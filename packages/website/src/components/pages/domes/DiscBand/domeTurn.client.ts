@@ -27,6 +27,8 @@ for (const disc of document.querySelectorAll<HTMLElement>('[data-dome-turn]')) {
   disc.addEventListener('pointermove', (event) => {
     if (grab !== undefined) set(angleAt(event) - grab);
   });
+  // A mouse drag on the picture is otherwise the browser's own image drag, which takes the pointer away.
+  disc.addEventListener('dragstart', (event) => event.preventDefault());
   for (const end of ['pointerup', 'pointercancel'] as const)
     disc.addEventListener(end, () => (grab = undefined));
   disc.addEventListener('keydown', (event) => {
