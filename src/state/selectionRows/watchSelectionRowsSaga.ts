@@ -53,7 +53,18 @@ function* reextract(slot: SelectionSlot) {
   // same way `watchGoHomeSaga` does, so a body row's position matches where the
   // render path draws it rather than a fixed epoch.
   const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
-  yield* put(setSelectionRow({ slot, row: selection.extractRow(ref, simDays) }));
+  const row = selection.extractRow(ref, simDays);
+  // The id rides the same action as the focus row so the two cannot disagree; an
+  // empty id counts as none.
+  yield* put(
+    slot === 'focus'
+      ? setSelectionRow({
+          slot,
+          row,
+          focusId: (ref && selection.focusIdOf(ref)) || null,
+        })
+      : setSelectionRow({ slot, row }),
+  );
 }
 
 export function* watchSelectionRowsSaga() {

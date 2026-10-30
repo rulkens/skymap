@@ -147,6 +147,17 @@ describe('watchSelectionRowsSaga', () => {
     });
   });
 
+  it('a focus ref change lands the focus id with the row; select and hover carry none', async () => {
+    const ref = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 } as const;
+    store.dispatch(updateSelectionSelect(ref));
+    await flush();
+    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
+
+    store.dispatch(updateSelectionFocus(ref));
+    await flush();
+    expect(store.getState()[selectionRowsRoute].focusId).toBe('sdss-1237668');
+  });
+
   it('clearSelection re-extracts select + focus rows to null, leaving hover untouched', async () => {
     // Regression: clearSelection (Esc / InfoCard ×) nulls the select+focus REFS,
     // but the reconciler must also null the derived ROWS — otherwise the InfoCard,
@@ -160,10 +171,13 @@ describe('watchSelectionRowsSaga', () => {
     expect(store.getState()[selectionRowsRoute].select).not.toBeNull();
     expect(store.getState()[selectionRowsRoute].focus).not.toBeNull();
 
+    expect(store.getState()[selectionRowsRoute].focusId).toBe('sdss-1237668');
+
     store.dispatch(clearSelection());
     await flush();
     expect(store.getState()[selectionRowsRoute].select).toBeNull();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
+    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
     // clearSelection leaves hover alone (it clears select + focus only).
     expect(store.getState()[selectionRowsRoute].hover).not.toBeNull();
   });
@@ -173,6 +187,7 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
+    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
 
     cloudPresent = true;
     store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
@@ -181,6 +196,7 @@ describe('watchSelectionRowsSaga', () => {
       type: 'galaxyCatalog',
       objId: '1237668',
     });
+    expect(store.getState()[selectionRowsRoute].focusId).toBe('sdss-1237668');
   });
 
   it('a star deep link fills on engineSourceCountReported (every source reports the same one pulse)', async () => {
@@ -239,6 +255,7 @@ describe('watchSelectionRowsSaga', () => {
     sagaMiddleware.setContext({
       selection: {
         extractRow: () => (layerRowsLanded ? { type: 'milkyWay' } : null),
+        focusIdOf: () => 'milkyWay',
       },
     });
 

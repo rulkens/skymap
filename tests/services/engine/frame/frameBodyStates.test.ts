@@ -25,7 +25,7 @@ describe('frameBodyStates', () => {
           focus: null,
           pending: { select: null, focus: null },
         },
-        selectionRows: { hover: MOVING, select: null, focus: null },
+        selectionRows: { hover: MOVING, select: null, focus: null, focusId: null },
       },
       [{ type: 'satellite', extractRow } as unknown as SelectionKindRow],
       AT,
