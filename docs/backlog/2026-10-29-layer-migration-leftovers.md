@@ -27,7 +27,7 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | J1 | Seeded stars: Sun, famous stars, S-stars, makers, anchors (§7 step 5) | starCatalog | NEEDS-JOINT | ~2,700 | `BodyPosition` has no `anchor` kind; `SCENE_ANCHORS` / `ORBIT_REACH_BY_REGION` read core tables |
 | J2 | Selection presentation: `buildGalaxyInfo` + galaxy math (via barrel), star arm of `buildFocusable`, galaxy/structure/MW framing | galaxyCatalog, starCatalog, structure, milkyWay | NEEDS-JOINT | ~1,480 | per-kind core tables (`BUILD_FOCUSABLE`, `REF_OF`, `focusFraming`, `mayHaveLabel`, `targetIdentityKey`, `selectionHaloTable`); needs `SelectionKindRow` members |
 | J3 | `ephemerisCorrections.generated` + `barycentricPairs` | body | NEEDS-JOINT | 1,113 | core solver (`orbitRowPlacement`) keys them by id; `LayerBody`/`OrbitalElements` would carry them |
-| J4 | Content camera clips (cosmicFlows, flowOrbit, famousFlythrough, earth/Søndermarken/Perseverance flyouts) | flow, galaxyCatalog, body, earthScenes, missions | NEEDS-JOINT | ~580 | no `clips?` member; `ClipId` union + `clipRegistry` are core |
+| J4 | Content camera clips (flowOrbit, famousFlythrough, earth/Søndermarken/Perseverance flyouts) | flow, galaxyCatalog, body, earthScenes, missions | NEEDS-JOINT | ~480 | no `clips?` member; `ClipId` union + `clipRegistry` are core |
 | J5 | `bodyFacts.generated` (card facts incl. `sgr-a-star`) | body, missions, blackHoles | NEEDS-JOINT | 500 | shared `BodyDetailCard` reads one table; `LayerBody` has no `facts` |
 | J6 | Structure focus mode (`structureFocusSubsystem`) | structure | NEEDS-JOINT | ~290 | core focus uniform read by other Layers' shaders; private fade controller vs "a Layer never drives a fade" |
 | J7 | Palette famous/alias/structure arms | galaxyCatalog, structure | NEEDS-JOINT | ~250 | `LayerSearchEntry` lacks thumbnail/description/scoring class |
@@ -45,7 +45,7 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | S6 | Shaders for Layer content | all | STAYS | ~6,000 WESL | README rule |
 | S7 | Body infrastructure per spec §4, shared places, labels/markers/selection ring, tours, featured tabs, tier | shared | STAYS | n/a | shared by ≥2 Layers or engine infrastructure |
 
-Totals: MOVE-NOW ~10,400 (M1 8.2k + M2-M8 2.1k). NEEDS-JOINT ~7,300. STAYS ~27,000 including ~11,000 WESL.
+Totals: MOVE-NOW ~10,400 (M1 8.2k + M2-M8 2.1k). NEEDS-JOINT ~7,200. STAYS ~27,000 including ~11,000 WESL.
 
 Known items, refined:
 
@@ -120,8 +120,8 @@ Consolidated into [the selection-kind-facts item](2026-10-28-selection-kind-fact
 ### J3. Ephemeris corrections + barycentric pairs: 1,113
 `ephemerisCorrections.generated` 1,088 (26 bodies: the planets and their moons) and `barycentricPairs` 25 (earth/moon). Both are read only by the core solver, `utils/orbit/orbitRowPlacement.ts`, keyed by element id. They are body content. **Joint:** the row's `OrbitalElements` (or `LayerBody`) carries its correction and barycentre. This widens `LayerBody`, which needs consent. The generator (`build-ephemeris-corrections`) would then emit into `layers/body/`.
 
-### J4. Content camera clips: ~580
-`data/animation/clips/{cosmicFlows 99, flowOrbit 55}` → flow, `famousFlythrough 70` → galaxyCatalog, `{earthFlyout 94, sondermarkenFlyout 81, perseveranceToSondermarken 141, earth*Loop 36}` → body/earthScenes/missions. `clipRegistry` and the `ClipId` union are core. Readers include `navigateSaga`, the remote menu, the debug clip triggers and `tools/record`. **Joint:** a `clips?` Layer member, or rule clips cross-Layer choreography like tours, in which case they stay. This is low value; `cosmicFlows`, which drives flow's slice, is the only one with a clear owner.
+### J4. Content camera clips: ~480
+`data/animation/clips/flowOrbit 55` → flow, `famousFlythrough 70` → galaxyCatalog, `{earthFlyout 94, sondermarkenFlyout 81, perseveranceToSondermarken 141, earth*Loop 36}` → body/earthScenes/missions. `clipRegistry` and the `ClipId` union are core. Readers include `navigateSaga`, the remote menu, the debug clip triggers and `tools/record`. **Joint:** a `clips?` Layer member, or rule clips cross-Layer choreography like tours, in which case they stay. This is low value. `cosmicFlows` is settled: it drives several Layers' state, so it lives in `src/compositions/clips/` (M5).
 
 ### J5. `bodyFacts.generated`: 500
 One table of card facts for 41 ids: planets, moons, craft and `sgr-a-star`. It is read by core's shared `BodyDetailCard` and by `blackHoles/ui/BlackHoleDetailCard`. **Joint:** per-row facts (`LayerBody.facts?`), or one generated facts file per Layer. Either way the seed and generator split.

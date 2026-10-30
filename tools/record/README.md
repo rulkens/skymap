@@ -240,7 +240,7 @@ not settle or dress a clip's opening the way it settles a windowed tour take
 (no `--settle` flag exists for clips; see below). A clip dresses itself:
 `scene()` / `show()` / `hide()` cues placed at t=0 on the clip's OWN timeline,
 authored with `over: 0` so they fire as a single instant rather than a fade.
-`cosmicFlows` (`src/data/animation/clips/cosmicFlows.ts`) shows the cue
+`cosmicFlows` (`src/compositions/clips/cosmicFlows.ts`) shows the cue
 shape — `hide(['cosmicWebDensity', 'cosmicWebFilaments', 'label:famousGalaxy'], 0)`,
 `fade(['flow'], 0, 0)`, and `scene(setFlowEnabled(true))` are all instant
 cues — though in that clip they land 2 s into the timeline, after a leading
