@@ -1,10 +1,9 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { satellitesSelectionRow } from '../../../../src/layers/satellites/present/satellitesSelectionRow';
 import { satelliteTransientId } from '../../../../src/layers/satellites/present/satelliteTransientId';
 import { createSatelliteSweeper } from '../../../../src/layers/satellites/load/createSatelliteSweeper';
 import { composeTemeToWorld } from '../../../../src/layers/satellites/subsystems/composeTemeToWorld';
 import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
-import { transientPositions } from '../../../../src/services/bodies/transientPositions';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
@@ -24,8 +23,6 @@ const row = satellitesSelectionRow(runtime);
 const AT_MS = Date.parse('2026-10-28T12:00:00Z');
 const AT = unixMsToJulianDays(AT_MS);
 const ISS_REF = { type: 'satellite', noradId: 25544 } as const;
-
-afterEach(() => transientPositions.delete(satelliteTransientId(25544)));
 
 describe('satellitesSelectionRow', () => {
   it('round-trips a focus id and claims nothing else', () => {
@@ -50,13 +47,6 @@ describe('satellitesSelectionRow', () => {
     expect(extracted.periodMin).toBeCloseTo(92.96, 1);
     expect(extracted.driver.poseId).toBe(satelliteTransientId(25544));
     expect(extracted.driver.followsSimClock).toBe(true);
-  });
-
-  // Hover extracts a row at pointer-pick rate; registering there grew the registry with every dot
-  // the pointer crossed. Only `createSelectedSatellites` registers.
-  it('registers nothing while it extracts', () => {
-    row.extractRow(ISS_REF, AT);
-    expect(deriveBodyStates(AT).has(satelliteTransientId(25544))).toBe(false);
   });
 
   it('follows the same point the dot is drawn at, to under a metre', () => {

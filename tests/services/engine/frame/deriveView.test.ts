@@ -90,6 +90,7 @@ function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
     altitudeMpc: POSE.distance,
     nowMs: 0,
     simDays: CONST_J2000,
+    bodyStates: deriveBodyStates(CONST_J2000),
   });
   if (!ctx.isReady) throw new Error('fixture not ready');
   return ctx;
@@ -361,7 +362,9 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         orientation: 'equatorial',
         bodies: { items: {} },
       },
+      selection: { hover: null, select: null, focus: null },
       selectionRows: { hover: null, select: null, focus: null },
+      selectionKindRows: [],
       slabRows: [],
       visibilityEntries: [],
       terrainHeightAt: datumOnlyTerrainHeight,
@@ -690,6 +693,7 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
       altitudeMpc: pose.distance,
       nowMs: 0,
       simDays: CONST_J2000,
+      bodyStates: deriveBodyStates(CONST_J2000),
     });
     if (!snapshot.isReady) throw new Error('fixture not ready');
     return { cam, snapshot: { ...snapshot, sceneBodies: positionedBodiesOf(bodies, STATES) } };

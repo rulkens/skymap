@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
@@ -70,6 +71,7 @@ const viewAt = (simDays: number) =>
       altitudeMpc: POSE.distance,
       nowMs: 0,
       simDays,
+      bodyStates: deriveBodyStates(simDays),
     },
     { width: 1920, height: 1080 },
   )!;

@@ -1,7 +1,7 @@
 /**
  * create — the satellites Layer in dependency order: the renderers, the propagator (no worker yet),
  * then the slot that drives it, then the selected
- * satellites the camera may follow. A landed sweep wakes the frame loop so it is drawn even with
+ * satellites the orbit rings draw. A landed sweep wakes the frame loop so it is drawn even with
  * the camera at rest.
  */
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';

@@ -107,6 +107,7 @@ function frameInput(
     altitudeMpc: pose.distance,
     nowMs: 0,
     simDays: over.simDays ?? CONST_J2000,
+    bodyStates: deriveBodyStates(over.simDays ?? CONST_J2000),
   };
 }
 

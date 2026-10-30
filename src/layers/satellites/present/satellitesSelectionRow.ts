@@ -1,9 +1,9 @@
 /**
  * satellitesSelectionRow — the `satellite` selection kind. The ref is the NORAD number, which
  * outlives any day's file; the pick index is the catalog index. Extracting is a pure read: the row
- * carries its SGP4 position at `simDays`, and the camera follows `driver.poseId`, whose transient
- * position `createSelectedSatellites` holds while the satellite is selected (`followsSimClock`).
- * With no catalog loaded there is no row: the satellites live only near Earth.
+ * carries its SGP4 position at `simDays`, and `followsSimClock` has core re-extract a selected or
+ * focused one every frame and place it under `driver.poseId` (`placeLiveSelection`), which the
+ * camera follows. With no catalog loaded there is no row: the satellites live only near Earth.
  */
 import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
@@ -49,7 +49,7 @@ export function satellitesSelectionRow(
       if (catalog === null || k < 0) return null;
       const id = satelliteTransientId(ref.noradId);
       const earth = deriveBodyStates(simDays).get(SCENE_EARTH.id)!.positionMpc;
-      const position = satellitePositioner(catalog, k)(simDays, new Map([[SCENE_EARTH.id, earth]]));
+      const position = satellitePositioner(catalog, k, simDays, earth);
       if (position === null) return null;
       return {
         type: 'satellite',

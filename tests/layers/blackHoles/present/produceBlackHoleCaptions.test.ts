@@ -9,6 +9,7 @@ import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structure
 import { describe, it, expect, vi } from 'vitest';
 
 import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/present/produceBlackHoleCaptions';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
 import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrAStar';
 import { SOURCE_REGISTRY } from '../../../../src/data/sources';
@@ -25,7 +26,13 @@ vi.mock('../../../../src/services/engine/frame/sceneOccluderBodies', () => ({
 const STATE = {} as unknown as EngineState;
 
 const CTX = {
-  snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
+  snapshot: {
+    bodyStates: deriveBodyStates(CONST_J2000),
+    simDays: CONST_J2000,
+    nowMs: 0,
+    focusBlend: 0,
+    focus: ZERO_FOCUS,
+  },
   cam: { distance: 1e-3 },
   drawCamPos: [0, 0, 0],
   drawPxPerRad: 720,

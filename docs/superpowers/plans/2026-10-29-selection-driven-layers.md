@@ -109,18 +109,18 @@ review: yes (camera follow, frame snapshot identity)
   `sceneBodyStates(state, ctx)` returns `ctx.snapshot.bodyStates`. `TransientBodyId` stays (it is the
   `poseId` key).
 
-- [ ] **Step 1:** `runFrame.ts:91`: `placeLiveSelection(deriveBodyStates(simDays), [select, focus], state.selectionKindRows, simDays)`
+- [x] **Step 1:** `runFrame.ts:91`: `placeLiveSelection(deriveBodyStates(simDays), [select, focus], state.selectionKindRows, simDays)`
   with each slot's `ref` from `stored.selection` and `row` from `stored.selectionRows`; pass the result
   as the camera step's `bodies` and into `deriveFrameContext` through its input.
-- [ ] **Step 2:** `frameContext.ts:53` reads `input.bodyStates` instead of calling `deriveBodyStates`.
-- [ ] **Step 3:** `sceneBodyStates` returns `ctx.snapshot.bodyStates`. If any caller passes a `ctx` without a
+- [x] **Step 2:** `frameContext.ts:53` reads `input.bodyStates` instead of calling `deriveBodyStates`.
+- [x] **Step 3:** `sceneBodyStates` returns `ctx.snapshot.bodyStates`. If any caller passes a `ctx` without a
   ready snapshot, STOP and report the site.
-- [ ] **Step 4:** Delete the registry, step 1e and the memo's registry version; change `satellitePositioner`
+- [x] **Step 4:** Delete the registry, step 1e and the memo's registry version; change `satellitePositioner`
   to the plain signature; drop the registry half of `createSelectedSatellites`.
-- [ ] **Step 5:** Port `transientFollow.test.ts`; delete `transientPositions.test.ts`; fix the selection-row test.
-- [ ] **Step 6: Run** `npm run typecheck` and `npx vitest run tests/services/engine tests/layers/satellites` — PASS;
+- [x] **Step 5:** Port `transientFollow.test.ts`; delete `transientPositions.test.ts`; fix the selection-row test.
+- [x] **Step 6: Run** `npm run typecheck` and `npx vitest run tests/services/engine tests/layers/satellites` — PASS;
   `grep -rn "transientPositions" src tests` — no hits.
-- [ ] **Step 7: Commit** `refactor(frame): core places the moving selection; transientPositions goes`.
+- [x] **Step 7: Commit** `refactor(frame): core places the moving selection; transientPositions goes`.
 
 ### Task 3: The trail pass reads `PassState.selection`
 

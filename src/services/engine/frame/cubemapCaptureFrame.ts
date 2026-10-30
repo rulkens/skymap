@@ -13,6 +13,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { CaptureFrame } from '../../../@types/engine/frame/CaptureFrame';
 import type { NotReadyFrameContext } from '../../../@types/engine/frame/NotReadyFrameContext';
 import { deriveFrameContext } from './frameContext';
+import { frameBodyStates } from './frameBodyStates';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
@@ -48,6 +49,7 @@ export function cubemapCaptureFrame(input: {
     basis,
     basis,
   );
+  const simDays = state.cameraRuntime.outputs.simDays;
   // A capture face's own `renderedTargets` defaults empty — capture steps
   // never union into the frame-wide fact (`executeFrame`'s header).
   const snapshot = deriveFrameContext(state, {
@@ -59,7 +61,8 @@ export function cubemapCaptureFrame(input: {
     // The synthetic pose orbits no pivot: its altitude is its own distance.
     altitudeMpc: nearMpc,
     nowMs,
-    simDays: state.cameraRuntime.outputs.simDays,
+    simDays,
+    bodyStates: frameBodyStates(state, state.selectionKindRows, simDays),
   });
   if (!snapshot.isReady) return { isReady: false };
   return { isReady: true, snapshot, cam };

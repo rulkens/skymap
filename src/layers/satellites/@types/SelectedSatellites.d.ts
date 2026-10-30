@@ -1,14 +1,14 @@
 /**
- * SelectedSatellites — the satellites the camera may follow: the selected and focused ones. Each
- * holds a transient position while it stays selected; `any` is what the asset row demands on.
+ * SelectedSatellites — the selected and focused satellites, for the orbit rings; `any` is what the
+ * asset row demands on.
  */
 import type { TrackedSatellite } from './TrackedSatellite';
 
 export type SelectedSatellites = {
   /** A satellite is selected or focused, whether or not the catalog has loaded yet. */
   any(): boolean;
-  /** The ones positioned now, for the orbit rings; the same array until the set changes. */
+  /** The ones the loaded catalog holds; the same array until the set changes. */
   tracked(): readonly TrackedSatellite[];
-  /** Unsubscribes and drops every transient position it set. */
+  /** Unsubscribes and empties `tracked`. */
   stop(): void;
 };

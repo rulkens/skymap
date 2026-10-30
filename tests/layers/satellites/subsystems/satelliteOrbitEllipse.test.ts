@@ -36,7 +36,7 @@ describe('satelliteOrbitEllipse', () => {
       const m = composeTemeToWorld(orientationForBody(SCENE_EARTH.id, simDays, positions), simDays);
       const ring = satelliteOrbitEllipse(satellite, simDays, m, EARTH_MPC)!;
       const big = eccentricAnomalyFromMean(ring.meanAnomalyRad, ring.eccentricity);
-      const dot = satellitePositioner(catalog, k)(simDays, positions)!;
+      const dot = satellitePositioner(catalog, k, simDays, EARTH_MPC)!;
       for (let i = 0; i < 3; i++) {
         const onRing =
           ring.centerMpc[i]! +
