@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { APP_COMPOSITION } from '../../src/compositions/app';
-import { APP_VISIBILITY } from '../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../src/compositions/appVisibility';
 import type { VisibilityEntry } from '../../src/@types/engine/layer/VisibilityEntry';
 import type { ShowEntry } from '../../src/@types/engine/layer/ShowEntry';
 import type { LabelEntry } from '../../src/@types/engine/layer/LabelEntry';
@@ -15,7 +15,7 @@ import type { VisibilityArg } from '../../src/@types/animation/VisibilityArg';
 import type { ScopedVisibilityAddress } from '../../src/@types/animation/ScopedVisibilityAddress';
 import type { ContentPass } from '../../src/@types/engine/frame/ContentPass';
 
-const ENTRIES: readonly VisibilityEntry[] = APP_VISIBILITY;
+const ENTRIES: readonly VisibilityEntry[] = APP_VISIBILITY_REGISTRY;
 const SHOWS = ENTRIES.filter((e): e is ShowEntry => 'key' in e);
 const LABELS = ENTRIES.filter((e): e is LabelEntry => 'label' in e);
 

@@ -6,10 +6,10 @@
  */
 
 import type { LabelAddress } from '../../@types/animation/LabelAddress';
-import { APP_VISIBILITY } from '../../compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../compositions/appVisibility';
 import { visibilityAddressOf } from '../visibility/visibilityAddressOf';
 
-const LABEL_ADDRESSES = APP_VISIBILITY.filter((entry) => 'label' in entry).map(
+const LABEL_ADDRESSES = APP_VISIBILITY_REGISTRY.filter((entry) => 'label' in entry).map(
   (entry) => visibilityAddressOf(entry) as LabelAddress,
 );
 

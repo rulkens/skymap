@@ -19,7 +19,7 @@ A Layer (`src/layers/<name>/`) owns everything about one slice of the scene and 
 through the members of the `Layer` contract: `sources`, `bodies`, `exhibits`, `visibility`,
 `passes`, `selection`, `ui`, and so on. The composition root, `src/compositions/`, assembles the
 app from a tuple of Layers. Anything a reader needs across all Layers, a **registry**, is meant
-to be collected from those members: `APP_EXHIBITS`, `APP_VISIBILITY`, the settings root and the
+to be collected from those members: `APP_EXHIBIT_REGISTRY`, `APP_VISIBILITY`, the settings root and the
 boot-time pass and selection tables are built that way, and ADR 0011 set the direction for the
 engine families.
 
@@ -64,7 +64,7 @@ Concretely:
   *runtime* registry is composed in `createLayers` from a runtime-bound member
   (`passes(runtime)`, `selection(runtime)`, `guides(runtime)`), and core reads it off
   `EngineState`. The composition root's own files (`app.ts`, the `app<Name>.ts` registries,
-  cross-Layer exhibits) are assembly and content, never a per-kind table: `APP_EXHIBITS` lists
+  cross-Layer exhibits) are assembly and content, never a per-kind table: `APP_EXHIBIT_REGISTRY` lists
   Layers' exhibit rows, it does not list kinds.
 - **Per-kind facts are fields on the Layer's row, and kind unions are derived.** The fact a
   per-kind table answers (how a selection kind frames, what halo it draws, which caption tier it

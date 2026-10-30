@@ -9,7 +9,7 @@
 import type { ScopedVisibilityAddress } from '../../@types/animation/ScopedVisibilityAddress';
 import type { VisibilityAddress } from '../../@types/animation/VisibilityAddress';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
-import { APP_VISIBILITY } from '../../compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../compositions/appVisibility';
 import { setVisibility } from '../../state/settings/setVisibilityAction';
 import { hasSectionSwitch } from './hasSectionSwitch';
 import { visibilityClusterOf } from './visibilityClusterOf';
@@ -26,7 +26,7 @@ export function setVisibilityActionsFor(
   const isLabel = parts[0] === 'label';
   const address = (isLabel ? `label:${parts[1]}` : parts[0]) as VisibilityAddress;
   const scopedItem = isLabel ? parts[2] : parts[1];
-  const entry = visibilityEntryOf(APP_VISIBILITY, address);
+  const entry = visibilityEntryOf(APP_VISIBILITY_REGISTRY, address);
   const cluster = visibilityClusterOf(entry);
   const field = isLabel ? 'labelEnabled' : 'enabled';
   const write = (item?: string) =>
