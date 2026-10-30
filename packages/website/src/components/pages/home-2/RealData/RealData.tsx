@@ -29,6 +29,8 @@ const KINDS = [
   { group: 'Imagery', shot: 'earth-terminator', accent: '#8fb6ff' },
 ];
 
+// A square window cut from a wide picture shows its full height, so the file is chosen for 16/9 of the window.
+const WINDOW_SIZES = '(max-width: 900px) 29rem, 32rem';
 // A source's short name: the table's name up to its gloss ("SDSS, the Sloan Digital Sky Survey").
 const shortName = (name: string) => name.split(', ')[0]!;
 // The Science table's count and its heading: what the app draws, or what the source holds where the build does
@@ -63,7 +65,7 @@ function RealData() {
             >
               <figure className={styles.figure}>
                 <div className={styles.window} style={delay(at)} data-reveal="rise">
-                  <Shot id={kind.shot} sizes="(max-width: 900px) 50vw, 18rem" />
+                  <Shot id={kind.shot} sizes={WINDOW_SIZES} />
                 </div>
                 <figcaption className={styles.caption}>
                   <ShotCaption id={kind.shot} showDrawn={false} foot />
