@@ -19,7 +19,7 @@ A Layer (`src/layers/<name>/`) owns everything about one slice of the scene and 
 through the members of the `Layer` contract: `sources`, `bodies`, `exhibits`, `visibility`,
 `passes`, `selection`, `ui`, and so on. The composition root, `src/compositions/`, assembles the
 app from a tuple of Layers. Anything a reader needs across all Layers, a **registry**, is meant
-to be collected from those members: `APP_EXHIBIT_REGISTRY`, `APP_VISIBILITY`, the settings root and the
+to be collected from those members: `APP_EXHIBIT_REGISTRY`, `APP_VISIBILITY_REGISTRY`, the settings root and the
 boot-time pass and selection tables are built that way, and ADR 0011 set the direction for the
 engine families.
 
@@ -72,7 +72,7 @@ Concretely:
   contributes for that kind, and core reads the field off the composed row. The closed unions
   core keys those tables on (`SelectionRef`, `FocusableTarget`, `CaptionKind`, `ExhibitId`,
   `ClipId`, `TourId`) are derived from the composition's declarations, as `ShowKey` already is
-  from `APP_VISIBILITY` (ADR 0012); none stays hand-typed. Where no contract member carries the
+  from `APP_VISIBILITY_REGISTRY` (ADR 0012); none stays hand-typed. Where no contract member carries the
   fact yet, the migration adds one, and that widening is sequenced and consented to per member,
   which decides the order of the work, never whether it happens.
 - **The composition root is the only place that may import more than one Layer.** It holds the
@@ -148,7 +148,7 @@ but any per-kind row inside them falls under this rule like every other.
 ## References
 
 - ADR 0011 — the row-registry direction for the engine families and the carve-out this narrows.
-- ADR 0012 — `ShowKey` as a core vocabulary derived from `APP_VISIBILITY`.
+- ADR 0012 — `ShowKey` as a core vocabulary derived from `APP_VISIBILITY_REGISTRY`.
 - `docs/research/engine/layer-composition-review-2026-09-09.md` §2 — the eighteen-table inventory.
 - `docs/backlog/2026-10-28-selection-kind-facts-in-the-layer.md` — the kind-B migration brief.
 - `docs/backlog/2026-10-11-layer-dependency-dag.md` — Layer-to-Layer reads, out of scope here.

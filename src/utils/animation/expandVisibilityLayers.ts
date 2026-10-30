@@ -1,6 +1,6 @@
 /**
  * expandVisibilityLayers — the one expansion of the cue helpers' `'labels'` aggregate: every
- * label address `APP_VISIBILITY` declares, in its order. Expanded at effect construction, so
+ * label address `APP_VISIBILITY_REGISTRY` declares, in its order. Expanded at effect construction, so
  * a stored effect, the settings write and the clip channel only ever see atomic addresses.
  * Derived from the entries, a new Layer's label joins `hide(['labels'])` with no edit here.
  */

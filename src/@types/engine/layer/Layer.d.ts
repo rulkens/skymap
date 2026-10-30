@@ -68,7 +68,7 @@ export type Layer<
    * `debug` in DebugPanel), a detail card, or a `labelsAndGuides` toggle row, which
    * `selectToggleRows` appends after the label-category rows in composition order. */
   readonly ui?: readonly LayerUiEntry[];
-  /** What this Layer can show and label. The address types derive from `APP_VISIBILITY`,
+  /** What this Layer can show and label. The address types derive from `APP_VISIBILITY_REGISTRY`,
    * which imports the same tuple from the Layer's `visibility.ts`, never from here. */
   readonly visibility?: readonly VisibilityEntry[];
 
