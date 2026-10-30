@@ -2,7 +2,8 @@
  * LessonPlan — a 45-minute lesson drawn as the app's clock bar, one stretch per part and as long as the
  * part, over the parts themselves: a picture, the routine, a question for the class and the link that opens
  * it. Pointing at a part lights its stretch of the bar (CSS only). It ends on the question pupils answer
- * as they leave, its answer behind a disclosure. Wide, the parts are two by two; narrow, one after another.
+ * as they leave, beside the orbit it asks about, its answer behind a disclosure. Wide, the parts are two by
+ * two; narrow, one after another.
  */
 import type { CSSProperties } from 'react';
 
@@ -11,6 +12,7 @@ import { says } from '../../../../content/pages/classroom/classroom.data.ts';
 import { appLink } from '../../../../data/appLink.ts';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
+import EarthOrbit from '../EarthOrbit/EarthOrbit.tsx';
 import styles from './LessonPlan.module.css';
 
 const LESSON_MINUTES = CLASS_FEATURES.reduce((sum, part) => sum + part.minutes, 0);
@@ -60,6 +62,7 @@ function LessonPlan() {
         ))}
       </div>
       <aside id="leave" className={styles.leave}>
+        <EarthOrbit />
         <h3>Before they leave</h3>
         <p>Ask one question pupils answer from memory, without a screen.</p>
         <p className={styles.ask}>
