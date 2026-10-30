@@ -109,16 +109,6 @@
   opacity: 1;
 }
 
-/* The app's selection ring, in the colour of the question in hand. */
-.ring {
-  position: absolute;
-  inset: 22% 29%;
-  border: 1px solid var(--accent);
-  border-radius: 50%;
-  opacity: 0.7;
-  transition: border-color var(--duration-reveal) var(--ease-standard);
-}
-
 @media (min-width: 901px) {
   .list {
     grid-column: 1 / span 7;
@@ -176,8 +166,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .slide,
-  .row h3,
-  .ring {
+  .row h3 {
     transition: none;
   }
 }

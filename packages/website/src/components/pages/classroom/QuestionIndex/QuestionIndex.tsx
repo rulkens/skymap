@@ -1,7 +1,7 @@
 /*
  * QuestionIndex — the ready-made questions as an index, by topic, beside one large picture of the view the
- * question in hand opens. Pointing at or focusing a question brings its picture forward, ringed in a colour
- * from that picture; without script the first stays. Narrow, there is no viewer: each question carries a
+ * question in hand opens. Pointing at or focusing a question brings its picture forward and marks the question
+ * in a colour from that picture; without script the first stays. Narrow, there is no viewer: each question carries a
  * small picture of its own. Each question's link names the view it opens.
  */
 import { useState } from 'react';
@@ -27,7 +27,7 @@ const VIEWER_SIZES = '(max-width: 900px) 0px, min(calc(42vw - 4rem), 32rem)';
 function QuestionIndex() {
   const [shown, setShown] = useState(0);
   return (
-    <div className={styles.root} style={{ '--accent': ROWS[shown]!.accent } as CSSProperties}>
+    <div className={styles.root}>
       <ol className={styles.list}>
         {ROWS.map((row, at) => (
           <li
@@ -56,7 +56,6 @@ function QuestionIndex() {
               <Shot id={row.shot} sizes={VIEWER_SIZES} alt="" />
             </div>
           ))}
-          <span className={styles.ring} />
         </div>
         <figcaption>
           <ShotCaption id={ROWS[shown]!.shot} showDrawn={false} open={false} />
