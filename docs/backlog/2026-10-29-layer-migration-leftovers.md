@@ -114,7 +114,7 @@ M1 sweep starts.
 - Also `bodySearchNames`, `constellationOfBody`, `mayHaveLabel`, `encode/decodeStarFocusId`, `rankPaletteMatches`.
 - `starCatalog` itself reads 7 of these core files.
 
-**Joint.** `BodyPosition` is `site | orbit | sampled`, and a fixed star is an anchor (`AnchorBody`). Needed: a `{ kind: 'anchor' }` position, or a Layer-folded anchor list, so `SCENE_ANCHORS` becomes a fold. S-stars already fit `orbit`. `ORBIT_REACH_BY_REGION` then reads the composed rows, as the spec says.
+**Joint.** `BodyPosition` is `site | orbit | sampled`, and a fixed star is an anchor (`AnchorBody`). Needed: a `{ kind: 'anchor' }` position, or a Layer-folded anchor list, so `SCENE_ANCHORS` becomes a fold. S-stars already fit `orbit`. `ORBIT_REACH_BY_REGION` then reads the composed rows, as the spec says. `SCENE_ANCHORS` already holds a non-body row (`GALACTIC_CENTRE_ANCHOR`, a `PlaceId`), so the fold is the place-anchor table and should be named and filed as one rather than under `data/bodies/`.
 
 ### J2. Selection presentation tables: ~1,480 movable behind them
 Core holds a row per selection kind in `BUILD_FOCUSABLE` (`helpers/buildFocusable.ts`), `REF_OF`, `focusFraming` (switch), `mayHaveLabel` (switch), `targetIdentityKey`, `selectionHaloTable`, `URL_HASH_FOR` (M9) and `CORE_DETAIL_CARDS` (M2). That is the anti-goal shape of spec §2: a table keyed by kind gaining a row per Layer. What sits behind the galaxy, star, structure and MW rows:
@@ -124,6 +124,7 @@ Core holds a row per selection kind in `BUILD_FOCUSABLE` (`helpers/buildFocusabl
 - The galaxyCatalog/starCatalog fact selectors in `state/engine/selectors.ts`.
 
 **Joint.** The `SelectionKindRow` presentation members: `toFocusable(row)`, `framing(row, fovY)`, `mayHaveLabel(ref)`, a halo row. Body-like arms already avoid the framing switch through `driver: DriverGeometry`. Galaxies and structures don't host the camera, so they can't reuse it.
+Consolidated into [the selection-kind-facts item](2026-10-28-selection-kind-facts-in-the-layer.md), which carries J2 now.
 
 ### J3. Ephemeris corrections + barycentric pairs: 1,113
 `ephemerisCorrections.generated` 1,088 (26 bodies: the planets and their moons) and `barycentricPairs` 25 (earth/moon). Both are read only by the core solver, `utils/orbit/orbitRowPlacement.ts`, keyed by element id. They are body content. **Joint:** the row's `OrbitalElements` (or `LayerBody`) carries its correction and barycentre. This widens `LayerBody`, which needs consent. The generator (`build-ephemeris-corrections`) would then emit into `layers/body/`.

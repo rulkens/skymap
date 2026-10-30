@@ -1,6 +1,6 @@
 # Layer composition design
 
-> **Status.** Design spec, not yet planned. Reopens and supersedes decision #17's deferral
+> **Status.** (a)–(e) of §10 have shipped; per-seam registry status lives in `src/compositions/README.md`, and [ADR 0013](../../adrs/0013-registries-built-from-layer-contributions.md) rules the two registry families §4.6 did not cover. Reopens and supersedes decision #17's deferral
 > of the umbrella type (§2). Written against the grill rulings of 2026-09-09 (ten items) and
 > 2026-09-10 (four more, §13); all are premises. Nothing in it is open.
 > **Sources.** [Layer-composition review](../../research/engine/layer-composition-review-2026-09-09.md)
