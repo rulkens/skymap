@@ -50,9 +50,9 @@ function Sharing() {
               Saturn on 15 October 2017
             </ViewLink>
           </div>
-        </div>
-        <div className={styles.open}>
-          <OpenApp />
+          <div className={styles.open}>
+            <OpenApp />
+          </div>
         </div>
       </div>
     </>

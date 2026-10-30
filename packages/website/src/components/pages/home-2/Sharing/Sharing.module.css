@@ -14,7 +14,7 @@
 }
 
 .parts {
-  composes: grid halves from '../../../../styles/layout.module.css';
+  composes: grid from '../../../../styles/layout.module.css';
   row-gap: 3rem;
 }
 
@@ -23,5 +23,27 @@
 }
 
 .open {
-  padding-top: 3.5rem;
+  padding-top: 0.5rem;
+}
+
+/*
+ * Wide, Open app closes the left column, under the words the band's title stands over, while the second part
+ * (the taller one) fills the right; read in order, it still comes last.
+ */
+@media (min-width: 901px) {
+  .part:first-child,
+  .open {
+    grid-column: 1 / span 5;
+  }
+
+  .part:nth-child(2) {
+    grid-area: 1 / 7 / span 2 / -1;
+  }
+
+  /* Its foot on the second part's last line. */
+  .open {
+    grid-row: 2;
+    align-self: end;
+    padding-top: 0;
+  }
 }
