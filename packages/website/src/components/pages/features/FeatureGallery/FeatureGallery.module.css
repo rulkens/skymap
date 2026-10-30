@@ -386,6 +386,17 @@
   }
 }
 
+/* A cut-out stands small in the middle of its frame: the thumbnail keeps that middle. */
+.cutThumb {
+  & picture {
+    overflow: hidden;
+  }
+
+  & img {
+    scale: 2.2;
+  }
+}
+
 /* The ring selects it as the app selects an object: a thin ring stands off, in the accent. */
 .thumb[aria-pressed='true'],
 .thumb:focus-visible {

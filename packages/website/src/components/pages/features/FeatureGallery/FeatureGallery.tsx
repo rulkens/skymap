@@ -103,7 +103,7 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
                 ref={(el) => {
                   thumbs.current[i] = el;
                 }}
-                className={styles.thumb}
+                className={cx(styles.thumb, slides[i]!.cutout && styles.cutThumb)}
                 type="button"
                 aria-label={siteShot(id).title}
                 title={siteShot(id).title}
@@ -112,7 +112,8 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
                 onClick={() => choose(i)}
                 onKeyDown={onKeyDown}
               >
-                <Shot id={id} sizes={THUMB_SIZES} alt="" />
+                {/* A slide's cut-out is its subject: at thumbnail size a drawing of thin paths reads as black. */}
+                <Shot id={slides[i]!.cutout ?? id} sizes={THUMB_SIZES} alt="" />
               </button>
             ))}
           </div>
