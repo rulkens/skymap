@@ -232,11 +232,15 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
+    // Regression: the structure encoder reads only the ref, so the id used to
+    // publish (URL, dome status) while the row was still unresolvable.
+    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
 
     structure = { id: 'cluster-virgo-m87', category: 'galaxy-cluster' } as unknown as StructureInfo;
     store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({ id: 'cluster-virgo-m87' });
+    expect(store.getState()[selectionRowsRoute].focusId).toBe('cluster-virgo-m87');
   });
 
   it('a milkyWay deep link fills on engineStatusChanged (a Layer-only kind, resolvable only once its row lands)', async () => {

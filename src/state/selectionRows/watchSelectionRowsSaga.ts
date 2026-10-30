@@ -54,14 +54,15 @@ function* reextract(slot: SelectionSlot) {
   // render path draws it rather than a fixed epoch.
   const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
   const row = selection.extractRow(ref, simDays);
-  // The id rides the same action as the focus row so the two cannot disagree; an
-  // empty id counts as none.
+  // The id rides the same action as the focus row so the two cannot disagree: no
+  // row, no id (ref-only encoders would otherwise publish an unresolvable ref).
+  // An empty id counts as none.
   yield* put(
     slot === 'focus'
       ? setSelectionRow({
           slot,
           row,
-          focusId: (ref && selection.focusIdOf(ref)) || null,
+          focusId: (ref && row && selection.focusIdOf(ref)) || null,
         })
       : setSelectionRow({ slot, row }),
   );
