@@ -1,45 +1,37 @@
 .root {
-  composes: wrap section grid from '../../../../styles/layout.module.css';
+  composes: section from '../../../../styles/layout.module.css';
+  position: relative;
+}
+
+.pin {
+  composes: wrap grid from '../../../../styles/layout.module.css';
   /* From the column's left edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
   --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   align-items: center;
-  row-gap: 2.5rem;
 }
 
 .figure {
   margin: 0;
 }
 
-/* The views lie on one another; the picture fades into the page above, below and towards the words. */
+/* The views lie on one another and dissolve into the page at every edge but the window's. */
 .stage {
-  --view-out: 1.4s;
-  --view-in: 1.4s;
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
-  isolation: isolate;
-
-  &::after {
-    content: '';
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-    pointer-events: none;
-    background:
-      linear-gradient(
-        180deg,
-        var(--color-bg) 0%,
-        rgb(0 0 0 / 0) 12%,
-        rgb(0 0 0 / 0) 88%,
-        var(--color-bg) 100%
-      ),
-      linear-gradient(90deg, rgb(0 0 0 / 0) 70%, var(--color-bg) 100%);
-  }
+  mask-image:
+    linear-gradient(90deg, #000 72%, rgb(0 0 0 / 0)),
+    linear-gradient(180deg, rgb(0 0 0 / 0), #000 9%, #000 88%, rgb(0 0 0 / 0));
+  mask-composite: intersect;
 }
 
+/* The next view arrives from a touch larger, as a camera settling; the last one leaves faster than that. */
 .layer {
   position: absolute;
   inset: 0;
+  transition:
+    opacity var(--duration-reveal) var(--ease-enter),
+    scale calc(var(--duration-reveal) + 50ms) var(--ease-enter);
 
   & picture {
     display: block;
@@ -54,64 +46,42 @@
   }
 }
 
+.away {
+  opacity: 0;
+  scale: 1.04;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-base) var(--ease-leave),
+    scale 0s linear var(--duration-base),
+    visibility 0s linear var(--duration-base);
+}
+
+/* The exhibit's own title stands at its left edge: the crop gives up the panel on the right, which fades anyway. */
+.layer:nth-child(2) img {
+  object-position: 0 50%;
+}
+
 /* A later view does not exist until it is warmed, so it is not fetched. */
 .cold {
   display: none;
 }
 
 .caption {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 }
 
 .lead {
   font-size: var(--text-lead);
 }
 
-.part {
+.parts {
+  display: grid;
+  gap: 2rem;
   margin-top: 2.5rem;
-
-  & p {
-    margin-bottom: 0.75rem;
-  }
 }
 
-/*
- * Wide, the picture fills the first screen and holds still while the words scroll past it; each part is a
- * step taller than its words, so the one at the window's middle (which chooses the picture) changes slowly.
- */
-@media (min-width: 901px) {
-  .root {
-    align-items: start;
-  }
-
-  .figure {
-    position: sticky;
-    top: var(--nav-height);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: var(--first-screen);
-    grid-column: 1 / span 7;
-    --cols: 7;
-  }
-
-  .stage {
-    margin-left: calc(-1 * var(--bleed));
-  }
-
-  .words {
-    grid-column: 8 / -1;
-    --cols: 5;
-    padding-top: 18svh;
-  }
-
-  .part {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-height: 70svh;
-    margin-top: 0;
-  }
+.part p {
+  margin-bottom: 0.75rem;
 }
 
 .links {
@@ -120,13 +90,107 @@
   column-gap: 2.5rem;
 }
 
-/* Narrow: the title and its line, the picture across the whole window with its label, then the parts. */
-@media (max-width: 900px) {
+.half {
+  display: none;
+}
+
+/*
+ * Wide, the whole screen holds still for as long as the two halves of the section take to scroll past; the half
+ * at the window's middle chooses the part. The picture takes seven columns and the margin to the window's edge.
+ */
+@media (min-width: 901px) {
   .root {
-    row-gap: 0;
+    height: calc(var(--section-space) + var(--first-screen) + 60svh);
   }
 
-  /* With the words dissolved, their parts are the grid's own items: each takes the row. */
+  .half {
+    position: absolute;
+    left: 0;
+    display: block;
+    width: 1px;
+    height: 50%;
+
+    &:first-child {
+      top: 0;
+    }
+
+    &:nth-child(2) {
+      top: 50%;
+    }
+  }
+
+  .pin {
+    position: sticky;
+    top: var(--nav-height);
+    height: var(--first-screen);
+  }
+
+  .figure {
+    grid-column: 1 / span 7;
+  }
+
+  .stage {
+    max-height: calc(var(--first-screen) - 6rem);
+    margin-left: calc(-1 * var(--bleed));
+  }
+
+  .words {
+    grid-column: 8 / -1;
+  }
+
+  /* A chapter of the list: lit while its picture shows, its line drawn down beside it in the column gap. */
+  .part {
+    position: relative;
+
+    & h3,
+    & p {
+      transition: var(--transition-color);
+    }
+
+    & h3 {
+      color: var(--site-text-dim);
+    }
+
+    & p {
+      color: var(--site-text-faint);
+    }
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0.25rem;
+      bottom: 0;
+      left: -2.75rem;
+      width: 1px;
+      background: rgb(232 238 255 / 0.16);
+    }
+
+    &::after {
+      background: var(--color-accent);
+      transform-origin: top;
+      scale: 1 0;
+      transition: scale var(--duration-reveal) var(--ease-enter);
+    }
+  }
+
+  .lit {
+    & h3 {
+      color: var(--color-fg);
+    }
+
+    & p {
+      color: var(--site-text-muted);
+    }
+
+    &::after {
+      scale: 1 1;
+    }
+  }
+}
+
+/* Narrow: the title and its line, the picture across the whole window with its label, then the parts. */
+@media (max-width: 900px) {
   .words {
     display: contents;
   }
@@ -141,22 +205,14 @@
     margin-bottom: 1rem;
   }
 
-  .part {
+  .parts {
     order: 2;
+    margin-top: 1.5rem;
   }
 
   .stage {
     aspect-ratio: 4 / 3;
     margin-inline: calc(-1 * var(--gutter));
-
-    &::after {
-      background: linear-gradient(
-        180deg,
-        var(--color-bg) 0%,
-        rgb(0 0 0 / 0) 12%,
-        rgb(0 0 0 / 0) 85%,
-        var(--color-bg) 100%
-      );
-    }
+    mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 10%, #000 86%, rgb(0 0 0 / 0));
   }
 }

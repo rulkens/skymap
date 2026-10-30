@@ -68,6 +68,11 @@
   --first-screen: calc(100svh - var(--nav-height));
   --open-top: 1.5rem;
   --open-rise: clamp(2rem, 20svh - 7.75rem, 4rem);
+
+  /* Motion beside the app's `--duration-*` and `--ease-standard`: entering decelerates, leaving accelerates. */
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-leave: cubic-bezier(0.4, 0, 1, 1);
+  --duration-reveal: 450ms;
 }
 
 /* The 900px breakpoint is also in components/site/Nav/Nav.module.css (CSS variables cannot be used in media queries). */
