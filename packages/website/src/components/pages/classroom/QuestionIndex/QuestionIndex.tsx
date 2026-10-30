@@ -1,11 +1,10 @@
 /*
  * QuestionIndex — the ready-made questions as an index, by topic, beside one large picture of the view the
- * question in hand opens. Pointing at or focusing a question brings its picture forward and marks the question
- * in a colour from that picture; without script the first stays. Narrow, there is no viewer: each question carries a
+ * question in hand opens. Pointing at or focusing a question brings its picture forward and lights its words,
+ * the others dimmed; without script the first stays. Narrow, there is no viewer: each question carries a
  * small picture of its own. Each question's link names the view it opens.
  */
 import { useState } from 'react';
-import type { CSSProperties } from 'react';
 
 import { CLASS_QUESTIONS, says } from '../../../../content/pages/classroom/classroom.data.ts';
 import { appLink } from '../../../../data/appLink.ts';
@@ -33,7 +32,6 @@ function QuestionIndex() {
           <li
             key={row.shot}
             className={cx(styles.row, at === shown && styles.shown)}
-            style={{ '--row-accent': row.accent } as CSSProperties}
             onPointerEnter={() => setShown(at)}
             onFocus={() => setShown(at)}
           >

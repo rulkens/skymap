@@ -17,11 +17,10 @@
   border-top: 1px solid var(--border-divider);
 
   & h3 {
-    position: relative;
     grid-area: ask;
     max-width: var(--measure);
     margin: 0 0 0.5rem;
-    color: var(--site-text-muted);
+    color: var(--site-text-dim);
     transition: color var(--duration-base) var(--ease-standard);
   }
 
@@ -48,22 +47,9 @@
   padding-top: 0;
 }
 
-/* The question in hand: its words lit and a ring of its picture's colour in the margin. */
+/* The question in hand: its words lit, the others dimmed. */
 .shown h3 {
   color: var(--color-fg);
-}
-
-.row h3::before {
-  content: '';
-  position: absolute;
-  top: 0.45em;
-  left: -1.75rem;
-  width: 0.625rem;
-  height: 0.625rem;
-  border: 1px solid var(--row-accent);
-  border-radius: 50%;
-  opacity: 0;
-  transition: opacity var(--duration-base) var(--ease-standard);
 }
 
 .readout {
@@ -117,10 +103,6 @@
   .viewer {
     grid-column: 8 / -1;
     --cols: 5;
-  }
-
-  .shown h3::before {
-    opacity: 1;
   }
 }
 
