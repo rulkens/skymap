@@ -12,7 +12,7 @@ import { CITATION } from '../../../packages/website/src/data/citation';
 import { DATA_SOURCES } from '../../../packages/website/src/data/dataSources';
 import { DOCS_SETTING_SIZES } from '../../../packages/website/src/data/docsSettingSizes';
 import { fact } from '../../../packages/website/src/data/fact';
-import { HORIZON_RADIUS_GPC } from '../../../src/data/rendering/horizonRadiusGpc';
+import { HORIZON_RADIUS_GPC } from '../../../src/layers/cosmicHorizon/data/horizonRadiusGpc';
 import { C_KM_S, H0_KM_S_MPC, PC_TO_LY } from '../../../src/utils/math/constants';
 import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
 import { statedFigures } from './statedFigures';

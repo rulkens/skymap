@@ -91,22 +91,34 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/starCatalog/ui/StarCatalogTuningSection.tsx',
   },
   {
+    heading: 'Surface Tiles',
+    shows:
+      'Near Earth or Mars: how many ground tiles are held and at what depth. Ten buttons fly to test sites, from Søndermarken and Everest to the four Mars rover sites, and two switches flatten the terrain or drop the tiles’ skirts.',
+    file: 'src/layers/body/ui/SurfaceTileAtlasSection.tsx',
+  },
+  {
+    heading: 'Terrain pick marker',
+    shows:
+      'The size of the marker drawn where the pointer meets the ground, and the height of the terrain under it.',
+    file: 'src/layers/body/ui/TerrainPickMarkerTuningSection.tsx',
+  },
+  {
+    heading: 'Earth tuning',
+    shows:
+      'Three sliders for Earth: how bright its atmosphere is drawn, how much light the night side keeps, and how wide the Sun’s glint on the oceans is.',
+    file: 'src/layers/body/ui/EarthTuningSectionContainer.tsx',
+  },
+  {
     heading: 'Debug Overlays',
     shows:
       'Three pictures laid over the scene: the buffer a click is looked up in, the stand-in shapes of the orbit trails, and the level of detail of each ground tile.',
     file: `${PANEL}/DebugOverlaysSection.tsx`,
   },
   {
-    heading: 'Surface Tiles',
+    heading: 'Focus moves',
     shows:
-      'Near Earth or Mars: how many ground tiles are held and at what depth. Ten buttons fly to test sites, from Søndermarken and Everest to the four Mars rover sites, and two switches flatten the terrain or drop the tiles’ skirts.',
-    file: `${PANEL}/SurfaceTileAtlasSection.tsx`,
-  },
-  {
-    heading: 'Terrain pick marker',
-    shows:
-      'The size of the marker drawn where the pointer meets the ground, and the height of the terrain under it.',
-    file: `${PANEL}/TerrainPickMarkerTuningSection.tsx`,
+      'The duration of an Eased focus move, and the Geodesic move’s pan-against-zoom balance, speed, shortest and longest duration and arrival ease. A move already in flight keeps the values it started with.',
+    file: `${PANEL}/FocusMovesTuningSection/FocusMovesTuningSection.tsx`,
   },
   {
     heading: 'Galaxy Provenance',

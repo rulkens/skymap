@@ -19,7 +19,8 @@ import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/G
 import type { GalaxyColumns } from '../../@types/data/galaxyCatalog/GalaxyColumns';
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 
-import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCES } from './sources/galaxyCatalogSources';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, COSMO } from '../../services/engine/frame/slabs';
 
@@ -99,7 +100,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   const points = new Map<GalaxyCatalogSourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>(
     GALAXY_CATALOG_SOURCES.map((code) => [
       code,
-      wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[code], deps, {
+      wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[code], deps, {
         pointRenderer,
         catalogs,
         records,
@@ -110,10 +111,10 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   );
   const octreePoints = new Map(
     GALAXY_CATALOG_SOURCES.filter(
-      (code) => (SOURCE_REGISTRY[code] as GalaxyCatalogSourceEntry).octree !== undefined,
+      (code) => (APP_SOURCE_REGISTRY[code] as GalaxyCatalogSourceEntry).octree !== undefined,
     ).map((code) => [
       code,
-      wireGalaxyOctreeSlot(SOURCE_REGISTRY[code], deps, {
+      wireGalaxyOctreeSlot(APP_SOURCE_REGISTRY[code], deps, {
         pooledPointRenderer,
         chunkStreams,
         records,
@@ -145,6 +146,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     },
     residencyVersion: 0,
     publish: deps.publish,
+    focusBindGroup: deps.focusUniform.bindGroup,
     points,
     octreePoints,
     chunkStreams,

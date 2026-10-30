@@ -13,7 +13,8 @@ import { wireGalaxyOctreeSlot } from '../../../../src/layers/galaxyCatalog/load/
 import { galaxyOctreeFetcher } from '../../../../src/layers/galaxyCatalog/load/galaxyOctreeFetcher';
 import { GALAXY_COLUMN_SCHEMA } from '../../../../src/data/octree/galaxyOctreeFamily';
 import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { octreePoolShape } from '../../../../src/utils/octree/octreePoolShape';
 import type { GalaxyColumns } from '../../../../src/@types/data/galaxyCatalog/GalaxyColumns';
 import type { GalaxyCatalogSourceType } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
@@ -75,7 +76,7 @@ describe('wireGalaxyOctreeSlot', () => {
     const chunkStreams = new Map<SourceType, OctreeChunkStream<GalaxyColumns>>();
     const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
     const slot = wireGalaxyOctreeSlot(
-      SOURCE_REGISTRY[Source.Glade],
+      APP_SOURCE_REGISTRY[Source.Glade],
       { publish: vi.fn(), requestRender: vi.fn() },
       {
         pooledPointRenderer: renderer as unknown as GalaxyPooledPointRenderer,
@@ -86,7 +87,7 @@ describe('wireGalaxyOctreeSlot', () => {
     );
 
     await slot.load({ source: Source.Glade, tier: 'medium' });
-    const { budgets, poolNodesPerRecord } = SOURCE_REGISTRY[Source.Glade].octree;
+    const { budgets, poolNodesPerRecord } = APP_SOURCE_REGISTRY[Source.Glade].octree;
     const pool = octreePoolShape(OCTREE, budgets.medium.poolRecords, poolNodesPerRecord);
     expect(renderer.upload).toHaveBeenCalledWith(Source.Glade, OCTREE, pool, {
       medianAbsMag: -20,

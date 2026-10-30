@@ -1,0 +1,36 @@
+.frame {
+  position: relative;
+}
+
+/* touch-action: none keeps the browser from panning or zooming the page and cancelling the drag.
+   The dot grid marks it as a surface to drag on rather than an empty box. */
+.pad {
+  height: var(--pad-height, 40vh);
+  min-height: 14rem;
+  background:
+    radial-gradient(circle, var(--border-control) 1px, transparent 1.5px) center / var(--space-12)
+      var(--space-12),
+    var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pad:active {
+  border-color: var(--border-hover);
+}
+
+.label {
+  position: absolute;
+  /* Inset on both sides by the hold buttons' column, so centred text never runs under it. */
+  inset: auto calc(var(--touch-target) + var(--space-6)) var(--space-6);
+  text-align: center;
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-base);
+  pointer-events: none;
+}

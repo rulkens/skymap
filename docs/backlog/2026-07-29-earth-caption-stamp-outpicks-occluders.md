@@ -11,7 +11,7 @@ regardless of how the sphere's depth is produced.
 
 ## Mechanism
 
-`bodyGlintsPass.drawPick` (`bodyGlintsPass.ts:318-330`) emits an ~18 px pick
+`bodyGlintsPass.drawPick` (`bodyGlintsPass.ts:121-135`) emits an ~18 px pick
 point at Earth's centre, forced to `PICK_BAND_EARTH_EPS = 5.0e-4` — the
 shallowest of the three glint priority bands, chosen so Earth out-picks the Moon
 and every planet _at glint scale_.
@@ -36,9 +36,9 @@ a _third_ body sits between the camera and Earth's centre.
 
 ## Why the guard that exists does not cover it
 
-The stamp is gated on `earthCaptionPickable` — Earth is seeded, and the camera is
-within `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`. There is no condition on Earth
-actually being at glint scale. The comment at `bodyGlintsPass.ts:311-314`
+The stamp is gated on `captionShown(ctx, EARTH_ENTRY.id)` — Earth's `label:body` caption band
+is above 0 at the eye. There is no condition on Earth
+actually being at glint scale. The comment in `bodyGlintsPass.ts`'s `drawPick`
 addresses the resolved case and dismisses it:
 
 > when Earth is resolved and large the extra 18 px point overlapping the sphere
@@ -72,7 +72,7 @@ choosing.
 
 ## Files
 
-- `src/services/engine/frame/passes/bodyGlintsPass.ts:297-330` — the stamp, its
+- `src/layers/body/passes/bodyGlintsPass.ts:46-48,121-135` — the stamp, its
   gate, and the comment that dismisses the overlap.
 - `src/services/gpu/shaders/lib/pickDepthBands.wesl` — the bands and the
   `~orbitDistance/4` reasoning.

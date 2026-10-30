@@ -18,7 +18,8 @@
  * this planner imports both.
  */
 
-import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { Source } from '../../../data/source';
+import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import { absoluteFromApparent, cartesianToRaDec, smoothstep } from '../../../utils/math/index';
 import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
 import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
@@ -130,7 +131,7 @@ export function createProceduralDiskSubsystem(
         // intrinsically bright galaxies bloom in the disk view too.
         const absMag = absoluteFromApparent(block.magG[i]!, dMpcFromOrigin);
         const rawSb = galaxySbAmp(absMag, medianAbsMag, dKpcRow);
-        const regEntry = SOURCE_REGISTRY[source];
+        const regEntry = APP_SOURCE_REGISTRY[source];
         const sbBoost = regEntry.type === 'galaxyCatalog' ? regEntry.sbBoost : 1;
         // sourceOpacity is the survey-fade term (see beginBlock above) — folded
         // in here because sbAmp is the sole brightness/alpha multiplier the

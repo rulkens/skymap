@@ -10,7 +10,7 @@ import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { GalaxyRecordBridge } from '../@types/GalaxyRecordBridge';
 
-import { GALAXY_CATALOG_SOURCES } from '../../../data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
 import { angularSepSqArcsec } from '../../../utils/math/angularSepSqArcsec';
 import { durableIdClaimants } from '../../../utils/galaxy/durableIdClaimants';

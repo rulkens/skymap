@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { sameRequest } from '../../../../src/utils/loading/sameRequest';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
@@ -21,7 +21,7 @@ import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/
 
 // The rows as the demand loop sees them — `createLayers` folds companions over
 // core's authored table plus every Layer's, and the fold is per-key local.
-const RUNTIME = { points: new Map() } as unknown as GalaxyCatalogRuntime;
+const RUNTIME = { points: new Map(), octreePoints: new Map() } as unknown as GalaxyCatalogRuntime;
 const EXPANDED_ROWS = expandCompanionRows(galaxyCatalogAssetRows(RUNTIME));
 
 function rowFor(key: AssetKey) {
@@ -43,6 +43,7 @@ function makeCtx(over: {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: over.tier ?? 'large',
+    selectedKinds: new Set(),
   };
 }
 

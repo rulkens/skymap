@@ -6,9 +6,9 @@
  * a moon's correction also shifts M before Kepler, so it stays on its conic.
  * `orbit` is the PROPAGATED element set at `t` the body was placed with, so
  * the orbit trail draws the same conic instead of re-deriving its own.
- * Memoized on `simDays` and the trajectory registry version: every pass (draw, pick, labels) reads the same
- * snapshot each frame, so recomputing per reader would tear a mid-frame
- * clock tick between passes.
+ * Memoized on `simDays` and the trajectory registry version: every pass (draw,
+ * pick, labels) reads the same snapshot each frame, so recomputing per reader
+ * would tear a mid-frame clock tick between passes.
  */
 
 import type { BodyState } from '../../../@types/scene/BodyState';
@@ -26,10 +26,11 @@ import { sitePointBodyFixed } from '../../../utils/camera/sitePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { orbitRowPlacement } from '../../../utils/orbit/orbitRowPlacement';
 import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 // The focus graph is authored, static data, so its order is resolved once at
 // module load and replayed every instant: the per-frame cost stays one linear
@@ -37,13 +38,19 @@ import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
 // mistake belongs — instead of on whichever frame first reaches the bad row.
 const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
 
-// The last computed snapshot, keyed by the instant and the trajectory registry
-// version it was computed at. A frame re-reads the same instant from several
+// The last computed snapshot, keyed by the instant and the registry version it
+// was computed at. A frame re-reads the same instant from several
 // passes and a paused clock re-reads it every frame, so a one-deep cache makes
 // both free; a new instant, or a track arriving on a paused clock, recomputes.
-let cache: { simDays: number; version: number; states: ReadonlyMap<string, BodyState> } | undefined;
+let cache:
+  | {
+      simDays: number;
+      version: number;
+      states: ReadonlyMap<PositionedId, BodyState>;
+    }
+  | undefined;
 
-export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState> {
+export function deriveBodyStates(simDays: number): ReadonlyMap<PositionedId, BodyState> {
   const version = trajectoryRegistry.version();
   if (cache !== undefined && simDays === cache.simDays && version === cache.version) {
     return cache.states;
@@ -51,8 +58,8 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
 
   // Phase 1 — positions only, so phase 2 can orient a body against where the
   // *other* bodies ended up rather than against iteration order.
-  const positions = new Map<string, Vec3>();
-  const orbits = new Map<string, OrbitalElements>();
+  const positions = new Map<PositionedId, Vec3>();
+  const orbits = new Map<PositionedId, OrbitalElements>();
 
   // 1a — the roots: position authored, not orbited, so no orbit. The authored
   // position is shared by reference rather than copied: it is never mutated,
@@ -106,7 +113,7 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
 
   // Phase 2 — orientations over the finished position map. Anchors go through
   // `orientationForBody` too, so the rotation-row gate stays one gate.
-  const states = new Map<string, BodyState>();
+  const states = new Map<PositionedId, BodyState>();
   for (const [id, positionMpc] of positions) {
     states.set(id, {
       positionMpc,

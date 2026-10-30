@@ -10,7 +10,7 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { MissionsRuntime } from '../@types/MissionsRuntime';
-import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { trajectoryRegistry } from '../../../services/bodies/trajectoryRegistry';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { countAtOrBefore } from '../../../utils/math/countAtOrBefore';
@@ -18,8 +18,8 @@ import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { sampledDepthBinding } from '../../../services/engine/frame/sampledDepthBinding';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { sceneOccluderSpheres } from '../../../services/engine/frame/sceneOccluderSpheres';
+import { near0OverlayClipScale } from '../../../services/engine/frame/near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../../../services/engine/frame/near0OverlayVpF32';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { emphasisDim } from '../../../utils/scene/emphasisDim';
 
 export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missionTrails'> {
@@ -28,12 +28,11 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
     fade: 'missionTrails',
 
     enabled(_state, ctx, _view) {
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       return SAMPLED_BODIES.some(({ id }) => spacecraftPresent(id, ctx.snapshot.simDays));
     },
 
     draw(pass, view, ctx, state, fade) {
-      const { renderer } = runtime;
+      const renderer = runtime.trailRenderer;
       const states = sceneBodyStates(state, ctx);
       const tracks = renderer.ensureTracks(
         trajectoryRegistry.version(),
@@ -41,7 +40,10 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
       );
 
       renderer.beginFrame(pass, {
-        vp: near0OverlayVpF32(rebaseViewProj(view.slab.vp, view.camPos)),
+        vp: near0OverlayVpF32(
+          rebaseViewProj(view.slab.vp, view.camPos),
+          near0OverlayClipScale(view.slab.near),
+        ),
         camPosMpc: view.camPos,
         viewportPx: view.viewportPx,
         pxPerRad: ctx.drawPxPerRad,

@@ -6,11 +6,11 @@
  */
 
 import { SCENE_MESH_BODIES } from '../../data/bodies/sceneMeshBodies';
-import { SAMPLED_BODY_IDS } from '../../data/missions/sampledBodyIds';
+import { SAMPLED_BODY_IDS } from '../../data/bodies/sampledBodyIds';
 import { trajectoryRegistry } from '../../services/bodies/trajectoryRegistry';
 import { unixMsToJulianDays } from '../time/unixMsToJulianDays';
 
-const PRESENT_FROM_DAYS = new Map(
+const PRESENT_FROM_DAYS = new Map<string, number>(
   SCENE_MESH_BODIES.flatMap(({ id, presentFromIso }) =>
     presentFromIso === undefined ? [] : [[id, unixMsToJulianDays(Date.parse(presentFromIso))]],
   ),

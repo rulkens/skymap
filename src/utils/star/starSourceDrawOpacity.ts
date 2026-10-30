@@ -17,7 +17,7 @@ export function starSourceDrawOpacity(
   // Only a SURVEY row ships a bin, so only it can be loaded and drawn.
   if (entry.type !== 'starCatalog' || entry.binBaseName === null) return 0;
   // `SourceEntryBase.id` widens to `string`; a `starCatalog` row's id is a
-  // `StarCatalogId` by construction of `SOURCE_REGISTRY`, which is where the
+  // `StarCatalogId` by construction of `APP_SOURCE_REGISTRY`, which is where the
   // literal survives. Callers passing a registry row cannot violate this.
   return fade[entry.id as StarCatalogId] * starCrossfadeOpacity(entry.crossfadePc, camDistPc);
 }

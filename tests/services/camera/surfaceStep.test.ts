@@ -32,6 +32,8 @@ import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { TILT_GAIN } from '../../../src/data/camera/tiltGain';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { angleBetween } from '../../helpers/math/angleBetween';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
@@ -69,7 +71,7 @@ const BAND_MID_HR = Math.sqrt(TUNING.tiltFullHR * TUNING.tiltZeroHR);
 /** Parked at the midpoint, so `bodyUpWeight` is strictly in (0, 1) and the
  * un-map shows up in the numbers rather than as an identity. */
 const IN_BAND: BodyFixedPose = {
-  bodyId: 'earth',
+  bodyId: asSceneBodyId('earth'),
   anchorLocalM: [0, 0, 0],
   eyeRelAnchorM: [0, 0, R * (1 + BAND_MID_HR)],
   basisLocal: NADIR,
@@ -93,7 +95,12 @@ function hrOf(p: BodyFixedPose): number {
 }
 
 function poseAt(eyeM: Vec3, basisLocal: Mat3): BodyFixedPose {
-  return { bodyId: 'earth', anchorLocalM: [0, 0, 0], eyeRelAnchorM: eyeM, basisLocal };
+  return {
+    bodyId: asSceneBodyId('earth'),
+    anchorLocalM: [0, 0, 0],
+    eyeRelAnchorM: eyeM,
+    basisLocal,
+  };
 }
 
 function drag(mode: 'orbit' | 'pan', startPx: Vec2, endPx: Vec2): InputStep {
@@ -108,13 +115,6 @@ function zoom(factor: number, duringGesture: boolean, cursorPx: Vec2 | null = nu
 function eyeOf(pose: BodyFixedPose): Vec3 {
   const { anchorLocalM: a, eyeRelAnchorM: e } = pose;
   return [a[0] + e[0], a[1] + e[1], a[2] + e[2]];
-}
-
-function angleBetween(a: Vec3, b: Vec3): number {
-  const la = Math.hypot(...a);
-  const lb = Math.hypot(...b);
-  const c = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (la * lb);
-  return Math.acos(Math.max(-1, Math.min(1, c)));
 }
 
 /**
@@ -423,7 +423,9 @@ describe('surfaceStep', () => {
       0.5 * Math.hypot(0 - 0.6, 0, 2 - 0.8),
       11, // measured residual 1.2e-12
     );
-    expect(angleBetween(pickThrough(stepped, [75, 50])!, anchor)).toBeLessThan(1e-12);
+    // 1e-11: the honest ruler reads 2.9e-12 here; the acos one read anything
+    // under 1.5e-8 as exactly 0, so the old 1e-12 bound never measured this.
+    expect(angleBetween(pickThrough(stepped, [75, 50])!, anchor)).toBeLessThan(1e-11);
 
     // …and keeping the wheel turning walks the eye onto that point, which is
     // the user-visible property: what the cursor is over stays put and grows.
@@ -1118,7 +1120,7 @@ describe('surfaceStep', () => {
 
   it('a tilt drag writes the un-mapped memory and returns a new object', () => {
     const prev = Object.freeze({ gesture: 'down' as const });
-    const prevTilt: TiltMemory = { hostId: 'earth', rememberedTiltRad: 0 };
+    const prevTilt: TiltMemory = { hostId: asSceneBodyId('earth'), rememberedTiltRad: 0 };
     const { pose, gesture, tilt } = surfaceStep(prev, prevTilt, IN_BAND, tiltDrag(15), CTX);
 
     expect(gesture).not.toBe(prev);
@@ -1133,7 +1135,7 @@ describe('surfaceStep', () => {
   });
 
   it('a zoom step never authors tilt', () => {
-    const prevTilt: TiltMemory = { hostId: 'earth', rememberedTiltRad: 0.4 };
+    const prevTilt: TiltMemory = { hostId: asSceneBodyId('earth'), rememberedTiltRad: 0.4 };
     const step: InputStep = { kind: 'zoom', factor: 0.5, duringGesture: false, cursorPx: null };
     const { pose, gesture, tilt } = surfaceStep(
       EMPTY_SURFACE_GESTURE_MEMORY,
@@ -1180,7 +1182,7 @@ describe('the zoom settle is priced per unit of zoom, not per step (F1, ruling 2
     ];
     const m = R * (1 + BAND_MID_HR);
     return {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [LU[0] * m, LU[1] * m, LU[2] * m],
       basisLocal: [...right, ...up, ...forward] as Mat3,

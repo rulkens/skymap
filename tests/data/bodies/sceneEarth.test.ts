@@ -4,11 +4,12 @@ import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const hypot3 = (v: readonly [number, number, number]) => Math.hypot(v[0], v[1], v[2]);
 
 // Earth's position + orientation live in its derived BodyState, not the record.
-const earthState = deriveBodyStates(CONST_J2000).get('earth')!;
+const earthState = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
 
 describe('SCENE_EARTH', () => {
   it('sits ~1 AU from the Sun (derived J2000 heliocentric position)', () => {

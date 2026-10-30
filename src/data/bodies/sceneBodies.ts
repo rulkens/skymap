@@ -1,15 +1,8 @@
 /**
- * SCENE_BODIES — the flat registry every body-aware consumer reads from: the
- * command-palette search rows, the `body-<id>` focus-id resolver, and the
- * selection-row extractor all iterate / look up this one list. Seeding a new
- * body is a one-line push into its seed table (`sceneEarth`, `sceneStars`,
- * `sceneSun`, `scenePlanets`, `sceneSStars`, `sceneMeshBodies`) — no
- * parallel list to keep in sync. Membership
- * is what makes a body searchable, focusable and selectable AT ALL: all three
- * consumers return null on a miss, so an omitted body fails silently rather than
- * loudly. Consumers only touch the
- * fields the `SceneBody` union shares (`id`, `label`); a body's size and
- * position are not among them — see `SceneBody.d.ts` and `deriveBodyStates`.
+ * SCENE_BODIES — the flat registry the `body-<id>` focus-id resolver and the selection-row
+ * extractor look up. Membership is what makes a body focusable and selectable AT ALL: both
+ * consumers return null on a miss, so an omitted body fails silently. Consumers touch only the
+ * fields the `SceneBody` union shares (`id`, `label`).
  */
 
 import { SCENE_EARTH } from './sceneEarth';

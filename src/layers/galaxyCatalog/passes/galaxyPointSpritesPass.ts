@@ -33,7 +33,14 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
         select !== null && select.type === 'galaxyCatalog'
           ? packSelection(select.source, select.index)
           : SELECTION_NONE_SENTINEL;
-      const settings = galaxyPointDrawSettingsOf(view, ctx, state, fade, selectedPacked);
+      const settings = galaxyPointDrawSettingsOf(
+        view,
+        ctx,
+        state,
+        fade,
+        selectedPacked,
+        runtime.focusBindGroup,
+      );
       runtime.pointRenderer.draw(pass, view.vp, view.viewportPx, settings);
 
       const pooled = runtime.pooledPointRenderer;

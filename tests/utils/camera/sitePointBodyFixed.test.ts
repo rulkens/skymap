@@ -7,12 +7,14 @@ import { describe, it, expect } from 'vitest';
 
 import { sitePointBodyFixed } from '../../../src/utils/camera/sitePointBodyFixed';
 import type { SurfaceFixedSite } from '../../../src/@types/scene/SurfaceFixedSite';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 
 describe('sitePointBodyFixed', () => {
   it('returns the hand-computed point for a fixture site', () => {
     const site: SurfaceFixedSite = {
-      id: 'fixture',
-      hostId: 'fixture-host',
+      id: asSurfaceSiteId('fixture'),
+      hostId: asSceneBodyId('fixture-host'),
       latDeg: 30,
       lonDeg: 60,
       altitudeM: 100,

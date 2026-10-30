@@ -35,7 +35,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { STAR_RESOLVE_PX } from '../../../../src/data/bodies/starResolvePx';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../fixtures/makeSlab';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';

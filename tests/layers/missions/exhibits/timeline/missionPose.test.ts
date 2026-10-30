@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { DriverCtx } from '../../../../../src/@types/engine/camera/DriverCtx';
 import type { MissionCameraMemory } from '../../../../../src/layers/missions/@types/MissionCameraMemory';
 import type { MissionOffsets } from '../../../../../src/@types/camera/MissionOffsets';
@@ -35,6 +34,7 @@ import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { unixMsToJulianDays } from '../../../../../src/utils/time/unixMsToJulianDays';
 import { makeDriverCtx } from '../../../../helpers/camera/makeDriverCtx';
 import { loadVoyagerStopWindows } from '../../../../helpers/missions/loadVoyagerStopWindows';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const neptune = MISSION_EVENTS.find((e) => e.id === 'voyager2-neptune') as MissionEvent;
 const tc = unixMsToJulianDays(missionEventMs(neptune));
@@ -132,8 +132,8 @@ describe('missionPose', () => {
     const pose = worldPose(ctxAt(missionOf(), tc + dDays));
     const eye = eyeMpcOf(pose, BASIS);
     const states = deriveBodyStates(tc + dDays);
-    const craft = states.get('voyager2' as BodyId)!.positionMpc;
-    const target = states.get('neptune' as BodyId)!.positionMpc;
+    const craft = states.get(asSceneBodyId('voyager2'))!.positionMpc;
+    const target = states.get(asSceneBodyId('neptune'))!.positionMpc;
     expect(inFrustum(eye, pose.target, craft)).toBe(true);
     expect(inFrustum(eye, pose.target, target)).toBe(true);
   });
@@ -181,8 +181,8 @@ describe('missionPose', () => {
 
     it('keeps the eye outside the planet and slides the aim to the craft', () => {
       const states = deriveBodyStates(t);
-      const earth = states.get('earth' as BodyId)!.positionMpc;
-      const craft = states.get('voyager1' as BodyId)!.positionMpc;
+      const earth = states.get(asSceneBodyId('earth'))!.positionMpc;
+      const craft = states.get(asSceneBodyId('voyager1'))!.positionMpc;
       const pose = worldPose(ctxAt(zoomed, t));
       const exact = worldPose(ctxAt(missionOf(undefined, false, 'voyager1'), t));
       expect(dist(eyeMpcOf(pose, BASIS), earth)).toBeGreaterThanOrEqual(bodyRadiusMpc('earth'));
@@ -197,7 +197,7 @@ describe('missionPose', () => {
       const zoom = out.own!.offsets.zoom;
       expect(zoom).toBeLessThan(0.01);
       if (out.pose.frame !== 'absolute') throw new Error('expected the world arm');
-      const earth = deriveBodyStates(t).get('earth' as BodyId)!.positionMpc;
+      const earth = deriveBodyStates(t).get(asSceneBodyId('earth'))!.positionMpc;
       const eye = eyeMpcOf(out.pose.pose, BASIS);
       expect(dist(eye, earth) / bodyRadiusMpc('earth')).toBeCloseTo(1.02, 6);
       const again = worldPose(ctxAt(missionOf({ yaw: 0, pitch: 0, zoom }, false, 'voyager1'), t));
@@ -281,7 +281,7 @@ describe('missionPose', () => {
   }
 
   function craftInView(pose: CameraPose, simDays: number): boolean {
-    const craft = deriveBodyStates(simDays).get('voyager2' as BodyId)!.positionMpc;
+    const craft = deriveBodyStates(simDays).get(asSceneBodyId('voyager2'))!.positionMpc;
     return inFrustum(eyeMpcOf(pose, BASIS), pose.target, craft);
   }
 

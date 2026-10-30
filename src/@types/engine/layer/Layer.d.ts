@@ -15,6 +15,7 @@ import type { Exhibit } from '../../exhibits/Exhibit';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
+import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { SlabRow } from '../frame/SlabRow';
 import type { LayerCoreDeps } from './LayerCoreDeps';
@@ -43,7 +44,6 @@ export type Layer<
   /** Folded into the app's slice list by `appSettingsSlices`. Absent = no knobs. */
   readonly settings?: Settings;
 
-  // Static contributions: plain data, readable without booting anything.
   /** Appended after core's `renderTargetRows` by the `renderTargets` GPU-handle
    * row (`composeRenderTargetRows`); ids are globally unique — a duplicate
    * throws at boot. */
@@ -55,12 +55,12 @@ export type Layer<
    * `anchorId`s are globally unique and the composed total must fit
    * `LAYER_SLAB_ROW_HEADROOM` — both throw at boot. */
   readonly slabs?: readonly SlabRow[];
-  /** Exhibit rows, folded after core's into `APP_EXHIBITS` by import (`appExhibits`); the
+  /** Exhibit rows, folded after core's into `APP_EXHIBIT_REGISTRY` by import (`appExhibits`); the
    * engine reads them here for their sections' camera rows. Ids unique, asserted at import. */
   readonly exhibits?: readonly Exhibit[];
-  /** Typing only: `data/sources.ts` folds the same rows into `SOURCE_REGISTRY` by import. */
+  /** Typing only: `compositions/appSources.ts` collects the same rows into `APP_SOURCE_REGISTRY` by import. */
   readonly sources?: Sources;
-  /** Typing only: `data/bodies/layerBodyRows.ts` folds the same rows into the body tables by import. */
+  /** Typing only: the composition root collects the same rows in `compositions/appBodies.ts`. */
   readonly bodies?: readonly LayerBody[];
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
   readonly facts?: Facts;
@@ -68,23 +68,21 @@ export type Layer<
    * `debug` in DebugPanel), a detail card, or a `labelsAndGuides` toggle row, which
    * `selectToggleRows` appends after the label-category rows in composition order. */
   readonly ui?: readonly LayerUiEntry[];
-  /** What this Layer can show and label. The address types derive from `APP_VISIBILITY`,
+  /** What this Layer can show and label. The address types derive from `APP_VISIBILITY_REGISTRY`,
    * which imports the same tuple from the Layer's `visibility.ts`, never from here. */
   readonly visibility?: readonly VisibilityEntry[];
 
-  // Lifecycle. Every member below is invoked from exactly one place —
-  // `instantiateLayer` — which is where to look to see the call shapes together.
+  // Every member below is invoked from `instantiateLayer`.
   /** Mints the private Runtime, after `initGpu` and before `wireSlots`. */
   create(deps: LayerCoreDeps<Facts>): Runtime;
   /** Run at teardown via the instance closure. WebGPU frees nothing on GC: release
    * what `create` took, subsystems before the renderers they hold. */
   destroy(runtime: Runtime): void;
 
-  // Runtime-bound contributions: closures over the Layer's own state.
   /** Appended after `CONTENT_PASSES` in `createLayers`; names are globally unique —
    * a duplicate throws at boot. */
   passes(runtime: Runtime): readonly ContentPass[];
-  /** Appended after `CORE_COMPUTES` in `createLayers`; names are globally unique —
+  /** Composed across Layers in `createLayers`; names are globally unique —
    * a duplicate throws at boot, and a name `FRAME_ORDER` never lists just never runs. */
   computes?(runtime: Runtime): readonly ContentCompute[];
   /** Rows join core's table in `createLayers`, which builds, wires and demand-drives
@@ -93,8 +91,8 @@ export type Layer<
   /** Three independent row sets, each composed in `createLayers`: `screenLabels` rows register
    * with the director of the slab they name, then poll once a frame like any
    * other screen-space producer; `worldLabels` rows join
-   * `state.label3DProducers`, walked by `runLabel3DProducers`; `orbitTrails` rows
-   * join `state.orbitTrailRows`, walked by `orbitTrailsPass`. Each label `id`
+   * `state.label3DProducers`, walked by `runLabel3DProducers`; the `orbitTrails` group
+   * joins `state.orbitTrailGroups`, walked by `orbitTrailsPass`. Each label `id`
    * must be stable across frames. */
   guides?(runtime: Runtime): LayerGuides;
   /** Folded by `composeSelectionRows`; `pickSources` are disjoint across Layers,
@@ -109,4 +107,6 @@ export type Layer<
   /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
+  /** The ground height core's camera reads; the datum with none. One provider per composition; boot throws on two. */
+  heightAt?(runtime: Runtime): TerrainHeightAtLookup;
 };

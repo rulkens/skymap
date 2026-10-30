@@ -1,2 +1,4 @@
-/** What a held press drives; #837 adds its navigator axes here. */
-export type HeldIntent = 'orbit' | 'pan';
+import type { NavIntent } from './NavIntent';
+
+/** What a held press drives. */
+export type HeldIntent = 'orbit' | 'pan' | NavIntent;

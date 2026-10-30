@@ -5,7 +5,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { sourceMaskOf } from '../../../../src/layers/galaxyCatalog/present/sourceMaskOf';
-import { Source, GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { GALAXY_CATALOG_SOURCES } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import { maskHas } from '../../../../src/utils/maskHas';
 import { makeGalaxyCatalogFade } from '../../../fixtures/makeGalaxyCatalogFade';
 

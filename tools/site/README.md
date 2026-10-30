@@ -39,7 +39,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 `npm run site:loops -- --url http://localhost:<port>` records every row of `packages/website/src/data/siteLoops.ts` from a running app and writes it to `packages/website/src/assets/loops/<id>.mp4` (H.264), which is committed: the files are small, ship with the site and need no upload. A loop is the short silent film inside a place's disc on Home; the page fetches one only when a visitor points at that place.
 
-- A row names the shot it starts from (`shot`), so the film opens on the picture it lies over, and a `motion`. `orbit` takes the camera once round its target with the clock stopped; `swayDeg` swings it that far to each side and back; `clockDays` leaves the camera alone and runs the clock, which must bring the scene back to its start (Earth: one turn against the stars, 0.99727 days). All three end where they began, so the film repeats without a seam.
+- A row names the shot it starts from (`shot`), so the film opens on the picture it lies over, and a `motion`. `orbit` takes the camera once round its target with the clock stopped; `swayDeg` swings it that far to each side and back; `clockDays` runs the clock, which must bring the scene back to its start (Earth: one turn against the stars, 0.99727 days), and leaves the camera alone unless the row adds `orbitTurns` or `swayDeg`. Those end where they began, so the film repeats without a seam. `live` moves nothing and takes frames of a scene that moves by itself (the flow ribbons, which run on the wall clock): it records a second longer and fades that extra second into the film's start, since nothing brings such a scene back.
 - The runner moves the camera or the clock one step, draws a frame and reads the canvas, so a slow frame costs time and never smoothness. Frames are kept as PNGs in `data/shots/site/loops/<id>/` (gitignored); `--from-masters` re-encodes from those, `--only id,id` limits a run. Needs `ffmpeg` with `libx264`.
 - Size, frame rate, CRF and the cap are in `siteLoopPlan.ts`, with the measurement that chose H.264 over AV1 (at these sizes AV1 turns the coloured stars grey). A file over the cap is encoded again at a higher CRF until it fits; the runner prints each file's size and the CRF it ended on, and fails if a file cannot be brought under.
 - What costs bytes is every pixel changing: a full orbit of a dense field of points (Laniakea) is 1.8 MB at the starting CRF, a sway of 5 degrees fits the cap. Choose the motion before raising the cap.
@@ -68,6 +68,10 @@ One-shot generators for the website's committed assets and its hero media. Each 
 ## Link check
 
 `npm run site:links` (after `npm run site:build`, and in CI) walks `dist/home/**/*.html` and resolves every internal `href`, `src` and `srcset` candidate: base-prefixed pages and files against the build, root-absolute shared files (`/fonts`, `/images/featured`, `/favicon.svg`) against the repo's `public/`, `/` as the app, and `#anchors` against the target page's ids. The only pages a link may point at before they exist are the `planned` rows of the docs tree (`packages/website/src/data/docsTree.ts`); such links are reported as pending. The check fails if a planned page now exists, so the PR that writes a page sets its row to `live`.
+
+## Structure check
+
+`npm run site:structure` (after `npm run site:build`) compares each landing page's `<page>.structure.yaml` (`packages/website/src/content/pages/<page>/`) with its built HTML: the YAML's sections are the page's h2s and their `parts` its h3s, inside `<main>`. A heading only one side has fails the check.
 
 ## External link check
 

@@ -7,7 +7,7 @@
  * exists for.
  */
 import { describe, expect, it } from 'vitest';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { parsePolyphyTraceSidecar } from '../../../../tools/parsers/polyphyTraceSidecar';
 import { autoFitGridBox } from '../../../../tools/mcpm-workbench/src/field/autoFitGridBox';
 import { emitTraceSidecar } from '../../../../tools/mcpm-workbench/src/export/emitTraceSidecar';

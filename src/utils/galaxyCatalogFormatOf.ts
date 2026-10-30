@@ -3,7 +3,7 @@
  * there is one, else the octree when the row ships one, else the flat files.
  */
 
-import { SOURCE_REGISTRY } from '../data/sources';
+import { APP_SOURCE_REGISTRY } from '../compositions/appSources';
 import type { GalaxyCatalogFormat } from '../@types/data/galaxyCatalog/GalaxyCatalogFormat';
 import type { GalaxyCatalogSourceEntry } from '../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
 import type { GalaxyCatalogSourceType } from '../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
@@ -12,6 +12,6 @@ export function galaxyCatalogFormatOf(
   formats: Partial<Record<GalaxyCatalogSourceType, GalaxyCatalogFormat>>,
   source: GalaxyCatalogSourceType,
 ): GalaxyCatalogFormat {
-  const entry: GalaxyCatalogSourceEntry = SOURCE_REGISTRY[source];
+  const entry: GalaxyCatalogSourceEntry = APP_SOURCE_REGISTRY[source];
   return formats[source] ?? (entry.octree !== undefined ? 'octree' : 'skmp');
 }

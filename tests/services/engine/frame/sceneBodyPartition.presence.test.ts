@@ -1,23 +1,21 @@
 import { describe, expect, it } from 'vitest';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
+import { bodySceneBodyPartition } from '../../../../src/layers/body/present/bodySceneBodyPartition';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
-import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySlabRosterIds';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
-import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { EARTH_SCENE_BODY_IDS } from '../../../../src/data/bodies/earthSceneBodyIds';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
-import { SAMPLED_BODY_IDS } from '../../../../src/data/missions/sampledBodyIds';
-import { SCENE_BODY_CAPTION_LABEL } from '../../../../src/data/labels/sceneBodyCaptionLabel';
-import { claimedLabelItemsOf } from '../../../../src/utils/visibility/claimedLabelItemsOf';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
 import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
@@ -26,6 +24,8 @@ import type { StarBody } from '../../../../src/@types/scene/StarBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
 const T0 = 2444000.5;
@@ -38,17 +38,16 @@ const STATE = {
     galaxyPickRenderer: {},
     renderTargets: {},
     compositor: {},
-    texturedBodyRenderer: null,
   },
+  terrainHeightAt: datumOnlyTerrainHeight,
   subsystems: {
     texturedDisks: {},
     fades: { opacityOf: () => 1 },
     clipPlayer: { clipOpacityOf: () => 1 },
   },
-  visibilityEntries: APP_VISIBILITY,
+  visibilityEntries: APP_VISIBILITY_REGISTRY,
   selectionRows: { hover: null, select: null, focus: null },
   slabRows: [],
-  data: { bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES } },
   settings: {
     bodies: { items: makeBodyItems() },
     missions: { craft: null },
@@ -72,26 +71,20 @@ const viewAt = (simDays: number) =>
       altitudeMpc: POSE.distance,
       nowMs: 0,
       simDays,
+      bodyStates: deriveBodyStates(simDays),
     },
     { width: 1920, height: 1080 },
   )!;
 
 const drawnIds = (simDays: number): string[] => {
   const view = viewAt(simDays);
-  const { glints, meshes } = sceneBodyPartition(STATE as never, view);
+  const roster = bodySlabRosterIds(view.snapshot.meshBodies);
+  const { glints, meshes } = sceneBodyPartition(STATE as never, view, roster, () => false);
   return [...glints, ...meshes].map((body) => body.id);
 };
-// Core captions every body but the sampled craft, which the missions Layer claims and captions.
-const CRAFT_FADE = Object.fromEntries(SAMPLED_BODY_IDS.map((id) => [id, 1]));
+// The missions Layer captions every craft; core captions none.
 const labelIds = (simDays: number): string[] =>
-  [
-    ...sceneBodyLabels(
-      deriveBodyStates(simDays),
-      simDays,
-      claimedLabelItemsOf(APP_VISIBILITY, SCENE_BODY_CAPTION_LABEL),
-    ),
-    ...produceMissionCaptions(STATE, viewAt(simDays), CRAFT_FADE).labels,
-  ].map((label) => label.id);
+  produceMissionCaptions(STATE, viewAt(simDays), { craft: 1 }).labels.map((label) => label.id);
 
 describe('spacecraft presence', () => {
   it('a body with a presence date is absent before it, present after', () => {
@@ -128,7 +121,6 @@ describe('spacecraft presence', () => {
   });
 });
 
-// The four-way routing of core's own bodies, fed straight through `sceneBodies`.
 const PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 6));
 const CAM: Vec3 = [0, 0, 0];
 const CLOSE = (radiusM: number) => radiusM * 5; // resolved (~hundreds of px)
@@ -136,7 +128,7 @@ const AU_M = SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.M_TO_MPC; // deep sub-pixel
 
 const planetAt = (id: string, radiusM: number, distanceM: number): PositionedSceneBody => ({
   body: {
-    id,
+    id: asSceneBodyId(id),
     label: id,
     surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     albedo: [0.5, 0.5, 0.5],
@@ -146,7 +138,7 @@ const planetAt = (id: string, radiusM: number, distanceM: number): PositionedSce
 });
 const meshAt = (id: string, radiusM: number, distanceM: number): PositionedSceneBody => ({
   body: {
-    id,
+    id: asSceneBodyId(id),
     label: id,
     boundingRadiusM: radiusM,
     albedo: [0.5, 0.5, 0.5],
@@ -158,18 +150,16 @@ const meshAt = (id: string, radiusM: number, distanceM: number): PositionedScene
 });
 
 /** The frame's mesh bodies are the meshes given; `sceneBodies` may hold more. Planet ids are
- *  `SCENE_PLANETS` ids, so core counts them as its own. */
+ *  `SCENE_PLANETS` ids, so the body Layer counts them as its own. */
 function partition(
   own: readonly PositionedSceneBody[],
   resident: (id: string) => boolean,
   extra: readonly PositionedSceneBody[] = [],
 ) {
   const state = {
-    gpu: {
-      texturedBodyRenderer: { hasMap: (id: string) => resident(id) },
-      meshBodyRenderer: { hasMesh: (id: string) => resident(id) },
-    },
+    gpu: { meshBodyRenderer: { hasMesh: (id: string) => resident(id) } },
   } as unknown as PassState;
+  const runtime = { texturedBodyRenderer: { hasMap: (id: string) => resident(id) } };
   const ctx = {
     snapshot: {
       meshBodies: own.filter((p) => 'meshKey' in p.body).map((p) => p.body),
@@ -178,7 +168,7 @@ function partition(
     drawCamPos: CAM,
     drawPxPerRad: PX_PER_RAD,
   } as unknown as FrameView;
-  return sceneBodyPartition(state, ctx);
+  return bodySceneBodyPartition(state, ctx, runtime as unknown as BodyRuntime);
 }
 const bodiesOf = (bodies: readonly PositionedSceneBody[]) => bodies.map((p) => p.body);
 const idsOf = (bodies: readonly { readonly id: string }[]) => bodies.map((b) => b.id);
@@ -189,7 +179,7 @@ describe('sceneBodyPartition routing', () => {
       planetAt('mars', 3390000, CLOSE(3390000)), // resolved, registry
       planetAt('titan', 2575000, CLOSE(2575000)), // resolved, not registry
       planetAt('jupiter', 69911000, AU_M), // sub-pixel glint
-      meshAt('whale', 6.8, CLOSE(6.8)), // resolved mesh
+      planetAt('phobos', 11000, 55000), // resolved shape-model mesh
     ];
     const { glints, flat, textured, meshes } = partition(bodies, () => true);
     const all = idsOf([...glints, ...flat, ...textured, ...meshes]);
@@ -215,18 +205,11 @@ describe('sceneBodyPartition routing', () => {
     expect(glints).toEqual([]);
   });
 
-  it('routes a sub-3px body, planet or mesh, to glints', () => {
-    const bodies = [planetAt('jupiter', 69911000, AU_M), meshAt('whale', 6.8, AU_M)];
+  it('routes a sub-3px body, planet or shape-model moon, to glints', () => {
+    const bodies = [planetAt('jupiter', 69911000, AU_M), planetAt('phobos', 11000, AU_M)];
     const { glints, flat, textured, meshes } = partition(bodies, () => true);
     expect(glints).toEqual(bodiesOf(bodies));
     expect([...flat, ...textured, ...meshes]).toEqual([]);
-  });
-
-  it('routes a resolved MeshBody to meshes, never textured or flat', () => {
-    const whale = meshAt('whale', 6.8, CLOSE(6.8));
-    const { meshes, flat, textured, glints } = partition([whale], () => true);
-    expect(idsOf(meshes)).toEqual(['whale']);
-    expect([...flat, ...textured, ...glints]).toEqual([]);
   });
 
   // A moon drawn from a shape model keeps its sphere until the mesh decodes.
@@ -238,17 +221,41 @@ describe('sceneBodyPartition routing', () => {
     expect(loading.meshes).toEqual([]);
   });
 
-  // A mission mesh has no sphere to fall back to: drawing one would be a wrong shape.
+  // earthScenes' roster holds the MeshBody; core's holds none, so these run on that roster.
+  const earthSceneRouting = (scene: PositionedSceneBody, resident: boolean) => {
+    const state = {
+      gpu: { meshBodyRenderer: { hasMesh: () => resident } },
+    } as unknown as PassState;
+    const ctx = {
+      snapshot: { meshBodies: [scene.body], sceneBodies: [scene] },
+      drawCamPos: CAM,
+      drawPxPerRad: PX_PER_RAD,
+    } as unknown as FrameView;
+    return sceneBodyPartition(state, ctx, EARTH_SCENE_BODY_IDS, () => false);
+  };
+
+  it('routes a resolved MeshBody to meshes, never textured or flat', () => {
+    const { meshes, flat, textured, glints } = earthSceneRouting(
+      meshAt('soendermarken', 160, CLOSE(160)),
+      true,
+    );
+    expect(idsOf(meshes)).toEqual(['soendermarken']);
+    expect([...flat, ...textured, ...glints]).toEqual([]);
+  });
+
+  // A mesh body has no sphere to fall back to: drawing one would be a wrong shape.
   it('drops a resolved MeshBody whose mesh is not resident from every branch', () => {
-    const whale = meshAt('whale', 6.8, CLOSE(6.8));
-    const { meshes, flat, textured, glints } = partition([whale], () => false);
+    const { meshes, flat, textured, glints } = earthSceneRouting(
+      meshAt('soendermarken', 160, CLOSE(160)),
+      false,
+    );
     expect([...meshes, ...flat, ...textured, ...glints]).toEqual([]);
   });
 
   it("takes only core's own bodies", () => {
     const sun: PositionedSceneBody = {
       body: {
-        id: 'sun',
+        id: asSceneBodyId('sun'),
         label: 'Sun',
         absMag: 4.8,
         color: [1, 1, 1],

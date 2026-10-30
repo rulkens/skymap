@@ -26,9 +26,9 @@
  * row is its consumer. The row's precedence ladder is `pending` first, then the
  * resolved value — so the two rungs have to MEET. They do not meet at the ref.
  *
- * The URL composes from `selectionRows.focus`, the saga-owned derived cache, not
- * from the ref: only the row carries the catalog-resolved identity a galaxy id
- * needs. That row lands one action AFTER the ref, because the reconciler
+ * The URL composes from `selectionRows.focusId`, stored with the saga-owned
+ * `selectionRows.focus` row, not from the ref: a galaxy id needs the
+ * catalog-resolved identity. That row lands one action AFTER the ref, because the reconciler
  * (`watchSelectionRowsSaga`) has to be woken by the ref write to produce it. So
  * retiring `pending` on `updateSelectionFocus` opened a one-action window in
  * which the lower rung still held the PREVIOUS target and the upper rung had

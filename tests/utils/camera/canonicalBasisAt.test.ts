@@ -6,6 +6,7 @@ import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { EyeFrame } from '../../../src/@types/camera/EyeFrame';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // An equatorial standpoint (localUp = +X), so east/north are the ordinary
 // geographic ones rather than the pole's degenerate fallback.
@@ -49,7 +50,7 @@ describe('canonicalBasisAt', () => {
     const azimuthRad = 2.1;
     const tiltRad = 1.0; // away from the 45° source-switch in refAzimuthOf
     const pose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [5, 0, 0], // eye along localUp, radius 5
       basisLocal: canonicalBasisAt(FRAME, azimuthRad, tiltRad),

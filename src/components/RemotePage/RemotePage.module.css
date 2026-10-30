@@ -1,0 +1,80 @@
+.root {
+  box-sizing: border-box;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+  padding-bottom: max(var(--space-8), env(safe-area-inset-bottom, 0px));
+  color-scheme: dark;
+}
+
+/* Sticky so a lost link shows wherever the page is scrolled; opaque so sections slide under it. */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  min-height: var(--touch-target);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-6);
+  padding: max(var(--space-6), env(safe-area-inset-top, 0px)) var(--space-8) var(--space-6);
+  background: var(--color-bg);
+  font-size: var(--font-size-input);
+}
+
+.focus {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.steer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-8) var(--space-8);
+}
+
+/* Home takes the width the two square scheme buttons leave. */
+.homeRow {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.home {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.sections[inert] {
+  opacity: 0.4;
+}
+
+/* A laptop has the width for the pad and the sections side by side; the pad stays put while they scroll. */
+@media (min-width: 64rem) {
+  .root {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    max-width: 72rem;
+    --pad-height: 60vh;
+  }
+
+  .root > :not(.steer, .sections) {
+    grid-column: 1 / -1;
+  }
+
+  .steer {
+    position: sticky;
+    top: var(--touch-target);
+  }
+
+  .sections > :first-child {
+    border-top: none;
+  }
+}

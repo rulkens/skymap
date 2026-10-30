@@ -7,7 +7,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createStarCatalogSlot } from '../../../../src/layers/starCatalog/load/starCatalogSlot';
 import { resizeStarPools } from '../../../../src/layers/starCatalog/load/resizeStarPools';
-import { SOURCE_REGISTRY, Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import type { OctreeChunkStream } from '../../../../src/@types/octree/OctreeChunkStream';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogRenderer } from '../../../../src/layers/starCatalog/@types/StarCatalogRenderer';
@@ -48,7 +49,7 @@ function setup(override: { value: number | null }) {
 
 const REQ = { source: Source.GaiaStars, tier: 'medium' } as const;
 const tierPoolRecords = () => {
-  const entry = SOURCE_REGISTRY[Source.GaiaStars];
+  const entry = APP_SOURCE_REGISTRY[Source.GaiaStars];
   if (entry.type !== 'starCatalog') throw new Error('not a star catalog');
   return entry.budgets.medium.poolRecords;
 };

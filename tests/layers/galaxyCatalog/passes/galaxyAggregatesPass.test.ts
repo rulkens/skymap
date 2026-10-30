@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { packSelection } from '../../../../src/data/selectionEncoding';
 import { galaxyAggregatesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyAggregatesPass';
 import { makeGalaxyCatalogFade } from '../../../fixtures/makeGalaxyCatalogFade';

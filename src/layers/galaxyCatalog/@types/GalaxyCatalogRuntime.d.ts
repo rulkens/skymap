@@ -47,6 +47,8 @@ export type GalaxyCatalogRuntime = {
   readonly catalogsVersion: number;
   /** Bumped by the planner when an octree chunk lands or leaves: the resident records changed. */
   residencyVersion: number;
+  /** Captured at `create` the way the pick renderer captures it (see the comment in `create.ts` on why that is safe): passes read the engine's `@group(3)` focus group here, not off `state.gpu`. */
+  readonly focusBindGroup: GPUBindGroup;
   /** Captured from `create`'s deps: `Layer.frame` hands `frame` only the runtime, never `deps`. */
   readonly publish: (patch: Partial<GalaxyCatalogFacts>) => void;
 

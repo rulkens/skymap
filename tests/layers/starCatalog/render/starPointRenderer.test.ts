@@ -15,7 +15,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createStarPointRenderer } from '../../../../src/layers/starCatalog/render/starPointRenderer';
 import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {
@@ -44,7 +45,7 @@ function mockPass(): GPURenderPassEncoder {
 }
 
 const SUN: PositionedStar = {
-  id: 'sun',
+  id: asSceneBodyId('sun'),
   label: 'Sun',
   positionMpc: [0, 0, 0],
   absMag: 4.83,
@@ -56,7 +57,7 @@ const SUN: PositionedStar = {
 };
 
 const SIRIUS: PositionedStar = {
-  id: 'sirius',
+  id: asSceneBodyId('sirius'),
   label: 'Sirius',
   positionMpc: [1.6e-6, 2.1e-6, -0.4e-6],
   absMag: 1.43,

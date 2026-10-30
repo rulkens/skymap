@@ -57,7 +57,6 @@ const restingRoot = rootWithCamera();
 
 /** No in-frame animation vote — the default for every case but the vote ones. */
 const NO_ANIM = {
-  surfaceTilesAnimating: false,
   labelsAnimating: false,
   probeDue: false,
   layersAwake: false,

@@ -22,6 +22,7 @@ export function galaxyPointDrawSettingsOf(
   state: PassState,
   fade: FadeValueOf<'survey'>,
   selectedPacked: number,
+  focusBindGroup: GPUBindGroup,
 ): GalaxyPointDrawSettings {
   const g = state.settings.galaxyCatalogs;
   return {
@@ -44,7 +45,7 @@ export function galaxyPointDrawSettingsOf(
     pxFadeEnd: PROCEDURAL_DISK_FADE_END_PX,
     // @group(3): the engine owns one focus buffer, written once per frame in
     // renderFrame. At rest (blend 0) the shader multiplier is 1.0.
-    focusBindGroup: state.gpu.focusUniform!.bindGroup,
+    focusBindGroup,
     fadeOpacityOf: (source: SourceType) => fade[galaxyCatalogIdOf(source)],
   };
 }

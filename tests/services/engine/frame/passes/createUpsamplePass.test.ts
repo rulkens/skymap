@@ -2,9 +2,8 @@
  * createUpsamplePass tests — the shared factory behind the four HDR upsample
  * ContentPasses (volume, star-aggregate, milky-way, zone-of-avoidance).
  * `enabled`/`name`/`slab` are forwarded verbatim from the row (untested here
- * — trivial passthrough); these tests cover `draw`'s two independent halves:
- * the blit (guarded by the row's handle) and `postBlit`, which the factory
- * guards independently of the blit — a missing handle must never suppress it.
+ * — trivial passthrough); these tests cover `draw`: the blit, guarded by the
+ * row's handle.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createUpsamplePass } from '../../../../../src/services/engine/frame/passes/createUpsamplePass';
@@ -119,26 +118,5 @@ describe('createUpsamplePass', () => {
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBe(PASS_STUB);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(offscreenView);
-  });
-
-  it('runs postBlit after the blit, into the same pass', () => {
-    const order: string[] = [];
-    const seenPasses: GPURenderPassEncoder[] = [];
-    const handle: Upsample = {
-      draw: (pass) => {
-        order.push('blit');
-        seenPasses.push(pass);
-      },
-    };
-    const postBlit = vi.fn((pass: GPURenderPassEncoder) => {
-      order.push('postBlit');
-      seenPasses.push(pass);
-    });
-    const layer = createUpsamplePass(makeRow({ handleOf: () => handle, postBlit }));
-
-    layer.draw(PASS_STUB, VIEW_STUB, makeCtx(), STATE_STUB);
-
-    expect(order).toEqual(['blit', 'postBlit']);
-    expect(seenPasses).toEqual([PASS_STUB, PASS_STUB]);
   });
 });

@@ -5,9 +5,10 @@
  * default format in force instead of a blank sky.
  */
 
-import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
 import type { GalaxyCatalogFormat } from '../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
 import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
+import type { GalaxyCatalogRegistryEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 
 export function galaxyFormatsFromSearch(
@@ -22,11 +23,13 @@ export function galaxyFormatsFromSearch(
   }
   for (const pair of (value ?? '').split(',')) {
     const [id, format] = pair.split(':');
-    const source = GALAXY_CATALOG_SOURCES.find((code) => SOURCE_REGISTRY[code].id === id);
-    if (source === undefined) continue;
-    const entry: GalaxyCatalogSourceEntry = SOURCE_REGISTRY[source];
+    const row = Object.values(APP_SOURCE_REGISTRY).find(
+      (e): e is GalaxyCatalogRegistryEntry => e.type === 'galaxyCatalog' && e.id === id,
+    );
+    if (row === undefined) continue;
+    const entry: GalaxyCatalogSourceEntry = row;
     if (format === 'skmp' || (format === 'octree' && entry.octree !== undefined)) {
-      formats[source] = format;
+      formats[row.code] = format;
     }
   }
   return formats;

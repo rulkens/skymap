@@ -5,7 +5,7 @@ import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
-import { Source } from '../../../../../src/data/sources';
+import { Source } from '../../../../../src/data/source';
 import { near0RingRadiusPx } from '../../../../../src/services/engine/helpers/near0RingRadiusPx';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
@@ -13,6 +13,7 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../../fixtures/starRowDriver';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // The enable gate never touches ctx or view — bare casts stand in for both.
 const CTX = { snapshot: { renderedTargets: new Set<string>() } } as unknown as FrameView;
@@ -134,7 +135,7 @@ describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
     const farMpc = 1e-6; // far below the anchor distance ⇒ would clip un-clamped
     const view = farClippingView(farMpc);
     const ctx = {
-      snapshot: { simDays: 0, renderedTargets: new Set<string>() },
+      snapshot: { bodyStates: deriveBodyStates(0), simDays: 0, renderedTargets: new Set<string>() },
       drawPxPerRad: 1000,
     } as unknown as FrameView;
 
@@ -172,14 +173,14 @@ describe('near0SelectionRingPass.draw — live body position', () => {
     // Advance well past epoch so the derived Earth position is clearly not the
     // stale row snapshot — the exact reported bug.
     const simDays = CONST_J2000 + 300;
-    const livePos = deriveBodyStates(simDays).get('earth')!.positionMpc;
+    const livePos = deriveBodyStates(simDays).get(asSceneBodyId('earth'))!.positionMpc;
 
     // A deliberately-wrong snapshot: a magnitude/direction the live Earth never
     // has (Earth's heliocentric offset is ~1 AU ≈ 5e-12 Mpc). Both stay well
     // inside the far plane below, so neither is length-clamped.
     const staleRow: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [1e-6, 0, 0],
       driver: bodyDriverGeometry('earth'),
@@ -189,7 +190,11 @@ describe('near0SelectionRingPass.draw — live body position', () => {
     const state = stateWith(staleRow, renderer);
     const view = farClippingView(1); // farMpc 1 Mpc ⇒ no clamp at this scale
     const ctx = {
-      snapshot: { simDays, renderedTargets: new Set<string>() },
+      snapshot: {
+        bodyStates: deriveBodyStates(simDays),
+        simDays,
+        renderedTargets: new Set<string>(),
+      },
       drawPxPerRad: 1000,
     } as unknown as FrameView;
 

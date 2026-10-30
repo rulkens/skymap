@@ -18,12 +18,11 @@ export function createUpsamplePass<K extends ShowKey = ShowKey>(
     name: erased.name,
     fade: erased.fade,
     enabled: (state, ctx, _view, fade) => erased.enabled(state, ctx, fade),
-    draw(pass, view, ctx, state) {
+    draw(pass, _view, ctx, state) {
       const handle = row.handleOf(state);
       if (handle !== null) {
         handle.draw(pass, ctx.snapshot.renderTargets.viewOf(row.sourceTargetId));
       }
-      row.postBlit?.(pass, view, ctx, state);
     },
   } as ContentPass as ContentPass<K>;
 }

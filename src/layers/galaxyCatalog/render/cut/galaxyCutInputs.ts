@@ -8,7 +8,7 @@ import type { OctreeCutSourceInput } from '../../../../@types/octree/OctreeCutSo
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 import { COSMO } from '../../../../services/engine/frame/slabs';
 import { FLOATS_PER_VIEW, HALF_DIAGONAL } from '../../../../services/gpu/octree/octreeCutLayout';
-import { SOURCE_REGISTRY } from '../../../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../../../compositions/appSources';
 import { PICK_PADDING_PX } from '../../../../data/pickPaddingPx';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
@@ -31,7 +31,7 @@ export function galaxyCutInputs(
   for (const [source, slot] of runtime.octreePoints) {
     const tier = slot.committed()?.req.tier;
     if (tier === undefined || !(fade[galaxyCatalogIdOf(source)] > 0)) continue;
-    const entry: GalaxyCatalogSourceEntry = SOURCE_REGISTRY[source];
+    const entry: GalaxyCatalogSourceEntry = APP_SOURCE_REGISTRY[source];
     const budget = entry.octree?.budgets[tier].drawBudget;
     // The source fade is the fragment's; the cut's own opacity channel stays 1.
     if (budget !== undefined) sources.push({ source, opacity: 1, drawBudget: budget });

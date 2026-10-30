@@ -36,7 +36,7 @@ import { createOctreeCutGpu } from '../../../services/gpu/octree/octreeCutGpu';
 import { WORD_BYTES } from '../../../services/gpu/octree/octreeCutLayout';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { GALAXY_OCTREE_FAMILY } from '../../../data/octree/galaxyOctreeFamily';
-import { SOURCE_REGISTRY } from '../../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import { GALAXY_GPU_RECORD_WORDS } from '../../../data/galaxyCatalog/galaxyGpuRecordWords';
 import {
   createViewSlotUniformRing,
@@ -162,7 +162,7 @@ export function createGalaxyPooledPointRenderer(init: {
     });
     device.queue.writeBuffer(recordsBuffer, 0, packed);
 
-    const entry = SOURCE_REGISTRY[source];
+    const entry = APP_SOURCE_REGISTRY[source];
     const sourceBuffer = uniformBuffer(`galaxy-pooled-source-${source}`, SOURCE_UNIFORM_BYTES);
     const sourceWords = new ArrayBuffer(SOURCE_UNIFORM_BYTES);
     new Uint32Array(sourceWords)[0] = source;

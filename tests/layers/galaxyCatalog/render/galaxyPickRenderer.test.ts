@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGalaxyPickRenderer } from '../../../../src/layers/galaxyCatalog/render/galaxyPickRenderer';
 import { UNIFORM_BYTES } from '../../../../src/layers/galaxyCatalog/render/galaxyPointVertexLayout';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import type { GalaxyPooledPickLayouts } from '../../../../src/@types/rendering/GalaxyPooledPickLayouts';
 
 // A minimal stub device with a tracked writeBuffer — allows assertions

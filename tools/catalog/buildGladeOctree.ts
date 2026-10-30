@@ -22,7 +22,7 @@ import {
   FLAG_DIAMETER_FALLBACK,
   FLAG_ORIENTATION_FALLBACK,
 } from '../../src/data/octree/galaxyRecordFlags';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import { countEstimatedProvenance } from '../../src/utils/countEstimatedProvenance';
 import { galaxyMagOffset } from '../../src/utils/galaxy/galaxyMagOffset';
 import { galaxyMedianAbsMag } from '../../src/utils/galaxy/galaxyMedianAbsMag';

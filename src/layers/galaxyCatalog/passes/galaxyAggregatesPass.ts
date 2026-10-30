@@ -26,7 +26,7 @@ export function galaxyAggregatesPass(runtime: GalaxyCatalogRuntime): ContentPass
         pass,
         view.vp,
         view.viewportPx,
-        galaxyPointDrawSettingsOf(view, ctx, state, fade, selectedPacked),
+        galaxyPointDrawSettingsOf(view, ctx, state, fade, selectedPacked, runtime.focusBindGroup),
         ctx.viewKind === 'capture',
         'aggregate',
         state.settings.galaxyCatalogs,

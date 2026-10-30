@@ -4,8 +4,8 @@
  * of `state.cubemapCaptures.probe`: `subject` names what this frame's faces
  * write (null when idle), `refreshedAtMs` when each body last completed.
  *
- * The candidates are the mesh bodies drawn this frame AND resident, so a probe
- * is never captured for a body no pass will shade with it.
+ * The candidates are the mesh bodies drawn this frame AND resident, whichever
+ * pass draws them, so a probe is never captured for a body no pass will shade with it.
  */
 
 import type { CaptureFace } from '../../../@types/engine/frame/CaptureFace';
@@ -19,8 +19,10 @@ import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId
 import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
 import { cubemapCaptureFrame } from './cubemapCaptureFrame';
 import { deriveView } from './deriveView';
+import { bodySlabRosterIds } from './bodySlabRosterIds';
 import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 export function scheduleProbeCapture(input: {
   readonly state: EngineState;
@@ -38,7 +40,8 @@ export function scheduleProbeCapture(input: {
   let subject: MeshPresentation | null = null;
   let refreshedAtMs = Number.POSITIVE_INFINITY;
   let dueCount = 0;
-  for (const body of sceneBodyPartition(state, ctx).meshes) {
+  const roster = bodySlabRosterIds(ctx.snapshot.meshBodies);
+  for (const body of sceneBodyPartition(state, ctx, roster, () => false).meshes) {
     const at = runtime.refreshedAtMs.get(body.id) ?? Number.NEGATIVE_INFINITY;
     if (ctx.snapshot.nowMs - at >= PROBE_REFRESH_INTERVAL_MS) dueCount++;
     if (at < refreshedAtMs) {
@@ -53,7 +56,7 @@ export function scheduleProbeCapture(input: {
   const bodyStates = sceneBodyStates(state, ctx);
   const eyeMpc = bodyStates.get(subject.id)!.positionMpc;
   const hostId = meshBodySlabHostId(subject.id);
-  // Cube axes = the host axes `meshBodiesPass` shades in (io.wesl's contract).
+  // Cube axes = the host axes `drawMeshBodiesOnRow` shades in (io.wesl's contract).
   const axes = bodyStates.get(hostId)!.orientation;
   // One frame for the whole row: null only pre-bootstrap, so the next frame retries.
   const capture = cubemapCaptureFrame({
@@ -62,6 +65,7 @@ export function scheduleProbeCapture(input: {
     nearMpc: row.nearMpc,
     nowMs: ctx.snapshot.nowMs,
     axes,
+    bodyStates: ctx.snapshot.bodyStates,
   });
   if (!capture.isReady) return null;
   const faces = new Map<CubeFace, CaptureFace>();

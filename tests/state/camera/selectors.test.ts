@@ -34,6 +34,7 @@ import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTwe
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { FrameTween } from '../../../src/@types/camera/FrameTween';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // Build a fresh store for each test so dispatch side-effects don't cross cases.
 const makeStore = () => configureStore({ reducer: rootReducer });
@@ -42,9 +43,9 @@ const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: -0.3, distance: 1
 
 // An engaged arm; only its `frame` tag is read here.
 const bodyArm: FramedCameraPose = {
-  frame: { body: 'earth' },
+  frame: { body: asSceneBodyId('earth') },
   pose: {
-    bodyId: 'earth',
+    bodyId: asSceneBodyId('earth'),
     anchorLocalM: [0, 0, 0],
     eyeRelAnchorM: [0, 0, 1e7],
     basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -57,8 +58,7 @@ const clip = { data: clipData, frame: DEFAULT_ORIENTATION } as const;
 const tween: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
   to: pose,
-  durationMs: 1200,
-  easing: 'easeOutCubic',
+  motion: { style: 'eased', durationMs: 1200, ease: 'easeOutCubic' },
   frame: DEFAULT_ORIENTATION,
 };
 

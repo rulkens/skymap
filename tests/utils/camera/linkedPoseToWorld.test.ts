@@ -17,6 +17,7 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const BASIS = ORIENTATION_FRAMES.ecliptic;
 const SIM_DAYS = CONST_J2000 + 9763.2;
@@ -51,8 +52,8 @@ describe('linkedPoseToWorld', () => {
       SIM_DAYS,
       BASIS,
     );
-    const mars = bodies.get('mars')!;
-    const rover = toLocalM(bodies.get('perseverance')!.positionMpc, mars);
+    const mars = bodies.get(asSceneBodyId('mars'))!;
+    const rover = toLocalM(bodies.get(asSceneBodyId('perseverance'))!.positionMpc, mars);
     const eye = toLocalM(eyeMpc(pose), mars);
     const up = normalize3(rover);
     const east = normalize3(cross([0, 0, 1], up));
@@ -73,7 +74,7 @@ describe('linkedPoseToWorld', () => {
     const eyeM: Vec3 = [3507565.09, 779181.37, 5261187.66];
     const basis = '1,0,0,0,1,0,0,0,1';
     const pose = linkedPoseToWorld(`b,earth,0,0,0,${eyeM.join(',')},${basis}`, SIM_DAYS, BASIS);
-    const eye = toLocalM(eyeMpc(pose), bodies.get('earth')!);
+    const eye = toLocalM(eyeMpc(pose), bodies.get(asSceneBodyId('earth'))!);
     for (let i = 0; i < 3; i++) expect(eye[i]!).toBeCloseTo(eyeM[i]!, -1);
   });
 

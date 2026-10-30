@@ -7,7 +7,8 @@
  */
 
 import { memo } from 'react';
-import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { Source } from '../../../data/source';
+import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import { maskHas } from '../../../utils/maskHas';
 import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
@@ -148,7 +149,7 @@ function GalaxiesSection({
       <CollapsibleSection title="Galaxy catalogs" defaultOpen>
         {TOGGLEABLE_SOURCES.map((s) => {
           const count = sourceCounts?.[s];
-          const entry = SOURCE_REGISTRY[s];
+          const entry = APP_SOURCE_REGISTRY[s];
           const hasOctree =
             entry.type === 'galaxyCatalog' &&
             'octree' in entry &&
@@ -156,7 +157,7 @@ function GalaxiesSection({
           return (
             <div className={styles.panelRow} key={s}>
               <label htmlFor={`toggle-source-${s}`}>
-                {SOURCE_REGISTRY[s].label}
+                {APP_SOURCE_REGISTRY[s].label}
                 {count !== undefined && (
                   <span className={styles.sourceCount}>{count.toLocaleString()}</span>
                 )}

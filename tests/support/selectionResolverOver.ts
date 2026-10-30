@@ -1,5 +1,5 @@
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
-import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../src/layers/structure/present/structureSelectionRow';
 import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import { galaxyRecordBridge } from '../../src/layers/galaxyCatalog/present/galaxyRecordBridge';
@@ -44,7 +44,7 @@ export function selectionResolverOver(
 ): SelectionResolver {
   return composeSelectionRows(
     () => [
-      ...coreSelectionRows(),
+      bodySelectionRow(),
       structureSelectionRow(structures),
       milkyWaySelectionRow(),
       ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))]),

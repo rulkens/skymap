@@ -1,20 +1,27 @@
 /**
- * A mesh body owns no slab row — it rides its host's (`meshBodiesPass`). So the
+ * A mesh body owns no slab row — it rides its host's (`drawMeshBodiesOnRow`). So the
  * host's roster gate decides whether the mesh body is drawn at all, and from a
  * 400 km orbit Earth's ~70° angular radius puts it outside the frustum gate
  * well before it is behind the eye. This pins the pose where that matters most:
  * the eye 2 m from the petunias with Earth at its back.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Every craft present, so the hostless Voyager rows exist without loading their tracks.
+vi.mock('../../../../src/utils/scene/spacecraftPresent', () => ({
+  spacecraftPresent: () => true,
+}));
 
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
+import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
+import { HOSTLESS_MESH_BODIES } from '../../../../src/data/bodies/hostlessMeshBodies';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -22,6 +29,8 @@ import type { CameraProjection } from '../../../../src/@types/camera/CameraProje
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -34,15 +43,12 @@ const STATE = {
     galaxyPickRenderer: {},
     renderTargets: {},
     compositor: {},
-    texturedBodyRenderer: null,
   },
+  terrainHeightAt: datumOnlyTerrainHeight,
   subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
-  slabRows: [],
+  slabRows: BODY_SLAB_ROWS,
   visibilityEntries: [],
-  data: {
-    bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES },
-  },
   settings: {
     bodies: { items: {} },
   },
@@ -52,8 +58,8 @@ const STATE = {
 describe('deriveFrameContext — a host carrying an on-screen mesh body', () => {
   it('keeps Earth in the slab table with the petunias filling the view and Earth behind the eye', () => {
     const states = deriveBodyStates(CONST_J2000);
-    const petunias = states.get('petunias')!.positionMpc;
-    const earth = states.get('earth')!.positionMpc;
+    const petunias = states.get(asSceneBodyId('petunias'))!.positionMpc;
+    const earth = states.get(asSceneBodyId('earth'))!.positionMpc;
     // Radially outward from Earth: aiming along it puts Earth ~180° off-axis
     // while the petunias sit dead centre at the eye's standoff.
     const outward = normalize3([
@@ -61,8 +67,6 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
       petunias[1] - earth[1],
       petunias[2] - earth[2],
     ]);
-    // The eye sits between Earth and the petunias, so the orbit pose's
-    // target-to-eye direction is the inward one.
     const toEye: Vec3 = [-outward[0], -outward[1], -outward[2]];
     const pose: CameraPose = {
       target: [petunias[0], petunias[1], petunias[2]],
@@ -76,11 +80,10 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
       {
         cam: assembleOrbitCamera(pose, PROJECTION, IDENTITY, IDENTITY),
         arm: absoluteArm(pose),
-        // World arm, no focus: the same value `pivotSurfaceRangeMpc` used to
-        // fall back to when this test omitted `altitudeMpc`.
         altitudeMpc: pose.distance,
         nowMs: 0,
         simDays: CONST_J2000,
+        bodyStates: deriveBodyStates(CONST_J2000),
       },
       { width: 1920, height: 1080 },
     );
@@ -90,5 +93,34 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
     expect(
       view.slabs.some((slab) => slab.frame.kind === 'body-m' && slab.frame.hostId === 'earth'),
     ).toBe(true);
+  });
+});
+
+describe('deriveFrameContext — slab candidates yield at the foreground band', () => {
+  const candidateIdsAt = (eyeFromHomeMpc: number): readonly string[] => {
+    const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.2, distance: eyeFromHomeMpc };
+    const ctx = deriveFrameContext(STATE, {
+      cam: assembleOrbitCamera(pose, PROJECTION, IDENTITY, IDENTITY),
+      arm: absoluteArm(pose),
+      altitudeMpc: pose.distance,
+      nowMs: 0,
+      simDays: CONST_J2000,
+      bodyStates: deriveBodyStates(CONST_J2000),
+    });
+    if (!ctx.isReady) throw new Error('fixture not ready');
+    return ctx.slabBodyCandidates.map((row) => row.anchorId);
+  };
+  const rowIds: string[] = [
+    ...BODY_SLAB_ROWS.map((row) => row.anchorId),
+    ...HOSTLESS_MESH_BODIES.map((body) => body.id),
+  ];
+
+  it('holds every body and hostless mesh row 1 AU from home', () => {
+    expect(candidateIdsAt(SCALE_UNITS.AU_TO_MPC)).toEqual(expect.arrayContaining(rowIds));
+  });
+
+  it('holds no body or hostless mesh row at the foreground cutoff from home', () => {
+    const ids = candidateIdsAt(FOREGROUND_MAX_DISTANCE_MPC);
+    expect(ids.filter((id) => rowIds.includes(id))).toEqual([]);
   });
 });

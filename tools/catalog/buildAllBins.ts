@@ -82,7 +82,8 @@ import { CUTOFF_MPC } from './localVolumeCutoff';
 import type { Cf4CatalogIndex } from '../parsers/cosmicflows4';
 import { loadCf4CatalogIndex } from '../parsers/cosmicflows4';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
-import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import {
   tierTarget,
@@ -856,7 +857,7 @@ async function runCli(): Promise<void> {
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;
     process.stderr.write(
-      `  ${SOURCE_REGISTRY[source].label}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
+      `  ${APP_SOURCE_REGISTRY[source].label}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
     );
   }
 
@@ -880,7 +881,7 @@ async function runCli(): Promise<void> {
       const target = tierTarget(source, tier);
       if (target === 0) {
         process.stderr.write(
-          `tier ${tier}: ${SOURCE_REGISTRY[source].label} excluded — skipping ${filename}\n`,
+          `tier ${tier}: ${APP_SOURCE_REGISTRY[source].label} excluded — skipping ${filename}\n`,
         );
         continue;
       }

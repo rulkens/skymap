@@ -1,5 +1,5 @@
 /**
- * composeSelectionRows, driven through the six core rows via
+ * composeSelectionRows, driven through the real selection rows via
  * `selectionResolverOver` — the composed resolver's dispatch and its
  * claim-then-decode focus-id contract. One describe per resolver
  * subject (pick, pick table, row extraction, focus id); the last describes pin
@@ -16,8 +16,17 @@ import type {
   StructureRowFixture,
 } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
+import { craftSelectionRow } from '../../../../src/layers/missions/present/craftSelectionRow';
+import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/present/earthSceneSelectionRow';
+import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceSelectionRow';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
+import { satellitesSelectionRow } from '../../../../src/layers/satellites/present/satellitesSelectionRow';
+import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
+import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
+import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
+import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
 import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -44,9 +53,10 @@ import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSks
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const SIM_DAYS = CONST_J2000;
-const EARTH_POS = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
+const EARTH_POS = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
 
 const virgo: StructureInfo = {
   type: 'structure',
@@ -214,7 +224,7 @@ describe('extractRow, composed', () => {
   });
 
   it('body ref → a self-contained row resolved at the passed simDays', () => {
-    const row = resolver.extractRow({ type: 'body', id: 'earth' }, SIM_DAYS);
+    const row = resolver.extractRow({ type: 'body', id: asSceneBodyId('earth') }, SIM_DAYS);
     expect(row).toEqual({
       type: 'body',
       id: SCENE_EARTH.id,
@@ -224,8 +234,11 @@ describe('extractRow, composed', () => {
     });
 
     const laterSimDays = SIM_DAYS + 200;
-    const expectedLater = deriveBodyStates(laterSimDays).get('earth')!.positionMpc;
-    const rowLater = resolver.extractRow({ type: 'body', id: 'earth' }, laterSimDays);
+    const expectedLater = deriveBodyStates(laterSimDays).get(asSceneBodyId('earth'))!.positionMpc;
+    const rowLater = resolver.extractRow(
+      { type: 'body', id: asSceneBodyId('earth') },
+      laterSimDays,
+    );
     expect(rowLater).toEqual({
       type: 'body',
       id: SCENE_EARTH.id,
@@ -236,7 +249,9 @@ describe('extractRow, composed', () => {
   });
 
   it('body ref with an unknown seed id → null', () => {
-    expect(resolver.extractRow({ type: 'body', id: 'krypton' }, SIM_DAYS)).toBeNull();
+    expect(
+      resolver.extractRow({ type: 'body', id: asSceneBodyId('krypton') }, SIM_DAYS),
+    ).toBeNull();
   });
 
   it('survey star ref resolves against the loaded catalog', async () => {
@@ -287,7 +302,7 @@ describe('extractRow, composed', () => {
       index: idx,
       id: 'sirius',
       label: sirius.label,
-      positionMpc: [...deriveBodyStates(SIM_DAYS).get('sirius')!.positionMpc],
+      positionMpc: [...deriveBodyStates(SIM_DAYS).get(asSceneBodyId('sirius'))!.positionMpc],
       radiusM: sirius.surface.datumRadiusM,
       // A seeded star poses from its own seed id — the S-star / famous-star
       // half of the arm→poseId mapping.
@@ -394,7 +409,7 @@ describe('resolveFocusId, composed', () => {
     expect(resolver.resolveFocusId('body-krypton')).toBeNull();
     // A star is not a body id any more (spec §6), so its old link decodes to nothing.
     expect(resolver.resolveFocusId('body-sirius')).toBeNull();
-    const id = resolver.focusIdOf({ type: 'body', id: 'earth' });
+    const id = resolver.focusIdOf({ type: 'body', id: asSceneBodyId('earth') });
     expect(id).toBe('body-earth');
     expect(resolver.resolveFocusId(id!)).toEqual({ type: 'body', id: 'earth' });
   });
@@ -486,6 +501,56 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
     const id = resolver.focusIdOf(ref);
     expect(id).toBe('m31');
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
+  });
+
+  it('GLADE ref with a catalog id → pgc-<objId> → same ref', () => {
+    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
+    const id = resolver.focusIdOf(ref);
+    expect(id).toBe('pgc-99');
+    expect(resolver.resolveFocusId(id!)).toEqual(ref);
+  });
+
+  it('structure ref → its durable id → same ref', () => {
+    const virgoId = 'galaxy-cluster-virgo';
+    const ref: SelectionRef = { type: 'structure', id: virgoId };
+    expect(resolver.focusIdOf(ref)).toBe(virgoId);
+    expect(resolver.resolveFocusId(virgoId)).toEqual(ref);
+  });
+});
+
+// Kinds whose rows the shared resolver above does not compose: every Layer's
+// row-encoder pinned to the literal `#focus=` id links in the wild carry.
+describe('focusIdOf over the Layers the shared resolver omits', () => {
+  const { catalog } = buildSatelliteCatalog(
+    [{ group: { group: 'active', class: 'active' }, records: [ISS] }],
+    0,
+  );
+  const full = composeSelectionRows(
+    () => [
+      craftSelectionRow(),
+      earthSceneSelectionRow(),
+      zoneOfAvoidanceSelectionRow(),
+      blackHoleSelectionRow(),
+      satellitesSelectionRow({
+        propagator: { catalog: () => catalog },
+      } as unknown as SatellitesRuntime),
+    ],
+    () => ALL_KINDS_ENABLED,
+  );
+  const AT = unixMsToJulianDays(Date.parse('2026-10-28T12:00:00Z'));
+  const IDS: [string, SelectionRef, string | null][] = [
+    ['craft', { type: 'craft', id: 'hubble' as never }, 'body-hubble'],
+    ['earth scene', { type: 'earthScene', id: 'soendermarken' as never }, 'body-soendermarken'],
+    ['zone of avoidance', { type: 'zoneOfAvoidance' }, null],
+    ['black hole', { type: 'blackHole', id: 'sgr-a-star' as never }, 'blackhole-sgr-a-star'],
+    ['satellite', { type: 'satellite', noradId: 25544 }, 'satellite-25544'],
+  ];
+
+  it.each(IDS)('%s', (_name, ref, id) => {
+    // Each ref is extracted first so a row that cannot resolve fails here
+    // rather than encoding a stale id.
+    expect(full.extractRow(ref, AT)).not.toBeNull();
+    expect(full.focusIdOf(ref)).toBe(id);
   });
 });
 
@@ -582,8 +647,11 @@ describe('composeSelectionRows — picking gate', () => {
         milkyWay: true,
         zoneOfAvoidance: true,
         body: true,
+        craft: true,
+        earthScene: true,
         starCatalog: true,
         blackHole: true,
+        satellite: true,
       }),
     );
     expect(allEnabled.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
@@ -596,8 +664,11 @@ describe('composeSelectionRows — picking gate', () => {
         milkyWay: true,
         zoneOfAvoidance: true,
         body: true,
+        craft: true,
+        earthScene: true,
         starCatalog: true,
         blackHole: true,
+        satellite: true,
       }),
     );
     expect(structureDisabled.resolvePick(pick)).toBeNull();
@@ -612,8 +683,11 @@ describe('composeSelectionRows — picking gate', () => {
         milkyWay: true,
         zoneOfAvoidance: true,
         body: true,
+        craft: true,
+        earthScene: true,
         starCatalog: true,
         blackHole: true,
+        satellite: true,
       }),
     );
     expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);

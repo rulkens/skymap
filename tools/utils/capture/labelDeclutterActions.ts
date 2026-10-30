@@ -9,7 +9,7 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
-import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
+import { BODY_SOURCE_IDS } from '../../../src/data/bodies/bodySourceIds';
 import { setGalaxyCatalogLabelEnabled } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { setStarCatalogLabelEnabled } from '../../../src/layers/starCatalog/state/starCatalogs/slice';
 import { setStructureLabelEnabled } from '../../../src/layers/structure/state/structures/slice';
@@ -23,7 +23,7 @@ export function labelDeclutterActions(): UnknownAction[] {
     ...GALAXY_CATALOG_IDS.map((id) => setGalaxyCatalogLabelEnabled({ id, enabled: false })),
     ...STAR_CATALOG_IDS.map((id) => setStarCatalogLabelEnabled({ id, enabled: false })),
     ...STRUCTURE_IDS.map((id) => setStructureLabelEnabled({ id, enabled: false })),
-    ...BODY_IDS.map((id) => setBodyLabelEnabled({ id, enabled: false })),
+    ...BODY_SOURCE_IDS.map((id) => setBodyLabelEnabled({ id, enabled: false })),
     setMilkyWayLabelEnabled(false),
     ...CAPTURE_HIDDEN_PASSES.map((pass) => setPassDisabled({ pass, disabled: true })),
   ];

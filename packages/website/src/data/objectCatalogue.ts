@@ -9,13 +9,14 @@ import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/data/bodies/seededStarCatalogsBySource';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
-import { APP_EXHIBITS } from '../../../../src/compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../../src/data/palette/earthPlaces';
 import { FEATURED_TABS } from '../../../../src/data/palette/featuredTabs';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 import { buildStaticAnchorStructures } from '../../../../src/layers/structure/load/buildStaticAnchorStructures';
 import { encodeBlackHoleFocusId } from '../../../../src/layers/blackHoles/present/encodeBlackHoleFocusId';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../../src/layers/blackHoles/sources/blackHoleSourceRows';
+import { CRAFT_SEARCH_NAMES } from '../../../../src/layers/missions/present/craftSearch';
 import { BODY_FOCUS_PREFIX } from '../../../../src/services/url/bodyFocusId';
 import { encodeStarFocusId } from '../../../../src/services/url/encodeStarFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../../src/services/url/milkyWayFocusId';
@@ -141,7 +142,7 @@ const labels = new Map<string, string>(
   ),
 );
 const orbitOf = new Map(ORBITAL_ELEMENTS.map((row) => [row.id, row.focusId]));
-const hostOf = new Map(SURFACE_FIXED_SITES.map((site) => [site.id, site.hostId as string]));
+const hostOf = new Map<string, string>(SURFACE_FIXED_SITES.map((site) => [site.id, site.hostId]));
 
 // The bodies with an orbit, in the orbit table's order: the planets outwards, then each planet's moons.
 const orbiting = ORBITAL_ELEMENTS.flatMap((orbit) => {
@@ -180,7 +181,7 @@ const missionIds = new Set(
 );
 const models = SCENE_MESH_BODIES.map((body) => {
   const id = `${BODY_FOCUS_PREFIX}${body.id}`;
-  const names = BODY_SEARCH_NAMES.get(body.id) ?? [];
+  const names = CRAFT_SEARCH_NAMES.get(body.id) ?? [];
   return focusRow({
     name: body.label,
     kind: missionIds.has(id) ? 'spacecraft' : 'model',
@@ -241,7 +242,7 @@ const structures = buildStaticAnchorStructures().map((structure) => {
   });
 });
 
-const exhibits = Object.values(APP_EXHIBITS).map(
+const exhibits = Object.values(APP_EXHIBIT_REGISTRY).map(
   (exhibit): ObjectRow => ({
     name: exhibit.label,
     kind: 'exhibit',

@@ -10,7 +10,7 @@ import {
   sourceClassLabel,
   milliquasParentSurveyPrefix,
 } from '../../../src/data/galaxyCatalog/sourceClass';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 
 describe('sourceClassLabel', () => {
   it('returns null for Milliquas byte 0 (unclassified)', () => {

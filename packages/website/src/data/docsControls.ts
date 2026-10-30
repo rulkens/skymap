@@ -10,7 +10,7 @@ const STEERING = 'The scene and exhibits';
  * when that table gains or loses a key these rows do not have. The other rows
  * are read from handlers the app does not export as data: the search
  * (usePaletteSearch.ts), the date box, the welcome screen, and every pointer,
- * wheel and touch handler (createCanvasDeviceChannel.ts, recognize.ts,
+ * wheel and touch handler (createDeviceChannel.ts, recognize.ts,
  * controlBindings.ts). "Anywhere" and "The scene and exhibits" are defined on
  * the page.
  */
@@ -36,6 +36,12 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
         shortcut: ['escape'],
         does: 'Unpins the card and lets go of the focus. The camera stays where it is.',
         where: `${ANYWHERE}, and in a text field too`,
+      },
+      {
+        input: ['Shift+C'],
+        shortcut: ['shift+c'],
+        does: 'Switches the mouse controls between the Skymap scheme and the OpenSpace scheme, where a drag sets the camera moving and it slows to a stop after you let go.',
+        where: ANYWHERE,
       },
     ],
   },

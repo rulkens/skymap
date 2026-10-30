@@ -14,7 +14,7 @@
 
 **Tech stack:** TS, Vitest, RTK (no react-redux), wgpu-matrix.
 
-**Spec:** [`docs/superpowers/specs/2026-09-29-openspace-camera-mode-design.md`](../specs/2026-09-29-openspace-camera-mode-design.md), §3 (Ground preparation) and §8 (`lookOffset`).
+**Spec:** [`docs/superpowers/specs/completed/2026-09-29-openspace-camera-mode-design.md`](../../specs/completed/2026-09-29-openspace-camera-mode-design.md), §3 (Ground preparation) and §8 (`lookOffset`).
 
 ## Global constraints
 

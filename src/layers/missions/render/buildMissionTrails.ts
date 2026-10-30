@@ -6,7 +6,7 @@
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { MissionTrailGeometry } from '../@types/MissionTrailGeometry';
-import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { MISSION_TRAIL_MAX_SAG_KM } from '../../../data/missions/missionTrailStyle';
 import { tessellateTrack } from '../../../utils/orbit/tessellateTrack';
 import { trackKmToWorldMpc } from '../../../utils/orbit/trackKmToWorldMpc';

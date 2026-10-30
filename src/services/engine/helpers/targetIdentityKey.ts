@@ -1,10 +1,7 @@
 /**
- * TARGET_IDENTITY_KEY — a stable, type-prefixed string identity per
- * FocusableTarget kind, keyed on the union tag `t.type`. Two targets name the
- * same thing iff their keys are equal; the type prefix makes cross-kind
- * comparisons unequal for free. Each row narrows `t` on `type` (no cast); the
- * empty-string fallback is unreachable because the table is only ever indexed
- * by the target's own tag.
+ * TARGET_IDENTITY_KEY — a type-prefixed identity per FocusableTarget kind: two targets
+ * are the same thing iff their keys are equal. The empty-string fallback is unreachable
+ * because the table is only indexed by the target's own tag.
  */
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { FocusableTargetType } from '../../../@types/engine/FocusableTargetType';
@@ -12,16 +9,14 @@ import type { FocusableTargetType } from '../../../@types/engine/FocusableTarget
 export const TARGET_IDENTITY_KEY: Record<FocusableTargetType, (t: FocusableTarget) => string> = {
   galaxyCatalog: (t) => (t.type === 'galaxyCatalog' ? `galaxyCatalog:${t.source}:${t.index}` : ''),
   structure: (t) => (t.type === 'structure' ? `structure:${t.id}` : ''),
-  // The Milky Way is a singleton — its identity is the tag itself.
   milkyWay: () => 'milkyWay',
-  // The zone of avoidance is a singleton too — same tag-as-identity.
   zoneOfAvoidance: () => 'zoneOfAvoidance',
-  // A scene body's seed id is stable and unique within the body namespace, so
-  // the `body:${id}` key names it exactly — the same shape as the structure arm.
+  // Seed ids are unique across every scene body, so craft and earthScene share the body key shape.
   body: (t) => (t.type === 'body' ? `body:${t.id}` : ''),
-  // A star's identity is the source + index pair its ref carries; the two
-  // seeded tables and the survey bin number independently, so the source is
-  // part of the key rather than a redundant prefix.
+  craft: (t) => (t.type === 'craft' ? `body:${t.id}` : ''),
+  earthScene: (t) => (t.type === 'earthScene' ? `body:${t.id}` : ''),
+  // The two seeded tables and the survey bin number independently, so source is part of the key.
   starCatalog: (t) => (t.type === 'starCatalog' ? `starCatalog:${t.source}:${t.index}` : ''),
   blackHole: (t) => (t.type === 'blackHole' ? `blackHole:${t.id}` : ''),
+  satellite: (t) => (t.type === 'satellite' ? `satellite:${t.noradId}` : ''),
 };

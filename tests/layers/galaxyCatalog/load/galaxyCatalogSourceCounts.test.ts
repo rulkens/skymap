@@ -10,7 +10,7 @@ import type { GalaxyRecordSource } from '../../../../src/@types/data/galaxyCatal
 import type { SourceCountReport } from '../../../../src/@types/engine/layer/SourceCountReport';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { galaxyCatalogSourceCounts } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogSourceCounts';
 
 function fakeSlot() {

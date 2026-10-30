@@ -1,43 +1,23 @@
 /**
- * runFrame — focused tests for the camera-driver resolve and the
- * per-frame demand re-evaluation.
+ * runFrame — focused tests for the camera-driver resolve and the per-frame demand re-evaluation.
  *
- * The full per-frame body is exercised end-to-end by higher-level engine
- * tests (renderFrame.test.ts integration suite, engine.tier-swap-race, etc.).
- * This file pins two lighter slices: the camera-driver priority resolver
- * (which runs before `deriveFrameContext`) and the once-per-frame
- * `reevaluateDemand` call.
- *
- * Testing only these slices keeps the test cheap: no GPU device, no rendering
- * subsystems. Every "do something" GPU path sits behind `isEngineReady`, so a
- * fixture with `booted: false` / null `gpu.renderTargets` short-circuits the
- * body before any of the GPU work runs.
- *
- * ### Camera-driver regression (new architecture)
- *
- * The new camera architecture reads state from the Redux store (`cb.store`),
- * not from EngineState fields. A driver returns a `CameraPose` that is stored
- * in `state.cameraRuntime.register.pose`; the regression fixtures use a real
- * Redux store and read that register.
+ * The full body is covered end-to-end elsewhere (renderFrame.test.ts, engine.tier-swap-race). Every
+ * GPU path sits behind `isEngineReady`, so a `booted: false` / null `gpu.renderTargets` fixture
+ * short-circuits before any GPU work. Camera state lives in the Redux store (`cb.store`): a driver's
+ * `CameraPose` lands in `state.cameraRuntime.register.pose`, which the fixtures read.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
-// Demand re-evaluation is the engine's per-frame heartbeat: runFrame calls it
-// every tick so any state change (a setter flipping a flag, then waking the
-// loop via requestRender) re-derives what should load.  Mock it here so the
-// FPS-wiring fixtures don't drive the real demand table, and so the dedicated
-// test below can assert the per-frame call without a full registry.
+// Mocked so the FPS-wiring fixtures don't drive the real demand table and the dedicated test can
+// assert the per-frame call (runFrame calls it every tick so any state change re-derives loads).
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
 
-// The GPU dispatch and pick-overlay composite are real WebGPU calls against
-// `deps.device`/`deps.context` — no JSDOM stub can service them. Mocked out
-// so the wake-fold test below can drive `runFrame` all the way through a
-// READY frame (past the two label directors) without a real device. Neither
-// module is otherwise under test here.
+// Real WebGPU calls against `deps.device`/`deps.context` that no JSDOM stub can service; mocked so
+// the wake-fold test can drive `runFrame` through a READY frame.
 vi.mock('../../../../src/services/engine/frame/renderFrame', () => ({
   renderFrame: vi.fn(),
 }));
@@ -45,22 +25,16 @@ vi.mock('../../../../src/services/engine/frame/drawPickDebugOverlay', () => ({
   drawPickDebugOverlay: vi.fn(),
 }));
 
-// resizeCanvasToDisplay reads window.devicePixelRatio; in this node test
-// environment window is undefined. The cam-bearing regression fixtures
-// reach the resize block (non-null cam), so stub it to a no-op false —
-// resize is incidental to what these tests exercise (the camera drivers).
-// runFrame imports only resizeCanvasToDisplay from this module, so a full
-// replacement is safe (nothing else from gpu/device needs the real impl).
+// resizeCanvasToDisplay reads window.devicePixelRatio (undefined in node); stubbed to a no-op false
+// since resize is incidental to the camera-driver tests. runFrame imports only that symbol.
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-// deriveBodyStates is wrapped (not replaced) so the sim-clock test can (a)
-// record the exact instant runFrame primes the body snapshot at, and (b) prove
-// that prime runs BEFORE the camera produce step. The spy delegates to the REAL
-// derive so construction-time consumers (sceneBodyLabels) still get real maps;
-// it just appends the instant to a hoisted log the stub driver's pose() also
-// writes to, so one array captures the derive→produce order.
+// deriveBodyStates is wrapped, not replaced: the sim-clock test records the instant runFrame primes
+// the body snapshot at and proves that prime runs BEFORE the camera produce step. It delegates to
+// the REAL derive and appends the instant to a hoisted log the stub driver's pose() also writes to,
+// so one array captures derive→produce order.
 const timeOrder = vi.hoisted(() => ({ log: [] as string[] }));
 vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importOriginal) => {
   const actual =
@@ -77,6 +51,7 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -93,6 +68,7 @@ import {
   ORIENTATION_FRAME_QUATERNIONS,
 } from '../../../../src/data/orientation/orientationFrames';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';
@@ -125,8 +101,9 @@ import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapC
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { angleBetween } from '../../../helpers/math/angleBetween';
 
-/** Build a real Redux store from the production root reducer. */
 function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
@@ -134,16 +111,10 @@ function makeStore() {
 /** `earthArm` measures in Earth radii; the scale-bar case reads back in km. */
 const EARTH_RADIUS_KM = 6371;
 
-/**
- * Build a minimal `EngineState`-shaped fixture that lets `runFrame` run the
- * camera + demand slices and then bail out cleanly via the renderer-null
- * guard further down.  Casting through `unknown` keeps the test honest — if
- * the exercised path ever reaches into a field not stubbed here, the test
- * will surface it as a runtime undefined rather than a silently-passing stub.
- */
+/** Minimal `EngineState`-shaped fixture; casting through `unknown` makes a read of any unstubbed
+ *  field surface as a runtime undefined rather than a silently-passing stub. */
 function makeState(): EngineState {
   return {
-    // Post-H5 nested-only settings shape.
     settings: {
       // Read unconditionally at the top of the resize block, before the
       // renderer-null bail-out — see `runFrame`'s fovYRad write.
@@ -176,11 +147,6 @@ function makeState(): EngineState {
     subsystems: {
       scheduler: { requestRender: vi.fn() },
       fades: { opacityOf: () => 0 },
-      // Minimal selection-subsystem stub.  The runFrame body reads
-      // `focused()` (cluster-focus fade) + `selected()` (halo) for the
-      // renderFrame settings bag; the renderer-null guard short-circuits
-      // before those reads fire in this fixture, but we provide the stub
-      // so the EngineState type is satisfied.
       selection: {
         hovered: () => null,
         selected: () => null,
@@ -190,8 +156,6 @@ function makeState(): EngineState {
         setFocused: vi.fn(),
         destroy: vi.fn(),
       },
-      // clipPlayer is non-nullable from t=0 (no GPU dep). The tick spy must be
-      // a typed vi.fn — bare vi.fn() fails tsc against the typed ClipPlayer interface.
       clipPlayer: {
         tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })),
         stop: vi.fn<() => void>(),
@@ -206,16 +170,8 @@ function makeState(): EngineState {
       loadProgress: null,
     },
     booted: false,
-    // runFrame looks up VIEW_RIGS[viewRig].views(canvas, state) once, ready-gated.
     viewRig: 'mono',
-    assetSlots: {
-      points: new Map(),
-      filaments: null,
-      famousGalaxiesMeta: null,
-      pgcAlias: null,
-    },
-    // cameraRuntime Resource bag — required for the camera-driver block
-    // that runs BEFORE the renderer-null bail-out.
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
@@ -228,18 +184,17 @@ function makeState(): EngineState {
       follow: null,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
+      navigator: NAV_AT_REST,
+      scheme: 'skymap',
       own: {},
       pivotBody: null,
       outputs: {
         displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
         simDays: 0,
-        // Seeded with the ecliptic (default) basis.
         upBasis: [...ORIENTATION_FRAMES.ecliptic],
         projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
       },
     },
-    // The ready-frame fixtures below (makeReadyState, makeLayerState) reach
-    // `runLabel3DProducers`, which iterates this — empty is the boot value.
     label3DProducers: [],
     // Read unconditionally by `runFrame`'s NEAR0 altitude line, before the
     // ready gate.
@@ -247,12 +202,6 @@ function makeState(): EngineState {
   } as unknown as EngineState;
 }
 
-/**
- * Build a `RunFrameDeps` of no-op stubs.  Every dep is inert because the
- * renderer-null bail-out inside `runFrame` short-circuits before any of
- * them are touched; the camera-driver fixtures override `controlSchemes` + `canvas`
- * + `cb.store` via `makeCamDeps`.
- */
 function makeDeps(store = makeStore()): RunFrameDeps {
   return {
     canvas: {
@@ -264,35 +213,20 @@ function makeDeps(store = makeStore()): RunFrameDeps {
     cb: { store } as unknown as RunFrameDeps['cb'],
     device: {} as unknown as GPUDevice,
     context: {} as unknown as GPUCanvasContext,
-    // Disabled stub matches production's "no `?gpuTimings`" path.
     timingService: createDisabledGpuTimingService(),
     controlSchemes: composeControlSchemes([]),
   };
 }
 
-/**
- * Camera-driver regression fixtures.
- *
- * Unlike `makeState()` (whose `booted: false` bails before the camera block),
- * these fixtures are booted, so the per-frame camera-driver resolver — which
- * runs BEFORE `deriveFrameContext` — is actually exercised. The renderer is
- * still null, so `deriveFrameContext` reports not-ready and the body
- * early-returns right after the camera block: exactly the slice we want to pin
- * without standing up a GPU. The produced pose lands in
- * `state.cameraRuntime.register.pose`; tests read that.
- */
+// Booted fixtures: unlike `makeState()` they exercise the camera-driver resolver, which runs BEFORE
+// `deriveFrameContext`. The renderer is still null, so the body early-returns right after the camera
+// block; the produced pose is read from `state.cameraRuntime.register.pose`.
 function makeCamState(): EngineState {
   const state = makeState();
   state.booted = true;
   return state;
 }
 
-/**
- * Deps for the cam-fixture tests: real camera drivers built from the same
- * `state` (so the production wiring is exercised, not a hand-rolled fake),
- * and a canvas whose client/backing dims match so `resizeCanvasToDisplay`
- * returns false and doesn't poke `projection.aspect`.
- */
 function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
   const deps = makeDeps(store);
   return {
@@ -345,15 +279,11 @@ describe('runFrame — the input drain runs before the produce step', () => {
 
 describe('runFrame — camera drivers (regression)', () => {
   it('tween wins over auto-rotate; register.pose reflects the tween pose, not auto-rotate', () => {
-    // The tween driver (priority 60) outranks auto-rotate (20), so with both
-    // active the resolver runs ONLY the tween's pose. This pins that
-    // precedence via the priority table rather than an imperative
-    // `!tweens.isActive()` guard.
+    // The tween driver (priority 60) outranks auto-rotate (20), so with both active only the tween's pose runs.
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
 
-    // Commit a base pose so the camera starts somewhere known.
     const BASE: CameraPose = {
       target: [0, 0, 0],
       yaw: 0,
@@ -366,15 +296,12 @@ describe('runFrame — camera drivers (regression)', () => {
       register: { ...state.cameraRuntime.register, pose: absoluteArm(BASE) },
     };
 
-    // Enable auto-rotate AND start a tween — both active so the resolver must
-    // pick the higher-priority tween driver.
     store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
     store.dispatch(
       startCameraTween({
         from: BASE,
         to: { target: [0, 0, 0], yaw: 1.5, pitch: 0, distance: 50 },
-        durationMs: 1000,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -382,9 +309,7 @@ describe('runFrame — camera drivers (regression)', () => {
     runFrame(state, deps, 0); // arrival: primes the tween clock (elapsed 0 → pose == from)
     runFrame(state, deps, 500); // elapsed 500/1000 → tween yaw in (0, 1.5)
 
-    // The tween wins: the yaw is somewhere between 0 and 1.5 (not auto-rotate's
-    // yaw + 0.000873/frame). The exact value is easing-dependent; we only need
-    // to verify it advanced toward the tween's to-yaw (1.5) and is not zero.
+    // The tween wins: yaw is between 0 and 1.5 (not auto-rotate's yaw + 0.000873/frame); the exact value is easing-dependent.
     const yaw = worldArmOf(state.cameraRuntime.register.pose).yaw;
     expect(yaw).toBeGreaterThan(0);
     expect(yaw).toBeLessThanOrEqual(1.5);
@@ -404,7 +329,6 @@ describe('runFrame — camera drivers (regression)', () => {
 
     runFrame(state, deps, 1000);
 
-    // Resting driver returns `s.camera.base` as-is.
     const pose = worldArmOf(state.cameraRuntime.register.pose);
     expect(pose.yaw).toBe(0.123);
     expect(pose.pitch).toBe(0.456);
@@ -428,13 +352,11 @@ describe('runFrame — camera drivers (regression)', () => {
       register: { ...state.cameraRuntime.register, pose: absoluteArm(BASE) },
     };
 
-    // Enable auto-rotate on the camera slice — the only home now.
     store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
 
     runFrame(state, deps, 0); // arrival: autoRotate wins, its epoch starts → yaw 0
     runFrame(state, deps, 1000); // elapsed 1000 → yaw advances
 
-    // After 1000 ms the yaw must have advanced from the base (0).
     const yaw = worldArmOf(state.cameraRuntime.register.pose).yaw;
     expect(yaw).toBeGreaterThan(0);
   });
@@ -467,31 +389,16 @@ describe('runFrame — orientation-frame roll', () => {
     a[2]! - b[2]!,
   ];
   const norm = (v: readonly number[]): number => Math.hypot(v[0]!, v[1]!, v[2]!);
-  const dot = (a: readonly number[], b: readonly number[]): number =>
-    a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;
-  // Angle (rad) between two unit-ish vectors, clamped so acos never sees >1.
-  const angleBetween = (a: readonly number[], b: readonly number[]): number => {
-    const c = dot(a, b) / (norm(a) * norm(b));
-    return Math.acos(Math.min(1, Math.max(-1, c)));
-  };
 
   it('a full orientation-frame roll: B(t) reaches the destination pole monotonically and the descriptor clears on completion', () => {
-    // NOT a produce-path test — see 'during a frame roll the assembled camera
-    // position is unchanged...' below for the committed-vs-live basis split
-    // `runFrame` resolves, and the position-holds-still invariant that follows. This test instead drives a real frameTween
-    // through `runFrame` end to end and reads a SYNTHETIC probe camera —
-    // `assembleOrbitCamera(pose, projection, B, B)` with the SAME live B(t)
-    // fed to both slots — purely to turn the resolved basis into a vector
-    // (frameUp) and confirm two things nothing else pins: (1) B(t) rotates
-    // MONOTONICALLY from the old pole to the new one across a full 0→1000ms
-    // sweep of real ticks (`resolveFrameBasis.test.ts` checks orthonormality
-    // and endpoints at isolated samples, not that the interpolation never
-    // backtracks — a slerp-direction bug could pass that and fail this); and
-    // (2) `runFrame`'s completion branch dispatches `clearFrameTween` exactly
-    // once when elapsed saturates. The target-fixed / distance-preserved
-    // assertions below are incidental byproducts of B(t) being a rotation
-    // matrix (already implied by orthonormality), not a separate claim about
-    // the produce path.
+    // Not a produce-path test (see 'during a frame roll the assembled camera position is unchanged...'
+    // for the committed-vs-live basis split). Drives a real frameTween through `runFrame` and reads a
+    // SYNTHETIC probe camera, `assembleOrbitCamera(pose, projection, B, B)` with the live B(t) in both
+    // slots, to confirm what nothing else pins: (1) B(t) rotates MONOTONICALLY from the old pole to the
+    // new across a full 0→1000ms sweep (`resolveFrameBasis.test.ts` checks orthonormality and endpoints
+    // only, so a slerp-direction bug could pass it); (2) `runFrame`'s completion branch dispatches
+    // `clearFrameTween` exactly once when elapsed saturates. The target/distance assertions are
+    // byproducts of B(t) being a rotation.
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -517,7 +424,7 @@ describe('runFrame — orientation-frame roll', () => {
     );
 
     const projection = state.cameraRuntime.outputs.projection;
-    const samples: { t: number; target: number[]; position: number[]; up: number[] }[] = [];
+    const samples: { t: number; target: number[]; position: number[]; up: Vec3 }[] = [];
     for (const t of [0, 250, 500, 750, 1000]) {
       runFrame(state, deps, t);
       const B = state.cameraRuntime.outputs.upBasis;
@@ -537,7 +444,6 @@ describe('runFrame — orientation-frame roll', () => {
 
     const first = samples[0]!;
     for (const s of samples) {
-      // Target is fixed across the whole transition.
       expect(norm(sub(s.target, first.target))).toBeLessThan(1e-6);
       // Distance (|position − target|) is preserved — B(t) is a rotation matrix
       // at every sample, so the synthetic probe's eye orbits at constant radius.
@@ -548,36 +454,25 @@ describe('runFrame — orientation-frame roll', () => {
       expect(rel).toBeLessThan(1e-6);
     }
 
-    // Endpoints: the up-vector starts on the ecliptic pole and lands on the
-    // galactic pole (the slerp saturates by elapsed ≥ durationMs).
     expect(angleBetween(first.up, frameUp(ORIENTATION_FRAMES.ecliptic))).toBeLessThan(1e-6);
     expect(
       angleBetween(samples[samples.length - 1]!.up, frameUp(ORIENTATION_FRAMES.galactic)),
     ).toBeLessThan(1e-6);
 
-    // The up-vector rotates MONOTONICALLY old → new: its angle from the start
-    // pole strictly increases across the transition. This is the roll.
     const anglesFromStart = samples.map((s) => angleBetween(s.up, first.up));
     for (let i = 1; i < anglesFromStart.length; i++) {
       expect(anglesFromStart[i]!).toBeGreaterThan(anglesFromStart[i - 1]!);
     }
-    // And the synthetic probe's eye genuinely moved (orbited) — proving the
-    // up-roll is a real world-space change, not a no-op.
     expect(norm(sub(samples[samples.length - 1]!.position, first.position))).toBeGreaterThan(1);
 
-    // Completion clears the descriptor exactly once: after the saturating frame
-    // the store's frameTween is null, so the steady branch takes over next frame.
     expect(store.getState().camera.frameTween).toBeNull();
   });
 
   it('during a frame roll the assembled camera position is unchanged while its up rotates', () => {
-    // The branch's rule: a frame switch changes only which way is up. `poseBasis`
-    // is the COMMITTED frame (`ORIENTATION_FRAMES[orientation]`), which
-    // `watchOrientationChangeSaga` sets to the destination the instant a switch
-    // starts — so it does not move for the roll's whole duration — while
-    // `upBasis` is the live, mid-slerp `B(t)` runFrame resolves into
-    // `cameraRuntime.outputs.upBasis`. This test drives those two sources through
-    // `assembleOrbitCamera` and asserts the split: position holds, up rotates.
+    // A frame switch changes only which way is up. `poseBasis` is the COMMITTED frame
+    // (`ORIENTATION_FRAMES[orientation]`, set by `watchOrientationChangeSaga` to the destination the
+    // instant a switch starts, so it never moves during the roll); `upBasis` is the live mid-slerp B(t)
+    // in `cameraRuntime.outputs.upBasis`. Position holds, up rotates.
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -589,8 +484,6 @@ describe('runFrame — orientation-frame roll', () => {
       register: { ...state.cameraRuntime.register, pose: absoluteArm(BASE) },
     };
 
-    // Mirrors watchOrientationChangeSaga: setOrientation commits the
-    // destination immediately, startFrameTween rolls the up-basis toward it.
     store.dispatch(setOrientation('galactic'));
     store.dispatch(
       startFrameTween({
@@ -623,7 +516,6 @@ describe('runFrame — orientation-frame roll', () => {
     // samples (it never moved), and the pose (target/yaw/pitch/distance) is
     // unchanged too (resting driver), so position is bit-for-bit identical.
     expect(cam2.position).toEqual(cam1.position);
-    // The horizon rotates: upBasis is still mid-slerp between t=250 and t=500.
     expect(frameUp(cam2.upBasis)).not.toEqual(frameUp(cam1.upBasis));
   });
 
@@ -671,8 +563,6 @@ describe('runFrame — orientation-frame roll', () => {
         state.cameraRuntime.outputs.upBasis,
       );
       for (const c of cam.position) expect(Number.isFinite(c)).toBe(true);
-      // The view-projection is where a degenerate near-pole lookAt would surface
-      // NaN; assert every entry is finite.
       const vp = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
       for (const m of vp) expect(Number.isFinite(m)).toBe(true);
     }
@@ -681,12 +571,9 @@ describe('runFrame — orientation-frame roll', () => {
 
 describe('runFrame — demand re-evaluation', () => {
   it('re-derives demand once per frame', () => {
-    // The per-frame call is what lets every setter Just Work: a setter flips
-    // its demand-gating state and calls requestRender (which it must, to
-    // repaint), the loop wakes, and this re-derivation loads whatever became
-    // demanded.  No setter has to remember to call reevaluateDemand itself —
-    // forgetting requestRender would visibly freeze the UI, so the trigger
-    // can't silently regress the way a forgotten per-setter call did.
+    // The per-frame call is what lets every setter Just Work: a setter flips its demand-gating state
+    // and calls requestRender, the loop wakes, and this re-derivation loads whatever became demanded.
+    // No setter has to call reevaluateDemand itself.
     vi.mocked(reevaluateDemand).mockClear();
     const store = makeStore();
     const state = makeState();
@@ -723,8 +610,6 @@ describe('runFrame — clipPlayer tick ordering (Task 12)', () => {
   });
 
   it('passes nowMs to clipPlayer.tick', () => {
-    // The clip player advances internal state based on elapsed time. It must
-    // receive the same `nowMs` the frame was called with, not a stale clock read.
     const store = makeStore();
     const state = makeState();
     const deps = makeDeps(store);
@@ -737,11 +622,9 @@ describe('runFrame — clipPlayer tick ordering (Task 12)', () => {
 
 describe('runFrame — sim clock (Task 8)', () => {
   it('derives simDays from the time intent and primes the body snapshot before the camera produce step', () => {
-    // The frame must resolve its sim instant and prime the body snapshot BEFORE
-    // it produces the camera pose, so a body-following driver (a later feature)
-    // can aim at where the body is THIS frame. This test drives a manual,
-    // non-J2000 clock and asserts (1) the snapshot is derived at that exact
-    // instant, and (2) the derive precedes the produce step.
+    // The frame must resolve its sim instant and prime the body snapshot BEFORE it produces the camera
+    // pose, so a body-following driver can aim at where the body is THIS frame: (1) the snapshot is
+    // derived at the manual clock's instant, (2) the derive precedes the produce step.
     timeOrder.log.length = 0;
     const store = makeStore();
     const NOW = 5000;
@@ -770,7 +653,7 @@ describe('runFrame — sim clock (Task 8)', () => {
     };
     const deps: RunFrameDeps = {
       ...makeCamDeps(state, store),
-      controlSchemes: { skymap: { drivers: [stub] } },
+      controlSchemes: { skymap: { drivers: [stub] }, openspace: { drivers: [stub] } },
     };
 
     runFrame(state, deps, NOW);
@@ -781,19 +664,12 @@ describe('runFrame — sim clock (Task 8)', () => {
 
 describe('runFrame — hover-pick removed from frame body', () => {
   it('does not call galaxyPickRenderer.pick inside the frame body', () => {
-    // Hover picking is driven by createPickDriver (wired in
-    // wireInput.ts); runFrame itself must never call galaxyPickRenderer.pick.
-    // This test pins that invariant — a re-added hover-pick block in the
-    // frame body would be caught here.
-    //
-    // The fixture is not ready, so the frame bails before the GPU-dispatch
-    // section — we only need to confirm pick is not called during the camera +
-    // demand pre-pass, before that bail.
+    // Hover picking is driven by createPickDriver (wireInput.ts); runFrame must never call
+    // galaxyPickRenderer.pick. The fixture bails before the GPU-dispatch section, so only the camera +
+    // demand pre-pass runs.
     const store = makeStore();
     const state = makeState();
     const pickSpy = vi.fn<() => Promise<null>>(() => Promise.resolve(null));
-    // Seed a non-null galaxyPickRenderer so a re-added pick call would have
-    // something to call.
     (state.gpu as any).galaxyPickRenderer = {
       pick: pickSpy,
       renderForDebug: vi.fn<() => null>(),
@@ -804,8 +680,6 @@ describe('runFrame — hover-pick removed from frame body', () => {
 
     runFrame(state, deps, 1000);
 
-    // The frame body must never call galaxyPickRenderer.pick — hover picks are
-    // now the driver's responsibility, not the frame's.
     expect(pickSpy).not.toHaveBeenCalled();
   });
 });
@@ -852,8 +726,6 @@ describe('runFrame — engineScaleChanged dispatch', () => {
 
     runFrame(state, deps, 0);
 
-    // At least one dispatch of engineScaleChanged must have fired.
-    // The payload shape is { label: string, widthPx: number }.
     const scaleCalls = spy.mock.calls.filter((call) => {
       const action = call[0] as { type?: string };
       return action?.type === engineScaleChanged.type;
@@ -866,10 +738,9 @@ describe('runFrame — engineScaleChanged dispatch', () => {
   });
 
   it('reports a km-scale legend under an ENGAGED body arm', () => {
-    // The arm's world pose already ranges eye→ground, so the pre-fix subtract
-    // of Earth's radius drove the range below zero: `computeScaleInfo`
-    // short-circuited to null and the reducer held the last label — the bar
-    // froze the moment the arm engaged (0.45 R ≈ 2,870 km up).
+    // The arm's world pose already ranges eye→ground; subtracting Earth's radius would drive the range
+    // below zero, `computeScaleInfo` would return null and the reducer would hold the last label (the
+    // bar froze the moment the arm engaged, 0.45 R ≈ 2,870 km up).
     const store = makeStore();
     const spy = vi.spyOn(store, 'dispatch');
     const state = makeCamState();
@@ -906,7 +777,6 @@ describe('runFrame — engineScaleChanged dispatch', () => {
     const state = makeCamState();
     const deps: RunFrameDeps = {
       ...makeCamDeps(state, store),
-      // clientHeight = 0 → computeScaleInfo returns null → no dispatch.
       canvas: {
         width: 100,
         height: 100,
@@ -925,8 +795,6 @@ describe('runFrame — engineScaleChanged dispatch', () => {
   });
 
   it('does not dispatch engineScaleChanged before boot', () => {
-    // Pre-boot the `if (state.booted)` guard is false and the scale block is
-    // unreachable — the test pins that it stays silent.
     const store = makeStore();
     const spy = vi.spyOn(store, 'dispatch');
     const state = makeState(); // not booted
@@ -943,17 +811,9 @@ describe('runFrame — engineScaleChanged dispatch', () => {
 });
 
 describe('runFrame — the label-director wake fold', () => {
-  /**
-   * A fully READY fixture — every `isEngineReady` field non-null — so the
-   * frame body runs all the way past the two label-director `runFrame`
-   * calls (spec §8) instead of bailing at the `ctx.isReady` guard the other
-   * fixtures in this file rely on. Every per-frame planner BETWEEN the ready
-   * gate and the label directors (hiResFamous, the disk-planner walk, Earth
-   * tiles) is left null so its block is skipped by its own guard — none of
-   * their machinery is what this test pins. `renderFrame`/
-   * `drawPickDebugOverlay` are mocked at module scope (top of file) so the
-   * GPU dispatch past the directors never touches the fake `device`.
-   */
+  /** A fully READY fixture (every `isEngineReady` field non-null) so the body runs past the two label
+   *  directors. Per-frame planners between the ready gate and the directors are left null so their
+   *  blocks skip; `renderFrame`/`drawPickDebugOverlay` are mocked at module scope. */
   function makeReadyState(
     cosmoRunFrame: () => boolean,
     foregroundRunFrame: () => boolean,
@@ -968,12 +828,9 @@ describe('runFrame — the label-director wake fold', () => {
       },
       slabRows: [],
       visibilityEntries: [],
-      data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
-      // Empty over the empty composition — runFrame's Layer-hook loop
-      // iterates this every ready frame (04b Task 12).
+      // Empty over the empty composition: runFrame's Layer-hook loop iterates this every ready frame.
       layers: [],
-      // Read past the (mocked) renderFrame for the probe's wake vote.
       cubemapCaptures: makeCubemapCaptureRuntimes(),
       gpu: {
         ...base.gpu,
@@ -990,7 +847,6 @@ describe('runFrame — the label-director wake fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        surfaceTiles: null,
         structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }),
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
         cosmoLabelDirector: { runFrame: vi.fn(cosmoRunFrame) },
@@ -1060,14 +916,9 @@ describe('runFrame — the label-director wake fold', () => {
 });
 
 describe('runFrame — the planner keep-ticking fold', () => {
-  /**
-   * A fully READY fixture, mirroring the label-director block's shape.
-   * `renderFrame` is mocked at module scope; a test that needs a planner to
-   * have voted `awake`/`settling` mutates `input.canvas.snapshot.plans`
-   * from inside that mock, the way the real `renderFrame` would via
-   * `runPlanSteps` — `runFrame` itself no longer runs any planner, only
-   * folds the result afterward (`snapshot.plans.awake`).
-   */
+  /** A fully READY fixture. `renderFrame` is mocked at module scope; a test needing a planner vote
+   *  mutates `input.canvas.snapshot.plans` from inside that mock, as the real `renderFrame` would via
+   *  `runPlanSteps`; `runFrame` only folds the result (`snapshot.plans.awake`). */
   function makeReadyState(): EngineState {
     const base = makeCamState();
     return {
@@ -1079,7 +930,6 @@ describe('runFrame — the planner keep-ticking fold', () => {
       },
       slabRows: [],
       visibilityEntries: [],
-      data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       layers: [],
       cubemapCaptures: makeCubemapCaptureRuntimes(),
@@ -1101,7 +951,6 @@ describe('runFrame — the planner keep-ticking fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        earthTiles: null,
         structureFocus: {
           update: vi.fn(),
           produceFocusUniforms: vi.fn(() => ({
@@ -1178,7 +1027,8 @@ describe('runFrame — effective intent', () => {
         return { pose: ctx.register, memory: mem };
       },
     };
-    const deps = { ...h.deps, controlSchemes: { skymap: { drivers: [probe, ...CAMERA_DRIVERS] } } };
+    const drivers = [probe, ...CAMERA_DRIVERS];
+    const deps = { ...h.deps, controlSchemes: { skymap: { drivers }, openspace: { drivers } } };
 
     const before = h.store.getState();
     runFrame(h.state, deps, 16);
@@ -1200,7 +1050,6 @@ describe('runFrame — effective intent', () => {
     const recorded: string[] = [];
     const inner = h.store.dispatch.bind(h.store);
     h.store.dispatch = ((action: { type: string }) => {
-      // Filtered as the golden trace's recorder filters it: drain bookkeeping.
       if (action.type !== inputConsumed.type) recorded.push(action.type);
       return inner(action as never);
     }) as typeof h.store.dispatch;

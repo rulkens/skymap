@@ -1,20 +1,12 @@
 /**
- * buildFocusable — the pure, React-side build of the FocusableTarget view-model
- * from a stored SelectionRow. Table-dispatched on the row tag: the galaxy arm
- * runs buildGalaxyInfo (the pure formatter); the structure arm IS already a
- * StructureInfo so it passes through; the Milky Way arm is the singleton const;
- * the body and black-hole arms ARE their Info plus the camera `driver`, which
- * they drop; the star arm builds one `StarInfo` for every star, survey or
- * seeded, whose `detail` block is chosen by what the star HAS rather than by
- * its catalog.
+ * buildFocusable — the pure, React-side build of the FocusableTarget view-model from a stored
+ * SelectionRow, table-dispatched on the row tag. The body and black-hole arms are their Info
+ * minus the camera `driver`. One `StarInfo` serves every star; its `detail` block follows what
+ * the star HAS, not its catalog.
  *
- * `famousStarsMeta` is joined in here rather than read by the card, the way the
- * galaxy card's meta join happens at the selector: the card stays presentational
- * and one fail-soft path covers both "sidecar still loading" and "no entry".
- *
- * This imports only pure builders + static tables, so React can call it inside a
- * memoized selector without reaching the engine — the whole point of the
- * pure-store read.
+ * `famousStarsMeta` joins here, not in the card, so the card stays presentational and one
+ * fail-soft path covers "sidecar still loading" and "no entry". Imports only pure builders and
+ * static tables, so a memoized selector can call it without reaching the engine.
  */
 import { buildGalaxyInfo } from './buildGalaxyInfo';
 import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
@@ -66,6 +58,8 @@ const BUILD_FOCUSABLE: {
   milkyWay: () => MILKY_WAY_INFO,
   zoneOfAvoidance: () => ZONE_OF_AVOIDANCE_INFO,
   body: ({ driver: _driver, ...info }) => info,
+  craft: ({ driver: _driver, ...info }) => info,
+  earthScene: ({ driver: _driver, ...info }) => info,
   starCatalog: (row, famousStarsMeta): StarInfo => {
     const [x, y, z] = row.positionMpc;
     const distancePc = Math.hypot(x, y, z) / SCALE_UNITS.PC_TO_MPC;
@@ -83,6 +77,7 @@ const BUILD_FOCUSABLE: {
     };
   },
   blackHole: ({ driver: _driver, ...info }) => info,
+  satellite: ({ driver: _driver, ...info }) => info,
 };
 
 export function buildFocusable(

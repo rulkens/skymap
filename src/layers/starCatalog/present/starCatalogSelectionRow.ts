@@ -26,6 +26,7 @@ import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKin
 import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 
 type StarCatalogRef = Extract<SelectionRef, { type: 'starCatalog' }>;
 
@@ -37,7 +38,7 @@ const FIELD_STAR_LABEL = 'Field star';
  * and footprint at once. A survey star poses from no table (`poseId` null), so
  * the camera never targets or follows it, but it still frames and haloes.
  */
-function starDriver(poseId: string | null, radiusM: number): DriverGeometry {
+function starDriver(poseId: SceneBodyId | null, radiusM: number): DriverGeometry {
   return {
     poseId,
     boundingRadiusM: radiusM,

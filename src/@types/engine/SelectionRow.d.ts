@@ -3,26 +3,21 @@ import type { GalaxyRow } from './GalaxyRow';
 import type { StructureInfo } from '../data/structure/StructureInfo';
 import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
 import type { BodyInfo } from './BodyInfo';
+import type { CraftInfo } from './CraftInfo';
+import type { EarthSceneInfo } from './EarthSceneInfo';
 import type { BlackHoleInfo } from './BlackHoleInfo';
+import type { SatelliteInfo } from './SatelliteInfo';
 import type { Vec3 } from '../math/Vec3';
 
 /**
- * SelectionRow — the serializable DISPLAY projection of a selected thing, held
- * in the saga-owned `selectionRows` derived cache. The galaxy arm is the small
- * `GalaxyRow` (built React-side into a `GalaxyInfo` by `buildFocusable`); the
- * structure arm is the already-serializable `StructureInfo` record; the Milky
- * Way and the zone of avoidance are each the singleton tag; the body and
- * black-hole arms are their card record plus the camera `driver`. The `label`
- * rides the row (not the async meta sidecar) so a star's name shows the instant
- * it is selected, before the JSON has loaded.
+ * SelectionRow — the serializable display projection of a selected thing, held in the
+ * saga-owned `selectionRows` cache. The galaxy arm is the small `GalaxyRow` (`buildFocusable`
+ * builds the `GalaxyInfo` React-side). The `label` rides the row, not the async meta sidecar,
+ * so a star's name shows before the JSON loads.
  *
- * `driver` rides only the arms that host the camera (`DrivenSelectionRow`),
- * filled by the arm's own `extractRow`; readers go through `selectionDriver`,
- * so no reader resolves a focus id against a body table.
- *
- * Every arm is JSON-serializable (`GalaxyRow.objId` is a string,
- * `StructureInfo` is a plain record, the body arm is flat numbers + strings),
- * so the RTK serializability check stays on.
+ * `driver` rides only camera-hosting arms (`DrivenSelectionRow`), filled by the arm's
+ * `extractRow`; readers use `selectionDriver`. Every arm must stay JSON-serializable
+ * (`GalaxyRow.objId` is a string) so the RTK serializability check stays on.
  */
 export type SelectionRow =
   | GalaxyRow
@@ -30,12 +25,10 @@ export type SelectionRow =
   | { readonly type: 'milkyWay' }
   | { readonly type: 'zoneOfAvoidance' }
   | (BodyInfo & { readonly driver: DriverGeometry })
-  // Star arm — the self-contained display projection of a picked star from any
-  // of the four catalogs, its physical fields snapshotted at extract time so
-  // framing and card read them directly. `source` + `index` come from the ref
-  // (so `buildFocusable` can rebuild it, as GalaxyRow's index does); `id` is the
-  // durable seed id the `star-<seedId>` URL needs, null for a survey star,
-  // which has no identity of its own (and so drives with a null `poseId`).
+  | (CraftInfo & { readonly driver: DriverGeometry })
+  | (EarthSceneInfo & { readonly driver: DriverGeometry })
+  // Star arm: fields snapshotted at extract time. `id` is the seed id the `star-<seedId>` URL
+  // needs; null for a survey star (which drives with a null `poseId`).
   | {
       readonly type: 'starCatalog';
       readonly source: StarCatalogSourceType;
@@ -43,16 +36,14 @@ export type SelectionRow =
       readonly id: string | null;
       readonly label: string;
       readonly positionMpc: Vec3;
-      // A seeded star's photosphere; for a survey star the nominal solar radius,
-      // since the bin quantises position + photometry only and carries no size.
-      // The one radius framing (bodyLikeFraming), the halo and the sphere gate read.
+      // Photosphere radius; the nominal solar radius for a survey star (the bin carries no size).
       readonly radiusM: number;
-      // Survey-only catalogued photometry — a seeded star's card reads its
-      // curated sidecar or its orbit instead.
+      // Survey-only; a seeded star's card reads its curated sidecar or orbit instead.
       readonly absMag?: number;
       readonly bpRp?: number;
       readonly driver: DriverGeometry;
     }
-  // A black hole poses from its PLACE (`driver.poseId`), not a body table. Its
-  // card fields ride the row so the card builds without reaching into the Layer.
-  | (BlackHoleInfo & { readonly driver: DriverGeometry });
+  // A black hole poses from its PLACE (`driver.poseId`), not a body table.
+  | (BlackHoleInfo & { readonly driver: DriverGeometry })
+  // A satellite poses from the position core re-extracts each frame (`placeLiveSelection`).
+  | (SatelliteInfo & { readonly driver: DriverGeometry });

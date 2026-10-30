@@ -12,6 +12,7 @@ import type { DragStep } from '../../../src/@types/camera/DragStep';
 import type { GroundRadiusLookup } from '../../../src/@types/camera/GroundRadiusLookup';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // Earth-scale bounds matching raycastTerrain.test.ts's own fixtures.
 const DATUM_M = 6_371_000;
@@ -29,7 +30,7 @@ const peakField: GroundRadiusLookup = (p) => {
 };
 
 const arm: BodyFixedPose = {
-  bodyId: 'earth',
+  bodyId: asSceneBodyId('earth'),
   anchorLocalM: [0, 0, 0],
   eyeRelAnchorM: [0, 0, DATUM_M + 100_000],
   basisLocal: NADIR,

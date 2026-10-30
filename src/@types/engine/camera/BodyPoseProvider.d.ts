@@ -2,11 +2,11 @@
  * BodyPoseProvider — per-frame lookup from a slab host id to that host's
  * `BodyRelativePose`. Null ⇒ no pose this frame (culled).
  *
- * Keyed on `SlabHostId`, not `BodyId`: a `body-m` row may hang off a place
+ * Keyed on `PositionedId`, not `SceneBodyId`: a `body-m` row may hang off a place
  * (`PlaceId`), and this is the provider `deriveSlabs` builds its `vp` from.
  */
 
-import type { SlabHostId } from '../frame/SlabHostId';
 import type { BodyRelativePose } from './BodyRelativePose';
+import type { PositionedId } from '../../scene/PositionedId';
 
-export type BodyPoseProvider = (bodyId: SlabHostId) => BodyRelativePose | null;
+export type BodyPoseProvider = (bodyId: PositionedId) => BodyRelativePose | null;

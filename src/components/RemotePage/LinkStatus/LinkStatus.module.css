@@ -1,0 +1,41 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  white-space: nowrap;
+  color: var(--color-fg-muted);
+}
+
+/* Filled when connected, a ring otherwise: the state reads without colour. */
+.mark {
+  box-sizing: border-box;
+  width: var(--space-5);
+  height: var(--space-5);
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.connected .mark {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.looking .mark {
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
+
+.lost {
+  color: var(--color-accent);
+}
+
+@keyframes pulse {
+  to {
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .looking .mark {
+    animation: none;
+  }
+}

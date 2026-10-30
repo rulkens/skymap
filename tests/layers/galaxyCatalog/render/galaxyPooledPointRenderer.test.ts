@@ -17,7 +17,7 @@ import {
 import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
 import { GALAXY_GPU_RECORD_WORDS } from '../../../../src/data/galaxyCatalog/galaxyGpuRecordWords';
 import { GALAXY_COLUMN_SCHEMA } from '../../../../src/data/octree/galaxyOctreeFamily';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import type { GalaxyColumns } from '../../../../src/@types/data/galaxyCatalog/GalaxyColumns';
 import type { Octree } from '../../../../src/@types/octree/Octree';
 import type { OctreeChunk } from '../../../../src/@types/octree/OctreeChunk';

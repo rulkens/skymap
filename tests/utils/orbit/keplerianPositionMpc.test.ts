@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPositionMpc';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const len = (v: Vec3) => Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 
@@ -9,8 +10,8 @@ const len = (v: Vec3) => Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 // the full affine map (rotations + centre-offset), not a degenerate flat circle.
 // Colour / ids / parent are irrelevant to the geometry under test.
 const base: OrbitalElements = {
-  id: 'test',
-  focusId: 'sun',
+  id: asSceneBodyId('test'),
+  focusId: asSceneBodyId('sun'),
   semiMajorMpc: 2,
   eccentricity: 0.5,
   inclinationRad: 0.4,

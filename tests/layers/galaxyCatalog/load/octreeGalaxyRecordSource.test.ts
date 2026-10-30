@@ -21,7 +21,8 @@ import { decodeOctreeChunk } from '../../../../src/data/octree/decodeOctreeChunk
 import { decodeOctreeIndex } from '../../../../src/data/octree/decodeOctreeIndex';
 import { decodeOctreeInfo } from '../../../../src/data/octree/decodeOctreeInfo';
 import { GALAXY_INFO_REQUIRED_COLUMNS } from '../../../../src/data/octree/galaxyOctreeFamily';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { flatGalaxyRecordSource } from '../../../../src/layers/galaxyCatalog/load/flatGalaxyRecordSource';
 import { octreeGalaxyRecordSource } from '../../../../src/layers/galaxyCatalog/load/octreeGalaxyRecordSource';
 import { galaxyRecordBridge } from '../../../../src/layers/galaxyCatalog/present/galaxyRecordBridge';
@@ -37,7 +38,7 @@ import { buildGladeOctree } from '../../../../tools/catalog/buildGladeOctree';
 const N = 3_000;
 const PGC_BASE = 1_000_000;
 const NAMED_ROW = 7;
-const ENTRY = SOURCE_REGISTRY[Source.Glade];
+const ENTRY = APP_SOURCE_REGISTRY[Source.Glade];
 
 /** pgc = PGC_BASE + row, except every 10th row, which has none (objId 0); a cube `spreadMpc` wide. */
 function makeCloud(spreadMpc = 800): GalaxyCatalog {

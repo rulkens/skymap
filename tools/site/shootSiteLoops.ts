@@ -21,7 +21,9 @@ import { dispatchActions } from '../utils/browser/dispatchActions';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { readCanvas } from '../utils/shot/readCanvas';
 import { SITE_LOOP_PLAN } from './siteLoopPlan';
+import { blendLoopSeam } from './utils/blendLoopSeam';
 import { loopVideoArgs } from './utils/loopVideoArgs';
+import { clockLoopYaw } from './utils/clockLoopYaw';
 import { loopYaw } from './utils/loopYaw';
 import { turnCameraArm } from './utils/turnCameraArm';
 import { openSiteShot } from './utils/openSiteShot';
@@ -54,8 +56,9 @@ try {
   for (const loop of rows) {
     const framesDir = join(MASTERS_DIR, loop.id);
     const frameCount = loop.seconds * SITE_LOOP_PLAN.fps;
+    const seamFrames = loop.motion === 'live' ? SITE_LOOP_PLAN.seamSeconds * SITE_LOOP_PLAN.fps : 0;
+    const shot = siteShot(loop.shot);
     if (browser) {
-      const shot = siteShot(loop.shot);
       rmSync(framesDir, { recursive: true, force: true });
       mkdirSync(framesDir, { recursive: true });
       const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: DPR });
@@ -67,16 +70,31 @@ try {
           return { camera: state.camera.base, simDays: state.time.anchor.simDays };
         });
         // Frame 0 is the still; the frame after the last would be frame 0 again, which is the seam.
-        for (let frame = 0; frame < frameCount; frame++) {
+        // A live film is recorded a seam longer and blended afterwards, as nothing brings its scene back.
+        for (let frame = 0; frame < frameCount + seamFrames; frame++) {
           const turn = frame / frameCount;
-          if (loop.motion === 'orbit' || 'swayDeg' in loop.motion) {
+          if (loop.motion === 'live') {
+            // The scene moves on its own: only the frames are taken.
+          } else if (loop.motion === 'orbit' || !('clockDays' in loop.motion)) {
             await dispatchActions(page, [
               cancelCameraTween(),
               commitCameraPose(turnCameraArm(start.camera, loopYaw(loop.motion, turn))),
             ]);
           } else {
-            const simDays = start.simDays + turn * loop.motion.clockDays;
-            await dispatchActions(page, [setSimDays({ simDays, nowMs: 0 })]);
+            const { clockDays, orbitTurns, swayDeg } = loop.motion;
+            const simDays = start.simDays + turn * clockDays;
+            await dispatchActions(page, [
+              setSimDays({ simDays, nowMs: 0 }),
+              // A camera that has to stay on one side of a body that moves (the Moon, kept facing Earth) is turned with the clock; one that sways breaks up an otherwise still view.
+              ...(orbitTurns === undefined && swayDeg === undefined
+                ? []
+                : [
+                    cancelCameraTween(),
+                    commitCameraPose(
+                      turnCameraArm(start.camera, clockLoopYaw({ orbitTurns, swayDeg }, turn)),
+                    ),
+                  ]),
+            ]);
           }
           // One frame for the store change to reach the renderer; readCanvas draws the next and reads it.
           await page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.nextFrame());
@@ -85,6 +103,7 @@ try {
             await readCanvas(page, 'png'),
           );
         }
+        if (seamFrames > 0) await blendLoopSeam(framesDir, frameCount, seamFrames);
       } catch (err) {
         failed = true;
         console.error(`${loop.id}: ${err instanceof Error ? err.message : String(err)}`);
@@ -99,6 +118,8 @@ try {
       continue;
     }
     const file = join(OUT_DIR, `${loop.id}.mp4`);
+    const width = loop.width ?? SITE_LOOP_PLAN.size;
+    const height = Math.round((width * shot.size.height) / shot.size.width);
     let crf = SITE_LOOP_PLAN.crf;
     let kb = Infinity;
     for (
@@ -107,7 +128,11 @@ try {
       crf += SITE_LOOP_PLAN.crfStep
     ) {
       const frames = join(framesDir, '%04d.png');
-      execFileSync('ffmpeg', ['-v', 'error', ...loopVideoArgs(SITE_LOOP_PLAN, crf, frames, file)]);
+      execFileSync('ffmpeg', [
+        '-v',
+        'error',
+        ...loopVideoArgs({ ...SITE_LOOP_PLAN, width, height }, crf, frames, file),
+      ]);
       kb = Math.round(statSync(file).size / 1024);
     }
     if (kb > SITE_LOOP_PLAN.maxKb) failed = true;

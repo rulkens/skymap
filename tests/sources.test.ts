@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Source } from '../src/data/sources';
+import { Source } from '../src/data/source';
 import { maskHas } from '../src/utils/maskHas';
 import { maskWith } from '../src/utils/maskWith';
 
