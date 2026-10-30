@@ -4,6 +4,8 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
+import { cosmicHorizonLayerSettings } from './state/slices';
+import { cosmicHorizonVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
 import { horizonShellPass } from './passes/horizonShellPass';
@@ -11,8 +13,13 @@ import { cosmicHorizonLayerExhibits } from './exhibits/exhibits';
 
 export const cosmicHorizonLayer = defineLayer({
   name: 'cosmicHorizon',
+  settings: cosmicHorizonLayerSettings,
+  visibility: cosmicHorizonVisibility,
   create,
   destroy,
   passes: (runtime) => [horizonShellPass(runtime)],
   exhibits: cosmicHorizonLayerExhibits,
+  ui: [
+    { slot: 'labelsAndGuides', content: { toggle: 'cosmicHorizon', label: 'Universe horizon' } },
+  ],
 });

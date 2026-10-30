@@ -63,6 +63,7 @@ import { pickingInitialState } from '../../../src/state/settings/core/pickingSli
 import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
 import { initialState as lightTimeInitialState } from '../../../src/layers/lightTime/state/lightTime/initialState';
+import { initialState as cosmicHorizonInitialState } from '../../../src/layers/cosmicHorizon/state/cosmicHorizon/initialState';
 import { initialState as galaxyCatalogsInitialState } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import { initialState as biasInitialState } from '../../../src/layers/galaxyCatalog/state/bias/initialState';
 import { initialState as thumbnailsInitialState } from '../../../src/layers/galaxyCatalog/state/thumbnails/initialState';
@@ -122,6 +123,7 @@ export function makeSettingsFixture(
     milkyWay: { ...milkyWayInitialState },
     zoneOfAvoidance: { ...zoneOfAvoidanceInitialState },
     lightTime: { ...lightTimeInitialState },
+    cosmicHorizon: { ...cosmicHorizonInitialState },
     blackHoles: { items: { ...blackHolesInitialState.items } },
     blackHoleLensingTuning: { ...blackHoleLensingTuningInitialState },
     cosmicWebFilaments: { ...filamentsInitialState },
