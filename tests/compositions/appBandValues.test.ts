@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { APP_VISIBILITY } from '../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../src/compositions/appVisibility';
 import { bandValueOf } from '../../src/services/engine/presentation/bandValueOf';
 import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
@@ -24,7 +24,7 @@ import type { VisibilityAddress } from '../../src/@types/animation/VisibilityAdd
 const BODY_STATES = deriveBodyStates(CONST_J2000);
 
 function valueAtEye(key: string, eye: Readonly<Vec3>, item?: string): number {
-  const entry = APP_VISIBILITY.find((e) => 'key' in e && e.key === key)!;
+  const entry = APP_VISIBILITY_REGISTRY.find((e) => 'key' in e && e.key === key)!;
   return bandValueOf(entry, item, { drawCamPos: eye, snapshot: { bodyStates: BODY_STATES } });
 }
 
@@ -125,7 +125,7 @@ describe('caption bands', () => {
   const sun = BODY_STATES.get(asSceneBodyId('sun'))!.positionMpc;
   const towardGc = normalize3([gc[0] - sun[0], gc[1] - sun[1], gc[2] - sun[2]]);
   const captionValue = (label: string, item: string, from: Readonly<Vec3>, d: number): number =>
-    viewBandOf(APP_VISIBILITY, `label:${label}` as VisibilityAddress, item, {
+    viewBandOf(APP_VISIBILITY_REGISTRY, `label:${label}` as VisibilityAddress, item, {
       drawCamPos: [from[0] - towardGc[0] * d, from[1] - towardGc[1] * d, from[2] - towardGc[2] * d],
       snapshot: { bodyStates: BODY_STATES },
     });

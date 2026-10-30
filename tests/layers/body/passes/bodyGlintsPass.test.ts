@@ -35,7 +35,7 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { viewBandOf } from '../../../../src/services/engine/presentation/viewBandOf';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 
 // Where the solar-system captions have faded out.
 const CAPTION_GONE_MPC = SOLAR_SYSTEM_CAPTION_RECEDE.out[1];
@@ -575,7 +575,7 @@ describe('bodyGlintsPass Earth stamp follows the Earth caption band', () => {
     const stamped = args.points.some(
       (p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
     );
-    expect(viewBandOf(APP_VISIBILITY, 'label:body', 'earth', ctx) > 0).toBe(captioned);
+    expect(viewBandOf(APP_VISIBILITY_REGISTRY, 'label:body', 'earth', ctx) > 0).toBe(captioned);
     expect(stamped).toBe(captioned);
     expect(GLINTS.pickEnabled!(STATE, ctx, makeNear0View(eye))).toBe(captioned);
   });

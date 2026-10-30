@@ -7,7 +7,7 @@
 import { memo, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { APP_COMPOSITION } from '../../compositions/app';
-import { APP_LABELS_AND_GUIDES_ROWS } from '../../compositions/appLabelsAndGuidesRows';
+import { APP_LABELS_AND_GUIDES_REGISTRY } from '../../compositions/appLabelsAndGuidesRows';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import LabelsAndGuidesSectionContainer from '../containers/LabelsAndGuidesSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
@@ -20,7 +20,7 @@ export const SettingsSections = memo(function SettingsSections(): ReactNode {
       {mainSections.map((Section, index) => (
         <Section key={index} />
       ))}
-      <LabelsAndGuidesSectionContainer layerRows={APP_LABELS_AND_GUIDES_ROWS} />
+      <LabelsAndGuidesSectionContainer layerRows={APP_LABELS_AND_GUIDES_REGISTRY} />
       <DisplaySectionContainer />
       <CameraControlsSectionContainer />
     </>

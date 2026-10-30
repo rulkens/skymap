@@ -39,7 +39,7 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
@@ -339,7 +339,7 @@ describe('deriveFrameContext — scene-body admission', () => {
   ): readonly string[] {
     const state = {
       ...makeState(),
-      visibilityEntries: APP_VISIBILITY,
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
       subsystems: {
         texturedDisks: {},
         fades: {

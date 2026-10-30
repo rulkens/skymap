@@ -12,7 +12,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { composeControlSchemes } from '../../../src/services/engine/camera/composeControlSchemes';
-import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../src/services/engine/camera/cameraFraming';
 import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
@@ -120,7 +120,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     device: {},
     context: {},
     timingService: {},
-    controlSchemes: composeControlSchemes(Object.values(APP_EXHIBITS)),
+    controlSchemes: composeControlSchemes(Object.values(APP_EXHIBIT_REGISTRY)),
   } as unknown as RunFrameDeps;
 
   /** Commit `framed` to the store and re-seed the runtime from it. */

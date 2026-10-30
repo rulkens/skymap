@@ -10,7 +10,7 @@ import { cosmicHorizonLayerExhibits } from '../layers/cosmicHorizon/exhibits/exh
 import { missionsLayerExhibits } from '../layers/missions/exhibits/exhibits';
 import { exhibitsById } from '../utils/exhibits/exhibitsById';
 
-export const APP_EXHIBITS = exhibitsById([
+export const APP_EXHIBIT_REGISTRY = exhibitsById([
   ...CORE_EXHIBITS,
   ...cosmicHorizonLayerExhibits,
   ...bodyLayerExhibits,
