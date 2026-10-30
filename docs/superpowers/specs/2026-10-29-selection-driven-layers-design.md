@@ -91,7 +91,7 @@ after `deriveBodyStates` returns, never inside it; inside, the memo isn't writte
 would recurse.
 
 **Cost.** One `extractRow` per moving select/focus ref per frame. The satellites row builds a
-satrec per call (`satellitePositioner` → `satrecOf`); give the Layer a one-entry memo keyed by
+satrec per call (`satellitePositionMpc` → `satrecOf`); give the Layer a one-entry memo keyed by
 `(catalog, k)` if the perf run shows it. Expected well under 0.1 ms per frame.
 
 ### 2. The trail pass reads the selection from `PassState`
@@ -109,7 +109,7 @@ fills it from the store's selection. The satellites asset row's two `runtime.sel
 wake (`watchSelectionWakeSaga.ts:38`) already re-runs demand on select and focus changes.
 
 With 1–3 in place `createSelectedSatellites`, `SelectedSatellites`, `transientPositions`,
-`TransientPositioner` (its only producer is `satellitePositioner`, which the row keeps as a plain
+`TransientPositioner` (its only producer is `satellitePositionMpc`, which the row keeps as a plain
 function) and the Layer's store subscription go. `LayerCoreDeps.store` becomes two thunks for its
 two remaining lazy readers, `settings()` (`starCatalog/create.ts:95`) and `debugPanelOpen()`
 (`body/create.ts:95`): re-apply #965's reverted commit `efe978552`.

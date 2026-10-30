@@ -196,12 +196,11 @@ describe('no file under src/layers imports src/state or src/store (outside ui/sa
   });
 });
 
-// The import ban alone does not close the outbound seam: a store handed to a
-// Layer's runtime could dispatch a self-minted `createAction` — the
-// improvisation the error message above would otherwise invite (`LayerCoreDeps`
-// carries only lazy reads). Zero at HEAD outside `ui/`/`sagas/`, and every store write in the
-// runtime sequence is a `deps` field, a published fact, `put()` from a
-// declared saga, or deleted (Ruling 17).
+// Nothing hands a Layer the store (`LayerCoreDeps` carries only lazy reads); this
+// sweep keeps it that way: a Layer could still dispatch a self-minted `createAction`
+// if one were threaded in. Zero at HEAD outside `ui/`/`sagas/`, and every store write in
+// the runtime sequence is a `deps` field, a published fact, `put()` from a declared saga,
+// or deleted (Ruling 17).
 describe('no file under src/layers dispatches (outside ui/sagas)', () => {
   const files = walk('src/layers').filter(
     (file) => !LAYER_STORE_REACH_DIRS.some((dir) => file.includes(dir)),

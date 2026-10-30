@@ -21,7 +21,7 @@ export type LayerCoreDeps<Facts = undefined> = {
   readonly focusBgl: FocusUniformsBgl;
   /** Core-owned; Layers are destroyed before core (D8), so the capture is safe. */
   readonly focusUniform: FocusUniformBuffer;
-  /** This frame's settings, read lazily; no Layer needs the store itself (nothing dispatches or subscribes). */
+  /** The live engine settings, read at call time. */
   readonly settings: () => Readonly<EngineSettingsState>;
   /** Core UI fact: whether the debug panel is open, read lazily. */
   readonly debugPanelOpen: () => boolean;
