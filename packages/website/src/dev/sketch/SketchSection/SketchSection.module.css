@@ -1,0 +1,60 @@
+.job {
+  margin-top: 0.5rem;
+  color: var(--site-text-dim);
+  font-style: italic;
+}
+
+/* The design notes read as annotations, not page copy. */
+.notes {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 1.25rem 0 0;
+  padding-left: 0.75rem;
+  border-left: 2px solid #2f4f78;
+  font: 0.875rem / 1.5 var(--font-family-mono, ui-monospace, monospace);
+  color: #7fa8dc;
+}
+
+.notes dt {
+  color: #4f7299;
+}
+
+.notes dd {
+  margin: 0;
+}
+
+.shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.shots figure {
+  margin: 0;
+}
+
+.shots figcaption {
+  margin-top: 0.25rem;
+  color: var(--site-text-faint);
+  font: 0.75rem var(--font-family-mono, ui-monospace, monospace);
+}
+
+.parts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.part {
+  padding: 1rem;
+  border: 1px solid #222a3d;
+  border-radius: 6px;
+}
+
+.part .shots {
+  grid-template-columns: 1fr;
+  margin: 0 0 1rem;
+}

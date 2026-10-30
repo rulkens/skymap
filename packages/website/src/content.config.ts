@@ -15,17 +15,18 @@ import { z } from 'astro/zod';
 import type { PageSection } from './@types/PageSection';
 import { SITE_SHOTS } from './data/siteShots';
 
+const shotId = z
+  .string()
+  .refine(
+    (id) => SITE_SHOTS.some((shot) => shot.id === id && shot.widths.length > 0),
+    'not a shot id with files in data/siteShots.ts',
+  );
+
 // One object for every written page, so each collection means the same by each field.
 const pageFields = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
-  image: z
-    .string()
-    .refine(
-      (id) => SITE_SHOTS.some((shot) => shot.id === id && shot.widths.length > 0),
-      'not a shot id with files in data/siteShots.ts',
-    )
-    .optional(),
+  image: shotId.optional(),
 });
 
 const docs = defineCollection({
@@ -47,6 +48,10 @@ const section: z.ZodType<PageSection> = z.lazy(() =>
   z.object({
     heading: z.string().min(1),
     job: z.string().min(1),
+    layout: z.string().optional(),
+    visual: z.string().optional(),
+    shots: z.array(shotId).optional(),
+    component: z.string().optional(),
     parts: z.array(section).optional(),
   }),
 );
