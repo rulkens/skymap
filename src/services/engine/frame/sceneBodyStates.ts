@@ -1,11 +1,7 @@
 /**
- * sceneBodyStates — THE per-frame map of every scene body's time-varying `BodyState`, keyed by
- * id: the frame context's `bodyStates`, which `runFrame` derived once at `ctx.snapshot.simDays`
- * and placed the moving selection in (`frameBodyStates`). Per-frame consumers read this and never
- * call `deriveBodyStates` with an epoch of their own: two Layers picking two instants would draw
- * the same body at two positions, and a followed satellite is only in this map.
- *
- * `state` is unread; the parameter keeps signature parity with `sceneBodyPartition`.
+ * sceneBodyStates — THE per-frame body map, keyed by id: the frame context's `bodyStates`.
+ * Per-frame consumers read this and never call `deriveBodyStates` at an epoch of their own, or
+ * two Layers could draw one body at two positions. `state` is unread (parity with `sceneBodyPartition`).
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';

@@ -13,7 +13,8 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { CaptureFrame } from '../../../@types/engine/frame/CaptureFrame';
 import type { NotReadyFrameContext } from '../../../@types/engine/frame/NotReadyFrameContext';
 import { deriveFrameContext } from './frameContext';
-import { frameBodyStates } from './frameBodyStates';
+import type { BodyState } from '../../../@types/scene/BodyState';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
@@ -25,8 +26,10 @@ export function cubemapCaptureFrame(input: {
   readonly nowMs: number;
   /** World-from-cube axes; omitted = world axes. */
   readonly axes?: Readonly<Mat3>;
+  /** The calling frame's own snapshot (`ctx.snapshot.bodyStates`): the selection is placed once a frame. */
+  readonly bodyStates: ReadonlyMap<PositionedId, BodyState>;
 }): CaptureFrame | NotReadyFrameContext {
-  const { state, eyeMpc, nearMpc, nowMs, axes } = input;
+  const { state, eyeMpc, nearMpc, nowMs, axes, bodyStates } = input;
   const basis = (axes ?? IDENTITY_MAT3) as Mat3;
   // `updatePosition` decodes local +Z through poseBasis's THIRD column, so
   // the capture camera's world forward is that column negated.
@@ -49,7 +52,6 @@ export function cubemapCaptureFrame(input: {
     basis,
     basis,
   );
-  const simDays = state.cameraRuntime.outputs.simDays;
   // A capture face's own `renderedTargets` defaults empty — capture steps
   // never union into the frame-wide fact (`executeFrame`'s header).
   const snapshot = deriveFrameContext(state, {
@@ -61,8 +63,8 @@ export function cubemapCaptureFrame(input: {
     // The synthetic pose orbits no pivot: its altitude is its own distance.
     altitudeMpc: nearMpc,
     nowMs,
-    simDays,
-    bodyStates: frameBodyStates(state, state.selectionKindRows, simDays),
+    simDays: state.cameraRuntime.outputs.simDays,
+    bodyStates,
   });
   if (!snapshot.isReady) return { isReady: false };
   return { isReady: true, snapshot, cam };

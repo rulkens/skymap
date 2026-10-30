@@ -1,7 +1,7 @@
 /**
  * frameBodyStates — the body snapshot a frame context is built on: `deriveBodyStates` at the
- * instant, with the moving select/focus placed in it. The one recipe `runFrame`, the pick path and
- * a cubemap capture share, so a followed satellite is in every snapshot they hand out.
+ * instant, with the moving select/focus placed in it. The one recipe `runFrame` and the pick path
+ * share; a cubemap capture takes its frame's Map instead, so the selection is placed once a frame.
  */
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { PositionedId } from '../../../@types/scene/PositionedId';

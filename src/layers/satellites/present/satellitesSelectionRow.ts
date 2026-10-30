@@ -14,7 +14,7 @@ import { SATELLITE_FOCUS_GEOMETRY } from '../../../data/satellites/satelliteFocu
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { catalogIndexOf } from '../subsystems/catalogIndexOf';
-import { satellitePositioner } from '../subsystems/satellitePositioner';
+import { satellitePositionMpc } from '../subsystems/satellitePositionMpc';
 import { satelliteTransientId } from './satelliteTransientId';
 import { encodeSatelliteFocusId } from './encodeSatelliteFocusId';
 import { SATELLITE_FOCUS_PREFIX } from './satelliteFocusPrefix';
@@ -48,8 +48,8 @@ export function satellitesSelectionRow(
       const k = catalog === null ? -1 : catalogIndexOf(catalog, ref.noradId);
       if (catalog === null || k < 0) return null;
       const id = satelliteTransientId(ref.noradId);
-      const earth = deriveBodyStates(simDays).get(SCENE_EARTH.id)!.positionMpc;
-      const position = satellitePositioner(catalog, k, simDays, earth);
+      const earth = deriveBodyStates(simDays).get(SCENE_EARTH.id)!;
+      const position = satellitePositionMpc(catalog, k, simDays, earth);
       if (position === null) return null;
       return {
         type: 'satellite',
@@ -59,7 +59,7 @@ export function satellitesSelectionRow(
         satelliteClass: SATELLITE_CLASSES[catalog.classCode[k]!] ?? 'other',
         positionMpc: [position[0], position[1], position[2]],
         altitudeKm:
-          distanceMpc(position, earth) / SCALE_UNITS.KM_TO_MPC -
+          distanceMpc(position, earth.positionMpc) / SCALE_UNITS.KM_TO_MPC -
           SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_KM,
         periodMin: 1440 / catalog.meanMotion[k]!,
         inclinationDeg: catalog.inclinationDeg[k]!,

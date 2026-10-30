@@ -362,9 +362,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         orientation: 'equatorial',
         bodies: { items: {} },
       },
-      selection: { hover: null, select: null, focus: null },
       selectionRows: { hover: null, select: null, focus: null },
-      selectionKindRows: [],
       slabRows: [],
       visibilityEntries: [],
       terrainHeightAt: datumOnlyTerrainHeight,
@@ -386,6 +384,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       nearMpc: overrides.nearMpc ?? CAPTURE_NEAR_MPC,
       nowMs: 0,
       axes: overrides.axes,
+      bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
     });
     return capture.isReady ? capture : null;
   }
@@ -427,6 +426,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         eyeMpc: CAPTURE_EYE_MPC,
         nearMpc: CAPTURE_NEAR_MPC,
         nowMs: 0,
+        bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
       }).isReady,
     ).toBe(false);
     expect(
@@ -435,6 +435,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         eyeMpc: CAPTURE_EYE_MPC,
         nearMpc: CAPTURE_NEAR_MPC,
         nowMs: 0,
+        bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
       }).isReady,
     ).toBe(false);
     expect(
@@ -443,6 +444,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         eyeMpc: CAPTURE_EYE_MPC,
         nearMpc: CAPTURE_NEAR_MPC,
         nowMs: 0,
+        bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
       }).isReady,
     ).toBe(false);
   });
@@ -609,6 +611,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       nearMpc: CUBEMAP_CAPTURES.probe.nearMpc,
       nowMs: 0,
       axes: voyager.orientation,
+      bodyStates,
     });
     expect(capture.isReady).toBe(true);
     if (!capture.isReady) return;

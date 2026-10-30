@@ -3,7 +3,7 @@
  * TEME state through `ellipseFromStateVector`, then the same rotation the dots and the camera-follow
  * use. The ellipse passes exactly through the satellite, and J2 turning the plane is free because
  * it is rebuilt every frame. km become Mpc BEFORE Earth's heliocentric position joins the centre,
- * as in `satellitePositioner`, or the offset would round off an au magnitude.
+ * as in `satellitePositionMpc`, or the offset would round off an au magnitude.
  */
 import { sgp4 } from '../load/satelliteJsCore';
 import { ellipseFromStateVector } from '../../../utils/orbit/ellipseFromStateVector';
