@@ -17,7 +17,8 @@ A design pass on one page of the companion website, run as a visual round trip. 
 
   It is shared by every page, so a restyle must hold in the nav, the footer and over photographs.
 - **Places ("Pick somewhere to start") is final.**
-- **Copy and headings stay as they are.** A restyle is not a rewrite. If a heading must change, change the page's `<page>.structure.yaml` too.
+- **Copy may play a little** (owner, 2026-10-30: "a bit more quirky… a good word play can do wonders. dont go overboard"): at most one pun or play on words per section, in a heading or a lead line, only where it lands; the rest stays plain. Science stays strictly true.
+- **Copy and headings stay as they are** unless the brief allows a rewrite. A restyle is not a rewrite. If a heading must change, change the page's `<page>.structure.yaml` too.
 - **Motion is deliberate.** It mostly answers scroll or the pointer; ambient motion is allowed where it is tasteful and quiet. `prefers-reduced-motion` removes it all, and no new runtime dependencies.
 - **Shared components** (`components/shared/**`, `useGallery`) change only opt-in: a new optional prop or parameter whose default keeps every other page identical.
 - **Read first:** `docs/superpowers/conventions/ui-ux.md` and the page's own components.
@@ -41,6 +42,8 @@ The default is lively, not quiet. Use these:
   - coordinate ticks along edges.
 - **Type as image:** big numerals (light-years, kilometres) and display headlines that overlap pictures, cross column edges or sit behind cut-outs.
 - **Interactive moments:** hover or drag that shows something true, for example a catalogue lighting up its slice of the sky, a timeline scrubbing the moons, a device turning, an orbit drawing in. Each section should have one thing worth touching.
+
+**Space is a design quality** (owner, 2026-10-30: "make sure it doesnt become too busy. good use of space is a great design quality"). Creativity is ONE strong idea per section with room around it, not more things. Every card, number or line must earn its place, and generous empty space around the subject is part of the design. If a section gets busy, remove before you add.
 
 Judge every one of these in the round trip; taste decides, and it must survive reduced motion and phones.
 
