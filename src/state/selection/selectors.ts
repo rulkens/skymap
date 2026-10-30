@@ -18,8 +18,8 @@
  *    are plain composed arrows. Each returns a stable reference or null;
  *    react-redux's reference-equality `useSelector` already bails out when the
  *    value is unchanged, so no `createSelector` wrapper is needed.
- *  - The derived `selectHoveredFocusable`, `selectSelectedFocusable`, and
- *    `selectFocusedFocusable` are the heavy ones: they call `buildFocusable`,
+ *  - The derived `selectHoveredFocusable` and `selectSelectedFocusable` are the
+ *    heavy ones: they call `buildFocusable`,
  *    which builds a fresh `GalaxyInfo` from a `GalaxyRow`. These are memoized
  *    via `createSelector` so a write to an unrelated slice doesn't re-run
  *    `buildFocusable` for no reason.
@@ -117,17 +117,6 @@ export const selectSelectedFocusable = createSelector(
   [selectSelectRow, selectFamousStarsMeta],
   (row, famousStarsMeta): FocusableTarget | null => buildFocusable(row, famousStarsMeta),
 );
-
-/**
- * selectFocusedFocusable — builds a `FocusableTarget` from the focus
- * `SelectionRow`, or null when the focus slot is empty. Memoized on the
- * focus row reference for the same reason as `selectHoveredFocusable`.
- */
-export const selectFocusedFocusable = createSelector(
-  [selectFocusRow, selectFamousStarsMeta],
-  (row, famousStarsMeta): FocusableTarget | null => buildFocusable(row, famousStarsMeta),
-);
-
 /**
  * selectIsSelectionActive — true when either the select or the focus ref slot
  * holds a SelectionRef. The cheap boolean the UI uses to know "is something

@@ -9,9 +9,8 @@
  * exercise the memoized `selectXFocusable` selectors through a live store to
  * verify the `buildFocusable` integration round-trips correctly.
  *
- * The derived `selectHoveredFocusable` / `selectSelectedFocusable` /
- * `selectFocusedFocusable` selectors each build a fresh `FocusableTarget` from
- * their slot's `SelectionRow` — the memoization means the same row reference
+ * The derived `selectHoveredFocusable` / `selectSelectedFocusable` selectors
+ * each build a fresh `FocusableTarget` from their slot's `SelectionRow` — the memoization means the same row reference
  * returns the same target reference, which is the core invariant tested here.
  */
 
@@ -21,7 +20,6 @@ import { createAppStore } from '../../../src/store/createAppStore';
 import {
   selectHoveredFocusable,
   selectSelectedFocusable,
-  selectFocusedFocusable,
   selectIsSelectionActive,
 } from '../../../src/state/selection/selectors';
 import {
