@@ -2,7 +2,8 @@
  * useGallery — the state of a band of several views. Every view is rendered by
  * the server and only the current one shows; this chooses it. Left alone the
  * band moves on by itself, slowly; a choice starts the wait again, and the band
- * waits while the reader is at the markers. A later view is kept out of the
+ * waits while the reader is at the markers. With `auto` off only a choice moves it,
+ * for a host whose scroll chooses. A later view is kept out of the
  * first load until `warmed` says the browser may fetch it.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -25,7 +26,7 @@ export type Gallery = GalleryState & {
   warmed: (i: number) => boolean;
 };
 
-export function useGallery(views: readonly GalleryView[]): Gallery {
+export function useGallery(views: readonly GalleryView[], auto = true): Gallery {
   const count = views.length;
   const [at, setAt] = useState(0);
   const [live, setLive] = useState(false);
@@ -91,21 +92,22 @@ export function useGallery(views: readonly GalleryView[]): Gallery {
         ...(layers.current[wrapIndex(current.current + 1, count)]?.querySelectorAll('img') ?? []),
       ].every((img) => img.complete && img.naturalWidth > 0);
     // Counted in seconds of rest, so the wait starts again whenever the reader leaves the band alone.
-    const clock = less.motion
-      ? undefined
-      : setInterval(() => {
-          rested.current = waiting() ? 0 : rested.current + 1;
-          if (rested.current < REST_SEC) return;
-          rested.current = 0;
-          show(current.current + 1, false);
-        }, 1000);
+    const clock =
+      less.motion || !auto
+        ? undefined
+        : setInterval(() => {
+            rested.current = waiting() ? 0 : rested.current + 1;
+            if (rested.current < REST_SEC) return;
+            rested.current = 0;
+            show(current.current + 1, false);
+          }, 1000);
     return () => {
       clearInterval(clock);
       band.removeEventListener('pointerenter', warmNext);
       band.removeEventListener('focusin', warmNext);
       window.removeEventListener('load', idle);
     };
-  }, [count, show, warmNext]);
+  }, [auto, count, show, warmNext]);
 
   return {
     views,

@@ -75,8 +75,22 @@
   }
 }
 
+/*
+ * Wide, the picture fills the first screen and holds still while the words scroll past it; each part is a
+ * step taller than its words, so the one at the window's middle (which chooses the picture) changes slowly.
+ */
 @media (min-width: 901px) {
+  .root {
+    align-items: start;
+  }
+
   .figure {
+    position: sticky;
+    top: var(--nav-height);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: var(--first-screen);
     grid-column: 1 / span 7;
     --cols: 7;
   }
@@ -88,6 +102,36 @@
   .words {
     grid-column: 8 / -1;
     --cols: 5;
+    padding-top: 18svh;
+  }
+
+  .part {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 70svh;
+    margin-top: 0;
+  }
+}
+
+/* As the section scrolls by, the picture draws back to its own size, the way the tour's camera moves out. */
+@keyframes draw-back {
+  from {
+    transform: scale(1.08);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+    .root {
+      view-timeline: --stories block;
+    }
+
+    .layer img {
+      animation: draw-back linear both;
+      animation-timeline: --stories;
+      animation-range: contain;
+    }
   }
 }
 
