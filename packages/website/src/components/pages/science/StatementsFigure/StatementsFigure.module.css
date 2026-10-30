@@ -5,4 +5,55 @@
 
 .statements {
   composes: statements from '../../../../styles/layout.module.css';
+  margin: 0;
+}
+
+/*
+ * The square frame is `--grow` times the statements' width. Vertical margins in % are of that width, so the
+ * frame's empty top tenth and bottom sixth are tucked away. Seen from above its north pole the Milky Way turns
+ * clockwise, so the scroll turns it that way.
+ */
+.subject {
+  --grow: 1.25;
+  width: calc(var(--grow) * 100%);
+  margin: calc(var(--grow) * -10%) 0 calc(var(--grow) * -16%);
+  pointer-events: none;
+
+  & picture,
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+.caption {
+  position: relative;
+}
+
+@keyframes statements-turn {
+  from {
+    rotate: -14deg;
+  }
+
+  to {
+    rotate: 14deg;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .subject picture {
+      animation: statements-turn linear both;
+      animation-timeline: view();
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .subject {
+    width: calc(100% + 2 * var(--gutter));
+    margin: -12% calc(-1 * var(--gutter)) -18%;
+  }
 }
