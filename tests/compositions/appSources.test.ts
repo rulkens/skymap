@@ -14,7 +14,7 @@ describe('Source.FamousGalaxy', () => {
   });
 });
 
-describe('SOURCE_REGISTRY ids', () => {
+describe('APP_SOURCE_REGISTRY ids', () => {
   const ids = Object.values(APP_SOURCE_REGISTRY).map((e) => e.id);
 
   it('ids are unique across the registry', () => {
