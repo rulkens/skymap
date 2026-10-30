@@ -243,9 +243,8 @@ cube, which is why it's desktop-only today. The impostor feature's +45–75 MB
 | v1: 256 × 128², N=14              | 43 MiB         | ~20–50 MiB             | −16 MiB             | **+45–75 MiB** |
 | rich: 256 × 128² + 48 × 256², N=8 | 75 MiB         | ~50 MiB                | −16 MiB             | **+110 MiB**   |
 
-(The 24–40 px photo band retires: `textureAtlas.ts`'s 16 MiB rgba8 atlas, the
-fetch queue's network traffic, and the `2026-06-29-thumbnail-quality-sdss-dss`
-backlog item's in-scene half all go with it. Famous curated WebP + hi-res
+(The 24–40 px photo band retires: `textureAtlas.ts`'s 16 MiB rgba8 atlas and the
+fetch queue's network traffic go with it. Famous curated WebP + hi-res
 presumably stay — a generated cloud is _a_ galaxy, not M31 — confirm at spec
 time.)
 
