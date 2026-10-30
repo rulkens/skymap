@@ -26,7 +26,8 @@ const clock = feature('class-time');
 const search = feature('class-search');
 const andromeda = lesson('lesson-andromeda');
 
-// `whole` keeps a picture of one panel uncut (it has its own edge). `film` plays the loop of the same id (data/siteLoops.ts) over its still, which gives the label.
+// `film` plays the loop of the same id (data/siteLoops.ts) over its still, which gives the label. `over` lays a
+// control of the app, captured on a clear ground, over the picture: at its foot or at its `side`.
 const PARTS = [
   {
     title: 'Ready-made links',
@@ -40,6 +41,7 @@ const PARTS = [
     title: 'Run the clock',
     shot: 'features-time-jupiter',
     film: true,
+    over: { id: 'ui-timebar', side: false },
     large: false,
     ask: clock.ask,
     hash: clock.hash,
@@ -47,11 +49,11 @@ const PARTS = [
   },
   {
     title: 'Questions to chase',
-    shot: 'home-search',
+    shot: 'features-constellations',
+    over: { id: 'ui-search', side: true },
     ask: search.ask,
     hash: search.hash,
     large: false,
-    whole: true,
   },
   {
     title: 'Feel the scale',
@@ -68,6 +70,8 @@ const sizes = (large: boolean) =>
   large
     ? '(max-width: 900px) 100vw, min(calc(58vw - 4rem), 41rem)'
     : '(max-width: 900px) 100vw, min(calc(42vw - 4rem), 29rem)';
+// An overlay is at most four fifths of a small picture.
+const OVER_SIZES = '(max-width: 900px) 80vw, 22rem';
 
 function Lessons() {
   return (
@@ -81,12 +85,19 @@ function Lessons() {
       <div className={styles.parts}>
         {PARTS.map((part) => (
           <div key={part.title} className={styles.part}>
-            <figure className={cx(styles.figure, part.whole && styles.whole)}>
+            <figure className={styles.figure}>
               <div className={styles.frame}>
-                {part.film ? (
-                  <FeatureFilm film={part.shot} sizes={sizes(part.large)} wide />
-                ) : (
-                  <Shot id={part.shot} sizes={sizes(part.large)} />
+                <div className={styles.ground}>
+                  {part.film ? (
+                    <FeatureFilm film={part.shot} sizes={sizes(part.large)} wide />
+                  ) : (
+                    <Shot id={part.shot} sizes={sizes(part.large)} />
+                  )}
+                </div>
+                {part.over && (
+                  <div className={cx(styles.over, part.over.side && styles.side)}>
+                    <Shot id={part.over.id} sizes={OVER_SIZES} />
+                  </div>
                 )}
               </div>
               <figcaption className={styles.caption}>

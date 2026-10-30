@@ -872,16 +872,6 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'Every card is a picture taken in the app.',
     alt: 'A panel of fifteen picture cards under seven tabs, among them Perseverance, Hubble, Earth, Saturn and the Cosmic Web.',
   },
-  {
-    id: 'home-search',
-    link: 'pose=a,0,0,0,6.14,0.2,5.5e-16,0',
-    settings: { ui: true, minimalUi: true, searchFor: '', settleMs: 3000, crop: { left: 300, top: 40, width: 600, height: 580 } },
-    size: FEATURE,
-    widths: [1200, 800],
-    title: 'The app’s search',
-    drawn: 'Every card is a picture taken in the app.',
-    alt: 'A search box above a panel of picture cards under seven tabs, among them Perseverance, Hubble, Earth, Saturn and the Cosmic Web.',
-  },
   // The next two are one element of the app on a transparent ground (`element`), for the site to lay over its own pictures.
   {
     id: 'ui-search',

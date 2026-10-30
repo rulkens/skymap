@@ -14,7 +14,12 @@
 
 /* One shape for every picture, the film's: a taller picture is cut about its middle. */
 .frame {
+  position: relative;
   aspect-ratio: 16 / 9;
+}
+
+.ground {
+  height: 100%;
   overflow: hidden;
 
   & picture {
@@ -28,16 +33,26 @@
   }
 }
 
-/* A panel with its own rounded edge stands whole on the page, as an object: no crop, no frame; its label is as wide. */
-.whole {
-  max-width: 24rem;
+/*
+ * The app's own control over the picture it acts on, as it sits in the app: translucent, so the render shows
+ * through. The clock along the picture's foot; the search panel at its right side, wide reaching past the
+ * picture's edge into the empty column beside it, so it reads as the thing in hand.
+ */
+.over {
+  position: absolute;
+  inset: auto 6% 6%;
+}
 
-  & .frame {
-    aspect-ratio: auto;
-  }
+.side {
+  inset: 50% 5% auto auto;
+  width: 46%;
+  translate: 0 -50%;
+}
 
-  & img {
-    height: auto;
+@media (min-width: 901px) {
+  .side {
+    right: -12%;
+    width: 52%;
   }
 }
 
@@ -47,7 +62,7 @@
 
 /* Narrow, each picture takes the window's whole width; its label keeps to the text's edge. */
 @media (max-width: 900px) {
-  .figure:not(.whole) .frame {
+  .frame {
     margin-inline: calc(-1 * var(--gutter));
   }
 }
