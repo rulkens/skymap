@@ -12,7 +12,7 @@ registry into one per-frame core step, then removes the satellites Layer's selec
 
 **Tech Stack:** TypeScript, Redux Toolkit + typed-redux-saga, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-10-29-selection-driven-layers-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-10-29-selection-driven-layers-design.md`
 
 ## Global Constraints
 
@@ -204,10 +204,10 @@ review: yes (Redux state)
   `assertSelectsDisjoint(entries: readonly VisibilityEntry[]): void` throws naming the kind when two entries
   list it.
 
-- [ ] **Step 1: Write the failing test** `throws when two show entries select the same kind` (and passes for
+- [x] **Step 1: Write the failing test** `throws when two show entries select the same kind` (and passes for
   `APP_VISIBILITY`).
-- [ ] **Step 2–4:** Run (FAIL), implement, run (PASS).
-- [ ] **Step 5: Commit** `feat(visibility): show entries name the selection kinds they hide`.
+- [x] **Step 2–4:** Run (FAIL), implement, run (PASS).
+- [x] **Step 5: Commit** `feat(visibility): show entries name the selection kinds they hide`.
 
 ### Task 6: `watchSelectionRevealSaga`
 
@@ -226,7 +226,7 @@ review: yes (sagas)
   entry whose `selects` holds the new ref's type; if its cluster `hasSectionSwitch` and that switch is off,
   `put` each of `setVisibilityActionsFor(settings, entry.key, true)`. Otherwise nothing.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
   - `switches Satellites on when a satellite is focused with the section off`
   - `does nothing on hover` (`updateSelectionHover` with a satellite)
   - `does nothing during a clip`
@@ -235,24 +235,25 @@ review: yes (sagas)
   - arrival: `a cold satellite deep link with Satellites off reveals, loads and arrives` — Satellites off,
     `#focus=satellite-25544`; expect `setVisibility({cluster:'satellites', field:'enabled', on:true})` before
     `arrived()` and no `arrivalFailed`. Use the existing arrival test harness; stub the catalog slot to land.
-- [ ] **Step 2–4:** Run (FAIL), implement, register, run (PASS).
-- [ ] **Step 5: Commit** `feat(selection): a select or focus switches its subject's section on`.
+- [x] **Step 2–4:** Run (FAIL), implement, register, run (PASS).
+- [x] **Step 5: Commit** `feat(selection): a select or focus switches its subject's section on`.
 
 ### Task 7: Verification
 
-- [ ] **Step 1:** Perf: `npm run perf:cpu -- --url http://localhost:<wt port>` at an Earth pose with the ISS
+- [x] **Step 1:** Perf: `npm run perf:cpu -- --url http://localhost:<wt port>` at an Earth pose with the ISS
   focused, clock running and paused, main vs branch. A regression over 0.1 ms/frame → add the one-entry
   satrec memo in the satellites row and re-measure.
-- [ ] **Step 2:** Eye-check pairs (main vs branch, deep links): cold `#focus=satellite-25544&t=2026-10-29T12:00:00Z`
+- [x] **Step 2:** Eye-check pairs (main vs branch, deep links): cold `#focus=satellite-25544&t=2026-10-29T12:00:00Z`
   (main: 30 s veil, then Earth; branch: arrives at the ISS), and the ISS trail/follow at 1 h/s.
-- [ ] **Step 3:** `/feature-done`.
+- [x] **Step 3:** `/feature-done`.
 
 ## Definition of Done
 
-- [ ] `grep -rn "transientPositions\|createSelectedSatellites\|deps\.store" src` has no code hits.
-- [ ] `npm run typecheck` and `npm test` green; CI green on both PRs.
-- [ ] A cold satellite deep link with Satellites off arrives (saga test + eye-check).
-- [ ] Hover never loads the catalog or flips a switch (tests).
-- [ ] Perf at the ISS pose within 0.1 ms/frame of main, running and paused.
-- [ ] Only the three consented Layer-contract changes landed.
-- [ ] Plan and spec filed under `*/completed/` by `/feature-done`.
+- [x] `grep -rn "transientPositions\|createSelectedSatellites\|deps\.store" src` has no code hits.
+- [x] `npm run typecheck` and `npm test` green; CI green on both PRs.
+- [x] A cold satellite deep link with Satellites off arrives (saga test + eye-check).
+- [x] Hover never loads the catalog or flips a switch (tests).
+- [x] Perf at the ISS pose within 0.1 ms/frame of main, running and paused.
+- [x] Only the consented Layer-contract changes landed (`DemandCtx.selectedKinds`, `LayerCoreDeps` thunks,
+  `DriverGeometry.placedEachFrame` ruled 2026-10-30, `ShowEntry.selects`).
+- [x] Plan and spec filed under `*/completed/` by `/feature-done`.

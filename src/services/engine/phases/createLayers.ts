@@ -28,6 +28,7 @@ import {
   engineStatusChanged,
 } from '../../../state/engine/engineSlice';
 import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSelectionRowsDisjoint';
+import { assertSelectsDisjoint } from '../../../utils/visibility/assertSelectsDisjoint';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
@@ -215,4 +216,5 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
 
   state.selectionKindRows = instances.flatMap((instance) => instance.selection);
   assertSelectionRowsDisjoint(state.selectionKindRows);
+  assertSelectsDisjoint(state.visibilityEntries);
 }

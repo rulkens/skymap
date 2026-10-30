@@ -11,6 +11,7 @@ export const satellitesVisibility = [
   {
     key: 'satellites',
     items: SATELLITE_CLASSES,
+    selects: ['satellite'],
     bands: {
       nearEarth: {
         out: [F.fullWithinKm * SCALE_UNITS.KM_TO_MPC, F.goneBeyondKm * SCALE_UNITS.KM_TO_MPC],

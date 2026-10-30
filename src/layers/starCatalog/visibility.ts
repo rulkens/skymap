@@ -24,6 +24,7 @@ export const starCatalogVisibility = [
     cluster: 'starCatalogs',
     items: STAR_CATALOG_IDS,
     bodies: SEEDED_STAR_CATALOGS,
+    selects: ['starCatalog'],
     // Each seeded set dissolves from its own region; the survey stars keep drawing from far
     // out. No foreground band: each backdrop is 0 long before FOREGROUND_RECEDE starts.
     bands: {
