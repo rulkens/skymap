@@ -1528,18 +1528,6 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   // Cutouts: one subject on pure black for the pages to blend with `screen`. Stars and the galaxy field are off, so nothing else is in frame.
   {
-    id: 'cut-hubble',
-    // 20 minutes on from the Features picture, with the camera under Hubble and the Sun beside it: Earth is out of frame, so nothing is behind it. The narrow lens keeps Earth's limb out.
-    link: 'focus=body-hubble&t=2026-09-18T13:20:12Z&pose=a,0,0,0,3.2,-1.0,1.3e-21,0',
-    settings: { ...CUTOUT, fovDeg: 25, exposure: 9, settleMs: 9000 },
-    size: WIDE,
-    widths: CUT_WIDTHS,
-    title: 'The Hubble Space Telescope',
-    drawn: 'The telescope is a 3D model.',
-    alt: 'The Hubble Space Telescope, a silver tube with two dark solar panels, on black.',
-    credit: 'Model: NASA',
-  },
-  {
     id: 'cut-voyager1',
     // Rolled so the long science boom lies across the frame; the narrow lens leaves no planet or moon dots in it.
     link: 'focus=body-voyager1&t=2026-09-18T12:56:32Z&pose=a,0,0,0,3.8408163993487223,-0.6565563346622649,1.75e-21,-0.7',
@@ -1574,41 +1562,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'Earth with the terminator through its middle, the day side lit and the night side dark, on black.',
     credit: 'Earth: NASA Blue Marble',
   },
-  // The rovers stand on terrain the app cannot hide, so these are not on black: the camera sits low at the rover's own height (`s` pose, a site's heading, elevation and range) and the Martian sky is dark brown.
-  {
-    id: 'cut-perseverance',
-    link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z&pose=s,perseverance,1.6,0.03,11',
-    settings: { ...CUTOUT, fovDeg: 35, settleMs: 9000 },
-    size: WIDE,
-    widths: CUT_WIDTHS,
-    title: 'Perseverance on Mars',
-    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
-    alt: 'A six-wheeled rover with a camera mast, seen from the side on a slope of smooth brown ground under a dark brown sky.',
-    credit: 'Model: Brian Kumanchik, NASA/JPL-Caltech',
-  },
-  {
-    id: 'cut-curiosity',
-    link: 'focus=body-curiosity&t=2026-10-07T16:00:00Z&pose=s,curiosity,5.0,0.03,11',
-    settings: { ...CUTOUT, fovDeg: 35, settleMs: 9000 },
-    size: WIDE,
-    widths: CUT_WIDTHS,
-    title: 'Curiosity on Mars',
-    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
-    alt: 'A six-wheeled rover with a long arm and a camera mast, seen from the side on the floor of Gale crater, a ridge rising behind it.',
-    credit: 'Model: NASA/JPL-Caltech',
-  },
-  {
-    id: 'cut-spirit',
-    link: 'focus=body-spirit&t=2026-10-07T08:00:00Z&pose=s,spirit,0.8,0.03,12',
-    settings: { ...CUTOUT, fovDeg: 35, settleMs: 9000 },
-    size: WIDE,
-    widths: CUT_WIDTHS,
-    title: 'Spirit on Mars',
-    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
-    alt: 'A six-wheeled rover with flat solar panels and a camera mast on smooth orange ground under a dark brown sky.',
-    credit: 'Model: NASA/JPL-Caltech',
-  },
-  // A strip for the foot of a section: the same low camera, Jezero's ground below a flat horizon.
+  // A strip for the foot of a section: the camera low at Perseverance's height (`s` pose: a site's heading, elevation and range), Jezero's ground below a flat horizon. The app cannot hide terrain, so it is not on black: the Martian sky is dark brown.
   {
     id: 'mars-horizon',
     link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z&pose=s,perseverance,1.6,0.03,2000',
