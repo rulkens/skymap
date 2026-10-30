@@ -96,6 +96,7 @@ import { captureFaceAttachment } from './captureFaceAttachment';
 import { runBloom } from './runBloom';
 import { sampledDepthFor } from './sampledDepthFor';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
+import { clearValueOf } from '../../../utils/gpu/clearValueOf';
 import { timestampSpread } from '../../../utils/gpu/timestampSpread';
 import { cpuSpans } from '../../../utils/perf/cpuSpans';
 
@@ -310,7 +311,10 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           if (loadOp === 'clear') lastDepthClear.set(step.target, view.slab);
           destination = {
             label: step.target,
-            dest: { view: viewFor(step.target, ctx, swapView), clearValue: spec.clearValue },
+            dest: {
+              view: viewFor(step.target, ctx, swapView),
+              clearValue: clearValueOf(spec, state),
+            },
             depth:
               spec.depth && loadOp !== undefined
                 ? { view: ctx.snapshot.renderTargets.depthViewOf(step.target), loadOp }
@@ -368,7 +372,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           colorAttachments: [
             colorAttachment(
               viewFor(dest, ctx, swapView),
-              ctx.snapshot.renderTargets.specOf(dest).clearValue,
+              clearValueOf(ctx.snapshot.renderTargets.specOf(dest), state),
               touched.has(dest),
             ),
           ],

@@ -1,7 +1,7 @@
 // meshBody/fragment.wesl — the mesh body's material: baked TBN relief over a
 // GGX metal/dielectric blend, lit by the Sun as a sphere light and by the
-// body's own reflection probe as its environment. The probe IS the ambient:
-// there is no fill and no night-side floor.
+// body's own reflection probe as its environment. The probe is the ambient;
+// 'u.ambient' adds a uniform fill only when a site shot asks (0 otherwise).
 //
 // LANDMINE -- there is no shadow map and no self-shadowing term. Occlusion of
 // the sun by the host is the CPU-side scalar 'u.sunVisibleFraction' and nothing
@@ -61,5 +61,9 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
     n, v, diffuseAlbedo, roughness, f0, probeTexture, meshSampler, envBrdfLut, lutSampler, ao,
   );
 
-  return vec4<f32>(direct + env, 1.0);
+  // A uniform grey environment of that fraction of sunlight: diffuse plus the
+  // specular's normal-incidence share, so a metal (Hubble's foil) lifts too.
+  let fill = (diffuseAlbedo + f0) * (u.ambient * SUN_IRRADIANCE) * ao;
+
+  return vec4<f32>(direct + env + fill, 1.0);
 }

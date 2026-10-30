@@ -19,6 +19,7 @@ import { readCanvas } from '../utils/shot/readCanvas';
 import { SHOT_ENCODING } from './shotEncoding';
 import { makeSiteOgCard } from './utils/makeSiteOgCard';
 import { openSiteShot } from './utils/openSiteShot';
+import { shootMatte } from './utils/shootMatte';
 import { shootPairedRemote } from './utils/shootPairedRemote';
 
 const MASTERS_DIR = 'data/shots/site';
@@ -65,6 +66,7 @@ let failed = false;
 try {
   for (const shot of rows) {
     const master = join(MASTERS_DIR, `${shot.id}.png`);
+    const shadowMaster = join(MASTERS_DIR, `${shot.id}-shadow.png`);
     const dpr = shot.dpr ?? DPR;
     if (!fromMasters) {
       const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: dpr });
@@ -87,6 +89,10 @@ try {
         // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
         if (shot.settings?.remote) {
           writeFileSync(master, await shootPairedRemote(page, base!, shot));
+        } else if (shot.settings?.matte) {
+          const { master: cutout, shadow } = await shootMatte(page, shot);
+          writeFileSync(master, cutout);
+          if (shadow) writeFileSync(shadowMaster, shadow);
         } else {
           writeFileSync(
             master,
@@ -103,41 +109,46 @@ try {
         await context.close();
       }
     }
-    if (!existsSync(master)) {
+    if (!existsSync(master) || (shot.settings?.shadow && !existsSync(shadowMaster))) {
       failed = true;
       console.error(`${shot.id}: no master at ${master}; run with --url first`);
       continue;
     }
-    // A row whose widths changed must not leave its old files behind.
-    for (const file of readdirSync(OUT_DIR)) {
-      if (/^(.+)-\d+\.(avif|webp)$/.exec(file)?.[1] === shot.id) rmSync(join(OUT_DIR, file));
+    // A `shadow` row's multiply layer is written beside its cut-out, at the same widths.
+    const outputs: [string, string][] = [[shot.id, master]];
+    if (shot.settings?.shadow) outputs.push([`${shot.id}-shadow`, shadowMaster]);
+    for (const [name, file] of outputs) {
+      // A row whose widths changed must not leave its old files behind.
+      for (const old of readdirSync(OUT_DIR)) {
+        if (/^(.+)-\d+\.(avif|webp)$/.exec(old)?.[1] === name) rmSync(join(OUT_DIR, old));
+      }
+      const sizes: string[] = [];
+      const crop = shot.settings?.crop;
+      const frame = crop
+        ? sharp(file).extract({
+            left: crop.left * dpr,
+            top: crop.top * dpr,
+            width: crop.width * dpr,
+            height: crop.height * dpr,
+          })
+        : sharp(file);
+      const narrowest = Math.min(...shot.widths);
+      for (const width of shot.widths) {
+        const resized = frame.clone().resize({ width, kernel: 'lanczos3' });
+        const avif = join(OUT_DIR, `${name}-${width}.avif`);
+        const quality = width > narrowest ? (shot.denseQuality ?? AVIF.quality) : AVIF.quality;
+        await resized
+          .clone()
+          .avif({ ...AVIF, quality })
+          .toFile(avif);
+        await resized
+          .clone()
+          .webp(WEBP)
+          .toFile(join(OUT_DIR, `${name}-${width}.webp`));
+        sizes.push(`${width}: ${Math.round(statSync(avif).size / 1024)} KB`);
+      }
+      console.log(`${name}  ${sizes.join(' · ')} (AVIF)`);
     }
-    const sizes: string[] = [];
-    const crop = shot.settings?.crop;
-    const frame = crop
-      ? sharp(master).extract({
-          left: crop.left * dpr,
-          top: crop.top * dpr,
-          width: crop.width * dpr,
-          height: crop.height * dpr,
-        })
-      : sharp(master);
-    const narrowest = Math.min(...shot.widths);
-    for (const width of shot.widths) {
-      const resized = frame.clone().resize({ width, kernel: 'lanczos3' });
-      const avif = join(OUT_DIR, `${shot.id}-${width}.avif`);
-      const quality = width > narrowest ? (shot.denseQuality ?? AVIF.quality) : AVIF.quality;
-      await resized
-        .clone()
-        .avif({ ...AVIF, quality })
-        .toFile(avif);
-      await resized
-        .clone()
-        .webp(WEBP)
-        .toFile(join(OUT_DIR, `${shot.id}-${width}.webp`));
-      sizes.push(`${width}: ${Math.round(statSync(avif).size / 1024)} KB`);
-    }
-    console.log(`${shot.id}  ${sizes.join(' · ')} (AVIF)`);
   }
   await makeSiteOgCard(browser, MASTERS_DIR);
 } finally {
