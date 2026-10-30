@@ -28,6 +28,17 @@ A design pass on one page of the companion website, run as a visual round trip. 
 - **Critiquing (step 4.3), on every pass:** load `site-critique`. The weakest thing it names is the one thing you fix next.
 - **Any section that adds or changes motion:** load `site-motion` before writing its CSS or script.
 
+## Pictures as material, not rectangles
+
+The owner asked: "use screenshots more creatively, i.e. integrate more into the page, cutouts". The tools for that:
+- **Float a render with no frame.** The renders sit on black, so `mix-blend-mode: screen` or `lighten` lets a planet, galaxy or web float on the page frameless.
+- **Feather the edges.** `mask-image` gradients make a picture dissolve into the ground instead of ending at a hard edge.
+- **Shoot clean subjects.** New shot rows with `hideStars` and `hideLabels` give a clean planet or spacecraft.
+- **Capture the UI on its own.** The `element` setting captures app UI on a transparent ground, for overlays (`tools/site/README.md`).
+- **Make depth.** Subjects can break out of their frame, overlap across columns and move in parallax on scroll.
+
+Every new shot row must be used on a page, or the shot test fails.
+
 ## 1. Shoot the before
 
 ```
