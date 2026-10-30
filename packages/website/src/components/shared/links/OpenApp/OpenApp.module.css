@@ -51,11 +51,43 @@
 
 .root svg {
   color: var(--color-accent);
+  overflow: visible;
+}
+
+/* The icon's star (its second stroke) grows from its own middle. */
+.root svg path:last-child {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: scale var(--duration-base) var(--ease-enter);
+}
+
+/*
+ * Pointing or focusing is one move, about 400 ms: the ring of the icon draws itself again from the top, the star
+ * inside it steps forward, the edge light turns once and the standoff ring lights. The selection, as the app
+ * makes it.
+ */
+@keyframes ring-draws {
+  from {
+    stroke-dashoffset: 54;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* Selected: the standoff ring of the app's marker (styles/ring.module.css), and the edge light turned once. */
 .root:focus-visible {
   outline: none;
+}
+
+.root:is(:hover, :focus-visible) svg path:first-child {
+  stroke-dasharray: 54;
+  animation: ring-draws var(--duration-reveal) var(--ease-enter);
+}
+
+.root:is(:hover, :focus-visible) svg path:last-child {
+  scale: 1.3;
 }
 
 .root:is(:hover, :focus-visible) {
@@ -94,8 +126,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .root {
+  .root,
+  .root svg path:last-child {
     transition: none;
+  }
+
+  .root:is(:hover, :focus-visible) svg path:first-child {
+    animation: none;
   }
 
   .root:active {
