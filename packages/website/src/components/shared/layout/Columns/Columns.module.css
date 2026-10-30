@@ -11,6 +11,22 @@
   }
 }
 
+/* A column's closing link, or row of links, stands on the foot of the row, so the links of a row share one line. */
+.root > * {
+  display: flex;
+  flex-direction: column;
+}
+
+.root > * > :is(a, div:has(> a)):last-child {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+/* The auto margin replaces a link row's own (links.module.css); as padding, its gap stays in the longest column. */
+.root > * > div:has(> a):last-child {
+  padding-top: var(--row-top, 1.5rem);
+}
+
 .footLast > :last-child {
   align-self: end;
 }

@@ -109,6 +109,7 @@ Change one section, then run the loop below before the next. Commit each section
 
 The owner's words: "alignment of the 'open this view' buttons is not there… its just not visually appealing and looks messy". Misalignment reads as mess before anything else, so check it in every shot:
 - **Shared edges.** Items in a row share their top edge, and their links share a baseline: the links under tiles of uneven text sit on one line (a grid with subgrid rows, or the link pushed to the end of its column), never at whatever height the text above leaves them.
+- **Columns of even length** (owner, 2026-10-30: "visually it is important that text sections are approximately the same length and buttons line up"). Text side by side runs to about the same length; when one column's copy is far longer, trim it in the owner's literal voice rather than leave a hole beside it. `Columns` and `Beside` stand a column's closing link, or link row, on the foot of the row; a new multi-column group does the same.
 - **One left edge per column.** A section's heading, its intro text and its link start on the same left edge, or on deliberate grid columns. An icon hanging outside the text edge is deliberate and the same everywhere.
 - **Gaps from the scale.** Gaps between a heading, its line and its link come from the site's spacing scale, the same in every section.
 - **Lined up across neighbours.** Captions under pictures in a row line up with each other, whatever the caption lengths.
