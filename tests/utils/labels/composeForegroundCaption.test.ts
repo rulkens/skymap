@@ -7,7 +7,6 @@ import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFoc
 
 const ctxWith = (focus: FocusUniformsValue): CaptionComposeContext => ({
   camPos: [0, 0, 0],
-  camOrbitDistanceMpc: 1e-3,
   viewportShortSidePx: 1000,
   drawPxPerRad: 1000,
   focus,

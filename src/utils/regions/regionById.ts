@@ -1,6 +1,6 @@
 /**
  * regionById — a `BodyRegion` by id, for the near-field edges derived from one
- * SPECIFIC region's extent (the caption gate, the two backdrop bands).
+ * SPECIFIC region's extent (the caption bands, the two backdrop bands).
  *
  * Throws where its sibling `regionOfBody` returns `null`, because the inputs
  * differ in kind: a body id is open, a `BodyRegionId` is a closed union over a
