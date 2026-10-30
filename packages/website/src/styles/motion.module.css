@@ -1,0 +1,86 @@
+/*
+ * motion.module.css — how an element arrives the first time it scrolls into view, played once. A vocabulary,
+ * not a component: compose `rise`, `unmask` or `draw`, and put `data-reveal` on the same element so
+ * reveal.client.ts can hold it back (`data-wait`) until it is in view. Without script, under reduced motion and
+ * on the first screen nothing waits. `--reveal-delay` staggers a row, 40 ms apart, most important first.
+ */
+
+/* A block that gains from arriving (a device, a word over its picture): up a little, from nothing. */
+.rise {
+  transition:
+    opacity var(--duration-reveal) var(--ease-enter) var(--reveal-delay, 0ms),
+    translate var(--duration-reveal) var(--ease-enter) var(--reveal-delay, 0ms);
+}
+
+.rise[data-wait] {
+  opacity: 0;
+  translate: 0 1.5rem;
+}
+
+/*
+ * A picture uncovered from its edge (`--unmask-from: right` for one that bleeds right): a black veil with a soft
+ * leading edge slides off it, and the picture settles from a little larger. The host keeps the picture's box.
+ */
+.unmask {
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    inset: 0 -25%;
+    pointer-events: none;
+    background: linear-gradient(
+      var(--unmask-angle, 90deg),
+      rgb(0 0 0 / 0) 0,
+      var(--color-bg) 16%,
+      var(--color-bg) 100%
+    );
+    translate: 100% 0;
+    transition: translate calc(var(--duration-reveal) * 1.1) var(--ease-enter)
+      var(--reveal-delay, 0ms);
+  }
+
+  & img,
+  & video {
+    transition: scale calc(var(--duration-reveal) * 1.1) var(--ease-enter) var(--reveal-delay, 0ms);
+  }
+}
+
+.unmask[data-wait] {
+  &::before {
+    translate: 0 0;
+  }
+
+  & img,
+  & video {
+    scale: 1.06;
+  }
+}
+
+/* From the right edge: the veil's soft edge leads leftward. */
+.unmask-right::before {
+  --unmask-angle: 270deg;
+  translate: -100% 0;
+}
+
+/* A hairline drawn from its start. */
+.draw {
+  transform-origin: left;
+  transition: scale var(--duration-reveal) var(--ease-enter) var(--reveal-delay, 0ms);
+}
+
+.draw[data-wait] {
+  scale: 0 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .unmask::before,
+  .unmask img,
+  .unmask video,
+  .draw {
+    transition: none;
+  }
+}

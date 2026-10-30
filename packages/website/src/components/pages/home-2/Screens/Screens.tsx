@@ -1,11 +1,15 @@
 /*
- * Screens — Home's row of the screens Skymap runs on, each showing Saturn: a phone, a tablet, a desktop and
- * a dome. Each is drawn near its real size against the others, standing on one line, with its name and a
- * few words under it. Wide, the title is centred over the row, the page's one centred head. Narrow, the
- * row is two by two.
+ * Screens — Home's row of the screens Skymap runs on, each showing Saturn: a phone, a tablet, a desktop and a
+ * dome. All four are one system: drawn the same height, standing on one floor line, each with the depth of a
+ * case, and turned together, toward the pointer and a little with the scroll (phoneTurn.client.ts sets the
+ * pointer's offset on the row). Wide, the title is centred over the row, the page's one centred head. Narrow,
+ * the row is two by two.
  */
+import type { CSSProperties } from 'react';
+
 import { appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
+import motion from '../../../../styles/motion.module.css';
 import { cx } from '../../../../utils/cx.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
@@ -14,6 +18,40 @@ import DeviceFrame from '../../../shared/media/DeviceFrame/DeviceFrame.tsx';
 import Disc from '../../../shared/media/Disc/Disc.tsx';
 import Phone3D from '../../../shared/media/Phone3D/Phone3D.tsx';
 import styles from './Screens.module.css';
+
+// The case behind a flat device: as many slices as the phone's, one pixel apart. The phone draws its own.
+const SLICES = 9;
+
+const PARTS = [
+  {
+    kind: 'phone',
+    title: 'Phone',
+    note: 'In the phone’s browser, moved with your fingers.',
+    device: <Phone3D shot="features-phone" follow={false} />,
+  },
+  {
+    kind: 'tablet',
+    title: 'Tablet',
+    note: 'The same view on a larger touch screen.',
+    device: (
+      <DeviceFrame device="tablet" shot="saturn-portrait" sizes="(max-width: 900px) 30vw, 14rem" />
+    ),
+  },
+  {
+    kind: 'desktop',
+    title: 'Desktop',
+    note: 'The full app, with a mouse and a keyboard.',
+    device: (
+      <DeviceFrame device="desktop" shot="start-saturn" sizes="(max-width: 900px) 50vw, 23rem" />
+    ),
+  },
+  {
+    kind: 'dome',
+    title: 'Dome',
+    note: 'A fisheye picture for a planetarium dome, steered from a phone.',
+    device: <Disc id="dome-saturn" sizes="(max-width: 900px) 40vw, 16rem" />,
+  },
+];
 
 function Screens() {
   return (
@@ -26,56 +64,38 @@ function Screens() {
         </p>
         <ViewLink href={appLink(siteShot('start-saturn').link)}>Open Saturn</ViewLink>
       </div>
-      <div className={styles.row}>
-        <div className={cx(styles.part, styles.phone)}>
-          <div className={styles.device}>
-            <Phone3D shot="features-phone" />
+      <div className={styles.row} data-turn>
+        {PARTS.map((part, at) => (
+          <div
+            key={part.kind}
+            className={cx(styles.part, styles[part.kind], motion.rise)}
+            style={{ '--reveal-delay': `${at * 40}ms` } as CSSProperties}
+            data-reveal
+          >
+            <div className={styles.device}>
+              <div className={styles.body}>
+                {part.kind !== 'phone' &&
+                  Array.from({ length: SLICES }, (_, i) => (
+                    <span
+                      key={i}
+                      className={styles.slice}
+                      style={{ transform: `translateZ(${-i - 1}px)` }}
+                    />
+                  ))}
+                <div className={styles.face}>{part.device}</div>
+              </div>
+            </div>
+            <div className={styles.label}>
+              <h3>{part.title}</h3>
+              <p className={styles.note}>{part.note}</p>
+              {part.kind === 'dome' && (
+                <ObjLink size="small" href={sitePath('/domes/')}>
+                  Domes and museums
+                </ObjLink>
+              )}
+            </div>
           </div>
-          <div className={styles.label}>
-            <h3>Phone</h3>
-            <p className={styles.note}>In the phone’s browser, moved with your fingers.</p>
-          </div>
-        </div>
-        <div className={cx(styles.part, styles.tablet)}>
-          <div className={styles.device}>
-            <DeviceFrame
-              device="tablet"
-              shot="saturn-portrait"
-              sizes="(max-width: 900px) 45vw, 14rem"
-            />
-          </div>
-          <div className={styles.label}>
-            <h3>Tablet</h3>
-            <p className={styles.note}>The same view on a larger touch screen.</p>
-          </div>
-        </div>
-        <div className={cx(styles.part, styles.desktop)}>
-          <div className={styles.device}>
-            <DeviceFrame
-              device="desktop"
-              shot="start-saturn"
-              sizes="(max-width: 900px) 45vw, 27rem"
-            />
-          </div>
-          <div className={styles.label}>
-            <h3>Desktop</h3>
-            <p className={styles.note}>The full app, with a mouse and a keyboard.</p>
-          </div>
-        </div>
-        <div className={cx(styles.part, styles.dome)}>
-          <div className={styles.device}>
-            <Disc id="dome-saturn" sizes="(max-width: 900px) 40vw, 14rem" />
-          </div>
-          <div className={styles.label}>
-            <h3>Dome</h3>
-            <p className={styles.note}>
-              A fisheye picture for a planetarium dome, steered from a phone.
-            </p>
-            <ObjLink size="small" hang href={sitePath('/domes/')}>
-              Domes and museums
-            </ObjLink>
-          </div>
-        </div>
+        ))}
       </div>
     </section>
   );
