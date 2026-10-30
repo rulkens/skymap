@@ -182,7 +182,7 @@ See the refinement above. Backlogged as `2026-10-28-per-body-slab-declaration.md
 
 ## Quality debt noted in passing
 
-- `@types/scene/OrbitConic`, `@types/engine/state/FocusState`, `@types/engine/wiring/WirePointSourceDeps` and `@types/engine/layer/ComposedSources` have zero references.
+- `@types/engine/state/FocusState`, `@types/engine/wiring/WirePointSourceDeps` and `@types/engine/layer/ComposedSources` have zero references.
 - Layer-to-Layer `initialState` imports exist (see M5) while the "Layer dependency DAG" item says a Layer may never import another; the rule and the code disagree and one needs a ruling.
 - The `src/utils/math/index.ts` barrel is already covered by the queued naming-ratchets PR.
 

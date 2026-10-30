@@ -27,7 +27,6 @@ import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { packCloudShellUniforms } from '../render/packCloudShellUniforms';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../../../services/engine/frame/subPixelBodyCullPx';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
@@ -81,7 +80,6 @@ export function cloudShellPass(runtime: BodyRuntime): ContentPass {
 
     enabled(state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       return cloudShellDraw(state, ctx, view.slab.frame.hostId, runtime) !== null;
     },
 

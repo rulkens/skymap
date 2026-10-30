@@ -1,6 +1,6 @@
 /*
  * sheet.module.css — a sheet over the page (DocsSearch, FigureSheet). A vocabulary, not a
- * component: no `.root`; take it with `composes: sheet from '../../styles/sheet.module.css'`.
+ * component: no `.root`; take it with `composes: sheet from '../../../../styles/sheet.module.css'`.
  * Locking the page's scroll while one is open is `html:has(dialog[open])` in site.css.
  */
 

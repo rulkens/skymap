@@ -20,7 +20,6 @@ import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates'
 import { sceneOccluderSpheres } from '../../../services/engine/frame/sceneOccluderSpheres';
 import { near0OverlayClipScale } from '../../../services/engine/frame/near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../../../services/engine/frame/near0OverlayVpF32';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { emphasisDim } from '../../../utils/scene/emphasisDim';
 
 export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missionTrails'> {
@@ -29,7 +28,6 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
     fade: 'missionTrails',
 
     enabled(_state, ctx, _view) {
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       return SAMPLED_BODIES.some(({ id }) => spacecraftPresent(id, ctx.snapshot.simDays));
     },
 

@@ -2,11 +2,11 @@
  * periodDaysFromSemiMajorKm — Kepler's third law against Earth's GM, for a
  * geocentric row with no JPL period column to transcribe (the whale/petunias
  * 400 km circular orbit; every other satellite row's `periodDays` comes
- * straight from JPL sats/elem instead). GM = 398600.4418 km³/s² is the
- * EGM2008 / WGS84 value, the standard geodesy constant for Earth.
+ * straight from JPL sats/elem instead).
  */
 
-const EARTH_GM_KM3_S2 = 398600.4418;
+import { EARTH_GM_KM3_S2 } from '../../data/earthGmKm3S2';
+
 const SECONDS_PER_DAY = 86400;
 
 export function periodDaysFromSemiMajorKm(semiMajorKm: number): number {

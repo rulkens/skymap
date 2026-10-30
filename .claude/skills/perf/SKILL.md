@@ -1,6 +1,6 @@
 ---
 name: perf
-description: Use when measuring, claiming, or investigating anything about render performance — before AND after any renderer/shader/perf change, or when asked "why is this slow?". Runs the headless GPU-timing harness and interprets it correctly.
+description: Use when measuring, claiming, or investigating anything about render performance — before AND after any renderer/shader/perf change, when asked "why is this slow?", or when a plan or checkpoint adds per-frame or per-chunk work that needs pricing. Runs the headless GPU-timing harness and interprets it correctly.
 ---
 
 # /perf — measure, don't eyeball
@@ -9,6 +9,19 @@ description: Use when measuring, claiming, or investigating anything about rende
 statement like "this pass is expensive", "my change made it faster", or "that's probably
 fill-bound" should come from a harness run, not intuition. Full reference:
 [`tools/perf/README.md`](../../../tools/perf/README.md).
+
+## Price it before you build it
+
+A measurement after the fact finds a cost the plan could have seen. At plan time and at every
+checkpoint:
+
+- Every per-record step on a streaming path (decode, pack, derive) gets a ms estimate at the
+  worst pose and churn rate. Where it runs (CPU or GPU, main thread or worker) is an explicit
+  question to the user, never copied from the old path.
+- A checkpoint that reports a bake or structure metric (node count, opacity, rows) adds one line
+  of implied per-frame work (draws, rows walked, bytes uploaded) against the old path; a
+  regression goes to the user for a ruling then, with the fix shape.
+- Once such an estimate exists, the perf gate between task groups is a hard stop by default.
 
 ## Procedure
 
@@ -28,7 +41,10 @@ fill-bound" should come from a harness run, not intuition. Full reference:
    scratchpad file — you cannot reconstruct the "before" after editing.
 
 3. **Re-run AFTER, same flags.** Compare MERGED medians. Run-to-run noise is ~0.5 ms at 30
-   frames — deltas inside that are not a result; raise `--frames` for finer claims.
+   frames — deltas inside that are not a result; raise `--frames` for finer claims. The MERGED
+   total can still drift ±5 ms between runs on one commit, so for a one-subsystem A/B compare
+   that subsystem's PER-LAYER totals (serialised, stable) instead, subtract ~1.3 ms per added
+   pass, and run an unrelated control scenario alongside.
 
 4. **Classify before optimizing.** `--sweep` fits time-vs-pixel-count per pass: exponent ≈1 →
    fragment/fill-bound (resolution levers help), ≈0 → vertex/CPU-bound (they won't). For
@@ -37,7 +53,9 @@ fill-bound" should come from a harness run, not intuition. Full reference:
 ## Interpretation rules (these get misquoted)
 
 - **Quote MERGED numbers.** That's the production encode shape; TOTAL (merged) + its fps ceiling
-  is the headline (GPU passes only — excludes CPU/present/vsync).
+  is the headline (GPU passes only — excludes CPU/present/vsync). The merged slot list can omit
+  render steps (`volume·COSMO` and `mw-aggregate·NEAR0` have gone missing): check your pass is
+  listed before quoting a merged delta.
 - **Never quote PER-LAYER rows as real costs.** Each carries a fixed ~1–3 ms per-pass overhead
   (full-viewport DRAM round-trip under the instrumented strategy). Use the **EST. PER-PASS
   FLOOR** section's floor-subtracted "real" values for attribution. (orbit-trails/body-glints

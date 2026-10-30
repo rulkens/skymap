@@ -6,7 +6,8 @@
  * pgc-/sdss-/pos@/famous branches mutually exclusive (composeSelectionRows.ts).
  */
 
-import { Source, GALAXY_CATALOG_SOURCES } from '../../../data/sources';
+import { Source } from '../../../data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';

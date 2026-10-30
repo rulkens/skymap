@@ -8,13 +8,11 @@
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { SurfaceTileBodyId } from '../../../../@types/data/SurfaceTileBodyId';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { isSurfaceTileBodyId } from './isSurfaceTileBodyId';
 import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
 import { visibleBodyRows } from '../../../../services/engine/frame/visibleBodyRows';
 
 export function tileBodiesInView(ctx: FrameView): readonly (SceneBodyId & SurfaceTileBodyId)[] {
-  if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return [];
   // `ctx.cam` is the view's turned camera, so its decoded forward is exactly the
   // `viewForward` `deriveView` culled this view's rows with.
   return visibleBodyRows(ctx.snapshot, {

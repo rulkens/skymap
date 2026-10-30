@@ -13,6 +13,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
 import { starPointsPass } from '../../../../src/layers/starCatalog/passes/starPointsPass';
+import { gateOrbitTrailGroup } from '../../../../src/services/engine/layer/gateOrbitTrailGroup';
+import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
+import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes/index';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
@@ -99,16 +102,20 @@ function makeCtx(
   catalogs: Catalogs = MAP_AND_SUN,
 ): FrameView {
   return {
-    snapshot: { simDays: CONST_J2000, focus, sceneBodies: sceneBodiesOf(catalogs) },
-    cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
+    snapshot: {
+      simDays: CONST_J2000,
+      nowMs: 0,
+      bodyStates: STATES,
+      focus,
+      sceneBodies: sceneBodiesOf(catalogs),
+    },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 
-// A below-gate camera 5 kpc down +z: well inside FOREGROUND_MAX_DISTANCE_MPC
-// (~0.23 Mpc) AND inside the backdrop-dissolve band's live range (goneAt ~0.023 Mpc),
-// so both the distance gate and the band pass — yet still parsecs beyond every
+// A camera 5 kpc down +z, inside the backdrop-dissolve band's live range (goneAt ~0.023 Mpc)
+// — yet still parsecs beyond every
 // seeded star, so all 24 non-Sun neighbours stay sub-pixel points.
 const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
 
@@ -183,26 +190,18 @@ describe('starPointsPass.enabled', () => {
     expect(pass.enabled(makeState(), nearCtx, VIEW_STUB, ALL_ON)).toBe(true);
   });
 
-  it('is disabled beyond the foreground gate even with point stars present', () => {
-    // A decade beyond the gate (cosmic scale) the whole neighbourhood is far
-    // below a pixel: the shared gate turns the backdrop off before the
-    // sort is even run, so the (hdr, NEAR0) step can be skipped
-    // wholesale. Derived from the gate so a farther seed growing it carries.
+  it('is disabled while every seeded set hands 0, even with point stars present', () => {
+    // The survey item keeps the catalog's value above 0, so core's own zero gate never fires.
     const pass = starPointsPass(makeRuntime(makeRenderer()));
-    const state = makeState();
-    expect(
-      pass.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]), VIEW_STUB, ALL_ON),
-    ).toBe(false);
+    const seededOff = { famousStar: 0, gaiaStars: 1, sStar: 0, sun: 0 } as const;
+    expect(pass.enabled(makeState(), makeCtx(NEAR_FIELD_CAM), VIEW_STUB, seededOff)).toBe(false);
   });
 
-  it('is disabled once the backdrop band has dissolved, even inside the foreground gate', () => {
-    // Just past the backdrop band's goneAt but still WELL inside the shared
-    // foreground gate: the additive sprite field has faded to black, so the
-    // layer must disable outright (the "opacity 0 ⇒ no render" house rule)
-    // rather than draw invisible sprites and hold the (hdr, NEAR0) step open.
-    // Derived from the band + gate so a roster growth carries both edges.
+  it('is disabled once the backdrop band has dissolved', () => {
+    // Just past the backdrop band's goneAt: the additive sprite field has faded to
+    // black, so the layer must disable outright (the "opacity 0 ⇒ no render" house
+    // rule) rather than draw invisible sprites and hold the (hdr, NEAR0) step open.
     const beyondBand = STAR_BACKDROP_DISSOLVE.goneAt * 1.01;
-    expect(beyondBand).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC); // still inside the gate
     const pass = starPointsPass(makeRuntime(makeRenderer()));
     const state = makeState();
     expect(pass.enabled(state, makeCtx([0, 0, beyondBand]), VIEW_STUB, ALL_ON)).toBe(false);
@@ -213,7 +212,16 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
   it('empties above the gate and is non-empty below it (the wholesale-skip property)', () => {
     // The group filter executeFrame applies over the early (hdr, NEAR0) step; above the gate
     // it must be empty (not just the (foreground:0, NEAR0) body group) for the skip to be wholesale.
-    const pointsPass = starPointsPass(makeRuntime(makeRenderer()));
+    // Both rows yield through their entries' bands, resolved here over the real entries with
+    // every fade at 1.
+    const gateState = {
+      visibilityEntries: APP_VISIBILITY,
+      subsystems: {
+        fades: { opacityOf: () => 1 },
+        clipPlayer: { clipOpacityOf: () => 1 },
+      },
+    } as unknown as EngineState;
+    const pointsPass = gatePassByFade(starPointsPass(makeRuntime(makeRenderer())), gateState);
     const state = {
       gpu: {
         orbitTrailRenderer: { draw: vi.fn() },
@@ -230,7 +238,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         orbitTrails: { enabled: true },
         missionTrails: { enabled: false },
       },
-      orbitTrailGroups: [{ show: 'orbitTrails', rows: [], fade: () => 1 }],
+      orbitTrailGroups: [gateOrbitTrailGroup({ show: 'orbitTrails', rows: [] }, gateState)],
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const hdrNear0 = FRAME_ORDER.flatMap((step) =>
