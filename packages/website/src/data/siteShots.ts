@@ -1537,4 +1537,32 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'The keys and mouse moves are the app’s own.',
     alt: 'A panel headed Navigation: drag to orbit the camera, wheel to zoom, H for the home view, F to focus, Esc to clear the selection and the search keys.',
   },
+  // The Domes page's exhibit chooser: each exhibit as it opens, in the frame of `dome-exhibit` and `class-exhibit`.
+  {
+    id: 'domes-exhibit-web',
+    link: 'exhibit=cosmicWeb',
+    settings: { ui: true, settleMs: 9000 },
+    size: FEATURE,
+    widths: [1600, 800],
+    title: 'The Cosmic Web exhibit as it opens',
+    alt: 'Violet and gold filaments with labelled clusters, the title Cosmic Web at the lower left and a panel of notes at the right.',
+  },
+  {
+    id: 'domes-exhibit-zoa',
+    link: 'exhibit=zoneOfAvoidance',
+    settings: { ui: true, settleMs: 9000 },
+    size: FEATURE,
+    widths: [1600, 800],
+    title: 'The Zone of Avoidance exhibit as it opens',
+    alt: 'Stars and galaxies on both sides of a violet band labelled Zone of Avoidance, the title at the lower left and a panel of notes at the right.',
+  },
+  {
+    id: 'domes-exhibit-universe',
+    link: 'exhibit=observableUniverse',
+    settings: { ui: true, settleMs: 9000 },
+    size: FEATURE,
+    widths: [1600, 800],
+    title: 'The Observable Universe exhibit as it opens',
+    alt: 'A pale blue shell around a small bright knot of surveyed galaxies, the title Observable Universe at the lower left and a panel of notes at the right.',
+  },
 ];
