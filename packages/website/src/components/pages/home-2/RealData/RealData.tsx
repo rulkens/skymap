@@ -1,11 +1,17 @@
 /*
  * RealData — Home's case that the scene is measured: four kinds of source, each a square picture and the
  * names of its sources (data/dataSources.ts, the Science page's table, so nothing is named here that is
- * not there), each name a link to its data page. Then the three words every part of the scene is sorted
- * into, as three pictures edge to edge across the window, each word and its meaning over its picture.
+ * not there), each name a link to its data page beside the number of objects it gives the scene, as that table
+ * counts them, and the count pointed at (the first, until then) stands large over the picture. Each picture is
+ * a round window into the scene, no frame. Then the three words every part of
+ * the scene is sorted into, as three pictures edge to edge across the window, each word over its picture.
  */
+import type { CSSProperties } from 'react';
+
 import { DATA_SOURCES } from '../../../../data/dataSources.ts';
 import { HONESTY_BINS } from '../../../../data/honestyBins.ts';
+import motion from '../../../../styles/motion.module.css';
+import { cx } from '../../../../utils/cx.ts';
 import { dataRowPath } from '../../../../utils/dataRowPath.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import SectionHead from '../../../shared/layout/SectionHead/SectionHead.tsx';
@@ -15,15 +21,25 @@ import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './RealData.module.css';
 
 // The title of each is a group of the table, which picks its sources.
+// `accent` is taken from the picture: the survey's warm near end, starlight, the orbits' gold, Earth's blue.
 const KINDS = [
-  { group: 'Galaxies and quasars', shot: 'features-desi' },
-  { group: 'Stars', shot: 'render-stars' },
-  { group: 'Solar system', shot: 'lesson-solar-system' },
-  { group: 'Imagery', shot: 'earth-terminator' },
+  { group: 'Galaxies and quasars', shot: 'features-desi', accent: '#e8a774' },
+  { group: 'Stars', shot: 'render-stars', accent: '#f1e2c4' },
+  { group: 'Solar system', shot: 'lesson-solar-system', accent: '#d9c27a' },
+  { group: 'Imagery', shot: 'earth-terminator', accent: '#8fb6ff' },
 ];
 
 // A source's short name: the table's name up to its gloss ("SDSS, the Sloan Digital Sky Survey").
 const shortName = (name: string) => name.split(', ')[0]!;
+// The Science table's count and its heading: what the app draws, or what the source holds where the build does
+// not count (SourceTable).
+const COUNT_LABEL = '# of objects';
+const sources = (group: string) =>
+  DATA_SOURCES.filter((row) => row.group === group).map((row) => ({
+    ...row,
+    count: row.drawn ?? row.rows,
+  }));
+const delay = (at: number) => ({ '--reveal-delay': `${at * 60}ms` }) as CSSProperties;
 
 function RealData() {
   return (
@@ -39,10 +55,14 @@ function RealData() {
           </ObjLink>
         </SectionHead>
         <div className={styles.kinds}>
-          {KINDS.map((kind) => (
-            <div key={kind.group} className={styles.kind}>
+          {KINDS.map((kind, at) => (
+            <div
+              key={kind.group}
+              className={styles.kind}
+              style={{ '--kind-accent': kind.accent } as CSSProperties}
+            >
               <figure className={styles.figure}>
-                <div className={styles.square}>
+                <div className={cx(styles.window, motion.rise)} style={delay(at)} data-reveal>
                   <Shot id={kind.shot} sizes="(max-width: 900px) 50vw, 18rem" />
                 </div>
                 <figcaption className={styles.caption}>
@@ -51,9 +71,23 @@ function RealData() {
               </figure>
               <h3>{kind.group}</h3>
               <ul className={styles.names}>
-                {DATA_SOURCES.filter((row) => row.group === kind.group).map((row) => (
+                {sources(kind.group).some((row) => row.count) && (
+                  <li className={styles.countHead} aria-hidden>
+                    {COUNT_LABEL}
+                  </li>
+                )}
+                {sources(kind.group).map((row) => (
                   <li key={row.id}>
                     <a href={sitePath(dataRowPath(row.entries))}>{shortName(row.name)}</a>
+                    {row.count && (
+                      <>
+                        <span className={styles.count}>{row.count}</span>
+                        <span className={styles.big} aria-hidden>
+                          {row.count.split(' ')[0]}
+                          <small>{shortName(row.name)}</small>
+                        </span>
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -70,11 +104,11 @@ function RealData() {
           </ObjLink>
         </div>
         <div className={styles.strip}>
-          {HONESTY_BINS.map((bin) => (
+          {HONESTY_BINS.map((bin, at) => (
             <figure key={bin.id} className={styles.bin}>
-              <div className={styles.over}>
+              <div className={cx(styles.over, motion.unmask)} style={delay(at)} data-reveal>
                 <Shot id={bin.shot} sizes="(max-width: 900px) 100vw, 34vw" />
-                <p className={styles.word}>
+                <p className={cx(styles.word, motion.rise)} style={delay(at + 2)} data-reveal>
                   <strong>{bin.title}</strong>
                   <span>{bin.gloss}</span>
                 </p>
