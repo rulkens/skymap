@@ -6,10 +6,19 @@
 }
 
 .ground {
-  z-index: 1;
+  /* Just under the bar, so a section's own layers (a raised heading, a reveal veil) pass under the ground too. */
+  z-index: 5;
   margin-bottom: calc(-1 * var(--nav-height));
   background: var(--color-bg);
   border-bottom: 1px solid var(--border-divider);
+}
+
+/* Where the browser can blur what passes under it, the ground lets it through, softened. */
+@supports (backdrop-filter: blur(1px)) {
+  .ground {
+    background: rgb(0 0 0 / 0.7);
+    backdrop-filter: blur(16px) saturate(1.2);
+  }
 }
 
 .root {
