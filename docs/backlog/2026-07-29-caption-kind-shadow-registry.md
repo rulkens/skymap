@@ -7,27 +7,11 @@ them (`CaptionKind`, in `captionPriority.ts`) maintained by hand.
 
 ## What's already been consolidated
 
-Three of the original four per-caption dispatch sites have merged into
-`captionFadeRules.ts`'s `CAPTION_FADE_RULES` — a `satisfies Record<CaptionKind,
-CaptionFadeRule>` table with one row per kind carrying `fadeTarget` (was: a 4-way
-ternary selecting `SCALE_FADE_BANDS`, keyed per-kind on the right distance units). The
-label switch (was: `labelGateFor`) and the "caption never outlives its dot" gate (was:
-inline `starMapEnabled` / `sunVisible` conjunctions) left the table entirely: each
-producer's label entry carries them in the value core hands it, and each producer names
-its own label item.
-
-This also closes the live trap the original write-up flagged: the band-selection
-ternary used to fall through `'constellation'` into the `'star'` arm (unreachable in
-practice, but a real hazard once the constellation and scene-body caption paths
-merge). `CAPTION_FADE_RULES` is `satisfies`-total over `CaptionKind`, so `constellation`
-now has its own explicit row (`captionFadeRules.ts:128-132`, `PRODUCER_SUPPLIED` target)
-and the fall-through can't recur — the table shape makes it a compile error to omit a
-kind, not just a convention to remember.
-
-`CAPTION_PRIORITY` (declutter tier, in `captionPriority.ts`) was already the model
-table before this work and is unchanged — it stayed its own sibling table rather than
-merging into `CAPTION_FADE_RULES`'s rows, which is fine: it's a second total `Record`
-over the same key, not a fourth dispatch branch.
+The per-caption dispatch sites are gone. Each caption's switch, fade and distance
+band are its own Layer's `visibility.ts` entry, handed to the producer as one value;
+the star map's per-star fade rides each caption's `revealBand`. `CaptionKind` now
+keys only `CAPTION_PRIORITY` (declutter tier, in `captionPriority.ts`), a
+`satisfies`-total `Record` over the union.
 
 ## What's left
 
@@ -53,8 +37,8 @@ from the registry would need that flag added first, not just a mechanical `.filt
 As a four-dispatch-sites problem, no — three sites are gone and the fourth
 (`CAPTION_PRIORITY`) was never actually broken. As a "derive one hand-typed union from
 the registry" problem, maybe, but it's no longer closing a live bug (the
-`satisfies Record` tables already make omitting a `CaptionKind` a compile error
-wherever it's consumed) — it would be a naming/provenance cleanup, and it first needs
+`satisfies Record` table already makes omitting a `CaptionKind` a compile error
+where it's consumed) — it would be a naming/provenance cleanup, and it first needs
 a decision about what registry-level concept ("has its own NEAR0 caption row") the
 derivation would key on. That's a smaller, `needs-design`-shaped question than the
 original four-site framing, and arguably lower priority now that the bug it was
