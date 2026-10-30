@@ -34,13 +34,16 @@ The core tables the satellites kind had to join (each `file:line` is the satelli
 The closed unions (`SelectionRef`, `SelectionRow`, `FocusableTarget`, `SourceEntry`) and the `Source`
 code also gain an arm per kind; they live in core `@types`.
 
+What would move behind the galaxy, star, structure and Milky Way arms of these tables (~1,480 LOC, `CORE_DETAIL_CARDS` included) is itemised as J2 in [the Layer leftovers sweep](2026-10-29-layer-migration-leftovers.md).
+
 ## Idea
 
 The Layer's `SelectionKindRow` (`src/@types/engine/layer/SelectionKindRow.d.ts`) declares the facts as
 fields: focusable, halo style, framing, label, identity, and the URL hash taken from its own
 `focusId.encode`. Core reads them by `ref.type`, and the tables above go. Exhibits name pick
 categories with "all" as the default, so a new kind edits no exhibit; this would absorb the
-"Narrow `PickingSettings.kinds`" item.
+"Narrow `PickingSettings.kinds`" item. That record is total over every selection kind today, so it
+carries a dead `earthScene` key with no pick source (`pickingSlice.ts:18` and every exhibit snapshot).
 
 ## Open
 

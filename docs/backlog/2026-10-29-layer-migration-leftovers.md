@@ -115,7 +115,7 @@ M1 sweep starts.
 - Also `bodySearchNames`, `constellationOfBody`, `mayHaveLabel`, `encode/decodeStarFocusId`, `rankPaletteMatches`.
 - `starCatalog` itself reads 7 of these core files.
 
-**Joint.** `BodyPosition` is `site | orbit | sampled`, and a fixed star is an anchor (`AnchorBody`). Needed: a `{ kind: 'anchor' }` position, or a Layer-folded anchor list, so `SCENE_ANCHORS` becomes a fold. S-stars already fit `orbit`. `ORBIT_REACH_BY_REGION` then reads the composed rows, as the spec says.
+**Joint.** `BodyPosition` is `site | orbit | sampled`, and a fixed star is an anchor (`AnchorBody`). Needed: a `{ kind: 'anchor' }` position, or a Layer-folded anchor list, so `SCENE_ANCHORS` becomes a fold. S-stars already fit `orbit`. `ORBIT_REACH_BY_REGION` then reads the composed rows, as the spec says. `SCENE_ANCHORS` already holds a non-body row (`GALACTIC_CENTRE_ANCHOR`, a `PlaceId`), so the fold is the place-anchor table and should be named and filed as one rather than under `data/bodies/`.
 
 ### J2. Selection presentation tables: ~1,480 movable behind them
 Core holds a row per selection kind in `BUILD_FOCUSABLE` (`helpers/buildFocusable.ts`), `REF_OF`, `focusFraming` (switch), `mayHaveLabel` (switch), `targetIdentityKey`, `selectionHaloTable`, `URL_HASH_FOR` (M9) and `CORE_DETAIL_CARDS` (M2). That is the anti-goal shape of spec §2: a table keyed by kind gaining a row per Layer. What sits behind the galaxy, star, structure and MW rows:
@@ -151,7 +151,7 @@ Four of six `DEBUG_OVERLAY_ROWS` (`surface-lod-overlay`, `terrain-no-displacemen
 `data/palette/earthPlaces` 49 + the `flyTo` palette action. `LayerSearchEntry.id` is a focus id only. **Joint:** a search-entry action.
 
 ### J11. Caption fade bands: ~40
-`SCALE_FADE_BANDS.{starCaption,sunCaption,sgrAStarCaption}` are read by core `captionFadeRules` through the hand-kept `CaptionKind`. This is already backlogged as `2026-07-29-caption-kind-shadow-registry`.
+`SCALE_FADE_BANDS.{starCaption,sunCaption,sgrAStarCaption}` are read by core `captionFadeRules` through the hand-kept `CaptionKind`.
 
 ### J12. `starSphereRangeM` in core `deriveView`: 38
 The NEAR0 view brackets the star-sphere range itself. **Joint:** a Layer range contribution to the NEAR0 row. This is small and may reasonably stay as slab infrastructure.
