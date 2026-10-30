@@ -23,7 +23,7 @@ import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
 import type { StarInfo } from '../../../src/@types/engine/StarInfo';
 import type { BlackHoleInfo } from '../../../src/@types/engine/BlackHoleInfo';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 function makeGalaxy(source: number): GalaxyInfo {

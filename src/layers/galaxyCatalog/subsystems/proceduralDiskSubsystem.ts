@@ -1,24 +1,5 @@
-/**
- * proceduralDiskSubsystem — LOD-1 per-frame planner body.
- *
- * The shared catalog walk ('diskPlannerWalk.ts') owns the loop, the stride
- * cursor, and the per-row geometry (camDist, px); this subsystem owns
- * everything LOD-1-specific: the apparent-size + finite-orientation gate,
- * the per-source sticky map, the famous-WebP crossfade-out, the
- * back-to-front sort, and the 'ProceduralDiskInstance[]' output array.
- * 'beginFrame(input)' returns the DiskRowVisitor the walk drives; the
- * visitor's endFrame stashes the sorted result on 'lastOutput'.
- *
- * No GPU work: reads catalog buffers and emits a sorted array;
- * 'proceduralDisksPass' consumes it next frame. Shares the per-row
- * helpers in 'utils/render/disk/' with the LOD-2 textured body.
- *
- * The LOD-aligned fade constants live in 'data/galaxyLodBands.ts' and the
- * pure emission helper 'maybeEmitProceduralDisk' in 'utils/render/disk/';
- * this planner imports both.
- */
-
-import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { Source } from '../../../data/source';
+import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
 import { absoluteFromApparent, cartesianToRaDec, smoothstep } from '../../../utils/math/index';
 import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
@@ -140,7 +121,7 @@ export function createProceduralDiskSubsystem(
         // intrinsically bright galaxies bloom in the disk view too.
         const absMag = absoluteFromApparent(block.magG[i]!, dMpcFromOrigin);
         const rawSb = galaxySbAmp(absMag, medianAbsMag, dKpcRow);
-        const regEntry = SOURCE_REGISTRY[source];
+        const regEntry = APP_SOURCE_REGISTRY[source];
         const sbBoost = regEntry.type === 'galaxyCatalog' ? regEntry.sbBoost : 1;
         // sourceOpacity is the survey-fade term (see beginBlock above) — folded
         // in here because sbAmp is the sole brightness/alpha multiplier the

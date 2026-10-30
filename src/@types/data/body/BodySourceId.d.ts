@@ -1,6 +1,5 @@
-import type { SOURCE_REGISTRY } from '../../../data/sources';
-
-type AnyEntry = (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY];
+import type { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+type AnyEntry = (typeof APP_SOURCE_REGISTRY)[keyof typeof APP_SOURCE_REGISTRY];
 
 /**
  * The closed set of body SOURCE ids — the key domain for `settings.bodies.items`.

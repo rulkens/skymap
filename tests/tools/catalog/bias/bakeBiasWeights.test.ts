@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { bakeBiasWeights } from '../../../../tools/catalog/bias/bakeBiasWeights';
 import { recordsToCloud } from '../../../../tools/catalog/buildAllBins';
 import type { ParsedRecord } from '../../../../tools/parsers/common';

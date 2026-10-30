@@ -21,7 +21,7 @@ skymap has two kinds of "data source", with very different edit surfaces:
   detail. The edit surface is a registry row plus a handful of typed tables;
   the rest derives from the registry.
 
-**The core hazard (read this first).** The `SOURCE_REGISTRY` row is the single
+**The core hazard (read this first).** The `APP_SOURCE_REGISTRY` row is the single
 home of a structure category's identity; settings, counts, pick decode, search,
 deep links and the marker and label passes derive from it. What remains
 hand-edited is a short list: the source code, the row, the style row, the record
@@ -57,7 +57,7 @@ The common case: **a source row inside the `galaxyCatalog` Layer**
 galaxy-catalog sources (SDSS, 2MRS, GLADE, …) each get their own
 `sources/<id>.ts` row file inside the Layer; `sources/galaxyCatalogSourceRows.ts`
 lists them in draw/UI order and the Layer composes them into the global
-`SOURCE_REGISTRY` (`src/data/sources.ts`, still the single cross-Layer table —
+`APP_SOURCE_REGISTRY` (`src/compositions/appSources.ts`, still the single cross-Layer table —
 the `Source` code enum stays global, per the layer-composition spec). Adding a
 tenth survey is a new row file plus a line in that list, not a new Layer.
 
@@ -133,7 +133,7 @@ stars, say — Decision A) mirrors these seams rather than inventing new ones.
 Walk them in the same registry row → settings cluster → fetcher/slot/wiring →
 renderer/layer order the galaxy catalogs use:
 
-- **Registry row + id domain** — a `type: 'starCatalog'` `SOURCE_REGISTRY` row
+- **Registry row + id domain** — a `type: 'starCatalog'` `APP_SOURCE_REGISTRY` row
   (`src/data/sources/gaia-stars.ts` is the template). `StarCatalogId`
   (`@types/data/starCatalog/StarCatalogId`) is the `type: 'starCatalog'`
   narrowing of the source-entry union, and `STAR_CATALOG_IDS`

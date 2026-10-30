@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
 import { maskHas } from '../../src/utils/maskHas';
 
 // Default-visible galaxy catalog bits: 1 (SDSS), 2 (2MRS), 3 (Glade),
@@ -14,7 +15,7 @@ describe('Source.FamousGalaxy', () => {
 });
 
 describe('SOURCE_REGISTRY ids', () => {
-  const ids = Object.values(SOURCE_REGISTRY).map((e) => e.id);
+  const ids = Object.values(APP_SOURCE_REGISTRY).map((e) => e.id);
 
   it('ids are unique across the registry', () => {
     // The id is the single home for each source's readable key — domain

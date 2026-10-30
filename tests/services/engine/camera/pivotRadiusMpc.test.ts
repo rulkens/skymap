@@ -22,7 +22,7 @@ import {
 } from '../../../../src/utils/camera/clampDistance';
 import { MIN_NEAR_MPC } from '../../../../src/utils/camera/foregroundFrustum';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../fixtures/starRowDriver';
 import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';

@@ -2,7 +2,7 @@
 
 The NEAR0 caption path keys everything on `CaptionKind` — `'sun' | 'earth' | 'planet' |
 'star' | 'constellation'`. Those near-field sources are also rows in
-`SOURCE_REGISTRY`, most with `bearsLabel: true`. Two vocabularies for one fact, one of
+`APP_SOURCE_REGISTRY`, most with `bearsLabel: true`. Two vocabularies for one fact, one of
 them (`CaptionKind`, in `captionPriority.ts`) maintained by hand.
 
 ## What's already been consolidated
@@ -32,7 +32,7 @@ over the same key, not a fourth dispatch branch.
 ## What's left
 
 The one thing the title actually names — `CaptionKind` itself — is still a hand-typed
-union (`captionPriority.ts:38`), not derived from `SOURCE_REGISTRY`. Nothing consumes
+union (`captionPriority.ts:38`), not derived from `APP_SOURCE_REGISTRY`. Nothing consumes
 the registry to produce or check it.
 
 This is smaller than it looks, though: `CaptionKind` was never a 1:1 shadow of

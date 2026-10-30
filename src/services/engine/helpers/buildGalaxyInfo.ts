@@ -1,18 +1,5 @@
-/**
- * buildGalaxyInfo — the PURE formatting half of the old galaxyInfoBuilder.
- *
- * Takes a serializable `GalaxyRow` (the cloud reads `extractGalaxyRow`
- * produced) and computes the full display-ready `GalaxyInfo`: sky coordinates,
- * distance, lookback, colours, IAU name, catalogue + thumbnail URLs, the
- * orientation/diameter provenance, the famous enrichment, and the display-name
- * ladder. Every helper it calls is a pure util, so this function imports no
- * engine state and no GPU — which is exactly why React can call it directly in
- * a memoized selector (the inverse of today's engine-bakes-GalaxyInfo flow).
- *
- * `row.objId` is the decimal string of the catalog objID; we parse it back to
- * a bigint once here because the SDSS/PGC URL + name logic compares it to 0n.
- */
-import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { Source } from '../../../data/source';
+import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import {
   DESI_TRACER_CLASS,
   sourceClassLabel,
@@ -85,7 +72,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     ? { magU: NaN, magG: NaN, magR: NaN, magI: NaN, magZ: NaN }
     : row;
 
-  const entry = SOURCE_REGISTRY[source];
+  const entry = APP_SOURCE_REGISTRY[source];
   if (entry.type !== 'galaxyCatalog') {
     throw new Error(
       `buildGalaxyInfo: non-galaxy catalog source ${source} has no photometric bands`,
@@ -249,7 +236,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     bands,
     colours,
     source,
-    sourceLabel: SOURCE_REGISTRY[source].label,
+    sourceLabel: APP_SOURCE_REGISTRY[source].label,
     agnClass,
     ...(suppressPhotometry ? { photometryNote: 'no photometry in source catalog' } : {}),
     catalogues,

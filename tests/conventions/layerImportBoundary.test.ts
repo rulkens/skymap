@@ -100,7 +100,6 @@ const CORE_ALLOWED: Readonly<Record<string, number>> = {
   'data/exhibits/zoneOfAvoidance': 3,
   'data/lightTime/lightTimeSpheres': 1,
   'data/milkyWay/milkyWayFacts': 1,
-  'data/sources': 13,
   'services/url/urlHashFor': 2,
 };
 

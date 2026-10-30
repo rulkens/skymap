@@ -1,18 +1,4 @@
-/**
- * extractGalaxyRow — the cloud-reading half of the old galaxyInfoBuilder.
- *
- * Reads the raw per-galaxy slots at `idx` off the CPU cloud mirror into a flat,
- * serializable `GalaxyRow`. This is the only engine-side step in the selection
- * read path; everything downstream (`buildGalaxyInfo`) is pure formatting that
- * runs React-side. The bounds + missing-cloud guards are the tier-swap race
- * defence: an index that no longer fits a just-shrunk cloud resolves to null
- * rather than reading past the typed array.
- *
- * The catalog `objID` (a bigint, SDSS ids exceed 2^53) is stringified here so
- * the row stays JSON-serializable for the RTK slice; `buildGalaxyInfo` parses
- * it back with `BigInt(...)` where it needs the numeric identity.
- */
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';

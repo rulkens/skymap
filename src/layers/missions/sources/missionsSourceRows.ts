@@ -1,6 +1,6 @@
 /**
  * The Layer's `sources` field (`Layer.d.ts`'s `Sources` bound): the one craft row, folded into
- * `SOURCE_REGISTRY`.
+ * `APP_SOURCE_REGISTRY`.
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';

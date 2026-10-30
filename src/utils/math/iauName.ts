@@ -9,7 +9,7 @@
  * truncation rules) while still telling the user which catalog the row
  * actually came from.
  *
- * Per-galaxy catalog prefixes live on `SOURCE_REGISTRY[source].iauPrefix`
+ * Per-galaxy catalog prefixes live on `APP_SOURCE_REGISTRY[source].iauPrefix`
  * (e.g. SDSS → "SDSS J…", 2MRS → "2MASX J…", Milliquas → "MQ J…").
  *
  * The coordinate part itself is identical across galaxy catalogs and lives in
@@ -22,7 +22,7 @@
  */
 
 import { iauRaDecSuffix } from './iauRaDecSuffix';
-import { SOURCE_REGISTRY } from '../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
 import type { SourceType } from '../../@types/data/SourceType';
 
 /**
@@ -35,7 +35,7 @@ import type { SourceType } from '../../@types/data/SourceType';
  * galaxy-headline code; route structure picks through their dedicated info path.
  */
 export function iauName(source: SourceType, raDeg: number, decDeg: number): string {
-  const entry = SOURCE_REGISTRY[source];
+  const entry = APP_SOURCE_REGISTRY[source];
   if (entry.type !== 'galaxyCatalog') {
     throw new Error(`iauName: structure source ${source} has no IAU designation`);
   }

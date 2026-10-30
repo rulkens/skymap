@@ -1,36 +1,4 @@
-/**
- * Per-source classification + Milliquas parent-survey lookup helpers.
- *
- * Two slots on every `GalaxyCatalog` record carry per-row metadata
- * whose meaning depends on the source:
- *
- *   - `classByte` (uint8) — source-interpreted classification.
- *     Milliquas populates it with an AGN class letter (enum 1..6);
- *     DESI Deep populates it with the LSS tracer (BGS/LRG/ELG/QSO,
- *     enum 1..4 — see `DESI_TRACER_CLASS` below). Every other source
- *     stores 0 and `sourceClassLabel` returns null. Future
- *     per-galaxy-catalog class signals (e.g. GLADE morphology) add a
- *     new branch here without touching the .bin format.
- *
- *   - `parentSurveyByte` (uint8) — Milliquas-only enum that
- *     records which parent survey the row's Milliquas Name came
- *     from (SDSS/2MASX/GAIA/WISEA/NVSS/FIRST/6dFGS).  Used by the
- *     InfoCard to reconstruct the historical "<PARENT> J<RA><Dec>"
- *     display name from the bin without a sidecar JSON.
- *
- * Why a separate module rather than members on `sources.ts`?
- * `sources.ts` is the canonical "what's a galaxy catalog?" file and is
- * imported almost everywhere; growing it with per-row interpretation
- * tables would blur the boundary between "galaxy catalog identity" and "row
- * payload semantics".  Splitting them lets each module say one thing
- * cleanly.
- *
- * The byte values below are persisted in `.bin` files (see
- * `galaxyCatalogFormat.ts`).  Treat them like the `Source` enum
- * values — append, never renumber.
- */
-
-import { Source } from '../sources';
+import { Source } from '../source';
 import type { SourceType } from '../../@types/data/SourceType';
 
 /**

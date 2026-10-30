@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { galaxyType } from '../../../src/utils/math/galaxyType';
-import { Source } from '../../../src/data/sources';
-
+import { Source } from '../../../src/data/source';
 describe('galaxyType', () => {
   it('SDSS dispatches to u−r classifier', () => {
     // u=18, g=17.5, r=17 → u−r = 1.0 → blue

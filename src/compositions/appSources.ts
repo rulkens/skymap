@@ -1,6 +1,10 @@
 /**
- * `SOURCE_REGISTRY`, keyed by `Source` code (`./source`); `SourceEntry.d.ts` lists the `type`
- * kinds. Each row lives under its Layer's `sources/` and folds in through that Layer's rows array.
+ * `SOURCE_REGISTRY`, keyed by `Source` code (`data/source`); `SourceEntry.d.ts` lists the `type`
+ * kinds. Rows import straight from each Layer's `sources/`, never `layer.ts` or `APP_COMPOSITION`
+ * (the tuple would reopen the circular alias and module-init cycles). `as const satisfies` keeps
+ * each entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]` narrows without casts.
+ * `maxDistMpc` is a display limit (H₀ ≈ 70 km/s/Mpc), not a cut. Integer keys iterate ascending,
+ * so `SOURCE_ENTRIES` / `SOURCE_IDS` and the Labels panel follow code value.
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
@@ -21,15 +25,7 @@ import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from '../layers/zoneOfAvoidance/sources
 import { STAR_CATALOG_SOURCE_ROWS } from '../layers/starCatalog/sources/starCatalogSourceRows';
 import { BLACK_HOLE_SOURCE_ROWS } from '../layers/blackHoles/sources/blackHoleSourceRows';
 
-export { Source } from './source';
-
-/**
- * `as const satisfies` keeps each entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]`
- * narrows without casts. `maxDistMpc` is a display limit (H₀ ≈ 70 km/s/Mpc), not a cut;
- * `bandLabels` names what each `magU/G/R/I/Z` slot really carries (`'—'` = empty). Integer keys
- * iterate ascending, so `SOURCE_ENTRIES` / `SOURCE_IDS` and the Labels panel follow code value.
- */
-export const SOURCE_REGISTRY = {
+export const APP_SOURCE_REGISTRY = {
   ...sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(STAR_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(FILAMENTS_SOURCE_ROWS),

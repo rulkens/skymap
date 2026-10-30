@@ -6,12 +6,12 @@
 ## Problem
 
 Adding a star-catalog or scalar-volume source is a multi-site hand-edit.
-`SOURCE_REGISTRY` (`src/data/sources.ts`) is already the single source of
+`APP_SOURCE_REGISTRY` (`src/data/sources.ts`) is already the single source of
 truth for an entry's _metadata_ axes, but the _fetcher + slot + UI wiring_
 are still authored per source. Galaxy catalogs no longer need this — plan
 04c derived their point rows and slot-mint loop straight from the registry
 entry. The remainder is the star-catalog and volume families: one
-`SOURCE_REGISTRY` entry should auto-generate the fetcher, the GPU slot, and
+`APP_SOURCE_REGISTRY` entry should auto-generate the fetcher, the GPU slot, and
 the SettingsPanel rows for those too.
 
 ## Current state (verified 2026-09-15, post-04c)

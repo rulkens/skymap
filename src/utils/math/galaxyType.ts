@@ -1,20 +1,4 @@
-/**
- * Source-aware galaxy-type dispatcher.
- *
- * Each galaxy catalog carries different photometric bands; using the same colour
- * thresholds for every source would mis-classify non-SDSS rows. This
- * function picks the right classifier based on the source enum, so the
- * InfoCard's "Red, quiescent" / "Blue, star-forming" tag actually reflects
- * the data the galaxy catalog provides.
- *
- * The dispatch table here mirrors (but does not import) the band-slot
- * mapping in `src/data/sources.ts`'s `BAND_LABELS`. Keeping the two in sync
- * is the price of putting the photometric band layout in one place and the
- * classification thresholds in another — review both whenever a new source
- * is added.
- */
-
-import { Source } from '../../data/sources';
+import { Source } from '../../data/source';
 import type { GalaxyTypeInfo } from '../../@types/data/galaxyCatalog/GalaxyTypeInfo';
 import type { GalaxyTypeMags } from '../../@types/data/galaxyCatalog/GalaxyTypeMags';
 import { galaxyTypeFromColor } from './galaxyTypeFromColor';

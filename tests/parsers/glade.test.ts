@@ -6,8 +6,7 @@ import {
   parseGladeLine,
   parseGlade2masxPgcLine,
 } from '../../tools/parsers/glade';
-import { Source } from '../../src/data/sources';
-
+import { Source } from '../../src/data/source';
 /**
  * Real first three rows of `data/raw/glade2.3.dat`, copied verbatim and
  * preserved character-for-character so trailing whitespace inside fixed-width
