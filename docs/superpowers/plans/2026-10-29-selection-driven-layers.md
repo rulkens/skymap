@@ -66,16 +66,16 @@ review: yes (camera follow)
   `orientationForBody` gives an id with no rotation row; `orbit` absent) to a COPY of `base`. No slot
   qualifies → returns `base` itself.
 
-- [ ] **Step 1: Write the failing tests** (stub kind rows; no catalog needed)
+- [x] **Step 1: Write the failing tests** (stub kind rows; no catalog needed)
   - `returns the same Map when no slot follows the sim clock` — `expect(out).toBe(base)` for a body row.
   - `places a followsSimClock focus row under its poseId at simDays` — the stub's `extractRow` records
     `simDays`; `out.get(poseId)!.positionMpc` equals the stub's position; `base` is unmodified.
   - `leaves out a ref whose extractRow returns null` — `out.has(poseId) === false`.
   - `places select and focus of the same ref once` — the stub's `extractRow` is called once.
-- [ ] **Step 2: Run** `npx vitest run tests/services/engine/frame/placeLiveSelection.test.ts` — FAIL (module missing).
-- [ ] **Step 3: Implement** in `placeLiveSelection.ts`.
-- [ ] **Step 4: Run** the same — PASS.
-- [ ] **Step 5: Commit** `refactor(frame): placeLiveSelection, the frame's moving selection`.
+- [x] **Step 2: Run** `npx vitest run tests/services/engine/frame/placeLiveSelection.test.ts` — FAIL (module missing).
+- [x] **Step 3: Implement** in `placeLiveSelection.ts`.
+- [x] **Step 4: Run** the same — PASS.
+- [x] **Step 5: Commit** `refactor(frame): placeLiveSelection, the frame's moving selection`.
 
 ### Task 2: The frame places the selection; the registry goes
 
