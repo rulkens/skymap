@@ -3,10 +3,8 @@
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
 import { HORIZON_RADIUS_MPC } from './data/horizonRadiusMpc';
 
-// The shell fades in with pull-back. Below 5 % of its radius (~0.7 Gpc) it is chrome
-// wrapped impossibly far round the galaxies being studied; by 40 % (~5.7 Gpc) the whole
-// quasar shell is in frame, the context it is drawn for. Fractions of the radius, so a
-// different horizon distance keeps the same pacing.
+// Below 5 % of the radius the shell is chrome wrapped round the galaxies being studied;
+// by 40 % the whole quasar shell is in frame. Fractions, so pacing survives a new radius.
 export const cosmicHorizonVisibility = [
   {
     key: 'cosmicHorizon',

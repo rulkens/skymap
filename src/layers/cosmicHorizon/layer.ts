@@ -20,6 +20,6 @@ export const cosmicHorizonLayer = defineLayer({
   passes: (runtime) => [horizonShellPass(runtime)],
   exhibits: cosmicHorizonLayerExhibits,
   ui: [
-    { slot: 'labelsAndGuides', content: { toggle: 'cosmicHorizon', label: 'Universe Horizon' } },
+    { slot: 'labelsAndGuides', content: { toggle: 'cosmicHorizon', label: 'Universe horizon' } },
   ],
 });

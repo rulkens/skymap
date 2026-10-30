@@ -1,5 +1,5 @@
-/** On by default: the grand tour's edge beat, the flyout clips and the Observable Universe
- * exhibit reach the shell by camera distance alone, with no cue to switch it on. */
+/** On by default so a fresh view, the flyout clips and the README loops show the shell
+ * by camera distance alone. */
 
 import type { CosmicHorizonSettings } from '../../../../@types/settings/CosmicHorizonSettings';
 

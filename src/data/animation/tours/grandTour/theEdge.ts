@@ -6,8 +6,9 @@
  * named. The shell's reach band (`cosmicHorizon/visibility.ts`) fades it in
  * by camera distance (full strength past 40% of its 14,300 Mpc radius,
  * ~5,700 Mpc), so the beat reaches its subject simply by pulling far enough
- * out; the one cue turns its switch back on for a viewer who turned it off. The quasar shell from the deep field stays lit and thins into
- * foreground dust against it.
+ * out; the one cue turns its switch back on for a viewer who turned it off.
+ * The quasar shell from the deep field stays lit and thins into foreground
+ * dust against it.
  *
  * No enter clip: the pull IS the beat, so it rides the captioned dwell (the
  * limit-case grammar) — "The edge" lands as the pull begins, and the text
@@ -27,7 +28,7 @@ import { dwellDrift } from '../../../../state/tour/dwellDrift';
 // Far enough OUTSIDE the 14,300 Mpc shell that the whole sphere sits in
 // frame — the edge seen from without, not from within. Eye-tuned right up
 // against the 30,000 Mpc camera ceiling.
-const THE_EDGE_MPC = 29229.01;
+export const THE_EDGE_MPC = 29229.01;
 
 export const theEdge: ClipData = {
   start: 'live',

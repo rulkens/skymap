@@ -611,9 +611,9 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: false,
       },
       {
-        name: 'Universe Horizon',
+        name: 'Universe horizon',
         control: 'switch',
-        does: 'Shows the edge of the observable universe, a sphere centred on us. It fades in as the camera pulls back from about 2 to about 19 thousand million light-years out.',
+        does: 'Shows the edge of the observable universe, a sphere centred on us. It fades in as the camera pulls back from about 2 to about 19 billion light-years out.',
         values: SWITCH,
         first: ON,
         state: 'cosmicHorizon.enabled',
