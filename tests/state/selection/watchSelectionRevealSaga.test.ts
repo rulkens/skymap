@@ -11,6 +11,7 @@ import {
 } from '../../../src/state/selection/selectionSlice';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { settingsRoute } from '../../../src/store/constants';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
@@ -61,6 +62,15 @@ describe('watchSelectionRevealSaga', () => {
     h.store.dispatch(
       clipStarted({ data: { start: 'live', timeline: [] }, frame: DEFAULT_ORIENTATION }),
     );
+    h.store.dispatch(updateSelectionFocus(ISS));
+    expect(h.writes).toEqual([]);
+  });
+
+  // A takeover's exit restore re-focuses the captured subject after restoring the settings;
+  // a reveal there would undo the viewer's own switch.
+  it('does nothing while a takeover runs', () => {
+    const h = build();
+    h.store.dispatch(takeoverStarted({ kind: 'tour', id: 'grandTour' }));
     h.store.dispatch(updateSelectionFocus(ISS));
     expect(h.writes).toEqual([]);
   });

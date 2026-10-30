@@ -134,7 +134,10 @@ only (so hover can never reach it), wrapped in `suspendDuringClip`
 (`src/state/selection/suspendDuringClip.ts`): a tour's visibility belongs to its cues, applied
 through `setVisibilityActionsFor` so the tour fold and playback agree, and a reveal written behind
 the fold's back would survive a seek back. A tour that focuses a hidden kind carries its own `show`
-cue. Links, search and the remote reveal. For the new ref's kind it finds the entry that `selects` it
+cue. It also skips while any takeover runs (`selectTakeoverSource`): a takeover's exit restore
+re-focuses after restoring the viewer's settings, and a reveal there would undo the viewer's own
+switch (ruled 2026-10-30; reordering the restore was rejected because its settings-before-focus
+order is pinned). Links, search and the remote reveal. For the new ref's kind it finds the entry that `selects` it
 in `APP_VISIBILITY`. If that entry's cluster has a section switch (`hasSectionSwitch`) and the
 switch is off, it puts `setVisibilityActionsFor(settings, entry.key, true)`. Only the section switch
 is written: on a per-item cluster, `setVisibilityActionsFor` with a bare key would turn every item
