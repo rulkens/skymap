@@ -16,7 +16,7 @@
 // '@builtin(position)'-bearing struct -- a second one links fine and is rejected
 // at 'createShaderModule' (the runtime-only landmine).
 //
-// ## Byte layout (uniform address space) -- 144 bytes, 36 f32
+// ## Byte layout (uniform address space) -- 160 bytes, 40 f32
 //
 //   offset   0..63:  mvp                 (mat4x4<f32>, column-major)
 //   offset  64..75:  sunDirLocal         (vec3<f32> -- 16-byte aligned)
@@ -26,6 +26,9 @@
 //   offset 128..139: camPosLocal         (vec3<f32> -- 16-byte aligned)
 //   offset 140..143: sinSunAngularRadius (f32 -- fills camPosLocal's 4th slot;
 //                                         R_sun / d from the body)
+//   offset 144..147: ambient             (f32 -- uniform fill, a fraction of
+//                                         sunlight; 0 outside site shots)
+//   offset 148..159: struct padding to a 16-byte multiple
 //
 // The first 80 bytes match 'LitBodyUniforms' byte-for-byte, but
 // 'packLitBodyUniforms' can NOT be reused: it zeroes byte 76 that
@@ -38,6 +41,7 @@ struct MeshBodyUniforms {
   model: mat3x3<f32>,
   camPosLocal: vec3<f32>,
   sinSunAngularRadius: f32,
+  ambient: f32,
 };
 
 struct MeshBodyVSOut {
