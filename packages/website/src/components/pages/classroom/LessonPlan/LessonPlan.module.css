@@ -196,9 +196,9 @@
     grid-column: span 6;
   }
 
-  /* The last question sits under the bar's end, where the bell is. */
+  /* The last question sits under the bar's end, where the bell is: on the right column of the parts above. */
   .leave {
-    width: calc((100% + var(--col-gap)) / 2);
+    width: calc((100% - var(--col-gap)) / 2);
     margin-left: auto;
   }
 }
