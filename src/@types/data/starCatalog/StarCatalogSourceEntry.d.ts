@@ -2,7 +2,7 @@ import type { SurveyStarCatalogSourceEntry } from './SurveyStarCatalogSourceEntr
 import type { SeededStarCatalogSourceEntry } from './SeededStarCatalogSourceEntry';
 
 /**
- * StarCatalog-typed row of the SOURCE_REGISTRY — a star set the user toggles
+ * StarCatalog-typed row of the APP_SOURCE_REGISTRY — a star set the user toggles
  * as a unit, keying `settings.starCatalogs.items`.
  *
  * Two variants, discriminated by `binBaseName`: a SURVEY catalog streams

@@ -36,7 +36,6 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | J8 | Tier-swap galaxy re-anchor (`captureGalaxyFocusIds`, half of `watchTierSaga`) | galaxyCatalog | NEEDS-JOINT | ~120 | capture must run before core's tier write: an ordering hook |
 | J9 | Body debug overlays + terrain-pick radius in core `debugSlice` | body | NEEDS-JOINT | ~80 | core `createPickDriver` reads the `terrain-pick-marker` toggle; no Layer debug-overlay rows |
 | J10 | Earth places palette (`earthPlaces`, flyTo action) | body | NEEDS-JOINT | ~60 | `LayerSearchEntry` is focus-only |
-| J11 | Caption bands `starCaption`/`sunCaption`/`sgrAStarCaption` | starCatalog, blackHoles | NEEDS-JOINT | ~40 | `CaptionKind` registry (existing backlog) |
 | J12 | `starSphereRangeM` in core `deriveView` | starCatalog | NEEDS-JOINT | 38 | NEAR0 range is core-sized; no Layer range contribution |
 | J13 | `bodySlabRosterIds` (`SCENE_PLANETS` roster) | body | NEEDS-JOINT | ~35 | known #3; per-body slab on `LayerBody` (backlog) |
 | J14 | `sgrAStar` sky-capture row + `sgrAStarLensing` band | blackHoles | NEEDS-JOINT | ~25 | `CUBEMAP_CAPTURES`/`SKY_CAPTURE_KEYS` are core-only |
@@ -55,7 +54,7 @@ Known items, refined:
 1. **Seeded stars** are sized at ~2.7k (J1). Stars are _anchors_, and `BodyPosition` only knows `site | orbit | sampled`. S-stars already fit `orbit`.
 2. **Four core exhibits**: three are MOVE-NOW (M5); Observable Universe went with the horizon shell into the `cosmicHorizon` Layer.
 3. **`near0SphereBodies`** filters through `bodySlabRosterIds`, the hand roster (`SCENE_PLANETS` + mesh bodies) (J13).
-4. **blackHoles' "anchor" read** is a core _place_ (`galactic-centre`, shared with the S-stars, regions and Milky Way framing) and legitimately stays. The real content leaks are the `sgr-a-star` row in `bodyFacts.generated` (J5), the `sgrAStar` sky-capture row and lensing band (J14), and the `sgrAStarCaption` band (J11). `sgrAStarMassSolar` has 3 readers, so it stays.
+4. **blackHoles' "anchor" read** is a core _place_ (`galactic-centre`, shared with the S-stars, regions and Milky Way framing) and legitimately stays. The real content leaks are the `sgr-a-star` row in `bodyFacts.generated` (J5), and the `sgrAStar` sky-capture row and lensing band (J14). `sgrAStarMassSolar` has 3 readers, so it stays.
 
 ## Open ruling
 
@@ -151,9 +150,6 @@ Four of six `DEBUG_OVERLAY_ROWS` (`surface-lod-overlay`, `terrain-no-displacemen
 ### J10. Earth places palette: ~60
 `data/palette/earthPlaces` 49 + the `flyTo` palette action. `LayerSearchEntry.id` is a focus id only. **Joint:** a search-entry action.
 
-### J11. Caption fade bands: ~40
-`SCALE_FADE_BANDS.{starCaption,sunCaption,sgrAStarCaption}` are read by core `captionFadeRules` through the hand-kept `CaptionKind`.
-
 ### J12. `starSphereRangeM` in core `deriveView`: 38
 The NEAR0 view brackets the star-sphere range itself. **Joint:** a Layer range contribution to the NEAR0 row. This is small and may reasonably stay as slab infrastructure.
 
@@ -162,6 +158,9 @@ See the refinement above. Backlogged as `2026-10-28-per-body-slab-declaration.md
 
 ### J14. Sgr A* sky capture: ~25
 `data/rendering/cubemapCaptures.ts` hard-codes the `sgrAStar` row, `SKY_CAPTURE_KEYS = ['sgrAStar','solarSystem']`, and `SCALE_FADE_BANDS.sgrAStarLensing`. blackHoles imports `cubemapCaptures` 5 times. **Joint:** Layer-declared sky captures. The `solarSystem` capture is mesh-probe infrastructure and stays.
+
+### J16. 13 galaxyCatalog/starCatalog files read `APP_SOURCE_REGISTRY` for their own rows
+galaxyCatalog `create.ts`, `load/galaxyCatalogAssetRows.ts`, `render/catalogStore.ts`, `state/galaxyCatalogs/selectors.ts`, `subsystems/proceduralDiskSubsystem.ts`, `ui/GalaxiesSection.tsx`; starCatalog `load/installStarPool.ts`, `load/starCatalogAssetRows.ts`, `load/starCatalogFetcher.ts`, `load/starCatalogSlot.ts`, `passes/fieldStarSpherePass.ts`, `render/cut/starSourcesInBand.ts`, `ui/StarCatalogTuningSectionContainer.tsx`. Per composition spec §4.7 a Layer's id-domain types and lookups derive from its own `sources` tuple, and only cross-Layer readers take the composed registry; path-only today, moved from `data/sources`.
 
 ---
 

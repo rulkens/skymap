@@ -20,7 +20,8 @@ vi.mock('../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher', () => 
 
 import { wireGalaxyCatalogSourceSlot } from '../../../../src/layers/galaxyCatalog/load/wireGalaxyCatalogSourceSlot';
 import { galaxyCatalogFetcher } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { installSlotReadyWake } from '../../../../src/services/engine/wiring/installSlotReadyWake';
 import type { LayerCoreDeps } from '../../../../src/@types/engine/layer/LayerCoreDeps';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -68,7 +69,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
   it('mints an idle slot named after the registry entry', () => {
     const h = harness();
-    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.SDSS], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[Source.SDSS], h.deps, h);
 
     expect(slot.name).toBe('sdss-points');
     expect(slot.state().kind).toBe('idle');
@@ -78,7 +79,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const h = harness();
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(42));
 
-    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.SDSS], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[Source.SDSS], h.deps, h);
     void slot.load({ source: Source.SDSS, tier: 'medium' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
@@ -94,13 +95,13 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const cloud = fakeCloud(7);
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(cloud);
 
-    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.Glade], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[Source.Glade], h.deps, h);
     void slot.load({ source: Source.Glade, tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     expect(h.upload).toHaveBeenCalledOnce();
     expect(h.upload).toHaveBeenCalledWith(
-      SOURCE_REGISTRY[Source.Glade].id,
+      APP_SOURCE_REGISTRY[Source.Glade].id,
       cloud,
       h.records.get(Source.Glade)!.stats,
     );
@@ -117,7 +118,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const requestRender = vi.fn();
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(5));
 
-    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.SDSS], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[Source.SDSS], h.deps, h);
     installSlotReadyWake(
       requestRender,
       new Map([['sdss-points', slot as unknown as AssetSlot<unknown, unknown>]]),
@@ -135,7 +136,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
   it('release unloads the renderer, drops the catalog and provenance, and republishes without the source', async () => {
     const h = harness();
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(42));
-    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.SDSS], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[Source.SDSS], h.deps, h);
     void slot.load({ source: Source.SDSS, tier: 'medium' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
     h.bumpCatalogsVersion.mockClear();
@@ -145,7 +146,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
     expect(slot.state().kind).toBe('idle');
     expect(slot.committed()).toBeNull();
-    expect(h.unload).toHaveBeenCalledExactlyOnceWith(SOURCE_REGISTRY[Source.SDSS].id);
+    expect(h.unload).toHaveBeenCalledExactlyOnceWith(APP_SOURCE_REGISTRY[Source.SDSS].id);
     expect(h.catalogs.has(Source.SDSS)).toBe(false);
     expect(h.bumpCatalogsVersion).toHaveBeenCalledOnce();
     const patch = vi.mocked(h.deps.publish).mock.calls[0]![0] as {

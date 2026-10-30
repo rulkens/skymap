@@ -13,7 +13,7 @@
  *                          the decoder still reads legacy `pos@<ra>,<dec>`.
  */
 
-import { Source } from '../../data/sources';
+import { Source } from '../../data/source';
 import type { SourceType } from '../../@types/data/SourceType';
 
 export function encodeGalaxyId(galaxy: {

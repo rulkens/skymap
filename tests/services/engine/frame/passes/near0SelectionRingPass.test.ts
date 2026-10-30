@@ -5,7 +5,7 @@ import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
-import { Source } from '../../../../../src/data/sources';
+import { Source } from '../../../../../src/data/source';
 import { near0RingRadiusPx } from '../../../../../src/services/engine/helpers/near0RingRadiusPx';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
