@@ -2,6 +2,170 @@
   margin: 0;
 }
 
+/* The frame clips its views; the interface pieces lie on the stage, outside that clip. */
+.stage {
+  position: relative;
+}
+
+/*
+ * A panel (a card, the switches) at the picture's outer edge and past it, so it reads as the thing in hand and
+ * the subject in the middle stays clear. The words' side is the inner one.
+ */
+.panel {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  /* Into the page's gutter, never to the window's edge. */
+  right: calc(1rem - var(--gutter));
+  width: 37%;
+  translate: 0 -50%;
+}
+
+.left .panel {
+  right: auto;
+  left: calc(1rem - var(--gutter));
+}
+
+.panel img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
+}
+
+/* Narrow, the picture takes the column's width: a panel keeps inside it, over the picture's lower corner. */
+@media (max-width: 900px) {
+  .panel {
+    top: auto;
+    right: 0;
+    bottom: -3rem;
+    width: 46%;
+    translate: none;
+  }
+
+  .left .panel {
+    left: auto;
+    right: 0;
+  }
+
+  .stage:has(.panel) {
+    margin-bottom: 3rem;
+  }
+}
+
+/*
+ * The section's figure, set as a picture: thin figures at the title's size in the section's colour, in the
+ * picture's inner lower corner (the words' side), over the dark of space; its measure under it. The body face,
+ * because the display face's figures are old-style and its 1 reads as an I.
+ */
+.reading {
+  display: grid;
+  margin: 0;
+  pointer-events: none;
+}
+
+.value {
+  color: var(--color-accent);
+  font-size: var(--text-h2);
+  font-weight: 300;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 2rem rgb(0 0 0 / 0.8);
+  white-space: nowrap;
+}
+
+.measure {
+  max-width: 22ch;
+  color: var(--site-text-muted);
+  font-size: var(--text-small);
+}
+
+@media (min-width: 901px) {
+  .reading {
+    position: absolute;
+    z-index: 1;
+    bottom: 6%;
+    left: 4%;
+  }
+
+  .left .reading {
+    right: 4%;
+    left: auto;
+    justify-items: end;
+    text-align: right;
+  }
+
+  .measure {
+    margin-top: 0.5rem;
+    text-shadow: 0 0 1rem #000;
+  }
+}
+
+/* Narrow, the figure stands over the picture, clear of the panel and the label that hang from its foot. */
+@media (max-width: 900px) {
+  .stage {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .reading {
+    order: -1;
+    margin-bottom: 1rem;
+  }
+}
+
+/* A film's clock across the picture's foot, half over it, as the app sets its clock at the foot of the view. */
+.clocks {
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+@media (min-width: 901px) {
+  .clocks {
+    position: absolute;
+    z-index: 2;
+    right: 4%;
+    bottom: calc(-1 * var(--tap) / 2);
+    width: min(36rem, 86%);
+  }
+
+  .stage:has(.clocks) {
+    margin-bottom: calc(var(--tap) / 2);
+  }
+}
+
+@media (max-width: 900px) {
+  .clocks {
+    position: relative;
+    z-index: 2;
+    margin-top: calc(-1 * var(--tap) / 2);
+    margin-inline: 0.5rem;
+  }
+}
+
+/* Wide, the piece moves a little against the picture as the page scrolls, as a nearer layer would. */
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .drift {
+      animation: drift linear both;
+      animation-timeline: view();
+    }
+  }
+}
+
+@keyframes drift {
+  from {
+    translate: 0 1.5rem;
+  }
+
+  to {
+    translate: 0 -1.5rem;
+  }
+}
+
 /* One frame the shape of a wide shot; the views lie on one another and the current one shows. */
 .frame {
   --view-out: 1.4s;
