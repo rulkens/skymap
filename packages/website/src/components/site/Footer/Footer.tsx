@@ -16,6 +16,7 @@ import { sitePath } from '../../../utils/sitePath.ts';
 import ObjLink from '../../shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../shared/links/OpenApp/OpenApp.tsx';
 import Shot from '../../shared/media/Shot/Shot.tsx';
+import Wordmark from '../../shared/text/Wordmark/Wordmark.tsx';
 import styles from './Footer.module.css';
 
 type FooterProps = { path: string; light?: ReactNode };
@@ -43,7 +44,7 @@ function Footer({ path, light }: FooterProps) {
         <div className={styles.top}>
           <div className={styles.brand}>
             <a className={styles.mark} href={sitePath('/')}>
-              skymap
+              <Wordmark />
             </a>
             <p className={styles.say}>
               A free, open-source web app that draws the mapped universe in three dimensions at true
