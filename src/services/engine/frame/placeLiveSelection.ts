@@ -1,6 +1,6 @@
 /**
  * placeLiveSelection — the frame's body snapshot with the moving selection placed in it: each
- * select/focus row whose driver `followsSimClock` is re-extracted at `simDays` and keyed under its
+ * select/focus row whose driver is `placedEachFrame` is re-extracted at `simDays` and keyed under its
  * `poseId`, so the camera and every pass read the satellite where the clock has it. Hover never
  * places: a pointer sweep would extract every dot it crosses. Runs AFTER `deriveBodyStates`
  * returns, never inside it: the satellites row's `extractRow` reads `deriveBodyStates` for Earth.
@@ -24,7 +24,7 @@ export function placeLiveSelection(
   let placed: Map<PositionedId, BodyState> | null = null;
   const extractedRefs = new Set<SelectionRef>();
   for (const { ref, row } of slots) {
-    if (ref === null || extractedRefs.has(ref) || selectionDriver(row)?.followsSimClock !== true)
+    if (ref === null || extractedRefs.has(ref) || selectionDriver(row)?.placedEachFrame !== true)
       continue;
     extractedRefs.add(ref);
     const extracted = kindRows.find((kind) => kind.type === ref.type)?.extractRow(ref, simDays);

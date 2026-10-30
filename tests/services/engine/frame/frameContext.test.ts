@@ -222,7 +222,13 @@ describe('deriveFrameContext — the placed selection', () => {
     const row = {
       type: 'satellite',
       positionMpc,
-      driver: { poseId, followsSimClock: true, boundingRadiusM: 50, groundRadiusM: null },
+      driver: {
+        poseId,
+        followsSimClock: true,
+        placedEachFrame: true,
+        boundingRadiusM: 50,
+        groundRadiusM: null,
+      },
     } as unknown as SelectionRow;
     const state = {
       ...makeState(),

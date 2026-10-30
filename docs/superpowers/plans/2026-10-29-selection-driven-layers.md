@@ -60,7 +60,7 @@ review: yes (camera follow)
     simDays: number,
   ): ReadonlyMap<PositionedId, BodyState>;
   ```
-  For each slot whose `row`'s driver (`selectionDriver(row)`) has `followsSimClock === true` and a
+  For each slot whose `row`'s driver (`selectionDriver(row)`) has `placedEachFrame === true` and a
   non-null `poseId`, it calls the kind row matching `ref.type`'s `extractRow(ref, simDays)`; a non-null
   result adds `poseId → { positionMpc: result.positionMpc, orientation: <fresh identity Mat3> }` (what
   `orientationForBody` gives an id with no rotation row; `orbit` absent) to a COPY of `base`. No slot
@@ -68,7 +68,7 @@ review: yes (camera follow)
 
 - [x] **Step 1: Write the failing tests** (stub kind rows; no catalog needed)
   - `returns the same Map when no slot follows the sim clock` — `expect(out).toBe(base)` for a body row.
-  - `places a followsSimClock focus row under its poseId at simDays` — the stub's `extractRow` records
+  - `places a placedEachFrame focus row under its poseId at simDays` — the stub's `extractRow` records
     `simDays`; `out.get(poseId)!.positionMpc` equals the stub's position; `base` is unmodified.
   - `leaves out a ref whose extractRow returns null` — `out.has(poseId) === false`.
   - `places select and focus of the same ref once` — the stub's `extractRow` is called once.
@@ -94,7 +94,7 @@ review: yes (camera follow, frame snapshot identity)
   callers `satellitesSelectionRow.ts:52`, `tests/layers/satellites/subsystems/satelliteOrbitEllipse.test.ts:39`
 - Modify: `src/layers/satellites/subsystems/createSelectedSatellites.ts` (drop the `transientPositions`
   half; `any()`/`tracked()` stay until Tasks 3–4), its test
-- Modify: comments naming the registry: `DriverGeometry.d.ts:26-30` (`followsSimClock` = "core re-extracts
+- Modify: comments naming the registry: `DriverGeometry.d.ts:26-30` (`placedEachFrame` = "core re-extracts
   this row every frame to place it", `placeLiveSelection`), `SelectionRow.d.ts:48`, `positionDrivers.ts:40`,
   `satellitesSelectionRow.ts` header
 - Delete: `src/services/bodies/transientPositions.ts`, `src/@types/scene/TransientPositioner.d.ts`,

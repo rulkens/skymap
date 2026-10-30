@@ -24,9 +24,13 @@ export type DriverGeometry = {
   /** Fixed radius multiple to arrive at, overriding the screen-fill distance. */
   readonly focusDistanceRadii?: number;
   /**
-   * Core re-extracts this row every frame to place it under `poseId`
-   * (`placeLiveSelection`): a transient object the sim clock moves though no body
-   * table says so. Bodies leave it unset; `bodyFollowsSimClock` answers for them.
+   * The sim clock moves `poseId` though no body table says so. Bodies leave it
+   * unset; `bodyFollowsSimClock` answers for them.
    */
   readonly followsSimClock?: true;
+  /**
+   * Core re-extracts this row every frame and places its `positionMpc` under
+   * `poseId` (`placeLiveSelection`), so its kind's `extractRow` must be cheap.
+   */
+  readonly placedEachFrame?: true;
 };

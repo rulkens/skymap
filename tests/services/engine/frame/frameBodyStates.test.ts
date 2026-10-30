@@ -10,7 +10,7 @@ const REF = { type: 'satellite', noradId: 25544 } as const;
 const MOVING = {
   type: 'satellite',
   positionMpc: [1e-5, 0, 0],
-  driver: { poseId: 'transient:satellite-25544', followsSimClock: true },
+  driver: { poseId: 'transient:satellite-25544', followsSimClock: true, placedEachFrame: true },
 } as unknown as SelectionRow;
 
 describe('frameBodyStates', () => {

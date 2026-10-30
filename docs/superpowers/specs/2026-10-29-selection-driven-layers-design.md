@@ -57,14 +57,14 @@ the selection it reads from core, never from a store subscription of its own.
 A new core helper, `placeLiveSelection` (name the builder's call), takes the snapshot
 `deriveBodyStates(simDays)` returns, the two selection refs (select, focus; never hover), the
 composed kind rows (`state.selectionKindRows`) and `simDays`. For each ref whose current row's
-`driver.followsSimClock` is set, it calls that kind row's `extractRow(ref, simDays)` and, when it
+`driver.placedEachFrame` is set, it calls that kind row's `extractRow(ref, simDays)` and, when it
 returns a row, adds `driver.poseId → BodyState` to a copy of the snapshot: `positionMpc` from the
 row, `orientation` from `orientationForBody(poseId, simDays, positions)` exactly as phase 2 gives a
 transient id today (`deriveBodyStates.ts:130-137`), `orbit` undefined. Bodies never set
-`followsSimClock`, so with no moving selection the snapshot passes through unchanged: the same Map
+`placedEachFrame`, so with no moving selection the snapshot passes through unchanged: the same Map
 object.
 
-`followsSimClock` keeps its field and gains its exact meaning: _core re-extracts this row every
+`placedEachFrame` is its own member beside `followsSimClock` (ruled 2026-10-30, so neither flag carries two meanings; `followsSimClock` keeps "the clock moves it"): _core re-extracts this row every
 frame to place it_. Every `poseId` reader stays as it is (7 code lines: `bodyMovesThisFrame.ts:13`,
 `stepCameraRuntime.ts:136`, `liveBodyPosition.ts:21` with its 5 callers, `cameraDrivers.ts:113`,
 `approachTiltedPose.ts:44,48`, `runFrame.ts:209`): the satellite is in the snapshot under its
@@ -186,7 +186,7 @@ invalidation. It also proposed failing the arrival on the asset's `error` rather
 
 ## Tests (what can break)
 
-- `placeLiveSelection`: a followsSimClock focus row lands under its `poseId` at the frame's
+- `placeLiveSelection`: a placedEachFrame focus row lands under its `poseId` at the frame's
   `simDays`; a body row leaves the snapshot identical (same object); hover is ignored; a ref whose
   `extractRow` returns null is left out. Port `transientFollow.test.ts` (camera follows a moving
   transient) onto it rather than deleting it.

@@ -47,6 +47,7 @@ describe('satellitesSelectionRow', () => {
     expect(extracted.periodMin).toBeCloseTo(92.96, 1);
     expect(extracted.driver.poseId).toBe(satelliteTransientId(25544));
     expect(extracted.driver.followsSimClock).toBe(true);
+    expect(extracted.driver.placedEachFrame).toBe(true);
   });
 
   it('follows the same point the dot is drawn at, to under a metre', () => {

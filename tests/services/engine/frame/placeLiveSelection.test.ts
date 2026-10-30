@@ -25,7 +25,7 @@ const movingRow = (positionMpc: Vec3, poseId: TransientBodyId = POSE_ID): Select
       footprintRadiusM: 50_000,
       groundRadiusM: null,
       standoffRadii: 2,
-      followsSimClock: true,
+      placedEachFrame: true,
     },
   }) as unknown as SelectionRow;
 
@@ -35,7 +35,7 @@ const kindRow = (extracted: SelectionRow | null) => {
 };
 
 describe('placeLiveSelection', () => {
-  it('returns the same Map when no slot follows the sim clock', () => {
+  it('returns the same Map when no slot is placed each frame', () => {
     const earth = asSceneBodyId('earth');
     const bodyRow = {
       type: 'body',
@@ -51,7 +51,16 @@ describe('placeLiveSelection', () => {
     expect(out).toBe(base);
   });
 
-  it('places a followsSimClock focus row under its poseId at simDays', () => {
+  it('does not place a row that only followsSimClock', () => {
+    const clockOnly = {
+      type: 'satellite',
+      driver: { poseId: POSE_ID, followsSimClock: true },
+    } as unknown as SelectionRow;
+    const { row } = kindRow(movingRow(PLACED));
+    expect(placeLiveSelection(base, [{ ref: REF, row: clockOnly }], [row], AT)).toBe(base);
+  });
+
+  it('places a placedEachFrame focus row under its poseId at simDays', () => {
     const { row, extractRow } = kindRow(movingRow(PLACED));
     const out = placeLiveSelection(
       base,

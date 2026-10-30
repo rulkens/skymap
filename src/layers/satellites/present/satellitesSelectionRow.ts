@@ -1,7 +1,7 @@
 /**
  * satellitesSelectionRow — the `satellite` selection kind. The ref is the NORAD number, which
  * outlives any day's file; the pick index is the catalog index. Extracting is a pure read: the row
- * carries its SGP4 position at `simDays`, and `followsSimClock` has core re-extract a selected or
+ * carries its SGP4 position at `simDays`, and `placedEachFrame` has core re-extract a selected or
  * focused one every frame and place it under `driver.poseId` (`placeLiveSelection`), which the
  * camera follows. With no catalog loaded there is no row: the satellites live only near Earth.
  */
@@ -69,6 +69,7 @@ export function satellitesSelectionRow(
           ...SATELLITE_FOCUS_GEOMETRY,
           groundRadiusM: null,
           followsSimClock: true,
+          placedEachFrame: true,
         },
       };
     },

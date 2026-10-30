@@ -63,6 +63,7 @@ const rowAt = (simDays: number): SelectionRow => ({
     groundRadiusM: null,
     standoffRadii: 2,
     followsSimClock: true,
+    placedEachFrame: true,
   },
 });
 
