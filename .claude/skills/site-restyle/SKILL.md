@@ -22,6 +22,12 @@ A design pass on one page of the companion website, run as a visual round trip. 
 - **Shared components** (`components/shared/**`, `useGallery`) change only opt-in: a new optional prop or parameter whose default keeps every other page identical.
 - **Read first:** `docs/superpowers/conventions/ui-ux.md` and the page's own components.
 
+## Design skills: which to load when
+
+- **Planning (step 2) and restyling each section (step 3):** load `site-composition`, beside `frontend-design:frontend-design`.
+- **Critiquing (step 4.3), on every pass:** load `site-critique`. The weakest thing it names is the one thing you fix next.
+- **Any section that adds or changes motion:** load `site-motion` before writing its CSS or script.
+
 ## 1. Shoot the before
 
 ```
