@@ -3,7 +3,7 @@
  * `dev` tours and clips stay off it; the registries are the only place a label is written.
  */
 
-import { APP_EXHIBITS } from '../../compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import type { RemoteMenuItem } from '../../@types/remote/RemoteMenuItem';
@@ -15,6 +15,6 @@ const listed = <Id extends string>(
 
 export const REMOTE_MENU: RemoteMenu = {
   tours: listed(Object.values(tourRegistry)),
-  exhibits: listed(Object.values(APP_EXHIBITS)),
+  exhibits: listed(Object.values(APP_EXHIBIT_REGISTRY)),
   clips: listed(Object.values(clipRegistry)),
 };

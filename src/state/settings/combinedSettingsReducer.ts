@@ -5,10 +5,10 @@
 
 import { combineSlices } from '@reduxjs/toolkit';
 
-import { APP_SETTINGS_SLICES } from '../../compositions/appSettingsSlices';
+import { APP_SETTINGS_SLICE_REGISTRY } from '../../compositions/appSettingsSlices';
 import { CORE_SETTINGS_SLICES } from './coreSettingsSlices';
 
 export const combinedSettingsReducer = combineSlices(
   ...CORE_SETTINGS_SLICES,
-  ...APP_SETTINGS_SLICES,
+  ...APP_SETTINGS_SLICE_REGISTRY,
 );

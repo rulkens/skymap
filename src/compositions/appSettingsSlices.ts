@@ -21,7 +21,7 @@ import { lightTimeLayerSettings } from '../layers/lightTime/state/slices';
 import { missionsLayerSettings } from '../layers/missions/state/slices';
 import { satellitesLayerSettings } from '../layers/satellites/state/slices';
 
-export const APP_SETTINGS_SLICES = [
+export const APP_SETTINGS_SLICE_REGISTRY = [
   ...blackHolesLayerSettings,
   ...bodyLayerSettings,
   ...constellationsLayerSettings,

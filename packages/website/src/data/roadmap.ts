@@ -238,7 +238,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
         id: 'label-declutter',
         title: 'Names that hold still',
         text: 'A switch for thinning out overlapping names, and names that do not come and go while the camera moves.',
-        state: 'planned',
+        state: 'idea',
         backlog: 'Label declutter toggle + hysteresis',
       },
       {

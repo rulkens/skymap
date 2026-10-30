@@ -13,11 +13,11 @@ byte-exact uniforms under a deadline.
 ## Items
 
 1. **Sgr A* lens: the whole prefix is dead.** Since the lens became a per-view
-   fullscreen triangle, `bodies/sgrAStarLensing/vertex.wesl` and
+   fullscreen triangle, `bodies/blackHoleLensing/vertex.wesl` and
    `fragment.wesl` read nothing from `u.cam`. Drop the `cam` member from
-   `shaders/lib/sgrAStarLensing.wesl`, the `writeCameraPrefix` call and its
-   three params in `packSgrAStarLensingUniforms.ts`, the three arguments in
-   `sgrAStarLensingPass.ts`, and the parity test's `CameraUniforms` row. The
+   `shaders/lib/blackHoleLensing.wesl`, the `writeCameraPrefix` call and its
+   three params in `packBlackHoleLensingUniforms.ts`, the three arguments in
+   `blackHoleLensingPass.ts`, and the parity test's `CameraUniforms` row. The
    struct goes 240 to 160 bytes; every offset moves by exactly -80, a
    multiple of 16, so vec3 landings and the `viewBasis` column stride survive.
    The parity test derives offsets from the WESL source and catches a slip.
