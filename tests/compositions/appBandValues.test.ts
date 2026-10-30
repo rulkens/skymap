@@ -15,6 +15,7 @@ import { STAR_CATALOG_IDS } from '../../src/data/starCatalog/starCatalogIds';
 import { SEEDED_STAR_CATALOGS } from '../../src/data/bodies/seededStarCatalogs';
 import { SUN_ENTRY } from '../../src/layers/starCatalog/sources/sun';
 import { normalize3 } from '../../src/utils/math/normalize3';
+import { SCENE_EARTH } from '../../src/data/bodies/sceneEarth';
 import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 import { viewBandOf } from '../../src/services/engine/presentation/viewBandOf';
 import { fadeBand } from '../../src/utils/math/fadeBand';
@@ -116,6 +117,23 @@ describe('flow at the Cosmic Flows exhibit pose', () => {
   it('is full at the nearest the exhibit eye can sit to home', () => {
     const { target, distance } = cosmicFlows.pose!;
     expect(valueAt('flow', distance - Math.hypot(...target))).toBe(1);
+  });
+});
+
+// Pins the satellites band to the live Earth position, read 100 days past J2000.
+describe('satellites near Earth', () => {
+  it('are full at 300 000 km and gone at 600 000 km from the live Earth', () => {
+    const states = deriveBodyStates(CONST_J2000 + 100);
+    const earth = states.get(SCENE_EARTH.id)!.positionMpc;
+    const at = (km: number): number => {
+      const entry = APP_VISIBILITY_REGISTRY.find((e) => 'key' in e && e.key === 'satellites')!;
+      const eye: Vec3 = [earth[0] + km * SCALE_UNITS.KM_TO_MPC, earth[1], earth[2]];
+      return bandValueOf(entry, 'active', { drawCamPos: eye, snapshot: { bodyStates: states } });
+    };
+    expect(at(300_000)).toBe(1);
+    expect(at(450_000)).toBeGreaterThan(0);
+    expect(at(450_000)).toBeLessThan(1);
+    expect(at(600_000)).toBe(0);
   });
 });
 
