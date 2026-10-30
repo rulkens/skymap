@@ -60,7 +60,7 @@ export type Layer<
   readonly exhibits?: readonly Exhibit[];
   /** Typing only: `data/sources.ts` folds the same rows into `SOURCE_REGISTRY` by import. */
   readonly sources?: Sources;
-  /** Typing only: `data/bodies/layerBodyRows.ts` folds the same rows into the body tables by import. */
+  /** Typing only: the composition root collects the same rows in `compositions/appBodies.ts`. */
   readonly bodies?: readonly LayerBody[];
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
   readonly facts?: Facts;
