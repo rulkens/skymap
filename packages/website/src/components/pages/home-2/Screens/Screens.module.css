@@ -2,6 +2,26 @@
   composes: wrap section from '../../../../styles/layout.module.css';
 }
 
+.head {
+  margin-bottom: 2.5rem;
+
+  & p {
+    max-width: var(--measure-lead);
+  }
+}
+
+@media (min-width: 901px) {
+  .head {
+    display: grid;
+    justify-items: center;
+    text-align: center;
+
+    & p {
+      margin-bottom: 1rem;
+    }
+  }
+}
+
 /*
  * Two rows shared by every part (subgrid): the devices stand on one line, the tallest setting it, and the
  * words start on the next. Columns in proportion to the devices' widths, so each is drawn near its size.
@@ -27,10 +47,17 @@
   }
 }
 
+/* Each device's words hang from a rule, as a picture's label does (ShotCaption): four plates on one line. */
+.label {
+  padding-top: 1rem;
+  border-top: 1px solid rgb(232 238 255 / 0.2);
+}
+
 .note {
   composes: small from '../../../../styles/type.module.css';
   margin-bottom: 0.5rem;
   color: var(--site-text-dim);
+  text-wrap: pretty;
 }
 
 .device {

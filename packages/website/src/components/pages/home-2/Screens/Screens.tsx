@@ -1,13 +1,13 @@
 /*
  * Screens — Home's row of the screens Skymap runs on, each showing Saturn: a phone, a tablet, a desktop and
  * a dome. Each is drawn near its real size against the others, standing on one line, with its name and a
- * few words under it. Narrow, the row is two by two.
+ * few words under it. Wide, the title is centred over the row, the page's one centred head. Narrow, the
+ * row is two by two.
  */
 import { appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
-import SectionHead from '../../../shared/layout/SectionHead/SectionHead.tsx';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import DeviceFrame from '../../../shared/media/DeviceFrame/DeviceFrame.tsx';
@@ -18,21 +18,20 @@ import styles from './Screens.module.css';
 function Screens() {
   return (
     <section className={styles.root} id="screens">
-      <SectionHead title="Explore the universe anywhere">
+      <div className={styles.head}>
+        <h2>Explore the universe anywhere</h2>
         <p>
           The same view of Saturn on four screens. Skymap runs in a browser, with nothing to
           install.
         </p>
-        <ViewLink hang href={appLink(siteShot('start-saturn').link)}>
-          Open Saturn
-        </ViewLink>
-      </SectionHead>
+        <ViewLink href={appLink(siteShot('start-saturn').link)}>Open Saturn</ViewLink>
+      </div>
       <div className={styles.row}>
         <div className={cx(styles.part, styles.phone)}>
           <div className={styles.device}>
             <Phone3D shot="features-phone" />
           </div>
-          <div>
+          <div className={styles.label}>
             <h3>Phone</h3>
             <p className={styles.note}>In the phone’s browser, moved with your fingers.</p>
           </div>
@@ -45,7 +44,7 @@ function Screens() {
               sizes="(max-width: 900px) 45vw, 14rem"
             />
           </div>
-          <div>
+          <div className={styles.label}>
             <h3>Tablet</h3>
             <p className={styles.note}>The same view on a larger touch screen.</p>
           </div>
@@ -58,7 +57,7 @@ function Screens() {
               sizes="(max-width: 900px) 45vw, 27rem"
             />
           </div>
-          <div>
+          <div className={styles.label}>
             <h3>Desktop</h3>
             <p className={styles.note}>The full app, with a mouse and a keyboard.</p>
           </div>
@@ -67,7 +66,7 @@ function Screens() {
           <div className={styles.device}>
             <Disc id="dome-saturn" sizes="(max-width: 900px) 40vw, 14rem" />
           </div>
-          <div>
+          <div className={styles.label}>
             <h3>Dome</h3>
             <p className={styles.note}>
               A fisheye picture for a planetarium dome, steered from a phone.
