@@ -80,6 +80,8 @@
   opacity: 0;
   pointer-events: none;
   text-shadow: 0 0 0.5rem rgb(0 0 0 / 0.9);
+  /* The scroll draws the words back with their picture (useFlight), towards the corner they stand in. */
+  transform-origin: var(--gutter) 100%;
 }
 
 /* A local scrim: under the words only, so the rest of the frame keeps its light. */

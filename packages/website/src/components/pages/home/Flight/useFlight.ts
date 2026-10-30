@@ -20,6 +20,8 @@ import { useFlightFilm } from './useFlightFilm.ts';
 
 // How much larger a still starts than it ends, over the two legs it is on screen: scrolling pulls it back.
 const PULL_BACK = 0.12;
+// The same for a stop's words, kept small so they stay sharp: they draw back with their picture.
+const WORDS_PULL_BACK = 0.1;
 // As shares of a leg: a stop's caption starts to leave here, and the next one's starts to
 // arrive once it has gone, so two captions never share the corner they are both set in.
 // The change is short, so wherever the page stops a caption is nearly always at full strength.
@@ -62,6 +64,7 @@ export function useFlight({
     const intro = parts.intro.current!;
     const arrive = parts.arrive.current!;
     const scale = parts.scale.current!;
+    const figure = scale.firstElementChild!;
     const hint = parts.hint.current!;
     const fill = parts.fill.current!;
     // The intro is the first stop's caption and the arrival block the last one's, so one rule fades all of them.
@@ -108,6 +111,11 @@ export function useFlight({
       words.forEach((el, k) => {
         const opacity = k === pose.index ? 1 - leaving : k === pose.index + 1 ? arriving : 0;
         el.style.opacity = String(opacity);
+        // The arrival holds still: it carries the way into the app.
+        el.style.transform =
+          opacity === 0 || snap || el === arrive
+            ? ''
+            : `scale(${(1 + (WORDS_PULL_BACK * (k - at)) / 2).toFixed(4)})`;
         // An invisible control must not take focus or clicks.
         if (el === intro || el === arrive) {
           el.inert = opacity < 0.5;
@@ -120,11 +128,12 @@ export function useFlight({
       const opening = pose.index === 0 && leaving < 0.5;
       const dip = pose.index === 0 ? Math.abs(1 - 2 * leaving) : 1;
       hint.style.opacity = String(dip * (1 - Number(arrive.style.opacity)));
-      const nudge = opening ? 'Scroll to pull back' : 'Keep scrolling';
-      if (hint.textContent !== nudge) hint.textContent = nudge;
+      if (hint.hasAttribute('data-onward') === opening)
+        hint.toggleAttribute('data-onward', !opening);
 
-      const readout = `${formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM)} from Earth`;
-      if (scale.textContent !== readout) scale.textContent = readout;
+      // Only the figure changes; "from Earth" stays put beside it.
+      const readout = formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM);
+      if (figure.textContent !== readout) figure.textContent = readout;
 
       // The rings are evenly spaced, so the line fills by stops passed and is full at the last ring.
       fill.style.height = `${(Math.min(at, count - 1) / (count - 1)) * 100}%`;

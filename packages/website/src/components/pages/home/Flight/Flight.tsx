@@ -79,10 +79,13 @@ function Flight({ stops, videoUrl }: FlightProps) {
           <Intro ref={parts.intro} />
           <Stops stops={stops} near={near} pictures={parts.pictures} captions={parts.captions} />
           {/* Rewritten on every scroll frame, so it is kept from screen readers; the stops' captions carry the same story. */}
-          <p ref={parts.scale} className={styles.scale} aria-hidden="true" />
-          {/* Stays through the flight and changes its words once the wordmark has gone. */}
+          <p ref={parts.scale} className={styles.scale} aria-hidden="true">
+            <span className={styles.figure} /> from Earth
+          </p>
+          {/* Stays through the flight and changes its words once the wordmark has gone (`data-onward`). */}
           <p ref={parts.hint} className={styles.hint} aria-hidden="true">
-            Scroll to pull back
+            <span className={styles.opening}>Scroll to pull back</span>
+            <span className={styles.onward}>Keep scrolling, there’s plenty of space</span>
           </p>
           <video
             ref={parts.video}

@@ -33,6 +33,8 @@
   align-items: end;
   gap: 1.5rem 3rem;
   padding: 0 5.5rem 4.5rem var(--gutter);
+  /* The scroll draws the words back with Earth (useFlight), towards the corner they stand in. */
+  transform-origin: var(--gutter) 100%;
 }
 
 /* A local scrim: under the words only, so the rest of the frame keeps its light. */

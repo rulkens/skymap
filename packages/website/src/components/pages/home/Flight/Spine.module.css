@@ -57,8 +57,28 @@
     transform: scale(1.4);
   }
 
+  /* The ring the app draws round what you select, closing in on the stop being read. */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -0.375rem;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    opacity: 0;
+    transform: scale(1.6);
+    transition:
+      opacity var(--duration-base) var(--ease-leave),
+      transform var(--duration-base) var(--ease-leave);
+  }
+
   &[aria-current='true'] {
     background: var(--color-accent);
+
+    &::before {
+      opacity: 1;
+      transform: none;
+      transition-timing-function: var(--ease-enter);
+    }
   }
 
   & span {
@@ -125,6 +145,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dot,
+  .dot::before,
   .dot span {
     transition: none;
   }
