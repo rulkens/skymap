@@ -2,8 +2,8 @@
  * The Layer's one asset row: demand while a class is shown and the camera is near Earth, the
  * palette is open or a satellite is selected; release when every class is off or none of those
  * holds (spec §5.5). The selection arm (`selectedKinds`, set as soon as a link's ref lands) is
- * what lets a deep link to a satellite resolve from far away; core's selection wake re-runs this
- * demand. Earth's position comes from the same instant the last frame derived its bodies at.
+ * what lets a deep link to a satellite resolve from far away, once `watchSelectionRevealSaga`
+ * has switched the section on; core's selection wake re-runs this demand. Earth's position comes from the same instant the last frame derived its bodies at.
  */
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { distanceMpc } from '../../../utils/math/distanceMpc';

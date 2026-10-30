@@ -10,8 +10,8 @@ from the text below:
   in a second job with no checkout and no npm. `docs/DEPLOY.md` "Satellite catalog" has the secrets.
 - §5.5: the asset row also demands while the search palette is open or a satellite is selected, so a
   satellite can be searched for, and followed, from anywhere.
-- Satellites start off; every class starts on. A satellite link opened with satellites off lands home
-  until the generic fix in `docs/superpowers/specs/2026-10-29-selection-driven-layers-design.md` lands.
+- Satellites start off; every class starts on. A satellite link opened with satellites off switches
+  them on and arrives (`docs/superpowers/specs/2026-10-29-selection-driven-layers-design.md` §4).
 - Following a satellite: the Layer sets and deletes its own entries in core's `transientPositions`
   registry (#955), read by `deriveBodyStates`; satellites are still never `bodies` rows (§2).
 

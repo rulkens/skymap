@@ -226,7 +226,7 @@ review: yes (sagas)
   entry whose `selects` holds the new ref's type; if its cluster `hasSectionSwitch` and that switch is off,
   `put` each of `setVisibilityActionsFor(settings, entry.key, true)`. Otherwise nothing.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
   - `switches Satellites on when a satellite is focused with the section off`
   - `does nothing on hover` (`updateSelectionHover` with a satellite)
   - `does nothing during a clip`
@@ -235,8 +235,8 @@ review: yes (sagas)
   - arrival: `a cold satellite deep link with Satellites off reveals, loads and arrives` — Satellites off,
     `#focus=satellite-25544`; expect `setVisibility({cluster:'satellites', field:'enabled', on:true})` before
     `arrived()` and no `arrivalFailed`. Use the existing arrival test harness; stub the catalog slot to land.
-- [ ] **Step 2–4:** Run (FAIL), implement, register, run (PASS).
-- [ ] **Step 5: Commit** `feat(selection): a select or focus switches its subject's section on`.
+- [x] **Step 2–4:** Run (FAIL), implement, register, run (PASS).
+- [x] **Step 5: Commit** `feat(selection): a select or focus switches its subject's section on`.
 
 ### Task 7: Verification
 
