@@ -16,7 +16,7 @@ import { createLabel2DDirector } from '../../../../src/services/engine/subsystem
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
 import { produceStarCaptions } from '../../../../src/layers/starCatalog/present/produceStarCaptions';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
+import { STAR_MAP_CAPTION_BAND } from '../../../../src/layers/starCatalog/data/starMapCaptionBand';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -167,7 +167,7 @@ function farVisibleStar(): { id: string; worldPos: Vec3; distPc: number } {
           worldPos[2] - EARTH_POS[2],
         ) / SCALE_UNITS.PC_TO_MPC,
     };
-  }).filter((s) => s.distPc <= SCALE_FADE_BANDS.starCaption.fullAt);
+  }).filter((s) => s.distPc * SCALE_UNITS.PC_TO_MPC <= STAR_MAP_CAPTION_BAND.fullAt);
   return candidates.reduce((a, b) => (b.distPc > a.distPc ? b : a));
 }
 

@@ -69,7 +69,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/engine/gpuHandles/gpuHandleRegistry.ts',
   'src/services/engine/helpers/famousDisplayName.ts',
   'src/services/engine/helpers/selectionHaloTable.ts',
-  'src/services/engine/presentation/captionFadeRules.ts',
   'src/services/engine/presentation/captionPriority.ts',
   'src/services/engine/presentation/famousLabelStyle.ts',
   'src/services/engine/presentation/foregroundCaption.ts',
