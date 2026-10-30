@@ -6,6 +6,7 @@ import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc'
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
 import { cosmicFlows } from '../../src/data/exhibits/cosmicFlows';
+import { HORIZON_RADIUS_MPC } from '../../src/layers/cosmicHorizon/data/horizonRadiusMpc';
 import { deriveBodyStates } from '../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../src/data/time/constJ2000';
 import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';
@@ -107,5 +108,15 @@ describe('flow at the Cosmic Flows exhibit pose', () => {
   it('is full at the nearest the exhibit eye can sit to home', () => {
     const { target, distance } = cosmicFlows.pose!;
     expect(valueAt('flow', distance - Math.hypot(...target))).toBe(1);
+  });
+});
+
+// Pins the horizon shell's reach band to the smoothstep(0.05 R, 0.4 R) curve the pass
+// computed by hand before the band: the tour and the flyouts are paced against it.
+describe('cosmic horizon reach', () => {
+  it('fades in from 5 % to 40 % of the shell radius', () => {
+    expect(valueAt('cosmicHorizon', 0.05 * HORIZON_RADIUS_MPC)).toBe(0);
+    expect(valueAt('cosmicHorizon', 0.225 * HORIZON_RADIUS_MPC)).toBeCloseTo(0.5, 12);
+    expect(valueAt('cosmicHorizon', 0.4 * HORIZON_RADIUS_MPC)).toBe(1);
   });
 });
