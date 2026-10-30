@@ -6,18 +6,17 @@
 .column {
   composes: wrap from '../../../../styles/layout.module.css';
   position: relative;
-  isolation: isolate;
 }
 
 /*
  * The S-stars' orbits, cut from black, their centre (the frame's) out past the window's left edge so the title
- * stands over the outer orbits, not over the bright knot. They lag the scroll a little: the title passes over them.
+ * stands over the outer orbits, not over the bright knot. They lag the scroll a little. No layer of their own: the
+ * screen blend must reach the page, or the frame's black would cover the caption above and the title.
  */
 .orbits {
   --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   --w: 64rem;
   position: absolute;
-  z-index: -1;
   top: calc(3.5rem - 0.28 * var(--w));
   left: calc(-1 * var(--bleed) + 3rem - 0.5 * var(--w));
   width: var(--w);
