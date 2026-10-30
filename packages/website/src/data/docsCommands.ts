@@ -297,6 +297,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: SITE_TOOLS,
       },
       {
+        scripts: ['site:sections'],
+        does: 'Shoots one page of the running site at each width, as the full page and one picture per section, for a design review.',
+        manual: SITE_TOOLS,
+      },
+      {
         scripts: ['site:external'],
         does: 'Asks for every address outside the site that a built page links to, and lists each one that is gone with its pages and its data row.',
         manual: SITE_TOOLS,

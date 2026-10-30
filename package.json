@@ -125,6 +125,7 @@
     "site:media": "tsx tools/site/buildHeroMedia.ts",
     "site:links": "tsx --import ./tools/site/stubCssImports.mjs tools/site/checkSiteLinks.ts",
     "site:structure": "tsx tools/site/checkPageStructure.ts",
+    "site:sections": "tsx tools/site/shootSections.ts",
     "site:external": "tsx tools/site/checkExternalLinks.ts",
     "site:repeats": "vitest run tests/packages/website/factRepeats.test.ts",
     "site:compare": "tsx tools/site/compareSite.ts",

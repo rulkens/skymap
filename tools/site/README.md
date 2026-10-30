@@ -73,6 +73,10 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 `npm run site:structure` (after `npm run site:build`) compares each landing page's `<page>.structure.yaml` (`packages/website/src/content/pages/<page>/`) with its built HTML: the YAML's sections are the page's h2s and their `parts` its h3s, inside `<main>`. A heading only one side has fails the check.
 
+## Section shots
+
+`npm run site:sections -- /home-2/ [--url http://localhost:5800] [--widths 1440,400] [--label before] [--out <dir>]` shoots one page of the RUNNING dev site at each width. It writes the full page, then one picture per h2 section (`<label>-<width>-<n>-<slug>.png`), after one scroll through the page so lazy pictures load, with the dev overlays and the fixed bar hidden. It is the screenshot half of the `site-restyle` skill's design round trip.
+
 ## External link check
 
 `npm run site:external` (after `npm run site:build`; needs the network, so not in CI) asks once for every `http(s)` address the built pages link to, without its fragment, two at a time to a host. An address that fails a plain request is opened in Chromium, since many publishers serve a browser and refuse a script; a DOI is good when doi.org redirects it. What is left is printed in two lists, each address with its status, its pages and the data row or line of `ATTRIBUTIONS.md` that holds it: addresses that are gone (404, 410, a server error, no such host), which fail the run, and addresses that refuse a robot (403, 405, 429), for a person to open. `--only <host>` limits a run. Run it twice before believing a failure.
