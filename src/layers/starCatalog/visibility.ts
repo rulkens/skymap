@@ -6,6 +6,7 @@ import { SOLAR_SYSTEM_CAPTION_RECEDE } from '../../data/bands/solarSystemCaption
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
+import { SUN_ENTRY } from './sources/sun';
 
 // The survey Gaia bin and the S-stars draw no names. A single-parameter `.filter` is what
 // lets `tsc` infer the narrowing predicate.
@@ -37,6 +38,6 @@ export const starCatalogVisibility = [
     of: 'starCatalog',
     recession: 'mild',
     // The curated map fades per star instead (`STAR_MAP_CAPTION_BAND`), which no entry band can.
-    bands: { caption: { ...SOLAR_SYSTEM_CAPTION_RECEDE, items: ['sun'] } },
+    bands: { caption: { ...SOLAR_SYSTEM_CAPTION_RECEDE, items: [SUN_ENTRY.id] } },
   },
 ] as const satisfies readonly VisibilityEntry[];

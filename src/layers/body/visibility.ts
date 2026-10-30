@@ -11,16 +11,13 @@ const LABEL_BEARING_BODY_IDS = SOURCE_ENTRIES.filter((e) => e.type === 'body' &&
   (e) => e.id,
 );
 
-// Exported on its own so the Earth pick stamp reads the same band its caption fades by.
-export const BODY_LABEL_ENTRY = {
-  label: 'body',
-  cluster: 'bodies',
-  items: LABEL_BEARING_BODY_IDS,
-  recession: 'mild',
-  bands: { caption: SOLAR_SYSTEM_CAPTION_RECEDE },
-} as const satisfies VisibilityEntry;
-
 export const bodyVisibility = [
   { key: 'orbitTrails', bands: { foreground: FOREGROUND_RECEDE } },
-  BODY_LABEL_ENTRY,
+  {
+    label: 'body',
+    cluster: 'bodies',
+    items: LABEL_BEARING_BODY_IDS,
+    recession: 'mild',
+    bands: { caption: SOLAR_SYSTEM_CAPTION_RECEDE },
+  },
 ] as const satisfies readonly VisibilityEntry[];

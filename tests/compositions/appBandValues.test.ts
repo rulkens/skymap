@@ -11,6 +11,7 @@ import { CONST_J2000 } from '../../src/data/time/constJ2000';
 import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';
 import { STAR_CATALOG_IDS } from '../../src/data/starCatalog/starCatalogIds';
 import { SEEDED_STAR_CATALOGS } from '../../src/data/bodies/seededStarCatalogs';
+import { SUN_ENTRY } from '../../src/layers/starCatalog/sources/sun';
 import { normalize3 } from '../../src/utils/math/normalize3';
 import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 import { viewBandOf } from '../../src/services/engine/presentation/viewBandOf';
@@ -72,7 +73,7 @@ describe('seeded star sets at the foreground gate', () => {
     from[2] + towardGc[2] * distanceMpc,
   ];
 
-  it.each(['famousStar', 'sun'])(
+  it.each(['famousStar', SUN_ENTRY.id])(
     'seeded neighbourhood stars (%s) are full at 1 kpc from home and gone at the cutoff',
     (item) => {
       expect(valueAtEye('starCatalog', along([0, 0, 0], SCALE_UNITS.KPC_TO_MPC), item)).toBe(1);
@@ -139,7 +140,7 @@ describe('caption bands', () => {
   const solarSystem: FadeBand = { fullAt: reachMpc / 2, goneAt: reachMpc };
 
   it.each([
-    ['starCatalog', 'sun'],
+    ['starCatalog', SUN_ENTRY.id],
     ['body', 'earth'],
     ['body', 'planet'],
     ['missions', 'craft'],

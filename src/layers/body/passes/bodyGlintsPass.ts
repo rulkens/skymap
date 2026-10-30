@@ -34,7 +34,8 @@ import { packBodyGlints } from '../../../utils/scene/packBodyGlints';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { bandValueOf } from '../../../services/engine/presentation/bandValueOf';
-import { BODY_LABEL_ENTRY } from '../visibility';
+import { bodyVisibility } from '../visibility';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { EARTH_ENTRY } from '../sources/earth';
 import { PLANET_ENTRY } from '../sources/planet';
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
@@ -42,12 +43,14 @@ import { MAX_GLINTS } from '../../../services/gpu/renderers/bodies/bodyGlintRend
 import { BODY_GLINT_INSTANCE_FLOATS } from '../../../data/rendering/bodyGlintInstanceFloats';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 
+const BODY_LABEL = visibilityEntryOf(bodyVisibility, 'label:body');
+
 // Reused every frame: the hot path allocates nothing.
 const staging = new Float32Array(MAX_GLINTS * BODY_GLINT_INSTANCE_FLOATS);
 
 /** `pickEnabled` and `drawPick` must agree with the Earth caption, so both read its band. */
 function earthCaptionPickable(ctx: FrameView): boolean {
-  return bandValueOf(BODY_LABEL_ENTRY, EARTH_ENTRY.id, ctx) > 0;
+  return bandValueOf(BODY_LABEL, EARTH_ENTRY.id, ctx) > 0;
 }
 
 export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
@@ -119,7 +122,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       const camPos = view.camPos;
       // The same far-dissolve alpha `draw` folds in, hoisted (per-frame constant).
       const backdropFade = bodyGlintBackdropFade(camPos, states);
-      const planetCaptionShown = bandValueOf(BODY_LABEL_ENTRY, PLANET_ENTRY.id, ctx) > 0;
+      const planetCaptionShown = bandValueOf(BODY_LABEL, PLANET_ENTRY.id, ctx) > 0;
       const pickPoints: BodyGlintPick[] = [];
 
       // Earth is not in the partition (it rides `SCENE_EARTH`), so without this stamp the
