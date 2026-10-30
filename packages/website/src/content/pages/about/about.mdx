@@ -14,6 +14,7 @@ import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
 import PictureBand from '../../../components/shared/media/PictureBand/PictureBand.tsx';
 import PressPictures from '../../../components/pages/about/PressPictures/PressPictures.tsx';
 import Quotable from '../../../components/pages/about/Quotable/Quotable.tsx';
+import WebAtScale from '../../../components/pages/about/WebAtScale/WebAtScale.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
@@ -34,12 +35,14 @@ import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
 </PictureBand>
 
 <Section id="what">
-  <h2>What Skymap is</h2>
-  <Quotable>{whatIs}</Quotable>
-  <div className={links['onward-row']}>
-    <OpenApp />
-    <ObjLink href={sitePath('/science/')}>The science behind Skymap</ObjLink>
-  </div>
+  <WebAtScale>
+    <h2>What Skymap is</h2>
+    <Quotable>{whatIs}</Quotable>
+    <div className={links['onward-row']}>
+      <OpenApp />
+      <ObjLink href={sitePath('/science/')}>The science behind Skymap</ObjLink>
+    </div>
+  </WebAtScale>
 </Section>
 
 <Section id="maker">

@@ -268,6 +268,40 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
     alt: 'A broad fan of points opening from a tip at the left, orange near the tip and blue-white far out.',
   },
+  // The About page's opening: the traced filaments seen whole, alone as light, and the app's scale bar at the same
+  // camera in a window of the same shape, so the bar is laid over the picture at the picture's own scale.
+  {
+    id: 'about-web',
+    link: 'pose=a,0,0,0,2.1,0.35,600,0',
+    settings: {
+      hideLabels: true,
+      hideStructures: true,
+      hideGalaxyField: true,
+      hideCosmicWeb: true,
+      hideZoneOfAvoidance: true,
+      hideStars: true,
+      filaments: true,
+      matte: 'emissive',
+      keepPasses: ['cosmic-web-filaments'],
+      settleMs: 8000,
+    },
+    size: { width: 1600, height: 1000 },
+    widths: [1600, 960],
+    title: 'The filaments of the cosmic web',
+    drawn: 'Traced by an algorithm through the positions of catalogued galaxies.',
+    alt: 'A ball of bright branching violet threads round a dense core, fraying at its edge.',
+  },
+  {
+    id: 'about-scale-bar',
+    link: 'pose=a,0,0,0,2.1,0.35,600,0',
+    settings: { ui: true, element: '[aria-label="Scale reference"]', settleMs: 6000 },
+    // As wide as a 1440 px window draws the web (76rem), so there the bar is at the app's own size.
+    size: { width: 1216, height: 760 },
+    widths: [480, 240],
+    title: 'The app’s scale bar',
+    drawn: 'The length is measured at the camera’s distance from what it looks at.',
+    alt: 'The app’s scale bar, a bracket labelled 100 Mpc / 326 Mly.',
+  },
   // The Science page's sources: one of the 3D models the table leaves out, alone on transparency.
   {
     id: 'science-hubble',

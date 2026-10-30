@@ -1,0 +1,136 @@
+/*
+ * `--frame` is the width the whole shot is drawn at. Only its middle is shown: the ball of filaments spans 17% to
+ * 81% across and 2.5% to 100% down (of the width: 4% to 100% of a 16:10 frame), so the stage is 0.64 by 0.6
+ * frames, its right edge on the window's.
+ */
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  --frame: min(76rem, 90vw);
+  align-items: center;
+}
+
+.words {
+  position: relative;
+  z-index: 1;
+}
+
+.figure {
+  position: relative;
+  margin: 0;
+}
+
+.web,
+.bar {
+  position: absolute;
+  pointer-events: none;
+
+  & picture,
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+.web {
+  top: 0;
+  right: calc(-1 * var(--bleed));
+  width: calc(0.64 * var(--frame));
+  height: calc(0.6 * var(--frame));
+  overflow: hidden;
+  /* The fringe nearest the words fades out before it reaches them. */
+  mask-image: linear-gradient(90deg, rgb(0 0 0 / 0), #000 30%);
+
+  & picture {
+    width: var(--frame);
+    margin: calc(-0.025 * var(--frame)) 0 0 calc(-0.17 * var(--frame));
+  }
+}
+
+/* The bar's window was 1216 px wide and the shape of the web's frame; its element is 211 px of that. */
+.bar {
+  top: calc(0.44 * var(--frame));
+  right: calc(-1 * var(--bleed) + 0.06 * var(--frame));
+  width: calc(211 / 1216 * var(--frame));
+}
+
+/* Under the web, clear of its threads. */
+.caption {
+  padding-top: calc(0.6 * var(--frame) + 1rem);
+}
+
+@keyframes web-drift {
+  from {
+    translate: 0 2rem;
+  }
+
+  to {
+    translate: 0 -2rem;
+  }
+}
+
+@keyframes bar-drift {
+  from {
+    translate: 0 5rem;
+  }
+
+  to {
+    translate: 0 -5rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .figure {
+      view-timeline-name: --web-at-scale;
+    }
+
+    .web,
+    .bar {
+      animation: web-drift linear both;
+      animation-timeline: --web-at-scale;
+    }
+
+    .bar {
+      animation-name: bar-drift;
+    }
+  }
+}
+
+@media (min-width: 901px) {
+  .words {
+    grid-column: 1 / span 6;
+  }
+
+  .figure {
+    grid-column: 7 / -1;
+  }
+}
+
+/* Narrow: the web under the words, the window's width; the bar would be too small to read, so it is left out. */
+@media (max-width: 900px) {
+  .root {
+    --frame: calc(100vw / 0.64);
+  }
+
+  .figure {
+    margin-top: 2rem;
+  }
+
+  .web {
+    position: relative;
+    right: auto;
+    margin-inline: calc(-1 * var(--gutter));
+    mask-image: none;
+  }
+
+  .bar {
+    display: none;
+  }
+
+  .caption {
+    padding-top: 0;
+  }
+}
