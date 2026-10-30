@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { blackHoleMarkerPass } from '../../../../src/layers/blackHoles/passes/blackHoleMarkerPass';
 import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../fixtures/makeSlab';

@@ -33,7 +33,7 @@ import { positionedSeededStars } from '../../../../src/layers/starCatalog/presen
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../src/utils/camera/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../src/data/famousStarPickRadiusPx';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { makeSlab } from '../../../fixtures/makeSlab';

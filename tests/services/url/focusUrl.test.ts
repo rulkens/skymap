@@ -13,7 +13,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { selectionToFocusId } from '../../../src/services/url/focusUrl';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 
 /**

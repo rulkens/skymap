@@ -32,7 +32,7 @@ import {
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants';
 import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';

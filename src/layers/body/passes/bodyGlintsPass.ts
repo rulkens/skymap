@@ -19,7 +19,7 @@ import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyGlintPick } from '../../../@types/rendering/bodyPickRenderer/BodyGlintPick';
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { bodySceneBodyPartition } from '../present/bodySceneBodyPartition';

@@ -3,7 +3,7 @@ import { catalogDistanceFor } from '../../tools/catalog/catalogDistanceFor';
 import type { Cf4CatalogIndex, Cf4Record } from '../../tools/parsers/cosmicflows4';
 import type { HyperLedaShapeMap } from '../../tools/parsers/glade';
 import type { ParsedRecord } from '../../tools/parsers/common';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 
 /** Minimal ParsedRecord-shaped fixture; unused fields default to NaN/0/null. */
 function rec(partial: Partial<ParsedRecord>): ParsedRecord {

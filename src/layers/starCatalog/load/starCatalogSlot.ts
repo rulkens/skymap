@@ -8,7 +8,7 @@
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { starCatalogFetcher } from './starCatalogFetcher';
 import { installStarPool } from './installStarPool';
-import { SOURCE_REGISTRY } from '../../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
@@ -21,7 +21,7 @@ export function createStarCatalogSlot(
   host: OctreePoolHost<StarColumns>,
   chunkSlotsOverride: () => number | null,
 ): AssetSlot<Octree<StarColumns>, StarCatalogReq> {
-  const entry = SOURCE_REGISTRY[source];
+  const entry = APP_SOURCE_REGISTRY[source];
   if (entry.type !== 'starCatalog' || entry.binBaseName === null) {
     throw new Error(`createStarCatalogSlot: source ${source} is not a streamed star catalog`);
   }

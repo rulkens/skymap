@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { structureMembership } from '../../../../src/layers/galaxyCatalog/present/structureMembership';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { packSelection } from '../../../../src/data/selectionEncoding';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';

@@ -12,7 +12,7 @@
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../utils/camera/composeBodySlabMvp';

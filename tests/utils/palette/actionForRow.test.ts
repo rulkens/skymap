@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { actionForRow } from '../../../src/utils/palette/actionForRow';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';

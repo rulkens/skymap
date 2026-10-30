@@ -34,7 +34,7 @@
  * fade-in left off).
  */
 
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { cartesianToRaDec } from '../../../utils/math/index';
 import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
 import { HI_RES_TRIGGER_PX, HI_RES_FADE_BAND_PX } from '../../../data/galaxyLodBands';

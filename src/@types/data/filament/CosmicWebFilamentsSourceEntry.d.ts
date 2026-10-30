@@ -1,7 +1,7 @@
 import type { SourceEntryBase } from '../SourceEntryBase';
 
 /**
- * Filament-typed row of the SOURCE_REGISTRY — derived line-strip geometry
+ * Filament-typed row of the APP_SOURCE_REGISTRY — derived line-strip geometry
  * built from the DisPerSE skeleton of a 2MRS + GLADE density field.
  *
  * Single global asset; no per-record identity or per-vertex source code,
