@@ -1,5 +1,10 @@
+/* The section spans the window, so the three pictures can; everything else keeps to the page's column. */
 .root {
-  composes: wrap section from '../../../../styles/layout.module.css';
+  composes: section from '../../../../styles/layout.module.css';
+}
+
+.column {
+  composes: wrap from '../../../../styles/layout.module.css';
 }
 
 /* Each kind's picture, title and names are rows shared across the four (subgrid), so the titles line up. */
@@ -70,7 +75,7 @@
 }
 
 .binsHead {
-  composes: grid from '../../../../styles/layout.module.css';
+  composes: wrap grid from '../../../../styles/layout.module.css';
   align-items: end;
   margin-bottom: 2rem;
 
@@ -115,7 +120,7 @@
 .word {
   position: absolute;
   z-index: 1;
-  inset: auto 1.25rem 1rem;
+  inset: auto var(--gutter) 1.25rem;
   display: grid;
   gap: 0.125rem;
   max-width: none;
@@ -138,7 +143,7 @@
 }
 
 .bin .caption {
-  padding-inline: 0.25rem;
+  padding-inline: var(--gutter);
 }
 
 @media (min-width: 901px) {
@@ -165,10 +170,5 @@
   .strip {
     grid-template-columns: minmax(0, 1fr);
     gap: 2rem;
-    margin-inline: calc(-1 * var(--gutter));
-  }
-
-  .bin .caption {
-    padding-inline: var(--gutter);
   }
 }
