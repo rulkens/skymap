@@ -1,5 +1,5 @@
 import type { MeshBody } from '../../@types/scene/MeshBody';
-import { LAYER_BODY_ROWS } from './layerBodyRows';
+import { LAYER_BODY_ROWS } from '../../compositions/appBodies';
 import { isMeshBody } from '../../utils/meshBodies/isMeshBody';
 
 /**

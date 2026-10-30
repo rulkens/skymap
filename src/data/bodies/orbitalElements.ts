@@ -7,7 +7,7 @@
  */
 
 import { S_STAR_ORBITAL_ELEMENTS } from './sStarOrbitalElements';
-import { LAYER_BODY_ROWS } from './layerBodyRows';
+import { LAYER_BODY_ROWS } from '../../compositions/appBodies';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 

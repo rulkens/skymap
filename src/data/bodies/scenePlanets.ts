@@ -5,7 +5,7 @@
 
 import type { PlanetBody } from '../../@types/scene/PlanetBody';
 import { isPlanetBody } from '../../utils/scene/isPlanetBody';
-import { LAYER_BODY_ROWS } from './layerBodyRows';
+import { LAYER_BODY_ROWS } from '../../compositions/appBodies';
 
 export const SCENE_PLANETS: readonly PlanetBody[] = LAYER_BODY_ROWS.map((row) => row.body).filter(
   isPlanetBody,

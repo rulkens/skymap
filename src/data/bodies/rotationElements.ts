@@ -6,7 +6,7 @@
  */
 
 import type { RotationElements } from '../../@types/scene/RotationElements';
-import { LAYER_BODY_ROWS } from './layerBodyRows';
+import { LAYER_BODY_ROWS } from '../../compositions/appBodies';
 
 export function rotationRowById(id: string): RotationElements | null {
   return ROTATION_ELEMENTS.find((el) => el.id === id) ?? null;

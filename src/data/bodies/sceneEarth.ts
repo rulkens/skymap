@@ -5,7 +5,7 @@
 
 import type { EarthBody } from '../../@types/scene/EarthBody';
 import { isEarthBody } from '../../utils/scene/isEarthBody';
-import { LAYER_BODY_ROWS } from './layerBodyRows';
+import { LAYER_BODY_ROWS } from '../../compositions/appBodies';
 
 function earthRow(): EarthBody {
   const earth = LAYER_BODY_ROWS.map((row) => row.body).find(isEarthBody);

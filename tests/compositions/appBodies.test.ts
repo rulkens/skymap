@@ -1,13 +1,13 @@
 /**
- * `Layer.bodies` is inert: `data/bodies/layerBodyRows.ts` folds each Layer's rows
- * into the body tables by direct import, so a Layer could declare rows, skip that
+ * `Layer.bodies` is inert: `compositions/appBodies.ts` collects each Layer's rows
+ * by direct import, so a Layer could declare rows, skip that
  * edit and ship green with its bodies absent.
  */
 
 import { describe, it, expect } from 'vitest';
 
 import { APP_COMPOSITION } from '../../src/compositions/app';
-import { LAYER_BODY_ROWS } from '../../src/data/bodies/layerBodyRows';
+import { LAYER_BODY_ROWS } from '../../src/compositions/appBodies';
 import type { LayerBody } from '../../src/@types/engine/layer/LayerBody';
 
 describe('LAYER_BODY_ROWS covers every composed Layer', () => {
