@@ -2,7 +2,7 @@
   max-width: 36rem;
 }
 
-/* The address is the section's action, so it is set as large as a heading and wraps only at its @. */
+/* The address is the section's action, so it is set large; on a narrow phone it may break anywhere. */
 .lead {
   margin-bottom: 0.5em;
   font: var(--weight-display) var(--text-ring-big) / var(--leading-display)

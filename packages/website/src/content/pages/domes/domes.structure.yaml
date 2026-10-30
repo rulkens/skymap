@@ -1,6 +1,6 @@
 job: "Can Skymap run in our dome or exhibit, and how do I ask for it?"
 sections:
-  - heading: "Live or as a film"
+  - heading: "Live, or in the can"
     job: "In what formats does Skymap reach a dome, and what would be new work?"
     parts:
       - heading: "Live in the dome"
@@ -18,17 +18,15 @@ sections:
         job: "How do I add a second phone?"
       - heading: "Where it runs"
         job: "Where does the connection between phone and dome run?"
-  - heading: "A screen for an exhibit"
+  - heading: "Exhibit A"
     job: "What can Skymap do on a screen in a museum, and what would be new work?"
   - heading: "What your audience is looking at"
     job: "What is data and what is drawn on my dome, and under what terms?"
     parts:
       - heading: "Data and drawing, labelled"
-        job: "Which parts of the scene are data and which are drawn?"
+        job: "Which parts of the scene are data and which are drawn, and can my technician read the code?"
       - heading: "Credits and licences"
         job: "Which licences apply to a paid commission?"
-      - heading: "Open source"
-        job: "Can my technician read the code?"
   - heading: "How a commission runs"
     job: "What happens between my first message and delivery?"
     parts:

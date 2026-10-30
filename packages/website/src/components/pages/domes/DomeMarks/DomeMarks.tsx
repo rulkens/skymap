@@ -2,15 +2,14 @@
  * DomeMarks — how a technician reads a dome-mode frame, drawn over it: the zenith at the centre, a scale of
  * heights above the horizon along one radius, the circle at the focus's height and the front of the dome
  * at the bottom edge. The frame is equidistant, so the scale's ticks are evenly spaced and a height is a
- * fixed share of the radius; the circle is placed from the app's own tilt, so the drawing moves with the
- * app if the tilt ever does. Lies over a Disc in a box of its size; the sky turns under it, the marks stay.
+ * fixed share of the radius. Lies over a Disc in a box of its size; the sky turns under it, the marks stay.
  */
-import { DOME_PARAMS } from '../../../../../../../src/data/rendering/domeParams';
+import { DOME_TILT_DEG } from '../../../../content/pages/domes/domes.data.ts';
 import styles from './DomeMarks.module.css';
 
-// The focus is `tiltDeg` from the zenith, and the rim is 90 degrees from it.
-const FOCUS_SHARE = DOME_PARAMS.tiltDeg / 90;
-const FOCUS_HEIGHT_DEG = 90 - DOME_PARAMS.tiltDeg;
+// The focus is the tilt away from the zenith, and the rim is 90 degrees from it.
+const FOCUS_SHARE = DOME_TILT_DEG / 90;
+const FOCUS_HEIGHT_DEG = 90 - DOME_TILT_DEG;
 const R = 100;
 // A tick every ten degrees of height, from the horizon (the rim) to the zenith; the focus's height is longer.
 const TICKS = Array.from({ length: 9 }, (_, i) => i * 10);

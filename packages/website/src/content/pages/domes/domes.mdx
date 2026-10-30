@@ -3,13 +3,14 @@ title: Domes and museums | Skymap
 description: Skymap draws the fisheye picture a dome system takes, live in a browser or as a 4K film, and builds screens for exhibits.
 ---
 
-import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
+import Beside from '../../../components/shared/layout/Beside/Beside.tsx';
 import ContactSection from '../../../components/pages/domes/ContactSection/ContactSection.astro';
 import Credits from '../../../components/shared/text/Credits/Credits.tsx';
 import Delivery from '../../../components/pages/domes/Delivery/Delivery.tsx';
 import DeliveryColumn from '../../../components/pages/domes/DeliveryColumn/DeliveryColumn.tsx';
 import DiscBand from '../../../components/pages/domes/DiscBand/DiscBand.tsx';
 import Exhibit from '../../../components/pages/domes/Exhibit/Exhibit.tsx';
+import LicenceTable from '../../../components/pages/domes/LicenceTable/LicenceTable.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import Remark from '../../../components/shared/text/Remark/Remark.tsx';
 import RemoteDemo from '../../../components/shared/media/RemoteDemo/RemoteDemo.tsx';
@@ -18,7 +19,6 @@ import SectionHead from '../../../components/shared/layout/SectionHead/SectionHe
 import Step from '../../../components/shared/layout/Step/Step.tsx';
 import Steps from '../../../components/shared/layout/Steps/Steps.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
-import { appLink } from '../../../data/appLink';
 import { fact } from '../../../data/fact';
 import { REPO_URL } from '../../../data/siteIdentity';
 import { siteShot } from '../../../data/siteShot';
@@ -36,14 +36,14 @@ import { STEPS } from './domes.data';
 </DiscBand>
 
 <Section id="deliver">
-  <SectionHead title="Live or as a film">
+  <SectionHead title="Live, or in the can">
     <p>One fisheye disc either way. Your dome system slices it between the projectors, warps it to the screen and blends the edges.</p>
   </SectionHead>
   <Delivery>
-    <DeliveryColumn kind="live" title="Live in the dome" shot="dome-web" disc figure="180°" measure="Field of view, from horizon to horizon" accent="#c9b8ff" href={appLink(siteShot('dome-web').link, siteShot('dome-web').query)} action="Open this view in dome mode">
+    <DeliveryColumn kind="live" title="Live in the dome" shot="dome-web" disc figure="180°" measure="Field of view, from horizon to horizon" accent="#c9b8ff" action="Open this view in dome mode">
       <p>Someone flies the app while the audience watches. Skymap has an OpenSpace-compatible <a href={sitePath('/docs/reference/settings/#camera-controls')}>navigation scheme</a>: a drag sets the camera moving and it slows to a stop.</p>
     </DeliveryColumn>
-    <DeliveryColumn kind="film" title="A film, rendered ahead" shot="tour-cosmic-web" figure="4,096" measure="Pixels across a fisheye film frame" accent="#d98fe6" href={appLink(siteShot('tour-cosmic-web').link)} action="Start the tour">
+    <DeliveryColumn kind="film" title="A film, rendered ahead" shot="tour-cosmic-web" figure="4,096" measure="Pixels across a fisheye film frame" accent="#d98fe6" action="Start the tour">
       <p>A flight written for your show, so the picture does not depend on the computer in the projection room.</p>
     </DeliveryColumn>
   </Delivery>
@@ -74,30 +74,27 @@ import { STEPS } from './domes.data';
   </Steer>
 </Section>
 
-<Exhibit id="exhibit" title="A screen for an exhibit" lead="A screen in a gallery that opens on one subject, with notes a visitor can read standing up.">
+<Exhibit id="exhibit" title="Exhibit A" lead="A screen in a gallery that opens on one subject, with notes a visitor can read standing up.">
   <p className={text.small}>Each exhibit is a prepared view with its own notes and sources, and opens from its own address. We would write a new one on your subject, in your words. {fact('kiosk-planned').text}</p>
   <ObjLink hang size="small" href={sitePath('/docs/guide/screens-and-domes/')}>Screens, quality and domes</ObjLink>
 </Exhibit>
 
 <Section id="honest">
   <SectionHead title="What your audience is looking at" />
-  <Columns count={3}>
+  <Beside>
     <div>
       <h3>Data and drawing, labelled</h3>
       <p className={text.small}>Star and galaxy positions come from published <a href={sitePath('/docs/data/')}>catalogues</a>. Some of the scene is a model: nobody has photographed <a href={sitePath('/docs/science/#the-milky-way')}>the Milky Way</a> from outside, so on your dome it is drawn.</p>
+      <p className={text.small}><a href={REPO_URL}>The code</a> is public under the MIT licence. Your technician can read <a href={sitePath('/docs/rendering/#the-dome')}>how the fisheye view is constructed</a> before anyone signs anything.</p>
       <ObjLink hang size="small" href={sitePath('/science/')}>The science behind Skymap</ObjLink>
     </div>
     <div>
       <h3>Credits and licences</h3>
-      <p className={text.small}>The stars are <a href={sitePath('/docs/data/gaia/')}>Gaia</a> data, under CC BY-NC 3.0 IGO, and the cloud-free Earth mosaic by EOX is under CC BY-NC-SA 4.0: both are non-commercial licences. Galaxy pictures from the Digitized Sky Survey need the holders’ written permission for commercial use, and several catalogues state no licence. For a paid commission we check the terms source by source, ask the rights holders where the terms require it, and replace what may not be shown.</p>
+      <p className={text.small}>Some of what Skymap shows is under a non-commercial licence, which matters for a paid show. For a commission we check the terms source by source, ask the rights holders where the terms require it, and replace what may not be shown.</p>
+      <LicenceTable />
       <ObjLink hang size="small" href={sitePath('/docs/credits/')}>Credits and licences</ObjLink>
     </div>
-    <div>
-      <h3>Open source</h3>
-      <p className={text.small}><a href={REPO_URL}>The code</a> is public under the MIT licence. Your technician can read <a href={sitePath('/docs/rendering/#the-dome')}>how the fisheye view is constructed</a> before anyone signs anything.</p>
-      <ObjLink hang size="small" href={sitePath('/about/')}>About Skymap</ObjLink>
-    </div>
-  </Columns>
+  </Beside>
   <Remark text={fact('earth-rotation').short} live="dome-turn" />
 </Section>
 
