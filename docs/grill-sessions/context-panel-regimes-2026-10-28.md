@@ -4,6 +4,8 @@ Source: user brief, 2026-10-28: "rework the settings panel … a new UI element 
 
 This file holds the facts swept for the session, the rulings so far, the proposed regime data model, the map of every toggle and destination onto the regimes, and the questions still open. It precedes `refactor-ground` and the spec.
 
+Refreshed 2026-10-30 against main after #958 and the band work that followed it (#976, #979, #980, #982): the "Visibility and scale" facts, the band-gap table, the map's trail and star rows and Q9 read as the code stands now.
+
 ---
 
 ## Rulings so far
@@ -26,12 +28,11 @@ This file holds the facts swept for the session, the rulings so far, the propose
 
 ### Visibility and scale (full ladder of 108 edges: session scratch `inventory-scale.md`)
 
-- Bands (`bandValueOf.ts`) measure the camera's distance from the render origin (the Sun), or from a region anchor via `from`. Smoothstep in/out; an item's value is the product of the bands that apply.
-- The NEAR0 foreground gate (`FOREGROUND_MAX_DISTANCE_MPC` = 0.23 Mpc, 100 × the largest region extent) and the 9.2 kpc caption cut measure `cam.distance`, camera to target, in 18 hand-written `enabled` checks across 16 files: eleven body and Earth passes, two star passes, mission trails, the black-hole marker and pick, the Earth-scene glints. A different quantity from the bands, though the structure Layer already encodes the same edge as an origin-keyed `out` band, and the two measures diverge only when the camera is far from home yet close to its target: at a famous galaxy's framing today's gate leaves the planet, ring and Earth passes enabled, drawing nothing.
+- Bands (`bandValueOf.ts`) measure the camera's distance from the render origin (the Sun), from a region anchor, or from a positioned body at its live position, via `from`. Smoothstep in/out; an item's value is the product of the bands that apply.
+- The foreground gate (`FOREGROUND_MAX_DISTANCE_MPC` = 0.23 Mpc, 100 × the largest region extent) is a band now, not a check: no pass reads `cam.distance` against it. Layer passes declare `FOREGROUND_RECEDE` on their entries and body slab rows yield through the same band, so the NEAR0 steps fall away wholesale past it. Scene-body admission measures bands at the frame camera, so a star banded to 0 neither occludes nor sizes NEAR0 (the bodies-and-bands invariant is gone).
 - Region extents, derived: solar-system ≈ 30 AU (1.47e-10 Mpc), solar-neighbourhood 2.3 kpc (exact, Eta Carinae), galactic-centre ≈ 0.11 pc (1.17e-7 Mpc).
-- Seven of fifteen Layers declare bands: galaxyCatalog (survey in 2–230 kpc; famous exempt), cosmicWebDensity (same), zoneOfAvoidance (in 35–175 kpc, out 2–6 Mpc), localBubble (in 0.4–1 kpc, out 4–10 kpc), constellations (out 1–10 kpc), milkyWay (disc in 200 pc–2 kpc and, from the Galactic Centre, 600 pc–12 kpc; "You are here" label in 2–230 kpc, out 0.6–2 Mpc), structure (cosmic rings in 2–230 kpc; Milky Way places out 35–230 kpc).
-- No bands, gated elsewhere: starCatalog (foreground gate; Gaia out 8–25 kpc; backdrop dissolve 4.6–23 kpc), body (foreground gate + pixel cull on orbit trails), missions (foreground gate), blackHoles (foreground gate; lens 100–500 AU from the Galactic Centre), lightTime (per-sphere ratio windows 1.2r–2r in, 12r–40r out), earthScenes (no `visibility` member).
-- No bands, no gate: flow, cosmicWebFilaments (R2).
+- Fifteen of sixteen Layers declare bands: galaxyCatalog (survey in 2–230 kpc; famous exempt), cosmicWebDensity (same), cosmicWebFilaments (same), flow (in 2–100 kpc, its own edge so the Cosmic Flows exhibit opens at full), zoneOfAvoidance (in 35–175 kpc, out 2–6 Mpc), localBubble (in 0.4–1 kpc, out 4–10 kpc), constellations (out 1–10 kpc), milkyWay (disc in 200 pc–2 kpc and, from the Galactic Centre, 600 pc–12 kpc; "You are here" label in 2–230 kpc, out 0.6–2 Mpc), structure (cosmic rings in 2–230 kpc; Milky Way places out 35–230 kpc), starCatalog (backdrop dissolve 4.6–23 kpc from the solar neighbourhood for the map and Sun, from the Galactic Centre for the S-stars; S-star trails out at the foreground gate; Sun caption recedes with the solar-system captions), missions (trails out at the foreground gate; craft captions recede), body (orbit trails out at the foreground gate; body captions recede), blackHoles (caption out from the Galactic Centre), satellites (out by live distance to Earth), cosmicHorizon (the horizon shell, in over 5–40 % of the horizon radius).
+- Still band-less: lightTime (per-sphere ratio windows 1.2r–2r in, 12r–40r out in a derived liveness) and the black-hole marker, whose pass has no show entry and gates on marker brightness alone (the lens band 100–500 AU from the Galactic Centre, in `SCALE_FADE_BANDS`). Gaia survey stars keep their own 8–25 kpc crossfade. earthScenes draws through core's glint pass over, no `visibility` member.
 - The scale readout: `runFrame.ts:170-174` computes `ScaleInfo` from `altitudeMpc`, the range to the pivot surface when the pivot is a body, else to the pivot. Unit ladder in `formatDistance.ts:44-67`: m → km at 1 km, AU at 1 AU, pc at 1 pc, kpc at 1 kpc, Mpc at 1 Mpc, Gpc at 1000 Mpc.
 - Home is Earth at ≈ 27,600 km range (|camPos| ≈ 1 AU, so every origin-keyed band reads 1 AU at home).
 
@@ -122,27 +123,23 @@ The brief asked how Layers, guides and destinations "register within" a regime. 
 | featured card | `focus` → framing distance → rung; `exhibit` → the exhibit's rung; `tour` → the tour's rung | no; the seven tabs become derivable (Q6) |
 | Display, Camera, Tier | none: device and input, not scale | no |
 
-Band gaps that R1 turns into work (ground preparation candidates):
+Band gaps that R1 turns into work, as of main on 2026-10-30. The foreground gate, the trails, the star backdrops and the captions landed in #958, #976, #980 and #982; what is left:
 
 | Layer | today | band to declare |
 |---|---|---|
-| flow | **done** (this branch): `SURVEY_DEEP_ZOOM` on the entry | outer edge still to decide |
-| cosmicWebFilaments | **done** (this branch): `SURVEY_DEEP_ZOOM` on the entry | outer edge still to decide |
-| starCatalog | `sStarTrails` **done** (this branch). `starCatalog` keeps its two pass gates: the entry carries `bodies`, and scene-body admission runs once per frame with no view, so it cannot read a band (`appVisibility.test.ts` pins it) | admission needs a view-aware reading before the star catalog can declare its band; the panel's star rows read the gate until then |
-| body (orbit trails) | **done** (this branch): `FOREGROUND_RECEDE` on `orbitTrails`; the group's value now carries the band | |
-| missions (trails, craft labels) | **done** (this branch) for the trails; the 9.2 kpc caption cut stays | |
-| blackHoles | hard gate; lens 100–500 AU from the GC; no show entry at all | a show entry needs a switch (`settings.blackHoles.items[id].enabled`) that does not exist; whether the Sgr A* marker becomes toggleable is a design question, so its two gates stay |
+| blackHoles (marker) | no show entry; the pass gates on marker brightness, the lens on `SCALE_FADE_BANDS.sgrAStarLensing` | a show entry needs a switch (`settings.blackHoles.items[id].enabled`) that does not exist; whether the Sgr A* marker becomes toggleable is a design question |
 | lightTime | per-sphere ratio windows in a derived liveness | entry-level "any shell live", or a band per shell |
-| earthScenes | no `visibility` member | a show entry with a surface-scale band |
+| earthScenes | no `visibility` member; draws through core's glint pass over | a show entry with a surface-scale band |
 | galaxyCatalog `famousGalaxy` | exempt from `deepZoom` on purpose | keep exempt for the draw; the panel row needs its own reading (Q8) |
+| flow, cosmicWebFilaments | fade in with the survey; no outer edge | an outer edge, if the Horizon rung should not list them |
 
-Declaring the foreground gate as bands is the same un-braid #912 did for toggles: core then skips those passes from one value, and the 18 hand-written checks go. No new contract member: `visibility.bands` already is the contract (`in`, `out`, `from`, `items`), and `from: 'galactic-centre'` covers the Sgr A* bodies. An origin band is also tighter than the gate where the two differ. It is a prep PR candidate for `refactor-ground`, not part of the panel.
+The lesson of #958 for the spec: `visibility.bands` is the whole contract. The star catalog needed no band of its own for the gate once admission measured bands at the frame camera, and no new contract member was added anywhere.
 
 ---
 
 ## The map: every control and destination by regime
 
-Legend: ● the band is full somewhere inside the rung · ◐ the band only fades inside the rung, never full · ○ out of range · **?** no band today, reads as "everywhere" under R1 until the band above lands. Read with the camera near the origin, except rows marked GC (Galactic Centre anchor). A static reading of a live value: at runtime the panel reads the band itself.
+Legend: ● the band is full somewhere inside the rung · ◐ the band only fades inside the rung, never full · ○ out of range · **?** no band today, reads as "everywhere" under R1 until a band lands (only the famous galaxies and light-time rows keep it). Read with the camera near the origin, except rows marked GC (Galactic Centre anchor). A static reading of a live value: at runtime the panel reads the band itself.
 
 ### Layer sections and their rows
 
@@ -151,12 +148,12 @@ Legend: ● the band is full somewhere inside the rung · ◐ the band only fade
 | Galaxies › 2MRS, SDSS, GLADE, Milliquas, DESI ×3 | `survey` items | ○ | ○ | ○ | ○ | ◐ | ● | ● | ● |
 | Galaxies › Famous | `survey:famousGalaxy` | ? | ? | ? | ? | ● | ● | ● | ◐ |
 | Galaxies › Advanced (6 sliders, select) | follow `survey` | ○ | ○ | ○ | ○ | ◐ | ● | ● | ● |
-| Stars › Famous, Gaia, Sun, S-Star | `starCatalog` items | ● | ● | ● | ● | ● (gone by 25 kpc) | ? | ? | ? |
-| Stars › S-Star (GC) | `starCatalog:sStar` | ○ | ● GC | ● GC | ◐ GC | ○ | ? | ? | ? |
-| Stars › Advanced (2 sliders) | follow `starCatalog` | ● | ● | ● | ● | ● (gone by 25 kpc) | ? | ? | ? |
+| Stars › Famous, Gaia, Sun, S-Star | `starCatalog` items | ● | ● | ● | ● | ● (gone by 25 kpc) | ○ | ○ | ○ |
+| Stars › S-Star (GC) | `starCatalog:sStar` | ○ | ● GC | ● GC | ◐ GC | ○ | ○ | ○ | ○ |
+| Stars › Advanced (2 sliders) | follow `starCatalog` | ● | ● | ● | ● | ● (gone by 25 kpc) | ○ | ○ | ○ |
 | Cosmic web density › MCPM, Polyphorm, Workbench | `cosmicWebDensity` items | ○ | ○ | ○ | ○ | ◐ | ● | ● | ● |
-| Cosmic web filaments › master, Intensity | `cosmicWebFilaments` | ? | ? | ? | ? | ? | ? | ● | ◐ |
-| Flow › master, Intensity | `flow` | ? | ? | ? | ? | ? | ? | ● | ◐ |
+| Cosmic web filaments › master, Intensity | `cosmicWebFilaments` | ○ | ○ | ○ | ○ | ◐ | ● | ● | ● (no outer edge) |
+| Flow › master, Intensity | `flow` | ○ | ○ | ○ | ○ | ● (from 100 kpc) | ● | ● | ● (no outer edge) |
 | Structures › Galaxy clusters, Superclusters, Voids, Galaxy groups | `structureRing` cosmic items | ○ | ○ | ○ | ○ | ◐ | ● | ● | ◐ |
 | Structures › Open clusters, Globulars, Nebulae, Galactic Centre | `structureRing` Milky Way items | ● | ● | ● | ● | ● (to 35 kpc) | ○ | ○ | ○ |
 
@@ -172,13 +169,13 @@ Legend: ● the band is full somewhere inside the rung · ◐ the band only fade
 | Planets, Earth | `label:body` | ○ | ● | ● | ◐ | ○ | ○ | ○ | ○ |
 | Galactic Centre (Sgr A*) | `label:blackHole` | ○ | ● GC | ● GC | ● GC | ◐ | ○ | ○ | ○ |
 | Spacecraft | `label:missions` | ● | ● | ● | ◐ | ○ | ○ | ○ | ○ |
-| S-star trails | `sStarTrails` | ○ | ● GC | ● GC | ○ | ○ | ? | ? | ? |
-| Mission trails | `missionTrails` | ◐ | ● | ● | ◐ | ○ | ? | ? | ? |
+| S-star trails | `sStarTrails` | ○ | ● GC | ● GC | ○ | ○ | ○ | ○ | ○ |
+| Mission trails | `missionTrails` | ◐ | ● | ● | ◐ | ○ | ○ | ○ | ○ |
 | Zone of Avoidance | `zoneOfAvoidance` | ○ | ○ | ○ | ○ | ● (from 175 kpc) | ● | ◐ | ○ |
 | Local Bubble | `localBubble` | ○ | ○ | ○ | ● (from 1 kpc) | ● (to 4 kpc) | ○ | ○ | ○ |
 | Light-time spheres | `lightTime` | ○ | ● | ● | ● | ● | ● | ● | ● |
 | Constellations | `constellations` | ● | ● | ● | ● | ◐ | ○ | ○ | ○ |
-| Orbit trails | `orbitTrails` | ○ | ◐ | ● | ◐ | ○ | ? | ? | ? |
+| Orbit trails | `orbitTrails` | ○ | ◐ | ● | ◐ | ○ | ○ | ○ | ○ |
 
 ### Core sections
 
@@ -302,11 +299,9 @@ The Stars rung is also the widest, 5.6 decades from 1,000 AU to 2 kpc, against a
 
 ## Q9: The foreground gate as bands
 
-**The question:** Make the six band-less Layers declare bands (table above), and let core skip the NEAR0 passes from the handed value instead of 18 `cam.distance` checks?
+**The question:** Make the band-less Layers declare bands, and let core skip the NEAR0 passes from the handed value instead of hand-written `cam.distance` checks?
 
-**Considerations:** It is a prep refactor in `refactor-ground`'s sense: behaviour-neutral, deletes code, and the panel cannot be honest without it. It is also the largest piece of ground.
-
-**Decision:** open; sequence and separate-PR question for the checkpoint.
+**Decision:** done on main (#958, then #976, #980, #982). No `cam.distance >= FOREGROUND_MAX_DISTANCE_MPC` check remains; admission reads bands at the frame camera; bands can measure from a body. Closed.
 
 ## Q10: Success measure
 
