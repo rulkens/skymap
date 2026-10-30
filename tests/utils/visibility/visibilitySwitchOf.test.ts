@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { APP_VISIBILITY } from '../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import settingsReducer from '../../../src/state/settings/settingsReducer';
@@ -8,7 +8,7 @@ import { visibilitySwitchOf } from '../../../src/utils/visibility/visibilitySwit
 import type { VisibilityEntry } from '../../../src/@types/engine/layer/VisibilityEntry';
 import type { SetVisibilityPayload } from '../../../src/@types/settings/SetVisibilityPayload';
 
-const ENTRIES: readonly VisibilityEntry[] = APP_VISIBILITY;
+const ENTRIES: readonly VisibilityEntry[] = APP_VISIBILITY_REGISTRY;
 const showEntry = (key: string): VisibilityEntry =>
   ENTRIES.find((e) => 'key' in e && e.key === key)!;
 const write = (...payloads: SetVisibilityPayload[]) =>

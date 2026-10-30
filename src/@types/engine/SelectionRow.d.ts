@@ -45,5 +45,5 @@ export type SelectionRow =
     }
   // A black hole poses from its PLACE (`driver.poseId`), not a body table.
   | (BlackHoleInfo & { readonly driver: DriverGeometry })
-  // A satellite poses from its transient position (`transientPositions`), which the clock moves.
+  // A satellite poses from the position core re-extracts each frame (`placeLiveSelection`).
   | (SatelliteInfo & { readonly driver: DriverGeometry });

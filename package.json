@@ -124,6 +124,7 @@
     "site:check": "npm run check --workspace @skymap/website",
     "site:media": "tsx tools/site/buildHeroMedia.ts",
     "site:links": "tsx --import ./tools/site/stubCssImports.mjs tools/site/checkSiteLinks.ts",
+    "site:structure": "tsx tools/site/checkPageStructure.ts",
     "site:external": "tsx tools/site/checkExternalLinks.ts",
     "site:repeats": "vitest run tests/packages/website/factRepeats.test.ts",
     "site:compare": "tsx tools/site/compareSite.ts",
@@ -187,7 +188,8 @@
     "wgslender": "1.4.1",
     "wrangler": "4.151.1",
     "ws": "8.22.0",
-    "xatlas-wasm": "0.1.3"
+    "xatlas-wasm": "0.1.3",
+    "yaml": "2.9.1"
   },
   "dependencies": {
     "@reduxjs/toolkit": "2.12.0",

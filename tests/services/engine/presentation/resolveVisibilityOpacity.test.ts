@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { resolveVisibilityOpacity } from '../../../../src/services/engine/presentation/resolveVisibilityOpacity';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -13,7 +13,7 @@ function makeState(fade: Record<string, number>, clip: Record<string, number>) {
   const clipPlayer = { clipOpacityOf: (address: string) => clip[address] ?? 1 };
   return {
     subsystems: { fades, clipPlayer },
-    visibilityEntries: APP_VISIBILITY,
+    visibilityEntries: APP_VISIBILITY_REGISTRY,
   } as unknown as Pick<EngineState, 'subsystems' | 'visibilityEntries'>;
 }
 

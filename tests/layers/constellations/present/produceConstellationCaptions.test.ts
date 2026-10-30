@@ -12,13 +12,16 @@ import { describe, it, expect } from 'vitest';
 
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
 import { NEIGHBOURHOOD_RECEDE_KPC } from '../../../../src/data/bands/neighbourhoodRecedeKpc';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/data/labels/solarSystemLabelMaxDistance';
+import { SOLAR_SYSTEM_CAPTION_RECEDE } from '../../../../src/data/bands/solarSystemCaptionRecede';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+
+// Where the solar-system captions have faded out.
+const CAPTION_GONE_MPC = SOLAR_SYSTEM_CAPTION_RECEDE.out[1];
 
 const PC = SCALE_UNITS.PC_TO_MPC;
 
@@ -69,8 +72,7 @@ describe('produceConstellationCaptions', () => {
   // A camera distance PAST the body-caption gate but still inside the
   // constellation band — the exact window a director-registered producer
   // could never reach through the COSMO near plane.
-  const pastBodyGate =
-    (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + NEIGHBOURHOOD_RECEDE_KPC * SCALE_UNITS.KPC_TO_MPC) / 2;
+  const pastBodyGate = (CAPTION_GONE_MPC + NEIGHBOURHOOD_RECEDE_KPC * SCALE_UNITS.KPC_TO_MPC) / 2;
 
   it('reads the handed label value, not a band-only `1`, for constellation demand', () => {
     // A prior version of this gate passed the band lookup

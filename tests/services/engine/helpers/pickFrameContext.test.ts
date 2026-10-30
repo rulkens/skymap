@@ -73,6 +73,7 @@ function makeState(
       orientation: 'equatorial',
       bodies: { items: {} },
     },
+    selection: { hover: null, select: null, focus: null },
     selectionRows: { hover: null, select: null, focus: null },
     selectionKindRows: overrides.selectionKindRows ?? [],
     slabRows: [],
@@ -129,6 +130,7 @@ describe('pickFrameContext', () => {
         // simDays does not affect the view-projection this test compares; any
         // valid epoch reproduces the same vp.
         simDays: 0,
+        bodyStates: deriveBodyStates(0),
       },
       { width: canvas.width, height: canvas.height },
     );

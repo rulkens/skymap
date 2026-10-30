@@ -15,6 +15,8 @@ import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import type { SelectionState } from '../../../../src/@types/store/SelectionState';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 
 function makeState(
@@ -23,6 +25,7 @@ function makeState(
     famousGalaxiesMetaState?: LoadState<unknown>['kind'];
     pose?: { target: [number, number, number]; yaw: number; pitch: number; distance: number };
     simDays?: number;
+    selection?: Partial<SelectionState>;
   } = {},
 ): EngineState {
   const slotsByKey = new Map<AssetKey, AssetSlot<unknown, unknown>>(
@@ -62,6 +65,7 @@ function makeState(
       },
     },
     slotsByKey,
+    selection: { hover: null, select: null, focus: null, ...opts.selection },
   } as unknown as EngineState;
 }
 
@@ -90,5 +94,18 @@ describe('buildDemandCtx', () => {
     // epoch). A wiring that hard-coded J2000 here would fail.
     const ctx = buildDemandCtx(makeState({ simDays: 8000 }));
     expect(ctx.simDays).toBe(8000);
+  });
+
+  it('selectedKinds holds the select and focus kinds, never hover', () => {
+    const ctx = buildDemandCtx(
+      makeState({
+        selection: {
+          select: { type: 'satellite', noradId: 25544 },
+          focus: { type: 'body', id: SCENE_EARTH.id },
+          hover: { type: 'milkyWay' },
+        },
+      }),
+    );
+    expect([...ctx.selectedKinds].sort()).toEqual(['body', 'satellite']);
   });
 });

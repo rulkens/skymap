@@ -17,7 +17,7 @@ import {
   WORD_BYTES,
 } from '../../../../src/services/gpu/octree/octreeCutLayout';
 import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
 import type { Octree } from '../../../../src/@types/octree/Octree';
 import type { OctreeChunk } from '../../../../src/@types/octree/OctreeChunk';

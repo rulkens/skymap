@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { sameRequest } from '../../../../src/utils/loading/sameRequest';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
@@ -43,6 +43,7 @@ function makeCtx(over: {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: over.tier ?? 'large',
+    selectedKinds: new Set(),
   };
 }
 

@@ -1,13 +1,14 @@
 ---
-/* The page for an address that is not on the site: its text and front matter are content/pages/404.mdx. */
+/* The page for an address that is not on the site: its text and front matter are content/pages/404/404.mdx. */
 import { getEntry, render } from 'astro:content';
 
 import Base from '../layouts/Base.astro';
 
 const entry = (await getEntry('pages', '404'))!;
 const { Content } = await render(entry);
+const structure = (await getEntry('pageStructures', '404'))!.data;
 ---
 
-<Base {...entry.data}>
+<Base {...entry.data} {...structure}>
   <Content />
 </Base>

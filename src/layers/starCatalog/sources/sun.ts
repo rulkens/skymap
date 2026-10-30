@@ -12,9 +12,8 @@ import { Source } from '../../../data/source';
  * the descent's aim point on screen — membership, not an `id === 'sun'` branch
  * in a shared loop, is what keeps the two apart.
  *
- * Its caption kind and `sunCaption` fade band stay where they are — those are
- * declutter and pacing concerns rather than visibility routing, and the Sun
- * genuinely does out-rank every other caption.
+ * Its caption kind stays its own: the Sun genuinely does out-rank every other
+ * caption.
  */
 export const SUN_ENTRY = {
   type: 'starCatalog',

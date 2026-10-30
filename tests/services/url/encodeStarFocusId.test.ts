@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 import { encodeStarFocusId } from '../../../src/services/url/encodeStarFocusId';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../../src/data/bodies/sceneSStars';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 
 describe('encodeStarFocusId', () => {
   it('names a seeded star by its seed id, from any seeded table', () => {

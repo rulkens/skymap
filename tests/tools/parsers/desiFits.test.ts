@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { parseDesiClustering, type DesiTracer } from '../../../tools/parsers/desiFits';
 import { DESI_TRACER_DISPLAY } from '../../../tools/parsers/desiTracerDisplay';
 import { DESI_TRACER_CLASS } from '../../../src/data/galaxyCatalog/sourceClass';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
 import { concatBuffers } from '../../helpers/fits/concatBuffers';
 import { fitsCard } from '../../helpers/fits/fitsCard';

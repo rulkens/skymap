@@ -52,6 +52,7 @@ describe('selectDomeStatus', () => {
           positionMpc: [0, 0, 0],
           driver: bodyDriverGeometry('earth'),
         },
+        focusId: 'body-earth',
       }),
     );
     expect(selectDomeStatus(state, NO_ROWS, 0).focus).toEqual({ id: 'body-earth' });

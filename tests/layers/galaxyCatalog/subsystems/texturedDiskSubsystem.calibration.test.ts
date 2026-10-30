@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { createGalaxyAtlasSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem';
 import { createTexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem';
 import { createProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem';

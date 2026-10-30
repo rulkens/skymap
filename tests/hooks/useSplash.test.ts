@@ -30,7 +30,7 @@ import { engineStatusChanged, engineLoadProgressChanged } from '../../src/state/
 import { selectSplashVisible, selectSplashDismissedVersion } from '../../src/state/ui/selectors';
 import { CURRENT_SPLASH_VERSION } from '../../src/state/ui/splashStorage';
 import type { UiState } from '../../src/@types/ui/UiState';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 
 /**
  * Render useSplash inside a Provider-wrapped store.  The `ui` seed is

@@ -29,7 +29,6 @@ import { packTexturedBodyUniforms } from '../render/packTexturedBodyUniforms';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { bodySceneBodyPartition } from '../present/bodySceneBodyPartition';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 
 /** Ring radii in planet-radius units, or `(0, 0)` (the fragment's "no ring" sentinel). */
 function ringRatios(body: PlanetBody, radiusM: number): { inner: number; outer: number } {
@@ -51,7 +50,6 @@ export function texturedBodiesPass(runtime: BodyRuntime): ContentPass {
 
     enabled(state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       const bodyId = view.slab.frame.hostId;
       return bodySceneBodyPartition(state, ctx, runtime).textured.some((b) => b.id === bodyId);
     },

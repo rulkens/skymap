@@ -3,9 +3,10 @@
  * atmosphere shell, with their `ATMOSPHERE_PARAMS` row and pose-dependent values.
  * `encodeAtmosphereSkyView`'s LUT bake and `atmosphereShellPass` both read this
  * memoised list, so neither works off a body the other skipped (a stale table
- * sampled silently). Memo keys on `ctx`; `state` is a live getter. The sub-pixel cull
- * measures the SURFACE diameter, NOT the atmosphere-TOP one: that would hold the limb
- * past the disc's own vanishing.
+ * sampled silently). Its roster is the frame's active slab rows, so a body whose
+ * row has yielded draws no shell. Memo keys on `ctx`; `state` is a live getter.
+ * The sub-pixel cull measures the SURFACE diameter, NOT the atmosphere-TOP one:
+ * that would hold the limb past the disc's own vanishing.
  */
 
 import type { AtmosphereDrawEntry } from '../@types/AtmosphereDrawEntry';
@@ -20,7 +21,6 @@ import { atmosphereInsideBand } from './atmosphereInsideBand';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../../../services/engine/frame/subPixelBodyCullPx';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { atmosphereDrawListCache } from './atmosphereDrawListCache';
@@ -34,13 +34,11 @@ export function atmosphereDrawList(
   const cached = atmosphereDrawListCache.get(ctx);
   if (cached !== undefined) return cached;
 
-  // Cached before it is filled: every exit returns this same array, the near-field short-circuit included.
   const entries: AtmosphereDrawEntry[] = [];
   atmosphereDrawListCache.set(ctx, entries);
 
-  if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return entries;
-
-  const candidates = [SCENE_EARTH, ...SCENE_PLANETS];
+  const activeIds = new Set(ctx.snapshot.slabBodyCandidates.map((row) => row.anchorId));
+  const candidates = [SCENE_EARTH, ...SCENE_PLANETS].filter((body) => activeIds.has(body.id));
 
   // Live position + orientation from the per-frame snapshot, not baked record fields.
   const states = sceneBodyStates(state, ctx);

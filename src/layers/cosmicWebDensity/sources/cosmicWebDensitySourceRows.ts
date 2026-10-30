@@ -1,6 +1,6 @@
 /**
  * The Layer's `sources` field (`Layer.d.ts`'s `Sources` bound): the three
- * rows `SOURCE_REGISTRY` folds in for the cosmic-web density family. The
+ * rows `compositions/appSources.ts` collects into `APP_SOURCE_REGISTRY` for the cosmic-web density family. The
  * one list slots, asset rows, the visibility entry and both sections map over.
  */
 
