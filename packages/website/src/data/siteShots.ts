@@ -4,8 +4,8 @@ import type { SiteShotSettings } from '../@types/SiteShotSettings';
 const WIDE = { width: 1280, height: 720 };
 const TALL = { width: 720, height: 900 };
 const THUMB = { width: 400, height: 400 };
-// Thumbnails sit in 80 to 120 px discs: 240 covers a 3x phone and a 2x desktop.
-const THUMB_WIDTHS = [240, 160];
+// Thumbnails sit in 80 to 120 px discs: 240 covers a 3x phone and a 2x desktop; the larger place discs on Home are drawn up to 240 px, so 480 serves them at 2x.
+const THUMB_WIDTHS = [480, 240, 160];
 const SUBJECT: SiteShotSettings = { hideLabels: true, hideOrbitTrails: true, hideStructures: true };
 const ONE_GALAXY: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true };
 // A data page's picture stands in the text column, 552 px at most: 1280 covers it at 2x.
@@ -110,7 +110,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=body-hubble&t=2026-09-18T13:00:12Z&pose=a,0,0,0,-1.938340168882169,0.09915032713380474,6.55234811878065e-22,0',
     settings: { ...SUBJECT, settleMs: 4000 },
     size: WIDE,
-    widths: [1920, 1280],
+    widths: [2560, 1920, 1280],
     title: 'The Hubble Space Telescope',
     caption: 'Off the coast of Namibia on 18 September 2026.',
     drawn: 'The orbit is computed from tracking data; the telescope is a 3D model.',
@@ -157,7 +157,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=body-saturn&t=2017-10-15T12:00:00Z&pose=a,0,0,0,3.75,0.38,9e-15,0,-0.2,0',
     settings: SUBJECT,
     size: WIDE,
-    widths: [1920, 1280, 640],
+    widths: [2560, 1920, 1280, 640],
     title: 'Saturn on 15 October 2017',
     caption: 'The rings are wide open and the planet’s shadow falls across them.',
     drawn: 'Position and ring tilt are computed for that date.',
@@ -182,7 +182,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'pose=a,0,0,0,0.9,0.55,1500,0',
     settings: { hideLabels: true, hideStructures: true, hideCosmicWeb: true, settleMs: 2000 },
     size: WIDE,
-    widths: [800, 640],
+    widths: [1920, 1280, 800, 640],
     title: 'Every galaxy and quasar in the catalogues',
     caption: 'From about 4.9 billion light-years out.',
     drawn: 'Each point’s direction on the sky is measured. Its distance is derived.',
@@ -193,7 +193,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'pose=a,0,0,0,2.1,0.35,260,0',
     settings: { hideLabels: true, hideStructures: true, hideCosmicWeb: true, filaments: true, settleMs: 4000 },
     size: WIDE,
-    widths: [800, 640],
+    widths: [1920, 1280, 800, 640],
     title: 'The filaments of the cosmic web',
     drawn: 'Traced by an algorithm through the positions of catalogued galaxies.',
     alt: 'Bright branching violet threads spreading from a dense core across a field of galaxies.',
@@ -252,7 +252,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: '',
     alt: '',
   },
-  { id: 'place-betelgeuse', link: `focus=star-betelgeuse&${NOON}`, settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
+  { id: 'place-betelgeuse', link: `focus=star-betelgeuse&${NOON}`, settings: { ...SUBJECT, exposure: 2.2 }, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
   {
     id: 'place-sgr-a',
     link: 'focus=blackhole-sgr-a-star',
@@ -271,7 +271,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: '',
     alt: '',
   },
-  { id: 'place-virgo', link: 'focus=galaxy-cluster-virgo-m87', settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
+  { id: 'place-virgo', link: 'focus=galaxy-cluster-virgo-m87', settings: { ...SUBJECT, exposure: 5 }, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
   // The Features page. The camera sits at the Sun, looking at Orion on a December evening.
   {
     id: 'features-constellations',
@@ -611,7 +611,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'lesson-solar-system',
     link: 'exhibit=solarSystem',
-    settings: { settleMs: 8000 },
+    settings: { exposure: 4.5, settleMs: 8000 },
     size: CARD,
     widths: CARD_WIDTHS,
     title: 'The Solar System exhibit',
