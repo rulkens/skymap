@@ -12,8 +12,9 @@ from the text below:
   satellite can be searched for, and followed, from anywhere.
 - Satellites start off; every class starts on. A satellite link opened with satellites off switches
   them on and arrives (`docs/superpowers/specs/2026-10-29-selection-driven-layers-design.md` §4).
-- Following a satellite: the Layer sets and deletes its own entries in core's `transientPositions`
-  registry (#955), read by `deriveBodyStates`; satellites are still never `bodies` rows (§2).
+- Following a satellite: core re-extracts the selected or focused satellite's row every frame and
+  places it in the frame's body states (#974, which replaced #955's `transientPositions` registry);
+  satellites are still never `bodies` rows (§2).
 
 ## 1. Intent
 
