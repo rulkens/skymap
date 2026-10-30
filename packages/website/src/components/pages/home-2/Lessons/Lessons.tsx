@@ -97,7 +97,7 @@ function Lessons() {
                 )}
               </div>
               <figcaption className={styles.caption}>
-                <ShotCaption id={part.shot} showDrawn={false} open={false} />
+                <ShotCaption id={part.shot} showDrawn={false} showTitle={false} open={false} />
               </figcaption>
             </figure>
             <div className={styles.words}>

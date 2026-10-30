@@ -54,7 +54,7 @@ function Exhibit({ id, title, lead, children }: ExhibitProps) {
               data-exhibit={exhibit.shot}
               aria-hidden={i === 0 ? undefined : true}
             >
-              <ShotCaption id={exhibit.shot} showDrawn={false} open={false} />
+              <ShotCaption id={exhibit.shot} showDrawn={false} showTitle={false} open={false} />
             </div>
           ))}
         </figcaption>

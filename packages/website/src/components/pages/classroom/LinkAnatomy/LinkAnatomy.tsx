@@ -53,7 +53,7 @@ function LinkAnatomy() {
           </p>
         </div>
         <figcaption className={styles.caption}>
-          <ShotCaption id={SHOT} showDrawn={false} open={false} />
+          <ShotCaption id={SHOT} showDrawn={false} showTitle={false} open={false} />
           <ViewLink hang href={appLink(HASH)}>
             Jupiter on 14 March 2033
           </ViewLink>

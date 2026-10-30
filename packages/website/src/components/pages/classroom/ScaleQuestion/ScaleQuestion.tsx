@@ -63,7 +63,7 @@ function ScaleQuestion() {
           </div>
         </div>
         <figcaption className={styles.caption}>
-          <ShotCaption id={SHOT} showDrawn={false} open={false} />
+          <ShotCaption id={SHOT} showDrawn={false} showTitle={false} open={false} />
         </figcaption>
       </figure>
     </section>

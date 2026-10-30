@@ -56,7 +56,7 @@ function QuestionIndex() {
           ))}
         </div>
         <figcaption>
-          <ShotCaption id={ROWS[shown]!.shot} showDrawn={false} open={false} />
+          <ShotCaption id={ROWS[shown]!.shot} showDrawn={false} showTitle={false} open={false} />
         </figcaption>
       </figure>
     </div>

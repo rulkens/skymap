@@ -3,8 +3,8 @@
  * name, what Skymap is and the way in; every page under three headings; then
  * the small print. Its ground is the app's widest view, the sphere at the edge
  * of the observable universe, of which only the top rises into the page, so
- * each page ends at the edge of the map. The picture carries its label like
- * any other on the site. The page's last sentence, which counts the light's
+ * each page ends at the edge of the map. The picture is a ground, so it has no
+ * label. The page's last sentence, which counts the light's
  * distance, is passed in as `light` (LightLine, made live by its own small script).
  */
 import type { ReactNode } from 'react';
@@ -16,7 +16,6 @@ import { sitePath } from '../../../utils/sitePath.ts';
 import ObjLink from '../../shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../shared/links/OpenApp/OpenApp.tsx';
 import Shot from '../../shared/media/Shot/Shot.tsx';
-import ShotCaption from '../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './Footer.module.css';
 
 type FooterProps = { path: string; light?: ReactNode };
@@ -76,8 +75,6 @@ function Footer({ path, light }: FooterProps) {
             ))}
           </nav>
         </div>
-
-        <ShotCaption id={GROUND} showDrawn={false} />
 
         <div className={styles.end}>
           {light}
