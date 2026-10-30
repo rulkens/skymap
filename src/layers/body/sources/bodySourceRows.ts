@@ -1,6 +1,6 @@
 /**
- * The Layer's `sources` field (`Layer.d.ts`'s `Sources` bound): the Planet and Earth rows, folded
- * into `APP_SOURCE_REGISTRY`.
+ * The Layer's `sources` field (`Layer.d.ts`'s `Sources` bound): the Planet and Earth rows, collected by
+ * `compositions/appSources.ts` into `APP_SOURCE_REGISTRY`.
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';

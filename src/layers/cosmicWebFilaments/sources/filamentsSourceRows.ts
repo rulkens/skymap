@@ -1,6 +1,6 @@
 /**
  * The Layer's `sources` field (`Layer.d.ts`'s `Sources` bound): the one row
- * `APP_SOURCE_REGISTRY` folds in for the cosmic-web skeleton.
+ * `compositions/appSources.ts` collects into `APP_SOURCE_REGISTRY` for the cosmic-web skeleton.
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';

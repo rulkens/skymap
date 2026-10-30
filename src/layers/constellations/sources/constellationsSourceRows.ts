@@ -1,6 +1,6 @@
 /**
  * The Layer's `sources` field (`Layer.d.ts`'s `Sources` bound): the one row
- * `APP_SOURCE_REGISTRY` folds in for the true-3D constellation overlay.
+ * `compositions/appSources.ts` collects into `APP_SOURCE_REGISTRY` for the true-3D constellation overlay.
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';

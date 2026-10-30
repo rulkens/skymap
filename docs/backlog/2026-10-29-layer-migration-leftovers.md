@@ -163,6 +163,9 @@ See the refinement above. Backlogged as `2026-10-28-per-body-slab-declaration.md
 ### J14. Sgr A* sky capture: ~25
 `data/rendering/cubemapCaptures.ts` hard-codes the `sgrAStar` row, `SKY_CAPTURE_KEYS = ['sgrAStar','solarSystem']`, and `SCALE_FADE_BANDS.sgrAStarLensing`. blackHoles imports `cubemapCaptures` 5 times. **Joint:** Layer-declared sky captures. The `solarSystem` capture is mesh-probe infrastructure and stays.
 
+### J16. 13 galaxyCatalog/starCatalog files read `APP_SOURCE_REGISTRY` for their own rows
+galaxyCatalog `create.ts`, `load/galaxyCatalogAssetRows.ts`, `render/catalogStore.ts`, `state/galaxyCatalogs/selectors.ts`, `subsystems/proceduralDiskSubsystem.ts`, `ui/GalaxiesSection.tsx`; starCatalog `load/installStarPool.ts`, `load/starCatalogAssetRows.ts`, `load/starCatalogFetcher.ts`, `load/starCatalogSlot.ts`, `passes/fieldStarSpherePass.ts`, `render/cut/starSourcesInBand.ts`, `ui/StarCatalogTuningSectionContainer.tsx`. Per composition spec §4.7 a Layer's id-domain types and lookups derive from its own `sources` tuple, and only cross-Layer readers take the composed registry; path-only today, moved from `data/sources`.
+
 ---
 
 ## STAYS: shared or infrastructure
