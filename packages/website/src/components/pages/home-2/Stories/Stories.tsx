@@ -26,8 +26,9 @@ const VIEWS = [
   { id: 'tour-cosmic-web', accent: '#c98cf2' },
   { id: 'class-exhibit', accent: '#d9c27a' },
 ];
-// Eight columns and the margin to the window's edge; the whole width on a phone.
-const SIZES = '(max-width: 900px) 100vw, calc(66vw + 8rem)';
+// Seven columns and the margin to the window's edge, a 4:3 stage cut from 16:9 pictures (so a third wider); on
+// a phone the whole width, likewise.
+const SIZES = '(max-width: 900px) 133vw, calc(66vw + 8rem)';
 
 function Stories() {
   const gallery = useGallery(VIEWS, false);

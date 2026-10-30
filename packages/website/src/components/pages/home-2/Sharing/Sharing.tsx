@@ -26,7 +26,8 @@ const VIEWS = [
   { id: 'hubble', lit: ['focus', 'pose'], accent: '#8fb6ff' },
   { id: 'saturn', lit: ['t'], accent: '#e6c98f' },
 ];
-const SIZES = '100vw';
+// The window's width; on a phone its 4:3 stage is cut from 16:9 pictures, so a third wider.
+const SIZES = '(max-width: 900px) 133vw, 100vw';
 
 function Sharing() {
   const gallery = useGallery(VIEWS);
