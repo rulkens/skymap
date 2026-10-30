@@ -1,0 +1,27 @@
+.lead {
+  max-width: 26rem;
+  font-size: var(--text-lead);
+}
+
+/* As wide as the words above it; the band's column would stretch it across the picture. */
+.strip {
+  max-width: 30rem;
+}
+
+.root {
+  composes: wrap from '../../../../styles/layout.module.css';
+  padding-top: 4rem;
+}
+
+.parts {
+  composes: grid halves from '../../../../styles/layout.module.css';
+  row-gap: 3rem;
+}
+
+.part p {
+  margin-bottom: 0.75rem;
+}
+
+.open {
+  padding-top: 3.5rem;
+}
