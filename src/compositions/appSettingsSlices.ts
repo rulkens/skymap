@@ -22,7 +22,7 @@ import { missionsLayerSettings } from '../layers/missions/state/slices';
 import { satellitesLayerSettings } from '../layers/satellites/state/slices';
 import { cosmicHorizonLayerSettings } from '../layers/cosmicHorizon/state/slices';
 
-export const APP_SETTINGS_SLICES = [
+export const APP_SETTINGS_SLICE_REGISTRY = [
   ...blackHolesLayerSettings,
   ...bodyLayerSettings,
   ...constellationsLayerSettings,

@@ -19,7 +19,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { MILD_RECESSION } from '../../../../src/data/mildRecession';
 
 function makeState(): EngineState {
@@ -183,7 +183,10 @@ describe('label2DDirector', () => {
       label: 'structure',
       produceLabels: () => ({ labels: [focused, sibling], awake: false }),
     });
-    const state = { ...makeState(), visibilityEntries: APP_VISIBILITY } as unknown as EngineState;
+    const state = {
+      ...makeState(),
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
+    } as unknown as EngineState;
     const ctxAt = (nowMs: number) =>
       ({
         ...makeCtx(nowMs),

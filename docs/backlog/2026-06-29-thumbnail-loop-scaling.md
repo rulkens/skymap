@@ -9,7 +9,7 @@ The per-frame thumbnail-priority loop is a linear CPU scan over on-screen galaxi
 
 ## Current state (verified 2026-06-29)
 
-The loop in `src/services/engine/subsystems/texturedDiskSubsystem.ts:141-299` is still a linear scan with the two #79 optimizations: stride decimation (`decimationFactor`, default 8, lines 98/155-158) and hoisted squared-distance gating (`maxCamDistForVisibilityUpper`/`maxCamDistSqUpper`, lines 130-131/179). The only compute shaders in the tree are the flow field's (`flowFieldRenderer.ts:332,341`), unrelated.
+The loop in `src/layers/galaxyCatalog/subsystems/diskPlannerWalk.ts` (shared stride cursors; `texturedDiskSubsystem.ts` is only the visitor) is still a linear scan with the two #79 optimizations: stride decimation (`decimationFactor`, default 8) and hoisted squared-distance gating (`maxCamDistForVisibilityUpper`/`maxCamDistSqUpper`). The only compute shaders in the tree are the flow field's (`flowFieldRenderer.ts:332,341`), unrelated.
 
 ## Direction
 

@@ -1,5 +1,5 @@
 /**
- * Exhibit — an `APP_EXHIBITS` row: a scene takeover addressed by a pose
+ * Exhibit — an `APP_EXHIBIT_REGISTRY` row: a scene takeover addressed by a pose
  * rather than a focus. `openExhibit` applies `settings` via `mergeSnapshot`,
  * flies to `pose` (or hands the camera to its hold kind), and shows `body` in the `ExhibitOverlay`; `withSceneSnapshotSaga`
  * owns restore.

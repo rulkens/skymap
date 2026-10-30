@@ -26,7 +26,7 @@ import { starCatalogVisibility } from '../layers/starCatalog/visibility';
 import { structureVisibility } from '../layers/structure/visibility';
 import { zoneOfAvoidanceVisibility } from '../layers/zoneOfAvoidance/visibility';
 
-export const APP_VISIBILITY = [
+export const APP_VISIBILITY_REGISTRY = [
   ...galaxyCatalogVisibility,
   ...starCatalogVisibility,
   ...cosmicWebDensityVisibility,
@@ -46,4 +46,4 @@ export const APP_VISIBILITY = [
 ] as const;
 
 // A misspelled `of` fails here: the entry types cannot name `ShowKey` themselves.
-APP_VISIBILITY satisfies readonly (ShowEntry | (LabelEntry & { readonly of?: ShowKey }))[];
+APP_VISIBILITY_REGISTRY satisfies readonly (ShowEntry | (LabelEntry & { readonly of?: ShowKey }))[];

@@ -47,7 +47,7 @@
  *
  * ### `args` are visibility addresses
  *
- * `show`/`hide`/`fade` name the addresses `APP_VISIBILITY` derives: show keys
+ * `show`/`hide`/`fade` name the addresses `APP_VISIBILITY_REGISTRY` derives: show keys
  * (`'flow'`, `'survey'`), label addresses (`'label:milkyWay'`) and, for
  * `show`/`hide`, one item of a per-item entry (`'survey:milliquas'`,
  * `'label:structure:void'`). `'labels'` is expanded at construction, so a stored
