@@ -302,6 +302,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: SITE_TOOLS,
       },
       {
+        scripts: ['site:judge', 'site:requests'],
+        does: 'Report on every picture of one page of the running site: the file chosen against the width it is drawn at, how much its frame cuts away, how bright it is, beside a sheet of all of them. The second files a request for a new picture and answers it.',
+        manual: SITE_TOOLS,
+      },
+      {
         scripts: ['site:external'],
         does: 'Asks for every address outside the site that a built page links to, and lists each one that is gone with its pages and its data row.',
         manual: SITE_TOOLS,

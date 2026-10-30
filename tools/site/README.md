@@ -35,6 +35,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 - Look at every picture after a run. Surface imagery streams in late (`settleMs`), and `tour-cosmic-web` is taken from a tour that keeps turning, so its framing differs a little each time.
 - Budget: at most about 400 KB for a row's largest file. The runner prints each file's size.
 - A row's `denseQuality` lowers the AVIF quality of every width above its narrowest. Use it only where the wider files are drawn at 2x or more (the upright cuts a phone gets), and look at the result at that density.
+- **Trying a framing.** `npm run site:shots -- --url <app> --try '<hash body>' [--settings '<json>'] [--size 1600x1000] [--query dome] [--name n] [--out dir]` takes one picture that is in no row, with the same settings a row takes (`exposure` among them), and writes `<out>/<name>.png` (the temp folder's `site-shot-try/` by default), cropped as the row would be. It touches neither the manifest nor the assets: try several framings, then write the one you keep as a row.
 
 ## Loops
 
@@ -76,7 +77,27 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## Section shots
 
-`npm run site:sections -- /home-2/ [--url http://localhost:5800] [--widths 1440,400] [--label before] [--out <dir>]` shoots one page of the RUNNING dev site at each width. It writes the full page, then one picture per h2 section (`<label>-<width>-<n>-<slug>.png`), after one scroll through the page so lazy pictures load, with the dev overlays and the fixed bar hidden. It is the screenshot half of the `site-restyle` skill's design round trip.
+`npm run site:sections -- /home-2/ [--url http://localhost:5800] [--widths 1440,400] [--label before] [--out <dir>]` shoots one page of the RUNNING dev site at each width. It writes the full page, then one picture per h2 section (`<label>-<width>-<n>-<slug>.png`), after one scroll through the page so lazy pictures load, with the dev overlays and the fixed bar hidden. It is the screenshot half of the `site-restyle` skill's design round trip. The page's HMR socket is held open and silent, so another edit to the site does not reload the page under a run.
+
+## Picture report
+
+`npm run site:judge -- /home-2/ [--url http://localhost:5800] [--widths 1440,1024,400] [--dpr 2] [--label judge] [--out <dir>]` writes the section shots above, then judges every site shot (`<img>` from `assets/shots/`) and every `<video>` in `<main>` at each width, on a screen of `--dpr` (2 by default, the density the browser chooses files for). The output folder (the temp folder's `site-judge/<page>/` by default) holds `report.md`, `report.json` and `contact-<width>.png`.
+
+- Per picture: its shot id and row link, its section, its laid-out box, the file width the browser chose against the device pixels the box needs, the share `object-fit: cover` cuts away, its brightness as displayed (mean, 5th and 95th percentile luma) and its alt text.
+- Flags: `UPSCALED` (the source is more than 5% narrower than needed; it says whether a wider file exists, a `sizes` fault, or the row needs a reshoot), `CROPPED` (cover cuts away over 30%), `STRETCHED`, `TOO DARK` (the brightest 5% stays under a fifth of white: ask for `exposure`), `BURNT` (5% at white), `NO ALT`, `NOT LOADED`. The thresholds are in `utils/judgePicture.ts` and `utils/brightnessFlags.ts`.
+- The contact sheet shows each picture cropped from the page as displayed, after it has been scrolled to the middle of the window and given time to arrive, labelled with its id and flags, in page order, so framing, angle and light compare across neighbours. A slide hidden under another at that moment is drawn from its own file instead and marked `hidden slide`.
+
+## Shot requests
+
+A page designer who wants a different picture and does not reshoot it alone files a request for whoever runs the shoot. Each is one JSON file (`@types/ShotRequest.d.ts`) in `.superpowers/sdd/2026-10-05-companion-website/shot-requests/` (gitignored), named `<UTC time>-<requester>-<subject>.json`, and checked on every write and listing.
+
+```
+npm run site:requests -- list [--open]
+npm run site:requests -- add --requester <who> --page /home-2/ --section '<h2>' --subject '<what>' --why '<why>' [--shot <id>|new] [--link '<hash body>'] [--settings '<json>'] [--size 1600x1000]
+npm run site:requests -- answer <file> --status done|declined [--ids a,b] --answer '<what was done>'
+```
+
+A link and settings tried with `site:shots --try` go in the request. A done request names the shot ids to use (they must be in the manifest) or says what was done; a declined one says why.
 
 ## External link check
 

@@ -64,6 +64,12 @@ Every new shot row must be used on a page, or the shot test fails.
 
 If a picture is the section's weakest thing, ask for a new one rather than designing around it. Either reshoot the row yourself with `npm run site:shots -- --url <app> --only <id>`, or send a request to whoever runs the shoot, with the subject, view or pose, size and why.
 
+**Judge, then request** (`tools/site/README.md`, "Picture report" and "Shot requests"):
+1. Run `npm run site:judge -- /<page>/ --widths 1440,1024,400 --out <scratchpad>/judge` and read `report.md` and the `contact-<width>.png` sheets beside the `site-critique` skill.
+2. Fix layout causes yourself: an `UPSCALED` flag that says a wider file exists is the `sizes` attribute; a large `CROPPED` share is the box's aspect.
+3. For a picture problem, try framings with `npm run site:shots -- --url <app> --try '<hash body>' --settings '<json>' --name <n>` and look at each. For a picture flagged `TOO DARK` or `BURNT`, or one that looks it, try `exposure` first (the app's default is 3), and `ambient` for a spacecraft or planet in shadow once that setting exists. Then update the row yourself, or file the framing you chose with `npm run site:requests -- add …` for the shoot agent.
+4. Before finishing, run `npm run site:requests -- list` and use what was answered.
+
 ## 1. Shoot the before
 
 ```
