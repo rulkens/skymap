@@ -64,6 +64,8 @@ const PARTS = [
 const SIZES = '(max-width: 900px) 100vw, min(calc(50vw - 4rem), 36rem)';
 // An overlay is at most half a picture.
 const OVER_SIZES = '(max-width: 900px) 80vw, 18rem';
+// The horizon strip spans the window; on a phone its 4:3 cut is taken from a strip 3.43 times as wide as tall.
+const HORIZON_SIZES = '(max-width: 900px) 260vw, 100vw';
 
 function Lessons() {
   return (
@@ -112,7 +114,7 @@ function Lessons() {
       </div>
       <figure className={styles.field}>
         <div className={styles.horizon}>
-          <Shot id="mars-horizon" sizes="100vw" />
+          <Shot id="mars-horizon" sizes={HORIZON_SIZES} />
         </div>
         <div className={styles.more}>
           <ObjLink hang href={sitePath('/classroom/')}>
