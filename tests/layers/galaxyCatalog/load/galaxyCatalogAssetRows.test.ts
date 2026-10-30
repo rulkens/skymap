@@ -43,6 +43,7 @@ function makeCtx(over: {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: over.tier ?? 'large',
+    selectedKinds: new Set(),
   };
 }
 

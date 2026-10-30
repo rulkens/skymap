@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { APP_SETTINGS_SLICES } from '../../src/compositions/appSettingsSlices';
+import { APP_SETTINGS_SLICE_REGISTRY } from '../../src/compositions/appSettingsSlices';
 import { CORE_SETTINGS_SLICES } from '../../src/state/settings/coreSettingsSlices';
 
-describe('APP_SETTINGS_SLICES', () => {
+describe('APP_SETTINGS_SLICE_REGISTRY', () => {
   // combineSlices lets the later slice win a duplicated key, silently.
   it('claims each settings-root key once, and none core claims', () => {
-    const paths = APP_SETTINGS_SLICES.map((s) => s.reducerPath);
+    const paths = APP_SETTINGS_SLICE_REGISTRY.map((s) => s.reducerPath);
     expect(new Set(paths).size).toBe(paths.length);
     // Widened to `string`: the two reducerPath unions are disjoint by
     // construction, so `Set<core-only-literals>.has(app-only-literal)` would
@@ -15,7 +15,7 @@ describe('APP_SETTINGS_SLICES', () => {
   });
 
   it('namespaces every action under settings/', () => {
-    for (const slice of APP_SETTINGS_SLICES) {
+    for (const slice of APP_SETTINGS_SLICE_REGISTRY) {
       expect(slice.name).toBe(`settings/${slice.reducerPath}`);
     }
   });

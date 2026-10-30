@@ -35,6 +35,7 @@ function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean): DemandCtx {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: 'medium',
+    selectedKinds: new Set(),
   };
 }
 

@@ -11,6 +11,8 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameContextInput } from '../../../@types/engine/frame/FrameContextInput';
 import type { AssembledOrbitCamera } from '../../../@types/camera/AssembledOrbitCamera';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { BodyState } from '../../../@types/scene/BodyState';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 
@@ -32,9 +34,11 @@ export function frameContextInputOf(
      *  feeds the instant the last DRAWN frame resolved bodies at, so pickable
      *  sprites are re-derived exactly where they were drawn. */
     readonly simDays: number;
+    /** `frameBodyStates` at `simDays`; `runFrame` hands in the Map its camera step read. */
+    readonly bodyStates: ReadonlyMap<PositionedId, BodyState>;
   },
 ): { readonly input: FrameContextInput; readonly cam: AssembledOrbitCamera } {
-  const { worldPose, nowMs, poseBasis, upBasis, simDays } = args;
+  const { worldPose, nowMs, poseBasis, upBasis, simDays, bodyStates } = args;
   // The DISPLAYED pose, not the authored register: the authored register is
   // untilted in-window and a pick against it misses (round-12c two-box
   // contract) — a plain field read, `state.cameraRuntime` already THIS
@@ -49,7 +53,7 @@ export function frameContextInputOf(
   // Eye→pivot-surface range NEAR0's bracket is sized from.
   const altitudeMpc = pivotSurfaceRangeMpc(arm, worldPose.distance, state.selectionRows.focus);
   return {
-    input: { cam, arm, altitudeMpc, nowMs, simDays },
+    input: { cam, arm, altitudeMpc, nowMs, simDays, bodyStates },
     cam,
   };
 }

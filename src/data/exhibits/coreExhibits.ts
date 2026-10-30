@@ -1,6 +1,6 @@
 /**
  * coreExhibits — core's takeover exhibits. One exhibit per file beside this one: each carries its
- * own settings, pose and copy. `APP_EXHIBITS` folds these with every Layer's rows.
+ * own settings, pose and copy. `APP_EXHIBIT_REGISTRY` folds these with every Layer's rows.
  */
 
 import { cosmicFlows } from './cosmicFlows';

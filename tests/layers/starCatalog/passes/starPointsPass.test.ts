@@ -15,7 +15,7 @@ import { mat4 } from 'wgpu-matrix';
 import { starPointsPass } from '../../../../src/layers/starCatalog/passes/starPointsPass';
 import { gateOrbitTrailGroup } from '../../../../src/services/engine/layer/gateOrbitTrailGroup';
 import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes/index';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
@@ -206,7 +206,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
     // Both rows yield through their entries' bands, resolved here over the real entries with
     // every fade at 1.
     const gateState = {
-      visibilityEntries: APP_VISIBILITY,
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
       subsystems: {
         fades: { opacityOf: () => 1 },
         clipPlayer: { clipOpacityOf: () => 1 },

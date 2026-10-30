@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { satelliteOrbitEllipse } from '../../../../src/layers/satellites/subsystems/satelliteOrbitEllipse';
-import { satellitePositioner } from '../../../../src/layers/satellites/subsystems/satellitePositioner';
+import { satellitePositionMpc } from '../../../../src/layers/satellites/subsystems/satellitePositionMpc';
 import { composeTemeToWorld } from '../../../../src/layers/satellites/subsystems/composeTemeToWorld';
 import { eccentricAnomalyFromMean } from '../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { satrecOf } from '../../../../src/layers/satellites/load/satrecOf';
@@ -29,14 +29,18 @@ describe('satelliteOrbitEllipse', () => {
   ])('passes through the %s dot to well under a km', (_name, noradId) => {
     const k = catalog.noradId.indexOf(noradId);
     expect(k).toBeGreaterThanOrEqual(0);
-    const satellite = { satrec: satrecOf(catalog, k), epochMs: catalog.epochMs[k]! };
+    const satrec = satrecOf(catalog, k);
     for (const iso of ['2026-10-28T12:00:00Z', '2026-11-03T03:17:00Z']) {
       const simDays = unixMsToJulianDays(Date.parse(iso));
       const positions = new Map([[SCENE_EARTH.id, EARTH_MPC]]);
-      const m = composeTemeToWorld(orientationForBody(SCENE_EARTH.id, simDays, positions), simDays);
-      const ring = satelliteOrbitEllipse(satellite, simDays, m, EARTH_MPC)!;
+      const orientation = orientationForBody(SCENE_EARTH.id, simDays, positions);
+      const m = composeTemeToWorld(orientation, simDays);
+      const ring = satelliteOrbitEllipse(satrec, catalog.epochMs[k]!, simDays, m, EARTH_MPC)!;
       const big = eccentricAnomalyFromMean(ring.meanAnomalyRad, ring.eccentricity);
-      const dot = satellitePositioner(catalog, k)(simDays, positions)!;
+      const dot = satellitePositionMpc(catalog, k, simDays, {
+        positionMpc: EARTH_MPC,
+        orientation,
+      })!;
       for (let i = 0; i < 3; i++) {
         const onRing =
           ring.centerMpc[i]! +

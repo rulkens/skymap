@@ -61,6 +61,7 @@ const SCENE_BODIES = positionedBodiesOf(
 function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   return {
     snapshot: {
+      bodyStates: deriveBodyStates(CONST_J2000),
       simDays: CONST_J2000,
       nowMs: 0,
       meshBodies: SCENE_MESH_BODIES,

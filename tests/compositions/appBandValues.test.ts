@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { APP_VISIBILITY } from '../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../src/compositions/appVisibility';
 import { bandValueOf } from '../../src/services/engine/presentation/bandValueOf';
 import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
@@ -21,7 +21,7 @@ import type { Vec3 } from '../../src/@types/math/Vec3';
 const BODY_STATES = deriveBodyStates(CONST_J2000);
 
 function valueAtEye(key: string, eye: Readonly<Vec3>, item?: string): number {
-  const entry = APP_VISIBILITY.find((e) => 'key' in e && e.key === key)!;
+  const entry = APP_VISIBILITY_REGISTRY.find((e) => 'key' in e && e.key === key)!;
   return bandValueOf(entry, item, { drawCamPos: eye, snapshot: { bodyStates: BODY_STATES } });
 }
 

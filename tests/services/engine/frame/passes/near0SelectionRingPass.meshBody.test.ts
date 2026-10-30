@@ -106,6 +106,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   });
   const ctx = {
     snapshot: {
+      bodyStates: deriveBodyStates(SIM_DAYS),
       meshBodies: SCENE_MESH_BODIES,
       sceneBodies: positionedBodiesOf(SCENE_MESH_BODIES, states),
       simDays: SIM_DAYS,
