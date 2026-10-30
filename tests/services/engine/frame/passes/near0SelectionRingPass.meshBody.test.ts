@@ -106,6 +106,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   });
   const ctx = {
     snapshot: {
+      bodyStates: deriveBodyStates(SIM_DAYS),
       meshBodies: SCENE_MESH_BODIES,
       sceneBodies: positionedBodiesOf(SCENE_MESH_BODIES, states),
       simDays: SIM_DAYS,
@@ -135,7 +136,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
       selectionRingRenderer: { draw: ringDraw },
     },
     selectionRows: { select: row, focus: row, hover: null },
-    settings: { galaxyCatalogs: { sizePx: 2 } },
+    settings: { galaxyCatalogs: { sizePx: 2 }, debug: { meshAmbient: 0 } },
   } as unknown as EngineState;
 
   const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.hostId === 'earth');

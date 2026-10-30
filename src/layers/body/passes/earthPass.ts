@@ -1,17 +1,18 @@
 /**
  * earthPass: Earth's `'body'`-slab content row, the base globe in `foreground:0`;
  * the detail patches over it are `surfaceTilesPass`. Earth's `body-m` row is itself
- * the visibility gate (culled at sub-pixel), so `enabled` checks the host id and the
- * foreground distance. `earthRenderer.draw` writes ONE non-dynamic uniform buffer,
- * so draw at most once per frame. The globe is ALWAYS drawn, at the datum's inner
- * bound, so it cannot occlude relief and covers ground no resident patch does yet.
+ * the visibility gate (culled at sub-pixel, absent past the foreground band), so
+ * `enabled` checks only the host id. `earthRenderer.draw` writes ONE non-dynamic
+ * uniform buffer, so draw at most once per frame. The globe is ALWAYS drawn, at the
+ * datum's inner bound, so it cannot occlude relief and covers ground no resident
+ * patch does yet.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
@@ -23,7 +24,6 @@ import { EARTH_SURFACE_PARAMS } from '../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../present/cloudShellParams';
 import { cloudDeckFade } from '../present/cloudDeckFade';
 import { bodyCameraDistanceMpc } from '../present/bodyCameraDistanceMpc';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { bodySlabFlooredPick } from '../../../services/engine/helpers/bodySlabFlooredPick';
 import { prepareBodySurfaceFrame } from '../present/prepareBodySurfaceFrame';
 
@@ -31,9 +31,8 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
   return {
     name: 'earth',
 
-    enabled(_state, ctx, view) {
-      if (view.slab.frame.kind !== 'body-m' || view.slab.frame.hostId !== 'earth') return false;
-      return ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC;
+    enabled(_state, _ctx, view) {
+      return view.slab.frame.kind === 'body-m' && view.slab.frame.hostId === 'earth';
     },
 
     draw(pass, view, ctx, state) {

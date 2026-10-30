@@ -12,7 +12,7 @@ import StarDetailCard from '../../../src/components/InfoCard/StarDetailCard/Star
 import { buildFocusable } from '../../../src/services/engine/helpers/buildFocusable';
 import { SGR_A_STAR_ENTRY } from '../../../src/layers/blackHoles/sources/sgrAStar';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { starRowDriver } from '../../fixtures/starRowDriver';
 import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStarMetaEntry';
 import type { StarInfo } from '../../../src/@types/engine/StarInfo';

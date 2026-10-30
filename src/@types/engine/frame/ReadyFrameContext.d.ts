@@ -32,9 +32,8 @@ export type ReadyFrameContext = {
    */
   camBasisWorld: Mat3;
   /**
-   * This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes
-   * one deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call
-   * this frame returns this SAME Map by reference — no second cache, no drift.
+   * This frame's ONE R_body(t) sample (spec §4), the moving selection placed
+   * in it (`frameBodyStates`); `sceneBodyStates(state, ctx)` returns this Map.
    */
   bodyStates: ReadonlyMap<PositionedId, BodyState>;
   /**
@@ -49,7 +48,7 @@ export type ReadyFrameContext = {
   /**
    * The rows eligible for a slab before any view's frustum gate: one per store
    * body (Earth, the planets, the mesh bodies that host their own row) plus the
-   * composed `state.slabRows` whose band is open. Frame-wide because the roster
+   * every composed or hostless row whose band is open. Frame-wide because the roster
    * is a store read and the band keys on the frame camera — a view culls it
    * (`visibleSlabBodies`), it never re-assembles it.
    */
@@ -74,9 +73,9 @@ export type ReadyFrameContext = {
   /**
    * This frame's sim-clock instant in Julian days — `deriveSimDays(time, nowMs)`,
    * sampled ONCE by `runFrame` from the time-intent slice before the camera
-   * produce step. `sceneBodyStates` evaluates the whole body snapshot at THIS
-   * instant, so every per-frame body reader (planets, textured bodies, orbit
-   * trails) shares one epoch and can never draw the same body at two positions.
+   * produce step. The whole body snapshot is evaluated at THIS instant, so
+   * every per-frame body reader (planets, textured bodies, orbit trails)
+   * shares one epoch and can never draw the same body at two positions.
    * A paused clock holds it steady; live/manual playback advances it each frame.
    */
   simDays: number;

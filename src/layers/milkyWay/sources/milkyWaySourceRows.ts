@@ -1,6 +1,6 @@
 /**
  * The Layer's `sources` field (`Layer.d.ts`'s `Sources` bound): the one row
- * `SOURCE_REGISTRY` folds in for the Milky Way disk overlay.
+ * `compositions/appSources.ts` collects into `APP_SOURCE_REGISTRY` for the Milky Way disk overlay.
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';

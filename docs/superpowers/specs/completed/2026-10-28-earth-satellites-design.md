@@ -10,10 +10,11 @@ from the text below:
   in a second job with no checkout and no npm. `docs/DEPLOY.md` "Satellite catalog" has the secrets.
 - §5.5: the asset row also demands while the search palette is open or a satellite is selected, so a
   satellite can be searched for, and followed, from anywhere.
-- Satellites start off; every class starts on. A satellite link opened with satellites off lands home
-  until the generic fix in `docs/backlog/2026-10-29-link-switches-its-subject-on.md` lands.
-- Following a satellite: the Layer sets and deletes its own entries in core's `transientPositions`
-  registry (#955), read by `deriveBodyStates`; satellites are still never `bodies` rows (§2).
+- Satellites start off; every class starts on. A satellite link opened with satellites off switches
+  them on and arrives (`docs/superpowers/specs/completed/2026-10-29-selection-driven-layers-design.md` §4).
+- Following a satellite: core re-extracts the selected or focused satellite's row every frame and
+  places it in the frame's body states (#974, which replaced #955's `transientPositions` registry);
+  satellites are still never `bodies` rows (§2).
 
 ## 1. Intent
 

@@ -7,6 +7,9 @@ const THUMB = { width: 400, height: 400 };
 // Thumbnails sit in 80 to 120 px discs: 240 covers a 3x phone and a 2x desktop; the larger place discs on Home are drawn up to 240 px, so 480 serves them at 2x.
 const THUMB_WIDTHS = [480, 240, 160];
 const SUBJECT: SiteShotSettings = { hideLabels: true, hideOrbitTrails: true, hideStructures: true };
+// A cut-out's ground left out with the sky: the planet behind a craft, the terrain under a rover.
+const HIDE_EARTH = ['earth', 'surface-tiles', 'cloud-shell', 'atmosphere-shell', 'aerial-perspective'];
+const HIDE_MARS = ['planets', 'textured-bodies', 'surface-tiles', 'atmosphere-shell', 'aerial-perspective', 'contact-shadows'];
 const ONE_GALAXY: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true };
 // A data page's picture stands in the text column, 552 px at most: 1280 covers it at 2x.
 const DATA_WIDTHS = [1280, 640];

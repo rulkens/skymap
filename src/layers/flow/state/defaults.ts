@@ -1,6 +1,6 @@
 /**
  * flow — the Layer's user-settable defaults, seeding `flowSlice`. These values
- * ARE the spike's hand-dialled advect look; the SOURCE_REGISTRY flow row
+ * ARE the spike's hand-dialled advect look; the APP_SOURCE_REGISTRY flow row
  * carries the asset, not the look, so retune them here.
  */
 

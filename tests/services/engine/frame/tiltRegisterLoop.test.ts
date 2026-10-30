@@ -212,6 +212,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
           positionMpc: [0, 0, 0],
           driver: bodyDriverGeometry('earth'),
         },
+        focusId: null,
       }),
     );
     h.frame();

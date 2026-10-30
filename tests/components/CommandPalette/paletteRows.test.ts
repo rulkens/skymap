@@ -5,7 +5,7 @@ import type { LayerSearchEntry } from '../../../src/@types/engine/layer/LayerSea
 import { ROW_VIEW } from '../../../src/components/CommandPalette/paletteRows';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import type { ScoredRow } from '../../../src/@types/palette/ScoredRow';
 

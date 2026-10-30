@@ -19,7 +19,7 @@
  * it land / is the load-fade still ramping?" (per-frame planning state).
  */
 
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';

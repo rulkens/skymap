@@ -18,7 +18,7 @@ import {
   unpackPick,
 } from '../../src/data/selectionEncoding';
 import type { PickResult } from '../../src/@types/data/PickResult';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 
 describe('selectionEncoding', () => {
   it('packs (source, localIdx) into the documented bit layout', () => {

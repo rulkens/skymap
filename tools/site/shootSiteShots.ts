@@ -22,7 +22,9 @@ import { warnIfWrongCheckout } from '../utils/browser/warnIfWrongCheckout';
 import { SHOT_ENCODING } from './shotEncoding';
 import { captureSiteShot } from './utils/captureSiteShot';
 import { makeSiteOgCard } from './utils/makeSiteOgCard';
+import { openSiteShot } from './utils/openSiteShot';
 import { parseSize } from './utils/parseSize';
+import { shootMatte } from './utils/shootMatte';
 import { shotFrame } from './utils/shotFrame';
 
 const MASTERS_DIR = 'data/shots/site';
@@ -52,7 +54,13 @@ if (tryLink !== undefined) {
   try {
     const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: DPR });
     const page = await context.newPage();
-    const master = await captureSiteShot(page, base, shot);
+    let master: Buffer;
+    if (settings.matte) {
+      await openSiteShot(page, base, shot);
+      master = (await shootMatte(page, shot)).master;
+    } else {
+      master = await captureSiteShot(page, base, shot);
+    }
     await warnIfWrongCheckout(page);
     await shotFrame(master, settings.crop, DPR).png().toFile(file);
   } finally {
@@ -87,12 +95,21 @@ let failed = false;
 try {
   for (const shot of rows) {
     const master = join(MASTERS_DIR, `${shot.id}.png`);
+    const shadowMaster = join(MASTERS_DIR, `${shot.id}-shadow.png`);
     const dpr = shot.dpr ?? DPR;
     if (!fromMasters) {
       const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: dpr });
       try {
         const page = await context.newPage();
-        writeFileSync(master, await captureSiteShot(page, base!, shot));
+        // A matte row is drawn twice (black, then white) by shootMatte; every other row is one capture.
+        if (shot.settings?.matte) {
+          await openSiteShot(page, base!, shot);
+          const { master: cutout, shadow } = await shootMatte(page, shot);
+          writeFileSync(master, cutout);
+          if (shadow) writeFileSync(shadowMaster, shadow);
+        } else {
+          writeFileSync(master, await captureSiteShot(page, base!, shot));
+        }
         if (warnCheckout) await warnIfWrongCheckout(page);
         warnCheckout = false;
       } catch (err) {
@@ -103,33 +120,38 @@ try {
         await context.close();
       }
     }
-    if (!existsSync(master)) {
+    if (!existsSync(master) || (shot.settings?.shadow && !existsSync(shadowMaster))) {
       failed = true;
       console.error(`${shot.id}: no master at ${master}; run with --url first`);
       continue;
     }
-    // A row whose widths changed must not leave its old files behind.
-    for (const file of readdirSync(OUT_DIR)) {
-      if (/^(.+)-\d+\.(avif|webp)$/.exec(file)?.[1] === shot.id) rmSync(join(OUT_DIR, file));
+    // A `shadow` row's multiply layer is written beside its cut-out, at the same widths.
+    const outputs: [string, string][] = [[shot.id, master]];
+    if (shot.settings?.shadow) outputs.push([`${shot.id}-shadow`, shadowMaster]);
+    for (const [name, file] of outputs) {
+      // A row whose widths changed must not leave its old files behind.
+      for (const old of readdirSync(OUT_DIR)) {
+        if (/^(.+)-\d+\.(avif|webp)$/.exec(old)?.[1] === name) rmSync(join(OUT_DIR, old));
+      }
+      const sizes: string[] = [];
+      const frame = shotFrame(file, shot.settings?.crop, dpr);
+      const narrowest = Math.min(...shot.widths);
+      for (const width of shot.widths) {
+        const resized = frame.clone().resize({ width, kernel: 'lanczos3' });
+        const avif = join(OUT_DIR, `${name}-${width}.avif`);
+        const quality = width > narrowest ? (shot.denseQuality ?? AVIF.quality) : AVIF.quality;
+        await resized
+          .clone()
+          .avif({ ...AVIF, quality })
+          .toFile(avif);
+        await resized
+          .clone()
+          .webp(WEBP)
+          .toFile(join(OUT_DIR, `${name}-${width}.webp`));
+        sizes.push(`${width}: ${Math.round(statSync(avif).size / 1024)} KB`);
+      }
+      console.log(`${name}  ${sizes.join(' · ')} (AVIF)`);
     }
-    const sizes: string[] = [];
-    const frame = shotFrame(master, shot.settings?.crop, dpr);
-    const narrowest = Math.min(...shot.widths);
-    for (const width of shot.widths) {
-      const resized = frame.clone().resize({ width, kernel: 'lanczos3' });
-      const avif = join(OUT_DIR, `${shot.id}-${width}.avif`);
-      const quality = width > narrowest ? (shot.denseQuality ?? AVIF.quality) : AVIF.quality;
-      await resized
-        .clone()
-        .avif({ ...AVIF, quality })
-        .toFile(avif);
-      await resized
-        .clone()
-        .webp(WEBP)
-        .toFile(join(OUT_DIR, `${shot.id}-${width}.webp`));
-      sizes.push(`${width}: ${Math.round(statSync(avif).size / 1024)} KB`);
-    }
-    console.log(`${shot.id}  ${sizes.join(' · ')} (AVIF)`);
   }
   await makeSiteOgCard(browser, MASTERS_DIR);
 } finally {

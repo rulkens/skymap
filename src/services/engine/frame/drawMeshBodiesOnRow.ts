@@ -73,6 +73,7 @@ export function drawMeshBodiesOnRow(
             })
           : 1,
         model: rotM,
+        ambient: state.settings.debug.meshAmbient,
         camPosLocal: [
           hostPose.eyeRelBodyM[0] - posM[0],
           hostPose.eyeRelBodyM[1] - posM[1],

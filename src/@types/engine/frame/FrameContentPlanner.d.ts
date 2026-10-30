@@ -24,6 +24,10 @@ export type FrameContentPlanner<T, K extends ShowKey = ShowKey> = (
   | {
       readonly name: string;
       readonly scope: 'once';
+      /** Fold the entry's distance band, measured at the anchor view `views[0]`, into the handed
+       *  value. Off by default: a planner whose output is a catalog fact rather than a draw list
+       *  (the survey planner's member count) must not lose sources by zoom. */
+      readonly hasDistanceBand?: true;
       plan(
         snapshot: ReadyFrameContext,
         views: readonly FrameView[],

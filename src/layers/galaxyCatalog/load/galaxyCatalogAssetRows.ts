@@ -5,12 +5,10 @@ import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRo
 import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
-import {
-  GALAXY_CATALOG_SOURCES,
-  HI_RES_LAYER_SIDE_BY_TIER,
-  Source,
-  SOURCE_REGISTRY,
-} from '../../../data/sources';
+import { Source } from '../../../data/source';
+import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
+import { HI_RES_LAYER_SIDE_BY_TIER } from '../data/hiResLayerSideByTier';
 import { tierTarget } from '../../../data/tierTargets';
 import type { Tier } from '../../../@types/data/Tier';
 import { galaxyCatalogRequest } from '../../../services/engine/wiring/galaxyCatalogRequest';
@@ -39,7 +37,7 @@ export function galaxyCatalogAssetRows(
   runtime: GalaxyCatalogRuntime,
 ): readonly (AssetWiringRow | CompanionAssetRow)[] {
   return [
-    ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(runtime, SOURCE_REGISTRY[code])),
+    ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(runtime, APP_SOURCE_REGISTRY[code])),
 
     // Loads once the Famous slot leaves `idle`.
     {

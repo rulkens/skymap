@@ -5,7 +5,7 @@
  */
 
 import type { GalaxyTypeInfo } from '../data/galaxyCatalog/GalaxyTypeInfo';
-import { Source } from '../../data/sources';
+import { Source } from '../../data/source';
 import type { BandLabels } from '../data/galaxyCatalog/BandLabels';
 import type { SourceType } from '../data/SourceType';
 
@@ -22,7 +22,7 @@ import type { SourceType } from '../data/SourceType';
  * Fields are grouped into four logical sections below.
  */
 export type GalaxyInfo = {
-  /** Union discriminant — mirrors SOURCE_REGISTRY's 'galaxyCatalog' type. */
+  /** Union discriminant — mirrors APP_SOURCE_REGISTRY's 'galaxyCatalog' type. */
   readonly type: 'galaxyCatalog';
 
   /** 0-based point index in the loaded cloud. */

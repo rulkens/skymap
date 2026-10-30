@@ -12,7 +12,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { engineLoadProgressChanged } from '../../../../src/state/engine/engineSlice';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';

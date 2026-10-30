@@ -27,7 +27,7 @@ import { octreeResidency } from '../../../services/octree/octreeResidency';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
-import { SOURCE_REGISTRY } from '../../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 
 /** The star this layer currently draws a sphere for — the presence memory. */
 type PresentStar = { ordinal: number; positionMpc: Vec3; bpRp: number };
@@ -105,7 +105,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass<'s
       // The presence query needs the live catalog; null (no catalog committed
       // yet), or one handed 0, disables before any distance math.
       const loaded = currentCatalog(runtime);
-      if (loaded === null || fade[SOURCE_REGISTRY[loaded.source].id as StarCatalogId] === 0) {
+      if (loaded === null || fade[APP_SOURCE_REGISTRY[loaded.source].id as StarCatalogId] === 0) {
         return false;
       }
       const catalog = loaded.octree;
@@ -145,7 +145,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass<'s
         IDENTITY_MAT3,
       );
       // Narrow here, at the GPU draw call — composeBodyMvp returns f64.
-      const opacity = fade[SOURCE_REGISTRY[loaded.source].id as StarCatalogId];
+      const opacity = fade[APP_SOURCE_REGISTRY[loaded.source].id as StarCatalogId];
       runtime.starRenderer.draw(pass, narrowMat4(mvp), starTintFromBpRp(present.bpRp), opacity);
     },
 

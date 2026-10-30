@@ -20,8 +20,6 @@ The core tables the satellites kind had to join (each `file:line` is the satelli
   `src/services/engine/helpers/buildFocusable.ts:80`: whether, and how, a row becomes a focus target.
 - `selectionHaloTable` `src/services/engine/helpers/selectionHaloTable.ts:70`: the halo style.
 - `targetIdentityKey` `src/services/engine/helpers/targetIdentityKey.ts:21`: the identity key.
-- `URL_HASH_FOR` `src/services/url/urlHashFor.ts:37`: the `#focus=` hash, which imports two Layers'
-  encoders (`urlHashFor.ts:15-16`), although each Layer's row already declares `focusId.encode`.
 - `focusFraming` `src/services/engine/camera/focusFraming.ts:61`: camera framing.
 - `mayHaveLabel` `src/utils/selection/mayHaveLabel.ts:23`: whether a hover may carry a label.
 - `pickingSlice` `src/state/settings/core/pickingSlice.ts:22`: the default pick switch.
@@ -34,13 +32,16 @@ The core tables the satellites kind had to join (each `file:line` is the satelli
 The closed unions (`SelectionRef`, `SelectionRow`, `FocusableTarget`, `SourceEntry`) and the `Source`
 code also gain an arm per kind; they live in core `@types`.
 
+What would move behind the galaxy, star, structure and Milky Way arms of these tables (~1,480 LOC, `CORE_DETAIL_CARDS` included) is itemised as J2 in [the Layer leftovers sweep](2026-10-29-layer-migration-leftovers.md).
+
 ## Idea
 
 The Layer's `SelectionKindRow` (`src/@types/engine/layer/SelectionKindRow.d.ts`) declares the facts as
 fields: focusable, halo style, framing, label, identity, and the URL hash taken from its own
 `focusId.encode`. Core reads them by `ref.type`, and the tables above go. Exhibits name pick
 categories with "all" as the default, so a new kind edits no exhibit; this would absorb the
-"Narrow `PickingSettings.kinds`" item.
+"Narrow `PickingSettings.kinds`" item. That record is total over every selection kind today, so it
+carries a dead `earthScene` key with no pick source (`pickingSlice.ts:18` and every exhibit snapshot).
 
 ## Open
 
@@ -49,3 +50,17 @@ categories with "all" as the default, so a new kind edits no exhibit; this would
 - **Halo and framing.** These are core mechanisms, so the Layer picks a closed core variant rather
   than supplying code.
 - **Pick codes.** Who assigns them (today `Source.Satellite = 37` is hand-picked).
+
+## Consolidated here (2026-10-29)
+
+Carried over from the two items this one absorbs (their files are deleted).
+
+- **Sibling, not a field on the bundle** (from the 2026-08-17 focusable-kind registry item). Kinds do
+  not map 1:1 onto render subsystems: stars and bodies share layers, famous galaxies live inside the
+  catalog subsystem, Sgr A* is a caption-only anchor that draws nothing. The kind descriptor stays a
+  sibling of the subsystem bundle; a bundle may reference the kinds it renders pick geometry for.
+- **Trigger.** The next new focusable kind (globular clusters from the Harris catalog are the plausible
+  candidate). The Milky Way v1 to v2 swap does not touch this surface.
+- **J2** (selection presentation in `docs/backlog/2026-10-29-layer-migration-leftovers.md`) is carried
+  by this item too.
+

@@ -37,6 +37,7 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { BLOOM_LEVELS } from '../../../data/bloomConstants';
 import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';
+import { clearValueOf } from '../../../utils/gpu/clearValueOf';
 
 /**
  * Open one bloom pass against `target`'s view. A `'clear'` pass reads the
@@ -51,6 +52,7 @@ import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';
 function openBloomPass(
   encoder: GPUCommandEncoder,
   ctx: FrameView,
+  state: EngineState,
   view: GPUTextureView,
   target: string,
   loadOp: 'clear' | 'load',
@@ -61,7 +63,7 @@ function openBloomPass(
       ? {
           view,
           loadOp: 'clear',
-          clearValue: ctx.snapshot.renderTargets.specOf(target).clearValue,
+          clearValue: clearValueOf(ctx.snapshot.renderTargets.specOf(target), state),
           storeOp: 'store',
         }
       : { view, loadOp: 'load', storeOp: 'store' };
@@ -99,7 +101,15 @@ export function runBloom(
     : undefined;
 
   // Bright prefilter: hdr → bloom0, clearing bloom0. Carries the slot's begin.
-  const brightPass = openBloomPass(encoder, ctx, viewOf('bloom0'), 'bloom0', 'clear', beginWrites);
+  const brightPass = openBloomPass(
+    encoder,
+    ctx,
+    state,
+    viewOf('bloom0'),
+    'bloom0',
+    'clear',
+    beginWrites,
+  );
   pyramid.bright(brightPass, viewOf('hdr'), threshold);
   brightPass.end();
 
@@ -111,7 +121,7 @@ export function runBloom(
   for (const level of downsampleLevels) {
     const src = `bloom${level - 1}`;
     const target = `bloom${level}`;
-    const pass = openBloomPass(encoder, ctx, viewOf(target), target, 'clear', undefined);
+    const pass = openBloomPass(encoder, ctx, state, viewOf(target), target, 'clear', undefined);
     pyramid.downsample(pass, viewOf(src), level, bloomSrcTexelSize(ctx, src), level === 1);
     pass.end();
   }
@@ -127,7 +137,7 @@ export function runBloom(
   for (const level of upsampleLevels) {
     const src = `bloom${level + 1}`;
     const target = `bloom${level}`;
-    const pass = openBloomPass(encoder, ctx, viewOf(target), target, 'load', undefined);
+    const pass = openBloomPass(encoder, ctx, state, viewOf(target), target, 'load', undefined);
     pyramid.upsample(pass, viewOf(src), level, bloomSrcTexelSize(ctx, src));
     pass.end();
   }
@@ -135,7 +145,7 @@ export function runBloom(
   // Fold: bloom0 → hdr, LOADING hdr (it already holds the composited scene — the
   // program places the bloom step after the foreground:0→hdr composite). Carries
   // the slot's end.
-  const foldPass = openBloomPass(encoder, ctx, viewOf('hdr'), 'hdr', 'load', endWrites);
+  const foldPass = openBloomPass(encoder, ctx, state, viewOf('hdr'), 'hdr', 'load', endWrites);
   pyramid.fold(foldPass, viewOf('bloom0'), strength);
   foldPass.end();
 }
