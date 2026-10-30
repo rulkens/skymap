@@ -18,7 +18,8 @@ import { BASE } from '../../packages/website/src/data/site';
 
 const HEIGHT_FOR_WIDTH: Record<number, number> = { 1440: 900, 1024: 768, 400: 860 };
 // The dev overlay marks all it adds with data-overlay-ui (dev/overlay/overlayUi.ts).
-const HIDE = '[data-overlay-ui], astro-dev-toolbar, body > header { display: none !important; }';
+const HIDE =
+  '[data-overlay-ui], astro-dev-toolbar, header:has(nav[aria-label="Main"]) { display: none !important; }';
 // One scroll step per 0.6 viewport, each long enough for a lazy picture to start and decode.
 const STEP_MS = 120;
 
@@ -62,12 +63,17 @@ for (const width of values.widths.split(',').map(Number)) {
     fullPage: true,
   });
 
-  // A section is the nearest ancestor of an h2 that is a direct child of <main>, so its whole band is shot.
+  // A section is the outermost box between the h2 and <main>, so its whole band is shot. An island
+  // wrapper (`astro-island`) is `display: contents` and has no box of its own, so it never counts.
   const sections = await page.$$eval('main h2', (headings) =>
     headings.map((h) => {
       let el: Element = h;
-      while (el.parentElement && el.parentElement.tagName !== 'MAIN') el = el.parentElement;
-      const box = el.getBoundingClientRect();
+      let band: Element = h;
+      while (el.parentElement && el.parentElement.tagName !== 'MAIN') {
+        el = el.parentElement;
+        if (getComputedStyle(el).display !== 'contents') band = el;
+      }
+      const box = band.getBoundingClientRect();
       return { text: h.textContent ?? '', y: box.top + window.scrollY, h: box.height };
     }),
   );
