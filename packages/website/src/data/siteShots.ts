@@ -1787,7 +1787,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'cut-mars',
     link: `focus=body-mars&${NOON}&pose=a,0,0,0,0.75,0.3,4.1e-16,0`,
-    settings: { ...CUTOUT, settleMs: 6000 },
+    // Mars's moons (meshes) and the other planets' point glints would stand in the frame as stray specks.
+    settings: { ...CUTOUT, hidePasses: ['body-meshes', 'body-glints'], settleMs: 6000 },
     size: WIDE,
     widths: CUT_WIDTHS,
     title: 'Mars',
@@ -1851,7 +1852,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'cut-pluto',
     link: 'focus=body-pluto&t=2026-10-07T12:00:00Z&pose=a,0,0,0,-1.9664,0.3,1.45e-16,0',
-    settings: { ...CUTOUT, settleMs: 8000 },
+    // Pluto's haze shell only dims what is behind it: on the black/white pair it reads as a dark ring round the limb.
+    settings: { ...CUTOUT, hidePasses: ['atmosphere-shell', 'aerial-perspective'], settleMs: 8000 },
     size: WIDE,
     widths: CUT_WIDTHS,
     title: 'Pluto',

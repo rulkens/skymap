@@ -19,7 +19,7 @@ export const solarSystem: readonly FeatureSlide[] = [
   { view: 'cut-mars', piece: 'ui-card-mars', fact: 'mars-distance', accent: '#eeb18b' },
   { view: 'cut-moon', piece: 'ui-card-moon', fact: 'moon-distance', accent: '#c5b5b7' },
   { view: 'cut-io', piece: 'ui-card-io', fact: 'io-lap', accent: '#e7ca92' },
-  { view: 'cut-pluto', piece: 'ui-card-pluto', fact: 'pluto-distance', accent: '#c9beb0' },
+  { view: 'cut-pluto', piece: 'ui-card-pluto', fact: 'pluto-distance', accent: '#cabfb0' },
 ];
 
 export const missions: readonly FeatureSlide[] = [
