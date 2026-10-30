@@ -45,6 +45,7 @@ describe('visibleSlabBodies', () => {
     const belowFloor: PlanetBody = {
       id: asSceneBodyId('below'),
       label: 'Below floor',
+      captionKind: 'planet',
       resolvePx: 3,
       surface: { datumRadiusM: 3e22 / PROXY_SCALE, reliefM: [0, 0] },
       albedo: [1, 1, 1],
@@ -52,6 +53,7 @@ describe('visibleSlabBodies', () => {
     const aboveFloor: PlanetBody = {
       id: asSceneBodyId('above'),
       label: 'Above floor',
+      captionKind: 'planet',
       resolvePx: 3,
       surface: { datumRadiusM: 3.2e22 / PROXY_SCALE, reliefM: [0, 0] },
       albedo: [1, 1, 1],
@@ -83,6 +85,7 @@ describe('visibleSlabBodies', () => {
     const orphan: PlanetBody = {
       id: asSceneBodyId('orphan'),
       label: 'Orphan',
+      captionKind: 'planet',
       resolvePx: 3,
       surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
       albedo: [1, 1, 1],
@@ -133,6 +136,7 @@ describe('visibleSlabBodies', () => {
     const wideBody: PlanetBody = {
       id: asSceneBodyId('wide'),
       label: 'Wide body',
+      captionKind: 'planet',
       resolvePx: 3,
       surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
       albedo: [1, 1, 1],
@@ -176,6 +180,7 @@ describe('visibleSlabBodies', () => {
       const straddling: PlanetBody = {
         id: asSceneBodyId('straddling'),
         label: 'Straddling',
+        captionKind: 'planet',
         resolvePx: 3,
         surface: { datumRadiusM, reliefM: [0, 0] },
         albedo: [1, 1, 1],
