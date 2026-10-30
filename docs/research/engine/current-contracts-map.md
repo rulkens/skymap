@@ -26,7 +26,7 @@ central file rather than contributing a row.
 
 ⚪ Seventh, parallel surface: **pick/selection** (~10–17 files per focusable
 kind) — out of bundle scope →
-[focusable-kind backlog](../../backlog/2026-08-17-focusable-kind-registry.md).
+[focusable-kind backlog](../../backlog/2026-10-28-selection-kind-facts-in-the-layer.md).
 
 What one new subsystem touches today:
 
@@ -197,7 +197,7 @@ flowchart LR
 
 - `pickProgram` is a deliberate **sibling** of the frame executor: demand-driven, own encoder, own lazily-allocated `r32uint` targets (`pickProgram.ts:92`).
 - `frontmostPick` folds **slab-ordered, not depth-ordered** — the slab-partition invariant.
-- Layer-side contract (`drawPick`/`pickEnabled`) is clean; the smear is **per kind**: 10–17 dispatch files per focusable kind → [backlog item](../../backlog/2026-08-17-focusable-kind-registry.md). Fresh evidence within range: zone-of-avoidance (#555) touched 13 production files to join the `SelectionRef`/`SelectionRow`/`FocusableTarget` cascade — even though it ends up declared NON-focusable (`focusFraming`'s throw arm), which surfaced a second backlog item, [focusability declared twice on the same discriminant](../../backlog/2026-08-17-focusability-double-encoded.md).
+- Layer-side contract (`drawPick`/`pickEnabled`) is clean; the smear is **per kind**: 10–17 dispatch files per focusable kind → [backlog item](../../backlog/2026-10-28-selection-kind-facts-in-the-layer.md). Fresh evidence within range: zone-of-avoidance (#555) touched 13 production files to join the `SelectionRef`/`SelectionRow`/`FocusableTarget` cascade — even though it ends up declared NON-focusable (`focusFraming`'s throw arm), which surfaced a second backlog item, [focusability declared twice on the same discriminant](../../backlog/2026-08-17-focusability-double-encoded.md).
 
 ## 6. Assessment — ranked by cost-per-new-subsystem
 
