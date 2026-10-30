@@ -117,7 +117,7 @@ describe('satellites near Earth', () => {
     const states = deriveBodyStates(CONST_J2000 + 100);
     const earth = states.get(SCENE_EARTH.id)!.positionMpc;
     const at = (km: number): number => {
-      const entry = APP_VISIBILITY.find((e) => 'key' in e && e.key === 'satellites')!;
+      const entry = APP_VISIBILITY_REGISTRY.find((e) => 'key' in e && e.key === 'satellites')!;
       const eye: Vec3 = [earth[0] + km * SCALE_UNITS.KM_TO_MPC, earth[1], earth[2]];
       return bandValueOf(entry, 'active', { drawCamPos: eye, snapshot: { bodyStates: states } });
     };

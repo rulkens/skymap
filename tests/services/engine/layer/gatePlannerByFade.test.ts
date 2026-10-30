@@ -7,7 +7,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { galaxyCatalogPlanner } from '../../../../src/layers/galaxyCatalog/frame';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
@@ -61,7 +61,7 @@ describe('gatePlannerByFade', () => {
   it('the survey planner keeps its survey catalogs at the home view, inside the deep-zoom band', () => {
     const value = onceValue(
       galaxyCatalogPlanner({} as never),
-      makeState(APP_VISIBILITY),
+      makeState(APP_VISIBILITY_REGISTRY),
       viewAt(SCALE_UNITS.AU_TO_MPC),
     ) as Record<string, number>;
     expect(value.sdss).toBe(1);
