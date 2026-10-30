@@ -13,6 +13,7 @@ import { describe, it, expect } from 'vitest';
 
 import { SCALE_FADE_BANDS } from '../../src/data/scaleFadeBands';
 import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/data/starBackdropDissolve';
+import { FOREGROUND_RECEDE } from '../../src/data/bands/foregroundRecede';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../src/data/labels/solarSystemLabelMaxDistance';
 import { regionById } from '../../src/utils/regions/regionById';
@@ -38,12 +39,10 @@ describe('star fade bands — pop-free coupling to their gates', () => {
     );
   });
 
-  it('the star backdrop dissolves fully inside the shared foreground gate', () => {
-    // The backdrop band must complete STRICTLY before `FOREGROUND_MAX_DISTANCE_MPC`
-    // hard-cuts the layer, so the gate lands on already-black sprites and never
-    // pops. A retune that pushed `goneAt` out to (or past) the gate would
-    // reintroduce the hard-cut blob this fix dissolved.
-    expect(STAR_BACKDROP_DISSOLVE.out[1]).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+  it('the star backdrop is gone before the foreground gate begins to recede', () => {
+    // The backdrop must reach 0 before FOREGROUND_RECEDE starts, so the NEAR0
+    // foreground step idles at galaxy zoom and never has a visible star to cut.
+    expect(STAR_BACKDROP_DISSOLVE.out[1]).toBeLessThan(FOREGROUND_RECEDE.out[0]);
   });
 
   it('the body-glint backdrop dissolves fully inside the shared foreground gate', () => {

@@ -73,14 +73,14 @@ describe('seeded star sets dissolve from their own region', () => {
   ];
 
   it.each([FAMOUS_STAR_ENTRY.id, SUN_ENTRY.id])(
-    'seeded neighbourhood stars (%s) are full at 1 kpc from home and gone at 23 kpc',
+    'seeded neighbourhood stars (%s) are full at 1 kpc from home and gone at the far edge of the backdrop',
     (item) => {
       expect(valueAtEye('starCatalog', along([0, 0, 0], SCALE_UNITS.KPC_TO_MPC), item)).toBe(1);
       expect(valueAtEye('starCatalog', along([0, 0, 0], goneAt), item)).toBe(0);
     },
   );
 
-  it('S-stars are full at 1 pc from the galactic centre and gone at 23 kpc from it', () => {
+  it('S-stars are full at 1 pc from the galactic centre and gone at the far edge of the backdrop from it', () => {
     expect(valueAtEye('starCatalog', along(gc, SCALE_UNITS.PC_TO_MPC), S_STAR_ENTRY.id)).toBe(1);
     expect(valueAtEye('starCatalog', along(gc, -goneAt), S_STAR_ENTRY.id)).toBe(0);
   });
