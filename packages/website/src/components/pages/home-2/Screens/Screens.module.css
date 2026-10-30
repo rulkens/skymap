@@ -1,0 +1,67 @@
+.root {
+  composes: wrap section from '../../../../styles/layout.module.css';
+}
+
+/*
+ * Two rows shared by every part (subgrid): the devices stand on one line, the tallest setting it, and the
+ * words start on the next. Columns in proportion to the devices' widths, so each is drawn near its size.
+ */
+.row {
+  display: grid;
+  grid-template-columns: 10fr 13fr 24fr 14fr;
+  grid-template-rows: auto auto;
+  column-gap: var(--col-gap);
+  row-gap: 2rem;
+  margin-top: 4rem;
+}
+
+.part {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  row-gap: 2rem;
+  min-width: 0;
+
+  & h3 {
+    margin-bottom: 0.5rem;
+  }
+}
+
+.note {
+  composes: small from '../../../../styles/type.module.css';
+  margin-bottom: 0.5rem;
+  color: var(--site-text-dim);
+}
+
+.device {
+  container-type: inline-size;
+  display: grid;
+  align-self: end;
+  justify-items: center;
+}
+
+/* Turned, the phone reads smaller than its width: it takes most of its column. */
+.phone .device {
+  --phone-width: 82cqw;
+}
+
+/* The ring stands outside the disc. */
+.dome .device {
+  padding: var(--disc-ring);
+}
+
+@media (max-width: 900px) {
+  .row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 2rem;
+    row-gap: 1.25rem;
+  }
+
+  .part {
+    row-gap: 1.25rem;
+  }
+
+  .phone .device {
+    --phone-width: min(70cqw, 10rem);
+  }
+}

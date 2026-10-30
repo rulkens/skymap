@@ -7,6 +7,7 @@ import Credits from '../../../components/shared/text/Credits/Credits.tsx';
 import Flight from '../../../components/pages/home/Flight/Flight.tsx';
 import Places from '../../../components/pages/home/Places/Places.tsx';
 import { placeLines } from '../../../components/pages/home/Places/placeLines.ts';
+import Screens from '../../../components/pages/home-2/Screens/Screens.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
 import Stories from '../../../components/pages/home-2/Stories/Stories.tsx';
 
@@ -15,6 +16,7 @@ import Stories from '../../../components/pages/home-2/Stories/Stories.tsx';
 <Flight stops={props.stops} videoUrl={props.videoUrl} client:load />
 <Places lines={placeLines()} client:visible />
 <Stories client:visible />
+<Screens />
 <Section as="div">
   <Credits />
 </Section>
