@@ -29,6 +29,8 @@ export type SiteShotSettings = {
   /** The galaxy flow ribbons on (off by default in the app). */
   flow?: true;
   fovDeg?: number;
+  /** The tone map's exposure in place of the app's default (DEFAULT_EXPOSURE, 3): higher lifts dark sides and faint light, and burns highlights sooner. */
+  exposure?: number;
   /** Density correction on "None — raw catalogue" in place of the app's first choice. */
   rawDensity?: true;
   /** The data size, where the picture is not of the one the window's width picks. */
