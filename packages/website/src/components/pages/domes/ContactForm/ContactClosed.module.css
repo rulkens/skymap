@@ -2,16 +2,24 @@
   max-width: 36rem;
 }
 
+/* The address is the section's action, so it is set as large as a heading and wraps only at its @. */
 .lead {
-  margin-bottom: 0.45em;
+  margin-bottom: 0.5em;
   font: var(--weight-display) var(--text-ring-big) / var(--leading-display)
     var(--font-family-display);
-  color: var(--color-fg);
+  overflow-wrap: anywhere;
+
+  & a {
+    color: var(--color-fg);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
 }
 
 .note {
   composes: small from '../../../../styles/type.module.css';
   max-width: none;
-  margin-top: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
   color: var(--site-text-dim);
 }

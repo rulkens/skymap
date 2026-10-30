@@ -5,7 +5,7 @@
  */
 import Beside from '../../../shared/layout/Beside/Beside.tsx';
 import Section from '../../../shared/layout/Section/Section.tsx';
-import { CONTACT_ENDPOINT, ISSUES_URL, TURNSTILE_SITE_KEY } from '../../../../data/contact';
+import { CONTACT_EMAIL, CONTACT_ENDPOINT, ISSUES_URL, TURNSTILE_SITE_KEY } from '../../../../data/contact';
 import { sitePath } from '../../../../utils/sitePath';
 import ContactClosed from '../ContactForm/ContactClosed.tsx';
 import ContactForm from '../ContactForm/ContactForm.tsx';
@@ -33,7 +33,7 @@ const privacyHref = sitePath('/privacy/');
             issuesHref={ISSUES_URL}
           />
         ) : (
-          <ContactClosed privacyHref={privacyHref} issuesHref={ISSUES_URL} />
+          <ContactClosed email={CONTACT_EMAIL} issuesHref={ISSUES_URL} />
         )
       }
     </div>
