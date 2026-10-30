@@ -11,7 +11,7 @@ from the text below:
 - §5.5: the asset row also demands while the search palette is open or a satellite is selected, so a
   satellite can be searched for, and followed, from anywhere.
 - Satellites start off; every class starts on. A satellite link opened with satellites off switches
-  them on and arrives (`docs/superpowers/specs/2026-10-29-selection-driven-layers-design.md` §4).
+  them on and arrives (`docs/superpowers/specs/completed/2026-10-29-selection-driven-layers-design.md` §4).
 - Following a satellite: core re-extracts the selected or focused satellite's row every frame and
   places it in the frame's body states (#974, which replaced #955's `transientPositions` registry);
   satellites are still never `bodies` rows (§2).

@@ -12,7 +12,7 @@ registry into one per-frame core step, then removes the satellites Layer's selec
 
 **Tech Stack:** TypeScript, Redux Toolkit + typed-redux-saga, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-10-29-selection-driven-layers-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-10-29-selection-driven-layers-design.md`
 
 ## Global Constraints
 
@@ -240,19 +240,20 @@ review: yes (sagas)
 
 ### Task 7: Verification
 
-- [ ] **Step 1:** Perf: `npm run perf:cpu -- --url http://localhost:<wt port>` at an Earth pose with the ISS
+- [x] **Step 1:** Perf: `npm run perf:cpu -- --url http://localhost:<wt port>` at an Earth pose with the ISS
   focused, clock running and paused, main vs branch. A regression over 0.1 ms/frame → add the one-entry
   satrec memo in the satellites row and re-measure.
-- [ ] **Step 2:** Eye-check pairs (main vs branch, deep links): cold `#focus=satellite-25544&t=2026-10-29T12:00:00Z`
+- [x] **Step 2:** Eye-check pairs (main vs branch, deep links): cold `#focus=satellite-25544&t=2026-10-29T12:00:00Z`
   (main: 30 s veil, then Earth; branch: arrives at the ISS), and the ISS trail/follow at 1 h/s.
-- [ ] **Step 3:** `/feature-done`.
+- [x] **Step 3:** `/feature-done`.
 
 ## Definition of Done
 
-- [ ] `grep -rn "transientPositions\|createSelectedSatellites\|deps\.store" src` has no code hits.
-- [ ] `npm run typecheck` and `npm test` green; CI green on both PRs.
-- [ ] A cold satellite deep link with Satellites off arrives (saga test + eye-check).
-- [ ] Hover never loads the catalog or flips a switch (tests).
-- [ ] Perf at the ISS pose within 0.1 ms/frame of main, running and paused.
-- [ ] Only the three consented Layer-contract changes landed.
-- [ ] Plan and spec filed under `*/completed/` by `/feature-done`.
+- [x] `grep -rn "transientPositions\|createSelectedSatellites\|deps\.store" src` has no code hits.
+- [x] `npm run typecheck` and `npm test` green; CI green on both PRs.
+- [x] A cold satellite deep link with Satellites off arrives (saga test + eye-check).
+- [x] Hover never loads the catalog or flips a switch (tests).
+- [x] Perf at the ISS pose within 0.1 ms/frame of main, running and paused.
+- [x] Only the consented Layer-contract changes landed (`DemandCtx.selectedKinds`, `LayerCoreDeps` thunks,
+  `DriverGeometry.placedEachFrame` ruled 2026-10-30, `ShowEntry.selects`).
+- [x] Plan and spec filed under `*/completed/` by `/feature-done`.
