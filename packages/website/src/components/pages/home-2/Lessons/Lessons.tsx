@@ -81,7 +81,7 @@ function Lessons() {
               <div
                 className={cx(styles.frame, motion.unmask)}
                 style={{ '--reveal-delay': `${(at % 2) * 80}ms` } as CSSProperties}
-                data-reveal
+                data-reveal="unmask"
               >
                 <div className={styles.ground}>
                   {part.film ? (

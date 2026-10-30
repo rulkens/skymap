@@ -62,7 +62,7 @@ function RealData() {
               style={{ '--kind-accent': kind.accent } as CSSProperties}
             >
               <figure className={styles.figure}>
-                <div className={cx(styles.window, motion.rise)} style={delay(at)} data-reveal>
+                <div className={styles.window} style={delay(at)} data-reveal="rise">
                   <Shot id={kind.shot} sizes="(max-width: 900px) 50vw, 18rem" />
                 </div>
                 <figcaption className={styles.caption}>
@@ -106,9 +106,9 @@ function RealData() {
         <div className={styles.strip}>
           {HONESTY_BINS.map((bin, at) => (
             <figure key={bin.id} className={styles.bin}>
-              <div className={cx(styles.over, motion.unmask)} style={delay(at)} data-reveal>
+              <div className={cx(styles.over, motion.unmask)} style={delay(at)} data-reveal="unmask">
                 <Shot id={bin.shot} sizes="(max-width: 900px) 100vw, 34vw" />
-                <p className={cx(styles.word, motion.rise)} style={delay(at + 2)} data-reveal>
+                <p className={styles.word} style={delay(at + 2)} data-reveal="rise">
                   <strong>{bin.title}</strong>
                   <span>{bin.gloss}</span>
                 </p>

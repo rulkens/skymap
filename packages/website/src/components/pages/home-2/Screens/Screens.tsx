@@ -9,7 +9,6 @@ import type { CSSProperties } from 'react';
 
 import { appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
-import motion from '../../../../styles/motion.module.css';
 import { cx } from '../../../../utils/cx.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
@@ -68,9 +67,9 @@ function Screens() {
         {PARTS.map((part, at) => (
           <div
             key={part.kind}
-            className={cx(styles.part, styles[part.kind], motion.rise)}
+            className={cx(styles.part, styles[part.kind])}
             style={{ '--reveal-delay': `${at * 40}ms` } as CSSProperties}
-            data-reveal
+            data-reveal="rise"
           >
             <div className={styles.device}>
               <div className={styles.body}>
