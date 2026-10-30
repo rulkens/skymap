@@ -7,6 +7,7 @@
 import { CLASS_FEATURES } from '../../../../content/pages/classroom/classFeatures.ts';
 import { appLink } from '../../../../data/appLink.ts';
 import { LESSON_TOPICS } from '../../../../data/lessons.ts';
+import { cx } from '../../../../utils/cx.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import SectionHead from '../../../shared/layout/SectionHead/SectionHead.tsx';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
@@ -25,7 +26,7 @@ const clock = feature('class-time');
 const search = feature('class-search');
 const andromeda = lesson('lesson-andromeda');
 
-// `film` plays the loop of the same id (data/siteLoops.ts) over its still, which gives the label.
+// `whole` keeps a picture of one panel uncut (it has its own edge). `film` plays the loop of the same id (data/siteLoops.ts) over its still, which gives the label.
 const PARTS = [
   {
     title: 'Ready-made links',
@@ -46,10 +47,11 @@ const PARTS = [
   },
   {
     title: 'Questions to chase',
-    shot: search.shot,
+    shot: 'home-search',
     ask: search.ask,
     hash: search.hash,
     large: false,
+    whole: true,
   },
   {
     title: 'Feel the scale',
@@ -79,7 +81,7 @@ function Lessons() {
       <div className={styles.parts}>
         {PARTS.map((part) => (
           <div key={part.title} className={styles.part}>
-            <figure className={styles.figure}>
+            <figure className={cx(styles.figure, part.whole && styles.whole)}>
               <div className={styles.frame}>
                 {part.film ? (
                   <FeatureFilm film={part.shot} sizes={sizes(part.large)} wide />

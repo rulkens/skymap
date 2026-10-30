@@ -28,13 +28,26 @@
   }
 }
 
+/* A panel with its own rounded edge stands whole on the page, as an object: no crop, no frame; its label is as wide. */
+.whole {
+  max-width: 24rem;
+
+  & .frame {
+    aspect-ratio: auto;
+  }
+
+  & img {
+    height: auto;
+  }
+}
+
 .caption {
   margin-top: 0.5rem;
 }
 
 /* Narrow, each picture takes the window's whole width; its label keeps to the text's edge. */
 @media (max-width: 900px) {
-  .frame {
+  .figure:not(.whole) .frame {
     margin-inline: calc(-1 * var(--gutter));
   }
 }
