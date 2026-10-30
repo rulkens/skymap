@@ -11,6 +11,28 @@
   }
 }
 
+/* A column's own list of points: short lines parted by hairlines, no bullets. A one-line lead keeps a second line's room, so the lists of a row start level. */
+.root > * > p:has(+ ul) {
+  min-height: 2lh;
+}
+
+.root > * > ul {
+  margin: 0 0 var(--stack);
+  padding: 0;
+  list-style: none;
+  color: var(--site-text-muted);
+
+  & li {
+    max-width: var(--measure);
+    padding-block: 0.625rem;
+    line-height: 1.45;
+  }
+
+  & li + li {
+    border-top: 1px solid var(--border-divider);
+  }
+}
+
 /* A column's closing link, or row of links, stands on the foot of the row, so the links of a row share one line. */
 .root > * {
   display: flex;

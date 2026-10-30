@@ -15,9 +15,7 @@ import ScaleQuestion from '../../../components/pages/classroom/ScaleQuestion/Sca
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
 import links from '../../../styles/links.module.css';
-import text from '../../../styles/type.module.css';
 import { sitePath } from '../../../utils/sitePath';
-import { says } from './classroom.data';
 
 <ScaleQuestion />
 
@@ -49,20 +47,35 @@ import { says } from './classroom.data';
   <Columns count={3}>
     <div>
       <h3>What it runs on</h3>
-      <p><a href={sitePath('/docs/reference/glossary/#webgpu')}>WebGPU</a> is the part of a browser that lets a web page draw with the computer’s graphics chip.{' '}{says('webgpu-required')}</p>
-      <p className={text.small}>{says('webgpu-browsers')}</p>
+      <p>A browser with <a href={sitePath('/docs/reference/glossary/#webgpu')}>WebGPU</a>, on by default as of 6 October 2026 in:</p>
+      <ul>
+        <li>Chrome 113 and later on Windows, macOS and ChromeOS</li>
+        <li>Chrome 121 and later on Android 12 and later</li>
+        <li>Safari 26 on Mac, iPhone and iPad</li>
+        <li>Firefox 141 and later on Windows, 147 on Macs with Apple silicon</li>
+        <li>Linux, depending on the graphics card and driver</li>
+      </ul>
       <ObjLink size="small" hang href={sitePath('/docs/start/browsers/')}>Browser support and troubleshooting</ObjLink>
     </div>
     <div>
       <h3>Try one link first</h3>
-      <p>Open one link on a pupil’s device before the lesson. School networks and older graphics chips differ.{' '}{says('app-browser-advice')}</p>
-      <p>There is nothing to install. {says('no-account')} The app counts visits without cookies: the{' '}<a href={sitePath('/privacy/')}>privacy page</a> has the details.</p>
+      <p>Open one link on a pupil’s device before the lesson.</p>
+      <ul>
+        <li>School networks and older graphics chips differ</li>
+        <li>Without WebGPU, the app shows a short page and loads no data</li>
+        <li>It then advises a recent Chrome or Edge on a desktop computer</li>
+        <li>Nothing to install, no accounts</li>
+        <li>Visits counted without cookies: see the <a href={sitePath('/privacy/')}>privacy page</a></li>
+      </ul>
     </div>
     <div>
       <h3>Limits</h3>
-      <p>{says('english-only')}</p>
-      <p>{says('phone-data-size')}</p>
-      <p>A link fixes the camera among the stars, so it cannot show the Moon’s phases as they look from the ground. There is no link for phases or eclipses.</p>
+      <p>Check these against your lesson.</p>
+      <ul>
+        <li>English only: the interface, the tour captions and the exhibit notes</li>
+        <li>On a screen under 768 pixels wide, the smallest data size, with fewer stars and galaxies</li>
+        <li>No link shows the Moon’s phases or an eclipse as seen from the ground</li>
+      </ul>
     </div>
   </Columns>
 </Section>
