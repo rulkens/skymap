@@ -44,11 +44,14 @@ const sources = (group: string) =>
     count: row.drawn ?? row.rows,
   }));
 // What a source's count is of: the noun of its catalogue size ("44,599 galaxies"), unless that only says rows,
-// objects or spectra, where the group's word stands in (2MRS holds galaxies only; GLADE and DESI hold both).
+// objects or spectra. Then the source's own word where it holds one kind: SDSS is queried for class GALAXY only
+// (docs/DATA.md), Milliquas is quasars and other active nuclei, and DESI's table row gives galaxies. GLADE+, which
+// takes in quasar catalogues, keeps the group's word.
 const GENERIC = ['rows', 'objects', 'spectra'];
-const countNoun = (rows: string | undefined, group: string) => {
+const SOURCE_NOUN: Record<string, string> = { sdss: 'galaxies', milliquas: 'quasars', desi: 'galaxies' };
+const countNoun = (id: string, rows: string | undefined, group: string) => {
   const noun = rows?.split(' ')[1];
-  return noun && !GENERIC.includes(noun) ? noun : group;
+  return noun && !GENERIC.includes(noun) ? noun : (SOURCE_NOUN[id] ?? group);
 };
 const delay = (at: number) => ({ '--reveal-delay': `${at * 60}ms` }) as CSSProperties;
 
@@ -99,7 +102,7 @@ function RealData() {
                         <span className={styles.big} aria-hidden>
                           {row.count.split(' ')[0]}
                           <small>
-                            {kind.counts ? `${countNoun(row.rows, kind.counts)} from ` : ''}
+                            {kind.counts ? `${countNoun(row.id, row.rows, kind.counts)} from ` : ''}
                             {shortName(row.name)}
                           </small>
                         </span>
