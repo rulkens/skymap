@@ -25,7 +25,7 @@ const clock = feature('class-time');
 const search = feature('class-search');
 const andromeda = lesson('lesson-andromeda');
 
-// `film` is a loop of data/siteLoops.ts shown in the picture's place; its label is its still's.
+// `film` plays the loop of the same id (data/siteLoops.ts) over its still, which gives the label.
 const PARTS = [
   {
     title: 'Ready-made links',

@@ -1,0 +1,174 @@
+.root {
+  composes: wrap section from '../../../../styles/layout.module.css';
+}
+
+/* Each kind's picture, title and names are rows shared across the four (subgrid), so the titles line up. */
+.kinds {
+  composes: grid quarters from '../../../../styles/layout.module.css';
+  row-gap: 0;
+}
+
+.kind {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  align-content: start;
+}
+
+.figure {
+  margin: 0 0 1.5rem;
+}
+
+.square {
+  aspect-ratio: 1;
+  overflow: hidden;
+
+  & picture {
+    display: block;
+    height: 100%;
+  }
+
+  & img {
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* Where each subject sits in its wide frame, so the square keeps it. */
+.kind:nth-child(1) img {
+  object-position: 45% 50%;
+}
+
+.kind:nth-child(4) img {
+  object-position: 85% 50%;
+}
+
+.caption {
+  margin-top: 0.5rem;
+}
+
+/* The names as one run of links, the way the table lists them. */
+.names {
+  composes: bare from '../../../../styles/layout.module.css';
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 0.25rem 1rem;
+  font-size: var(--text-small);
+  font-weight: var(--weight-small);
+  line-height: 1.5;
+
+  & a {
+    color: var(--site-text-muted);
+    text-decoration-color: rgb(195 205 232 / 0.4);
+  }
+}
+
+.bins {
+  margin-top: 7rem;
+}
+
+.binsHead {
+  composes: grid from '../../../../styles/layout.module.css';
+  align-items: end;
+  margin-bottom: 2rem;
+
+  & h3 {
+    font-size: var(--text-ring-big);
+    line-height: var(--leading-display);
+  }
+
+  & p {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Three pictures edge to edge: one strip, cut in three. */
+.strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 2px;
+}
+
+.bin {
+  margin: 0;
+}
+
+.over {
+  position: relative;
+
+  & img {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  /* The word stands on the picture's foot, darkened to 0.85: 4.5:1 for the dim line over a white star. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(0 0 0 / 0) 35%, rgb(0 0 0 / 0.85) 82%);
+  }
+}
+
+.word {
+  position: absolute;
+  z-index: 1;
+  inset: auto 1.25rem 1rem;
+  display: grid;
+  gap: 0.125rem;
+  max-width: none;
+  margin: 0;
+
+  & strong {
+    font: var(--weight-display) var(--text-ring-big) / var(--leading-display)
+      var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  /* Two lines whether or not the gloss needs them, so the three words stand on one line. */
+  & span {
+    min-height: 2.8em;
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    line-height: 1.4;
+    color: var(--site-text-muted);
+  }
+}
+
+.bin .caption {
+  padding-inline: 0.25rem;
+}
+
+@media (min-width: 901px) {
+  .binsHead h3 {
+    grid-column: span 6;
+  }
+
+  .binsHead > :not(h3) {
+    grid-column: 7 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Two by two: the page grid with two columns. */
+  .kinds {
+    --cols: 2;
+    row-gap: 2.5rem;
+
+    & > * {
+      grid-column: auto;
+    }
+  }
+
+  .strip {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    margin-inline: calc(-1 * var(--gutter));
+  }
+
+  .bin .caption {
+    padding-inline: var(--gutter);
+  }
+}
