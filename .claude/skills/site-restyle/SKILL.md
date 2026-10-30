@@ -39,6 +39,15 @@ The owner asked: "use screenshots more creatively, i.e. integrate more into the 
 
 Every new shot row must be used on a page, or the shot test fails.
 
+**Judge the pictures themselves, not only the layout.** On every pass, look at each picture the section uses:
+- **Framing:** is the subject cropped badly or too small?
+- **Background:** is it busy behind the type?
+- **Labels:** are app labels showing where they shouldn't?
+- **Consistency:** does it match its neighbours' angle and light?
+- **Fit:** is it the right subject for the section's job?
+
+If a picture is the section's weakest thing, ask for a new one rather than designing around it. Either reshoot the row yourself with `npm run site:shots -- --url <app> --only <id>`, or send a request to whoever runs the shoot, with the subject, view or pose, size and why.
+
 ## 1. Shoot the before
 
 ```
