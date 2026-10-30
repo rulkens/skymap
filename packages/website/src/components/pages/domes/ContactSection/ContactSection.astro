@@ -9,11 +9,13 @@ import { CONTACT_EMAIL, CONTACT_ENDPOINT, ISSUES_URL, TURNSTILE_SITE_KEY } from 
 import { sitePath } from '../../../../utils/sitePath';
 import ContactClosed from '../ContactForm/ContactClosed.tsx';
 import ContactForm from '../ContactForm/ContactForm.tsx';
+import VoyagerPath from '../VoyagerPath/VoyagerPath.tsx';
 
 const privacyHref = sitePath('/privacy/');
 ---
 
 <Section id="contact">
+  <VoyagerPath />
   <Beside>
     <div>
       <h2>Write to us</h2>

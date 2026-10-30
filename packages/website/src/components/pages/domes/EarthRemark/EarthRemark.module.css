@@ -1,0 +1,88 @@
+.root {
+  /* From the column's left edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  --globe: 27rem;
+  position: relative;
+  isolation: isolate;
+}
+
+/* A box the globe's size; the picture inside is centred on it, the globe being 0.44 of the picture's width. */
+.earth {
+  position: absolute;
+  z-index: -1;
+  top: 20%;
+  left: calc(-1 * var(--bleed) - 0.08 * var(--globe));
+  width: var(--globe);
+  aspect-ratio: 1;
+  translate: 0 -50%;
+  pointer-events: none;
+
+  & picture {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(var(--globe) / 0.44);
+    translate: -50% -50%;
+    mix-blend-mode: screen;
+    mask-image: radial-gradient(closest-side, #000 76%, rgb(0 0 0 / 0) 84%);
+  }
+
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+@keyframes earth-drift {
+  from {
+    translate: 0 calc(-50% + 2.5rem);
+  }
+
+  to {
+    translate: 0 calc(-50% - 2.5rem);
+  }
+}
+
+@keyframes earth-drift-narrow {
+  from {
+    translate: 0 1.5rem;
+  }
+
+  to {
+    translate: 0 -1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .earth {
+      animation: earth-drift linear both;
+      animation-timeline: view();
+    }
+  }
+}
+
+/* Narrow: a smaller globe stands out past the right edge, above the sentence. */
+@media (max-width: 900px) {
+  .root {
+    --globe: 13rem;
+    padding-top: 9rem;
+  }
+
+  .earth {
+    top: 0;
+    right: calc(-1 * var(--gutter) - 0.3 * var(--globe));
+    left: auto;
+    translate: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .earth {
+        animation-name: earth-drift-narrow;
+      }
+    }
+  }
+}

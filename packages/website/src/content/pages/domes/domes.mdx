@@ -9,6 +9,7 @@ import Credits from '../../../components/shared/text/Credits/Credits.tsx';
 import Delivery from '../../../components/pages/domes/Delivery/Delivery.tsx';
 import DeliveryColumn from '../../../components/pages/domes/DeliveryColumn/DeliveryColumn.tsx';
 import DiscBand from '../../../components/pages/domes/DiscBand/DiscBand.tsx';
+import EarthRemark from '../../../components/pages/domes/EarthRemark/EarthRemark.tsx';
 import Exhibit from '../../../components/pages/domes/Exhibit/Exhibit.tsx';
 import LicenceTable from '../../../components/pages/domes/LicenceTable/LicenceTable.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
@@ -95,7 +96,9 @@ import { STEPS } from './domes.data';
       <ObjLink hang size="small" href={sitePath('/docs/credits/')}>Credits and licences</ObjLink>
     </div>
   </Beside>
-  <Remark text={fact('earth-rotation').short} live="dome-turn" />
+  <EarthRemark>
+    <Remark text={fact('earth-rotation').short} live="dome-turn" />
+  </EarthRemark>
 </Section>
 
 <Section id="commission">

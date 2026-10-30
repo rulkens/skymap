@@ -1,0 +1,119 @@
+/*
+ * The render's own geometry, measured on orbits-voyager: the path leaves the Sun at (51.3%, 51.6%) of the frame
+ * and climbs at 33.4 degrees; it meets the frame's edge 0.528 of the frame's width out. On cut-voyager1 the dish's
+ * centre is at (50.6%, 51.8%). Turning the drawing by 33.4 degrees plus `--descent` lays the path along a line
+ * that falls `--descent` to the right, and the spacecraft stands `--reach-len` along it.
+ */
+.root {
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  /* The point this box sits on is the top of the section's text; the Sun stands up in the gap above it. */
+  --w: 144vw;
+  --descent: 4deg;
+  --reach-len: calc(0.47 * var(--w));
+  --sun-x: 20vw;
+  --sun-y: -8rem;
+  /* Above the page in paint order, but screened: over black it shows, over the type it changes nothing. */
+  position: relative;
+  left: calc(-1 * var(--bleed));
+  width: 100vw;
+  height: 0;
+  overflow-x: clip;
+  pointer-events: none;
+  timeline-scope: --voyager;
+}
+
+.sun {
+  position: absolute;
+  top: var(--sun-y);
+  left: var(--sun-x);
+}
+
+/* Only the corridor of Voyager 1's line, and a small disc round the Sun, are kept; `--reach` draws the line out. */
+.path {
+  position: absolute;
+  top: calc(-0.516 * 0.5625 * var(--w));
+  left: calc(-0.513 * var(--w));
+  width: var(--w);
+  rotate: calc(33.4deg + var(--descent));
+  transform-origin: 51.3% 51.6%;
+  mix-blend-mode: screen;
+  mask-image:
+    linear-gradient(146.6deg, rgb(0 0 0 / 0) 50.7%, #000 51.15%, #000 51.7%, rgb(0 0 0 / 0) 52.15%),
+    radial-gradient(
+      circle at 51.3% 51.6%,
+      rgb(0 0 0 / 0) 4%,
+      #000 9%,
+      #000 calc(var(--reach) - 5%),
+      rgb(0 0 0 / 0) var(--reach)
+    );
+  mask-composite: intersect;
+
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+.craft {
+  position: absolute;
+  top: calc(var(--sun-y) + var(--reach-len) * sin(var(--descent)));
+  left: calc(var(--sun-x) + var(--reach-len) * cos(var(--descent)));
+  width: 32rem;
+  translate: -50.6% -51.8%;
+  rotate: var(--descent);
+  transform-origin: 50.6% 51.8%;
+  mix-blend-mode: screen;
+  mask-image: radial-gradient(closest-side, #000 80%, rgb(0 0 0 / 0));
+  view-timeline-name: --voyager;
+
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+/* The whole line by default: without scroll-driven animation, or with reduced motion, nothing is left to draw. */
+@property --reach {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 81%;
+}
+
+/* 81% of the ray to the frame's far corner is `--reach-len`: the line ends in the spacecraft. */
+@keyframes path-draw {
+  from {
+    --reach: 9%;
+  }
+
+  to {
+    --reach: 81%;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .path {
+      animation: path-draw linear both;
+      animation-timeline: --voyager;
+      animation-range: entry 0% cover 55%;
+    }
+  }
+}
+
+/* Narrow: the Sun near the left edge, a steeper fall, the spacecraft past the right edge above the heading. */
+@media (max-width: 900px) {
+  .root {
+    --w: 150vw;
+    --descent: 10deg;
+    --sun-x: 4vw;
+    --sun-y: -2.5rem;
+  }
+
+  .craft {
+    width: 70vw;
+  }
+}
