@@ -30,5 +30,8 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // positions match the frame that drew them.
     simDays: state.cameraRuntime.outputs.simDays,
     tier: state.tier,
+    selectedKinds: new Set(
+      [state.selection.select, state.selection.focus].flatMap((ref) => (ref ? [ref.type] : [])),
+    ),
   };
 }

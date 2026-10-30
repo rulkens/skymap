@@ -187,6 +187,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // directly. Per state so no pending entry survives into the next case, and
     // at the production concurrency so `firedKeys` exercises the real bound.
     subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
+    selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
   // The composed lists `createLayers` would have written: core's mesh rows plus
   // the Layers', folded once, with every row's slot indexed by its key. The mesh

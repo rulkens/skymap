@@ -28,7 +28,6 @@ import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { HOSTLESS_MESH_BODIES } from '../../../data/bodies/hostlessMeshBodies';
 import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
-import { deriveBodyStates } from './deriveBodyStates';
 import { createFramePlannerResultStore } from './createFramePlannerResultStore';
 import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverageOf';
 import { fadeIdentityKey } from '../../../utils/visibility/fadeIdentityKey';
@@ -47,11 +46,7 @@ export function deriveFrameContext(
   if (!isEngineReady(state)) {
     return { isReady: false };
   }
-  const { cam, arm, altitudeMpc, nowMs, simDays } = input;
-
-  // `deriveBodyStates` memoizes on `simDays`, so every later `sceneBodyStates` call
-  // this frame returns this SAME Map.
-  const bodyStates = deriveBodyStates(simDays);
+  const { cam, arm, altitudeMpc, nowMs, simDays, bodyStates } = input;
 
   // Same roll as NEAR0's vp derivation (shared `imagePlaneBasis`); read `cam.roll`,
   // never 0, so body rows stay aligned once a roll is set.

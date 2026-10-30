@@ -86,6 +86,7 @@ function makeState(
       },
     },
     slotsByKey: points,
+    selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
 }
 
@@ -435,6 +436,7 @@ describe('evaluateRows — body textures at a stale tier', () => {
         },
       },
       slotsByKey: new Map([[key, slot]]),
+      selection: { hover: null, select: null, focus: null },
     } as unknown as EngineState;
   }
 
