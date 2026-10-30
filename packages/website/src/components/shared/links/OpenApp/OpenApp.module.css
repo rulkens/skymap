@@ -17,9 +17,9 @@
   text-decoration: none;
   white-space: nowrap;
   transition:
-    background-color 150ms ease-out,
-    border-color 150ms ease-out,
-    transform 150ms ease-out;
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
 }
 
 .root svg {
