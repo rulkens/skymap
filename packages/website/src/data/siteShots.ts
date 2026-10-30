@@ -14,11 +14,21 @@ const ONE_GALAXY: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCo
 // A data page's picture stands in the text column, 552 px at most: 1280 covers it at 2x.
 const DATA_WIDTHS = [1280, 640];
 const NOON = 't=2026-10-05T12:00:00Z';
-// A cutout: the subject alone on black, for a page to blend in with `screen`.
-const CUTOUT: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true, hideStars: true };
+const SUBJECT_ALONE: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true, hideStars: true };
+// A cutout: the subject alone on transparency, for a page to lay over its own ground.
+const CUTOUT: SiteShotSettings = { ...SUBJECT_ALONE, matte: 'occluding' };
 const CUT_WIDTHS = [1920, 1280];
-// An orbit drawing: the lines are the subject, so the trails stay on and everything else is off.
-const ORBITS: SiteShotSettings = { hideLabels: true, hideStructures: true, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true, hideStars: true };
+// An orbit drawing: the lines are the subject, kept as light on transparency; everything else is off.
+const ORBITS: SiteShotSettings = {
+  hideLabels: true,
+  hideStructures: true,
+  hideGalaxyField: true,
+  hideCosmicWeb: true,
+  hideZoneOfAvoidance: true,
+  hideStars: true,
+  matte: 'emissive',
+  keepPasses: ['orbit-trails', 'mission-trails'],
+};
 // Late morning in Copenhagen at midsummer, the time the park's other pictures are taken at.
 const PARK_TIME = 't=2026-06-21T11:00:00Z';
 // The Time films: stills 960 wide like the films, and 480 for a thumbnail.
@@ -809,6 +819,67 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'The orbits are computed and drawn as lines.',
     alt: 'Orbit rings around a labelled Sun, beside notes headed What you’re seeing, How it was made and Sources.',
   },
+  // Home's Stories: the tour's cosmic-web step and the Solar System exhibit, each taken apart into layers on
+  // transparency that the page moves on their own. The interface pieces are found by the dev server's CSS-module
+  // class names (`_caption_<hash>`), which keep the source's class name at their start.
+  {
+    // 20 s into the step the caption is fully in and the camera has pulled back over the web's near edge.
+    id: 'stories-web',
+    link: 'tour=grandTour',
+    settings: { tourStep: 8, settleMs: 20000, matte: 'emissive', keepPasses: ['cosmic-web-density', 'cosmic-web-density-upsample'], hideLabels: true, hideStructures: true },
+    size: { width: 1600, height: 1000 },
+    widths: [1920, 1280, 800],
+    title: 'The cosmic web in the tour',
+    drawn: 'The purple field is density computed from SDSS galaxy positions.',
+    alt: 'A purple web of threads with gold knots, ending at a straight edge.',
+  },
+  {
+    id: 'stories-rings',
+    link: 'tour=grandTour',
+    settings: { tourStep: 8, settleMs: 20000, matte: 'emissive', keepPasses: ['structure-markers-cosmo'], hideStructureLabels: true },
+    size: { width: 1600, height: 1000 },
+    widths: [1920, 1280, 800],
+    title: 'The superclusters the tour marks',
+    drawn: 'Each disc is a named supercluster at its catalogued place and size.',
+    alt: 'Soft gold discs, each inside a thin ring, scattered across black.',
+  },
+  {
+    id: 'stories-tour-caption',
+    link: 'tour=grandTour',
+    settings: { ui: true, tourStep: 8, settleMs: 20000, element: 'div[class^=_caption_]' },
+    size: FEATURE,
+    widths: [720, 360],
+    title: 'The tour’s caption at the cosmic web',
+    alt: 'The Long Way Out, step 9 of 14: The cosmic web. Far enough out, galaxies trace a web: bright threads and clumps where superclusters gather, ringed by dark voids.',
+  },
+  {
+    id: 'stories-orbits',
+    link: 'exhibit=solarSystem',
+    settings: { settleMs: 9000, matte: 'emissive', keepPasses: ['orbit-trails'], hideLabels: true },
+    size: { width: 1600, height: 1000 },
+    widths: [1920, 1280, 800],
+    title: 'The Solar System exhibit’s orbits',
+    drawn: 'The orbits are computed and drawn as lines.',
+    alt: 'Nested orbit rings seen at a slant, crowded at the centre, the outer ones crossing the frame.',
+  },
+  {
+    id: 'stories-exhibit-title',
+    link: 'exhibit=solarSystem',
+    settings: { ui: true, settleMs: 9000, element: 'div[class^=_caption_]' },
+    size: FEATURE,
+    widths: [1120, 560],
+    title: 'The Solar System exhibit’s title',
+    alt: 'Exhibit: Solar System. One star, eight planets, and mostly distance. The Sun holds about 99.8% of the mass; the rest is spread across orbits that take from 88 days to 165 years.',
+  },
+  {
+    id: 'stories-exhibit-facts',
+    link: 'exhibit=solarSystem',
+    settings: { ui: true, settleMs: 9000, element: 'div[class^=_facts_]' },
+    size: FEATURE,
+    widths: [800, 400],
+    title: 'The Solar System exhibit’s figures',
+    alt: 'Planets: 8. Sun’s share of mass: 99.8%. Innermost orbit: 0.39 AU. Outermost orbit: 30 AU.',
+  },
   {
     id: 'class-time',
     link: `${JUPITER}&pose=a,0,0,0,-1.9664,1.0,1.3e-13,0`,
@@ -1485,12 +1556,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'The keys and mouse moves are the app’s own.',
     alt: 'A panel headed Navigation: drag to orbit the camera, wheel to zoom, H for the home view, F to focus, Esc to clear the selection and the search keys.',
   },
-  // Cutouts: one subject on pure black for the pages to blend with `screen`. Stars and the galaxy field are off, so nothing else is in frame.
+  // Cutouts: one subject on transparency. Stars and the galaxy field are off, so nothing else is in frame.
   {
     id: 'cut-voyager1',
     // Rolled so the long science boom lies across the frame; the narrow lens leaves no planet or moon dots in it.
     link: 'focus=body-voyager1&t=2026-09-18T12:56:32Z&pose=a,0,0,0,3.8408163993487223,-0.6565563346622649,1.75e-21,-0.7',
-    settings: { ...CUTOUT, fovDeg: 20, settleMs: 9000 },
+    settings: { ...CUTOUT, fovDeg: 20, ambient: 0.12, settleMs: 9000 },
     size: WIDE,
     widths: CUT_WIDTHS,
     title: 'Voyager 1',
@@ -1500,9 +1571,9 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   {
     id: 'cut-saturn',
-    // Just above the ring plane, lit side; the rings span about 70% of the width. Titan stays in frame as one dot.
+    // Just above the ring plane, lit side; the rings span about 85% of the width. Titan stays in frame as one dot.
     link: 'focus=body-saturn&t=2017-10-15T12:00:00Z&pose=a,0,0,0,3.75,-0.2,1.9e-14,0.2',
-    settings: { ...CUTOUT, fovDeg: 20, settleMs: 9000 },
+    settings: { ...CUTOUT, fovDeg: 18, settleMs: 9000 },
     size: WIDE,
     widths: CUT_WIDTHS,
     title: 'Saturn',
@@ -1525,14 +1596,14 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'mars-horizon',
     link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z&pose=s,perseverance,1.6,0.03,2000',
-    settings: { ...CUTOUT, fovDeg: 60, settleMs: 9000 },
+    settings: { ...SUBJECT_ALONE, fovDeg: 60, settleMs: 9000 },
     size: { width: 1440, height: 420 },
-    widths: [2400, 1440],
+    widths: [2880, 1440],
     title: 'Jezero crater from a rover’s height',
     drawn: 'The ground is measured terrain with colour from orbit; the sky is a model.',
     alt: 'A rover on a slope of smooth brown ground at the foot of a low ridge, under a dark brown sky.',
   },
-  // Orbit drawings, seen from above. The app cannot hide Jupiter's own orbit line or the dim cloud of the Milky Way, so each pose is chosen to keep them out of frame or small.
+  // Orbit drawings, seen from above. The app cannot hide Jupiter's own orbit line, so each pose is chosen to keep it out of frame or small.
   {
     id: 'orbits-inner',
     link: 't=2026-01-01T00:00:00Z&focus=star-sun&pose=a,0,0,0,0,1.0,1.4e-11,0',
@@ -1557,8 +1628,9 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     id: 'orbits-voyager',
     link: 't=2026-09-18T00:00:00Z&focus=star-sun&pose=a,0,0,0,4.468,0.5,8.5e-10,0',
     settings: { ...ORBITS, hideOrbitTrails: true, missionTrails: true, settleMs: 6000 },
-    size: WIDE,
-    widths: CUT_WIDTHS,
+    // Drawn across a whole window on the Domes page, so a 1-px path needs the frame at full width.
+    size: { width: 1920, height: 1080 },
+    widths: [3840, 1920, 1280],
     title: 'The paths of Voyager 1 and 2',
     drawn: 'The paths are computed from tracking data.',
     alt: 'Two green lines leaving a small knot at the centre, one long and straight, the other bending away.',
