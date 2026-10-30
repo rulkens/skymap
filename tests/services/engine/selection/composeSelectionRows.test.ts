@@ -16,6 +16,15 @@ import type {
   StructureRowFixture,
 } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
+import { craftSelectionRow } from '../../../../src/layers/missions/present/craftSelectionRow';
+import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/present/earthSceneSelectionRow';
+import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceSelectionRow';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
+import { satellitesSelectionRow } from '../../../../src/layers/satellites/present/satellitesSelectionRow';
+import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
+import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
+import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
+import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
 import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
 import { Source } from '../../../../src/data/source';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
@@ -492,6 +501,56 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
     const id = resolver.focusIdOf(ref);
     expect(id).toBe('m31');
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
+  });
+
+  it('GLADE ref with a catalog id → pgc-<objId> → same ref', () => {
+    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
+    const id = resolver.focusIdOf(ref);
+    expect(id).toBe('pgc-99');
+    expect(resolver.resolveFocusId(id!)).toEqual(ref);
+  });
+
+  it('structure ref → its durable id → same ref', () => {
+    const virgoId = 'galaxy-cluster-virgo';
+    const ref: SelectionRef = { type: 'structure', id: virgoId };
+    expect(resolver.focusIdOf(ref)).toBe(virgoId);
+    expect(resolver.resolveFocusId(virgoId)).toEqual(ref);
+  });
+});
+
+// Kinds whose rows the shared resolver above does not compose: every Layer's
+// row-encoder pinned to the literal `#focus=` id links in the wild carry.
+describe('focusIdOf over the Layers the shared resolver omits', () => {
+  const { catalog } = buildSatelliteCatalog(
+    [{ group: { group: 'active', class: 'active' }, records: [ISS] }],
+    0,
+  );
+  const full = composeSelectionRows(
+    () => [
+      craftSelectionRow(),
+      earthSceneSelectionRow(),
+      zoneOfAvoidanceSelectionRow(),
+      blackHoleSelectionRow(),
+      satellitesSelectionRow({
+        propagator: { catalog: () => catalog },
+      } as unknown as SatellitesRuntime),
+    ],
+    () => ALL_KINDS_ENABLED,
+  );
+  const AT = unixMsToJulianDays(Date.parse('2026-10-28T12:00:00Z'));
+  const IDS: [string, SelectionRef, string | null][] = [
+    ['craft', { type: 'craft', id: 'hubble' as never }, 'body-hubble'],
+    ['earth scene', { type: 'earthScene', id: 'soendermarken' as never }, 'body-soendermarken'],
+    ['zone of avoidance', { type: 'zoneOfAvoidance' }, null],
+    ['black hole', { type: 'blackHole', id: 'sgr-a-star' as never }, 'blackhole-sgr-a-star'],
+    ['satellite', { type: 'satellite', noradId: 25544 }, 'satellite-25544'],
+  ];
+
+  it.each(IDS)('%s', (_name, ref, id) => {
+    // Each ref is extracted first so a row that cannot resolve fails here
+    // rather than encoding a stale id.
+    expect(full.extractRow(ref, AT)).not.toBeNull();
+    expect(full.focusIdOf(ref)).toBe(id);
   });
 });
 
