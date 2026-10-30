@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { SURVEYS_OFF } from '../../../../src/data/exhibits/utils/surveysOff';
+import { SURVEYS_OFF } from '../../../../src/compositions/exhibits/utils/surveysOff';
 
 describe('SURVEYS_OFF', () => {
   it('keeps the famous galaxies as landmarks and silences every survey', () => {

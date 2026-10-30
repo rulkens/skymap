@@ -48,8 +48,8 @@
  *   D  — fade all active layers to black on clipOpacity (transient; intent untouched)
  */
 
-import type { Clip } from '../../../@types/animation/Clip';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Clip } from '../../@types/animation/Clip';
+import type { Vec3 } from '../../@types/math/Vec3';
 import {
   all,
   dollyTo,
@@ -62,8 +62,8 @@ import {
   scene,
   seq,
   wait,
-} from '../../../services/engine/animation/effectHelpers';
-import { setFlowEnabled } from '../../../layers/flow/state/flow/slice';
+} from '../../services/engine/animation/effectHelpers';
+import { setFlowEnabled } from '../../layers/flow/state/flow/slice';
 
 export const cosmicFlows: Clip = {
   id: 'cosmicFlows',

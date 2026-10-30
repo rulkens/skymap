@@ -88,15 +88,8 @@ function assertSweep(
 }
 
 const CORE_ALLOWED: Readonly<Record<string, number>> = {
-  '@types/animation/SettingsAction.d': 2,
   'components/containers/GalaxyProvenanceSectionContainer': 2,
-  'data/animation/clips/cosmicFlows': 1,
   'data/bodies/earthSceneBodyIds': 1,
-  'data/exhibits/cosmicFlows': 3,
-  'data/exhibits/cosmicWeb': 2,
-  'data/exhibits/utils/cosmicWebDensityOff': 1,
-  'data/exhibits/utils/surveysOff': 1,
-  'data/exhibits/zoneOfAvoidance': 3,
   'data/lightTime/lightTimeSpheres': 1,
   'data/milkyWay/milkyWayFacts': 1,
 };
@@ -235,5 +228,32 @@ describe('layer.ts, slices.ts, slice.ts, initialState.ts, defaults.ts, sources/ 
       return hits.length === 0 ? [] : [`${file} imports a selectors module: ${hits.join(', ')}.`];
     });
     assertNoOffenders(offenders, "A reverse import here reopens D1's module-init cycle.");
+  });
+});
+
+// The composition owns cross-Layer content and may read a Layer's state modules (initial
+// states, slice actions), never its renderers, passes or ui: those pull GPU code into every
+// importer. The `app*.ts` registries at the folder's root are unconstrained.
+const COMPOSITION_CONTENT_DIRS = ['exhibits', 'clips', '@types'];
+const LAYER_STATE_MODULE_RE = /^src\/layers\/[^/]+\/state\//;
+
+describe('composition content imports only Layer state modules', () => {
+  const files = COMPOSITION_CONTENT_DIRS.flatMap((dir) => walk(`src/compositions/${dir}`));
+  expect(files.length).toBeGreaterThan(0);
+
+  it('every src/layers specifier is under a Layer state/ folder', () => {
+    const offenders = files.flatMap((file) => {
+      const hits = specifiersMatching(
+        file,
+        (resolved) => resolved.startsWith('src/layers/') && !LAYER_STATE_MODULE_RE.test(resolved),
+      );
+      return hits.length === 0
+        ? []
+        : [`${file} imports beyond a Layer state/ folder: ${hits.join(', ')}.`];
+    });
+    assertNoOffenders(
+      offenders,
+      'Cross-Layer content reads Layer state only; a renderer, pass or ui import belongs in the Layer.',
+    );
   });
 });

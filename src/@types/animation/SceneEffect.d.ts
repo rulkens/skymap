@@ -58,7 +58,7 @@
 
 import type { VisibilityAddress } from './VisibilityAddress';
 import type { ScopedVisibilityAddress } from './ScopedVisibilityAddress';
-import type { SettingsAction } from './SettingsAction';
+import type { SettingsAction } from '../../compositions/@types/SettingsAction';
 import type { SelectionRef } from '../engine/SelectionRef';
 import type { OrientationFrameId } from '../camera/OrientationFrameId';
 import type { Ease } from './Ease';
