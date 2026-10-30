@@ -1,5 +1,56 @@
 .root {
   composes: wrap section from '../../../../styles/layout.module.css';
+  position: relative;
+  isolation: isolate;
+}
+
+/*
+ * Saturn itself, cut from black (screen blend, a feathered edge), beside the centred title: the planet every
+ * screen below shows. A band the window's width holds it, so a ring past the window's edge is cut, not scrolled to.
+ */
+.planet {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  height: 36rem;
+  overflow: hidden;
+  pointer-events: none;
+
+  & picture {
+    position: absolute;
+    top: 3rem;
+    left: calc(50% + 15rem);
+    width: 48rem;
+    mix-blend-mode: screen;
+    mask-image: radial-gradient(closest-side at 50% 52%, #000 70%, rgb(0 0 0 / 0));
+  }
+}
+
+@keyframes planet-drift {
+  from {
+    translate: 0 2rem;
+  }
+
+  to {
+    translate: 0 -2rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .planet picture {
+      animation: planet-drift linear both;
+      animation-timeline: view();
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .planet {
+    display: none;
+  }
 }
 
 .head {

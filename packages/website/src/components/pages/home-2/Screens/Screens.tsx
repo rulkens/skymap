@@ -2,8 +2,8 @@
  * Screens — Home's row of the screens Skymap runs on, each showing Saturn: a phone, a tablet, a desktop and a
  * dome. All four are one system: drawn the same height, standing on one floor line, each with the depth of a
  * case, and turned together, toward the pointer and a little with the scroll (phoneTurn.client.ts sets the
- * pointer's offset on the row). Wide, the title is centred over the row, the page's one centred head. Narrow,
- * the row is two by two.
+ * pointer's offset on the row). Wide, the title is centred over the row, the page's one centred head, and the
+ * planet they all show floats free beside it, drifting a little with the scroll. Narrow, the row is two by two.
  */
 import type { CSSProperties } from 'react';
 
@@ -16,6 +16,7 @@ import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import DeviceFrame from '../../../shared/media/DeviceFrame/DeviceFrame.tsx';
 import Disc from '../../../shared/media/Disc/Disc.tsx';
 import Phone3D from '../../../shared/media/Phone3D/Phone3D.tsx';
+import Shot from '../../../shared/media/Shot/Shot.tsx';
 import styles from './Screens.module.css';
 
 // The case behind a flat device: as many slices as the phone's, one pixel apart. The phone draws its own.
@@ -55,6 +56,9 @@ const PARTS = [
 function Screens() {
   return (
     <section className={styles.root} id="screens">
+      <div className={styles.planet} aria-hidden>
+        <Shot id="cut-saturn" sizes="48rem" alt="" />
+      </div>
       <div className={styles.head}>
         <h2>Explore the universe anywhere</h2>
         <p>
