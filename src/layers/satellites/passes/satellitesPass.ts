@@ -10,7 +10,6 @@
  */
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { SatellitesRuntime } from '../@types/SatellitesRuntime';
-import type { Vec3 } from '../../../@types/math/Vec3';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
@@ -32,13 +31,13 @@ import { composeTemeToWorld } from '../subsystems/composeTemeToWorld';
 import { SATELLITE_SWEEP_TIMING } from '../../../data/satellites/satelliteSweepTiming';
 
 export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satellites'> {
-  const opacityOf = (simDays: number, eye: Readonly<Vec3>, earthMpc: Readonly<Vec3>): number => {
+  const opacityOf = (simDays: number): number => {
     const sweep = runtime.renderer.uploaded();
     const age = sweep === null ? Infinity : Math.abs(julianDaysToUnixMs(simDays) - sweep.simMs);
     return (
       sweepAgeOpacity(
         Math.max(age, runtime.simRate.rate() * SATELLITE_SWEEP_TIMING.expectedSweepLagMs),
-      ) * satelliteLayerOpacity(runtime.propagator.catalog(), simDays, eye, earthMpc)
+      ) * satelliteLayerOpacity(runtime.propagator.catalog(), simDays)
     );
   };
 
@@ -66,7 +65,7 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
         (earth.positionMpc[2] - eye[2]) / SCALE_UNITS.KM_TO_MPC,
       ],
       temeToWorld: composeTemeToWorld(earth.orientation, simDays),
-      opacity: opacityOf(simDays, eye, earth.positionMpc),
+      opacity: opacityOf(simDays),
       classOpacity: [fade.active, fade.debris, fade.other],
       occluders: sceneOccluderSpheres(state, ctx),
       depth,
@@ -77,10 +76,9 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
     name: 'satellites',
     fade: 'satellites',
 
-    enabled(state, ctx, view, fade) {
-      const earth = sceneBodyStates(state, ctx).get(SCENE_EARTH.id);
-      if (earth === undefined) return false;
-      return opacityOf(ctx.snapshot.simDays, view.camPos, earth.positionMpc) > 0;
+    enabled(state, ctx) {
+      if (!sceneBodyStates(state, ctx).has(SCENE_EARTH.id)) return false;
+      return opacityOf(ctx.snapshot.simDays) > 0;
     },
 
     draw(pass, view, ctx, state, fade) {

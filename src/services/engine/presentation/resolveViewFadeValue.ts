@@ -1,10 +1,9 @@
 /**
  * The handed value for a per-view consumer: `resolveFadeValue` times the address's distance
- * band at this view. Once-scope planners keep `resolveFadeValue`: one result there serves
- * every view, so no one view's distance may enter it (a once-scope compute reads the canvas
- * view, see `gateComputeByFade`; scene-body admission reads the frame camera). Memoised per
- * view and address, since `gatePassByFade` asks up to four times per pass per view; a view is
- * minted per frame, so the memo never outlives the snapshot it read.
+ * band at this view. Once-scope computes and planners read it at the canvas view (see
+ * `gateComputeByFade`, `gatePlannerByFade`); scene-body admission reads the frame camera.
+ * Memoised per view and address, since `gatePassByFade` asks up to four times per pass per
+ * view; a view is minted per frame, so the memo never outlives the snapshot it read.
  */
 
 import type { FadeValueOf } from '../../../@types/animation/FadeValueOf';

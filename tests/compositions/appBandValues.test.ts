@@ -12,6 +12,7 @@ import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';
 import { STAR_CATALOG_IDS } from '../../src/data/starCatalog/starCatalogIds';
 import { SEEDED_STAR_CATALOGS } from '../../src/data/bodies/seededStarCatalogs';
 import { normalize3 } from '../../src/utils/math/normalize3';
+import { SCENE_EARTH } from '../../src/data/bodies/sceneEarth';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 
 const BODY_STATES = deriveBodyStates(CONST_J2000);
@@ -107,5 +108,23 @@ describe('flow at the Cosmic Flows exhibit pose', () => {
   it('is full at the nearest the exhibit eye can sit to home', () => {
     const { target, distance } = cosmicFlows.pose!;
     expect(valueAt('flow', distance - Math.hypot(...target))).toBe(1);
+  });
+});
+
+// Pins the satellites to Earth's LIVE position: measured from a J2000 anchor, a camera beside
+// today's Earth would sit a fraction of an orbit away and the dots would never show.
+describe('satellites near Earth', () => {
+  it('are full at 300 000 km and gone at 600 000 km from Earth, away from J2000', () => {
+    const states = deriveBodyStates(CONST_J2000 + 100);
+    const earth = states.get(SCENE_EARTH.id)!.positionMpc;
+    const at = (km: number): number => {
+      const entry = APP_VISIBILITY.find((e) => 'key' in e && e.key === 'satellites')!;
+      const eye: Vec3 = [earth[0] + km * SCALE_UNITS.KM_TO_MPC, earth[1], earth[2]];
+      return bandValueOf(entry, 'active', { drawCamPos: eye, snapshot: { bodyStates: states } });
+    };
+    expect(at(300_000)).toBe(1);
+    expect(at(450_000)).toBeGreaterThan(0);
+    expect(at(450_000)).toBeLessThan(1);
+    expect(at(600_000)).toBe(0);
   });
 });

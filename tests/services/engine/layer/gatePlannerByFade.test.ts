@@ -1,6 +1,7 @@
 /**
- * One plan of a once-scope planner serves every view, so it must not carry any one view's
- * distance band; a perView planner must. Either side silently flipping draws the wrong cut.
+ * A once-scope planner reads the band at the canvas view (`views[0]`), as a once-scope compute
+ * does; a perView planner reads its own view's. A once-scope planner losing the band plans work
+ * (an SGP4 sweep) for a Layer nothing draws.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -31,8 +32,7 @@ function makeState() {
 }
 
 describe('gatePlannerByFade', () => {
-  it('a once-scope planner gets no band', () => {
-    const state = makeState();
+  it('a once-scope planner gets the band at the canvas view, and none without a view', () => {
     const plan = vi.fn((..._args: unknown[]) => RESULT);
     const planner = {
       name: 'p',
@@ -40,10 +40,12 @@ describe('gatePlannerByFade', () => {
       fade: 'probe',
       plan,
     } as unknown as FrameContentPlanner<null>;
-    const gated = gatePlannerByFade(planner, state);
+    const gated = gatePlannerByFade(planner, makeState());
     if (gated.scope !== 'once') throw new Error('scope lost');
     gated.plan(SNAPSHOT, [viewAt2()], S);
-    expect(plan.mock.calls[0]![3]).toBe(1);
+    expect(plan.mock.calls[0]![3]).toBe(0);
+    gated.plan(SNAPSHOT, [], S);
+    expect(plan.mock.calls[1]![3]).toBe(1);
   });
 
   it('a perView planner gets its view band', () => {

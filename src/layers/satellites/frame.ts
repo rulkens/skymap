@@ -8,8 +8,6 @@ import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContent
 import type { SatellitesRuntime } from './@types/SatellitesRuntime';
 import type { SatelliteSweep } from './@types/SatelliteSweep';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
-import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
-import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { satelliteLayerOpacity } from './subsystems/satelliteLayerOpacity';
 import { sweepDue } from './subsystems/sweepDue';
 import { SATELLITE_CLASSES } from '../../data/satellites/satelliteClasses';
@@ -29,14 +27,9 @@ export function satellitesPlanner(
       const simMs = julianDaysToUnixMs(snapshot.simDays);
       runtime.simRate.observe(simMs, snapshot.nowMs);
       const catalog = propagator.catalog();
-      const earth = deriveBodyStates(snapshot.simDays).get(SCENE_EARTH.id);
-      if (catalog === null || earth === undefined || views.length === 0) return IDLE;
+      if (catalog === null || views.length === 0) return IDLE;
       if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return IDLE;
-      if (
-        satelliteLayerOpacity(catalog, snapshot.simDays, views[0]!.drawCamPos, earth.positionMpc) <=
-        0
-      )
-        return IDLE;
+      if (satelliteLayerOpacity(catalog, snapshot.simDays) <= 0) return IDLE;
 
       const latest = propagator.latest();
       if (latest !== null && latest !== drawn?.sweep) {
