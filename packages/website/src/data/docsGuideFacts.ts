@@ -534,7 +534,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'exhibit-key',
     about: 'app',
     text: 'Cosmic Flows and Cosmic Web also print a key to their colours, with a switch under it that brings the galaxies back into the view and takes them out again.',
-    source: `${REPO_BLOB}/src/data/exhibits/cosmicWeb.ts`,
+    source: `${REPO_BLOB}/src/compositions/exhibits/cosmicWeb.ts`,
     sourceLabel: `the Cosmic Web exhibit, ${IN_REPO}`,
     checked: CHECKED,
   },

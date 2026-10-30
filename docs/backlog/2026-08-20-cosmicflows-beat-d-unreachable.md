@@ -3,7 +3,7 @@
 **Area:** tour/animation · **Readiness:** ready
 
 Surfaced by rung 7's T7 review (`decisions.md` #18 closing paragraphs,
-2026-08-20): `compileClip(cosmicFlows.data)` (`src/data/animation/clips/cosmicFlows.ts`)
+2026-08-20): `compileClip(cosmicFlows.data)` (`src/compositions/clips/cosmicFlows.ts`)
 yields `durationSec = 20`, with beat D's cue —
 `fade([… milkyWayDisk …], 0, 3)` at `:96` — landing at `atSec = 20`, exactly
 on the compiled boundary. `fade` cues contribute **zero awaited seconds** to

@@ -23,7 +23,7 @@ The core tables the satellites kind had to join (each `file:line` is the satelli
 - `focusFraming` `src/services/engine/camera/focusFraming.ts:61`: camera framing.
 - `mayHaveLabel` `src/utils/selection/mayHaveLabel.ts:23`: whether a hover may carry a label.
 - `pickingSlice` `src/state/settings/core/pickingSlice.ts:22`: the default pick switch.
-- Every exhibit's picking snapshot: `src/data/exhibits/zoneOfAvoidance.ts:34`,
+- Every exhibit's picking snapshot: `src/compositions/exhibits/zoneOfAvoidance.ts:34`,
   `src/layers/body/exhibits/solarSystem.ts:42`, `src/layers/missions/exhibits/voyagerMissions.ts:94`.
 - `galaxyType` `src/utils/math/galaxyType.ts:100`: an exhaustive `Source` switch that has to name every
   non-galaxy source.

@@ -3,7 +3,7 @@
 **Readiness:** M-items `ready`; J-items `needs-design` (each needs a consented contract member). Surveyed at
 `742f6e21b` (main + body PR 2).
 
-**Answer.** The body PR finishes the body family, but core still holds about **10.7k LOC that could move with no
+**Answer.** The body PR finishes the body family, but core still holds about **10.4k LOC that could move with no
 contract change**, plus about **7.3k LOC behind missing joints**. About **27k LOC (including ~11k WESL) stays in
 core for a legitimate reason**: shared infrastructure, tool-shared formats, shaders by rule, or the unshipped v2
 Milky Way field.
@@ -21,7 +21,6 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | M1 | Single-Layer files left in core (~286 files: renderer/subsystem types, settings types, helpers, generated data) | 14 Layers (galaxyCatalog 2.9k, missions 1.2k, cosmicWebDensity 0.9k, starCatalog 0.8k, milkyWay 0.55k, body 0.48k, flow 0.41k, blackHoles 0.33k, …) | MOVE-NOW | ~8,200 | none: `npm run move-files` per Layer |
 | M2 | Galaxy + star detail cards (+ compact cards, star astro utils) | galaxyCatalog, starCatalog | MOVE-NOW | ~807 | none: `ui.detailCard` exists; drop `CORE_DETAIL_CARDS` |
 | M4 | `TIPS` table split (star/galaxy/milkyWay/structure keys) | 4 Layers | MOVE-NOW | ~391 | none (split one table) |
-| M5 | Cosmic Flows, Cosmic Web, Zone of Avoidance exhibits | flow, cosmicWebDensity, zoneOfAvoidance | MOVE-NOW | 313 | none: `exhibits` exists; precedent for cross-Layer initialState imports |
 | M6 | Galaxy provenance debug section | galaxyCatalog | MOVE-NOW | 286 | none: `ui.debug` exists |
 | M7 | Earth settings subgroup | body | MOVE-NOW* | 162 | a placement ruling: it nests inside core's Display section |
 | M8 | Milky Way + seeded-star palette arms | milkyWay, starCatalog | MOVE-NOW | ~100 | none: `search` fits |
@@ -46,12 +45,12 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | S6 | Shaders for Layer content | all | STAYS | ~6,000 WESL | README rule |
 | S7 | Body infrastructure per spec §4, shared places, labels/markers/selection ring, tours, featured tabs, tier | shared | STAYS | n/a | shared by ≥2 Layers or engine infrastructure |
 
-Totals: MOVE-NOW ~10,700 (M1 8.2k + M2-M8 2.4k). NEEDS-JOINT ~7,300. STAYS ~27,000 including ~11,000 WESL.
+Totals: MOVE-NOW ~10,400 (M1 8.2k + M2-M8 2.1k). NEEDS-JOINT ~7,300. STAYS ~27,000 including ~11,000 WESL.
 
 Known items, refined:
 
 1. **Seeded stars** are sized at ~2.7k (J1). Stars are _anchors_, and `BodyPosition` only knows `site | orbit | sampled`. S-stars already fit `orbit`.
-2. **Four core exhibits**: three are MOVE-NOW (M5); Observable Universe went with the horizon shell into the `cosmicHorizon` Layer.
+2. **Four core exhibits**: three moved to `compositions/exhibits/` (cross-Layer content); Observable Universe went with the horizon shell into the `cosmicHorizon` Layer.
 3. **`near0SphereBodies`** filters through `bodySlabRosterIds`, the hand roster (`SCENE_PLANETS` + mesh bodies) (J13).
 4. **blackHoles' "anchor" read** is a core _place_ (`galactic-centre`, shared with the S-stars, regions and Milky Way framing) and legitimately stays. The real content leaks are the `sgr-a-star` row in `bodyFacts.generated` (J5), and the `sgrAStar` sky-capture row and lensing band (J14). `sgrAStarMassSolar` has 3 readers, so it stays.
 
@@ -85,10 +84,6 @@ M1 sweep starts.
 
 ### M4. `TIPS` table split: ~391 of 582 lines
 `components/InfoCard/tooltips.tsx` is one `Record` of tooltip copy for every card. By key usage: star 160 lines (13 keys), galaxy 116 (9), body 115 (10, stays with the shared BodyDetailCard), milkyWay 68 (6), structure 47 (4), shared 59. The milkyWay and structure cards already reach from their Layers into this core table.
-
-### M5. Three core exhibits: 313
-`data/exhibits/cosmicFlows` 108 → flow, `cosmicWeb` 110 → cosmicWebDensity, `zoneOfAvoidance` 95 → zoneOfAvoidance.
-**Why still core.** They are rows in `src/data/exhibits/exhibitRegistry.ts`; the `exhibits` Layer member (#854) already hosts the Voyager exhibit. The one multi-Layer case, Observable Universe, already lives in the `cosmicHorizon` Layer. Cosmic Web's subject is the `polyphorm-2mrs` volume (`cosmicWebFilaments` is the other candidate home). `ExhibitId` is a hand-kept union that `exhibitRegistry`'s `Record` checks for completeness; once rows come from Layers it should be derived from the folded rows. These exhibits import other Layers' `initialState`. `body/exhibits/solarSystem.ts` (→ starCatalog) and `missions/exhibits/voyagerMissions.ts` (→ galaxyCatalog, starCatalog, structure) already do the same and nothing forbids it, so it does not block. `utils/cosmicWebDensityOff` is also read by `featuredTabs`, so it stays.
 
 ### M6. Galaxy provenance debug section: 286
 `DebugPanel/GalaxyProvenanceSection` 154, `containers/GalaxyProvenanceSectionContainer` 56, `utils/sumProvenanceCounts` 34, `data/provenanceFilter` 29, `GalaxyProvenanceSettings.d.ts` 13. The container imports galaxyCatalog's slice. `ui: { slot: 'debug' }` exists.
@@ -158,6 +153,12 @@ See the refinement above. Backlogged as `2026-10-28-per-body-slab-declaration.md
 ### J16. 13 galaxyCatalog/starCatalog files read `APP_SOURCE_REGISTRY` for their own rows
 galaxyCatalog `create.ts`, `load/galaxyCatalogAssetRows.ts`, `render/catalogStore.ts`, `state/galaxyCatalogs/selectors.ts`, `subsystems/proceduralDiskSubsystem.ts`, `ui/GalaxiesSection.tsx`; starCatalog `load/installStarPool.ts`, `load/starCatalogAssetRows.ts`, `load/starCatalogFetcher.ts`, `load/starCatalogSlot.ts`, `passes/fieldStarSpherePass.ts`, `render/cut/starSourcesInBand.ts`, `ui/StarCatalogTuningSectionContainer.tsx`. Per composition spec §4.7 a Layer's id-domain types and lookups derive from its own `sources` tuple, and only cross-Layer readers take the composed registry; path-only today, moved from `data/sources`.
 
+**Ruled design (2026-10-30; do after GLADE octree PR #932 lands, converting #932's three new readers in the same change):**
+- galaxyCatalog and starCatalog each build `<LAYER>_SOURCE_RECORD = sourceRecordOf(<LAYER>_SOURCE_ROWS)` in their `sources/`; `appSources.ts` spreads those records.
+- `GalaxyCatalogSourceType` / `StarCatalogSourceType` derive from the Layer's own rows, not the composed registry; wide `SourceType` params narrow to them, dropping the runtime `.type` guards and `as …Id` casts.
+- `starCatalogAssetRows` uses the row's own `entry.id`.
+- A new `layerImportBoundary` sweep forbids any `src/layers/` file importing `src/compositions/` (empty allow-list).
+
 ---
 
 ## STAYS: shared or infrastructure
@@ -178,7 +179,7 @@ galaxyCatalog `create.ts`, `load/galaxyCatalogAssetRows.ts`, `render/catalogStor
 ## Quality debt noted in passing
 
 - `@types/engine/state/FocusState`, `@types/engine/wiring/WirePointSourceDeps` and `@types/engine/layer/ComposedSources` have zero references.
-- Layer-to-Layer `initialState` imports exist (see M5) while the "Layer dependency DAG" item says a Layer may never import another; the rule and the code disagree and one needs a ruling.
+- Layer-to-Layer `initialState` imports exist while the "Layer dependency DAG" item says a Layer may never import another; the rule and the code disagree and one needs a ruling.
 - The `src/utils/math/index.ts` barrel is already covered by the queued naming-ratchets PR.
 
 ## Appendix: M1 files per Layer
