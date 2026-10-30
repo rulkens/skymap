@@ -125,6 +125,7 @@ Core holds a row per selection kind in `BUILD_FOCUSABLE` (`helpers/buildFocusabl
 - The galaxyCatalog/starCatalog fact selectors in `state/engine/selectors.ts`.
 
 **Joint.** The `SelectionKindRow` presentation members: `toFocusable(row)`, `framing(row, fovY)`, `mayHaveLabel(ref)`, a halo row. Body-like arms already avoid the framing switch through `driver: DriverGeometry`. Galaxies and structures don't host the camera, so they can't reuse it.
+Consolidated into [the selection-kind-facts item](2026-10-28-selection-kind-facts-in-the-layer.md), which carries J2 now.
 
 ### J3. Ephemeris corrections + barycentric pairs: 1,113
 `ephemerisCorrections.generated` 1,088 (26 bodies: the planets and their moons) and `barycentricPairs` 25 (earth/moon). Both are read only by the core solver, `utils/orbit/orbitRowPlacement.ts`, keyed by element id. They are body content. **Joint:** the row's `OrbitalElements` (or `LayerBody`) carries its correction and barycentre. This widens `LayerBody`, which needs consent. The generator (`build-ephemeris-corrections`) would then emit into `layers/body/`.

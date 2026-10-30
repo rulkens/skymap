@@ -52,3 +52,23 @@ carries a dead `earthScene` key with no pick source (`pickingSlice.ts:18` and ev
 - **Halo and framing.** These are core mechanisms, so the Layer picks a closed core variant rather
   than supplying code.
 - **Pick codes.** Who assigns them (today `Source.Satellite = 37` is hand-picked).
+
+## Consolidated here (2026-10-29)
+
+Carried over from the two items this one absorbs (their files are deleted).
+
+- **Sibling, not a field on the bundle** (from the 2026-08-17 focusable-kind registry item). Kinds do
+  not map 1:1 onto render subsystems: stars and bodies share layers, famous galaxies live inside the
+  catalog subsystem, Sgr A* is a caption-only anchor that draws nothing. The kind descriptor stays a
+  sibling of the subsystem bundle; a bundle may reference the kinds it renders pick geometry for.
+- **Trigger.** The next new focusable kind (globular clusters from the Harris catalog are the plausible
+  candidate). The Milky Way v1 to v2 swap does not touch this surface.
+- **Verification question** (from the `URL_HASH_FOR` duplication item): is `FocusableTarget` derivable
+  from `SelectionRef` on every arm, so one `focusId.encode` per kind replaces `URL_HASH_FOR`? Ruled
+  2026-10-29 as J15: the selection-rows saga stores `focusId` beside the focus row, and the hash
+  writer, dome status and `shareUrlFor` all read that one selector. Before deleting `focusUrl`, add a
+  galaxy ra/dec parity test. `zoneOfAvoidance` has no `focusId` row; `URL_HASH_FOR` returns null for
+  it, consistent.
+- **J2** (selection presentation in `docs/backlog/2026-10-29-layer-migration-leftovers.md`) is carried
+  by this item too.
+
