@@ -36,7 +36,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 - Look at every picture after a run. Surface imagery streams in late (`settleMs`), and `tour-cosmic-web` is taken from a tour that keeps turning, so its framing differs a little each time.
 - Budget: at most about 400 KB for a row's largest file. The runner prints each file's size.
 - A row's `denseQuality` lowers the AVIF quality of every width above its narrowest. Use it only where the wider files are drawn at 2x or more (the upright cuts a phone gets), and look at the result at that density.
-- **Trying a framing.** `npm run site:shots -- --url <app> --try '<hash body>' [--settings '<json>'] [--size 1600x1000] [--query dome] [--name n] [--out dir]` takes one picture that is in no row, with the same settings a row takes (`exposure` and `matte` among them), and writes `<out>/<name>.png` (the temp folder's `site-shot-try/` by default), cropped as the row would be. It touches neither the manifest nor the assets: try several framings, then write the one you keep as a row.
+- **Trying a framing.** `npm run site:shots -- --url <app> --try '<hash body>' [--settings '<json>'] [--size 1600x1000] [--query dome] [--name n] [--out dir]` takes one picture that is in no row, with the same settings a row takes (`exposure` and `matte` among them), and writes `<out>/<name>.png` (the temp folder's `site-shot-try/` by default), cropped as the row would be, with `<name>-shadow.png` beside it for a `shadow` setting. It touches neither the manifest nor the assets: try several framings, then write the one you keep as a row.
 
 ## Loops
 

@@ -57,7 +57,13 @@ if (tryLink !== undefined) {
     let master: Buffer;
     if (settings.matte) {
       await openSiteShot(page, base, shot);
-      master = (await shootMatte(page, shot)).master;
+      const matte = await shootMatte(page, shot);
+      master = matte.master;
+      if (matte.shadow) {
+        await shotFrame(matte.shadow, settings.crop, DPR)
+          .png()
+          .toFile(file.replace(/\.png$/, '-shadow.png'));
+      }
     } else {
       master = await captureSiteShot(page, base, shot);
     }
