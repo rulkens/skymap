@@ -404,7 +404,7 @@ Not user-facing; listed so nobody mistakes them for features. Counts are approxi
 
 | Area | About how many | Representative items | Evidence |
 | --- | ---: | --- | --- |
-| Engine composition and registries | 12 | Derive `SettingsSnapshot` from the Layer registry; focusable-kind registry; source-registry factory; scene anchors as places; seeded stars out of the body tables; `URL_GATES` table | `docs/BACKLOG.md` "Engine & State"; `docs/backlog/2026-09-21-derive-settings-snapshot.md`, `2026-08-17-focusable-kind-registry.md` |
+| Engine composition and registries | 12 | Derive `SettingsSnapshot` from the Layer registry; focusable-kind registry; source-registry factory; scene anchors as places; seeded stars out of the body tables; `URL_GATES` table | `docs/BACKLOG.md` "Engine & State"; `docs/backlog/2026-09-21-derive-settings-snapshot.md`, `2026-10-28-selection-kind-facts-in-the-layer.md` |
 | Layer composition, remaining Layers | 2 | `structure` and `body` Layers still to form | `docs/superpowers/specs/2026-09-09-layer-composition-design.md` §3; `docs/backlog/2026-09-22-stars-still-in-the-body-tables.md` |
 | Declarative frame program | 1 | Layers declare where their passes go; needs an ADR superseding 0011 | `docs/grill-sessions/declarative-frame-program-2026-09-23.md` (three cases unruled) |
 | Subsystem bundles spec | 1 | Reference only, "not executable" | `docs/superpowers/specs/2026-08-17-subsystem-bundles-design.md` status banner |

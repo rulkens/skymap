@@ -1,7 +1,8 @@
 /**
  * layerImportBoundary — the ratchet that keeps `src/layers/**` a leaf a Layer's
  * `create` composes INTO core, never a dependency core reaches back into (the
- * inbound sweep), and keeps a Layer module from importing the slice it will
+ * inbound sweep: all of `src/` outside `layers/` and `compositions/`, ADR 0013;
+ * each CORE_ALLOWED file must be a row of `src/compositions/README.md`), and keeps a Layer module from importing the slice it will
  * itself mint actions against (the outbound sweep) — D1's module-init cycle
  * risk: a Layer's own `<cluster>Slice` → `appSettingsSlices` →
  * `combinedSettingsReducer` → a Layer that reads its own slice module at
@@ -86,20 +87,48 @@ function assertSweep(
   assertNoOffenders(sweepOffenders(files, prefixes, allowed), adviceForOverBudget);
 }
 
-const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {};
+const CORE_ALLOWED: Readonly<Record<string, number>> = {
+  '@types/animation/SettingsAction.d': 2,
+  'components/containers/GalaxyProvenanceSectionContainer': 2,
+  'data/animation/clips/cosmicFlows': 1,
+  'data/bodies/earthSceneBodyIds': 1,
+  'data/exhibits/cosmicFlows': 3,
+  'data/exhibits/cosmicWeb': 2,
+  'data/exhibits/utils/cosmicWebDensityOff': 1,
+  'data/exhibits/utils/surveysOff': 1,
+  'data/exhibits/zoneOfAvoidance': 3,
+  'data/lightTime/lightTimeSpheres': 1,
+  'data/milkyWay/milkyWayFacts': 1,
+  'data/sources': 13,
+  'services/url/urlHashFor': 2,
+};
 
-describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {
-  const files = [...walk('src/services/engine'), ...walk('src/state')];
-  expect(files.length).toBeGreaterThan(0);
+const coreFiles = walk('src').filter(
+  (file) => !file.startsWith('src/layers/') && !file.startsWith('src/compositions/'),
+);
+
+describe('core files import nothing from src/layers beyond their ALLOWED row', () => {
+  expect(coreFiles.length).toBeGreaterThan(0);
 
   it('every file matches its ALLOWED row', () => {
     assertSweep(
-      files,
+      coreFiles,
       ['src/layers/'],
-      ENGINE_AND_STATE_ALLOWED,
+      CORE_ALLOWED,
       'Over the row: a Layer contributes into core through Layer.create/passes/etc, ' +
-        'not the other way — read the value through the composition, or raise the row ' +
-        'here naming why.',
+        'not the other way. Build the registry in src/compositions (ADR 0013) or read the ' +
+        'value through the composition; raise the row only with a ledger row naming why.',
+    );
+  });
+
+  it('every ALLOWED file is a row of the composition ledger', () => {
+    const ledger = readFileSync('src/compositions/README.md', 'utf8');
+    const missing = Object.keys(CORE_ALLOWED).filter((key) => !ledger.includes(`src/${key}`));
+    assertNoOffenders(
+      missing.map(
+        (key) => `src/${key} is allow-listed but absent from src/compositions/README.md.`,
+      ),
+      'Add a ledger row or finish the migration.',
     );
   });
 });

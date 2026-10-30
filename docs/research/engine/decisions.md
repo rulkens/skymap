@@ -1389,7 +1389,7 @@ deletion — follow-up PRs, each mechanical.
 - Focusability/selectability consolidation: every focusable kind hand-adds rows to
   ~10 files (FocusableTarget, SelectionRow, selectionHaloTable, pick tables, URL
   hash…) — a surface as large as rendering; bundle contract deliberately excludes.
-  Detail file: [focusable-kind backlog](../../backlog/2026-08-17-focusable-kind-registry.md).
+  Detail file: [focusable-kind backlog](../../backlog/2026-10-28-selection-kind-facts-in-the-layer.md).
   A second, related backlog item landed with the merge:
   [focusability is declared twice on the same discriminant](../../backlog/2026-08-17-focusability-double-encoded.md)
   (`ROW_FOCUSABLE` vs `focusFraming`'s throw, both hand-encoding "does this row

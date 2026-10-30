@@ -117,11 +117,13 @@ during navigation. Three shapes, in ascending effort:
 
 ## Interactions
 
-- **[Real star apparent magnitudes from Earth](2026-07-22-star-apparent-magnitude-realism.md)** —
-  the star-only, Earth-vantage subset of this; its "slider becomes exposure/adaptation" note
-  is the same keystone. Fold into whichever direction ships.
-- **[Bright star clump at ~5.9 kpc](2026-07-17-star-clump-brightness-5-9kpc.md)** — residual
-  over-exposure is display policy; a principled exposure/tone shoulder subsumes it.
+- **Real star apparent magnitudes from Earth** — the star-only, Earth-vantage subset of this:
+  calibrate so the Earth pose matches the night sky (naked-eye limit m ≈ 6.5, Sirius at m = −1.46
+  bloom-driven), with the brightness slider becoming exposure/adaptation, checked on Orion and the
+  Pleiades from the `earth-surface` perf pose.
+- **Bright star clump at ~5.9 kpc** — validation pose `target [0,0,0], distance 0.0058922765,
+  yaw 5.4131, pitch -0.1237`: the central Gaia field reads over-bright there although flux is
+  conserved, so a principled exposure/tone shoulder should tame it.
 - **Bloom** (`2026-07-21-bloom-mip-count-perf.md`, `2026-07-21-fold-star-upsample-into-tonemap.md`) —
   the bloom threshold `2.0` is load-bearing for the Sun; any brightness rebalance must hold or
   re-derive the `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE ≤ STAR_EMISSIVE` ordering
