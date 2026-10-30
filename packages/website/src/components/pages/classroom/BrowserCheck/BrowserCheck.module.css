@@ -1,17 +1,21 @@
-/* The verdict as the section's lead, behind the site's ring: filled for yes, hollow and dim for no. */
+/*
+ * The verdict as the section's lead, behind the site's ring: filled for yes, hollow and dim for no. A block
+ * with the ring hung in its margin, not a flex row, so its last line is a baseline the head can align to.
+ */
 .root {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
+  position: relative;
   max-width: var(--measure-lead);
   margin: 0;
+  padding-left: 1.625rem;
   font-size: var(--text-lead);
   color: var(--color-fg);
   text-wrap: balance;
 
   &::before {
     content: '';
-    flex: none;
+    position: absolute;
+    top: 0.55em;
+    left: 0;
     width: 0.875rem;
     height: 0.875rem;
     border: 1px solid var(--color-accent);
