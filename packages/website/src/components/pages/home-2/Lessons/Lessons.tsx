@@ -4,7 +4,8 @@
  * horizon at one scale: a small Earth on 21 June and Jupiter eleven times wider, the app's clock riding on it, a
  * hairline drawn between them as the section scrolls in. Then Orion with the app's search riding over it, and
  * Andromeda. The questions are the classroom page's own (data/lessons.ts and its class features). The section
- * stands on the field trip with no bus: Jezero crater across the window, the way in set in its sky.
+ * stands on the field trip with no bus: Jezero crater across the window, the way in set in its sky, and
+ * Perseverance, cut out with its shadow, driving up onto its own spot as the strip scrolls in.
  */
 import { CLASS_FEATURES } from '../../../../content/pages/classroom/classFeatures.ts';
 import { appLink } from '../../../../data/appLink.ts';
@@ -117,6 +118,12 @@ function Lessons() {
         <div className={styles.ground}>
           <Shot id="mars-horizon" sizes="(max-width: 900px) 260vw, 100vw" />
         </div>
+        <div className={cx(styles.rover, styles.shadow)}>
+          <Shot id="lessons-perseverance" shadow sizes="(max-width: 900px) 260vw, 100vw" alt="" />
+        </div>
+        <div className={styles.rover}>
+          <Shot id="lessons-perseverance" sizes="(max-width: 900px) 260vw, 100vw" alt="" />
+        </div>
         <div className={styles.more}>
           <ObjLink hang href={sitePath('/classroom/')}>
             Use Skymap in the classroom
@@ -124,6 +131,7 @@ function Lessons() {
         </div>
         <figcaption className={styles.marsCaption}>
           <ShotCaption id="mars-horizon" showDrawn={false} />
+          <ShotCaption id="lessons-perseverance" showTitle={false} showDrawn={false} open={false} />
         </figcaption>
       </figure>
     </section>

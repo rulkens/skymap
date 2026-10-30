@@ -59,7 +59,7 @@ export type SiteShotSettings = {
   matte?: 'occluding' | 'emissive';
   /** With `matte`: sky passes that are the subject, kept when the rest of the sky is left out (`flow`, `cosmic-web-filaments`, …). */
   keepPasses?: readonly string[];
-  /** With `matte`: the app's render passes also left out of the cut-out, such as the planet behind a craft (`earth`, `cloud-shell`, …). */
+  /** The app's render passes left out of the picture: with `matte`, out of the cut-out, such as the planet behind a craft (`earth`, `cloud-shell`, …); without, out of the scene, such as a rover the page lays back on as its own cut-out (`mission-meshes`). */
   hidePasses?: readonly string[];
   /** With `matte: 'occluding'`: also a `<id>-shadow` multiply layer (white = no shadow) of the contact shadow a craft casts on the ground. */
   shadow?: true;

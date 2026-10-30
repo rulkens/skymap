@@ -194,6 +194,34 @@
   }
 }
 
+/*
+ * Perseverance and its contact shadow, each a layer of the strip's own frame and crop, so at rest the rover stands
+ * where it was shot. Two siblings, not one wrapper: a moved wrapper would isolate the shadow's multiply from the
+ * ground. `--drive` runs along the slope under the wheels, which climbs about 0.13 to the right.
+ */
+.rover {
+  grid-area: 1 / 1;
+  aspect-ratio: 1440 / 420;
+  pointer-events: none;
+  --drive: 2.5rem;
+
+  & picture {
+    display: block;
+    height: 100%;
+  }
+
+  & img {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.shadow {
+  mix-blend-mode: multiply;
+}
+
 .more {
   z-index: 1;
   grid-area: 1 / 1;
@@ -260,8 +288,13 @@
   }
 
   /* A taller cut of the strip, so the rover at its middle still reads. */
-  .ground {
+  .ground,
+  .rover {
     aspect-ratio: 4 / 3;
+  }
+
+  .rover {
+    --drive: 1.5rem;
   }
 
   .more {
@@ -315,6 +348,12 @@
   }
 }
 
+@keyframes drive {
+  from {
+    translate: calc(-1 * var(--drive)) calc(0.13 * var(--drive));
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
     .horizon {
@@ -362,6 +401,13 @@
 
     .search > picture {
       animation-timeline: --orion;
+    }
+
+    /* The rover parks on its own spot as the strip reaches the middle of the window. */
+    .rover {
+      animation: drive linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 50%;
     }
   }
 }

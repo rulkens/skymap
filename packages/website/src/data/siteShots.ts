@@ -1599,15 +1599,28 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     credit: 'Earth: NASA Blue Marble',
   },
   // A strip for the foot of a section: the camera low at Perseverance's height (`s` pose: a site's heading, elevation and range), Jezero's ground below a flat horizon. The app cannot hide terrain, so it is not on black: the Martian sky is dark brown.
+  // The rover and its shadow are left out, so the page can lay `lessons-perseverance` back on and drive it.
   {
     id: 'mars-horizon',
     link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z&pose=s,perseverance,1.6,0.03,2000',
-    settings: { ...SUBJECT_ALONE, fovDeg: 60, settleMs: 9000 },
+    settings: { ...SUBJECT_ALONE, fovDeg: 60, hidePasses: ['mission-meshes', 'contact-shadows'], settleMs: 9000 },
     size: { width: 1440, height: 420 },
     widths: [2880, 1440],
     title: 'Jezero crater from a rover’s height',
     drawn: 'The ground is measured terrain with colour from orbit; the sky is a model.',
     alt: 'A rover on a slope of smooth brown ground at the foot of a low ridge, under a dark brown sky.',
+  },
+  // Perseverance alone from the strip's own camera and frame, so it lands on its own spot in the strip, with its contact shadow as a multiply layer.
+  {
+    id: 'lessons-perseverance',
+    link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z&pose=s,perseverance,1.6,0.03,2000',
+    settings: { ...CUTOUT, fovDeg: 60, shadow: true, hidePasses: HIDE_MARS, ambient: 0.1, settleMs: 9000 },
+    size: { width: 1440, height: 420 },
+    widths: [2880, 1440],
+    title: 'Perseverance',
+    drawn: 'The rover is a 3D model.',
+    alt: 'Perseverance, a six-wheeled rover with a camera mast, side on.',
+    credit: 'Model: Brian Kumanchik, NASA/JPL-Caltech',
   },
   // Orbit drawings, seen from above. The app cannot hide Jupiter's own orbit line, so each pose is chosen to keep it out of frame or small.
   {
