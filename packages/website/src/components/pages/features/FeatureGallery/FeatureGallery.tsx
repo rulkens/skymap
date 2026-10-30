@@ -46,6 +46,8 @@ type FeatureGalleryProps = {
 const THUMB_SIZES = '6rem';
 // A piece is drawn at about three tenths of the picture, wider on a phone where it stands beside the caption.
 const PIECE_SIZES = '(max-width: 900px) 42vw, 13rem';
+// A bar is half the picture wide, and on a phone the column's width.
+const BAR_SIZES = '(max-width: 900px) 100vw, 22rem';
 const CUTOUT_SIZES = '(max-width: 900px) 70vw, 28rem';
 
 // The instant a shot's link sets the clock to.
@@ -208,7 +210,7 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
                   piece && (
                     <div key={view} className={cx(styles.piece, bar && styles.bar, changes(i))}>
                       <div className={styles.drift}>
-                        <Shot id={piece} sizes={PIECE_SIZES} />
+                        <Shot id={piece} sizes={bar ? BAR_SIZES : PIECE_SIZES} />
                       </div>
                     </div>
                   ),

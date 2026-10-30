@@ -368,6 +368,9 @@
   background: none;
   cursor: pointer;
   line-height: 0;
+  /* A hairline, so a thumbnail of lines on black (Voyager's paths) still reads as a button beside the others. */
+  outline: 1px solid var(--color-fg-ghost);
+  outline-offset: -1px;
 
   & picture {
     display: block;

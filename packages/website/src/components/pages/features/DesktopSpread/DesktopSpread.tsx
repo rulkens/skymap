@@ -67,7 +67,7 @@ function DesktopSpread({ title, line, href, label }: DesktopSpreadProps) {
           </p>
         </div>
         <figcaption className={styles.caption}>
-          <ShotCaption id={RENDER} showDrawn={false} />
+          <ShotCaption id={RENDER} showDrawn={false} showTitle={false} />
         </figcaption>
       </figure>
     </section>
