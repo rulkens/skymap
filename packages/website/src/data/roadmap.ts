@@ -163,7 +163,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
         title: 'A night sky as bright as the real one',
         text: 'The brightness of stars seen from Earth set so that the sky matches what an eye sees.',
         state: 'planned',
-        backlog: 'Real star apparent magnitudes from Earth',
+        backlog: 'Cross-layer brightness rebalance + HDR output',
       },
       {
         id: 'missing-stars',
@@ -178,13 +178,6 @@ export const ROADMAP: readonly RoadmapGroup[] = [
         text: 'The atmosphere measured from the planet’s reference surface.',
         state: 'planned',
         backlog: 'Atmosphere density altitude-zero is the relief floor',
-      },
-      {
-        id: 'saturn-rings',
-        title: 'Brighter rings for Saturn',
-        text: 'The brightness of the rings set again beside the planet’s disc.',
-        state: 'planned',
-        backlog: 'Saturn ring brightness',
       },
       {
         id: 'eclipse',
