@@ -12,7 +12,7 @@ export function shotRequestProblems(value: unknown, shotIds: readonly string[]):
     (key) => typeof r[key] !== 'string' || !(r[key] as string).trim(),
   ).map((key) => `\`${key}\` is required`);
   if (typeof r.page === 'string' && !/^\/(.*\/)?$/.test(r.page))
-    problems.push('`page` is a site path such as /home-2/');
+    problems.push('`page` is a site path such as /features/');
   if (typeof r.shotId === 'string' && r.shotId !== 'new' && !shotIds.includes(r.shotId))
     problems.push(`\`shotId\` "${r.shotId}" is not in the manifest (use 'new' for a new picture)`);
   if (typeof r.link === 'string' && r.link.startsWith('#'))

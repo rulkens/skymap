@@ -78,11 +78,11 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## Section shots
 
-`npm run site:sections -- /home-2/ [--url http://localhost:5800] [--widths 1440,400] [--label before] [--out <dir>]` shoots one page of the RUNNING dev site at each width. It writes the full page, then one picture per h2 section (`<label>-<width>-<n>-<slug>.png`), after one scroll through the page so lazy pictures load, with the dev overlays and the fixed bar hidden. It is the screenshot half of the `site-restyle` skill's design round trip. The page's HMR socket is held open and silent, so another edit to the site does not reload the page under a run.
+`npm run site:sections -- /features/ [--url http://localhost:5800] [--widths 1440,400] [--label before] [--out <dir>]` shoots one page of the RUNNING dev site at each width. It writes the full page, then one picture per h2 section (`<label>-<width>-<n>-<slug>.png`), after one scroll through the page so lazy pictures load, with the dev overlays and the fixed bar hidden. It is the screenshot half of the `site-restyle` skill's design round trip. The page's HMR socket is held open and silent, so another edit to the site does not reload the page under a run.
 
 ## Picture report
 
-`npm run site:judge -- /home-2/ [--url http://localhost:5800] [--widths 1440,1024,400] [--dpr 2] [--label judge] [--out <dir>]` writes the section shots above, then judges every site shot (`<img>` from `assets/shots/`) and every `<video>` in `<main>` at each width, on a screen of `--dpr` (2 by default, the density the browser chooses files for). The output folder (the temp folder's `site-judge/<page>/` by default) holds `report.md`, `report.json` and `contact-<width>.png`.
+`npm run site:judge -- /features/ [--url http://localhost:5800] [--widths 1440,1024,400] [--dpr 2] [--label judge] [--out <dir>]` writes the section shots above, then judges every site shot (`<img>` from `assets/shots/`) and every `<video>` in `<main>` at each width, on a screen of `--dpr` (2 by default, the density the browser chooses files for). The output folder (the temp folder's `site-judge/<page>/` by default) holds `report.md`, `report.json` and `contact-<width>.png`.
 
 - Per picture: its shot id and row link, its section, its laid-out box, the file width the browser chose against the device pixels the box needs, the share `object-fit: cover` cuts away, its brightness as displayed (mean, 5th and 95th percentile luma) and its alt text.
 - Flags: `UPSCALED` (the source is more than 5% narrower than needed; it says whether a wider file exists, a `sizes` fault, or the row needs a reshoot), `CROPPED` (cover cuts away over 30%), `STRETCHED`, `TOO DARK` (the brightest 5% stays under a fifth of white: ask for `exposure`), `BURNT` (5% at white), `NO ALT`, `NOT LOADED`. The thresholds are in `utils/judgePicture.ts` and `utils/brightnessFlags.ts`.
@@ -94,7 +94,7 @@ A page designer who wants a different picture and does not reshoot it alone file
 
 ```
 npm run site:requests -- list [--open]
-npm run site:requests -- add --requester <who> --page /home-2/ --section '<h2>' --subject '<what>' --why '<why>' [--shot <id>|new] [--link '<hash body>'] [--settings '<json>'] [--size 1600x1000]
+npm run site:requests -- add --requester <who> --page /features/ --section '<h2>' --subject '<what>' --why '<why>' [--shot <id>|new] [--link '<hash body>'] [--settings '<json>'] [--size 1600x1000]
 npm run site:requests -- answer <file> --status done|declined [--ids a,b] --answer '<what was done>'
 ```
 

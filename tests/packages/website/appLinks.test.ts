@@ -24,7 +24,7 @@ const OTHER_USES: Record<string, number> = {
   // The address set large is the link, as a browser's is, and its copy control copies it.
   'components/pages/classroom/LinkAnatomy/LinkAnatomy.tsx': 2,
   // The address in the window's bar is the link, as a browser's is, and its copy control copies it.
-  'components/pages/home-2/Sharing/Sharing.tsx': 2,
+  'components/pages/home/Sharing/Sharing.tsx': 2,
 };
 
 const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })

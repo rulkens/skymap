@@ -5,7 +5,7 @@
  * as displayed, its alt text. A contact sheet per width (`contact-<width>.png`) shows every picture
  * as displayed, labelled, in page order, to compare framing and light across neighbours.
  *
- *   npm run site:judge -- /home-2/ [--url http://localhost:5800] [--widths 1440,1024,400] [--dpr 2] [--label judge] [--out <dir>]
+ *   npm run site:judge -- /features/ [--url http://localhost:5800] [--widths 1440,1024,400] [--dpr 2] [--label judge] [--out <dir>]
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -41,7 +41,7 @@ const { positionals, values } = parseArgs({
   },
 });
 const path = positionals[0];
-if (!path) throw new Error('Give the page path, such as /home-2/');
+if (!path) throw new Error('Give the page path, such as /features/');
 const out =
   values.out ?? join(tmpdir(), 'site-judge', path.replace(/\W+/g, '-').replace(/^-|-$/g, ''));
 const dpr = Number(values.dpr);

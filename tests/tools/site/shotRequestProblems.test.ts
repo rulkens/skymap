@@ -6,8 +6,8 @@ import { shotRequestProblems } from '../../../tools/site/utils/shotRequestProble
 
 const ids = ['place-virgo', 'saturn'];
 const open: ShotRequest = {
-  requester: 'home-2 designer',
-  page: '/home-2/',
+  requester: 'home designer',
+  page: '/',
   section: 'Pick somewhere to start',
   shotId: 'place-virgo',
   subject: 'Virgo cluster, brighter',
@@ -26,7 +26,7 @@ describe('shotRequestProblems', () => {
   it('names every missing or malformed field', () => {
     const { why: _, ...noWhy } = open;
     expect(shotRequestProblems(noWhy, ids)).toEqual(['`why` is required']);
-    expect(shotRequestProblems({ ...open, page: 'home-2' }, ids)).toHaveLength(1);
+    expect(shotRequestProblems({ ...open, page: 'home' }, ids)).toHaveLength(1);
     expect(shotRequestProblems({ ...open, shotId: 'virgo' }, ids)[0]).toContain(
       'not in the manifest',
     );
@@ -56,10 +56,10 @@ describe('shotRequestFileName', () => {
     expect(
       shotRequestFileName(
         new Date('2026-10-30T14:03:09.512Z'),
-        'Home-2 designer',
+        'Home designer',
         'Virgo cluster, brighter!',
       ),
-    ).toBe('20261030T140309-home-2-designer-virgo-cluster-brighter.json');
+    ).toBe('20261030T140309-home-designer-virgo-cluster-brighter.json');
     expect(shotRequestFileName(new Date('2026-10-30T14:03:09Z'), '', '??')).toBe(
       '20261030T140309-anon-shot.json',
     );

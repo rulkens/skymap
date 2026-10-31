@@ -3,7 +3,7 @@
  * JSON file per request (`ShotRequest`) in a gitignored folder, validated on every write and read.
  *
  *   npm run site:requests -- list [--open]
- *   npm run site:requests -- add --requester <who> --page /home-2/ --section <h2> --subject <what> --why <why>
+ *   npm run site:requests -- add --requester <who> --page /features/ --section <h2> --subject <what> --why <why>
  *       [--shot <id>|new] [--link '<hash body>'] [--settings '<json>'] [--size 1600x1000]
  *   npm run site:requests -- answer <file> --status done|declined [--ids a,b] --answer "…"
  */

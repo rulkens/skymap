@@ -3,7 +3,7 @@
  * scrolls the whole page once so lazy pictures load, hides the dev overlays and the fixed bar (which
  * would otherwise sit over every section shot), then writes one PNG per h2 section plus the full page.
  *
- *   npm run site:sections -- /home-2/ [--url http://localhost:5800] [--widths 1440,400] [--label r1] [--out <dir>]
+ *   npm run site:sections -- /features/ [--url http://localhost:5800] [--widths 1440,400] [--label r1] [--out <dir>]
  *
  * Files: <out>/<label>-<width>-full.png and <out>/<label>-<width>-<n>-<slug>.png, n counting h2s from 0.
  * Unlike site:compare it shoots the dev server, motion and all, as a person scrolling sees it.
@@ -28,7 +28,7 @@ const { positionals, values } = parseArgs({
   },
 });
 const path = positionals[0];
-if (!path) throw new Error('Give the page path, such as /home-2/');
+if (!path) throw new Error('Give the page path, such as /features/');
 mkdirSync(values.out, { recursive: true });
 
 const browser = await launchChromium();
