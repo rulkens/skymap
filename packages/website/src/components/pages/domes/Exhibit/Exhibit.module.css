@@ -25,6 +25,17 @@
   margin-top: 0.5rem;
 }
 
+/*
+ * Every exhibit's notes stand in the frame's right third. Only their first heading and a line or two show,
+ * fading out, so they read as a screen of notes without competing with the section's own words.
+ */
+.frame {
+  mask-image:
+    linear-gradient(90deg, #000 52%, rgb(0 0 0 / 0) 64%),
+    radial-gradient(28% 16% at 80% 8%, #000 40%, rgb(0 0 0 / 0));
+  mask-composite: add;
+}
+
 .screen {
   opacity: 0;
   transition: opacity var(--duration-reveal) var(--ease-standard);

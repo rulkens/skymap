@@ -1,6 +1,6 @@
 /*
  * Exhibit — the page's section on a screen for a museum: the app's exhibits as each opens, running from the
- * window's left edge across seven columns, and the title, the lead, the list of exhibits and the words (the
+ * window's left edge across seven columns with only a taste of their notes, and the title, the lead, the list of exhibits and the words (the
  * children) in the last four. Each name opens its exhibit in the app; pointing at it or reaching it with Tab shows its
  * screen and its label (exhibitChooser.client.ts). Without script the first screen stays. Narrow, the title
  * comes first, then the picture across the window, then the words.
