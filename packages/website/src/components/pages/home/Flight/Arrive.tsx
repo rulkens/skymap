@@ -1,6 +1,6 @@
 /*
  * Arrive — the flight's last words and the way into the app, set on its last picture: the whole
- * observable universe, centred on us. A ring marks where we are; the words and Open app stand
+ * observable universe, centred on us. A label marks where we are; the words and Open app stand
  * under it, and pointing at the button selects the universe, the ring closing in on its edge.
  */
 import type { Ref } from 'react';
