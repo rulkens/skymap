@@ -111,17 +111,6 @@
   transform-origin: left;
 }
 
-/* The app's clock, as it sits in the app: at the foot of the view, over the planet it runs. */
-.clock {
-  position: absolute;
-  top: calc(50% + 0.24 * var(--jupiter));
-  left: var(--jupiter-x);
-  /* The app's own size: the widest file is the bar at 2x. */
-  width: 25rem;
-  margin-left: -12.5rem;
-  --drift: 2rem;
-}
-
 /* Under Earth, as the scale bar's own label. */
 .label {
   position: absolute;
@@ -258,13 +247,6 @@
     overflow-x: clip;
   }
 
-  .clock {
-    left: auto;
-    right: var(--gutter);
-    width: 80vw;
-    margin-left: 0;
-  }
-
   .label {
     top: calc(100% + 0.5rem);
     left: var(--gutter);
@@ -312,8 +294,8 @@
 
 /*
  * As the horizon crosses the window Earth runs a little ahead of the page and Jupiter lags, the scale bar draws
- * from Earth to Jupiter and the clock comes up onto the planet; the search slides onto Orion. At rest (mid-window,
- * reduced motion, no scroll timelines) every layer is in its finished place.
+ * from Earth to Jupiter; the search slides onto Orion. At rest (mid-window, reduced motion, no scroll timelines)
+ * every layer is in its finished place.
  */
 @keyframes drift {
   from {
@@ -322,16 +304,6 @@
 
   to {
     translate: -50% calc(-50% - var(--drift));
-  }
-}
-
-@keyframes rise {
-  from {
-    translate: 0 var(--drift);
-  }
-
-  to {
-    translate: 0 calc(-1 * var(--drift));
   }
 }
 
@@ -370,17 +342,11 @@
       animation-range: cover 0% cover 100%;
     }
 
-    .clock {
-      animation: rise linear both;
-      animation-range: cover 0% cover 100%;
-    }
-
     .span {
       animation: draw linear both;
       animation-range: entry 60% cover 50%;
     }
 
-    .clock > picture,
     .search > picture {
       animation: arrive linear both;
       animation-range: entry 80% cover 50%;
@@ -393,8 +359,6 @@
 
     .earth,
     .jupiter,
-    .clock,
-    .clock > picture,
     .span {
       animation-timeline: --horizon;
     }

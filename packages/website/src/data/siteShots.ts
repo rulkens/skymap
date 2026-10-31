@@ -968,7 +968,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'Every card is a picture taken in the app.',
     alt: 'A panel of fifteen picture cards under seven tabs, among them Perseverance, Hubble, Earth, Saturn and the Cosmic Web.',
   },
-  // The next two are one element of the app on a transparent ground (`element`), for the site to lay over its own pictures.
+  // One element of the app on a transparent ground (`element`), for the site to lay over its own pictures.
   {
     id: 'ui-search',
     link: 'pose=a,0,0,0,6.14,0.2,5.5e-16,0',
@@ -978,16 +978,6 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: 'The app’s search',
     drawn: 'Every card is a picture taken in the app.',
     alt: 'A search box above a panel of picture cards under seven tabs, among them Perseverance, Hubble, Earth, Saturn and the Cosmic Web.',
-  },
-  {
-    id: 'ui-timebar',
-    link: JUPITER,
-    settings: { ui: true, element: '[aria-label="Time controls"]', settleMs: 4000 },
-    size: FEATURE,
-    widths: [800, 400],
-    title: 'The app’s clock',
-    drawn: 'The clock is set by the address; the buttons are the app’s own.',
-    alt: 'The clock bar of the app, reading 2033-03-14 21:00 UTC, with buttons to step the speed and to play or pause.',
   },
   {
     id: 'class-search-phone',
