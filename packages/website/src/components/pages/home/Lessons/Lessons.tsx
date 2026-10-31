@@ -48,7 +48,7 @@ const ANDROMEDA = {
   action: 'Andromeda, the nearest large galaxy',
 };
 const SCALE_LABEL = {
-  title: 'Earth and Jupiter at one scale',
+  title: 'Earth and Jupiter at the same scale',
   credit: `${siteShot('lessons-earth').credit}. ${siteShot('lessons-jupiter').credit}`,
 };
 
