@@ -175,4 +175,44 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     licence: 'NASA PDS (no licence stated)',
     attribution: 'Shape: P. Thomas (Cornell), Deimos shape model K005, NASA PDS / NAIF',
   },
+  vesta: {
+    key: 'vesta',
+    tierCeiling: 'medium',
+    boundingRadiusM: 292397.2697036091,
+    groundOffsetM: 232888.984375,
+    meanAlbedo: [0.308058, 0.295568, 0.275531],
+    triangleCount: 150000,
+    substituted: [],
+    source: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds',
+    licence: 'NASA PDS (no licence stated); USGS mosaic (no licence stated, cite the authors)',
+    attribution:
+      'Shape: Dawn Gravity Team (R. Park, JPL), Vesta shape model icq0512, NASA PDS / NAIF. Colour: Dawn FC HAMO mosaic, NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology',
+  },
+  ceres: {
+    key: 'ceres',
+    tierCeiling: 'medium',
+    boundingRadiusM: 487040.34727217676,
+    groundOffsetM: 446696.78125,
+    meanAlbedo: [0.176255, 0.171764, 0.166547],
+    triangleCount: 150000,
+    substituted: [],
+    source: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds',
+    licence: 'NASA PDS (no licence stated); USGS mosaic (no licence stated, cite the authors)',
+    attribution:
+      'Shape: Dawn Gravity Team (R. Park, JPL), Ceres shape model icq0256, NASA PDS / NAIF. Colour: Dawn FC DLR mosaic, NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology',
+  },
+  bennu: {
+    key: 'bennu',
+    tierCeiling: 'medium',
+    boundingRadiusM: 291.54111656998447,
+    groundOffsetM: 244.78289794921875,
+    meanAlbedo: [0.133046, 0.129892, 0.123096],
+    triangleCount: 150000,
+    substituted: [],
+    source:
+      'https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds',
+    licence: 'NASA PDS (no licence stated); USGS public domain',
+    attribution:
+      'Shape: OSIRIS-REx Altimetry Working Group (O. Barnouin, JHU/APL), Bennu shape model v020 from OLA, NASA PDS / NAIF. Colour: ShapeV20 normal-albedo mosaic (Golish et al. 2021), NASA/University of Arizona, USGS Astrogeology',
+  },
 };

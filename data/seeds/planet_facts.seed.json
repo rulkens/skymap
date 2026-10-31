@@ -125,6 +125,36 @@
     "description": "Counted as the ninth planet until 2006, Pluto is the largest known world in the Kuiper Belt, the field of icy debris beyond Neptune. Its bright heart, Tombaugh Regio, is a plain of frozen nitrogen named for the astronomer who spotted it in 1930."
   },
   {
+    "id": "vesta",
+    "mass": "2.59 × 10²⁰ kg",
+    "gravity": "0.026 g",
+    "dayLength": "5.3 hours",
+    "yearLength": "3.6 Earth years",
+    "distance": "2.36 AU",
+    "wikiTitle": "4_Vesta",
+    "description": "A battered rocky world in the asteroid belt, Vesta was mapped from orbit by NASA's Dawn spacecraft. Its south pole is one giant impact basin, Rheasilvia, about 500 km across, nearly as wide as Vesta itself. The mound at its centre rises 20 to 25 km, one of the tallest peaks in the Solar System."
+  },
+  {
+    "id": "ceres",
+    "mass": "9.38 × 10²⁰ kg",
+    "gravity": "0.029 g",
+    "dayLength": "9.1 hours",
+    "yearLength": "4.6 Earth years",
+    "distance": "2.77 AU",
+    "wikiTitle": "Ceres_(dwarf_planet)",
+    "description": "Ceres is the dwarf planet of the asteroid belt, mapped from orbit by NASA's Dawn spacecraft. Its isolated mountain Ahuna Mons is an ice volcano about 4 km high and 17 km wide, with no counterpart anywhere else on Ceres."
+  },
+  {
+    "id": "bennu",
+    "mass": "7.33 × 10¹⁰ kg",
+    "gravity": "0.0000085 g",
+    "dayLength": "4.3 hours (retrograde)",
+    "yearLength": "1.2 Earth years",
+    "distance": "1.13 AU",
+    "wikiTitle": "101955_Bennu",
+    "description": "Bennu is a near-Earth asteroid about half a kilometre across. NASA's OSIRIS-REx touched its surface on 20 October 2020 and brought 121.6 g of it back to Utah on 24 September 2023, the largest asteroid sample ever collected in space."
+  },
+  {
     "id": "moon",
     "mass": "7.35 × 10²² kg",
     "gravity": "0.17 g",

@@ -14,7 +14,7 @@ import { MESH_SOURCES } from '../../../../tools/utils/io/meshSources';
 // meshPrebake.py's `gltf_from_blender`.
 const gltfFromBlender = ([x, y, z]: Vec3): Vec3 => [x, z, -y];
 
-describe.each(['phobos', 'deimos'])('MESH_SOURCES.%s', (key) => {
+describe.each(['phobos', 'deimos', 'vesta', 'ceres', 'bennu'])('MESH_SOURCES.%s', (key) => {
   const entry = MESH_SOURCES[key]!;
 
   it('maps every exported axis back onto the body frame it was modelled in', () => {

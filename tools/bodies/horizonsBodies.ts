@@ -45,6 +45,19 @@ export const HORIZONS_BODIES: readonly HorizonsBody[] = [
   fitted('umbriel', '702', '500@799', 360),
   fitted('titania', '703', '500@799', 720),
   fitted('oberon', '704', '500@799', 720),
+  // Small bodies: the trailing ';' makes Horizons read the number as an asteroid, not a NAIF
+  // planet id. Bennu's span sits between its 2005 and 2054 Earth encounters: each one steps its
+  // orbit, and over 1900–2100 the fit saturates at 400 + 400 terms 90,000 km off Horizons.
+  fitted('vesta', '4;', '500@10', 1440),
+  fitted('ceres', '1;', '500@10', 1440),
+  {
+    id: 'bennu',
+    target: '101955;',
+    centre: '500@10',
+    span: ['2007-01-01', '2054-01-01'],
+    stepMinutes: 1440,
+    vectors: 'position',
+  },
   // Voyagers: daily Sun-centred state vectors from the first Horizons sample. Their dense
   // encounter windows come from `fetchVoyagerWindows`; the fit never sees them.
   {

@@ -60,6 +60,7 @@ function saturnBody(): SeededPlanet {
   return {
     id: asSceneBodyId(SATURN_RING.bodyId),
     label: 'Saturn',
+    captionKind: 'planet',
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
     resolvePx: 3,
     surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
@@ -73,6 +74,7 @@ function earthBody(): SeededPlanet {
   return {
     id: asSceneBodyId('earth'),
     label: 'Earth',
+    captionKind: 'planet',
     positionMpc: [1, 0, 0],
     resolvePx: 3,
     surface: { datumRadiusM: 6371000, reliefM: [0, 0] },

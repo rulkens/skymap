@@ -127,4 +127,28 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
     origin: 'source',
   },
+  vesta: {
+    tiers: { small: { raw: 'meshes.vesta' }, medium: { raw: 'meshes.vesta' } },
+    licence: 'NASA PDS (no licence stated); USGS mosaic (no licence stated, cite the authors)',
+    attribution:
+      'Shape: Dawn Gravity Team (R. Park, JPL), Vesta shape model icq0512, NASA PDS / NAIF. Colour: Dawn FC HAMO mosaic, NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology',
+    bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
+    origin: 'source',
+  },
+  ceres: {
+    tiers: { small: { raw: 'meshes.ceres' }, medium: { raw: 'meshes.ceres' } },
+    licence: 'NASA PDS (no licence stated); USGS mosaic (no licence stated, cite the authors)',
+    attribution:
+      'Shape: Dawn Gravity Team (R. Park, JPL), Ceres shape model icq0256, NASA PDS / NAIF. Colour: Dawn FC DLR mosaic, NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology',
+    bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
+    origin: 'source',
+  },
+  bennu: {
+    tiers: { small: { raw: 'meshes.bennu' }, medium: { raw: 'meshes.bennu' } },
+    licence: 'NASA PDS (no licence stated); USGS public domain',
+    attribution:
+      'Shape: OSIRIS-REx Altimetry Working Group (O. Barnouin, JHU/APL), Bennu shape model v020 from OLA, NASA PDS / NAIF. Colour: ShapeV20 normal-albedo mosaic (Golish et al. 2021), NASA/University of Arizona, USGS Astrogeology',
+    bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
+    origin: 'source',
+  },
 };

@@ -46,7 +46,7 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
         bodyFootprintRadiusM(planet),
         bodyStates.get(planet.id)!.positionMpc,
         compressBrightness(planet.albedo, PLANET_TINT_GAMMA),
-        'planet',
+        planet.captionKind,
       ),
     ),
   ];

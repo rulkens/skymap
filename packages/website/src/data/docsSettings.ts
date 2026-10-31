@@ -565,6 +565,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: false,
       },
       label('Galactic Centre', 'structures.items.gc-cluster.labelEnabled', 'the star clusters near the centre of the Milky Way'),
+      label('Small bodies', 'bodies.items.small-body.labelEnabled', 'the asteroids Vesta and Bennu and the dwarf planet Ceres'),
       {
         name: 'S-star trails',
         control: 'switch',

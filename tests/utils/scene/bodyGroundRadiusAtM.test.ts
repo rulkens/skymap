@@ -1,5 +1,5 @@
 /**
- * The camera's ground for a mesh-drawn moon must sit on the mesh's outer bound,
+ * The camera's ground for a mesh-drawn body must sit on the mesh's outer bound,
  * or zoom/drag settles inside Phobos' long end (the datum is 11 km, the mesh
  * reaches 13.94 km). Real rows, so a lost `reliefM` or presentation fails here.
  */
@@ -13,7 +13,7 @@ import { bodyGroundRadiusAtM } from '../../../src/utils/scene/bodyGroundRadiusAt
 const row = (id: string) => SCENE_CELESTIAL_BODIES.find((body) => body.id === id)!;
 
 describe('bodyGroundRadiusAtM', () => {
-  it.each(['phobos', 'deimos'])(
+  it.each(['phobos', 'deimos', 'vesta', 'ceres', 'bennu'])(
     'puts %s’s ground outside its whole mesh, whatever the terrain',
     (id) => {
       const meshRadiusM = MESH_PRESENTATIONS.find((p) => p.id === id)!.boundingRadiusM;

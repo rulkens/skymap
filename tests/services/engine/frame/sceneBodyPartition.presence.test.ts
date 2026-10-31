@@ -130,6 +130,7 @@ const planetAt = (id: string, radiusM: number, distanceM: number): PositionedSce
   body: {
     id: asSceneBodyId(id),
     label: id,
+    captionKind: 'planet',
     surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     albedo: [0.5, 0.5, 0.5],
     resolvePx: 3,

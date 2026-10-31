@@ -2052,6 +2052,84 @@ rewritten only by `npm run build-meshes`, which re-bakes the models.
 - **Modified:** Yes. Painted the seed albedo; no colour map is used.
 - **Checked:** 2026-10-19: <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/>
 
+### Vesta shape model (Dawn icq0512) and HAMO mosaic
+
+<!-- attribution: id=mesh-vesta; keys=meshes.vesta*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Vesta up close: the Dawn gravity team's 3.1-million-plate shape
+  model and the Dawn Framing Camera HAMO clear-filter global mosaic.
+- **By:** Shape: Dawn Gravity Team (R. Park, JPL), archived by NASA's Planetary
+  Data System and served by NAIF. Mosaic: Roatsch et al. (DLR), from Dawn
+  Framing Camera images (NASA/JPL-Caltech/UCLA/MPS/DLR/IDA), served by USGS
+  Astrogeology.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it. The USGS Astropedia page for the
+  mosaic names no licence and asks users to cite its authors.
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: Dawn Gravity Team (R. Park, JPL), Vesta shape
+  model icq0512, NASA PDS / NAIF. Colour: Dawn FC HAMO mosaic,
+  NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds>,
+  <https://planetarymaps.usgs.gov/mosaic/Vesta_Dawn_FC_HAMO_Mosaic_Global_74ppd.tif>
+- **Enters skymap:** downloaded by hand → DSK converted to OBJ once →
+  Blender import and relief pre-bake → `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic's gaps and unlit north filled with its
+  median, downsampled, and rescaled to the seed albedo.
+- **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/>
+
+### Ceres shape model (Dawn icq0256) and Dawn mosaic
+
+<!-- attribution: id=mesh-ceres; keys=meshes.ceres*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Ceres up close: the Dawn gravity team's 786,432-plate shape model
+  and the DLR Dawn Framing Camera clear-filter global mosaic.
+- **By:** Shape: Dawn Gravity Team (JPL; R. Park), archived by NASA's
+  Planetary Data System and served by NAIF. Mosaic: Roatsch et al. (DLR), from
+  Dawn Framing Camera images (NASA/JPL-Caltech/UCLA/MPS/DLR/IDA), served by USGS
+  Astrogeology.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it. The USGS Astropedia page for the
+  mosaic names no licence and asks users to cite its authors.
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: Dawn Gravity Team (R. Park, JPL), Ceres shape
+  model icq0256, NASA PDS / NAIF. Colour: Dawn FC DLR mosaic,
+  NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds>,
+  <https://planetarymaps.usgs.gov/mosaic/Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif>
+- **Enters skymap:** downloaded by hand → DSK converted to OBJ once →
+  Blender import and relief pre-bake → `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic resampled and rescaled to the seed albedo.
+- **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/>
+
+### Bennu shape model (OSIRIS-REx v020) and albedo mosaic
+
+<!-- attribution: id=mesh-bennu; keys=meshes.bennu*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Bennu up close: the OSIRIS-REx laser-altimeter shape model
+  (3.1 million plates) and the ShapeV20 normal-albedo global mosaic.
+- **By:** Shape: OSIRIS-REx Altimetry Working Group (O. Barnouin, JHU/APL),
+  archived by NASA's Planetary Data System and served by NAIF. Mosaic: Golish
+  et al. 2021, from OSIRIS-REx images (NASA/University of Arizona), served by
+  USGS Astrogeology.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it; the mosaic's USGS use constraints
+  say "public domain".
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: OSIRIS-REx Altimetry Working Group (O.
+  Barnouin, JHU/APL), Bennu shape model v020 from OLA, NASA PDS / NAIF. Colour:
+  ShapeV20 normal-albedo mosaic (Golish et al. 2021), NASA/University of
+  Arizona, USGS Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds>,
+  <https://planetarymaps.usgs.gov/mosaic/Bennu/Bennu_global_ShapeV20_GndControl_ROLOphase_ALBEDO_8bit_v6.tif>
+- **Enters skymap:** downloaded by hand → DSK converted to OBJ once →
+  Blender import and relief pre-bake → `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic's polar gaps filled with its median,
+  downsampled, and rescaled to the seed albedo.
+- **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/>
+
 ## Fonts
 
 All three are under the SIL Open Font License 1.1, whose second condition

@@ -1,6 +1,9 @@
 /**
- * Planet and moon positions vs JPL Horizons at six dates (both span ends + the Voyager flybys).
- * Fixture query (one per target; Earth is 399, the rest as in HORIZONS_BODIES):
+ * Planet, small-body and moon positions vs JPL Horizons at six dates (both span ends + the
+ * Voyager flybys). Fixture query (one per target; Earth is 399, the rest as in HORIZONS_BODIES;
+ * Vesta, Ceres and Bennu are '4;', '1;' and '101955;', fetched 2026-10-30; Bennu's fit spans only
+ * 2007–2054, so its TLIST is both span ends, OSIRIS-REx arrival, TAG, sample return and 2026-10-20
+ * '2454101.5' '2458455.5' '2459142.5' '2460211.5' '2461333.5' '2471268.5'):
  * https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='199'&OBJ_DATA='NO'&MAKE_EPHEM='YES'&EPHEM_TYPE='VECTORS'&CENTER='500@10'&REF_PLANE='FRAME'&TIME_TYPE='UT'&OUT_UNITS='KM-S'&CSV_FORMAT='YES'&VEC_TABLE='1'&TLIST_TYPE='JD'&TLIST='2415171.5' '2443937.5' '2444555.5' '2446454.5' '2447763.5' '2487855.5'
  * Moons (`horizonsMoons.json`, fetched 2026-10-05): the same query with each moon's target and
  * centre ('500@599' / '500@699'), TLIST = the Voyager Jupiter and Saturn flybys and both span ends
@@ -36,8 +39,8 @@ function relativeKm(id: string, centreId: string, jd: number): [number, number, 
   return [(body[0] - centre[0]) * k, (body[1] - centre[1]) * k, (body[2] - centre[2]) * k];
 }
 
-describe('planet ephemeris', () => {
-  it('every planet is within 1,000 km of Horizons at the fixture dates', () => {
+describe('heliocentric ephemeris', () => {
+  it('every heliocentric body is within 1,000 km of Horizons at the fixture dates', () => {
     for (const [id, rows] of Object.entries(HORIZONS)) {
       for (const [jd, expected] of Object.entries(rows)) {
         const [x, y, z] = relativeKm(id, 'sun', Number(jd));
