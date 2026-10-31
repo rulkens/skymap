@@ -11,7 +11,7 @@ import PictureBand from '../../../shared/media/PictureBand/PictureBand.tsx';
 function FeaturesHero() {
   return (
     <PictureBand views={FEATURE_VIEWS} gap="none" eager>
-      <h1>Detail at every scale</h1>
+      <h1>A universe of detail</h1>
       <p className={text.say}>
         From Earth in 3D to rovers on Mars, from the Milky Way to the cosmic web, on your phone, PC
         or in a dome.
