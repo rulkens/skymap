@@ -38,6 +38,27 @@
     max-width: none;
     height: auto;
   }
+
+  /*
+   * The Sun at its place in the frame. At this scale its disc would be under a tenth of a rem, so it is drawn
+   * as a point of light with a glow, the first thing the orbits draw out from.
+   */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 53.7%;
+    left: 49.9%;
+    width: 4%;
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    background: radial-gradient(
+      closest-side,
+      #fff 0 8%,
+      rgb(255 232 196 / 0.6) 16%,
+      rgb(255 214 160 / 0.14) 45%,
+      rgb(255 214 160 / 0)
+    );
+  }
 }
 
 .label {
