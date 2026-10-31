@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { coreSceneBodyPartition } from '../../../../src/services/engine/frame/coreSceneBodyPartition';
+import { bodySceneBodyPartition } from '../../../../src/layers/body/present/bodySceneBodyPartition';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
 import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySlabRosterIds';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { EARTH_SCENE_BODY_IDS } from '../../../../src/data/bodies/earthSceneBodyIds';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
 import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
@@ -24,7 +24,7 @@ import type { StarBody } from '../../../../src/@types/scene/StarBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
@@ -38,18 +38,16 @@ const STATE = {
     galaxyPickRenderer: {},
     renderTargets: {},
     compositor: {},
-    texturedBodyRenderer: null,
   },
-  terrain: FLAT_TERRAIN,
+  terrainHeightAt: datumOnlyTerrainHeight,
   subsystems: {
     texturedDisks: {},
     fades: { opacityOf: () => 1 },
     clipPlayer: { clipOpacityOf: () => 1 },
   },
-  visibilityEntries: APP_VISIBILITY,
+  visibilityEntries: APP_VISIBILITY_REGISTRY,
   selectionRows: { hover: null, select: null, focus: null },
   slabRows: [],
-  data: { bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES } },
   settings: {
     bodies: { items: makeBodyItems() },
     missions: { craft: null },
@@ -73,6 +71,7 @@ const viewAt = (simDays: number) =>
       altitudeMpc: POSE.distance,
       nowMs: 0,
       simDays,
+      bodyStates: deriveBodyStates(simDays),
     },
     { width: 1920, height: 1080 },
   )!;
@@ -122,7 +121,6 @@ describe('spacecraft presence', () => {
   });
 });
 
-// The four-way routing of core's own bodies, fed straight through `sceneBodies`.
 const PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 6));
 const CAM: Vec3 = [0, 0, 0];
 const CLOSE = (radiusM: number) => radiusM * 5; // resolved (~hundreds of px)
@@ -152,18 +150,16 @@ const meshAt = (id: string, radiusM: number, distanceM: number): PositionedScene
 });
 
 /** The frame's mesh bodies are the meshes given; `sceneBodies` may hold more. Planet ids are
- *  `SCENE_PLANETS` ids, so core counts them as its own. */
+ *  `SCENE_PLANETS` ids, so the body Layer counts them as its own. */
 function partition(
   own: readonly PositionedSceneBody[],
   resident: (id: string) => boolean,
   extra: readonly PositionedSceneBody[] = [],
 ) {
   const state = {
-    gpu: {
-      texturedBodyRenderer: { hasMap: (id: string) => resident(id) },
-      meshBodyRenderer: { hasMesh: (id: string) => resident(id) },
-    },
+    gpu: { meshBodyRenderer: { hasMesh: (id: string) => resident(id) } },
   } as unknown as PassState;
+  const runtime = { texturedBodyRenderer: { hasMap: (id: string) => resident(id) } };
   const ctx = {
     snapshot: {
       meshBodies: own.filter((p) => 'meshKey' in p.body).map((p) => p.body),
@@ -172,7 +168,7 @@ function partition(
     drawCamPos: CAM,
     drawPxPerRad: PX_PER_RAD,
   } as unknown as FrameView;
-  return coreSceneBodyPartition(state, ctx);
+  return bodySceneBodyPartition(state, ctx, runtime as unknown as BodyRuntime);
 }
 const bodiesOf = (bodies: readonly PositionedSceneBody[]) => bodies.map((p) => p.body);
 const idsOf = (bodies: readonly { readonly id: string }[]) => bodies.map((b) => b.id);

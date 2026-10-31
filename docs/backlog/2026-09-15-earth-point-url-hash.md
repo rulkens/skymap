@@ -34,7 +34,6 @@ to ~5 decimals (about 1 m) — or read-only in a first cut, like `t` was.
   altitude, which at boot is the 27,587 km framing — useless for a point).
 - Earth only or `site=<body>:lon,lat` (the saga already takes any body).
 - Ordering against `focus=body-earth` in the same hash, and against the
-  wider camera-pose codec in
-  [`2026-09-14-camera-pose-url-hash.md`](2026-09-14-camera-pose-url-hash.md):
+  wider camera-pose codec `#pose=` (#787):
   this is the human-typable subset of that codec, and should not become a
-  second pose authority once it lands.
+  second pose authority.

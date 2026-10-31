@@ -5,7 +5,7 @@
  * unless `image` overrides it, which only the Galaxies tab's cards do.
  */
 import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
-import { COSMIC_WEB_DENSITY_OFF } from '../exhibits/utils/cosmicWebDensityOff';
+import { COSMIC_WEB_DENSITY_OFF } from '../../compositions/exhibits/utils/cosmicWebDensityOff';
 import type { PaletteCard } from '../../@types/palette/PaletteCard';
 import { structureShotUrl } from '../../utils/structure/structureShotUrl';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';

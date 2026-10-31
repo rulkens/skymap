@@ -1867,6 +1867,26 @@ export const RAW_DATA = {
     description: 'What `meshes.sha256` pins, the R2 backup, and the restore command.',
   },
 
+  // ─── CelesTrak GP orbit data (Earth satellites) ────────────────────────
+
+  celestrak: {
+    path: 'data/raw/celestrak',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Holds `<group>.json`: CelesTrak GP mean elements (OMM JSON) for each `CELESTRAK_GROUPS` group, refetched at most every 2 h. Input to `build-satellites`; the daily Action fetches its own copy.',
+    upstream: 'https://celestrak.org/NORAD/elements/gp.php',
+    fetcher: 'tools/fetch/fetchCelestrak.ts',
+    readme: 'celestrak.readme',
+  },
+  'celestrak.readme': {
+    path: 'data/raw/celestrak/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the CelesTrak groups: the query, the groups and the download policy.',
+  },
+
   // ─── JPL Horizons planet and moon vectors (ephemeris-correction fit input)
 
   horizons: {

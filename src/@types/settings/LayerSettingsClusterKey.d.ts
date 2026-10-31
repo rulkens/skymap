@@ -4,6 +4,6 @@
  * Layer's cluster joins by being composed in, with no list to edit.
  */
 
-import type { APP_SETTINGS_SLICES } from '../../compositions/appSettingsSlices';
+import type { APP_SETTINGS_SLICE_REGISTRY } from '../../compositions/appSettingsSlices';
 
-export type LayerSettingsClusterKey = (typeof APP_SETTINGS_SLICES)[number]['reducerPath'];
+export type LayerSettingsClusterKey = (typeof APP_SETTINGS_SLICE_REGISTRY)[number]['reducerPath'];

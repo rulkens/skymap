@@ -1,36 +1,28 @@
 /**
- * orbitTrailsPass — Keplerian orbit trails (Earth / Jupiter / Moon) as additive
- * screen-space conics. Drawn through NEAR0 because AU-to-lunar orbits sit far
- * inside COSMO's 0.01 Mpc near plane, while still accumulating into HDR.
+ * orbitTrailsPass — Keplerian orbit trails as additive screen-space conics, drawn through NEAR0
+ * because AU-to-lunar orbits sit far inside COSMO's 0.01 Mpc near plane. No pass-level `fade`:
+ * each trail group carries its own show key, so one switch cannot hide another group's trails.
+ * Each group's value carries its entry's distance band, so the pass is off past the foreground gate.
  *
- * No pass-level `fade`: each trail group carries its own show key (core's `orbitTrails`, the
- * S-stars' `sStarTrails`), so one switch cannot hide the other group's trails.
- *
- * HARD INVARIANT: `composeOrbitConic` takes `view.slab.vp`, NOT `view.vp`. It
- * assembles and INVERTS the homography in f64 to resolve the cancellation between
- * the ~1e-12 Mpc centres and the vp's large translation column; fed the narrowed
- * `view.vp` it misplaces a trail by far more than its stroke width.
+ * HARD INVARIANT: `writeOrbitTrailRecord` takes `view.slab.vp`, NOT `view.vp`: its conic is
+ * inverted in f64 to resolve the cancellation between the ~1e-12 Mpc centres and the vp's large
+ * translation column; fed the f32-narrowed `view.vp` it misplaces a trail by far more than its stroke.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { ORBIT_REACH_BY_ROOT } from '../../../../data/bodies/orbitReachByRoot';
-import { CULL_PX, FULL_PX } from '../../../../data/bodies/orbitTrailConstants';
+import { CULL_PX } from '../../../../data/bodies/orbitTrailConstants';
 import { distanceMpc } from '../../../../utils/math/distanceMpc';
 import { keplerianPositionMpc } from '../../../../utils/orbit/keplerianPositionMpc';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
-import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
+import { writeOrbitTrailRecord } from '../../../../utils/orbit/writeOrbitTrailRecord';
 import { sampledDepthBinding } from '../sampledDepthBinding';
-import { eyeRelativeOrbitBasisKm } from '../../../../utils/orbit/eyeRelativeOrbitBasisKm';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { sceneOccluderSpheres } from '../sceneOccluderSpheres';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 
-// Reused across frames so the hot path allocates nothing. The roster is composed
-// at boot (core's rows plus every Layer's `guides.orbitTrails`), so the buffer is
-// grown on the first frame that needs more room rather than sized once here.
+// Reused across frames; grown on the first frame that needs more room (the roster is composed at boot).
 let staging = new Float32Array(0);
 
 export const orbitTrailsPass: ContentPass = {
@@ -38,13 +30,10 @@ export const orbitTrailsPass: ContentPass = {
 
   enabled(state, ctx, _view) {
     if (state.gpu.orbitTrailRenderer === null) return false;
-    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    if (state.orbitTrailGroups.every((group) => group.fade(ctx.snapshot) === 0)) return false;
-    // Whole-layer sub-pixel cull: the per-orbit CULL_PX test in `draw`, bounded
-    // once per root anchor (the Sun, the Galactic Centre, a planet host) at the
-    // camera's NEAREST possible distance to any of that root's orbit points. Keyed
-    // on the eye (`drawCamPos`), NOT `cam.distance`, which measures to the orbit TARGET. Failing here lets the executor skip the
-    // whole (hdr, NEAR0) step instead of packing zero records.
+    if (state.orbitTrailGroups.every((group) => group.fade(ctx) === 0)) return false;
+    // Whole-layer cull: `draw`'s CULL_PX test bounded per root anchor (the Sun, the Galactic
+    // Centre, a planet host) at the NEAREST possible distance to any of its orbit points.
+    // Keyed on the eye (`drawCamPos`), NOT `cam.distance`, which measures to the orbit TARGET.
     const states = sceneBodyStates(state, ctx);
     for (const [rootId, reachMpc] of ORBIT_REACH_BY_ROOT) {
       const nearestMpc = Math.max(
@@ -65,8 +54,7 @@ export const orbitTrailsPass: ContentPass = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.orbitTrailRenderer;
     if (renderer === null) return;
-    // Reading the shared snapshot — never re-deriving — is what welds each trail
-    // to the exact instant its body is drawn at.
+    // The shared snapshot, never a re-derivation, welds each trail to its body's instant.
     const states = sceneBodyStates(state, ctx);
     const groups = state.orbitTrailGroups;
     const limit = groups.reduce((total, group) => total + group.rows.length, 0);
@@ -75,31 +63,20 @@ export const orbitTrailsPass: ContentPass = {
     }
     const camPos = ctx.drawCamPos;
 
-    // One 46-float record per VISIBLE conic; byte offsets must mirror the
-    // renderer's INSTANCE_ATTRIBUTES:
-    //   floats 0..11  — the three Ginv columns (loc1/2/3 at byte 0/16/32)
-    //   floats 12..15 — colour.rgb + eccentricity (loc4 at byte 48)
-    //   floats 16..19 — mean anomaly + fade alpha + viewportPx.xy (loc5 at byte 64)
-    //   floats 20..31 — clip basis Cc/Ac/Bc (loc6/7/8 at byte 80/96/112)
-    //   floats 32..33 — the visible arc eStart/eSpan (loc9 at byte 128)
-    //   floats 34..45 — eye-relative 3D basis, km (loc10/11/12 at byte 136/152/168)
+    // One record per VISIBLE conic; the layout lives in `writeOrbitTrailRecord`.
     let count = 0;
     for (const group of groups) {
-      const fade = group.fade(ctx.snapshot);
+      const fade = group.fade(ctx);
       if (fade === 0) continue;
       const rows = group.rows;
       for (let i = 0; i < rows.length; i++) {
         const elements = rows[i]!;
         const body = states.get(elements.id)!;
-        // The snapshot's own elements, never a re-propagation: trail and body share one
-        // conic. `keplerianEllipse` returns FRESH vectors per call, so the in-place
-        // anchoring below cannot alias a shared scratch across orbits. Every trail row is an
-        // element row, and deriveBodyStates sets `orbit` for each of those.
+        // `keplerianEllipse` returns FRESH vectors, so the in-place anchoring below cannot alias
+        // across orbits. `deriveBodyStates` sets `orbit` for every element row.
         const orbit = body.orbit!;
         const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(orbit);
-        // Centre = the snapshot body position, less its Kepler offset, plus the
-        // ellipse centre offset: the body sits on its trail by construction, so any
-        // later correction to the snapshot position moves the trail with it.
+        // Centre = snapshot position - Kepler position + ellipse offset, so the body sits on its trail.
         const bodyMpc = body.positionMpc;
         const keplerMpc = keplerianPositionMpc(orbit);
         const centerMpc = centerOffsetMpc;
@@ -107,57 +84,28 @@ export const orbitTrailsPass: ContentPass = {
         centerMpc[1] += bodyMpc[1] - keplerMpc[1];
         centerMpc[2] += bodyMpc[2] - keplerMpc[2];
 
-        const dx = centerMpc[0] - camPos[0];
-        const dy = centerMpc[1] - camPos[1];
-        const dz = centerMpc[2] - camPos[2];
-        const distanceMpc = Math.hypot(dx, dy, dz);
-        const semiMajorLenMpc = Math.hypot(semiMajorMpc[0], semiMajorMpc[1], semiMajorMpc[2]);
-        const diameterPx = apparentSizePx({
-          diameterKpc: 2 * semiMajorLenMpc * 1000,
-          distanceMpc,
-          pxPerRad: ctx.drawPxPerRad,
-        });
-        if (diameterPx < CULL_PX) continue; // deep sub-pixel — do not render
-        const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * fade;
-
-        const { ginv, clipBasis, arc } = composeOrbitConic(
-          view.slab.vp,
-          centerMpc,
-          semiMajorMpc,
-          semiMinorMpc,
-          view.viewportPx,
-          RENDER_ORIGIN_MPC,
-        );
-        if (arc[1] <= 0) continue; // whole orbit behind the camera — no geometry
-        const base = count++ * INSTANCE_FLOATS;
-        staging.set(ginv, base); // Ginv columns → floats 0..11
-        staging[base + 12] = elements.color[0];
-        staging[base + 13] = elements.color[1];
-        staging[base + 14] = elements.color[2];
-        staging[base + 15] = orbit.eccentricity;
-        // Falloff anchor: the snapshot's mean anomaly, so the trail fades behind
-        // where the body actually is at `t`.
-        staging[base + 16] = orbit.meanAnomalyRad;
-        staging[base + 17] = alpha;
-        staging[base + 18] = view.viewportPx[0]; // ribbon vertex stage's divisor
-        staging[base + 19] = view.viewportPx[1];
-        staging.set(clipBasis[0], base + 20); // clip basis Cc → floats 20..23
-        staging.set(clipBasis[1], base + 24); // clip basis Ac → floats 24..27
-        staging.set(clipBasis[2], base + 28); // clip basis Bc → floats 28..31
-        staging[base + 32] = arc[0]; // visible arc eStart → float 32
-        staging[base + 33] = arc[1]; // visible arc eSpan → float 33
-        eyeRelativeOrbitBasisKm(
-          { eyeMpc: camPos, centerMpc, semiMajorMpc, semiMinorMpc },
+        const wrote = writeOrbitTrailRecord(
+          {
+            slabVp: view.slab.vp,
+            viewportPx: view.viewportPx,
+            eyeMpc: camPos,
+            pxPerRad: ctx.drawPxPerRad,
+            centerMpc,
+            semiMajorMpc,
+            semiMinorMpc,
+            eccentricity: orbit.eccentricity,
+            meanAnomalyRad: orbit.meanAnomalyRad,
+            color: elements.color,
+            fade,
+          },
           staging,
-          base + 34,
+          count * INSTANCE_FLOATS,
         );
+        if (wrote) count++;
       }
     }
     if (count > 0) {
-      // The second occluder channel: the terrain and meshes of the row that last
-      // cleared the sampled depth. Its own f64 `vp` (the invariant above), scaled
-      // by metres-per-km so the fragment's reconstructed distances land in the
-      // same km as the eye-relative orbit points it compares them against.
+      // `depth` is the second occluder channel (terrain and meshes), in km like the eye-relative orbit points.
       renderer.draw(pass, {
         instances: staging,
         count,

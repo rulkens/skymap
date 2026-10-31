@@ -7,6 +7,7 @@
  */
 
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -18,10 +19,8 @@ import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 import { cross3 } from '../../../src/utils/math/cross3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../src/utils/math/mat3FromColumns';
-import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
-import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
-import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
-import { FLAT_TERRAIN } from '../../../src/data/camera/flatTerrain';
+import { BODY_SLAB_ROWS } from '../../../src/layers/body/present/bodySlabRows';
+import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 
 const FOV_Y_RAD = 1;
@@ -63,12 +62,11 @@ export function frameViewsAt(input: {
   const state = {
     booted: true,
     gpu: { galaxyPointRenderer: {}, renderTargets: {}, galaxyPickRenderer: {}, compositor: {} },
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
-    slabRows: [],
+    slabRows: BODY_SLAB_ROWS,
     visibilityEntries: [],
-    data: { bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: SCENE_MESH_BODIES } },
     settings: { bodies: { items: {} } },
     picking: { pickInFlight: false, cursorTexPx: null },
   } as unknown as EngineState;
@@ -78,6 +76,7 @@ export function frameViewsAt(input: {
     altitudeMpc: distanceMpc,
     nowMs: 0,
     simDays,
+    bodyStates: deriveBodyStates(simDays),
   });
   if (!snapshot.isReady) throw new Error('frameViewsAt: frame not ready');
   return rotations.map((rotation, slot) =>

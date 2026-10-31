@@ -12,7 +12,7 @@ import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { unpackPick } from '../../../src/data/selectionEncoding';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 
 const resolver = selectionResolverOver({ byId: () => null, byCategory: () => [] });
 

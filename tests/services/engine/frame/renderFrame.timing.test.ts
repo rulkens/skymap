@@ -23,10 +23,9 @@ import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/mi
 import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
 import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
-import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
@@ -45,13 +44,8 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 
-// ── Mock timing service ────────────────────────────────────────────────────
-//
-// `descriptorFor` returns a *distinct* descriptor per slot so we can
-// assert "the descriptor for slot X landed on pass X's beginRenderPass
-// descriptor" — not merely "some descriptor landed".  We tag the stub
-// querySet with the slot name (`{ _stub: slot }`) so the assertion can
-// dereference back to the calling slot.
+// `descriptorFor` returns a DISTINCT descriptor per slot, with the stub querySet tagged
+// `{ _stub: slot }`, so assertions can tell which slot's descriptor landed on which pass.
 
 function makeFakeTimingService() {
   const beginFrame = vi.fn(() => ({ frameIndex: 0, stagingSlot: 0 as const }));
@@ -73,8 +67,6 @@ function makeFakeTimingService() {
   };
   return { svc, beginFrame, descriptorFor, endFrame };
 }
-
-// ── WebGPU mock fabricators ────────────────────────────────────────────────
 
 type Beg = { kind: 'beginRenderPass'; desc: GPURenderPassDescriptor };
 
@@ -120,10 +112,6 @@ function makeLoggingRenderer() {
   return { draw: vi.fn(), render: vi.fn() };
 }
 
-/**
- * Mock the offscreen render-target table. The backing `views` record is
- * shared by reference so a test can swap the density row's view.
- */
 function makeRenderTargets(views: Record<string, GPUTextureView>) {
   // Clear values match production; `specOf` is what `executeFrame` reads.
   const specs = [
@@ -190,8 +178,6 @@ function makeRenderTargets(views: Record<string, GPUTextureView>) {
   };
 }
 
-// Fixture camera optics — the ctx built in makeMinimalInputWithTiming()
-// mirrors these.
 const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;
 const FIXTURE_CANVAS_HEIGHT_PX = 720;
 
@@ -218,18 +204,13 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-/**
- * Build a minimal RenderFrameInput where only point-sprites and the
- * Milky-Way cloud's three rows are enabled.  Every other optional
- * renderer / slot is null so its pass's `enabled()` gate reports false.
- */
 // SCENE's `plan` row names 'structure-markers' by string, not by object
 // identity — a stub with an empty result satisfies `runPlanSteps` without
 // dragging in `produceStructureMarkers`'s own state (see renderFrame.test.ts).
 // What `createLayers` gates each pass with: every fade resolves to 1 here.
 const PASS_GATE_STATE = {
   subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
-  visibilityEntries: APP_VISIBILITY,
+  visibilityEntries: APP_VISIBILITY_REGISTRY,
 } as unknown as Parameters<typeof gatePassByFade>[1];
 
 const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
@@ -253,17 +234,12 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const device = makeFakeDevice(env.encoder);
   const context = makeFakeContext();
   const galaxyPointRenderer = makeLoggingRenderer();
-  // The cloud renderer's two passes target two different textures, so it has
-  // two entry points rather than one `draw`.
   const milkyWayCloudRenderer = { drawStars: vi.fn(), drawDust: vi.fn() };
-  // The milkyWay Layer's passes close over its own runtime — see
-  // `densityRuntime` above for the same shape.
   const milkyWayRuntime = {
     cloud: { buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }) },
     cloudRenderer: milkyWayCloudRenderer,
     aggregateUpsample: null,
   } as unknown as MilkyWayRuntime;
-  const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
   const renderTargetViews: Record<string, GPUTextureView> = {
@@ -290,11 +266,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     vp: Float64Array.from(viewProj as unknown as Float32Array),
   });
 
-  // Shared by identity with `input.renderedTargets` below.
   const renderedTargets = new Set<string>();
-  // Frame-owned fields (`ReadyFrameContext`), nested under `snapshot` — every
-  // `ContentPass` in this file reads `ctx.snapshot.x` (see renderFrame.test.ts's
-  // fixture).
   const snapshotFields = {
     isReady: true as const,
     slabBodyCandidates: [],
@@ -304,8 +276,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     // to 0 in frameContext, and an absent one yields NaN alphas here.
     focusBlend: 0,
     renderTargets,
-    // Frame-wide: which targets hold this frame's content — the executor
-    // unions into this as it opens each render step; a later pass reads it.
     renderedTargets,
     plans: createFramePlannerResultStore(),
   };
@@ -342,45 +312,26 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
 
   const input: RenderFrameInput = {
     canvas: ctx,
-    // Mono's own contract: the frame's one view is the canvas itself.
     views: [ctx],
     state: {
-      // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
       viewRig: 'mono',
       gpu: {
         labelRendererCosmo: null,
+        label3DRenderer: null,
         markerLineRendererCosmo: null,
         debugLineRenderer: null,
         selectionRingRenderer: null,
-        // Near-field handles null → the (hdr, NEAR0) render, the
-        // foreground:0 render, and the NEAR0 caption render all select
-        // nothing, and the foreground:0→swap composite is
-        // touched-set-skipped, so those near-field steps bill no timing slot.
-        // The only near-field rows left are the Milky-Way cloud's three, whose
-        // handles ARE wired below (point-sprites, the three cloud rows,
-        // hdr→swap).
-        earthRenderer: null,
-        planetRenderer: null,
+        // Near-field handles null: the near-field steps select nothing and bill no timing slot; the only
+        // near-field rows left are the Milky-Way cloud's three, whose handles ARE wired below.
         // No mesh renderer → the probe scheduler idles before reading `data`.
         meshBodyRenderer: null,
-        // Near-field handle null → atmosphereShellPass disabled AND the
-        // atmosphereSkyView compute step early-outs, so it bills no work.
-        atmosphereShellRenderer: null,
         orbitTrailRenderer: null,
         labelRendererNear: null,
-        // Every `ContentPass.draw` reads its renderer straight off
-        // `state.gpu.*` — this is the ONLY place these mock instances are
-        // wired in (no top-level `input.*` duplication). The milkyWay Layer's
-        // passes close over `milkyWayRuntime` instead — see the `passes`
-        // array below.
-        horizonShellRenderer,
-        // The FRAME program's hdr→swap composite reads state.gpu.compositor.
+        // Every `ContentPass.draw` reads its renderer off `state.gpu.*`; the milkyWay Layer's passes close
+        // over `milkyWayRuntime` instead.
         compositor: { label: 'compositor', draw: vi.fn(), destroy: vi.fn() },
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
-      // A null slot → slotReady false → not loaded.
-      // The encoders read the renderer-toggle override bag off
-      // `settings.debug.disabledPasses`; empty by default so no pass is skipped.
       settings: {
         galaxyCatalogs: {
           items: makeGalaxyCatalogItems(),
@@ -407,8 +358,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         debug: { disabledPasses: {}, renderStrategy: 'auto' },
       },
       selection: { select: settings.selected },
-      // Pick-throttle bag; the content passes don't touch it, but the
-      // engine-state shape carries it.
       picking: {
         pickInFlight: false,
       },
@@ -428,12 +377,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         },
         clipPlayer: { clipOpacityOf: () => 1 },
       },
-      // The cubemap-capture bookkeeping — see the matching fixture comment in
-      // renderFrame.test.ts.
       cubemapCaptures: makeCubemapCaptureRuntimes(),
-      // The COMPOSED list `createLayers` writes: core's registry plus the
-      // galaxyCatalog Layer's pass (the `point-sprites` timed slot) and the
-      // cosmicWebDensity Layer's two, which this suite asserts.
       passes: [
         ...CONTENT_PASSES,
         galaxyPointSpritesPass({
@@ -445,7 +389,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         milkyWayUpsamplePass(milkyWayRuntime),
         milkyWayPass(milkyWayRuntime),
       ].map((pass) => gatePassByFade(pass, PASS_GATE_STATE)),
-      computes: CORE_COMPUTES,
+      computes: [],
       planners: STUB_PLANNERS,
     } as never,
     device,
@@ -471,20 +415,12 @@ describe('renderFrame — timing service hookup', () => {
 
     renderFrame(input);
 
-    // beginFrame fires exactly once per frame.
     expect(beginFrame).toHaveBeenCalledTimes(1);
 
-    // 'perLayerTimed' strategy: descriptorFor fires once per enabled layer
-    // (its own timed pass) PLUS once for the hdr→swap composite. In this
-    // fixture the enabled layers are point-sprites plus the Milky-Way cloud's
-    // three rows — milky-way-aggregate (its own reduced-res offscreen),
-    // milky-way-upsample and milky-way (both in HDR) — since all three share
-    // one liveness gate (the others are gated off via null subsystems / null
-    // optional renderers; the horizon shell's fade-in band starts at
-    // cosmological distances, and MW_ALIVE_DIST_MPC is the close framing that
-    // lights the cloud). There is NO 'tone-map' or 'ui-overlay' slot anymore —
-    // the tone-map is the 'hdr→swap' composite, and with no swap layer enabled
-    // no swap pass opens.
+    // 'perLayerTimed' strategy: descriptorFor fires once per enabled layer plus once for the hdr→swap
+    // composite. Enabled here: point-sprites and the cloud's three rows (milky-way-aggregate in its
+    // reduced-res offscreen, milky-way-upsample and milky-way in HDR), which share one liveness gate;
+    // MW_ALIVE_DIST_MPC is the close framing that lights the cloud.
     const slotsCalled = descriptorFor.mock.calls.map((c) => c[0]);
     expect(slotsCalled).toContain('point-sprites');
     expect(slotsCalled).toContain('milky-way-aggregate');
@@ -495,11 +431,9 @@ describe('renderFrame — timing service hookup', () => {
     expect(slotsCalled).not.toContain('tone-map');
     expect(descriptorFor).toHaveBeenCalledTimes(5);
 
-    // Every opened pass carries its slot's timestampWrites — the first HDR
-    // layer's pass carries the clear AND its own descriptor (no dedicated
-    // clear pass in the unified path), so all five begins are tagged. The
-    // composite's beginRenderPass is opened by the executor (against the swap
-    // view), so it counts among the five begins.
+    // Every opened pass carries its slot's timestampWrites (the first HDR pass carries the clear AND
+    // its own descriptor), so all five begins are tagged; the composite's pass is opened by the
+    // executor against the swap view.
     expect(beginCalls).toHaveLength(5);
     const stubSlots = beginCalls.map((b) => {
       const tw = (
@@ -522,8 +456,6 @@ describe('renderFrame — timing service hookup', () => {
       'hdr→swap',
     ]);
 
-    // endFrame fires once with the live encoder so the resolve + copy
-    // commands ride the same submit as the HDR draws.
     expect(endFrame).toHaveBeenCalledTimes(1);
     expect(endFrame.mock.calls[0]![1]).toBe(encoder);
   });
@@ -535,12 +467,8 @@ describe('renderFrame — timing service hookup', () => {
 
     expect(() => renderFrame(input)).not.toThrow();
 
-    // The encoder lifecycle still runs end-to-end.
     expect(device.createCommandEncoder).toHaveBeenCalled();
 
-    // Crucially: no beginRenderPass descriptor carries a
-    // `timestampWrites` field — the disabled-mode path doesn't
-    // attach any.
     for (const b of beginCalls) {
       const desc = b.desc as GPURenderPassDescriptor & {
         timestampWrites?: GPURenderPassTimestampWrites;
@@ -554,12 +482,8 @@ describe('renderFrame — timing service hookup', () => {
     const { input, beginCalls, renderTargetViews, densityRuntime } =
       makeMinimalInputWithTiming(svc);
 
-    // Force the master on with an active field: both density passes gate on
-    // the shared liveness, which reads the Layer's renderer.
     (input.state as any).settings.cosmicWebDensity = { enabled: true, items: {} };
     Object.assign(densityRuntime.renderer, { hasActiveFields: () => true });
-    // The density render step resolves its attachment via
-    // ctx.renderTargets.viewOf('cosmic-web-density'); swap the backing row.
     const reducedView = { __id: 'reduced' } as unknown as GPUTextureView;
     renderTargetViews['cosmic-web-density'] = reducedView;
 
@@ -567,9 +491,8 @@ describe('renderFrame — timing service hookup', () => {
 
     const slots = descriptorFor.mock.calls.map((c) => c[0]);
     expect(slots).toContain('cosmic-web-density');
-    // The density render step precedes the hdr step, and there is no dedicated
-    // clear pass in the unified path, so the density pass is the FIRST
-    // beginRenderPass (index 0) — carrying its own descriptor.
+    // The density render step precedes the hdr step, so the density pass is the FIRST
+    // beginRenderPass (index 0).
     const preDesc = beginCalls[0]!.desc as GPURenderPassDescriptor & {
       timestampWrites?: GPURenderPassTimestampWrites;
     };

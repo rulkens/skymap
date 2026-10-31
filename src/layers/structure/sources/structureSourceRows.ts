@@ -1,6 +1,6 @@
 /**
  * The Layer's `sources` field (`Layer.d.ts`'s `Sources` bound): one registry
- * row per structure category, folded into `SOURCE_REGISTRY`.
+ * row per structure category, collected by `compositions/appSources.ts` into `APP_SOURCE_REGISTRY`.
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';

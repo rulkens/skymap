@@ -20,8 +20,10 @@ import { zoneOfAvoidanceLayerSettings } from '../layers/zoneOfAvoidance/state/sl
 import { skyGridLayerSettings } from '../layers/skyGrid/state/slices';
 import { lightTimeLayerSettings } from '../layers/lightTime/state/slices';
 import { missionsLayerSettings } from '../layers/missions/state/slices';
+import { satellitesLayerSettings } from '../layers/satellites/state/slices';
+import { cosmicHorizonLayerSettings } from '../layers/cosmicHorizon/state/slices';
 
-export const APP_SETTINGS_SLICES = [
+export const APP_SETTINGS_SLICE_REGISTRY = [
   ...blackHolesLayerSettings,
   ...bodyLayerSettings,
   ...constellationsLayerSettings,
@@ -37,4 +39,6 @@ export const APP_SETTINGS_SLICES = [
   ...skyGridLayerSettings,
   ...lightTimeLayerSettings,
   ...missionsLayerSettings,
+  ...satellitesLayerSettings,
+  ...cosmicHorizonLayerSettings,
 ] as const;

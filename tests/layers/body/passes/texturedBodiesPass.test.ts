@@ -1,0 +1,257 @@
+/**
+ * texturedBodiesPass — the `textured` branch of the body partition, one `'body'`-slab row per body.
+ * Pinned: the f64 seam (MVP from `view.slab.vp`, NOT the f32 `view.vp`; pose off `ctx.bodyPose`); the
+ * partition gate (a row draws ONLY when its `bodyId` is in the `textured` branch — resolved AND its
+ * surface texture resident; the no-double-draw invariant lives in `planetsPass.test.ts`); and ring
+ * ratios as DATA (Saturn packs its `SCENE_RINGS` radii in planet-radius units, a ringless body
+ * zeros; Minnaert limb darkening is the same data-gate).
+ */
+
+import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
+import { describe, it, expect, vi } from 'vitest';
+
+import { texturedBodiesPass } from '../../../../src/layers/body/passes/texturedBodiesPass';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { SCENE_RINGS } from '../../../../src/data/bodies/sceneRings';
+import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
+import { LIMB_DARKENING_PARAMS } from '../../../../src/layers/body/present/limbDarkeningParams';
+import { lightDirLocal } from '../../../../src/utils/camera/lightDirLocal';
+import { bodySlabCamAltitudeSq } from '../../../../src/layers/body/present/bodySlabCamAltitudeSq';
+import { innerBoundRadiusM } from '../../../../src/utils/occlusion/innerBoundRadiusM';
+import { makeSlab } from '../../../fixtures/makeSlab';
+import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
+import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import { sceneBodyStates } from '../../../../src/services/engine/frame/sceneBodyStates';
+import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
+import type { BodyState } from '../../../../src/@types/scene/BodyState';
+import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
+import type { TextureKind } from '../../../../src/@types/data/TextureKind';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
+
+const MOCK_MVP = new Float64Array(16);
+const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
+vi.mock('../../../../src/utils/camera/composeBodySlabMvp', () => ({
+  composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
+}));
+vi.mock('../../../../src/utils/camera/bodySlabCamLocal', () => ({
+  bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
+}));
+import { composeBodySlabMvp } from '../../../../src/utils/camera/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+
+type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+// Production reads the static scene tables, so `makeCtx` pins the snapshot to the fixture bodies.
+vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
+  sceneBodyStates: vi.fn(),
+}));
+
+const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
+const camLocalMock = bodySlabCamLocal as unknown as ReturnType<typeof vi.fn>;
+
+const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];
+
+/** A body sitting `radiusM·5` down +x — firmly resolved on the fixture viewport. */
+function bodyAt(
+  id: string,
+  radiusM: number,
+  reliefM: readonly [number, number] = [0, 0],
+): SeededPlanet {
+  const distanceM = radiusM * 5;
+  return {
+    id: asSceneBodyId(id),
+    label: id,
+    resolvePx: 3,
+    surface: { datumRadiusM: radiusM, reliefM },
+    albedo: [0.5, 0.5, 0.5],
+    positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
+    orientation: IDENTITY_MAT3,
+  };
+}
+
+/** Non-zero below-datum relief, so a datum-radius draw fails the radius checks. */
+const MARS_RELIEF_M = [-2000, 27000] as const;
+
+const STUB_POSE: BodyRelativePose = { eyeRelBodyM: [1, 2, 3], basisM: IDENTITY_MAT3 };
+
+const PASS_STUB = {
+  setPipeline: vi.fn(),
+  setVertexBuffer: vi.fn(),
+  setIndexBuffer: vi.fn(),
+  setBindGroup: vi.fn(),
+  drawIndexed: vi.fn(),
+} as unknown as GPURenderPassEncoder;
+
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
+
+function makeCtx(planets: readonly SeededPlanet[]): FrameView {
+  vi.mocked(sceneBodyStates).mockReturnValue(seededBodyStates(0, planets));
+  return {
+    snapshot: { meshBodies: [], sceneBodies: positionedBodiesOf(planets) },
+    drawCamPos: [0, 0, 0],
+    bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
+}
+
+function makeBodyView(bodyId: SceneBodyId): SlabView {
+  const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
+  const f32Vp = new Float32Array(16);
+  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
+  return {
+    slab,
+    vp: f32Vp,
+    camPos: [0, 0, 5],
+    viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
+  };
+}
+
+/** A `texturedBodyRenderer` spy whose `hasMap('surface')` reports resident for exactly the given ids. */
+function makeRendererSpy(residentIds: readonly string[] = []) {
+  return {
+    draw: vi.fn<(pass: GPURenderPassEncoder, id: string, uniforms: Float32Array) => void>(),
+    hasMap: vi.fn(
+      (id: string, kind: TextureKind) => kind === 'surface' && residentIds.includes(id),
+    ),
+  };
+}
+
+function makeFixture(renderer: unknown, bodies: readonly SeededPlanet[]) {
+  const state = { gpu: {} } as unknown as EngineState;
+  const textured = texturedBodiesPass({ texturedBodyRenderer: renderer } as unknown as BodyRuntime);
+  return { state, bodies, textured };
+}
+
+describe('texturedBodiesPass.enabled', () => {
+  it('is false for a registry body that is NOT resident (it is flat, drawn by planetsPass)', () => {
+    const { state, bodies, textured } = makeFixture(makeRendererSpy([]), [bodyAt('mars', 3390000)]);
+    expect(textured.enabled(state, makeCtx(bodies), makeBodyView(asSceneBodyId('mars')))).toBe(
+      false,
+    );
+  });
+
+  it('is true for a resident row, false for a different body`s row', () => {
+    const { state, bodies, textured } = makeFixture(makeRendererSpy(['mars']), [
+      bodyAt('mars', 3390000),
+      bodyAt('jupiter', 69911000),
+    ]);
+    const ctx = makeCtx(bodies);
+    expect(textured.enabled(state, ctx, makeBodyView(asSceneBodyId('mars')))).toBe(true);
+    expect(textured.enabled(state, ctx, makeBodyView(asSceneBodyId('jupiter')))).toBe(false);
+  });
+});
+
+describe('texturedBodiesPass.draw', () => {
+  it('composes the MVP from view.slab.vp (never view.vp) and the pose off ctx.bodyPose', () => {
+    mvpMock.mockClear();
+    camLocalMock.mockClear();
+    const mars = bodyAt('mars', 3390000, MARS_RELIEF_M);
+    const { state, bodies, textured } = makeFixture(makeRendererSpy(['mars']), [mars]);
+    const ctx = makeCtx(bodies);
+    const view = makeBodyView(asSceneBodyId('mars'));
+
+    textured.draw(PASS_STUB, view, ctx, state);
+
+    expect(mvpMock).toHaveBeenCalledTimes(1);
+    const call = mvpMock.mock.calls[0]!;
+    expect(call[0]).toBe(view.slab.vp);
+    expect(call[0]).not.toBe(view.vp);
+    expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
+    // The INNER bound, so the globe sits under every terrain tile.
+    expect(call[2]).toBe(innerBoundRadiusM(mars.surface));
+
+    expect(camLocalMock).toHaveBeenCalledTimes(1);
+    expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
+    // camPosLocal uses the SAME radius the mvp did (the Minnaert view-cosine
+    // frame must match the frame the vertices were transformed into).
+    expect(camLocalMock.mock.calls[0]![1]).toBe(innerBoundRadiusM(mars.surface));
+  });
+
+  it('draws only the row matching its own body, never a neighbour`s', () => {
+    const mars = bodyAt('mars', 3390000);
+    const jupiter = bodyAt('jupiter', 69911000);
+    const renderer = makeRendererSpy(['mars', 'jupiter']);
+    const { state, bodies, textured } = makeFixture(renderer, [mars, jupiter]);
+    const ctx = makeCtx(bodies);
+
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
+    expect(renderer.draw).toHaveBeenCalledTimes(1);
+    expect(renderer.draw.mock.calls[0]![1]).toBe('mars');
+
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('jupiter')), ctx, state);
+    expect(renderer.draw).toHaveBeenCalledTimes(2);
+    expect(renderer.draw.mock.calls[1]![1]).toBe('jupiter');
+  });
+
+  it('packs a length-44 uniform record with sunDirLocal@16..18 and Minnaert params@22..23', () => {
+    const mars = bodyAt('mars', 3390000, MARS_RELIEF_M);
+    const marsRadiusM = innerBoundRadiusM(mars.surface);
+    const jupiter = bodyAt('jupiter', 69911000); // has a LIMB_DARKENING_PARAMS row
+    const renderer = makeRendererSpy(['mars', 'jupiter']);
+    const { state, bodies, textured } = makeFixture(renderer, [mars, jupiter]);
+    const ctx = makeCtx(bodies);
+
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('jupiter')), ctx, state);
+
+    const u0 = renderer.draw.mock.calls[0]![2];
+    expect(u0).toBeInstanceOf(Float32Array);
+    expect(u0).toHaveLength(44);
+    const expectedSun = lightDirLocal(mars.positionMpc, RENDER_ORIGIN_MPC, mars.orientation);
+    expect(u0[16]).toBeCloseTo(expectedSun[0]);
+    expect(u0[17]).toBeCloseTo(expectedSun[1]);
+    expect(u0[18]).toBeCloseTo(expectedSun[2]);
+    // Mars has no LIMB_DARKENING_PARAMS row ⇒ identity.
+    expect(u0[22]).toBe(0);
+    expect(u0[23]).toBe(1);
+
+    const u1 = renderer.draw.mock.calls[1]![2];
+    expect(u1[22]).toBeCloseTo(LIMB_DARKENING_PARAMS.jupiter!.strength);
+    expect(u1[23]).toBeCloseTo(LIMB_DARKENING_PARAMS.jupiter!.exponent);
+
+    // camPosLocal (mocked) at floats 24..26.
+    expect(u0[24]).toBe(Math.fround(MOCK_CAM_LOCAL[0]));
+    expect(u0[25]).toBe(Math.fround(MOCK_CAM_LOCAL[1]));
+    expect(u0[26]).toBe(Math.fround(MOCK_CAM_LOCAL[2]));
+
+    // The contact-range depth pair. Neither util is mocked, so these assert the
+    // ARGUMENTS: the altitude term reads the pose's eyeRelBodyM at the body's
+    // own radius, and the eye-relative vp is `view.slab.vp` (the f64 one —
+    // `view.vp` is all zeros here) scaled by that radius, translation untouched.
+    expect(u0[27]).toBe(Math.fround(bodySlabCamAltitudeSq(STUB_POSE.eyeRelBodyM, marsRadiusM)));
+    expect(u0[28]).toBe(Math.fround(0.5 * marsRadiusM));
+    expect(u0[31]).toBe(Math.fround(3.5 * marsRadiusM));
+    expect([u0[40], u0[41], u0[42], u0[43]]).toEqual([12.5, 13.5, 14.5, 15.5]);
+  });
+
+  it('packs Saturn`s SCENE_RINGS radii as ring ratios and zeros for a ringless body', () => {
+    const saturn = bodyAt('saturn', 58232000);
+    const mars = bodyAt('mars', 3390000);
+    const renderer = makeRendererSpy(['saturn', 'mars']);
+    const { state, bodies, textured } = makeFixture(renderer, [saturn, mars]);
+    const ctx = makeCtx(bodies);
+
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), ctx, state);
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
+
+    const ring = SCENE_RINGS.find((r) => r.bodyId === 'saturn')!;
+    const saturnU = renderer.draw.mock.calls[0]![2];
+    expect(saturnU[20]).toBeCloseTo(
+      ring.innerRadiusKm / (saturn.surface.datumRadiusM * SCALE_UNITS.M_TO_KM),
+    );
+    expect(saturnU[21]).toBeCloseTo(
+      ring.outerRadiusKm / (saturn.surface.datumRadiusM * SCALE_UNITS.M_TO_KM),
+    );
+
+    const marsU = renderer.draw.mock.calls[1]![2];
+    expect(marsU[20]).toBe(0);
+    expect(marsU[21]).toBe(0);
+  });
+});

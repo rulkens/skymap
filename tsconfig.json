@@ -12,6 +12,7 @@
     "esModuleInterop": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
+    "paths": { "satellite.js/dist/*": ["./node_modules/satellite.js/dist/*"] },
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node", "@webgpu/types", "vite/client"]

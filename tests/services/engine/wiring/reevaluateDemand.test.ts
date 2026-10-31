@@ -1,28 +1,17 @@
 /**
- * reevaluateDemand — unit tests for the guarded demand-evaluation loop.
- *
- * Tests exercise the factored-out `evaluateRows(state, rows)` with stub rows
- * and stub slots, so the loop logic is verified without the real ASSET_WIRING
- * registry (Task 10). The behaviours under test:
- *
- *   - a row whose demand is true AND whose slot is idle triggers
- *     `slot.load(row.req(tier))`,
- *   - a row whose demand is false does not load,
- *   - a row whose slot is already loading/ready is left alone (the idle-guard
- *     that prevents a re-fetch storm when the loop re-runs on every toggle),
- *   - a non-idle slot whose request drifted reloads in place, never releases,
- *   - a throwing demand predicate is caught and does not stop later rows.
- *
- * Mocking strategy: stub slots live in `state.layerSlots` keyed by a
- * numeric SourceType; `slot.load` is a vi.fn so calls are assertable. Rows
- * carry numeric keys so `slotFor` resolves them through the points map.
+ * reevaluateDemand — the guarded demand-evaluation loop, via `evaluateRows(state, rows)` with stub
+ * rows and slots. A demanded row with an idle slot triggers `slot.load(row.req(tier))`; an undemanded
+ * row does not load; a loading/ready slot is left alone (the idle-guard against a re-fetch storm); a
+ * non-idle slot whose request drifted reloads in place, never releases; a throwing predicate is caught
+ * and does not stop later rows. Each stub row carries its stub slot, also indexed in
+ * `state.slotsByKey` under the row's numeric SourceType key (as `createLayers` does).
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { evaluateRows } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { galaxyCatalogRequest } from '../../../../src/services/engine/wiring/galaxyCatalogRequest';
 import { createAssetSlot } from '../../../../src/services/loading/AssetSlot';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { clampTier } from '../../../../src/utils/math/clampTier';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
@@ -35,21 +24,14 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Tier } from '../../../../src/@types/data/Tier';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 
 type StubSlot = AssetSlot<unknown, unknown> & {
   load: ReturnType<typeof vi.fn>;
   release: ReturnType<typeof vi.fn>;
-  /** Override the reported lifecycle kind so tests can pin the idle/ready guards. */
   setKind: (kind: LoadState<unknown>['kind']) => void;
 };
 
-/**
- * A stub slot whose `load` and `release` are spies. `state()` reports a mutable
- * kind (idle by default — the boot model) so tests can simulate a slot that is
- * already loading/ready and assert the idle-guard (load) or ready-guard
- * (release) fires the right edge.
- */
 function stubSlot(
   initialKind: LoadState<unknown>['kind'] = 'idle',
   lastReq: unknown = null,
@@ -80,19 +62,10 @@ function stubSlot(
   };
 }
 
-/**
- * Build a minimal EngineState with the slices evaluateRows reads transitively
- * (via buildDemandCtx + slotFor): the `tier` root field, `settings`, `requests`,
- * a `points` map carrying the stub slots, and the `subsystems.assetQueue` the
- * load edge enqueues onto.
- *
- * The queue is constructed PER CALL, never shared: a queue leaked across cases
- * would carry one test's pending entries into the next. It is also mandatory
- * rather than optional — `evaluateRows` guards each row in a try/catch, so a
- * missing queue would surface as a swallowed TypeError and turn every
- * `expect(slot.load).toHaveBeenCalled()` in this file into a silent failure
- * instead of a visible crash.
- */
+/** Minimal EngineState with the slices evaluateRows reads via buildDemandCtx. The assetQueue is built
+ *  PER CALL (a shared queue would leak pending entries between cases) and is mandatory: `evaluateRows`
+ *  try/catches each row, so a missing queue would be a swallowed TypeError that turns every
+ *  `expect(slot.load)` into a silent failure. */
 function makeState(
   points: Map<SourceType, AssetSlot<unknown, unknown>>,
   assetQueue: unknown = new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
@@ -101,12 +74,8 @@ function makeState(
     tier: 'medium',
     settings: {},
     requests: new Set(),
-    assetSlots: {},
     subsystems: { assetQueue },
-    // buildDemandCtx assembles the camera eye from pose + projection, so both
-    // must be present. A far resting pose keeps the proximity-gated body-texture
-    // rows out of the demand set.
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: { pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
       outputs: {
@@ -116,13 +85,13 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    // The stub slots live where a Layer's do: `slotFor` consults this map first.
-    layerSlots: points,
+    slotsByKey: points,
+    selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
 }
 
-/** A wiring row over a numeric (point-slot) key with overridable demand/release/req. */
 function row(
+  slot: AssetSlot<unknown, unknown>,
   key: SourceType,
   demand: AssetWiringRow['demand'],
   opts: { release?: AssetWiringRow['release']; req?: AssetWiringRow['req'] } = {},
@@ -130,7 +99,7 @@ function row(
   const req = opts.req ?? ((tier) => ({ source: key, tier }));
   // `priority` is required on the row type but irrelevant to the edges under
   // test here (fetch order is the queue's concern), so every stub row shares 0.
-  return { key, factory: () => stubSlot(), req, demand, release: opts.release, priority: 0 };
+  return { key, slot, req, demand, release: opts.release, priority: 0 };
 }
 
 /** A queue whose calls are assertable — for the edges that must reach it with
@@ -141,8 +110,12 @@ function stubQueue() {
 
 /** A demanded row carrying a real rank — for the fetch-order test, where
  *  `priority` is the thing under test rather than an irrelevant field. */
-function ranked(key: SourceType, priority: number): AssetWiringRow {
-  return { ...row(key, () => true), priority };
+function ranked(
+  slot: AssetSlot<unknown, unknown>,
+  key: SourceType,
+  priority: number,
+): AssetWiringRow {
+  return { ...row(slot, key, () => true), priority };
 }
 
 afterEach(() => {
@@ -153,16 +126,15 @@ describe('evaluateRows', () => {
   it('loads a row whose demand returns true', () => {
     const slot = stubSlot();
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => true)]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
     expect(slot.load).toHaveBeenCalledTimes(1);
-    // The request is derived from the active tier via row.req.
     expect(slot.load).toHaveBeenCalledWith({ source: Source.SDSS, tier: 'medium' });
   });
 
   it('does not load a row whose demand returns false', () => {
     const slot = stubSlot();
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => false)]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => false)]);
     expect(slot.load).not.toHaveBeenCalled();
   });
 
@@ -177,10 +149,10 @@ describe('evaluateRows', () => {
       ]),
     );
     evaluateRows(state, [
-      row(Source.SDSS, () => {
+      row(sdss, Source.SDSS, () => {
         throw new Error('boom');
       }),
-      row(Source.Glade, () => true),
+      row(glade, Source.Glade, () => true),
     ]);
     // First row's throw is swallowed + warned; the second row still loads.
     expect(sdss.load).not.toHaveBeenCalled();
@@ -191,23 +163,16 @@ describe('evaluateRows', () => {
   it('does not re-load a slot that is already ready', () => {
     const slot = stubSlot('ready');
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => true)]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
     // Demanded, but the slot already holds data — the idle-guard skips it so a
     // toggle-driven re-eval doesn't abort + re-fetch a ready galaxy catalog.
     expect(slot.load).not.toHaveBeenCalled();
   });
 
-  it('skips a true-demand row with no slot without throwing', () => {
-    // slotFor returns undefined for a key with no minted slot; the optional
-    // chain makes the load a no-op rather than a crash.
-    const state = makeState(new Map());
-    expect(() => evaluateRows(state, [row(Source.SDSS, () => true)])).not.toThrow();
-  });
-
   it('releases a ready slot whose release predicate returns true', () => {
     const slot = stubSlot('ready');
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => false, { release: () => true })]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => false, { release: () => true })]);
     expect(slot.release).toHaveBeenCalledTimes(1);
     expect(slot.load).not.toHaveBeenCalled();
   });
@@ -218,22 +183,21 @@ describe('evaluateRows', () => {
     // `ready`-only gate pins a whole-globe texture in VRAM for the session.
     const slot = stubSlot('error');
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => false, { release: () => true })]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => false, { release: () => true })]);
     expect(slot.release).toHaveBeenCalledTimes(1);
   });
 
   it('does not release a ready slot whose release predicate returns false', () => {
     const slot = stubSlot('ready');
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => false, { release: () => false })]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => false, { release: () => false })]);
     expect(slot.release).not.toHaveBeenCalled();
   });
 
   it('never releases a row with no release predicate (load-once default)', () => {
-    // The 17 existing rows omit `release`; a ready slot must stay put forever.
     const slot = stubSlot('ready');
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => true)]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
     expect(slot.release).not.toHaveBeenCalled();
   });
 
@@ -241,7 +205,7 @@ describe('evaluateRows', () => {
     // The drop edge claims every idle slot before the evict edge is reached.
     const slot = stubSlot('idle');
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => false, { release: () => true })]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => false, { release: () => true })]);
     expect(slot.release).not.toHaveBeenCalled();
   });
 
@@ -264,18 +228,21 @@ describe('evaluateRows', () => {
       });
       return slot;
     };
+    const sdss = recordingSlot(Source.SDSS);
+    const glade = recordingSlot(Source.Glade);
+    const twoMrs = recordingSlot(Source.TwoMRS);
     const state = makeState(
       new Map([
-        [Source.SDSS, recordingSlot(Source.SDSS)],
-        [Source.Glade, recordingSlot(Source.Glade)],
-        [Source.TwoMRS, recordingSlot(Source.TwoMRS)],
+        [Source.SDSS, sdss],
+        [Source.Glade, glade],
+        [Source.TwoMRS, twoMrs],
       ]),
     );
 
     evaluateRows(state, [
-      ranked(Source.SDSS, 60),
-      ranked(Source.Glade, 10),
-      ranked(Source.TwoMRS, 0),
+      ranked(sdss, Source.SDSS, 60),
+      ranked(glade, Source.Glade, 10),
+      ranked(twoMrs, Source.TwoMRS, 0),
     ]);
 
     // Exactly ASSET_QUEUE_CONCURRENCY loads, and they are the two best ranks in
@@ -302,9 +269,9 @@ describe('evaluateRows', () => {
     );
 
     evaluateRows(state, [
-      ranked(Source.TwoMRS, 0),
-      ranked(Source.Glade, 1),
-      { ...ranked(Source.SDSS, 2), demand: () => demanded },
+      ranked(first, Source.TwoMRS, 0),
+      ranked(second, Source.Glade, 1),
+      { ...ranked(waiting, Source.SDSS, 2), demand: () => demanded },
     ]);
     expect(waiting.load).not.toHaveBeenCalled();
 
@@ -317,7 +284,6 @@ describe('evaluateRows', () => {
 });
 
 describe('evaluateRows — drift edge', () => {
-  /** A slot loaded at 'small' while `makeState` sits at 'medium' ⇒ drifted. */
   const drifted = (kind: LoadState<unknown>['kind']) =>
     stubSlot(kind, { source: Source.SDSS, tier: 'small' });
 
@@ -326,7 +292,7 @@ describe('evaluateRows — drift edge', () => {
     // in place. Releasing would blank the catalog for the length of the refetch.
     const slot = drifted('ready');
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => true)]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
     expect(slot.load).toHaveBeenCalledTimes(1);
     expect(slot.load).toHaveBeenCalledWith({ source: Source.SDSS, tier: 'medium' });
     expect(slot.release).not.toHaveBeenCalled();
@@ -337,7 +303,7 @@ describe('evaluateRows — drift edge', () => {
     // different fetch, so the edge is not gated on `ready`.
     const slot = drifted('error');
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => true)]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
     expect(slot.load).toHaveBeenCalledTimes(1);
   });
 
@@ -345,7 +311,9 @@ describe('evaluateRows — drift edge', () => {
     // Drift answers WHICH request, never WHETHER — an undemanded row stays put.
     const slot = drifted('ready');
     const queue = stubQueue();
-    evaluateRows(makeState(new Map([[Source.SDSS, slot]]), queue), [row(Source.SDSS, () => false)]);
+    evaluateRows(makeState(new Map([[Source.SDSS, slot]]), queue), [
+      row(slot, Source.SDSS, () => false),
+    ]);
     expect(slot.load).not.toHaveBeenCalled();
     expect(slot.release).not.toHaveBeenCalled();
     expect(queue.enqueueMany).toHaveBeenCalledWith([]);
@@ -356,7 +324,7 @@ describe('evaluateRows — drift edge', () => {
     // back through the idle edges rather than reloading at the old distance.
     const slot = drifted('ready');
     const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => true, { release: () => true })]);
+    evaluateRows(state, [row(slot, Source.SDSS, () => true, { release: () => true })]);
     expect(slot.release).toHaveBeenCalledTimes(1);
     expect(slot.load).not.toHaveBeenCalled();
   });
@@ -367,7 +335,9 @@ describe('evaluateRows — drift edge', () => {
     // be dropped on the floor. `load()` aborts the superseded attempt itself.
     const slot = drifted('loading');
     const queue = stubQueue();
-    evaluateRows(makeState(new Map([[Source.SDSS, slot]]), queue), [row(Source.SDSS, () => true)]);
+    evaluateRows(makeState(new Map([[Source.SDSS, slot]]), queue), [
+      row(slot, Source.SDSS, () => true),
+    ]);
     expect(slot.load).toHaveBeenCalledTimes(1);
     expect(slot.load).toHaveBeenCalledWith({ source: Source.SDSS, tier: 'medium' });
     expect(queue.enqueueMany).toHaveBeenCalledWith([]);
@@ -402,7 +372,9 @@ describe('evaluateRows — drift edge', () => {
     const queue = new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY);
     const state = makeState(new Map([[Source.SDSS, slot]]), queue);
     const rows = [
-      row(Source.SDSS, () => true, { req: (tier) => galaxyCatalogRequest(Source.SDSS, tier) }),
+      row(slot, Source.SDSS, () => true, {
+        req: (tier) => galaxyCatalogRequest(Source.SDSS, tier),
+      }),
     ];
 
     evaluateRows(state, rows);
@@ -430,36 +402,30 @@ describe('evaluateRows — drift edge', () => {
   });
 });
 
-describe('evaluateRows — bodyTextures at a stale tier', () => {
-  /** A body-texture row (key routes through the bodyTextures map) whose req
-   *  clamps the tier to Earth's 'large' ceiling — so req('small').tier === 'small'. */
-  const earthRow: AssetWiringRow = {
+describe('evaluateRows — body textures at a stale tier', () => {
+  const earthRow = (slot: AssetSlot<unknown, unknown>): AssetWiringRow => ({
     key: 'earth:surface',
-    factory: () => stubSlot(),
+    slot,
     req: (tier) => ({ bodyId: 'earth', kind: 'surface', tier: clampTier(tier, 'large') }),
     demand: () => true,
     priority: 0,
-  };
+  });
 
-  /** A low-ceiling body-texture row (Uranus ships only up to 'small'). */
-  const uranusRow: AssetWiringRow = {
+  const uranusRow = (slot: AssetSlot<unknown, unknown>): AssetWiringRow => ({
     key: 'uranus:surface',
-    factory: () => stubSlot(),
+    slot,
     req: (tier) => ({ bodyId: 'uranus', kind: 'surface', tier: clampTier(tier, 'small') }),
     demand: () => true,
     priority: 0,
-  };
+  });
 
-  /** State with `slot` in the keyed bodyTextures map under `key` at the given tier. */
   function makeBodyState(key: string, slot: AssetSlot<unknown, unknown>, tier: Tier): EngineState {
     return {
       tier,
       settings: {},
       requests: new Set(),
-      assetSlots: { points: new Map(), bodyTextures: new Map([[key, slot]]) },
-      // Per-call queue, for the same reasons spelled out on `makeState`.
       subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
-      terrain: FLAT_TERRAIN,
+      terrainHeightAt: datumOnlyTerrainHeight,
       cameraRuntime: {
         register: { pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
         outputs: {
@@ -469,8 +435,8 @@ describe('evaluateRows — bodyTextures at a stale tier', () => {
           upBasis: ORIENTATION_FRAMES.ecliptic,
         },
       },
-      // `slotFor` consults the Layer-owned slots first; none here.
-      layerSlots: new Map(),
+      slotsByKey: new Map([[key, slot]]),
+      selection: { hover: null, select: null, focus: null },
     } as unknown as EngineState;
   }
 
@@ -479,7 +445,7 @@ describe('evaluateRows — bodyTextures at a stale tier', () => {
     // 'medium' ⇒ the drift edge re-fetches at the new tier. The texture on the
     // GPU stays bound meanwhile; releasing it would show an untextured body.
     const slot = stubSlot('ready', { bodyId: 'earth', kind: 'surface', tier: 'medium' });
-    evaluateRows(makeBodyState('earth:surface', slot, 'small'), [earthRow]);
+    evaluateRows(makeBodyState('earth:surface', slot, 'small'), [earthRow(slot)]);
     expect(slot.load).toHaveBeenCalledTimes(1);
     expect(slot.load).toHaveBeenCalledWith({ bodyId: 'earth', kind: 'surface', tier: 'small' });
     expect(slot.release).not.toHaveBeenCalled();
@@ -487,7 +453,7 @@ describe('evaluateRows — bodyTextures at a stale tier', () => {
 
   it('leaves a ready slot whose tier already matches alone', () => {
     const slot = stubSlot('ready', { bodyId: 'earth', kind: 'surface', tier: 'small' });
-    evaluateRows(makeBodyState('earth:surface', slot, 'small'), [earthRow]);
+    evaluateRows(makeBodyState('earth:surface', slot, 'small'), [earthRow(slot)]);
     expect(slot.load).not.toHaveBeenCalled();
     expect(slot.release).not.toHaveBeenCalled();
   });
@@ -499,7 +465,7 @@ describe('evaluateRows — bodyTextures at a stale tier', () => {
     // is left alone. Comparing against the raw tier ('large') would re-load every
     // re-evaluation forever — the bug the clamp prevents.
     const slot = stubSlot('ready', { bodyId: 'uranus', kind: 'surface', tier: 'small' });
-    evaluateRows(makeBodyState('uranus:surface', slot, 'large'), [uranusRow]);
+    evaluateRows(makeBodyState('uranus:surface', slot, 'large'), [uranusRow(slot)]);
     expect(slot.load).not.toHaveBeenCalled();
   });
 });

@@ -25,7 +25,7 @@ import type { OrientationFrameId } from '../../../src/@types/camera/OrientationF
 import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategory';
 import { APP_COMPOSITION } from '../../../src/compositions/app';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
-import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { FLOW_SLIDER_FIELDS } from '../../../src/data/flow/flowFields';
 import { orientationFrameLabel } from '../../../src/data/orientation/orientationFrameLabel';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
@@ -65,7 +65,7 @@ describe('Controls page', () => {
     const listed = DOCS_CONTROLS.flatMap((group) =>
       group.rows.flatMap((row) => row.shortcut ?? []),
     );
-    const exhibitKeys = Object.values(APP_EXHIBITS).flatMap((exhibit) =>
+    const exhibitKeys = Object.values(APP_EXHIBIT_REGISTRY).flatMap((exhibit) =>
       exhibit.body.flatMap((s) => (s.kind.shortcuts ?? []).flatMap((k) => shortcutKeys(k.keys))),
     );
     const keys = new Set([...Object.keys(SHORTCUTS_BY_KEY), ...exhibitKeys]);
@@ -91,11 +91,13 @@ describe('Settings page', () => {
     /^(constellations|lightTime|zoneOfAvoidance)\.labelEnabled$/,
     /^missions\.items\.[\w-]+\.labelEnabled$/,
     /^picking\./,
+    /^focusMoves\.(eased|geodesic)\./,
     /^labels\.focusedOnly$/,
     /^thumbnails\.enabled$/,
     /^blackHoleLensingTuning\./,
     /^bodies\.items\.[\w-]+\.enabled$/,
     /^(constellations|localBubble)\.intensity$/,
+    /^earth\.(atmosphereExposure|ambientLight|oceanRoughness)$/,
     /^flow\.(mode|count|trail|flowSpeed|densityBias|wander|boundaryFadeWidth)$/,
     /^galaxyCatalogs\.(brightness|provenance\..+)$/,
     /^galaxyCatalogs\.items\.(sdss|2mrs|glade|milliquas|desiDeep|desiWedge|desiSgw)\.labelEnabled$/,
@@ -258,7 +260,7 @@ describe('URL parameters page', () => {
       sorted(Object.keys(ORIENTATION_FRAMES)),
     );
     expect(sorted(DOCS_EXHIBIT_IDS.map((row) => row.id))).toEqual(
-      sorted(Object.keys(APP_EXHIBITS)),
+      sorted(Object.keys(APP_EXHIBIT_REGISTRY)),
     );
     expect(sorted(DOCS_TOUR_IDS.map((row) => row.id))).toEqual(sorted(Object.keys(tourRegistry)));
   });

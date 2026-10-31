@@ -163,7 +163,7 @@ describe('focus release while engaged (round 10)', () => {
     // the focus cue at beat START, then the clip glides in. The clip DELIVERS
     // the framing, so it settles the debt its own cue created; if it did not,
     // the approach owed on the exit frame would fly the eye straight back out
-    // to h/R 3.3, which is why this runs well past `FOCUS_TWEEN_MS`.
+    // to h/R 3.3, which is why this runs well past the Eased duration.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
     const start: CameraPose = { ...MARS_PARK, distance: bodyFocusDistance(MARS_R_MPC, FOV) };
     h.seedPose(absoluteArm(start));
@@ -403,7 +403,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
     expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
 
     h.notch(240, [70, 30]);
-    h.frame(60); // past FOCUS_TWEEN_MS — the approach saturates at its target
+    h.frame(60); // past the Eased duration — the approach saturates at its target
 
     // The notch lands whole on the target the approach then flies to: e^0.24
     // for deltaY 240, untapered because a rover's pivot carries no surface

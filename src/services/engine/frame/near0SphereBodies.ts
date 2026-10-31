@@ -1,9 +1,9 @@
 /**
- * near0SphereBodies — LEFTOVER (T7-5), deleted by the bodies-into-Layers PR's per-body slab
- * field: the resolved bodies NEAR0 draws, outside the body-slab roster (`bodySlabRosterIds`),
- * each of which draws in a `'body'` slab whichever Layer draws it; spanning one would move
- * NEAR0 in the painter order. Static rosters, not the frame's slab rows, so a Layer's own slab
- * row never leaks in.
+ * near0SphereBodies — the resolved bodies NEAR0 draws as spheres: everything outside the
+ * body-slab roster (`bodySlabRosterIds`). A rostered body draws in a `'body'` slab whichever
+ * Layer draws it, and spanning one here would move NEAR0 in the painter order. Static rosters,
+ * not the frame's slab rows, so a Layer's own slab row (the Sgr A* lens, anchored on a place)
+ * never leaks in.
  */
 
 import type { PositionedSceneBody } from '../../../@types/engine/frame/PositionedSceneBody';

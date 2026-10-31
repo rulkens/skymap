@@ -7,9 +7,9 @@ import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../../src/data/milkyWay/galacticCenter';
-import { FOCUS_TWEEN_MS } from '../../../src/services/engine/camera/focusTweenDuration';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { FocusMotion } from '../../../src/@types/camera/FocusMotion';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
@@ -18,6 +18,7 @@ import type { StructureInfo } from '../../../src/@types/data/structure/Structure
 const FROM: CameraPose = { target: [9, 9, 9], yaw: 1.23, pitch: -0.4, distance: 5 };
 const FOVY = 0.8;
 const FRAME = 'galactic';
+const MOTION: FocusMotion = { style: 'eased', durationMs: 600, ease: 'easeOutCubic' };
 
 const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   makeGalaxyRow({
@@ -43,11 +44,10 @@ const structureRow = (over: Partial<StructureInfo> = {}) =>
   }) as StructureInfo;
 
 describe('focusTweenDescriptor', () => {
-  it('carries the live from-pose, FOCUS_TWEEN_MS, easeOutCubic, and the caller-stamped frame', () => {
-    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY, FRAME);
+  it('carries the live from-pose, the caller-given motion, and the caller-stamped frame', () => {
+    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY, MOTION, FRAME);
     expect(d.from).toBe(FROM);
-    expect(d.durationMs).toBe(FOCUS_TWEEN_MS);
-    expect(d.easing).toBe('easeOutCubic');
+    expect(d.motion).toBe(MOTION);
     expect(d.frame).toBe(FRAME);
   });
 
@@ -56,6 +56,7 @@ describe('focusTweenDescriptor', () => {
       galaxyRow({ x: 1, y: 2, z: 3, diameterKpc: 40 }),
       FROM,
       FOVY,
+      MOTION,
       FRAME,
     );
     expect(d.to.target).toEqual([1, 2, 3]);
@@ -65,7 +66,13 @@ describe('focusTweenDescriptor', () => {
   });
 
   it('a structure row frames on its apparent radius via the lens FOV', () => {
-    const d = focusTweenDescriptor(structureRow({ apparentRadiusMpc: 5 }), FROM, FOVY, FRAME);
+    const d = focusTweenDescriptor(
+      structureRow({ apparentRadiusMpc: 5 }),
+      FROM,
+      FOVY,
+      MOTION,
+      FRAME,
+    );
     expect(d.to.target).toEqual([10, -20, 30]);
     expect(d.to.distance).toBe(structureFocusDistance(5, FOVY));
   });
@@ -75,13 +82,14 @@ describe('focusTweenDescriptor', () => {
       structureRow({ apparentRadiusMpc: undefined, physicalRadiusMpc: 2 }),
       FROM,
       FOVY,
+      MOTION,
       FRAME,
     );
     expect(d.to.distance).toBe(structureFocusDistance(2, FOVY));
   });
 
   it('the Milky Way arm targets the galactic centre at the fixed view distance', () => {
-    const d = focusTweenDescriptor({ type: 'milkyWay' }, FROM, FOVY, FRAME);
+    const d = focusTweenDescriptor({ type: 'milkyWay' }, FROM, FOVY, MOTION, FRAME);
     expect(d.to.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],
@@ -93,7 +101,7 @@ describe('focusTweenDescriptor', () => {
 
   it('copies the target into a fresh array — never aliases the source Vec3', () => {
     const struct = structureRow({ worldPos: [10, -20, 30] });
-    const d = focusTweenDescriptor(struct, FROM, FOVY, FRAME);
+    const d = focusTweenDescriptor(struct, FROM, FOVY, MOTION, FRAME);
     expect(d.to.target).not.toBe(struct.worldPos);
   });
 });

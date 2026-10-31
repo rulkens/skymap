@@ -281,6 +281,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'planets-and-their-moons',
     figure: 'guide-conjunction',
   },
+  celestrak: {
+    description:
+      'CelesTrak’s orbits of the active satellites, the largest debris clouds and recent launches around Earth, refreshed daily.',
+    about:
+      'CelesTrak publishes the orbit of every tracked object the US Space Force releases, as the mean elements its SGP4 model needs. Once a day we download the active satellites, three debris clouds and the last month’s launches, drop the orbits SGP4 cannot run and store the rest in our own compact file.',
+    shows: 'Nothing yet. The data is fetched daily; the layer that draws the satellites is still being built.',
+  },
   'seed-planet-facts': {
     title: 'Fact sheets of the Solar System bodies',
     description:

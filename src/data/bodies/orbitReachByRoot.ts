@@ -1,12 +1,10 @@
 /**
- * ORBIT_REACH_BY_ROOT — the seeded scene's orbital reach per root anchor, derived
- * once so the orbit-trail cull costs one comparison per root rather than a
- * table walk per frame. Conservative: it never drops a visible CORE orbit.
+ * ORBIT_REACH_BY_ROOT — orbital reach per root anchor (the Sun, the Galactic Centre, a planet
+ * host), derived once so the orbit-trail cull is one comparison per root per frame.
+ * Conservative: never drops a visible orbit.
  *
- * Over the non-mesh `ORBITAL_ELEMENTS`, not `CORE_TRAIL_ELEMENTS`: the
- * Galactic Centre's reach must still count the S-star orbits even
- * though their TRAIL is now the star Layer's `guides.orbitTrails`, not core's
- * — reworking this into a roster-derived reach is the backlog item.
+ * Over the non-mesh `ORBITAL_ELEMENTS`, not `BODY_TRAIL_ELEMENTS`: the Galactic Centre's
+ * reach must still count the S-star orbits, whose trail is the star Layer's.
  */
 
 import type { PositionedId } from '../../@types/scene/PositionedId';
@@ -15,8 +13,6 @@ import { ORBITAL_ELEMENTS } from './orbitalElements';
 import { SCENE_ANCHORS } from './sceneAnchors';
 import { SCENE_MESH_BODIES } from './sceneMeshBodies';
 
-// Re-derives the same id set `coreTrailElements.ts` computes; both are leaf
-// data modules, so sharing would add an edge rather than remove duplication.
 const MESH_BODY_IDS = new Set(SCENE_MESH_BODIES.map((body) => body.id));
 const NON_MESH_ORBITAL_ELEMENTS = ORBITAL_ELEMENTS.filter((el) => !MESH_BODY_IDS.has(el.id));
 

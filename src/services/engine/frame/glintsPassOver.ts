@@ -7,7 +7,6 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { BodyGlintRenderer } from '../../../@types/rendering/BodyGlintRenderer';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { BODY_GLINT_INSTANCE_FLOATS } from '../../../data/rendering/bodyGlintInstanceFloats';
 import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -29,7 +28,6 @@ export function glintsPassOver(
     name,
 
     enabled(state, ctx, _view) {
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       const states = sceneBodyStates(state, ctx);
       return sceneBodyPartition(state, ctx, roster, () => false).glints.some(
         (body) => bodyGlintBackdropFade(lightSourceMpc(body.id, states), ctx.drawCamPos) > 0,

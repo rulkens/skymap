@@ -18,7 +18,7 @@ import { createAdditiveUpsample } from '../../services/gpu/passes/additiveUpsamp
 export function create(deps: LayerCoreDeps): MilkyWayRuntime {
   return {
     pickRenderer: createMilkyWayPickRenderer(deps.ctx, deps.fadeBgl, SLAB_REVERSED_Z[NEAR0]!),
-    // `MILKY_WAY_TUNING_DEFAULTS.starCount`, not `deps.store`'s live setting:
+    // `MILKY_WAY_TUNING_DEFAULTS.starCount`, not `deps.settings()`'s live setting:
     // `milkyWayPlanner` regenerates the cloud on divergence from the live
     // setting, so reading settings here would just add a second path to the
     // same answer.

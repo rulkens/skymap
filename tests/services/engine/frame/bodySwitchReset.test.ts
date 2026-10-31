@@ -58,8 +58,8 @@ describe('body switch reset (ruling 18)', () => {
     seedRememberedTilt(h);
     expect(h.state.cameraRuntime.tilt.rememberedTiltRad).toBeGreaterThan(0.3);
 
-    // The user's action. The real saga path dispatches NO tween for a moving
-    // body (watchFocusTweenSaga gates on bodyMovesThisFrame) — the follow row IS
+    // The user's action. Under Eased (the default) the real saga path
+    // dispatches NO tween for a moving body — the follow row IS
     // the flight, so the store focus write alone reproduces the app flow.
     h.focus('saturn');
 

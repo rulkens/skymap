@@ -6,7 +6,7 @@
 import type { StarCatalogId } from '../../../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { StarSourceInBand } from '../../@types/StarSourceInBand';
-import { SOURCE_REGISTRY } from '../../../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../../../compositions/appSources';
 import { starSourceDrawOpacity } from '../../../../utils/star/starSourceDrawOpacity';
 
 export function starSourcesInBand(
@@ -16,7 +16,7 @@ export function starSourcesInBand(
 ): readonly StarSourceInBand[] {
   const result: StarSourceInBand[] = [];
   for (const { source } of runtime.renderer.loadedCatalogs()) {
-    const entry = SOURCE_REGISTRY[source];
+    const entry = APP_SOURCE_REGISTRY[source];
     if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
     const crossfade = starSourceDrawOpacity(entry, fade, camDistPc);
     if (crossfade > 0) result.push({ source, entry, crossfade });

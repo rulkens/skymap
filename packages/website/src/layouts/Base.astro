@@ -4,9 +4,10 @@ import '../styles/site.css';
 // The two faces every page paints with at once; preloaded so the first paint is the last swap.
 import jostUrl from '@fontsource-variable/jost/files/jost-latin-wght-normal.woff2?url';
 import displayUrl from '../assets/fonts/cormorant-garamond-600-site.woff2?url';
+import type { PageSection } from '../@types/PageSection';
 import BaseLayout from './BaseLayout/BaseLayout.tsx';
-import NavMenu from '../components/Nav/NavMenu.tsx';
-import LightLine from '../components/Footer/LightLine.tsx';
+import NavMenu from '../components/site/Nav/NavMenu.tsx';
+import LightLine from '../components/site/Footer/LightLine.tsx';
 import { fact } from '../data/fact';
 import DevOverlay from '../dev/overlay/DevOverlay/DevOverlay.tsx';
 import { INDEXABLE } from '../data/site';
@@ -19,15 +20,17 @@ type Props = {
   image?: string;
   /** The page's job, for the dev review bar only; absent on pages made from data. */
   job?: string;
-  /** Where a job is written when it is not the page's front matter, for the review bar's note. */
+  /** Where a job is written when it is not the page's own file (front matter or structure file), for the review bar's note. */
   jobSetIn?: string;
+  /** A landing page's section jobs from its structure file, for the dev review panel only. */
+  sections?: readonly PageSection[];
   jsonLd?: readonly Record<string, unknown>[];
   heroNav?: boolean;
   /** The id "Skip to content" goes to, where a layout has its own contents before the text. */
   skipTo?: string;
 };
 
-const { title, description, image, job, jobSetIn, jsonLd = [], heroNav = false, skipTo = 'main' } = Astro.props;
+const { title, description, image, job, jobSetIn, sections, jsonLd = [], heroNav = false, skipTo = 'main' } = Astro.props;
 const card = await shareImage(image);
 // Shared root files stay root-absolute (the main shell serves them); the canonical and the card need the site origin.
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
@@ -65,6 +68,7 @@ const imageUrl = new URL(card.src, Astro.site).href;
     <meta name="twitter:image" content={imageUrl} />
     <meta name="twitter:image:alt" content={card.alt} />
     {import.meta.env.DEV && job !== undefined && <meta name="skymap:job" content={job} data-set-in={jobSetIn} />}
+    {import.meta.env.DEV && sections !== undefined && <script type="application/json" id="skymap-structure" set:html={JSON.stringify(sections).replace(/</g, '\\u003c')} />}
     <!-- `<` is escaped so a string containing `</script>` cannot close the block. -->
     {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />)}
     <slot name="head" />
@@ -76,9 +80,10 @@ const imageUrl = new URL(card.src, Astro.site).href;
       <slot />
     </BaseLayout>
     <script>
-      import '../components/Footer/lightLine.client.ts';
-      import '../components/CopyButton/copyButtons.client.ts';
-      import '../components/Remark/remarkLines.client.ts';
+      import '../components/site/Footer/lightLine.client.ts';
+      import '../components/shared/links/CopyButton/copyButtons.client.ts';
+      import '../components/shared/text/Remark/remarkLines.client.ts';
+      import '../components/shared/media/Phone3D/phoneTurn.client.ts';
     </script>
     {
       import.meta.env.DEV && (

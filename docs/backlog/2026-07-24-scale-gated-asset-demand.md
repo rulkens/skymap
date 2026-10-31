@@ -14,14 +14,14 @@ nothing.
   19.4 MB, `milliquas-medium.bin` 12.8 MB, `sdss-medium.bin` 10.1 MB,
   `2mrs.bin` 2.5 MB, plus small sidecars. At tier `large` the same set is
   roughly 420 MB.
-- `src/services/engine/wiring/assetWiring.ts` demand predicates for the
-  galaxy/star catalog rows key only on the settings toggle (e.g. line 121
+- The Layers' asset rows (`src/layers/galaxyCatalog/load/galaxyCatalogAssetRows.ts` and siblings), whose demand predicates for the
+  galaxy/star catalog rows key only on the settings toggle (e.g.
   `ctx.settings.galaxyCatalogs.items[id]?.enabled === true`) — no scale
   term anywhere in the demand function for glade, sdss, milliquas, stars,
   or the mcpm volume.
-- At the Earth boot view, the `surveyDeepZoom` band
-  (`src/data/scaleFadeBands.ts:66`,
-  `{ fullAt: FOREGROUND_MAX_DISTANCE_MPC, goneAt: 0.002 }`) is fully faded
+- At the Earth boot view, the Layer-declared `SURVEY_DEEP_ZOOM` band
+  (`src/data/bands/surveyDeepZoom.ts`,
+  `{ in: [0.002, FOREGROUND_MAX_DISTANCE_MPC] }`) is fully faded
   to zero below 0.002 Mpc, and boot starts well inside that. So glade, sdss,
   milliquas, and the mcpm volume render nothing at boot, yet all fetch at
   boot — roughly 68 MB downloaded to draw nothing.
@@ -29,7 +29,7 @@ nothing.
 ## Fix
 
 Add a scale-gate term to the demand predicate in
-`src/services/engine/wiring/assetWiring.ts` so an asset whose
+the asset rows (`src/layers/galaxyCatalog/load/galaxyCatalogAssetRows.ts`) so an asset whose
 `SCALE_FADE_BANDS` row says it is invisible at the current camera distance
 does not demand yet; it loads once the camera approaches its band. This
 would cut boot from ~101.7 MB to roughly ~33 MB.
@@ -59,7 +59,5 @@ covers the gap.
 Deliberately sequenced AFTER the boot load-priority scheduler work (bounded
 priority queue + static per-row rank + low-res body texture atlas). The two
 compose: the scheduler reorders what gets fetched first, this gate reduces
-what gets fetched at all. See also
-[`2026-07-24-filaments-flow-scale-bands.md`](2026-07-24-filaments-flow-scale-bands.md) —
-filaments and flow need `SCALE_FADE_BANDS` rows of their own before they can
-participate in this gate.
+what gets fetched at all. Filaments and flow declare `SURVEY_DEEP_ZOOM` on their
+show entries, so both can participate in this gate.

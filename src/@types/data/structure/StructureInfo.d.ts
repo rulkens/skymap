@@ -32,7 +32,7 @@ import type { Messenger } from './Messenger';
  * single discriminant.
  */
 type StructureBase = {
-  /** Union discriminant — mirrors SOURCE_REGISTRY's 'structure' type. */
+  /** Union discriminant — mirrors APP_SOURCE_REGISTRY's 'structure' type. */
   readonly type: 'structure';
   readonly id: string;
   readonly name: string;

@@ -6,7 +6,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 import type { Tier } from '../Tier';
 
 /**
- * Galaxy catalog-typed row of the SOURCE_REGISTRY — all the per-galaxy-catalog metadata
+ * Galaxy catalog-typed row of the APP_SOURCE_REGISTRY — all the per-galaxy-catalog metadata
  * needed by the UI, the loader, and the camera, colocated so adding a new
  * galaxy catalog means editing one place.
  */
@@ -26,25 +26,11 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
   readonly maxDistMpc: number;
   /** Band each `magU/G/R/I/Z` slot actually carries on this source. */
   readonly bandLabels: BandLabels;
-  /**
-   * Recipe for computing this source's colour index — which two band slots
-   * to subtract, the natural range that gets remapped to the 0..2 WGSL
-   * ramp, and the per-redshift K-correction coefficient. See `pickColourIndex`
-   * in `data/colourIndex.ts` for the consumer.
-   */
+  /** Colour-index recipe; consumer is `pickColourIndex` in `data/colourIndex.ts`. */
   readonly colourSpec: ColourIndexSpec;
-  /**
-   * Apparent-magnitude flux limit for the galaxy catalog, in the band that defines
-   * its selection (SDSS r, 2MRS K_s, GLADE B, …). Used by the Malmquist-
-   * bias correction; the band is recorded in {@link bandLabels} / {@link
-   * colourSpec}, so call sites that need the value look it up here.
-   */
+  /** Apparent-magnitude flux limit in the band that defines the selection (SDSS r, 2MRS K_s, GLADE B); Malmquist-bias correction. */
   readonly mLim: number;
-  /**
-   * Schechter luminosity-function triple `(M*, α, φ*)` for the band that
-   * defines the galaxy catalog's flux limit. Used by the Schechter-density
-   * pathway of the bias correction.
-   */
+  /** Schechter luminosity-function triple `(M*, α, φ*)` in the flux-limit band. */
   readonly schechter: SchechterTriple;
   /**
    * Short-name prefix for IAU-style designations (`<prefix> J<RA><Dec>`), e.g.
@@ -70,20 +56,11 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
    * members the M_abs cut drops. Only consulted on capped tiers.
    */
   readonly fluxSupplementMagLimit?: number;
-  /**
-   * Per-source multiplier on the physical surface-brightness intensity
-   * (1.0 = no boost). Plumbed through `SourceUniforms` to
-   * `points/vertexBody.wesl`. Raise it to lift intrinsically-faint catalogs
-   * (e.g. Milliquas quasars) that the physical model renders dim.
-   */
+  /** Multiplier on surface-brightness intensity (1.0 = none), via `SourceUniforms`; lifts faint catalogs such as Milliquas. */
   readonly sbBoost: number;
-  /**
-   * Half-distance (Mpc) of the depth-fade curve `1 / (1 + (d / falloffHalfMpc)²)`,
-   * via `SourceUniforms`. Sparse far-field catalogs (Milliquas, d ~ 8000 Mpc)
-   * set a very large value to disable the fade.
-   */
+  /** Half-distance (Mpc) of the depth fade `1 / (1 + (d / falloffHalfMpc)²)`; a very large value disables it. */
   readonly falloffHalfMpc: number;
-  /** Fetch rank of the `ASSET_WIRING` row minted here; see `AssetWiringRow.priority`. */
+  /** Fetch rank of the asset row minted here; see `AssetWiringRow.priority`. */
   readonly priority: number;
   /** The durable id kind this source's `objIDs` carry; absent when they carry none a URL may name. */
   readonly durableId?: GalaxyDurableIdClaim;

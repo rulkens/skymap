@@ -86,10 +86,12 @@ describe('texturedDisksPass', () => {
   it('draw() forwards ctx.viewSlot to texturedDiskRenderer.draw as the 8th arg', () => {
     const disks = [{ x: 1 }];
     const texturedDiskRenderer = makeTexturedDiskRenderer();
-    const state = {
-      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup } },
-    } as unknown as EngineState;
-    const runtime = { texturedDisks: { lastOutput: { disks } }, texturedDiskRenderer } as never;
+    const state = {} as unknown as EngineState;
+    const runtime = {
+      texturedDisks: { lastOutput: { disks } },
+      texturedDiskRenderer,
+      focusBindGroup: {} as GPUBindGroup,
+    } as never;
     const ctx = { ...makeCtx(), viewSlot: 3 };
     texturedDisksPass(runtime).draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state);
     expect(texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);

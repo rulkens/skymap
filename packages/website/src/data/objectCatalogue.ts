@@ -9,7 +9,7 @@ import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/data/bodies/seededStarCatalogsBySource';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
-import { APP_EXHIBITS } from '../../../../src/compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../../src/data/palette/earthPlaces';
 import { FEATURED_TABS } from '../../../../src/data/palette/featuredTabs';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
@@ -273,7 +273,7 @@ const structures = buildStaticAnchorStructures().map((structure) => {
   });
 });
 
-const exhibits = Object.values(APP_EXHIBITS).map(
+const exhibits = Object.values(APP_EXHIBIT_REGISTRY).map(
   (exhibit): ObjectRow => ({
     name: exhibit.label,
     kind: 'exhibit',

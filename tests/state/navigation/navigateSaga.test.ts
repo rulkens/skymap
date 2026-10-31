@@ -43,7 +43,7 @@ import {
 } from '../../../src/state/selection/selectors';
 import { selectArrival } from '../../../src/state/arrival/selectors';
 import { arrived } from '../../../src/state/arrival/arrivalSlice';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
@@ -51,7 +51,7 @@ import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { sphereFitDistance } from '../../../src/utils/camera/sphereFitDistance';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
-import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { StructureRowFixture } from '../../support/selectionResolverOver';
@@ -86,11 +86,7 @@ function build() {
   });
   mw.setContext({
     selection: composeSelectionRows(
-      () => [
-        ...coreSelectionRows(),
-        structureSelectionRow(EMPTY_STRUCTURES),
-        milkyWaySelectionRow(),
-      ],
+      () => [bodySelectionRow(), structureSelectionRow(EMPTY_STRUCTURES), milkyWaySelectionRow()],
       () => ALL_KINDS_ENABLED,
     ),
     cameraRuntime: () => ({
@@ -195,7 +191,7 @@ describe('navigateSaga', () => {
     expect(outcome).toEqual({ ok: true });
     expect(h.playClip).not.toHaveBeenCalled();
     expect(h.commits()).toBe(1);
-    const { fitRadiusMpc } = APP_EXHIBITS.observableUniverse;
+    const { fitRadiusMpc } = APP_EXHIBIT_REGISTRY.observableUniverse;
     expect(worldArmOf(h.store.getState().camera.base).distance).toBe(
       sphereFitDistance(fitRadiusMpc!, 0.8, 16 / 9),
     );

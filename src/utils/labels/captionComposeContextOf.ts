@@ -11,9 +11,6 @@ import { sceneOccluderBodies } from '../../services/engine/frame/sceneOccluderBo
 export function captionComposeContextOf(state: EngineState, ctx: FrameView): CaptionComposeContext {
   return {
     camPos: ctx.drawCamPos,
-    // Orbit distance, NOT `|camPos|`: the bound the solar-system-reach kinds
-    // ride, which diverges from origin distance once focus leaves the origin.
-    camOrbitDistanceMpc: ctx.cam.distance,
     viewportShortSidePx: Math.min(ctx.canvasSize.width, ctx.canvasSize.height),
     drawPxPerRad: ctx.drawPxPerRad,
     focus: ctx.snapshot.focus,

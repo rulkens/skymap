@@ -12,6 +12,7 @@ import type { ShowKey } from '../@types/animation/ShowKey';
 import { blackHolesVisibility } from '../layers/blackHoles/visibility';
 import { bodyVisibility } from '../layers/body/visibility';
 import { constellationsVisibility } from '../layers/constellations/visibility';
+import { cosmicHorizonVisibility } from '../layers/cosmicHorizon/visibility';
 import { cosmicWebDensityVisibility } from '../layers/cosmicWebDensity/visibility';
 import { cosmicWebFilamentsVisibility } from '../layers/cosmicWebFilaments/visibility';
 import { flowVisibility } from '../layers/flow/visibility';
@@ -20,22 +21,25 @@ import { lightTimeVisibility } from '../layers/lightTime/visibility';
 import { localBubbleVisibility } from '../layers/localBubble/visibility';
 import { milkyWayVisibility } from '../layers/milkyWay/visibility';
 import { missionsVisibility } from '../layers/missions/visibility';
+import { satellitesVisibility } from '../layers/satellites/visibility';
 import { starCatalogVisibility } from '../layers/starCatalog/visibility';
 import { structureVisibility } from '../layers/structure/visibility';
 import { zoneOfAvoidanceVisibility } from '../layers/zoneOfAvoidance/visibility';
 import { skyGridVisibility } from '../layers/skyGrid/visibility';
 
-export const APP_VISIBILITY = [
+export const APP_VISIBILITY_REGISTRY = [
   ...galaxyCatalogVisibility,
   ...starCatalogVisibility,
   ...cosmicWebDensityVisibility,
   ...cosmicWebFilamentsVisibility,
   ...flowVisibility,
   ...missionsVisibility,
+  ...satellitesVisibility,
   ...zoneOfAvoidanceVisibility,
   ...skyGridVisibility,
   ...localBubbleVisibility,
   ...lightTimeVisibility,
+  ...cosmicHorizonVisibility,
   ...constellationsVisibility,
   ...blackHolesVisibility,
   ...milkyWayVisibility,
@@ -44,4 +48,4 @@ export const APP_VISIBILITY = [
 ] as const;
 
 // A misspelled `of` fails here: the entry types cannot name `ShowKey` themselves.
-APP_VISIBILITY satisfies readonly (ShowEntry | (LabelEntry & { readonly of?: ShowKey }))[];
+APP_VISIBILITY_REGISTRY satisfies readonly (ShowEntry | (LabelEntry & { readonly of?: ShowKey }))[];
