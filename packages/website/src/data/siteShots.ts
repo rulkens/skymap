@@ -191,23 +191,23 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'A model. Every camera we have is inside it.',
     alt: 'A barred spiral galaxy seen from above, with small companion galaxies around it.',
   },
-  // The same model alone on transparency, from above its north pole: the Science page floats it over its own ground.
+  // The same model alone on transparency, all but edge-on: the Science page lays its disc across the window.
   {
-    id: 'milky-way-face-on',
-    link: 'focus=milkyWay&pose=a,-0.000447,-0.007140,-0.003966,-1.5704,0.5203,0.042,0',
+    id: 'milky-way-edge-on',
+    link: 'focus=milkyWay&pose=a,-0.000447,-0.007140,-0.003966,0.3888,0.45,0.024,1.0',
     settings: {
       ...ONE_GALAXY,
       hideStars: true,
       matte: 'emissive',
       keepPasses: ['milky-way', 'milky-way-aggregate', 'milky-way-upsample'],
-      exposure: 2.2,
+      exposure: 2.4,
       settleMs: 4000,
     },
-    size: { width: 1400, height: 1400 },
-    widths: [1600, 960],
+    size: { width: 1800, height: 600 },
+    widths: [3600, 2400, 1200],
     title: 'The Milky Way from outside',
     drawn: 'A model. Every camera we have is inside it.',
-    alt: 'A barred spiral galaxy seen from above its pole, a bright bar at its centre and dust along its arms, with globular clusters scattered round it.',
+    alt: 'The Milky Way seen almost edge-on: a thin bright disc with a dark lane of dust across a glowing bulge, globular clusters scattered above and below.',
   },
   // The Science page's Coverage: the DESI fan of features-desi alone as light, beside the footprints that shape the map.
   {
@@ -226,11 +226,38 @@ export const SITE_SHOTS: readonly SiteShot[] = [
       settleMs: 12000,
     },
     size: { width: 1600, height: 1000 },
-    // Drawn in the page's margin, 28rem at most: 960 covers it at 2x, and fine points cost bytes above that.
+    // A phone's band across the window, about 560px wide: 960 covers it at 2x, and fine points cost bytes above that.
     widths: [960, 640],
     title: 'The DESI survey wedge',
     drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
     alt: 'A broad fan of points opening from a tip at the left, orange near the tip and blue-white far out.',
+  },
+  // The same fan upright for a wide window's margin, run down two lists of the Science page: seen lower, so it opens
+  // less, and rolled so its near edge is plumb. Tip to far end fills the frame's height; the margin shows at most the
+  // frame's left two fifths, so only those are kept. Fine points cost bytes: 880 at quality 28 is about 400 KB.
+  {
+    id: 'science-desi-spine',
+    link: 'pose=a,-1479.2,-2321.8,1631.3,2.7856,0.1666,6250,2.421',
+    settings: {
+      hideLabels: true,
+      hideStructures: true,
+      hideCosmicWeb: true,
+      hideZoneOfAvoidance: true,
+      hideGalaxyField: true,
+      hideStars: true,
+      desiWedge: true,
+      matte: 'emissive',
+      keepPasses: ['point-sprites'],
+      exposure: 4,
+      crop: { left: 0, top: 0, width: 440, height: 2200 },
+      settleMs: 12000,
+    },
+    size: { width: 1100, height: 2200 },
+    widths: [880, 440],
+    denseQuality: 28,
+    title: 'The DESI survey wedge',
+    drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
+    alt: 'A long fan of points running down from a tip at the top, white and orange near the tip, blue and thinning far out.',
   },
   // The About page's opening: the traced filaments seen whole, alone as light, and the app's scale bar at the same
   // camera in a window of the same shape, so the bar is laid over the picture at the picture's own scale.
@@ -766,22 +793,14 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   {
     id: 'about-milky-way',
-    link: 'focus=milkyWay&pose=a,-0.000447,-0.007140,-0.003966,-0.6421,0.2356,0.048,0',
-    settings: {
-      ...ONE_GALAXY,
-      hideStars: true,
-      matte: 'emissive',
-      keepPasses: ['milky-way', 'milky-way-aggregate', 'milky-way-upsample'],
-      exposure: 2.4,
-      // The square round the galaxy and its clusters; the rest of the frame is empty.
-      crop: { left: 400, top: 120, width: 800, height: 800 },
-      settleMs: 4000,
-    },
-    size: { width: 1600, height: 1000 },
-    widths: [1600, 960],
+    link: 'focus=milkyWay&pose=a,0,0,0,-2.22,0.6,0.05,0,0.3,0',
+    settings: { ...SUBJECT, hideZoneOfAvoidance: true, settleMs: 3000 },
+    size: WIDE,
+    widths: [1920, 1280],
     title: 'The Milky Way from outside',
+    caption: 'With its small companion galaxies around it.',
     drawn: 'A model. Every camera we have is inside it.',
-    alt: 'A barred spiral galaxy at a slant, a bright bar at its centre and dust along its arms, with globular clusters scattered round it.',
+    alt: 'A barred spiral galaxy seen from above on a field of stars, with small companion galaxies around it.',
   },
   {
     // New moon, so the Sun is behind the camera and both discs are fully lit.
@@ -799,7 +818,6 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'dome-earth',
     link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,4.6e-16,0`,
-  // The About page's opening: the Milky Way model at a slant, alone as light, so the page's own black is its sky.
     query: 'dome',
     settings: { ...SUBJECT, settleMs: 4000 },
     size: DOME,

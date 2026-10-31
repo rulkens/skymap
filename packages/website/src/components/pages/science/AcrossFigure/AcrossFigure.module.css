@@ -1,0 +1,67 @@
+.root {
+  /* From the column's edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  margin: 0 0 2.5rem;
+}
+
+.window {
+  margin-inline: calc(-1 * var(--bleed));
+  overflow-x: clip;
+  pointer-events: none;
+}
+
+/*
+ * One and a half windows wide, centred, so the disc runs out past both edges. Vertical margins in % are of the
+ * window's width: the frame's empty top and foot, a third each, are tucked away and faded into the gaps.
+ */
+.subject {
+  width: 150%;
+  margin: -12% 0 -12% -25%;
+  mask-image: linear-gradient(transparent 22%, #000 40%, #000 60%, transparent 78%);
+
+  & picture,
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+/* On the statements' edge, three columns in, as Claims sets them. */
+.caption {
+  position: relative;
+  max-width: 30rem;
+}
+
+@media (min-width: 901px) {
+  .caption {
+    margin-left: calc(3 * (100% + var(--col-gap)) / 12);
+  }
+}
+
+@keyframes across-tip {
+  from {
+    rotate: -5deg;
+  }
+
+  to {
+    rotate: 3deg;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .subject picture {
+      animation: across-tip linear both;
+      animation-timeline: view();
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .subject {
+    width: 220%;
+    margin: -22% 0 -22% -60%;
+  }
+}
