@@ -41,8 +41,10 @@ const BASE = [
 
 const EARTH_LABEL_ID = 'sceneBody-earth';
 const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
-  SCENE_PLANETS.map((p) => `sceneBody-${p.id}`),
+  SCENE_PLANETS.filter((p) => p.captionKind === 'planet').map((p) => `sceneBody-${p.id}`),
 );
+const SMALL_BODY_LABEL_IDS = ['sceneBody-vesta', 'sceneBody-ceres', 'sceneBody-bennu'];
+const MARS_LABEL_ID = 'sceneBody-mars';
 const SGR_A_STAR_LABEL_ID = `sceneBody-${SGR_A_STAR_ENTRY.id}`;
 const PETUNIAS_LABEL_ID = 'sceneBody-petunias';
 
@@ -83,7 +85,10 @@ function fadeOf(
   const named: Record<string, boolean> = typeof bodyLabels === 'boolean' ? {} : bodyLabels;
   const unnamed = typeof bodyLabels === 'boolean' ? bodyLabels : true;
   return Object.fromEntries(
-    ['earth', 'planet'].map((item) => [item, over[item] ?? ((named[item] ?? unnamed) ? 1 : 0)]),
+    ['earth', 'planet', 'small-body'].map((item) => [
+      item,
+      over[item] ?? ((named[item] ?? unnamed) ? 1 : 0),
+    ]),
   );
 }
 
@@ -145,6 +150,35 @@ describe('produceSceneBodyCaptions', () => {
     expect(fadeAlphaOf(out.labels, EARTH_LABEL_ID)).toBe(0);
     const anyPlanetOn = [...PLANET_LABEL_IDS].some((id) => (fadeAlphaOf(out.labels, id) ?? 0) > 0);
     expect(anyPlanetOn).toBe(true);
+  });
+
+  it('a small body captions under the Small bodies item, not Planets', () => {
+    const labels = sceneBodyLabels(J2000_STATES);
+    for (const id of SMALL_BODY_LABEL_IDS)
+      expect(labels.find((l) => l.id === id)?.kind, id).toBe('smallBody');
+  });
+
+  it('unticking Small bodies hides only the small bodies', () => {
+    const ctx = makeCtx(worldPosOf(EARTH_LABEL_ID));
+    const alphasWith = (planet: boolean, smallBody: boolean) => {
+      const out = produceSceneBodyCaptions(
+        makeState(),
+        ctx,
+        fadeOf({ planet, 'small-body': smallBody }),
+      ).labels;
+      return {
+        mars: fadeAlphaOf(out, MARS_LABEL_ID)!,
+        small: SMALL_BODY_LABEL_IDS.map((id) => fadeAlphaOf(out, id)!),
+      };
+    };
+
+    const smallOff = alphasWith(true, false);
+    expect(smallOff.small).toEqual([0, 0, 0]);
+    expect(smallOff.mars).toBeGreaterThan(0);
+
+    const planetsOff = alphasWith(false, true);
+    for (const alpha of planetsOff.small) expect(alpha).toBeGreaterThan(0);
+    expect(planetsOff.mars).toBe(0);
   });
 
   it('suppresses Earth + planet captions when both body rows’ labels are off', () => {

@@ -102,8 +102,7 @@ About 960 MB of downloads; all gitignored under `data/raw/meshes/<id>/`.
   query and full-precision elements are in the recon file.
 - **Correction fit** — `HORIZONS_BODIES` rows (targets `'1;'`, `'4;'`,
   `'101955;'`, centre `'500@10'`, daily step) and `FITTED_BODIES` rows with
-  `outside: 'hold'`. Bennu's Horizons record starts 1900-01-02, so its span
-  starts there. A fixed conic misses these bodies by far more than any planet
+  `outside: 'hold'`. Bennu's span is shorter (see the outcome below). A fixed conic misses these bodies by far more than any planet
   (Ceres/Vesta 16–34M km, Bennu ~300M km at the span ends, mostly along-track),
   and the Cartesian fit stops at 900 km and throws above 1,000 km
   (`buildEphemerisCorrections.ts:115` runs the ΔM pre-fit only for rows with a
@@ -113,6 +112,16 @@ About 960 MB of downloads; all gitignored under `data/raw/meshes/<id>/`.
   regenerate unchanged); if Bennu still misses
   the stop, shorten its span to the decades it does fit (`outside: 'hold'`).
   Commit the regenerated corrections.
+  *Outcome (2026-10-30):* Vesta and Ceres fit 1900–2100 at `fitStep` 10.
+  Bennu over 1900–2100 saturated at 400 ΔM + 400 Cartesian terms and missed
+  by 90,392 km: each Earth encounter (1911, 1970, 1999, 2005, 2054, 2060,
+  2080) steps its semi-major axis by 1–14 × 10⁻³ au, a kink no sinusoid
+  series follows. Its span is now 2007-01-01 to 2054-01-01, between the 2005
+  and 2054 encounters, at `fitStep` 4 (232 ΔM + 197 Cartesian terms, 884 km;
+  a step-10 trial on the slice reached 900 km). 2001–2060 also passed in a
+  trial, but saturated the terms at 931 km. Bennu holds its 2007/2054 correction outside the span, and its
+  ephemeris-test dates move inside it. (Its Horizons record starts
+  2 s after midnight on 1900-01-02, so a 1900 span would start on the 3rd.)
 - **Rotation** — each row's `rotation` field, IAU pole form as Pluto's (not
   `tidallyLocked`, which throws without a host planet):
   | Body | α₀ | δ₀ | W₀ | Ẇ (°/d) | Source |

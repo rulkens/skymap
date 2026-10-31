@@ -3,7 +3,7 @@
  * buildEphemerisCorrections — fit each `FITTED_BODIES` row's `Horizons − Kepler` residual
  * (1900–2100) into the committed `EPHEMERIS_CORRECTIONS` table. Kepler is the app's own path
  * (`keplerianPositionMpc(propagateElements(row, jd))`), so any element-row or frame edit needs a
- * rerun. A moon (an element row with a non-Sun focus) first fits a ΔM series to 300 km-equivalent
+ * rerun. A `fitMeanAnomaly` row (a moon, a small body) first fits a ΔM series to 300 km-equivalent
  * (|ΔM|·a), so it stays on its own conic and its trail stays centred; the Cartesian fit then takes
  * what the shipped ΔM leaves. Fits on the row's coarse grid to 900 km, then verifies the ROUNDED
  * values, as parsed from the emitted file, through `correctionSeriesAt` on every raw row in
@@ -112,7 +112,7 @@ function buildBody(fitted: FittedBody): { text: string; summary: string } {
   const fields: string[] = [`outside: '${outside}'`];
   let phase: CorrectionSeries | undefined;
   let phaseTerms = '';
-  if (row.focusId !== 'sun') {
+  if (fitted.fitMeanAnomaly) {
     // Unwrap sample to sample: the series must see ΔM's true drift, not a ±π sawtooth.
     const target = new Float64Array(tJd.length);
     tJd.forEach((t, s) => {
