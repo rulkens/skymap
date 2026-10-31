@@ -43,6 +43,7 @@ export async function captureSiteShot(
     await page.locator('button', { has: page.locator(`span:text-is("${heading}")`) }).click();
     await page.waitForTimeout(PANEL_SETTLE_MS);
   }
+  for (const key of shot.settings?.keys ?? []) await page.keyboard.press(key);
   if (shot.settings?.minimalUi) await page.addStyleTag({ content: MINIMAL_UI_CSS });
   // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
   if (shot.settings?.remote) return shootPairedRemote(page, base, shot);

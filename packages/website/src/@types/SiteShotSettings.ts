@@ -43,6 +43,8 @@ export type SiteShotSettings = {
   minimalUi?: true;
   /** With `ui`: open the app’s search and type this before the shot; an empty string leaves it on its picture cards. */
   searchFor?: string;
+  /** With `ui`: keys pressed in order before the shot, as a reader presses them (Playwright's names: `]`, `Shift+N`). */
+  keys?: readonly string[];
   /** With `ui`: the app's debug panel open, as the D key opens it. */
   debugPanel?: true;
   /** With `ui`: headings of the app's panels to click before the shot, in order (`Settings` itself where the panel starts folded). */

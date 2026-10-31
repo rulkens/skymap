@@ -191,23 +191,23 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'A model. Every camera we have is inside it.',
     alt: 'A barred spiral galaxy seen from above, with small companion galaxies around it.',
   },
-  // The same model alone on transparency, all but edge-on: the Science page lays its disc across the window.
+  // The same model alone on transparency, from above its north pole: the Science page floats it over its own ground.
   {
-    id: 'milky-way-edge-on',
-    link: 'focus=milkyWay&pose=a,-0.000447,-0.007140,-0.003966,0.3888,0.45,0.024,1.0',
+    id: 'milky-way-face-on',
+    link: 'focus=milkyWay&pose=a,-0.000447,-0.007140,-0.003966,-1.5704,0.5203,0.042,0',
     settings: {
       ...ONE_GALAXY,
       hideStars: true,
       matte: 'emissive',
       keepPasses: ['milky-way', 'milky-way-aggregate', 'milky-way-upsample'],
-      exposure: 2.4,
+      exposure: 2.2,
       settleMs: 4000,
     },
-    size: { width: 1800, height: 600 },
-    widths: [3600, 2400, 1200],
+    size: { width: 1400, height: 1400 },
+    widths: [1600, 960],
     title: 'The Milky Way from outside',
     drawn: 'A model. Every camera we have is inside it.',
-    alt: 'The Milky Way seen almost edge-on: a thin bright disc with a dark lane of dust across a glowing bulge, globular clusters scattered above and below.',
+    alt: 'A barred spiral galaxy seen from above its pole, a bright bar at its centre and dust along its arms, with globular clusters scattered round it.',
   },
   // The Science page's Coverage: the DESI fan of features-desi alone as light, beside the footprints that shape the map.
   {
@@ -226,38 +226,11 @@ export const SITE_SHOTS: readonly SiteShot[] = [
       settleMs: 12000,
     },
     size: { width: 1600, height: 1000 },
-    // A phone's band across the window, about 560px wide: 960 covers it at 2x, and fine points cost bytes above that.
+    // Drawn in the page's margin, 28rem at most: 960 covers it at 2x, and fine points cost bytes above that.
     widths: [960, 640],
     title: 'The DESI survey wedge',
     drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
     alt: 'A broad fan of points opening from a tip at the left, orange near the tip and blue-white far out.',
-  },
-  // The same fan upright for a wide window's margin, run down two lists of the Science page: seen lower, so it opens
-  // less, and rolled so its near edge is plumb. Tip to far end fills the frame's height; the margin shows at most the
-  // frame's left two fifths, so only those are kept. Fine points cost bytes: 880 at quality 28 is about 400 KB.
-  {
-    id: 'science-desi-spine',
-    link: 'pose=a,-1479.2,-2321.8,1631.3,2.7856,0.1666,6250,2.421',
-    settings: {
-      hideLabels: true,
-      hideStructures: true,
-      hideCosmicWeb: true,
-      hideZoneOfAvoidance: true,
-      hideGalaxyField: true,
-      hideStars: true,
-      desiWedge: true,
-      matte: 'emissive',
-      keepPasses: ['point-sprites'],
-      exposure: 4,
-      crop: { left: 0, top: 0, width: 440, height: 2200 },
-      settleMs: 12000,
-    },
-    size: { width: 1100, height: 2200 },
-    widths: [880, 440],
-    denseQuality: 28,
-    title: 'The DESI survey wedge',
-    drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
-    alt: 'A long fan of points running down from a tip at the top, white and orange near the tip, blue and thinning far out.',
   },
   // The About page's opening: the traced filaments seen whole, alone as light, and the app's scale bar at the same
   // camera in a window of the same shape, so the bar is laid over the picture at the picture's own scale.
@@ -1028,7 +1001,9 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'Saturn and its rings inside a selection ring, beside a card listing radius, mass, gravity, day length and more.',
     credit: 'Saturn: Solar System Scope',
   },
-  // The first-flight tutorial: no pinned time on the first four, because the page describes the app as a visitor finds it, with its clock on the present.
+  // The first-flight tutorial. A view with no pinned time shows the app as a visitor finds it, its clock on the present.
+  // A `first-flight-` piece is one control alone, and its narrowest file is its size in the app, the size the page
+  // draws it at (components/docs/ControlFigure). The two Earth-and-Moon rows share a window, so the bar reads the view.
   {
     id: 'start-arrival',
     link: 'focus=body-earth',
@@ -1042,24 +1017,43 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     credit: 'Earth: NASA Blue Marble',
   },
   {
-    id: 'start-moon-orbit',
+    id: 'first-flight-scale',
     link: 'focus=body-earth&pose=a,0,0,0,6.14,1.0,8.4e-14,0',
-    settings: { ui: true, settleMs: 4000 },
-    size: FEATURE,
-    widths: DOCS_WIDTHS,
-    title: 'Earth and the Moon’s orbit, from about 2.6 million kilometres',
-    drawn: 'The line round Earth is the Moon’s orbit. Earth is too small to see from here, so the small circle and the name stand in for it.',
-    alt: 'A small circle labelled Earth inside the line of the Moon’s orbit, with the Moon labelled on it, among stars, with a scale bar reading a few hundred thousand kilometres.',
+    settings: { ui: true, element: '[aria-label="Scale reference"]', settleMs: 4000 },
+    size: { width: 1600, height: 1000 },
+    widths: [440, 220],
+    title: 'The scale bar',
+    alt: 'The app’s scale bar reading 308,568 km.',
   },
   {
-    id: 'start-search',
+    id: 'first-flight-moon-orbit',
+    link: 'focus=body-earth&pose=a,0,0,0,6.14,1.0,8.4e-14,0',
+    settings: { settleMs: 4000, crop: { left: 480, top: 300, width: 640, height: 400 } },
+    size: { width: 1600, height: 1000 },
+    widths: [1280, 960],
+    title: 'Earth and the Moon’s orbit',
+    drawn: 'Earth is too small to see from here, so the small circle and the name stand in for it.',
+    alt: 'A small circle labelled Earth inside the thin line of the Moon’s orbit, the Moon labelled on it, among stars.',
+  },
+  {
+    id: 'first-flight-search',
     link: 'focus=body-earth',
-    settings: { ui: true, searchFor: 'Saturn', settleMs: 3000 },
+    settings: { ui: true, searchFor: 'Saturn', element: '[role="dialog"][aria-label^="Search"]', settleMs: 4000 },
+    size: FEATURE,
+    widths: [1220, 610],
+    title: 'The search with “Saturn” typed in',
+    alt: 'The app’s search box holding the word Saturn, above one result: Saturn, tagged Solar System.',
+  },
+  {
+    id: 'first-flight-saturn',
+    link: 'focus=body-saturn',
+    settings: { ui: true, minimalUi: true, settleMs: 5000 },
     size: FEATURE,
     widths: DOCS_WIDTHS,
-    title: 'The search with “Saturn” typed in',
-    drawn: 'The result’s small picture was taken in the app.',
-    alt: 'A search box holding the word Saturn above one result, Saturn, tagged Solar System, with the scene dimmed behind it.',
+    title: 'Saturn, with its card open',
+    drawn: 'The planet’s position, its lit side and the tilt of its rings are computed for the moment the link is opened; the figures on the card are textbook values typed into the app.',
+    alt: 'Saturn and its rings inside a white ring, the search box and three round buttons above, and on the right a card headed Saturn with its radius, mass, day length and more.',
+    credit: 'Saturn: Solar System Scope',
   },
   {
     id: 'start-saturn',
@@ -1074,15 +1068,43 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     credit: 'Saturn: Solar System Scope',
   },
   {
-    id: 'start-clock',
+    // A link opens the clock stopped at real speed; five presses of ] step it to 6 hr/s and leave it stopped.
+    id: 'first-flight-clock',
     link: 'focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,1.3e-13,0',
-    settings: { ui: true, settleMs: 4000 },
+    settings: { ui: true, keys: [']', ']', ']', ']', ']'], element: '[aria-label="Time controls"] > div', settleMs: 4000 },
     size: FEATURE,
-    widths: DOCS_WIDTHS,
-    title: 'Saturn’s moons on their orbits, with the clock stopped',
-    caption: 'The clock’s controls are open at the lower right. A link opens the clock stopped at real speed, so the speed here reads 1 s/s.',
+    widths: [862, 431],
+    title: 'The clock at 6 hr/s, stopped',
+    alt: 'The app’s clock: Now, 6 hr/s, the Slower, Play and Faster buttons, and 2026-10-07 12:00 UTC.',
+  },
+  {
+    id: 'first-flight-moons',
+    link: 'focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,1.3e-13,0',
+    settings: { settleMs: 4000, crop: { left: 400, top: 250, width: 800, height: 500 } },
+    size: { width: 1600, height: 1000 },
+    widths: [1600, 960],
+    title: 'Saturn’s moons on their orbits',
     drawn: 'The positions are computed for 7 October 2026 at 12:00 UTC; the lines round the planet are the moons’ orbits.',
-    alt: 'A small Saturn inside the orbits of several moons, each labelled, and at the lower right a bar reading Now, a speed, three buttons and a date.',
+    alt: 'Saturn in a white ring inside the orbits of its moons, with Tethys, Enceladus, Dione, Rhea and Titan labelled.',
+  },
+  {
+    // The Home button's tooltip wrapper stands between the bar and the button.
+    id: 'first-flight-topbar',
+    link: 'focus=body-earth',
+    settings: { ui: true, element: 'div:has(> * > [aria-label="Fly camera home"])', settleMs: 4000 },
+    size: FEATURE,
+    widths: [932, 466],
+    title: 'The top bar',
+    alt: 'The app’s top bar: a search box reading Search the universe, and round Home, Auto-rotate and About buttons.',
+  },
+  {
+    id: 'first-flight-tour-nav',
+    link: 'tour=grandTour',
+    settings: { ui: true, tourStep: 0, settleMs: 9000, element: 'div:has(> [aria-label="Exit tour"])' },
+    size: FEATURE,
+    widths: [420, 210],
+    title: 'The tour’s buttons',
+    alt: 'The tour’s four buttons: back, pause inside a ring that runs down, stop, and forward.',
   },
   {
     // 9 s into the first step: the title card is up and the Milky Way is in frame.

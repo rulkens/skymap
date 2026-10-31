@@ -19,7 +19,7 @@ facts:
 
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
 
-You need a browser that has WebGPU; [Browser support and troubleshooting](/docs/start/browsers/) lists them. Each step gives a key and, for a phone or a tablet, a button. If a key does nothing on your keyboard, use the button. The link under each picture opens the app as the picture shows it.
+You need a browser that has WebGPU; [Browser support and troubleshooting](/docs/start/browsers/) lists them. Each step gives a key and the button that does the same, and under it we show that button as the app draws it. On a phone, the search, the clock, Home and About are in the bar at the foot of the screen. The link under each picture opens the app as the picture shows it.
 
 <p>
   <OpenApp />
@@ -29,7 +29,9 @@ You need a browser that has WebGPU; [Browser support and troubleshooting](/docs/
 
 1. Open the app in a second window, beside this page. In front of a class, keep this page on a second device.
 
-2. Press **Explore** on the [welcome screen](/docs/reference/glossary/#welcome-screen). If you have been here before, there is no welcome screen. You are above Earth. Earth is selected, so it has a white ring and its [card](/docs/guide/info-cards/#open-a-card) is open: on the right on a computer, as a sheet at the foot of a phone. The search box is at the top, and the [scale bar](/docs/reference/glossary/#scale-bar) and the clock are at the lower right.
+2. Press **Explore** on the [welcome screen](/docs/reference/glossary/#welcome-screen). If you have been here before, there is no welcome screen.
+
+You are above Earth. Earth is selected, so it has a white ring and its [card](/docs/guide/info-cards/#open-a-card) is open: on the right on a computer, as a sheet at the foot of a phone. On a computer the search box is at the top, and the [scale bar](/docs/reference/glossary/#scale-bar) and the clock are at the lower right.
 
 <Figure id="start-arrival" />
 
@@ -37,9 +39,13 @@ You need a browser that has WebGPU; [Browser support and troubleshooting](/docs/
 
 3. Drag on the sky, with the mouse or one finger. The stars swing round and Earth stays in the middle.
 
-4. With the pointer over the sky, scroll, or pinch two fingers together, until the scale bar reads about 300,000 km. Earth is now a small circle with its name beside it. The line round it is the Moon’s orbit, with the Moon on it, 1.3 seconds away at the speed of light.
+4. With the pointer over the sky, scroll, or pinch two fingers together, until the scale bar reads about 300,000 km.
 
-<Figure id="start-moon-orbit" />
+   <Control piece="first-flight-scale" />
+
+Earth is now a small circle with its name beside it. The line round it is the Moon’s orbit, with the Moon on it, 1.3 seconds away at the speed of light.
+
+<Figure id="first-flight-moon-orbit" wide />
 
 ## Go to Saturn by name
 
@@ -47,37 +53,71 @@ You need a browser that has WebGPU; [Browser support and troubleshooting](/docs/
 
 6. Type `Saturn`. The cards give way to one result.
 
+   <Control
+     piece="first-flight-search"
+     keys={[
+       ['/', 'open the search'],
+       ['Enter', 'fly to the result'],
+     ]}
+   />
+
 7. Press <Keys of="Enter" />, or click the result. The camera flies to Saturn and Saturn’s card takes the place of Earth’s. If you arrive over the night side, drag round to the lit one. The address now ends in `#focus=body-saturn`: that [address](/docs/guide/sharing/) is a link to Saturn.
 
-<Figure id="start-search" />
-
-<Figure id="start-saturn" />
+<Figure id="first-flight-saturn" />
 
 ## Run the clock
 
 8. Scroll or pinch out until the scale bar reads about 300,000 km again. Thin lines with names appear round the planet: the orbits of its moons.
 
-9. Press <Keys of="]" /> five times. On a phone, tap the [clock](/docs/guide/time/) first: its controls open, with a box for setting a date above them, which you can leave alone. Then tap the Faster button, the arrow to the right of the pause button, five times. The clock reads `6 hr/s`, six hours of the scene for each second, and the moons move along their orbits, the inner ones fastest. The address has gained a date and time, after `t=`.
+<Figure id="first-flight-moons" wide />
+
+9. Press <Keys of="]" /> five times, or point at the [clock](/docs/guide/time/) and press its Faster button, the arrow to the right of the pause button, five times. On a phone, tap **Time** first: the clock’s row opens above the bar. The clock reads `6 hr/s`, six hours of the scene for each second, and the moons move along their orbits, the inner ones fastest. The address has gained a date and time, after `t=`.
+
+   <Control
+     piece="first-flight-clock"
+     keys={[
+       [']', 'faster'],
+       ['[', 'slower'],
+       ['\\', 'stop or run'],
+       ['Shift+N', 'back to now'],
+     ]}
+   />
 
 10. Press <Keys of="\" />, or the pause button on the clock. The moons stop, and `t=` in the address now holds the date and time the clock stopped on.
 
 11. Press <Keys of="Shift+N" />, or the **Now** button on the clock. The clock is back on the present, running at `1 s/s`, and `t=` has gone from the address.
 
-<Figure id="start-clock" />
-
 ## Come home
 
-12. Press <Keys of="H" />, or the [Home button](/docs/guide/moving/#go-home) at the top. The camera flies back to Earth, Earth’s card returns, and the address has nothing after it again.
+12. Press <Keys of="H" />, or the [Home button](/docs/guide/moving/#go-home), the first round button at the top. The camera flies back to Earth, Earth’s card returns, and the address has nothing after it again.
+
+    <Control
+      piece="first-flight-topbar"
+      keys={[
+        ['/', 'search'],
+        ['H', 'fly home'],
+      ]}
+    />
 
 ## Take the tour
 
-13. Press the About button, the last of the three at the top, then **Tour** on the welcome screen. The interface goes away and the tour’s title comes up.
+13. Press the About button, the last round button at the top, then **Tour** on the welcome screen. The interface goes away and the tour’s title comes up.
+
+<Figure id="start-tour" />
 
 14. Let it play, which takes a little over 5 minutes, or go through its [14 steps](/docs/guide/tours/#the-long-way-out) with <Keys of="Right" /> and <Keys of="Left" /> or the arrow buttons at the foot of the screen.
 
-15. Press <Keys of="Esc" />, or the square button, to leave. The view stays where the tour took it, so press <Keys of="H" />, or the Home button, to come back to Earth.
+    <Control
+      piece="first-flight-tour-nav"
+      keys={[
+        ['Right', 'next step'],
+        ['Left', 'step back'],
+        ['Space', 'pause'],
+        ['Esc', 'leave'],
+      ]}
+    />
 
-<Figure id="start-tour" />
+15. Press <Keys of="Esc" />, or the square button, to leave. The view stays where the tour took it, so press <Keys of="H" />, or the Home button, to come back to Earth.
 
 ## Where to go next
 

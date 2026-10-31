@@ -1,0 +1,68 @@
+.root {
+  /* From the column's right edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  position: relative;
+}
+
+/* The two columns the statements leave empty and the window's margin beyond them, over the list's rules. */
+.margin {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: calc(-1 * var(--bleed));
+  bottom: 0;
+  left: calc(10 * (100% + var(--col-gap)) / 12);
+  overflow-x: clip;
+  pointer-events: none;
+}
+
+.held {
+  position: sticky;
+  top: calc(var(--nav-height) + 2rem);
+  margin: 0;
+}
+
+/*
+ * The fan's tip (21% across its frame) on the margin's left edge, its open end run off the window. The ground
+ * under it dims the list's rules where they cross it.
+ */
+.subject {
+  --frame: 34rem;
+  width: var(--frame);
+  margin-left: calc(-0.21 * var(--frame));
+  background: radial-gradient(closest-side, var(--color-bg) 50%, rgb(0 0 0 / 0));
+
+  & picture,
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+.caption {
+  max-width: 13rem;
+  pointer-events: auto;
+}
+
+@media (max-width: 900px) {
+  .margin {
+    position: static;
+    margin: 0 calc(-1 * var(--gutter)) 1.5rem;
+  }
+
+  .held {
+    position: static;
+  }
+
+  .subject {
+    width: 120%;
+    margin-left: -12%;
+  }
+
+  .caption {
+    max-width: none;
+    margin-inline: var(--gutter);
+  }
+}
