@@ -91,15 +91,14 @@
 }
 
 /*
- * One system: every device is `--h` tall, its width set by its own shape, so a phone is narrow and a desktop wide
- * at one scale. Two rows shared by every part (subgrid): the devices stand on one floor line, the words under it.
+ * One system: every device is `--dh` tall, its part's `--s` times the row's `--h`, rising from the phone to the dome;
+ * its width set by its own shape. Two rows shared by every part (subgrid): the devices stand on one floor line,
+ * the words under it.
  */
 .row {
-  --h: clamp(11rem, 19vw, 16.5rem);
-  --yaw: -14deg;
+  --h: clamp(10rem, 15vw, 15rem);
+  --yaw: -6deg;
   --pitch: 5deg;
-  --phone-yaw: calc(var(--yaw) + var(--scroll-yaw));
-  --phone-pitch: var(--pitch);
   position: relative;
   display: grid;
   grid-template-columns: repeat(4, auto);
@@ -135,12 +134,42 @@
   }
 }
 
+/*
+ * Each part on its own: `--aim-x` is the pointer's offset from this device, in row widths (`--turn-x` is from the
+ * row's middle, phoneTurn.client.ts; `--at` is where the device's middle stands in the row), so each turns toward
+ * the pointer from where it stands. `--shift-*` moves it against the pointer by its size: the dome, nearest and
+ * largest, the most. Without a pointer `--aim-x` leaves each device facing the row's middle and nothing shifts.
+ */
 .part {
+  --dh: calc(var(--h) * var(--s));
+  --aim-x: calc(var(--turn-x, 0) + 0.5 - var(--at));
+  --shift-x: calc(var(--turn-x, 0) * var(--s) * -1.25rem);
+  --shift-y: calc(var(--turn-y, 0) * var(--s) * -0.5rem);
   display: grid;
   grid-row: span 2;
   grid-template-rows: subgrid;
   justify-items: center;
   min-width: 0;
+}
+
+.phone {
+  --s: 0.7;
+  --at: 0.07;
+}
+
+.tablet {
+  --s: 0.85;
+  --at: 0.26;
+}
+
+.desktop {
+  --s: 1;
+  --at: 0.51;
+}
+
+.dome {
+  --s: 1.5;
+  --at: 0.84;
 }
 
 /* Placed, so the floor line (placed in the first row) does not push them down. */
@@ -169,19 +198,28 @@
 .device {
   align-self: end;
   perspective: 1400px;
+  translate: var(--shift-x) var(--shift-y);
+  transition: translate var(--duration-reveal) var(--ease-enter);
 }
 
-/* Turned as the phone's case is (Phone3D), so all four move as one. */
+/* Turned as the phone's case is (Phone3D), each by its own aim. */
 .body {
   position: relative;
   transform-style: preserve-3d;
-  transform: rotateY(calc(var(--yaw) + var(--scroll-yaw) + var(--turn-x, 0) * 22deg))
+  transform: rotateY(calc(var(--yaw) + var(--scroll-yaw) + var(--aim-x) * 18deg))
     rotateX(calc(var(--pitch) - var(--turn-y, 0) * 12deg));
   transition: transform 0.25s ease-out;
 }
 
 .phone .body {
   transform: none;
+}
+
+/* The phone's case turns itself: its yaw takes the aim, and the row's own offset is kept from it. */
+.phone .face {
+  --phone-yaw: calc(var(--yaw) + var(--scroll-yaw) + var(--aim-x) * 18deg);
+  --phone-pitch: var(--pitch);
+  --turn-x: 0;
 }
 
 /* The case's edge, as Phone3D draws its own. */
@@ -197,12 +235,12 @@
 }
 
 .phone .device {
-  --phone-width: calc(var(--h) * 0.48);
+  --phone-width: calc(var(--dh) * 0.48);
 }
 
-/* Widths from each picture's shape and frame, so every device is `--h` tall. */
+/* Widths from each picture's shape and frame, so every device is `--dh` tall. */
 .tablet .face {
-  width: calc(var(--h) * 0.815);
+  width: calc(var(--dh) * 0.815);
 }
 
 .tablet .slice {
@@ -210,7 +248,7 @@
 }
 
 .desktop .face {
-  width: calc(var(--h) * 1.373);
+  width: calc(var(--dh) * 1.373);
 }
 
 /* Only the screen has a case; the stand under it stays a drawing. */
@@ -221,7 +259,7 @@
 }
 
 .dome .face {
-  width: var(--h);
+  width: var(--dh);
   padding: var(--disc-ring);
 }
 
@@ -231,12 +269,19 @@
 }
 
 .label {
-  width: 12rem;
+  width: 11rem;
   max-width: 100%;
   text-align: center;
 
   & h3 {
     margin-bottom: 0.5rem;
+  }
+}
+
+/* Room under the widest device for its link on one line. */
+@media (min-width: 901px) {
+  .dome .label {
+    width: 14rem;
   }
 }
 
@@ -248,14 +293,30 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .device,
   .body {
     transition: none;
   }
 }
 
+/* Two by two: the dome as wide as its cell allows with its ring, still the largest. */
 @media (max-width: 900px) {
+  .phone,
+  .desktop {
+    --at: 0.25;
+  }
+
+  .tablet,
+  .dome {
+    --at: 0.75;
+  }
+
+  .dome {
+    --s: 1.2;
+  }
+
   .row {
-    --h: 30vw;
+    --h: 28vw;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-top: 2rem;
     row-gap: 1.25rem;

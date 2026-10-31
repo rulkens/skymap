@@ -1,9 +1,10 @@
 /*
  * Screens — Home's row of the screens Skymap runs on, each showing Saturn: a phone, a tablet, a desktop and a
- * dome. All four are one system: drawn the same height, standing on one floor line, each with the depth of a
- * case, and turned together, toward the pointer and a little with the scroll (phoneTurn.client.ts sets the
- * pointer's offset on the row). Wide, the title is centred over the row, the page's one centred head, and the
- * planet they all show floats free beside it, drifting a little with the scroll. Narrow, the row is two by two.
+ * dome, rising in size from the phone to the dome on one floor line, each with the depth of a case. Each turns
+ * toward the pointer from where it stands and shifts against it by its size, and all turn a little with the
+ * scroll (phoneTurn.client.ts sets the pointer's offset on the row). Wide, the title is centred over the row, the
+ * page's one centred head, and the planet they all show floats free beside it, drifting a little with the scroll.
+ * Narrow, the row is two by two.
  */
 import type { CSSProperties } from 'react';
 
@@ -49,7 +50,7 @@ const PARTS = [
     kind: 'dome',
     title: 'Dome',
     note: 'A fisheye picture for a planetarium dome, steered from a phone.',
-    device: <Disc id="dome-saturn" sizes="(max-width: 900px) 40vw, 16rem" />,
+    device: <Disc id="dome-saturn" sizes="(max-width: 900px) 34vw, 23rem" />,
   },
 ];
 

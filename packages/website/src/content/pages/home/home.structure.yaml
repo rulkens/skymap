@@ -20,7 +20,7 @@ sections:
   - heading: "Explore the universe anywhere"
     job: "Show that Skymap runs on phones, tablets, desktops and domes."
     component: "Screens"
-    layout: "one row of four screens, same view, one height on one floor line, turning together; two by two on a phone"
+    layout: "one row of four screens, same view, rising in size from the phone to the dome on one floor line, each turning toward the pointer and shifting by its size; two by two on a phone"
     visual: "Phone3D, DeviceFrame tablet and desktop, dome Disc"
     parts:
       - heading: "Phone"
