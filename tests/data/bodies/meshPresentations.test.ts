@@ -20,6 +20,6 @@ describe('MESH_PRESENTATIONS shape models', () => {
   ])('%s is drawn from its own mesh at its measured outer radius', (id, radiusM) => {
     const row = MESH_PRESENTATIONS.find((p) => p.id === id);
     expect(row?.meshKey).toBe(id);
-    expect(Math.abs(row!.boundingRadiusM / radiusM - 1)).toBeLessThan(0.004);
+    expect(Math.abs(row!.boundingRadiusM / radiusM - 1)).toBeLessThan(7e-4);
   });
 });

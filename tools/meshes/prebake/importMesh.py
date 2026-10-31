@@ -77,7 +77,7 @@ SOURCES = {
         "Phobos_Viking_Mosaic_40ppd_DLRcontrol.tif", 4.5, (0.30, 0.29, 0.28))),
     "deimos": source("DEIMOS_K005_THO_V01.OBJ", scale=1000.0,
                      rock={"constant": (0.32, 0.30, 0.28)}),
-    # The maps are pre-shrunk to 8192 px with their NoData filled (README).
+    # Vesta's and Bennu's maps are pre-shrunk to 8192 px with their NoData filled (README).
     "vesta": source("dawn_vesta_grv_icq0512_v1.obj", scale=1000.0, rock=lonlat_albedo(
         "Vesta_Dawn_FC_HAMO_Mosaic_Global_74ppd.8192.png", 0.0, (0.45, 0.43, 0.40))),
     "ceres": source("dawn_ceres_grv_icq0256_v2.obj", scale=1000.0, rock=lonlat_albedo(
