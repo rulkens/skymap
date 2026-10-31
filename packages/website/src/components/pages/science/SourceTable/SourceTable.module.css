@@ -107,16 +107,73 @@
 }
 
 .notes {
+  composes: grid from '../../../../styles/layout.module.css';
   composes: small from '../../../../styles/type.module.css';
-  composes: tap-links from '../../../../styles/links.module.css';
+  align-items: center;
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--border-divider);
+}
 
-  & p {
-    max-width: 34rem;
-    margin-bottom: 0.75rem;
-    color: var(--site-text-dim);
+.text {
+  composes: tap-links from '../../../../styles/links.module.css';
+}
+
+.text p {
+  max-width: 34rem;
+  margin-bottom: 0.75rem;
+  color: var(--site-text-dim);
+}
+
+.figure {
+  margin: 0;
+}
+
+/*
+ * The model drifts across the notes and rests square mid-window; on black it needs no frame. Its frame's empty
+ * top and foot (in % of the width: 16:9) are tucked away so the label sits under the telescope.
+ */
+.drift {
+  margin: -6% 0 -12%;
+  pointer-events: none;
+
+  & picture,
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+@keyframes notes-drift {
+  from {
+    translate: 3rem 2rem;
+    rotate: 5deg;
+  }
+
+  to {
+    translate: -3rem -2rem;
+    rotate: -5deg;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .drift picture {
+      animation: notes-drift linear both;
+      animation-timeline: view();
+    }
+  }
+}
+
+@media (min-width: 901px) {
+  .notes > .text {
+    grid-column: 1 / span 6;
+  }
+
+  .notes > .figure {
+    grid-column: 7 / span 6;
   }
 }
 

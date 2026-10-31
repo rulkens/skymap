@@ -1,0 +1,231 @@
+.root {
+  composes: section from '../../../../styles/layout.module.css';
+}
+
+.head {
+  composes: wrap from '../../../../styles/layout.module.css';
+}
+
+.lead {
+  max-width: var(--measure-lead);
+  margin-bottom: 0;
+  font-size: var(--text-lead);
+}
+
+.window {
+  position: relative;
+  margin: 3rem 0 0;
+}
+
+/* The bar is the one raised surface: lighter than the ground, over the top of the view it opens. */
+.bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  width: min(58rem, calc(100% - 2 * var(--gutter)));
+  margin: 0 auto -1.75rem;
+  border: 1px solid rgb(232 238 255 / 0.22);
+  border-radius: 0.5rem;
+  background: rgb(14 17 26 / 0.86);
+  box-shadow: 0 1.25rem 3rem rgb(0 0 0 / 0.7);
+  backdrop-filter: blur(12px);
+  transition: border-color var(--duration-base) var(--ease-standard);
+
+  &:hover,
+  &:focus-within {
+    border-color: var(--view-accent);
+  }
+}
+
+.address {
+  flex: 1;
+  min-width: 0;
+  min-height: 3.5rem;
+  padding: 1rem 1.25rem;
+  font: 400 var(--text-small) / 1.5 var(--font-family-mono);
+  color: var(--site-text-faint);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+
+  & > span {
+    display: inline-block;
+    max-width: 100%;
+  }
+
+  & b {
+    font-weight: 400;
+    color: var(--site-text-muted);
+  }
+}
+
+.host {
+  color: var(--site-text-faint);
+}
+
+/* The parameters the part being read is about, in its picture's colour. */
+.lit {
+  color: var(--view-accent);
+
+  & b {
+    color: var(--view-accent);
+  }
+}
+
+.address .lit,
+.address .lit b {
+  transition: var(--transition-color);
+}
+
+/* The view across the window, dissolving into the page at its sides and foot. */
+.stage {
+  position: relative;
+  height: min(56.25vw, 78svh);
+  overflow: hidden;
+  mask-image:
+    linear-gradient(180deg, #000 72%, rgb(0 0 0 / 0)),
+    linear-gradient(90deg, rgb(0 0 0 / 0), #000 7%, #000 93%, rgb(0 0 0 / 0));
+  mask-composite: intersect;
+}
+
+/* As Stories' views: the next arrives from a touch larger, the last leaves faster. */
+.layer {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity var(--duration-reveal) var(--ease-enter),
+    scale calc(var(--duration-reveal) + 50ms) var(--ease-enter);
+
+  & picture {
+    display: block;
+    height: 100%;
+  }
+
+  & img {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.away {
+  opacity: 0;
+  scale: 1.04;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-base) var(--ease-leave),
+    scale 0s linear var(--duration-base),
+    visibility 0s linear var(--duration-base);
+}
+
+.cold {
+  display: none;
+}
+
+.caption {
+  composes: wrap from '../../../../styles/layout.module.css';
+  margin-top: -1.5rem;
+}
+
+/* The two parts and the way in, on one row: a rule over the part being read draws out in its colour. */
+.parts {
+  composes: wrap grid from '../../../../styles/layout.module.css';
+  row-gap: 2.5rem;
+  margin-top: 3.5rem;
+}
+
+.part {
+  position: relative;
+  padding-top: 1.25rem;
+
+  & h3,
+  & p {
+    transition: var(--transition-color);
+  }
+
+  & h3 {
+    color: var(--site-text-dim);
+  }
+
+  & p {
+    margin-bottom: 0.75rem;
+    color: var(--site-text-dim);
+  }
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgb(232 238 255 / 0.16);
+  }
+
+  &::after {
+    background: var(--view-accent);
+    transform-origin: left;
+    scale: 0 1;
+    transition: scale var(--duration-reveal) var(--ease-enter);
+  }
+}
+
+.on {
+  & h3 {
+    color: var(--color-fg);
+  }
+
+  & p {
+    color: var(--site-text-muted);
+  }
+
+  &::after {
+    scale: 1 1;
+  }
+}
+
+@media (min-width: 901px) {
+  .part:first-child {
+    grid-column: 1 / span 4;
+  }
+
+  .part:nth-child(2) {
+    grid-column: 5 / span 4;
+  }
+
+  /* The way in closes the row, its foot on the second part's last line. */
+  .open {
+    grid-column: 10 / -1;
+    align-self: end;
+    justify-self: end;
+  }
+}
+
+@media (max-width: 900px) {
+  .window {
+    margin-top: 2rem;
+  }
+
+  .bar {
+    margin-bottom: -1.25rem;
+  }
+
+  .address {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .stage {
+    height: 75vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer,
+  .away,
+  .part::after {
+    transition: none;
+  }
+}

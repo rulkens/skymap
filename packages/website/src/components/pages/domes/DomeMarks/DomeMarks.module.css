@@ -1,0 +1,62 @@
+.root {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1;
+  opacity: 0.8;
+
+  & * {
+    vector-effect: non-scaling-stroke;
+  }
+}
+
+.dashed {
+  stroke-dasharray: 3 5;
+}
+
+/* Each name inside the disc on a black ground of its own: the stars behind it are too busy for text alone. */
+.zenith,
+.focus,
+.front {
+  position: absolute;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  color: var(--site-text-muted);
+  font-size: var(--text-small);
+  font-weight: var(--weight-small);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.zenith,
+.focus {
+  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+}
+
+.zenith {
+  top: 50%;
+  left: 54%;
+  translate: 0 -50%;
+}
+
+.focus {
+  left: 50%;
+  translate: -50% -50%;
+}
+
+/* The front is named below the rim, outside the ring, clear of what stands at the front of the dome. */
+.front {
+  top: calc(100% + var(--disc-ring) + 0.25rem);
+  left: 50%;
+  translate: -50% 0;
+}

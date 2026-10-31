@@ -1,0 +1,154 @@
+/* Wide: the index in seven of the page grid's columns, the viewer in the last five, held while the index scrolls. */
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  align-items: start;
+}
+
+.list {
+  composes: bare from '../../../../styles/layout.module.css';
+}
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'topic' 'ask' 'read' 'link';
+  padding-block: 1.25rem;
+  border-top: 1px solid var(--border-divider);
+
+  & h3 {
+    grid-area: ask;
+    max-width: var(--measure);
+    margin: 0 0 0.5rem;
+    color: var(--site-text-dim);
+    transition: color var(--duration-base) var(--ease-standard);
+  }
+
+  & > a {
+    grid-area: link;
+    justify-self: start;
+  }
+}
+
+/* A topic's name opens its group in the place of its first question's rule: space, not a second line, sets the groups. */
+.topic {
+  composes: small from '../../../../styles/type.module.css';
+  grid-area: topic;
+  margin: 0 0 1rem;
+  color: var(--site-text-dim);
+}
+
+.row:has(.topic) {
+  padding-top: 3rem;
+  border-top: 0;
+}
+
+.row:first-child {
+  padding-top: 0;
+}
+
+/* The question in hand: its words lit, the others dimmed. */
+.shown h3 {
+  color: var(--color-fg);
+}
+
+.readout {
+  composes: small from '../../../../styles/type.module.css';
+  grid-area: read;
+  margin: 0 0 0.5rem;
+  font-family: var(--font-family-mono);
+  color: var(--site-text-dim);
+}
+
+.thumb {
+  display: none;
+}
+
+.viewer {
+  position: sticky;
+  top: calc(var(--nav-height) + 2rem);
+  margin: 0;
+}
+
+.stack {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  /* The picture dissolves into the page instead of ending at an edge. */
+  mask-image: radial-gradient(closest-side, #000 72%, rgb(0 0 0 / 0));
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity var(--duration-reveal) var(--ease-standard);
+
+  & img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.on {
+  opacity: 1;
+}
+
+@media (min-width: 901px) {
+  .list {
+    grid-column: 1 / span 7;
+  }
+
+  .viewer {
+    grid-column: 8 / -1;
+    --cols: 5;
+  }
+}
+
+@media (hover: hover) and (min-width: 901px) {
+  .row {
+    cursor: default;
+  }
+}
+
+/* Narrow: no viewer; each question has its picture small at its left. */
+@media (max-width: 900px) {
+  .viewer {
+    display: none;
+  }
+
+  .row {
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    grid-template-areas: 'topic topic' 'thumb ask' 'thumb read' 'thumb link';
+    column-gap: 1rem;
+
+    & h3 {
+      color: var(--color-fg);
+    }
+  }
+
+  .thumb {
+    display: block;
+    grid-area: thumb;
+    align-self: start;
+    margin-top: 0.25rem;
+    border-radius: 50%;
+    overflow: hidden;
+    aspect-ratio: 1;
+
+    & img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide,
+  .row h3 {
+    transition: none;
+  }
+}

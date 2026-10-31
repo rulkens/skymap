@@ -1,0 +1,281 @@
+/*
+ * Wide, the picture spans the first three rows and the title and the question lie on its black above and
+ * below the line from Earth to the Moon. The picture's ground is black, so it has no edge to hide.
+ */
+.root {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto auto;
+  min-height: var(--first-screen);
+  overflow-x: clip;
+}
+
+.words,
+.ask,
+.caption {
+  composes: wrap from '../../../../styles/layout.module.css';
+  position: relative;
+  z-index: 1;
+  grid-column: 1;
+  width: 100%;
+}
+
+.words {
+  grid-row: 1;
+  padding-top: var(--open-top);
+
+  & h1 {
+    margin-bottom: 1rem;
+  }
+}
+
+.say {
+  composes: say from '../../../../styles/type.module.css';
+  max-width: var(--measure-lead);
+  color: var(--site-text-muted);
+}
+
+.figure {
+  display: contents;
+}
+
+.frame {
+  position: relative;
+  grid-area: 1 / 1 / 4;
+  align-self: center;
+
+  & img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+/*
+ * Where Earth, the Moon and the gap between them are in the picture, in fractions of its box, measured from
+ * the master of `class-earth-moon` (and of its upright cut below). A reshoot must measure them again.
+ */
+.frame {
+  --earth-x: 11.09%;
+  --earth-top: 46.2%;
+  --moon-x: 90.06%;
+  --moon-top: 48.2%;
+  --gap-left: 12.406%;
+  --gap-width: 77.313%;
+  --gap-top: 47.064%;
+  --gap-height: 6.872%;
+}
+
+/* A name as the app writes one: the display face, with a short line down to the thing it names. */
+.earth,
+.moon {
+  position: absolute;
+  translate: -50% -100%;
+  font: var(--weight-display) var(--text-body) / 1 var(--font-family-display);
+  color: var(--accent);
+
+  &::after {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 0.625rem;
+    margin: 0.375rem auto 0;
+    background: currentColor;
+    opacity: 0.6;
+  }
+}
+
+.earth {
+  top: var(--earth-top);
+  left: var(--earth-x);
+}
+
+.moon {
+  top: var(--moon-top);
+  left: var(--moon-x);
+}
+
+/* Thirty rings of Earth's width, filling the gap: drawn in from Earth when the answer is opened. */
+.rings {
+  position: absolute;
+  top: var(--gap-top);
+  left: var(--gap-left);
+  display: flex;
+  width: var(--gap-width);
+  height: var(--gap-height);
+
+  & i {
+    flex: 1;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    opacity: 0;
+    scale: 0.3;
+    transition:
+      opacity var(--duration-base) var(--ease-enter) calc(var(--i) * 10ms),
+      scale var(--duration-base) var(--ease-enter) calc(var(--i) * 10ms);
+  }
+}
+
+/* The count as a picture of itself, over the rings it counts; raised so the old-style 3's tail clears them. */
+.numeral {
+  position: absolute;
+  bottom: calc(100% - var(--gap-top) + 8%);
+  left: calc(var(--gap-left) + var(--gap-width) / 2);
+  translate: -50% 0;
+  font: var(--weight-display) calc(var(--text-h2) * 1.6) / 0.8 var(--font-family-display);
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity var(--duration-reveal) var(--ease-enter) 250ms;
+}
+
+.root:has(details[open]) {
+  & .rings i {
+    opacity: 0.8;
+    scale: 1;
+  }
+
+  & .numeral {
+    opacity: 1;
+  }
+}
+
+.ask {
+  grid-row: 3;
+  padding-bottom: 1.5rem;
+}
+
+.question {
+  max-width: 22ch;
+  margin: 0 0 0.75rem;
+  font: var(--weight-display) var(--text-ring-big) / var(--leading-display)
+    var(--font-family-display);
+  color: var(--color-fg);
+  text-wrap: balance;
+}
+
+.answer {
+  composes: answer from '../answer.module.css';
+  margin-bottom: 1.25rem;
+}
+
+/* Wide: the question and the answer on the left, the link and its note on the page grid's last five columns. */
+@media (min-width: 901px) {
+  .ask {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    align-items: end;
+  }
+
+  .question,
+  .answer {
+    grid-column: 1 / span 7;
+  }
+
+  .act {
+    grid-area: 1 / 8 / 3 / -1;
+    align-self: end;
+    padding-bottom: 0.75rem;
+  }
+}
+
+.caption {
+  grid-row: 4;
+  padding-bottom: 2rem;
+}
+
+/*
+ * Narrow: the words and the question, then the picture, then the answer and the link under it, so the
+ * question is asked before the gap is crossed. `.ask` dissolves for that, so its parts take the gutter.
+ */
+@media (max-width: 900px) {
+  .root {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .words {
+    order: -2;
+  }
+
+  .ask {
+    display: contents;
+  }
+
+  .question,
+  .answer,
+  .act {
+    width: 100%;
+    max-width: var(--wrap-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .question {
+    order: -1;
+    margin-block: 0;
+    padding-top: 2rem;
+  }
+
+  .answer {
+    margin-block: 1rem 1.25rem;
+  }
+
+  .act {
+    padding-bottom: 2rem;
+  }
+
+  .frame {
+    width: 100%;
+    margin-inline: auto;
+  }
+}
+
+/* The upright cut: the Moon at the top, Earth at the foot, the rings stacked up from Earth. */
+@media (max-width: 700px) {
+  .frame {
+    --gap-left: 47.7%;
+    --gap-width: 5.393%;
+    --gap-top: 8.45%;
+    --gap-height: 80.9%;
+    max-width: 30rem;
+  }
+
+  .earth,
+  .moon {
+    translate: 0 -50%;
+
+    &::after {
+      display: none;
+    }
+  }
+
+  .earth {
+    top: 90.65%;
+    left: 56%;
+  }
+
+  .moon {
+    top: 8.1%;
+    left: 54%;
+  }
+
+  .rings {
+    flex-direction: column-reverse;
+  }
+
+  .numeral {
+    top: 50%;
+    left: 30%;
+    translate: -50% -50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rings i,
+  .numeral {
+    transition: none;
+  }
+}

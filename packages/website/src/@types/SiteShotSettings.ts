@@ -29,6 +29,8 @@ export type SiteShotSettings = {
   /** The galaxy flow ribbons on (off by default in the app). */
   flow?: true;
   fovDeg?: number;
+  /** The tone map's exposure in place of the app's default (DEFAULT_EXPOSURE, 3): higher lifts dark sides and faint light, and burns highlights sooner. */
+  exposure?: number;
   /** Density correction on "None — raw catalogue" in place of the app's first choice. */
   rawDensity?: true;
   /** The data size, where the picture is not of the one the window's width picks. */
@@ -49,6 +51,20 @@ export type SiteShotSettings = {
   remote?: true;
   /** Keep this part of the frame only, in the viewport's CSS pixels: a phone's cut of a wide interface shot. */
   crop?: { left: number; top: number; width: number; height: number };
+  /** With `ui`: a CSS selector of one element of the app's interface; the picture is that element alone on a transparent ground, with a margin for its shadow. Not with `crop`. */
+  element?: string;
+  /**
+   * The subject alone on transparency, with the sky left out. `occluding`: a body or craft that hides what is behind it; the frame is drawn on black and on white and the alpha taken from the difference. `emissive`: light that adds to what is behind it (points, lines, a glowing volume); the alpha is the frame's brightest channel on black.
+   */
+  matte?: 'occluding' | 'emissive';
+  /** With `matte`: sky passes that are the subject, kept when the rest of the sky is left out (`flow`, `cosmic-web-filaments`, …). */
+  keepPasses?: readonly string[];
+  /** The app's render passes left out of the picture: with `matte`, out of the cut-out, such as the planet behind a craft (`earth`, `cloud-shell`, …); without, out of the scene, such as a rover the page lays back on as its own cut-out (`mission-meshes`). */
+  hidePasses?: readonly string[];
+  /** With `matte: 'occluding'`: also a `<id>-shadow` multiply layer (white = no shadow) of the contact shadow a craft casts on the ground. */
+  shadow?: true;
+  /** A uniform fill light on craft and other mesh bodies, as a fraction of sunlight (0.15 opens up a shadow side); the app has none. */
+  ambient?: number;
   /** Extra time before the shot: streamed surface imagery arrives after the app reports settled. */
   settleMs?: number;
 };

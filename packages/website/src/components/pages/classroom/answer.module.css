@@ -1,0 +1,85 @@
+/*
+ * answer.module.css — the classroom page's kept-back answer: a native `details` whose summary is the site's
+ * ring with a question mark in it. Pointed at, the ring is selected as every ring is; opened, it fills and
+ * turns once, and the mark becomes an exclamation mark as the answer comes up under it. A vocabulary of this
+ * page: compose `answer`; the host sets `--accent`, or the ring takes the link colour.
+ */
+.answer {
+  & summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.875rem;
+    min-height: var(--tap);
+    cursor: pointer;
+    color: var(--accent, var(--color-accent));
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::before {
+      content: '?';
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      font: var(--weight-display) 1.25rem / 1 var(--font-family-display);
+      transition:
+        background-color var(--duration-base) var(--ease-standard),
+        color var(--duration-base) var(--ease-standard),
+        box-shadow var(--duration-fast) var(--ease-standard),
+        rotate var(--duration-reveal) var(--ease-standard);
+    }
+  }
+
+  /* Selected as the site's other rings are: a thin ring stands off around the marker. */
+  & summary:is(:hover, :focus-visible)::before {
+    box-shadow:
+      0 0 0 0.3125rem var(--color-bg),
+      0 0 0 0.375rem currentColor;
+  }
+
+  /* Not `currentColor`: the marker's own colour turns to the ground's here. */
+  &[open] summary::before {
+    content: '!';
+    rotate: 1turn;
+    background: var(--accent, var(--color-accent));
+    color: var(--color-bg);
+    border-color: var(--accent, var(--color-accent));
+  }
+
+  & summary:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 4px;
+  }
+
+  & p {
+    margin: 0;
+    color: var(--site-text-muted);
+  }
+
+  &[open] p {
+    animation: answer-in var(--duration-reveal) var(--ease-standard);
+  }
+}
+
+@keyframes answer-in {
+  from {
+    opacity: 0;
+    translate: 0 -0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .answer summary::before {
+    transition: none;
+  }
+
+  .answer[open] p {
+    animation: none;
+  }
+}

@@ -1,0 +1,120 @@
+/* The scroll box reaches into the margin, so the rings hung there are inside it and not clipped. */
+.root {
+  overflow-x: auto;
+  margin: 0 0 1.5rem -1.5rem;
+  padding-left: 1.5rem;
+
+  & table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    line-height: 1.5;
+  }
+
+  & th,
+  & td {
+    padding: 0.625rem 1rem 0.625rem 0;
+    border-bottom: 1px solid var(--border-divider);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  & thead th {
+    color: var(--site-text-dim);
+    font-weight: var(--weight-small);
+    border-bottom-color: var(--color-accent);
+  }
+
+  & tbody th {
+    position: relative;
+    color: var(--color-fg);
+    font-weight: var(--weight-small);
+  }
+
+  & td {
+    color: var(--site-text);
+  }
+}
+
+/*
+ * A ring in the margin per row, as the site's link markers hang: open where paid use needs a step first,
+ * filled where it is free. The words say the same; the ring lets the column be read at a glance.
+ */
+.root tbody th::before {
+  content: '';
+  position: absolute;
+  top: 1.05rem;
+  left: -1.5rem;
+  width: 0.5rem;
+  aspect-ratio: 1;
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+}
+
+.root tbody tr[data-free] th::before {
+  background: var(--color-accent);
+}
+
+/* Narrow, the rings come inside the column, and the first column gives them room. */
+@media (max-width: 900px) {
+  .root {
+    margin-left: 0;
+    padding-left: 0;
+  }
+
+  .root tbody th {
+    padding-left: 1.25rem;
+  }
+
+  .root tbody th::before {
+    left: 0;
+  }
+}
+
+/* A phone has no room for three columns: each source stacks over its two cells, each cell named. */
+@media (max-width: 600px) {
+  .root {
+    & table,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+    }
+
+    & thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: 0.75rem;
+      border-bottom: 1px solid var(--border-divider);
+    }
+
+    & tbody th,
+    & td {
+      padding-block: 0.125rem;
+      border: 0;
+    }
+
+    & td {
+      display: grid;
+      grid-template-columns: 8rem minmax(0, 1fr);
+      padding-left: 1.25rem;
+    }
+
+    & td::before {
+      content: attr(data-label);
+      color: var(--site-text-dim);
+    }
+  }
+
+  .root tbody th::before {
+    top: 0.6rem;
+  }
+}

@@ -24,6 +24,15 @@ describe('website facts', () => {
     }
   });
 
+  // A figure set large is the row's own: each run of digits in it is printed in the sentence it comes from.
+  it('every figure is stated in its row', () => {
+    for (const row of FACTS.filter((f) => f.figure)) {
+      for (const digits of row.figure!.value.match(/\d[\d,.]*/g) ?? []) {
+        expect(row.text, `${row.id} figure ${digits}`).toContain(digits);
+      }
+    }
+  });
+
   it('an unknown id throws, so a page citing a missing row fails the build', () => {
     expect(() => fact('no-such-fact')).toThrow(/no-such-fact/);
   });
@@ -79,6 +88,13 @@ describe('website facts', () => {
     const [near, far] = statedFigures('saturn-distance', /between (\d+) and (\d+) light-minutes/);
     expect(Math.round(1_205.5e6 / C_KM_S / 60)).toBe(near);
     expect(Math.round(1_658.6e6 / C_KM_S / 60)).toBe(far);
+    // NASA Jupiter and Pluto fact sheets, nearest and farthest in km.
+    const [jupiterNear, jupiterFar] = statedFigures('jupiter-distance', /between (\d+) and (\d+) light-minutes/);
+    expect(Math.round(588.5e6 / C_KM_S / 60)).toBe(jupiterNear);
+    expect(Math.round(968.5e6 / C_KM_S / 60)).toBe(jupiterFar);
+    const [plutoNear, plutoFar] = statedFigures('pluto-distance', /between (\d+) and (\d+) light-hours/);
+    expect(Math.round(4_284.7e6 / C_KM_S / 3600)).toBe(plutoNear);
+    expect(Math.round(7_528.0e6 / C_KM_S / 3600)).toBe(plutoFar);
     const [kmS, years, ly] = statedFigures(
       'voyager1-to-proxima',
       /speed of (\d+(?:\.\d+)?) km\/s .* about ([\d,]+) years to travel the (\d+(?:\.\d+)?) light-years/,

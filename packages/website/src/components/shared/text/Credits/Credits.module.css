@@ -1,21 +1,113 @@
+/*
+ * A colophon on the page grid: wide, the title holds the first three columns and the sources the rest, each
+ * group's name in the margin of its list; each source is a row, its name and its licence side by side over
+ * a hairline, so a long list reads across. Narrow, all of it stacks under the title.
+ */
 .root {
+  composes: grid from '../../../../styles/layout.module.css';
   composes: small from '../../../../styles/type.module.css';
-  padding-block: 2rem 3rem;
+  row-gap: 1.5rem;
+  padding-block: 3rem 4rem;
   border-top: 1px solid var(--border-divider);
   color: var(--site-text-dim);
 
   & h2 {
-    font-size: var(--text-h3);
+    margin: 0;
+    font-size: var(--text-ring-big);
   }
 
   & p {
-    max-width: 62rem;
-    margin-block: 0 0.75rem;
+    max-width: none;
+    margin: 0;
     color: inherit;
   }
+}
 
-  & b {
-    font-weight: 400;
+.head .why {
+  max-width: 22rem;
+  margin-top: 0.75rem;
+  color: var(--site-text-faint);
+}
+
+.body {
+  display: grid;
+  row-gap: 2.5rem;
+}
+
+.group {
+  display: grid;
+  row-gap: 0.5rem;
+}
+
+.label {
+  color: var(--site-text-muted);
+}
+
+.list {
+  margin: 0;
+}
+
+.row {
+  display: grid;
+  gap: 0.25rem var(--col-gap);
+  padding-block: 0.75rem;
+  border-top: 1px solid var(--border-divider);
+
+  & dt,
+  & dd {
+    margin: 0;
+  }
+
+  & a {
     color: var(--site-text-muted);
+    text-decoration-color: rgb(195 205 232 / 0.4);
+  }
+}
+
+/* The colophon's own rule is over the first source already: a second one there would stack two hairlines. */
+.group:first-child .row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.more a {
+  color: var(--color-accent);
+}
+
+@media (min-width: 901px) {
+  .head {
+    grid-column: 1 / span 3;
+  }
+
+  .body {
+    grid-column: 4 / -1;
+    --cols: 9;
+  }
+
+  /* The group's name in two of the nine columns, level with its first row; the rows in the other seven. */
+  .group {
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    column-gap: var(--col-gap);
+  }
+
+  .label {
+    grid-column: span 2;
+    padding-top: 0.75rem;
+  }
+
+  .group:first-child .label {
+    padding-top: 0;
+  }
+
+  .list {
+    grid-column: 3 / -1;
+  }
+
+  .row {
+    grid-template-columns: 4fr 3fr;
+  }
+
+  .more {
+    padding-left: calc((100% + var(--col-gap)) * 2 / 9);
   }
 }

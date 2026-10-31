@@ -4,6 +4,7 @@ description: What Skymap shows, in pictures and films. Places from a park in Cop
 ---
 
 import AddressStrip from '../../../components/shared/links/AddressStrip/AddressStrip.tsx';
+import DesktopSpread from '../../../components/pages/features/DesktopSpread/DesktopSpread.tsx';
 import FeatureGallery from '../../../components/pages/features/FeatureGallery/FeatureGallery.tsx';
 import FeaturesHero from '../../../components/pages/features/FeaturesHero/FeaturesHero.tsx';
 import FeatureSection from '../../../components/shared/layout/FeatureSection/FeatureSection.tsx';
@@ -13,23 +14,25 @@ import RemoteDemo from '../../../components/shared/media/RemoteDemo/RemoteDemo.t
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
 import { siteShot } from '../../../data/siteShot';
-import { big } from './features.data';
+import { big, cosmicWeb, earth, milkyWay, missions, solarSystem, time } from './features.data';
 
 <FeaturesHero client:visible />
 
 <Section as="div">
-  <SectionHead title="Places" />
+  <SectionHead title="Places">
+    <p>From a park in Copenhagen to the cosmic web, each beside the card, search or switch the app shows for it.</p>
+  </SectionHead>
 </Section>
 
-<FeatureGallery title="Earth in 3D" line="A globe with satellite imagery that you can fly down to, as far as aerial photographs of a park in Copenhagen." href="/docs/guide/moving/" label="Moving around" views={['earth-terminator', 'features-earth-glint', 'features-everest', 'features-grand-canyon', 'lead-park']} sizes={big} client:visible />
+<FeatureGallery title="Earth in 3D" line="A globe with satellite imagery that you can fly down to, as far as aerial photographs of a park in Copenhagen." href="/docs/guide/moving/" label="Moving around" slides={earth} sizes={big} client:visible />
 
-<FeatureGallery side="left" title="The Solar System" line="Explore the planets, moons and other objects of interest in the solar system." href="/docs/start/scene/#planets-and-their-moons" label="Planets and their moons" views={['saturn', 'features-jupiter', 'features-mars', 'features-moon', 'data-io', 'data-pluto']} sizes={big} client:visible />
+<FeatureGallery side="left" frameless title="The Solar System" line="Explore the planets, moons and other objects of interest in the solar system." href="/docs/start/scene/#planets-and-their-moons" label="Planets and their moons" slides={solarSystem} sizes={big} client:visible />
 
-<FeatureGallery title="Missions" line="We have been exploring space for decades. Skymap shows several of the missions, as 3D models and in an exhibit on the Voyagers." href="/docs/start/scene/#spacecraft" label="Spacecraft" views={['features-voyager1', 'hubble', 'data-perseverance', 'data-spirit']} sizes={big} client:visible />
+<FeatureGallery title="Missions" line="We have been exploring space for decades. Skymap shows several of the missions, as 3D models and in an exhibit on the Voyagers." href="/docs/start/scene/#spacecraft" label="Spacecraft" slides={missions} sizes={big} client:visible />
 
-<FeatureGallery side="left" title="The Milky Way" line="Stars from the catalogues, the constellations, and a model of our galaxy seen from outside." href="/docs/start/scene/#the-milky-way" label="The Milky Way" views={['render-milky-way', 'render-stars', 'features-s-stars', 'render-black-hole', 'features-pleiades', 'features-constellations']} sizes={big} client:visible />
+<FeatureGallery side="left" title="The Milky Way" line="Stars from the catalogues, the constellations, and a model of our galaxy seen from outside." href="/docs/start/scene/#the-milky-way" label="The Milky Way" slides={milkyWay} sizes={big} client:visible />
 
-<FeatureGallery title="The cosmic web and deep space" line="Galaxies from the surveys, the filaments between them, and the flow of galaxies towards the Great Attractor." href="/docs/start/scene/#filaments-and-the-cosmic-web" label="Filaments and the cosmic web" views={['features-flow', 'tour-cosmic-web', 'features-filaments', 'features-galaxies', 'features-desi']} sizes={big} client:visible />
+<FeatureGallery title="The cosmic web and deep space" line="Galaxies from the surveys, the filaments between them, and the flow of galaxies towards the Great Attractor." href="/docs/start/scene/#filaments-and-the-cosmic-web" label="Filaments and the cosmic web" slides={cosmicWeb} sizes={big} client:visible />
 
 <Section as="div">
   <SectionHead title="The universe in motion">
@@ -37,7 +40,7 @@ import { big } from './features.data';
   </SectionHead>
 </Section>
 
-<FeatureGallery side="left" title="Time" line="Planets and moons move along their orbits, Earth turns from day to night, and spacecraft move along their paths." href="/docs/guide/time/" label="Time" views={['features-time-jupiter', 'features-time-earth', 'features-time-seasons', 'features-time-moon', 'features-time-voyager', 'features-time-planets']} sizes={big} client:visible />
+<FeatureGallery side="left" title="Time" line="Planets and moons move along their orbits, Earth turns from day to night, and spacecraft move along their paths." href="/docs/guide/time/" label="Time" slides={time} under="orbits-jupiter-moons" sizes={big} client:visible />
 
 <Section as="div">
   <SectionHead title="Screens of all sizes">
@@ -49,9 +52,7 @@ import { big } from './features.data';
   <Phone3D shot="features-phone" />
 </FeatureSection>
 
-<FeatureSection side="left" title="On your desktop" line="A mouse and a keyboard to fly with, and an info card beside the view for what you select." href="/docs/reference/controls/" label="Controls">
-  <Figure id="features-card" sizes={big} showDrawn={false} />
-</FeatureSection>
+<DesktopSpread title="On your desktop" line="A mouse and a keyboard to fly with, and an info card beside the view for what you select." href="/docs/reference/controls/" label="Controls" client:visible />
 
 <FeatureSection title="Domes" line="A fisheye picture for a planetarium dome, from the live app or as a rendered film. Steer it from a phone." href="/domes/" label="Domes and museums">
   <RemoteDemo sizes="21rem" client:visible />

@@ -3,7 +3,8 @@
  * ShotCaption per view in one cell, under a row of ring markers, one per view,
  * that choose the view. A host treats it as a single label (it draws the same
  * foot). The markers sit close and centred: a quiet row, not a control bar.
- * Before the page's script runs the markers stay hidden and the first label stands.
+ * Before the page's script runs the markers stay hidden and the first label stands. `open={false}` leaves
+ * out each label's address, where the words beside the pictures already link the views.
  */
 import type { KeyboardEvent } from 'react';
 import { useRef } from 'react';
@@ -17,9 +18,9 @@ import changing from '../PictureBand/viewChange.module.css';
 import ShotCaption from '../ShotCaption/ShotCaption.tsx';
 import styles from './CaptionGallery.module.css';
 
-type CaptionGalleryProps = { showDrawn?: boolean };
+type CaptionGalleryProps = { showDrawn?: boolean; open?: boolean };
 
-function CaptionGallery({ showDrawn = true }: CaptionGalleryProps) {
+function CaptionGallery({ showDrawn = true, open = true }: CaptionGalleryProps) {
   const { views, at, live, byReader, choose, marksRef } = useGalleryState();
   const marks = useRef<(HTMLButtonElement | null)[]>([]);
   const last = views.length - 1;
@@ -64,7 +65,7 @@ function CaptionGallery({ showDrawn = true }: CaptionGalleryProps) {
             key={view.id}
             className={cx(changing.view, (live ? i !== at : i !== 0) && changing.away)}
           >
-            <ShotCaption id={view.id} showDrawn={showDrawn} />
+            <ShotCaption id={view.id} showDrawn={showDrawn} open={open} />
           </div>
         ))}
       </div>

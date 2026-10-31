@@ -11,6 +11,7 @@ import Credits from '../../../components/shared/text/Credits/Credits.tsx';
 import FramePair from '../../../components/pages/science/FramePair/FramePair.tsx';
 import FullFigure from '../../../components/pages/science/FullFigure/FullFigure.tsx';
 import Group from '../../../components/shared/layout/Group/Group.tsx';
+import MarginFigure from '../../../components/pages/science/MarginFigure/MarginFigure.tsx';
 import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
@@ -50,7 +51,7 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
   <SectionHead title="The sources">
     <p>This is every dataset Skymap is built from: the catalogues of stars and galaxies, the orbits, the named structures and the imagery. We list them so that anything you see in the app can be traced to who measured it. Each name opens a page with its licence and the files we use.</p>
   </SectionHead>
-  <SourceTable>
+  <SourceTable figure="science-hubble">
     <p>{fact('sci-built-counts').text}{' '}<a href={fact('sci-built-counts').source}>{fact('sci-built-counts').sourceLabel}</a></p>
     <p>The count is what the app draws. It is smaller than the source’s own total because rows without a usable <a href={sitePath('/docs/reference/glossary/#redshift')}>redshift</a> are dropped, <a href={sitePath('/docs/data/pipeline/#cross-match-and-de-duplicate')}>overlapping catalogues are merged</a>, and <a href={sitePath('/docs/data/sdss/')}>SDSS</a> is cut to about 500,000 of its most luminous galaxies. Where a count is missing, neither our build nor the source’s own record gives one.</p>
     <p>Terrain heights, the Mars rover sites, 3D models, the constellation lines, the photographs of named galaxies and the survey pictures fetched for other galaxies are not in the table. They are recorded in the repository’s <a href={`${REPO_URL}/tree/main/data/raw`}>data records</a> and its{' '}<a href={`${REPO_URL}/blob/main/ATTRIBUTIONS.md`}>attributions file</a>.</p>
@@ -75,7 +76,7 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
 
   <Group title="Drawn" big>
     <p slot="lede">A model or a choice of ours, with no measurement behind each object. Every camera we have is still inside the <a href={sitePath('/docs/science/#the-milky-way')}>Milky Way</a>, so its portrait from outside has to be drawn.</p>
-    <StatementsFigure id="milky-way-drawn" sizes="(max-width: 900px) 100vw, 40rem" />
+    <StatementsFigure id="milky-way-face-on" sizes="(max-width: 900px) 100vw, 44rem" />
     <Claims items={DRAWN} />
   </Group>
   <Remark text={fact('astronomical-unit').short} />
@@ -89,7 +90,13 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
   </SectionHead>
   {SIMPLIFIED.map((group, i) => (
     <Group title={group.title} big first={i === 0}>
-      <Claims items={group.items} />
+      {group.title === 'Coverage' ? (
+        <MarginFigure id="science-desi">
+          <Claims items={group.items} />
+        </MarginFigure>
+      ) : (
+        <Claims items={group.items} />
+      )}
     </Group>
   ))}
   <Note>If you find one we missed, <a href={`${REPO_URL}/issues`}>open an issue in the repository</a>.</Note>

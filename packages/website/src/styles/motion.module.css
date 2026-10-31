@@ -1,0 +1,31 @@
+/*
+ * motion.module.css — the parts of an arrival (reveal.client.ts) that must exist in the markup. A vocabulary, not
+ * a component: compose `unmask` on a picture's box with `data-reveal="unmask"`; the veil it draws waits off the
+ * picture, and the script slides it off from over the picture as the picture first scrolls into view.
+ * `unmask-right` uncovers from the right edge instead, for a picture that bleeds right.
+ */
+.unmask {
+  position: relative;
+  overflow: hidden;
+
+  /* A black veil with a soft leading edge, half again as wide as the picture so that edge starts outside it. */
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    inset: 0 -25%;
+    pointer-events: none;
+    background: linear-gradient(
+      var(--unmask-angle, 90deg),
+      rgb(0 0 0 / 0) 0,
+      var(--color-bg) 16%,
+      var(--color-bg) 100%
+    );
+    translate: 100% 0;
+  }
+}
+
+.unmask-right::before {
+  --unmask-angle: 270deg;
+  translate: -100% 0;
+}

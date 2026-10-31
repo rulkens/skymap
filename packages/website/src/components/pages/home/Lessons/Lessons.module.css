@@ -1,0 +1,377 @@
+.root {
+  composes: wrap section from '../../../../styles/layout.module.css';
+  /* From the column's left edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+}
+
+/* Title over its line on one left edge: RealData, next, opens on a split head. */
+.head {
+  & p {
+    max-width: var(--measure-lead);
+    margin-bottom: 0;
+    font-size: var(--text-lead);
+  }
+}
+
+/* A row's parts stretch to one height and their links stand on its foot, level whatever the questions' lengths. */
+.part {
+  display: flex;
+  flex-direction: column;
+}
+
+.words {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+
+  & > a {
+    margin-top: auto;
+  }
+
+  & h3 {
+    margin-bottom: 0.625rem;
+    color: var(--color-fg);
+  }
+
+  & p {
+    margin-bottom: 0.75rem;
+  }
+}
+
+.line {
+  composes: small from '../../../../styles/type.module.css';
+  color: var(--site-text-dim);
+}
+
+.near,
+.far {
+  composes: grid from '../../../../styles/layout.module.css';
+}
+
+/* Every layer's picture fills its box at its frame's own shape. */
+.horizon,
+.figure {
+  margin: 0;
+
+  & picture {
+    display: block;
+  }
+
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+/*
+ * One horizon, one scale. On the masters Earth's disc is 0.635 of its frame and Jupiter's 0.767 of its, and
+ * Jupiter's mean radius is 10.97 Earth's, so Jupiter's frame is 9.086 Earth's. `--earth` is Earth's frame; the box
+ * is as tall as Jupiter's disc and both centres stand on its middle line.
+ */
+.horizon {
+  --earth: 5rem;
+  --jupiter: calc(9.086 * var(--earth));
+  --earth-x: calc(var(--bleed) + 2.5rem);
+  --jupiter-x: 75%;
+  position: relative;
+  height: calc(0.767 * var(--jupiter));
+  margin: 2rem calc(-1 * var(--bleed)) 3.5rem;
+}
+
+.earth,
+.jupiter {
+  position: absolute;
+  top: 50%;
+  translate: -50% -50%;
+}
+
+.earth {
+  left: var(--earth-x);
+  width: var(--earth);
+  --drift: 1.5rem;
+}
+
+.jupiter {
+  left: var(--jupiter-x);
+  width: var(--jupiter);
+  --drift: -1rem;
+}
+
+/* The comparison drawn as a scale bar: limb to limb, a gap of a rem at each end. */
+.span {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--earth-x) + 0.3175 * var(--earth) + 1rem);
+  right: calc(100% - var(--jupiter-x) + 0.3835 * var(--jupiter) + 1rem);
+  height: 1px;
+  background: rgb(232 238 255 / 0.22);
+  transform-origin: left;
+}
+
+/* Under Earth, as the scale bar's own label. */
+.label {
+  position: absolute;
+  top: calc(50% + 0.6rem);
+  left: calc(var(--earth-x) + 0.3175 * var(--earth) + 1rem);
+}
+
+/* Orion and Andromeda, each a picture without a frame: a soft-edged window of sky. */
+.far {
+  margin-top: 6rem;
+  row-gap: 4rem;
+}
+
+.figure {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+/* One shape for both, so the two questions under them stand level. */
+.field,
+.galaxy {
+  aspect-ratio: 16 / 10;
+  mask-image: radial-gradient(closest-side, #000 62%, rgb(0 0 0 / 0));
+
+  & picture,
+  & img {
+    height: 100%;
+  }
+
+  & img {
+    object-fit: cover;
+  }
+}
+
+/* The search's field and tabs only (the top 128 of its 770 px): the panel's grid of cards is cut off under them. */
+.search {
+  position: absolute;
+  right: -4%;
+  bottom: 14%;
+  overflow: hidden;
+  width: 30rem;
+  aspect-ratio: 800 / 128;
+  mask-image: linear-gradient(180deg, #000 85%, rgb(0 0 0 / 0));
+}
+
+/*
+ * The section's ground: Jezero crater from a rover's height, across the window, its sky dissolving into the page.
+ * The way to the classroom page stands in that sky, on the text's left edge; the label goes under the ground.
+ */
+.mars {
+  display: grid;
+  margin: 4rem calc(-1 * var(--bleed)) 0;
+}
+
+.ground {
+  grid-area: 1 / 1;
+  aspect-ratio: 1440 / 420;
+  mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 38%, #000 86%, rgb(0 0 0 / 0));
+
+  & picture {
+    display: block;
+    height: 100%;
+  }
+
+  & img {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/*
+ * Perseverance and its contact shadow, each a layer of the strip's own frame and crop, so at rest the rover stands
+ * where it was shot. Two siblings, not one wrapper: a moved wrapper would isolate the shadow's multiply from the
+ * ground. `--drive` runs along the slope under the wheels, which climbs about 0.13 to the right.
+ */
+.rover {
+  grid-area: 1 / 1;
+  aspect-ratio: 1440 / 420;
+  pointer-events: none;
+  --drive: 2.5rem;
+
+  & picture {
+    display: block;
+    height: 100%;
+  }
+
+  & img {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.shadow {
+  mix-blend-mode: multiply;
+}
+
+.more {
+  z-index: 1;
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: start;
+  margin: 4.5rem 0 0 var(--bleed);
+}
+
+.marsCaption {
+  margin: 0 var(--bleed);
+}
+
+@media (min-width: 901px) {
+  .near > .first {
+    grid-column: 1 / span 4;
+  }
+
+  .near > .second {
+    grid-column: 7 / span 5;
+  }
+
+  .far > .part {
+    grid-column: span 6;
+  }
+}
+
+/* Narrow: the horizon across the window with Jupiter cut by its right edge, then each question in turn. */
+@media (max-width: 900px) {
+  .horizon {
+    --earth: 12vw;
+    --earth-x: calc(var(--gutter) + 6vw);
+    --jupiter-x: 70%;
+    margin: 2.5rem calc(-1 * var(--gutter)) 6rem;
+    overflow-x: clip;
+  }
+
+  .label {
+    top: calc(100% + 0.5rem);
+    left: var(--gutter);
+  }
+
+  .second {
+    margin-top: 2.5rem;
+  }
+
+  .far {
+    margin-top: 4rem;
+  }
+
+  .figure {
+    margin-inline: calc(-1 * var(--gutter));
+  }
+
+  .search {
+    right: var(--gutter);
+    width: 84vw;
+  }
+
+  /* A taller cut of the strip, so the rover at its middle still reads. */
+  .ground,
+  .rover {
+    aspect-ratio: 4 / 3;
+  }
+
+  .rover {
+    --drive: 1.5rem;
+  }
+
+  .more {
+    margin: 2rem 0 0 var(--gutter);
+  }
+
+  .mars {
+    margin-inline: calc(-1 * var(--gutter));
+  }
+
+  .marsCaption {
+    margin-inline: var(--gutter);
+  }
+}
+
+/*
+ * As the horizon crosses the window Earth runs a little ahead of the page and Jupiter lags, the scale bar draws
+ * from Earth to Jupiter; the search slides onto Orion. At rest (mid-window, reduced motion, no scroll timelines)
+ * every layer is in its finished place.
+ */
+@keyframes drift {
+  from {
+    translate: -50% calc(-50% + var(--drift));
+  }
+
+  to {
+    translate: -50% calc(-50% - var(--drift));
+  }
+}
+
+@keyframes draw {
+  from {
+    scale: 0 1;
+  }
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    translate: var(--from-x, 0) var(--from-y, 1.5rem);
+  }
+}
+
+@keyframes drive {
+  from {
+    translate: calc(-1 * var(--drive)) calc(0.13 * var(--drive));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .horizon {
+      view-timeline-name: --horizon;
+    }
+
+    .far > .part:first-child .figure {
+      view-timeline-name: --orion;
+    }
+
+    .earth,
+    .jupiter {
+      animation: drift linear both;
+      animation-range: cover 0% cover 100%;
+    }
+
+    .span {
+      animation: draw linear both;
+      animation-range: entry 60% cover 50%;
+    }
+
+    .search > picture {
+      animation: arrive linear both;
+      animation-range: entry 80% cover 50%;
+    }
+
+    .search > picture {
+      --from-x: 2.5rem;
+      --from-y: 0;
+    }
+
+    .earth,
+    .jupiter,
+    .span {
+      animation-timeline: --horizon;
+    }
+
+    .search > picture {
+      animation-timeline: --orion;
+    }
+
+    /* The rover parks on its own spot as the strip reaches the middle of the window. */
+    .rover {
+      animation: drive linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 50%;
+    }
+  }
+}

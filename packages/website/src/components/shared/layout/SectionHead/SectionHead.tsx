@@ -3,18 +3,19 @@
  * (the children): the name in the left half and the words in the right half of
  * the page grid when wide, stacked when narrow. `narrow` breaks a short name
  * over two lines and gives the words the lead's measure, for a page whose
- * sections open on a full sentence.
+ * sections open on a full sentence. `top` stands the words level with the name's top rather than its foot,
+ * for words taller than the name.
  */
 import type { ReactNode } from 'react';
 
 import { cx } from '../../../../utils/cx.ts';
 import styles from './SectionHead.module.css';
 
-type SectionHeadProps = { title: string; narrow?: boolean; children?: ReactNode };
+type SectionHeadProps = { title: string; narrow?: boolean; top?: boolean; children?: ReactNode };
 
-function SectionHead({ title, narrow = false, children }: SectionHeadProps) {
+function SectionHead({ title, narrow = false, top = false, children }: SectionHeadProps) {
   return (
-    <div className={cx(styles.root, narrow && styles.narrow)}>
+    <div className={cx(styles.root, narrow && styles.narrow, top && styles.top)}>
       <h2>{title}</h2>
       {children && <div className={styles.lead}>{children}</div>}
     </div>

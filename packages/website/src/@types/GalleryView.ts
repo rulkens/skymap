@@ -2,4 +2,9 @@
 export type GalleryView = {
   id: string;
   tall?: string;
+  /**
+   * Where a meteor may now and then cross this view, as fractions of the band's box: open stars, clear of the
+   * subject and of the band's words. A view without it gets none.
+   */
+  sky?: { left: number; top: number; right: number; bottom: number };
 };

@@ -1,0 +1,71 @@
+/*
+ * The box starts at the sentence's rule (the remark's top margin collapses through it), so a globe hung from its
+ * top stays below the column links above. No stacking context of its own: the screen blend must reach the page,
+ * or the picture's black would cover whatever it overlaps.
+ */
+.root {
+  /* From the column's left edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  --globe: 20rem;
+  position: relative;
+}
+
+/* A box the globe's size; the picture inside is centred on it, the globe being 0.44 of the picture's width. */
+.earth {
+  position: absolute;
+  top: -2.5rem;
+  left: calc(-1 * var(--bleed) - 0.08 * var(--globe));
+  width: var(--globe);
+  aspect-ratio: 1;
+  pointer-events: none;
+
+  & picture {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(var(--globe) / 0.44);
+    translate: -50% -50%;
+    mix-blend-mode: screen;
+    mask-image: radial-gradient(closest-side, #000 76%, rgb(0 0 0 / 0) 84%);
+  }
+
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+@keyframes earth-drift {
+  from {
+    translate: 0 1rem;
+  }
+
+  to {
+    translate: 0 -1rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .earth {
+      animation: earth-drift linear both;
+      animation-timeline: view();
+    }
+  }
+}
+
+/* Narrow: a smaller globe stands out past the right edge, above the sentence. */
+@media (max-width: 900px) {
+  .root {
+    --globe: 13rem;
+    padding-top: 9rem;
+  }
+
+  .earth {
+    top: 0;
+    right: calc(-1 * var(--gutter) - 0.3 * var(--globe));
+    left: auto;
+  }
+}

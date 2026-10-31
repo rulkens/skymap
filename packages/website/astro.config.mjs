@@ -31,6 +31,7 @@ import { toolPages } from '../../tools/utils/io/toolPages.ts';
 import { feedbackPlugin } from '../../tools/site/feedbackPlugin.ts';
 import { jsxSourceAttributes } from '../../tools/site/jsxSourceAttributes.ts';
 import { reviewPlugin } from '../../tools/site/reviewPlugin.ts';
+import { shotFilesReload } from '../../tools/site/shotFilesReload.ts';
 import { BASE, INDEXABLE } from './src/data/site.ts';
 import { robotsTxt } from './src/utils/robotsTxt.ts';
 import { sitemapXml } from './src/utils/sitemapXml.ts';
@@ -81,6 +82,7 @@ const devRootStatics = {
               jsxSourceAttributes(resolve(import.meta.dirname, 'src')),
               feedbackPlugin(`${BASE}__feedback`),
               reviewPlugin(BASE),
+              shotFilesReload(resolve(import.meta.dirname, 'src')),
             ],
           },
         });

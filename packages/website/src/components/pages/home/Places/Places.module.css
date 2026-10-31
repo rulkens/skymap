@@ -1,7 +1,7 @@
-/* Half a section gap: this continues the lead above it. */
+/* A whole section gap: the flight's full-bleed stage ends on a hard edge and needs the room. */
 .root {
   composes: wrap from '../../../../styles/layout.module.css';
-  padding-top: calc(var(--section-space) / 2);
+  padding-top: var(--section-space);
 }
 
 .head {

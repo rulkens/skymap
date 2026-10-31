@@ -13,5 +13,7 @@ export type Fact = {
   sourceLabel: string;
   checked: string;
   short?: string;
+  // The row set as one large figure and what it measures; the figure is printed in `text` too.
+  figure?: { value: string; measure: string };
   about?: 'app';
 };

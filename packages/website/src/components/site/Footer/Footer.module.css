@@ -69,8 +69,8 @@
 }
 
 .mark {
-  font: var(--weight-display) clamp(2.75rem, 4.5vw, 4rem) / 0.9 var(--font-family-display);
-  letter-spacing: -0.02em;
+  display: inline-block;
+  font-size: clamp(2.75rem, 4.5vw, 4rem);
   color: var(--color-fg);
   text-decoration: none;
 }

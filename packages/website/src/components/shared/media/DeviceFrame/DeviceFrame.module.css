@@ -1,0 +1,52 @@
+/* The rim is the page's control border (AddressStrip): the frame reads as an outline, not an object. */
+.root {
+  --rim: rgb(232 238 255 / 0.28);
+  width: 100%;
+}
+
+.screen {
+  overflow: hidden;
+  background: var(--color-bg);
+  box-shadow: 0 0 0 1px var(--rim);
+
+  & img {
+    width: 100%;
+  }
+}
+
+.tablet .screen {
+  padding: 4.5%;
+  border-radius: 6%/ 4.8%;
+
+  & picture,
+  & img {
+    border-radius: 2%;
+  }
+}
+
+.desktop .screen {
+  padding: 1.75%;
+  border-radius: 0.5rem;
+}
+
+/* The stand: a neck under the middle of the screen, on a foot. */
+.desktop::after {
+  content: '';
+  display: block;
+  width: 34%;
+  height: 0;
+  margin: 0 auto;
+  padding-top: 9%;
+  border-bottom: 1px solid var(--rim);
+  background: linear-gradient(
+    90deg,
+    rgb(0 0 0 / 0) 42%,
+    var(--rim) 42%,
+    var(--rim) calc(42% + 1px),
+    rgb(0 0 0 / 0) calc(42% + 1px),
+    rgb(0 0 0 / 0) calc(58% - 1px),
+    var(--rim) calc(58% - 1px),
+    var(--rim) 58%,
+    rgb(0 0 0 / 0) 58%
+  );
+}

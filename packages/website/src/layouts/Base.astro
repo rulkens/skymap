@@ -84,6 +84,9 @@ const imageUrl = new URL(card.src, Astro.site).href;
       import '../components/shared/links/CopyButton/copyButtons.client.ts';
       import '../components/shared/text/Remark/remarkLines.client.ts';
       import '../components/shared/media/Phone3D/phoneTurn.client.ts';
+      import '../styles/reveal.client.ts';
+      // Dev only, and dropped from the build: a star-field background to judge on real pages (?stars=a…d).
+      if (import.meta.env.DEV) import('../dev/starPreview/starPreview.client.ts');
     </script>
     {
       import.meta.env.DEV && (

@@ -1,0 +1,70 @@
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  row-gap: 3rem;
+  align-items: center;
+  --steer-accent: #8fb6ff;
+  /* Where the rings sit: out in the margin as the site's link markers hang, so the words keep the left edge. */
+  --ring-x: -1.75rem;
+  --ring-size: 0.625rem;
+  --ring-top: 0.625rem;
+}
+
+/* Each step (a heading and its lines) hangs a ring in the margin; a thin line runs from each ring to the next. */
+.track > * {
+  position: relative;
+  padding-bottom: 2rem;
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+
+  & h3 {
+    margin-bottom: 0.5rem;
+    font-size: var(--text-h3);
+  }
+
+  & p {
+    margin-bottom: 0;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: var(--ring-top);
+    left: var(--ring-x);
+    width: var(--ring-size);
+    aspect-ratio: 1;
+    border: 1px solid var(--steer-accent);
+    border-radius: 50%;
+  }
+
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: calc(var(--ring-top) + var(--ring-size));
+    bottom: calc(-1 * var(--ring-top));
+    left: calc(var(--ring-x) + var(--ring-size) / 2 - 0.5px);
+    border-left: 1px solid color-mix(in srgb, var(--steer-accent) 45%, transparent);
+  }
+}
+
+@media (min-width: 901px) {
+  .track {
+    grid-column: span 5;
+  }
+
+  .demo {
+    grid-column: 7 / -1;
+  }
+}
+
+/* Narrow, the rings come inside the column: in the margin they would fall off a phone's edge. */
+@media (max-width: 900px) {
+  .track {
+    padding-left: 1.5rem;
+  }
+
+  .root {
+    --ring-x: -1.5rem;
+  }
+}

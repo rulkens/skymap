@@ -11,8 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = resolve(import.meta.dirname, '../../../packages/website/src');
 
-// Feature hands its `href` to a ViewLink.
-const VIEW_LINK_TAGS = ['ViewLink', 'Feature'];
+const VIEW_LINK_TAGS = ['ViewLink'];
 
 /** View addresses that are not a control of their own: file, how many, and why. */
 const OTHER_USES: Record<string, number> = {
@@ -22,8 +21,10 @@ const OTHER_USES: Record<string, number> = {
   'components/pages/home/Places/PlaceLink.tsx': 1,
   // Each slide is a link to its own view, the current one reachable; the caption under it carries the ViewLink.
   'components/pages/features/FeatureGallery/FeatureGallery.tsx': 1,
-  // The card's picture repeats the card's ViewLink, hidden from the keyboard and from assistive technology.
-  'components/pages/classroom/LessonLinks/LessonLinks.tsx': 1,
+  // The address set large is the link, as a browser's is, and its copy control copies it.
+  'components/pages/classroom/LinkAnatomy/LinkAnatomy.tsx': 2,
+  // The address in the window's bar is the link, as a browser's is, and its copy control copies it.
+  'components/pages/home/Sharing/Sharing.tsx': 2,
 };
 
 const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })

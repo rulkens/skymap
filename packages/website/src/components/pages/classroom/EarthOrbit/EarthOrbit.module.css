@@ -1,0 +1,108 @@
+/*
+ * Measured on orbits-inner: the Sun is at (49.9%, 53.7%) of the frame and Earth's orbit comes nearest the right
+ * edge at (67.2%, 55.3%). (`--x`, `--y`) is where that point of Earth's orbit stands: wide, in the empty half to
+ * the left of the question; narrow, so the Sun is at the middle of a band above it.
+ */
+.root {
+  --w: 64rem;
+  --h: calc(var(--w) * 0.5625);
+  --x: calc(-1 * (var(--col-gap) + 7.5rem));
+  --y: 7rem;
+  position: relative;
+  height: 0;
+  pointer-events: none;
+}
+
+/*
+ * The orbits come out from the Sun: `--reach` is how far, on an ellipse the shape of the orbits. Below Earth's
+ * orbit (81.6% down) the frame fades out, taking Mars' cut-off foot and a glow of the Milky Way with it.
+ */
+.orbits {
+  position: absolute;
+  top: calc(var(--y) - 0.553 * var(--h));
+  left: calc(var(--x) - 0.672 * var(--w));
+  width: var(--w);
+  mix-blend-mode: screen;
+  mask-image:
+    radial-gradient(
+      ellipse 30% 46% at 49.9% 53.7%,
+      #000 calc(var(--reach) - 20%),
+      rgb(0 0 0 / 0) var(--reach)
+    ),
+    linear-gradient(180deg, #000 83%, rgb(0 0 0 / 0) 88%);
+  mask-composite: intersect;
+
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+
+  /*
+   * The Sun at its place in the frame. At this scale its disc would be under a tenth of a rem, so it is drawn
+   * as a point of light with a glow, the first thing the orbits draw out from.
+   */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 53.7%;
+    left: 49.9%;
+    width: 4%;
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    background: radial-gradient(
+      closest-side,
+      #fff 0 8%,
+      rgb(255 232 196 / 0.6) 16%,
+      rgb(255 214 160 / 0.14) 45%,
+      rgb(255 214 160 / 0)
+    );
+  }
+}
+
+.label {
+  position: absolute;
+  top: calc(var(--y) - 0.75em);
+  left: calc(var(--x) + 0.75rem);
+  color: var(--earth);
+  font-size: var(--text-small);
+  white-space: nowrap;
+}
+
+/* All four orbits by default: without scroll-driven animation, or with reduced motion, nothing is left to draw. */
+@property --reach {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 100%;
+}
+
+@keyframes orbits-draw {
+  from {
+    --reach: 20%;
+  }
+
+  to {
+    --reach: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .orbits {
+      animation: orbits-draw linear both;
+      animation-timeline: view();
+      animation-range: entry 20% cover 50%;
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .root {
+    --w: 120vw;
+    --x: calc(50% + 0.173 * var(--w));
+    --y: calc(50% + 0.016 * var(--h));
+    height: calc(0.6 * var(--h));
+    margin-bottom: 1.5rem;
+  }
+}

@@ -1,0 +1,132 @@
+.root {
+  composes: wrap section grid from '../../../../styles/layout.module.css';
+  align-items: start;
+
+  & h2 {
+    max-width: 10ch;
+  }
+}
+
+.figure {
+  margin: 0;
+}
+
+/* The screens lie on one another in one cell; the one shown is opaque, the rest wait under it. */
+.frame,
+.labels {
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.labels {
+  margin-top: 0.5rem;
+}
+
+/*
+ * Every exhibit's notes stand in the frame's right third. Only their first heading and a line or two show,
+ * fading out, so they read as a screen of notes without competing with the section's own words.
+ */
+.frame {
+  mask-image:
+    linear-gradient(90deg, #000 52%, rgb(0 0 0 / 0) 64%),
+    radial-gradient(28% 16% at 80% 8%, #000 40%, rgb(0 0 0 / 0));
+  mask-composite: add;
+}
+
+.screen {
+  opacity: 0;
+  transition: opacity var(--duration-reveal) var(--ease-standard);
+}
+
+.screen[data-shown] {
+  opacity: 1;
+}
+
+.frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.words p {
+  max-width: var(--measure);
+}
+
+/* The exhibits by name, each a way into the app; the one on the screen is lit in a colour from its picture. */
+.chooser {
+  composes: bare from '../../../../styles/layout.module.css';
+}
+
+/* Doubled, to win over `bare`'s margin wherever the two land in the sheet. */
+.words .chooser {
+  margin: 0.5rem 0 2rem;
+  border-top: 1px solid var(--border-divider);
+
+  & li {
+    border-bottom: 1px solid var(--border-divider);
+  }
+
+  & a {
+    display: flex;
+    min-height: var(--tap);
+    align-items: center;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  & a[aria-current] {
+    color: var(--exhibit-accent);
+  }
+
+  & li:has(a[aria-current]) {
+    border-bottom-color: var(--exhibit-accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen {
+    transition: none;
+  }
+}
+
+/*
+ * Wide, the picture fills the first seven columns and the margin to the window's edge; its label stays on the
+ * text's edge. The title and the words share the last four columns, the title level with the picture's top.
+ */
+@media (min-width: 901px) {
+  .figure {
+    grid-column: 1 / span 7;
+    grid-row: 1 / span 2;
+  }
+
+  .frame {
+    margin-left: calc(min(0px, (var(--wrap-max) - 100vw) / 2) - var(--gutter));
+  }
+
+  .root > h2,
+  .words {
+    grid-column: 9 / -1;
+    --cols: 4;
+  }
+
+  .root > h2 {
+    grid-row: 1;
+    margin-top: 0;
+  }
+
+  .words {
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 900px) {
+  .frame {
+    margin-inline: calc(-1 * var(--gutter));
+  }
+
+  .figure {
+    margin-bottom: 2rem;
+  }
+}

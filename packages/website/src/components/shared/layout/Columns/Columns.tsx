@@ -1,8 +1,9 @@
 /*
  * Columns — its children side by side in `count` equal columns of the page
  * grid when wide, stacked when narrow. Each child is one column: a heading and
- * what belongs under it. `footLast` stands the last, shorter column on the foot
- * of the row.
+ * what belongs under it; a column's closing link stands on the foot of the row,
+ * level with its neighbours'. `footLast` stands the last, shorter column on the
+ * foot of the row.
  */
 import type { ReactNode } from 'react';
 

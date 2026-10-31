@@ -1,10 +1,11 @@
-/* Band — the markup of a PictureBand: the picture (or the pictures of a gallery, one on another) and the words. */
+/* Band — the markup of a PictureBand: the picture (or the pictures of a gallery, one on another, with Meteors over their star fields) and the words. */
 import type { CSSProperties, ReactNode } from 'react';
 
 import type { GalleryView } from '../../../../@types/GalleryView';
 import { cx } from '../../../../utils/cx.ts';
 import { shotSources } from '../../../../utils/shotSources.ts';
 import Shot from '../Shot/Shot.tsx';
+import Meteors from './Meteors.tsx';
 import styles from './PictureBand.module.css';
 import changing from './viewChange.module.css';
 import type { Gallery } from './useGallery.ts';
@@ -75,6 +76,7 @@ function Band({ views, words, gap, eager, zoom, gallery, children }: BandProps) 
           : views.map((view) => (
               <Shot key={view.id} id={view.id} tall={view.tall} sizes={sizes(view)} eager={eager} />
             ))}
+        {gallery && views.some((view) => view.sky) && <Meteors views={views} at={gallery.at} />}
       </div>
       <div className={styles.copy}>{children}</div>
     </section>
