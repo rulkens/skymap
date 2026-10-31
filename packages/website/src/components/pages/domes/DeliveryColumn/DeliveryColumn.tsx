@@ -1,9 +1,10 @@
 /*
  * DeliveryColumn — one way to get Skymap onto a dome: its picture with the picture's title, its one
  * figure set large, its name, a sentence or two (the children), its line of every row of the
- * specification (domes.data.ts) and one link, to the picture's view. `disc` shows the picture as a
- * fisheye frame. Its parts are rows of Delivery's grid (thirteen, the count `grid-row` spans in the
- * module), so they line up with the column beside it.
+ * specification (domes.data.ts) and one link, to the picture's view. Both columns' pictures stand in
+ * the same square mount, the shape of a dome frame, so the pair reads as one kind of thing. Its parts
+ * are rows of Delivery's grid (thirteen, the count `grid-row` spans in the module), so they line up
+ * with the column beside it.
  */
 import type { CSSProperties, ReactNode } from 'react';
 
@@ -11,7 +12,6 @@ import { DELIVERY_ROWS } from '../../../../content/pages/domes/domes.data.ts';
 import { appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
-import Disc from '../../../shared/media/Disc/Disc.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './DeliveryColumn.module.css';
@@ -20,7 +20,6 @@ type DeliveryColumnProps = {
   kind: 'live' | 'film';
   title: string;
   shot: string;
-  disc?: boolean;
   /** The column's one figure, set large, and what it measures. */
   figure: string;
   measure: string;
@@ -31,19 +30,20 @@ type DeliveryColumnProps = {
   children: ReactNode;
 };
 
-const SIZES = '(max-width: 900px) 100vw, min(calc(50vw - 4rem), 35rem)';
+/** The mount's widest, in rem (`.mount` in the module); a wide picture fills its height, so it loads that much wider. */
+const MOUNT_REM = 22;
 
 function DeliveryColumn(props: DeliveryColumnProps) {
-  const { kind, title, shot, disc = false, figure, measure, accent, action, children } = props;
+  const { kind, title, shot, figure, measure, accent, action, children } = props;
+  const { size, link, query } = siteShot(shot);
+  const spread = Math.max(1, size.width / size.height);
+  // A phone's 100vw understates a wide picture on purpose: at 3x the full width would fetch the desktop file.
+  const sizes = `(max-width: 900px) 100vw, ${Math.ceil(MOUNT_REM * spread)}rem`;
   return (
     <article className={styles.root} style={{ '--column-accent': accent } as CSSProperties}>
       <figure className={styles.figure}>
-        <div className={disc ? styles.disc : styles.flat}>
-          {disc ? (
-            <Disc id={shot} sizes="(max-width: 900px) 70vw, 20rem" />
-          ) : (
-            <Shot id={shot} sizes={SIZES} />
-          )}
+        <div className={styles.mount}>
+          <Shot id={shot} sizes={sizes} />
         </div>
         <figcaption>
           <ShotCaption id={shot} showDrawn={false} open={false} />
@@ -63,11 +63,7 @@ function DeliveryColumn(props: DeliveryColumnProps) {
           </div>
         ))}
       </dl>
-      <ViewLink
-        className={styles.link}
-        hang
-        href={appLink(siteShot(shot).link, siteShot(shot).query)}
-      >
+      <ViewLink className={styles.link} hang href={appLink(link, query)}>
         {action}
       </ViewLink>
     </article>

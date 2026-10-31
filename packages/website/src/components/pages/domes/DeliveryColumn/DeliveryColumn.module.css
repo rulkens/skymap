@@ -1,22 +1,30 @@
+/* Every group in the column stands one `--stack` below the last; a name sits closer to its own words. */
 .root {
   display: grid;
   align-content: start;
 }
 
 .figure {
-  margin: 0 0 2rem;
+  margin: 0 0 var(--stack);
 }
 
-/* The disc keeps the ring Disc draws outside it; its width matches the flat picture's height beside it. */
-.disc {
-  width: min(20rem, calc(100% - 2 * var(--disc-ring)));
-  margin: var(--disc-ring);
-}
+/*
+ * The same square mount for both pictures: a dome frame is square, its disc touching the sides, and a wide film
+ * frame is cut to the square about its middle. A hairline shows the square on the page's black. Narrow, it takes
+ * a phone's full width but stops short of filling a tablet's.
+ */
+.mount {
+  width: min(100%, 26rem);
+  aspect-ratio: 1;
+  overflow: hidden;
+  outline: 1px solid var(--border-divider);
 
-.flat img {
-  display: block;
-  width: 100%;
-  height: auto;
+  & img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
 /* The column's figure as a readout: large numerals in its picture's colour, the measure beside them. */
@@ -26,7 +34,7 @@
   align-items: baseline;
   gap: 0.25rem 1rem;
   max-width: none;
-  margin: 0 0 1.75rem;
+  margin: 0 0 var(--stack);
   color: var(--site-text-dim);
   font-size: var(--text-small);
   font-weight: var(--weight-small);
@@ -43,13 +51,13 @@
 }
 
 .words p {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--stack);
 }
 
 /* A specification: each line a label and a phrase on one hairline, the label dim. */
 .spec {
   --spec-label: clamp(6rem, 22vw, 8.5rem);
-  margin: 0 0 1.5rem;
+  margin: 0 0 var(--stack);
 
   & > div {
     display: grid;
@@ -91,7 +99,7 @@
 /*
  * Wide, every part is a row of Delivery's grid: the figure's two (the picture, its title), the readout, the
  * name, the words, the seven lines of the specification and the link. Thirteen rows, so both columns' parts
- * sit level.
+ * sit level. The mount spans four of the column's six grid columns, so its right edge is a line of the grid.
  */
 @media (min-width: 901px) {
   .root {
@@ -105,8 +113,8 @@
     grid-template-rows: subgrid;
   }
 
-  .figure > :first-child {
-    align-self: end;
+  .mount {
+    width: calc((100% - 5 * var(--col-gap)) / 6 * 4 + 3 * var(--col-gap));
   }
 
   .spec {
@@ -114,6 +122,6 @@
   }
 
   .spec > div:last-child {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--stack);
   }
 }
