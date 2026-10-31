@@ -36,8 +36,8 @@ function Places({ lines }: PlacesProps) {
         <h2>Pick somewhere to start</h2>
         <p>
           Skymap is full of places to explore. Choose one and the app opens there. They run from
-          nearest to farthest: light from the Moon
-          arrives in 1.3 seconds, from Andromeda in 2.5 million years.
+          nearest to farthest: light from the Moon arrives in 1.3 seconds, from Andromeda in 2.5
+          million years.
         </p>
       </div>
       <div
