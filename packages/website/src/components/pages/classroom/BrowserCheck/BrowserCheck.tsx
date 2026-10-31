@@ -1,7 +1,7 @@
 /*
  * BrowserCheck — asks the browser the page is open in whether it can draw with WebGPU, as the app must,
- * and says so in one line beside a ring: filled when it can, hollow when it cannot. Before the answer, and
- * without script, it asks the reader to open a link on each kind of device instead.
+ * and says so in one line beside a ring: filled with a check mark when it can, hollow when it cannot.
+ * Before the answer, and without script, it asks the reader to open a link on each kind of device instead.
  */
 import { useEffect, useState } from 'react';
 
