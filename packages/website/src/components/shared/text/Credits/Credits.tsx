@@ -1,7 +1,7 @@
 /*
- * Credits — who made the images and catalogues Home shows, set as a colophon: the title, then each group as
- * a list of sources, each name a link to its source beside its licence in words, and one way to the
- * credits page for the terms in full.
+ * Credits — who made the images and catalogues a page shows, set as a colophon: the title over one line on why
+ * we credit, then each group as a list of sources, each name a link to its source beside its licence in words,
+ * and one way to the credits page for the terms in full.
  */
 import { DATA_CREDITS, IMAGE_CREDITS } from '../../../../data/credits.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
@@ -15,7 +15,13 @@ const groups = [
 function Credits() {
   return (
     <section className={styles.root} id="credits" aria-labelledby="credits-title">
-      <h2 id="credits-title">Credits</h2>
+      <div className={styles.head}>
+        <h2 id="credits-title">Credits</h2>
+        <p className={styles.why}>
+          The pictures and data here are other people’s work, and their licences ask us to name
+          them.
+        </p>
+      </div>
       <div className={styles.body}>
         {groups.map((group) => (
           <div key={group.label} className={styles.group}>

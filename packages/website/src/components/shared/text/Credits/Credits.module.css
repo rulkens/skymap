@@ -23,6 +23,12 @@
   }
 }
 
+.head .why {
+  max-width: 22rem;
+  margin-top: 0.75rem;
+  color: var(--site-text-faint);
+}
+
 .body {
   display: grid;
   row-gap: 2.5rem;
@@ -69,7 +75,7 @@
 }
 
 @media (min-width: 901px) {
-  .root h2 {
+  .head {
     grid-column: 1 / span 3;
   }
 
