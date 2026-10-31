@@ -6,7 +6,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 import type { Tier } from '../Tier';
 
 /**
- * Galaxy catalog-typed row of the SOURCE_REGISTRY — all the per-galaxy-catalog metadata
+ * Galaxy catalog-typed row of the APP_SOURCE_REGISTRY — all the per-galaxy-catalog metadata
  * needed by the UI, the loader, and the camera, colocated so adding a new
  * galaxy catalog means editing one place.
  */

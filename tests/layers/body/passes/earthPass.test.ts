@@ -29,7 +29,7 @@ import { innerBoundRadiusM } from '../../../../src/utils/occlusion/innerBoundRad
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../src/layers/body/present/cloudShellParams';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../src/services/engine/helpers/minPickRadiusMpc';
 import { makeSlab } from '../../../fixtures/makeSlab';

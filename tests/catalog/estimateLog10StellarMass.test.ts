@@ -3,7 +3,7 @@ import {
   estimateLog10StellarMass,
   type StellarMassEstimateInput,
 } from '../../tools/catalog/estimateLog10StellarMass';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 
 /** Minimal StellarMassEstimateInput fixture; unused magnitude slots default to NaN. */
 function input(partial: Partial<StellarMassEstimateInput>): StellarMassEstimateInput {

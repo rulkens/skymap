@@ -529,8 +529,8 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Labels & Guides',
         control: 'switch',
-        does: 'Sets the twenty-two switches under it at once. With every one off it switches them all on, the Local Bubble and the constellations included; otherwise it switches them all off.',
-        values: 'On, off, or a dash while the twenty-two differ',
+        does: 'Sets every switch under it at once. With every one off it switches them all on, the Local Bubble and the constellations included; otherwise it switches them all off.',
+        values: 'On, off, or a dash while they differ',
         first: 'A dash',
       },
       label('Famous Galaxies', 'galaxyCatalogs.items.famousGalaxy.labelEnabled', 'the named galaxies'),
@@ -610,6 +610,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         first: OFF,
         state: 'lightTime.enabled',
         firstValue: false,
+      },
+      {
+        name: 'Universe horizon',
+        control: 'switch',
+        does: 'Shows the edge of the observable universe, a sphere centred on us. It fades in as the camera pulls back from about 2 to about 19 billion light-years out.',
+        values: SWITCH,
+        first: ON,
+        state: 'cosmicHorizon.enabled',
+        firstValue: true,
       },
       {
         name: 'Constellations',

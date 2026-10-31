@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { parseTwoMrs, parseXscShapeCsv, type XscShapeMap } from '../../tools/parsers/twoMrs';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 
 /**
  * Helper for the XSC-application tests below. Builds a 233-character 2MRS

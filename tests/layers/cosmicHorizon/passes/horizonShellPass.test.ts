@@ -1,7 +1,7 @@
 /**
- * horizonShellPass — the distance-fade gate in `enabled` and the `draw` call's
- * arguments, against stub state + ctx with no GPU device. `draw` must thread the
- * resolved `SlabView`'s `viewportPx` rather than reading `ctx.canvasSize` directly.
+ * horizonShellPass — the `draw` call's arguments, against stub state + ctx with no GPU
+ * device. `draw` must thread the resolved `SlabView`'s `viewportPx` rather than reading
+ * `ctx.canvasSize` directly, and hand the core-resolved fade to the shader as its alpha.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -43,7 +43,7 @@ function makeCam(): OrbitCamera {
  * production encoders perform once per frame — works against these
  * fixtures without a bespoke double.
  */
-function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } = {}): FrameView {
+function makeCtx(): FrameView {
   const cam = makeCam();
   const vp = new Float32Array(16) as unknown as Mat4;
   const renderTargets = { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any;
@@ -80,7 +80,6 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
     // Nothing in this file reads bodyPose — a stub that never resolves a
     // body is a safe default.
     bodyPose: () => null,
-    ...overrides,
   } as unknown as FrameView;
 }
 
@@ -100,38 +99,17 @@ function makePass(draw = vi.fn()) {
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-describe('horizonShellPass.enabled', () => {
-  it('returns false near the origin — the inverse of the Milky-Way band', () => {
-    // Camera at 5 Mpc is far below the shell's fade-in band (5% of
-    // 14.3 Gpc ≈ 0.7 Gpc), so the layer is skipped — no empty
-    // full-screen ray-march pass at galaxy-scale zoom.
-    const ctx0 = makeCtx();
-    expect(makePass().enabled(STATE_STUB, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
-  });
-
-  it('returns true once the camera pulls back to cosmological scale', () => {
-    // 8 Gpc is past the 40%-of-radius full-strength point (~5.7 Gpc).
-    const ctx = makeCtx({
-      drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
-    });
-    expect(makePass().enabled(STATE_STUB, ctx, slabViewOf(ctx, COSMO))).toBe(true);
-  });
-});
-
 describe('horizonShellPass.draw', () => {
-  it('forwards the distance-fade alpha as the 4th draw arg', () => {
+  it('forwards the handed fade as the 4th draw arg', () => {
     const drawSpy = vi.fn();
-    const ctx = makeCtx({
-      drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
-    });
+    const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    makePass(drawSpy).draw(PASS_STUB, view, ctx, STATE_STUB);
+    makePass(drawSpy).draw(PASS_STUB, view, ctx, STATE_STUB, 0.37);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(ctx.cam);
     expect(args[2]).toEqual(view.viewportPx);
-    // 8 Gpc is past the full-strength point → alpha 1.0.
-    expect(args[3]).toBe(1.0);
+    expect(args[3]).toBe(0.37);
   });
 });

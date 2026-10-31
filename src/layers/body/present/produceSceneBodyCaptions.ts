@@ -22,7 +22,8 @@ const BODY_CAPTION_ITEM: Readonly<Partial<Record<CaptionKind, LabelItemOf<'body'
   smallBody: SMALL_BODY_ENTRY.id,
 };
 
-// `deriveBodyStates` returns the SAME Map while `simDays` is unchanged: a free change-detector.
+// The body snapshot is the SAME Map while `simDays` is unchanged and nothing moving is selected
+// (`placeLiveSelection`): a free change-detector.
 let cachedStates: ReadonlyMap<string, BodyState> | undefined;
 let cachedLabels: ReturnType<typeof sceneBodyLabels> = [];
 

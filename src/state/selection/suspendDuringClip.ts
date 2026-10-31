@@ -24,7 +24,8 @@
  *   stale focus target. The `clipEnded` reducer clears tweens planted BEFORE the
  *   clip started; this guard stops NEW ones from being planted DURING it.
  *
- * SCOPE — guard only `watchFocusTweenSaga`. The clip RELIES on:
+ * SCOPE — guard only `watchFocusTweenSaga` and `watchSelectionRevealSaga` (a tour's
+ * visibility is its cues'). The clip RELIES on:
  *   - `watchFadesSaga` driving `intentOpacity` for in-clip fade cues.
  *   - `watchSelectionRowsSaga` reconciling `selectionRows.focus` for the isolation dim
  *     that in-clip `focus()` cues trigger.

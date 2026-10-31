@@ -1,7 +1,6 @@
 /**
  * encodeGalaxyId — the ONE home for the galaxy `#focus=<id>` priority ladder,
- * fed by `selectionToFocusId` (focusUrl.ts) and `galaxyCatalogSelectionRow`'s
- * `focusId.encode`, so the two can never drift in grammar. `resolveFocusId` is
+ * fed by `galaxyCatalogSelectionRow`'s `focusId.encode`. `resolveFocusId` is
  * the inverse; the round-trip parity test guards that.
  *
  *   - famous id          : a curated seed id ("m31") beats every numeric id.
@@ -13,7 +12,7 @@
  *                          the decoder still reads legacy `pos@<ra>,<dec>`.
  */
 
-import { Source } from '../../data/sources';
+import { Source } from '../../data/source';
 import type { SourceType } from '../../@types/data/SourceType';
 
 export function encodeGalaxyId(galaxy: {

@@ -97,8 +97,34 @@ are NOT rewritten by any subcommand:
   `import()` strings, `vi.mock()` path literals, anything referenced as text rather
   than as a symbol.
 
+- **`?worker` / `?url` / `?raw` import specifiers**: they are ambient-typed, so a
+  stale path passes tsc AND `vite build` and breaks only at runtime.
+- **`.mts` files**: outside the ts-morph project (only `.ts`/`.tsx` are globbed);
+  `npm run typecheck` (the `tsconfig.tools.json` pass) catches their stale imports.
+- **Type properties and loose fixtures**: `rename` handles exported declarations
+  only, not type properties, and fixtures full of `as unknown as` / `Partial<…>`
+  accept a stale key silently. Grep them separately.
+- **Ratchet allow-lists** (e.g. `tests/helpers/conventions/inlineTypeFiles.ts`)
+  hold paths as strings and are not updated.
+- **Ad-hoc ts-morph importer rewrites**: never repoint importers with a one-off
+  ts-morph script. A module move is `npm run move-files -- <from> <to>` (it rewrites
+  every importer project-wide) and a symbol rename is `refactor rename`. In any
+  ts-morph code, `ImportDeclaration.remove()` on a file's first import drops the
+  module header comment and the blank line after it; use `removeImportKeepingTrivia`
+  (`tools/utils/refactor/`) instead.
+
 After any rename/extract/inline/move, `grep` for the old name and old basename to
 catch those by hand.
+
+### Per-subcommand gaps
+
+- **`move`** rewrites string literals that merely contain a moved basename, and
+  strips their extension: review every non-import string hunk in the diff. It does
+  not mirror faceted tests (`foo.facet.test.ts`; add manifest entries for them) and
+  leaves the emptied source directory behind.
+- **`extract`** needs an exported symbol, can write `../../node_modules/<pkg>/index`
+  specifiers (rewrite them to the bare package name), and re-quotes to double
+  quotes, so run `npx prettier --write` on the touched files.
 
 ## Always
 

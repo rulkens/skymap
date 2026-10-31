@@ -16,7 +16,12 @@ import type { SelectionRow } from '../engine/SelectionRow';
  * The shape is a `Record` over `SelectionSlot` so that adding a fourth slot to
  * `SelectionState` automatically widens this type too — no parallel manual
  * update needed.
+ *
+ * `focusId` is the focus row's durable `#focus=` id, landed in the same action
+ * as the row so the two can never disagree: the saga encodes it only when the row
+ * resolved, so an unresolvable ref publishes no link. Null when nothing is focused
+ * or the kind has no link form.
  */
 export type SelectionRowsState = {
   readonly [K in SelectionSlot]: SelectionRow | null;
-};
+} & { readonly focusId: string | null };

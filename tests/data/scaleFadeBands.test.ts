@@ -1,7 +1,7 @@
 /**
- * scaleFadeBands — pins the two POP-FREE relationships between the star fade
- * bands and the gates they hand off to. Both couple constants that are tuned in
- * SEPARATE files (`scaleFadeBands`, `solarSystemLabelMaxDistance`,
+ * scaleFadeBands — pins the POP-FREE relationships between the backdrop fade
+ * bands and the gate they hand off to. Each couples constants that are tuned in
+ * SEPARATE files (`scaleFadeBands`, `starBackdropDissolve`,
  * `foregroundMaxDistance`), so each fails on a silent retune of one margin that
  * would reintroduce a visible pop on descent — the exact regression this fix
  * removed. These are NOT restatements of the derivations (which would assert a
@@ -13,37 +13,19 @@ import { describe, it, expect } from 'vitest';
 
 import { SCALE_FADE_BANDS } from '../../src/data/scaleFadeBands';
 import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/data/starBackdropDissolve';
+import { FOREGROUND_RECEDE } from '../../src/data/bands/foregroundRecede';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../src/data/labels/solarSystemLabelMaxDistance';
 import { regionById } from '../../src/utils/regions/regionById';
-import { SCALE_UNITS } from '../../src/data/scaleUnits';
 import { fadeBand } from '../../src/utils/math/fadeBand';
 
 const NEIGHBOURHOOD_EXTENT_MPC = regionById('solar-neighbourhood').extentMpc;
 const SOLAR_SYSTEM_EXTENT_MPC = regionById('solar-system').extentMpc;
 
-describe('star fade bands — pop-free coupling to their gates', () => {
-  it('the star caption reaches 0 before its layer gate cuts it', () => {
-    // Worst-case star-to-camera distance at the caption gate crossing is
-    // `gate − 2·EXTENT` (camera `gate` from a target star sitting `EXTENT` from
-    // the region's anchor, another seed up to `2·EXTENT` beyond it). For no
-    // caption to still be fading when the layer switches off, the band's `goneAt`
-    // (in Mpc) must not exceed that lower bound — i.e.
-    // `goneAt·PC_TO_MPC + 2·EXTENT ≤ gate`. A retune that widened the caption
-    // band or tightened the gate would surface a half-faded caption with a hard
-    // edge at the gate; this catches it.
-    const captionGoneMpc = SCALE_FADE_BANDS.starCaption.goneAt * SCALE_UNITS.PC_TO_MPC;
-    expect(captionGoneMpc + 2 * NEIGHBOURHOOD_EXTENT_MPC).toBeLessThanOrEqual(
-      SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
-    );
-  });
-
-  it('the star backdrop dissolves fully inside the shared foreground gate', () => {
-    // The backdrop band must complete STRICTLY before `FOREGROUND_MAX_DISTANCE_MPC`
-    // hard-cuts the layer, so the gate lands on already-black sprites and never
-    // pops. A retune that pushed `goneAt` out to (or past) the gate would
-    // reintroduce the hard-cut blob this fix dissolved.
-    expect(STAR_BACKDROP_DISSOLVE.goneAt).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+describe('backdrop fade bands — pop-free coupling to the foreground gate', () => {
+  it('the star backdrop is gone before the foreground gate begins to recede', () => {
+    // The backdrop must reach 0 before FOREGROUND_RECEDE starts, so the NEAR0
+    // foreground step idles at galaxy zoom and never has a visible star to cut.
+    expect(STAR_BACKDROP_DISSOLVE.out[1]).toBeLessThan(FOREGROUND_RECEDE.out[0]);
   });
 
   it('the body-glint backdrop dissolves fully inside the shared foreground gate', () => {
@@ -65,10 +47,10 @@ describe('both backdrop bands derive from one shape', () => {
     // independently of the other's (the bug this shape consolidation removes),
     // the two ratios would diverge and this would fail; retuning the shared
     // shape moves both ratios together and stays green.
-    expect(STAR_BACKDROP_DISSOLVE.fullAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
+    expect(STAR_BACKDROP_DISSOLVE.out[0] / NEIGHBOURHOOD_EXTENT_MPC).toBe(
       SCALE_FADE_BANDS.bodyGlintBackdrop.fullAt / SOLAR_SYSTEM_EXTENT_MPC,
     );
-    expect(STAR_BACKDROP_DISSOLVE.goneAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
+    expect(STAR_BACKDROP_DISSOLVE.out[1] / NEIGHBOURHOOD_EXTENT_MPC).toBe(
       SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt / SOLAR_SYSTEM_EXTENT_MPC,
     );
   });
