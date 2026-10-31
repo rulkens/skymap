@@ -218,3 +218,26 @@ own. Glints (planet class), trails, regions, search and focus come from the rows
 Phases 3–4 (backlog), a body show-toggle, featured cards for the new bodies, a
 DSK reader, a spin-acceleration rotation term, the website object catalogue's
 grouping (it would list the three under "Sun, planets and dwarf planets").
+
+## Orientation checks (2026-10-31)
+
+Run once by hand on the baked `<id>.prebaked.glb` and its albedo atlas (150k
+triangles; body = (x, −z, y) of the glTF), since CI has neither.
+
+- **Vesta:** the "75° S, 301° E" planned for Rheasilvia is a Dawn-Claudia
+  coordinate; in Claudia″, the frame of the shape and the mosaic, the Gazetteer
+  puts its centre at 72.0° S, 86.3° E. On the baked mesh the basin's central
+  mound (the most prominent high south of 45° S, against an ellipsoid fitted
+  to the north) sits at 75.0° S, 92.7° E, 3.5° from the Gazetteer centre. The
+  lowest 45° cap is centred 83° S, 66° E. The lowest vertex and the lowest
+  20° cap (79° S, 314° E) lie on the floor beside the mound, so they cannot
+  locate the centre. Not a Dawn-Claudia mesh, not a 180° turn.
+- **Ceres:** the 99.7th-percentile cap clips the Cerealia facula to the same
+  value as other bright ground, so the brightest atlas texel says nothing. The
+  strongest local bright anomaly between 10–30° N and 229–250° E sits at
+  20.5° N, 242.5° E on the baked atlas (19.5° N, 239.5° E in the source
+  mosaic, 1° cells). The baked atlas correlates with the source mosaic best at
+  a 0° longitude shift (r = 0.95).
+- **Bennu:** the widest 2° latitude band is −2° to 0° (mean radius 270.1 m),
+  and the top 1% of vertices by radius average 0.4° S. The ridge is on the
+  equator.

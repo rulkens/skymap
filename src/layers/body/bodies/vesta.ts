@@ -17,7 +17,8 @@ export const VESTA: LayerBody = {
     id: 'vesta',
     label: 'Vesta',
     datumRadiusM: 261400,
-    reliefM: [-49041, 30977], // DSK radius extremes − datum
+    // Radius extremes − datum; the top is the baked mesh's bound, a little over the DSK's.
+    reliefM: [-49041, 30998],
     albedo: [0.45, 0.43, 0.4],
   }),
   position: {

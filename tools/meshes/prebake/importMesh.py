@@ -47,7 +47,8 @@ def lonlat_albedo(filename, lon_offset_deg, mean_albedo):
     """A planetocentric, east-positive equirect mosaic whose left edge is longitude
     -180, sampled `lon_offset_deg` east of each surface point (its measured
     registration against the shape's relief) and rescaled so its median is
-    `mean_albedo` — the body's seed, so the mesh reads as bright as the sphere did."""
+    `mean_albedo` — the body's seed, so the mesh reads as bright as the sphere did.
+    A mosaic whose left edge is 0 instead takes 180 more."""
     return {"image": filename, "lon_offset_deg": lon_offset_deg, "mean_albedo": mean_albedo}
 
 
@@ -76,6 +77,14 @@ SOURCES = {
         "Phobos_Viking_Mosaic_40ppd_DLRcontrol.tif", 4.5, (0.30, 0.29, 0.28))),
     "deimos": source("DEIMOS_K005_THO_V01.OBJ", scale=1000.0,
                      rock={"constant": (0.32, 0.30, 0.28)}),
+    # The maps are pre-shrunk to 8192 px with their NoData filled (README).
+    "vesta": source("dawn_vesta_grv_icq0512_v1.obj", scale=1000.0, rock=lonlat_albedo(
+        "Vesta_Dawn_FC_HAMO_Mosaic_Global_74ppd.8192.png", 0.0, (0.45, 0.43, 0.40))),
+    "ceres": source("dawn_ceres_grv_icq0256_v2.obj", scale=1000.0, rock=lonlat_albedo(
+        "Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif", 180.0, (0.30, 0.29, 0.28))),
+    "bennu": source("bennu_g_00880mm_alt_obj_0000n00000_v020.obj", scale=1000.0,
+                    rock=lonlat_albedo("Bennu_global_ShapeV20_GndControl_ROLOphase_ALBEDO_8bit_v6.8192.png",
+                                       180.0, (0.24, 0.23, 0.22))),
 }
 
 # The mosaic is resampled to this before it is packed: a 4096 atlas over Phobos

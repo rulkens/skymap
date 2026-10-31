@@ -577,6 +577,30 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-deimos&t=2026-10-07T12:00:00Z', label: 'Open Deimos' },
   },
+  'mesh-vesta': {
+    title: 'Vesta shape model and Dawn mosaic',
+    description:
+      'The shape of the asteroid Vesta from 3.1 million facets, with its colour from a Dawn mosaic.',
+    shows: 'Vesta up close, with the Rheasilvia basin around its south pole.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-vesta&t=2026-10-20T00:00:00Z', label: 'Open Vesta' },
+  },
+  'mesh-ceres': {
+    title: 'Ceres shape model and Dawn mosaic',
+    description:
+      'The shape of the dwarf planet Ceres from 786,000 facets, with its colour from a Dawn mosaic.',
+    shows: 'Ceres up close, with the bright spots of Occator crater.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-ceres&t=2026-10-20T00:00:00Z', label: 'Open Ceres' },
+  },
+  'mesh-bennu': {
+    title: 'Bennu shape model and albedo mosaic',
+    description:
+      'The shape of the asteroid Bennu from OSIRIS-REx’s laser altimeter, with its brightness from an OSIRIS-REx mosaic.',
+    shows: 'Bennu up close, with its equatorial ridge and boulders.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-bennu&t=2026-10-20T00:00:00Z', label: 'Open Bennu' },
+  },
   skraafoto: {
     description:
       'The aerial photographs and the laser scan from which we rebuilt Søndermarken as a 3D model.',

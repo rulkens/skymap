@@ -16,7 +16,8 @@ export const CERES: LayerBody = {
     id: 'ceres',
     label: 'Ceres',
     datumRadiusM: 469700,
-    reliefM: [-27282, 17313], // DSK radius extremes − datum
+    // Radius extremes − datum; the top is the baked mesh's bound, a little over the DSK's.
+    reliefM: [-27282, 17341],
     albedo: [0.3, 0.29, 0.28],
   }),
   position: {

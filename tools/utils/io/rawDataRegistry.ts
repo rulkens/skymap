@@ -1658,6 +1658,145 @@ export const RAW_DATA = {
     description:
       'Provenance for the Deimos shape model — source, licence, fetch date, checksum, frame and units, and how to rebuild.',
   },
+  'meshes.vestaSource': {
+    path: 'data/raw/meshes/vesta/dawn_vesta_grv_icq0512_v1.obj',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Dawn gravity-team Vesta shape model icq0512 (3,145,728 plates, km, IAU_VESTA Claudia″ frame, origin at the centre of mass), converted one-off from the NAIF type-2 DSK `dawn_vesta_grv_icq0512_v1.bds` (README). `npm run import-mesh -- vesta` dresses it and the pre-bake bakes its relief onto a decimated copy.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds',
+    readme: 'meshes.vesta.readme',
+  },
+  'meshes.vestaAlbedo': {
+    path: 'data/raw/meshes/vesta/Vesta_Dawn_FC_HAMO_Mosaic_Global_74ppd.8192.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Vesta Dawn FC HAMO clear-filter mosaic, NoData and the unlit north filled with the median and box-downsampled from 26704 to 8192 px wide (README); planetocentric, east-positive, Claudia″, left edge -180. The import samples it at 0 deg offset.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Vesta_Dawn_FC_HAMO_Mosaic_Global_74ppd.tif',
+    readme: 'meshes.vesta.readme',
+  },
+  'meshes.vestaBlend': {
+    path: 'data/raw/meshes/vesta/vesta.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'vesta.blend — the shape model in metres, smooth-shaded, wearing a rock material that samples the HAMO mosaic by longitude/latitude; written by `npm run import-mesh -- vesta` from the two files above.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.vesta.readme',
+  },
+  'meshes.vesta': {
+    path: 'data/raw/meshes/vesta/vesta.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Vesta decimated to 150k triangles with albedo, normal, roughness and metallic 4096^2 atlases baked from the full 3.1M-plate surface — what MESH_SOURCES.vesta points at. Regenerate with `npm run prebake-mesh -- vesta` (Blender, not CI).',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.vesta.readme',
+  },
+  'meshes.vesta.readme': {
+    path: 'data/raw/meshes/vesta/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Vesta shape model and HAMO mosaic — sources, licences, fetch date, checksums, the DSK conversion and map preparation, frame and units, and how to rebuild.',
+  },
+  'meshes.ceresSource': {
+    path: 'data/raw/meshes/ceres/dawn_ceres_grv_icq0256_v2.obj',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Dawn gravity-team Ceres shape model icq0256 (786,432 plates, km, IAU_CERES frame, origin at the centre of mass), converted one-off from the NAIF type-2 DSK `dawn_ceres_grv_icq0256_v2.bds` (README). `npm run import-mesh -- ceres` dresses it and the pre-bake bakes its relief onto a decimated copy.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds',
+    readme: 'meshes.ceres.readme',
+  },
+  'meshes.ceresAlbedo': {
+    path: 'data/raw/meshes/ceres/Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Ceres Dawn FC clear-filter controlled mosaic, 20 ppd (7383x3691), used as downloaded; planetocentric, east-positive, left edge 0. The import samples it 180 deg east of each surface point, which absorbs the 0 left edge.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif',
+    readme: 'meshes.ceres.readme',
+  },
+  'meshes.ceresBlend': {
+    path: 'data/raw/meshes/ceres/ceres.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'ceres.blend — the shape model in metres, smooth-shaded, wearing a rock material that samples the Dawn mosaic by longitude/latitude; written by `npm run import-mesh -- ceres` from the two files above.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.ceres.readme',
+  },
+  'meshes.ceres': {
+    path: 'data/raw/meshes/ceres/ceres.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Ceres decimated to 150k triangles with albedo, normal, roughness and metallic 4096^2 atlases baked from the full 786k-plate surface — what MESH_SOURCES.ceres points at. Regenerate with `npm run prebake-mesh -- ceres` (Blender, not CI).',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.ceres.readme',
+  },
+  'meshes.ceres.readme': {
+    path: 'data/raw/meshes/ceres/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Ceres shape model and Dawn mosaic — sources, licences, fetch date, checksums, the DSK conversion, frame and units, and how to rebuild.',
+  },
+  'meshes.bennuSource': {
+    path: 'data/raw/meshes/bennu/bennu_g_00880mm_alt_obj_0000n00000_v020.obj',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'OSIRIS-REx AltWG Bennu shape model v020 from OLA (3,145,728 plates, km, IAU_BENNU frame, origin at the centre of mass), converted one-off from the NAIF type-2 DSK `bennu_g_00880mm_alt_obj_0000n00000_v020.bds` (README). `npm run import-mesh -- bennu` dresses it and the pre-bake bakes its relief onto a decimated copy.',
+    upstream:
+      'https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds',
+    readme: 'meshes.bennu.readme',
+  },
+  'meshes.bennuAlbedo': {
+    path: 'data/raw/meshes/bennu/Bennu_global_ShapeV20_GndControl_ROLOphase_ALBEDO_8bit_v6.8192.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Bennu ShapeV20 normal-albedo mosaic (±55 deg only), NoData filled with the median and box-downsampled from 25134 to 8192 px wide (README); planetocentric, east-positive, left edge 0. The import samples it 180 deg east of each surface point, which absorbs the 0 left edge.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Bennu/Bennu_global_ShapeV20_GndControl_ROLOphase_ALBEDO_8bit_v6.tif',
+    readme: 'meshes.bennu.readme',
+  },
+  'meshes.bennuBlend': {
+    path: 'data/raw/meshes/bennu/bennu.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'bennu.blend — the shape model in metres, smooth-shaded, wearing a rock material that samples the albedo mosaic by longitude/latitude; written by `npm run import-mesh -- bennu` from the two files above.',
+    upstream:
+      'https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.bennu.readme',
+  },
+  'meshes.bennu': {
+    path: 'data/raw/meshes/bennu/bennu.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Bennu decimated to 150k triangles with albedo, normal, roughness and metallic 4096^2 atlases baked from the full 3.1M-plate surface — what MESH_SOURCES.bennu points at. Regenerate with `npm run prebake-mesh -- bennu` (Blender, not CI).',
+    upstream:
+      'https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.bennu.readme',
+  },
+  'meshes.bennu.readme': {
+    path: 'data/raw/meshes/bennu/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Bennu shape model and albedo mosaic — sources, licences, fetch date, checksums, the DSK conversion and map preparation, frame and units, and how to rebuild.',
+  },
   'meshes.hubbleSource': {
     path: 'data/raw/meshes/hubble/Hubble Space Telescope (A).glb',
     kind: 'file',
