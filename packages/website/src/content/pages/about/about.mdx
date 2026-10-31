@@ -3,6 +3,7 @@ title: 'About Skymap: who makes it and which pictures you may reuse'
 description: Skymap is made by one person, Alexander Rulkens, and is open source. Its version and history, how to get in touch, press pictures, and a colophon.
 ---
 
+import AboutHero from '../../../components/pages/about/AboutHero/AboutHero.tsx';
 import Beside from '../../../components/shared/layout/Beside/Beside.tsx';
 import Claims from '../../../components/shared/text/Claims/Claims.tsx';
 import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
@@ -11,12 +12,10 @@ import Figure from '../../../components/shared/media/Figure/Figure.tsx';
 import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
-import PictureBand from '../../../components/shared/media/PictureBand/PictureBand.tsx';
 import PressPictures from '../../../components/pages/about/PressPictures/PressPictures.tsx';
 import Quotable from '../../../components/pages/about/Quotable/Quotable.tsx';
 import WebAtScale from '../../../components/pages/about/WebAtScale/WebAtScale.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
-import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
 import { CONTACT_ENDPOINT, ISSUES_URL } from '../../../data/contact';
@@ -28,11 +27,10 @@ import { formatDate } from '../../../utils/formatDate';
 import { sitePath } from '../../../utils/sitePath';
 import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
 
-<PictureBand id="about-milky-way" gap="none" eager>
+<AboutHero>
   <h1>About Skymap</h1>
   <p className={text.say}>Skymap is made by one person. This page says who, how to reach us and which pictures you may reuse.</p>
-  <ShotCaption id="about-milky-way" />
-</PictureBand>
+</AboutHero>
 
 <Section id="what">
   <WebAtScale>

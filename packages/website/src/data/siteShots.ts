@@ -766,14 +766,22 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   {
     id: 'about-milky-way',
-    link: 'focus=milkyWay&pose=a,0,0,0,-2.22,0.6,0.05,0,0.3,0',
-    settings: { ...SUBJECT, hideZoneOfAvoidance: true, settleMs: 3000 },
-    size: WIDE,
-    widths: [1920, 1280],
+    link: 'focus=milkyWay&pose=a,-0.000447,-0.007140,-0.003966,-0.6421,0.2356,0.048,0',
+    settings: {
+      ...ONE_GALAXY,
+      hideStars: true,
+      matte: 'emissive',
+      keepPasses: ['milky-way', 'milky-way-aggregate', 'milky-way-upsample'],
+      exposure: 2.4,
+      // The square round the galaxy and its clusters; the rest of the frame is empty.
+      crop: { left: 400, top: 120, width: 800, height: 800 },
+      settleMs: 4000,
+    },
+    size: { width: 1600, height: 1000 },
+    widths: [1600, 960],
     title: 'The Milky Way from outside',
-    caption: 'With its small companion galaxies around it.',
     drawn: 'A model. Every camera we have is inside it.',
-    alt: 'A barred spiral galaxy seen from above on a field of stars, with small companion galaxies around it.',
+    alt: 'A barred spiral galaxy at a slant, a bright bar at its centre and dust along its arms, with globular clusters scattered round it.',
   },
   {
     // New moon, so the Sun is behind the camera and both discs are fully lit.
@@ -791,6 +799,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'dome-earth',
     link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,4.6e-16,0`,
+  // The About page's opening: the Milky Way model at a slant, alone as light, so the page's own black is its sky.
     query: 'dome',
     settings: { ...SUBJECT, settleMs: 4000 },
     size: DOME,
