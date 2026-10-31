@@ -1,12 +1,11 @@
 .root {
-  composes: wrap section from '../../../../styles/layout.module.css';
+  composes: section from '../../../../styles/layout.module.css';
   /* From the column's left edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
   --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
 }
 
-.tour,
-.exhibit {
-  composes: grid from '../../../../styles/layout.module.css';
+.pin {
+  composes: wrap grid from '../../../../styles/layout.module.css';
 }
 
 .lead {
@@ -110,8 +109,9 @@
   margin-inline: var(--bleed);
 }
 
+/* Wide and unpinned: the tour's stage beside the title and its part, then the exhibit's part over its stage. */
 @media (min-width: 901px) {
-  .tour {
+  .pin {
     align-items: center;
   }
 
@@ -134,16 +134,16 @@
     margin-top: 2.5rem;
   }
 
-  .exhibit {
-    margin-top: 3rem;
-  }
-
-  .exhibit > .part {
+  .exhibitPart {
     grid-column: 8 / -1;
+    grid-row: 2;
+    margin-top: 3rem;
   }
 
   /* Its faded top slides under the part's foot. */
   .exhibitStage {
+    grid-column: 1 / -1;
+    grid-row: 3;
     margin: -3rem calc(-1 * var(--bleed)) 0;
   }
 }
@@ -169,6 +169,16 @@
     margin-top: 1.5rem;
   }
 
+  .exhibitPart {
+    order: 3;
+    margin-top: 3rem;
+  }
+
+  .exhibitStage {
+    order: 4;
+    margin: -2rem calc(-1 * var(--gutter)) 0;
+  }
+
   .plate {
     aspect-ratio: 4 / 3;
     mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 12%, #000 80%, rgb(0 0 0 / 0));
@@ -192,14 +202,6 @@
 
   .tourStage .label {
     margin: 3.5rem var(--gutter) 0;
-  }
-
-  .exhibit {
-    margin-top: 3rem;
-  }
-
-  .exhibitStage {
-    margin: -2rem calc(-1 * var(--gutter)) 0;
   }
 
   /* A 5:4 cut of the frame's middle, at its full height: the frame is 1.28 cuts wide, so the ring's end is at 58.3%. */
@@ -228,9 +230,9 @@
 }
 
 /*
- * Each layer moves at its own depth while its stage crosses the window: `--drift` is how far it runs ahead of the
- * page (negative lags), at rest where the stage is mid-window. Arrivals play on the inner picture, so they add to
- * the drift. The rest pose is the finished picture, so without scroll timelines nothing is missing.
+ * Unpinned, each layer moves at its own depth while its stage crosses the window: `--drift` is how far it runs
+ * ahead of the page (negative lags), at rest where the stage is mid-window. Arrivals play on the inner picture, so
+ * they add to the drift. The rest pose is the finished picture, so without scroll timelines nothing is missing.
  */
 @keyframes drift {
   from {
@@ -316,6 +318,233 @@
     .title,
     .title > picture {
       animation-timeline: --exhibit;
+    }
+  }
+}
+
+/*
+ * Pinned, every motion runs on one timeline, `--stories`: the track's scroll while the pin holds still (its view
+ * inset by the nav, so `contain` 0% to 100% is exactly the pinned stretch, and `entry` the approach). The tour owns
+ * the first half and the exhibit the second; at the middle the parts and the stages hand over. `settle` moves a
+ * layer from `--drift` to its rest, so the pin lets go of the finished picture.
+ */
+@keyframes settle {
+  from {
+    translate: 0 var(--drift);
+  }
+}
+
+@keyframes hand-off {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* No dimmer: the part's muted text keeps 4.5:1 on black. */
+@keyframes dim {
+  to {
+    opacity: 0.6;
+  }
+}
+
+@keyframes fill {
+  from {
+    scale: 1 0;
+  }
+}
+
+/* A window too short to hold the words and the parts is left unpinned. */
+@media (min-width: 901px) and (min-height: 42rem) and (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .track {
+      height: calc(var(--first-screen) + 120svh);
+      view-timeline-name: --stories;
+      view-timeline-inset: var(--nav-height) 0;
+    }
+
+    .pin {
+      position: sticky;
+      top: var(--nav-height);
+      height: var(--first-screen);
+      align-content: center;
+    }
+
+    /* The words and the exhibit's part meet at the middle; both stages lie over the same cell. */
+    .words {
+      align-self: end;
+    }
+
+    .tourPart {
+      margin-top: 2rem;
+    }
+
+    .exhibitPart {
+      align-self: start;
+      margin-top: 1.5rem;
+    }
+
+    .tourStage,
+    .exhibitStage {
+      grid-column: 1 / span 7;
+      grid-row: 1 / span 2;
+      margin: 0 0 0 calc(-1 * var(--bleed));
+    }
+
+    .exhibitStage .label {
+      margin: 0 0 0 var(--bleed);
+    }
+
+    /*
+     * The frame 1.6 times the stage, about the Sun at its middle, so the ring's end moves out to (60.4%, 51%). The
+     * disc is 16.7% of the frame wide at 1440, as unpinned: 26.7% of the stage, centred on that end.
+     */
+    .orbits {
+      aspect-ratio: 16 / 10;
+      mask-image:
+        linear-gradient(90deg, #000 70%, rgb(0 0 0 / 0)),
+        linear-gradient(180deg, rgb(0 0 0 / 0), #000 14%, #000 85%, rgb(0 0 0 / 0));
+      mask-composite: intersect;
+
+      & picture {
+        width: 160%;
+        height: auto;
+        margin: -18.75% 0 0 -30%;
+      }
+
+      & img {
+        height: auto;
+      }
+    }
+
+    .planet {
+      top: 51%;
+      left: 60.4%;
+      width: 26.7%;
+      margin: -7.5% 0 0 -13.35%;
+    }
+
+    .title {
+      bottom: 6%;
+      width: 26rem;
+    }
+
+    /* A chapter of the list: a faint line beside it in the column gap, its own colour filling down it. */
+    .part {
+      position: relative;
+
+      &::before,
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0.25rem;
+        bottom: 0;
+        left: -2.75rem;
+        width: 1px;
+        background: rgb(232 238 255 / 0.16);
+      }
+
+      &::after {
+        background: var(--accent);
+        transform-origin: top;
+      }
+    }
+
+    .tourStage {
+      animation: hand-off linear both;
+    }
+
+    .exhibitStage {
+      animation: hand-off linear both reverse;
+    }
+
+    .tourPart {
+      animation: dim linear both;
+    }
+
+    .exhibitPart {
+      animation: dim linear both reverse;
+    }
+
+    /* After the shorthands, which reset the range. The stages hand over one after the other, so their labels never
+     * stand over each other. */
+    .tourPart,
+    .exhibitPart {
+      animation-range: contain 45% contain 55%;
+    }
+
+    .tourStage {
+      animation-range: contain 42% contain 50%;
+    }
+
+    .exhibitStage {
+      animation-range: contain 50% contain 58%;
+    }
+
+    .tourPart::after {
+      animation: fill linear both;
+      animation-range: contain 0% contain 50%;
+    }
+
+    .exhibitPart::after {
+      animation: fill linear both;
+      animation-range: contain 50% contain 100%;
+    }
+
+    .plate > picture {
+      animation: pull-back linear both;
+      animation-range: entry 40% contain 50%;
+    }
+
+    .tourCaption {
+      animation: settle linear both;
+      animation-range: entry 60% contain 50%;
+    }
+
+    .tourCaption > picture {
+      animation: slide-in linear both;
+      animation-range: entry 90% contain 20%;
+    }
+
+    .orbits > picture {
+      animation: open-out linear both;
+      animation-range: contain 50% contain 90%;
+    }
+
+    .planet {
+      --drift: -3rem;
+      animation: settle linear both;
+      animation-range: contain 50% contain 90%;
+    }
+
+    .title {
+      animation: settle linear both;
+      animation-range: contain 55% contain 95%;
+    }
+
+    .title > picture {
+      animation: slide-in linear both;
+      animation-range: contain 60% contain 85%;
+    }
+
+    .plate {
+      animation: none;
+    }
+
+    .tourStage,
+    .exhibitStage,
+    .tourPart,
+    .exhibitPart,
+    .tourPart::after,
+    .exhibitPart::after,
+    .plate > picture,
+    .tourCaption,
+    .tourCaption > picture,
+    .orbits > picture,
+    .planet,
+    .title,
+    .title > picture {
+      animation-timeline: --stories;
     }
   }
 }

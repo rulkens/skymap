@@ -8,8 +8,8 @@ sections:
   - heading: "Stories in the sky"
     job: "Show that Skymap has a way to animate a tour through the sky, and that it can be used to tell a story."
     component: "Stories"
-    layout: "the tour's stage left, out to the window edge, beside the title, line and its part; the exhibit's part right, over its stage across the window"
-    visual: "each view taken apart into layers on true alpha, each moving at its own depth with the scroll: the web pulls back and the tour caption slides in; the orbits open out, Jupiter settles on its orbit and the exhibit's title slides in"
+    layout: "pinned for a screen: the stage left, out to the window edge; the title, line and the parts as a list right, the current one lit with a line filling beside it; unpinned on a phone and under reduced motion, each part by its stage"
+    visual: "each view taken apart into layers on true alpha, arriving in the stage as its part becomes current: the web pulls back and the tour caption slides in; then the orbits open out, Jupiter settles on its orbit and the exhibit's title slides in"
     parts:
       - heading: "The Long Way Out"
         job: "The guided tour, Earth to the edge, playing."
