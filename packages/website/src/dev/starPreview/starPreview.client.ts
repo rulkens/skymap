@@ -2,21 +2,22 @@
  * Dev only, for the owner to judge a star-field background on real pages before one is built: `?stars=a|b|c|d`
  * turns a variant on (it stays on across pages for the tab), `?stars=off` turns it off. The stars are random
  * here, a stand-in for density and brightness only; the built field would draw the real sky.
- *   a: sparse, fixed behind the page   b: as a, the brighter stars a layer that drifts with the scroll
- *   c: as b, thinned out around words and pictures   d: half of a, barely there
+ *   a: sparse, fixed behind the page   b: as a, in four depths that drift with the scroll at their own pace
+ *   c: as b, dimmer, thinned out around words and pictures (the owner's pick)   d: half of a, barely there
  */
 type Variant = { count: number; min: number; max: number; drift: boolean; clear: boolean };
 
 const VARIANTS: Record<string, Variant> = {
   a: { count: 700, min: 0.3, max: 0.9, drift: false, clear: false },
   b: { count: 700, min: 0.3, max: 0.9, drift: true, clear: false },
-  c: { count: 850, min: 0.3, max: 0.95, drift: true, clear: true },
+  c: { count: 750, min: 0.2, max: 0.7, drift: true, clear: true },
   d: { count: 350, min: 0.22, max: 0.6, drift: false, clear: false },
 };
 const KEY = 'skymap:stars';
 // Per 1440 × 900 CSS pixels, so a phone gets the same density as a wide screen.
 const AREA = 1440 * 900;
-const DRIFT = 0.06;
+// Four depths, faintest farthest: each layer drifts against the scroll by its own share, so near stars pass the far ones.
+const DEPTHS = [0.015, 0.035, 0.065, 0.11];
 const CLEARED = 'h1, h2, h3, p, li, img, video, canvas:not([data-star-preview]), a, button, figure';
 
 const asked = new URLSearchParams(location.search).get('stars');
@@ -49,7 +50,8 @@ if (variant) {
     g.globalCompositeOperation = 'source-over';
     g.clearRect(0, 0, w, h);
     for (const s of stars) {
-      const shift = variant.drift && s.b > 0.25 ? (scrollY * DRIFT) % h : 0;
+      const depth = DEPTHS[Math.min(DEPTHS.length - 1, Math.floor(s.b * 1.6 * DEPTHS.length))]!;
+      const shift = variant.drift ? (scrollY * depth) % h : 0;
       const y = (((s.y * h - shift) % h) + h) % h;
       g.fillStyle = `rgba(${s.tint},${s.a})`;
       g.beginPath();
