@@ -4,7 +4,8 @@
  * fitted at ≈ P/8 (Iapetus every 2 days: its residual carries Titan's ~16-day pull, which a
  * P/8 grid aliases) and switches its correction off outside the span. Vesta, Ceres and Bennu
  * take a ΔM series first, like the moons: a fixed conic loses them along-track within decades.
- * Bennu fits every 4 days: its residual kinks at each Earth encounter.
+ * Bennu fits only 2007–2054, between Earth encounters, and every 4 days: at 10 the fit stalls
+ * at the 900 km stop.
  */
 import type { FittedBody } from './@types/FittedBody';
 

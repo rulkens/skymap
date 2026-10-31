@@ -102,7 +102,8 @@ About 960 MB of downloads; all gitignored under `data/raw/meshes/<id>/`.
   query and full-precision elements are in the recon file.
 - **Correction fit** — `HORIZONS_BODIES` rows (targets `'1;'`, `'4;'`,
   `'101955;'`, centre `'500@10'`, daily step) and `FITTED_BODIES` rows with
-  `outside: 'hold'`. Bennu's span is shorter (see the outcome below). A fixed conic misses these bodies by far more than any planet
+  `outside: 'hold'`. Bennu's span is shorter (see the outcome below). A fixed
+  conic misses these bodies by far more than any planet
   (Ceres/Vesta 16–34M km, Bennu ~300M km at the span ends, mostly along-track),
   and the Cartesian fit stops at 900 km and throws above 1,000 km
   (`buildEphemerisCorrections.ts:115` runs the ΔM pre-fit only for rows with a

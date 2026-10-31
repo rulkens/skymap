@@ -148,7 +148,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     distance: '2.77 AU',
     wikiTitle: 'Ceres_(dwarf_planet)',
     description:
-      "Ceres is the dwarf planet of the asteroid belt, mapped from orbit by NASA's Dawn spacecraft. Its lone mountain Ahuna Mons is an ice volcano about 4 km high and 17 km wide, with no counterpart anywhere else on Ceres.",
+      "Ceres is the dwarf planet of the asteroid belt, mapped from orbit by NASA's Dawn spacecraft. Its isolated mountain Ahuna Mons is an ice volcano about 4 km high and 17 km wide, with no counterpart anywhere else on Ceres.",
   },
   bennu: {
     mass: '7.33 × 10¹⁰ kg',
