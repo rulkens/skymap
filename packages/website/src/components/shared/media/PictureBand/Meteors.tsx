@@ -13,8 +13,9 @@ type Sky = NonNullable<GalleryView['sky']>;
 type Streak = { id: number; at: number; style: CSSProperties };
 type MeteorsProps = { views: readonly GalleryView[]; at: number };
 
-// Rare: the wait between two meteors, in seconds; past it the next comes with the next view that has a sky.
-const GAP_SEC = [20, 45] as const;
+// The wait between two meteors, in seconds: often enough to be caught on one slide or two, never on every one.
+// Past it the next comes with the next view that has a sky.
+const GAP_SEC = [6, 16] as const;
 // After a view's 1.4 s cross-fade, so a meteor never crosses two pictures.
 const SETTLE_MS = 2000;
 
