@@ -3,6 +3,7 @@ title: 'The science behind Skymap: data, methods, limits'
 description: Where Skymap’s numbers come from, how we turn catalogues into pixels, and where we simplify. Each claim links to its source.
 ---
 
+import AcrossFigure from '../../../components/pages/science/AcrossFigure/AcrossFigure.tsx';
 import AskList from '../../../components/pages/science/AskList/AskList.tsx';
 import Citation from '../../../components/shared/text/Citation/Citation.tsx';
 import Claims from '../../../components/shared/text/Claims/Claims.tsx';
@@ -11,7 +12,6 @@ import Credits from '../../../components/shared/text/Credits/Credits.tsx';
 import FramePair from '../../../components/pages/science/FramePair/FramePair.tsx';
 import FullFigure from '../../../components/pages/science/FullFigure/FullFigure.tsx';
 import Group from '../../../components/shared/layout/Group/Group.tsx';
-import MarginFigure from '../../../components/pages/science/MarginFigure/MarginFigure.tsx';
 import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
@@ -20,9 +20,9 @@ import Remark from '../../../components/shared/text/Remark/Remark.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import SectionNav from '../../../components/pages/science/SectionNav/SectionNav.tsx';
 import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
-import StatementsFigure from '../../../components/pages/science/StatementsFigure/StatementsFigure.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
 import SourceTable from '../../../components/pages/science/SourceTable/SourceTable.tsx';
+import SurveySpine from '../../../components/pages/science/SurveySpine/SurveySpine.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
 import { fact } from '../../../data/fact';
 import { REPO_URL } from '../../../data/siteIdentity';
@@ -76,7 +76,7 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
 
   <Group title="Drawn" big>
     <p slot="lede">A model or a choice of ours, with no measurement behind each object. Every camera we have is still inside the <a href={sitePath('/docs/science/#the-milky-way')}>Milky Way</a>, so its portrait from outside has to be drawn.</p>
-    <StatementsFigure id="milky-way-face-on" sizes="(max-width: 900px) 100vw, 44rem" />
+    <AcrossFigure id="milky-way-edge-on" />
     <Claims items={DRAWN} />
   </Group>
   <Remark text={fact('astronomical-unit').short} />
@@ -88,15 +88,17 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
   <SectionHead title="Known simplifications">
     <p>{count} places where the scene <a href={sitePath('/docs/simplifications/')}>departs from the sky</a>, or from what a careful analysis would do, as of{' '}{formatDate(fact('sim-frames').checked)}.</p>
   </SectionHead>
-  {SIMPLIFIED.map((group, i) => (
-    <Group title={group.title} big first={i === 0}>
-      {group.title === 'Coverage' ? (
-        <MarginFigure id="science-desi">
-          <Claims items={group.items} />
-        </MarginFigure>
-      ) : (
+  {/* The survey's fan runs down Distance and Coverage: its length is distance, its width the sky it covers. */}
+  <SurveySpine id="science-desi-spine" band="science-desi">
+    {SIMPLIFIED.slice(0, 2).map((group, i) => (
+      <Group title={group.title} big first={i === 0}>
         <Claims items={group.items} />
-      )}
+      </Group>
+    ))}
+  </SurveySpine>
+  {SIMPLIFIED.slice(2).map((group) => (
+    <Group title={group.title} big>
+      <Claims items={group.items} />
     </Group>
   ))}
   <Note>If you find one we missed, <a href={`${REPO_URL}/issues`}>open an issue in the repository</a>.</Note>
