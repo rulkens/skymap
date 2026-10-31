@@ -1,10 +1,5 @@
-/* The section spans the window, so the three pictures can; everything else keeps to the page's column. */
 .root {
-  composes: section from '../../../../styles/layout.module.css';
-}
-
-.column {
-  composes: wrap from '../../../../styles/layout.module.css';
+  composes: wrap section from '../../../../styles/layout.module.css';
   position: relative;
 }
 
@@ -78,13 +73,9 @@
 }
 
 /* The picture, then its label filling the row the four share, so their addresses stand on one line. */
-.figure,
-.bin {
+.figure {
   display: grid;
   grid-template-rows: auto 1fr;
-}
-
-.figure {
   margin: 0 0 1.5rem;
 }
 
@@ -214,84 +205,6 @@
   }
 }
 
-.bins {
-  margin-top: 7rem;
-}
-
-/* Title, line and link on one left edge, spaced as a part of Stories is: the head of the strip below. */
-.binsHead {
-  composes: wrap from '../../../../styles/layout.module.css';
-  margin-bottom: 2.5rem;
-
-  & h3 {
-    margin-bottom: 0.75rem;
-    font-size: var(--text-ring-big);
-    line-height: var(--leading-display);
-  }
-
-  & p {
-    margin-bottom: 0.75rem;
-  }
-}
-
-/* Three pictures edge to edge: one strip, cut in three. */
-.strip {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0 2px;
-}
-
-.bin {
-  margin: 0;
-}
-
-.over {
-  position: relative;
-
-  & img {
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 14%);
-  }
-
-  /* The word stands on the picture's foot, darkened to 0.85: 4.5:1 for the dim line over a white star. */
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgb(0 0 0 / 0) 35%, rgb(0 0 0 / 0.85) 82%);
-  }
-}
-
-.word {
-  position: absolute;
-  z-index: 1;
-  inset: auto var(--gutter) 1.25rem;
-  display: grid;
-  gap: 0.125rem;
-  max-width: none;
-  margin: 0;
-
-  & strong {
-    font: var(--weight-display) var(--text-ring-big) / var(--leading-display)
-      var(--font-family-display);
-    color: var(--color-fg);
-  }
-
-  /* Two lines whether or not the gloss needs them, so the three words stand on one line. */
-  & span {
-    min-height: 2.8em;
-    font-size: var(--text-small);
-    font-weight: var(--weight-small);
-    line-height: 1.4;
-    color: var(--site-text-muted);
-  }
-}
-
-.bin .caption {
-  padding-inline: var(--gutter);
-}
-
 @media (max-width: 900px) {
   /* One after another, each window a little smaller than the column. */
   .kinds {
@@ -301,10 +214,5 @@
     & > * {
       grid-column: auto;
     }
-  }
-
-  .strip {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2rem;
   }
 }

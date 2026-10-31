@@ -56,8 +56,8 @@ sections:
   - heading: "Data you can count on"
     job: "To give the visitor confidence that this is a real scientific tool, what are the sources of the data?"
     component: "RealData"
-    layout: "four round windows, each over a ledger of its sources and their counts; then three pictures edge to edge"
-    visual: "the S-stars' orbits (orbits-s-stars) behind the title, lagging the scroll; one still per kind, the count pointed at large over it; the three words over their pictures"
+    layout: "four round windows, each over a ledger of its sources and their counts"
+    visual: "the S-stars' orbits (orbits-s-stars) behind the title, lagging the scroll; one still per kind, the count pointed at large over it"
     parts:
       - heading: "Galaxies and quasars"
         job: "Which catalogues place them?"
@@ -71,9 +71,6 @@ sections:
       - heading: "Imagery"
         job: "Where the surface pictures come from."
         shots: [earth-terminator]
-      - heading: "Measured, derived and drawn"
-        job: "Every part labelled by kind."
-        shots: [galaxies-measured, filaments-derived, milky-way-drawn]
   - heading: "Wish you were here"
     job: "Show that it is easy to share Skymap locations with friends, colleagues and students."
     component: "Sharing"
