@@ -4,13 +4,14 @@ import { rotatedAboutPoint } from '../../../src/utils/camera/rotatedAboutPoint';
 import { quatFromAxisAngle } from '../../../src/utils/math/quatFromAxisAngle';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 describe('rotatedAboutPoint', () => {
   it('preserves the eye-to-pivot distance under any rotation', () => {
     const pose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [1, 0, 0],
       eyeRelAnchorM: [1, 0, 0], // eye at [2, 0, 0]
       basisLocal: IDENTITY,
@@ -31,7 +32,7 @@ describe('rotatedAboutPoint', () => {
     // rotation: a caller reaching for the wrong one would silently drag the
     // anchor along too.
     const pose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [1, 0, 0],
       eyeRelAnchorM: [1, 0, 0],
       basisLocal: IDENTITY,

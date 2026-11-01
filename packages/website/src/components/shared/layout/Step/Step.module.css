@@ -1,0 +1,24 @@
+.root {
+  min-width: 0;
+  padding-block: 1.5rem 2rem;
+  border-top: 1px solid var(--border-divider);
+  counter-increment: step;
+
+  & h3 {
+    font-size: var(--text-lead);
+  }
+
+  /* Steps sets the `--numeral-*` properties for a fixed row of short steps; otherwise the numeral is the ring's size. */
+  & h3::before {
+    content: counter(step);
+    display: block;
+    margin-bottom: var(--numeral-gap, 0.5rem);
+    font-size: var(--numeral-size, var(--text-ring-big));
+    line-height: var(--numeral-leading, 1.1);
+    color: var(--site-text-dim);
+  }
+
+  & > p:last-child {
+    margin-bottom: 0;
+  }
+}

@@ -5,6 +5,7 @@ import { keplerianEllipse } from '../../../src/utils/orbit/keplerianEllipse';
 import { planeFrameFromPole } from '../../../src/data/bodies/orbitPlaneFrames';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
@@ -30,7 +31,7 @@ describe('skyInclinationToFrameInclination', () => {
     // North, prograde motion toward East. That expectation comes from the
     // convention, not from this code — which is what makes it a gate.
     const elements: OrbitalElements = {
-      id: 'face-on-prograde',
+      id: asSceneBodyId('face-on-prograde'),
       focusId: 'galactic-centre',
       semiMajorMpc: 1,
       eccentricity: 0,

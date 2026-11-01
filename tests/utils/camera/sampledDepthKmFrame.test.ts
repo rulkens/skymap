@@ -14,6 +14,7 @@ import { makeSlab } from '../../fixtures/makeSlab';
 
 import type { Slab } from '../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // The eye in the body's fixed frame — metres, asymmetric so a dropped or
 // swapped axis in the km conversion shows up.
@@ -23,7 +24,7 @@ const EYE_M: Vec3 = [6.6e6, -1.2e6, 3.4e5];
 function bodyRow(): Slab {
   return makeSlab({
     vp: Float64Array.from([2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 5, 6, 7, 1]),
-    frame: { kind: 'body-m', hostId: 'earth' },
+    frame: { kind: 'body-m', hostId: asSceneBodyId('earth') },
   });
 }
 
@@ -48,7 +49,7 @@ describe('sampledDepthKmFrame', () => {
     expect(sampledDepthKmFrame(makeSlab(), POSE_OF as never)).toBeNull();
     expect(
       sampledDepthKmFrame(
-        makeSlab({ vp: bodyRow().vp, frame: { kind: 'body-m', hostId: 'planet' } }),
+        makeSlab({ vp: bodyRow().vp, frame: { kind: 'body-m', hostId: asSceneBodyId('planet') } }),
         POSE_OF as never,
       ),
     ).toBeNull();

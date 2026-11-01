@@ -8,13 +8,14 @@ import { describe, it, expect } from 'vitest';
 import { steppedSitePose } from '../../../src/utils/camera/steppedSitePose';
 import { ORBIT_MAX_RAD_PER_PX } from '../../../src/utils/camera/orbitRadPerPixel';
 import { SITE_RUNG } from '../../../src/data/camera/siteRung';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { MeshBody } from '../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../src/@types/camera/SitePose';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 
 const ROVER: MeshBody = {
-  id: 'fixture-rover',
+  id: asSceneBodyId('fixture-rover'),
   label: 'Fixture rover',
   resolvePx: 3,
   boundingRadiusM: 2.479,
@@ -27,7 +28,7 @@ const VIEWPORT = [800, 600] as const;
 const FOV_Y_RAD = 0.8;
 
 const POSE: SitePose = {
-  siteId: 'fixture-rover' as BodyId,
+  siteId: asSurfaceSiteId('fixture-rover'),
   headingRad: 0,
   elevationRad: 0.4,
   rangeM: 50,

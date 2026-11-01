@@ -30,8 +30,6 @@ import { clipStarted } from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { RootState } from '../../../../src/store/types';
@@ -45,9 +43,11 @@ vi.mock('../../../../src/services/engine/camera/toBodyFixedChannels', async (imp
   return { ...actual, toBodyFixedChannels: vi.fn(actual.toBodyFixedChannels) };
 });
 import { toBodyFixedChannels } from '../../../../src/services/engine/camera/toBodyFixedChannels';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 
-const EARTH = { body: 'earth' as BodyId };
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+const EARTH = { body: asSceneBodyId('earth') };
+const BODIES = deriveBodyStates(CONST_J2000);
 const BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const START: CameraPose = { target: [0, 0, 0], yaw: 0.5, pitch: 0.2, distance: 10 };
 const CTX = {
@@ -142,7 +142,7 @@ describe('frame-tagged keyframes', () => {
     // instant the body leg ends: folding its 50 Mpc into the pose handed to the
     // conversion would read it as 50 metres of range.
     const data: ClipData = { start: START, timeline: [earthLeg(), dollyTo(50, 0)] };
-    const openingAngles = toBodyFixedChannels(START, 'earth', BODIES, BASIS);
+    const openingAngles = toBodyFixedChannels(START, asSceneBodyId('earth'), BODIES, BASIS);
     const expected = fromBodyFixedChannels(
       {
         target: [0, 0, 9e6],
@@ -161,13 +161,16 @@ describe('frame-tagged keyframes', () => {
 
   it('absolute → body → absolute keeps the eye and the aim', () => {
     const pose: CameraPose = {
-      target: BODIES.get('earth' as BodyId)!.positionMpc,
+      target: BODIES.get(asSceneBodyId('earth'))!.positionMpc,
       yaw: 0.9,
       pitch: -0.3,
       distance: 3e-10,
     };
 
-    const back = fromBodyFixedChannels(toBodyFixedChannels(pose, 'earth', BODIES, BASIS), EARTH);
+    const back = fromBodyFixedChannels(
+      toBodyFixedChannels(pose, asSceneBodyId('earth'), BODIES, BASIS),
+      EARTH,
+    );
 
     const [ex, ey, ez] = eyeMpcOf(pose, BASIS);
     const [bx, by, bz] = eyeMpcOf(back, BASIS);
@@ -179,7 +182,7 @@ describe('frame-tagged keyframes', () => {
   });
 
   it('a clip leg tagged { site } evaluates in the site rung, tweening from its converted start', () => {
-    const CURIOSITY = { site: 'curiosity' as BodyId };
+    const CURIOSITY = { site: asSurfaceSiteId('curiosity') };
     const HEADING_RAD = 0.7;
     const ELEVATION_RAD = 0.2;
     const RANGE_M = 12;
@@ -219,6 +222,6 @@ describe('frame-tagged keyframes', () => {
     // The same LookAt decode the evaluator's channels imply — body-fixed metres,
     // with no orientation re-encode applied to them on the way out.
     const channels = evaluateFramedClip(data, 2, opts(state.camera.clip!)).channels;
-    expect(pose.pose).toEqual(decodeBodyFixedChannels(channels, 'earth'));
+    expect(pose.pose).toEqual(decodeBodyFixedChannels(channels, asSceneBodyId('earth')));
   });
 });

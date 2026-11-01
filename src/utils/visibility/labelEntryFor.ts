@@ -1,8 +1,8 @@
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 import type { LabelEntry } from '../../@types/engine/layer/LabelEntry';
-import { APP_VISIBILITY } from '../../compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../compositions/appVisibility';
 
-const LABEL_ENTRIES: readonly LabelEntry[] = APP_VISIBILITY.filter((e) => 'label' in e);
+const LABEL_ENTRIES: readonly LabelEntry[] = APP_VISIBILITY_REGISTRY.filter((e) => 'label' in e);
 
 /** The label entry a panel label category reads and writes: the one whose items include it,
  * else the item-less entry named for it (the Milky Way's). */

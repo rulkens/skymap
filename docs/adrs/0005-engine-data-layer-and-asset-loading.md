@@ -40,7 +40,7 @@ dual-role).
 
 Two registries already exist with a real, layering-forced split:
 
-- `src/data/sources.ts` `SOURCE_REGISTRY` — **identity + presentation defaults**
+- `src/compositions/appSources.ts` `SOURCE_REGISTRY` — **identity + presentation defaults**
   for every `Source` across all four `type`s. The pure-data layer; it must not
   import services.
 - `services/engine/wiring/galaxyCatalogSourceRegistry.ts` — **wiring** (fetcher,

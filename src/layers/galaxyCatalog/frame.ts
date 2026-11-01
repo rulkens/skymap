@@ -18,7 +18,6 @@ import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
-import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
@@ -49,25 +48,24 @@ export function galaxyCatalogPlanner(
         aliasIndexVersion = runtime.catalogsVersion;
         runtime.publish({
           aliasIndex: buildAliasIndex({
-            catalogs: runtime.catalogs,
+            records: runtime.records.values(),
             aliasMap: pgcAliasCommitted.value,
-            sources: [Source.Glade, Source.TwoMRS],
           }),
         });
       }
 
       // Built from the handed value, so the counts, the hi-res famous gate and the
       // disk walk keep a hidden catalog through its fade-out, as the point sprites do.
-      const visibleSourceMask = sourceMaskOf(fade);
+      const sourceMask = sourceMaskOf(fade);
 
       const selectRow = state.selectionRows.select;
       if (
         selectRow !== memberCountRow ||
-        visibleSourceMask !== memberCountMask ||
+        sourceMask !== memberCountMask ||
         runtime.catalogsVersion !== memberCountVersion
       ) {
         memberCountRow = selectRow;
-        memberCountMask = visibleSourceMask;
+        memberCountMask = sourceMask;
         memberCountVersion = runtime.catalogsVersion;
         runtime.publish({
           // Narrowed on the row's own tag, never a structural sniff — only a
@@ -76,11 +74,7 @@ export function galaxyCatalogPlanner(
             selectRow !== null &&
             selectRow.type === 'structure' &&
             STRUCTURE_IDS_BY_SCALE.cosmic.includes(selectRow.category)
-              ? structureMemberCount(
-                  selectRow,
-                  (source) => runtime.catalogs.get(source),
-                  visibleSourceMask,
-                )
+              ? structureMemberCount(selectRow, runtime.records, sourceMask)
               : null,
         });
       }
@@ -101,7 +95,7 @@ export function galaxyCatalogPlanner(
         pair.subsystem.runFrame({
           cam,
           catalogs: runtime.catalogs,
-          visibleSourceMask,
+          sourceMask,
           pxPerRad,
           famousGalaxiesMeta: runtime.famousMeta,
         });
@@ -111,8 +105,8 @@ export function galaxyCatalogPlanner(
       // textured); each `beginFrame` returns the visitor the walk drives.
       const sharedInput = {
         cam,
-        catalogs: runtime.catalogs,
-        visibleSourceMask,
+        records: runtime.records,
+        sourceMask,
         pxPerRad,
         // Both LOD disk bodies fold this into their emitted alpha/brightness so a
         // hidden catalog's disks fade out with the point sprites instead of

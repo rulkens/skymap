@@ -9,6 +9,7 @@ import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { siteGroundRadiusM } from '../../../src/utils/camera/siteGroundRadiusM';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const marsRow = rotationRowById('mars');
 if (marsRow === null || (marsRow.kind !== undefined && marsRow.kind !== 'iau-pole')) {
@@ -21,8 +22,8 @@ const MARS_RADIUS_M = findByIdOrThrow(SCENE_PLANETS, 'mars', 'surfaceFixedSites.
 
 function offsetFromMarsMpc(simDays: number): readonly number[] {
   const states = deriveBodyStates(simDays);
-  const rover = states.get('curiosity')!.positionMpc;
-  const mars = states.get('mars')!.positionMpc;
+  const rover = states.get(asSceneBodyId('curiosity'))!.positionMpc;
+  const mars = states.get(asSceneBodyId('mars'))!.positionMpc;
   return [rover[0] - mars[0], rover[1] - mars[1], rover[2] - mars[2]];
 }
 

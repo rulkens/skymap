@@ -1,6 +1,6 @@
 /**
  * attachOrbitControls — the dev workbenches' DOM gesture recognizer (the app
- * reads the canvas through `createCanvasDeviceChannel` + `recognize`). Emits
+ * reads the canvas through `createDeviceChannel` + `recognize`). Emits
  * `InputGestureEvent`s, touching no camera: `createInputAggregator` folds a
  * frame's events and the workbench applies them once per frame, so a second
  * controller never becomes a second writer of the same register.

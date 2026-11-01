@@ -3,7 +3,7 @@ import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry'
 import { visibilityAddressOf } from './visibilityAddressOf';
 
 /** The composed entry an address names. Every address a consumer declares is typed from
- * `APP_VISIBILITY`, so one with no composed entry is a Layer missing from the composition. */
+ * `APP_VISIBILITY_REGISTRY`, so one with no composed entry is a Layer missing from the composition. */
 export function visibilityEntryOf(
   entries: readonly VisibilityEntry[],
   address: VisibilityAddress,

@@ -1,5 +1,5 @@
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarCutDraw } from './StarCutDraw';
+import type { OctreeCutDraw } from '../../../@types/octree/OctreeCutDraw';
 
 /**
  * What the pick renderer shares with the visual star renderer: the three bind
@@ -15,5 +15,5 @@ export type StarCatalogPickResources = {
   /** Pool-sized (index records, then each chunk slot's); `null` when the source has no catalog. */
   recordsBindGroup(source: SourceType): GPUBindGroup | null;
   /** The frame cut's leaf list; `null` until a frame has cut the source. */
-  leafDraw(source: SourceType): StarCutDraw | null;
+  leafDraw(source: SourceType): OctreeCutDraw | null;
 };

@@ -22,17 +22,21 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { createCatalogStore } from '../../../../src/layers/galaxyCatalog/render/catalogStore';
 import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/@types/BuildRunner';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+
+/** Stats are the record source's to compute; these suites only exercise buffers. */
+const STATS = { magOffset: 0, medianAbsMag: -20.5 };
 
 // The store keys its catalogs by the string `GalaxyCatalogId`; these tests
 // still reason in terms of the numeric `Source` codes (the `loadedSources()`
 // iterator yields `source`), so resolve the id at each upload/unload call
 // site through the registry.
 function idOf(source: (typeof Source)[keyof typeof Source]): GalaxyCatalogId {
-  return SOURCE_REGISTRY[source].id as GalaxyCatalogId;
+  return APP_SOURCE_REGISTRY[source].id as GalaxyCatalogId;
 }
 
 // `GPUBufferUsage` and friends come from the shared
@@ -106,9 +110,9 @@ describe('catalogStore.totalCount', () => {
       sourceBgl: makeStubSourceBgl(),
       buildRunner: testRunner,
     });
-    await store.upload(idOf(Source.SDSS), makeCloud(100));
-    await store.upload(idOf(Source.TwoMRS), makeCloud(50));
-    await store.upload(idOf(Source.Glade), makeCloud(25));
+    await store.upload(idOf(Source.SDSS), makeCloud(100), STATS);
+    await store.upload(idOf(Source.TwoMRS), makeCloud(50), STATS);
+    await store.upload(idOf(Source.Glade), makeCloud(25), STATS);
     expect(store.totalCount()).toBe(175);
   });
 });
@@ -128,7 +132,7 @@ describe('catalogStore.unload', () => {
       sourceBgl: makeStubSourceBgl(),
       buildRunner: testRunner,
     });
-    await store.upload(idOf(Source.SDSS), makeCloud(10));
+    await store.upload(idOf(Source.SDSS), makeCloud(10), STATS);
     expect(destroyed).toEqual([]);
 
     store.unload(idOf(Source.SDSS));
@@ -144,9 +148,9 @@ describe('catalogStore.unload', () => {
       sourceBgl: makeStubSourceBgl(),
       buildRunner: testRunner,
     });
-    await store.upload(idOf(Source.SDSS), makeCloud(1000));
+    await store.upload(idOf(Source.SDSS), makeCloud(1000), STATS);
     store.unload(idOf(Source.SDSS));
-    await store.upload(idOf(Source.SDSS), makeCloud(750));
+    await store.upload(idOf(Source.SDSS), makeCloud(750), STATS);
 
     expect(Array.from(store.loadedSources()).map((e) => e.count)).toEqual([750]);
   });
@@ -164,8 +168,8 @@ describe('catalogStore.loadedSources', () => {
     // GALAXY_CATALOG_SOURCES is ordered smallest-catalogue → largest:
     //   [Famous, TwoMRS, SDSS, Glade]
     // so TwoMRS comes before SDSS.
-    await store.upload(idOf(Source.SDSS), makeCloud(100));
-    await store.upload(idOf(Source.TwoMRS), makeCloud(50));
+    await store.upload(idOf(Source.SDSS), makeCloud(100), STATS);
+    await store.upload(idOf(Source.TwoMRS), makeCloud(50), STATS);
 
     const entries = Array.from(store.loadedSources());
 
@@ -198,7 +202,7 @@ describe('catalogStore.upload — regression: replace, not append', () => {
     const cloudA = makeCloud(1000);
     const cloudB = makeCloud(500);
 
-    await store.upload(idOf(Source.SDSS), cloudA);
+    await store.upload(idOf(Source.SDSS), cloudA, STATS);
     const firstEntry = Array.from(store.loadedSources()).find((e) => e.source === Source.SDSS);
     expect(firstEntry).toBeDefined();
     const firstBuffer = firstEntry!.vertexBuffer;
@@ -208,7 +212,7 @@ describe('catalogStore.upload — regression: replace, not append', () => {
     // each upload's buffer has its own `destroy` we can spy on independently.
     const destroySpy = vi.spyOn(firstBuffer, 'destroy');
 
-    await store.upload(idOf(Source.SDSS), cloudB);
+    await store.upload(idOf(Source.SDSS), cloudB, STATS);
     expect(destroySpy).toHaveBeenCalledTimes(1);
 
     // Bookkeeping reflects the second upload's count, not the sum.
@@ -266,12 +270,12 @@ describe('catalogStore.upload — regression: parallel-upload rebake race', () =
     // Seed with the "prior tier" layout so the rebake has stale offsets to act
     // on. Counts only have to differ from the new ones — the race is in the
     // ordering, not the volume — so these stand in for the real ~0.5M/2M tiers.
-    await store.upload(idOf(Source.SDSS), makeCloud(497));
-    await store.upload(idOf(Source.Glade), makeCloud(1995));
+    await store.upload(idOf(Source.SDSS), makeCloud(497), STATS);
+    await store.upload(idOf(Source.Glade), makeCloud(1995), STATS);
 
     // Tier swap: kick off both in parallel, the way `engine.setTier` does.
-    const sdssPromise = store.upload(idOf(Source.SDSS), makeCloud(156));
-    const gladePromise = store.upload(idOf(Source.Glade), makeCloud(400));
+    const sdssPromise = store.upload(idOf(Source.SDSS), makeCloud(156), STATS);
+    const gladePromise = store.upload(idOf(Source.Glade), makeCloud(400), STATS);
 
     await Promise.all([sdssPromise, gladePromise]);
 

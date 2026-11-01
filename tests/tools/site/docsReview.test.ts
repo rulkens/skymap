@@ -6,7 +6,6 @@ import { isDocsReview } from '../../../tools/site/utils/isDocsReview';
 
 const review: DocsReview = {
   page: '/docs/start/scene/',
-  job: 'What am I looking at?',
   words: { before: 1632 },
   marks: [
     { id: 'm1', text: 'A sentence.', reason: 'why', state: 'cut' },
@@ -40,7 +39,7 @@ describe('isDocsReview', () => {
 
   it('refuses a body with a missing field or a wrong state', () => {
     expect(isDocsReview(null)).toBe(false);
-    expect(isDocsReview({ ...review, job: undefined })).toBe(false);
+    expect(isDocsReview({ ...review, page: undefined })).toBe(false);
     expect(isDocsReview({ ...review, words: {} })).toBe(false);
     expect(isDocsReview({ ...review, marks: [{ ...review.marks[0], state: 'maybe' }] })).toBe(
       false,

@@ -56,9 +56,6 @@ describe('renderFrame — plan rows', () => {
     const makeView = (viewSlot: number): FrameView =>
       ({
         snapshot,
-        // Past `FOREGROUND_MAX_DISTANCE_MPC` so `atmosphereDrawList` short-circuits
-        // before touching body data this fixture doesn't carry.
-        cam: { distance: Number.POSITIVE_INFINITY },
         vp: new Float32Array(16),
         slabs: [],
         canvasSize: { width: 10, height: 10 },

@@ -11,8 +11,6 @@ import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFra
 import { foldToWorld } from '../../../src/services/engine/camera/rungs/foldToWorld';
 import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
 import { worldArmOf } from '../../fixtures/worldArmOf';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { DriverCtx } from '../../../src/@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 import type { RootState } from '../../../src/store/types';
@@ -42,7 +40,7 @@ export function makeDriverCtx(
     committedWorld:
       args.committedWorld ??
       foldToWorld(args.state.camera.base, {
-        bodies: args.bodies ?? (deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>),
+        bodies: args.bodies ?? deriveBodyStates(simDays),
         poseBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],
         upBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],
         terrainHeightAt: datumOnlyTerrainHeight,
@@ -51,7 +49,7 @@ export function makeDriverCtx(
     lastWinnerRidesWheel: args.lastWinnerRidesWheel ?? RIDES_WHEEL.has(winnerLastFrame),
     poseBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],
     simDays,
-    bodies: args.bodies ?? (deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>),
+    bodies: args.bodies ?? deriveBodyStates(simDays),
     projection: args.projection ?? { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
     followDistanceTarget: args.followDistanceTarget ?? null,
   };

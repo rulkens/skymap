@@ -6,6 +6,8 @@
  * Typed arrays throughout: the Gaia bake holds ~17 M records and V8 caps a Map or Set at 2^24.
  */
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
+import type { AggregateBlob } from '../@types/octree/AggregateBlob';
+import type { AggregateRecord } from '../@types/octree/AggregateRecord';
 import type { OctreeBuildInput } from '../@types/octree/OctreeBuildInput';
 import type { StratifiedOctree } from '../@types/octree/StratifiedOctree';
 import {
@@ -17,7 +19,8 @@ import {
 } from '../../src/data/octree/octreeFormat';
 import { mortonDecode3 } from '../../src/utils/math/mortonDecode3';
 import { mortonEncode3 } from '../../src/utils/math/mortonEncode3';
-import { aggregateMeanAbsMag, fluxFromAbsMag } from '../stars/mergeFluxAggregate';
+import { fluxFromAbsMag } from '../stars/mergeFluxAggregate';
+import { AGGREGATE_RULES } from './aggregateRules';
 import { COLUMN_AGGREGATE } from './columnAggregate';
 import { levelForMagnitude } from './levelForMagnitude';
 
@@ -108,15 +111,25 @@ export function stratifyOctree(input: OctreeBuildInput): StratifiedOctree {
 
   const records = n + blobs;
   const builders = schema.map((c) => {
-    const aggregate = COLUMN_AGGREGATE[c.id];
-    const width = aggregate === 'fluxCentroid' ? AXES : 1;
-    const source = aggregate === 'fluxCentroid' ? undefined : columns.get(c.id);
-    if (aggregate !== 'fluxCentroid' && source === undefined) {
+    const rule = AGGREGATE_RULES[COLUMN_AGGREGATE[c.id]];
+    const source = rule.input === 'column' ? columns.get(c.id) : undefined;
+    if (rule.input === 'column' && source === undefined) {
       throw new Error(`column '${c.id}' has no input values`);
     }
-    const sums = Array.from({ length: width }, () => new Float64Array(count));
-    return { id: c.id, aggregate, source, out: new Float32Array(records * width), sums };
+    const sums = Array.from({ length: rule.sums }, () => new Float64Array(count));
+    return { id: c.id, rule, source, out: new Float32Array(records * rule.width), sums };
   });
+  // One scratch object per builder and one for blobs, rewritten per row: the Gaia bake runs ~17 M records.
+  let cur = 0;
+  const blobScratch: AggregateBlob = { subFlux: 0, subCount: 0, boxMin: [], edge: 0 };
+  const recordScratch = builders.map(
+    (b): AggregateRecord => ({
+      value: (a) => (b.source === undefined ? positions[AXES * cur + a]! : b.source[cur]!),
+      flux: 0,
+      boxMin: [],
+      edge: 0,
+    }),
+  );
   // Subtree totals per row: flux, real-record count, and each builder's `sums`.
   const subFlux = new Float64Array(count);
   const subCount = new Uint32Array(count);
@@ -143,36 +156,25 @@ export function stratifyOctree(input: OctreeBuildInput): StratifiedOctree {
         for (const b of builders) for (const s of b.sums) s[i]! += s[c]!;
       }
       const at = rec + own;
-      for (const b of builders) {
-        if (b.aggregate === 'fluxCentroid') {
-          for (let a = 0; a < AXES; a++) {
-            b.out[AXES * at + a] = (b.sums[a]![i]! / subFlux[i]! - box[a]!) / edge;
-          }
-        } else if (b.aggregate === 'fluxMeanMagnitude') {
-          b.out[at] = aggregateMeanAbsMag({ totalFlux: b.sums[0]![i]!, starCount: subCount[i]! });
-        } else {
-          b.out[at] = b.sums[0]![i]! / subFlux[i]!;
-        }
-      }
+      blobScratch.subFlux = subFlux[i]!;
+      blobScratch.subCount = subCount[i]!;
+      blobScratch.boxMin = box;
+      blobScratch.edge = edge;
+      for (const b of builders) b.rule.blob(blobScratch, b.out, at, b.sums, i);
       nodes.blobCount[i] = subCount[i]!;
     }
 
     for (let k = 0; k < own; k++, rec++) {
       const r = order[q + k]!;
       const flux = fluxFromAbsMag(mags[r]!);
-      for (const b of builders) {
-        if (b.aggregate === 'fluxCentroid') {
-          for (let a = 0; a < AXES; a++) {
-            const p = positions[AXES * r + a]!;
-            b.out[AXES * rec + a] = (p - box[a]!) / edge;
-            b.sums[a]![i]! += flux * p;
-          }
-        } else {
-          const v = b.source![r]!;
-          b.out[rec] = v;
-          b.sums[0]![i]! += b.aggregate === 'fluxMeanMagnitude' ? fluxFromAbsMag(v) : flux * v;
-        }
-      }
+      cur = r;
+      builders.forEach((b, j) => {
+        const record = recordScratch[j]!;
+        record.flux = flux;
+        record.boxMin = box;
+        record.edge = edge;
+        b.rule.own(record, b.out, rec, b.sums, i);
+      });
       subFlux[i]! += flux;
       subCount[i]!++;
     }

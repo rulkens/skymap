@@ -24,4 +24,12 @@ describe('cssSelector', () => {
     const second = document.querySelectorAll('p')[1]!;
     expect(cssSelector(second)).not.toContain('astro-');
   });
+
+  it('spells a CSS-module class by its {Folder}-{class} name, which is stable and is the author’s', () => {
+    document.body.innerHTML =
+      '<nav><a class="Nav-mark" href="#a">a</a><a class="Nav-item" href="#b">b</a><a class="Nav-item" href="#c">c</a></nav>';
+    const second = document.querySelectorAll('a')[1]!;
+    expect(cssSelector(second)).toContain('Nav-item');
+    expect(document.querySelector(cssSelector(second))).toBe(second);
+  });
 });

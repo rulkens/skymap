@@ -19,6 +19,6 @@ export function milkyWayUpsamplePass(runtime: MilkyWayRuntime): ContentPass<'mil
     sourceTargetId: 'mw-aggregate',
     fade: 'milkyWayDisk',
     handleOf: () => runtime.aggregateUpsample,
-    enabled: (state, ctx, fade) => deriveMilkyWayCloudAlpha(state, ctx, fade) !== null,
+    enabled: (_state, ctx, fade) => deriveMilkyWayCloudAlpha(ctx, fade) !== null,
   });
 }

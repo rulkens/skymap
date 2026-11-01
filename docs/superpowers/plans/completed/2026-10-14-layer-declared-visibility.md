@@ -1,6 +1,6 @@
 # Layer-declared visibility: implementation plan
 
-**Starts after PR 1 merged.** PR 1 is the ground prep, `docs/superpowers/plans/2026-10-15-layer-visibility-ground.md`. Branch this PR from `main` once PR 1 has landed; nothing here runs against a tree without it.
+**Starts after PR 1 merged.** PR 1 is the ground prep, `docs/superpowers/plans/completed/2026-10-15-layer-visibility-ground.md`. Branch this PR from `main` once PR 1 has landed; nothing here runs against a tree without it.
 
 **Goal:** each Layer declares what it can show and label as static `visibility` data; the seven hand tables about fades, cues, recession, label switches and panel toggles are derived from it or deleted, and a new toggleable fading Layer edits no core file beyond the composition lists. Every Layer goes through the same contracts: no Layer gets a special case (spec "Uniformity").
 

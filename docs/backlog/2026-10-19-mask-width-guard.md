@@ -8,4 +8,4 @@
 
 ## Direction
 
-Throw in `maskWith` / `maskHas` for a code ≥ 32 and in `packSelection` for an index ≥ 2^26, with a test for each. One PR, a day; it holds until ADR 0013 lands and is deleted with it.
+Throw in `maskWith` / `maskHas` for a code ≥ 32 and in `packSelection` for an index ≥ 2^26, with a test for each. One PR, a day; it holds until ADR 0014 lands and is deleted with it.

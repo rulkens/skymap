@@ -31,6 +31,7 @@ import {
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the seam Promise stub.
@@ -254,8 +255,8 @@ describe('clipBodySaga', () => {
     // earthFlyout bakes a concrete start pose (not a 'live' capture).
     const start = handed.start;
     if (start === undefined || start === 'live') throw new Error('expected a baked start pose');
-    const liveEarth = deriveBodyStates(SIM).get('earth')!.positionMpc;
-    const j2000Earth = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    const liveEarth = deriveBodyStates(SIM).get(asSceneBodyId('earth'))!.positionMpc;
+    const j2000Earth = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
 
     // Opened on the live instant's Earth, to sub-Mpc precision.
     expect(start.target[0]).toBeCloseTo(liveEarth[0]);

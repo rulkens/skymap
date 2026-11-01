@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMilkyWayPickRenderer } from '../../../../src/layers/milkyWay/render/milkyWayPickRenderer';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../src/data/milkyWay/galacticCenter';
-import { MILKY_WAY_RADIUS_MPC } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import { MILKY_WAY_PICK_MIN_SIZE_PX } from '../../../../src/data/milkyWay/milkyWayPickMinSizePx';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
 
 // Null-device pattern, mirrors structureMarkerRenderer.test.ts.  The GPU-

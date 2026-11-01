@@ -9,10 +9,11 @@ import { describe, it, expect } from 'vitest';
 import { clampedSitePose } from '../../../src/utils/camera/clampedSitePose';
 import type { MeshBody } from '../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../src/@types/camera/SitePose';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 
 const BODY: MeshBody = {
-  id: 'fixture',
+  id: asSceneBodyId('fixture'),
   label: 'Fixture',
   resolvePx: 3,
   boundingRadiusM: 1,
@@ -22,7 +23,7 @@ const BODY: MeshBody = {
 };
 
 const POSE: SitePose = {
-  siteId: 'curiosity' as BodyId,
+  siteId: asSurfaceSiteId('curiosity'),
   headingRad: 0.4,
   elevationRad: 0,
   rangeM: 10,

@@ -12,4 +12,5 @@ export const SITE_LOOP_PLAN: SiteLoopPlan = {
   crfStep: 2,
   crfCeiling: 38,
   maxKb: 200,
+  seamSeconds: 1,
 };

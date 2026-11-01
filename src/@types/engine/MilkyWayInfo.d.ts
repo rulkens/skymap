@@ -15,7 +15,7 @@
  * way it does on `GalaxyInfo.famous.type` (which isn't the union tag).
  */
 export type MilkyWayInfo = {
-  /** Union tag — mirrors the SOURCE_REGISTRY 'milkyWay' row type; what every
+  /** Union tag — mirrors the APP_SOURCE_REGISTRY 'milkyWay' row type; what every
    *  FocusableTarget table / guard keys on. */
   readonly type: 'milkyWay';
   /** Headline shown in the InfoCard / palette row. */

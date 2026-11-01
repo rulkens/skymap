@@ -42,8 +42,8 @@ import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { SimBodyId } from '../../../helpers/camera/SimBodyId';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // Past the flight, then a further stretch the result must survive unchanged.
 const FLIGHT_FRAMES = Math.ceil(FLY_TO_LON_LAT_TWEEN_MS / 16) + 10;
@@ -80,6 +80,7 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
           const p = h.bodies.get(ref.id)!.positionMpc;
           return { type: 'body', id: ref.id, label: ref.id, positionMpc: [p[0]!, p[1]!, p[2]!] };
         },
+        focusIdOf: () => null,
       },
     },
   };
@@ -93,7 +94,7 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
  *  paused clock every case but the moving-body one runs on. */
 function standpoint(h: CameraSimHarness, id: SimBodyId, bodyState = h.bodies.get(id)!) {
   const basis = ORIENTATION_FRAMES[h.store.getState().settings.orientation];
-  const arm = toBodyArm(liveWorldPose(h.state), basis, basis, id as BodyId, bodyState);
+  const arm = toBodyArm(liveWorldPose(h.state), basis, basis, asSceneBodyId(id), bodyState);
   const eyeM = bodyFixedEyeM(arm);
   return {
     ...directionToLonLatDeg(normalize3(eyeM)),
@@ -171,7 +172,7 @@ describe('flyToLonLat through the frame loop', () => {
     const footprintM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'mars', 'test'));
     const framingM =
       bodyFocusDistance(footprintM * SCALE_UNITS.M_TO_MPC, Math.PI / 3) / SCALE_UNITS.M_TO_MPC;
-    flyAndHold(h, () => fly({ body: 'mars' as BodyId, lonDeg: 137, latDeg: -5 }), 'mars', {
+    flyAndHold(h, () => fly({ body: asSceneBodyId('mars'), lonDeg: 137, latDeg: -5 }), 'mars', {
       lonDeg: 137,
       latDeg: -5,
       altM: framingM - h.radiusM('mars'),
@@ -196,7 +197,7 @@ describe('flyToLonLat through the frame loop', () => {
     h.frame(FLIGHT_FRAMES);
 
     const simDays = deriveSimDays(selectTimeState(h.store.getState()), h.nowMs());
-    const got = standpoint(h, 'earth', deriveBodyStates(simDays).get('earth')!);
+    const got = standpoint(h, 'earth', deriveBodyStates(simDays).get(asSceneBodyId('earth'))!);
     // Not the 1 m the paused cases assert: the tween can only END on a frame
     // boundary, so up to one frame of orbital motion (~30 km/s × 16 ms ≈ 0.5 km)
     // survives the prediction. That is inside the narrowest baked band; the bug

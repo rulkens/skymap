@@ -16,7 +16,7 @@ import { STAR_FOCUS_PREFIX } from '../../../services/url/starFocusId';
 import { encodeStarFocusId } from '../../../services/url/encodeStarFocusId';
 import { decodeStarFocusId } from '../../../services/url/decodeStarFocusId';
 import { resolveStarRecord } from '../../../services/engine/helpers/resolveStarRecord';
-import { starResidency } from '../load/starResidency';
+import { octreeResidency } from '../../../services/octree/octreeResidency';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { STAR_CATALOG_SOURCE_ROWS } from '../sources/starCatalogSourceRows';
 import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/clampDistance';
@@ -26,6 +26,7 @@ import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKin
 import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 
 type StarCatalogRef = Extract<SelectionRef, { type: 'starCatalog' }>;
 
@@ -37,7 +38,7 @@ const FIELD_STAR_LABEL = 'Field star';
  * and footprint at once. A survey star poses from no table (`poseId` null), so
  * the camera never targets or follows it, but it still frames and haloes.
  */
-function starDriver(poseId: string | null, radiusM: number): DriverGeometry {
+function starDriver(poseId: SceneBodyId | null, radiusM: number): DriverGeometry {
   return {
     poseId,
     boundingRadiusM: radiusM,
@@ -95,7 +96,11 @@ export function starCatalogSelectionRow(
       }
       const catalog = catalogOf(runtime, ref.source);
       if (!catalog) return null;
-      const record = resolveStarRecord(catalog, starResidency(runtime, ref.source), ref.index);
+      const record = resolveStarRecord(
+        catalog,
+        octreeResidency(runtime.chunkStreams, ref.source),
+        ref.index,
+      );
       if (!record) return null;
       const radiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
       return {

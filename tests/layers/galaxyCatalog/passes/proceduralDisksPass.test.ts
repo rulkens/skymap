@@ -89,10 +89,9 @@ describe('proceduralDisksPass', () => {
     const instances = [{ x: 1 }, { x: 2 }];
     const focusBindGroup = {} as GPUBindGroup;
     const proceduralDiskRenderer = makeProceduralDiskRenderer();
-    const state = {
-      gpu: { focusUniform: { bindGroup: focusBindGroup } },
-    } as unknown as EngineState;
+    const state = {} as unknown as EngineState;
     const runtime = {
+      focusBindGroup,
       proceduralDisks: { lastOutput: { instances } },
       proceduralDiskRenderer,
     } as never;

@@ -35,10 +35,11 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import GOLDEN from '../../../fixtures/camera/settleGoldenTrace.json';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
-const EARTH = deriveBodyStates(SIM).get('earth')! as BodyState;
+const EARTH = deriveBodyStates(SIM).get(asSceneBodyId('earth'))! as BodyState;
 const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 const FIXTURE_PATH = fileURLToPath(
   new URL('../../../fixtures/camera/settleGoldenTrace.json', import.meta.url),

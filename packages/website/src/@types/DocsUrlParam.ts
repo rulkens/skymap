@@ -11,7 +11,6 @@ export type DocsUrlParam = {
   value: string;
   example: string;
   does: string;
-  written: string;
   unknown: string;
   skipsWelcome: boolean;
   development?: true;

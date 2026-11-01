@@ -1,0 +1,15 @@
+job: "What does the Skymap website or app collect or keep about me?"
+sections:
+  - heading: "This website"
+    job: "What does this website load and keep about me?"
+  - heading: "The app"
+    job: "What does the app load and keep about me?"
+    parts:
+      - heading: "The visit counter"
+        job: "How does the visit counter work?"
+      - heading: "Where this falls short"
+        job: "Where does the privacy practice fall short?"
+      - heading: "Everything else"
+        job: "What else does the app keep?"
+  - heading: "Who is responsible"
+    job: "Who decides, and how do I ask what is held about me?"

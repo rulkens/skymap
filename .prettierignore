@@ -19,3 +19,6 @@ data
 .claude
 .design-sync
 tests/**/fixtures
+
+# MDX landing pages: text inside a JSX tag is Markdown, so prettier moving it onto its own line wraps it in a <p>.
+packages/website/src/content/pages

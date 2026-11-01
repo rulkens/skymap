@@ -257,7 +257,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // threaded into every pass in the group. Resolved BEFORE the gate: a
         // body-row pass's `enabled` reads `view.slab.frame.hostId` off it, and
         // a `{ sample }` step's `sampledDepth` must be on `view` before the
-        // gate too — `contactShadowsPass.enabled` reads it to tell "my row"
+        // gate too — missions' `contactShadowsPass.enabled` reads it to tell "my row"
         // from some other row sampling the same texture. Capture rosters
         // carry no sample marker (`bodyRowSteps`'s module header), so a
         // capture step never takes this branch.

@@ -25,6 +25,7 @@ import type { CameraProjection } from '../../../../src/@types/camera/CameraProje
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -33,11 +34,6 @@ const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, 
 // derive would poison with.
 const LAST_SIM_DAYS = 2460000.0;
 
-/**
- * Build an `EngineState`-shaped fixture with every bootstrap-gate handle
- * populated (so `isEngineReady` passes by default), a `cameraRuntime` carrying
- * `LAST_POSE` + `PROJECTION`; nulling any gate handle exercises the not-ready branch.
- */
 function makeState(
   overrides: {
     booted?: boolean;
@@ -77,15 +73,12 @@ function makeState(
       orientation: 'equatorial',
       bodies: { items: {} },
     },
-    // No focused pivot in this fixture — see frameContext.test.ts's makeState
-    // for why `deriveSlabs` needs this field once a pivot radius is threaded in.
+    selection: { hover: null, select: null, focus: null },
     selectionRows: { hover: null, select: null, focus: null },
     selectionKindRows: overrides.selectionKindRows ?? [],
-    // No seeded bodies/stars — see frameContext.test.ts's makeState for why
-    // `deriveFrameContext` needs this now.
     slabRows: [],
     visibilityEntries: [],
-    data: { bodies: { earth: null, planets: [], meshBodies: [] } },
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: { pose: absoluteArm(LAST_POSE) },
       outputs: {
@@ -105,10 +98,8 @@ function makeCanvas(width = 1920, height = 1080): HTMLCanvasElement {
 
 describe('pickFrameContext', () => {
   it('returns null before the engine is ready', () => {
-    // Missing one of the two core gate handles → `deriveFrameContext` reports
-    // not-ready → `pickFrameContext` returns null (not a not-ready context).
-    // The galaxy/pick renderers are no longer part of the gate (D13) — a null
-    // `galaxyPointRenderer` alone no longer blocks the pick context.
+    // Missing a core gate handle makes `deriveFrameContext` report not-ready, so `pickFrameContext`
+    // returns null. A null `galaxyPointRenderer` alone does not block the pick context.
     expect(pickFrameContext(makeState({ booted: false }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ renderTargets: null }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ compositor: null }), makeCanvas())).toBeNull();
@@ -128,8 +119,6 @@ describe('pickFrameContext', () => {
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
 
-    // The camera the pick pass draws from must equal the one `deriveFrameContext`
-    // produces for the SAME register.pose + projection the last frame rendered.
     const basis = ORIENTATION_FRAMES[state.settings.orientation];
     const expected = canvasViewOf(
       state,
@@ -141,6 +130,7 @@ describe('pickFrameContext', () => {
         // simDays does not affect the view-projection this test compares; any
         // valid epoch reproduces the same vp.
         simDays: 0,
+        bodyStates: deriveBodyStates(0),
       },
       { width: canvas.width, height: canvas.height },
     );

@@ -21,7 +21,7 @@ skymap has two kinds of "data source", with very different edit surfaces:
   detail. The edit surface is a registry row plus a handful of typed tables;
   the rest derives from the registry.
 
-**The core hazard (read this first).** The `SOURCE_REGISTRY` row is the single
+**The core hazard (read this first).** The `APP_SOURCE_REGISTRY` row is the single
 home of a structure category's identity; settings, counts, pick decode, search,
 deep links and the marker and label passes derive from it. What remains
 hand-edited is a short list: the source code, the row, the style row, the record
@@ -57,7 +57,7 @@ The common case: **a source row inside the `galaxyCatalog` Layer**
 galaxy-catalog sources (SDSS, 2MRS, GLADE, …) each get their own
 `sources/<id>.ts` row file inside the Layer; `sources/galaxyCatalogSourceRows.ts`
 lists them in draw/UI order and the Layer composes them into the global
-`SOURCE_REGISTRY` (`src/data/sources.ts`, still the single cross-Layer table —
+`APP_SOURCE_REGISTRY` (`src/compositions/appSources.ts`, still the single cross-Layer table —
 the `Source` code enum stays global, per the layer-composition spec). Adding a
 tenth survey is a new row file plus a line in that list, not a new Layer.
 
@@ -133,7 +133,7 @@ stars, say — Decision A) mirrors these seams rather than inventing new ones.
 Walk them in the same registry row → settings cluster → fetcher/slot/wiring →
 renderer/layer order the galaxy catalogs use:
 
-- **Registry row + id domain** — a `type: 'starCatalog'` `SOURCE_REGISTRY` row
+- **Registry row + id domain** — a `type: 'starCatalog'` `APP_SOURCE_REGISTRY` row
   (`src/layers/starCatalog/sources/gaia-stars.ts` is the template). `StarCatalogId`
   (`@types/data/starCatalog/StarCatalogId`) is the `type: 'starCatalog'`
   narrowing of the source-entry union, and `STAR_CATALOG_IDS`
@@ -176,13 +176,13 @@ walk you to anything missed.
 | 2   | Registry row       | `src/layers/structure/sources/<x>.ts` (new, a `StructureSourceEntry`) + import and line in `src/layers/structure/sources/structureSourceRows.ts`                                                | `id`, `scale`, the copy fields `detailLabel` / `shortLabel` / `plural`          |
 | 3   | Non-survey guard   | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                                                                    | Keeps the `switch` exhaustive; a structure has no galaxy type                                   |
 | 4   | Record arm         | `src/@types/data/structure/StructureInfo.d.ts` (`XRecord` + the union)                                                                              | The category's own fields, if any (`nebulaKind`)                                                   |
-| 5   | Style row          | `src/layers/structure/present/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `visibleBand`, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
-| 6   | Fade band (if new) | `src/services/engine/presentation/scaleFadeBands.ts`                                                                                                | Only when no existing band fits; otherwise point `visibleBand` at one                           |
+| 5   | Style row          | `src/layers/structure/present/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
+| 6   | Distance band      | `src/layers/structure/visibility.ts`  | Nothing to edit: the category joins `STRUCTURE_IDS_BY_SCALE` through its registry row's `scale` and takes that scale's band (below) |
 | 7   | Build switch       | `src/layers/structure/load/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
 | 8   | Seed parser        | `tools/parsers/parseStructureSeed.ts`                                                                                                               | Per-category fields: what is required, what is rejected elsewhere                               |
 | 9   | Card row (if any)  | `src/layers/structure/ui/StructureDetailCard/StructureDetailCard.tsx`; copy in `src/data/structure/` (`nebulaKindLabels.ts`, which stays in core)                       | A per-category fact such as a nebula's Type                                                     |
 | 10  | Seed rows          | `data/seeds/structure_anchors.seed.json` (plain `git add`)                                                                                          | The data; fields below                                                                          |
-| 11  | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/layers/structure/load/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm; a band test in `structureVisibleBands.test.ts` if the band is new |
+| 11  | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/layers/structure/load/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm |
 
 ### Source code (step 1)
 
@@ -207,13 +207,18 @@ walk you to anything missed.
 - `bearsLabel` and `bearsMarker` are `true` and `labelLayer` is `'structure'`
   for every structure row; copy the neighbour's row.
 
-### Style row (steps 5, 6)
+### Distance band (step 6)
 
-Colour, size and fade fields as for any structure; the two that carry a decision:
+The structure Layer's `structureRing` entry in `src/layers/structure/visibility.ts` carries two
+bands, each limited to one scale's ids via `STRUCTURE_IDS_BY_SCALE`: `cosmic` (the survey's
+deep-zoom band) and `milkyWayPlaces` (full out to two Galaxy radii, gone at the foreground
+gate). The category's labels follow its ring through the label entry's `of`. A new category needs
+no band edit; only a genuinely new window means a new band on that entry.
 
-- `visibleBand` — the camera-distance band over which the category's rings, halos
-  and labels are visible. Cosmic categories use `surveyDeepZoom`, Milky Way ones
-  `milkyWayStructures` (full inside the Galaxy, gone at the foreground gate).
+### Style row (step 5)
+
+Colour, size and fade fields as for any structure; the one that carries a decision:
+
 - `labelPlacement` — `'centre'` puts the label on the ring; `'above'` puts it
   just over the ring's top edge with a fixed pixel gap
   (`STRUCTURE_LABEL_ABOVE_GAP_PX`), for categories whose rings stay on screen

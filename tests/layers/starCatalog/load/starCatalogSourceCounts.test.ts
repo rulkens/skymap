@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 
 import { starCatalogSourceCounts } from '../../../../src/layers/starCatalog/load/starCatalogSourceCounts';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/data/bodies/seededStarCatalogsBySource';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SkstCatalog } from '../../../../src/@types/data/starCatalog/SkstCatalog';
 import type { SourceCountReport } from '../../../../src/@types/engine/layer/SourceCountReport';
@@ -81,7 +81,7 @@ describe('starCatalogSourceCounts', () => {
     } as unknown as StarCatalogRuntime;
 
     const iterator = starCatalogSourceCounts(runtime)[Symbol.asyncIterator]();
-    gaia.emit({ kind: 'ready', value: { starCount: 1234 } } as unknown as LoadState<SkstCatalog>);
+    gaia.emit({ kind: 'ready', value: { recordCount: 1234 } } as unknown as LoadState<SkstCatalog>);
 
     const reports = await drain(iterator, SEEDED_SOURCES.length + 1);
 

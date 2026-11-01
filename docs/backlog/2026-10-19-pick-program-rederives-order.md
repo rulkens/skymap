@@ -8,4 +8,4 @@
 
 ## Direction
 
-Derive pick targets and order from the same expanded steps, `RenderTargetSpec` rows and `foregroundChainOrder` the renderer uses; expose the depth format through the slab. Likely rides the ADR 0014 migration.
+Derive pick targets and order from the same expanded steps, `RenderTargetSpec` rows and `foregroundChainOrder` the renderer uses; expose the depth format through the slab. Likely rides the ADR 0015 migration.

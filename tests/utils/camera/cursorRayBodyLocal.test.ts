@@ -15,11 +15,12 @@ import { describe, it, expect } from 'vitest';
 import { cursorRayBodyLocal } from '../../../src/utils/camera/cursorRayBodyLocal';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // right=[0,0,1], up=[0,1,0], forward=[-1,0,0] as columns (column-major: cell
 // at row r, col c is m[c*3+r]).
 const pose: BodyFixedPose = {
-  bodyId: 'earth',
+  bodyId: asSceneBodyId('earth'),
   anchorLocalM: [10, 20, 30],
   eyeRelAnchorM: [1, 2, 3],
   basisLocal: [0, 0, 1, 0, 1, 0, -1, 0, 0],

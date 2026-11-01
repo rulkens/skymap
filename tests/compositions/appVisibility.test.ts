@@ -1,5 +1,5 @@
 /**
- * `APP_VISIBILITY` is hand-assembled beside `APP_COMPOSITION`, and the address types only see
+ * `APP_VISIBILITY_REGISTRY` is hand-assembled beside `APP_COMPOSITION`, and the address types only see
  * its literals: a duplicate key, a bad `of` pairing or a Layer missing from the list would all
  * compile. The engine reads the composition, so a missing Layer would escape `'labels'`.
  */
@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { APP_COMPOSITION } from '../../src/compositions/app';
-import { APP_VISIBILITY } from '../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../src/compositions/appVisibility';
 import type { VisibilityEntry } from '../../src/@types/engine/layer/VisibilityEntry';
 import type { ShowEntry } from '../../src/@types/engine/layer/ShowEntry';
 import type { LabelEntry } from '../../src/@types/engine/layer/LabelEntry';
@@ -15,12 +15,12 @@ import type { VisibilityArg } from '../../src/@types/animation/VisibilityArg';
 import type { ScopedVisibilityAddress } from '../../src/@types/animation/ScopedVisibilityAddress';
 import type { ContentPass } from '../../src/@types/engine/frame/ContentPass';
 
-const ENTRIES: readonly VisibilityEntry[] = APP_VISIBILITY;
+const ENTRIES: readonly VisibilityEntry[] = APP_VISIBILITY_REGISTRY;
 const SHOWS = ENTRIES.filter((e): e is ShowEntry => 'key' in e);
 const LABELS = ENTRIES.filter((e): e is LabelEntry => 'label' in e);
 
-describe('APP_VISIBILITY', () => {
-  it('every address in APP_VISIBILITY is declared once', () => {
+describe('APP_VISIBILITY_REGISTRY', () => {
+  it('every address in APP_VISIBILITY_REGISTRY is declared once', () => {
     const keys = SHOWS.map((e) => e.key);
     const labels = LABELS.map((e) => e.label);
     expect(new Set(keys).size).toBe(keys.length);
@@ -56,7 +56,27 @@ describe('APP_VISIBILITY', () => {
     }
   });
 
-  it('APP_VISIBILITY lists exactly the entries the composed Layers declare', () => {
+  it("every band's in and out are ascending and in[1] ≤ out[0]", () => {
+    for (const entry of ENTRIES) {
+      for (const [name, band] of Object.entries(entry.bands ?? {})) {
+        const where = `${'key' in entry ? entry.key : `label:${entry.label}`}.${name}`;
+        if (band.in) expect(band.in[0], where).toBeLessThanOrEqual(band.in[1]);
+        if (band.out) expect(band.out[0], where).toBeLessThanOrEqual(band.out[1]);
+        if (band.in && band.out) expect(band.in[1], where).toBeLessThanOrEqual(band.out[0]);
+      }
+    }
+  });
+
+  it("a band's items are a subset of its entry's items", () => {
+    for (const entry of ENTRIES) {
+      for (const band of Object.values(entry.bands ?? {})) {
+        const strays = (band.items ?? []).filter((item) => !entry.items?.includes(item));
+        expect(strays).toEqual([]);
+      }
+    }
+  });
+
+  it('APP_VISIBILITY_REGISTRY lists exactly the entries the composed Layers declare', () => {
     // `U` pinned: `layers` is a tuple of unlike Layer types.
     const declared = APP_COMPOSITION.layers.flatMap<VisibilityEntry>(
       (layer) => layer.visibility ?? [],

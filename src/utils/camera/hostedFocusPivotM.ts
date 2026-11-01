@@ -6,20 +6,21 @@
  * drag turns the arm rigidly.
  */
 
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { positionDriverById } from '../../data/bodies/positionDrivers';
+import { positionDriverOrNull } from '../../data/bodies/positionDrivers';
 import { siteGroundRadiusM } from './siteGroundRadiusM';
 import { sitePointBodyFixed } from './sitePointBodyFixed';
+import type { PositionedId } from '../../@types/scene/PositionedId';
 
 export function hostedFocusPivotM(
-  focusBodyId: BodyId | null,
-  hostId: BodyId,
+  focusBodyId: PositionedId | null,
+  hostId: SceneBodyId,
   hostRadiusM: number,
 ): Vec3 | null {
   if (focusBodyId === null || focusBodyId === hostId) return null;
-  const driver = positionDriverById(focusBodyId);
-  return driver.kind === 'surfaceFixed' && driver.hostId === hostId
+  const driver = positionDriverOrNull(focusBodyId);
+  return driver?.kind === 'surfaceFixed' && driver.hostId === hostId
     ? sitePointBodyFixed(driver, siteGroundRadiusM(driver, hostRadiusM))
     : null;
 }

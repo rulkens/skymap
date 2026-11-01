@@ -8,7 +8,7 @@
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { createHiResFamousTexture } from '../../../services/gpu/resources/hiResFamousTexture';
 import { createHiResFamousSubsystem } from '../subsystems/hiResFamousSubsystem';
-import { HI_RES_LAYER_COUNT } from '../../../data/sources';
+import { HI_RES_LAYER_COUNT } from '../data/hiResLayerCount';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { HiResFamousPair } from '../../../@types/engine/subsystems/HiResFamousPair';

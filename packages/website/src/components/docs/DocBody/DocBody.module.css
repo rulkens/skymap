@@ -1,0 +1,132 @@
+.root {
+  /* The longest line of running text; a column sets it on a wide window, this on one of 600 to 900px. */
+  --doc-measure: none;
+  font: var(--weight-small) 1.125rem / 1.65 var(--font-body);
+  font-variant-numeric: tabular-nums;
+
+  & > :first-child {
+    margin-top: 0;
+  }
+
+  & :is(p, li, dd):where(:not([data-embed] *)) {
+    max-width: var(--doc-measure);
+    text-wrap: pretty;
+  }
+
+  /* The gap above a heading is always larger than the one below it. */
+  & h2 {
+    margin: 3.5rem 0 1rem;
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+
+  & h3:where(:not([data-embed] *)) {
+    margin: 2.5rem 0 0.75rem;
+  }
+
+  /*
+   * A heading or a term a link landed on stands clear of the bars above it. The contents' bar is counted here and
+   * not in the page's scroll padding, which would move the page whenever the bar itself took the keyboard.
+   */
+  & :is(h2, h3, dt) {
+    scroll-margin-top: calc(1.5rem + var(--docs-bar));
+  }
+
+  & strong:where(:not([data-embed] *)) {
+    font-weight: 500;
+    color: var(--color-fg);
+  }
+
+  & :is(ul, ol):where(:not([data-embed] *)) {
+    margin: 0 0 var(--stack);
+    padding-left: 1.5rem;
+    color: var(--site-text-muted);
+  }
+
+  & li:where(:not([data-embed] *)) {
+    margin-block: 0.5rem;
+  }
+
+  & li > :is(ul, ol) {
+    margin-bottom: 0;
+  }
+
+  & ul:where(:not([data-embed] *)) {
+    list-style: none;
+
+    & > li {
+      position: relative;
+    }
+
+    & > li::before {
+      content: '';
+      position: absolute;
+      left: -1.25rem;
+      top: 0.65em;
+      width: 0.4375rem;
+      height: 0.4375rem;
+      border: 1px solid var(--color-accent);
+      border-radius: 50%;
+    }
+  }
+
+  & ol > li::marker {
+    color: var(--site-text-dim);
+  }
+
+  /* One size for code and one for a key wherever they stand, so a page does not gain a size for each place. */
+  & :is(code, pre, kbd) {
+    font-size: 0.9375rem;
+  }
+
+  & :is(code, pre) {
+    font-family: var(--font-family-mono);
+    color: var(--color-fg);
+  }
+
+  & dl:where(:not([data-embed] *)) {
+    margin: 0 0 var(--stack);
+  }
+
+  & dt:where(:not([data-embed] *)) {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-divider);
+    color: var(--color-fg);
+  }
+
+  /* The term a link or the search landed on, marked as the catalogue marks its row. */
+  & dt:target {
+    border-top-color: var(--color-accent);
+  }
+
+  & dd:where(:not([data-embed] *)) {
+    margin: 0 0 0.75rem;
+    color: var(--site-text-muted);
+  }
+
+  /* `--figure-out` is how far a wide figure runs past the text's right edge (DocFigure). */
+  & figure {
+    margin: 2.5rem var(--figure-out, 0) 2.5rem 0;
+  }
+
+  /*
+   * A view link standing by itself in the text (a link row sets its own gaps): a line of its own, as far from the
+   * paragraph above as from the one below; its 44px for the thumb is more than a line of text, so the margins take
+   * the difference back.
+   */
+  & > a {
+    display: flex;
+    width: fit-content;
+    margin: -0.75rem 0 0.75rem;
+  }
+
+  /* A view link in a table cell keeps its 44px and gives the row the height of its text. */
+  & :is(td, th) > a:has(> svg) {
+    margin-block: -0.75rem;
+    vertical-align: middle;
+  }
+
+  @media (max-width: 900px) {
+    --doc-measure: 35rem;
+  }
+}

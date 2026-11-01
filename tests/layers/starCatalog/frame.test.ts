@@ -5,30 +5,31 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
 
-import { planStarChunks } from '../../../src/utils/star/planStarChunks';
+import { planOctreeChunks } from '../../../src/utils/octree/planOctreeChunks';
 import { starCatalogPlanner } from '../../../src/layers/starCatalog/frame';
 import type { StarCatalogRuntime } from '../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCutInputs } from '../../../src/layers/starCatalog/@types/StarCutInputs';
-import type { StarChunkStream } from '../../../src/layers/starCatalog/@types/StarChunkStream';
+import type { OctreeChunkStream } from '../../../src/@types/octree/OctreeChunkStream';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
-import type { StarOctree } from '../../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../src/@types/octree/Octree';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { Source } from '../../../src/data/source';
 import { mat4d } from 'wgpu-matrix';
 import { makeSlab } from '../../fixtures/makeSlab';
 import { STAR_PLAN_INTERVAL_FRAMES } from '../../../src/data/starPlanIntervalFrames';
-import { EYE_SLACK_MPC, NODE_FADE_MS } from '../../../src/data/starNodeFade';
+import { EYE_SLACK_MPC, NODE_FADE_MS } from '../../../src/data/octree/octreeNodeFade';
+import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
 
-vi.mock('../../../src/utils/star/planStarChunks', async (original) => {
-  const { planStarChunks: real } =
-    await original<typeof import('../../../src/utils/star/planStarChunks')>();
-  return { planStarChunks: vi.fn(real) };
+vi.mock('../../../src/utils/octree/planOctreeChunks', async (original) => {
+  const { planOctreeChunks: real } =
+    await original<typeof import('../../../src/utils/octree/planOctreeChunks')>();
+  return { planOctreeChunks: vi.fn(real) };
 });
 
 const MID_BAND_PC = 1_000; // inside Gaia's crossfade band
@@ -48,15 +49,16 @@ function makeView(camPos: Vec3, nowMs: number): FrameView {
   } as unknown as FrameView;
 }
 
-function makeRuntime(loaded: boolean, stream?: StarChunkStream): StarCatalogRuntime {
+function makeRuntime(loaded: boolean, stream?: OctreeChunkStream<StarColumns>): StarCatalogRuntime {
   // An empty index: the chunk planner walks nothing, so a stubbed stream's counters drive the vote.
   const catalog = {
     starCount: 0,
+    family: 'star',
     grid: { bits: 10, origin: [0, 0, 0], cellEdge: 1 },
     nodes: { count: 0 },
     chunks: [],
     chunkCount: 0,
-  } as unknown as StarOctree;
+  } as unknown as Octree<StarColumns>;
   let cut: StarCutInputs | null = null;
   return {
     chunkStreams: new Map(stream ? [[Source.GaiaStars, stream]] : []),
@@ -128,7 +130,7 @@ describe('starCatalogPlanner', () => {
       hasFailed: () => false,
       inFlightCount: () => 0,
       epoch: () => counters.epoch,
-    } as unknown as StarChunkStream;
+    } as unknown as OctreeChunkStream<StarColumns>;
     const runtime = makeRuntime(true, stream);
     const planner = starCatalogPlanner(runtime);
     const recut = (x: number, t: number) => {
@@ -158,7 +160,7 @@ describe('starCatalogPlanner', () => {
         hasFailed: () => false,
         inFlightCount: () => counters.inFlight,
         epoch: () => counters.epoch,
-      } as unknown as StarChunkStream;
+      } as unknown as OctreeChunkStream<StarColumns>;
       return { stream, counters };
     }
 
@@ -180,7 +182,7 @@ describe('starCatalogPlanner', () => {
       const planner = starCatalogPlanner(makeRuntime(true, stream));
       const frame = (t: number) =>
         planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), t)], STATE, ALL_ON);
-      const walks = vi.mocked(planStarChunks);
+      const walks = vi.mocked(planOctreeChunks);
       walks.mockClear();
 
       frame(0);
@@ -265,8 +267,8 @@ describe('starCatalogPlanner', () => {
 
   it('re-installs the pools when the chunk-slots override changes, publishing the outcome', () => {
     const runtime = makeRuntime(true);
-    const octree = {} as StarOctree;
-    const upload = vi.fn((_s: number, _o: StarOctree, slots: number) => {
+    const octree = {} as Octree<StarColumns>;
+    const upload = vi.fn((_s: number, _o: Octree<StarColumns>, slots: number) => {
       if (slots > 256) throw new Error('only 256 slots fit');
       return 0;
     });

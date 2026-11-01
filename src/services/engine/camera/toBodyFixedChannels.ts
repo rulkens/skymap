@@ -5,7 +5,7 @@
  * (spec §10, `oneMpcSeam`).
  */
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
@@ -17,12 +17,13 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
 import { bodyRelativePose } from './bodyRelativePose';
 import { toBodyArm } from './poseFrameConversion';
 import { hostOrThrow } from './rungs/hostOrThrow';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 /** Absolute Mpc channels → the same camera in `bodyId`'s fixed axes, metres. */
 export function toBodyFixedChannels(
   pose: CameraPose,
-  bodyId: BodyId,
-  bodies: ReadonlyMap<BodyId, BodyState>,
+  bodyId: SceneBodyId,
+  bodies: ReadonlyMap<PositionedId, BodyState>,
   basis: Readonly<Mat3>,
 ): CameraPose {
   const bodyState = hostOrThrow(

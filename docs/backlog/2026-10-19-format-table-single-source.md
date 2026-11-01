@@ -4,8 +4,8 @@
 
 ## Problem
 
-See ADR 0015 (`docs/adrs/0015-data-contracts.md`) §1. Folder drift today: `octreeFormat.ts:21,69` (`OCTREE_VERSION = 1`, prefix `'star-catalog/v2'`); meshes (`meshBinaryFormat.ts:14`) and tracks (`writeSpacecraftTracks.ts:22` / `parseSpacecraftTracks.ts:19`, a duplicated literal) have no epoch folder; `dataFamilies.ts:34,43` re-types folder names; DATA.md's table counted seven (fixed to ten 2026-10-19).
+See ADR 0016 (`docs/adrs/0016-data-contracts.md`) §1. Folder drift today: `starOctreeFamily.ts:30` hand-types `'star-catalog/v2'` beside `OCTREE_VERSION = 1`; meshes (`meshBinaryFormat.ts:14`) and tracks (`writeSpacecraftTracks.ts:22` / `parseSpacecraftTracks.ts:19`, a duplicated literal) have no epoch folder; `dataFamilies.ts:34,43` re-types folder names; DATA.md's table counted seven of what are now eleven families, SATG included (fixed 2026-10-19).
 
 ## Blocked on
 
-ADR 0015's acceptance. The typed-error item lands first and independently.
+ADR 0016's acceptance. The typed-error item lands first and independently.

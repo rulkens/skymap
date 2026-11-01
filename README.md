@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/rulkens/skymap/actions/workflows/ci.yml/badge.svg)](https://github.com/rulkens/skymap/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/rulkens/skymap)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+[![Node](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20037028-1f87b3?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.20037028)
 
@@ -89,7 +89,7 @@ Every dataset skymap renders is listed below. [docs/science.md](docs/science.md)
 
 ## Quickstart
 
-Requires Node 20+.
+Requires Node 24+ (`nvm use` picks it up from `.nvmrc`).
 
 ```bash
 npm install
@@ -162,5 +162,7 @@ The live queue is [docs/BACKLOG.md](docs/BACKLOG.md).
 If you use skymap in a publication, talk, or derived work, please cite it via [CITATION.cff](CITATION.cff). GitHub's "Cite this repository" sidebar button exposes BibTeX and APA forms.
 
 Skymap's source code is MIT-licensed; see [LICENSE](LICENSE). The catalog data, imagery, and external services it uses carry their own citation requirements and license terms: some are public domain or CC BY, some are non-commercial (Gaia's stars are CC BY-NC, the close-up Earth imagery CC BY-NC-SA), and several state no licence at all. So the MIT licence does not cover what skymap shows, or pictures taken of it. Each source is listed with its terms in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
+
+To work on skymap, start with [CONTRIBUTING.md](CONTRIBUTING.md).
 
 [CLAUDE.md](CLAUDE.md) at the repo root is onboarding guidance for AI coding assistants. It isn't load-bearing for the build or runtime. It exists because parts of this project were developed with AI assistance, and that context helps future AI-assisted edits.

@@ -10,16 +10,16 @@ import type { Vec3 } from '../../math/Vec3';
  * Two sub-kinds are distinguished by the `segKind` discriminant:
  *
  *   - `'tween'` (from `set` / `setVec`): move the channel TO `to` over the
- *     window. `from` is optional here; the evaluator fills it from the prior
- *     segment's final value or the clip's `start` pose at scrub time.
- *     `to` is `number` for scalar channels, `Vec3` for `'target'`.
+ *     window. `to` is `number` for scalar channels, `Vec3` for `'target'`.
  *
  *   - `'spin'` (from `spin`): rotate the channel BY `to` (the `by` delta from
  *     the action) over the window. The `to` field stores the delta, NOT an
  *     absolute bearing — the evaluator adds it to the running pose rather than
- *     interpolating toward it. `from` is not needed for `spin` (the additive
- *     base is always the current channel value), but is kept optional for
- *     structural symmetry.
+ *     interpolating toward it.
+ *
+ * `from`, on either kind, is set only by `compileClip` on the first segment
+ * after a composite: its final value. Absent, the evaluator starts the segment
+ * from the prior segment's final value or the clip's `start` pose.
  *
  * `space` comes directly from the `set`/`spin` action (defaulting to
  * `CHANNEL_SPACE[ch]`). `ease` is also carried from the action.

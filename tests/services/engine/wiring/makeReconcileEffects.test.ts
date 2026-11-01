@@ -111,28 +111,6 @@ describe('makeReconcileEffects', () => {
       CANVAS,
       'LIVE_FOCUS_ROW',
       state.cameraRuntime.outputs.simDays,
-      null,
-      'DISPLAYED_ARM',
-    );
-  });
-
-  it("logCameraState forwards the surfaceTiles subsystem's sub-camera readout when engaged", () => {
-    const getDebugSnapshot = vi.fn(() => ({
-      subCamera: { lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 },
-    }));
-    const { state } = makeState();
-    (state as unknown as { subsystems: { surfaceTiles: unknown } }).subsystems.surfaceTiles = {
-      getDebugSnapshot,
-    };
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.logCameraState();
-
-    expect(logCameraState).toHaveBeenCalledWith(
-      'LIVE_CAM',
-      CANVAS,
-      'LIVE_FOCUS_ROW',
-      state.cameraRuntime.outputs.simDays,
-      { lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 },
       'DISPLAYED_ARM',
     );
   });

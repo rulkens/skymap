@@ -1,7 +1,7 @@
 # Grill Session: Input architecture — 2026-10-14
 
 Source: the dome remote brainstorm
-([`2026-10-11-dome-remote-design.md`](../superpowers/specs/2026-10-11-dome-remote-design.md)). The remote is the
+([`2026-10-11-dome-remote-design.md`](../superpowers/specs/completed/2026-10-11-dome-remote-design.md)). The remote is the
 app's second input source, and both ways of adding it to today's input path were rejected as bolt-ons: a
 `SagaContext.pushGesture` member (prep Task 1 of #888, reverted in `2a0d4c6cc`) and replaying the remote's events as
 synthetic DOM events on the canvas.

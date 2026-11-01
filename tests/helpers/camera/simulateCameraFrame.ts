@@ -8,8 +8,6 @@
  */
 
 import type { CameraState } from '../../../src/@types/camera/CameraState';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { Epoch } from '../../../src/@types/engine/camera/Epoch';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 import type { CameraSimHarness } from './CameraSimHarness';
@@ -42,10 +40,10 @@ export function simulateCameraFrame(
     canvasPx,
     aspect: deps.canvas.width / deps.canvas.height,
     steps: pendingToInputSteps(pending, canvasPx),
-    bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
+    bodies: deriveBodyStates(simDays),
     terrainHeightAt: () => 0,
     clipEpoch,
-    drivers: deps.controlSchemes.skymap.drivers,
+    schemes: deps.controlSchemes,
   });
   state.cameraRuntime = next;
   for (const action of actions) store.dispatch(action);

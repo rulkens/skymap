@@ -32,12 +32,17 @@ import { northUpRoll } from '../../../utils/camera/northUpRoll';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 import { SCALE_UNITS } from '../../scaleUnits';
 import { SONDERMARKEN_POSE } from './sondermarkenFlyout';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 /** The opening view, as the app's `#pose=` link value: 8.6 m off the rover. */
 export const PERSEVERANCE_POSE =
   's,perseverance,0.48274334808813857,0.15066116048769496,8.617544429797482';
 
 // Eye-tuned. Each leg spans 9-11 decades of distance.
+const PERSEVERANCE_ID = asSceneBodyId('perseverance');
+const MARS_ID = asSceneBodyId('mars');
+const EARTH_ID = asSceneBodyId('earth');
+
 const LEAD_IN_SEC = 3;
 const LEG_SEC = 45;
 const SYSTEM_HOLD_SEC = 4;
@@ -61,8 +66,8 @@ export function perseveranceToSondermarken(simDays: number): Clip {
   const linked = linkedPoseToWorld(PERSEVERANCE_POSE, simDays, basis);
   const end = linkedPoseToWorld(SONDERMARKEN_POSE, simDays, basis);
   const bodies = deriveBodyStates(simDays);
-  const rover = bodies.get('perseverance')!.positionMpc;
-  const roverUp = normalize3(sub(rover, bodies.get('mars')!.positionMpc));
+  const rover = bodies.get(PERSEVERANCE_ID)!.positionMpc;
+  const roverUp = normalize3(sub(rover, bodies.get(MARS_ID)!.positionMpc));
   // The world arm pivots where the sightline meets Mars's DATUM, kilometres
   // past the rover (Jezero lies below it); pivot on the rover instead, same
   // eye and sightline, so the pull-out and the tilt turn about what is framed.
@@ -74,7 +79,7 @@ export function perseveranceToSondermarken(simDays: number): Clip {
     eye[1] - range * toEye[1],
     eye[2] - range * toEye[2],
   ];
-  const parkUp = normalize3(sub(end.target, bodies.get('earth')!.positionMpc));
+  const parkUp = normalize3(sub(end.target, bodies.get(EARTH_ID)!.positionMpc));
 
   // The system view looks down on the Sun from the rover's side of the sky,
   // so the outbound swing is mostly a change of tilt.
@@ -113,7 +118,7 @@ export function perseveranceToSondermarken(simDays: number): Clip {
         aimAt(orbitAnglesLookingAlong(neg(parkUp), basis), DESCEND_AIM_SEC),
         // Overhead the park, north at the top, as sondermarkenFlyout frames it.
         tween('roll', {
-          to: northUpRoll(neg(parkUp), bodies.get('earth')!.orientation, basis),
+          to: northUpRoll(neg(parkUp), bodies.get(EARTH_ID)!.orientation, basis),
           over: DESCEND_AIM_SEC,
         }),
       ]),

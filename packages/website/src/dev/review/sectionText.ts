@@ -1,3 +1,4 @@
+import { OVERLAY_UI } from '../overlay/overlayUi';
 import type { ReviewSection } from './@types/ReviewSection';
 import { reviewBlockOf } from './reviewBlockOf';
 
@@ -13,7 +14,7 @@ export function sectionText(article: Element, section: ReviewSection): string {
   else range.setEnd(article, article.childNodes.length);
   const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) =>
-      range.intersectsNode(node) && !node.parentElement?.closest('script, style, [data-review-ui]')
+      range.intersectsNode(node) && !node.parentElement?.closest(`script, style, ${OVERLAY_UI}`)
         ? NodeFilter.FILTER_ACCEPT
         : NodeFilter.FILTER_REJECT,
   });

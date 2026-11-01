@@ -1,0 +1,79 @@
+/**
+ * scaleFadeBands — pins the POP-FREE relationships between the backdrop fade
+ * bands and the gate they hand off to. Each couples constants that are tuned in
+ * SEPARATE files (`scaleFadeBands`, `starBackdropDissolve`,
+ * `foregroundMaxDistance`), so each fails on a silent retune of one margin that
+ * would reintroduce a visible pop on descent — the exact regression this fix
+ * removed. These are NOT restatements of the derivations (which would assert a
+ * band equals `FARTHEST × k`): they assert the cross-file inequality that keeps
+ * a fade from outliving the layer it fades within.
+ */
+
+import { describe, it, expect } from 'vitest';
+
+import { SCALE_FADE_BANDS } from '../../src/data/scaleFadeBands';
+import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/data/starBackdropDissolve';
+import { FOREGROUND_RECEDE } from '../../src/data/bands/foregroundRecede';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
+import { regionById } from '../../src/utils/regions/regionById';
+import { fadeBand } from '../../src/utils/math/fadeBand';
+
+const NEIGHBOURHOOD_EXTENT_MPC = regionById('solar-neighbourhood').extentMpc;
+const SOLAR_SYSTEM_EXTENT_MPC = regionById('solar-system').extentMpc;
+
+describe('backdrop fade bands — pop-free coupling to the foreground gate', () => {
+  it('the star backdrop is gone before the foreground gate begins to recede', () => {
+    // The backdrop must reach 0 before FOREGROUND_RECEDE starts, so the NEAR0
+    // foreground step idles at galaxy zoom and never has a visible star to cut.
+    expect(STAR_BACKDROP_DISSOLVE.out[1]).toBeLessThan(FOREGROUND_RECEDE.out[0]);
+  });
+
+  it('the body-glint backdrop dissolves fully inside the shared foreground gate', () => {
+    // The same pop-free property as the star backdrop, one scale-decade down: the
+    // body-glint far-dissolve must complete STRICTLY before the shared foreground
+    // gate hard-cuts the layer, so the gate lands on already-dark glints. A retune
+    // that pushed `goneAt` out to (or past) the gate would reintroduce the bright-
+    // blob pop this fix removed (all ~22 glints collapsed onto one dot into
+    // Milky-Way framing).
+    expect(SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+  });
+});
+
+describe('both backdrop bands derive from one shape', () => {
+  it('the star backdrop dissolve and bodyGlintBackdrop apply the same fullAt/goneAt multiple to their own region extent', () => {
+    // Neither ratio is hardcoded here — only that the two bands, each keyed on a
+    // DIFFERENT region extent (solar-neighbourhood vs. solar-system), come out
+    // to the SAME multiple. If a future edit re-inlined one band's multiplier
+    // independently of the other's (the bug this shape consolidation removes),
+    // the two ratios would diverge and this would fail; retuning the shared
+    // shape moves both ratios together and stays green.
+    expect(STAR_BACKDROP_DISSOLVE.out[0] / NEIGHBOURHOOD_EXTENT_MPC).toBe(
+      SCALE_FADE_BANDS.bodyGlintBackdrop.fullAt / SOLAR_SYSTEM_EXTENT_MPC,
+    );
+    expect(STAR_BACKDROP_DISSOLVE.out[1] / NEIGHBOURHOOD_EXTENT_MPC).toBe(
+      SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt / SOLAR_SYSTEM_EXTENT_MPC,
+    );
+  });
+});
+
+describe('sgrAStarLensing band', () => {
+  // The DIRECTION is the load-bearing fact: `fullAt < goneAt` makes this an
+  // approach fade, so the lens engages as the camera closes on Sgr A*. Edges
+  // swapped, it would fade OUT on approach — the opposite of the effect — and
+  // still type-check. Read off the band itself, so an intentional retune of
+  // where the envelope sits stays green.
+  it('fades IN on approach, monotonically across the envelope', () => {
+    const { fullAt, goneAt } = SCALE_FADE_BANDS.sgrAStarLensing;
+    expect(fullAt).toBeLessThan(goneAt);
+
+    const midpoint = (fullAt + goneAt) / 2;
+    const nearMid = (fullAt + midpoint) / 2;
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, fullAt)).toBe(1);
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, goneAt)).toBe(0);
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, nearMid)).toBeGreaterThan(
+      fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpoint),
+    );
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpoint)).toBeGreaterThan(0);
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpoint)).toBeLessThan(1);
+  });
+});

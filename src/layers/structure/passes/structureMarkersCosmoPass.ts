@@ -9,7 +9,7 @@ import type { StructureRuntime } from '../@types/StructureRuntime';
 import { createStructureMarkersPass } from '../render/createStructureMarkersPass';
 import { structureMarkersPlanner } from '../frame';
 
-export function structureMarkersCosmoPass(runtime: StructureRuntime): ContentPass {
+export function structureMarkersCosmoPass(runtime: StructureRuntime): ContentPass<'structureRing'> {
   return createStructureMarkersPass({
     name: 'structure-markers-cosmo',
     scale: 'cosmic',

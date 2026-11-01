@@ -7,7 +7,7 @@
  *
  *   - `FAR_CLIP_MPC = 80000` — far-clip plane.  Sized so the entire
  *     observable-universe horizon shell (radius 14 300 Mpc, drawn by
- *     `horizonShellRenderer`) stays inside the frustum at every
+ *     the `cosmicHorizon` Layer) stays inside the frustum at every
  *     reachable camera distance: max_cam 60 000 + shell 14 300 =
  *     74 300 Mpc, plus headroom.  Visual pass uses additive blending
  *     with no depth test, so depth precision is not a concern; the

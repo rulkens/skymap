@@ -52,6 +52,6 @@ export const FAMOUS_GALAXY_ENTRY = {
   // every other catalog's brightness.
   sbBoost: 0.45,
   falloffHalfMpc: 1000,
-  // Ahead of the star catalog (50): the only `surveyDeepZoom` exemption, so it draws at boot.
+  // Ahead of the star catalog (50): the only survey deep-zoom band exemption, so it draws at boot.
   priority: 20,
 } as const satisfies GalaxyCatalogSourceEntry;

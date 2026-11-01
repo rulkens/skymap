@@ -1,6 +1,6 @@
 /**
  * SurfaceTileSpec — one body's entry in `SURFACE_TILE_REGISTRY`: everything
- * `surfaceTileSubsystem` needs to know about a body BEFORE its manifest has
+ * `surfaceTileStream` needs to know about a body BEFORE its manifest has
  * ever been fetched. Membership in the registry IS the "this body tiles"
  * predicate — there is no separate boolean to drift out of sync with it.
  */

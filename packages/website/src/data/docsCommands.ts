@@ -49,6 +49,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: [
           'fetch-2mass-xsc',
+          'fetch-celestrak',
           'fetch-cf4',
           'fetch-desi',
           'fetch-dhm',
@@ -101,6 +102,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: ['build-spacecraft-tracks'],
         does: 'Write the file of Voyager trails from the state vectors and the encounter windows that fetch-horizons and fetch-voyager-windows downloaded.',
+        manual: DATA,
+      },
+      {
+        scripts: ['build-satellites'],
+        does: 'Write the file of satellite orbits from the CelesTrak groups that fetch-celestrak downloaded. A scheduled GitHub workflow runs both every day and uploads the file.',
         manual: DATA,
       },
       {
@@ -286,6 +292,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: SITE_TOOLS,
       },
       {
+        scripts: ['site:structure'],
+        does: 'Compares the headings of each landing page in the built site with its structure file and fails on one that only one of the two has.',
+        manual: SITE_TOOLS,
+      },
+      {
         scripts: ['site:external'],
         does: 'Asks for every address outside the site that a built page links to, and lists each one that is gone with its pages and its data row.',
         manual: SITE_TOOLS,
@@ -293,6 +304,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: ['site:repeats'],
         does: 'Reads every page of the built site and fails when one sourced sentence is printed in full on more pages than the set limit.',
+        manual: SITE_TOOLS,
+      },
+      {
+        scripts: ['site:compare'],
+        does: 'Shoots every page of two built copies of the site at a desktop and a phone width, and fails on a page that differs in more than a thousandth of its pixels or is in one copy only.',
         manual: SITE_TOOLS,
       },
       {

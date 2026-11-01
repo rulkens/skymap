@@ -1,5 +1,5 @@
 /**
- * SURFACE_TILE_REGISTRY — the closed set of bodies `surfaceTileSubsystem` can
+ * SURFACE_TILE_REGISTRY — the closed set of bodies `surfaceTileStream` can
  * page a virtual texture for. Membership IS the predicate (`bodyId in
  * SURFACE_TILE_REGISTRY`) — `runFrame` never names a body literally on the
  * tile-planning path.

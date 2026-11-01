@@ -7,7 +7,7 @@
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';

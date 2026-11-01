@@ -31,6 +31,7 @@ import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry'
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
@@ -53,14 +54,14 @@ const virgoRow: StructureInfo = {
 
 const earthRow: SelectionRow = {
   type: 'body',
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [0, 0, 0],
   driver: bodyDriverGeometry('earth'),
 };
 
-function focusedOn(row: SelectionRow): RootState {
-  return stateAfter(setSelectionRow({ slot: 'focus', row }));
+function focusedOn(row: SelectionRow, focusId: string): RootState {
+  return stateAfter(setSelectionRow({ slot: 'focus', row, focusId }));
 }
 
 afterEach(() => {
@@ -86,7 +87,7 @@ describe('focus row', () => {
   });
 
   it('writes the encoded target once the request has resolved', () => {
-    expect(focusSource.write(focusedOn(virgoRow))).toBe('cluster-virgo-m87');
+    expect(focusSource.write(focusedOn(virgoRow, 'cluster-virgo-m87'))).toBe('cluster-virgo-m87');
   });
 
   it('writes the pending id AHEAD of an already-resolved target', () => {
@@ -94,14 +95,14 @@ describe('focus row', () => {
     // still resolved would otherwise republish the OLD id until the new one
     // landed, so Back would restore a URL that never matched the screen.
     const state = stateAfter(
-      setSelectionRow({ slot: 'focus', row: virgoRow }),
+      setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }),
       requestFocus({ id: 'm31', transition: 'fly' }),
     );
     expect(focusSource.write(state)).toBe('m31');
   });
 
   it('writes nothing for the Earth home body (a bare URL is home)', () => {
-    expect(focusSource.write(focusedOn(earthRow))).toBeNull();
+    expect(focusSource.write(focusedOn(earthRow, 'body-earth'))).toBeNull();
   });
 });
 

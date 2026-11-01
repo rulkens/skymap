@@ -17,14 +17,14 @@ import { innerBoundRadiusM } from '../../../src/utils/occlusion/innerBoundRadius
 import { outerBoundRadiusM } from '../../../src/utils/occlusion/outerBoundRadiusM';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import type { HostBody } from '../../../src/@types/camera/HostBody';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const MARS_ROW = SCENE_CELESTIAL_BODIES.find((row) => row.id === 'mars')!;
 const MARS: HostBody = {
-  id: 'mars' as BodyId,
-  state: deriveBodyStates(CONST_J2000).get('mars')!,
+  id: asSceneBodyId('mars'),
+  state: deriveBodyStates(CONST_J2000).get(asSceneBodyId('mars'))!,
   radiusM: MARS_ROW.surface.datumRadiusM,
   groundRadiusAtM: () => MARS_ROW.surface.datumRadiusM,
   innerBoundRadiusM: innerBoundRadiusM(MARS_ROW.surface),
@@ -49,12 +49,18 @@ describe('hostedFocusOverHorizon', () => {
   it('a rover on the far side of the planet is over the horizon', () => {
     // Curiosity from 60 m over Opportunity: 142° around
     // Mars. Held, the arm serves a point it cannot show and no driver is live.
-    expect(hostedFocusOverHorizon(over('opportunity', 60), 'curiosity' as BodyId, MARS)).toBe(true);
+    expect(hostedFocusOverHorizon(over('opportunity', 60), asSceneBodyId('curiosity'), MARS)).toBe(
+      true,
+    );
   });
 
   it('a rover under the eye is not', () => {
-    expect(hostedFocusOverHorizon(over('curiosity', 60), 'curiosity' as BodyId, MARS)).toBe(false);
-    expect(hostedFocusOverHorizon(over('curiosity', 1e6), 'curiosity' as BodyId, MARS)).toBe(false);
+    expect(hostedFocusOverHorizon(over('curiosity', 60), asSceneBodyId('curiosity'), MARS)).toBe(
+      false,
+    );
+    expect(hostedFocusOverHorizon(over('curiosity', 1e6), asSceneBodyId('curiosity'), MARS)).toBe(
+      false,
+    );
   });
 
   it('an eye under the site is judged from ITS floor, not the bare datum (F4)', () => {
@@ -73,16 +79,14 @@ describe('hostedFocusOverHorizon', () => {
     // Well above the bare-datum floor — this eye is nowhere near underground
     // by the planet's own generic standard, only by the site's own altitude.
     expect(Math.hypot(...eye)).toBeGreaterThan(bareDatumFloorM);
-    expect(hostedFocusOverHorizon(eye, 'curiosity' as BodyId, MARS)).toBe(false);
+    expect(hostedFocusOverHorizon(eye, asSceneBodyId('curiosity'), MARS)).toBe(false);
   });
 
   it('a focus that is not hosted on this body never releases it', () => {
     // The host itself, an orbiting moon and no focus at all: the subtree rule
     // owns those cells, and answering true here would release every body arm.
-    for (const focus of ['mars', 'phobos', 'earth', null]) {
-      expect(hostedFocusOverHorizon(over('curiosity', 60), focus as BodyId | null, MARS)).toBe(
-        false,
-      );
+    for (const focus of [...['mars', 'phobos', 'earth'].map(asSceneBodyId), null]) {
+      expect(hostedFocusOverHorizon(over('curiosity', 60), focus, MARS)).toBe(false);
     }
   });
 });

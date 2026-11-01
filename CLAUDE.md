@@ -2,6 +2,22 @@
 
 Quick orientation for an AI agent picking up work here; it points at the deeper docs.
 
+## Why this exists
+
+Skymap puts the measured universe in anyone's hands: students, teachers, planetarium
+audiences, anyone curious. It is built to last, and every change is held to three tests:
+
+- **Can we keep building on it?** Leave each file clearer than you found it, and finish
+  what you start: no half-renames, no old and new code left standing side by side.
+- **Could a new developer pick it up cold?** If the why isn't in the code, the docs or an
+  ADR, the work isn't done.
+- **Would a user come back?** A bug a user sees costs more than a feature that ships late,
+  so never trade reliability for landing speed.
+
+When you pass quality debt (a stale branch, a flaky test, dead code, an unclear name),
+say so and offer to fix it. Don't build around it. The conventions below are how we meet
+these tests.
+
 ## What this is
 
 A WebGPU 3D galaxy renderer: three real catalogs (SDSS, 2MRS, GLADE) parsed at build time into a custom binary format, loaded in the browser, drawn as instanced point billboards with per-galaxy thumbnail quads on close approach. TS + Vite + React UI shell; raw WebGPU + WGSL renderer.
@@ -32,7 +48,7 @@ tests/  Vitest suite — mirrors src/ tree
 - **No barrel exports for components**: import React components directly from their `.tsx`; no `index.ts` re-export files.
 - **One symbol per file** in `utils/` and `@types/` (`src/` and `tools/` alike): one function per `utils/` file, one type per `@types/` file, filename = the symbol's name; a generic helper growing inside another file gets extracted to `utils/<area>/<fn>.ts` with a focused test. Deep relative imports, no barrels. Types never live inline in implementation files (a React component's own `Props` is the one exception); inside a Layer, its own `@types/` folder is this convention's home for the Layer's own contract types (e.g. `src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime.ts`), while types shared with core or with a sibling subsystem still live under `src/@types/`. Under `tools/`, a tool app owns its types in `tools/<tool>/@types/` (the same pattern) and shared-helper types live in `tools/@types/<area>/` (the `src/@types/` analogue) — never loose beside the implementation.
 - **Frame files declare only their own symbol**: files in `src/services/engine/frame/` (incl. `timing/`, `passes/`) export the one symbol they are named for and nothing else — helpers to `src/utils/` or `frame/`, constants to `src/data/`; ratchet test `tests/services/engine/frame/frameFilePurity.test.ts` allow-lists today's offenders and only ever shrinks.
-- **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. For a visual check, shoot the link with `npm run shot -- '<link>' --url <your server>`, look at the result, then send the shot and its deep link to the user as a dash check; the user keeps the verdict.
+- **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. For a visual check, shoot the link with `npm run shot -- '<link>' --url <your server>`, look at the result, then send the shot and its deep link to the user as a dash check; the user keeps the verdict. In a cloud container (no `public/data/`, no GPU) start it as `VITE_DATA_BASE_URL=https://skymap-data.rulkens.com npm run dev` on port 5173; shots fall back to SwiftShader on their own — see [`tools/shot/README.md`](tools/shot/README.md).
 - **Plans coexist**: multiple in-flight plans is normal — check `docs/BACKLOG.md` and the plans file list before starting work, to reuse what exists and avoid stomping on it.
 - **TDD via plans**: substantial features get a bite-sized-task plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`, executed via the `subagent-driven-development` workflow under the lean protocol in [`sdd-execution.md`](docs/superpowers/conventions/sdd-execution.md) (grouped dispatches, one whole-branch review at the end, CI as the gate) and written per [`plan-style.md`](docs/superpowers/conventions/plan-style.md) — contract code yes, implementation code no, overriding the `writing-plans` skill; `/feature-done` gates the DoD and files plan + spec under `*/completed/`.
 - **Add a feature** → check `docs/BACKLOG.md` and `docs/superpowers/plans/` first; if substantial, write a plan via the `writing-plans` skill rather than coding inline, and remove the matching backlog item in the same change.
@@ -43,7 +59,7 @@ tests/  Vitest suite — mirrors src/ tree
 - **Code is liability**: the scarce resource is the user's maintenance attention — smallest diff wins, deletion beats addition, speculative generality and extra knobs are review findings, and neutral-or-negative evidence **halts** a landing pipeline (land/park is the user's ruling, never process momentum); `deletion-audit` is the standing counter-bias after fix waves and at `/feature-done`, per [`leanness.md`](docs/superpowers/conventions/leanness.md).
 - **Fix a bug** → reproduce it as a failing test first, then fix.
 - **Why is this slow?** → measure first with `npm run perf`, then [docs/RENDERER.md](docs/RENDERER.md) for the CPU mental model (per-frame work scales with ~2.5M on-screen galaxies: hoist constants, gate with squared distances, no per-galaxy `Math.tan`).
-- **Move/rename/relocate a file** (incl. folder reorgs) → `npm run move-files -- <from> <to>` (or `-- --manifest <moves.json>`; `--dry` first), never `git mv` + hand-edited imports; it rewrites relative imports project-wide and drags the `tests/` mirror along, but misses `.wesl` `package::` imports, CSS `@import` paths (the website imports the app's tokens.css) and string-literal paths — grep for the old path afterwards. See `.claude/skills/refactor/SKILL.md`.
+- **Move/rename/relocate a file** (incl. folder reorgs) → `npm run move-files -- <from> <to>` (or `-- --manifest <moves.json>`; `--dry` first), never `git mv` + hand-edited imports; it rewrites relative imports project-wide and drags the `tests/` mirror along, but misses `.wesl` `package::` imports, the website's `.astro`/`.mdx` imports, CSS `@import` paths (the website imports the app's tokens.css) and string-literal paths — grep for the old path afterwards. See `.claude/skills/refactor/SKILL.md`.
 - **Refactors keep the services/ layout**: cross-cutting helpers in `utils/`, rendering subsystems in `services/gpu/`, tests mirroring src.
 - **Choices I must make**: if the `mcp__claude-dash-ui__ask_user` tool is available, put every one in ONE call (`options`, `recommended`, a `why` of ≤ 15 words; visual checks as `kind: "check"` with the image attached) and end the turn with one line saying they're in the dash, without repeating them in prose. Don't act on a question the answers list under "Left open". Keep `[!QUESTION]` for a single free-text question: at most one per reply, as the last callout.
 - **Process progress**: if the `mcp__claude-dash-ui__session_progress` tool is available, call it when your work moves between explore, design, plan, implement, verify, land and done (main session only; carry on if it fails). For your own steps, send `steps` once, then `{ step, label }` per task; set `doc` to the plan path.

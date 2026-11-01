@@ -10,7 +10,7 @@ import type { ProvenanceFilter } from '../@types/settings/ProvenanceFilter';
 
 /**
  * Shader-side encoding, packed into the points `Uniforms` as a u32.  These
- * numbers are matched literally by `points/vertex.wesl`'s cull test — change
+ * numbers are matched literally by `points/vertexBody.wesl`'s cull test — change
  * one side and the other must follow.
  */
 export const PROVENANCE_FILTER_CODE: Record<ProvenanceFilter, number> = {

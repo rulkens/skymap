@@ -51,9 +51,12 @@ body {
 
 /* Dome rig draws a fisheye disc, which only reads correctly on a square
    backing store — `resizeCanvasToDisplay` follows this box, not the 100vw
-   above. */
+   above. Opacity just under 1 bars Chrome from promoting the canvas to its
+   own hardware overlay layer — a field test for the Wisdome rig, where two
+   projectors on a second GPU showed the UI but not the render. */
 #c[data-view-rig='dome'] {
   width: min(100vw, 100vh);
   height: min(100vw, 100vh);
   margin-inline: auto;
+  opacity: 0.99;
 }

@@ -1,0 +1,93 @@
+/* Shared vocabulary of the remote's sections; each section composes from it. */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  border-top: 1px solid var(--border-section);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  color: var(--color-fg-tertiary);
+}
+
+/* Grids, not wrapping flex: a wrapped flex row leaves an orphan stretched across the next line. */
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: var(--space-4);
+}
+
+/* Named items (tours, exhibits, matches) need room for two words a line. */
+.menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-4);
+}
+
+.button {
+  min-height: var(--touch-target);
+  padding: var(--space-4) var(--space-6);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--font-size-input);
+  line-height: var(--line-height-tight);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.button:focus-visible,
+.input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.button:not(:disabled):active {
+  background: var(--surface-control-active);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.input {
+  min-height: var(--touch-target);
+  padding: var(--space-4) var(--space-6);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--font-size-input);
+}
+
+/* A doubled border as well as the colour, so "this one is running" survives without colour vision. */
+.on {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+  color: var(--color-accent);
+}
+
+.status {
+  margin: 0;
+  font-size: var(--font-size-input);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (hover: hover) {
+  .button:not(:disabled):hover {
+    border-color: var(--border-hover);
+    background: var(--surface-control);
+  }
+}

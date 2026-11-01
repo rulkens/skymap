@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import { subsampleByAbsMag } from '../../tools/catalog/subsampleByAbsMag';
 import type { ParsedRecord } from '../../tools/parsers/common';
 

@@ -4,6 +4,7 @@ import { orbitReachByRegion } from '../../../src/utils/orbit/orbitReachByRegion'
 import type { AnchorBody } from '../../../src/@types/scene/AnchorBody';
 import type { BodyRegion } from '../../../src/@types/scene/BodyRegion';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // Synthetic two-anchor scene: the Sun at the render origin and a Sgr A*-like
 // anchor 8.178e-3 Mpc away, one orbit hanging off each. Synthetic rather than
@@ -11,14 +12,14 @@ import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements'
 // precisely so the far-anchored case is pinned by hand-computed apoapses, not by
 // whatever the seeded S-star table currently holds.
 const SYNTHETIC_ANCHORS: readonly AnchorBody[] = [
-  { id: 'sun', positionMpc: [0, 0, 0] },
+  { id: asSceneBodyId('sun'), positionMpc: [0, 0, 0] },
   { id: 'galactic-centre', positionMpc: [8.178e-3, 0, 0] },
 ];
 
 function makeElements(id: string, focusId: string, semiMajorMpc: number): OrbitalElements {
   return {
-    id,
-    focusId,
+    id: asSceneBodyId(id),
+    focusId: asSceneBodyId(focusId),
     semiMajorMpc,
     eccentricity: 0.5,
     inclinationRad: 0,
@@ -30,7 +31,13 @@ function makeElements(id: string, focusId: string, semiMajorMpc: number): Orbita
 }
 
 function makeRegion(id: BodyRegion['id'], anchorId: string, memberIds: string[]): BodyRegion {
-  return { id, label: id, anchorId, memberIds, extentMpc: 0 };
+  return {
+    id,
+    label: id,
+    anchorId: asSceneBodyId(anchorId),
+    memberIds: memberIds.map(asSceneBodyId),
+    extentMpc: 0,
+  };
 }
 
 describe('orbitReachByRegion', () => {
@@ -43,7 +50,9 @@ describe('orbitReachByRegion', () => {
       's2',
     ]);
     const regionOf = (bodyId: string): BodyRegion | null =>
-      [solarSystem, galacticCentre].find((region) => region.memberIds.includes(bodyId)) ?? null;
+      [solarSystem, galacticCentre].find((region) =>
+        region.memberIds.includes(asSceneBodyId(bodyId)),
+      ) ?? null;
 
     const reach = orbitReachByRegion(SYNTHETIC_ANCHORS, [nearOrbit, farOrbit], regionOf);
 

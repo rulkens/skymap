@@ -19,6 +19,7 @@ import { degToRad } from '../../../src/utils/math/degToRad';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const R = 6_371_000;
 const VIEWPORT: Vec2 = [800, 600];
@@ -75,7 +76,7 @@ function poseAt(
 
   const eyeM = R + altM;
   return {
-    bodyId: 'earth',
+    bodyId: asSceneBodyId('earth'),
     anchorLocalM: splitAnchor ? [u[0] * R, u[1] * R, u[2] * R] : [0, 0, 0],
     eyeRelAnchorM: splitAnchor
       ? [u[0] * altM, u[1] * altM, u[2] * altM]

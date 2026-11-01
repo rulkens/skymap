@@ -1,5 +1,5 @@
 /**
- * MissionsSettings — the sampled craft. A timeline exhibit seeds `speed` at 1× and the takeover
+ * MissionsSettings — the craft. A timeline exhibit seeds `speed` at 1× and the takeover
  * bracket restores it on exit.
  */
 
@@ -11,6 +11,7 @@ export type MissionsSettings = {
   readonly craft: string | null;
   /** The `MISSION_SPEEDS` factor the mission clock plays at; snapshots carry it, the URL does not. */
   speed: number;
-  /** One row per `SAMPLED_BODY_IDS` craft, complete: a write never creates a row. */
+  /** One row per item of the `missions` label entry (the one `craft` item), complete: a write
+   *  never creates a row. */
   readonly items: Readonly<Record<string, MissionCraftSettings>>;
 };

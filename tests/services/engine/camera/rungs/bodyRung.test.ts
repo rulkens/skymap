@@ -13,21 +13,19 @@ import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientat
 import { DEFAULT_ORIENTATION } from '../../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../../../src/@types/scene/BodyState';
+import type { SceneBodyId } from '../../../../../src/@types/scene/SceneBodyId';
 import type { RungBasisCtx } from '../../../../../src/@types/camera/RungBasisCtx';
 import type { TerrainHeightAtLookup } from '../../../../../src/@types/camera/TerrainHeightAtLookup';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+const BODIES = deriveBodyStates(CONST_J2000);
 const EARTH_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'earth', 'bodyRung.test').surface
   .datumRadiusM;
 const MARS_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'bodyRung.test').surface
   .datumRadiusM;
-// `BodyId`'s declared union (settings-toggle groups) doesn't literally include
-// 'mars' — the same cast every other rung test uses (e.g. siteRung.test.ts).
-const MARS_ID = 'mars' as BodyId;
-const EARTH_ID = 'earth' as BodyId;
+const MARS_ID = asSceneBodyId('mars');
+const EARTH_ID = asSceneBodyId('earth');
 
 function ctxWith(terrainHeightAt: TerrainHeightAtLookup): RungBasisCtx {
   return { bodies: BODIES, poseBasis: B, upBasis: B, terrainHeightAt };
@@ -35,7 +33,7 @@ function ctxWith(terrainHeightAt: TerrainHeightAtLookup): RungBasisCtx {
 
 describe("bodyRung.host's groundRadiusAtM", () => {
   it('queries the lookup with the host it was built for, not a fixed body id', () => {
-    const seen: BodyId[] = [];
+    const seen: SceneBodyId[] = [];
     const terrainHeightAt: TerrainHeightAtLookup = (bodyId) => {
       seen.push(bodyId);
       return bodyId === MARS_ID ? 42 : 0;

@@ -5,7 +5,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,
@@ -29,7 +29,7 @@ function makeState(...writes: SetVisibilityPayload[]) {
   const state = {
     settings: writes.reduce((s, p) => settingsReducer(s, setVisibility(p)), INITIAL_SETTINGS),
     subsystems: { fades: { fadeTo, setImmediate, targetOf }, scheduler: { requestRender } },
-    visibilityEntries: APP_VISIBILITY,
+    visibilityEntries: APP_VISIBILITY_REGISTRY,
     visibilityGates: new Map(),
   } as unknown as EngineState;
   return { state, fadeTo, setImmediate, targetOf, requestRender };

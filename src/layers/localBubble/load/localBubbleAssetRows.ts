@@ -1,8 +1,6 @@
 /**
- * The Layer's one asset row — demand + request only; the `factory` hands
- * back the slot `create` already minted. Distance-gated on the camera's
- * proximity to the Sun: the ~11 MB `.shell` file stays off the boot path
- * until the camera nears the solar neighbourhood.
+ * The Layer's one asset row. Distance-gated on the camera's proximity to the Sun:
+ * the ~11 MB `.shell` file stays off the boot path until the camera nears it.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -15,7 +13,7 @@ export function localBubbleAssetRows(runtime: LocalBubbleRuntime): readonly Asse
   return [
     {
       key: 'localBubble',
-      factory: () => runtime.slot,
+      slot: runtime.slot,
       req: () => undefined,
       demand: (ctx) =>
         ctx.settings.localBubble.enabled && Math.hypot(...ctx.cameraPosMpc) < DEMAND_DISTANCE_MPC,

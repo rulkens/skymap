@@ -59,6 +59,7 @@ import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import { focusFraming } from './focusFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 
 /**
  * True Sun–body–camera phase angle between the aim and the pure-sunward axis.
@@ -67,7 +68,7 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
 export const HOME_TERMINATOR_OFFSET_RAD = (Math.PI / 180) * 60;
 
 export function bodyHomePose(
-  bodyId: string,
+  bodyId: SceneBodyId,
   simDays: number,
   fovYRad: number,
   frameBasis?: Mat3,

@@ -12,8 +12,9 @@ import { climbRowFor } from '../../../../../src/services/engine/camera/rungs/cli
 import { rungKindOf } from '../../../../../src/services/engine/camera/rungs/rungKindOf';
 import type { PoseFrame } from '../../../../../src/@types/camera/PoseFrame';
 import type { FrameOf } from '../../../../../src/@types/camera/FrameOf';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
-const BODY_FRAME: FrameOf['body'] = { body: 'earth' };
+const BODY_FRAME: FrameOf['body'] = { body: asSceneBodyId('earth') };
 
 describe('rowFor', () => {
   it('returns the row whose kind matches rungKindOf, for a frame of each kind', () => {

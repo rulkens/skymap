@@ -35,7 +35,7 @@ import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { selectionRowsRoute } from '../../../src/store/constants';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import {
   buildStarOctree,
@@ -53,8 +53,10 @@ import type {
   StructureRowFixture,
 } from '../../support/selectionResolverOver';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { StarOctree } from '../../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../src/utils/star/starOctreeFromSkst';
+import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -80,7 +82,7 @@ function makeCloud(): GalaxyCatalog {
 // index 0 to a real row. Two stars keep the leaf non-degenerate; index 0 lands
 // in the dense leaf at grid origin, an exact reconstruction.
 const STAR_GRID: StarOctreeGrid = { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] };
-async function makeStarCatalog(): Promise<StarOctree> {
+async function makeStarCatalog(): Promise<Octree<StarColumns>> {
   const stars: OctreeLeafStar[] = [
     { mortonIndex: 0, offset: [1, 2, 3], absMag: 5, bpRp: 0.3 },
     { mortonIndex: 0, offset: [4, 5, 6], absMag: 5, bpRp: 0.3 },
@@ -95,7 +97,7 @@ describe('watchSelectionRowsSaga', () => {
   // Mutable: the cloud is absent at first (deep-link), then arrives.
   let cloudPresent = false;
   // Mutable star catalog: null until the star bin commits (deep-link race).
-  let starCatalog: StarOctree | null = null;
+  let starCatalog: Octree<StarColumns> | null = null;
   let structure: StructureInfo | null = null;
 
   function build() {
@@ -145,6 +147,17 @@ describe('watchSelectionRowsSaga', () => {
     });
   });
 
+  it('a focus ref change lands the focus id with the row; select and hover carry none', async () => {
+    const ref = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 } as const;
+    store.dispatch(updateSelectionSelect(ref));
+    await flush();
+    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
+
+    store.dispatch(updateSelectionFocus(ref));
+    await flush();
+    expect(store.getState()[selectionRowsRoute].focusId).toBe('sdss-1237668');
+  });
+
   it('clearSelection re-extracts select + focus rows to null, leaving hover untouched', async () => {
     // Regression: clearSelection (Esc / InfoCard ×) nulls the select+focus REFS,
     // but the reconciler must also null the derived ROWS — otherwise the InfoCard,
@@ -158,10 +171,13 @@ describe('watchSelectionRowsSaga', () => {
     expect(store.getState()[selectionRowsRoute].select).not.toBeNull();
     expect(store.getState()[selectionRowsRoute].focus).not.toBeNull();
 
+    expect(store.getState()[selectionRowsRoute].focusId).toBe('sdss-1237668');
+
     store.dispatch(clearSelection());
     await flush();
     expect(store.getState()[selectionRowsRoute].select).toBeNull();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
+    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
     // clearSelection leaves hover alone (it clears select + focus only).
     expect(store.getState()[selectionRowsRoute].hover).not.toBeNull();
   });
@@ -171,6 +187,7 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
+    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
 
     cloudPresent = true;
     store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
@@ -179,6 +196,7 @@ describe('watchSelectionRowsSaga', () => {
       type: 'galaxyCatalog',
       objId: '1237668',
     });
+    expect(store.getState()[selectionRowsRoute].focusId).toBe('sdss-1237668');
   });
 
   it('a star deep link fills on engineSourceCountReported (every source reports the same one pulse)', async () => {
@@ -214,11 +232,15 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
+    // Regression: the structure encoder reads only the ref, so the id used to
+    // publish (URL, dome status) while the row was still unresolvable.
+    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
 
     structure = { id: 'cluster-virgo-m87', category: 'galaxy-cluster' } as unknown as StructureInfo;
     store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({ id: 'cluster-virgo-m87' });
+    expect(store.getState()[selectionRowsRoute].focusId).toBe('cluster-virgo-m87');
   });
 
   it('a milkyWay deep link fills on engineStatusChanged (a Layer-only kind, resolvable only once its row lands)', async () => {
@@ -237,6 +259,7 @@ describe('watchSelectionRowsSaga', () => {
     sagaMiddleware.setContext({
       selection: {
         extractRow: () => (layerRowsLanded ? { type: 'milkyWay' } : null),
+        focusIdOf: () => 'milkyWay',
       },
     });
 
@@ -258,12 +281,12 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(setSimDays({ simDays: SIM_DAYS, nowMs: 0 }));
     store.dispatch(pause({ nowMs: 0 }));
 
-    store.dispatch(updateSelectionFocus({ type: 'body', id: 'earth' }));
+    store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('earth') }));
     await flush();
 
     const row = store.getState()[selectionRowsRoute].focus;
-    const expectedPos = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
-    const j2000Pos = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    const expectedPos = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
+    const j2000Pos = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
     expect(row).toMatchObject({ type: 'body', id: 'earth', positionMpc: [...expectedPos] });
     expect((row as { positionMpc: number[] }).positionMpc).not.toEqual([...j2000Pos]);
   });

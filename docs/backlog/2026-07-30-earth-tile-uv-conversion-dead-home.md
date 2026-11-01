@@ -1,6 +1,14 @@
-# Earth tile uv-conversion functions have no production caller
+# `surfaceTileCentreUv` has no production caller
 
 `needs-design`
+
+**Renamed since filing (2026-10-30):** `earthTileXyForUv` is now
+`surfaceTileXyForUv` (`src/utils/surfaceTiles/surfaceTileXyForUv.ts`) and has
+production callers (`terrainHeightM.ts`, `tools/utils/textures/siteTerrain/tilePostAtLatLon.ts`);
+`earthTileCentreUv` is now `surfaceTileCentreUv`
+(`src/layers/body/subsystems/surfaceTiles/surfaceTileCentreUv.ts`) and is still
+test-only; `planEarthTiles` became `cutSurfaceTiles`. The site list below
+predates the rename; re-trace it before designing.
 
 ## The problem
 

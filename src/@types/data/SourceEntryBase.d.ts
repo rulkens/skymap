@@ -1,5 +1,5 @@
 /**
- * Fields shared by every row of the SOURCE_REGISTRY, regardless of kind.
+ * Fields shared by every row of the APP_SOURCE_REGISTRY, regardless of kind.
  * Each variant (`GalaxyCatalogSourceEntry`, `StructureSourceEntry`, ...) intersects with
  * this base and adds its own discriminator (`type: '<kind>'`) plus
  * kind-specific fields.

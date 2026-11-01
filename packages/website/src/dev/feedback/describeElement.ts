@@ -16,10 +16,11 @@ function nearestHeading(el: Element): string | null {
   return found ? squash(found.textContent) || null : null;
 }
 
-// The dev build tags elements written in .astro templates with their file and `line:column`;
-// elements made by a script have none, so the nearest tagged ancestor stands in.
+// The dev build tags elements written in .astro templates, and (tools/site/jsxSourceAttributes.ts) in
+// .tsx files, with their file and `line:column`; elements made by a script have none, so the nearest
+// tagged ancestor stands in.
 function astroSource(el: Element): FeedbackElement['source'] {
-  // Copied by DevFeedback.astro's inline script, because the dev toolbar removes the attributes.
+  // Copied by the inline script in layouts/Base.astro, because the dev toolbar removes the attributes.
   const copied = (window as unknown as { __feedbackSources?: WeakMap<Element, [string, string]> })
     .__feedbackSources;
   for (let node: Element | null = el; node; node = node.parentElement) {

@@ -4,11 +4,11 @@
 
 ## Problem
 
-See `docs/research/2026-10-16-central-frame-table.md` §2 and §4 and ADR 0014 (`docs/adrs/0014-frame-placement-on-layers.md`). Adding a Layer is a core commit; four intra-roster constraints between Layers exist only as prose; a Layer target still needs a core line.
+See `docs/research/2026-10-16-central-frame-table.md` §2 and §4 and ADR 0015 (`docs/adrs/0015-frame-placement-on-layers.md`). Adding a Layer is a core commit; four intra-roster constraints between Layers exist only as prose; a Layer target still needs a core line.
 
 ## Blocked on
 
-ADR 0014's acceptance, decided together with the dependency DAG item (`2026-10-11-layer-dependency-dag.md`) because `after:` edges are the first explicit inter-Layer reference.
+ADR 0015's acceptance, decided together with the dependency DAG item (`2026-10-11-layer-dependency-dag.md`) because `after:` edges are the first explicit inter-Layer reference.
 
 ## Plan shape once ruled
 

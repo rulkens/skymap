@@ -5,7 +5,7 @@
  * Each point is a landmark inside its bbox, never the bbox centre — several
  * centres fall in open water. `altKm` frames the place: ~8-15 km for a city,
  * ~2-5 km for a single landmark; Everest/Grand Canyon/Cape Town reuse the
- * hand-tuned values from `data/debug/flyToPresets.ts`.
+ * hand-tuned values from the body Layer's `ui/flyToPresets.ts`.
  */
 import type { EarthPlace } from '../../@types/palette/EarthPlace';
 

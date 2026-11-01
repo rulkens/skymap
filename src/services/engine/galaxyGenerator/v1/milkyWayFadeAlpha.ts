@@ -17,11 +17,8 @@
 
 import { apparentDiameterPx } from '../../../../utils/math/apparentDiameterPx';
 import { smoothstep } from '../../../../utils/math/smoothstep';
-import {
-  MILKY_WAY_FADE_FULL_PX,
-  MILKY_WAY_FADE_GONE_PX,
-  MILKY_WAY_RADIUS_MPC,
-} from './milkyWayCalibration';
+import { MILKY_WAY_FADE_FULL_PX, MILKY_WAY_FADE_GONE_PX } from './milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../data/milkyWay/milkyWayRadiusMpc';
 
 export function milkyWayFadeAlpha(camDistMpc: number, pxPerRad: number): number {
   const px = apparentDiameterPx(2 * MILKY_WAY_RADIUS_MPC, camDistMpc, pxPerRad);

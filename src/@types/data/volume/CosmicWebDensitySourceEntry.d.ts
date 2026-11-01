@@ -2,7 +2,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 import type { VolumeFieldDefaults } from './VolumeFieldDefaults';
 
 /**
- * Volume-typed row of the SOURCE_REGISTRY — scalar-field cube
+ * Volume-typed row of the APP_SOURCE_REGISTRY — scalar-field cube
  * registered with the scalar-volume renderer.
  *
  * Each volume lives as a registry entry so its presentation defaults

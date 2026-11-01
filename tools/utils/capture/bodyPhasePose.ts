@@ -38,7 +38,7 @@ export function bodyPhasePose(
   const body = findByIdOrThrow(SCENE_BODIES, bodyId, 'bodyPhasePose');
   const instantMs = Date.parse(instantIso);
   if (Number.isNaN(instantMs)) throw new Error(`capture instant '${instantIso}' is not a date`);
-  const state = deriveBodyStates(unixMsToJulianDays(instantMs)).get(bodyId);
+  const state = deriveBodyStates(unixMsToJulianDays(instantMs)).get(body.id);
   if (state === undefined)
     throw new Error(`body '${bodyId}' has no derived state at ${instantIso}`);
 

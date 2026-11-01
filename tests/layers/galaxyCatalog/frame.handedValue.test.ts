@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { maskHas } from '../../../src/utils/maskHas';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
@@ -34,6 +34,7 @@ function walkInputFor(fade: ReturnType<typeof makeGalaxyCatalogFade>): DiskWalkI
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
     texturedDisks: { beginFrame: vi.fn(() => ({})), hasFadingContent: () => false },
     catalogs: new Map(),
+    records: new Map(),
     famousMeta: [],
     catalogsVersion: 0,
     pgcAlias: { committed: () => null },
@@ -46,8 +47,8 @@ function walkInputFor(fade: ReturnType<typeof makeGalaxyCatalogFade>): DiskWalkI
 describe('galaxyCatalogPlanner — handed value', () => {
   it('the planner walk hides a catalog whose handed value is 0', () => {
     const input = walkInputFor(makeGalaxyCatalogFade({ sdss: 0 }));
-    expect(maskHas(input.visibleSourceMask, Source.SDSS)).toBe(false);
-    expect(maskHas(input.visibleSourceMask, Source.TwoMRS)).toBe(true);
+    expect(maskHas(input.sourceMask, Source.SDSS)).toBe(false);
+    expect(maskHas(input.sourceMask, Source.TwoMRS)).toBe(true);
   });
 
   it('the LOD disks take the planner handed value', () => {

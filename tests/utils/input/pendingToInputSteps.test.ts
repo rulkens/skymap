@@ -61,4 +61,16 @@ describe('pendingToInputSteps', () => {
       { kind: 'zoom', factor: 1.1, duringGesture: false, cursorPx: [25, 25] },
     ]);
   });
+
+  it('a 9:16 source moves a nav drag isotropically on a 16:9 view', () => {
+    // 0.1 of the source's height on both axes: dx = 0.1 / aspect.
+    const aspect = 9 / 16;
+    const [step] = pendingToInputSteps(
+      [drag({ intent: 'navOrbit', aspect, dx: 0.1 / aspect, dy: 0.1, at: null })],
+      [1600, 900],
+    );
+    if (step?.kind !== 'navDrag') throw new Error('expected a navDrag');
+    expect(step.deltaPx[0]).toBeCloseTo(step.deltaPx[1], 9);
+    expect(step.deltaPx[1]).toBeCloseTo(90, 9);
+  });
 });

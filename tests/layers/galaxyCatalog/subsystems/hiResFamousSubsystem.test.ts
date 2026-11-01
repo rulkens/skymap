@@ -21,7 +21,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { createHiResFamousSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/hiResFamousSubsystem';
 import { createHiResFamousTexture } from '../../../../src/services/gpu/resources/hiResFamousTexture';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -117,7 +117,7 @@ function makeInput(
   return {
     cam: makeCam(camDist),
     catalogs,
-    visibleSourceMask: mask,
+    sourceMask: mask,
     pxPerRad: PX_PER_RAD,
     famousGalaxiesMeta,
   };

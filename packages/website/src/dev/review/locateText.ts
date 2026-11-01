@@ -1,3 +1,4 @@
+import { OVERLAY_UI } from '../overlay/overlayUi';
 import type { ReviewPortion } from './@types/ReviewPortion';
 import { foldText } from './foldText';
 import { reviewBlockOf } from './reviewBlockOf';
@@ -12,7 +13,7 @@ export function locateText(root: Element, needle: string): ReviewPortion[] | nul
   if (!want) return null;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) =>
-      node.parentElement?.closest('script, style, [data-review-ui]')
+      node.parentElement?.closest(`script, style, ${OVERLAY_UI}`)
         ? NodeFilter.FILTER_REJECT
         : NodeFilter.FILTER_ACCEPT,
   });
@@ -26,11 +27,16 @@ export function locateText(root: Element, needle: string): ReviewPortion[] | nul
     raw += node.data;
     previous = block;
   }
+  // Matched with the spaces left out: two elements in one block (a link and its line) touch in
+  // the DOM, while the browser's selection text puts a break between them.
   const { text, at } = foldText(raw);
-  const hit = text.indexOf(want);
+  const kept: number[] = [];
+  for (let i = 0; i < text.length; i++) if (text[i] !== ' ') kept.push(at[i]!);
+  const bare = want.replaceAll(' ', '');
+  const hit = text.replaceAll(' ', '').indexOf(bare);
   if (hit < 0) return null;
-  const from = at[hit]!;
-  const to = at[hit + want.length - 1]! + 1;
+  const from = kept[hit]!;
+  const to = kept[hit + bare.length - 1]! + 1;
   return starts.flatMap(({ node, from: nodeFrom }) => {
     const start = Math.max(from, nodeFrom) - nodeFrom;
     const end = Math.min(to, nodeFrom + node.length) - nodeFrom;

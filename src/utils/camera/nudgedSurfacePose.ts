@@ -6,6 +6,7 @@ import { lookedSurfacePose } from './lookedSurfacePose';
 import { orbitedSurfacePose } from './orbitedSurfacePose';
 import { rollBasisAboutView } from './rollBasisAboutView';
 import { settledDragPose } from './settledDragPose';
+import { surfaceOrbitScale } from './surfaceOrbitScale';
 import { surfaceZoomStep } from './surfaceZoomStep';
 
 /**
@@ -44,7 +45,10 @@ export function nudgedSurfacePose(
   let settled = { pose: zoomed, tilt };
   if (orbit !== undefined || look !== undefined) {
     let moved = zoomed;
-    if (orbit !== undefined) moved = orbitedSurfacePose(moved, orbit[0], orbit[1]);
+    if (orbit !== undefined) {
+      const s = surfaceOrbitScale(moved, ctx.fovYRad, ctx.groundRadiusAtM);
+      moved = orbitedSurfacePose(moved, orbit[0] * s, orbit[1] * s);
+    }
     if (look !== undefined) moved = lookedSurfacePose(moved, look[0], look[1]);
     settled = settledDragPose(zoomed, moved, look !== undefined ? 'look' : 'orbit', tilt, ctx);
   }

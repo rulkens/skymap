@@ -8,6 +8,8 @@
 
 import type { AssembledOrbitCamera } from '../../camera/AssembledOrbitCamera';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { BodyState } from '../../scene/BodyState';
+import type { PositionedId } from '../../scene/PositionedId';
 
 export type FrameContextInput = {
   /** The frame's one camera, pose-true — see `assembleOrbitCamera` for the
@@ -30,4 +32,7 @@ export type FrameContextInput = {
    *  see `ReadyFrameContext.nowMs`/`.simDays` for how each is read. */
   readonly nowMs: number;
   readonly simDays: number;
+  /** The body snapshot at `simDays` with the moving selection placed (`frameBodyStates`):
+   *  taken, not derived, so the frame context and the camera step read one Map. */
+  readonly bodyStates: ReadonlyMap<PositionedId, BodyState>;
 };

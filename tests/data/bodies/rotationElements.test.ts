@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ROTATION_ELEMENTS, rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { SATURN_EQUATORIAL_FRAME } from '../../../src/data/bodies/orbitPlaneFrames';
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
+import { BODY_TEXTURE_REGISTRY } from '../../../src/data/bodies/bodyTextureRegistry';
 import { degToRad } from '../../../src/utils/math/degToRad';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
@@ -21,13 +22,16 @@ describe('ROTATION_ELEMENTS', () => {
     }
   });
 
+  it('every textured body keeps its rotation row', () => {
+    // A row without one falls back to IDENTITY_MAT3: the texture would turn with the
+    // ecliptic frame and its prime meridian would be wrong, silently.
+    for (const spec of Object.values(BODY_TEXTURE_REGISTRY)) {
+      expect(rotationRowById(spec.bodyId), spec.bodyId).not.toBeNull();
+    }
+  });
+
   it("Saturn's rotation pole equals SATURN_EQUATORIAL_FRAME.normal", () => {
-    // The rings and Saturn's regular moons ride one equatorial frame. That frame
-    // is built from an IAU pole authored in orbitPlaneFrames.ts; this table
-    // authors the same pole independently. Building the unit pole vector from
-    // THIS table's α/δ and comparing to the frame normal proves the two authored
-    // copies agree — a real cross-table contract (spec §4.1/§10), broken the day
-    // one table is retuned without the other.
+    // The same IAU pole is authored independently in orbitPlaneFrames.ts and here; retuning one alone breaks it.
     const saturn = rotationRowById('saturn')!;
     if (!('poleRaDeg' in saturn)) throw new Error('saturn must be an IAU-pole row');
     const ra = degToRad(saturn.poleRaDeg);
@@ -40,27 +44,15 @@ describe('ROTATION_ELEMENTS', () => {
   });
 
   it("Charon's spin rate equals 360° / its own orbital period (mutual tidal lock)", () => {
-    // The other cross-table contract, and the one Charon's row comment declares:
-    // Pluto and Charon are MUTUALLY locked, so Charon's rotation period and its
-    // orbital period are one physical quantity measured two ways — spin from
-    // WGCCRE, period from JPL's Pluto-satellite page. Editing one alone silently
-    // unlocks the pair, and the render (a face that slowly turns away over
-    // enough sim time) is the only other place it would show.
-    //
-    // The period comes back out of the row's stored rate rather than being
-    // restated: `satellite`/`moonRatesFromPeriods` folded JPL's P into
-    // dM/dt = 2π · 36525 / P, so this inverts that and never hard-codes 6.387222.
+    // Spin (WGCCRE) and period (JPL) are one quantity measured twice; editing one alone silently
+    // unlocks the pair. Inverts dM/dt = 2π · 36525 / P (`moonRatesFromPeriods`) rather than restating P.
     const charon = elementsById('charon');
     const orbitalPeriodDays = (2 * Math.PI * 36_525) / charon.meanAnomalyRateRadPerCty!;
     const charonRotation = rotationRowById('charon')!;
     if (!('spinRateDegPerDay' in charonRotation)) throw new Error('charon must be an IAU-pole row');
 
-    // Tolerance from the two constants' published precision, not from taste.
-    // d(360/P)/dP = 360/P² = 8.8 °/day per day of P, so P's last published place
-    // (1e-6 d) is worth 8.8e-6 °/day — and the residual between the two
-    // independently rounded numbers is exactly one such place, 8.8e-6. The bound
-    // sits just above it: any edit that moves P beyond its published rounding
-    // trips this, while the rounding itself does not.
+    // d(360/P)/dP = 8.8 °/day per day, so P's last published place (1e-6 d) is 8.8e-6 °/day,
+    // exactly the rounding residual; 2e-5 sits just above it.
     expect(Math.abs(charonRotation.spinRateDegPerDay - 360 / orbitalPeriodDays)).toBeLessThan(2e-5);
   });
 });

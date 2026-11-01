@@ -4,6 +4,7 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 describe('the whale and petunias orbit rows', () => {
   it('the petunia pot trails the whale by the authored mean-anomaly offset at epoch', () => {
@@ -12,8 +13,8 @@ describe('the whale and petunias orbit rows', () => {
     // not a mirror of the degrees-based arc-length formula the row itself uses
     // to derive its meanAnomalyDeg.
     const states = deriveBodyStates(CONST_J2000);
-    const whale = states.get('whale')!;
-    const petunias = states.get('petunias')!;
+    const whale = states.get(asSceneBodyId('whale'))!;
+    const petunias = states.get(asSceneBodyId('petunias'))!;
     const semiMajorMetres = SCENE_EARTH.surface.datumRadiusM + 400_000;
     const expectedOffsetRad = 40 / semiMajorMetres;
 
@@ -21,7 +22,7 @@ describe('the whale and petunias orbit rows', () => {
 
     // Physical sanity check: both bodies actually sit in the ~400 km orbit,
     // not on top of Earth or off at some other radius.
-    const earth = states.get('earth')!;
+    const earth = states.get(asSceneBodyId('earth'))!;
     const expectedRadiusMpc = semiMajorMetres * SCALE_UNITS.M_TO_MPC;
     for (const body of [whale, petunias]) {
       const dx = body.positionMpc[0] - earth.positionMpc[0];

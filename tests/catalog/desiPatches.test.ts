@@ -6,7 +6,7 @@ import { DESI_PATCHES } from '../../tools/catalog/desiPatches';
  * buckets crossMatch output by each patch's `source`, so a collision on either
  * of the two identity axes (key / source) would silently merge or overwrite
  * two patches' outputs. `source` uniqueness already guarantees unique `.bin`
- * stems too — the stem comes from `SOURCE_REGISTRY[source].binBaseName`, one
+ * stems too — the stem comes from `APP_SOURCE_REGISTRY[source].binBaseName`, one
  * registry entry per `Source` — so there is no separate binName axis to pin.
  * These pin the axes are all distinct.
  */

@@ -19,7 +19,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { MILD_RECESSION } from '../../../../src/data/mildRecession';
 
 function makeState(): EngineState {
@@ -183,7 +183,10 @@ describe('label2DDirector', () => {
       label: 'structure',
       produceLabels: () => ({ labels: [focused, sibling], awake: false }),
     });
-    const state = { ...makeState(), visibilityEntries: APP_VISIBILITY } as unknown as EngineState;
+    const state = {
+      ...makeState(),
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
+    } as unknown as EngineState;
     const ctxAt = (nowMs: number) =>
       ({
         ...makeCtx(nowMs),
@@ -1038,6 +1041,39 @@ describe('label2DDirector', () => {
       const flushedIds = (labelStub.setLabels.mock.calls.at(-1)![0] as Label2D[]).map((l) => l.id);
       expect(flushedIds).toContain('planet');
       expect(flushedIds).not.toContain('orion');
+    });
+
+    it('a caption standing under a lifted planet caption survives: the cull reads where the text is drawn', () => {
+      // The Curiosity case: a rover at the sub-camera point projects within a
+      // pixel of its host planet's anchor, but the planet's text is lifted
+      // 1.5x its apparent diameter up the screen. A separation cull on the
+      // pre-lift anchors drops the rover against text 600 px away.
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
+
+      const planet: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'mars',
+        prominencePx: CAPTION_PRIORITY.planet * CAPTION_TIER_SCALE,
+        fadeAlpha: 1,
+        lift: { subjectSizePx: 400, lineBottomLiftPx: 204 },
+      };
+      const rover: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'curiosity',
+        worldPos: [0, -0.002, 0],
+        prominencePx: CAPTION_PRIORITY.meshBody * CAPTION_TIER_SCALE,
+        fadeAlpha: 1,
+        lift: { subjectSizePx: 0, lineBottomLiftPx: 4 },
+      };
+      dir.registerProducer(makeProducer('p', [planet, rover]));
+
+      dir.runFrame(makeState(), makeNear0Ctx(0));
+      const flushedIds = (labelStub.setLabels.mock.calls.at(-1)![0] as Label2D[]).map((l) => l.id);
+      expect(flushedIds).toContain('mars');
+      expect(flushedIds).toContain('curiosity');
     });
 
     it('smoothstepRamp keeps flushing a remembered emission until the ramp hits 0 (mirrors the exponential absence test above)', () => {

@@ -9,7 +9,7 @@
  * the 4 Hz debug snapshot and `runFrame`'s delta record both read THIS.
  */
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDofAngles } from '../../../@types/camera/CameraDofAngles';
 import type { CameraDofRow } from '../../../@types/camera/CameraDofRow';
@@ -36,6 +36,7 @@ import { tiltFromNadirRad } from '../../../utils/camera/tiltFromNadirRad';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
 import { wrapRad } from '../../../utils/math/wrapRad';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 const ABSENT: CameraDofRow = { currentRad: null, targetRad: null, residualRad: null };
 
@@ -50,7 +51,7 @@ export function cameraDofAnglesOf(input: {
   readonly worldPose: CameraPose;
   readonly poseBasis: Readonly<Mat3>;
   readonly upBasis: Readonly<Mat3>;
-  readonly bodyStates: ReadonlyMap<BodyId, BodyState>;
+  readonly bodyStates: ReadonlyMap<PositionedId, BodyState>;
   readonly rememberedTiltRad: number;
   readonly tuning: CameraTuning;
 }): CameraDofAngles {
@@ -67,7 +68,7 @@ export function cameraDofAnglesOf(input: {
     upBasis,
     terrainHeightAt: datumOnlyTerrainHeight,
   });
-  let bodyId: BodyId | null = engaged?.id ?? null;
+  let bodyId: SceneBodyId | null = engaged?.id ?? null;
   let hr: number | null = engaged === null ? null : hOverR(eyeMpc, engaged.state, engaged.radiusM);
   if (rungKindOf(storedFrame) === 'absolute') {
     const nearest = nearestBodyHR(eyeMpc, bodyStates);

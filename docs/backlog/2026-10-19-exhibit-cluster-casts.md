@@ -4,7 +4,7 @@
 
 ## Problem
 
-`mergeSettingsSnapshot.ts:41` replaces a whole cluster (the takeover camera-cluster line already covers the merge). On top of that, `src/layers/missions/exhibits/voyagerMissions.ts:51-52` writes `orbitTrails: { enabled: true }` as a bare literal and `:56-71` rebuilds `items` as `{ enabled: false, labelEnabled: false }` under `as Record<GalaxyCatalogId|StructureId, …>`; `solarSystem.ts` hand-lists every `picking.kinds` entry. `src/data/exhibits/utils/surveysOff.ts:14-22` spreads `...item` and is safe. `computeSceneEntering.ts:31-33,43` folds only settings-route actions.
+`mergeSettingsSnapshot.ts` replaces each present cluster whole (the earlier takeover camera-cluster line was dropped in #978; the merge is unchanged). On top of that, `src/layers/missions/exhibits/voyagerMissions.ts:51-52` writes `orbitTrails: { enabled: true }` as a bare literal and `:56-71` rebuilds `items` as `{ enabled: false, labelEnabled: false }` under `as Record<GalaxyCatalogId|StructureId, …>`; `solarSystem.ts` hand-lists every `picking.kinds` entry. `src/data/exhibits/utils/surveysOff.ts:14-22` spreads `...item` and is safe. `computeSceneEntering.ts:31-33,43` folds only settings-route actions.
 
 ## Direction
 

@@ -174,7 +174,7 @@ The first six are the owner's rulings; the rest come from the sources, where the
 - A note and its passage point at each other: selecting either marks the other. [Hypothesis]
 - Each item shows its status; one toggle shows the page as it reads after the changes. [GitHub-review, Word, GDocs]
 - **It never ships.** Mounted under `import.meta.env.DEV`, with its code imported behind the same flag
-  (see `packages/website/src/dev/review/DevReview.astro`). [owner]
+  (see `packages/website/src/dev/overlay/DevOverlay/DevOverlay.tsx`). [owner]
 
 ## Before you commit
 

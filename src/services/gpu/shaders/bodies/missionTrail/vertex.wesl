@@ -2,7 +2,7 @@
 // quad. Endpoints arrive as f32 hi/lo pairs of world Mpc; the camera's own pair
 // is subtracted FIRST, so the huge near-equal terms cancel exactly and only the
 // small remainders carry f32 rounding. The vp is rebased about the camera and
-// emits clip metres (near0OverlayVpF32), so it consumes that eye-relative Mpc.
+// emits near-plane clip units (near0OverlayVpF32), so it consumes that eye-relative Mpc.
 
 import package::bodies::missionTrail::io::TrailSegment;
 import package::bodies::missionTrail::io::TrailUniforms;
@@ -12,8 +12,9 @@ import package::lib::segmentQuad::expandSegmentQuad;
 
 @group(0) @binding(2) var<uniform> u: TrailUniforms;
 
-// Clip metres: a segment end behind the eye is slid along the segment to this w,
-// since a quad built from a negative-w endpoint folds across the screen.
+// Clip w is in near-plane units (near0OverlayClipScale: the near plane sits at w = 1).
+// A segment end behind the eye is slid along the segment to this w, since a quad
+// built from a negative-w endpoint folds across the screen.
 const W_EPS: f32 = 0.01;
 const MPC_TO_KM: f32 = 3.0856775814913673e19;
 

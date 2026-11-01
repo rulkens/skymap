@@ -15,6 +15,9 @@ import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningA
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
+import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
+import type { FocusMoveSettings } from '../../@types/settings/FocusMoveSettings';
+import type { FocusMoveStyle } from '../../@types/camera/FocusMoveStyle';
 
 // --- orientation (bare scalar) ------------------------------------------------
 
@@ -34,6 +37,19 @@ export const selectOrientation = (state: RootState): OrientationFrameId =>
  * `cameraRuntime.outputs.projection.fovYRad` once per frame.
  */
 export const selectFovDeg = (state: RootState): number => selectSettings(state).camera.fovDeg;
+
+// --- cameraControls cluster ----------------------------------------------------
+
+export const selectCameraControls = (state: RootState): CameraControlsSettings =>
+  selectSettings(state).cameraControls;
+
+// --- focusMoves cluster --------------------------------------------------------
+
+export const selectFocusMoves = (state: RootState): FocusMoveSettings =>
+  selectSettings(state).focusMoves;
+
+export const selectFocusMoveStyle = (state: RootState): FocusMoveStyle =>
+  selectFocusMoves(state).style;
 
 // --- tonemap cluster ----------------------------------------------------------
 

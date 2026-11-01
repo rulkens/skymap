@@ -54,7 +54,7 @@ import { useRunSaga } from '../store/RunSagaProvider';
 import { installPerfHook } from '../state/perf/installPerfHook';
 import { installSkymapHook } from '../state/automation/installSkymapHook';
 import { inputSourceSaga } from '../state/input/inputSourceSaga';
-import { createCanvasDeviceChannel } from '../services/input/createCanvasDeviceChannel';
+import { createDeviceChannel } from '../services/input/createDeviceChannel';
 import type { Task } from 'redux-saga';
 
 export function useEngine(): UseEngineReturn {
@@ -92,7 +92,7 @@ export function useEngine(): UseEngineReturn {
         handleRef.current = handle;
         // The canvas is the first input source: it only dispatches `input/*`
         // actions, which the engine's frame and pick driver read from the store.
-        canvasSource = runSaga(() => inputSourceSaga('canvas', createCanvasDeviceChannel(canvas)));
+        canvasSource = runSaga(() => inputSourceSaga('canvas', createDeviceChannel(canvas)));
 
         // Perf harness seam — a no-op unless the page is in `?perf` mode. Installed
         // here (not main.tsx) because it needs the live engine handle to reach the

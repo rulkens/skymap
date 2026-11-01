@@ -17,12 +17,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Set up Node 22
-        uses: actions/setup-node@v4
+      - name: Set up Node
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -49,6 +49,10 @@ jobs:
       # pages are an explicit allow-list that can only shrink.
       - name: Check website links
         run: npm run site:links
+
+      # Each landing page's structure file names the headings the built page has.
+      - name: Check page structure files
+        run: npm run site:structure
 
       # No sourced sentence stands in full on more pages than the worst did
       # when the check was written; the limit only goes down.

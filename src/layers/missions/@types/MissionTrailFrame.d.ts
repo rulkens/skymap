@@ -1,6 +1,6 @@
 /**
  * MissionTrailFrame — what `missionTrailRenderer.beginFrame` needs once per view:
- * `vp` is the camera-rebased view-projection in clip metres and `camPosMpc` the
+ * `vp` is the camera-rebased view-projection in near-plane clip units (`near0OverlayClipScale`) and `camPosMpc` the
  * eye it was rebased about, in f64; the renderer splits the eye into hi/lo.
  */
 

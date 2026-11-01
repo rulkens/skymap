@@ -50,7 +50,7 @@ import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/La
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { focusedFamousIndex } from '../../../services/engine/helpers/focusedFamousIndex';

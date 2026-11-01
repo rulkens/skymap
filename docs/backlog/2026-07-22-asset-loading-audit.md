@@ -38,4 +38,3 @@ are filed as their own backlog items. What remains here is the **policy** half (
 ## Related
 
 - DebugPanel sections → modules + containers: `backlog/2026-06-30-debugpanel-sections-modules-containers.md` (the UI sweep should ride or follow it).
-- Source-registry factory: `backlog/2026-06-29-source-registry-factory.md` (same wiring table is its subject).

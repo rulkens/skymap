@@ -1,17 +1,19 @@
 /**
  * BODY_PICK_ROWS — each body's DURABLE seed table, the array a pick tagged
- * with that row's source code indexes into. Total over `BodyId`. Pack side:
+ * with that row's source code indexes into. Total over `BodySourceId`. Pack side:
  * `sceneBodyPickId`; unpack: `bodySelectionRow`'s `resolvePick`. The star
- * sources have their own tables (`SEEDED_STAR_CATALOGS`).
+ * sources and the craft have their own tables (`SEEDED_STAR_CATALOGS`,
+ * `MISSION_CRAFT_IDS`).
  */
 
 import { SCENE_EARTH } from './sceneEarth';
 import { SCENE_PLANETS } from './scenePlanets';
-import { SCENE_MESH_BODIES } from './sceneMeshBodies';
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../@types/data/body/BodySourceId';
+import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 
-export const BODY_PICK_ROWS: Readonly<Record<BodyId, readonly { readonly id: string }[]>> = {
+export const BODY_PICK_ROWS: Readonly<
+  Record<BodySourceId, readonly { readonly id: SceneBodyId }[]>
+> = {
   earth: [SCENE_EARTH],
   planet: SCENE_PLANETS,
-  'mesh-body': SCENE_MESH_BODIES,
 };

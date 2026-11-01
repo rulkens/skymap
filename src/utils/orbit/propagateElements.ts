@@ -35,10 +35,7 @@
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 import { CONST_J2000 } from '../../data/time/constJ2000';
-
-// The length of a Julian century in days — with `CONST_J2000` (the J2000.0
-// epoch), the pair that turns a Julian Date into "centuries since J2000".
-const DAYS_PER_JULIAN_CENTURY = 36_525;
+import { DAYS_PER_JULIAN_CENTURY } from '../../data/time/daysPerJulianCentury';
 
 export function propagateElements(elements: OrbitalElements, simDays: number): OrbitalElements {
   const centuriesSinceEpoch = (simDays - CONST_J2000) / DAYS_PER_JULIAN_CENTURY;

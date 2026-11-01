@@ -22,7 +22,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { recordsToCloud, type LocalVolumeOverrides } from '../../tools/catalog/buildAllBins';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import type { ParsedRecord } from '../../tools/parsers/common';
 import type { Cf4Record } from '../../tools/parsers/cosmicflows4';
 

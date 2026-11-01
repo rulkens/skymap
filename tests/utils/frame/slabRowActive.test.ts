@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { slabRowActive } from '../../../src/utils/frame/slabRowActive';
-import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../src/data/scaleFadeBands';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { SlabRow } from '../../../src/@types/engine/frame/SlabRow';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -21,10 +21,8 @@ const ROW: SlabRow = {
   drawRadiusM: () => 1,
   footprintRadiusM: 1,
   activeBand: BAND,
-  source: 'lens',
 };
 
-/** The anchor `distanceMpc` from a camera at the origin. */
 function statesAt(distanceMpc: number): ReadonlyMap<string, BodyState> {
   const positionMpc: Vec3 = [distanceMpc, 0, 0];
   return new Map([[ANCHOR_ID, { positionMpc, orientation: [...IDENTITY], meanAnomalyRad: 0 }]]);

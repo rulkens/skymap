@@ -22,7 +22,7 @@ export function cosmicWebDensityAssetRows(
   return COSMIC_WEB_DENSITY_SOURCE_ROWS.map(
     ([code, entry]): AssetWiringRow => ({
       key: code,
-      factory: () => runtime.slots[entry.id],
+      slot: runtime.slots[entry.id],
       // An untiered row carries no `tier`, so a tier flip leaves its request
       // unchanged and the demand loop never reloads it.
       req: (tier) =>

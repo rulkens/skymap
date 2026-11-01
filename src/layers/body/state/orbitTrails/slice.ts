@@ -1,7 +1,6 @@
 /**
- * orbitTrails — the body Layer's near-field Keplerian orbit-trails switch. It
- * also governs the star catalog's S-star trails, which the same core
- * `orbitTrailsPass` draws.
+ * orbitTrails — the body Layer's near-field Keplerian orbit-trails switch. The
+ * S-star trails have their own (`sStarTrails`).
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';

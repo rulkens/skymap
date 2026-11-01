@@ -62,7 +62,7 @@ export const MILKY_WAY_VIEW_DISTANCE_MPC = 0.15;
 /**
  * Physical radius (kpc) of the Milky Way's stellar disc — THE single home
  * of the number.  The rendered point cloud and the pick target size from
- * it via `MILKY_WAY_RADIUS_MPC` (`milkyWayCalibration.ts`, a pure unit
+ * it via `MILKY_WAY_RADIUS_MPC` (`milkyWayRadiusMpc.ts`, a pure unit
  * conversion of this constant), and the selection ring borrows it the way
  * the galaxy branch borrows a catalog `diameterKpc` — so the disc the
  * user sees, the area that takes the click, and the ring drawn around it

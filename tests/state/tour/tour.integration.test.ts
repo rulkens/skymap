@@ -16,13 +16,13 @@ import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
-import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
+import { cosmicFlows } from '../../../src/compositions/clips/cosmicFlows';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/present/milkyWayCloudLiveness';
-import { Source } from '../../../src/data/sources';
-import { APP_VISIBILITY } from '../../../src/compositions/appVisibility';
+import { Source } from '../../../src/data/source';
+import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import { gatePassByFade } from '../../../src/services/engine/layer/gatePassByFade';
 import { resolveFadeValue } from '../../../src/services/engine/presentation/resolveFadeValue';
 
@@ -157,7 +157,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   //
   // Two camera distances, each chosen so its site's OWN scale band reads
   // exactly 1 — the drawn alpha then starts at the intent value and any drop is
-  // attributable to the clip channel alone. 5 Mpc clears surveyDeepZoom's full
+  // attributable to the clip channel alone. 5 Mpc clears the survey deep-zoom band's full
   // edge (~0.23 Mpc); 1 Mpc keeps the Milky-Way disc above its 12-px
   // apparent-size edge, which 5 Mpc would not.
   const SURVEY_CAM_POS = [0, 0, 5] as Readonly<[number, number, number]>;
@@ -168,7 +168,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // `galaxyPointRenderer` rides `state.gpu` now (D13), not this ctx.
   function makeDrawCtx(nowMs: number, camPos: Readonly<[number, number, number]>): FrameView {
     return {
-      snapshot: { nowMs, focusBlend: 0, visibleSourceMask: 0xffffffff },
+      snapshot: { nowMs, focusBlend: 0 },
       drawCamPos: camPos,
       fovYRad: FOV_Y_RAD,
       canvasSize: CANVAS,
@@ -183,7 +183,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     return {
       subsystems: { fades, clipPlayer },
       // The composed entries core resolves the handed value from.
-      visibilityEntries: APP_VISIBILITY,
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
       settings: {
         milkyWay: { enabled: true },
         galaxyCatalogs: { items: makeGalaxyCatalogItems() },
@@ -252,11 +252,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const alphaWith = (clipFactor: number): number | null => {
       const state = makeDrawState(fades, makeClipStub(clipFactor));
       const ctx = makeDrawCtx(0, MW_CAM_POS);
-      return deriveMilkyWayCloudAlpha(
-        state,
-        ctx,
-        resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'),
-      );
+      return deriveMilkyWayCloudAlpha(ctx, resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'));
     };
     const unmasked = alphaWith(1);
     expect(unmasked).toBe(1);

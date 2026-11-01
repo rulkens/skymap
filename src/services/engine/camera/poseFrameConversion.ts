@@ -11,7 +11,7 @@
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
@@ -35,7 +35,7 @@ export function toBodyArm(
   pose: CameraPose,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
-  bodyId: BodyId,
+  bodyId: SceneBodyId,
   bodyState: BodyState,
 ): BodyFixedPose {
   // The world eye and camera basis exactly as `frameContext` derives them:

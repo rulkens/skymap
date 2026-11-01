@@ -1,6 +1,6 @@
 /**
- * arrivalSaga — over a real store with the selection and focus-tween watchers
- * running. The camera runtime starts absent and appears the way `wireInput`
+ * arrivalSaga — over a real store with the selection, reveal and focus-tween
+ * watchers running. The camera runtime starts absent and appears the way `wireInput`
  * brings it up (runtime first, then the boot base commit), so every case
  * also covers the arrival waiting for the engine.
  */
@@ -19,24 +19,32 @@ vi.mock('../../../src/services/gpu/device', () => ({
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { arrivalSaga } from '../../../src/state/arrival/arrivalSaga';
-import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
+import { arrivalPending, arrived } from '../../../src/state/arrival/arrivalSlice';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { selectArrival } from '../../../src/state/arrival/selectors';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
 import { watchRequestSelectSaga } from '../../../src/state/selection/watchRequestSelectSaga';
 import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSelectionRowsSaga';
+import { watchSelectionRevealSaga } from '../../../src/state/selection/watchSelectionRevealSaga';
+import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
+import { selectSettings } from '../../../src/state/settings/selectSettings';
 import { commitCameraPose, startCameraTween } from '../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectFocusRef, selectSelectedRef } from '../../../src/state/selection/selectors';
 import {
   engineLoadProgressChanged,
+  engineSourceCountReported,
   engineStatusChanged,
 } from '../../../src/state/engine/engineSlice';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
+import { satellitesSelectionRow } from '../../../src/layers/satellites/present/satellitesSelectionRow';
+import { buildSatelliteCatalog } from '../../../tools/satellites/buildSatelliteCatalog';
+import { ISS } from '../../layers/satellites/fixtures/celestrakRecords';
+import { Source } from '../../../src/data/source';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../src/services/engine/camera/rungs/foldToWorld';
 import { ARRIVAL_TIMEOUT_MS } from '../../../src/data/arrival/arrivalTimeoutMs';
@@ -60,12 +68,16 @@ import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { LiveCameraRuntime } from '../../../src/store/types';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../src/@types/scene/BodyState';
+import type { SatellitesRuntime } from '../../../src/layers/satellites/@types/SatellitesRuntime';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: () => [] };
+const { catalog: SATELLITES } = buildSatelliteCatalog(
+  [{ group: { group: 'active', class: 'active' }, records: [ISS] }],
+  0,
+);
 
 const LIVE: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
@@ -94,13 +106,20 @@ function build({
   });
   let booted = false;
   const layerRows = { landed: milkyWayLanded };
+  // Demand loads the catalog only while the section is shown.
+  const satellites = {
+    propagator: {
+      catalog: () => (selectSettings(store.getState()).satellites.enabled ? SATELLITES : null),
+    },
+  } as unknown as SatellitesRuntime;
   mw.setContext({
     nextFrame,
     selection: composeSelectionRows(
       () => [
-        ...coreSelectionRows(),
+        bodySelectionRow(),
         structureSelectionRow(EMPTY_STRUCTURES),
         ...(layerRows.landed ? [milkyWaySelectionRow()] : []),
+        satellitesSelectionRow(satellites),
       ],
       () => ALL_KINDS_ENABLED,
     ),
@@ -109,6 +128,7 @@ function build({
   });
   for (const saga of [
     watchSelectionRowsSaga,
+    watchSelectionRevealSaga,
     watchRequestFocusSaga,
     watchRequestSelectSaga,
     watchFocusTweenSaga,
@@ -186,7 +206,7 @@ describe('arrivalSaga', () => {
     for (const action of arrival) sim.store.dispatch(action);
 
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-    const bodies = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+    const bodies = deriveBodyStates(CONST_J2000);
     const shown = () =>
       foldToWorld(sim.state.cameraRuntime.outputs.displayed, {
         bodies,
@@ -225,6 +245,22 @@ describe('arrivalSaga', () => {
     expect(h.status()).toEqual({ status: 'arrived' });
   });
 
+  it('a cold satellite deep link with Satellites off reveals, then arrives once the catalog lands', async () => {
+    const h = build();
+    h.arrive({ view: { kind: 'focus', id: 'satellite-25544' }, t: Date.UTC(2026, 9, 28, 12) });
+    h.boot();
+    await flush();
+    h.store.dispatch(engineSourceCountReported({ source: Source.Satellite, count: 1 }));
+    await flush();
+
+    const reveal = h.recorded.findIndex(
+      (a) => setVisibility.match(a) && a.payload.cluster === 'satellites' && a.payload.on,
+    );
+    expect(reveal).toBeGreaterThanOrEqual(0);
+    expect(h.recorded.findIndex(arrived.match)).toBeGreaterThan(reveal);
+    expect(h.status()).toEqual({ status: 'arrived' });
+  });
+
   it('an id the loaded catalogs lack fails to home', async () => {
     const h = build();
     h.arrive({ view: { kind: 'focus', id: 'pgc-99999999' } });
@@ -260,7 +296,7 @@ describe('arrivalSaga', () => {
     h.boot();
     await flush();
 
-    const marsAtT = deriveBodyStates(unixMsToJulianDays(t)).get('mars')!.positionMpc;
+    const marsAtT = deriveBodyStates(unixMsToJulianDays(t)).get(asSceneBodyId('mars'))!.positionMpc;
     const target = worldArmOf(h.store.getState().camera.base).target;
     for (const axis of [0, 1, 2]) expect(target[axis]).toBeCloseTo(marsAtT[axis]!, 12);
     expect(h.status()).toEqual({ status: 'arrived' });

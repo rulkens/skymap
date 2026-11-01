@@ -19,7 +19,6 @@ function makeCtx(): FrameView {
       nowMs: 0,
       simDays: 0,
       focusBlend: 0,
-      visibleSourceMask: 0xffffffff,
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,
         apparentRadiusMpc: 1,
@@ -32,7 +31,6 @@ function makeCtx(): FrameView {
     },
     viewSlot: 0,
     viewKind: 'frame',
-    // Nothing in this file reads bodyPose.
     bodyPose: () => null,
     cam: {} as never,
     vp: new Float32Array(16) as unknown as Mat4,
@@ -43,7 +41,6 @@ function makeCtx(): FrameView {
   } as unknown as FrameView;
 }
 
-/** Minimal SlabView matching the ctx above. `slab` is unused by this layer. */
 function makeView(): SlabView {
   return {
     slab: makeCosmoSlab(),
@@ -58,11 +55,6 @@ function makeState(): EngineState {
   return { settings: { flow: { enabled: true } } } as unknown as EngineState;
 }
 
-/**
- * A runtime whose `slot.committed()` models the load status directly — the
- * gate reads `runtime.slot`, not `state.assetSlots.flow`, now that the pass
- * closes over the Layer's own Runtime.
- */
 function makeRuntime(
   over: { loaded?: boolean; draw?: (...args: unknown[]) => void } = {},
 ): FlowRuntime {

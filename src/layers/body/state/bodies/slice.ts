@@ -3,7 +3,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 
 export const bodiesSlice = createSlice({
   name: 'settings/bodies',
@@ -15,7 +15,7 @@ export const bodiesSlice = createSlice({
     // themselves, and no product decision has been made to expose a "hide this
     // body" control. There is no cluster-level gate either, for the same reason
     // (see EngineSettingsState).
-    setBodyLabelEnabled: (bodies, action: PayloadAction<{ id: BodyId; enabled: boolean }>) => {
+    setBodyLabelEnabled: (bodies, action: PayloadAction<{ id: BodySourceId; enabled: boolean }>) => {
       bodies.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
   },

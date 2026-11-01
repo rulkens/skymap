@@ -1,0 +1,43 @@
+import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
+
+/**
+ * SurfaceTileDebugSnapshot — `surfaceTileStream`'s residency for the DebugPanel,
+ * published by `surfaceTilePlanner` (see its header for the pacing).
+ * `engaged: false` (atlas never allocated, or destroyed) means every other
+ * field is a quiet zero/empty — see `EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT`.
+ */
+export type SurfaceTileDebugSnapshot = {
+  readonly engaged: boolean;
+  /** The engaged body, or `null` while disengaged — what the panel titles
+   *  itself with and what its fly-to control targets. */
+  readonly bodyId: SurfaceTileBodyId | null;
+  /** Atlas slot count: `(SURFACE_TILE_ATLAS_SIDE / tilePx) ** 2`. */
+  readonly capacity: number;
+  /** Slots currently claimed by a key, loaded or still in flight. */
+  readonly used: number;
+  /** Slot pressure on the second product's own `rgba8unorm` atlas. Separate
+   *  from `used`/`capacity` above because the two atlases have different
+   *  geometry and independent LRU clocks — height residency is what gates
+   *  refinement, so it is worth reading on its own. */
+  readonly height: { readonly used: number; readonly capacity: number };
+  /** One row per level with any resident or pending ALBEDO tile, sorted by `z`. */
+  readonly levels: ReadonlyArray<{
+    readonly z: number;
+    readonly resident: number;
+    readonly pending: number;
+  }>;
+  /** The most recent engaged frame's plan shape, or `null` while disengaged. */
+  readonly plan: {
+    readonly requestCount: number;
+    readonly zWin: number;
+    /** Planned tiles with no bitmap resident yet. */
+    readonly misses: number;
+    /** Leaves in the frame's drawn cut (`SurfaceTilePlan.cut`) — unbounded
+     *  today; a growth watch, not a cap. */
+    readonly cutCount: number;
+  } | null;
+  /** `atlas.allocate` refusals ("atlas full this frame") on the last update. */
+  readonly droppedAllocations: number;
+  /** `"x,y"` keys resident at the deepest active level, capped at 16. */
+  readonly deepestLevelKeys: readonly string[];
+};

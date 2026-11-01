@@ -15,10 +15,11 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const EARTH_FOCUS: SelectionRow = {
   type: 'body',
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [0, 0, 0],
   driver: bodyDriverGeometry('earth'),

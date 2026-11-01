@@ -20,17 +20,20 @@ vi.mock('../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher', () => 
 
 import { wireGalaxyCatalogSourceSlot } from '../../../../src/layers/galaxyCatalog/load/wireGalaxyCatalogSourceSlot';
 import { galaxyCatalogFetcher } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { installSlotReadyWake } from '../../../../src/services/engine/wiring/installSlotReadyWake';
 import type { LayerCoreDeps } from '../../../../src/@types/engine/layer/LayerCoreDeps';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { ProvenanceCounts } from '../../../../src/@types/engine/ProvenanceCounts';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogFacts';
+import type { GalaxyCatalogSourceType } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyRecordSource } from '../../../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
-/** Only `count` is read by the subscriber and the upload log line. */
+/** A zero-filled catalog: the commit builds its record source over every column. */
 function fakeCloud(count: number): GalaxyCatalog {
-  return { count } as unknown as GalaxyCatalog;
+  return makeGalaxyCatalog(count);
 }
 
 function harness() {
@@ -43,12 +46,22 @@ function harness() {
     totalCount: () => 0,
   } as never;
   const catalogs = new Map<SourceType, GalaxyCatalog>();
-  const provenanceCounts = new Map<SourceType, ProvenanceCounts>();
+  const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
+  const famousMeta = () => [];
   const bumpCatalogsVersion = vi.fn();
   const deps = {
     publish: vi.fn(),
   } as unknown as LayerCoreDeps<GalaxyCatalogFacts>;
-  return { upload, unload, pointRenderer, catalogs, provenanceCounts, bumpCatalogsVersion, deps };
+  return {
+    upload,
+    unload,
+    pointRenderer,
+    catalogs,
+    records,
+    famousMeta,
+    bumpCatalogsVersion,
+    deps,
+  };
 }
 
 describe('wireGalaxyCatalogSourceSlot', () => {
@@ -56,7 +69,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
   it('mints an idle slot named after the registry entry', () => {
     const h = harness();
-    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.SDSS], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[Source.SDSS], h.deps, h);
 
     expect(slot.name).toBe('sdss-points');
     expect(slot.state().kind).toBe('idle');
@@ -66,7 +79,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const h = harness();
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(42));
 
-    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.SDSS], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[Source.SDSS], h.deps, h);
     void slot.load({ source: Source.SDSS, tier: 'medium' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
@@ -74,9 +87,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const patch = vi.mocked(h.deps.publish).mock.calls[0]![0] as {
       provenanceCounts: Record<number, unknown>;
     };
-    expect(patch.provenanceCounts[Source.SDSS]).toBeDefined();
-    // A COPY of the runtime's map: a shared reference would be frozen by immer.
-    expect(patch.provenanceCounts).not.toBe(h.provenanceCounts);
+    expect(patch.provenanceCounts[Source.SDSS]).toBe(h.records.get(Source.SDSS)!.stats.provenance);
   });
 
   it('commit uploads the cloud to the renderer and writes it into the runtime catalogs', async () => {
@@ -84,12 +95,16 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const cloud = fakeCloud(7);
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(cloud);
 
-    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.Glade], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[Source.Glade], h.deps, h);
     void slot.load({ source: Source.Glade, tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     expect(h.upload).toHaveBeenCalledOnce();
-    expect(h.upload).toHaveBeenCalledWith(SOURCE_REGISTRY[Source.Glade].id, cloud);
+    expect(h.upload).toHaveBeenCalledWith(
+      APP_SOURCE_REGISTRY[Source.Glade].id,
+      cloud,
+      h.records.get(Source.Glade)!.stats,
+    );
     expect(h.catalogs.get(Source.Glade)).toBe(cloud);
     // A stale alias row set would otherwise linger past this commit — the
     // alias index reconcile keys on this bump to know its build is out of date.
@@ -103,7 +118,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const requestRender = vi.fn();
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(5));
 
-    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.SDSS], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[Source.SDSS], h.deps, h);
     installSlotReadyWake(
       requestRender,
       new Map([['sdss-points', slot as unknown as AssetSlot<unknown, unknown>]]),
@@ -121,7 +136,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
   it('release unloads the renderer, drops the catalog and provenance, and republishes without the source', async () => {
     const h = harness();
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(42));
-    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.SDSS], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[Source.SDSS], h.deps, h);
     void slot.load({ source: Source.SDSS, tier: 'medium' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
     h.bumpCatalogsVersion.mockClear();
@@ -131,7 +146,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
     expect(slot.state().kind).toBe('idle');
     expect(slot.committed()).toBeNull();
-    expect(h.unload).toHaveBeenCalledExactlyOnceWith(SOURCE_REGISTRY[Source.SDSS].id);
+    expect(h.unload).toHaveBeenCalledExactlyOnceWith(APP_SOURCE_REGISTRY[Source.SDSS].id);
     expect(h.catalogs.has(Source.SDSS)).toBe(false);
     expect(h.bumpCatalogsVersion).toHaveBeenCalledOnce();
     const patch = vi.mocked(h.deps.publish).mock.calls[0]![0] as {

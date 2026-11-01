@@ -1,15 +1,13 @@
 /**
- * FocusId — a branded type alias that marks strings intended as durable focus
- * identifiers in tour clips and authoring surfaces.
+ * FocusId — a durable focus identifier in tour clips and authoring surfaces.
  *
- * Branding at the type system level earns its keep only at the authoring boundary —
- * where raw strings from UI inputs need to be validated and stamped as safe before
- * flowing into the tour/clip graph. Because FocusId is assignable to string, the
- * resolver's `resolveFocusId` method stays plain and simple: it works with
- * ordinary strings. The brand is a compile-time guard, not a runtime wrapper.
- *
- * This keeps the concern narrow: the brand says "the author proved this was a valid
- * identifier", not "we wrapped it in a class". The resolver never needs to unwrap.
+ * The tag earns its keep only at the authoring boundary, where raw strings from
+ * UI inputs are validated and stamped before flowing into the tour/clip graph.
+ * Because a FocusId is assignable to string, the resolver's `resolveFocusId`
+ * stays plain: it works with ordinary strings. The tag is a compile-time guard,
+ * not a runtime wrapper, so the resolver never needs to unwrap.
  */
 
-export type FocusId = string & { readonly __focusId: unique symbol };
+import type { Tagged } from '../utils/Tagged';
+
+export type FocusId = Tagged<string, 'focusId'>;

@@ -12,6 +12,7 @@ import {
 } from '../../../src/state/selection/selectionSlice';
 import { Source } from '../../../src/data/source';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -52,7 +53,7 @@ describe('watchSelectionWakeSaga', () => {
     await flush();
     expect(requestRender).not.toHaveBeenCalled();
 
-    store.dispatch(updateSelectionHover({ type: 'body', id: 'earth' }));
+    store.dispatch(updateSelectionHover({ type: 'body', id: asSceneBodyId('earth') }));
     await flush();
     expect(requestRender).toHaveBeenCalledTimes(1);
 

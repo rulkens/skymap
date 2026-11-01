@@ -149,7 +149,7 @@ function SettingsPanelPreview({ defaultOpen = true }: { defaultOpen?: boolean })
       headerExtra={<TierChip tier={tier} onTierChange={setTier} />}
     >
       <GalaxiesSection
-        visibleSourceMask={visibleSourceMask}
+        sourceMask={visibleSourceMask}
         onToggleSource={(source, visible) =>
           setVisibleSourceMask((mask) =>
             visible ? mask | (1 << source) : mask & ~(1 << source),

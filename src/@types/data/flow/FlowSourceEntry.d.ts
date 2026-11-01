@@ -1,7 +1,7 @@
 import type { SourceEntryBase } from '../SourceEntryBase';
 
 /**
- * Flow-typed row of the SOURCE_REGISTRY — the CF4++ peculiar-velocity field
+ * Flow-typed row of the APP_SOURCE_REGISTRY — the CF4++ peculiar-velocity field
  * overlay. A single global asset (`flowfield.scfd`), demand-loaded on first
  * enable like the volume cubes; no per-record identity or pick code.
  *

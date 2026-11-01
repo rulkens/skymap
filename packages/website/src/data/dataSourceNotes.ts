@@ -281,6 +281,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'planets-and-their-moons',
     figure: 'guide-conjunction',
   },
+  celestrak: {
+    description:
+      'CelesTrak’s orbits of the active satellites, the largest debris clouds and recent launches around Earth, refreshed daily.',
+    about:
+      'CelesTrak publishes the orbit of every tracked object the US Space Force releases, as the mean elements its SGP4 model needs. Once a day we download the active satellites, three debris clouds and the last month’s launches, drop the orbits SGP4 cannot run and store the rest in our own compact file.',
+    shows: 'Nothing yet. The data is fetched daily; the layer that draws the satellites is still being built.',
+  },
   'seed-planet-facts': {
     title: 'Fact sheets of the Solar System bodies',
     description:
@@ -554,6 +561,21 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'spacecraft',
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Spirit' },
     figure: 'data-spirit',
+  },
+  'mesh-phobos': {
+    title: 'Phobos shape model and Viking mosaic',
+    description:
+      'The shape of Phobos from 3.1 million facets, with its colour from a Viking Orbiter mosaic.',
+    shows: 'Phobos up close, with Stickney crater and its grooves.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-phobos&t=2026-10-07T12:00:00Z', label: 'Open Phobos' },
+  },
+  'mesh-deimos': {
+    title: 'Deimos shape model',
+    description: 'The shape of Deimos, the smaller moon of Mars, from Viking images.',
+    shows: 'Deimos up close.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-deimos&t=2026-10-07T12:00:00Z', label: 'Open Deimos' },
   },
   skraafoto: {
     description:

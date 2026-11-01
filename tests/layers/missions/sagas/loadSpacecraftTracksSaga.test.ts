@@ -9,6 +9,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { writeSpacecraftTracks } from '../../../../tools/utils/io/writeSpacecraftTracks';
 import type { ReconcileEffects } from '../../../../src/store/effects/ReconcileEffects';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 const T0 = 2444000.5;
@@ -60,11 +61,11 @@ describe('loadSpacecraftTracksSaga', () => {
       vi.fn().mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(body) }),
     );
     const t = T0 + 5;
-    const before = deriveBodyStates(t).get('voyager1')!.positionMpc;
+    const before = deriveBodyStates(t).get(asSceneBodyId('voyager1'))!.positionMpc;
     const { store, requestRender } = build();
     store.dispatch(ready);
     await flush();
-    expect(deriveBodyStates(t).get('voyager1')!.positionMpc).not.toEqual(before);
+    expect(deriveBodyStates(t).get(asSceneBodyId('voyager1'))!.positionMpc).not.toEqual(before);
     expect(requestRender).toHaveBeenCalledTimes(1);
   });
 });

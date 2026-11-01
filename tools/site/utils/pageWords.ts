@@ -17,7 +17,7 @@ const ENTITIES: Record<string, string> = {
 export function pageWords(html: string): string {
   return html
     .replace(/<(head|script|style)\b[\s\S]*?<\/\1>/g, ' ')
-    .replace(/<details class="sources\b[\s\S]*?<\/details>/g, ' ')
+    .replace(/<details class="Sources-root\b[\s\S]*?<\/details>/g, ' ')
     .replace(/<[^>]+>/g, '')
     .replace(/&(#?\w+);/g, (whole, name: string) => ENTITIES[name] ?? whole)
     .replace(/\s+/g, ' ')

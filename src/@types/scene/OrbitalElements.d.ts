@@ -29,12 +29,14 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { OrbitPlaneFrame } from './OrbitPlaneFrame';
+import type { SceneBodyId } from './SceneBodyId';
+import type { PositionedId } from './PositionedId';
 
 export type OrbitalElements = {
   /** Stable identifier (e.g. `'earth'`, `'jupiter'`, `'moon'`). */
-  readonly id: string;
+  readonly id: SceneBodyId;
   /** Focus body id; `'sun'` for heliocentric (Sun at the render origin). */
-  readonly focusId: string;
+  readonly focusId: PositionedId;
   /** Semi-major axis a, in Mpc (authored via `SCALE_UNITS`). */
   readonly semiMajorMpc: number;
   /** Eccentricity e. Circular at 0, elliptical below 1. Bound orbits only. */

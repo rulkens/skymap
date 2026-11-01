@@ -1,5 +1,5 @@
 import { laneColorCss } from './laneColorCss';
-import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { findByIdOrThrow } from '../../object/findByIdOrThrow';
 import type { MissionTimeline } from '../../../@types/exhibits/MissionTimeline';
 import type { TimelineLane } from '../../../@types/exhibits/TimelineLane';

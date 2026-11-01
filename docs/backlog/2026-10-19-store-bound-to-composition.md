@@ -1,11 +1,11 @@
-# The store is statically bound to the app composition and to React section components
+# Layer-specific search feeds and React components sit in the store graph
 
 **Readiness:** `needs-design`. **Surfaced:** 2026-10-19, architecture audit (`docs/audits/2026-10-16-architecture-weak-points.md`).
 
 ## Problem
 
-`navigateSaga.ts:40`, `watchTakeoverSaga.ts:21` and `watchKeyboardEventsSaga.ts:28` import `APP_EXHIBITS`; `combinedSettingsReducer.ts:8` and `captureSettings.ts:39` import `APP_SETTINGS_SLICES`. `APP_EXHIBITS` pulls `data/exhibits/*`, which pulls `components/ExhibitOverlay/kinds/factsKind.ts`, which imports a React component into the store graph. `state/engine/selectors.ts:94-142` reads `galaxyCatalog?.famousMeta`, `aliasIndex`, `starCatalog?…`, `structure?.searchList` by name, and `CommandPaletteContainer.tsx:25-28` wires three Layer-specific search feeds beside the generic `layerSearch` rows. The engine, by contrast, receives the composition injected (`useEngine.ts:91`).
+ADR 0014 made the composition root (`src/compositions/app<Name>.ts`) the home of every static registry, read by import, so sagas importing `APP_EXHIBIT_REGISTRY` is the decided shape. Two things sit outside it. `APP_EXHIBIT_REGISTRY` pulls exhibit section kinds whose `Component` is a React component, so the store's import graph reaches `components/`. And `state/engine/selectors.ts` reads Layer fact keys by name (`galaxyCatalog?.famousMeta`, `aliasIndex`, `starCatalog?…`, `structure?.searchList`) while `CommandPaletteContainer.tsx` wires three Layer-specific search feeds beside the generic `layerSearch` rows.
 
 ## Direction
 
-Inject exhibits and settings slices into `createAppStore` and the saga context; move famous, alias and structure search onto `layerSearch`. Pairs with "Existing exhibits move into their Layers".
+Move famous, alias and structure search onto `layerSearch`, and split a section kind's `Component` from its saga-side data so the store graph stays React-free. Pairs with "Existing exhibits move into their Layers".

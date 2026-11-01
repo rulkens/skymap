@@ -11,12 +11,13 @@
 import { describe, it, expect } from 'vitest';
 import { poseFromBodyArm } from '../../../src/utils/camera/poseFromBodyArm';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 describe('poseFromBodyArm', () => {
   it('folds the anchor exactly — a non-zero anchor, hand-computed', () => {
     const basisLocal: BodyFixedPose['basisLocal'] = [1, 0, 0, 0, 0, 1, 0, -1, 0];
     const pose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [4_000_000, -3_000_000, 2_000_000],
       eyeRelAnchorM: [1200, -800, 500],
       basisLocal,
@@ -33,7 +34,7 @@ describe('poseFromBodyArm', () => {
   it('is a no-op fold at the body centre (anchor zero)', () => {
     const basisLocal: BodyFixedPose['basisLocal'] = [1, 0, 0, 0, 1, 0, 0, 0, 1];
     const pose: BodyFixedPose = {
-      bodyId: 'planet',
+      bodyId: asSceneBodyId('planet'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [10, 20, 30],
       basisLocal,

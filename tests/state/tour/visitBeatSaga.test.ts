@@ -42,7 +42,7 @@ import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';

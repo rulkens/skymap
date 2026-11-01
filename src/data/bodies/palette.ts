@@ -1,6 +1,6 @@
 /**
  * palette — SHARED linear-RGB colours only. Per-body data read once at its seed site stays
- * inline (planet albedos in `scenePlanets.ts`); star tints come from `temperatureToLinearRgb`.
+ * inline (planet albedos in the body Layer's `bodies/` rows); star tints come from `temperatureToLinearRgb`.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';

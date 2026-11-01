@@ -71,6 +71,7 @@ import type { Ease } from './Ease';
 import type { SplineConfig } from './SplineConfig';
 import type { PassByConfig } from './PassByConfig';
 import type { Vec3 } from '../math/Vec3';
+import type { GeodesicTuning } from '../camera/GeodesicTuning';
 
 export type Effect =
   | CameraAction
@@ -147,4 +148,17 @@ export type Effect =
        * untouched). See `PassByConfig`.
        */
       readonly passBy?: PassByConfig;
+    }
+  | {
+      /**
+       * geodesic — van Wijk & Nuij's zoom/pan path out of the running pose at
+       * its start to `to`, one composite writer over `target` + `distance`;
+       * yaw and pitch stay open to base tweens. `over` (seconds) omitted ⇒ the
+       * arc-length duration from `tuning`. See `buildGeodesicTrack`.
+       */
+      readonly kind: 'geodesic';
+      readonly to: { readonly target: Vec3; readonly distance: number };
+      readonly tuning: GeodesicTuning;
+      readonly fovYRad: number;
+      readonly over?: number;
     };

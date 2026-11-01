@@ -47,6 +47,7 @@ vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
 }));
 
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { starAggregatesPass } from '../../../../src/layers/starCatalog/passes/starAggregatesPass';
@@ -194,6 +195,7 @@ function makeCtx(
   });
   return {
     snapshot: {
+      bodyStates: deriveBodyStates(0),
       isReady: true,
       slabBodyCandidates: [],
       simDays: 0,

@@ -28,8 +28,9 @@ import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cam
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
+const EARTH = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))! as BodyState;
 const EARTH_RADIUS_M = SCENE_EARTH.surface.datumRadiusM;
 
 describe('tilt lerp round trip (ruling 13)', () => {

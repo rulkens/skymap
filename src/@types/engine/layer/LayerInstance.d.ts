@@ -1,3 +1,4 @@
+import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { SelectionKindRow } from './SelectionKindRow';
@@ -8,7 +9,7 @@ import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { LayerScreenLabel } from './LayerScreenLabel';
 import type { LayerWorldLabel } from './LayerWorldLabel';
-import type { OrbitalElements } from '../../scene/OrbitalElements';
+import type { OrbitTrailGroup } from './OrbitTrailGroup';
 
 /** A Layer bound to its own `Runtime` by `instantiateLayer`, once, at `createLayers`. */
 export type LayerInstance = {
@@ -20,11 +21,13 @@ export type LayerInstance = {
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
   readonly screenLabels: readonly LayerScreenLabel[];
   readonly worldLabels: readonly LayerWorldLabel[];
-  readonly orbitTrails: readonly OrbitalElements[];
+  /** `[]` or `[the Layer's group]`. */
+  readonly orbitTrails: readonly OrbitTrailGroup[];
   readonly selection: readonly SelectionKindRow[];
   /** Bound feeds, absent when the Layer declares no such member; `createLayers`
    * runs each as its own `runLayerFeedSaga` task, cancelled with the Layer's sagas. */
   readonly search?: AsyncIterable<readonly LayerSearchEntry[]>;
   readonly sourceCounts?: AsyncIterable<SourceCountReport>;
+  readonly heightAt?: TerrainHeightAtLookup;
   destroy(): void;
 };

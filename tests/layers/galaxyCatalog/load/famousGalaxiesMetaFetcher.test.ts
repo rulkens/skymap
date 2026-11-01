@@ -3,7 +3,7 @@ import {
   famousGalaxiesMetaFetcher,
   parseFamousGalaxiesMeta,
 } from '../../../../src/layers/galaxyCatalog/load/famousGalaxiesMetaFetcher';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { useFetchMock } from '../../../setup/fetchMock';
 
 /** The fetcher ignores the request; any well-typed `GalaxyCatalogReq` will do. */

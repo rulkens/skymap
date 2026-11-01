@@ -6,7 +6,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { Mat4 } from 'wgpu-matrix';
-import { Source } from '../../../../../src/data/sources';
+import { Source } from '../../../../../src/data/source';
 import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
@@ -15,6 +15,7 @@ import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import { starRowDriver } from '../../../../fixtures/starRowDriver';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -32,7 +33,6 @@ function makeCtx(): FrameView {
       nowMs: 0,
       simDays: 0,
       focusBlend: 0,
-      visibleSourceMask: 0xffffffff,
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,
         apparentRadiusMpc: 1,
@@ -112,7 +112,7 @@ const MILKY_WAY_ROW: SelectionRow = { type: 'milkyWay' };
 // must ignore it and the NEAR0 sibling must own it.
 const BODY_ROW: SelectionRow = {
   type: 'body',
-  id: 'jupiter',
+  id: asSceneBodyId('jupiter'),
   label: 'Jupiter',
   positionMpc: [1e-9, 2e-9, -3e-9],
   driver: bodyDriverGeometry('jupiter'),

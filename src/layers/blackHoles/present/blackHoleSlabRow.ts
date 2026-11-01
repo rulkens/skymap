@@ -18,6 +18,6 @@ export function blackHoleSlabRow(row: BlackHoleRow): SlabRow {
     drawRadiusM: blackHoleLensEnvelopeM(row),
     footprintRadiusM: schwarzschildRadiusM(row.massSolar),
     activeBand: CUBEMAP_CAPTURES[row.capture].band,
-    source: 'lens',
+    hosts: [{ line: 'lens' }],
   };
 }

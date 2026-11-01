@@ -9,7 +9,6 @@ import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { constellationsBand } from '../present/constellationsBand';
 import { CONSTELLATION_LINE_HALFWIDTH_PX } from '../../../data/constellation/constellationLineHalfwidthPx';
 import { CONSTELLATION_LINE_COLOR } from '../../../data/constellation/constellationLineColor';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
@@ -21,10 +20,7 @@ export function constellationsPass(runtime: ConstellationsRuntime): ContentPass<
   return {
     name: 'constellations',
     fade: 'constellations',
-
-    // Toggle-independent hard cull — see `constellationsBand`; a zero band
-    // also empties the (hdr, NEAR0) step for this row.
-    enabled: (_state, ctx) => constellationsBand(ctx) > 0,
+    enabled: () => true,
 
     draw(pass, view, ctx, state, fade) {
       // `constellationsSlot`'s commit owns the upload; this pass never uploads.
@@ -32,9 +28,9 @@ export function constellationsPass(runtime: ConstellationsRuntime): ContentPass<
 
       // view.camPos, NOT ctx.drawCamPos, for the f64 rebase below — the
       // renderer writes endpoints camera-relative to THIS pose (the
-      // starPointsPass seam); `constellationsBand` reads ctx separately.
+      // starPointsPass seam).
       const camPos = view.camPos;
-      const layerOpacity = constellationsBand(ctx) * fade * emphasisOf(entry, ctx.snapshot);
+      const layerOpacity = fade * emphasisOf(entry, ctx.snapshot);
 
       // Multiplying absolute parsec-scale endpoints by an f32 vp cancels catastrophically
       // on approach and makes the lines hop, so fold the eye offset in at f64 — from the

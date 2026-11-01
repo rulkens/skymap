@@ -18,12 +18,13 @@ import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 import { bodyFootprintRadiusM } from '../../../src/utils/scene/bodyFootprintRadiusM';
 import { MARS_DATUM_RADIUS_M } from '../../../src/data/bodies/marsSurfaceParams';
 import { formatDistance } from '../../../src/utils/format/formatDistance';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const JUPITER_RADIUS_M = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'jupiter', 'test'));
 
 const jupiterTarget: BodyInfo = {
   type: 'body',
-  id: 'jupiter',
+  id: asSceneBodyId('jupiter'),
   label: 'Jupiter',
   positionMpc: [0, 0, 0],
 };
@@ -57,7 +58,7 @@ describe('BodyDetailCard', () => {
     // both must appear exactly once, not duplicated.
     const marsTarget: BodyInfo = {
       type: 'body',
-      id: 'mars',
+      id: asSceneBodyId('mars'),
       label: 'Mars',
       positionMpc: [0, 0, 0],
     };
@@ -87,7 +88,7 @@ describe('BodyDetailCard', () => {
     // the rows stay exactly where they were before this feature.
     const callistoTarget: BodyInfo = {
       type: 'body',
-      id: 'callisto',
+      id: asSceneBodyId('callisto'),
       label: 'Callisto',
       positionMpc: [0, 0, 0],
     };

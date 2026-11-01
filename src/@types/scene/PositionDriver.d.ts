@@ -8,9 +8,11 @@
 import type { Vec3 } from '../math/Vec3';
 import type { OrbitalElements } from './OrbitalElements';
 import type { SurfaceFixedSite } from './SurfaceFixedSite';
+import type { SceneBodyId } from './SceneBodyId';
+import type { PositionedId } from './PositionedId';
 
 export type PositionDriver =
-  | { readonly kind: 'anchor'; readonly id: string; readonly positionMpc: Vec3 }
-  | { readonly kind: 'orbit'; readonly id: string; readonly elements: OrbitalElements }
-  | { readonly kind: 'sampled'; readonly id: string; readonly focusId: 'sun' }
+  | { readonly kind: 'anchor'; readonly id: PositionedId; readonly positionMpc: Vec3 }
+  | { readonly kind: 'orbit'; readonly id: SceneBodyId; readonly elements: OrbitalElements }
+  | { readonly kind: 'sampled'; readonly id: SceneBodyId; readonly focusId: SceneBodyId & 'sun' }
   | ({ readonly kind: 'surfaceFixed' } & SurfaceFixedSite);

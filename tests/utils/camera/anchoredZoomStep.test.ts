@@ -18,6 +18,7 @@ import { anchoredZoomStep } from '../../../src/utils/camera/anchoredZoomStep';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
 import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const BASIS_IDENTITY: BodyFixedPose['basisLocal'] = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 const BODY_RADIUS_M = 6_371_000;
@@ -38,7 +39,7 @@ function magnitude([x, y, z]: readonly [number, number, number]): number {
 describe('anchoredZoomStep', () => {
   it('260 notches out and back with the cursor parked (missing) returns to the starting pose', () => {
     const start: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [0, 0, 30_000_000],
       basisLocal: BASIS_IDENTITY,
@@ -84,7 +85,7 @@ describe('anchoredZoomStep', () => {
     // so `f` and `1/f` cancel — here to the metre out of 6371 km.
     const altitudeM = 1000;
     const start: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [0, 0, BODY_RADIUS_M + altitudeM],
       basisLocal: BASIS_IDENTITY,
@@ -121,7 +122,7 @@ describe('anchoredZoomStep', () => {
 
   it('is stateless: the same input pose and factor give the same output twice', () => {
     const pose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [1_000_000, 2_000_000, 20_000_000],
       basisLocal: BASIS_IDENTITY,
@@ -156,7 +157,7 @@ describe('anchoredZoomStep', () => {
 
   it('zooming out recedes from the cursor anchor, mirroring the dive (ruling 7)', () => {
     const pose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [0, 0, 20_000_000],
       basisLocal: BASIS_IDENTITY,
@@ -190,7 +191,7 @@ describe('anchoredZoomStep', () => {
   it('an approach step never goes below the surface floor', () => {
     const floorM = surfaceFloorM(BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
     const pose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [0, 0, floorM * 1.2],
       basisLocal: BASIS_IDENTITY,
@@ -211,7 +212,7 @@ describe('anchoredZoomStep', () => {
 
   it('an oversized factor is clamped on both signs', () => {
     const pose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [0, 0, 50_000_000],
       basisLocal: BASIS_IDENTITY,
@@ -265,7 +266,7 @@ describe('anchoredZoomStep', () => {
 
   it("an approach genuinely anchors on the cursor, and never crosses onto the anchor's far side", () => {
     const pose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [0, 0, 20_000_000],
       basisLocal: BASIS_IDENTITY,

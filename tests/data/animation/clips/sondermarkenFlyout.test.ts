@@ -25,6 +25,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const BASIS = ORIENTATION_FRAMES.ecliptic;
 // aimAlong names no subject, so the resolver is never asked.
@@ -33,7 +34,7 @@ const SIM_DAYS = CONST_J2000 + 123.4;
 
 /** Eye in Earth's body-fixed metres, and the view direction in world. */
 function eyeAndView(pose: CameraPose) {
-  const earth = deriveBodyStates(SIM_DAYS).get('earth')!;
+  const earth = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!;
   const toEye = rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), BASIS);
   const eyeWorldM = [0, 1, 2].map(
     (i) =>

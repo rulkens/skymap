@@ -3,7 +3,7 @@ import {
   pickColourIndex,
   UNKNOWN_COLOUR_RAMP_POSITION,
 } from '../../../src/data/galaxyCatalog/colourIndex';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 
 // d = 0 collapses the K-correction term to zero so the assertions can
 // focus on the observed-colour normalisation. Standalone K-correction

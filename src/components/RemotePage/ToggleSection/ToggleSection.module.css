@@ -1,0 +1,68 @@
+/* The summary is the fold's control: tall enough to hit, with a chevron that turns when open. */
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-height: var(--touch-target);
+  margin: calc(-1 * var(--space-4)) 0;
+  list-style: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.root::-webkit-details-marker {
+  display: none;
+}
+
+.root::after {
+  content: '';
+  width: var(--space-3);
+  height: var(--space-3);
+  margin-left: auto;
+  border-right: 2px solid var(--color-fg-tertiary);
+  border-bottom: 2px solid var(--color-fg-tertiary);
+  transform: rotate(45deg);
+  transition: var(--transition-chevron);
+}
+
+details[open] > .root::after {
+  transform: rotate(225deg);
+}
+
+.root:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+.count {
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-height: var(--touch-target);
+  font-size: var(--font-size-input);
+}
+
+.box {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.box:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root::after {
+    transition: none;
+  }
+}

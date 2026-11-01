@@ -4,8 +4,8 @@
 
 ## Problem
 
-`src/@types/engine/frame/PassState.d.ts:12-23` is a `Pick<EngineState>` including `gpu` (38 handles), `subsystems`, `assetSlots`, `data` and `settings`. Asset factories receive the full `EngineState` (`SlotDeps.d.ts:30-33`, `createLayers.ts:219`). `starCatalog` (`starPointsPass.ts:249`, `fieldStarSpherePass.ts:272`, `starSpheresPass.ts:126`) and `blackHoles` (`blackHoleMarkerPass.ts:45,80`) draw through `state.gpu.bodyPickRenderer`; `galaxyCatalog` reads `state.gpu.focusUniform!` although `LayerCoreDeps` already hands it the same object. Because `PassState` depends on the settings root type, the composition cannot be read off `APP_COMPOSITION` (circular alias), which is why `compositions/app.ts`, `appVisibility.ts`, `appSettingsSlices.ts`, `appExhibits.ts` and `data/sources.ts:15-28` are five parallel lists.
+`src/@types/engine/frame/PassState.d.ts` still picks `gpu` and `subsystems` off `EngineState` (the `data` and `assetSlots` bags left with the body Layers). Asset factories receive the full `EngineState` (`SlotDeps.d.ts`, `createLayers.ts`). `starCatalog` (`starPointsPass.ts`, `fieldStarSpherePass.ts`, `starSpheresPass.ts`) and `blackHoles` (`blackHoleMarkerPass.ts`) draw through `state.gpu.bodyPickRenderer`, so a Layer pass can reach any core renderer and nothing flags it. (#965 already moved `focusUniform` onto the Runtime.)
 
 ## Direction
 
-`PassState` becomes settings, tier, selection and selectionRows plus explicit capabilities. Shared renderers (`bodyPickRenderer`) and the focus uniform are `LayerCoreDeps` members. With the alias broken, derive the four lists from `APP_COMPOSITION`. Decide the order: capabilities first (each Layer stops reading `state.gpu`), then the type narrows, then the lists collapse.
+`PassState` becomes settings, tier, selection and selectionRows plus explicit capabilities. Shared renderers (`bodyPickRenderer`) become `LayerCoreDeps` members. Order: capabilities first (each Layer stops reading `state.gpu`), then the type narrows. The composition-root registries are ADR 0014's decided shape and stay.

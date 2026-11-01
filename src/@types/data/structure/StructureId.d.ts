@@ -1,6 +1,6 @@
-import type { SOURCE_REGISTRY } from '../../../data/sources';
+import type { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 
-type AnyEntry = (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY];
+type AnyEntry = (typeof APP_SOURCE_REGISTRY)[keyof typeof APP_SOURCE_REGISTRY];
 
 /**
  * StructureId — the source-level id for the structure source type

@@ -9,6 +9,7 @@ import { selectionDriver } from '../selection/selectionDriver';
  * `liveBodyPosition(...) !== null` answers "has a position", not "moves".
  */
 export function bodyMovesThisFrame(focusRow: SelectionRow | null): boolean {
-  const id = selectionDriver(focusRow)?.poseId ?? null;
-  return id !== null && bodyFollowsSimClock(id);
+  const driver = selectionDriver(focusRow);
+  const id = driver?.poseId ?? null;
+  return id !== null && (driver!.followsSimClock === true || bodyFollowsSimClock(id));
 }

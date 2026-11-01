@@ -1,0 +1,58 @@
+.root {
+  position: fixed;
+  pointer-events: auto;
+  box-sizing: border-box;
+  width: 20rem;
+  max-width: calc(100vw - 1rem);
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #05070d;
+  border: 1px solid rgba(168, 208, 255, 0.5);
+  color: var(--color-fg);
+}
+
+.root textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+  padding: 0.5rem;
+  border: 1px solid rgba(168, 208, 255, 0.5);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+}
+
+.root textarea:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+}
+
+.button {
+  composes: ring ring-small from '../../../styles/ring.module.css';
+  min-height: 2.25rem;
+  padding: 0.125rem 0;
+}
+
+.hint,
+.status {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--site-text-muted);
+}
+
+.status:empty {
+  display: none;
+}
+
+.status.error {
+  color: #ffb4a8;
+}

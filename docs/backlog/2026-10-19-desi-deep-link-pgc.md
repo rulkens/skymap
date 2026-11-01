@@ -4,7 +4,7 @@
 
 ## Claim to verify
 
-Reported by the pipeline audit: DESI rows carry TARGETID in `objID` (`tools/parsers/desiFits.ts:269`), the galaxy id encoder emits `pgc-<objID>` for any source other than SDSS, and `galaxyCatalogSelectionRow.ts:88`'s `resolvePgc` searches only GLADE and 2MRS. If so, a `#focus=` link to a DESI galaxy never resolves.
+Reported by the pipeline audit: DESI rows carry TARGETID in `objID` (`tools/parsers/desiFits.ts:269`), `src/services/url/encodeGalaxyId.ts:28` emits `pgc-<objID>` for any source other than SDSS, and `galaxyCatalogSelectionRow.ts:88`'s `resolvePgc` searches only GLADE and 2MRS. If so, a `#focus=` link to a DESI galaxy never resolves.
 
 ## Next
 

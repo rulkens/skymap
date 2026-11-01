@@ -5,7 +5,7 @@
 
 ## Problem
 
-The label director's greedy screen-space overlap cull (`labelDirectorSubsystem.ts` `declutter`) suppresses the lower-`prominencePx` of any two labels whose measured text rects (padded by `DECLUTTER_PAD_PX`) intersect on screen. Under a slow orbit (or any sustained camera move) labels repeatedly cross that boundary and get suppressed-then-released frame-to-frame, which reads as flicker — distracting on a screen recording, and arguably during normal navigation.
+The label director's greedy screen-space overlap cull (`label2DDirector.ts` `declutter`) suppresses the lower-`prominencePx` of any two labels whose measured text rects (padded by `DECLUTTER_PAD_PX`) intersect on screen. Under a slow orbit (or any sustained camera move) labels repeatedly cross that boundary and get suppressed-then-released frame-to-frame, which reads as flicker — distracting on a screen recording, and arguably during normal navigation.
 
 ## Current state (verified 2026-06-29)
 
@@ -13,5 +13,5 @@ No setting exists. `declutter(...)` runs unconditionally every frame inside `run
 
 ## Two threads
 
-1. **User setting** to disable declutter — under **Settings → Labels → Advanced** (the Labels section exists; this is a new per-section Advanced toggle, plumbed `settings.labels.declutter` → `labelDirectorSubsystem`).
+1. **User setting** to disable declutter — under **Settings → Labels → Advanced** (the Labels section exists; this is a new per-section Advanced toggle, plumbed `settings.labels.declutter` → `label2DDirector`).
 2. **Stabilise the cull** so on/off decisions hysteresis-damp rather than toggle per-frame (a release margin wider than the suppress margin, or a short cooldown before a suppressed label can re-show) — the proper fix if labels are wanted _on_ during the cosmic-web clip and the tour.

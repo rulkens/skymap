@@ -3,5 +3,6 @@
  */
 
 import { starCatalogsSlice } from './starCatalogs/slice';
+import { sStarTrailsSlice } from './sStarTrails/slice';
 
-export const starCatalogLayerSettings = [starCatalogsSlice] as const;
+export const starCatalogLayerSettings = [starCatalogsSlice, sStarTrailsSlice] as const;
