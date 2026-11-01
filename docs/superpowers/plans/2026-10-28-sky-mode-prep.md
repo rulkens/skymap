@@ -98,13 +98,22 @@ so the in-front path is unchanged.
 #947 precesses Earth's pole, so the spec's equatorial grid is now the grid **of date**, and RA zero is
 the host's vernal equinox for every host. The fix rode #949, the PR that carries the spec.
 
-## Status (2026-10-28, autonomous run)
+## Status (2026-10-30)
 
-- **P1 done, verified in an offscreen harness.** An offscreen WebGPU page (SwiftShader) draws
-  eye-crossing segments through the old and new helpers against a CPU reference projection. Old:
-  wedges. New: constant-width lines on the reference, with the both-in-front case unchanged. All 155
-  linked entry shaders compile clean in Chrome's WGSL compiler. The in-app shots listed above are
-  still owed: vite cannot run in that container (EMFILE), and the deployed app renders a black scene
-  under SwiftShader (texture uploads fail).
-- **P3 done.** The suite is green, and the Søndermarken/Everest shots are still owed.
-- **P4 not started.** It needs the in-app shots.
+- **P1 done.**
+  - **Harness:** in an offscreen WebGPU harness (SwiftShader) the old helper draws eye-crossing
+    segments as wedges; the new one draws constant-width lines on a CPU reference projection, and
+    segments with both ends in front are unchanged.
+  - **Shaders:** all linked entry shaders (158) compile clean in Chrome's WGSL compiler.
+  - **In-app shots (since #948 made them possible here):** main vs this branch on the dome rig and
+    on Earth from orbit, both with constellations on. Both views are unchanged; the only difference
+    is the live clock moving Hubble's label.
+  - **Repro:** the bug case itself is the harness pair. A 60° or dome view of real constellations
+    rarely puts a figure line across the eye plane, so the in-app pair is the no-regression check.
+- **P3 done.** Søndermarken (1.5 km) and Everest (12 km) are unchanged against main (≤ 4 pixels of
+  compression noise).
+- **P4 moves to the feature PR.**
+  - **Why:** the repro needs an eye at 1.7 m, and every body-arm path floors the eye at the ~15 m
+    `SURFACE_STANDOFF_RADII`. Only the sky rung reaches standing height.
+  - **So:** it becomes the feature plan's first eye check, before the grids. The rule stands: fix
+    only what the shots show.
