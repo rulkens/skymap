@@ -1,10 +1,7 @@
 /**
  * zoneOfAvoidanceUpsamplePass tests — the consumer half of the reduced-res
  * band: the hdr-target layer that composites the reduced-res `zoa` offscreen
- * into HDR (`runtime.upsample`) and then draws the full-res curved lettering
- * via the shared `label3DRenderer.draw` — `postBlit` guards itself
- * independently, so `label3DRenderer` being absent pre-bootstrap doesn't
- * silence the blit.
+ * into HDR (`runtime.upsample`).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -55,66 +52,16 @@ function makeRuntime(upsampleDraw?: ReturnType<typeof vi.fn>): ZoneOfAvoidanceRu
   } as unknown as ZoneOfAvoidanceRuntime;
 }
 
-function makeState(
-  over: {
-    labelDraw?: ReturnType<typeof vi.fn>;
-    glyphCount?: number;
-    label3D?: unknown;
-  } = {},
-): EngineState {
-  return {
-    gpu: {
-      label3DRenderer:
-        over.label3D === undefined
-          ? { draw: over.labelDraw ?? vi.fn(), glyphCount: () => over.glyphCount ?? 1 }
-          : over.label3D,
-    },
-    settings: { zoneOfAvoidance: { labelColor: [1, 1, 1], intensity: 1 } },
-  } as unknown as EngineState;
-}
-
 describe('zoneOfAvoidanceUpsamplePass.draw', () => {
-  it('composites the zoa offscreen into HDR and draws the full-res lettering', () => {
+  it('composites the zoa offscreen into HDR', () => {
     const upsampleDraw = vi.fn();
-    const labelDraw = vi.fn();
     const pass = zoneOfAvoidanceUpsamplePass(makeRuntime(upsampleDraw));
-    const state = makeState({ labelDraw });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    pass.draw(PASS_STUB, view, ctx, state, 1);
+    pass.draw(PASS_STUB, view, ctx, {} as EngineState, 1);
 
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
     expect(upsampleDraw.mock.calls[0]![0]).toBe(PASS_STUB);
     expect(upsampleDraw.mock.calls[0]![1]).toBe(ZOA_VIEW);
-
-    expect(labelDraw).toHaveBeenCalledTimes(1);
-    const labelArgs = labelDraw.mock.calls[0]!;
-    // label3DRenderer.draw(pass, viewProj, viewportPx) — full-res: the
-    // resolved SlabView's vp/viewportPx, NOT a downscaled one.
-    expect(labelArgs[0]).toBe(PASS_STUB);
-    expect(labelArgs[1]).toBe(view.vp);
-    expect(labelArgs[2]).toEqual(view.viewportPx);
-  });
-
-  it('skips the labels but still blits when label3DRenderer is null', () => {
-    const upsampleDraw = vi.fn();
-    const pass = zoneOfAvoidanceUpsamplePass(makeRuntime(upsampleDraw));
-    const state = makeState({ label3D: null });
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    expect(() => pass.draw(PASS_STUB, view, ctx, state, 1)).not.toThrow();
-    expect(upsampleDraw).toHaveBeenCalledTimes(1);
-  });
-
-  it('skips the labels but still blits when glyphCount is 0 (no lettering to draw)', () => {
-    const upsampleDraw = vi.fn();
-    const labelDraw = vi.fn();
-    const pass = zoneOfAvoidanceUpsamplePass(makeRuntime(upsampleDraw));
-    const state = makeState({ labelDraw, glyphCount: 0 });
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    pass.draw(PASS_STUB, view, ctx, state, 1);
-    expect(upsampleDraw).toHaveBeenCalledTimes(1);
-    expect(labelDraw).not.toHaveBeenCalled();
   });
 });

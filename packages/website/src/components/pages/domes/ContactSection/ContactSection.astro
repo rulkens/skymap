@@ -1,0 +1,41 @@
+---
+/*
+ * The domes page's contact section. It is an `.astro` file because Astro finds a `client:` island only
+ * where its tag stands in the markup, not inside a `{ ? : }` expression in MDX.
+ */
+import Beside from '../../../shared/layout/Beside/Beside.tsx';
+import Section from '../../../shared/layout/Section/Section.tsx';
+import { CONTACT_ENDPOINT, ISSUES_URL, TURNSTILE_SITE_KEY } from '../../../../data/contact';
+import { sitePath } from '../../../../utils/sitePath';
+import ContactClosed from '../ContactForm/ContactClosed.tsx';
+import ContactForm from '../ContactForm/ContactForm.tsx';
+
+const privacyHref = sitePath('/privacy/');
+---
+
+<Section id="contact">
+  <Beside>
+    <div>
+      <h2>Write to us</h2>
+      <p>
+        If you teach, <a href={sitePath('/classroom/')}>Use Skymap in the classroom</a> has links you can use today
+        without asking anyone.
+      </p>
+    </div>
+    <div>
+      {
+        CONTACT_ENDPOINT && TURNSTILE_SITE_KEY ? (
+          <ContactForm
+            client:visible
+            endpoint={CONTACT_ENDPOINT}
+            siteKey={TURNSTILE_SITE_KEY}
+            privacyHref={privacyHref}
+            issuesHref={ISSUES_URL}
+          />
+        ) : (
+          <ContactClosed privacyHref={privacyHref} issuesHref={ISSUES_URL} />
+        )
+      }
+    </div>
+  </Beside>
+</Section>

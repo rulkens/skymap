@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildAliasIndex } from '../../../../src/layers/galaxyCatalog/load/buildAliasIndex';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';

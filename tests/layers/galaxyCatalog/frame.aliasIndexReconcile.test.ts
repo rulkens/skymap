@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';

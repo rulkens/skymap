@@ -16,13 +16,13 @@ import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
-import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
+import { cosmicFlows } from '../../../src/compositions/clips/cosmicFlows';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/present/milkyWayCloudLiveness';
-import { Source } from '../../../src/data/sources';
-import { APP_VISIBILITY } from '../../../src/compositions/appVisibility';
+import { Source } from '../../../src/data/source';
+import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import { gatePassByFade } from '../../../src/services/engine/layer/gatePassByFade';
 import { resolveFadeValue } from '../../../src/services/engine/presentation/resolveFadeValue';
 
@@ -183,7 +183,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     return {
       subsystems: { fades, clipPlayer },
       // The composed entries core resolves the handed value from.
-      visibilityEntries: APP_VISIBILITY,
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
       settings: {
         milkyWay: { enabled: true },
         galaxyCatalogs: { items: makeGalaxyCatalogItems() },

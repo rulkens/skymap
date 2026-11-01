@@ -22,15 +22,15 @@ one — hence doubles rather than a clean brightness ramp.
 
 - Fade the direct-view skyCapture roster layers out with the inverse of the
   band alpha inside the band, so total contribution per source stays ~1. The
-  band-gated step split (`matchesHdrPhase`, T14b) already distinguishes
-  inside-band frame composition — a per-layer alpha ride on the same predicate
-  is the natural seam.
+  per-frame band alpha (`skyCaptureBandAlpha`) is read today only by the lens
+  pass and the probe blit — a per-layer alpha ride on the same value is the
+  natural seam.
 - Alternatively gate direct roster layers hard-off above a band-alpha
   threshold and let the lens quad's own edge fade cover the transition.
 
 ## Pointers
 
-- Band definition + alpha: `SCALE_FADE_BANDS` row for `sgr-a-star` (T7).
-- Step split predicate: `matchesHdrPhase` in
-  `src/services/engine/frame/slabs.ts`.
-- Lens quad edge fade: `sgrAStarLensing/fragment.wesl` (`edgeFadeEndRs`).
+- Band definition: `SCALE_FADE_BANDS.sgrAStarLensing`; per-frame alpha:
+  `src/services/engine/frame/skyCaptureBandAlpha.ts`.
+- Lens pass reading it: `src/layers/blackHoles/passes/blackHoleLensingPass.ts:53`.
+- Lens quad edge fade: `src/services/gpu/shaders/bodies/blackHoleLensing/fragment.wesl` (`edgeFadeEndRs`).

@@ -1,8 +1,9 @@
 /**
  * composeForegroundCaption — the per-caption compose every NEAR0 caption producer
- * shares: fade rule → overflow → prominence → occlusion → `occludeNearKm` → lift.
+ * shares: reveal → overflow → prominence → occlusion → `occludeNearKm` → lift.
  * `fade` is the caller's: the per-item value core hands its label entry (switch,
- * fade and clip already folded in), so nothing here reads the registry.
+ * fade, clip and the entry's distance bands already folded in), so nothing here
+ * reads the registry or decides a caption's reach.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -10,7 +11,6 @@ import type { Label2D } from '../../@types/rendering/Label2D';
 import type { CaptionComposeContext } from '../../@types/rendering/CaptionComposeContext';
 import type { ForegroundCaption } from '../../services/engine/presentation/foregroundCaption';
 import { isPickableUnderFocus } from '../structure/isPickableUnderFocus';
-import { CAPTION_FADE_RULES } from '../../services/engine/presentation/captionFadeRules';
 import {
   CAPTION_PRIORITY,
   CAPTION_TIER_SCALE,
@@ -39,13 +39,8 @@ export function composeForegroundCaption(
     pxPerRad: ctx.drawPxPerRad,
   });
 
-  const rule = CAPTION_FADE_RULES[label.kind];
   const revealAlpha = label.revealBand === undefined ? 1 : fadeBand(label.revealBand, distanceMpc);
-  const fadeAlpha =
-    rule.fadeTarget(distanceMpc, ctx.camOrbitDistanceMpc) *
-    revealAlpha *
-    overflowFade(subjectSizePx, ctx.viewportShortSidePx) *
-    fade;
+  const fadeAlpha = revealAlpha * overflowFade(subjectSizePx, ctx.viewportShortSidePx) * fade;
 
   const prominencePx =
     CAPTION_PRIORITY[label.kind] * CAPTION_TIER_SCALE +
@@ -68,7 +63,15 @@ export function composeForegroundCaption(
     })
       ? 1
       : 0,
-    occludeNearKm: (distanceMpc - label.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
+    // The sampled-depth channel asks whether the scene at the subject's pixel
+    // stands nearer than the subject. Under a pixel, that pixel is one terrain
+    // texel spanning kilometres and the baked site height sits inside its LOD
+    // error, so the answer is noise (rover captions flickered over Mars); a
+    // negative cutoff is the shader's "never", leaving the sphere test to decide.
+    occludeNearKm:
+      subjectSizePx < 1
+        ? -1
+        : (distanceMpc - label.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
     prominencePx,
     lift: {
       subjectSizePx,

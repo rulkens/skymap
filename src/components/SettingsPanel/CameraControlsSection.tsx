@@ -6,6 +6,7 @@
 
 import { memo } from 'react';
 import type { ReactNode } from 'react';
+import type { FocusMoveStyle } from '../../@types/camera/FocusMoveStyle';
 import type { ControlSchemeId } from '../../@types/engine/camera/ControlSchemeId';
 import type { FrictionGroup } from '../../@types/camera/FrictionGroup';
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
@@ -19,8 +20,15 @@ const FRICTION_TOGGLES: readonly { group: FrictionGroup; label: string }[] = [
   { group: 'roll', label: 'Look & roll' },
 ];
 
+const FOCUS_MOVE_STYLE_LABELS: Readonly<Record<FocusMoveStyle, string>> = {
+  eased: 'Eased',
+  geodesic: 'Geodesic',
+};
+
 export type CameraControlsSectionProps = {
   readonly controls: CameraControlsSettings;
+  readonly focusMoveStyle: FocusMoveStyle;
+  readonly onFocusMoveStyleChange: (style: FocusMoveStyle) => void;
   readonly onSchemeChange: (scheme: ControlSchemeId) => void;
   readonly onFrictionChange: (friction: number) => void;
   readonly onFrictionOnChange: (group: FrictionGroup, on: boolean) => void;
@@ -28,6 +36,8 @@ export type CameraControlsSectionProps = {
 
 function CameraControlsSection({
   controls,
+  focusMoveStyle,
+  onFocusMoveStyleChange,
   onSchemeChange,
   onFrictionChange,
   onFrictionOnChange,
@@ -44,6 +54,27 @@ function CameraControlsSection({
         >
           <option value="skymap">Skymap</option>
           <option value="openspace">OpenSpace</option>
+        </select>
+      </div>
+
+      <div className={styles.panelRow}>
+        <label htmlFor="focus-move-style">Focus moves</label>
+        <select
+          id="focus-move-style"
+          className={styles.modeSelect}
+          value={focusMoveStyle}
+          onChange={(e) => {
+            const style = e.target.value;
+            if (Object.hasOwn(FOCUS_MOVE_STYLE_LABELS, style)) {
+              onFocusMoveStyleChange(style as FocusMoveStyle);
+            }
+          }}
+        >
+          {Object.entries(FOCUS_MOVE_STYLE_LABELS).map(([style, label]) => (
+            <option key={style} value={style}>
+              {label}
+            </option>
+          ))}
         </select>
       </div>
 

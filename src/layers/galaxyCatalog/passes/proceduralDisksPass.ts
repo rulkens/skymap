@@ -25,7 +25,7 @@ export function proceduralDisksPass(runtime: GalaxyCatalogRuntime): ContentPass 
         view.viewportPx,
         view.camPos,
         ctx.drawPxPerRad,
-        state.gpu.focusUniform!.bindGroup,
+        runtime.focusBindGroup,
         runtime.proceduralDisks.lastOutput.instances,
       );
     },
@@ -41,7 +41,7 @@ export function proceduralDisksPass(runtime: GalaxyCatalogRuntime): ContentPass 
         view.viewportPx,
         view.camPos,
         ctx.drawPxPerRad,
-        state.gpu.focusUniform!.bindGroup,
+        runtime.focusBindGroup,
       );
     },
   };

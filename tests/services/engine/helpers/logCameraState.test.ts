@@ -163,7 +163,7 @@ describe('logCameraState', () => {
       },
     };
 
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, bodyArm);
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, bodyArm);
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
     expect(out.frame).toBe('body:earth');
@@ -202,7 +202,7 @@ describe('logCameraState', () => {
       },
     };
 
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, siteArm);
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, siteArm);
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
     expect(out.frame).toBe('site:curiosity');

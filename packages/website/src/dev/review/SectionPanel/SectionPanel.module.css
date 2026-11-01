@@ -20,9 +20,13 @@
   color: var(--color-accent);
 }
 
-.words {
+.job {
   composes: dim from '../ReviewControl/ReviewControl.module.css';
   margin-bottom: var(--space-4);
+}
+
+.words {
+  composes: job;
   font-variant-numeric: tabular-nums;
 }
 

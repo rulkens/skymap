@@ -31,6 +31,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { angleBetween } from '../../../helpers/math/angleBetween';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -47,11 +48,6 @@ function poseAtHR(hr: number, yaw: number, pitch: number): CameraPose {
     distance: R_MPC * (1 + hr),
     roll: 0,
   };
-}
-
-function angleBetween(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
-  const d = a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;
-  return Math.acos(Math.max(-1, Math.min(1, d)));
 }
 
 // Altitudes spanning below-engage (transient crossing notches), the whole

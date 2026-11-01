@@ -1,7 +1,7 @@
 /*
  * type.module.css — named text styles that components share: the small size, a date, running prose
  * and an opening section's lead. A vocabulary, not a component: no `.root`; take a class with
- * `composes: small from '../../styles/type.module.css'`.
+ * `composes: small from '../../../../styles/type.module.css'`.
  */
 
 /* `:where`, so a composing component's own size, weight or line height wins wherever its rule falls in the sheet. */

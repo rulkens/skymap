@@ -6,10 +6,10 @@
 // orbit lock reads it a second time, as a spin rate (`whale.ts`).
 
 import { SCALE_UNITS } from '../scaleUnits';
-import { SCENE_EARTH } from '../bodies/sceneEarth';
+import { EARTH_DATUM_RADIUS_M } from '../bodies/earthDatumRadiusM';
 import { periodDaysFromSemiMajorKm } from '../../utils/orbit/periodDaysFromSemiMajorKm';
 
-export const HITCHHIKER_ORBIT_SEMI_MAJOR_KM = SCENE_EARTH.surface.datumRadiusM / 1000 + 400;
+export const HITCHHIKER_ORBIT_SEMI_MAJOR_KM = EARTH_DATUM_RADIUS_M / 1000 + 400;
 export const HITCHHIKER_ORBIT_PERIOD_DAYS = periodDaysFromSemiMajorKm(
   HITCHHIKER_ORBIT_SEMI_MAJOR_KM,
 );

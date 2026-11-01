@@ -1,6 +1,6 @@
 /**
  * flyPathDemo tests — the stage-03-shaped `flyPath` clip resolves its named
- * group waypoints, compiles to one path track, and evaluates as a smooth path
+ * group waypoints, compiles to one composite track, and evaluates as a smooth path
  * from the live start pose through to the final group (Sculptor).
  *
  * The clip mixes `atFocus` (catalog-resolved) and `atPoint` (hand-placed)

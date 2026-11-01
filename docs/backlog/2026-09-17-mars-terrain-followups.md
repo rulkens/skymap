@@ -3,7 +3,7 @@
 `needs-design` — left open when #743 landed (user: land it, fix in follow-ups).
 
 - **Cut planner step 3 samples only the lowest height.** The projected-bbox cull in
-  `src/utils/surfaceTiles/cutSurfaceTiles.ts` projects the patch at its subtree
+  `src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles.ts` projects the patch at its subtree
   minimum, so a non-straddling patch whose peaks poke into view at a screen edge
   can still be dropped. Step 2 (frustum sphere) was made conservative in #743.
 - **NaN DTM posts in the feather ring.** `tools/textures/clippedHeightSource.ts:48-53`

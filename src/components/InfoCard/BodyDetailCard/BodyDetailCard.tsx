@@ -1,8 +1,8 @@
 /**
  * BodyDetailCard — rich panel for a focused scene body (Earth, a planet/moon, a
- * mesh body) or craft, which reads as a body; stars have `StarDetailCard`. The engine hands React a lean
- * `BodyInfo`; the rest comes from the compiled-in `BODY_FACTS` table, keyed by
- * `id` (no entry: radius alone). Camera distance swings as the body orbits, so
+ * mesh body), a craft or an Earth scene, each read as a body; stars have
+ * `StarDetailCard`. The engine hands React a lean `BodyInfo`; the rest comes
+ * from the compiled-in `BODY_FACTS` table, keyed by `id` (no entry: radius alone). Camera distance swings as the body orbits, so
  * it arrives as the `distanceMpc` prop, never read from the engine here.
  * Optional fields drop their row rather than show a blank.
  */
@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
 import type { CraftInfo } from '../../../@types/engine/CraftInfo';
+import type { EarthSceneInfo } from '../../../@types/engine/EarthSceneInfo';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import { formatDistance } from '../../../utils/format/formatDistance';
 import { formatRadiusM } from '../../../utils/format/formatRadiusM';
@@ -34,7 +35,7 @@ import styles from '../cardChrome.module.css';
 import local from './BodyDetailCard.module.css';
 
 export type BodyDetailCardProps = {
-  target: BodyInfo | CraftInfo;
+  target: BodyInfo | CraftInfo | EarthSceneInfo;
   isPinned?: boolean;
   layout?: CardLayout;
   /**

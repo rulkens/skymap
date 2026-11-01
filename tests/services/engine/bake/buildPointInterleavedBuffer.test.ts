@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 

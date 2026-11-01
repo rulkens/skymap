@@ -1,0 +1,132 @@
+---
+title: Use Skymap in the classroom | Skymap
+description: Pupils fly the distances of space at true scale, from the Moon to the galaxies. A five-minute tour, ready-made lesson links, no accounts, no install.
+---
+
+import AddressStrip from '../../../components/shared/links/AddressStrip/AddressStrip.tsx';
+import ClassroomHero from '../../../components/pages/classroom/ClassroomHero/ClassroomHero.tsx';
+import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
+import Credits from '../../../components/shared/text/Credits/Credits.tsx';
+import Feature from '../../../components/pages/classroom/Feature/Feature.tsx';
+import LessonLinks from '../../../components/pages/classroom/LessonLinks/LessonLinks.tsx';
+import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
+import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
+import Remark from '../../../components/shared/text/Remark/Remark.tsx';
+import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
+import Step from '../../../components/shared/layout/Step/Step.tsx';
+import Steps from '../../../components/shared/layout/Steps/Steps.tsx';
+import Section from '../../../components/shared/layout/Section/Section.tsx';
+import { appLink } from '../../../data/appLink';
+import { CLASS_FEATURES } from './classFeatures';
+import { fact } from '../../../data/fact';
+import { HOME_LINKS } from '../../../data/homeLinks';
+import { HONESTY_BINS } from '../../../data/honestyBins';
+import links from '../../../styles/links.module.css';
+import text from '../../../styles/type.module.css';
+import { sitePath } from '../../../utils/sitePath';
+import { says } from './classroom.data';
+
+<ClassroomHero client:visible />
+
+<Section id="lesson">
+  <SectionHead title="What you can do in a lesson">
+    <p>The first needs no preparation.</p>
+  </SectionHead>
+  {CLASS_FEATURES.map((feature) => (
+    <Feature
+      shot={feature.shot}
+      tall={feature.tall}
+      title={feature.title}
+      kicker={feature.prep}
+      ask={feature.ask}
+      href={appLink(feature.hash)}
+      action={feature.action}
+    >
+      <p>{feature.factIds.map(says).join(' ')}</p>
+      <p>{feature.lesson}</p>
+    </Feature>
+  ))}
+  <Remark text={says('earth-orbit-speed')} />
+</Section>
+
+<Section id="links">
+  <SectionHead title="Ready-made links">
+    <p>Each link has one question. It opens where its picture was taken. The pictures have the <a href={sitePath('/docs/guide/settings/#turn-names-on-or-off')}>name labels</a> switched off; the links open with them on.</p>
+  </SectionHead>
+  <LessonLinks />
+</Section>
+
+<Section id="make">
+  <SectionHead title="Make your own link">
+    <p>There is no share button: the address bar is the link.</p>
+  </SectionHead>
+  <Steps>
+    <Step title="Find the object">
+      <p>Open <a href={sitePath('/docs/guide/finding/#open-the-search')}>the search</a>, type a name and press Enter. {says('double-click-focus')}</p>
+    </Step>
+    <Step title="Set the date">
+      <p>Select <a href={sitePath('/docs/guide/time/#set-a-date-and-time')}>the clock</a> at the bottom right, type a date and a time, and press Enter. {says('date-entry-utc')}{' '}{says('date-entry-paused')}</p>
+    </Step>
+    <Step title="Copy the address">
+      <p>{says('lesson-link')}</p>
+    </Step>
+  </Steps>
+  <Columns count={2}>
+    <AddressStrip hash={HOME_LINKS.classroom} />
+    <div>
+      <p>Paste it into a lesson plan or a slide. {says('link-pose')}</p>
+      <ObjLink size="small" hang href={sitePath('/docs/guide/sharing/')}>Sharing a view</ObjLink>
+    </div>
+  </Columns>
+</Section>
+
+<Section id="runs">
+  <SectionHead title="Before you rely on it" />
+  <Columns count={3}>
+    <div>
+      <h3>What it runs on</h3>
+      <p><a href={sitePath('/docs/reference/glossary/#webgpu')}>WebGPU</a> is the part of a browser that lets a web page draw with the computer’s graphics chip.{' '}{says('webgpu-required')}</p>
+      <p className={text.small}>{says('webgpu-browsers')}</p>
+      <ObjLink size="small" hang href={sitePath('/docs/start/browsers/')}>Browser support and troubleshooting</ObjLink>
+    </div>
+    <div>
+      <h3>Before the lesson</h3>
+      <p>Open one link on a pupil’s device before the lesson. School networks and older graphics chips differ.{' '}{says('app-browser-advice')}</p>
+      <p>There is nothing to install. {says('no-account')} The app counts visits without cookies: the{' '}<a href={sitePath('/privacy/')}>privacy page</a> has the details.</p>
+    </div>
+    <div>
+      <h3>Limits</h3>
+      <p>{says('english-only')}</p>
+      <p>{says('phone-data-size')}</p>
+      <p>A link fixes the camera among the stars, so it cannot show the Moon’s phases as they look from the ground. There is no link for phases or eclipses.</p>
+    </div>
+  </Columns>
+</Section>
+
+<Section id="honest">
+  <SectionHead title="Measured, derived and drawn">
+    <p>Some of the scene is data, some is <a href={sitePath('/docs/science/')}>derived from data</a>, and some is a choice of ours. It makes a lesson in how we know things: of anything on screen, ask which of the three it is.</p>
+  </SectionHead>
+  <Columns count={3}>
+    {HONESTY_BINS.map((bin) => (
+      <div>
+        <h3>{bin.title}</h3>
+        <p>{bin.gloss}</p>
+      </div>
+    ))}
+  </Columns>
+  <div className={links['link-row']}>
+    <ObjLink hang href={sitePath('/science/#bins')}>The science behind Skymap</ObjLink>
+  </div>
+</Section>
+
+<Section as="div">
+  <div className={links['onward-row']}>
+    <OpenApp />
+    <ObjLink href={sitePath('/domes/')}>Domes and museums</ObjLink>
+  </div>
+</Section>
+
+<Section as="div">
+  <Credits />
+</Section>

@@ -12,7 +12,7 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 
 const PROJECTION = { fovYRad: 0.9, aspect: 16 / 9, near: 0.01, far: 1e4 };
 // The pose basis (settings) and the up-basis MUST differ, or a swap between the
@@ -28,7 +28,7 @@ function makeState(overrides?: { booted?: boolean }): EngineState {
   return {
     booted: overrides?.booted ?? true,
     settings: { orientation: 'equatorial' },
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: { pose: absoluteArm(REGISTERED) },
       outputs: {
@@ -38,7 +38,6 @@ function makeState(overrides?: { booted?: boolean }): EngineState {
         simDays: CONST_J2000,
       },
     },
-    subsystems: { surfaceTiles: null },
   } as unknown as EngineState;
 }
 

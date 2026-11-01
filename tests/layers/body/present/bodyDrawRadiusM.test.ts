@@ -1,0 +1,40 @@
+import { describe, it, expect } from 'vitest';
+import { bodyDrawRadiusM } from '../../../../src/layers/body/present/bodyDrawRadiusM';
+import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { ATMOSPHERE_PARAMS } from '../../../../src/layers/body/present/atmosphereParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../src/layers/body/present/cloudShellParams';
+import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+
+const findPlanet = (id: string) => {
+  const body = SCENE_PLANETS.find((row) => row.id === id);
+  if (body === undefined) throw new Error(`test fixture: no seeded body '${id}'`);
+  return body;
+};
+
+describe('bodyDrawRadiusM', () => {
+  it('returns the bare radius for a body with no shells', () => {
+    // Mimas: no ATMOSPHERE_PARAMS row, not Earth (cloud shell), not Saturn (ring).
+    const mimas = findPlanet('mimas');
+    expect(bodyDrawRadiusM(mimas)).toBe(outerBoundRadiusM(mimas.surface));
+  });
+
+  it("returns Saturn's ring outer edge", () => {
+    const saturn = findPlanet('saturn');
+    // Hand-computed from sceneRings: outerRadiusKm 140_220 → metres.
+    const result = bodyDrawRadiusM(saturn);
+    expect(result).toBe(140_220_000);
+    expect(result).toBeGreaterThan(outerBoundRadiusM(saturn.surface));
+  });
+
+  it("returns Earth's atmosphere top, not its cloud shell — the cloud shell still comes from the envelope row", () => {
+    // Derived from the table bodyDrawRadiusM reads, not a restated literal. Must beat the cloud shell
+    // (BODY_DRAW_ENVELOPES 'earth', footprint * radiusRatio): a missing km->m on the atmosphere branch
+    // would let the cloud shell win, a 1000x wrong near plane.
+    const result = bodyDrawRadiusM(SCENE_EARTH);
+    expect(result).toBe(ATMOSPHERE_PARAMS.earth!.atmosphereTopKm * SCALE_UNITS.KM_TO_M);
+    const cloudShellM = outerBoundRadiusM(SCENE_EARTH.surface) * CLOUD_SHELL_PARAMS.radiusRatio;
+    expect(result).toBeGreaterThan(cloudShellM);
+  });
+});

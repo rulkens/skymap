@@ -25,6 +25,7 @@ import { focusFraming } from '../../services/engine/camera/focusFraming';
 import { hostOf } from '../../services/engine/camera/rungs/hostOf';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { FLY_TO_LON_LAT_TWEEN_MS } from '../../data/camera/flyToLonLatTweenMs';
+import { EASED_FOCUS_EASE } from '../../data/camera/focusMoveDefaults';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../data/scaleUnits';
@@ -100,8 +101,7 @@ export function* watchFlyToLonLatSaga() {
       startCameraTween({
         from: runtime.from,
         to: to.pose,
-        durationMs,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs, ease: EASED_FOCUS_EASE },
         frame,
       }),
     );

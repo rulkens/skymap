@@ -6,36 +6,6 @@ whole-plan reviews as **backlog, not blockers**. Everything here is
 agree-by-construction or dead-code-safe today; each item removes a
 hand-synchronized mirror before it can drift.
 
-## 2. Equirect dir→uv convention has three homes (D9-l1, low)
-
-`cubeSphereMesh.ts` (TS bake of vertex uvs), `dirToEquirectUv` in
-`earth/fragment.wesl:159-163` (the cloud-shadow crossing sample) and
-`equirectUvFromDir` in `lib/analyticSphere.wesl:169-173` co-encode the same
-`u = atan2(y,x)/2π + 0.5`, `v = asin(z)/π + 0.5` convention. The third is the
-canonical WESL home and did not exist when this was filed — the analytic-sphere
-primitive added it — so the fix now has an obvious destination:
-`earth/fragment.wesl` imports it instead of re-deriving. `dirToEquirectUv` is
-`equirectUvFromDir` plus a `fract` on u, and that wrap is what the sampler's
-`repeat` addressing does anyway.
-
-The `0.5` map-centre offset rides along as a third copy of
-`TEXTURE_PRIME_MERIDIAN_U` (`src/data/bodies/texturePrimeMeridianU.ts`, whose
-"three sites" docblock predates the fourth). `analyticSphere.wesl:93-97` at
-least names that source of truth; `earth/fragment.wesl` writes a bare literal.
-No parity test on any copy: the two TS meshes are each pinned separately (lon 0
-→ u 0.5), nothing covers either WESL copy and nothing ties the copies together.
-A mesh longitude-basis change must touch every copy or Earth's ground shadows
-shift off the clouds that cast them.
-
-## 3. earthRenderer.setMap kind ladder → table dispatch (D9-l2, low)
-
-`earthRenderer.setMap` grew one if-branch per plan (surface/material/night/
-normal/clouds — five arms assigning five closure slots + a label ternary). The
-build side got the equivalent consolidation (`KIND_WRITERS` table, plan C); the
-renderer side didn't. A per-kind record table (`slot`, `format-axis`, `label`)
-is the renderer twin of that fix. Trigger: the next kind, or the next time the
-file is open for surgery.
-
 ## 5. Three sphere-proxy meshes each hand-tuning their own margin (low-med)
 
 Earth now draws three concentric sphere approximations, each carrying its own

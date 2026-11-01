@@ -3,7 +3,7 @@
  * the hole's far-field presence until its lens engages, drawn through the
  * Layer's own `bodyGlintRenderer` instance. It carries none of the seeded
  * glints' apparent-size or solar-system backdrop fades: a hole is meant to read
- * from anywhere in the foreground range. NEAR0 + camera-relative anchors paired
+ * from anywhere in its own foreground band. NEAR0 + camera-relative anchors paired
  * with a rebased vp, the same f64 seam as `bodyGlintsPass`.
  * `drawPick` stamps each hole while its marker shows (`blackHolePickable`);
  * inside the band, where only the caption shows, the caption takes the click.
@@ -14,10 +14,9 @@ import type { BodyPointPick } from '../../../@types/rendering/bodyPickRenderer/B
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BlackHolesRuntime } from '../@types/BlackHolesRuntime';
 import { BLACK_HOLES } from '../data/blackHoles';
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { BODY_GLINT_INSTANCE_FLOATS } from '../../../data/rendering/bodyGlintInstanceFloats';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
@@ -34,7 +33,6 @@ export function blackHoleMarkerPass(runtime: BlackHolesRuntime): ContentPass {
     name: 'black-hole-marker',
 
     enabled(state, ctx, _view) {
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       const states = sceneBodyStates(state, ctx);
       return BLACK_HOLES.some(
         (row) => blackHoleMarkerBrightness(row, ctx.drawCamPos, states) > GLINT_MIN_BRIGHTNESS,

@@ -1,9 +1,9 @@
-import type { FadeBand } from '../../../@types/math/FadeBand';
 import { backdropBand } from '../../../utils/math/backdropBand';
 import { regionById } from '../../../utils/regions/regionById';
 
-// Completes STRICTLY inside the hard foreground gate, which is what hides its cut. Pass-owned,
-// not a visibility band: a band on the entry would drop seeded stars from scene-body admission.
-export const STAR_BACKDROP_DISSOLVE: FadeBand = backdropBand(
-  regionById('solar-neighbourhood').extentMpc,
-);
+// The seeded stars are a minimum-size additive sprite field: at galaxy framing the whole
+// roster would collapse onto a few pixels into one bright blob, so each set dissolves well
+// before that, measured from its own region.
+const { fullAt, goneAt } = backdropBand(regionById('solar-neighbourhood').extentMpc);
+
+export const STAR_BACKDROP_DISSOLVE = { out: [fullAt, goneAt] } as const;

@@ -1,66 +1,16 @@
 /**
- * wireSlots — bootstrap phase 3: core's half of the demand-driven asset
- * orchestrator. Every Layer's slots already exist (`createLayers` minted them);
- * this mints core's own and then lets the demand loop decide what loads:
- *
- *   1. `buildSlotsFromRegistry` — construct every core, non-external slot from
- *      the composed rows (sidecars: the body-texture atlas, the volume overlays).
- *      Pure: no state writes, no loads.
- *   2. `installSlots` — the single mutation site that writes each built slot
- *      onto its named `state.assetSlots` field.
- *   3. The keyed families — `bodyTextures` (`wireBodyTextureSlots`) and
- *      `meshBodies` (`wireMeshBodySlots`) — minted here, not by
- *      `buildSlotsFromRegistry` (their rows carry `built: 'external'`).
- *   4. `createSurfaceTileStream` / `seedVisibilityFades` — the surface
- *      virtual texture, and every visibility identity at its boot target
- *      (`installVisibilityGates` later subscribes its gating slots, so a
- *      commit or release retargets that identity's fade).
- *   5. `installLoadProgress` — the flat `allSlots` registry + load-progress
- *      emitter, over core's slots and every Layer's.
- *   6. `installSlotReadyWake` — one subscription per slot wakes the render
- *      scheduler on `ready`; the single channel-mouth enforcement point.
- *      `installFormatVersionAlert` shares the same window and shape: the first
- *      time any slot's error is a `FormatVersionError`, it dispatches a
- *      `cause: 'format-version'` status AND `reopenSplash()` — a returning
- *      visitor's `seenVersion` already hid the splash, so the alert needs
- *      both to actually reach them.
- *   7. `reevaluateDemand` — the single place loads start, awaited on
- *      `loadDataManifest` immediately before it so no fetch can race the
- *      manifest. It walks every wiring row and triggers each demanded slot
- *      with its tier-derived request. The same loop re-runs on every state
- *      change, so "is this asset required?" has one answer in one place.
- *
- * The phase does not block on data arrival: `engineStatusChanged({ kind:
- * 'loading' })` dispatches synchronously (before the manifest await) and
- * `wireInput`/`startLoop` run immediately after this returns, so the camera
- * and rAF loop come up with whatever has landed.
- *
- * ### State writes
- *
- *   - `state.assetSlots.{bodyTextureAtlas,…}`
- *     (via `installSlots`) + `.bodyTextures` (via `wireBodyTextureSlots`) +
- *     `.meshBodies` (via `wireMeshBodySlots`).
- *   - `state.subsystems.{loadProgress, surfaceTiles}`.
- *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
- *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` and an
- *     `installFormatVersionAlert` subscriber; the latter may later dispatch
- *     `engineStatusChanged({ kind: 'error', cause: 'format-version' })` AND
- *     `reopenSplash()`.
- *
- * ### Side effects on `deps`
- *
- *   - Mutates `deps.allSlots` — populated with every installed slot.
+ * wireSlots: bootstrap phase 3, core's half of the demand-driven asset
+ * orchestrator. Every slot already rides on its composed asset row; this wires
+ * visibility fades and gates, load progress, the ready-wake, the format-version
+ * alert and `reevaluateDemand`, the single place loads start. It does not block
+ * on data arrival: `wireInput`/`startLoop` run right after, so the camera and rAF
+ * loop come up with whatever has landed. Mutates `deps.allSlots` and
+ * `state.subsystems.loadProgress`.
  */
 
-import { buildSlotsFromRegistry } from '../wiring/buildSlotsFromRegistry';
-import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
-import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
-import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
-import { createSurfaceTileStream } from '../subsystems/surfaceTileStream';
-import { IDLE_SURFACE_TILE_PLAN } from '../../../data/bodies/idleSurfaceTilePlan';
 import { collectVisibilityGates } from '../wiring/collectVisibilityGates';
 import { seedVisibilityFades } from '../wiring/seedVisibilityFades';
 import { installVisibilityGates } from '../wiring/installVisibilityGates';
@@ -74,66 +24,29 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { cb } = deps;
 
-  // Build every core, non-external slot from the composed rows, then install
-  // them in one mutation pass. The keyed families are skipped here
-  // (built: 'external' — minted below); a Layer's rows are skipped because
-  // `createLayers` already minted their slots.
-  const slots = buildSlotsFromRegistry(state.assetRows, { state, cb });
-  installSlots(state, slots);
-
-  // The keyed families: their `ASSET_WIRING` rows carry `built: 'external'`, so
-  // `buildSlotsFromRegistry` above skips them and they're minted here directly.
-  // Must run before `installLoadProgress` (enumerates them into `allSlots`) and
-  // `reevaluateDemand` (triggers their loads).
-  wireBodyTextureSlots(state);
-  wireMeshBodySlots(state);
-
-  // The surface virtual texture. A subsystem, not a renderer — it owns
-  // residency and streaming — so it's constructed here, not in `initGpu`.
-  // Construction is free (no GPU memory, no fetch until a plan engages it),
-  // and kept out of `wireImpostorSubsystems` since it shares nothing with
-  // that dependency-ordered cluster but the device.
-  state.subsystems.surfaceTiles = {
-    stream: createSurfaceTileStream({
-      device: deps.phaseLocals!.device,
-      requestRender: () => state.subsystems.scheduler.requestRender(),
-    }),
-    plan: IDLE_SURFACE_TILE_PLAN,
-  };
-
-  // Every visibility identity seeds at its target, which reads its gating slot's commit,
-  // so frame 1 is coherent and a demand-loaded thing waits at 0 to fade in on arrival.
+  // Seeded at each identity's target (its gating slot's commit), so frame 1 is
+  // coherent and a demand-loaded thing waits at 0 to fade in.
   state.visibilityGates = collectVisibilityGates(state);
   seedVisibilityFades(state);
 
-  // Build the flat `allSlots` registry + load-progress emitter over every
-  // installed slot (core and Layer-owned).
   installLoadProgress(state, deps);
 
-  // Channel-mouth render wake.  After installLoadProgress (allSlots fully
-  // populated), before reevaluateDemand (no slot can reach 'ready' unsubscribed).
+  // After installLoadProgress (allSlots populated), before reevaluateDemand (no
+  // slot can reach 'ready' unsubscribed).
   installSlotReadyWake(() => state.subsystems.scheduler.requestRender(), deps.allSlots);
 
   // Before `reevaluateDemand`, so no gating slot can commit unheard.
   installVisibilityGates(state);
 
-  // Same window: a stale-.bin version mismatch turns into a splash-visible
-  // error rather than a silent empty sky.
+  // Same window: a stale-.bin version mismatch becomes a splash-visible error, not
+  // a silent empty sky.
   installFormatVersionAlert(cb.store.dispatch, deps.allSlots);
 
-  // Signal loading state immediately so the user sees progress before the
-  // (potentially multi-second) fetches complete.
   cb.store.dispatch(engineStatusChanged({ kind: 'loading' }));
 
-  // reevaluateDemand is the only place loads start, so awaiting the manifest
-  // here — after the loading dispatch, before any fetch can begin — makes
-  // "no data fetch can race the manifest" structural rather than a hope.
+  // Awaited before reevaluateDemand (the only place loads start), so no fetch can
+  // race the manifest.
   await loadDataManifest();
 
-  // The single place loads start: walk the wiring registry and trigger every
-  // demanded slot with its tier-derived request.  At boot this loads the
-  // default-visible galaxy catalogs + famous-galaxies-meta + the default-on MCPM volume +
-  // the cluster catalog; filaments / Polyphorm 2MRS / PGC-alias stay idle until their
-  // demand flips.  The same loop re-runs on every state change.
   reevaluateDemand(state);
 }

@@ -32,7 +32,7 @@
  *   them inside the row loop.
  */
 
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';

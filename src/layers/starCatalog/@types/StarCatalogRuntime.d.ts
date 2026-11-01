@@ -1,8 +1,6 @@
 /**
- * The star family's whole runtime — the four renderers, the survey/famous
- * slots, and the shared upsample handle, as plain fields every contribution
- * closes over. Non-null throughout: `create` builds each one before
- * returning, so no reader re-checks a handle.
+ * The star family's whole runtime: renderers, survey/famous slots and the shared
+ * upsample handle. Non-null throughout: `create` builds each before returning.
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';
@@ -21,7 +19,7 @@ import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
 import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
 export type StarCatalogRuntime = {
-  /** One slot per survey source (`EngineAssetSlots.starCatalogs`). */
+  /** One slot per survey source. */
   readonly catalogs: ReadonlyMap<SourceType, AssetSlot<Octree<StarColumns>, StarCatalogReq>>;
   /** A source's chunk stream while its committed index names chunks; the slot's commit fills it and release clears it. */
   readonly chunkStreams: Map<SourceType, OctreeChunkStream<StarColumns>>;

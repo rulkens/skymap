@@ -1,23 +1,8 @@
 /**
- * detailCardTable — folds core's three FocusableTarget arms with every Layer's
- * `detailCard` ui-slot contribution into the `DetailCardTable` InfoCard
- * dispatches on. Called once at module load (`InfoCard.tsx`), so a missing arm
- * throws at boot naming the union member nobody claimed — a composition
- * wiring bug, not one to surface per-render.
- *
- * Each core entry is the card component itself — `GalaxyDetailCard` /
- * `CompactCard` for a galaxy, `StarDetailCard` / `CompactStarCard` for a star,
- * and so on — InfoCard renders `entry.Detail`/`entry.Compact`
- * as JSX, so every card's own props type must already match
- * `DetailCardProps<K>`/`CompactCardProps<K>` (the table key `K` is the
- * narrowing proof; a card never re-checks `target.type`).
- *
- * Dispatching on `target.type` through a `DetailCardTable` follows the
- * simplicity convention's table-dispatch rule (item 7): a new focusable kind
- * adds one Layer `ui` entry instead of a render branch in InfoCard. InfoCard
- * keeps the outer-wrapper-stable contract and the
- * hover/pinned stacking around this lookup; the table only decides which card
- * a given target renders as.
+ * detailCardTable — folds core's two FocusableTarget arms with every Layer's `detailCard`
+ * ui-slot contribution into the `DetailCardTable` InfoCard dispatches on. Called once at module
+ * load (`InfoCard.tsx`), so a missing arm throws at boot naming the unclaimed union member.
+ * Every card's props type must already match `DetailCardProps<K>`/`CompactCardProps<K>`.
  */
 
 import type { Layer } from '../../@types/engine/layer/Layer';
@@ -27,26 +12,15 @@ import type { DetailCardEntry } from '../../@types/components/infoCard/DetailCar
 import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
-import BodyDetailCardContainer from '../containers/BodyDetailCardContainer';
 import StarDetailCard from './StarDetailCard/StarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
-import CompactBodyCard from './CompactBodyCard/CompactBodyCard';
 import CompactStarCard from './CompactStarCard/CompactStarCard';
 
-/** The three focusable kinds core still owns outright — no Layer claims them.
- * `zoneOfAvoidance`, `milkyWay` and `structure` are the arms missing here: they
- * arrive via `layerUiContents`, from their own Layer's `ui` entry. */
+/** The two kinds no Layer claims; every other arm arrives via `layerUiContents`. */
 const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
   galaxyCatalog: {
     Detail: GalaxyDetailCard,
     Compact: CompactCard,
-  },
-  body: {
-    // Detail renders through a store container: a focused body's distance is
-    // time-dependent, re-derived live off the throttled time pub, which a
-    // presentational card cannot read (store-boundary rule).
-    Detail: BodyDetailCardContainer,
-    Compact: CompactBodyCard,
   },
   starCatalog: {
     Detail: StarDetailCard,
@@ -54,9 +28,7 @@ const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
   },
 };
 
-/** Folds `CORE_DETAIL_CARDS` with every composed Layer's `detailCard` ui-slot
- * entry into the table InfoCard dispatches on. Throws if the composition
- * leaves any `SelectionKind` arm — core or Layer — unclaimed. */
+/** Throws if the composition leaves any `SelectionKind` arm unclaimed. */
 export function detailCardTable(layers: readonly Layer<string, unknown>[]): DetailCardTable {
   const table: Partial<DetailCardTable> = { ...CORE_DETAIL_CARDS };
   for (const { type, ...entry } of layerUiContents(layers, 'detailCard')) {

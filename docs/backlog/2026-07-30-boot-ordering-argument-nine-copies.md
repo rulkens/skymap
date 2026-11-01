@@ -1,4 +1,4 @@
-# The saga-context boot-ordering argument is restated in nine passages
+# The saga-context boot-ordering argument is restated in five files
 
 Surfaced during the 2026-07-30 entanglement-radar pass over the `url-hash-saga-port`
 branch.
@@ -20,16 +20,14 @@ One causal chain, told end to end:
 | File                                      | Lines       | Role                                            |
 | ----------------------------------------- | ----------- | ----------------------------------------------- |
 | `src/store/sagaContextRegistered.ts`      | 1-32        | the canonical telling                           |
-| `src/store/createAppStore.ts`             | 35-45       | why the factory dispatches the action           |
-| `src/store/createAppStore.ts`             | 81-88       | why merge-then-announce, in that order          |
-| `src/store/rootSaga.ts`                   | 31-42       | why composing watchers pre-registration is safe |
+| `src/store/createAppStore.ts`             | 21-35       | why the factory dispatches the action           |
+| `src/store/createAppStore.ts`             | 110-117     | why merge-then-announce, in that order          |
+| `src/store/rootSaga.ts`                   | 7           | why composing watchers pre-registration is safe |
 | `src/state/url/watchHashSaga.ts`          | 26-61       | why the gate is in the parent, not either half  |
-| `src/state/url/watchHashReadSaga.ts`      | 8-24        | why its dispatches need the context             |
-| `src/state/url/watchHashWriteSaga.ts`     | 16-21       | why its `takeEvery` must not start early        |
-| `src/services/engine/phases/wireInput.ts` | 169-181     | why registration must stay ahead of bootstrap   |
+| `src/state/url/watchHashReadSaga.ts`      | 13          | why its dispatches need the context             |
 | `tests/state/url/watchHashSaga.test.ts`   | 8-23, 88-94 | what the test is pinning                        |
 
-Nine passages, one fact. Line numbers are as of this branch and will drift.
+Seven passages, one fact (`wireInput.ts` and `watchHashWriteSaga.ts` no longer tell it). Line numbers are as of this branch and will drift.
 
 ## Why raise it against the didactic-comments convention
 

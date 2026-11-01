@@ -13,7 +13,7 @@
 
 .kind {
   margin-left: var(--space-4);
-  color: var(--color-fg-dim);
+  color: var(--color-fg-tertiary);
   font-size: var(--font-size-lg);
 }
 

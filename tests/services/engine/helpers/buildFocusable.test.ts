@@ -11,7 +11,7 @@ import type { StructureInfo } from '../../../../src/@types/data/structure/Struct
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { FamousStarMetaEntry } from '../../../../src/@types/loading/FamousStarMetaEntry';
 import type { StarInfo } from '../../../../src/@types/engine/StarInfo';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const structure = {

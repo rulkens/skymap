@@ -12,10 +12,9 @@ import type { DebugOverlayRow } from '../../@types/data/debug/DebugOverlayRow';
 // yellow/orange/red = 1/2/3+ levels coarser) — see
 // surfaceTile/surfaceLighting.wesl's `tileLodOverlayColor`.
 // terrain-pick-marker: a fresh ray/terrain pick under the cursor every frame,
-// drawn as a depth-tested analytic sphere (`terrainPickMarkerPass`); it also
-// turns on the Camera section's `terrain_pick_height_m` row, since the cursor
-// is only carried while this is on. Sectioned to its own tuning board so the
-// switch sits with the radius knob that only means anything while it is on.
+// drawn as a depth-tested analytic sphere (`terrainPickMarkerPass`), with the
+// height under it read out on its own tuning board, beside the radius knob that
+// only means anything while it is on.
 export const DEBUG_OVERLAY_ROWS = [
   { key: 'pick-buffer', label: 'Show pick buffer' },
   { key: 'orbit-trail-impostor', label: 'Show orbit-trail impostor' },

@@ -568,8 +568,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 50 },
         to: { target: [1, 2, 3], yaw: 2, pitch: 0.2, distance: 10 },
-        durationMs: 1000,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );

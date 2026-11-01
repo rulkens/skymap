@@ -14,8 +14,8 @@
 
 import type { SourceType } from '../@types/data/SourceType';
 import type { GalaxyCatalogId } from '../@types/data/galaxyCatalog/GalaxyCatalogId';
-import { SOURCE_REGISTRY } from '../data/sources';
+import { APP_SOURCE_REGISTRY } from '../compositions/appSources';
 
 export function galaxyCatalogIdOf(source: SourceType): GalaxyCatalogId {
-  return SOURCE_REGISTRY[source].id as GalaxyCatalogId;
+  return APP_SOURCE_REGISTRY[source].id as GalaxyCatalogId;
 }

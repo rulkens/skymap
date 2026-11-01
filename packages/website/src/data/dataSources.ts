@@ -211,6 +211,17 @@ export const DATA_SOURCES: readonly DataSource[] = [
     evidence: `${REPO_BLOB}/data/raw/horizons/README.md`,
   },
   {
+    id: 'celestrak',
+    entries: ['celestrak'],
+    group: SOLAR,
+    name: 'CelesTrak orbit data',
+    gives: 'The orbits of satellites and debris around Earth',
+    release: 'GP mean elements, refreshed daily',
+    licence: 'No licence stated.',
+    href: 'https://celestrak.org/NORAD/elements/',
+    evidence: `${REPO_BLOB}/data/raw/celestrak/README.md`,
+  },
+  {
     id: 's-stars',
     entries: ['s-stars'],
     group: STARS,

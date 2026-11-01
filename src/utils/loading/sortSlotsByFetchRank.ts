@@ -1,21 +1,10 @@
 /**
- * sortSlotsByFetchRank — order debug-panel slot rows the way the boot fetch
- * queue orders them: authored rank ascending (lower fetches first), name
- * ascending within a rank.
- *
- * The name tiebreak is the load-bearing half. Whole families share one rank on
- * purpose — every body texture is 10, every star catalog is 50 — so without an
- * explicit second key those rows would fall back to the slot Map's insertion
- * order, which is an artifact of which bootstrap phase minted them, not
- * anything a reader can predict. Alphabetical is arbitrary too, but it is
- * arbitrary in a way that is stable across runs and obvious on sight.
- *
- * Unranked slots (the DEV synthetic-volume fixtures, which have no
- * `ASSET_WIRING` row) sort last as a block rather than being dropped — the
- * panel is an inventory, and a row silently missing from it is worse than a row
- * with a blank rank.
- *
- * Returns a new array; the caller's snapshot is left alone.
+ * sortSlotsByFetchRank: order debug-panel slot rows as the boot fetch queue does,
+ * authored rank ascending (lower fetches first), then name. The name tiebreak is
+ * load-bearing: whole families share a rank (every body texture 10, every star
+ * catalog 50), and without it the order would be the slot Map's insertion order.
+ * Unranked slots (DEV fixtures) sort last rather than being dropped. Returns a new
+ * array.
  */
 
 export function sortSlotsByFetchRank<T extends { readonly name: string }>(

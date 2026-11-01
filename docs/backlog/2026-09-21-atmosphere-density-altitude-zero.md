@@ -1,6 +1,6 @@
 # Atmosphere density profile altitude-zero is the relief floor, not the datum
 
-`needs-design` — `planetRadiusKm` in `src/data/bodies/atmosphereParams.ts` (via
+`needs-design` — `planetRadiusKm` in `src/layers/body/present/atmosphereParams.ts` (via
 `seededRadiusKm` = `innerBoundRadiusM`) serves two meanings:
 
 - (a) the shell fragment's ground-hit radius (`shell/fragment.wesl` raySphere on

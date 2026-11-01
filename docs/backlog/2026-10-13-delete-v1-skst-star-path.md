@@ -11,7 +11,7 @@ at audit time: src −640, tools −460, tests −440 removed / +150–250 re-fi
   encode/decode/empty), `starBinCodec.ts`, `starOctreeFromSkst.ts`, `SkstCatalog.d.ts`, `SkstNode.d.ts`,
   `StarCatalogFormat.d.ts` + the `format` field + the fetcher's skst branch, `STAR_OFFSET_LEVELS` (no readers since
   `0948af5c4`), and SKST mentions in `StarOctree`, `StarColumns`, `StarSourceBudgets`, `StarCatalogReq`,
-  `resolveStarRecord`, `starCutLayout`.
+  `resolveStarRecord`, `octreeCutLayout`.
 - `tools`: `tools/stars/buildStarOctree.ts` (no production caller; it is a test-fixture builder) and the
   `star-catalog-v1` `DATA_FAMILIES` row.
 - `tests`: `starOctreeFromSkst`, `starBinCodec`, `starCatalogRecord`, `buildStarOctree`, most of
@@ -22,8 +22,8 @@ at audit time: src −640, tools −460, tests −440 removed / +150–250 re-fi
 
 **Cost:** 12 test files build octrees through `buildStarOctree` → `encodeSkstCatalog` → `starOctreeFromSkst` and need
 fixtures through `stratifyOctree`/`chunkOctree` (start from `makeOctreeBuildInput`): fieldStarSpherePass,
-watchSelectionRowsSaga, composeSelectionRows, resolveStarRecord, nearestResolvableStar, starCutLayout,
-starCutLayout.parity, starCutGpu, starAggregateUpsamplePass, referenceStarCut, starCatalogFetcher,
+watchSelectionRowsSaga, composeSelectionRows, resolveStarRecord, nearestResolvableStar, octreeCutLayout,
+starCutLayout.parity, octreeCutGpu, starAggregateUpsamplePass, referenceStarCut, starCatalogFetcher,
 starCatalogSourceCounts.
 
 **Risks:** `stars-rs` still emits only v1, so its output cannot load until

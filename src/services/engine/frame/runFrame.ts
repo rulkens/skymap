@@ -23,11 +23,8 @@ import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
-import { deriveBodyStates } from './deriveBodyStates';
+import { frameBodyStates } from './frameBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
-import { planSurfaceTiles } from './surfaceTilePlanner/planSurfaceTiles';
-import { surfaceTileOverOf } from './surfaceTilePlanner/surfaceTileOverOf';
-import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -44,7 +41,6 @@ import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPic
 import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
 import { selectPendingInput } from '../../../state/input/selectors';
 import { inputConsumed } from '../../../state/input/inputSlice';
-import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
 /**
  * Scale-bar width, CSS px. Must stay under the ScaleBar panel's ~145 px content
@@ -59,50 +55,40 @@ const SCALE_TARGET_PX = 120;
 const publishBodyDistanceGate = throttleByTime(250);
 
 /**
- * Idle-tick cadence for a LIVE sim clock, ms. The terminator sweeps 0.00417°·T
- * of ground per tick; at the 127 km tile standoff the viewport spans ~147 km, so
- * a 3 s tick is a visible ~8 px jump on a 900 px canvas — 500 ms holds it under
- * 1.5 px at every altitude. A one-shot `requestIdleFrame`, not `setInterval`:
- * an interval fires unconditionally and double-schedules against real wakes.
+ * Idle-tick cadence for a LIVE sim clock, ms. At the 127 km tile standoff the
+ * viewport spans ~147 km, so a 3 s tick is a visible ~8 px terminator jump on a
+ * 900 px canvas; 500 ms holds it under 1.5 px. One-shot `requestIdleFrame`, not
+ * `setInterval`, which double-schedules against real wakes.
  */
 const LIVE_IDLE_TICK_MS = 500;
 
 /** `nowMs` is `performance.now()`-shaped, passed in so tests drive the timing. */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
-  // First statement, by contract: scene cues fired here (fade / show / hide /
-  // focus) are in the store before this frame derives demand or the pose,
-  // and a frameTween a cue dispatches is seen by this frame's basis.
+  // First statement, by contract: cues fired here are in the store before this frame
+  // derives demand or the pose, and a cue's frameTween is seen by this frame's basis.
   const { clipEpoch } = state.subsystems.clipPlayer.tick(state.cameraRuntime.epochs.clip, nowMs);
 
   reevaluateDemand(state);
 
-  // `reconcile` runs unconditionally (canvas size AND every state-driven scale
-  // feed it) and reallocates only rows whose pixel size moved; `renderTargets`
-  // is null until initGpu. The resize is the backing store's side effect, not
-  // the camera's; the step is handed the aspect it produced.
+  // `reconcile` runs unconditionally and reallocates only rows whose pixel size moved;
+  // `renderTargets` is null until initGpu. The step is handed the aspect it produced.
   resizeCanvasToDisplay(deps.canvas);
   state.gpu.renderTargets?.reconcile(state, {
     width: deps.canvas.width,
     height: deps.canvas.height,
   });
 
-  state.gpu.atmosphereShellRenderer?.reconcile({
-    skyViewLutSize: SKY_VIEW_LUT_SIZE_BY_TIER[state.tier],
-  });
-
-  // The frame's ONE store snapshot. The camera step runs before
-  // `deriveFrameContext` so a camera-only-ready frame still makes motion
-  // progress before the missing-GPU early return.
+  // The frame's ONE store snapshot. The camera step runs before `deriveFrameContext`
+  // so a camera-only-ready frame still makes progress before the missing-GPU return.
   const stored = deps.cb.store.getState();
   const canvasPx: Vec2 = [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1];
   const pending = selectPendingInput(stored);
   const steps = pendingToInputSteps(pending, canvasPx);
 
-  // The sim instant is derived BEFORE the step: the follow driver aims at where
-  // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
-  // this call primes the map every later reader gets by reference.
+  // Derived BEFORE the step: the follow driver aims at where the body is this frame. The
+  // ONE placement of the moving selection; the frame context takes this same Map.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
-  const bodyStates = deriveBodyStates(simDays);
+  const bodyStates = frameBodyStates(stored, state.selectionKindRows, simDays);
 
   const {
     next,
@@ -118,7 +104,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
-    terrainHeightAt: state.terrain.heightAt,
+    terrainHeightAt: state.terrainHeightAt,
     clipEpoch,
     schemes: deps.controlSchemes,
   });
@@ -133,10 +119,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const upBasis = next.outputs.upBasis;
   const poseBasis = ORIENTATION_FRAMES[stored.settings.orientation];
 
-  // The debug panel's Δ/peak columns, at FRAME rate: its 4 Hz poll averages
-  // ~15 frames into one reading, which is precisely how a per-frame decay
-  // passes for a per-notch one. Gated on the panel being mounted — the
-  // derivation walks the body roster, which nobody who never opens it pays for.
+  // The debug panel's Δ/peak columns at FRAME rate: its 4 Hz poll averages ~15 frames,
+  // which lets a per-frame decay pass for a per-notch one. Gated on the panel being
+  // mounted: the derivation walks the body roster.
   if (orientDeltasWatched()) {
     recordOrientDeltas(
       cameraDofAnglesOf({
@@ -151,17 +136,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
-  // The camera assembly + altitude line, shared with `pickFrameContext`:
-  // `nowMs`/`poseBasis`/`upBasis`/`simDays` are the only
-  // fields the two callers vary on purpose; everything else reads off `state`
-  // identically — safe to call here because `state.cameraRuntime = next` above
-  // already made `state`'s view of the runtime THIS frame's.
+  // Shared with `pickFrameContext`; only the time, the bases and the body snapshot vary
+  // between callers. Safe here because `state.cameraRuntime = next` above already
+  // made `state`'s runtime THIS frame's.
   const { input, cam } = frameContextInputOf(state, {
     worldPose,
     nowMs,
     poseBasis,
     upBasis,
     simDays,
+    bodyStates,
   });
 
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
@@ -177,9 +161,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     }
   }
 
-  // This frame's one `renderedTargets` fact — minted here so `runFrame` can
-  // hand the SAME mutable `Set` to `renderFrame` below, while every pass sees
-  // only the narrower `ReadonlySet` riding `snapshot.renderedTargets`.
+  // Minted here so `renderFrame` gets the SAME mutable `Set`; passes see only the
+  // `ReadonlySet` on `snapshot.renderedTargets`.
   const renderedTargets = new Set<string>();
   // The 'not ready' branch is the window before cam + GPU handles populate.
   const snapshot = deriveFrameContext(state, input, renderedTargets);
@@ -189,21 +172,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     return;
   }
 
-  // The frame's views, once — mono is `[canvas]` itself. `deriveView` reads
-  // no stamp: focus/focusBlend/plans live only on `snapshot`, reached
-  // by reference from every view, so this can run ahead of them. It must
-  // still run ahead of the view-dependent planner below (surface cut) and
-  // every Layer's `frame` hook so they can walk every view's frustum without
-  // re-deriving this per planner.
+  // The frame's views, once (mono is `[canvas]`). `deriveView` reads no stamp, so it can
+  // run ahead of focus/plans, and must run ahead of every planner row so each can walk
+  // every view's frustum.
   const canvas = deriveView(
     snapshot,
     cam,
     mainViewSpec(cam, { width: deps.canvas.width, height: deps.canvas.height }),
   );
-  // The rig hands back specs, not views (`ViewRig.views`'s doc): deriving them
-  // HERE, off the one `snapshot` every other view already shares, is what
-  // makes the shared-snapshot invariant structural rather than a rig author's
-  // promise.
+  // The rig hands back specs; deriving views HERE, off the one shared `snapshot`,
+  // makes the shared-snapshot invariant structural.
   const viewSpecs = VIEW_RIGS[state.viewRig].views(canvas, state);
   const views =
     viewSpecs === null || viewSpecs.length === 0
@@ -237,18 +215,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       }
     }
     deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
-  }
-
-  // The one writer of the frame's tile plan; the passes and the terrain seam read it.
-  const surfaceTiles = state.subsystems.surfaceTiles;
-  if (surfaceTiles !== null) {
-    surfaceTiles.plan = planSurfaceTiles(
-      views,
-      surfaceTileOverOf(views),
-      surfaceTiles.stream.residency,
-      (bodyId) => bodySurfaceTier(state, bodyId),
-    );
-    surfaceTiles.stream.apply(surfaceTiles.plan);
   }
 
   // Before the GPU dispatch (they upload the label buffers). Three statements,
@@ -287,14 +253,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     rootState,
     nowMs,
     {
-      // Outside the engagement: the manifest loads before anything can
-      // engage, and voting only on engaged frames would sleep the loop mid-fetch.
-      surfaceTilesAnimating: surfaceTiles?.plan.awake ?? false,
       labelsAnimating,
       probeDue: state.cubemapCaptures.probe.due,
-      // Read AFTER `renderFrame`: every planner row — core's and every Layer's
-      // — ran inside it, so this is this frame's whole OR-fold, not a stale
-      // pre-render snapshot.
+      // Read AFTER `renderFrame`: every planner row ran inside it.
       layersAwake: snapshot.plans.awake,
     },
     deps.controlSchemes[next.scheme].drivers,

@@ -1,7 +1,7 @@
 /**
  * MemorySectionContainer — engine-handle boundary for the GPU-memory debug
- * readout. Mirrors `SurfaceTileAtlasSectionContainer`: `gpuMemory` comes off
- * `engineHandleRef.current.debug`, engine-only data with no store reach.
+ * readout: `gpuMemory` comes off `engineHandleRef.current.debug`, engine-only
+ * data with no store reach.
  */
 
 import { memo, type ReactElement } from 'react';

@@ -9,7 +9,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../src/compositions/appSources';
 import { S_STAR_ENTRY } from '../../../src/layers/starCatalog/sources/s-star';
 import { SUN_ENTRY } from '../../../src/layers/starCatalog/sources/sun';
 import { BODY_SOURCE_IDS } from '../../../src/data/bodies/bodySourceIds';
@@ -39,10 +40,10 @@ describe('the S-star source row', () => {
     // bits with the all-ones value reserved as the no-hit sentinel, so 62 is the
     // last usable code. Nothing else checks the ceiling, and overflowing it would
     // corrupt `localIdx` rather than fail: the OR would carry into the index.
-    const codes = Object.values(SOURCE_REGISTRY).map((entry) => entry.code);
+    const codes = Object.values(APP_SOURCE_REGISTRY).map((entry) => entry.code);
     const maxCode = (1 << (32 - SELECTION_SOURCE_SHIFT)) - 1 - 1;
     expect(Math.max(...codes)).toBeLessThanOrEqual(maxCode);
     expect(new Set(codes).size).toBe(codes.length);
-    expect(SOURCE_REGISTRY[Source.SStar]).toBe(S_STAR_ENTRY);
+    expect(APP_SOURCE_REGISTRY[Source.SStar]).toBe(S_STAR_ENTRY);
   });
 });

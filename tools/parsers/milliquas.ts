@@ -31,7 +31,7 @@
  * `MQ J<RA><Dec>` IAU name.
  */
 
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import {
   MILLIQUAS_CLASS_BYTE,
   MILLIQUAS_PARENT_SURVEY_BYTE,

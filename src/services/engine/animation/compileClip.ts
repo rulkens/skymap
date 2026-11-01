@@ -66,11 +66,15 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { CHANNEL_SPACE } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';
+import { validateCompositeExclusivity } from './validateCompositeExclusivity';
 import { buildPathTrack } from './buildPathTrack';
+import { buildGeodesicTrack } from './buildGeodesicTrack';
+import { channelValueAt } from './channelValueAt';
+import type { CompositeSample } from '../../../@types/animation/compiledClip/CompositeSample';
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
 import type { OscTrack } from '../../../@types/animation/compiledClip/OscTrack';
-import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
+import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 
 // ---------------------------------------------------------------------------
@@ -92,15 +96,48 @@ type Accum = {
   readonly velRamps: VelRamp[];
   readonly oscTracks: OscTrack[];
   readonly cues: SceneCue[];
-  readonly pathTracks: PathTrack[];
-  // The resolved clip start pose — a `flyPath` flies out of it (it is the first
-  // spline knot), so the walk needs it when it reaches a `flyPath` leaf.
+  readonly compositeTracks: CompositeTrack[];
+  // The resolved clip start pose — the seed of every channel's running value, so
+  // a composite leaf can start from where the camera is (`startPoseAt`).
   readonly start: CameraPose;
   // The STEADY orientation-frame basis this clip compiles under; a `flyPath`
   // encodes its world tangents to (yaw, pitch) through it (see `buildPathTrack`).
   // Absent ⇒ identity (world-frame aim), so every non-frame caller is unchanged.
   readonly frameBasis?: Mat3;
 };
+
+// A composite leaf starts from the running value of each channel at `atSec`,
+// so it continues the previous move rather than snapping to the clip start.
+// Known limit: read in walk order (the track's duration needs it), so a base
+// segment in a LATER `all` sibling is not yet accumulated.
+function startPoseAt(atSec: number, acc: Accum): CameraPose {
+  const { start } = acc;
+  const at = <C extends keyof CompositeSample>(ch: C, seed: NonNullable<CompositeSample[C]>) =>
+    channelValueAt(ch, atSec, acc.baseSegs, acc.compositeTracks, seed).value;
+  return {
+    ...start,
+    target: at('target', start.target),
+    distance: at('distance', start.distance),
+    yaw: at('yaw', start.yaw),
+    pitch: at('pitch', start.pitch),
+  };
+}
+
+// The first base segment after a composite continues from its final sample;
+// `from` stays absent otherwise, so a clip without composites compiles as before.
+function continuedFromComposite(seg: BaseSegment, acc: Accum): BaseSegment {
+  // No composite samples roll or the lens, so their segments run on from their own values.
+  if (seg.from !== undefined || seg.channel === 'roll' || seg.channel === 'fov') return seg;
+  const ch = seg.channel;
+  const { value, byComposite } = channelValueAt(
+    ch,
+    seg.startSec,
+    acc.baseSegs,
+    acc.compositeTracks,
+    acc.start[ch],
+  );
+  return byComposite ? { ...seg, from: value } : seg;
+}
 
 // ---------------------------------------------------------------------------
 // Core recursive walk.
@@ -204,7 +241,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         return w;
       });
       const track = buildPathTrack({
-        start: acc.start,
+        start: startPoseAt(atSec, acc),
         startSec: atSec,
         over: effect.over,
         ease: effect.ease,
@@ -217,10 +254,24 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         passBy: effect.passBy,
         frameBasis: acc.frameBasis,
       });
-      acc.pathTracks.push(track);
+      acc.compositeTracks.push(track);
       // A dwell (`linger` + `lingerSec`) ADDS time, so the real duration is the
       // track's — not the authored `over` (the cruise budget). Return it so the
       // cursor and the single-writer window land on the true end.
+      return track.endSec - atSec;
+    }
+
+    // --- Camera leaves: zoom/pan geodesic (composite writer over target + distance) ---
+    case 'geodesic': {
+      const track = buildGeodesicTrack({
+        start: startPoseAt(atSec, acc),
+        startSec: atSec,
+        to: effect.to,
+        tuning: effect.tuning,
+        fovYRad: effect.fovYRad,
+        over: effect.over,
+      });
+      acc.compositeTracks.push(track);
       return track.endSec - atSec;
     }
 
@@ -330,7 +381,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     velRamps: [],
     oscTracks: [],
     cues: [],
-    pathTracks: [],
+    compositeTracks: [],
     start,
     frameBasis,
   };
@@ -345,17 +396,21 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
 
   const sortedCues: SceneCue[] = [...acc.cues].sort((a, b) => a.atSec - b.atSec);
 
+  // After the walk, so a segment walked before the composite it follows (an
+  // earlier `all` sibling) still picks it up.
+  const baseSegs = acc.baseSegs.map((seg) => continuedFromComposite(seg, acc));
+
   // Build baseTracks as Record<Channel, BaseSegment[]> with an entry for
   // every channel (sorted ascending by startSec within each channel).
   const baseTracks = Object.fromEntries(
     ALL_CHANNELS.map((ch) => [
       ch,
-      acc.baseSegs.filter((s) => s.channel === ch).sort((a, b) => a.startSec - b.startSec),
+      baseSegs.filter((s) => s.channel === ch).sort((a, b) => a.startSec - b.startSec),
     ]),
   ) as Record<Channel, BaseSegment[]>;
 
   validateSingleWriter(baseTracks);
-  validatePathExclusivity(baseTracks, acc.pathTracks);
+  validateCompositeExclusivity(baseTracks, acc.compositeTracks);
 
   return {
     start,
@@ -364,34 +419,6 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     velTracks: acc.velRamps,
     oscTracks: acc.oscTracks,
     cues: sortedCues,
-    pathTracks: acc.pathTracks,
+    compositeTracks: acc.compositeTracks,
   };
-}
-
-/**
- * validatePathExclusivity — a `flyPath` is a COMPOSITE base writer: it drives
- * every camera channel over its window (roll it only holds). So just like two `set`s on the same
- * channel clash, a base segment that overlaps a path window is a clash too — the
- * evaluator would let the path silently win, which is a footgun, not a feature.
- * Catch it at registration time with the same loud-throw discipline as
- * `validateSingleWriter`.
- */
-function validatePathExclusivity(
-  baseTracks: Record<Channel, BaseSegment[]>,
-  pathTracks: PathTrack[],
-): void {
-  for (const path of pathTracks) {
-    for (const ch of ALL_CHANNELS) {
-      for (const seg of baseTracks[ch]) {
-        const overlaps = seg.startSec < path.endSec && path.startSec < seg.endSec;
-        if (overlaps) {
-          throw new Error(
-            `flyPath window [${path.startSec}, ${path.endSec}) overlaps a base '${ch}' writer ` +
-              `[${seg.startSec}, ${seg.endSec}). A flyPath owns all camera channels for its window — ` +
-              `move the conflicting camera action outside it.`,
-          );
-        }
-      }
-    }
-  }
 }

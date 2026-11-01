@@ -29,8 +29,8 @@ export function createDeviceChannel(element: HTMLElement): EventChannel<DeviceEv
       const r = element.getBoundingClientRect();
       return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
     };
-    // Pointers pressed on the element. A window move from any other pointer over
-    // another element (a panel above the canvas) is not this surface's hover.
+    // Pointers pressed on the element. A window move, up or cancel from any other pointer
+    // (a panel above the canvas, a button held beside the pad) is not this surface's.
     const pressed = new Set<number>();
 
     const pointer =
@@ -38,7 +38,10 @@ export function createDeviceChannel(element: HTMLElement): EventChannel<DeviceEv
       (e: PointerEvent): void => {
         if (kind === 'down') pressed.add(e.pointerId);
         if (kind === 'move' && e.target !== element && !pressed.has(e.pointerId)) return;
-        if (kind === 'up' || kind === 'cancel') pressed.delete(e.pointerId);
+        if (kind === 'up' || kind === 'cancel') {
+          // A release from a pointer that never pressed here (a held button elsewhere) is not ours.
+          if (!pressed.delete(e.pointerId)) return;
+        }
         emit({
           kind,
           t: e.timeStamp,

@@ -113,7 +113,7 @@ const searchIndex = {
       if (!index) throw new Error(`pagefind: ${errors.join('; ')}`);
       await index.addDirectory({ path: out });
       const { outputPath } = await index.writeFiles({ outputPath: join(out, 'pagefind') });
-      // Pagefind also writes its ready-made interfaces; the site draws its own (components/DocsSearch/DocsSearch.tsx).
+      // Pagefind also writes its ready-made interfaces; the site draws its own (components/docs/DocsSearch/DocsSearch.tsx).
       for (const name of readdirSync(outputPath))
         if (/-ui\.|-highlight\./.test(name)) rmSync(join(outputPath, name));
       logger.info(`search index written to ${outputPath}`);
@@ -122,7 +122,7 @@ const searchIndex = {
 };
 
 // CSS-module class names are `{folder}-{class}` with no content hash. Every component sits in a folder of
-// its own (components/Nav/Nav.module.css), so the folder is already a unique prefix and the compiled CSS
+// its own (components/site/Nav/Nav.module.css), so the folder is already a unique prefix and the compiled CSS
 // stays readable; the stylesheet file name still carries the hash that busts caches. Same rule as
 // ~/Development/web/rulkens.com/astro.config.ts.
 const generateScopedName = (name, file) => `${basename(dirname(file))}-${name}`;

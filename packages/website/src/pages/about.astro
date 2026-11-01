@@ -1,23 +1,24 @@
 ---
-/* The about page: its text and front matter are content/pages/about.mdx. The route holds the structured data, which needs the site's origin. */
+/* The about page: its text and front matter are content/pages/about/about.mdx. The route holds the structured data, which needs the site's origin. */
 import { getEntry, render } from 'astro:content';
 
-import { aboutJsonLd } from '../data/aboutJsonLd';
-import { fact } from '../data/fact';
+import { aboutJsonLd } from '../content/pages/about/aboutJsonLd';
 import Base from '../layouts/Base.astro';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
 
 const entry = (await getEntry('pages', 'about'))!;
 const { Content } = await render(entry);
+const structure = (await getEntry('pageStructures', 'about'))!.data;
 const pageUrl = new URL(sitePath('/about/'), Astro.site).href;
 ---
 
 <Base
   {...entry.data}
+  {...structure}
   jsonLd={[
     breadcrumbJsonLd(Astro.site!, [{ name: 'About', path: '/about/' }]),
-    ...aboutJsonLd(Astro.site!, pageUrl, fact('about-what-is').text),
+    ...aboutJsonLd(Astro.site!, pageUrl),
   ]}
 >
   <Content />

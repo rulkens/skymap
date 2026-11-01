@@ -14,6 +14,7 @@ import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { angleBetween } from '../../helpers/math/angleBetween';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
@@ -94,8 +95,6 @@ describe('nudgedSurfacePose', () => {
   });
 
   it('a body orbit nudge slows with altitude, so the ground tracks the drag', () => {
-    const angleBetween = (a: Vec3, b: Vec3) =>
-      Math.acos(Math.min(1, dot(a, b) / Math.hypot(...a) / Math.hypot(...b)));
     const eyeOf = (p: BodyFixedPose): Vec3 => [
       p.anchorLocalM[0] + p.eyeRelAnchorM[0],
       p.anchorLocalM[1] + p.eyeRelAnchorM[1],

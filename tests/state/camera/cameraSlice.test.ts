@@ -53,8 +53,7 @@ const tweenFrame: OrientationFrameId = 'ecliptic';
 const tween: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
   to: pose,
-  durationMs: 1200,
-  easing: 'easeOutCubic',
+  motion: { style: 'eased', durationMs: 1200, ease: 'easeOutCubic' },
   frame: tweenFrame,
 };
 

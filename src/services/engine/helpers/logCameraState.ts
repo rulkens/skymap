@@ -9,7 +9,6 @@
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import type { TerrainSubCamera } from '../../../@types/camera/TerrainSubCamera';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { frameKey } from '../camera/rungs/frameKey';
 import { isBodyArm } from '../camera/rungs/isBodyArm';
@@ -23,7 +22,6 @@ export function logCameraState(
   canvas: HTMLCanvasElement,
   focusRow: SelectionRow | null,
   simDays: number,
-  earthSubCamera: TerrainSubCamera | null = null,
   framed: FramedCameraPose | null = null,
 ): void {
   if (!cam) {
@@ -36,7 +34,10 @@ export function logCameraState(
   if (
     pivotMpc !== null &&
     focusRow !== null &&
-    (focusRow.type === 'body' || focusRow.type === 'craft' || focusRow.type === 'starCatalog')
+    (focusRow.type === 'body' ||
+      focusRow.type === 'craft' ||
+      focusRow.type === 'earthScene' ||
+      focusRow.type === 'starCatalog')
   ) {
     // Measured from world positions directly, not `cam.distance` (target-to-
     // camera, which a follow-pan offset can pull away from the body's center)
@@ -76,7 +77,6 @@ export function logCameraState(
     focus: focusRow,
     pivotRadiusMpc: pivotMpc,
     derived,
-    earthSubCamera,
   };
 
   console.log('[engine] camera state (full precision):', JSON.stringify(out, null, 2));

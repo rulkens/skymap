@@ -8,6 +8,7 @@ import { frameUp } from '../../../src/utils/camera/frameUp';
 import { orbitForwardOf } from '../../../src/utils/camera/orbitForwardOf';
 import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
+import { angleBetween } from '../../helpers/math/angleBetween';
 
 // A non-identity frame, so a turn about world +Y instead of the frame up fails.
 const BASIS = ORIENTATION_FRAMES.ecliptic;
@@ -28,11 +29,6 @@ const INIT: OrbitCameraInit = {
 
 function camWith(lookOffset?: Vec2) {
   return createOrbitCamera({ ...INIT, ...(lookOffset && { lookOffset }) });
-}
-
-function angleBetween(a: Vec3, b: Vec3): number {
-  const dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-  return Math.acos(Math.min(1, Math.max(-1, dot)));
 }
 
 describe('orbitForwardOf', () => {

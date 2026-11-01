@@ -41,9 +41,12 @@ const FILES: readonly string[] = SWEPT_DIRS.flatMap((dir) => walkFiles(dir, ['.t
 
 // Allow-list: pre-existing declarations the sweep's name pattern would catch
 // that are NOT a regime flag. Each entry names why it is not the thing §4
-// forbids. Empty — kept as the widening point a future false-positive should
-// use instead of loosening NAME_PATTERN or BOOLEAN_TYPE_TEXTS.
-const ALLOW_LIST: ReadonlySet<string> = new Set();
+// forbids. The widening point a future false-positive should use instead of
+// loosening NAME_PATTERN or BOOLEAN_TYPE_TEXTS.
+const ALLOW_LIST: ReadonlySet<string> = new Set([
+  // `engaged` is the tile stream's own per-body readout, not a camera regime.
+  'src/layers/body/@types/SurfaceTileDebugSnapshot.d.ts',
+]);
 
 type NamedDeclaration = VariableDeclaration | PropertySignature | PropertyDeclaration;
 

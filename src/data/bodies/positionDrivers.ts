@@ -1,11 +1,7 @@
 /**
- * positionDrivers — the three authored position tables read as one tagged
- * union, so a consumer asking "how does this body get its position?" or "what
- * does it hang off?" does not have to probe each table for membership.
- *
- * Derived, never authored: `SCENE_ANCHORS`, `ORBITAL_ELEMENTS` and
- * `SURFACE_FIXED_SITES` remain the single source of truth, and an orbit driver
- * carries its element row whole rather than a narrowed copy of it.
+ * positionDrivers — the authored position tables read as one tagged union.
+ * Derived, never authored: the source tables stay the single source of truth,
+ * and an orbit driver carries its element row whole.
  */
 
 import { SCENE_ANCHORS } from './sceneAnchors';
@@ -41,9 +37,14 @@ export function positionDriverById(id: string): PositionDriver {
   return driver;
 }
 
+/** As `positionDriverById`, for an id that may be transient (`TransientBodyId`): no row is null. */
+export function positionDriverOrNull(id: string): PositionDriver | null {
+  return BY_ID.get(id) ?? null;
+}
+
 /**
  * The body this one hangs off: an orbit's focus, a sampled craft's Sun, a site's host. Anchors hang
- * off nothing. Not `utils/bodyTextures/hostBodyId`, which resolves a TEXTURE key's host.
+ * off nothing. Not the body Layer's `hostBodyId`, which resolves a TEXTURE key's host.
  */
 export function bodyHostId(id: string): PositionedId | null {
   const driver = positionDriverById(id);

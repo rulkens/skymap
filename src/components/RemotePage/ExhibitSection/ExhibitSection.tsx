@@ -1,4 +1,4 @@
-/** ExhibitSection — open an exhibit or play a clip, and leave either with Exit. */
+/** ExhibitSection — open an exhibit or play a clip, and leave either with one button. */
 
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import type { RemoteMenu } from '../../../@types/remote/RemoteMenu';
@@ -10,11 +10,12 @@ export type ExhibitSectionProps = {
 };
 
 function ExhibitSection({ menu, onCommand }: ExhibitSectionProps) {
+  if (!menu || menu.exhibits.length + menu.clips.length === 0) return null;
   return (
     <section className={controls.section}>
       <h2 className={controls.heading}>Exhibits and clips</h2>
-      <div className={controls.row}>
-        {menu?.exhibits.map(({ id: exhibitId, label }) => (
+      <div className={controls.menu}>
+        {menu.exhibits.map(({ id: exhibitId, label }) => (
           <button
             key={exhibitId}
             type="button"
@@ -24,7 +25,7 @@ function ExhibitSection({ menu, onCommand }: ExhibitSectionProps) {
             {label}
           </button>
         ))}
-        {menu?.clips.map((clip) => (
+        {menu.clips.map((clip) => (
           <button
             key={clip.id}
             type="button"
@@ -40,7 +41,7 @@ function ExhibitSection({ menu, onCommand }: ExhibitSectionProps) {
         className={controls.button}
         onClick={() => onCommand({ name: 'exitTakeover', payload: null })}
       >
-        Exit
+        Exit exhibit or clip
       </button>
     </section>
   );

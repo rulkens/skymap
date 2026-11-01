@@ -14,7 +14,7 @@ import Button from '../../../../../src/components/common/Button/Button';
 import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import SliderGroup from '../../../../../src/components/common/SliderGroup/SliderGroup';
-import { SOURCE_REGISTRY } from '../../../../../src/data/sources';
+import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
 import { TIER_LADDER } from '../../../../../src/data/tierLadder';
 import { tierTarget } from '../../../../../src/data/tierTargets';
 import {
@@ -219,7 +219,7 @@ function ControlsPanel(): ReactNode {
           {WORKBENCH_SOURCES.map((s) => (
             <ToggleRow
               key={s}
-              label={SOURCE_REGISTRY[s].label}
+              label={APP_SOURCE_REGISTRY[s].label}
               on={catalog.sources.includes(s)}
               // Excluded at the current tier (e.g. SDSS at 'small') carries no bin for
               // this tier, but selection must survive a tier switch — mute + hint, never

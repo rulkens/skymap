@@ -1,8 +1,3 @@
-.readout {
-  margin: 0;
-  font-size: var(--font-size-input);
-}
-
 .date {
   display: flex;
   flex-direction: column;
@@ -13,5 +8,4 @@
 
 .input {
   composes: input from '../remoteControls.module.css';
-  color-scheme: dark;
 }

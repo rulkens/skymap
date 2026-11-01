@@ -17,7 +17,7 @@
 # is a leaf — no internal `import` statements, and nothing imports it via
 # `package::` — so it can sit outside `root` and just be listed in `include`.
 #
-# wesl-plugin locates this file from the *explicit* `weslToml` option in
+# weslStaticPlugin locates this file from the *explicit* `weslToml` option in
 # vite.config.ts — NOT from the Vite `root`. By default the plugin reads
 # `<process.cwd()>/wesl.toml`, and `npm run flow-workbench` keeps cwd at the
 # repo root, so without the explicit path the plugin would pick up the runtime

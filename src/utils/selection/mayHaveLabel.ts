@@ -19,6 +19,8 @@ export function mayHaveLabel(ref: SelectionRef | null): boolean {
     case 'starCatalog':
       return SEEDED_STAR_CATALOGS_BY_SOURCE.has(ref.source);
     case 'zoneOfAvoidance':
+    case 'earthScene':
+    case 'satellite':
       return false;
     case 'structure':
     case 'body':

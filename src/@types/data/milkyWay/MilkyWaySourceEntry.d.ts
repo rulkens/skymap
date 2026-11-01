@@ -1,7 +1,7 @@
 import type { SourceEntryBase } from '../SourceEntryBase';
 
 /**
- * Milky-Way-typed row of the SOURCE_REGISTRY — the GPU-generated star/dust
+ * Milky-Way-typed row of the APP_SOURCE_REGISTRY — the GPU-generated star/dust
  * point-cloud overlay drawn by `milkyWayCloudRenderer`.
  *
  * The row is label-bearing (bearsLabel:true), carrying

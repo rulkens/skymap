@@ -13,7 +13,6 @@ import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapsho
 import { clearOrientPeaks, watchOrientDeltas } from '../../services/engine/camera/orientDeltas';
 import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
 import { selectCameraBase, selectCameraTuning } from '../../state/camera/selectors';
-import { selectTerrainPickMarkerRadiusM } from '../../state/settings/selectors';
 import { shareUrlFor } from '../../state/url/shareUrlFor';
 import { useAppSelector, useAppStore } from '../../store/hooks';
 import { deg } from '../../utils/format/deg';
@@ -38,7 +37,6 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
   // The ONE reader of the live tuning: two readers at two rates (here and the
   // 4 Hz snapshot) would be a 250 ms mirror of the value the sliders write.
   const tuning = useAppSelector(selectCameraTuning);
-  const markerRadiusM = useAppSelector(selectTerrainPickMarkerRadiusM);
   // Read at click time only, never subscribed: a `useAppSelector((s) => s)`
   // here would re-render this section on every store change.
   const store = useAppStore();
@@ -58,7 +56,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
     };
   }, [cameraDebug]);
 
-  const model = modelOf(snap, tuning, markerRadiusM);
+  const model = modelOf(snap, tuning);
 
   return (
     <DebugSection title="Camera">
@@ -86,7 +84,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
           className={styles.copyButton}
           onClick={() => {
             void navigator.clipboard
-              .writeText(copyTextOf(modelOf(cameraDebug(), tuning, markerRadiusM)))
+              .writeText(copyTextOf(modelOf(cameraDebug(), tuning)))
               .then(() => {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1200);

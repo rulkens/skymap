@@ -7,7 +7,7 @@
  */
 
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import { GALAXY_CATALOG_SOURCES } from '../../../data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { maskWith } from '../../../utils/maskWith';
 

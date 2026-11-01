@@ -1,6 +1,6 @@
 /**
  * The link a docs picture is, and the attributes FigureSheet reads from it
- * (components/FigureFrame/FigureFrame.tsx): the address of the picture's
+ * (components/docs/FigureFrame/FigureFrame.tsx): the address of the picture's
  * largest file, its title, the size the app drew it at and the file's width.
  */
 export type FigureFrameSheet = {

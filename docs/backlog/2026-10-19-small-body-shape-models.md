@@ -51,7 +51,7 @@ Licence check still owed for JAXA (Ryugu) and ESA/LAM (67P, Lutetia, Šteins).
 - **Mars eclipse on mesh moons:** a self-hosted mesh moon draws unshadowed
   (`drawMeshBodiesOnRow` skips the umbra when `hostId === body.id`); the sphere path
   had no eclipse either, but the mesh path could take Mars as the occluder.
-- **Seed albedo twice:** `importMesh.py` repeats the `scenePlanets.ts` seed
+- **Seed albedo twice:** `importMesh.py` repeats the `src/layers/body/bodies/` seed
   albedos with no guard against drift.
 - Also out of phase-1 scope: mesh-surface camera following (the floor is the
   bounding sphere), Deimos colour, a DSK reader (OBJs only today).

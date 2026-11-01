@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { bandValueOf } from '../../../../src/services/engine/presentation/bandValueOf';
 import { smoothstep } from '../../../../src/utils/math/smoothstep';
 import { regionById } from '../../../../src/utils/regions/regionById';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EntryBand } from '../../../../src/@types/engine/layer/EntryBand';
 import type { ShowEntry } from '../../../../src/@types/engine/layer/ShowEntry';
@@ -65,6 +66,29 @@ describe('bandValueOf', () => {
       viewAt(atEdge),
     );
     expect(fromOrigin).toBeGreaterThan(0);
+  });
+
+  it("from a body id measures from that body's live position", () => {
+    const body = asSceneBodyId('probe-body');
+    const e = entry({ b: { from: body, out: [1, 2] } });
+    const eyeAt = (bodyMpc: Vec3) =>
+      ({
+        drawCamPos: [0, 0, 0],
+        snapshot: { bodyStates: new Map([[body, { positionMpc: bodyMpc }]]) },
+      }) as never;
+    expect(bandValueOf(e, undefined, eyeAt([0.5, 0, 0]))).toBe(1);
+    expect(bandValueOf(e, undefined, eyeAt([3, 0, 0]))).toBe(0);
+  });
+
+  it('a body missing from bodyStates reads as infinitely far', () => {
+    const e = entry({ b: { from: asSceneBodyId('absent'), out: [1, 2] } });
+    expect(bandValueOf(e, undefined, viewAt([0, 0, 0]))).toBe(0);
+  });
+
+  it('an unbranded string is no band anchor', () => {
+    // @ts-expect-error a raw string is neither a region nor a stamped body id
+    const band: EntryBand = { from: 'earth', out: [1, 2] };
+    expect(band.from).toBe('earth');
   });
 
   it('an entry without bands gives 1', () => {

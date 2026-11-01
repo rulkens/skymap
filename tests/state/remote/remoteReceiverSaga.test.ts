@@ -10,7 +10,7 @@ import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/to
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { remoteReceiverSaga } from '../../../src/state/remote/remoteReceiverSaga';
-import { REMOTE_MENU } from '../../../src/compositions/remoteMenu';
+import { REMOTE_MENU } from '../../../src/state/remote/remoteMenu';
 import { selectRemote } from '../../../src/state/remote/selectors';
 import { inputGestureEnded } from '../../../src/state/input/inputSlice';
 import { setRate, pause, resume } from '../../../src/state/time/timeSlice';

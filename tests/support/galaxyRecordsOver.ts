@@ -1,4 +1,4 @@
-import { SOURCE_REGISTRY } from '../../src/data/sources';
+import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
 import { flatGalaxyRecordSource } from '../../src/layers/galaxyCatalog/load/flatGalaxyRecordSource';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRegistryEntry } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
@@ -18,7 +18,7 @@ export function galaxyRecordsOver(
 ): Map<GalaxyCatalogSourceType, GalaxyRecordSource> {
   const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
   for (const [source, catalog] of catalogs) {
-    const entry = SOURCE_REGISTRY[source as SourceType] as GalaxyCatalogRegistryEntry;
+    const entry = APP_SOURCE_REGISTRY[source as SourceType] as GalaxyCatalogRegistryEntry;
     records.set(entry.code, flatGalaxyRecordSource(entry, catalog, famousMeta));
   }
   return records;

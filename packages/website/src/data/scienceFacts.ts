@@ -155,7 +155,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-horizon-shell',
     text: 'The sphere at the edge of the observable universe is drawn at 14.3 gigaparsecs (46.6 thousand million light-years). It marks the particle horizon of a cosmological model: how far away, today, the most distant matter is from which any signal could have reached us. The matter whose glow we see as the microwave background is a little nearer.',
-    source: `${REPO_BLOB}/src/data/rendering/horizonRadiusGpc.ts`,
+    source: `${REPO_BLOB}/src/layers/cosmicHorizon/data/horizonRadiusGpc.ts`,
     sourceLabel: `the horizon radius, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -169,7 +169,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-atmospheres',
     text: 'The atmospheres of 9 bodies are computed from a light-scattering model after Bruneton and Neyret and Hillaire, with a table of gases and hazes for each body.',
-    source: `${REPO_BLOB}/src/data/bodies/atmosphereParams.ts`,
+    source: `${REPO_BLOB}/src/layers/body/present/atmosphereParams.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -255,7 +255,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sim-horizon-h0',
     text: 'The sphere at 14.3 gigaparsecs fits a Hubble constant near 67. With the 70 we use for galaxies and the same matter density, the same model gives about 13.6 gigaparsecs. The sphere is drawn about 5 per cent too far out for the galaxies inside it.',
-    source: `${REPO_BLOB}/src/data/rendering/horizonRadiusGpc.ts`,
+    source: `${REPO_BLOB}/src/layers/cosmicHorizon/data/horizonRadiusGpc.ts`,
     sourceLabel: `the horizon radius, ${IN_REPO}`,
     checked: CHECKED,
   },

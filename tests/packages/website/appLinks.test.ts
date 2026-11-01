@@ -17,11 +17,13 @@ const VIEW_LINK_TAGS = ['ViewLink', 'Feature'];
 /** View addresses that are not a control of their own: file, how many, and why. */
 const OTHER_USES: Record<string, number> = {
   // The address shown as text and copied, beside a picture.
-  'components/AddressStrip/AddressStrip.tsx': 1,
+  'components/shared/links/AddressStrip/AddressStrip.tsx': 1,
   // The whole card is the link, its picture included; the launch drawing follows the name.
-  'components/Places/PlaceLink.tsx': 1,
+  'components/pages/home/Places/PlaceLink.tsx': 1,
+  // Each slide is a link to its own view, the current one reachable; the caption under it carries the ViewLink.
+  'components/pages/features/FeatureGallery/FeatureGallery.tsx': 1,
   // The card's picture repeats the card's ViewLink, hidden from the keyboard and from assistive technology.
-  'components/LessonLinks/LessonLinks.tsx': 1,
+  'components/pages/classroom/LessonLinks/LessonLinks.tsx': 1,
 };
 
 const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
@@ -38,7 +40,7 @@ const tagAt = (text: string, index: number) =>
 describe('app links', () => {
   it('only OpenApp launches the app with no view', () => {
     const bare = files.filter((file) => /appLink\(\s*\)/.test(file.text)).map((file) => file.name);
-    expect(bare).toEqual(['components/OpenApp/OpenApp.tsx']);
+    expect(bare).toEqual(['components/shared/links/OpenApp/OpenApp.tsx']);
   });
 
   it('an address of a view goes to a ViewLink and to nothing else', () => {
@@ -56,6 +58,6 @@ describe('app links', () => {
     const marked = files
       .filter((file) => /icon="(view|launch)"/.test(file.text))
       .map((file) => file.name);
-    expect(marked).toEqual(['components/ViewLink/ViewLink.tsx']);
+    expect(marked).toEqual(['components/shared/links/ViewLink/ViewLink.tsx']);
   });
 });

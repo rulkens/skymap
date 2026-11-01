@@ -114,7 +114,8 @@ import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHe
 import { DEFAULT_FOV_Y_RAD } from './cameraFraming';
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
-import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
+import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
+import type { CompositeSample } from '../../../@types/animation/compiledClip/CompositeSample';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 // ---------------------------------------------------------------------------
@@ -358,11 +359,10 @@ function evaluateBaseScalar(
       return runningVal;
     }
 
-    // The running value at the START of this segment is the value we've accumulated so far.
-    const segStart = runningVal;
+    // An explicit `from` (a segment continuing a composite) overrides the base chain.
+    const segStart = seg.from !== undefined ? (seg.from as number) : runningVal;
 
     if (seg.segKind === 'tween') {
-      const from = seg.from !== undefined ? (seg.from as number) : segStart;
       const to = seg.to as number;
 
       if (t >= seg.endSec) {
@@ -375,9 +375,9 @@ function evaluateBaseScalar(
         const e = EASE[seg.ease](localT);
 
         if (channel === 'yaw' || channel === 'roll') {
-          return lerpAngleShortest(from, to, e);
+          return lerpAngleShortest(segStart, to, e);
         }
-        return lerpInSpace(seg.space, from, to, e);
+        return lerpInSpace(seg.space, segStart, to, e);
       }
     } else {
       // spin segment: additive delta onto runningVal.
@@ -456,23 +456,31 @@ function evaluateBaseVec3(
 }
 
 // ---------------------------------------------------------------------------
-// Path layer — a flyPath supersedes the base layer for every channel but roll.
+// Composite layer — a composite supersedes the base layer for the channels it declares.
 // ---------------------------------------------------------------------------
 
 /**
- * activePathAt — the path that governs the base layer at time `t`, or null.
+ * governingCompositeAt — the composite that writes `ch` at time `t`, or null.
  *
- * A path governs from its `startSec` onward (not just within its window): once a
- * flythrough has started, it holds its final pose after `endSec` so the camera
- * does not snap back to the start pose during a trailing `hold`. When clips
- * chain multiple paths, the most recently started one wins.
+ * A composite governs from its `startSec` (holding its final value through a
+ * trailing `hold`) until the first base segment on `ch` starting at or after its
+ * `endSec`; compileClip gave that segment the composite's final value as `from`.
+ * Per channel, the most recently started composite that declares it wins.
  */
-function activePathAt(paths: PathTrack[], t: number): PathTrack | null {
-  let best: PathTrack | null = null;
-  for (const p of paths) {
-    if (p.startSec <= t && (best === null || p.startSec > best.startSec)) best = p;
+function governingCompositeAt(
+  tracks: readonly CompositeTrack[],
+  segments: readonly BaseSegment[],
+  ch: keyof CompositeSample,
+  t: number,
+): CompositeTrack | null {
+  let best: CompositeTrack | null = null;
+  for (const c of tracks) {
+    const later = best === null || c.startSec > best.startSec;
+    if (c.startSec <= t && later && c.channels.includes(ch)) best = c;
   }
-  return best;
+  if (best === null) return null;
+  const endSec = best.endSec;
+  return segments.some((s) => s.startSec >= endSec && s.startSec <= t) ? null : best;
 }
 
 /** The pose a frame leg starts from, and the second it starts at. */
@@ -593,7 +601,7 @@ function originOfLeg(
 // ---------------------------------------------------------------------------
 
 /**
- * evaluateBaseAt — the base layer (or the path that supersedes it) at `t`,
+ * evaluateBaseAt — the base layer (or the composites that supersede it) at `t`,
  * seeded from the current leg's origin. `origin.atSec` is `-Infinity` on the
  * opening leg, so every segment counts and the walk is the pre-frames one.
  * `beforeSec` is only passed when seeding the NEXT leg (see `LegWindow`).
@@ -610,23 +618,31 @@ function evaluateBaseAt(
   const { atSec, pose: start } = origin;
   const window: LegWindow =
     atSec === -Infinity && beforeSec === Infinity ? WHOLE_CLIP : { fromSec: atSec, beforeSec };
-  // A path authors no roll; `validatePathExclusivity` keeps roll writers out of
-  // its window, so this holds the roll the path flew in with.
-  const roll = evaluateBaseScalar(baseTracks['roll'], start.roll ?? 0, 'roll', t, window);
-  const path = activePathAt(compiled.pathTracks, t);
-  if (path !== null) {
-    // Clamp into the path's own window: before it starts we never get here
-    // (activePathAt requires startSec ≤ t); after it ends, hold the final pose.
-    const localSec = Math.min(Math.max(t - path.startSec, 0), path.endSec - path.startSec);
-    const pose = path.sample(localSec);
-    return { target: pose.target, yaw: pose.yaw, pitch: pose.pitch, distance: pose.distance, roll };
-  }
+  // Channels governed by the same composite share one sample (one spline eval per frame).
+  let sampledTrack: CompositeTrack | null = null;
+  let sampled: CompositeSample = {};
+  const fromComposite = <K extends keyof CompositeSample>(ch: K): CompositeSample[K] => {
+    const track = governingCompositeAt(compiled.compositeTracks, baseTracks[ch], ch, t);
+    if (track === null) return undefined;
+    if (track !== sampledTrack) {
+      // Clamp into the track's own window: after it ends, hold the final value.
+      const span = track.endSec - track.startSec;
+      sampledTrack = track;
+      sampled = track.sample(Math.min(Math.max(t - track.startSec, 0), span));
+    }
+    return sampled[ch];
+  };
   return {
-    roll,
-    target: evaluateBaseVec3(baseTracks['target'], start.target, t, window),
-    yaw: evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t, window),
-    pitch: evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t, window),
-    distance: evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t, window),
+    roll: evaluateBaseScalar(baseTracks['roll'], start.roll ?? 0, 'roll', t, window),
+    target:
+      fromComposite('target') ?? evaluateBaseVec3(baseTracks['target'], start.target, t, window),
+    yaw: fromComposite('yaw') ?? evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t, window),
+    pitch:
+      fromComposite('pitch') ??
+      evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t, window),
+    distance:
+      fromComposite('distance') ??
+      evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t, window),
   };
 }
 

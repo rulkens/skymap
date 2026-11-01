@@ -1,7 +1,7 @@
 /**
  * zoneOfAvoidanceUpsamplePass — composites the reduced-res `zoa` offscreen
- * into HDR, then draws the curved lettering full-res via `postBlit` (MSDF
- * text at reduced res blurs past legibility).
+ * into HDR. The band's lettering is core's `labels-world` pass, drawn after
+ * this one.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -17,10 +17,5 @@ export function zoneOfAvoidanceUpsamplePass(
     fade: 'zoneOfAvoidance',
     handleOf: () => runtime.upsample,
     enabled: () => true,
-    postBlit(pass, view, ctx, state) {
-      const r = state.gpu.label3DRenderer;
-      if (r === null || r.glyphCount() === 0) return;
-      r.draw(pass, view.vp, view.viewportPx, ctx.drawPxPerRad);
-    },
   });
 }

@@ -19,8 +19,6 @@ export function paletteRowLabel(row: ScoredRow): PaletteRowLabel {
       return { name: MILKY_WAY_NAMES[0], kind: 'Galaxy' };
     case 'alias':
       return { name: row.entry.names[0] ?? UNNAMED, kind: 'Galaxy' };
-    case 'body':
-      return { name: row.body.label, kind: 'Object' };
     case 'starCatalog':
       return { name: row.star.label, kind: 'Star' };
     case 'structure':

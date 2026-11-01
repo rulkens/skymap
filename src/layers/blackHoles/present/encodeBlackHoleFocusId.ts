@@ -1,7 +1,7 @@
 /**
  * encodeBlackHoleFocusId — a black hole's `#focus=` id. Shared by the selection
- * row's `focusId.encode`, the search row's id and `URL_HASH_FOR`, so the palette,
- * the deep link and the resolver can never spell it two ways.
+ * row's `focusId.encode` and the search row's id, so the palette, the deep link
+ * and the resolver can never spell it two ways.
  */
 
 import { BLACK_HOLE_FOCUS_PREFIX } from './blackHoleFocusPrefix';

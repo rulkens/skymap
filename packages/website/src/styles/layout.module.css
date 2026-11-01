@@ -1,7 +1,7 @@
 /*
  * layout.module.css — the page's column, its section rhythm and its twelve-column grid.
  * A vocabulary, not a component: it has no `.root`. A component takes a class with
- * `composes: wrap from '../../styles/layout.module.css'`. `.halves`, `.thirds` and
+ * `composes: wrap from '../../../../styles/layout.module.css'`. `.halves`, `.thirds` and
  * `.quarters` are composed together with `.grid` (they only set the children's spans).
  * `.bare` is a list with its bullets, margin and padding taken off.
  */

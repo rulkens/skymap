@@ -119,12 +119,18 @@ describe('replayInput', () => {
     // so such a write throws right here. The world at-rest notch, a followed
     // pan and the gesture edges cover every accumulator field.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
     const prev = deepFreeze({
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
       gesture: { ...EMPTY_SURFACE_GESTURE_MEMORY },
       tilt: { ...EMPTY_TILT_MEMORY },
-      follow: { from: null, distanceTarget: 42, panOffset: [1, 2, 3] as Vec3, saturated: false },
+      follow: {
+        from: null,
+        distanceTarget: 42,
+        durationMs: null,
+        panOffset: [1, 2, 3] as Vec3,
+        saturated: false,
+      },
     });
     const steps = deepFreeze<readonly InputStep[]>([
       atRestZoom(1.5),
@@ -221,10 +227,11 @@ describe('replayInput', () => {
       roll: 1.4,
     });
     followStore.dispatch(commitCameraPose(nearEarth));
-    followStore.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    followStore.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
     const follow = {
       from: null,
       distanceTarget: 2.5 * EARTH_RADIUS_MPC,
+      durationMs: null,
       panOffset: [0, 0, 0] as Vec3,
       saturated: false,
     };
@@ -429,7 +436,7 @@ describe('replayInput', () => {
     // translation of the drag, no body motion mixed in — and an orbit step's
     // angular delta never touches it.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
     const prev = {
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
@@ -556,10 +563,11 @@ describe('replayInput', () => {
       distance: 4 * EARTH_RADIUS_MPC,
     });
     store.dispatch(commitCameraPose(nearEarth));
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
     const follow = {
       from: null,
       distanceTarget: 4 * EARTH_RADIUS_MPC,
+      durationMs: null,
       panOffset: [0, 0, 0] as Vec3,
       saturated: false,
     };
@@ -599,7 +607,7 @@ describe('replayInput', () => {
         distance: distMpc,
         roll,
       });
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
     // Half an engage-edge down, so the in-band roll is fully authored (w = 1)
     // before the recession starts, wherever ruling 19's band is tuned to.
     const startHR = DEFAULT_CAMERA_TUNING.engageHR * 0.5;
@@ -615,7 +623,13 @@ describe('replayInput', () => {
           register,
           gesture: EMPTY_SURFACE_GESTURE_MEMORY,
           tilt: EMPTY_TILT_MEMORY,
-          follow: { from: null, distanceTarget: target, panOffset: [0, 0, 0], saturated: false },
+          follow: {
+            from: null,
+            distanceTarget: target,
+            durationMs: null,
+            panOffset: [0, 0, 0],
+            saturated: false,
+          },
         },
         [atRestZoom(Math.exp(deltaY * 0.001))],
         ctxOf(store, { winnerLastFrame: 'followHold', nowMs }),
@@ -683,7 +697,7 @@ describe('replayInput', () => {
   it('floors an in-gesture zoom at the focused body’s surface', () => {
     // A pinch spread far enough to blow through the surface in one step.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
 
     const next = replayInput(
       {

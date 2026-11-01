@@ -22,6 +22,17 @@ const ALIASES: Readonly<Record<string, readonly string[]>> = {
   opportunity: ['Oppy', 'MER-B'],
 };
 
+// A craft's kind, the palette row's chip; the whale and petunias are jokes, not a kind, so they carry none.
+const CHIP: Readonly<Record<string, string>> = {
+  curiosity: 'Rover',
+  perseverance: 'Rover',
+  spirit: 'Rover',
+  opportunity: 'Rover',
+  voyager1: 'Probe',
+  voyager2: 'Probe',
+  hubble: 'Space telescope',
+};
+
 export const CRAFT_SEARCH_NAMES: ReadonlyMap<string, readonly string[]> = new Map(
   MISSIONS_BODY_ROWS.map((row) => row.body)
     .filter(isMeshBody)
@@ -33,5 +44,6 @@ export async function* craftSearch(): AsyncIterable<readonly LayerSearchEntry[]>
     id: `${BODY_FOCUS_PREFIX}${id}`,
     class: 'primary' as const,
     names,
+    chip: CHIP[id],
   }));
 }

@@ -8,7 +8,7 @@ coupling still in place.
 
 ## What is true today
 
-- `src/data/bodies/orbitalElements.ts` — eleven element rows carry
+- `src/layers/body/bodies/` — eleven element rows carry
   `focusId: 'sun'`. The elements are heliocentric J2000 Keplerian sets, so the
   Sun is their true focus, not a stand-in.
 - `src/data/bodies/bodyRegions.ts:23,66,116-117` — `SUN_ID = 'sun'` anchors
@@ -58,5 +58,5 @@ one of these arrives, the place is a second `[0, 0, 0]` with no reader:
   (`2026-09-22-stars-still-in-the-body-tables.md`), which would move the Sun's
   anchor out of core and make `bodyRegions`' dependency on `'sun'` an inversion.
 
-Sequence after `2026-09-22-scene-anchors-are-places.md` — whether
+Sequence after J1 in `2026-10-29-layer-migration-leftovers.md` — whether
 `SCENE_ANCHORS` is the place table decides where `SOLAR_SYSTEM_ANCHOR` lives.

@@ -16,8 +16,10 @@ export const pickingInitialState: PickingSettings = {
     zoneOfAvoidance: true,
     body: true,
     craft: true,
+    earthScene: true,
     starCatalog: true,
     blackHole: true,
+    satellite: true,
   },
 };
 

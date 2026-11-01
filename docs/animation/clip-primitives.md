@@ -124,10 +124,17 @@ never clash with `base` or each other. This is why `spin('yaw')` +
 `oscillate('pitch')` + `rate('distance')` coexist freely, but `all([dollyTo(…),
 dollyTo(…)])` does not.
 
-**A `flyPath` is a composite base writer** — it drives all four channels over its
-window. `compileClip` runs a companion check, `validatePathExclusivity`, that throws
-if any `set`/`setVec`/`spin` base segment overlaps a `flyPath` window. So don't also
-drive the camera with `dollyTo` / `moveTarget` / `set` inside a `flyPath`'s window.
+**A `flyPath` is a composite base writer** — it declares and drives `target`,
+`distance`, `yaw` and `pitch` over its window. `compileClip` runs a companion check,
+`validateCompositeExclusivity`, that throws if any `set`/`setVec`/`spin` base segment
+on a declared channel overlaps the window. So don't also drive the camera with
+`dollyTo` / `moveTarget` / `set` inside a `flyPath`'s window; a `roll` tween is fine.
+A `geodesic` is the same kind of writer over `target` and `distance` only, so yaw and
+pitch tweens may run beside it.
+
+**Every channel continues from whatever wrote it last.** A composite starts from each
+channel's running value at its start, and the first base segment after a composite
+starts from the composite's final value, so `seq([flyPath(…), dollyTo(…)])` never snaps.
 
 > **Velocity does not cross the clip boundary.** The handoff between clips (and to
 > the resting camera) is a single `CameraPose` — position only. A clip's residual
@@ -153,6 +160,7 @@ return plain `Effect` objects (a tagged union) — serializable, inspectable, te
 | `spin`       | `spin(ch, { by, over, ease?, loop? }) → CameraAction`                | **base**, additive: add `by` radians over `over` s (typically an angle channel; `ch` is the full `Channel`). `loop: true` makes it **perpetual** — a linear continuation past `endSec`, the orbit idiom.                                 |
 | `rate`       | `rate(ch, { to, over, ease? }) → CameraAction`                       | **vel.** Ramp the channel's **velocity** from the carried-in velocity to `to` over `over` s, then hold that velocity (within the clip). The "ease rotation in from a standstill" idiom.                                                  |
 | `oscillate`  | `oscillate(ch, { amp, period, over?, fade?, ease? }) → CameraAction` | **osc.** Additive zero-mean sine `amp · env(t) · sin(2π t / period)`. Perpetual by default; pass `over` (window length) + `fade` (amplitude ramp seconds) to ease amplitude `0 → amp → 0` across the window. Stays zero-mean throughout. |
+| `geodesic` | `geodesic(to: { target, distance }, tuning, fovYRad, over?) → Effect` | **composite / target + distance.** van Wijk & Nuij's zoom/pan path to `to`: zoom and pan at one even perceived pace. `over` omitted ⇒ the arc-length duration `tuning` derives. Yaw and pitch stay free for tweens beside it. |
 
 ### Focus-addressed camera helpers (deferred resolution)
 
@@ -331,7 +339,7 @@ frame. They change what's _drawn_, not where the camera _is_.
 | `frameTo` | `frameTo(frame: OrientationFrameId, { over, ease? }) → SceneEffect` | Roll the horizon to another orientation frame over `over` seconds (`ease` defaults `'easeInOutCubic'`). The eye does **not** move and its aim does not change — only which way is up. Authored **in the clip**, never on the beat, so an act owns its pole; a clip pins the frame it started under, so a switch mid-clip cannot reinterpret its authored yaws. A tour restores the viewer's pre-tour frame when it ends.                               |
 
 **`args` are visibility addresses**, derived from every Layer's `visibility.ts`
-(`APP_VISIBILITY`): show keys (`'flow'`, `'survey'`, `'structureRing'`,
+(`APP_VISIBILITY_REGISTRY`): show keys (`'flow'`, `'survey'`, `'structureRing'`,
 `'milkyWayDisk'`, `'cosmicWebDensity'`, …) and label addresses (`'label:milkyWay'`,
 `'label:famousGalaxy'`, `'label:structure'`, …). A bare per-item address writes the
 cluster's section switch where it has one (`'cosmicWebDensity'`, `'starCatalog'`),

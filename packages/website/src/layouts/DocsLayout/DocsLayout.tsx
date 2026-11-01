@@ -12,9 +12,9 @@
 import type { MarkdownHeading } from 'astro';
 import type { ReactNode } from 'react';
 
-import DocBody from '../../components/DocBody/DocBody.tsx';
-import ObjLink from '../../components/ObjLink/ObjLink.tsx';
-import Sources from '../../components/Sources/Sources.tsx';
+import DocBody from '../../components/docs/DocBody/DocBody.tsx';
+import ObjLink from '../../components/shared/links/ObjLink/ObjLink.tsx';
+import Sources from '../../components/shared/text/Sources/Sources.tsx';
 import type { DocsPlace } from '../../@types/DocsPlace.ts';
 import { landingLabel } from '../../utils/landingLabel.ts';
 import { sitePath } from '../../utils/sitePath.ts';

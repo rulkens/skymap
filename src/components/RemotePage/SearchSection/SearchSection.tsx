@@ -1,6 +1,6 @@
 /** SearchSection — type a name, get the dome's matches, tap one to fly there. */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { MAX_SEARCH_QUERY_CHARS } from '../../../data/remote/maxSearchQueryChars';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import type { RemoteSearchMatch } from '../../../@types/remote/RemoteSearchMatch';
@@ -17,6 +17,7 @@ export type SearchSectionProps = {
 
 function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
   const [query, setQuery] = useState('');
+  const headingId = useId();
   useEffect(() => {
     const timer = setTimeout(() => onSearch(query.trim()), DEBOUNCE_MS);
     return () => clearTimeout(timer);
@@ -24,12 +25,14 @@ function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
 
   return (
     <section className={controls.section}>
-      <h2 className={controls.heading}>Search</h2>
+      <h2 id={headingId} className={controls.heading}>
+        Search
+      </h2>
       <input
         className={controls.input}
         type="search"
-        aria-label="Search the sky"
-        placeholder="Galaxy, planet, cluster"
+        aria-labelledby={headingId}
+        placeholder="Andromeda, Saturn"
         value={query}
         maxLength={MAX_SEARCH_QUERY_CHARS}
         autoComplete="off"
@@ -37,7 +40,9 @@ function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
         spellCheck={false}
         onChange={(e) => setQuery(e.target.value)}
       />
-      {query.trim() !== '' && matches.length === 0 && <p className={styles.empty}>No matches.</p>}
+      {query.trim() !== '' && matches.length === 0 && (
+        <p className={styles.empty}>No match for “{query.trim()}”</p>
+      )}
       <ul className={styles.list}>
         {matches.map((match, i) => (
           <li key={`${i}-${match.name}`}>

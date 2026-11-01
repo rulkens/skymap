@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { maskHas } from '../../../src/utils/maskHas';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';

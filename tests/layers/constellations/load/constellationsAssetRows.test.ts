@@ -23,6 +23,7 @@ function makeCtx(settings: unknown): DemandCtx {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: 'medium',
+    selectedKinds: new Set(),
   };
 }
 
@@ -30,9 +31,5 @@ describe('constellationsAssetRows', () => {
   it('demand follows settings.constellations.enabled', () => {
     expect(ROW.demand(makeCtx({ constellations: { enabled: true } }))).toBe(true);
     expect(ROW.demand(makeCtx({ constellations: { enabled: false } }))).toBe(false);
-  });
-
-  it('the factory hands back the runtime’s own slot, never minting one', () => {
-    expect(ROW.factory({} as never)).toBe(RUNTIME.slot);
   });
 });

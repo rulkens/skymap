@@ -1,15 +1,13 @@
 /**
- * SlabRow — one candidate `body-m` slab row, as plain data. Core derives one
- * per store body (`bodySlabRowOf`); a Layer authors its own (`Layer.slabs`).
- *
- * Camera fields are deliberately absent: driving the camera and hosting a
- * metre frame vary independently (spec §2.5). The two radii are separate
- * because the culls and the near plane need the drawn footprint and the
- * occupied sphere as distinct facts — see `bodyDrawRadiusM`.
+ * SlabRow — one candidate `body-m` slab row, as plain data. A Layer authors
+ * its own (`Layer.slabs`); core derives one only for a hostless mesh body
+ * (`bodySlabRowOf`). The two radii are separate: the culls and the near plane
+ * need the drawn footprint and the occupied sphere as distinct facts.
  */
 
 import type { FadeBand } from '../../math/FadeBand';
 import type { PositionedId } from '../../scene/PositionedId';
+import type { BodyRowSource } from './BodyRowSource';
 
 export type SlabRow = {
   /** Pose = `ctx.bodyPose(anchorId)`; also the row's `SlabFrame.hostId`. */
@@ -20,6 +18,7 @@ export type SlabRow = {
   readonly footprintRadiusM: number;
   /** The row exists only while `fadeBand(activeBand, |cam − anchor|) > 0`. */
   readonly activeBand?: FadeBand;
-  /** Which frame-graph line consumes the row (`BodyRowSource`). */
-  readonly source: 'foreground' | 'lens';
+  /** The extra frame lines this row hosts, each while this view's eye is inside
+   *  its band (`hostBandOpen`: Mpc from the anchor); no band = always. */
+  readonly hosts?: readonly { readonly line: BodyRowSource; readonly band?: FadeBand }[];
 };

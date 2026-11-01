@@ -8,8 +8,8 @@
  */
 import type { ReactNode } from 'react';
 
-import Footer from '../../components/Footer/Footer.tsx';
-import Nav from '../../components/Nav/Nav.tsx';
+import Footer from '../../components/site/Footer/Footer.tsx';
+import Nav from '../../components/site/Nav/Nav.tsx';
 import styles from './BaseLayout.module.css';
 
 type BaseLayoutProps = {

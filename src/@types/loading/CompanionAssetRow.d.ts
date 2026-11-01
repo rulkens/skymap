@@ -1,6 +1,5 @@
 import type { AssetKey } from './AssetKey';
 import type { AssetSlot } from './AssetSlot';
-import type { SlotDeps } from './SlotDeps';
 
 /**
  * An asset that loads whenever its parent does, one rank behind it, with the
@@ -11,6 +10,6 @@ import type { SlotDeps } from './SlotDeps';
  */
 export type CompanionAssetRow<T = unknown, R = unknown> = {
   key: AssetKey;
-  factory: (deps: SlotDeps) => AssetSlot<T, R>;
+  slot: AssetSlot<T, R>;
   companionOf: AssetKey;
 };

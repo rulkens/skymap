@@ -15,7 +15,7 @@ import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl'
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { createDummyFadeBindGroup } from '../../../services/gpu/lib/dummyFade';
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { MILKY_WAY_CENTER_WORLD } from '../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_PICK_MIN_SIZE_PX } from '../../../data/milkyWay/milkyWayPickMinSizePx';
 import { MILKY_WAY_RADIUS_MPC } from '../../../data/milkyWay/milkyWayRadiusMpc';

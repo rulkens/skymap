@@ -4,7 +4,7 @@
  * to name.
  */
 
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';

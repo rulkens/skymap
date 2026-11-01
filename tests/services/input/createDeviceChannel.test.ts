@@ -72,4 +72,11 @@ describe('createDeviceChannel', () => {
     expect(events.map((e) => e.kind)).toEqual(['down', 'move']);
     expect(events[1]).toMatchObject({ at: { x: 1.5, y: 0.25 } });
   });
+
+  it('an up or cancel from a pointer that never pressed the canvas emits nothing', () => {
+    firePointer(panel, 'pointerup', 150, 75);
+    firePointer(panel, 'pointercancel', 150, 75);
+    drain();
+    expect(events).toEqual([]);
+  });
 });

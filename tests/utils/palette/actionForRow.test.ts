@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { actionForRow } from '../../../src/utils/palette/actionForRow';
-import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
-import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
@@ -62,13 +61,6 @@ describe('actionForRow', () => {
     });
   });
 
-  it('a body row → the seed id under the body focus prefix', () => {
-    expect(actionForRow({ kind: 'body', body: SCENE_EARTH, score: 0 })).toEqual({
-      kind: 'focus',
-      focusId: `body-${SCENE_EARTH.id}`,
-    });
-  });
-
   it('a star row → the seed id under the star focus prefix', () => {
     const index = SCENE_STARS.findIndex((star) => star.id === 'sirius');
     expect(
@@ -83,7 +75,7 @@ describe('actionForRow', () => {
   });
 
   it('an exhibit row → an exhibit action carrying the registry id, not a focus', () => {
-    const exhibit = APP_EXHIBITS.cosmicWeb;
+    const exhibit = APP_EXHIBIT_REGISTRY.cosmicWeb;
     expect(actionForRow({ kind: 'exhibit', exhibit, score: 0 })).toEqual({
       kind: 'exhibit',
       exhibitId: exhibit.id,

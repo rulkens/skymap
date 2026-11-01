@@ -7,7 +7,7 @@ import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequest
 import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { selectionRoute } from '../../../src/store/constants';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
@@ -69,7 +69,7 @@ describe('watchRequestFocusSaga', () => {
 
   it('resolves a body deep link immediately, with no catalog cloud in the path', async () => {
     // Ruling 4: a static (body/star/structure) focus id resolves off its table
-    // through the composed resolver's core rows — no `engineSourceCountReported`
+    // through the composed resolver's static rows — no `engineSourceCountReported`
     // pulse required, even with the cloud absent.
     cloudPresent = false;
     store.dispatch(requestFocus({ id: 'body-mars', transition: 'fly' }));

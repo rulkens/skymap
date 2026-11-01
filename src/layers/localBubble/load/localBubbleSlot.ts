@@ -1,9 +1,4 @@
-/**
- * localBubbleSlot — factory for the shell's asset slot: its own fetcher and
- * its own renderer target. Construction-pure — builds and returns. A
- * Layer's slot lands in `state.layerSlots` (`createLayers`), never
- * `state.assetSlots`.
- */
+/** localBubbleSlot — factory for the shell's asset slot (own fetcher and renderer target). */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { localBubbleFetcher } from './localBubbleFetcher';

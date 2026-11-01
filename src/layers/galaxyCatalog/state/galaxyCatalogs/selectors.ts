@@ -1,7 +1,8 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
 import { maskWith } from '../../../../utils/maskWith';
 import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
 import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -60,7 +61,7 @@ export const selectVisibleSourceMask = createSelector([selectRoute], (route) => 
   for (const src of GALAXY_CATALOG_SOURCES) {
     // `src ∈ GALAXY_CATALOG_SOURCES` ⇒ its registry id is a galaxy catalog id; the broad
     // `SourceId` typing on `.id` doesn't know that, so the cast is safe.
-    const id = SOURCE_REGISTRY[src].id as GalaxyCatalogId;
+    const id = APP_SOURCE_REGISTRY[src].id as GalaxyCatalogId;
     if (route.items[id].enabled) mask = maskWith(mask, src);
   }
   return mask;

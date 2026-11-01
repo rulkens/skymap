@@ -11,6 +11,7 @@ import { deriveFrameContext } from '../frame/frameContext';
 import { deriveView } from '../frame/deriveView';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { frameContextInputOf } from '../frame/frameContextInputOf';
+import { frameBodyStates } from '../frame/frameBodyStates';
 import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { liveWorldPose } from './liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
@@ -24,14 +25,16 @@ export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement):
   // One read of the committed orientation for this call — `poseBasis` and the
   // at-rest `upBasis` are the SAME frame, unlike `runFrame`'s live mid-slerp one.
   const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
+  // The instant the last frame derived its bodies at, so pickable body sprites
+  // are re-derived exactly where they were drawn.
+  const simDays = state.cameraRuntime.outputs.simDays;
   const { input, cam } = frameContextInputOf(state, {
     worldPose: liveWorldPose(state),
     nowMs,
     poseBasis,
     upBasis: poseBasis,
-    // The instant the last frame derived its bodies at, so pickable body sprites
-    // are re-derived exactly where they were drawn.
-    simDays: state.cameraRuntime.outputs.simDays,
+    simDays,
+    bodyStates: frameBodyStates(state, state.selectionKindRows, simDays),
   });
   // Pick never runs a view through `executeFrame` (see `pickProgram.ts`'s
   // header), so the default `renderedTargets` is fine here.

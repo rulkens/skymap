@@ -1,0 +1,10 @@
+/**
+ * BODY_TRAIL_ELEMENTS — the body Layer's orbit-trail roster (Earth, planet and moon rows).
+ */
+
+import { BODY_BODY_ROWS } from '../bodies/bodyBodyRows';
+import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
+
+export const BODY_TRAIL_ELEMENTS: readonly OrbitalElements[] = BODY_BODY_ROWS.flatMap((row) =>
+  row.position.kind === 'orbit' ? [row.position.elements] : [],
+);

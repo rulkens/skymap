@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { shallowEqualRef } from '../../../src/utils/object/shallowEqualRef';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 
 describe('shallowEqualRef', () => {

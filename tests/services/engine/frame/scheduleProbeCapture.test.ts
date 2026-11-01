@@ -37,12 +37,6 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 const SIM_DAYS = 0;
 const NOW_MS = 100_000;
 
-// A hosted rover (rides Mars's row) and a hostless probe (owns its row).
-const CURIOSITY = SCENE_MESH_BODIES.find((body) => body.id === 'curiosity')!;
-const VOYAGER = SCENE_MESH_BODIES.find((body) => body.id === 'voyager1')!;
-const WHALE = SCENE_MESH_BODIES.find((body) => body.id === 'whale')!;
-const PETUNIAS = SCENE_MESH_BODIES.find((body) => body.id === 'petunias')!;
-
 // 600-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 600 / (2 * Math.tan(1 / 2));
 
@@ -50,9 +44,8 @@ const FIXTURE_PX_PER_RAD = 600 / (2 * Math.tan(1 / 2));
 function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
   const positionMpc = deriveBodyStates(SIM_DAYS).get(asSceneBodyId(bodyId))!.positionMpc;
   return {
-    // Frame-owned: `scheduleProbeCapture` and `sceneBodyStates` both read
-    // these off `ctx.snapshot.x`.
     snapshot: {
+      bodyStates: deriveBodyStates(SIM_DAYS),
       simDays: SIM_DAYS,
       nowMs,
       meshBodies: SCENE_MESH_BODIES,
@@ -67,14 +60,11 @@ function makeState(resident: readonly string[]): EngineState {
   return {
     gpu: {
       meshBodyRenderer: { hasMesh: (id: string) => resident.includes(id) },
-      texturedBodyRenderer: null,
     },
-    data: { bodies: { planets: [], meshBodies: [CURIOSITY, VOYAGER] } },
     cubemapCaptures: makeCubemapCaptureRuntimes(),
   } as unknown as EngineState;
 }
 
-/** A face ctx whose slab table carries Mars's body-m row at index 3. */
 function faceCtxWithMarsRow(face: CubeFace): FrameView {
   return {
     __face: face,
@@ -125,7 +115,6 @@ describe('scheduleProbeCapture', () => {
     // A paused, still scene wakes for nothing else, so the loser of the tie
     // would sit on a zero cube until the next input.
     const state = makeState(['whale', 'petunias']);
-    (state.data.bodies as { meshBodies: unknown }).meshBodies = [WHALE, PETUNIAS];
     const probe = state.cubemapCaptures.probe;
 
     expect(scheduleProbeCapture({ state, ctx: ctxAt('whale') })).not.toBeNull();
@@ -148,7 +137,6 @@ describe('scheduleProbeCapture', () => {
     expect(state.cubemapCaptures.probe.subject).toBeNull();
     expect(deriveViewMock).not.toHaveBeenCalled();
 
-    // One millisecond later the interval has elapsed.
     expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity', NOW_MS + 1) })).not.toBeNull();
   });
 
@@ -161,7 +149,6 @@ describe('scheduleProbeCapture', () => {
     const row = CUBEMAP_CAPTURES.probe;
     const curiosityMpc = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('curiosity'))!.positionMpc;
 
-    // One frame for the whole row.
     expect(cubemapCaptureFrameMock).toHaveBeenCalledTimes(1);
     expect(cubemapCaptureFrameMock.mock.calls[0]![0]).toMatchObject({
       eyeMpc: curiosityMpc,
@@ -171,7 +158,6 @@ describe('scheduleProbeCapture', () => {
       axes: deriveBodyStates(SIM_DAYS).get(asSceneBodyId('mars'))!.orientation,
     });
 
-    // Six faces off that one frame, each stamped with the row's slot base and size.
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
     for (const call of deriveViewMock.mock.calls) {
       const spec = call[2] as ViewSpec;

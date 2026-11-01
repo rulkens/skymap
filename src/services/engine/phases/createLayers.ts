@@ -2,7 +2,7 @@
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
  * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
  * then composes each instance's contributions onto core's `state.passes` /
- * `.computes` / `.assetRows` / `.visibilityEntries` / `.layerSlots` / `.selectionKindRows`,
+ * `.computes` / `.assetRows` / `.slotsByKey` / `.visibilityEntries` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
  * `.label3DProducers` and `.orbitTrailGroups` are unkeyed concatenations instead.
  */
@@ -14,12 +14,9 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { SourceCountReport } from '../../../@types/engine/layer/SourceCountReport';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { AssetKey } from '../../../@types/loading/AssetKey';
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
-import { composeTerrain } from '../layer/composeTerrain';
-import { surfaceTileTerrain } from '../../../utils/surfaceTiles/surfaceTileTerrain';
+import { composeTerrainHeightAt } from '../layer/composeTerrainHeightAt';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
@@ -40,11 +37,9 @@ import { gateOrbitTrailGroup } from '../layer/gateOrbitTrailGroup';
 import { gatePassByFade } from '../layer/gatePassByFade';
 import { gatePlannerByFade } from '../layer/gatePlannerByFade';
 import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
-import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
-import { CORE_COMPUTES } from '../frame/computes';
-import { ASSET_WIRING } from '../wiring/assetWiring';
+import { meshAssetRows } from '../wiring/meshAssetRows';
 
 export async function createLayers(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals;
@@ -66,12 +61,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   if (uiCtx === null) throw new Error('createLayers: state.gpu.uiCtx is null');
 
   const requestRender = (): void => state.subsystems.scheduler.requestRender();
-  // Core's "a source's catalog landed" pulse, and everything core does on it
-  // (D6, Ruling 3). The running total is `galaxyPointRenderer.totalCount()` by
-  // construction — per-source last-reported count, summed, replaced on a tier
-  // swap — so the splash's ready echo needs no renderer read of its own. The
-  // echo is per-arrival, not per-boot: a catalog the user enables mid-session
-  // echoes too, where the deleted gate only subscribed to boot-enabled sources.
+  // Core's "a source's catalog landed" pulse. The running total equals
+  // `galaxyPointRenderer.totalCount()` by construction (per-source last count, summed,
+  // replaced on tier swap). The echo is per-arrival, so a catalog enabled mid-session
+  // echoes too.
   const countBySource = new Map<SourceType, number>();
   function* consumeSourceCountSaga(report: SourceCountReport): SagaIterator {
     yield* put(engineSourceCountReported(report));
@@ -84,9 +77,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     }
   }
 
-  // Collected here (not read back off `runSaga`'s call sites) so `state.layers = instances`
-  // and `state.layerSagaTasks = layerSagaTasks` assign together below — see `RunSaga`'s
-  // doc comment for why `destroy()` needs these.
+  // Collected so `state.layers` and `state.layerSagaTasks` assign together below
+  // (`RunSaga`'s doc says why `destroy()` needs them).
   const layerSagaTasks: Task[] = [];
   const instances = deps.composition.layers.map((layer) => {
     const common = {
@@ -101,15 +93,13 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       sourceBgl,
       focusBgl,
       focusUniform,
-      store: deps.cb.store,
+      settings: () => deps.cb.store.getState().settings,
+      debugPanelOpen: () => deps.cb.store.getState().ui.debugPanelOpen,
       requestRender,
     };
-    // Facts is erased to `undefined` at this composition boundary
-    // (`Layer<string, unknown>`), so `publish` cannot appear in a
-    // `LayerCoreDeps<undefined>` — only a Layer's own `create` sees it typed,
-    // against its literal Facts. Built into the literal rather than assigned
-    // after: `publish` is `readonly`, and the cast below is the one place that
-    // erasure boundary is bridged.
+    // Facts is erased to `undefined` at this boundary (`Layer<string, unknown>`), so
+    // `publish` cannot appear in `LayerCoreDeps<undefined>`; the cast below bridges it.
+    // Built into the literal because `publish` is `readonly`.
     const declaresFacts = layer.facts !== undefined;
     if (declaresFacts) {
       deps.cb.store.dispatch(
@@ -128,8 +118,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
         }
       : common;
     const instance = instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>);
-    // The feeds are tasks like `sagas`, on the same array, so `engine.ts`'s
-    // teardown cancels them the same way — which is what closes each iterator.
+    // Feeds are tasks on the same array as `sagas`, so teardown cancels (and closes) them alike.
     const { search, sourceCounts } = instance;
     if (search) {
       layerSagaTasks.push(deps.cb.runSaga(() => runLayerSearchSaga(layer.name, search)));
@@ -144,41 +133,39 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
 
   state.layers = instances;
   state.layerSagaTasks = layerSagaTasks;
-  // `expandFrameOrder` resolves a FRAME_ORDER name by the FIRST pass that
-  // answers to it, and `checkFrameOrder` counts order lines rather than passes —
-  // so a core pass left behind under a name a Layer now contributes would keep
-  // drawing, silently, with the Layer's own version never reached.
-  // Every pass, compute, planner and label row is gated here, once, so the executors never see
-  // a `fade` or `label` declaration: they call what they always called.
+  // `expandFrameOrder` resolves a FRAME_ORDER name by the FIRST pass answering to it and
+  // `checkFrameOrder` counts lines, so a core pass left under a name a Layer contributes
+  // would keep drawing silently, the Layer's version never reached.
+  // Fade/label gating is applied here once, so executors never see those declarations.
   state.passes = concatUniqueRows('createLayers: passes', (pass) => pass.name, [
     CONTENT_PASSES,
     ...instances.map((instance) => instance.passes),
   ]).map((pass) => gatePassByFade(pass, state));
-  state.computes = concatUniqueRows('createLayers: compute rows', (compute) => compute.name, [
-    CORE_COMPUTES,
-    ...instances.map((instance) => instance.computes),
-  ]).map((compute) => gateComputeByFade(compute, state));
+  state.computes = concatUniqueRows(
+    'createLayers: compute rows',
+    (compute) => compute.name,
+    instances.map((instance) => instance.computes),
+  ).map((compute) => gateComputeByFade(compute, state));
   state.planners = concatUniqueRows(
     'createLayers: planner rows',
     (planner) => planner.name,
     instances.map((instance) => instance.planners),
   ).map((planner) => gatePlannerByFade(planner, state));
-  // Two maps answer "the slot for key K", and `slotFor` consults the Layer one
-  // first — so a duplicate would silently SHADOW the other rather than surface,
-  // leaving whichever slot core still mints loading into nothing. One fold over
-  // the whole list: a companion's parent may sit in the other half, and
-  // `expandCompanionRows` is only correct over a list holding both.
+  // A duplicate key would leave two slots behind one key, and every key-addressed
+  // read would answer with only one of them. One fold over the whole list: a
+  // companion's parent may sit in the other half, and `expandCompanionRows` is
+  // only correct over a list holding both. Layer rows lead: the queue breaks equal
+  // ranks by array order, so body textures load ahead of craft meshes.
   state.assetRows = expandCompanionRows(
     concatUniqueRows('createLayers: asset keys', (row) => String(row.key), [
-      ASSET_WIRING,
       ...instances.map((instance) => instance.assets),
+      meshAssetRows(state),
     ]),
   );
-  // Static, so read off the composition rather than the instances — `targets`
-  // is composed the same way. The ceiling sizes the GPU query set before any
-  // Layer exists (`slabRowCeiling.ts`), so the composition must fit the
-  // headroom that reserved; a duplicate `anchorId` would give two rows one
-  // pose and one `SlabFrame.hostId`, with the second silently unreachable.
+  state.slotsByKey = new Map(state.assetRows.map((row) => [row.key, row.slot]));
+  // Static, read off the composition. The ceiling sizes the GPU query set before any
+  // Layer exists (`slabRowCeiling.ts`), so the composition must fit its headroom; a
+  // duplicate `anchorId` would leave the second row silently unreachable.
   const slabRows = concatUniqueRows(
     'createLayers: slab rows',
     (row) => row.anchorId,
@@ -200,35 +187,23 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.label3DProducers = instances.flatMap((instance) =>
     instance.worldLabels.map(gateWorldLabelProducer),
   );
-  state.orbitTrailGroups = [
-    { show: 'orbitTrails' as const, rows: CORE_TRAIL_ELEMENTS },
-    ...instances.flatMap((instance) => instance.orbitTrails),
-  ].map((group) => gateOrbitTrailGroup(group, state));
-  // Core keeps the slot until body Layers can reach the tile subsystem; the
-  // body move deletes this row, and the two-provider throw catches a half-done move.
-  state.terrain = composeTerrain([
-    { name: 'core:surfaceTiles', terrain: surfaceTileTerrain(state.subsystems) },
-    ...instances.flatMap((instance) =>
-      instance.terrain ? [{ name: instance.name, terrain: instance.terrain }] : [],
+  state.orbitTrailGroups = instances
+    .flatMap((instance) => instance.orbitTrails)
+    .map((group) => gateOrbitTrailGroup(group, state));
+  state.terrainHeightAt = composeTerrainHeightAt(
+    instances.flatMap((instance) =>
+      instance.heightAt ? [{ name: instance.name, heightAt: instance.heightAt }] : [],
     ),
-  ]);
+  );
 
-  // Two directors, each owning one slab's screen-space projection — a
-  // producer names the slab whose director it registers on (`LayerGuides`'s
-  // header explains why NEAR0 vs COSMO matters).
+  // Two directors, one per slab's screen-space projection; a producer names its slab
+  // (`LayerGuides`'s header explains why NEAR0 vs COSMO matters).
   const screenLabelDirectors: Readonly<Record<number, Label2DDirector>> = {
     [NEAR0]: state.subsystems.foregroundLabelDirector,
     [COSMO]: state.subsystems.cosmoLabelDirector,
   };
 
-  const layerSlots = new Map<AssetKey, AssetSlot<unknown, unknown>>();
   for (const instance of instances) {
-    for (const row of instance.assets) {
-      // Once, here — not per frame: the slot IS the Layer's runtime-owned
-      // object, and a second call would mint a second subscriber. `SlotDeps` is
-      // passed for signature parity; a Layer row's factory ignores it.
-      layerSlots.set(row.key, row.factory({ state, cb: deps.cb }) as AssetSlot<unknown, unknown>);
-    }
     for (const { slab, ...producer } of instance.screenLabels) {
       const director = screenLabelDirectors[slab];
       if (!director) {
@@ -237,11 +212,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       director.registerProducer(gateLabelProducer(producer));
     }
   }
-  state.layerSlots = layerSlots;
 
-  state.selectionKindRows = [
-    ...state.selectionKindRows,
-    ...instances.flatMap((instance) => instance.selection),
-  ];
+  state.selectionKindRows = instances.flatMap((instance) => instance.selection);
   assertSelectionRowsDisjoint(state.selectionKindRows);
 }

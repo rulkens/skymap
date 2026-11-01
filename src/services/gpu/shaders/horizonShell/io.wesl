@@ -36,8 +36,8 @@
 //   offset 32 : camUp         (vec3<f32>) + radiusGpc   (f32)
 //   offset 48 : cameraPosGpc  (vec3<f32>) + fadeAlpha   (f32)
 //
-// 'fadeAlpha' is the CPU-computed distance fade (see
-// utils/math/horizonShellFade): 0 when the camera is too close for the
+// 'fadeAlpha' is the pass's handed fade (the switch times the reach band in
+// layers/cosmicHorizon/visibility.ts): 0 when the camera is too close for the
 // shell to be relevant, smoothstepping to 1 at cosmological pull-back.
 // The fragment stage multiplies it into the emitted (additive) colour.
 
