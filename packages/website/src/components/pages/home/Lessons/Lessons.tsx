@@ -7,60 +7,14 @@
  * stands on the field trip with no bus: Jezero crater across the window, the way in set in its sky, and
  * Perseverance, cut out with its shadow, driving up onto its own spot as the strip scrolls in.
  */
-import { CLASS_FEATURES } from '../../../../content/pages/classroom/classFeatures.ts';
-import { LESSON_TOPICS } from '../../../../data/lessons.ts';
-import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
-import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
+import { ANDROMEDA, EARTH, JUPITER, ORION, SCALE_LABEL } from './Lessons.constants.ts';
+import LessonAsk from './LessonAsk.tsx';
 import styles from './Lessons.module.css';
-
-const lesson = (shot: string) =>
-  LESSON_TOPICS.flatMap((topic) => topic.lessons).find((row) => row.shot === shot)!;
-const feature = (shot: string) => CLASS_FEATURES.find((row) => row.shot === shot)!;
-
-const EARTH = {
-  ask: 'Can you see the North Pole on 21 June?',
-  line: 'Earth as the Sun lit it that day. Ask what it means for the length of a day there.',
-  hash: lesson('lesson-earth-june').hash,
-  action: 'Earth on 21 June',
-};
-const JUPITER = {
-  ask: 'How many times does Io go round while Europa goes round once?',
-  line: 'Jupiter with the clock paused. Start it, speed it up and count.',
-  hash: feature('class-time').hash,
-  action: 'Jupiter and its moons',
-};
-const ORION = {
-  ask: 'Which is farther away: Betelgeuse, or the centre of the Milky Way?',
-  line: 'Orion and the stars around it. Pupils search for both and compare.',
-  hash: feature('class-search').hash,
-  action: 'Orion and its neighbours',
-};
-const ANDROMEDA = {
-  ask: 'Had our species appeared when this light left Andromeda?',
-  line: 'A photograph of Andromeda at its catalogued place. The light left 2.5 million years ago.',
-  hash: lesson('lesson-andromeda').hash,
-  action: 'Andromeda, the nearest large galaxy',
-};
-const SCALE_LABEL = {
-  title: 'Earth and Jupiter at the same scale',
-  credit: `${siteShot('lessons-earth').credit}. ${siteShot('lessons-jupiter').credit}`,
-};
-
-// A question with its line and the view that answers it.
-const words = (part: typeof EARTH, className?: string) => (
-  <div className={cx(styles.words, className)}>
-    <h3>{part.ask}</h3>
-    <p className={styles.line}>{part.line}</p>
-    <ViewLink hang view={part.hash}>
-      {part.action}
-    </ViewLink>
-  </div>
-);
 
 function Lessons() {
   return (
@@ -86,8 +40,8 @@ function Lessons() {
             <ShotCaption label={SCALE_LABEL} />
           </figcaption>
         </figure>
-        {words(EARTH, styles.first)}
-        {words(JUPITER, styles.second)}
+        <LessonAsk {...EARTH} className={styles.first} />
+        <LessonAsk {...JUPITER} className={styles.second} />
       </div>
       <div className={styles.far}>
         <div className={styles.part}>
@@ -99,7 +53,7 @@ function Lessons() {
               <Shot id="ui-search" sizes="(max-width: 900px) 84vw, 26rem" alt="" />
             </div>
           </figure>
-          {words(ORION)}
+          <LessonAsk {...ORION} />
         </div>
         <div className={styles.part}>
           <figure className={styles.figure}>
@@ -107,7 +61,7 @@ function Lessons() {
               <Shot id="lesson-andromeda" sizes="(max-width: 900px) 100vw, 36rem" />
             </div>
           </figure>
-          {words(ANDROMEDA)}
+          <LessonAsk {...ANDROMEDA} />
         </div>
       </div>
       <figure className={styles.mars}>

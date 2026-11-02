@@ -10,28 +10,16 @@
 import type { ReactNode } from 'react';
 
 import pkg from '../../../../../../package.json';
-import { FOOTER_GROUPS } from '../../../data/nav.ts';
-import { MAKER_NAME, REPO_BLOB, REPO_URL } from '../../../data/siteIdentity.ts';
+import { MAKER_NAME, REPO_BLOB } from '../../../data/siteIdentity.ts';
 import { sitePath } from '../../../utils/sitePath.ts';
 import ObjLink from '../../shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../shared/links/OpenApp/OpenApp.tsx';
 import Shot from '../../shared/media/Shot/Shot.tsx';
 import Wordmark from '../../shared/text/Wordmark/Wordmark.tsx';
+import { GROUND, groups } from './Footer.constants.ts';
 import styles from './Footer.module.css';
 
 type FooterProps = { path: string; light?: ReactNode };
-
-const GROUND = 'lesson-universe';
-const groups = FOOTER_GROUPS.map((group) => ({
-  heading: group.heading,
-  links: group.items.map((item) => ({
-    label: item.label,
-    icon: item.icon,
-    href: sitePath(item.path),
-  })),
-}));
-// The repository is the one link here that leaves the site, so it is not a row of the site's own pages.
-groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
 
 function Footer({ path, light }: FooterProps) {
   return (

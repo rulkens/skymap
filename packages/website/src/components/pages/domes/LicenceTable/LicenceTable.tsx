@@ -5,10 +5,8 @@
  * stacks, its cells named by their column (`data-label`).
  */
 import { LICENCE_ROWS } from '../../../../content/pages/domes/domes.data.ts';
-import { sitePath } from '../../../../utils/sitePath.ts';
+import { siteHref } from '../../../../utils/siteHref.ts';
 import styles from './LicenceTable.module.css';
-
-const href = (path: string) => (path.startsWith('/') ? sitePath(path) : path);
 
 function LicenceTable() {
   return (
@@ -25,7 +23,7 @@ function LicenceTable() {
           {LICENCE_ROWS.map((row) => (
             <tr key={row.source} data-free={row.licence === 'MIT' ? '' : undefined}>
               <th scope="row">
-                {'href' in row ? <a href={href(row.href)}>{row.source}</a> : row.source}
+                {'href' in row ? <a href={siteHref(row.href)}>{row.source}</a> : row.source}
               </th>
               <td data-label="Licence">{row.licence}</td>
               <td data-label="For a paid show">{row.paid}</td>

@@ -8,60 +8,18 @@
  */
 import type { CSSProperties } from 'react';
 
-import { DATA_SOURCES } from '../../../../data/dataSources.ts';
 import { fact } from '../../../../data/fact.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { dataRowPath } from '../../../../utils/dataRowPath.ts';
+import { revealDelay } from '../../../../utils/revealDelay.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import SectionHead from '../../../shared/layout/SectionHead/SectionHead.tsx';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
+import { COUNT_LABEL, KINDS, WINDOW_SIZES } from './RealData.constants.ts';
 import styles from './RealData.module.css';
 
-// The title of each is a group of the table, which picks its sources.
-// `accent` is taken from the picture: the survey's warm near end, starlight, the orbits' gold, Earth's blue.
-// `counts` names what the large number counts where a source's own count does not (`countNoun`).
-// `fact` stands a sourced figure there instead, for a kind whose sources give no count: orbits fitted, levels of detail.
-const KINDS = [
-  {
-    group: 'Galaxies and quasars',
-    counts: 'galaxies and quasars',
-    shot: 'features-desi',
-    accent: '#e8a774',
-  },
-  { group: 'Stars', counts: 'stars', shot: 'render-stars', accent: '#f1e2c4' },
-  { group: 'Solar system', fact: 'sci-ephemeris', shot: 'lesson-solar-system', accent: '#d9c27a' },
-  { group: 'Imagery', fact: 'pipe-earth-tiles', shot: 'earth-terminator', accent: '#8fb6ff' },
-];
-
-// A square window cut from a wide picture shows its full height, so the file is chosen for 16/9 of the window.
-const WINDOW_SIZES = '(max-width: 900px) 29rem, 32rem';
-// A source's short name: the table's name up to its gloss ("SDSS, the Sloan Digital Sky Survey").
-const shortName = (name: string) => name.split(', ')[0]!;
-// The Science table's count and its heading: what the app draws, or what the source holds where the build does
-// not count (SourceTable).
-const COUNT_LABEL = '# of objects';
-const sources = (group: string) =>
-  DATA_SOURCES.filter((row) => row.group === group).map((row) => ({
-    ...row,
-    count: row.drawn ?? row.rows,
-  }));
-// What a source's count is of: the noun of its catalogue size ("44,599 galaxies"), unless that only says rows,
-// objects or spectra. Then the source's own word where it holds one kind: SDSS is queried for class GALAXY only
-// (docs/DATA.md), Milliquas is quasars and other active nuclei, and DESI's table row gives galaxies. GLADE+, which
-// takes in quasar catalogues, keeps the group's word.
-const GENERIC = ['rows', 'objects', 'spectra'];
-const SOURCE_NOUN: Record<string, string> = {
-  sdss: 'galaxies',
-  milliquas: 'quasars',
-  desi: 'galaxies',
-};
-const countNoun = (id: string, rows: string | undefined, group: string) => {
-  const noun = rows?.split(' ')[1];
-  return noun && !GENERIC.includes(noun) ? noun : (SOURCE_NOUN[id] ?? group);
-};
-const delay = (at: number) => ({ '--reveal-delay': `${at * 60}ms` }) as CSSProperties;
 function RealData() {
   return (
     <section className={styles.root} id="data">
@@ -87,7 +45,7 @@ function RealData() {
               style={{ '--kind-accent': kind.accent } as CSSProperties}
             >
               <figure className={styles.figure}>
-                <div className={styles.window} style={delay(at)} data-reveal="rise">
+                <div className={styles.window} style={revealDelay(at * 60)} data-reveal="rise">
                   <Shot id={kind.shot} sizes={WINDOW_SIZES} />
                 </div>
                 {figure && (
@@ -102,22 +60,22 @@ function RealData() {
               </figure>
               <h3>{kind.group}</h3>
               <ul className={styles.names}>
-                {sources(kind.group).some((row) => row.count) && (
+                {kind.sources.some((row) => row.count) && (
                   <li className={styles.countHead} aria-hidden>
                     {COUNT_LABEL}
                   </li>
                 )}
-                {sources(kind.group).map((row) => (
+                {kind.sources.map((row) => (
                   <li key={row.id}>
-                    <a href={sitePath(dataRowPath(row.entries))}>{shortName(row.name)}</a>
+                    <a href={sitePath(dataRowPath(row.entries))}>{row.short}</a>
                     {row.count && (
                       <>
                         <span className={styles.count}>{row.count}</span>
                         <span className={styles.big} aria-hidden>
                           {row.count.split(' ')[0]}
                           <small>
-                            {kind.counts ? `${countNoun(row.id, row.rows, kind.counts)} from ` : ''}
-                            {shortName(row.name)}
+                            {row.noun ? `${row.noun} from ` : ''}
+                            {row.short}
                           </small>
                         </span>
                       </>

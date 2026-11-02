@@ -13,9 +13,7 @@ import type { GalleryState } from '../../../../@types/GalleryState';
 import type { GalleryView } from '../../../../@types/GalleryView';
 import { lessWanted } from '../../../../utils/lessWanted.ts';
 import { wrapIndex } from '../../../../utils/wrapIndex.ts';
-
-// Long enough to read a label through before its picture goes.
-const REST_SEC = 9;
+import { REST_SEC } from './useGallery.constants.ts';
 
 export type Gallery = GalleryState & {
   /** The band's section, for the pointer and focus that warm the next view. */

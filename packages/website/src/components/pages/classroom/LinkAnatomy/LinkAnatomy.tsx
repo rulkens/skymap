@@ -7,7 +7,6 @@
 import type { CSSProperties } from 'react';
 
 import { ACCENTS, says } from '../../../../content/pages/classroom/classroom.data.ts';
-import { HOME_LINKS } from '../../../../data/homeLinks.ts';
 import { appAddress } from '../../../../utils/appAddress.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import AddressText from '../../../shared/links/AddressText/AddressText.tsx';
@@ -18,10 +17,7 @@ import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './LinkAnatomy.module.css';
-
-// The address of the Jupiter picture beside it, without the camera position a copied address never has.
-const HASH = HOME_LINKS.classroom;
-const SHOT = 'classroom-hero';
+import { HASH, SHOT } from './LinkAnatomy.constants.ts';
 
 function LinkAnatomy() {
   return (

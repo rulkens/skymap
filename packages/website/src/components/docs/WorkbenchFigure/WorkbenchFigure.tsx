@@ -11,18 +11,9 @@ import type { FigureFrameSheet } from '../../../@types/FigureFrameSheet';
 import { WORKBENCHES, WORKBENCH_WIDTHS, WORKBENCH_WINDOW } from '../../../data/workbenches.ts';
 import FigureFrame from '../FigureFrame/FigureFrame.tsx';
 import ShotCaption from '../../shared/media/ShotCaption/ShotCaption.tsx';
+import { FILES, SIZES } from './WorkbenchFigure.constants.ts';
 
 type WorkbenchFigureProps = { id: string };
-
-const FILES = import.meta.glob<string>('../../../assets/workbenches/*.{avif,webp}', {
-  eager: true,
-  query: '?url&no-inline',
-  import: 'default',
-});
-
-// As DocFigure's figure in the column: the screen, then the text's seven columns, then its six.
-const SIZES =
-  '(max-width: 900px) 100vw, (max-width: 1199px) calc(58.33vw - 4.46rem), (max-width: 1239px) calc(50vw - 4.25rem), 34.5rem';
 
 function WorkbenchFigure({ id }: WorkbenchFigureProps) {
   const row = WORKBENCHES.find((workbench) => workbench.id === id);

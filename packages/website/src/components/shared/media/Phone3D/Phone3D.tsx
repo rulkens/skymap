@@ -10,10 +10,9 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import Shot from '../Shot/Shot.tsx';
 import styles from './Phone3D.module.css';
+import { SLICES } from './Phone3D.constants.ts';
 
 type Phone3DProps = { shot: string; follow?: boolean; width?: string; children?: ReactNode };
-
-const SLICES = 9;
 
 function Phone3D({ shot, follow = true, width, children }: Phone3DProps) {
   return (

@@ -9,8 +9,7 @@ import type { ReactNode } from 'react';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './DomeSky.module.css';
-
-const ID = 'dome-saturn';
+import { ID } from './DomeSky.constants.ts';
 
 type DomeSkyProps = { children: ReactNode };
 

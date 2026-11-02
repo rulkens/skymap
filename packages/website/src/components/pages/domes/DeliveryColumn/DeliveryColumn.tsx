@@ -16,6 +16,7 @@ import Disc from '../../../shared/media/Disc/Disc.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './DeliveryColumn.module.css';
+import { SIZES } from './DeliveryColumn.constants.ts';
 
 type DeliveryColumnProps = {
   kind: 'live' | 'film';
@@ -32,9 +33,6 @@ type DeliveryColumnProps = {
   earlier?: string[];
   children: ReactNode;
 };
-
-// A phone's 70vw understates the disc on purpose: at 3x the full width would fetch the desktop file.
-const SIZES = '(max-width: 900px) 70vw, 20rem';
 
 function DeliveryColumn(props: DeliveryColumnProps) {
   const { kind, title, shot, figure, measure, accent, action, earlier = [], children } = props;

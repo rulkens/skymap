@@ -6,52 +6,16 @@
  * page's one centred head, and the planet they all show floats free beside it, drifting a little with the scroll.
  * Narrow, the row is two by two.
  */
-import type { CSSProperties } from 'react';
-
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
+import { revealDelay } from '../../../../utils/revealDelay.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
-import DeviceFrame from '../../../shared/media/DeviceFrame/DeviceFrame.tsx';
-import Disc from '../../../shared/media/Disc/Disc.tsx';
-import Phone3D from '../../../shared/media/Phone3D/Phone3D.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import styles from './Screens.module.css';
-
-// The case behind a flat device: as many slices as the phone's, one pixel apart. The phone draws its own.
-const SLICES = 9;
-
-const PARTS = [
-  {
-    kind: 'phone',
-    title: 'Phone',
-    note: 'In the phone’s browser, moved with your fingers.',
-    device: <Phone3D shot="features-phone" follow={false} />,
-  },
-  {
-    kind: 'tablet',
-    title: 'Tablet',
-    note: 'The same view on a larger touch screen.',
-    device: (
-      <DeviceFrame device="tablet" shot="saturn-portrait" sizes="(max-width: 900px) 30vw, 14rem" />
-    ),
-  },
-  {
-    kind: 'desktop',
-    title: 'Desktop',
-    note: 'The full app, with a mouse and a keyboard.',
-    device: (
-      <DeviceFrame device="desktop" shot="start-saturn" sizes="(max-width: 900px) 50vw, 23rem" />
-    ),
-  },
-  {
-    kind: 'dome',
-    title: 'Dome',
-    note: 'A fisheye picture for a planetarium dome, steered from a phone.',
-    device: <Disc id="dome-saturn" sizes="(max-width: 900px) 34vw, 23rem" />,
-  },
-];
+import ScreenDevice from './ScreenDevice.tsx';
+import { PARTS, SLICES } from './Screens.constants.ts';
 
 function Screens() {
   return (
@@ -75,7 +39,7 @@ function Screens() {
           <div
             key={part.kind}
             className={cx(styles.part, styles[part.kind])}
-            style={{ '--reveal-delay': `${at * 40}ms` } as CSSProperties}
+            style={revealDelay(at * 40)}
             data-reveal="rise"
           >
             <div className={styles.device} data-look>
@@ -88,7 +52,9 @@ function Screens() {
                       style={{ transform: `translateZ(${-i - 1}px)` }}
                     />
                   ))}
-                <div className={styles.face}>{part.device}</div>
+                <div className={styles.face}>
+                  <ScreenDevice kind={part.kind} />
+                </div>
               </div>
             </div>
             <div className={styles.label}>

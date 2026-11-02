@@ -13,11 +13,7 @@ import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './ScaleQuestion.module.css';
-
-const SHOT = 'class-earth-moon';
-const ORBITS = 'class-earth-moon-orbits';
-// One ring per Earth that fits the gap (the `earth-moon-in-earths` fact).
-const RINGS = Array.from({ length: 30 }, (_, i) => i);
+import { SHOT, ORBITS, RINGS } from './ScaleQuestion.constants.ts';
 
 function ScaleQuestion() {
   return (

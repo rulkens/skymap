@@ -5,9 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { lessWanted } from '../../../../utils/lessWanted.ts';
-
-// The whole change takes this long, however much of it there is: a reveal's pace (motion skill, ≤ 500 ms).
-const TYPE_MS = 450;
+import { TYPE_MS } from './useTyped.constants.ts';
 
 export function useTyped(text: string): string {
   const [shown, setShown] = useState(text);

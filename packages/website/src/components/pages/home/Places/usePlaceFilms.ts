@@ -9,8 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 import { lessWanted } from '../../../../utils/lessWanted.ts';
-
-const DWELL_MS = 350;
+import { DWELL_MS } from './usePlaceFilms.constants.ts';
 
 type Mode = 'off' | 'hover' | 'band';
 

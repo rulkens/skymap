@@ -16,26 +16,20 @@ import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './LinkSpread.module.css';
+import {
+  RENDER,
+  ACCENT,
+  RENDER_SIZES,
+  CARD_SIZES,
+  CLOCK_SIZES,
+  WORDS,
+} from './LinkSpread.constants.ts';
 
 type LinkSpreadProps = {
   title: string;
   line: string;
   href: string;
   label: string;
-};
-
-const RENDER = 'features-link-saturn';
-// Saturn's gold, from the render.
-const ACCENT = '#dbc29e';
-// Seven of the page grid's twelve columns wide; the window's width on a phone.
-const RENDER_SIZES = '(max-width: 900px) 100vw, min(calc(58vw - 4rem), 41rem)';
-const CARD_SIZES = '(max-width: 900px) 50vw, 15rem';
-const CLOCK_SIZES = '(max-width: 900px) 80vw, 21rem';
-// What each parameter of the address sets, in the address's order.
-const WORDS: Record<string, string> = {
-  focus: 'what you look at',
-  t: 'the moment',
-  pose: 'where the camera stands',
 };
 
 function LinkSpread({ title, line, href, label }: LinkSpreadProps) {

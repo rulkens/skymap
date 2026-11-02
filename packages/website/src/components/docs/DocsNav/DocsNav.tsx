@@ -17,6 +17,7 @@ import DocsSearch from '../DocsSearch/DocsSearch.tsx';
 import Icon from '../../shared/links/Icon/Icon.tsx';
 import PageSections from '../PageSections/PageSections.tsx';
 import styles from './DocsNav.module.css';
+import { BEFORE_PAINT } from './DocsNav.constants.ts';
 
 // The tree comes in as a prop: data/docsTree.ts reads ATTRIBUTIONS.md from disk, so it cannot be in an island's bundle.
 type DocsNavProps = {
@@ -24,17 +25,6 @@ type DocsNavProps = {
   sections: readonly MarkdownHeading[];
   groups: readonly Pick<DocsGroup, 'name' | 'pages'>[];
 };
-
-// Before the first paint, so a phone never shows the list open and then folds it; without script it stays open.
-// Wide, the list scrolls by itself: the row of the page you are on is brought to its middle, and nothing else moves.
-// It runs where it stands in the markup, at parse time, so it is a string and not a hook: an effect would be too late.
-const BEFORE_PAINT = `{
-  const menu = document.currentScript.previousElementSibling;
-  const nav = menu.parentElement;
-  const here = menu.querySelector('[aria-current]');
-  if (matchMedia('(max-width: 900px)').matches) menu.open = false;
-  else if (here) nav.scrollTop = here.offsetTop - nav.clientHeight / 2;
-}`;
 
 function DocsNav({ current, sections, groups }: DocsNavProps) {
   const menu = useRef<HTMLDetailsElement>(null);

@@ -2,10 +2,8 @@
  * AskList — the set texts some sources ask a user to print, each under its
  * source's name with a link to the page that holds the full, current wording.
  */
-import { DATA_SOURCES } from '../../../../data/dataSources.ts';
 import styles from './AskList.module.css';
-
-const asks = DATA_SOURCES.filter((row) => row.ask);
+import { asks } from './AskList.constants.ts';
 
 function AskList() {
   return (

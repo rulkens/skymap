@@ -11,18 +11,9 @@ import type { ReactNode } from 'react';
 import { slotHtml } from '../../../../utils/slotHtml.ts';
 import CopyButton from '../../links/CopyButton/CopyButton.tsx';
 import styles from './CodeBlock.module.css';
+import { ENTITIES } from './CodeBlock.constants.ts';
 
 type CodeBlockProps = { text?: string; label?: string; children?: ReactNode };
-
-// A fenced block reaches the page as escaped HTML; the clipboard gets the characters.
-const ENTITIES: Record<string, string> = {
-  amp: '&',
-  lt: '<',
-  gt: '>',
-  quot: '"',
-  '#39': "'",
-  '#x27': "'",
-};
 
 function CodeBlock({ text, label = 'Copy these lines', children }: CodeBlockProps) {
   const fenced = text === undefined;

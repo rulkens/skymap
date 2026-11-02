@@ -9,6 +9,7 @@
  */
 import { siteShot } from '../../../../data/siteShot.ts';
 import { shotSources } from '../../../../utils/shotSources.ts';
+import { TALL_MEDIA } from './Shot.constants.ts';
 
 type ShotProps = {
   id: string;
@@ -18,8 +19,6 @@ type ShotProps = {
   eager?: boolean;
   shadow?: boolean;
 };
-
-const TALL_MEDIA = '(max-width: 700px)';
 
 function Shot({ id, tall, sizes, alt, eager = false, shadow = false }: ShotProps) {
   const wide = shotSources(id, shadow);

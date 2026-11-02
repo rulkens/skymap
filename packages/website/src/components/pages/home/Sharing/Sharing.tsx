@@ -20,17 +20,7 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './Sharing.module.css';
 import { useTyped } from './useTyped.ts';
-
-const VIEWS = [
-  { id: 'hubble', tab: 'Hubble' },
-  { id: 'privacy-far-side', tab: 'Moon' },
-  { id: 'saturn', tab: 'Saturn' },
-  { id: 'features-s-stars', tab: 'S-stars' },
-];
-// The parameters the parts are about, each in its own colour.
-const INKS: Record<string, string | undefined> = { focus: styles.focus, t: styles.clock };
-// The window's width; on a phone its 4:3 stage is cut from 16:9 pictures, so a third wider.
-const SIZES = '(max-width: 900px) 133vw, 100vw';
+import { VIEWS, INKS, SIZES } from './Sharing.constants.ts';
 
 function Sharing() {
   const gallery = useGallery(VIEWS);

@@ -3,7 +3,8 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import type { GalleryView } from '../../../../@types/GalleryView';
 import { cx } from '../../../../utils/cx.ts';
-import { shotSources } from '../../../../utils/shotSources.ts';
+import { shotAspect } from '../../../../utils/shotAspect.ts';
+import { shotRatio } from '../../../../utils/shotRatio.ts';
 import Shot from '../Shot/Shot.tsx';
 import Meteors from './Meteors.tsx';
 import styles from './PictureBand.module.css';
@@ -20,16 +21,14 @@ export type BandProps = {
   children?: ReactNode;
 };
 
-const ratio = (id: string) => shotSources(id).width / shotSources(id).height;
-// A phone's pictures share one box, shaped as the first view's: its upright cut up to Shot's 700px, the wide one above.
-const shape = (id: string) => `${shotSources(id).width} / ${shotSources(id).height}`;
-
 function Band({ views, words, gap, eager, zoom, gallery, children }: BandProps) {
   const first = views[0]!;
   // How wide a picture is drawn, in window widths: the zoom, and for a gallery view with no upright cut the width
   // it has once a phone's upright box has cropped it.
   const cropped = (view: GalleryView) =>
-    gallery && !view.tall ? Math.ceil((100 * ratio(view.id)) / ratio(first.tall ?? first.id)) : 100;
+    gallery && !view.tall
+      ? Math.ceil((100 * shotRatio(view.id)) / shotRatio(first.tall ?? first.id))
+      : 100;
   const sizes = (view: GalleryView) =>
     `(max-width: 700px) ${Math.round(cropped(view) * zoom)}vw, ${Math.round(100 * zoom)}vw`;
 
@@ -42,8 +41,9 @@ function Band({ views, words, gap, eager, zoom, gallery, children }: BandProps) 
       style={
         {
           '--zoom': zoom,
-          '--shape': shape(first.id),
-          '--shape-tall': shape(first.tall ?? first.id),
+          // A phone's pictures share one box, shaped as the first view's: its upright cut up to Shot's 700px, the wide one above.
+          '--shape': shotAspect(first.id),
+          '--shape-tall': shotAspect(first.tall ?? first.id),
         } as CSSProperties
       }
     >

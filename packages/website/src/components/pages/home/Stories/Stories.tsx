@@ -7,7 +7,6 @@
  * its own orbit and the exhibit's title comes in from the side. All of it is CSS on the scroll. Narrow, under
  * reduced motion, or without scroll-driven animation nothing is pinned and each part sits by its picture.
  */
-import type { CSSProperties } from 'react';
 
 import { HOME_LINKS } from '../../../../data/homeLinks.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
@@ -18,18 +17,13 @@ import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './Stories.module.css';
-
-// The tour's stage is seven columns and the margin to the window's edge; the exhibit's the whole window when
-// nothing is pinned. A phone's 4:3 and 5:4 cuts draw their 16:10 frames 1.2 and 1.28 windows wide.
-const TOUR_SIZES = '(max-width: 900px) 120vw, 60vw';
-const EXHIBIT_SIZES = '(max-width: 900px) 128vw, 100vw';
-const EXHIBIT_LABEL = {
-  title: 'The Solar System exhibit, layer by layer',
-  credit: siteShot('cut-jupiter').credit,
-};
-// Each part's line takes its picture's colour: the web's violet, the orbits' gold.
-const TOUR_ACCENT = { '--accent': '#c98cf2' } as CSSProperties;
-const EXHIBIT_ACCENT = { '--accent': '#d9c27a' } as CSSProperties;
+import {
+  TOUR_SIZES,
+  EXHIBIT_SIZES,
+  EXHIBIT_LABEL,
+  TOUR_ACCENT,
+  EXHIBIT_ACCENT,
+} from './Stories.constants.ts';
 
 function Stories() {
   return (

@@ -10,9 +10,7 @@ import type { DocsReview } from '../../../../../../tools/site/@types/DocsReview'
 import { wordsIn } from '../wordsIn';
 import ReviewPage from '../ReviewPage/ReviewPage.tsx';
 import type { JobMeta } from '../@types/JobMeta';
-
-const BASE = import.meta.env.BASE_URL.replace(/\/?$/, '/');
-const ROUTE = `${BASE}__review`;
+import { BASE, ROUTE } from './Review.constants.ts';
 
 type Loaded = { article: Element; url: string; first: DocsReview; job: JobMeta | undefined };
 

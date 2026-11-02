@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { clockRate } from '../../../../utils/clockRate.ts';
 import { clockReading } from '../../../../utils/clockReading.ts';
 import styles from './FilmClock.module.css';
+import { STEPS } from './FilmClock.constants.ts';
 
 type FilmClockProps = {
   // The film's first frame, as an ISO instant, and the days its clock ran over the whole film.
@@ -20,8 +21,6 @@ type FilmClockProps = {
   // Called on every drag, so the gallery around it stays on this view.
   onScrub: () => void;
 };
-
-const STEPS = 1000;
 
 function FilmClock({ from, days, seconds, film, onScrub }: FilmClockProps) {
   const start = Date.parse(from);

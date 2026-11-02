@@ -10,17 +10,13 @@ import type { CSSProperties } from 'react';
 
 import { PLACES } from '../../../../data/places.ts';
 import { cx } from '../../../../utils/cx.ts';
-import { loopUrl } from '../../../../utils/loopUrl.ts';
 import { smoothPath } from '../../../../utils/smoothPath.ts';
 import PlaceLink from './PlaceLink.tsx';
-import { DEPTHS, TALL, TALL_HEIGHT, WIDE, WIDE_HEIGHT } from './placeLayout.ts';
+import { DEPTHS, TALL, WIDE, WIDE_HEIGHT } from './placeLayout.ts';
 import styles from './Places.module.css';
 import { usePlaceDrift } from './usePlaceDrift.ts';
 import { usePlaceFilms } from './usePlaceFilms.ts';
-
-const FILMS = PLACES.map((place) => (place.loop ? loopUrl(place.loop) : undefined));
-const IDS = PLACES.map((place) => place.id);
-const tallHeight = TALL_HEIGHT.toFixed(2);
+import { FILMS, IDS, tallHeight } from './Places.constants.ts';
 
 /** `lines`: the words under each name, from placeLines() on the page. */
 type PlacesProps = { lines: readonly string[] };

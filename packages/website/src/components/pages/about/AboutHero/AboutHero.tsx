@@ -9,8 +9,7 @@ import type { ReactNode } from 'react';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './AboutHero.module.css';
-
-const ID = 'about-milky-way';
+import { ID } from './AboutHero.constants.ts';
 
 type AboutHeroProps = { children: ReactNode };
 

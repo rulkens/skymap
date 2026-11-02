@@ -8,9 +8,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 
 import { FILM_QUERY } from './filmQuery.ts';
-
-// Half a film frame, so a seek to a stop's time lands on that frame and not the one before.
-const HALF_FRAME = 1 / 48;
+import { HALF_FRAME } from './useFlightFilm.constants.ts';
 
 export function useFlightFilm(
   video: RefObject<HTMLVideoElement | null>,

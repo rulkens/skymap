@@ -11,25 +11,19 @@
 import { createRef, useCallback, useState } from 'react';
 import type { CSSProperties } from 'react';
 
-import { HERO_MEDIA } from '../../../../../../../tools/site/heroMediaPlan';
 import type { FlightParts } from '../../../../@types/FlightParts';
 import type { FlightStopView } from '../../../../@types/FlightStopView';
 import { FLIGHT_STOPS } from '../../../../data/flightStops.ts';
-import { flightTimeline } from '../../../../utils/flightTimeline.ts';
 import Arrive from './Arrive.tsx';
 import styles from './Flight.module.css';
 import Intro from './Intro.tsx';
 import Spine from './Spine.tsx';
 import Stops from './Stops.tsx';
 import { useFlight } from './useFlight.ts';
+import { TIMELINE } from './Flight.constants.ts';
 
 /** `stops` come from the page (flightStopViews), which reads the facts: they stay out of the island's script. */
 type FlightProps = { stops: FlightStopView[]; videoUrl: string };
-
-const TIMELINE = flightTimeline(
-  FLIGHT_STOPS.map((stop) => stop.atSec),
-  HERO_MEDIA.outSec - HERO_MEDIA.inSec,
-);
 
 function Flight({ stops, videoUrl }: FlightProps) {
   const [shown, setShown] = useState(0);

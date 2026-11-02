@@ -3,18 +3,11 @@
  * display face the app's own constellation names cut out as light: the labels the Headings fact says share its
  * face. The names come from the data the facts are written from. Narrow, the picture follows the faces.
  */
-import { DISPLAY_FACE, TEXT_FACE } from '../../../../data/aboutFacts.ts';
 import { fact } from '../../../../data/fact.ts';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './Specimens.module.css';
-
-const ID = 'about-constellations';
-
-const SPECIMENS = [
-  { term: 'Headings', name: DISPLAY_FACE, id: 'about-display-face', face: styles.display },
-  { term: 'Text', name: TEXT_FACE, id: 'about-text-face', face: styles.body },
-];
+import { ID, SPECIMENS } from './Specimens.constants.ts';
 
 function Specimens() {
   return (

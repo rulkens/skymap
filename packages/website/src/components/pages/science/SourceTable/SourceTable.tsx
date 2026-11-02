@@ -10,23 +10,15 @@
  */
 import type { ReactNode } from 'react';
 
-import { DATA_SOURCES } from '../../../../data/dataSources.ts';
 import { dataRowPath } from '../../../../utils/dataRowPath.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './SourceTable.module.css';
+import { groups, COLUMNS } from './SourceTable.constants.ts';
 
 type SourceTableProps = { children?: ReactNode; figure?: string };
-
-// One count per source: what the app draws, or what the source holds where our build does not count.
-const sources = DATA_SOURCES.map((row) => ({ ...row, count: row.drawn ?? row.rows }));
-const groups = [...new Set(sources.map((row) => row.group))].map((name) => ({
-  name,
-  rows: sources.filter((row) => row.group === name),
-}));
-const COLUMNS = { release: 'Release / Paper', count: '# of objects', licence: 'Licence' } as const;
 
 function SourceTable({ children, figure }: SourceTableProps) {
   return (

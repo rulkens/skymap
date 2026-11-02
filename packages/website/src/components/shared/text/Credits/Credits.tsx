@@ -3,14 +3,9 @@
  * we credit, then each group as a list of sources, each name a link to its source beside its licence in words,
  * and one way to the credits page for the terms in full.
  */
-import { DATA_CREDITS, IMAGE_CREDITS } from '../../../../data/credits.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import styles from './Credits.module.css';
-
-const groups = [
-  { label: 'Images', credits: IMAGE_CREDITS },
-  { label: 'Catalogues', credits: DATA_CREDITS },
-];
+import { groups } from './Credits.constants.ts';
 
 function Credits() {
   return (

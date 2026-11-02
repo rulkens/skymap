@@ -5,12 +5,12 @@
  * right, as they sit in the app; the three move apart a little as the page scrolls, and lean away from the
  * pointer, the nearer card the most, so the depth can be felt.
  */
-import { fact } from '../../../../data/fact.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './DesktopSpread.module.css';
+import { RENDER, DISTANCE, RENDER_SIZES, PIECE_SIZES } from './DesktopSpread.constants.ts';
 
 type DesktopSpreadProps = {
   title: string;
@@ -18,12 +18,6 @@ type DesktopSpreadProps = {
   href: string;
   label: string;
 };
-
-const RENDER = 'features-andromeda';
-const DISTANCE = fact('andromeda-distance').figure!;
-// Eight of the page grid's twelve columns, the window's width on a phone.
-const RENDER_SIZES = '(max-width: 900px) 100vw, min(calc(66vw - 3rem), 47rem)';
-const PIECE_SIZES = '(max-width: 900px) 48vw, 20rem';
 
 function DesktopSpread({ title, line, href, label }: DesktopSpreadProps) {
   return (

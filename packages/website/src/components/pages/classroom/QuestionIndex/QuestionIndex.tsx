@@ -6,21 +6,13 @@
  */
 import { useState } from 'react';
 
-import { CLASS_QUESTIONS, says } from '../../../../content/pages/classroom/classroom.data.ts';
-import { LESSON_TOPICS } from '../../../../data/lessons.ts';
+import { says } from '../../../../content/pages/classroom/classroom.data.ts';
 import { cx } from '../../../../utils/cx.ts';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './QuestionIndex.module.css';
-
-const ROWS = CLASS_QUESTIONS.map((question) => {
-  const topic = LESSON_TOPICS.find((t) => t.lessons.some((l) => l.shot === question.shot))!;
-  const lesson = topic.lessons.find((l) => l.shot === question.shot)!;
-  return { ...question, topic: topic.title, lesson };
-});
-
-const VIEWER_SIZES = '(max-width: 900px) 0px, min(calc(42vw - 4rem), 32rem)';
+import { ROWS, VIEWER_SIZES } from './QuestionIndex.constants.ts';
 
 function QuestionIndex() {
   const [shown, setShown] = useState(0);
