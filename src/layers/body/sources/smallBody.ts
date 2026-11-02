@@ -8,7 +8,6 @@ export const SMALL_BODY_ENTRY = {
   label: 'Small body',
   // Only galaxy-catalog footprints consult this flag; true matches the other non-catalog rows.
   allSky: true,
-  // A label-only row: Vesta, Ceres and Bennu caption under it but pick as `Planet` rows.
   bearsLabel: true,
   bearsMarker: false,
   detailLabel: 'Small body',

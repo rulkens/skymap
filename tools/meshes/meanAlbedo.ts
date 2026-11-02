@@ -28,22 +28,13 @@ export function meanAlbedo(
   let totalArea = 0;
   for (let t = 0; t < indices.length; t += 3) {
     const [a, b, c] = [indices[t]!, indices[t + 1]!, indices[t + 2]!];
-    const e1 = [
-      p[3 * b]! - p[3 * a]!,
-      p[3 * b + 1]! - p[3 * a + 1]!,
-      p[3 * b + 2]! - p[3 * a + 2]!,
-    ];
-    const e2 = [
-      p[3 * c]! - p[3 * a]!,
-      p[3 * c + 1]! - p[3 * a + 1]!,
-      p[3 * c + 2]! - p[3 * a + 2]!,
-    ];
-    const area =
-      Math.hypot(
-        e1[1]! * e2[2]! - e1[2]! * e2[1]!,
-        e1[2]! * e2[0]! - e1[0]! * e2[2]!,
-        e1[0]! * e2[1]! - e1[1]! * e2[0]!,
-      ) / 2;
+    const ux = p[3 * b]! - p[3 * a]!;
+    const uy = p[3 * b + 1]! - p[3 * a + 1]!;
+    const uz = p[3 * b + 2]! - p[3 * a + 2]!;
+    const vx = p[3 * c]! - p[3 * a]!;
+    const vy = p[3 * c + 1]! - p[3 * a + 1]!;
+    const vz = p[3 * c + 2]! - p[3 * a + 2]!;
+    const area = 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
     // glTF UVs put (0, 0) at the image's top-left, as the decoded rows run; they
     // stay in [0, 1] (`writeMeshBinary` refuses others), so 1.0 is the only clamp.
     const u = (uvs[2 * a]! + uvs[2 * b]! + uvs[2 * c]!) / 3;

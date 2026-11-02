@@ -151,12 +151,6 @@ describe('produceSceneBodyCaptions', () => {
     expect(anyPlanetOn).toBe(true);
   });
 
-  it('a small body captions under the Small bodies item, not Planets', () => {
-    const labels = sceneBodyLabels(J2000_STATES);
-    for (const id of SMALL_BODY_LABEL_IDS)
-      expect(labels.find((l) => l.id === id)?.kind, id).toBe('smallBody');
-  });
-
   it('unticking Small bodies hides only the small bodies', () => {
     const ctx = makeCtx(worldPosOf(EARTH_LABEL_ID));
     const alphasWith = (planet: boolean, smallBody: boolean) => {

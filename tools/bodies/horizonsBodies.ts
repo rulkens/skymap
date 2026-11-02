@@ -50,14 +50,7 @@ export const HORIZONS_BODIES: readonly HorizonsBody[] = [
   // orbit, and over 1900–2100 the fit saturates at 400 + 400 terms 90,000 km off Horizons.
   fitted('vesta', '4;', '500@10', 1440),
   fitted('ceres', '1;', '500@10', 1440),
-  {
-    id: 'bennu',
-    target: '101955;',
-    centre: '500@10',
-    span: ['2007-01-01', '2054-01-01'],
-    stepMinutes: 1440,
-    vectors: 'position',
-  },
+  { ...fitted('bennu', '101955;', '500@10', 1440), span: ['2007-01-01', '2054-01-01'] },
   // Voyagers: daily Sun-centred state vectors from the first Horizons sample. Their dense
   // encounter windows come from `fetchVoyagerWindows`; the fit never sees them.
   {
