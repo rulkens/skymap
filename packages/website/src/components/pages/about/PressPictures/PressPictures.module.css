@@ -77,7 +77,7 @@
   gap: var(--site-space-2xs);
 
   & button {
-    margin-block: -0.625rem;
+    margin-block: calc(-1 * var(--tap-reach));
   }
 }
 

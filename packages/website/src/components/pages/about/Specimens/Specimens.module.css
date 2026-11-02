@@ -50,8 +50,8 @@
   & a {
     display: block;
     width: fit-content;
-    padding-block: 0.625rem;
-    margin-bottom: -0.625rem;
+    padding-block: var(--tap-reach);
+    margin-bottom: calc(-1 * var(--tap-reach));
   }
 }
 

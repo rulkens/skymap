@@ -73,7 +73,7 @@
   /*
    * Every margin, padding and gap inside a section is a step of this scale (rem, so it grows with the
    * reader's text size); the app's px `--space-*` is for its panels. What is not on it is geometry: a
-   * picture's size, an overlap, a tap area taken back by a negative margin, an optical nudge, an `em`.
+   * picture's size, an overlap, an optical nudge, an `em`. A link's reach to the thumb is --tap-reach.
    */
   --site-space-3xs: 0.25rem;
   --site-space-2xs: 0.5rem;
@@ -96,6 +96,8 @@
   --stack: var(--site-space-m);
   --nav-height: 4.5rem;
   --tap: 2.75rem;
+  /* How far a link in a line of text reaches above and below it to be --tap tall; a negative margin takes it back. */
+  --tap-reach: 0.625rem;
   /* How far the ring about a dome frame (Disc) stands outside it; its host leaves that room. */
   --disc-ring: 1.1875rem;
 

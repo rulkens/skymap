@@ -16,7 +16,7 @@
     position: absolute;
     right: 0;
     /* Level with "Open this view", which hangs below the label by the same amount (ShotCaption). */
-    bottom: -0.625rem;
+    bottom: calc(-1 * var(--tap-reach));
     /* The label's own size. */
     font-size: 0.875rem;
     color: var(--site-text-dim);

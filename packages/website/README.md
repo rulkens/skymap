@@ -32,7 +32,8 @@ with no `.root` that a class takes with `composes: <class> from '…/styles/<mod
   `a11y` (words for screen readers, the skip link).
 - `site.css` holds the tokens (colour, type scale, the `--site-space-*` spacing scale, `--bleed`, `--disc-ring`)
   and the few global rules. Every margin, padding and gap is a `--site-space-*` step; a raw length is geometry
-  (a picture's size, an overlap, a tap area taken back by a negative margin, an optical nudge, an `em`).
+  (a picture's size, an overlap, an optical nudge, an `em`). A link in a line of text is made 44px tall to the
+  thumb with `padding-block: var(--tap-reach)` and given back with a `calc(-1 * var(--tap-reach))` margin.
 - A colour is a token: lines are `--site-line` and `--site-line-strong`, another alpha of a token is
   `color-mix(in srgb, var(--color-fg) 30%, transparent)`, and a colour taken from a picture is its subject's
   `--site-accent-*` (a component's `.constants.ts` passes it on as `'var(--site-accent-orbits)'`). The colours

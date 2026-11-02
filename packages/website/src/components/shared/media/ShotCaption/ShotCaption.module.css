@@ -40,7 +40,7 @@
 
 /* The control keeps its 44px for the thumb; the margin takes back what the row of text does not need. */
 .root > .view {
-  margin-block: 0 -0.625rem;
+  margin-block: 0 calc(-1 * var(--tap-reach));
   font-size: inherit;
 }
 

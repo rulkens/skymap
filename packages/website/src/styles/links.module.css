@@ -10,8 +10,8 @@
  */
 .tap-links a {
   display: inline-block;
-  padding-block: 0.625rem;
-  margin-block: -0.625rem;
+  padding-block: var(--tap-reach);
+  margin-block: calc(-1 * var(--tap-reach));
 }
 
 /* Ring links side by side under the text they follow. */
