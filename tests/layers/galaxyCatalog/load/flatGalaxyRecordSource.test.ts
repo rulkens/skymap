@@ -9,18 +9,13 @@ import { describe, it, expect } from 'vitest';
 
 import { flatGalaxyRecordSource } from '../../../../src/layers/galaxyCatalog/load/flatGalaxyRecordSource';
 import { Source } from '../../../../src/data/source';
-import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
-import type { GalaxyCatalogRegistryEntry } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 
-const sourceOver = (source: SourceType, catalog: GalaxyCatalog) =>
-  flatGalaxyRecordSource(
-    APP_SOURCE_REGISTRY[source] as GalaxyCatalogRegistryEntry,
-    catalog,
-    () => [],
-  );
+const sourceOver = (source: GalaxyCatalogSourceType, catalog: GalaxyCatalog) =>
+  flatGalaxyRecordSource(GALAXY_CATALOG_SOURCE_RECORD[source], catalog, () => []);
 
 describe('flatGalaxyRecordSource', () => {
   it('stats equal the per-tier values', () => {
