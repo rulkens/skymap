@@ -1,5 +1,8 @@
+/* The two parameters' colours: `focus` a clear blue, the clock `t` a planet's gold. */
 .root {
   composes: section from '../../../../styles/layout.module.css';
+  --focus-ink: #8fb6ff;
+  --clock-ink: #e6c98f;
 }
 
 .head {
@@ -14,17 +17,62 @@
 
 .window {
   position: relative;
-  margin: 3rem 0 0;
+  margin-top: 3rem;
 }
 
-/* The bar is the one raised surface: lighter than the ground, over the top of the view it opens. */
-.bar {
+/* The tabs and the bar, the one raised surface: lighter than the ground, over the top of the view it opens. */
+.chrome {
   position: relative;
   z-index: 2;
-  display: flex;
-  align-items: center;
   width: min(58rem, calc(100% - 2 * var(--gutter)));
   margin: 0 auto -1.75rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding-inline: 0.5rem;
+}
+
+/* The current tab is the bar's own surface, open into it; the others are words on the page. */
+.tab {
+  flex: 0 1 9rem;
+  min-width: 0;
+  min-height: 2.25rem;
+  margin-bottom: -1px;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: none;
+  font: var(--weight-small) 0.875rem / 1 var(--font-body);
+  color: var(--site-text-faint);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: var(--transition-color);
+
+  &[aria-pressed='true'] {
+    position: relative;
+    z-index: 1;
+    border-color: rgb(232 238 255 / 0.22);
+    background: rgb(14 17 26);
+    color: var(--color-fg);
+    cursor: default;
+  }
+}
+
+@media (hover: hover) {
+  .tab:not([aria-pressed='true']):hover {
+    color: var(--site-text-muted);
+  }
+}
+
+.bar {
+  display: flex;
+  align-items: center;
   border: 1px solid rgb(232 238 255 / 0.22);
   border-radius: 0.5rem;
   background: rgb(14 17 26 / 0.86);
@@ -34,7 +82,7 @@
 
   &:hover,
   &:focus-within {
-    border-color: var(--view-accent);
+    border-color: rgb(232 238 255 / 0.4);
   }
 }
 
@@ -47,43 +95,33 @@
   color: var(--site-text-faint);
   text-decoration: none;
   overflow-wrap: anywhere;
-
-  & > span {
-    display: inline-block;
-    max-width: 100%;
-  }
-
-  & b {
-    font-weight: 400;
-    color: var(--site-text-muted);
-  }
 }
 
 .host {
   color: var(--site-text-faint);
 }
 
-/* The parameters the part being read is about, in its picture's colour. */
-.lit {
-  color: var(--view-accent);
-
-  & b {
-    color: var(--view-accent);
-  }
+/* A parameter and the part about it share a colour: its words in the bar, the part's name and rule. */
+.focus {
+  --ink: var(--focus-ink);
 }
 
-.address .lit,
-.address .lit b {
-  transition: var(--transition-color);
+.clock {
+  --ink: var(--clock-ink);
 }
 
-/* The view across the window, dissolving into the page at its sides and foot. */
+.address .focus,
+.address .clock {
+  color: var(--ink);
+}
+
+/* The view across the window, dissolving into the page at its sides and over its foot, where the words stand. */
 .stage {
   position: relative;
   height: min(56.25vw, 78svh);
   overflow: hidden;
   mask-image:
-    linear-gradient(180deg, #000 72%, rgb(0 0 0 / 0)),
+    linear-gradient(180deg, #000 52%, rgb(0 0 0 / 0.45) 72%, rgb(0 0 0 / 0.12) 86%, rgb(0 0 0 / 0)),
     linear-gradient(90deg, rgb(0 0 0 / 0), #000 7%, #000 93%, rgb(0 0 0 / 0));
   mask-composite: intersect;
 }
@@ -123,81 +161,61 @@
   display: none;
 }
 
-.caption {
-  composes: wrap from '../../../../styles/layout.module.css';
-  margin-top: -1.5rem;
-}
-
-/* The two parts and the way in, on one row: a rule over the part being read draws out in its colour. */
-.parts {
+/* The picture's label, the two parts and the way in, standing on the picture's foot. */
+.foot {
   composes: wrap grid from '../../../../styles/layout.module.css';
-  row-gap: 2.5rem;
-  margin-top: 3.5rem;
-}
-
-.part {
   position: relative;
-  padding-top: 1.25rem;
-
-  & h3,
-  & p {
-    transition: var(--transition-color);
-  }
-
-  & h3 {
-    color: var(--site-text-dim);
-  }
-
-  & p {
-    margin-bottom: 0.75rem;
-    color: var(--site-text-dim);
-  }
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: rgb(232 238 255 / 0.16);
-  }
-
-  &::after {
-    background: var(--view-accent);
-    transform-origin: left;
-    scale: 0 1;
-    transition: scale var(--duration-reveal) var(--ease-enter);
-  }
+  z-index: 1;
+  row-gap: 2rem;
+  margin-top: -11rem;
 }
 
-.on {
+.labels {
+  composes: view-words from '../../../../styles/picture.module.css';
+}
+
+/* A part stands under its parameter's name, on a rule in its colour. */
+.part {
+  padding-top: 1rem;
+  border-top: 1px solid var(--ink);
+
+  & code {
+    display: block;
+    margin-bottom: 0.5rem;
+    font: 400 var(--text-small) / 1.5 var(--font-family-mono);
+    color: var(--ink);
+  }
+
   & h3 {
-    color: var(--color-fg);
+    margin-bottom: 0.5rem;
   }
 
   & p {
+    margin-bottom: 0;
     color: var(--site-text-muted);
-  }
-
-  &::after {
-    scale: 1 1;
   }
 }
 
 @media (min-width: 901px) {
-  .part:first-child {
-    grid-column: 1 / span 4;
-  }
-
   .part:nth-child(2) {
-    grid-column: 5 / span 4;
+    grid-column: 1 / span 4;
+    grid-row: 1;
   }
 
-  /* The way in closes the row, its foot on the second part's last line. */
+  .part:nth-child(3) {
+    grid-column: 5 / span 4;
+    grid-row: 1;
+  }
+
+  /* The picture's label at the top of the last columns, the way in at their foot, on the parts' last line. */
+  .labels {
+    grid-column: 9 / -1;
+    grid-row: 1;
+  }
+
   .open {
     grid-column: 10 / -1;
+    grid-row: 1;
     align-self: end;
     justify-self: end;
   }
@@ -208,8 +226,17 @@
     margin-top: 2rem;
   }
 
-  .bar {
+  .chrome {
     margin-bottom: -1.25rem;
+  }
+
+  .tabs {
+    padding-inline: 0.25rem;
+  }
+
+  .tab {
+    flex: 1 1 0;
+    padding: 0 0.625rem;
   }
 
   .address {
@@ -220,12 +247,15 @@
   .stage {
     height: 75vw;
   }
+
+  .foot {
+    margin-top: -3rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .layer,
-  .away,
-  .part::after {
+  .away {
     transition: none;
   }
 }

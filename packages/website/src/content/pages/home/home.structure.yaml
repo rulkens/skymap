@@ -74,9 +74,9 @@ sections:
   - heading: "Wish you were here"
     job: "Show that it is easy to share Skymap locations with friends, colleagues and students."
     component: "Sharing"
-    shots: [hubble, saturn]
-    layout: "a frameless browser window across the page, its address bar over the view; the two parts and Open app in one row under it"
-    visual: "each part is a view; the one being read fills the window and its address types itself into the bar"
+    shots: [hubble, privacy-far-side, saturn, features-s-stars]
+    layout: "a frameless browser window across the page: one tab per view, ordered outward from Earth, over its address bar over the view; the picture's label, the two parts and Open app in one row on the picture's dissolving foot"
+    visual: "the chosen tab's view fills the window and its address types itself into the bar, the camera's numbers folded into a faint ellipsis; focus= and t= in the bar each in a colour that is also its part's name and rule"
     parts:
       - heading: "Every view is a link"
         job: "The address bar holds your view."
