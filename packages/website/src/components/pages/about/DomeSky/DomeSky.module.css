@@ -1,0 +1,104 @@
+/*
+ * `--d` is the frame's diameter, never taller than the window; a fifth of it runs out past the window's left edge.
+ * The frame is turned a quarter, so Saturn (at its foot as taken) stands at its right edge, beside the words.
+ */
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  --d: min(44rem, 54vw, 85svh);
+  align-items: center;
+}
+
+.figure {
+  margin: 0;
+}
+
+.ring {
+  position: relative;
+  width: var(--d);
+  aspect-ratio: 1;
+  margin: var(--disc-ring) 0 var(--disc-ring) calc(-1 * var(--bleed) - 0.2 * var(--d));
+
+  /* The dome's ring, clear of the frame by `--disc-ring` with nothing painted between. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: calc(-1 * var(--disc-ring));
+    border: 1px solid var(--border-card);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+}
+
+/* The frame is a disc inscribed in a square: the round mask trims only its black corners. */
+.disc {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--border-hover);
+  rotate: -90deg;
+
+  & picture,
+  & img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.caption {
+  margin-top: var(--stack);
+}
+
+@keyframes sky-turn {
+  from {
+    rotate: -102deg;
+  }
+
+  to {
+    rotate: -78deg;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .figure {
+      view-timeline-name: --dome-sky;
+    }
+
+    .disc {
+      animation: sky-turn linear both;
+      animation-timeline: --dome-sky;
+    }
+  }
+}
+
+@media (min-width: 901px) {
+  .figure {
+    grid-row: 1;
+    grid-column: 1 / span 6;
+  }
+
+  .words {
+    grid-row: 1;
+    grid-column: 7 / -1;
+  }
+}
+
+/* Narrow: the words, then the frame across the column with room for its ring. */
+@media (max-width: 900px) {
+  .words {
+    order: -1;
+  }
+
+  .figure {
+    margin-top: 2rem;
+  }
+
+  .ring {
+    width: calc(100% - 2 * var(--disc-ring));
+    margin-inline: auto;
+  }
+}
