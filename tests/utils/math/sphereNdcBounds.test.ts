@@ -21,7 +21,6 @@ describe('sphereNdcBounds', () => {
     const [lo, hi] = sphereNdcBounds(1, 1, 0.1, 0, 2, 0);
     expect(lo).toBeCloseTo(Math.tan(Math.PI / 4 - alpha) - 1, 10);
     expect(hi).toBeCloseTo(Math.tan(Math.PI / 4 + alpha) - 1, 10);
-    expect((lo + hi) / 2).toBeCloseTo(0, 1);
   });
 
   it('returns the full range when the eye is inside or the sphere reaches the eye plane', () => {

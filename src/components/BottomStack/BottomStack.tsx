@@ -8,12 +8,19 @@
  * become the containing block for its fixed children.
  */
 
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import cx from 'classnames';
+import { useViewCover } from '../../hooks/useViewCover';
+import type { ViewCover } from '../../@types/layout/ViewCover';
 import styles from './BottomStack.module.css';
 
 export type BottomStackProps = {
   readonly timeOpen: boolean;
+  /** A selection card rests here, even while Layers hides it or it is pulled open. */
+  readonly restingSheet: boolean;
+  readonly coverActive: boolean;
+  /** Must be stable; see `useViewCover`. */
+  readonly onCover: (cover: ViewCover | null) => void;
   /** Null when no sheet is showing. */
   readonly sheet: ReactNode;
   readonly scale: ReactNode;
@@ -21,7 +28,21 @@ export type BottomStackProps = {
   readonly dock: ReactNode;
 };
 
-function BottomStack({ timeOpen, sheet, scale, timeRow, dock }: BottomStackProps): ReactNode {
+function BottomStack({
+  timeOpen,
+  restingSheet,
+  coverActive,
+  onCover,
+  sheet,
+  scale,
+  timeRow,
+  dock,
+}: BottomStackProps): ReactNode {
+  // The cover is measured off a probe, not the sheet: the sheet peeks by a
+  // transform a ResizeObserver can't see, and opening Layers unmounts it.
+  const probeRef = useRef<HTMLDivElement>(null);
+  useViewCover(probeRef, 'bottom', coverActive, onCover);
+
   return (
     <div
       className={cx(styles.root, timeOpen && styles.timeOpen, sheet !== null && styles.hasSheet)}
@@ -33,6 +54,11 @@ function BottomStack({ timeOpen, sheet, scale, timeRow, dock }: BottomStackProps
         {timeOpen && timeRow}
         {dock}
       </div>
+      <div
+        ref={probeRef}
+        className={cx(styles.coverProbe, restingSheet && styles.restingSheet)}
+        aria-hidden="true"
+      />
     </div>
   );
 }

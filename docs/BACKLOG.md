@@ -44,6 +44,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Focus/palette on an absent craft** `awaiting-decision` — before launch the camera frames Earth at craft distance. → [details](backlog/2026-10-06-absent-craft-focus-and-palette.md)
 - [ ] **Arrival's replace-write briefly drops `exhibit=` from the hash** `ready` — reloading a mid-exhibit link (`#exhibit=…&t=…`), the arrival's replace publish composes the hash before the takeover has started, so `exhibit=` vanishes until the takeover write restores it; seen while debugging the exhibit exit clock on #854.
 - [ ] **Selection survives a scrub before the body existed** `ready` — selecting Hubble then scrubbing to 1977 keeps it selected while `spacecraftPresent` (`presentFromIso`) hides it; clear or park the selection when the selected body goes absent.
+- [ ] **A shifted exhibit subject spills under the notes on narrow windows** `needs-design` — exhibit framing sizes from the whole canvas, so below ~1.45:1 the fitted sphere is wider than the strip left of the notes. → [details](backlog/2026-11-02-exhibit-fit-before-cover.md)
 - [ ] **Unify the clip clock restore with the takeover scene capture** `needs-design` — `clipBodySaga` keeps its own clock restore beside P5's capture. → [details](backlog/2026-10-06-unify-clip-clock-restore.md)
 - [ ] **`npm run shot` intermittently fails to settle** `needs-repro` — three no-settle shots in three days, each clean on rerun; HMR mid-boot suspected, unproven. → [details](backlog/2026-10-07-shot-intermittent-no-settle.md)
 

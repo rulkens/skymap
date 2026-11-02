@@ -19,8 +19,9 @@ The orbit pivot, the thing you rotate around, should appear in the middle of the
   - phone (non-exhibit): the dock (tab bar) and the collapsed sheet strip;
   - desktop exhibit: the notes sidebar only (the bottom-left title block does not count);
   - phone exhibit: the caption block (title, lede) and the Exit button at the bottom.
-- Framing (focus fly-to, exhibit fit, mission camera, home, tours/clips, the follow driver) fits the subject
-  inside that uncovered area, on its **narrower side** (2026-11-02 ruling: portrait phones fit by width).
+- Framing (focus fly-to, exhibit fit, mission camera, home, tours/clips, the follow driver) keeps its
+  whole-canvas size, and the subject is centred in the uncovered area (§6: the earlier "fit the uncovered
+  area" and "narrower side" rulings were reversed after an eye check).
 - When the covered area changes (rotate the phone, enter or leave an exhibit, hide the UI), the shift eases.
 
 **Non-goals**
@@ -52,25 +53,25 @@ uncovered rect. With insets `L, R, T, B` in CSS px on a `W × H` canvas, the axi
 Consequences, by construction:
 
 - Navigation rates (radians or world units per pixel) are unchanged: the extents are unchanged.
-- The uncovered rect is symmetric about the axis, so framing needs only its two half-tangents
-  (`FramingWindow = { tanHalfX, tanHalfY }`), with no offset term.
 - Everything that draws or picks through the view-projection (geometry, culling, labels, overlays, GPU
   pick) follows the shift with no change of its own.
 
 The camera runtime builds the main-view frustum once per step (`FrameOutputs.frustum`), and every consumer
-reads that one value: `mainViewSpec(cam, sizePx, frustum)` for drawing and picking, and the surface
+reads that one value: `mainViewSpec(sizePx, frustum)` for drawing and picking, and the surface
 gesture contexts for cursor rays. Dome faces, cube/probe faces and any future rig build their own
 frustums, so the shift cannot reach them. In a non-mono view rig the runtime treats insets as zero.
 
 Per axis, the covered fraction is clamped to ≤ 0.6 (my call), so a sidebar wider than a narrow window
-can't push the pivot off-screen or collapse the framing window.
+can't push the pivot off-screen.
 
 ## 4. Covers: UI → store
 
-- `useViewCover(id, ref, edge, active)` measures one element with a ResizeObserver: its reach in CSS px
-  from the given canvas edge to the element's inner edge. It writes a row to a small `viewCover` slice
-  (`Record<CoverId, { edge, reachPx }>`), and clears the row when `active` turns false or on unmount. The
-  slice's route is a render-wake route, so a cover change wakes the passive scheduler.
+- `useViewCover(ref, edge, active, onCover)` measures one element with a ResizeObserver: its reach in CSS px
+  from the given canvas edge to the element's inner edge, handed to `onCover`, and `null` when `active`
+  turns false or on unmount. The hook is DOM-only; the panel's container dispatches
+  `viewCoverSet({ id, cover })` into a small `viewCover` slice (`Record<CoverId, { edge, reachPx }>`; a
+  null cover deletes the row). The slice's route is a render-wake route, so a cover change wakes the
+  passive scheduler.
 - **The phone's bottom cover is one invisible probe, not the sheet itself** (builder check): the sheet
   peeks by a transform, which a ResizeObserver can't see, and opening Layers unmounts the InfoCard sheet.
   BottomStack renders a fixed, empty probe element at the bottom edge, `var(--dock-height)` tall, plus
@@ -95,20 +96,20 @@ can't push the pivot off-screen or collapse the framing window.
   each frame: an exponential approach, τ = 80 ms (about 95% in 250 ms; my call). It requests renders until
   settled. It eases in NDC, so a resize mid-ease stays smooth, and the step is a pure function, which keeps
   the recorder deterministic.
-- `FrameOutputs` carries `frustum` (shifted by the eased value, for drawing) and `framing: FramingWindow`.
-  The framing window is computed from the **target** insets, so a fly-to that starts mid-ease still lands
-  framed.
+- `FrameOutputs` carries `frustum`, shifted by the eased value.
 - `runFrame` and `pickFrameContext` both pass `outputs.frustum` to `mainViewSpec`, so draw and pick always
   agree.
-- `LiveCameraRuntime` publishes `framing` (replacing `aspect`) to the sagas. The follow driver reads the
-  same window from its context.
 
-## 6. Framing on the narrower side
+## 6. Size from the whole canvas; covers only shift
 
-The framing functions take the `FramingWindow`. Body and structure fills, which size against the vertical
-half-angle today, use `min(tanHalfX, tanHalfY)`, as `sphereFitDistance` already does with `min(1, aspect)`.
-This changes framing on portrait phones even when nothing is covered (subjects come out smaller), which
-is the ruling. It lands as its own feature commit so it can be eye-checked on its own.
+Framing sizes every subject against the **whole canvas** (the lens `fovYRad`/`aspect`, as before this
+work), never the covers, and the
+covers only move where the subject sits (owner, 2026-11-02, option A). Covers register after boot
+framing and deep links run, so a covered fit gave the same subject a different size depending on timing:
+boot home at the old size, a later Home press about 7% smaller. That was ruled not acceptable. A re-fit when
+covers arrive (option B) would make Earth visibly zoom after load, and would need a covers-settled
+signal. With the 0.4 body fill, a whole-canvas fit still sits well inside the uncovered sky (about 48% of
+it on a phone).
 
 ## 7. Ground preparation
 
@@ -119,36 +120,31 @@ every number unchanged on today's symmetric view. They ship as **one prep PR, be
 
 1. **Shell renderers read the view's four tangents.** `horizonShellRenderer.ts:154`,
    `zoneOfAvoidanceRenderer.ts:166` (and its pick packing) and `lightTimeSpheresRenderer.ts:105` stop
-   rebuilding a centred ray from `tan(cam.fovYRad / 2)` and the aspect. Their uniforms carry
-   `tanLeft/tanRight/tanDown/tanUp` from the view's frustum, and their shaders map NDC through them, as
-   `blackHoleLensing/vertex.wesl` does. `sphereNdcBounds` takes the frustum. This closes backlog item
+   rebuilding a centred ray from `tan(cam.fovYRad / 2)` and the aspect. Their uniforms keep their
+   size: the forward slot becomes `rayAxis` (forward tilted to the window centre, `frustumRayAxis`) and the
+   two scalars become `tanHalfY`/`tanHalfX`. `sphereNdcBounds` takes the tangent window `(tanLo, tanHi)`. This closes backlog item
    `2026-09-22-off-axis-fovy-reconstruction`: the greenfield shape (the camera keeps fovY as its lens, and
    ray builders read the view's frustum) replaces that item's "four tangents on `OrbitCamera`" fix, which
    would have touched 39 readers in 31 files.
 2. **The camera runtime owns the main-view frustum, and the cursor ray reads it.** `FrameOutputs.frustum`
-   (symmetric in prep) feeds `mainViewSpec(cam, sizePx, frustum)` and the surface gesture contexts.
+   (symmetric in prep) feeds `mainViewSpec(sizePx, frustum)` and the surface gesture contexts.
    `cursorRayBodyLocal(pose, pixel, viewportPx, frustum)` maps NDC through the frustum, for 5 callers.
    `surfaceZoomStep.ts:53`'s cursorless anchor becomes the optical-centre pixel of that frustum.
-3. **Framing takes one framing window.** The ten framing functions (`focusFraming`, `framingPose`,
-   `bodyLikeFraming`, `bodyFocusDistance`, `structureFocusDistance`, `sphereFitDistance`, `homePose`,
-   `bodyHomePose`, `missionCameraFrame`, `resolveClipFoci`; 25 calls) take `FramingWindow` instead of
-   `fovYRad` (+ `aspect`). `FrameOutputs` and `LiveCameraRuntime` carry `framing`. In this commit the body
-   and structure fills still read `tanHalfY` only (identical numbers). `min` arrives in the feature (§6).
+3. ~~**Framing takes one framing window.**~~ Built, then reverted on the prep branch once framing was ruled
+   to size from the whole canvas (§6): the window would only ever carry the lens.
 4. **The HUD-stack hidden rule becomes a selector.** `App.tsx:90`'s inline
    `uiHidden || splashVisible || tourActive || exhibitId !== null` becomes `selectUiStackHidden`, so the
    phone covers share it instead of copying it.
 
 After the prep, the feature is growth: the `viewCover` slice, its selector and one `WAKE_ROUTES` row; the
-`useViewCover` hook at four panels; and `coverPx` in, plus a shifted `frustum` and covered `framing` out,
-of the camera runtime.
+`useViewCover` hook at four panels; and `coverPx` in, plus a shifted `frustum` out, of the camera runtime.
 
 ## 8. Testing and checks
 
 - Prep: each commit's existing tests stay green unchanged. One new test per joint pins the identity on a
-  symmetric frustum (shell uniforms, cursor ray, framing window).
-- Feature: unit tests for the shift maths (insets → `shiftNdc` and `FramingWindow`; per-edge max; zero
-  when no rows), the easing step, and narrower-side framing. An interaction test shows a hidden panel
-  clears its cover.
+  symmetric frustum (shell uniforms, cursor ray).
+- Feature: unit tests for the shift maths (insets → `shiftNdc`; per-edge max; zero when no rows) and the
+  easing step. An interaction test shows a hidden panel clears its cover.
 - Eye checks (before/after per link, on the phone via `npm run phone` for the phone rows):
   `#focus=body-earth` on a phone; `#exhibit=solarSystem` on desktop 1600×900 and on a phone;
   `#focus=body-earth` with the sheet pulled open (Earth stays put); Tab-hidden UI (re-centred);
@@ -161,11 +157,9 @@ of the camera runtime.
   test pins it.
 - **Risk: first-frame jump** while ResizeObservers report. The runtime starts at the first target with no
   ease, then eases.
-- **Decided while you were away (review these):**
-  - **No re-fit when covers arrive late** (builder check Q1). A deep-linked exhibit or a boot `#focus=`
-    frames before its covers register, and the subject then eases into place without its distance being
-    re-fitted. This only matters when a cover lands on the narrower side (landscape phones). A re-fit would
-    need a "covers settled" signal through the store to the sagas: new machinery for an edge case.
+- **Decided while the owner was away, then reviewed one by one (2026-11-02):** the probe and the clamp
+  were kept; the late-cover call became moot under §6.
+  - **No re-fit when covers arrive late** (builder check Q1), now moot: sizing ignores covers (§6).
   - **The 0.6 covered-fraction clamp** (Q2): the landscape phone exhibit caption can cover about half the
     height. The clamp bounds the worst case with one constant.
   - **The phone probe** (§4) replaces measuring the sheet.

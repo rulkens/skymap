@@ -1,19 +1,19 @@
 # View centre lens shift: implementation plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under
-> [`sdd-execution.md`](../conventions/sdd-execution.md). Steps use checkbox (`- [ ]`) syntax for tracking.
+> [`sdd-execution.md`](../../conventions/sdd-execution.md). Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** draw the orbit pivot at the centre of the canvas minus resting UI, and frame subjects inside that
-uncovered area.
+**Goal:** draw the orbit pivot at the centre of the canvas minus resting UI. Subjects keep their
+whole-canvas framing size (spec §6).
 
 **Architecture:** first, behaviour-neutral prep. Shells and cursor rays read a view frustum, the camera
-runtime owns the main-view frustum, framing reads one `FramingWindow`, and the HUD-stack hidden rule
+runtime owns the main-view frustum, and the HUD-stack hidden rule
 becomes a selector. Then the feature: panels write cover rows, the camera runtime turns them into an
-eased off-axis frustum plus a framing window, and framing fits the narrower side.
+eased off-axis frustum; framing keeps its whole-canvas size.
 
 **Tech stack:** TS, Redux Toolkit + typed-redux-saga (no react-redux), React, WebGPU/WESL, Vitest.
 
-**Spec:** [`docs/superpowers/specs/2026-11-02-view-centre-lens-shift-design.md`](../specs/2026-11-02-view-centre-lens-shift-design.md)
+**Spec:** [`docs/superpowers/specs/completed/2026-11-02-view-centre-lens-shift-design.md`](../../specs/completed/2026-11-02-view-centre-lens-shift-design.md)
 
 **Branches:** Part A on `lens-shift-prep` (PR 1). Part B on `lens-shift`, stacked on it (PR 2, `--base lens-shift-prep` until PR 1 merges).
 
@@ -24,23 +24,20 @@ eased off-axis frustum plus a framing window, and framing fits the narrower side
 - **Shifted frustum.** With `hx = tan(fovY/2)·aspect` and `hy = tan(fovY/2)`, the frustum for shift
   `[cx, cy]` is `tanLeft = −hx(1+cx)`, `tanRight = hx(1−cx)`, `tanDown = −hy(1+cy)`, `tanUp = hy(1−cy)`.
   Its extents stay `2hx × 2hy`.
-- **Framing window.** `tanHalfX = hx·(W − left − right)/W`, `tanHalfY = hy·(H − top − bottom)/H`. It is
-  computed from the **target** insets, never the eased ones.
 - **Covers clamp.** Per axis, the covered fraction `(left+right)/W` (and `(top+bottom)/H`) is clamped to
-  ≤ 0.6 before either formula. A cover can't push the pivot off-screen or collapse the window.
+  ≤ 0.6 before the shift formula. A cover can't push the pivot off-screen.
 - **Ease.** Exponential approach of `shiftNdc` to its target: `τ = 80 ms`, factor `1 − exp(−dt/τ)`. The
-  first step after boot or a zero-to-zero stretch snaps to the target. Done when `|Δ| < 1e-4` per axis.
+  first step after boot (no previous step time) snaps to the target. Done when `|Δ| < 1e-4` per axis.
   While not done, the step requests another render.
 - **What counts as a cover** (rulings): the phone dock plus the collapsed InfoCard sheet's peek (one
   probe, Task 7); the desktop exhibit notes column (right edge); the phone exhibit caption block (bottom
   edge). A pulled-open sheet still counts as its peek. Panel sheets (Layers, …), Search, the Time row and
   the palette never add to a cover.
-- **No re-fit when covers arrive late** (ruling, spec §9): framing uses the window at the moment it frames,
-  and only the shift eases afterwards.
+- **Framing size ignores covers** (owner, spec §6): covers only move the subject, never resize it.
 - **Hidden ⇒ no cover.** Phone covers drop while `selectUiStackHidden` is true, and exhibit covers while
   the exhibit eye toggle is hidden. In a non-mono `viewRig` the runtime treats insets as zero.
-- Comments follow [`comments.md`](../conventions/comments.md): explain why, not what. UI work reads
-  [`ui-ux.md`](../conventions/ui-ux.md) first.
+- Comments follow [`comments.md`](../../conventions/comments.md): explain why, not what. UI work reads
+  [`ui-ux.md`](../../conventions/ui-ux.md) first.
 
 ## Review Focus
 
@@ -120,7 +117,7 @@ Update each `io.wesl` layout comment and the TS twins' offset constants.
 
 **Interfaces:**
 - `FrameOutputs.frustum: ViewFrustum`. In this task it is `symmetricFrustum(projection.fovYRad, aspect)`, built once per step.
-- `mainViewSpec(cam: OrbitCamera, sizePx: Size, frustum: ViewFrustum): ViewSpec`. Both production callers pass `state.cameraRuntime.outputs.frustum`.
+- `mainViewSpec(sizePx: Size, frustum: ViewFrustum): ViewSpec` (shipped without the planned, unused `cam`). Both production callers pass `state.cameraRuntime.outputs.frustum`.
 - `cursorRayBodyLocal(pose, pixel, viewportPx, frustum: ViewFrustum): BodyLocalRay`. It maps the pixel to NDC, then to tangents `rs = mix(tanLeft, tanRight, (ndcX+1)/2)` and `us = mix(tanDown, tanUp, (ndcY+1)/2)`.
 - `opticalCentrePx(frustum: ViewFrustum, viewportPx: Readonly<Vec2>): Vec2`, the CSS pixel the axis passes through (y-down). `surfaceZoomStep.ts:53` uses it as the cursorless anchor in place of `[w/2, h/2]`.
 
@@ -130,7 +127,9 @@ Update each `io.wesl` layout comment and the TS twins' offset constants.
 - [x] Implement, then `npm run typecheck:fast` and the targeted tests (`cursorRay`, `surfaceZoom`, `draggedSurface`, `latchSurface`, `terrainPick`, `deriveView`, `stepCameraRuntime`).
 - [x] Commit.
 
-### Task 3: Framing reads one framing window — review: yes
+### Task 3: Framing reads one framing window — review: yes — REVERTED
+
+> Reverted on `lens-shift-prep` after the owner ruled framing sizes from the whole canvas (spec §6): the window would only ever carry the lens.
 
 **Files:**
 - Create: `src/@types/camera/FramingWindow.d.ts`, `src/utils/camera/lensFramingWindow.ts`
@@ -164,7 +163,7 @@ Update each `io.wesl` layout comment and the TS twins' offset constants.
 
 ### Task 5: Prep PR (controller)
 
-- [ ] Push `lens-shift-prep`, open PR 1 (spec + plan + Tasks 1–4), and watch CI in the background.
+- [x] Push `lens-shift-prep`, open PR 1 (spec + plan + Tasks 1–4), and watch CI in the background.
 
 ---
 
@@ -181,16 +180,16 @@ Update each `io.wesl` layout comment and the TS twins' offset constants.
 - `type CoverId = 'phoneBottom' | 'exhibitNotes' | 'exhibitCaption'`
 - `type ViewCover = { readonly edge: CoverEdge; readonly reachPx: number }`. `reachPx` is CSS px from that canvas edge to the panel's inner edge.
 - `type InsetsPx = { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number }`
-- Actions `viewCoverSet({ id, cover })` and `viewCoverCleared(id)`. State: `Partial<Record<CoverId, ViewCover>>`.
+- Action `viewCoverSet({ id, cover: ViewCover | null })`; null deletes the row. State: `Partial<Record<CoverId, ViewCover>>`.
 - `selectViewCoverPx(state): InsetsPx` is the per-edge **max**, memoised. With no rows it is all zeros.
 
-- [ ] Test `selectViewCoverPx takes the max per edge`: phoneBottom bottom 140 + exhibitCaption bottom 300 → `bottom: 300`, the rest 0.
-- [ ] Test `selectViewCoverPx is zero with no covers`.
-- [ ] Implement, typecheck, targeted tests, commit.
+- [x] Test `selectViewCoverPx takes the max per edge`: phoneBottom bottom 140 + exhibitCaption bottom 300 → `bottom: 300`, the rest 0.
+- [x] Test `selectViewCoverPx is zero with no covers`.
+- [x] Implement, typecheck, targeted tests, commit.
 
 ### Task 7: Panels claim their cover — review: yes
 
-Read [`ui-ux.md`](../conventions/ui-ux.md) and the `create-component` skill's conventions before you touch components.
+Read [`ui-ux.md`](../../conventions/ui-ux.md) and the `create-component` skill's conventions before you touch components.
 
 **Files:**
 - Create: `src/hooks/useViewCover.ts`, `tests/hooks/useViewCover.test.tsx`
@@ -199,61 +198,61 @@ Read [`ui-ux.md`](../conventions/ui-ux.md) and the `create-component` skill's co
 **Why a probe** (builder check): the sheet peeks by `transform` (`MobileSheet.module.css:39,52-56`), which a ResizeObserver can't see, and opening Layers unmounts the InfoCard sheet (`PhoneHudContainer.tsx:76-93`). A cover tied to the sheet element would vanish exactly when a transient panel opens.
 
 **Interfaces:**
-- `useViewCover(id: CoverId, ref: RefObject<HTMLElement | null>, edge: CoverEdge, active: boolean): void`
-  - While active: a ResizeObserver plus a window `resize` listener. The reach comes from `getBoundingClientRect()` against the viewport (`bottom` → `innerHeight − rect.top`, `right` → `innerWidth − rect.left`, `top` → `rect.bottom`, `left` → `rect.right`). It dispatches `viewCoverSet` only when the rounded reach changes.
-  - Inactive or unmount: `viewCoverCleared(id)`.
+- `useViewCover(ref: RefObject<HTMLElement | null>, edge: CoverEdge, active: boolean, onCover: (cover: ViewCover | null) => void): void` — DOM-only; the container wires a stable `useCallback` that dispatches `viewCoverSet` for its `CoverId`.
+  - While active: a ResizeObserver plus a window `resize` listener. The reach comes from `getBoundingClientRect()` against the viewport (`bottom` → `innerHeight − rect.top`, `right` → `innerWidth − rect.left`, `top` → `rect.bottom`, `left` → `rect.right`). It calls `onCover` only when the rounded reach changes.
+  - Inactive or unmount: `onCover(null)`.
 - BottomStack probe: an empty `aria-hidden` element, `position: fixed; bottom: 0; left: 0; width: 0; pointer-events: none`. Its height is `var(--dock-height)`, plus `var(--mobile-sheet-peek)` under `.restingSheet`. Cover `phoneBottom`, edge `bottom`, active while not `selectUiStackHidden`.
 - Exhibit: on desktop, the notes column → `exhibitNotes`, `right`. On mobile, the caption block → `exhibitCaption`, `bottom`. Inactive while the eye toggle is hidden; the notes cover is also inactive when there are no notes.
 - Update `CoverId` (Task 6) to `'phoneBottom' | 'exhibitNotes' | 'exhibitCaption'` if Task 6 landed the older names.
 
-- [ ] Test `useViewCover clears its row when it turns inactive`.
-- [ ] Test `useViewCover reports the reach from its edge`: stub `getBoundingClientRect` and `innerHeight`, then assert `reachPx`.
-- [ ] Interaction test (ExhibitOverlay): the eye toggle clears the exhibit row, and pressing it again restores it.
-- [ ] Interaction test (BottomStack/PhoneHud): the probe takes the `restingSheet` class while a selection exists, including while Layers is open.
-- [ ] Implement, typecheck, targeted tests, commit.
+- [x] Test `useViewCover clears its row when it turns inactive`.
+- [x] Test `useViewCover reports the reach from its edge`: stub `getBoundingClientRect` and `innerHeight`, then assert `reachPx`.
+- [x] Interaction test (ExhibitOverlay): the eye toggle clears the exhibit row, and pressing it again restores it.
+- [x] Interaction test (BottomStack/PhoneHud): the probe takes the `restingSheet` class while a selection exists, including while Layers is open.
+- [x] Implement, typecheck, targeted tests, commit.
 
-### Task 8: The camera runtime shifts the frustum and frames the uncovered area — review: yes
+### Task 8: The camera runtime shifts the frustum — review: yes
 
 **Files:**
-- Create: `src/utils/camera/{coverShiftNdc,shiftedFrustum,coveredFramingWindow,easedShiftNdc}.ts` + tests under `tests/utils/camera/`; constants `src/data/camera/{lensShiftEaseTauMs,maxCoveredFraction}.ts`
-- Modify: `src/@types/engine/state/CameraRuntime.d.ts` (add `shiftNdc: Vec2` memory), its initial value, `stepCameraRuntime.ts` (input `coverPx: InsetsPx`; outputs `frustum` = shifted, `framing` = covered; `requestRender` while easing), `runFrame.ts:97-108` (pass `selectViewCoverPx(stored)`, or zeros when `state.viewRig !== 'mono'`)
+- Create: `src/utils/camera/{coverShiftNdc,shiftedFrustum,easedShiftNdc}.ts` (`coveredFramingWindow` was built, then deleted with Task 3) + tests under `tests/utils/camera/`; constants `src/data/camera/{lensShiftEaseTauMs,maxCoveredFraction}.ts`
+- Modify: `src/@types/engine/state/CameraRuntime.d.ts` (add `shiftNdc: Vec2` memory), its initial value, `stepCameraRuntime.ts` (input `coverPx: InsetsPx`; output `frustum` = shifted; `requestRender` while easing), `runFrame.ts:97-108` (pass `selectViewCoverPx(stored)`, or zeros when `state.viewRig !== 'mono'`)
 
 **Interfaces:**
 - `coverShiftNdc(insets: InsetsPx, canvasPx: Readonly<Vec2>): Vec2`, which applies the clamp.
 - `shiftedFrustum(fovYRad: number, aspect: number, shiftNdc: Readonly<Vec2>): ViewFrustum`
-- `coveredFramingWindow(fovYRad: number, aspect: number, insets: InsetsPx, canvasPx: Readonly<Vec2>): FramingWindow`, which applies the clamp and replaces `lensFramingWindow` in the runtime.
-- `easedShiftNdc(current: Readonly<Vec2> | null, target: Readonly<Vec2>, dtMs: number): Vec2`. `null` current means snap.
+- `easedShiftNdc(current: Readonly<Vec2>, target: Readonly<Vec2>, dtMs: number): Vec2`. The caller snaps when there is no previous step time.
 
-- [ ] Test `coverShiftNdc lifts the axis above a bottom cover`: insets bottom 200 on 400×1000 → `[0, 0.2]`.
-- [ ] Test `coverShiftNdc moves the axis left of a right sidebar`: right 400 on 1600×900 → `[-0.25, 0]`.
-- [ ] Test `coverShiftNdc clamps a cover wider than the window`: right 1000 on 1000 wide → `cx = −0.6`.
-- [ ] Test `shiftedFrustum keeps its extents`: for shift `[0.3, −0.2]`, `tanRight − tanLeft = 2hx` and `tanUp − tanDown = 2hy`, and at shift `[0,0]` it equals `symmetricFrustum`.
-- [ ] Test `shiftedFrustum puts the axis at the shift`: the NDC of tangent 0 equals `shiftNdc`.
-- [ ] Test `coveredFramingWindow shrinks to the uncovered rect`: bottom 200 on 400×1000 → `tanHalfY = 0.8·hy`, `tanHalfX = hx`.
-- [ ] Test `easedShiftNdc snaps from null, approaches with τ = 80 ms, and stays continuous when the target jumps mid-ease`.
-- [ ] Test (stepCameraRuntime): a cover change yields `requestRender: true` until the shift settles, and `outputs.framing` uses the target from the first frame.
-- [ ] Implement, typecheck, targeted tests, commit.
+- [x] Test `coverShiftNdc lifts the axis above a bottom cover`: insets bottom 200 on 400×1000 → `[0, 0.2]`.
+- [x] Test `coverShiftNdc moves the axis left of a right sidebar`: right 400 on 1600×900 → `[-0.25, 0]`.
+- [x] Test `coverShiftNdc clamps a cover wider than the window`: right 1000 on 1000 wide → `cx = −0.6`.
+- [x] Test `shiftedFrustum keeps its extents`: for shift `[0.3, −0.2]`, `tanRight − tanLeft = 2hx` and `tanUp − tanDown = 2hy`, and at shift `[0,0]` it equals `symmetricFrustum`.
+- [x] Test `shiftedFrustum puts the axis at the shift`: the NDC of tangent 0 equals `shiftNdc`.
+- [x] Test `easedShiftNdc snaps from null, approaches with τ = 80 ms, and stays continuous when the target jumps mid-ease`.
+- [x] Test (stepCameraRuntime): a cover change yields `requestRender: true` until the shift settles.
+- [x] Implement, typecheck, targeted tests, commit.
 
-### Task 9: Framing fits the narrower side
+### Task 9: Framing fits the narrower side — REVERTED
+
+> Reverted with Task 3: bodies and structures size from the whole canvas again (spec §6).
 
 **Files:** `src/services/engine/camera/{bodyFocusDistance,structureFocusDistance}.ts` + tests.
 
-- [ ] Change both to fill against `Math.min(framing.tanHalfX, framing.tanHalfY)`.
-- [ ] Test `bodyFocusDistance fits by width in a portrait window`: `{tanHalfX: 0.3, tanHalfY: 0.6}` gives the same distance as `{0.3, 0.3}`.
-- [ ] Update the expected values that change in existing tests (portrait fixtures only). Name each one in the commit body.
-- [ ] Commit.
+- [x] Change the body fill to `Math.min(framing.tanHalfX, framing.tanHalfY)`. The structure fill stays on `tanHalfY` (review fix): its fade is judged in canvas-height pixels (spec §6).
+- [x] **Reverted after the eye check** (owner, 2026-11-02): a width fit shrank Earth to 165 px on a phone, then, with Task 3, back to main's whole-canvas fill; no test remains from this task.
+- [x] Update the expected values that change in existing tests (portrait fixtures only). Name each one in the commit body.
+- [x] Commit.
 
 ### Task 10: Verify and land (controller)
 
-- [ ] Eye checks, before (main) / after, one dash check each:
+- [x] Eye checks, before (main) / after, one dash check each:
   - phone via `npm run phone`: `#focus=body-earth`; sheet expanded (Earth holds); `#exhibit=solarSystem`; the exhibit eye toggled (re-centred); a pinch on Earth's surface (anchors under the fingers)
   - desktop 1600×900: `#exhibit=solarSystem` (Sun left of the notes); Tab-hidden (centred)
-- [ ] Push `lens-shift`, open PR 2 (`--base lens-shift-prep`), watch CI.
-- [ ] One whole-branch review across both PRs' diffs (spec fidelity + slop), one fix round.
+- [x] Push `lens-shift`, open PR 2 (`--base lens-shift-prep`), watch CI.
+- [x] One whole-branch review across both PRs' diffs (spec fidelity + slop), one fix round.
 
 ## Definition of Done
 
-- **Deliverables:** `frustumRayAxis`, `opticalCentrePx`, `FramingWindow` + `lensFramingWindow`/`coveredFramingWindow`, `selectUiStackHidden`, the `viewCover` slice + `selectViewCoverPx`, `useViewCover`, `coverShiftNdc`, `shiftedFrustum`, `easedShiftNdc`; `FrameOutputs.frustum`/`.framing`; `LiveCameraRuntime.framing`.
+- **Deliverables:** `frustumRayAxis`, `opticalCentrePx`, `selectUiStackHidden`, the `viewCover` slice + `selectViewCoverPx`, `useViewCover`, `coverShiftNdc`, `shiftedFrustum`, `easedShiftNdc`; `FrameOutputs.frustum`.
 - **Observable:**
   - On a phone, Earth's centre sits midway between the screen top and the top of the collapsed sheet.
   - Pulling the sheet open does not move Earth.
