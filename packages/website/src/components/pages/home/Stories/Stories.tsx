@@ -39,7 +39,8 @@ function Stories() {
           <div className={styles.words}>
             <h2>Stories in the sky</h2>
             <p className={styles.lead}>
-              A tour moves the camera from view to view and says what you are looking at.
+              Explore the universe through tours and exhibits, from the Voyager missions to the
+              cosmic web.
             </p>
             <div className={cx(styles.part, styles.tourPart)} style={TOUR_ACCENT}>
               <h3>The Long Way Out</h3>
