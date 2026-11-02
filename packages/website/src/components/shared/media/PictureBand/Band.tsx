@@ -6,6 +6,7 @@ import type { GalleryView } from '../../../../@types/GalleryView';
 import { cx } from '../../../../utils/cx.ts';
 import { shotAspect } from '../../../../utils/shotAspect.ts';
 import { shotRatio } from '../../../../utils/shotRatio.ts';
+import { MEDIA } from '../../../../data/media.ts';
 import Shot from '../Shot/Shot.tsx';
 import Meteors from './Meteors.tsx';
 import styles from './PictureBand.module.css';
@@ -30,7 +31,7 @@ function Band({ views, words, gap, eager, zoom, gallery, children }: BandProps) 
       ? Math.ceil((100 * shotRatio(view.id)) / shotRatio(first.tall ?? first.id))
       : 100;
   const sizes = (view: GalleryView) =>
-    `(max-width: 700px) ${Math.round(cropped(view) * zoom)}vw, ${Math.round(100 * zoom)}vw`;
+    `${MEDIA.phone} ${Math.round(cropped(view) * zoom)}vw, ${Math.round(100 * zoom)}vw`;
 
   return (
     <section
@@ -41,7 +42,7 @@ function Band({ views, words, gap, eager, zoom, gallery, children }: BandProps) 
       style={
         {
           '--zoom': zoom,
-          // A phone's pictures share one box, shaped as the first view's: its upright cut up to Shot's 700px, the wide one above.
+          // A phone's pictures share one box, shaped as the first view's: its upright cut up to MEDIA.phone, the wide one above.
           '--shape': shotAspect(first.id),
           '--shape-tall': shotAspect(first.tall ?? first.id),
         } as CSSProperties

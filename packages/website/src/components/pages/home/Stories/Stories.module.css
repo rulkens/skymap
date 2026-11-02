@@ -108,7 +108,7 @@
 }
 
 /* Wide and unpinned: the tour's stage beside the title and its part, then the exhibit's part over its stage. */
-@media (min-width: 901px) {
+@media (--wide) {
   .pin {
     align-items: center;
   }
@@ -147,7 +147,7 @@
 }
 
 /* Narrow: the title and its line, then the tour's stage across the window, its part, the exhibit's part, its stage. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .words {
     display: contents;
   }
@@ -353,7 +353,7 @@
 }
 
 /* A window too short to hold the words and the parts is left unpinned. */
-@media (min-width: 901px) and (min-height: 42rem) and (prefers-reduced-motion: no-preference) {
+@media (--wide) and (min-height: 42rem) and (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
     .track {
       height: calc(var(--first-screen) + 120svh);

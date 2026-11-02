@@ -156,14 +156,14 @@
  * to hold the big marker; narrower, a link under a big one is set in by the
  * difference (2.875rem is the big marker and its gap), so the labels still meet.
  */
-@media (min-width: 1200px) {
+@media (--broad) {
   .ring.ring-hang {
     --hang: calc(var(--mark) + var(--gap));
     margin-inline: calc(-1 * var(--hang)) var(--hang);
   }
 }
 
-@media (max-width: 1199px) {
+@media not (--broad) {
   .ring.ring-big.ring-hang + .ring.ring-hang {
     padding-left: calc(2.875rem - var(--mark) - var(--gap));
   }

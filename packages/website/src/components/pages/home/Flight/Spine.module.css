@@ -108,7 +108,7 @@
 }
 
 /* Upright screens: the spine takes the top right, and its labels would sit over the picture. */
-@media (max-width: 760px) and (orientation: portrait) {
+@media (--portrait) {
   :root[data-flight-live] .spine {
     right: 0.875rem;
     top: calc(var(--nav-height) + 1.25rem);
@@ -128,7 +128,7 @@
 }
 
 /* Short screens (a phone on its side): no room for labels that would repeat the caption beside them. */
-@media (max-height: 520px) and (orientation: landscape) {
+@media (--landscape) {
   :root[data-flight-live] .spine {
     right: 1.25rem;
     top: calc(var(--nav-height) + 0.75rem);

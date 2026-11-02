@@ -3,14 +3,14 @@
   row-gap: 0;
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .root > * {
     grid-column: span 6;
     --cols: 6;
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root > * + * {
     margin-top: var(--site-space-3xl);
   }

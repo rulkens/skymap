@@ -46,7 +46,7 @@
   & .address {
     padding: var(--site-space-s) var(--site-space-m);
 
-    @media (max-width: 900px) {
+    @media (--narrow) {
       padding: var(--site-space-xs);
     }
   }

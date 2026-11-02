@@ -126,7 +126,7 @@
     vertical-align: middle;
   }
 
-  @media (max-width: 900px) {
+  @media (--narrow) {
     --doc-measure: 35rem;
   }
 }

@@ -30,7 +30,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .planet {
     display: none;
   }
@@ -44,7 +44,7 @@
   }
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .head {
     display: grid;
     justify-items: center;
@@ -143,7 +143,7 @@
 }
 
 /* Placed, so the floor line (placed in the first row) does not push them down. */
-@media (min-width: 901px) {
+@media (--wide) {
   .part {
     grid-row: 1 / span 2;
   }
@@ -250,7 +250,7 @@
 }
 
 /* Room under the widest device for its link on one line. */
-@media (min-width: 901px) {
+@media (--wide) {
   .dome .label {
     width: 14rem;
   }
@@ -270,7 +270,7 @@
 }
 
 /* Two by two: the dome as wide as its cell allows with its ring, still the largest. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .dome {
     --s: 1.2;
   }

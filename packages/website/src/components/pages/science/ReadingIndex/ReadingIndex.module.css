@@ -19,7 +19,7 @@
   }
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .root > h2,
   .foot {
     grid-column: span 6;

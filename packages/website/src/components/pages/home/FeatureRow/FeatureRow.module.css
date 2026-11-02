@@ -89,7 +89,7 @@
   }
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .row {
     --across: 5;
   }

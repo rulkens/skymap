@@ -130,7 +130,7 @@
 }
 
 /* Narrow: only a short name beside its words stays side by side. Every other row is a block. */
-@media (max-width: 699px) {
+@media (--phone) {
   .root:not(.twoFour) {
     & tr > * {
       grid-column: 1 / -1;

@@ -77,7 +77,7 @@
   }
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .figure {
     grid-row: 1;
     grid-column: 1 / span 6;
@@ -90,7 +90,7 @@
 }
 
 /* Narrow: the web under the words, the window's width; the bar would be too small to read, so it is left out. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     --frame: calc(100vw / 0.64);
   }

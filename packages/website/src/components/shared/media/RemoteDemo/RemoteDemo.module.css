@@ -19,7 +19,7 @@
 }
 
 /* In the page's two-column layout the disc fills its column and the phone lies over its bottom right. */
-@media (min-width: 901px) {
+@media (--wide) {
   .root {
     display: block;
     --film-width: 100%;

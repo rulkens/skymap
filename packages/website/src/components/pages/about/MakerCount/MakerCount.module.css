@@ -17,7 +17,7 @@
   user-select: none;
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .words {
     grid-row: 1;
     grid-column: 1 / span 6;
@@ -30,7 +30,7 @@
 }
 
 /* Narrow: the numeral first, smaller, on the words' left edge, so the heading under it reads as its caption. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .count {
     order: -1;
     margin: 0 0 var(--stack);

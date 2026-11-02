@@ -97,7 +97,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     --w: 120vw;
     --x: calc(50% + 0.173 * var(--w));

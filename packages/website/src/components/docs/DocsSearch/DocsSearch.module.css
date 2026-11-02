@@ -149,7 +149,7 @@ button.open {
   text-underline-offset: 0.25em;
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .ask,
   .status,
   .results {
@@ -162,7 +162,7 @@ button.open {
 }
 
 /* Narrow: the whole screen, Close above the field at the thumb's corner, results indented by their marker. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .sheet {
     min-height: 100dvh;
     padding-top: var(--site-space-2xs);

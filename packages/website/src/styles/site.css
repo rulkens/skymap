@@ -113,8 +113,8 @@
   --duration-reveal: 450ms;
 }
 
-/* The 900px breakpoint is also in components/site/Nav/Nav.module.css (CSS variables cannot be used in media queries). */
-@media (max-width: 900px) {
+/* The one layout break; its name and the others are in data/media.ts. */
+@media (--narrow) {
   :root {
     /* 18px body is under the 300 floor, so the phone reads in 400. */
     --text-body: 1.125rem;

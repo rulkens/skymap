@@ -56,7 +56,7 @@
   pointer-events: none;
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root a {
     padding-block: var(--site-space-xs);
   }

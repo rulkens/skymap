@@ -74,7 +74,7 @@
  * the card rises from its upper right, the Navigation panel hangs from its lower left under the words. Each is
  * drawn a little under the size it has in the app.
  */
-@media (min-width: 901px) {
+@media (--wide) {
   .root {
     align-items: start;
   }
@@ -130,7 +130,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .reading {
     grid-column: 1 / -1;
     margin-top: var(--site-space-s);
@@ -138,7 +138,7 @@
 }
 
 /* Narrow, the render takes the window's width and the two pieces stand side by side over its foot. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .stage {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -170,7 +170,7 @@
   composes: drift lean from '../../../../styles/motion.module.css';
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .navigation {
     --drift: 1.5rem;
   }

@@ -57,7 +57,7 @@
 }
 
 /* Narrow, the rings come inside the column, and the first column gives them room. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     margin-left: 0;
     padding-left: 0;

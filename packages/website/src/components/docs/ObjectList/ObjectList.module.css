@@ -51,7 +51,7 @@
     overflow-wrap: anywhere;
   }
 
-  @media (max-width: 699px) {
+  @media (--phone) {
     & li {
       grid-template-columns: minmax(0, 1fr) 4.75rem;
       padding-top: var(--site-space-2xs);

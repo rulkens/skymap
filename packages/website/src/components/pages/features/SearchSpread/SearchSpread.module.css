@@ -73,7 +73,7 @@
 }
 
 /* Wide, the words take five columns and the pieces the page's right half, the panels' edges on its lines. */
-@media (min-width: 901px) {
+@media (--wide) {
   .words {
     grid-column: 1 / span 5;
   }
@@ -98,7 +98,7 @@
 }
 
 /* Narrow, the pieces take the window's width, their shadow margins in the gutters. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .figure {
     margin-inline: calc(-1 * var(--gutter));
   }

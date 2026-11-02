@@ -115,7 +115,7 @@
   line-height: 1.45;
 }
 
-@media (max-width: 699px) {
+@media (--phone) {
   .ticks span:not(:first-child, :last-child, .middle) {
     display: none;
   }

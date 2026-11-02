@@ -150,7 +150,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .inner {
     gap: var(--site-space-2xl);
     padding-block: var(--site-space-2xl) 8rem;

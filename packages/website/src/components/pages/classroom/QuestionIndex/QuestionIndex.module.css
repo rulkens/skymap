@@ -94,7 +94,7 @@
   opacity: 1;
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .list {
     grid-column: 1 / span 7;
   }
@@ -105,14 +105,14 @@
   }
 }
 
-@media (hover: hover) and (min-width: 901px) {
+@media (hover: hover) and (--wide) {
   .row {
     cursor: default;
   }
 }
 
 /* Narrow: no viewer; each question has its picture small at its left. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .viewer {
     display: none;
   }

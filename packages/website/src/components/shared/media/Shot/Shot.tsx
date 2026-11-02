@@ -9,7 +9,7 @@
  */
 import { siteShot } from '../../../../data/siteShot.ts';
 import { shotSources } from '../../../../utils/shotSources.ts';
-import { TALL_MEDIA } from './Shot.constants.ts';
+import { MEDIA } from '../../../../data/media.ts';
 
 type ShotProps = {
   id: string;
@@ -28,7 +28,7 @@ function Shot({ id, tall, sizes, alt, eager = false, shadow = false }: ShotProps
       {upright && (
         <>
           <source
-            media={TALL_MEDIA}
+            media={MEDIA.phone}
             type="image/avif"
             srcSet={upright.avif}
             sizes="100vw"
@@ -36,7 +36,7 @@ function Shot({ id, tall, sizes, alt, eager = false, shadow = false }: ShotProps
             height={upright.height}
           />
           <source
-            media={TALL_MEDIA}
+            media={MEDIA.phone}
             type="image/webp"
             srcSet={upright.webp}
             sizes="100vw"

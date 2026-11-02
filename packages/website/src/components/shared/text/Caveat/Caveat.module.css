@@ -17,7 +17,7 @@
   }
 
   /* Narrow, as the text it stands in. */
-  @media (max-width: 900px) {
+  @media (--narrow) {
     max-width: var(--doc-measure);
   }
 }

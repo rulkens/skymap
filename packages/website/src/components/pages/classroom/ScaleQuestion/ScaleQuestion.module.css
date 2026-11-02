@@ -183,7 +183,7 @@
 }
 
 /* Wide: the question and the answer on the left, the link and its note on the page grid's last five columns. */
-@media (min-width: 901px) {
+@media (--wide) {
   .ask {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -212,7 +212,7 @@
  * Narrow: the words and the question, then the picture, then the answer and the link under it, so the
  * question is asked before the gap is crossed. `.ask` dissolves for that, so its parts take the gutter.
  */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     display: flex;
     flex-direction: column;
@@ -257,7 +257,7 @@
 }
 
 /* The upright cut: the Moon at the top, Earth at the foot, the rings stacked up from Earth. */
-@media (max-width: 700px) {
+@media (--phone) {
   .frame {
     --gap-left: 47.7%;
     --gap-width: 5.393%;

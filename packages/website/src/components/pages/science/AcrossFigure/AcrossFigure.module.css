@@ -32,7 +32,7 @@
   max-width: 30rem;
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .caption {
     margin-left: calc(3 * (100% + var(--col-gap)) / 12);
   }
@@ -57,7 +57,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .subject {
     width: 220%;
     margin: -22% 0 -22% -60%;

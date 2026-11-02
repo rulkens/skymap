@@ -205,7 +205,7 @@
   composes: answer from '../answer.module.css';
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .part {
     grid-column: span 6;
   }
@@ -218,7 +218,7 @@
 }
 
 /* Narrow: the bar stands upright down the margin of a list, each stretch as tall as its part is long. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .bar {
     flex-direction: column;
     margin-bottom: var(--site-space-xl);

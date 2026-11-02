@@ -64,7 +64,7 @@
 }
 
 /* From its own -50% to -30%: it lags the page as the page leaves, turning away. */
-@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+@media (--wide) and (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
     .root {
       view-timeline-name: --about-hero;
@@ -79,7 +79,7 @@
 }
 
 /* Narrow: the title and the lead, then the galaxy across the window, then its label. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     min-height: 0;
   }

@@ -38,7 +38,7 @@
 }
 
 /* Narrow: a smaller globe stands out past the right edge, above the sentence. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     --globe: 13rem;
     padding-top: 9rem;

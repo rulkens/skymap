@@ -105,7 +105,7 @@
 }
 
 /* Narrow: the Sun near the left edge, a steeper fall, the spacecraft past the right edge above the heading. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     --w: 150vw;
     --descent: 10deg;

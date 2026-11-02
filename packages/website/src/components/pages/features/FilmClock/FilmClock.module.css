@@ -81,7 +81,7 @@
 }
 
 /* Narrow, the figures share the first line and the track takes the whole second. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     flex-wrap: wrap;
     row-gap: 0;

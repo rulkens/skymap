@@ -21,7 +21,7 @@
   margin-left: calc(3 * (100% + var(--col-gap)) / 12);
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     margin: var(--site-space-2xl) 0 0 auto;
   }

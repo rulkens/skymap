@@ -69,7 +69,7 @@
   composes: unseen from '../../../styles/a11y.module.css';
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .about {
     grid-column: span 3;
   }
@@ -86,7 +86,7 @@
   }
 }
 
-@media (min-width: 561px) and (max-width: 900px) {
+@media (min-width: 561px) and (--narrow) {
   .pages > li {
     grid-column: span 6;
   }

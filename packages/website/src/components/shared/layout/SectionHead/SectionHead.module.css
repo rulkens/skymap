@@ -16,7 +16,7 @@
 }
 
 /* The words start on the page's middle line, where a section in two columns starts its second. */
-@media (min-width: 901px) {
+@media (--wide) {
   .root h2:not(:only-child),
   .lead {
     grid-column: span 6;

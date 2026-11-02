@@ -19,7 +19,7 @@
   --numeral-leading: 1;
 }
 
-@media (min-width: 481px) and (max-width: 900px) {
+@media (min-width: 481px) and (--narrow) {
   .fixed > * {
     grid-column: span 6;
   }

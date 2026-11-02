@@ -87,7 +87,7 @@ button.toggle {
 }
 
 /* Same breakpoint as site.css. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     gap: var(--site-space-s);
   }

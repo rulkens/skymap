@@ -18,7 +18,7 @@
   }
 }
 
-@media (min-width: 700px) {
+@media (--tablet) {
   .root {
     display: grid;
     grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));

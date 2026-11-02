@@ -167,7 +167,7 @@
   }
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .notes > .text {
     grid-column: 1 / span 6;
   }
@@ -178,7 +178,7 @@
 }
 
 /* Narrow: the list in the table's place. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .table {
     display: none;
   }

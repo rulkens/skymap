@@ -160,7 +160,7 @@
 }
 
 /* Narrow: the address, then the picture of the view it opens, then its label. */
-@media (max-width: 900px) {
+@media (--narrow) {
   /* Through `.root`, as the composed `.grid` may load after this file and would win a tie. */
   .root .figure {
     display: flex;

@@ -33,7 +33,7 @@
   align-items: baseline;
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .lede h3 {
     grid-column: span 3;
   }
@@ -43,7 +43,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .big {
     margin-top: var(--site-space-2xl);
   }

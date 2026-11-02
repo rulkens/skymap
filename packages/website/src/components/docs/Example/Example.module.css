@@ -13,7 +13,7 @@
     border-bottom: 1px solid var(--border-divider);
   }
 
-  @media (max-width: 900px) {
+  @media (--narrow) {
     max-width: var(--doc-measure);
   }
 }

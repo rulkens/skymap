@@ -126,7 +126,7 @@
   border-top: 1px solid var(--border-divider);
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .terms dt {
     grid-column: span 4;
   }

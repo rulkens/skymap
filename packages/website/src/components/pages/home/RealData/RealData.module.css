@@ -32,7 +32,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .orbits {
     --w: 30rem;
     top: calc(-1.5rem - 0.28 * var(--w));
@@ -193,14 +193,14 @@
   opacity: 1;
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .window,
   .big {
     max-width: 16rem;
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   /* One after another, each window a little smaller than the column. */
   .kinds {
     --cols: 1;

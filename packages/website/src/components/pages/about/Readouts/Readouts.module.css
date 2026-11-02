@@ -57,7 +57,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .list > div {
     grid-row: auto;
     grid-template-rows: none;

@@ -48,7 +48,7 @@
   }
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .track {
     grid-column: span 5;
   }
@@ -59,7 +59,7 @@
 }
 
 /* Narrow, the rings come inside the column: in the margin they would fall off a phone's edge. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .track {
     padding-left: 1.5rem;
   }

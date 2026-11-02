@@ -56,7 +56,7 @@
 }
 
 /* Upright screens: the words take the bottom. */
-@media (max-width: 760px) and (orientation: portrait) {
+@media (--portrait) {
   :root[data-flight-live] .intro {
     grid-template-columns: 1fr;
     gap: var(--site-space-m);
@@ -74,7 +74,7 @@
 }
 
 /* Short screens (a phone on its side): everything smaller, nothing stacked. */
-@media (max-height: 520px) and (orientation: landscape) {
+@media (--landscape) {
   :root[data-flight-live] .intro {
     padding: 0 var(--site-space-2xl) var(--site-space-xl) var(--gutter);
   }

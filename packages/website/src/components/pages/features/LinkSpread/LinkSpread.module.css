@@ -113,7 +113,7 @@
  * Wide, the words take five columns and the view the other seven; the card rises off the view's upper right and the
  * clock floats over its lower left, each near the size it has in the app.
  */
-@media (min-width: 901px) {
+@media (--wide) {
   .root {
     align-items: center;
   }
@@ -159,7 +159,7 @@
  * Narrow, the view takes the window's width, the clock floats over its foot, and the card stands under it on the
  * right with its tag in the space to its left.
  */
-@media (max-width: 900px) {
+@media (--narrow) {
   .stage {
     display: grid;
     margin-inline: calc(-1 * var(--gutter));
@@ -199,7 +199,7 @@
 }
 
 /* Wide, the pieces are nearer than the view: as the page scrolls they move against it, the card the most. */
-@media (min-width: 901px) {
+@media (--wide) {
   .clock {
     --drift: 1.5rem;
   }

@@ -146,7 +146,7 @@
 }
 
 /* Short screens (a phone on its side): the words and the button side by side. */
-@media (max-height: 520px) and (orientation: landscape) {
+@media (--landscape) {
   :root[data-flight-live] .words {
     flex-direction: row;
     justify-content: center;

@@ -42,7 +42,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root dt,
   .root dd {
     grid-column: 1 / -1;

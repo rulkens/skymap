@@ -74,7 +74,7 @@
   }
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .figure {
     grid-row: 1;
     grid-column: 1 / span 6;
@@ -87,7 +87,7 @@
 }
 
 /* Narrow: the words, then the frame across the column with room for its ring. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .words {
     order: -1;
   }

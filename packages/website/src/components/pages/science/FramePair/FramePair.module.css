@@ -5,7 +5,7 @@
   margin-bottom: var(--site-space-xl);
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     grid-template-columns: 1fr;
   }

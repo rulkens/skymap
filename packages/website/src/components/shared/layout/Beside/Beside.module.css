@@ -22,7 +22,7 @@
   align-items: center;
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .root > :first-child {
     grid-column: span 5;
     --cols: 5;
@@ -35,7 +35,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .picture > :first-child {
     max-width: var(--picture);
   }

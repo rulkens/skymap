@@ -36,6 +36,9 @@ with no `.root` that a class takes with `composes: <class> from '…/styles/<mod
   `color-mix(in srgb, var(--color-fg) 30%, transparent)`, and a colour taken from a picture is its subject's
   `--site-accent-*` (a component's `.constants.ts` passes it on as `'var(--site-accent-orbits)'`). The colours
   sampled per slide in `content/pages/features/features.data.ts` are data, like the shots they come from.
+- A media query is a name from `src/data/media.ts`: CSS writes `@media (--narrow)` (custom media, which
+  `tools/site/customMedia.ts` writes out at compile time, since no browser reads it yet), a script
+  `matchMedia(MEDIA.narrow)`. An unknown name fails the compile.
 
 ## Pictures and films
 

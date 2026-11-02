@@ -224,7 +224,7 @@
   }
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .clocks {
     position: absolute;
     z-index: 2;
@@ -242,7 +242,7 @@
  * Narrow, the picture takes the column's width: the figure stands over it, and the piece stands beside the
  * caption, lapping over the picture's foot.
  */
-@media (max-width: 900px) {
+@media (--narrow) {
   .figure {
     display: grid;
     grid-template-columns: 1fr 42%;
@@ -319,7 +319,7 @@
   composes: drift from '../../../../styles/motion.module.css';
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .drift {
     --drift: 1.5rem;
   }

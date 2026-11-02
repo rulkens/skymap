@@ -157,7 +157,7 @@
  * Upright screens: the bottom line holds one thing at a time. The hint has it while the wordmark
  * stands, then the readout; a thumb needs no reminder to keep scrolling.
  */
-@media (max-width: 760px) and (orientation: portrait) {
+@media (--portrait) {
   :root[data-flight-live] .scale {
     bottom: 0.875rem;
   }
@@ -175,7 +175,7 @@
 }
 
 /* Short screens (a phone on its side): no room for the hint. */
-@media (max-height: 520px) and (orientation: landscape) {
+@media (--landscape) {
   :root[data-flight-live] .hint {
     display: none;
   }

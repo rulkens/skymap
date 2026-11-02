@@ -10,7 +10,7 @@
 }
 
 /* On a phone the review bar sits along the foot (ReviewBar sets --review-bar while it shows). */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     bottom: calc(1rem + var(--review-bar, 0px));
   }

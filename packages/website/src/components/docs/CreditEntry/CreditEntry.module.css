@@ -24,7 +24,7 @@
 }
 
 /* The name on the columns a row's words stand on, the terms in the last two: one edge down the whole page. */
-@media (min-width: 700px) {
+@media (--tablet) {
   .root header {
     display: grid;
     grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));

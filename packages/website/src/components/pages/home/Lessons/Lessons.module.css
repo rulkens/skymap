@@ -222,7 +222,7 @@
   margin: 0 var(--bleed);
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .near > .first {
     grid-column: 1 / span 4;
   }
@@ -237,7 +237,7 @@
 }
 
 /* Narrow: the horizon across the window with Jupiter cut by its right edge, then each question in turn. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .horizon {
     --earth: 12vw;
     --earth-x: calc(var(--gutter) + 6vw);

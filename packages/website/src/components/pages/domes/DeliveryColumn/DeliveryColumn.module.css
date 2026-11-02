@@ -151,7 +151,7 @@
  * name, the words, the seven lines of the specification and the link. Thirteen rows, so both columns' parts
  * sit level.
  */
-@media (min-width: 901px) {
+@media (--wide) {
   .root {
     grid-row: span 13;
     grid-template-rows: subgrid;

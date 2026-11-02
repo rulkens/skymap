@@ -99,7 +99,7 @@
 }
 
 /* Upright screens: the words take the bottom. */
-@media (max-width: 760px) and (orientation: portrait) {
+@media (--portrait) {
   :root[data-flight-live] .cap {
     padding: 0 var(--gutter) var(--site-space-xl);
   }
@@ -116,7 +116,7 @@
 }
 
 /* Short screens (a phone on its side): everything smaller, nothing stacked. */
-@media (max-height: 520px) and (orientation: landscape) {
+@media (--landscape) {
   :root[data-flight-live] .cap {
     max-width: 62%;
     padding-bottom: var(--site-space-l);

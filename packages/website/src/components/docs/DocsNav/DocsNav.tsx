@@ -17,6 +17,7 @@ import DocsSearch from '../DocsSearch/DocsSearch.tsx';
 import Icon from '../../shared/links/Icon/Icon.tsx';
 import PageSections from '../PageSections/PageSections.tsx';
 import styles from './DocsNav.module.css';
+import { MEDIA } from '../../../data/media.ts';
 import { BEFORE_PAINT } from './DocsNav.constants.ts';
 
 // The tree comes in as a prop: data/docsTree.ts reads ATTRIBUTIONS.md from disk, so it cannot be in an island's bundle.
@@ -32,7 +33,7 @@ function DocsNav({ current, sections, groups }: DocsNavProps) {
 
   useEffect(() => {
     const details = menu.current!;
-    const narrow = matchMedia('(max-width: 900px)');
+    const narrow = matchMedia(MEDIA.narrow);
     // The list is one element at every width: wide, it must be open, since its summary is not shown there.
     const onWidth = () => (details.open = !narrow.matches);
     // Narrow, the list is a sheet with its own scroll: opened, it shows the row of the page you are on.

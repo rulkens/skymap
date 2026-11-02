@@ -55,7 +55,7 @@
 }
 
 /* Narrow: a contents list, drawing beside the words, two columns while they fit. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     padding-top: var(--site-space-xl);
   }
