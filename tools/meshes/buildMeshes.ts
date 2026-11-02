@@ -737,6 +737,7 @@ async function bakeTier(
     new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
     info.width,
     info.height,
+    geometry,
   ).map((c, i) => (baseColorTexture ? c * factor[i]! : c)) as Vec3;
 
   return {
