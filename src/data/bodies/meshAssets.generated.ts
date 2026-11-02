@@ -203,10 +203,10 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   bennu: {
     key: 'bennu',
-    tierCeiling: 'medium',
+    tierCeiling: 'small',
     boundingRadiusM: 291.54111656998447,
     groundOffsetM: 244.78289794921875,
-    meanAlbedo: [0.133046, 0.129892, 0.123096],
+    meanAlbedo: [0.162636, 0.159556, 0.154277],
     triangleCount: 150000,
     substituted: [],
     source:

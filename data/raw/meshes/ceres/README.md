@@ -72,6 +72,6 @@ and map agree at 0°; the import's 180° offset only absorbs that left edge.
    roughness and metallic atlases selected-to-active onto it. Capped at 150k
    like the other shape models rather than the 600k budget: Ceres' relief is
    only ±4% of its radius, so the normal atlas carries what the triangles
-   lose, at a quarter of the download.
+   lose, with a quarter of the geometry.
 3. `npm run build-meshes` — `small` and `medium` share the 150k mesh and differ
    only in atlas size (2048 / 4096).

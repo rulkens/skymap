@@ -76,7 +76,7 @@ true normal albedo, which the import rescales to the seed albedo anyway.
 2. `npm run prebake-mesh -- bennu` — keeps the full surface as the bake source,
    decimates a copy to 150k triangles, and bakes 4096² albedo, normal,
    roughness and metallic atlases selected-to-active onto it. 150k, as for
-   Phobos: the normal atlas carries the boulders the triangles lose, at a
-   quarter of the 600k budget's download.
-3. `npm run build-meshes` — `small` and `medium` share the 150k mesh and differ
-   only in atlas size (2048 / 4096).
+   Phobos: the normal atlas carries the boulders the triangles lose, with a
+   quarter of the 600k budget's geometry.
+3. `npm run build-meshes` — ships the `small` tier only, its atlases at 2048²:
+   a 4096² relief atlas was 15 MB, for texels finer than an approach resolves.

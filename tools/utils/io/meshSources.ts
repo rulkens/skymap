@@ -144,7 +144,8 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     origin: 'source',
   },
   bennu: {
-    tiers: { small: { raw: 'meshes.bennu' }, medium: { raw: 'meshes.bennu' } },
+    // Small only: its 4096 relief atlas was 15 MB, for texels finer than an approach resolves.
+    tiers: { small: { raw: 'meshes.bennu' } },
     licence: 'NASA PDS (no licence stated); USGS public domain',
     attribution:
       'Shape: OSIRIS-REx Altimetry Working Group (O. Barnouin, JHU/APL), Bennu shape model v020 from OLA, NASA PDS / NAIF. Colour: ShapeV20 normal-albedo mosaic (Golish et al. 2021), NASA/University of Arizona, USGS Astrogeology',

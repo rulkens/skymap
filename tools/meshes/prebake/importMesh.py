@@ -84,7 +84,7 @@ SOURCES = {
         "Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif", 180.0, (0.30, 0.29, 0.28))),
     "bennu": source("bennu_g_00880mm_alt_obj_0000n00000_v020.obj", scale=1000.0,
                     rock=lonlat_albedo("Bennu_global_ShapeV20_GndControl_ROLOphase_ALBEDO_8bit_v6.8192.png",
-                                       180.0, (0.24, 0.23, 0.22))),
+                                       180.0, (0.30, 0.29, 0.28))),
 }
 
 # The mosaic is resampled to this before it is packed: a 4096 atlas over Phobos

@@ -17,7 +17,7 @@ export const BENNU: LayerBody = {
     label: 'Bennu',
     datumRadiusM: 242,
     reliefM: [-29, 50], // DSK radius extremes − datum
-    albedo: [0.24, 0.23, 0.22],
+    albedo: [0.3, 0.29, 0.28],
   }),
   position: {
     kind: 'orbit',
