@@ -7,8 +7,6 @@
 import { initialState as missionsInitialState } from '../state/missions/initialState';
 import { initialState as starCatalogsInitialState } from '../../starCatalog/state/starCatalogs/initialState';
 import { initialState as galaxyCatalogsInitialState } from '../../galaxyCatalog/state/galaxyCatalogs/initialState';
-import type { GalaxyCatalogId } from '../../galaxyCatalog/@types/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../@types/settings/GalaxyCatalogItemSettings';
 import { initialState as structuresInitialState } from '../../structure/state/structures/initialState';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../@types/settings/StructureItemSettings';
@@ -60,7 +58,7 @@ export const voyagerMissions: Exhibit = {
           id,
           { enabled: false, labelEnabled: false },
         ]),
-      ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
+      ) as typeof galaxyCatalogsInitialState.items,
     },
     structures: {
       items: Object.fromEntries(
