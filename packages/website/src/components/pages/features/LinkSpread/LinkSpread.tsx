@@ -8,12 +8,11 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 
-import { APP_BASE, appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { pointerLean } from '../../../../utils/pointerLean.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
-import CopyButton from '../../../shared/links/CopyButton/CopyButton.tsx';
+import AddressStrip from '../../../shared/links/AddressStrip/AddressStrip.tsx';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
@@ -29,10 +28,10 @@ type LinkSpreadProps = {
 const RENDER = 'features-link-saturn';
 // Saturn's gold, from the render.
 const ACCENT = '#dbc29e';
-// Eight of the page grid's twelve columns wide; the window's width on a phone.
-const RENDER_SIZES = '(max-width: 900px) 100vw, min(calc(66vw - 4rem), 56rem)';
-const CARD_SIZES = '(max-width: 900px) 46vw, 17rem';
-const CLOCK_SIZES = '(max-width: 900px) 92vw, 26rem';
+// Seven of the page grid's twelve columns wide; the window's width on a phone.
+const RENDER_SIZES = '(max-width: 900px) 100vw, min(calc(58vw - 4rem), 41rem)';
+const CARD_SIZES = '(max-width: 900px) 50vw, 15rem';
+const CLOCK_SIZES = '(max-width: 900px) 80vw, 21rem';
 // What each parameter of the address sets, in the address's order.
 const WORDS: Record<string, string> = {
   focus: 'what you look at',
@@ -43,17 +42,13 @@ const WORDS: Record<string, string> = {
 function LinkSpread({ title, line, href, label }: LinkSpreadProps) {
   const [lit, setLit] = useState<string | null>(null);
   const link = siteShot(RENDER).link;
-  const site = new URL(import.meta.env.SITE);
-  const params = link.split('&').map((pair) => {
-    const at = pair.indexOf('=');
-    return { key: pair.slice(0, at), value: pair.slice(at + 1) };
-  });
   // Pointing at either half of a pair lights both and lets the other two fall back.
   const pair = (key: string) => ({
     onPointerEnter: () => setLit(key),
     onPointerLeave: () => setLit(null),
   });
-  const state = (key: string) => cx(lit === key && styles.on, lit !== null && lit !== key && styles.off);
+  const state = (key: string) =>
+    cx(lit === key && styles.on, lit !== null && lit !== key && styles.off);
   const tag = (key: string) => (
     <p className={styles.tag}>
       <code>{key}</code> {WORDS[key]}
@@ -85,19 +80,10 @@ function LinkSpread({ title, line, href, label }: LinkSpreadProps) {
           </div>
         </div>
         <div className={styles.bar}>
-          <a className={styles.address} href={appLink(link)}>
-            <span className={styles.host}>
-              {site.host}
-              {APP_BASE}#
-            </span>
-            {params.map(({ key, value }, i) => (
-              <span key={key} className={cx(styles.param, state(key))} {...pair(key)}>
-                {i > 0 && '&'}
-                <i>{key}</i>=<b>{value}</b>
-              </span>
-            ))}
-          </a>
-          <CopyButton text={site.origin + appLink(link)} label="Copy the address" />
+          <AddressStrip
+            hash={link}
+            param={(key) => ({ className: cx(styles.param, state(key)), ...pair(key) })}
+          />
         </div>
         <figcaption className={styles.caption}>
           <ShotCaption id={RENDER} showDrawn={false} />

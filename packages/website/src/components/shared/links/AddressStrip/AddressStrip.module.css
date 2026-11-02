@@ -1,27 +1,12 @@
-/* The wrapper centres the field in a column taller than it (the classroom page's row under its steps). */
 .root {
   display: flex;
   align-items: center;
-  margin-top: 0.75rem;
-}
-
-.field {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  border: 1px solid rgb(232 238 255 / 0.28);
-  border-radius: 0.25rem;
-
-  &:hover,
-  &:focus-within {
-    border-color: var(--color-accent);
-  }
 }
 
 .address {
   flex: 1;
   min-width: 0;
-  padding: 0.75rem;
+  padding: 0.6875rem 0;
   /* The one text under 16px on the site, with the BibTeX box: an address field's own face and size. */
   font: 400 0.875rem / 1.6 var(--font-family-mono);
   color: var(--site-text-dim);
@@ -40,14 +25,30 @@
   }
 }
 
-.plain {
-  margin-top: 0;
+/* The field is a raised surface, as Home's window bar (Sharing): lighter than the view it lies over. */
+.raised {
+  border: 1px solid rgb(232 238 255 / 0.22);
+  border-radius: 0.5rem;
+  background: rgb(14 17 26 / 0.86);
+  box-shadow: 0 1.25rem 3rem rgb(0 0 0 / 0.7);
+  backdrop-filter: blur(12px);
+  transition: border-color var(--duration-base) var(--ease-standard);
 
-  & .field {
-    border: 0;
+  &:focus-within {
+    border-color: var(--color-accent);
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--color-accent);
+    }
   }
 
   & .address {
-    padding: 0.6875rem 0;
+    padding: 1rem 1.25rem;
+
+    @media (max-width: 900px) {
+      padding: 0.75rem;
+    }
   }
 }

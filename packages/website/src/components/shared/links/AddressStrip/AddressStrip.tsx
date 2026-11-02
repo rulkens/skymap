@@ -1,21 +1,29 @@
 /*
  * AddressStrip — an app address shown as a browser's address field, which is
  * also the link, with a copy control (CopyButton) at its end as a browser has. The one boxed
- * element on the site: it depicts a real field. Lines break only between parameters.
- * `plain` is the address among a docs page's text (Example): no box, and
+ * element on the site: it depicts a real field, raised over the view it opens. Lines break only
+ * between parameters. `plain` is the address among a docs page's text (Example): no box, and
  * words to read, the link being the control under it. `query` is a flag
- * before the `#`; `shown` prints a shorter address than the one copied.
+ * before the `#`; `shown` prints a shorter address than the one copied; `param` gives each
+ * parameter's span its props by key, for a figure that pairs a parameter with what it sets.
  */
 import { Fragment } from 'react';
+import type { HTMLAttributes } from 'react';
 
 import { APP_BASE, appLink } from '../../../../data/appLink.ts';
 import { cx } from '../../../../utils/cx.ts';
 import CopyButton from '../CopyButton/CopyButton.tsx';
 import styles from './AddressStrip.module.css';
 
-type AddressStripProps = { hash: string; query?: string; shown?: string; plain?: boolean };
+type AddressStripProps = {
+  hash: string;
+  query?: string;
+  shown?: string;
+  plain?: boolean;
+  param?: (key: string) => HTMLAttributes<HTMLSpanElement>;
+};
 
-function AddressStrip({ hash, query, shown = hash, plain = false }: AddressStripProps) {
+function AddressStrip({ hash, query, shown = hash, plain = false, param }: AddressStripProps) {
   const site = new URL(import.meta.env.SITE);
   const address = appLink(hash, query);
   const params = shown.split('&').map((pair) => {
@@ -28,12 +36,12 @@ function AddressStrip({ hash, query, shown = hash, plain = false }: AddressStrip
       {site.host}
       {APP_BASE}
       {query && `?${query}`}#
-      {params.map((param, i) => (
-        <span key={i}>
+      {params.map((p, i) => (
+        <span key={i} {...param?.(p.key)}>
           {i > 0 && '&'}
-          {param.key}=
+          {p.key}=
           <b>
-            {param.parts.map((part, k) => (
+            {p.parts.map((part, k) => (
               <Fragment key={k}>
                 {k > 0 && (
                   <>
@@ -49,17 +57,15 @@ function AddressStrip({ hash, query, shown = hash, plain = false }: AddressStrip
     </>
   );
   return (
-    <div className={cx(styles.root, plain && styles.plain)}>
-      <div className={styles.field}>
-        {plain ? (
-          <span className={styles.address}>{shownAddress}</span>
-        ) : (
-          <a className={styles.address} href={address}>
-            {shownAddress}
-          </a>
-        )}
-        <CopyButton text={site.origin + address} label="Copy the address" />
-      </div>
+    <div className={cx(styles.root, !plain && styles.raised)}>
+      {plain ? (
+        <span className={styles.address}>{shownAddress}</span>
+      ) : (
+        <a className={styles.address} href={address}>
+          {shownAddress}
+        </a>
+      )}
+      <CopyButton text={site.origin + address} label="Copy the address" />
     </div>
   );
 }

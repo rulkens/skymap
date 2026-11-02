@@ -23,7 +23,7 @@
 
   & picture {
     display: block;
-    mask-image: radial-gradient(ellipse 70% 72% at 50% 50%, #000 52%, transparent 100%);
+    mask-image: radial-gradient(ellipse 58% 62% at 50% 50%, #000 38%, transparent 90%);
   }
 
   & img {
@@ -33,14 +33,19 @@
   }
 }
 
-.piece img {
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
+.piece {
+  position: relative;
+  z-index: 1;
+
+  & img {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
+  }
 }
 
-/* A parameter's name in the address's own face and colour, then what it sets. */
+/* A parameter's name in the address's own face, in the view's colour, then what it sets. */
 .tag {
   display: flex;
   align-items: baseline;
@@ -56,10 +61,20 @@
   }
 }
 
+/* On the address's left edge, with the clock's tag. */
 .view .tag {
   position: absolute;
   top: 8%;
-  left: 6%;
+  left: 0;
+}
+
+/* A piece's picture keeps 6% of its width clear for its shadow: the tag lines up with the piece, not the picture. */
+.piece > .tag {
+  margin: 0 0 0 6%;
+}
+
+.clock > .tag {
+  margin-bottom: -2.5%;
 }
 
 /* Pointing at one half of a pair: its piece comes forward, the others fall back. */
@@ -73,59 +88,15 @@
   opacity: 0.45;
 }
 
-/* The address: the one raised surface, laid over the view's foot. */
+.param.on {
+  color: var(--link-accent);
+}
+
+/* The address lies over the view's foot. */
 .bar {
   position: relative;
   z-index: 2;
-  display: flex;
-  align-items: center;
   margin-top: -2rem;
-  border: 1px solid rgb(232 238 255 / 0.22);
-  border-radius: 0.5rem;
-  background: rgb(14 17 26 / 0.86);
-  box-shadow: 0 1.25rem 3rem rgb(0 0 0 / 0.7);
-  backdrop-filter: blur(12px);
-  transition: border-color var(--duration-base) var(--ease-standard);
-
-  &:hover,
-  &:focus-within {
-    border-color: var(--link-accent);
-  }
-}
-
-.address {
-  flex: 1;
-  min-width: 0;
-  padding: 1rem 1.25rem;
-  /* An address field's own face and size, as AddressStrip's. */
-  font: 400 0.875rem / 1.6 var(--font-family-mono);
-  color: var(--site-text-faint);
-  text-decoration: none;
-  overflow-wrap: anywhere;
-}
-
-.host {
-  color: var(--site-text-faint);
-}
-
-/* A parameter moves to the next line whole. */
-.param {
-  display: inline-block;
-  max-width: 100%;
-
-  & i {
-    font-style: normal;
-    color: var(--link-accent);
-  }
-
-  & b {
-    font-weight: 400;
-    color: var(--site-text-muted);
-  }
-}
-
-.param.on b {
-  color: var(--color-fg);
 }
 
 .caption {
@@ -133,8 +104,8 @@
 }
 
 /*
- * Wide, the words take four columns and the view the other eight; the card rises off the view's upper right and the
- * clock hangs from its left edge into the gap beside the words, each near the size it has in the app.
+ * Wide, the words take five columns and the view the other seven; the card rises off the view's upper right and the
+ * clock floats over its lower left, each near the size it has in the app.
  */
 @media (min-width: 901px) {
   .root {
@@ -142,30 +113,30 @@
   }
 
   .words {
-    grid-column: 1 / span 4;
+    grid-column: 1 / span 5;
     grid-row: 1;
   }
 
   .figure {
-    grid-column: 5 / -1;
+    grid-column: 6 / -1;
     grid-row: 1;
   }
 
   .piece {
     position: absolute;
-    z-index: 1;
   }
 
+  /* Less the pictures' clear margins, the pieces line up with the address's ends. */
   .card {
-    top: -12%;
-    right: -2%;
-    width: 30%;
+    top: -10%;
+    right: -1.4%;
+    width: 36%;
   }
 
   .clock {
-    bottom: 16%;
-    left: -12%;
-    width: 46%;
+    bottom: 14%;
+    left: -3%;
+    width: 50%;
   }
 
   /* Lean away from the pointer, as nearer layers would when the head moves; the card is the nearest. */
@@ -186,38 +157,46 @@
   }
 }
 
-/* Narrow, the view takes the window's width, the card stands over its right side and the clock over its foot. */
+/*
+ * Narrow, the view takes the window's width, the clock floats over its foot, and the card stands under it on the
+ * right with its tag in the space to its left.
+ */
 @media (max-width: 900px) {
   .stage {
     display: grid;
     margin-inline: calc(-1 * var(--gutter));
   }
 
-  .view {
-    grid-area: 1 / 1;
-  }
-
-  .card {
-    grid-area: 1 / 1;
-    z-index: 1;
-    justify-self: end;
-    align-self: end;
-    width: 44%;
-    margin: 0 var(--gutter) -1rem 0;
+  .view .tag {
+    left: var(--gutter);
   }
 
   .clock {
-    z-index: 1;
-    width: calc(100% - 2 * var(--gutter));
-    margin: 1.5rem auto 0;
+    grid-row: 2;
+    justify-self: start;
+    width: 80%;
+    margin: -2.5rem 0 0 calc(var(--gutter) - 4.8%);
+  }
+
+  .card {
+    grid-row: 3;
+    justify-self: end;
+    width: 50%;
+    margin: 1.5rem calc(var(--gutter) - 2%) 0 0;
+
+    & .tag {
+      position: absolute;
+      top: 0;
+      right: 100%;
+      margin: 0;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0;
+    }
   }
 
   .bar {
-    margin-top: 1rem;
-  }
-
-  .address {
-    padding: 0.75rem;
+    margin-top: 1.5rem;
   }
 }
 
