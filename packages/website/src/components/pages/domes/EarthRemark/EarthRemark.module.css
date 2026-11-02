@@ -10,6 +10,8 @@
 
 /* A box the globe's size; the picture inside is centred on it, the globe being 0.44 of the picture's width. */
 .earth {
+  composes: drift from '../../../../styles/motion.module.css';
+  --drift: 1rem;
   position: absolute;
   top: -2.5rem;
   left: calc(-1 * var(--bleed) - 0.08 * var(--globe));
@@ -32,25 +34,6 @@
     width: 100%;
     max-width: none;
     height: auto;
-  }
-}
-
-@keyframes earth-drift {
-  from {
-    translate: 0 1rem;
-  }
-
-  to {
-    translate: 0 -1rem;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    .earth {
-      animation: earth-drift linear both;
-      animation-timeline: view();
-    }
   }
 }
 

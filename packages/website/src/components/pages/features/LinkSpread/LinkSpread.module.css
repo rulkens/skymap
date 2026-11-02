@@ -34,6 +34,7 @@
 }
 
 .piece {
+  composes: drift from '../../../../styles/motion.module.css';
   position: relative;
   z-index: 1;
 
@@ -201,27 +202,13 @@
 }
 
 /* Wide, the pieces are nearer than the view: as the page scrolls they move against it, the card the most. */
-@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    .card,
-    .clock {
-      animation: link-drift linear both;
-      animation-timeline: view();
-    }
-
-    .card {
-      --drift: 3rem;
-    }
-  }
-}
-
-@keyframes link-drift {
-  from {
-    translate: 0 var(--drift, 1.5rem);
+@media (min-width: 901px) {
+  .clock {
+    --drift: 1.5rem;
   }
 
-  to {
-    translate: 0 calc(-1 * var(--drift, 1.5rem));
+  .card {
+    --drift: 3rem;
   }
 }
 

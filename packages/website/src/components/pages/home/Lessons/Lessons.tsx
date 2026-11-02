@@ -92,7 +92,7 @@ function Lessons() {
       <div className={styles.far}>
         <div className={styles.part}>
           <figure className={styles.figure}>
-            <div className={styles.field}>
+            <div className={styles.view}>
               <Shot id="features-constellations" sizes="(max-width: 900px) 100vw, 36rem" />
             </div>
             <div className={styles.search}>
@@ -103,7 +103,7 @@ function Lessons() {
         </div>
         <div className={styles.part}>
           <figure className={styles.figure}>
-            <div className={styles.galaxy}>
+            <div className={styles.view}>
               <Shot id="lesson-andromeda" sizes="(max-width: 900px) 100vw, 36rem" />
             </div>
           </figure>

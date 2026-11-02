@@ -83,16 +83,18 @@
 .jupiter {
   position: absolute;
   top: 50%;
-  translate: -50% -50%;
+  transform: translate(-50%, -50%);
 }
 
 .earth {
+  composes: drift from '../../../../styles/motion.module.css';
   left: var(--earth-x);
   width: var(--earth);
   --drift: 1.5rem;
 }
 
 .jupiter {
+  composes: drift from '../../../../styles/motion.module.css';
   left: var(--jupiter-x);
   width: var(--jupiter);
   --drift: -1rem;
@@ -127,11 +129,10 @@
   margin-bottom: 1.5rem;
 }
 
-/* One shape for both, so the two questions under them stand level. */
-.field,
-.galaxy {
+/* One shape for both far views, so the two questions under them stand level. */
+.view {
+  composes: feather from '../../../../styles/motion.module.css';
   aspect-ratio: 16 / 10;
-  mask-image: radial-gradient(closest-side, #000 62%, rgb(0 0 0 / 0));
 
   & picture,
   & img {
@@ -295,16 +296,6 @@
  * from Earth to Jupiter; the search slides onto Orion. At rest (mid-window, reduced motion, no scroll timelines)
  * every layer is in its finished place.
  */
-@keyframes drift {
-  from {
-    translate: -50% calc(-50% + var(--drift));
-  }
-
-  to {
-    translate: -50% calc(-50% - var(--drift));
-  }
-}
-
 @keyframes draw {
   from {
     scale: 0 1;
@@ -328,16 +319,11 @@
   @supports (animation-timeline: view()) {
     .horizon {
       view-timeline-name: --horizon;
+      --drift-timeline: --horizon;
     }
 
     .far > .part:first-child .figure {
       view-timeline-name: --orion;
-    }
-
-    .earth,
-    .jupiter {
-      animation: drift linear both;
-      animation-range: cover 0% cover 100%;
     }
 
     .span {
@@ -355,8 +341,6 @@
       --from-y: 0;
     }
 
-    .earth,
-    .jupiter,
     .span {
       animation-timeline: --horizon;
     }

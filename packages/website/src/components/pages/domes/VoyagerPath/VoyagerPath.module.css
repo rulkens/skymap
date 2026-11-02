@@ -56,6 +56,7 @@
 }
 
 .craft {
+  composes: feather from '../../../../styles/motion.module.css';
   position: absolute;
   top: calc(var(--sun-y) + var(--reach-len) * sin(var(--descent)));
   left: calc(var(--sun-x) + var(--reach-len) * cos(var(--descent)));
@@ -64,7 +65,7 @@
   rotate: var(--descent);
   transform-origin: 50.6% 51.8%;
   mix-blend-mode: screen;
-  mask-image: radial-gradient(closest-side, #000 80%, rgb(0 0 0 / 0));
+  --feather: 80%;
   view-timeline-name: --voyager;
 
   & img {

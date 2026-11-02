@@ -314,36 +314,17 @@
 }
 
 /* Wide, the pieces move a little against the picture as the page scrolls, as a nearer layer would. */
-@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    .drift {
-      animation: drift linear both;
-      animation-timeline: view();
-    }
-
-    .under .drift {
-      animation-name: drift-far;
-    }
-  }
+.drift {
+  composes: drift from '../../../../styles/motion.module.css';
 }
 
-@keyframes drift {
-  from {
-    translate: 0 1.5rem;
+@media (min-width: 901px) {
+  .drift {
+    --drift: 1.5rem;
   }
 
-  to {
-    translate: 0 -1.5rem;
-  }
-}
-
-@keyframes drift-far {
-  from {
-    translate: 0 -2.5rem;
-  }
-
-  to {
-    translate: 0 2.5rem;
+  .under .drift {
+    --drift: -2.5rem;
   }
 }
 

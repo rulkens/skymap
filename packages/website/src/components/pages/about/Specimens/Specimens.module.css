@@ -61,8 +61,8 @@
 
 /* Lines only on a transparent ground: added as light, the page's sky shows through; the edges fade out. */
 .cutout {
+  composes: feather from '../../../../styles/motion.module.css';
   mix-blend-mode: plus-lighter;
-  mask-image: radial-gradient(closest-side, #000 70%, rgb(0 0 0 / 0));
 
   & picture,
   & img {

@@ -9,6 +9,8 @@
  * screen blend must reach the page, or the frame's black would cover the caption above and the title.
  */
 .orbits {
+  composes: drift from '../../../../styles/motion.module.css';
+  --drift: -2rem;
   --w: 64rem;
   position: absolute;
   top: calc(3.5rem - 0.28 * var(--w));
@@ -27,25 +29,6 @@
     width: 100%;
     max-width: none;
     height: auto;
-  }
-}
-
-@keyframes orbits-lag {
-  from {
-    translate: 0 -2rem;
-  }
-
-  to {
-    translate: 0 2rem;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    .orbits {
-      animation: orbits-lag linear both;
-      animation-timeline: view();
-    }
   }
 }
 
@@ -80,8 +63,8 @@
 
 /* A round window into the scene: the picture dissolves into the page at its rim, no frame. */
 .window {
+  composes: feather from '../../../../styles/motion.module.css';
   aspect-ratio: 1;
-  mask-image: radial-gradient(closest-side, #000 64%, rgb(0 0 0 / 0));
 
   & picture {
     display: block;
