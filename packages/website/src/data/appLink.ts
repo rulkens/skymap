@@ -10,7 +10,8 @@ const APP_ORIGIN = import.meta.env.MODE === 'development' ? String(import.meta.e
 /**
  * Root-absolute URL of the app (absolute to the live site on the dev server), with an optional
  * deep-link hash (`focus=body-earth`, no leading `#`) and an optional query flag (`dome`), which
- * the app reads before the hash. A link renders it through AppLink; a copy control calls it for its text.
+ * the app reads before the hash. A link renders it through AppLink; a copied or printed address is
+ * utils/appAddress.ts, which is absolute everywhere.
  */
 export function appLink(hash?: string, query?: string): string {
   return `${APP_ORIGIN}${APP_BASE}${query ? `?${query}` : ''}${hash ? `#${hash}` : ''}`;

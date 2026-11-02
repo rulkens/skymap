@@ -7,11 +7,11 @@
  * before the `#`; `shown` prints a shorter address than the one copied; `param` gives each
  * parameter's span its props by key, for a figure that pairs a parameter with what it sets.
  */
-import { Fragment } from 'react';
 import type { HTMLAttributes } from 'react';
 
-import { APP_BASE, appLink } from '../../../../data/appLink.ts';
+import { appAddress } from '../../../../utils/appAddress.ts';
 import { cx } from '../../../../utils/cx.ts';
+import AddressText from '../AddressText/AddressText.tsx';
 import AppLink from '../AppLink/AppLink.tsx';
 import CopyButton from '../CopyButton/CopyButton.tsx';
 import styles from './AddressStrip.module.css';
@@ -25,37 +25,7 @@ type AddressStripProps = {
 };
 
 function AddressStrip({ hash, query, shown = hash, plain = false, param }: AddressStripProps) {
-  const site = new URL(import.meta.env.SITE);
-  const params = shown.split('&').map((pair) => {
-    const at = pair.indexOf('=');
-    // A long value (a pose) may break after a comma, never inside a number.
-    return { key: pair.slice(0, at), parts: pair.slice(at + 1).split(',') };
-  });
-  const shownAddress = (
-    <>
-      {site.host}
-      {APP_BASE}
-      {query && `?${query}`}#
-      {params.map((p, i) => (
-        <span key={i} {...param?.(p.key)}>
-          {i > 0 && '&'}
-          {p.key}=
-          <b>
-            {p.parts.map((part, k) => (
-              <Fragment key={k}>
-                {k > 0 && (
-                  <>
-                    ,<wbr />
-                  </>
-                )}
-                {part}
-              </Fragment>
-            ))}
-          </b>
-        </span>
-      ))}
-    </>
-  );
+  const shownAddress = <AddressText hash={shown} query={query} param={param} />;
   return (
     <div className={cx(styles.root, !plain && styles.raised)}>
       {plain ? (
@@ -65,7 +35,7 @@ function AddressStrip({ hash, query, shown = hash, plain = false, param }: Addre
           {shownAddress}
         </AppLink>
       )}
-      <CopyButton text={site.origin + appLink(hash, query)} label="Copy the address" />
+      <CopyButton text={appAddress(hash, query)} label="Copy the address" />
     </div>
   );
 }

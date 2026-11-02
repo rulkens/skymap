@@ -9,11 +9,12 @@
 import type { KeyboardEvent } from 'react';
 import { useRef } from 'react';
 
-import { APP_BASE, appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
+import { appAddress } from '../../../../utils/appAddress.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { galleryKeyTarget } from '../../../../utils/galleryKeyTarget.ts';
 import { wrapIndex } from '../../../../utils/wrapIndex.ts';
+import AddressText from '../../../shared/links/AddressText/AddressText.tsx';
 import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import CopyButton from '../../../shared/links/CopyButton/CopyButton.tsx';
 import OpenApp from '../../../shared/links/OpenApp/OpenApp.tsx';
@@ -44,7 +45,6 @@ function Sharing() {
   const pairs = link.split('&');
   const kept = pairs.filter((pair) => !pair.startsWith('pose='));
   const typed = useTyped(kept.join('&') + (kept.length < pairs.length ? '&…' : ''));
-  const site = new URL(import.meta.env.SITE);
 
   const onKeyDown = (event: KeyboardEvent) => {
     const to = galleryKeyTarget(event.key, at, VIEWS.length - 1);
@@ -59,8 +59,8 @@ function Sharing() {
       <div className={styles.head}>
         <h2>Wish you were here</h2>
         <p className={styles.lead}>
-          Copy the address of any view and send it. It opens on the same view for whoever follows
-          it.
+          Every object and view in Skymap has its own unique link. Did you find a place you find
+          interesting? Sharing with others is as easy as copy/paste.
         </p>
       </div>
       <div className={styles.window}>
@@ -86,18 +86,13 @@ function Sharing() {
           </div>
           <div className={styles.bar}>
             <AppLink className={styles.address} view={link}>
-              <span className={styles.host}>
-                {site.host}
-                {APP_BASE}#
-              </span>
-              {typed.split('&').map((pair, i) => (
-                <span key={i} className={INKS[pair.split('=')[0]!]}>
-                  {i > 0 && '&'}
-                  {pair}
-                </span>
-              ))}
+              <AddressText
+                hash={typed}
+                head={styles.host}
+                param={(key) => ({ className: INKS[key] })}
+              />
             </AppLink>
-            <CopyButton text={site.origin + appLink(link)} label="Copy the address" />
+            <CopyButton text={appAddress(link)} label="Copy the address" />
           </div>
         </div>
         <div className={styles.stage}>

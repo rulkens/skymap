@@ -20,7 +20,6 @@
   }
 
   & b {
-    font-weight: 400;
     color: var(--color-fg);
   }
 }

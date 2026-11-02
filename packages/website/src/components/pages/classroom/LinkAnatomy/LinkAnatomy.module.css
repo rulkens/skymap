@@ -43,6 +43,7 @@
   text-shadow: 0 0 1.5rem rgb(0 0 0 / 0.8);
   /* A part never breaks at its own hyphens, and the copy control stays on the last part's line. */
   white-space: nowrap;
+  counter-reset: part;
 }
 
 .link {
@@ -50,9 +51,14 @@
   text-decoration: none;
 }
 
-.link > .host,
-.line {
+.link > .host {
   display: block;
+}
+
+/* One line per part, so each part's number stands in the margin at its line's start. */
+.part:not(:last-child)::after {
+  content: '\A';
+  white-space: pre;
 }
 
 /* Pointed at, the whole address lights in the picture's colour, as it does for the third step. */
@@ -73,10 +79,11 @@
   position: relative;
   text-decoration: underline 1px var(--accent);
   text-underline-offset: 0.3em;
+  counter-increment: part;
   transition: color var(--duration-base) var(--ease-standard);
 
   &::before {
-    content: attr(data-n);
+    content: counter(part);
     position: absolute;
     top: 50%;
     left: -2.25rem;
@@ -145,8 +152,8 @@
   background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-.root:has(.step:nth-child(1):is(:hover, :focus-within)) .part[data-n='1'],
-.root:has(.step:nth-child(2):is(:hover, :focus-within)) .part[data-n='2'],
+.root:has(.step:nth-child(1):is(:hover, :focus-within)) .host + .part,
+.root:has(.step:nth-child(2):is(:hover, :focus-within)) .part + .part,
 .root:has(.step:nth-child(3):is(:hover, :focus-within)) .url,
 .root:has(.step:nth-child(3):is(:hover, :focus-within)) .host {
   color: var(--accent);

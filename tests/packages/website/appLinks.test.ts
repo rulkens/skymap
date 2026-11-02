@@ -11,15 +11,6 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = resolve(import.meta.dirname, '../../../packages/website/src');
 
-/** The files that build an app address themselves, and how many times. */
-const ADDRESS_BUILDERS: Record<string, number> = {
-  'components/shared/links/AppLink/AppLink.tsx': 1,
-  // The copy control's text: an address to paste, not a link.
-  'components/shared/links/AddressStrip/AddressStrip.tsx': 1,
-  'components/pages/home/Sharing/Sharing.tsx': 1,
-  'components/pages/classroom/LinkAnatomy/LinkAnatomy.tsx': 1,
-};
-
 const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
   .filter((name) => /\.(astro|tsx|mdx)$/.test(name))
   .map((name) => ({
@@ -28,13 +19,10 @@ const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
   }));
 
 describe('app links', () => {
-  it('only AppLink and the copy controls build an app address', () => {
-    const builders: Record<string, number> = {};
-    for (const file of files) {
-      const count = file.text.match(/appLink\(/g)?.length;
-      if (count) builders[file.name] = count;
-    }
-    expect(builders).toEqual(ADDRESS_BUILDERS);
+  // A copy control's text goes through appAddress (absolute); appLink is root-relative in a build.
+  it('only AppLink builds a link into the app', () => {
+    const builders = files.filter((file) => /appLink\(/.test(file.text)).map((file) => file.name);
+    expect(builders).toEqual(['components/shared/links/AppLink/AppLink.tsx']);
   });
 
   it('only OpenApp opens the app with no view', () => {

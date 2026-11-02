@@ -7,9 +7,10 @@
 import type { CSSProperties } from 'react';
 
 import { ACCENTS, says } from '../../../../content/pages/classroom/classroom.data.ts';
-import { APP_BASE, appLink } from '../../../../data/appLink.ts';
 import { HOME_LINKS } from '../../../../data/homeLinks.ts';
+import { appAddress } from '../../../../utils/appAddress.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
+import AddressText from '../../../shared/links/AddressText/AddressText.tsx';
 import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import CopyButton from '../../../shared/links/CopyButton/CopyButton.tsx';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
@@ -21,10 +22,8 @@ import styles from './LinkAnatomy.module.css';
 // The address of the Jupiter picture beside it, without the camera position a copied address never has.
 const HASH = HOME_LINKS.classroom;
 const SHOT = 'classroom-hero';
-const [FOCUS, TIME] = HASH.split('&') as [string, string];
 
 function LinkAnatomy() {
-  const site = new URL(import.meta.env.SITE);
   return (
     <div className={styles.root} style={{ '--accent': ACCENTS.jupiter } as CSSProperties}>
       <figure className={styles.figure}>
@@ -32,25 +31,17 @@ function LinkAnatomy() {
           <Shot id={SHOT} tall="classroom-hero-portrait" sizes="(max-width: 900px) 100vw, 60vw" />
         </div>
         <div className={styles.address}>
-          {/* One line per part, so each part's number stands in the margin at its line's start. The address is
-              the link, as a browser's is; the copy control sits outside it, a button cannot live in a link. */}
+          {/* The address is the link, as a browser's is; the copy control sits outside it, a button cannot live in
+              a link. */}
           <p className={styles.url}>
             <AppLink className={styles.link} view={HASH}>
-              <span className={styles.host}>
-                {site.host}
-                {APP_BASE}#
-              </span>
-              <span className={styles.line}>
-                <span className={styles.part} data-n="1">
-                  {FOCUS}
-                </span>
-                <span className={styles.host}>&amp;</span>
-              </span>
-              <span className={styles.part} data-n="2">
-                {TIME}
-              </span>
+              <AddressText
+                hash={HASH}
+                head={styles.host}
+                param={() => ({ className: styles.part })}
+              />
             </AppLink>{' '}
-            <CopyButton text={appLink(HASH)} label="Copy the address" />
+            <CopyButton text={appAddress(HASH)} label="Copy the address" />
           </p>
         </div>
         <figcaption className={styles.caption}>
