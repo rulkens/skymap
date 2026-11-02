@@ -24,7 +24,9 @@ import { selectSelectedFocusable } from '../../state/selection/selectors';
 import { selectPaletteOpen, selectUiStackHidden } from '../../state/ui/selectors';
 import { reopenSplash, setPaletteOpen } from '../../state/ui/uiSlice';
 import { goHome } from '../../state/selection/goHome';
+import { viewCoverSet } from '../../state/viewCover/viewCoverSlice';
 import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
+import type { ViewCover } from '../../@types/layout/ViewCover';
 
 export type PhoneHudContainerProps = {
   // Same App-layout gate the desktop TimeBar takes (palette open).
@@ -74,6 +76,10 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   }, [dispatch]);
   const onAbout = useCallback(() => dispatch(reopenSplash()), [dispatch]);
   const onTime = useCallback(() => setTimeOpen((cur) => !cur), []);
+  const onCover = useCallback(
+    (cover: ViewCover | null) => dispatch(viewCoverSet({ id: 'phoneBottom', cover })),
+    [dispatch],
+  );
 
   let sheet: ReactNode = null;
   if (layersOpen) {
@@ -99,6 +105,7 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
       timeOpen={timeOpen}
       restingSheet={selectionKey !== null}
       coverActive={!uiStackHidden}
+      onCover={onCover}
       sheet={sheet}
       scale={<ScaleBracketContainer />}
       timeRow={<TimeBarContainer hidden={hidden} row />}

@@ -164,4 +164,15 @@ describe('PhoneHudContainer', () => {
     act(() => void store.dispatch(setUiHidden(true)));
     expect(cover()).toBeUndefined();
   });
+
+  // An unstable cover callback would clear and re-set the row on every render.
+  it('leaves the cover row alone when the container re-renders', () => {
+    const { store } = setup();
+    act(() => void store.dispatch({ type: 'ui/dismissSplash', payload: 1 }));
+    act(() => void store.dispatch(setUiHidden(false)));
+    const covers = store.getState()[viewCoverRoute];
+    expect(covers.phoneBottom).toBeDefined();
+    act(() => void store.dispatch(setPaletteOpen(true)));
+    expect(store.getState()[viewCoverRoute]).toBe(covers);
+  });
 });

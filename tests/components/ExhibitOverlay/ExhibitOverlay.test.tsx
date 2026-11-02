@@ -7,29 +7,27 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Provider } from 'react-redux';
 import ExhibitOverlay from '../../../src/components/ExhibitOverlay/ExhibitOverlay';
 import styles from '../../../src/components/ExhibitOverlay/ExhibitOverlay.module.css';
-import { createTestStore } from '../../support/createTestStore';
-import { viewCoverRoute } from '../../../src/store/constants';
 import type { ExhibitSection } from '../../../src/@types/exhibits/ExhibitSection';
+import type { ViewCover } from '../../../src/@types/layout/ViewCover';
 
 const NOTE: ExhibitSection = { kind: { Component: () => <p>A note</p> }, data: null };
 
 function setup(body: readonly ExhibitSection[] = []) {
-  const { store } = createTestStore();
+  const onNotesCover = vi.fn<(cover: ViewCover | null) => void>();
   render(
-    <Provider store={store}>
-      <ExhibitOverlay
-        label="Voyager"
-        lede="Two probes"
-        body={body}
-        enterDelaySec={0}
-        onExit={vi.fn<() => void>()}
-      />
-    </Provider>,
+    <ExhibitOverlay
+      label="Voyager"
+      lede="Two probes"
+      body={body}
+      enterDelaySec={0}
+      onExit={vi.fn<() => void>()}
+      onNotesCover={onNotesCover}
+      onCaptionCover={vi.fn<(cover: ViewCover | null) => void>()}
+    />,
   );
-  return { notesCover: () => store.getState()[viewCoverRoute].exhibitNotes };
+  return { onNotesCover };
 }
 
 describe('ExhibitOverlay hide toggle', () => {
@@ -55,11 +53,11 @@ describe('ExhibitOverlay hide toggle', () => {
   });
 
   it('clears the notes cover while hidden and restores it when shown again', () => {
-    const { notesCover } = setup([NOTE]);
-    expect(notesCover()).toMatchObject({ edge: 'right' });
+    const { onNotesCover } = setup([NOTE]);
+    expect(onNotesCover).toHaveBeenLastCalledWith(expect.objectContaining({ edge: 'right' }));
     fireEvent.click(screen.getByRole('button', { name: 'Hide exhibit' }));
-    expect(notesCover()).toBeUndefined();
+    expect(onNotesCover).toHaveBeenLastCalledWith(null);
     fireEvent.click(screen.getByRole('button', { name: 'Show exhibit' }));
-    expect(notesCover()).toMatchObject({ edge: 'right' });
+    expect(onNotesCover).toHaveBeenLastCalledWith(expect.objectContaining({ edge: 'right' }));
   });
 });

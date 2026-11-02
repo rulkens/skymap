@@ -2,33 +2,25 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import { Provider } from 'react-redux';
 import { useRef } from 'react';
 import { useViewCover } from '../../src/hooks/useViewCover';
-import { createTestStore } from '../support/createTestStore';
-import { viewCoverRoute } from '../../src/store/constants';
 import type { CoverEdge } from '../../src/@types/layout/CoverEdge';
+import type { ViewCover } from '../../src/@types/layout/ViewCover';
 
-function Panel({ edge, active }: { edge: CoverEdge; active: boolean }) {
+type OnCover = (cover: ViewCover | null) => void;
+
+function Panel({ edge, active, onCover }: { edge: CoverEdge; active: boolean; onCover: OnCover }) {
   const ref = useRef<HTMLDivElement>(null);
-  useViewCover('phoneBottom', ref, edge, active);
+  useViewCover(ref, edge, active, onCover);
   return <div ref={ref} />;
 }
 
 function setup(edge: CoverEdge, active: boolean) {
-  const { store } = createTestStore();
-  const view = render(
-    <Provider store={store}>
-      <Panel edge={edge} active={active} />
-    </Provider>,
-  );
+  const onCover = vi.fn<OnCover>();
+  const view = render(<Panel edge={edge} active={active} onCover={onCover} />);
   const rerender = (next: boolean) =>
-    view.rerender(
-      <Provider store={store}>
-        <Panel edge={edge} active={next} />
-      </Provider>,
-    );
-  return { row: () => store.getState()[viewCoverRoute].phoneBottom, rerender };
+    view.rerender(<Panel edge={edge} active={next} onCover={onCover} />);
+  return { onCover, rerender };
 }
 
 afterEach(() => {
@@ -42,14 +34,14 @@ describe('useViewCover', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       top: 859.6,
     } as DOMRect);
-    const { row } = setup('bottom', true);
-    expect(row()).toEqual({ edge: 'bottom', reachPx: 140 });
+    const { onCover } = setup('bottom', true);
+    expect(onCover).toHaveBeenLastCalledWith({ edge: 'bottom', reachPx: 140 });
   });
 
-  it('clears its row when it turns inactive', () => {
-    const { row, rerender } = setup('bottom', true);
-    expect(row()).toBeDefined();
+  it('reports null when it turns inactive', () => {
+    const { onCover, rerender } = setup('bottom', true);
+    expect(onCover).toHaveBeenLastCalledWith(expect.objectContaining({ edge: 'bottom' }));
     rerender(false);
-    expect(row()).toBeUndefined();
+    expect(onCover).toHaveBeenLastCalledWith(null);
   });
 });

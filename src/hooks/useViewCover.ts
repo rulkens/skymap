@@ -1,25 +1,22 @@
 /**
- * useViewCover — claims one cover row for a resting panel: how far `ref`
- * reaches in from `edge`, re-measured on resize, cleared when `active` turns
+ * useViewCover — measures how far a resting panel reaches in from `edge` and
+ * hands it to `onCover`, re-measured on resize, `null` when `active` turns
  * false or the panel unmounts. `active` is "is it showing", never "does it
- * have a rect": faded UI keeps its DOM size.
+ * have a rect": faded UI keeps its DOM size. `onCover` must be stable: a new
+ * one clears and re-reports the cover.
  */
 
 import { useEffect, type RefObject } from 'react';
 
-import { useAppDispatch } from '../store/hooks';
-import { viewCoverCleared, viewCoverSet } from '../state/viewCover/viewCoverSlice';
 import type { CoverEdge } from '../@types/layout/CoverEdge';
-import type { CoverId } from '../@types/layout/CoverId';
+import type { ViewCover } from '../@types/layout/ViewCover';
 
 export function useViewCover(
-  id: CoverId,
   ref: RefObject<HTMLElement | null>,
   edge: CoverEdge,
   active: boolean,
+  onCover: (cover: ViewCover | null) => void,
 ): void {
-  const dispatch = useAppDispatch();
-
   useEffect(() => {
     const el = ref.current;
     if (!active || !el) return;
@@ -36,7 +33,7 @@ export function useViewCover(
       const reachPx = Math.round(reach);
       if (reachPx === lastReachPx) return;
       lastReachPx = reachPx;
-      dispatch(viewCoverSet({ id, cover: { edge, reachPx } }));
+      onCover({ edge, reachPx });
     };
 
     measure();
@@ -50,7 +47,7 @@ export function useViewCover(
       observer.disconnect();
       window.removeEventListener('resize', measure);
       el.removeEventListener('animationend', measure);
-      dispatch(viewCoverCleared(id));
+      onCover(null);
     };
-  }, [id, ref, edge, active, dispatch]);
+  }, [ref, edge, active, onCover]);
 }

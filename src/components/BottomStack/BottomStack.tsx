@@ -11,6 +11,7 @@
 import { useRef, type ReactNode } from 'react';
 import cx from 'classnames';
 import { useViewCover } from '../../hooks/useViewCover';
+import type { ViewCover } from '../../@types/layout/ViewCover';
 import styles from './BottomStack.module.css';
 
 export type BottomStackProps = {
@@ -18,6 +19,8 @@ export type BottomStackProps = {
   /** A selection card rests here, even while Layers hides it or it is pulled open. */
   readonly restingSheet: boolean;
   readonly coverActive: boolean;
+  /** Must be stable; see `useViewCover`. */
+  readonly onCover: (cover: ViewCover | null) => void;
   /** Null when no sheet is showing. */
   readonly sheet: ReactNode;
   readonly scale: ReactNode;
@@ -29,6 +32,7 @@ function BottomStack({
   timeOpen,
   restingSheet,
   coverActive,
+  onCover,
   sheet,
   scale,
   timeRow,
@@ -37,7 +41,7 @@ function BottomStack({
   // The cover is measured off a probe, not the sheet: the sheet peeks by a
   // transform a ResizeObserver can't see, and opening Layers unmounts it.
   const probeRef = useRef<HTMLDivElement>(null);
-  useViewCover('phoneBottom', probeRef, 'bottom', coverActive);
+  useViewCover(probeRef, 'bottom', coverActive, onCover);
 
   return (
     <div

@@ -181,7 +181,7 @@ Update each `io.wesl` layout comment and the TS twins' offset constants.
 - `type CoverId = 'phoneBottom' | 'exhibitNotes' | 'exhibitCaption'`
 - `type ViewCover = { readonly edge: CoverEdge; readonly reachPx: number }`. `reachPx` is CSS px from that canvas edge to the panel's inner edge.
 - `type InsetsPx = { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number }`
-- Actions `viewCoverSet({ id, cover })` and `viewCoverCleared(id)`. State: `Partial<Record<CoverId, ViewCover>>`.
+- Action `viewCoverSet({ id, cover: ViewCover | null })`; null deletes the row. State: `Partial<Record<CoverId, ViewCover>>`.
 - `selectViewCoverPx(state): InsetsPx` is the per-edge **max**, memoised. With no rows it is all zeros.
 
 - [x] Test `selectViewCoverPx takes the max per edge`: phoneBottom bottom 140 + exhibitCaption bottom 300 → `bottom: 300`, the rest 0.
@@ -199,9 +199,9 @@ Read [`ui-ux.md`](../conventions/ui-ux.md) and the `create-component` skill's co
 **Why a probe** (builder check): the sheet peeks by `transform` (`MobileSheet.module.css:39,52-56`), which a ResizeObserver can't see, and opening Layers unmounts the InfoCard sheet (`PhoneHudContainer.tsx:76-93`). A cover tied to the sheet element would vanish exactly when a transient panel opens.
 
 **Interfaces:**
-- `useViewCover(id: CoverId, ref: RefObject<HTMLElement | null>, edge: CoverEdge, active: boolean): void`
-  - While active: a ResizeObserver plus a window `resize` listener. The reach comes from `getBoundingClientRect()` against the viewport (`bottom` → `innerHeight − rect.top`, `right` → `innerWidth − rect.left`, `top` → `rect.bottom`, `left` → `rect.right`). It dispatches `viewCoverSet` only when the rounded reach changes.
-  - Inactive or unmount: `viewCoverCleared(id)`.
+- `useViewCover(ref: RefObject<HTMLElement | null>, edge: CoverEdge, active: boolean, onCover: (cover: ViewCover | null) => void): void` — DOM-only; the container wires a stable `useCallback` that dispatches `viewCoverSet` for its `CoverId`.
+  - While active: a ResizeObserver plus a window `resize` listener. The reach comes from `getBoundingClientRect()` against the viewport (`bottom` → `innerHeight − rect.top`, `right` → `innerWidth − rect.left`, `top` → `rect.bottom`, `left` → `rect.right`). It calls `onCover` only when the rounded reach changes.
+  - Inactive or unmount: `onCover(null)`.
 - BottomStack probe: an empty `aria-hidden` element, `position: fixed; bottom: 0; left: 0; width: 0; pointer-events: none`. Its height is `var(--dock-height)`, plus `var(--mobile-sheet-peek)` under `.restingSheet`. Cover `phoneBottom`, edge `bottom`, active while not `selectUiStackHidden`.
 - Exhibit: on desktop, the notes column → `exhibitNotes`, `right`. On mobile, the caption block → `exhibitCaption`, `bottom`. Inactive while the eye toggle is hidden; the notes cover is also inactive when there are no notes.
 - Update `CoverId` (Task 6) to `'phoneBottom' | 'exhibitNotes' | 'exhibitCaption'` if Task 6 landed the older names.

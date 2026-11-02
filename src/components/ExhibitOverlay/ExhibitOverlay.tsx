@@ -13,6 +13,7 @@ import EyeIcon from './EyeIcon';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useViewCover } from '../../hooks/useViewCover';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
+import type { ViewCover } from '../../@types/layout/ViewCover';
 import styles from './ExhibitOverlay.module.css';
 
 export type ExhibitOverlayProps = {
@@ -22,6 +23,9 @@ export type ExhibitOverlayProps = {
   /** Seconds to wait before the copy animates in — the fly-in's near-landing. */
   readonly enterDelaySec: number;
   readonly onExit: () => void;
+  /** Both must be stable; see `useViewCover`. */
+  readonly onNotesCover: (cover: ViewCover | null) => void;
+  readonly onCaptionCover: (cover: ViewCover | null) => void;
 };
 
 function ExhibitOverlay({
@@ -30,6 +34,8 @@ function ExhibitOverlay({
   body,
   enterDelaySec,
   onExit,
+  onNotesCover,
+  onCaptionCover,
 }: ExhibitOverlayProps): ReactNode {
   // Local on purpose: the container keys this on the exhibit id, so it resets
   // per exhibit and on exit without touching the app-wide `uiHidden`.
@@ -44,8 +50,8 @@ function ExhibitOverlay({
   const isMobile = useIsMobile();
   const notesRef = useRef<HTMLDivElement>(null);
   const kickerRef = useRef<HTMLDivElement>(null);
-  useViewCover('exhibitNotes', notesRef, 'right', !hidden && !isMobile && body.length > 0);
-  useViewCover('exhibitCaption', kickerRef, 'bottom', !hidden && isMobile);
+  useViewCover(notesRef, 'right', !hidden && !isMobile && body.length > 0, onNotesCover);
+  useViewCover(kickerRef, 'bottom', !hidden && isMobile, onCaptionCover);
 
   return (
     <div className={hidden ? `${styles.root} ${styles.hidden}` : styles.root} style={clock}>

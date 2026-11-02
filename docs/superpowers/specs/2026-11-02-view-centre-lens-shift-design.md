@@ -67,10 +67,12 @@ can't push the pivot off-screen or collapse the framing window.
 
 ## 4. Covers: UI → store
 
-- `useViewCover(id, ref, edge, active)` measures one element with a ResizeObserver: its reach in CSS px
-  from the given canvas edge to the element's inner edge. It writes a row to a small `viewCover` slice
-  (`Record<CoverId, { edge, reachPx }>`), and clears the row when `active` turns false or on unmount. The
-  slice's route is a render-wake route, so a cover change wakes the passive scheduler.
+- `useViewCover(ref, edge, active, onCover)` measures one element with a ResizeObserver: its reach in CSS px
+  from the given canvas edge to the element's inner edge, handed to `onCover`, and `null` when `active`
+  turns false or on unmount. The hook is DOM-only; the panel's container dispatches
+  `viewCoverSet({ id, cover })` into a small `viewCover` slice (`Record<CoverId, { edge, reachPx }>`; a
+  null cover deletes the row). The slice's route is a render-wake route, so a cover change wakes the
+  passive scheduler.
 - **The phone's bottom cover is one invisible probe, not the sheet itself** (builder check): the sheet
   peeks by a transform, which a ResizeObserver can't see, and opening Layers unmounts the InfoCard sheet.
   BottomStack renders a fixed, empty probe element at the bottom edge, `var(--dock-height)` tall, plus
