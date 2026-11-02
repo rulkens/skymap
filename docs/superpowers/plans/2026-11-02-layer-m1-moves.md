@@ -39,7 +39,7 @@ a file added by hand follows the same rules.
 | `src/@types/**/T.d.ts` | `src/layers/<L>/@types/T.d.ts` (flat; Layer `@types/` has no subfolders) |
 | `src/utils/<area>/f.ts` | `src/layers/<L>/utils/<area>/f.ts` (`src/utils/f.ts` goes to `src/layers/<L>/utils/f.ts`) |
 | `src/data/**/x.ts` | `src/layers/<L>/data/x.ts` (flat, like the existing Layer `data/` folders) |
-| `src/services/**`, `src/state/**` | the Layer folder its importers sit in (`render/`, `load/`, `present/`, `state/`), mapped per file in the generator |
+| `src/services/**`, `src/state/**` | the Layer folder its importers sit in (`render/`, `load/`, `present/`, `ui/`), mapped per file in the generator; a Layer's `state/` holds slice files only (`tests/conventions/layerStateShape.test.ts`) |
 | `src/components/**/<Card>/` | `src/layers/<L>/ui/<Card>/` (M2 and M6) |
 
 ## Per-PR recipe
@@ -53,7 +53,7 @@ Every Layer task below runs this recipe. Its PR is a draft off `origin/main`, op
 3. **Blind spots: one commit.** `move-files` misses these:
    - `?worker`, `?url` and `?raw` import specifiers. A stale path still passes `tsc` and `vite build`, and breaks only at runtime.
    - String-literal paths: a generator's output path, `vi.mock(...)` paths, `new URL(...)`.
-   - `.module.css` files beside a moved component, and CSS `@import`.
+   - `.module.css` files beside a moved component (`move-files` is TS-only; `git mv` the CSS in the move commit), CSS `@import`, and `composes … from` paths in CSS modules. A stale CSS specifier passes `tsc`.
    - `.wesl` `package::` imports, and the website's `.astro`/`.mdx` imports.
    - Allow-lists that hold paths as strings, such as `tests/helpers/conventions/inlineTypeFiles.ts` and `CORE_ALLOWED`.
 
@@ -87,20 +87,20 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
 - The ledger and `CORE_ALLOWED` per recipe step 5.
 
 **Steps:**
-- **Recipe.** Run steps 1–7. `projectMarkerCategoryVisibility` lands in `src/layers/structure/state/`. If it imports `src/state/` and so trips the "no file under src/layers imports src/state" sweep, move it to `src/layers/structure/ui/` instead (its only user is `ui/`), and say so.
+- **Recipe.** Run steps 1–7. `projectMarkerCategoryVisibility` lands in `src/layers/structure/ui/`, beside its only user (a Layer's `state/` holds slices only, per `layerStateShape`).
 - **`TIPS` split mechanism (M4).**
   - The inline `TipContent` type in `tooltips.tsx` becomes `src/@types/components/infoCard/TipContent.d.ts`, because core and Layers share it.
   - The keys only the structure card reads (`structureDistance`, `structureRadius` and the other structure-only keys; grep `TIPS.` under `src/layers/structure`) move to `src/layers/structure/ui/structureTips.tsx` as `export const STRUCTURE_TIPS = { … } as const satisfies Record<string, TipContent>;`.
   - The card reads `STRUCTURE_TIPS.<key>` with no `!`; the typed keys are the ruling.
-  - Shared keys the card also reads, such as `memberCount`, stay in core `TIPS`.
-  - Core `TIPS` keeps its `Record<string, TipContent>` shape until the last Layer split (Task 6) types it too.
+  - A key stays in core `TIPS` only if a second card reads it (grep `TIPS.<key>` across `src/`). `memberCount` turned out structure-only.
+  - Core `TIPS` keeps its `Record<string, TipContent>` shape until the last Layer split (Task 7) types it too.
 - **README (`src/layers/README.md`).** Add a `utils/` row to "Where things go": the Layer's own helpers, `utils/<area>/<fn>.ts`, one function per file, mirroring `src/utils/`. Under the existing `@types/` bullet, note that the Layer's own settings and renderer types live there.
 
 **Done:** none of the 11 manifest `from` paths exists, no structure-only key is left in core `TIPS`, and `StructureDetailCard` has no `TIPS.*!`.
 
 **Smoke:**
-- Open a supercluster card: `#focus=galaxy-cluster-virgo-m87`.
-- Check the Distance and Radius tooltips open.
+- Open a galaxy cluster card: `#focus=galaxy-cluster-virgo-m87`.
+- Check the Distance, Radius and Galaxies tooltips open; on `#focus=galaxy-cluster-coma-a1656`, the Abell tooltip too.
 - Check the structure ring labels draw and the category toggles in the Structures section still hide rings.
 
 ### Task 2 (batch A, three PRs in parallel): blackHoles, cosmicWebFilaments, localBubble
@@ -125,7 +125,7 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
 
 - **earthScenes:** [`earthScenes.json`](2026-11-02-layer-m1-moves/earthScenes.json), 1 file. `earthSceneBodyIds` moving deletes the `EARTH_SCENE_BODY_IDS` ledger row. Smoke: one Earth scene deep link from `src/layers/earthScenes/bodies/`.
 - **cosmicHorizon:** [`cosmicHorizon.json`](2026-11-02-layer-m1-moves/cosmicHorizon.json), 1 file (`CosmicHorizonSettings`). Smoke: `#exhibit=observableUniverse`.
-- **milkyWay:** [`milkyWay.json`](2026-11-02-layer-m1-moves/milkyWay.json), 14 files, 550 lines: the v1 helpers go to `render/` and `present/`, and `milkyWayFacts` moving deletes the "Milky Way facts" ledger row. It also takes its M4 part: the 6 Milky Way keys move to `src/layers/milkyWay/ui/milkyWayTips.tsx` the way Task 1 did it, and `MilkyWayDetailCard` drops `TIPS.*!`. Smoke: the Milky Way card's tooltips.
+- **milkyWay:** [`milkyWay.json`](2026-11-02-layer-m1-moves/milkyWay.json), 14 files, 550 lines: the v1 helpers go to `render/` and `present/`, and `milkyWayFacts` moving deletes the "Milky Way facts" ledger row. It also takes its M4 part: the 7 Milky Way-only keys (`sunToCentre`, `milkyWayStars`, `milkyWayMass`, `oldestStars`, `galacticYear`, `centralBlackHole`, `morphology`) move to `src/layers/milkyWay/ui/milkyWayTips.tsx` the way Task 1 did it. `diameter` stays in core `TIPS` (shared with `GalaxyDetailCard`), so `MilkyWayDetailCard` keeps `TIPS.diameter!` until Task 7. Blind spot: `src/services/engine/galaxyGenerator/v1/README.md` names the moved v1 helpers by bare name; repoint it. Smoke: the Milky Way card's tooltips.
 
 ### Task 6 (batch E): missions, body, starCatalog
 
@@ -142,9 +142,9 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
 **starCatalog:**
 - Manifest: [`starCatalog.json`](2026-11-02-layer-m1-moves/starCatalog.json), 23 files, 1,371 lines, including the S2 `starCatalogFormat` and `starBinCodec`, and the ride-alongs `starTintFromBpRp` and `starOctreeFromSkst`.
 - M2, star half:
-  - `src/components/InfoCard/{StarDetailCard,CompactStarCard}/` move to `src/layers/starCatalog/ui/` with their `.module.css`.
+  - `src/components/InfoCard/{StarDetailCard,CompactStarCard}/` move to `src/layers/starCatalog/ui/`. `git mv` each `.module.css` in the move commit, and repoint its `composes … from '../cardChrome.module.css'` / `'../compactChrome.module.css'` and the TSX's `import styles from '../cardChrome.module.css'` to `../../../../components/InfoCard/…`, as `src/layers/structure/ui/StructureDetailCard/` already does.
   - The star astro utils only the card reads move to `src/layers/starCatalog/utils/astro/`: `deriveStarProperties`, `starTeffK`, `starTeffCoefficients`, `starLuminositySolar`, `starRadiusSolar`, `isGiantStar` and `bolometricCorrectionG`. `starWikipediaTitle` goes to `utils/format/`.
-  - Add a `{ slot: 'detailCard', content: { type: 'starCatalog', Detail, Compact } }` row to `src/layers/starCatalog/layer.ts`, and drop the `starCatalog` arm of `CORE_DETAIL_CARDS` (`src/components/InfoCard/detailCardTable.ts:19-28`).
+  - Add a `{ slot: 'detailCard', content: { type: 'starCatalog', Detail, Compact } }` row to `src/layers/starCatalog/layer.ts`, and drop the `starCatalog` arm of `CORE_DETAIL_CARDS` (`src/components/InfoCard/detailCardTable.ts:25-28`). Change the line 2 header ("core's two FocusableTarget arms") and the line 19 comment ("The two kinds") to one kind.
   - Add a manifest file for these moves (`starCatalog-m2.json`) and run it as its own move commit.
 - M4: the 13 star keys move to `src/layers/starCatalog/ui/starTips.tsx`.
 - Smoke: a seeded star card (`#focus=star-sirius`) with its tooltips, and the star field at NEAR0.
@@ -154,7 +154,7 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
 - **Manifest:** [`galaxyCatalog.json`](2026-11-02-layer-m1-moves/galaxyCatalog.json), 92 files, 3,329 lines, including the S2 `galaxyCatalogFormat` and `tierTargets`.
 - **Blind spot:** `buildPointInterleavedBuffer.worker.ts` is imported with a `?worker` suffix, so repoint it by hand and check that the bake runs in the dev server.
 - **M2, galaxy half:**
-  - `GalaxyDetailCard/` and `CompactCard/` move to `src/layers/galaxyCatalog/ui/`.
+  - `GalaxyDetailCard/` and `CompactCard/` move to `src/layers/galaxyCatalog/ui/`, their `.module.css` handled as in Task 6 (`git mv`, repoint `composes … from` and the TSX's chrome imports). `GalaxyProvenanceSection.module.css` likewise: `composes: muted from './debugSection.module.css'` needs repointing.
   - Add a `detailCard` row to `layer.ts`.
   - Delete `CORE_DETAIL_CARDS` and its spread in `detailCardTable`.
   - Fix the "two kinds no Layer claims" doc comment.
@@ -162,7 +162,7 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
   - `GalaxyProvenanceSection` (+ css), `GalaxyProvenanceSectionContainer`, `sumProvenanceCounts`, `provenanceFilter` and `GalaxyProvenanceSettings` move into the Layer, following the destination rules.
   - The section becomes a `{ slot: 'debug' }` `ui` row, and the DebugPanel reorder is accepted.
   - This deletes the `GalaxyProvenanceSectionContainer` ledger row.
-- **M4:** the 9 galaxy keys move to `src/layers/galaxyCatalog/ui/galaxyTips.tsx`. Core `TIPS` then keeps only body and shared keys; type it `as const satisfies Record<string, TipContent>` and drop every remaining `TIPS.*!`.
+- **M4:** the 12 galaxy-only keys (`distance`, `hubbleVelocity`, `lookback`, `earthEra`, `ra`, `dec`, `redshift`, `apparentMag`, `absoluteMag`, `colour`, `orientation`, `agnClass`) move to `src/layers/galaxyCatalog/ui/galaxyTips.tsx`; `diameter` stays core as the one shared key. Core `TIPS` then keeps only body and shared keys; type it `as const satisfies Record<string, TipContent>` and drop every remaining `TIPS.*!`.
 - **Ride-along:** delete the dead types `FocusState`, `WirePointSourceDeps` and `ComposedSources` with `npm run refactor -- delete <file>#<symbol>`.
 - **Backlog close-out, in this PR:**
   - Delete the M1, M2, M4 and M6 sections, their summary-table rows and the "Appendix: M1 files per Layer" from `docs/backlog/2026-10-29-layer-migration-leftovers.md`.
