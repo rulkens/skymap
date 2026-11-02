@@ -10,7 +10,7 @@
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StarCatalogRenderer } from '../@types/StarCatalogRenderer';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
 import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { StarCatalogPickResources } from '../@types/StarCatalogPickResources';
@@ -122,9 +122,13 @@ export function createStarCatalogRenderer(
     linear: makePipeline('star-catalog-linear-pipeline', 'fsLinear'),
   };
 
-  const sources = new Map<SourceType, LoadedStarSource>();
+  const sources = new Map<StarCatalogSourceType, LoadedStarSource>();
 
-  function upload(source: SourceType, octree: Octree<StarColumns>, slots: number): number {
+  function upload(
+    source: StarCatalogSourceType,
+    octree: Octree<StarColumns>,
+    slots: number,
+  ): number {
     const poolSlots = Math.min(slots, octree.chunkCount);
     // Throws past a pool cap before anything below is created or released.
     cut.upload(source, octree, poolSlots);
@@ -170,7 +174,7 @@ export function createStarCatalogRenderer(
   }
 
   function uploadChunk(
-    source: SourceType,
+    source: StarCatalogSourceType,
     slot: number,
     chunk: OctreeChunk<StarColumns>,
     hostSlot: number | null,
@@ -192,7 +196,7 @@ export function createStarCatalogRenderer(
     entry.slotChunks[slot] = chunk;
   }
 
-  function evictChunk(source: SourceType, slot: number, hostSlot: number | null): void {
+  function evictChunk(source: StarCatalogSourceType, slot: number, hostSlot: number | null): void {
     const entry = sources.get(source);
     const chunk = entry?.slotChunks[slot] ?? null;
     if (entry === undefined || chunk === null) return;
@@ -214,20 +218,20 @@ export function createStarCatalogRenderer(
     slots,
   });
 
-  function recordOrdinalOf(source: SourceType, poolIndex: number): number | null {
+  function recordOrdinalOf(source: StarCatalogSourceType, poolIndex: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(poolIndex) || poolIndex < 0) return null;
     return recordOrdinal(layoutOf(entry), refsOf(entry.pickSlotChunks), poolIndex);
   }
 
-  function poolRecordIndexOf(source: SourceType, ordinal: number): number | null {
+  function poolRecordIndexOf(source: StarCatalogSourceType, ordinal: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(ordinal) || ordinal < 0) return null;
     return poolRecordIndex(layoutOf(entry), refsOf(entry.slotChunks), ordinal);
   }
 
   function* loadedCatalogs(): IterableIterator<{
-    source: SourceType;
+    source: StarCatalogSourceType;
     octree: Octree<StarColumns>;
   }> {
     for (const [source, entry] of sources) {

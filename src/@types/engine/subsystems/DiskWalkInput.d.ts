@@ -11,12 +11,12 @@
 
 import type { GalaxyRecordSource } from '../../data/galaxyCatalog/GalaxyRecordSource';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
-import type { SourceType } from '../../data/SourceType';
+import type { GalaxyCatalogSourceType } from '../../data/galaxyCatalog/GalaxyCatalogSourceType';
 
 export type DiskWalkInput = {
   readonly cam: OrbitCamera;
-  readonly records: ReadonlyMap<SourceType, GalaxyRecordSource>;
+  readonly records: ReadonlyMap<GalaxyCatalogSourceType, GalaxyRecordSource>;
   readonly sourceMask: number;
   readonly pxPerRad: number;
-  readonly sourceOpacity: (source: SourceType) => number;
+  readonly sourceOpacity: (source: GalaxyCatalogSourceType) => number;
 };

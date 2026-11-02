@@ -15,6 +15,7 @@
 
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
@@ -25,7 +26,7 @@ import type { CatalogDrawEntry } from '../@types/CatalogDrawEntry';
 import type { CatalogStore } from '../@types/CatalogStore';
 import type { BuildRunner } from '../@types/BuildRunner';
 import type { LoadedSource } from '../@types/LoadedSource';
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
@@ -55,18 +56,18 @@ function defaultWorkerRunner(
 }
 
 // The public key is the string `GalaxyCatalogId`; the GPU-facing `sourceCode`
-// and the draw order are numeric. Both derive from `APP_SOURCE_REGISTRY`.
+// and the draw order are numeric. Both derive from the Layer's own rows.
 
 /** String `GalaxyCatalogId` → numeric `Source` code. */
-const CODE_OF_ID = new Map<GalaxyCatalogId, SourceType>(
-  GALAXY_CATALOG_SOURCES.map((code) => [APP_SOURCE_REGISTRY[code].id as GalaxyCatalogId, code]),
+const CODE_OF_ID = new Map<GalaxyCatalogId, GalaxyCatalogSourceType>(
+  GALAXY_CATALOG_SOURCES.map((code) => [GALAXY_CATALOG_SOURCE_RECORD[code].id, code]),
 );
 
 /** Draw order paired with string ids: keys the id-keyed map while emitting the numeric `sourceCode`. */
-const CATALOG_DRAW_ORDER: readonly { code: SourceType; id: GalaxyCatalogId }[] =
+const CATALOG_DRAW_ORDER: readonly { code: GalaxyCatalogSourceType; id: GalaxyCatalogId }[] =
   GALAXY_CATALOG_SOURCES.map((code) => ({
     code,
-    id: APP_SOURCE_REGISTRY[code].id as GalaxyCatalogId,
+    id: GALAXY_CATALOG_SOURCE_RECORD[code].id,
   }));
 
 /**
@@ -121,12 +122,7 @@ export function createCatalogStore(init: {
     if (source === undefined) {
       throw new Error(`catalogStore cannot upload unknown galaxy catalog id '${id}'`);
     }
-    const entry = APP_SOURCE_REGISTRY[source];
-    if (entry.type !== 'galaxyCatalog') {
-      throw new Error(
-        `catalogStore cannot upload non-galaxy catalog id '${id}' (type=${entry.type})`,
-      );
-    }
+    const entry = GALAXY_CATALOG_SOURCE_RECORD[source];
 
     const result = await buildRunner({ cloud: galaxyCatalog, source, stats });
     const { interleaved } = result;

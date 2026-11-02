@@ -257,3 +257,21 @@ describe('composition content imports only Layer state modules', () => {
     );
   });
 });
+
+// A Layer is composed INTO the composition root (ADR 0013); importing it back would make
+// the registry a Layer's dependency and reopen module-init cycles. A Layer reads its own
+// rows from its `sources/` folder. Empty allow-list: there is no exception to ledger.
+describe('no file under src/layers imports src/compositions', () => {
+  const files = walk('src/layers');
+  expect(files.length).toBeGreaterThan(0);
+
+  it('every file is free of a composition import', () => {
+    assertSweep(
+      files,
+      ['src/compositions/'],
+      {},
+      'Read your own rows from <layer>/sources (<LAYER>_SOURCE_RECORD); only core and ' +
+        'cross-Layer readers take the composed registry.',
+    );
+  });
+});

@@ -27,7 +27,7 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
 import type { DiskWalkInput } from '../../../@types/engine/subsystems/DiskWalkInput';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { DiskPlannerWalkDeps } from '../../../@types/engine/subsystems/DiskPlannerWalkDeps';
 
 /**
@@ -47,7 +47,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
 
   // The shared stride cursors: which row each block's decimated window resumes
   // from next frame, by source then ordinal base. One map for BOTH bodies.
-  const strideStartBySource = new Map<SourceType, Map<number, number>>();
+  const strideStartBySource = new Map<GalaxyCatalogSourceType, Map<number, number>>();
 
   function runFrame(
     input: DiskWalkInput,

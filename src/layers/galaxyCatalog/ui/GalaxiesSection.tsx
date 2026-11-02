@@ -8,11 +8,11 @@
 
 import { memo } from 'react';
 import { Source } from '../../../data/source';
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
 import { maskHas } from '../../../utils/maskHas';
 import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
 import Slider from '../../../components/common/Slider/Slider';
 import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
@@ -25,7 +25,7 @@ import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
  * pencil-beam, dec-band wedge, and Sloan Great Wall sit last as
  * footprint-limited appendices to that ladder.
  */
-const TOGGLEABLE_SOURCES: readonly SourceType[] = [
+const TOGGLEABLE_SOURCES: readonly GalaxyCatalogSourceType[] = [
   Source.FamousGalaxy,
   Source.TwoMRS,
   Source.SDSS,
@@ -42,12 +42,12 @@ type GalaxiesSectionProps = {
   /** Bitmask of currently-visible galaxy catalog sources. */
   sourceMask: number;
   /** Called when the user toggles a single catalog on or off. */
-  onToggleSource: (source: SourceType, visible: boolean) => void;
+  onToggleSource: (source: GalaxyCatalogSourceType, visible: boolean) => void;
   /**
    * Per-source loaded point counts. Absent entries (catalog not yet loaded)
    * render the toggle without a count rather than a misleading "0".
    */
-  sourceCounts?: Partial<Record<SourceType, number>>;
+  sourceCounts?: Partial<Record<GalaxyCatalogSourceType, number>>;
   /** Current point size in pixels. */
   pointSize: number;
   /** Called when the user moves the point-size slider. */
@@ -144,7 +144,7 @@ function GalaxiesSection({
           return (
             <div className={styles.panelRow} key={s}>
               <label htmlFor={`toggle-source-${s}`}>
-                {APP_SOURCE_REGISTRY[s].label}
+                {GALAXY_CATALOG_SOURCE_RECORD[s].label}
                 {count !== undefined && (
                   <span className={styles.sourceCount}>{count.toLocaleString()}</span>
                 )}
