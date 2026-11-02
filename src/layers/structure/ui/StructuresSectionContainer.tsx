@@ -14,7 +14,7 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectStructureItems } from '../state/structures/selectors';
 import { selectStructureCounts } from '../../../state/engine/selectors';
 import { setStructureItemEnabled } from '../state/structures/slice';
-import { projectMarkerCategoryVisibility } from '../state/projectMarkerCategoryVisibility';
+import { projectMarkerCategoryVisibility } from './projectMarkerCategoryVisibility';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 
 function StructuresSectionContainer(): React.ReactElement {

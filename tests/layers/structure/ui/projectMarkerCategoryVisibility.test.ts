@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { projectMarkerCategoryVisibility } from '../../../../src/layers/structure/state/projectMarkerCategoryVisibility';
+import { projectMarkerCategoryVisibility } from '../../../../src/layers/structure/ui/projectMarkerCategoryVisibility';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { makeSettingsFixture } from '../../../state/settings/makeSettingsFixture';
 
