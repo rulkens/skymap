@@ -8,15 +8,16 @@
  * letting the saga trigger the render effect.
  */
 
-import { takeEvery, getContext } from 'typed-redux-saga';
+import { take, takeEvery, getContext } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
-import { settingsRoute, cameraRoute, timeRoute, tierRoute } from '../constants';
+import { settingsRoute, cameraRoute, timeRoute, tierRoute, viewCoverRoute } from '../constants';
 import type { ReconcileEffects } from './ReconcileEffects';
+import { sagaContextRegistered } from '../sagaContextRegistered';
 
 // WAKE_ROUTES — the registry of store routes whose writes affect the drawn
 // scene and must poke the passive render-on-demand scheduler. Settings, camera,
-// the sim clock, and the tier. Membership by route means new actions within any
+// the sim clock, the tier, and the view covers. Membership by route means new actions within any
 // listed slice wake the renderer by construction, with no per-action `did we
 // remember requestRender?` audit.
 //
@@ -36,17 +37,29 @@ import type { ReconcileEffects } from './ReconcileEffects';
 // (`engine/engineBodyDistanceReported`), not `time/`, so it does not re-enter
 // this wake path — no feedback loop between the render report and this trigger.
 //
+// `viewCoverRoute`: a cover change moves the drawn view off-centre.
+//
 // Selection is deliberately NOT a wake route: it has its own dedicated
 // `watchSelectionWakeSaga` (src/state/selection/) that wakes on select / focus
 // / clear via takeEvery. Route-level granularity would wake on the whole
 // selection slice — including `updateSelectionHover`, which has no GPU
 // consequence (it only feeds the React InfoCard) and must stay wake-free. The
 // per-action saga draws that line; a route membership can't.
-const WAKE_ROUTES = new Set<string>([settingsRoute, cameraRoute, timeRoute, tierRoute]);
+const WAKE_ROUTES = new Set<string>([
+  settingsRoute,
+  cameraRoute,
+  timeRoute,
+  tierRoute,
+  viewCoverRoute,
+]);
 const isWakeWrite = (a: Action): boolean =>
   typeof a.type === 'string' && WAKE_ROUTES.has(a.type.split('/')[0]!);
 
 export function* watchWakeSaga() {
+  // A wake write can precede the engine (the phone cover probe measures on mount), and
+  // `getContext` is undefined until then; that throw would cancel every saga. The
+  // engine's first frame reads the store anyway, so earlier writes need no wake.
+  yield* take(sagaContextRegistered);
   yield* takeEvery(isWakeWrite, function* () {
     const fx = yield* getContext<ReconcileEffects>('reconcile');
     fx.requestRender();

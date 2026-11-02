@@ -8,7 +8,7 @@
  */
 
 import type { SourceCountReport } from '../../../@types/engine/layer/SourceCountReport';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
 import { callbackIterable } from '../../../utils/async/callbackIterable';

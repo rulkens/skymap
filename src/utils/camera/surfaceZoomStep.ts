@@ -2,6 +2,7 @@ import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { GroundRadiusLookup } from '../../@types/camera/GroundRadiusLookup';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
+import type { ViewFrustum } from '../../@types/camera/ViewFrustum';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { anchoredZoomStep } from './anchoredZoomStep';
@@ -10,6 +11,7 @@ import { bodyUpWeight } from './bodyUpWeight';
 import { cursorRayBodyLocal } from './cursorRayBodyLocal';
 import { eyeFrameOf } from './eyeFrameOf';
 import { mappedTiltRad } from './mappedTiltRad';
+import { opticalCentrePx } from './opticalCentrePx';
 import { pickOnBody } from './pickOnBody';
 import { raycastTerrain } from './raycastTerrain';
 import { surfacePickToleranceM } from './surfacePickToleranceM';
@@ -24,6 +26,7 @@ export function surfaceZoomStep(
   factor: number,
   cursorPx: Readonly<Vec2> | null,
   viewportPx: Readonly<Vec2>,
+  frustum: ViewFrustum,
   fovYRad: number,
   bodyRadiusM: number,
   standoffRadii: number,
@@ -44,13 +47,13 @@ export function surfaceZoomStep(
     latched !== null && dot3(bodyFixedEyeM(arm), normalize3(latched)) < Math.hypot(...latched);
   // At rest the wheel's own cursor pixel is the pick (user ruling, §12-R4);
   // during a gesture the drag's last pixel is the more current one. Only a
-  // pinch supplies neither, and its screen-centre pick is the point C §3.1
+  // pinch supplies neither, and its optical-centre pick is the point C §3.1
   // measures the zoom distance from. Note the two owners differ in anchor
   // LIFETIME by construction: a gesture holds its latch until it goes stale,
   // while at rest every tick re-picks through the same pixel — which converges
   // on the pointed-at ground point rather than drifting off it.
-  const pixel: Readonly<Vec2> = gesture?.prevPixel ??
-    cursorPx ?? [viewportPx[0] / 2, viewportPx[1] / 2];
+  const pixel: Readonly<Vec2> =
+    gesture?.prevPixel ?? cursorPx ?? opticalCentrePx(frustum, viewportPx);
   // A focus hosted on this body OWNS the notch's anchor, so the pick is not
   // even taken: the eye scales about the rover and every settle turn pivots
   // there, which pixel-locks it in BOTH directions and leaves the site engage
@@ -60,7 +63,7 @@ export function surfaceZoomStep(
   // site, not inside the pure marcher: a terrain miss (a ray past the limb)
   // still falls back to the datum sphere rather than leaving the wheel inert.
   const freshPick = (): Readonly<Vec3> | null => {
-    const ray = cursorRayBodyLocal(arm, pixel, viewportPx, fovYRad);
+    const ray = cursorRayBodyLocal(arm, pixel, viewportPx, frustum);
     const toleranceM = surfacePickToleranceM(
       bodyFixedEyeM(arm),
       bodyRadiusM,

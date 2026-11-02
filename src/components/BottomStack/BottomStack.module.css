@@ -25,3 +25,18 @@
   display: flex;
   flex-direction: column;
 }
+
+/* The resting cover: the dock plus a resting sheet's peek. The time row and a
+   pulled-open sheet are transient, so they never change it. */
+.coverProbe {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: var(--dock-height);
+  pointer-events: none;
+}
+
+.restingSheet {
+  height: calc(var(--dock-height) + var(--mobile-sheet-peek));
+}

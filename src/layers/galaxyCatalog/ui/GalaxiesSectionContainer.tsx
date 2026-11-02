@@ -29,7 +29,7 @@ import {
 } from '../state/galaxyCatalogs/slice';
 import { setBiasMode, setAbsMagLimit } from '../state/bias/slice';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
 
 function GalaxiesSectionContainer(): React.ReactElement {
@@ -50,7 +50,7 @@ function GalaxiesSectionContainer(): React.ReactElement {
   const falloffStrength = useAppSelector(selectGalaxyFalloffStrength);
 
   const onToggleSource = useCallback(
-    (source: SourceType, enabled: boolean) =>
+    (source: GalaxyCatalogSourceType, enabled: boolean) =>
       dispatch(setGalaxyCatalogVisible({ id: galaxyCatalogIdOf(source), enabled })),
     [dispatch],
   );

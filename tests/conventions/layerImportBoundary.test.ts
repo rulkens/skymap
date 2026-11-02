@@ -88,17 +88,31 @@ function assertSweep(
 }
 
 const CORE_ALLOWED: Readonly<Record<string, number>> = {
-  '@types/animation/SettingsAction.d': 2,
+  '@types/data/galaxyCatalog/GalaxyRecordSource.d': 1,
+  '@types/data/starCatalog/SeededStarCatalogId.d': 1,
+  '@types/engine/GalaxyRow.d': 1,
+  '@types/engine/SelectionRef.d': 2,
+  '@types/engine/SelectionRow.d': 1,
+  '@types/engine/StarInfo.d': 1,
+  '@types/engine/subsystems/DiskRowVisitor.d': 1,
+  '@types/engine/subsystems/DiskWalkInput.d': 1,
+  '@types/loading/StarCatalogReq.d': 1,
+  '@types/palette/ScoredRow.d': 1,
+  '@types/rendering/GalaxyPointDrawSettings.d': 1,
+  '@types/rendering/GalaxyPointRenderer.d': 2,
+  '@types/scene/PositionedStar.d': 1,
+  '@types/settings/GalaxyCatalogSettings.d': 1,
+  '@types/settings/StarCatalogSettings.d': 1,
   'components/containers/GalaxyProvenanceSectionContainer': 2,
-  'data/animation/clips/cosmicFlows': 1,
   'data/bodies/earthSceneBodyIds': 1,
-  'data/exhibits/cosmicFlows': 3,
-  'data/exhibits/cosmicWeb': 2,
-  'data/exhibits/utils/cosmicWebDensityOff': 1,
-  'data/exhibits/utils/surveysOff': 1,
-  'data/exhibits/zoneOfAvoidance': 3,
+  'data/bodies/seededStarCatalogsBySource': 1,
   'data/lightTime/lightTimeSpheres': 1,
   'data/milkyWay/milkyWayFacts': 1,
+  'services/engine/helpers/refOf': 1,
+  'services/engine/wiring/galaxyCatalogRequest': 2,
+  'state/selection/captureGalaxyFocusIds': 1,
+  'utils/galaxyCatalogIdOf': 3,
+  'utils/star/starSourceDrawOpacity': 1,
 };
 
 const coreFiles = walk('src').filter(
@@ -235,5 +249,50 @@ describe('layer.ts, slices.ts, slice.ts, initialState.ts, defaults.ts, sources/ 
       return hits.length === 0 ? [] : [`${file} imports a selectors module: ${hits.join(', ')}.`];
     });
     assertNoOffenders(offenders, "A reverse import here reopens D1's module-init cycle.");
+  });
+});
+
+// The composition owns cross-Layer content and may read a Layer's state modules (initial
+// states, slice actions), never its renderers, passes or ui: those pull GPU code into every
+// importer. The `app*.ts` registries at the folder's root are unconstrained.
+const COMPOSITION_CONTENT_DIRS = ['exhibits', 'clips', '@types'];
+const LAYER_STATE_MODULE_RE = /^src\/layers\/[^/]+\/state\//;
+
+describe('composition content imports only Layer state modules', () => {
+  const files = COMPOSITION_CONTENT_DIRS.flatMap((dir) => walk(`src/compositions/${dir}`));
+  expect(files.length).toBeGreaterThan(0);
+
+  it('every src/layers specifier is under a Layer state/ folder', () => {
+    const offenders = files.flatMap((file) => {
+      const hits = specifiersMatching(
+        file,
+        (resolved) => resolved.startsWith('src/layers/') && !LAYER_STATE_MODULE_RE.test(resolved),
+      );
+      return hits.length === 0
+        ? []
+        : [`${file} imports beyond a Layer state/ folder: ${hits.join(', ')}.`];
+    });
+    assertNoOffenders(
+      offenders,
+      'Cross-Layer content reads Layer state only; a renderer, pass or ui import belongs in the Layer.',
+    );
+  });
+});
+
+// The composition root collects from the Layers (ADR 0013), so a Layer never reads it back:
+// a Layer that needs its own rows reads its `sources/` folder. The allow-list is empty and
+// must stay so.
+describe('no file under src/layers imports src/compositions', () => {
+  const files = walk('src/layers');
+  expect(files.length).toBeGreaterThan(0);
+
+  it('every file is free of a composition import', () => {
+    assertSweep(
+      files,
+      ['src/compositions/'],
+      {},
+      'Read your own rows from <layer>/sources (<LAYER>_SOURCE_RECORD); only core and ' +
+        'cross-Layer readers take the composed registry.',
+    );
   });
 });

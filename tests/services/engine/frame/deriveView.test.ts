@@ -64,6 +64,7 @@ const UP: Mat3 = [1, 0, 0, 0, 0, -1, 0, 1, 0];
 // every fixture below can pass this SAME value rather than reading it off
 // the frame context, which carries no `cam` field.
 const CAM = assembleOrbitCamera(POSE, PROJECTION, BASIS, BASIS);
+const CANVAS_FRUSTUM = symmetricFrustum(CAM.fovYRad, CAM.aspect);
 
 function makeState(): EngineState {
   return {
@@ -112,7 +113,7 @@ function spec(overrides: Partial<ViewSpec> = {}): ViewSpec {
 function view(overrides: Partial<ViewSpec> = {}): { canvas: FrameView; v: FrameView } {
   const snapshot = frame();
   return {
-    canvas: deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS)),
+    canvas: deriveView(snapshot, CAM, mainViewSpec(CANVAS, CANVAS_FRUSTUM)),
     v: deriveView(snapshot, CAM, spec(overrides)),
   };
 }
@@ -151,7 +152,7 @@ describe('deriveView', () => {
 
   it('five dome-like specs derive five distinct vps from one frame', () => {
     const snapshot = frame();
-    const cam = basisOf(deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS)).vp);
+    const cam = basisOf(deriveView(snapshot, CAM, mainViewSpec(CANVAS, CANVAS_FRUSTUM)).vp);
     const camBasis: Mat3 = [...cam.right, ...cam.up, ...cam.forward];
     const faces = [[1, 0, 0, 0, 1, 0, 0, 0, 1] as Mat3, YAW_LEFT, YAW_RIGHT, BACK, UP].map(
       (rotation, slot) => {
@@ -238,7 +239,7 @@ describe('deriveView', () => {
 
   it('two views of one frame share the snapshot by reference', () => {
     const snapshot = frame();
-    const a = deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS));
+    const a = deriveView(snapshot, CAM, mainViewSpec(CANVAS, CANVAS_FRUSTUM));
     const b = deriveView(snapshot, CAM, spec({ rotation: YAW_RIGHT, slot: 1 }));
     // Reference equality, not value: a copied context would drift the moment
     // `runFrame` stamps focus on one of them, and the clock and body sample
@@ -300,7 +301,7 @@ describe('deriveView — the canvas view is the pre-split one', () => {
 
   it('the canvas view’s vp, drawCamPos and slab vps are bit-identical to the pre-split values', () => {
     const snapshot = frame();
-    const canvas = deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS));
+    const canvas = deriveView(snapshot, CAM, mainViewSpec(CANVAS, CANVAS_FRUSTUM));
     for (let i = 0; i < 16; i++) expect(canvas.vp[i]).toBe(VP[i]);
     for (let i = 0; i < 3; i++) expect(canvas.drawCamPos[i]).toBe(DRAW_CAM_POS[i]);
     expect(canvas.slabs).toHaveLength(2);

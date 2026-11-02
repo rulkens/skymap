@@ -9,14 +9,15 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { Vec2 } from '../../../@types/math/Vec2';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 import type { LightTimeSpheresRenderer } from '../@types/LightTimeSpheresRenderer';
 import type { LightTimeLiveness } from '../@types/LightTimeLiveness';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
+import { frustumRayAxis } from '../../../utils/camera/frustumRayAxis';
 import { sphereNdcBounds } from '../../../utils/math/sphereNdcBounds';
 import { LIGHT_TIME_SPHERES } from '../../../data/lightTime/lightTimeSpheres';
 import vsCode from '../../../services/gpu/shaders/lightTime/vertex.wesl?static';
@@ -26,10 +27,10 @@ import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 
 /** Slots in the WESL `spheres` array; the distance window never opens more at once. */
 const MAX_VISIBLE = 4;
-const FORWARD_FLOAT_OFFSET = 0;
-const TAN_HALF_FOV_Y_FLOAT_OFFSET = 3;
+const RAY_AXIS_FLOAT_OFFSET = 0;
+const TAN_HALF_Y_FLOAT_OFFSET = 3;
 const RIGHT_FLOAT_OFFSET = 4;
-const ASPECT_FLOAT_OFFSET = 7;
+const TAN_HALF_X_FLOAT_OFFSET = 7;
 const UP_FLOAT_OFFSET = 8;
 const COUNT_FLOAT_OFFSET = 11;
 const RECT_FLOAT_OFFSET = 12;
@@ -88,6 +89,7 @@ export function createLightTimeSpheresRenderer(
   // Per-frame scratch, allocated once.
   const f32 = new Float32Array(UNIFORM_FLOATS);
   const fwd: Vec3 = [0, 0, 0];
+  const rayAxis: Vec3 = [0, 0, 0];
   const upRef: Vec3 = [0, 0, 0];
   const basis: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
 
@@ -95,15 +97,13 @@ export function createLightTimeSpheresRenderer(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
     camPos: Readonly<Vec3>,
-    viewport: Vec2,
+    frustum: ViewFrustum,
     liveness: LightTimeLiveness,
   ): void {
     // Same basis `computeViewProj`'s lookAt derives, so the rays match the scene.
     orbitForwardOf(cam, fwd);
     imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.upBasis, upRef), basis);
     const { right, up } = basis;
-    const tanHalfFovY = Math.tan(cam.fovYRad / 2);
-    const aspect = viewport[0] / viewport[1];
 
     const { centre, opacities } = liveness;
     const eyeX = camPos[0] - centre[0];
@@ -135,13 +135,14 @@ export function createLightTimeSpheresRenderer(
     const depth = -(eyeX * fwd[0] + eyeY * fwd[1] + eyeZ * fwd[2]);
     // Wholly behind the eye: nothing to draw.
     if (depth <= -largestRadius) return;
-    const [minX, maxX] = sphereNdcBounds(x, depth, largestRadius, tanHalfFovY * aspect, RECT_PAD);
-    const [minY, maxY] = sphereNdcBounds(y, depth, largestRadius, tanHalfFovY, RECT_PAD);
+    const { tanLeft, tanRight, tanDown, tanUp } = frustum;
+    const [minX, maxX] = sphereNdcBounds(x, depth, largestRadius, tanLeft, tanRight, RECT_PAD);
+    const [minY, maxY] = sphereNdcBounds(y, depth, largestRadius, tanDown, tanUp, RECT_PAD);
 
-    f32.set(fwd, FORWARD_FLOAT_OFFSET);
-    f32[TAN_HALF_FOV_Y_FLOAT_OFFSET] = tanHalfFovY;
+    f32.set(frustumRayAxis(fwd, right, up, frustum, rayAxis), RAY_AXIS_FLOAT_OFFSET);
+    f32[TAN_HALF_Y_FLOAT_OFFSET] = (tanUp - tanDown) / 2;
     f32.set(right, RIGHT_FLOAT_OFFSET);
-    f32[ASPECT_FLOAT_OFFSET] = aspect;
+    f32[TAN_HALF_X_FLOAT_OFFSET] = (tanRight - tanLeft) / 2;
     f32.set(up, UP_FLOAT_OFFSET);
     f32[COUNT_FLOAT_OFFSET] = count;
     f32[RECT_FLOAT_OFFSET] = minX;

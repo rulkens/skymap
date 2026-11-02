@@ -52,7 +52,7 @@ import type { GeodesicTuning } from '../../../@types/camera/GeodesicTuning';
 import type { VisibilityArg } from '../../../@types/animation/VisibilityArg';
 import type { ScopedVisibilityAddress } from '../../../@types/animation/ScopedVisibilityAddress';
 import { expandVisibilityLayers } from '../../../utils/animation/expandVisibilityLayers';
-import type { SettingsAction } from '../../../@types/animation/SettingsAction';
+import type { SettingsAction } from '../../../compositions/@types/SettingsAction';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import type { PassByConfig } from '../../../@types/animation/PassByConfig';

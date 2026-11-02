@@ -21,10 +21,12 @@ import LazyInfoCardContainer from './LazyInfoCardContainer';
 import LazyPhoneSettingsContainer from './LazyPhoneSettingsContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectSelectedFocusable } from '../../state/selection/selectors';
-import { selectPaletteOpen } from '../../state/ui/selectors';
+import { selectPaletteOpen, selectUiStackHidden } from '../../state/ui/selectors';
 import { reopenSplash, setPaletteOpen } from '../../state/ui/uiSlice';
 import { goHome } from '../../state/selection/goHome';
+import { viewCoverSet } from '../../state/viewCover/viewCoverSlice';
 import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
+import type { ViewCover } from '../../@types/layout/ViewCover';
 
 export type PhoneHudContainerProps = {
   // Same App-layout gate the desktop TimeBar takes (palette open).
@@ -37,6 +39,7 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   const selectionKey = selected ? TARGET_IDENTITY_KEY[selected.type](selected) : null;
 
   const paletteOpen = useAppSelector(selectPaletteOpen);
+  const uiStackHidden = useAppSelector(selectUiStackHidden);
 
   const [layersOpen, setLayersOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
@@ -73,6 +76,10 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   }, [dispatch]);
   const onAbout = useCallback(() => dispatch(reopenSplash()), [dispatch]);
   const onTime = useCallback(() => setTimeOpen((cur) => !cur), []);
+  const onCover = useCallback(
+    (cover: ViewCover | null) => dispatch(viewCoverSet({ id: 'phoneBottom', cover })),
+    [dispatch],
+  );
 
   let sheet: ReactNode = null;
   if (layersOpen) {
@@ -96,6 +103,9 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   return (
     <BottomStack
       timeOpen={timeOpen}
+      restingSheet={selectionKey !== null}
+      coverActive={!uiStackHidden}
+      onCover={onCover}
       sheet={sheet}
       scale={<ScaleBracketContainer />}
       timeRow={<TimeBarContainer hidden={hidden} row />}

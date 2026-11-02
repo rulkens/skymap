@@ -4,11 +4,11 @@
  */
 
 import type { Vec2 } from '../../../@types/math/Vec2';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { StarFocusSphere } from './StarFocusSphere';
 
 export type StarCatalogPickDrawArgs = {
-  readonly source: SourceType;
+  readonly source: StarCatalogSourceType;
   /** Rebased about the cut's origin, like the visual draw's. */
   readonly vp: Float32Array;
   readonly viewportPx: Vec2;

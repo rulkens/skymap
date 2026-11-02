@@ -9,7 +9,7 @@ import { SEEDED_STAR_CATALOGS } from './seededStarCatalogs';
 import { SOURCE_ENTRIES } from '../sourceEntries';
 import type { SeededStarCatalogId } from '../../@types/data/starCatalog/SeededStarCatalogId';
 import type { SeededStarCatalogRow } from '../../@types/data/starCatalog/SeededStarCatalogRow';
-import type { StarCatalogSourceType } from '../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
 
 export const SEEDED_STAR_CATALOGS_BY_SOURCE: ReadonlyMap<
   StarCatalogSourceType,

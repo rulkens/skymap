@@ -1,4 +1,4 @@
-import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyColumnBlock } from './GalaxyColumnBlock';
 import type { GalaxyRow } from '../../engine/GalaxyRow';
 import type { ProvenanceCounts } from '../../engine/ProvenanceCounts';

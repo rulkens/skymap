@@ -18,19 +18,19 @@
  * comfortably precise.  Ray directions are unitless (normalised), so
  * only the camera position and radius carry the unit choice.
  *
- * ### Frustum-corner rays
+ * ### View rays
  *
- * The four NDC-corner view-ray directions are unprojected on the CPU
- * (fp64, plain-array vec3 math), uploaded in the uniform block, selected
- * per-vertex, and interpolated across the quad — so the vertex stage
- * never multiplies a large world coordinate either.
+ * The camera basis and the view's frustum (`frustumRayAxis` + half-extents)
+ * are built on the CPU in fp64 and uploaded in the uniform block; the
+ * fragment rebuilds each ray from them, so an off-axis frustum shifts the
+ * rays with no extra uniform and no large world coordinate on the GPU.
  *
  * ### Uniform buffer ABI (64 bytes)
  *
  * See `shaders/horizonShell/io.wesl` for the authoritative layout:
  *
- *   offset 0  | vec3<f32> camForward + f32 tanHalfFovY
- *   offset 16 | vec3<f32> camRight   + f32 aspect
+ *   offset 0  | vec3<f32> rayAxis    + f32 tanHalfY
+ *   offset 16 | vec3<f32> camRight   + f32 tanHalfX
  *   offset 32 | vec3<f32> camUp      + f32 radiusGpc
  *   offset 48 | vec3<f32> cameraPosGpc (world pos / 1000) + f32 fadeAlpha
  */
@@ -40,6 +40,7 @@ import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
+import { frustumRayAxis } from '../../../utils/camera/frustumRayAxis';
 import vsCode from '../../../services/gpu/shaders/horizonShell/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/horizonShell/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
@@ -49,7 +50,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { HorizonShellRenderer } from '../@types/HorizonShellRenderer';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 
 type Init = {
   device: GPUDevice;
@@ -121,6 +122,7 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   // Plain Vec3 tuples so the per-component reads below index cleanly under
   // noUncheckedIndexedAccess; `orbitForwardOf` writes into them in place.
   const fwd: Vec3 = [0, 0, 0];
+  const rayAxis: Vec3 = [0, 0, 0];
   // Frame-pole reference up, allocated once and rewritten in place each frame.
   const upRefScratch: Vec3 = [0, 0, 0];
   // Roll-adjusted screen basis, allocated once and rewritten in place each
@@ -130,7 +132,7 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   function draw(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
-    viewport: Vec2,
+    frustum: ViewFrustum,
     fadeAlpha: number,
   ): void {
     // ── Camera basis (matches gl-matrix lookAt in computeViewProj) ────
@@ -149,20 +151,18 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
     imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.upBasis, upRefScratch), basis);
     const right = basis.right;
     const up = basis.up;
+    frustumRayAxis(fwd, right, up, frustum, rayAxis);
 
-    const aspect = viewport[1] > 0 ? viewport[0] / viewport[1] : cam.aspect;
-    const tanHalfFovY = Math.tan(cam.fovYRad / 2);
-
-    // camForward (floats 0..2) + tanHalfFovY (float 3).
-    f32[0] = fwd[0];
-    f32[1] = fwd[1];
-    f32[2] = fwd[2];
-    f32[3] = tanHalfFovY;
-    // camRight (floats 4..6) + aspect (float 7).
+    // rayAxis (floats 0..2) + tanHalfY (float 3).
+    f32[0] = rayAxis[0];
+    f32[1] = rayAxis[1];
+    f32[2] = rayAxis[2];
+    f32[3] = (frustum.tanUp - frustum.tanDown) / 2;
+    // camRight (floats 4..6) + tanHalfX (float 7).
     f32[4] = right[0];
     f32[5] = right[1];
     f32[6] = right[2];
-    f32[7] = aspect;
+    f32[7] = (frustum.tanRight - frustum.tanLeft) / 2;
     // camUp (floats 8..10) + radiusGpc (float 11).
     f32[8] = up[0];
     f32[9] = up[1];
