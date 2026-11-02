@@ -1,8 +1,8 @@
 /*
  * Screens — Home's row of the screens Skymap runs on, each showing Saturn: a phone, a tablet, a desktop and a
- * dome, rising in size from the phone to the dome on one floor line, each with the depth of a case. Each turns
- * on its own toward the pointer from where it stands, none moving, and all turn a little with the scroll
- * (phoneTurn.client.ts sets the pointer's offset on the row). Wide, the title is centred over the row, the
+ * dome, rising in size from the phone to the dome on one floor line, each with the depth of a case. Each faces
+ * the pointer on its own from where it stands, none moving, and all turn a little with the scroll
+ * (phoneTurn.client.ts sets each device's look). Wide, the title is centred over the row, the
  * page's one centred head, and the planet they all show floats free beside it, drifting a little with the scroll.
  * Narrow, the row is two by two.
  */
@@ -67,7 +67,7 @@ function Screens() {
         </p>
         <ViewLink view={siteShot('start-saturn').link}>Open Saturn</ViewLink>
       </div>
-      <div className={styles.row} data-turn>
+      <div className={styles.row}>
         {PARTS.map((part, at) => (
           <div
             key={part.kind}
@@ -75,7 +75,7 @@ function Screens() {
             style={{ '--reveal-delay': `${at * 40}ms` } as CSSProperties}
             data-reveal="rise"
           >
-            <div className={styles.device}>
+            <div className={styles.device} data-look>
               <div className={styles.body}>
                 {part.kind !== 'phone' &&
                   Array.from({ length: SLICES }, (_, i) => (

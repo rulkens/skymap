@@ -134,14 +134,8 @@
   }
 }
 
-/*
- * Each part on its own: `--aim-x` is the pointer's offset from this device, in row widths (`--turn-x` is from the
- * row's middle, phoneTurn.client.ts; `--at` is where the device's middle stands in the row), so each turns toward
- * the pointer from where it stands and none moves. Without a pointer each device faces the row's middle.
- */
 .part {
   --dh: calc(var(--h) * var(--s));
-  --aim-x: calc(var(--turn-x, 0) + 0.5 - var(--at));
   display: grid;
   grid-row: span 2;
   grid-template-rows: subgrid;
@@ -151,22 +145,18 @@
 
 .phone {
   --s: 0.7;
-  --at: 0.07;
 }
 
 .tablet {
   --s: 0.85;
-  --at: 0.26;
 }
 
 .desktop {
   --s: 1;
-  --at: 0.51;
 }
 
 .dome {
   --s: 1.5;
-  --at: 0.84;
 }
 
 /* Placed, so the floor line (placed in the first row) does not push them down. */
@@ -197,12 +187,16 @@
   perspective: 1400px;
 }
 
-/* Turned as the phone's case is (Phone3D), each by its own aim. */
+/*
+ * Each device faces the pointer from where it stands (`--look-x/y`, set on `.device` by phoneTurn.client.ts), so a
+ * device near the pointer swings while a far one barely moves. Set on `.device`, which never turns, so the turn
+ * cannot feed back into the measure.
+ */
 .body {
   position: relative;
   transform-style: preserve-3d;
-  transform: rotateY(calc(var(--yaw) + var(--scroll-yaw) + var(--aim-x) * 18deg))
-    rotateX(calc(var(--pitch) - var(--turn-y, 0) * 12deg));
+  transform: rotateY(calc(var(--yaw) + var(--scroll-yaw) + atan(var(--look-x, 0))))
+    rotateX(calc(var(--pitch) - atan(var(--look-y, 0))));
   transition: transform 0.25s ease-out;
 }
 
@@ -210,11 +204,10 @@
   transform: none;
 }
 
-/* The phone's case turns itself: its yaw takes the aim, and the row's own offset is kept from it. */
+/* The phone's case turns itself (Phone3D), by the same look. */
 .phone .face {
-  --phone-yaw: calc(var(--yaw) + var(--scroll-yaw) + var(--aim-x) * 18deg);
-  --phone-pitch: var(--pitch);
-  --turn-x: 0;
+  --phone-yaw: calc(var(--yaw) + var(--scroll-yaw) + atan(var(--look-x, 0)));
+  --phone-pitch: calc(var(--pitch) - atan(var(--look-y, 0)));
 }
 
 /* The case's edge, as Phone3D draws its own. */
@@ -295,16 +288,6 @@
 
 /* Two by two: the dome as wide as its cell allows with its ring, still the largest. */
 @media (max-width: 900px) {
-  .phone,
-  .desktop {
-    --at: 0.25;
-  }
-
-  .tablet,
-  .dome {
-    --at: 0.75;
-  }
-
   .dome {
     --s: 1.2;
   }
