@@ -2,7 +2,7 @@
   /* From the column's right edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
   --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   position: relative;
-  view-timeline: --survey-spine block;
+  view-timeline: --margin-spine block;
 }
 
 /*
@@ -24,27 +24,40 @@
   pointer-events: none;
 }
 
-/* Its own ground parts the list's rules across the whole margin, the words kept to 13rem. */
+/* A soft pool of the page's ground under the words hides a list's rule that crosses them, with no edge in the sky. */
 .caption {
+  position: relative;
+  isolation: isolate;
+  max-width: 13rem;
   padding-block: 0.5rem;
-  padding-right: max(0px, 100% - 13rem);
-  background: var(--color-bg);
   pointer-events: auto;
+
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -1.5rem -3rem;
+    background: radial-gradient(closest-side, var(--color-bg) 60%, transparent);
+  }
 }
 
 .reach {
   overflow: clip;
 }
 
+/*
+ * The picture's left edge on the margin's. No edge of its frame shows: its top and left edges are feathered, what
+ * the window leaves fades out, and so does its foot.
+ */
 .down {
   flex: 1;
   min-height: 0;
+  mask-image: linear-gradient(#000 calc(100% - 10rem), transparent);
 
-  & .fan {
+  & .hold {
     height: 100%;
   }
 
-  /* The fan's near edge, a fifth into the kept frame, on the margin's left edge; what the window leaves fades out. */
   & picture,
   & img {
     display: block;
@@ -54,8 +67,10 @@
   }
 
   & img {
-    translate: -22% 0;
-    mask-image: linear-gradient(to right, #000 70%, transparent);
+    mask-image:
+      linear-gradient(to right, transparent, #000 2rem, #000 70%, transparent),
+      linear-gradient(transparent, #000 2rem);
+    mask-composite: intersect;
   }
 }
 
@@ -64,8 +79,8 @@
 }
 
 /*
- * The scroll draws the fan out from its tip: the clip slides down while the fan inside it slides back, so the fan
- * stands still and its lit part ends three quarters down the window until the far end is in.
+ * The scroll draws the picture out from its top: the clip slides down while the picture inside it slides back, so
+ * the picture stands still and its lit part ends three quarters down the window until its foot is in.
  */
 @keyframes spine-reach-down {
   from {
@@ -110,14 +125,13 @@
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
     .down {
-      mask-image: linear-gradient(#000 calc(100% - 10rem), transparent);
       animation: spine-reach-down linear both;
-      animation-timeline: --survey-spine;
+      animation-timeline: --margin-spine;
       animation-range: cover 25vh cover calc(100% - 75vh);
 
-      & .fan {
+      & .hold {
         animation: spine-hold-down linear both;
-        animation-timeline: --survey-spine;
+        animation-timeline: --margin-spine;
         animation-range: cover 25vh cover calc(100% - 75vh);
       }
     }
@@ -128,7 +142,7 @@
       animation-timeline: view();
       animation-range: entry 50% cover 50%;
 
-      & .fan {
+      & .hold {
         animation: spine-hold-across linear both;
         animation-timeline: view();
         animation-range: entry 50% cover 50%;
@@ -137,7 +151,7 @@
   }
 }
 
-/* Below this the margin is too narrow for the fan to read as one: it lies across the window over the lists. */
+/* Below this the margin is too narrow for the picture to read as one: a band lies across the window over the lists. */
 @media (max-width: 1099px) {
   .spine {
     position: static;
@@ -146,17 +160,26 @@
     overflow-x: clip;
   }
 
+  .margin-only {
+    display: none;
+  }
+
   .caption {
     order: 1;
+    max-width: none;
     padding: 0;
     margin-inline: var(--gutter);
+
+    &::before {
+      content: none;
+    }
   }
 
   .down {
     display: none;
   }
 
-  /* The tip, a fifth into the frame, on the text's left edge. */
+  /* The band's tip, a fifth into its frame, on the text's left edge. */
   .across {
     display: block;
 

@@ -12,6 +12,7 @@ import Credits from '../../../components/shared/text/Credits/Credits.tsx';
 import FramePair from '../../../components/pages/science/FramePair/FramePair.tsx';
 import FullFigure from '../../../components/pages/science/FullFigure/FullFigure.tsx';
 import Group from '../../../components/shared/layout/Group/Group.tsx';
+import MarginSpine from '../../../components/pages/science/MarginSpine/MarginSpine.tsx';
 import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
@@ -23,7 +24,6 @@ import SectionNav from '../../../components/pages/science/SectionNav/SectionNav.
 import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
 import SourceTable from '../../../components/pages/science/SourceTable/SourceTable.tsx';
-import SurveySpine from '../../../components/pages/science/SurveySpine/SurveySpine.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
 import { fact } from '../../../data/fact';
 import { REPO_URL } from '../../../data/siteIdentity';
@@ -71,7 +71,11 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
   <Group title="Derived" big>
     <p slot="lede">Computed from measurements by a method we can name.</p>
     <FramePair start="science-web-points" end="science-web-density" sizes="(max-width: 900px) 100vw, 36rem" />
-    <Claims items={DERIVED} />
+    <Claims items={DERIVED.slice(0, 6)} />
+    {/* The traced filaments run down the claims about the large-scale structure, in the DESI fan's margin. */}
+    <MarginSpine id="science-filaments-spine">
+      <Claims items={DERIVED.slice(6)} />
+    </MarginSpine>
   </Group>
 
   <Group title="Drawn" big>
@@ -89,13 +93,13 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
     <p>{count} places where the scene <a href={sitePath('/docs/simplifications/')}>departs from the sky</a>, or from what a careful analysis would do, as of{' '}{formatDate(fact('sim-frames').checked)}.</p>
   </SectionHead>
   {/* The survey's fan runs down Distance and Coverage: its length is distance, its width the sky it covers. */}
-  <SurveySpine id="science-desi-spine" band="science-desi">
+  <MarginSpine id="science-desi-spine" band="science-desi">
     {SIMPLIFIED.slice(0, 2).map((group, i) => (
       <Group title={group.title} big first={i === 0}>
         <Claims items={group.items} />
       </Group>
     ))}
-  </SurveySpine>
+  </MarginSpine>
   {SIMPLIFIED.slice(2).map((group) => (
     <Group title={group.title} big>
       <Claims items={group.items} />

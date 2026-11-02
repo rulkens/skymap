@@ -233,8 +233,9 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'A broad fan of points opening from a tip at the left, orange near the tip and blue-white far out.',
   },
   // The same fan upright for a wide window's margin, run down two lists of the Science page: seen lower, so it opens
-  // less, and rolled so its near edge is plumb. Tip to far end fills the frame's height; the margin shows at most the
-  // frame's left two fifths, so only those are kept. Fine points cost bytes: 880 at quality 28 is about 400 KB.
+  // less, and rolled so its near edge is plumb. Tip to far end fills the frame's height; only the strip from the near
+  // edge, a fifth in, to two fifths in is kept, which the margin shows. Fine points cost bytes, and a narrower file
+  // costs more, as resizing packs them tighter: at quality 24 it is about 370 KB, which at 2x looks as 28 does.
   {
     id: 'science-desi-spine',
     link: 'pose=a,-1479.2,-2321.8,1631.3,2.7856,0.1666,6250,2.421',
@@ -249,15 +250,42 @@ export const SITE_SHOTS: readonly SiteShot[] = [
       matte: 'emissive',
       keepPasses: ['point-sprites'],
       exposure: 4,
-      crop: { left: 0, top: 0, width: 440, height: 2200 },
+      crop: { left: 97, top: 0, width: 343, height: 2200 },
       settleMs: 12000,
+    },
+    size: { width: 1100, height: 2200 },
+    widths: [686, 343],
+    denseQuality: 24,
+    title: 'The DESI survey wedge',
+    drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
+    alt: 'A long fan of points running down from a tip at the top, white and orange near the tip, blue and thinning far out.',
+  },
+  // The traced filaments upright for the same margin, beside the Science page's claims on the large-scale structure:
+  // dimmed so the faint fur of short threads all but goes and the long ones carry, and cut to the strip around the
+  // bright knot at the middle of the frame. Fine threads cost bytes as points do: at quality 28 it is about 220 KB.
+  {
+    id: 'science-filaments-spine',
+    link: 'pose=a,0,0,0,2.1,0.35,400,1.5708',
+    settings: {
+      hideLabels: true,
+      hideStructures: true,
+      hideGalaxyField: true,
+      hideCosmicWeb: true,
+      hideZoneOfAvoidance: true,
+      hideStars: true,
+      filaments: true,
+      matte: 'emissive',
+      keepPasses: ['cosmic-web-filaments'],
+      exposure: 0.6,
+      crop: { left: 330, top: 660, width: 440, height: 1100 },
+      settleMs: 8000,
     },
     size: { width: 1100, height: 2200 },
     widths: [880, 440],
     denseQuality: 28,
-    title: 'The DESI survey wedge',
-    drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
-    alt: 'A long fan of points running down from a tip at the top, white and orange near the tip, blue and thinning far out.',
+    title: 'The filaments of the cosmic web',
+    drawn: 'Traced by an algorithm through the positions of catalogued galaxies.',
+    alt: 'Thin violet threads running down the margin, crossing at a bright knot and fraying above and below it.',
   },
   // The About page's opening: the traced filaments seen whole, alone as light, and the app's scale bar at the same
   // camera in a window of the same shape, so the bar is laid over the picture at the picture's own scale.
