@@ -9,10 +9,15 @@ const CHECKED = '2026-10-06';
 const IN_REPO = 'in the Skymap repository';
 
 /**
- * The About page's claims, spread into FACTS. The history row is a count from
- * `git log` on the main branch at the date it names: re-count and re-date it
- * together, never one without the other.
+ * The history row's figures, from `git log` on the main branch: the count holds on `countedOn`, so re-count and
+ * re-date them together, never one without the other. The About page also sets the count as a figure.
  */
+export const HISTORY = { firstCommit: '2026-05-03', countedOn: '2026-10-05', commits: 1550 } as const;
+
+/** The people who make Skymap, set as a figure on the About page; `about-maker` says it in words. */
+export const MAKER_COUNT = 1;
+
+/** The About page's claims, spread into FACTS. */
 export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-what-is',
@@ -57,7 +62,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-history',
     about: 'app',
-    text: 'The first commit in the repository is dated 3 May 2026. As of 5 October 2026 its main branch holds 1,550 commits.',
+    text: `The first commit in the repository is dated ${formatDate(HISTORY.firstCommit)}. As of ${formatDate(HISTORY.countedOn)} its main branch holds ${HISTORY.commits.toLocaleString('en-GB')} commits.`,
     source: `${REPO_URL}/commits/main`,
     sourceLabel: 'the commit history, on GitHub',
     checked: CHECKED,

@@ -1,0 +1,40 @@
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  align-items: center;
+}
+
+/* The body face: the display face's subset has only old-style figures, whose 1 reads as a capital I. */
+.count {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: var(--weight-body);
+  font-size: clamp(16rem, 34vw, 32rem);
+  line-height: 0.8;
+  /* The stem stands on the grid's right edge, the edge the readouts' values below end on; Jost's 1 has 0.125em of side bearing. */
+  margin-right: -0.125em;
+  text-align: right;
+  color: var(--site-text);
+  user-select: none;
+}
+
+@media (min-width: 901px) {
+  .words {
+    grid-row: 1;
+    grid-column: 1 / span 6;
+  }
+
+  .count {
+    grid-row: 1;
+    grid-column: 8 / -1;
+  }
+}
+
+/* Narrow: the numeral first, smaller, on the words' left edge, so the heading under it reads as its caption. */
+@media (max-width: 900px) {
+  .count {
+    order: -1;
+    margin: 0 0 var(--stack);
+    font-size: 12rem;
+    text-align: left;
+  }
+}

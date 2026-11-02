@@ -9,11 +9,13 @@ import Claims from '../../../components/shared/text/Claims/Claims.tsx';
 import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
 import Credits from '../../../components/shared/text/Credits/Credits.tsx';
 import Figure from '../../../components/shared/media/Figure/Figure.tsx';
+import MakerCount from '../../../components/pages/about/MakerCount/MakerCount.tsx';
 import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
 import PressPictures from '../../../components/pages/about/PressPictures/PressPictures.tsx';
 import Quotable from '../../../components/pages/about/Quotable/Quotable.tsx';
+import Readouts from '../../../components/pages/about/Readouts/Readouts.tsx';
 import WebAtScale from '../../../components/pages/about/WebAtScale/WebAtScale.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
@@ -44,23 +46,19 @@ import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
 </Section>
 
 <Section id="maker">
-  <Columns count={2} footLast>
-    <div>
-      <h2>Who makes it</h2>
-      <p>{fact('about-maker').text}</p>
-      <p>The “we” on this site is the project. Counted in people, it comes to one.</p>
-      <p>{fact('about-ai').text}</p>
-      <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
+  <MakerCount>
+    <h2>Who makes it</h2>
+    <p>{fact('about-maker').text}</p>
+    <p>The “we” on this site is the project. Counted in people, it comes to one.</p>
+    <p>{fact('about-ai').text}</p>
+    <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
+  </MakerCount>
+  <Readouts title="Open source, and maintained" items={ALIVE}>
+    <div className={links['link-row']}>
+      <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
+      <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite Skymap</ObjLink>
     </div>
-    <div>
-      <h3>Open source, and maintained</h3>
-      <Claims items={ALIVE} narrow />
-      <div className={links['link-row']}>
-        <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
-        <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite Skymap</ObjLink>
-      </div>
-    </div>
-  </Columns>
+  </Readouts>
 </Section>
 
 <Section id="dome">
