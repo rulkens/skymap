@@ -1,0 +1,46 @@
+[
+  {
+    "from": "src/@types/loading/structureCatalogPayload/StructureCatalogPayload.d.ts",
+    "to": "src/layers/structure/@types/StructureCatalogPayload.d.ts"
+  },
+  {
+    "from": "src/@types/loading/structureCatalogPayload/StructureMetaEntry.d.ts",
+    "to": "src/layers/structure/@types/StructureMetaEntry.d.ts"
+  },
+  {
+    "from": "src/@types/settings/StructureSettings.d.ts",
+    "to": "src/layers/structure/@types/StructureSettings.d.ts"
+  },
+  {
+    "from": "src/data/markerRadiusRetune.ts",
+    "to": "src/layers/structure/data/markerRadiusRetune.ts"
+  },
+  {
+    "from": "src/data/structure/structureCatalogFormat.ts",
+    "to": "src/layers/structure/data/structureCatalogFormat.ts"
+  },
+  {
+    "from": "src/services/engine/helpers/structureIdOf.ts",
+    "to": "src/layers/structure/present/structureIdOf.ts"
+  },
+  {
+    "from": "src/state/settings/projectMarkerCategoryVisibility.ts",
+    "to": "src/layers/structure/state/projectMarkerCategoryVisibility.ts"
+  },
+  {
+    "from": "src/utils/format/formatAbellDesignation.ts",
+    "to": "src/layers/structure/utils/format/formatAbellDesignation.ts"
+  },
+  {
+    "from": "src/utils/format/wrapLabelName.ts",
+    "to": "src/layers/structure/utils/format/wrapLabelName.ts"
+  },
+  {
+    "from": "src/utils/labels/aboveRingAnchor.ts",
+    "to": "src/layers/structure/utils/labels/aboveRingAnchor.ts"
+  },
+  {
+    "from": "src/utils/picking/structurePickId.ts",
+    "to": "src/layers/structure/utils/picking/structurePickId.ts"
+  }
+]
