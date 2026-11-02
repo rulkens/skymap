@@ -11,6 +11,7 @@ import type { Size } from '../../../src/@types/rendering/Size';
 import { deriveFrameContext } from '../../../src/services/engine/frame/frameContext';
 import { deriveView } from '../../../src/services/engine/frame/deriveView';
 import { mainViewSpec } from '../../../src/utils/camera/mainViewSpec';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 export function canvasViewOf(
   state: EngineState,
@@ -18,5 +19,7 @@ export function canvasViewOf(
   sizePx: Size,
 ): FrameView | null {
   const snapshot = deriveFrameContext(state, input);
-  return snapshot.isReady ? deriveView(snapshot, input.cam, mainViewSpec(input.cam, sizePx)) : null;
+  if (!snapshot.isReady) return null;
+  const frustum = symmetricFrustum(input.cam.fovYRad, input.cam.aspect);
+  return deriveView(snapshot, input.cam, mainViewSpec(sizePx, frustum));
 }

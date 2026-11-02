@@ -4,7 +4,7 @@
  * faded-out shell costs no render pass instead of ray-marching every pixel to transparent.
  * Drawn after the cosmic-web volumes (they composite over it) and before the cluster
  * markers (their rings stay on top). The renderer reads `ctx.cam`, not `view.vp`: it
- * builds per-pixel view rays from the camera basis and FOV, transforming no vertices.
+ * builds per-pixel view rays from the camera basis and `ctx.frustum`, transforming no vertices.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -17,8 +17,8 @@ export function horizonShellPass(runtime: CosmicHorizonRuntime): ContentPass<'co
 
     enabled: () => true,
 
-    draw(pass, view, ctx, _state, fade) {
-      runtime.renderer.draw(pass, ctx.cam, view.viewportPx, fade);
+    draw(pass, _view, ctx, _state, fade) {
+      runtime.renderer.draw(pass, ctx.cam, ctx.frustum, fade);
     },
   };
 }

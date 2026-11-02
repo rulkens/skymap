@@ -15,6 +15,7 @@ import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { angleBetween } from '../../helpers/math/angleBetween';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
@@ -22,6 +23,7 @@ const FOV = Math.PI / 2;
 const POLE: Vec3 = [0, 0, 1];
 const CTX: SurfaceStepCtx = {
   viewportPx: VIEWPORT,
+  frustum: symmetricFrustum(FOV, 1),
   fovYRad: FOV,
   bodyRadiusM: R,
   standoffRadii: SURFACE_STANDOFF_RADII,

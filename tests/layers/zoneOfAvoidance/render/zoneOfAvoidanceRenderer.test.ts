@@ -3,6 +3,7 @@ import { createZoneOfAvoidanceRenderer } from '../../../../src/layers/zoneOfAvoi
 import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../src/data/zoneOfAvoidance/zoneOfAvoidanceShell';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { ZoneOfAvoidanceTuning } from '../../../../src/@types/settings/ZoneOfAvoidanceTuning';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 // Minimal mock GPUDevice — Vitest runs in Node without a WebGPU surface.
 // Mirrors labelRenderer.test.ts's pattern:
@@ -51,6 +52,7 @@ describe('zoneOfAvoidanceRenderer window rect', () => {
     aspect: 2,
     position: [0, 0, 1],
   } as unknown as OrbitCamera;
+  const FRUSTUM = symmetricFrustum(Math.PI / 3, 2);
   const TUNING = {
     intensity: 1,
     radialFalloff: 0.5,
@@ -79,7 +81,7 @@ describe('zoneOfAvoidanceRenderer window rect', () => {
   it("drawPick writes the window's canvas-NDC rect at bytes 112–127", () => {
     const { renderer, windowRect } = build();
     const window = { originPx: [0, 0], sizePx: [1, 1] } as const;
-    renderer.drawPick(PASS, CAM, [100, 50], window, TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
+    renderer.drawPick(PASS, CAM, FRUSTUM, [100, 50], window, TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
     const [cx, cy, hx, hy] = windowRect();
     expect(cx).toBeCloseTo(-0.99, 6);
     expect(cy).toBeCloseTo(0.98, 6);
@@ -90,11 +92,11 @@ describe('zoneOfAvoidanceRenderer window rect', () => {
   it('draw writes the whole-canvas NDC rect', () => {
     const { renderer, windowRect } = build();
     const window = { originPx: [0, 0], sizePx: [1, 1] } as const;
-    renderer.draw(PASS, CAM, [100, 50], TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
+    renderer.draw(PASS, CAM, FRUSTUM, TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
     expect(windowRect()).toEqual([0, 0, 1, 1]);
     // The buffer is shared, so a pick's rect must not leak.
-    renderer.drawPick(PASS, CAM, [100, 50], window, TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
-    renderer.draw(PASS, CAM, [100, 50], TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
+    renderer.drawPick(PASS, CAM, FRUSTUM, [100, 50], window, TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
+    renderer.draw(PASS, CAM, FRUSTUM, TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
     expect(windowRect()).toEqual([0, 0, 1, 1]);
   });
 });

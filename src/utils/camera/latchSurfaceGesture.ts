@@ -2,6 +2,7 @@ import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { DragStep } from '../../@types/camera/DragStep';
 import type { GroundRadiusLookup } from '../../@types/camera/GroundRadiusLookup';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
+import type { ViewFrustum } from '../../@types/camera/ViewFrustum';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { MIN_INCIDENCE_COS } from './anchoredDragRotation';
@@ -16,6 +17,7 @@ export function latchSurfaceGesture(
   arm: BodyFixedPose,
   step: DragStep,
   viewportPx: Readonly<Vec2>,
+  frustum: ViewFrustum,
   fovYRad: number,
   bodyRadiusM: number,
   groundRadiusAtM: GroundRadiusLookup,
@@ -23,7 +25,7 @@ export function latchSurfaceGesture(
   outerBoundRadiusM: number,
 ): SurfaceGesture {
   const prevPixel = step.startPx;
-  const ray = cursorRayBodyLocal(arm, prevPixel, viewportPx, fovYRad);
+  const ray = cursorRayBodyLocal(arm, prevPixel, viewportPx, frustum);
   const toleranceM = surfacePickToleranceM(bodyFixedEyeM(arm), bodyRadiusM, fovYRad, viewportPx[1]);
   // "Always answer something" is camera-feel policy, so the datum fallback
   // lives at this call site, not inside the pure marcher (mirrors surfaceZoomStep).

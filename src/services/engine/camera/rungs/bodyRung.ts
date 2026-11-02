@@ -38,6 +38,7 @@ import { bodyGroundRadiusAtM } from '../../../../utils/scene/bodyGroundRadiusAtM
 function surfaceStepCtxOf(host: HostBody, ctx: RungCtx): SurfaceStepCtx {
   return {
     viewportPx: ctx.viewportPx,
+    frustum: ctx.frustum,
     fovYRad: ctx.fovYRad,
     bodyRadiusM: host.radiusM,
     standoffRadii: host.standoffRadii,

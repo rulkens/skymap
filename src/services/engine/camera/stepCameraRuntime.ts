@@ -24,6 +24,7 @@ import { pickWinner, elapsedForWinner, settledMemory } from './cameraDrivers';
 import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
+import { symmetricFrustum } from '../../../utils/camera/symmetricFrustum';
 import { ridesWheelTarget } from './ridesWheelTarget';
 import { releasedWorldArm } from './releasedWorldArm';
 import { frameKey } from './rungs/frameKey';
@@ -120,6 +121,7 @@ export function stepCameraRuntime(
     near: NEAR_CLIP_MPC,
     far: FAR_CLIP_MPC,
   };
+  const frustum = symmetricFrustum(projection.fovYRad, aspect);
   // `poseBasis` is the COMMITTED frame — the saga writes the destination into
   // `settings.orientation` when a switch starts, so the eye holds still through
   // a roll and only up rotates (`upBasis`, the live B(t)).
@@ -136,6 +138,7 @@ export function stepCameraRuntime(
     focusBodyId: selectionDriver(focus)?.poseId ?? null,
     pivot: pivotFraming(pivotRow),
     viewportPx: canvasPx,
+    frustum,
     fovYRad: projection.fovYRad,
     tuning,
     terrainHeightAt,
@@ -346,6 +349,7 @@ export function stepCameraRuntime(
         simDays,
         upBasis,
         projection,
+        frustum,
       },
     },
     actions,

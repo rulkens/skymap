@@ -13,6 +13,7 @@ import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnl
 import type { FramedPose } from '../../../../../src/@types/camera/FramedPose';
 import type { RungCtx } from '../../../../../src/@types/camera/RungCtx';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -25,6 +26,7 @@ const CTX: RungCtx = {
   focusBodyId: null,
   pivot: { radiusMpc: null, floorMpc: 0 },
   viewportPx: [1920, 1080],
+  frustum: symmetricFrustum(1, 1920 / 1080),
   fovYRad: 1,
   tuning: TUNING,
 };

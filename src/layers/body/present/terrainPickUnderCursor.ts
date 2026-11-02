@@ -13,8 +13,10 @@ import type { BodyRelativePose } from '../../../@types/engine/camera/BodyRelativ
 import type { SurfacePick } from '../../../@types/camera/SurfacePick';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { cursorRayBodyLocal } from '../../../utils/camera/cursorRayBodyLocal';
+import { frustumFovYRad } from '../../../utils/camera/frustumFovYRad';
 import { raycastTerrain } from '../../../utils/camera/raycastTerrain';
 import { surfacePickToleranceM } from '../../../utils/camera/surfacePickToleranceM';
 import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
@@ -29,9 +31,9 @@ export function terrainPickUnderCursor(input: {
   /** Cursor and viewport in ONE pixel space; only their ratio reaches the ray. */
   readonly cursorPx: Readonly<Vec2>;
   readonly viewportPx: Readonly<Vec2>;
-  readonly fovYRad: number;
+  readonly frustum: ViewFrustum;
 }): SurfacePick | null {
-  const { tiles, bodyId, pose, cursorPx, viewportPx, fovYRad } = input;
+  const { tiles, bodyId, pose, cursorPx, viewportPx, frustum } = input;
   const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId);
   if (body === undefined) return null;
 
@@ -43,10 +45,10 @@ export function terrainPickUnderCursor(input: {
     basisLocal: [...pose.basisM],
   };
   return raycastTerrain(
-    cursorRayBodyLocal(arm, cursorPx, viewportPx, fovYRad),
+    cursorRayBodyLocal(arm, cursorPx, viewportPx, frustum),
     innerBoundRadiusM(body.surface),
     outerBoundRadiusM(body.surface),
     (dir) => bodyGroundRadiusAtM(body, tiles.stream.heightAt(bodyId, dir, tiles.plan.params)),
-    surfacePickToleranceM(eyeM, body.surface.datumRadiusM, fovYRad, viewportPx[1]),
+    surfacePickToleranceM(eyeM, body.surface.datumRadiusM, frustumFovYRad(frustum), viewportPx[1]),
   );
 }

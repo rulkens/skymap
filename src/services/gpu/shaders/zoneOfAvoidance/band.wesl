@@ -22,9 +22,9 @@ const INNER_RIM_FRACTION: f32 = 0.05;
 // latitude wedge (e.g. toward the poles).
 fn bandDensityMask(u: Uniforms, ndc: vec2<f32>, fragCoordXY: vec2<f32>) -> f32 {
   let rayDir = normalize(
-    u.camForward
-    + ndc.x * u.tanHalfFovY * u.aspect * u.camRight
-    + ndc.y * u.tanHalfFovY * u.camUp,
+    u.rayAxis
+    + ndc.x * u.tanHalfX * u.camRight
+    + ndc.y * u.tanHalfY * u.camUp,
   );
 
   let outerHits = raySphere(u.cameraPosMpc, rayDir, vec3<f32>(0.0), u.outerRadiusMpc);
