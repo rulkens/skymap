@@ -17,16 +17,13 @@ export function zoneOfAvoidancePass(
     fade: 'zoneOfAvoidance',
     enabled: () => true,
 
-    // `view` unused: draw takes the raw OrbitCamera (`ctx.cam`) and the
-    // downscaled viewport below, not the SlabView's full-canvas vp/viewportPx.
+    // `view` unused: the 'zoa' target is a downsample of the canvas, so its
+    // rays are the canvas frustum's (`ctx.frustum`), not the SlabView's vp.
     draw(pass, _view, ctx, state, fade) {
-      // Viewport is the 'zoa' target's allocated size (see `sizeOf`).
-      const { width: vw, height: vh } = ctx.snapshot.renderTargets.sizeOf('zoa');
-
       runtime.renderer.draw(
         pass,
         ctx.cam,
-        [vw, vh],
+        ctx.frustum,
         state.settings.zoneOfAvoidance,
         ZONE_OF_AVOIDANCE_SHELL,
         fade,
@@ -34,13 +31,13 @@ export function zoneOfAvoidancePass(
     },
 
     // No `pickEnabled`: the band's pick set equals its draw set, so the pick
-    // program falls back to `enabled` above. The pick rays are the full
-    // canvas's (`canvasSize`, not the 'zoa' downsample `draw` uses), and the
-    // pick target covers `view.window` of that canvas.
+    // program falls back to `enabled` above. The pick rays are the canvas
+    // frustum's too, and the pick target covers `view.window` of that canvas.
     drawPick(pass, view, ctx, state, fade) {
       runtime.renderer.drawPick(
         pass,
         ctx.cam,
+        ctx.frustum,
         [ctx.canvasSize.width, ctx.canvasSize.height],
         view.window,
         state.settings.zoneOfAvoidance,

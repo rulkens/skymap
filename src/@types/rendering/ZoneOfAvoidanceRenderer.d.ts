@@ -15,6 +15,7 @@
  */
 
 import type { OrbitCamera } from '../camera/OrbitCamera';
+import type { ViewFrustum } from '../camera/ViewFrustum';
 import type { Vec2 } from '../math/Vec2';
 import type { PickWindow } from '../engine/frame/PickWindow';
 import type { ZoneOfAvoidanceTuning } from '../settings/ZoneOfAvoidanceTuning';
@@ -24,7 +25,7 @@ import type { Renderer } from './Renderer';
 export type ZoneOfAvoidanceRenderer = Renderer & {
   /**
    * Issue the fullscreen-quad draw. Encodes the uniform write and a single
-   * `draw(6, 1)` call.
+   * `draw(6, 1)` call. The rays span `cam`'s basis by `frustum`, the view's.
    *
    * `shell` bounds the visible radii and the longitude-dependent
    * latitude-limit curve; `fadeAlpha` is the caller's per-frame opacity
@@ -35,7 +36,7 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
   draw(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
-    viewport: Vec2,
+    frustum: ViewFrustum,
     tuning: ZoneOfAvoidanceTuning,
     shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
@@ -43,12 +44,13 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
 
   /**
    * Pick twin of `draw`, issued against the r32uint pick pipeline. The rays
-   * are the canvas's (`canvasPx` sets the aspect); the target covers only
-   * `window`, a canvas-px rectangle.
+   * are the canvas's (`frustum`); the target covers only `window`, a
+   * rectangle of the `canvasPx` canvas.
    */
   drawPick(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
+    frustum: ViewFrustum,
     canvasPx: Vec2,
     window: PickWindow,
     tuning: ZoneOfAvoidanceTuning,

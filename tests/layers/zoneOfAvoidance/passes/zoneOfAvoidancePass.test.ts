@@ -9,6 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { zoneOfAvoidancePass } from '../../../../src/layers/zoneOfAvoidance/passes/zoneOfAvoidancePass';
 import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../src/data/zoneOfAvoidance/zoneOfAvoidanceShell';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ZoneOfAvoidanceRuntime } from '../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceRuntime';
@@ -20,44 +21,13 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-// The layer reads its viewport via `sizeOf('zoa')` — the fixture computes it
-// here, mirroring the production table's scale: 5.
-const ZOA_SCALE = 5;
-
 const INSIDE_CAM_DIST = MILKY_WAY_RADIUS_MPC * 10;
 
-function makeCtx(
-  over: {
-    canvasSize?: { width: number; height: number };
-    drawCamPos?: Readonly<[number, number, number]>;
-  } = {},
-): FrameView {
-  const canvasSize = over.canvasSize ?? { width: 1280, height: 720 };
+function makeCtx(): FrameView {
   return {
-    snapshot: {
-      isReady: true,
-      nowMs: 0,
-      focusBlend: 0,
-      renderTargets: {
-        specs: [
-          { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-          { id: 'zoa', format: 'rgba16float', depth: null, scale: ZOA_SCALE },
-        ],
-        sizeOf: (id: string) => {
-          if (id !== 'zoa') throw new Error(`fixture renderTargets: no size for '${id}'`);
-          return {
-            width: Math.max(1, Math.floor(canvasSize.width / ZOA_SCALE)),
-            height: Math.max(1, Math.floor(canvasSize.height / ZOA_SCALE)),
-          };
-        },
-        viewOf: () => ({}) as GPUTextureView,
-        destroy: vi.fn(),
-      } as never,
-    },
     cam: { position: [0, 0, INSIDE_CAM_DIST] } as never,
-    canvasSize,
-    drawCamPos: [0, 0, INSIDE_CAM_DIST] as Readonly<[number, number, number]>,
-    ...over,
+    frustum: symmetricFrustum(1, 1280 / 720),
+    canvasSize: { width: 1280, height: 720 },
   } as unknown as FrameView;
 }
 
@@ -79,7 +49,7 @@ function makeRuntime(
 }
 
 describe('zoneOfAvoidancePass.draw', () => {
-  it('draws with ctx.cam, the downsampled viewport, and the composed opacity', () => {
+  it('draws with ctx.cam, the canvas frustum, and the composed opacity', () => {
     const drawSpy = vi.fn();
     const runtime = makeRuntime({ draw: drawSpy });
     const pass = zoneOfAvoidancePass(runtime);
@@ -88,11 +58,11 @@ describe('zoneOfAvoidancePass.draw', () => {
     pass.draw(PASS_STUB, {} as never, ctx, state, 0.5);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
-    // draw(pass, cam, viewport, tuning, shell, opacity)
+    // draw(pass, cam, frustum, tuning, shell, opacity)
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(ctx.cam);
-    // Downsampled viewport — matches the actual fragment count.
-    expect(args[2]).toEqual([Math.floor(1280 / ZOA_SCALE), Math.floor(720 / ZOA_SCALE)]);
+    // The canvas frustum, not one off the 'zoa' downsample: it is the canvas, resampled.
+    expect(args[2]).toBe(ctx.frustum);
     expect(args[3]).toBe(state.settings.zoneOfAvoidance);
     expect(args[4]).toBe(ZONE_OF_AVOIDANCE_SHELL);
     expect(args[5]).toBeCloseTo(0.5, 6); // the handed value, inside the window
@@ -100,7 +70,7 @@ describe('zoneOfAvoidancePass.draw', () => {
 });
 
 describe('zoneOfAvoidancePass.drawPick', () => {
-  it('draws with ctx.cam, the FULL canvas size, the view window, and the composed opacity', () => {
+  it('draws with ctx.cam, the canvas frustum and size, the view window, and the composed opacity', () => {
     const drawPickSpy = vi.fn();
     const runtime = makeRuntime({ drawPick: drawPickSpy });
     const pass = zoneOfAvoidancePass(runtime);
@@ -110,14 +80,14 @@ describe('zoneOfAvoidancePass.drawPick', () => {
     pass.drawPick!(PASS_STUB, { window } as never, ctx, state, 0.5);
     expect(drawPickSpy).toHaveBeenCalledTimes(1);
     const args = drawPickSpy.mock.calls[0]!;
-    // drawPick(pass, cam, canvasPx, window, tuning, shell, opacity)
+    // drawPick(pass, cam, frustum, canvasPx, window, tuning, shell, opacity)
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(ctx.cam);
-    // Full canvas — NOT the 'zoa' target's downsampled one `draw` uses: the
-    // pick rays are the canvas's, whatever window the target covers.
-    expect(args[2]).toEqual([1280, 720]);
-    expect(args[3]).toBe(window);
-    expect(args[4]).toBe(state.settings.zoneOfAvoidance);
-    expect(args[6]).toBeCloseTo(0.5, 6); // the handed value, inside the window
+    // The pick rays are the canvas's, whatever window the target covers.
+    expect(args[2]).toBe(ctx.frustum);
+    expect(args[3]).toEqual([1280, 720]);
+    expect(args[4]).toBe(window);
+    expect(args[5]).toBe(state.settings.zoneOfAvoidance);
+    expect(args[7]).toBeCloseTo(0.5, 6); // the handed value, inside the window
   });
 });

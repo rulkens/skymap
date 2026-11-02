@@ -4,6 +4,7 @@ import { createLightTimeSpheresRenderer } from '../../../../src/layers/lightTime
 import { LIGHT_TIME_SPHERES } from '../../../../src/data/lightTime/lightTimeSpheres';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 // Float indices of the uniform block — `src/services/gpu/shaders/lightTime/io.wesl`, restated so a silent
 // renderer-side shift fails here rather than on screen.
@@ -33,10 +34,16 @@ function drawUniforms(camPos: Vec3, opacities: readonly number[]): Float32Array 
     setBindGroup: vi.fn(),
     draw: vi.fn(),
   } as unknown as GPURenderPassEncoder;
-  createLightTimeSpheresRenderer(device, 'rgba16float').draw(pass, CAM, camPos, [800, 800], {
-    centre: CENTRE,
-    opacities,
-  });
+  createLightTimeSpheresRenderer(device, 'rgba16float').draw(
+    pass,
+    CAM,
+    camPos,
+    symmetricFrustum(CAM.fovYRad, 1),
+    {
+      centre: CENTRE,
+      opacities,
+    },
+  );
   return writeBuffer.mock.calls[0]![2] as Float32Array;
 }
 
