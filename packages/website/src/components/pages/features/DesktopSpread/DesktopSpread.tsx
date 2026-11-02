@@ -21,8 +21,8 @@ type DesktopSpreadProps = {
 
 const RENDER = 'features-andromeda';
 const DISTANCE = fact('andromeda-distance').figure!;
-// Ten of the page grid's twelve columns, the window's width on a phone.
-const RENDER_SIZES = '(max-width: 900px) 100vw, min(calc(83vw - 4rem), 64rem)';
+// Eight of the page grid's twelve columns, the window's width on a phone.
+const RENDER_SIZES = '(max-width: 900px) 100vw, min(calc(66vw - 3rem), 47rem)';
 const PIECE_SIZES = '(max-width: 900px) 48vw, 20rem';
 
 function DesktopSpread({ title, line, href, label }: DesktopSpreadProps) {

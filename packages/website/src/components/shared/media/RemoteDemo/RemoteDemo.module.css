@@ -37,6 +37,21 @@
   }
 }
 
+/* Compact, the phone lies over the disc's bottom right at every width, and the disc stops at 26rem in the middle. */
+.compact {
+  display: block;
+  max-width: 26rem;
+  margin-inline: auto;
+  --film-width: 100%;
+  --phone-width: min(9rem, 30vw);
+
+  & .phone {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+  }
+}
+
 /* Where the remote's drag pad is on its picture, as shares of the screen. */
 .pad {
   position: absolute;

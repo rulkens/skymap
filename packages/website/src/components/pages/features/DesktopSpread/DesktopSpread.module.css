@@ -70,17 +70,26 @@
 }
 
 /*
- * Wide, the render takes eleven columns under the words, and the pieces break its edges: the card rises from its
- * upper right into the room the words leave beside them, the Navigation panel hangs from its lower left into the
- * first column. Each is drawn near the size it has in the app.
+ * Wide, the words take four columns and the render the other eight beside them, and the pieces break its edges:
+ * the card rises from its upper right, the Navigation panel hangs from its lower left under the words. Each is
+ * drawn a little under the size it has in the app.
  */
 @media (min-width: 901px) {
+  .root {
+    align-items: start;
+  }
+
+  .words,
+  .figure {
+    grid-row: 1;
+  }
+
   .words {
-    grid-column: 1 / span 5;
+    grid-column: 1 / span 4;
   }
 
   .figure {
-    grid-column: 2 / -1;
+    grid-column: 5 / -1;
   }
 
   .stage {
@@ -91,17 +100,17 @@
   .card {
     position: absolute;
     z-index: 1;
-    width: 27%;
+    width: 31%;
   }
 
   .navigation {
-    bottom: 12%;
-    left: -11%;
+    bottom: 2%;
+    left: -15%;
   }
 
   .card {
-    top: -22%;
-    right: 4%;
+    top: -10%;
+    right: 3%;
   }
 
   .reading {
