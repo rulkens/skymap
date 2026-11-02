@@ -103,7 +103,7 @@
   }
 
   .frame {
-    margin-left: calc(min(0px, (var(--wrap-max) - 100vw) / 2) - var(--gutter));
+    margin-left: calc(-1 * var(--bleed));
   }
 
   .root > h2,

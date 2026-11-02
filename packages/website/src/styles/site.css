@@ -54,6 +54,8 @@
   /* The one gap between columns of the page grid (`.grid`, styles/layout.module.css). */
   --col-gap: 3rem;
   --wrap-max: 77.5rem;
+  /* From the column's edge to the window's: `.wrap` centres a column at most `--wrap-max` wide, inside the gutter. */
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   --section-space: 9.375rem;
   --stack: 1.5rem;
   --nav-height: 4.5rem;

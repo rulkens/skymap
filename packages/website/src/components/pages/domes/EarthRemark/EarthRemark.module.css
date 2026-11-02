@@ -4,8 +4,6 @@
  * or the picture's black would cover whatever it overlaps.
  */
 .root {
-  /* From the column's left edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
-  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   --globe: 20rem;
   position: relative;
 }

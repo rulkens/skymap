@@ -9,7 +9,6 @@
  * screen blend must reach the page, or the frame's black would cover the caption above and the title.
  */
 .orbits {
-  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   --w: 64rem;
   position: absolute;
   top: calc(3.5rem - 0.28 * var(--w));

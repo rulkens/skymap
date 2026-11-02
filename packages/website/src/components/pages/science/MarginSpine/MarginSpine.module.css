@@ -1,6 +1,4 @@
 .root {
-  /* From the column's right edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
-  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   position: relative;
   view-timeline: --margin-spine block;
 }

@@ -5,7 +5,6 @@
  */
 .root {
   composes: grid from '../../../../styles/layout.module.css';
-  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   --frame: min(76rem, 90vw);
   align-items: center;
 }

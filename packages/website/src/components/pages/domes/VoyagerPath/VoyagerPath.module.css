@@ -5,7 +5,6 @@
  * that falls `--descent` to the right, and the spacecraft stands `--reach-len` along it.
  */
 .root {
-  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   /* The point this box sits on is the top of the section's text; the Sun stands up in the gap above it. */
   --w: 144vw;
   --descent: 4deg;

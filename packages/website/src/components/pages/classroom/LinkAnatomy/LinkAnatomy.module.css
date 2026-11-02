@@ -6,10 +6,10 @@
   align-items: center;
 }
 
-/* Out to the window's right edge: the wrap's gutter, plus the margin beside it once the window is wider than the wrap. */
+/* Out to the window's right edge. */
 .picture {
   grid-area: 1 / 5 / 2 / -1;
-  margin-right: calc(-1 * max(var(--gutter), (100vw - var(--wrap-max)) / 2 + var(--gutter)));
+  margin-right: calc(-1 * var(--bleed));
   mask-image:
     linear-gradient(90deg, rgb(0 0 0 / 0), #000 30%),
     linear-gradient(180deg, rgb(0 0 0 / 0), #000 12%, #000 85%, rgb(0 0 0 / 0));

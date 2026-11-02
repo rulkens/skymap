@@ -1,6 +1,5 @@
 .root {
   composes: grid from '../../../../styles/layout.module.css';
-  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   align-items: start;
   margin-bottom: calc(var(--section-space) / 2);
 }
