@@ -105,14 +105,15 @@ can't push the pivot off-screen or collapse the framing window.
 - `LiveCameraRuntime` publishes `framing` (replacing `aspect`) to the sagas. The follow driver reads the
   same window from its context.
 
-## 6. Framing on the narrower side
+## 6. Framing in the uncovered area
 
-The framing functions take the `FramingWindow`. The body fill, which sizes against the vertical
-half-angle today, uses `min(tanHalfX, tanHalfY)`, as `sphereFitDistance` already does with `min(1, aspect)`.
-This changes framing on portrait phones even when nothing is covered (subjects come out smaller), which
-is the ruling. The structure fill stays on `tanHalfY`: it is not a fit but a distance at which the marker
-ring has faded past `markerMaxApparentRadiusPx`, and that fade is judged against the canvas-height
-`drawPxPerRad`, so a width fill would leave the ring half-faded on portrait phones. It lands as its own feature commit so it can be eye-checked on its own.
+The framing functions take the `FramingWindow`. Body and structure fills size against the
+**uncovered height** (`tanHalfY`), and `sphereFitDistance` keeps its limiting axis (`min`). The first
+build fitted bodies to the narrower side, per a ground-check ruling. On a portrait phone that shrank Earth
+from about 366 to 165 px across, and the eye check failed it. With the 0.4 fill, a body only overflows the
+width once the uncovered area is taller than 2.5:1, and phones are about 2:1. Height is on trial
+(owner, 2026-11-02, ruling after an eye check). The structure fill is not a fit: it is a distance at which the
+marker ring has faded past `markerMaxApparentRadiusPx`, judged against the canvas-height `drawPxPerRad`.
 
 ## 7. Ground preparation
 

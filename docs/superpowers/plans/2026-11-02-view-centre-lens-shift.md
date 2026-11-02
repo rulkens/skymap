@@ -9,7 +9,7 @@ uncovered area.
 **Architecture:** first, behaviour-neutral prep. Shells and cursor rays read a view frustum, the camera
 runtime owns the main-view frustum, framing reads one `FramingWindow`, and the HUD-stack hidden rule
 becomes a selector. Then the feature: panels write cover rows, the camera runtime turns them into an
-eased off-axis frustum plus a framing window, and framing fits the narrower side.
+eased off-axis frustum plus a framing window, and framing fits the uncovered area.
 
 **Tech stack:** TS, Redux Toolkit + typed-redux-saga (no react-redux), React, WebGPU/WESL, Vitest.
 
@@ -239,7 +239,7 @@ Read [`ui-ux.md`](../conventions/ui-ux.md) and the `create-component` skill's co
 **Files:** `src/services/engine/camera/{bodyFocusDistance,structureFocusDistance}.ts` + tests.
 
 - [x] Change the body fill to `Math.min(framing.tanHalfX, framing.tanHalfY)`. The structure fill stays on `tanHalfY` (review fix): its fade is judged in canvas-height pixels (spec §6).
-- [x] Test `bodyFocusDistance fits by width in a portrait window`: `{tanHalfX: 0.3, tanHalfY: 0.6}` gives the same distance as `{0.3, 0.3}`.
+- [x] **Reverted after the eye check** (owner, 2026-11-02): a width fit shrank Earth to 165 px on a phone, so the body fill is back on `tanHalfY` of the uncovered area. Test: `bodyFocusDistance fits by height, even in a portrait window`.
 - [x] Update the expected values that change in existing tests (portrait fixtures only). Name each one in the commit body.
 - [x] Commit.
 
