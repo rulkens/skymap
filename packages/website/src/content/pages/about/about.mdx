@@ -20,7 +20,7 @@ import Sources from '../../../components/shared/text/Sources/Sources.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
 import { CONTACT_EMAIL, CONTACT_ENDPOINT, ISSUES_URL } from '../../../data/contact';
 import { fact } from '../../../data/fact';
-import { MAKER_NAME, REPO_URL } from '../../../data/siteIdentity';
+import { MAKER_NAME, MAKER_SITE, REPO_URL } from '../../../data/siteIdentity';
 import links from '../../../styles/links.module.css';
 import text from '../../../styles/type.module.css';
 import { formatDate } from '../../../utils/formatDate';
@@ -38,9 +38,12 @@ import { COLOPHON, factIds, licence, makerProfile, whatIs } from './about.data';
 
 <Section id="maker">
   <MakerPortrait alt="Alexander Rulkens, arms crossed, in a patterned shirt against a dark wall">
-    <h2>Who makes it</h2>
+    <h2>About me</h2>
     <p>I’m Alexander Rulkens. I’ve loved astronomy since my school’s astronomy club, and I’ve written software for more than twenty years, among it design apps such as <a href="https://repper.app">Repper</a>. Skymap is where the two meet: data visualisation that shows the measured universe, and some of the awe that comes with it. It’s my way of giving something back to the astronomy community.</p>
-    <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
+    <div className={links['link-row']}>
+      <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
+      <ObjLink hang size="small" href={MAKER_SITE}>rulkens.com</ObjLink>
+    </div>
   </MakerPortrait>
 </Section>
 
