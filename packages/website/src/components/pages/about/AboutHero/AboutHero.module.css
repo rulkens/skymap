@@ -35,7 +35,7 @@
   padding-top: var(--open-top);
 
   & > * {
-    max-width: min(30rem, 40vw);
+    max-width: min(34rem, 40vw);
   }
 
   & > h1 {
@@ -78,7 +78,7 @@
   }
 }
 
-/* Narrow: the title and the lead, then the galaxy across the window, then its label. */
+/* Narrow: the words, then the galaxy across the window, then its label. */
 @media (--narrow) {
   .root {
     min-height: 0;

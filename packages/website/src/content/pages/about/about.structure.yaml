@@ -1,7 +1,5 @@
-job: "Who makes Skymap, how do I reach them, and which pictures may I reuse?"
+job: "What is Skymap, who makes it, how do I reach them, and which pictures may I reuse?"
 sections:
-  - heading: "What Skymap is"
-    job: "What is Skymap, in a sentence?"
   - heading: "Who makes it"
     job: "Who makes Skymap?"
   - heading: "On a dome"

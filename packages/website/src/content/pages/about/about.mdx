@@ -15,8 +15,6 @@ import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
 import PressPictures from '../../../components/pages/about/PressPictures/PressPictures.tsx';
-import Quotable from '../../../components/pages/about/Quotable/Quotable.tsx';
-import WebAtScale from '../../../components/pages/about/WebAtScale/WebAtScale.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
@@ -31,19 +29,12 @@ import { COLOPHON, factIds, licence, makerProfile, whatIs } from './about.data';
 
 <AboutHero>
   <h1>About Skymap</h1>
-  <p className={text.say}>Skymap is made by one person. This page says who, how to reach us and which pictures you may reuse.</p>
+  <p className={text.say}>{whatIs}</p>
+  <div className={links['onward-row']}>
+    <OpenApp />
+    <ObjLink href={sitePath('/science/')}>The science behind Skymap</ObjLink>
+  </div>
 </AboutHero>
-
-<Section id="what">
-  <WebAtScale>
-    <h2>What Skymap is</h2>
-    <Quotable>{whatIs}</Quotable>
-    <div className={links['onward-row']}>
-      <OpenApp />
-      <ObjLink href={sitePath('/science/')}>The science behind Skymap</ObjLink>
-    </div>
-  </WebAtScale>
-</Section>
 
 <Section id="maker">
   <MakerPortrait alt="Alexander Rulkens, arms crossed, in a patterned shirt against a dark wall">

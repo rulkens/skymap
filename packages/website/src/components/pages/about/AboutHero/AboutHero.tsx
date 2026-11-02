@@ -1,8 +1,8 @@
 /*
- * AboutHero — the About page's opening: the title and lead on the left of the page grid, and the Milky Way model
- * cut out as light beside them, run out past the window's right edge so the page's black is its sky. As the page
- * scrolls away the galaxy turns a little and falls behind the words. Narrow, the title and lead come first and
- * the galaxy follows them across the window.
+ * AboutHero — the About page's opening: the words (title, lead, what Skymap is, the way into the app) on the left
+ * of the page grid, and the Milky Way model cut out as light beside them, run out past the window's right edge so
+ * the page's black is its sky. As the page scrolls away the galaxy turns a little and falls behind the words.
+ * Narrow, the words come first and the galaxy follows them across the window.
  */
 import type { ReactNode } from 'react';
 
