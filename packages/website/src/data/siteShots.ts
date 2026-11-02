@@ -514,14 +514,15 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   // The Features hero: its words cover the left of the band, so each view is the picture above turned to put the subject in the right half.
   {
     id: 'features-hero-glint',
-    link: 't=2026-10-05T03:20:00Z&pose=b,earth,0,0,0,-5962326.45,-3442350.78,-602333.338,-0.1086915317,0.4389724959,0.8919020678,-0.993207972,-0.0854313554,-0.0789899283,-0.04152199651,0.8944297799,-0.4452766471',
-    settings: { ...SUBJECT, settleMs: 4000 },
+    // The owner's view (2026-11-02), shifted right (lookOffset 1.15, 0) so Earth clears the hero’s words, and lifted (exposure 4.5).
+    link: 't=2017-10-15T20:51:59.999Z&pose=a,4.467242812474955e-12,1.6933953971412816e-12,7.340668699187929e-13,0.42899000718114055,0.6578275564849868,3.2737082895325877e-16,0.0000777899244019005,1.15,0',
+    settings: { ...SUBJECT, exposure: 4.5, settleMs: 5000 },
     size: WIDE,
     widths: [1920, 1280],
-    title: 'The Pacific Ocean from 540 kilometres up',
-    caption: 'About Hubble’s height, looking towards a low Sun.',
+    title: 'The Sun’s glint off the Caribbean',
+    caption: 'About 3,700 kilometres up, with night coming over the ocean to the east.',
     drawn: 'The Sun’s glint on the water is computed; the surface and the clouds are satellite photography.',
-    alt: 'The curve of Earth against stars, a bright reflection of the Sun on dark blue ocean and a thin blue haze along the horizon.',
+    alt: 'Earth filling the right of the picture against stars: a bright reflection of the Sun off the Caribbean by the coast of South America, clouds, and the dark night side beyond.',
     credit: 'Earth: NASA Blue Marble',
   },
   {
@@ -2024,7 +2025,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'features-earth',
     link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,7.5e-16,0,-0.08,0`,
-    settings: { ...SUBJECT, settleMs: 5000 },
+    settings: { ...SUBJECT, exposure: 4.5, settleMs: 5000 },
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'Earth',

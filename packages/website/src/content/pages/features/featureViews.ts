@@ -7,7 +7,7 @@ import type { GalleryView } from '../../../@types/GalleryView';
  * where a meteor may cross.
  */
 export const FEATURE_VIEWS: readonly GalleryView[] = [
-  { id: 'features-hero-glint', sky: { left: 0.55, top: 0.13, right: 0.97, bottom: 0.4 } },
+  { id: 'features-hero-glint' },
   { id: 'features-hero-saturn', sky: { left: 0.52, top: 0.13, right: 0.97, bottom: 0.31 } },
   { id: 'features-hero-perseverance' },
   { id: 'features-hero-constellations', sky: { left: 0.52, top: 0.13, right: 0.97, bottom: 0.7 } },
