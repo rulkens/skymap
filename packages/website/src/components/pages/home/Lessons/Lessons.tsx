@@ -2,8 +2,8 @@
  * Lessons — Home's pitch for the classroom: four questions a pupil can answer by going there, ordered outward, each
  * under the thing it asks about, cut out of its own view and floated on the page. The first two stand on one
  * horizon at one scale: a small Earth on 21 June and Jupiter eleven times wider, a hairline drawn between them as
- * the section scrolls in. Then Orion with the app's search riding over it, and
- * Andromeda. The questions' views are the classroom page's own (data/lessons.ts and its class features). The section
+ * the section scrolls in. Then Orion with the app's search riding over it, and Andromeda. The questions' views
+ * are the classroom page's own (content/pages/classroom/lessons.ts and its class features). The section
  * stands on the field trip with no bus: Jezero crater across the window, the way in set in its sky, and
  * Perseverance, cut out with its shadow, driving up onto its own spot as the strip scrolls in. The words are
  * the page's: the title, the line under it (children), each question's and the way in.

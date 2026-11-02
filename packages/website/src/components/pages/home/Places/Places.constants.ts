@@ -1,4 +1,4 @@
-import { PLACES } from '../../../../data/places.ts';
+import { PLACES } from '../../../../content/pages/home/places.ts';
 import { loopUrl } from '../../../../utils/loopUrl.ts';
 import { TALL_HEIGHT } from './placeLayout.ts';
 

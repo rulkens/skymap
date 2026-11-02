@@ -10,8 +10,10 @@ The companion site in Astro, React and MDX. `npm run site` serves it on port 580
   prop, which blanks the page. The docs are `src/content/docs/`.
 - `src/components/` has four homes: `shared/` (used across pages: `layout/`, `links/`, `media/`, `text/`),
   `pages/<page>/` (one page's sections), `docs/` (the docs' parts) and `site/` (nav, footer, star field).
-- `src/data/` holds the facts and manifests the pages are written from. A lookup by an unknown id throws, so a page
-  that names a missing fact, source or shot fails the build.
+- `src/data/` holds the facts and manifests the pages are written from, and data that more than one page or a tool
+  reads; data only one landing page reads is in its `content/pages/<page>/` folder. The facts stay in `data/`
+  whichever page states them, since every fact is one registry (`facts.ts`). A lookup by an unknown id throws, so
+  a page that names a missing fact, source or shot fails the build.
 - `src/utils/` is one function per file, `src/@types/` one type per file, as in the app.
 - `src/dev/` is the dev overlay, never in a build (see below).
 

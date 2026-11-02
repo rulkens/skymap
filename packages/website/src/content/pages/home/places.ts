@@ -1,4 +1,4 @@
-import type { Place } from '../@types/Place';
+import type { Place } from '../../../@types/Place';
 
 /**
  * Places to start on Home. `hash` is an app deep-link body; `shot` is the

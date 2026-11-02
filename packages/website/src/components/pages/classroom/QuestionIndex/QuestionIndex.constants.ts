@@ -1,5 +1,5 @@
 import { CLASS_QUESTIONS } from '../../../../content/pages/classroom/classroom.data.ts';
-import { LESSON_TOPICS } from '../../../../data/lessons.ts';
+import { LESSON_TOPICS } from '../../../../content/pages/classroom/lessons.ts';
 import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 export const ROWS = CLASS_QUESTIONS.map((question) => {

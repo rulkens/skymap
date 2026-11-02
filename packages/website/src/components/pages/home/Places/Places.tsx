@@ -9,7 +9,7 @@
 import { useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 
-import { PLACES } from '../../../../data/places.ts';
+import { PLACES } from '../../../../content/pages/home/places.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { smoothPath } from '../../../../utils/smoothPath.ts';
 import PlaceLink from './PlaceLink.tsx';

@@ -3,7 +3,7 @@
  * Places section. A gallery's caption follows the band's current view through
  * React, so the band and its caption are one island, made by the page.
  */
-import { FEATURE_VIEWS } from '../../../../data/featureViews.ts';
+import { FEATURE_VIEWS } from '../../../../content/pages/features/featureViews.ts';
 import text from '../../../../styles/type.module.css';
 import CaptionGallery from '../../../shared/media/CaptionGallery/CaptionGallery.tsx';
 import PictureBand from '../../../shared/media/PictureBand/PictureBand.tsx';

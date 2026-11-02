@@ -1,5 +1,5 @@
-import type { LessonTopic } from '../@types/LessonTopic';
-import { siteShot } from './siteShot';
+import type { LessonTopic } from '../../../@types/LessonTopic';
+import { siteShot } from '../../../data/siteShot';
 
 // A lesson opens exactly where its picture was taken, so the link is read from the picture's manifest row.
 const at = (shot: string) => ({ shot, hash: siteShot(shot).link });

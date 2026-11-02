@@ -1,4 +1,4 @@
-import type { GalleryView } from '../@types/GalleryView';
+import type { GalleryView } from '../../../@types/GalleryView';
 
 /**
  * The Features page's opening gallery: one picture from each Places section,

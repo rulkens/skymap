@@ -8,7 +8,7 @@ export const says = (id: string): string => fact(id).short ?? fact(id).text;
 export const ACCENTS = { earth: 'var(--site-accent-earth)', jupiter: 'var(--site-accent-planet)' } as const;
 
 /**
- * The ready-made questions, in the order of data/lessons.ts's topics. Each is answered by opening
+ * The ready-made questions, in the order of lessons.ts's topics. Each is answered by opening
  * its link and looking, never by reading a figure off a card.
  */
 export const CLASS_QUESTIONS: readonly ClassQuestion[] = [
