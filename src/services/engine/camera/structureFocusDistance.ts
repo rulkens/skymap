@@ -24,10 +24,6 @@
  *   distance         = R / (FOCUS_FILL · tan(fovY / 2))
  *   ⇒ apparentRadiusPx = FOCUS_FILL · (viewportHeight / 2)
  *
- * Height only, never the narrower side: this is not a fit. The fade judges the
- * radius against the canvas-height `drawPxPerRad`, so a width fill would leave
- * the ring half-faded on a portrait phone.
- *
  * One fill factor frames every structure to the same on-screen size. The fade
  * threshold is identical for all four structure categories, so a single factor
  * covers cluster / supercluster / void / group — no per-category multiplier,
@@ -54,8 +50,6 @@
  *   projects it to a few pixels — the user reads it as "I didn't move".
  */
 
-import type { FramingWindow } from '../../../@types/camera/FramingWindow';
-
 /**
  * Apparent ring radius at focus, as a multiple of the half-viewport-height.
  * 2.2 overflows the viewport ~2.2:1, landing the marker past the close-approach
@@ -76,10 +70,13 @@ const MAX_FRAMING_DISTANCE_MPC = 800;
  * non-positive values return DEGENERATE_RADIUS_DISTANCE_MPC; positive infinity
  * clamps to the maximum.
  */
-export function structureFocusDistance(apparentRadiusMpc: number, framing: FramingWindow): number {
+export function structureFocusDistance(apparentRadiusMpc: number, fovYRad: number): number {
   if (apparentRadiusMpc === Number.POSITIVE_INFINITY) return MAX_FRAMING_DISTANCE_MPC;
   if (!Number.isFinite(apparentRadiusMpc) || apparentRadiusMpc <= 0) {
     return DEGENERATE_RADIUS_DISTANCE_MPC;
   }
-  return Math.min(apparentRadiusMpc / (FOCUS_FILL * framing.tanHalfY), MAX_FRAMING_DISTANCE_MPC);
+  return Math.min(
+    apparentRadiusMpc / (FOCUS_FILL * Math.tan(fovYRad / 2)),
+    MAX_FRAMING_DISTANCE_MPC,
+  );
 }

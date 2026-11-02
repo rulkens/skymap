@@ -32,7 +32,6 @@ import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
-import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the seam Promise stub.
@@ -62,7 +61,7 @@ const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: ()
 const RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
   fovYRad: 0.8,
-  framing: lensFramingWindow(0.8, 16 / 9),
+  aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
 };
 

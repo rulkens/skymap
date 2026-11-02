@@ -54,7 +54,6 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
-import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);
@@ -155,7 +154,7 @@ describe('focus release while engaged (round 10)', () => {
     const endDist = distTo(displayedEye(h.state), MARS);
     expect(endDist).toBeGreaterThan(startDist * 100); // gone — at Earth
     const dEarth = distTo(displayedEye(h.state), EARTH);
-    const earthFraming = bodyFocusDistance(R_MPC, lensFramingWindow(Math.PI / 3, 1));
+    const earthFraming = bodyFocusDistance(R_MPC, Math.PI / 3);
     expect(Math.abs(dEarth - earthFraming) / earthFraming).toBeLessThan(1e-3);
   });
 
@@ -166,10 +165,7 @@ describe('focus release while engaged (round 10)', () => {
     // the approach owed on the exit frame would fly the eye straight back out
     // to h/R 3.3, which is why this runs well past the Eased duration.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
-    const start: CameraPose = {
-      ...MARS_PARK,
-      distance: bodyFocusDistance(MARS_R_MPC, lensFramingWindow(FOV, 1)),
-    };
+    const start: CameraPose = { ...MARS_PARK, distance: bodyFocusDistance(MARS_R_MPC, FOV) };
     h.seedPose(absoluteArm(start));
     h.focus('mars');
     h.store.dispatch(
@@ -238,7 +234,7 @@ function roverMpc(bodies: ReadonlyMap<string, BodyState>): Vec3 {
 const ROVER_FRAMING_M =
   bodyFocusDistance(
     bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'curiosity', 'test')) * SCALE_UNITS.M_TO_MPC,
-    lensFramingWindow(FOV, 1),
+    FOV,
   ) / SCALE_UNITS.M_TO_MPC;
 
 describe('focus switch between two rovers on one planet (adverse 5)', () => {
@@ -383,7 +379,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
     // Whole, in order: the length is half the property — a release without the
     // approach behind it lands `body:mars` and stops there.
     expect(out).toEqual(['site:curiosity', 'body:mars', 'absolute']);
-    const marsFraming = bodyFocusDistance(MARS_R_MPC, lensFramingWindow(FOV, 1));
+    const marsFraming = bodyFocusDistance(MARS_R_MPC, FOV);
     expect(distTo(displayedEye(h.state), MARS) / marsFraming).toBeCloseTo(1, 6);
 
     h.focus('curiosity');

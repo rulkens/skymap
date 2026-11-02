@@ -7,9 +7,9 @@
 uncovered area.
 
 **Architecture:** first, behaviour-neutral prep. Shells and cursor rays read a view frustum, the camera
-runtime owns the main-view frustum, framing reads one `FramingWindow`, and the HUD-stack hidden rule
+runtime owns the main-view frustum, and the HUD-stack hidden rule
 becomes a selector. Then the feature: panels write cover rows, the camera runtime turns them into an
-eased off-axis frustum plus a framing window, and framing fits the uncovered area.
+eased off-axis frustum; framing keeps its whole-canvas size.
 
 **Tech stack:** TS, Redux Toolkit + typed-redux-saga (no react-redux), React, WebGPU/WESL, Vitest.
 
@@ -130,7 +130,9 @@ Update each `io.wesl` layout comment and the TS twins' offset constants.
 - [x] Implement, then `npm run typecheck:fast` and the targeted tests (`cursorRay`, `surfaceZoom`, `draggedSurface`, `latchSurface`, `terrainPick`, `deriveView`, `stepCameraRuntime`).
 - [x] Commit.
 
-### Task 3: Framing reads one framing window — review: yes
+### Task 3: Framing reads one framing window — review: yes — REVERTED
+
+> Reverted on `lens-shift-prep` after the owner ruled framing sizes from the whole canvas (spec §6): the window would only ever carry the lens.
 
 **Files:**
 - Create: `src/@types/camera/FramingWindow.d.ts`, `src/utils/camera/lensFramingWindow.ts`
@@ -215,7 +217,7 @@ Read [`ui-ux.md`](../conventions/ui-ux.md) and the `create-component` skill's co
 ### Task 8: The camera runtime shifts the frustum and frames the uncovered area — review: yes
 
 **Files:**
-- Create: `src/utils/camera/{coverShiftNdc,shiftedFrustum,coveredFramingWindow,easedShiftNdc}.ts` + tests under `tests/utils/camera/`; constants `src/data/camera/{lensShiftEaseTauMs,maxCoveredFraction}.ts`
+- Create: `src/utils/camera/{coverShiftNdc,shiftedFrustum,easedShiftNdc}.ts` (`coveredFramingWindow` was built, then deleted with Task 3) + tests under `tests/utils/camera/`; constants `src/data/camera/{lensShiftEaseTauMs,maxCoveredFraction}.ts`
 - Modify: `src/@types/engine/state/CameraRuntime.d.ts` (add `shiftNdc: Vec2` memory), its initial value, `stepCameraRuntime.ts` (input `coverPx: InsetsPx`; outputs `frustum` = shifted, `framing` = covered; `requestRender` while easing), `runFrame.ts:97-108` (pass `selectViewCoverPx(stored)`, or zeros when `state.viewRig !== 'mono'`)
 
 **Interfaces:**
@@ -234,7 +236,9 @@ Read [`ui-ux.md`](../conventions/ui-ux.md) and the `create-component` skill's co
 - [x] Test (stepCameraRuntime): a cover change yields `requestRender: true` until the shift settles, and `outputs.framing` uses the target from the first frame.
 - [x] Implement, typecheck, targeted tests, commit.
 
-### Task 9: Framing fits the narrower side
+### Task 9: Framing fits the narrower side — REVERTED
+
+> Reverted with Task 3: bodies and structures size from the whole canvas again (spec §6).
 
 **Files:** `src/services/engine/camera/{bodyFocusDistance,structureFocusDistance}.ts` + tests.
 
@@ -253,7 +257,7 @@ Read [`ui-ux.md`](../conventions/ui-ux.md) and the `create-component` skill's co
 
 ## Definition of Done
 
-- **Deliverables:** `frustumRayAxis`, `opticalCentrePx`, `FramingWindow` + `lensFramingWindow`/`coveredFramingWindow`, `selectUiStackHidden`, the `viewCover` slice + `selectViewCoverPx`, `useViewCover`, `coverShiftNdc`, `shiftedFrustum`, `easedShiftNdc`; `FrameOutputs.frustum`/`.framing`; `LiveCameraRuntime.framing`.
+- **Deliverables:** `frustumRayAxis`, `opticalCentrePx`, `selectUiStackHidden`, the `viewCover` slice + `selectViewCoverPx`, `useViewCover`, `coverShiftNdc`, `shiftedFrustum`, `easedShiftNdc`; `FrameOutputs.frustum`.
 - **Observable:**
   - On a phone, Earth's centre sits midway between the screen top and the top of the collapsed sheet.
   - Pulling the sheet open does not move Earth.

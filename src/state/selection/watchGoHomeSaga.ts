@@ -50,7 +50,7 @@ export function* watchGoHomeSaga() {
     yield* put(
       startCameraTween({
         from: runtime.from,
-        to: bodyHomePose(EARTH_REF.id, simDays, runtime.framing, frameBasis),
+        to: bodyHomePose(EARTH_REF.id, simDays, runtime.fovYRad, frameBasis),
         motion,
         frame,
       }),

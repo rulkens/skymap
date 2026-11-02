@@ -26,7 +26,6 @@ import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitAn
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
-import { lensFramingWindow } from '../../../../../src/utils/camera/lensFramingWindow';
 
 const FOV_Y = 0.8;
 // Arbitrary — this chain resolves only structure refs, never a body.
@@ -100,7 +99,7 @@ describe('neighbourhoodReveal lands the flythrough launch bearing, not localGrou
     const resolvedLocalGroupDwell = resolveClipFoci(
       localGroupDwell,
       RESOLVER,
-      lensFramingWindow(FOV_Y, 1),
+      FOV_Y,
       fromEnteringLocalGroupDwell,
       SIM_DAYS,
     );
@@ -128,7 +127,7 @@ describe('neighbourhoodReveal lands the flythrough launch bearing, not localGrou
     const resolvedReveal = resolveClipFoci(
       neighbourhoodReveal,
       RESOLVER,
-      lensFramingWindow(FOV_Y, 1),
+      FOV_Y,
       fromEnteringReveal,
       SIM_DAYS,
     );

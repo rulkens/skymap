@@ -29,7 +29,6 @@ import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness'
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
-import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 const SATURN = deriveBodyStates(CONST_J2000).get(asSceneBodyId('saturn'))! as BodyState;
 
@@ -51,7 +50,7 @@ describe('follow approach under autoRotate (R14-3)', () => {
     const h = makeCameraSimHarness();
     const framingMpc = bodyFocusDistance(
       h.radiusM('saturn') * SCALE_UNITS.M_TO_MPC,
-      lensFramingWindow(Math.PI / 3, 1), // the harness FOV, stamped onto the projection every frame
+      Math.PI / 3, // the harness FOV, stamped onto the projection every frame
     );
 
     // The bug's exact gesture: dive into the Earth surface regime, turn the

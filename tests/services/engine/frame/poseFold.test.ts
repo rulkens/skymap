@@ -889,7 +889,7 @@ describe('runFrame — the regime fold', () => {
       bodyFocusDistance(
         bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'curiosity', 'poseFold')) *
           SCALE_UNITS.M_TO_MPC,
-        h.state.cameraRuntime.outputs.framing,
+        h.state.cameraRuntime.outputs.projection.fovYRad,
       ) * SCALE_UNITS.MPC_TO_M;
     expect(arrivalM).toBeCloseTo(framingM, 2);
   });

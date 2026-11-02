@@ -318,7 +318,7 @@ export function createEngine(
         ? {
             from: liveWorldPose(state),
             fovYRad: state.cameraRuntime.outputs.projection.fovYRad,
-            framing: state.cameraRuntime.outputs.framing,
+            aspect: state.cameraRuntime.outputs.projection.aspect,
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
           }
         : null,

@@ -25,7 +25,6 @@ import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
 import { coverShiftNdc } from '../../../utils/camera/coverShiftNdc';
-import { lensFramingWindow } from '../../../utils/camera/lensFramingWindow';
 import { easedShiftNdc } from '../../../utils/camera/easedShiftNdc';
 import { shiftedFrustum } from '../../../utils/camera/shiftedFrustum';
 import { ridesWheelTarget } from './ridesWheelTarget';
@@ -133,9 +132,6 @@ export function stepCameraRuntime(
     lastNowMs === null ? shiftTarget : easedShiftNdc(prev.shiftNdc, shiftTarget, nowMs - lastNowMs);
   const shiftSettled = shiftNdc[0] === shiftTarget[0] && shiftNdc[1] === shiftTarget[1];
   const frustum = shiftedFrustum(projection.fovYRad, aspect, shiftNdc);
-  // Size from the whole canvas, never the covers: they register after boot framing runs, so a
-  // covered fit would size the same subject differently by timing (owner, 2026-11-02). Covers only shift.
-  const framing = lensFramingWindow(projection.fovYRad, aspect);
   // `poseBasis` is the COMMITTED frame — the saga writes the destination into
   // `settings.orientation` when a switch starts, so the eye holds still through
   // a roll and only up rotates (`upBasis`, the live B(t)).
@@ -268,7 +264,7 @@ export function stepCameraRuntime(
       lastWinnerRidesWheel,
       poseBasis,
       simDays,
-      framing,
+      projection,
       bodies,
       followDistanceTarget: drained.followDistanceTarget,
     },
@@ -365,7 +361,6 @@ export function stepCameraRuntime(
         upBasis,
         projection,
         frustum,
-        framing,
       },
     },
     actions,

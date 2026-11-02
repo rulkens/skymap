@@ -710,7 +710,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
 });
 
 describe('the lens shift', () => {
-  it('a cover change renders until the shift settles; framing ignores the covers', () => {
+  it('a cover change renders until the shift settles', () => {
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
     h.frame(2);
     const coverPx = { ...NO_INSETS_PX, bottom: 20 };
@@ -724,9 +724,7 @@ describe('the lens shift', () => {
     };
 
     const first = step();
-    const lensHalfY = Math.tan(first.next.outputs.projection.fovYRad / 2);
     expect(first.requestRender).toBe(true);
-    expect(first.next.outputs.framing.tanHalfY).toBeCloseTo(lensHalfY, 12);
     expect(first.next.shiftNdc[1]).toBeGreaterThan(0);
     expect(first.next.shiftNdc[1]).toBeLessThan(0.2);
 

@@ -37,7 +37,6 @@ import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
-import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -67,12 +66,7 @@ describe('watchGoHomeSaga', () => {
     // The focus tween saga runs too: Home's own Earth focus write funnels through it.
     mw.run(watchGoHomeSaga);
     mw.run(watchFocusTweenSaga);
-    cameraRuntime = () => ({
-      from: FROM,
-      fovYRad: FOV,
-      framing: lensFramingWindow(FOV, 16 / 9),
-      upBasisQuat: [0, 0, 0, 1],
-    });
+    cameraRuntime = () => ({ from: FROM, fovYRad: FOV, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({
       cameraRuntime: () => cameraRuntime(),
       selection: composeSelectionRows(
@@ -116,9 +110,7 @@ describe('watchGoHomeSaga', () => {
     const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
     const orientation = selectOrientation(store.getState());
     const frameBasis = ORIENTATION_FRAMES[orientation];
-    expect(tween!.to).toEqual(
-      bodyHomePose(asSceneBodyId('earth'), simDays, lensFramingWindow(FOV, 1), frameBasis),
-    );
+    expect(tween!.to).toEqual(bodyHomePose(asSceneBodyId('earth'), simDays, FOV, frameBasis));
 
     // The descriptor pins the orientation live at dispatch time, mirroring
     // `clip.frame` and `focusTweenDescriptor`'s `frame` — the driver re-expresses
@@ -164,8 +156,6 @@ describe('watchGoHomeSaga', () => {
     const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
     expect(tweens).toHaveLength(1);
     expect(tweens[0]!.motion.style).toBe('geodesic');
-    expect(tweens[0]!.to).toEqual(
-      bodyHomePose(asSceneBodyId('earth'), simDays, lensFramingWindow(FOV, 1), frameBasis),
-    );
+    expect(tweens[0]!.to).toEqual(bodyHomePose(asSceneBodyId('earth'), simDays, FOV, frameBasis));
   });
 });

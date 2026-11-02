@@ -24,14 +24,13 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
-import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 const FOV_Y_RAD = (Math.PI / 180) * 45;
 // An arbitrary live instant; deriveBodyStates is analytic, so no clock needed.
 const SIM_DAYS = CONST_J2000 + 1234.5;
 
 const earthPos = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
-const pose = bodyHomePose(asSceneBodyId('earth'), SIM_DAYS, lensFramingWindow(FOV_Y_RAD, 1));
+const pose = bodyHomePose(asSceneBodyId('earth'), SIM_DAYS, FOV_Y_RAD);
 
 // The orbit convention places the eye at target + distance·dir with dir pointing
 // target→eye; reconstruct that eye-offset direction from the returned angles.
@@ -56,11 +55,7 @@ describe('bodyHomePose', () => {
   });
 
   it('targets and frames Earth exactly as body focus does', () => {
-    const framing = bodyLikeFraming(
-      earthPos,
-      outerBoundRadiusM(SCENE_EARTH.surface),
-      lensFramingWindow(FOV_Y_RAD, 1),
-    );
+    const framing = bodyLikeFraming(earthPos, outerBoundRadiusM(SCENE_EARTH.surface), FOV_Y_RAD);
     expect(pose.target).toEqual(framing.target);
     expect(pose.distance).toBe(framing.distance);
   });
@@ -97,7 +92,7 @@ describe('bodyHomePose', () => {
     const framed = bodyHomePose(
       asSceneBodyId('earth'),
       SIM_DAYS,
-      lensFramingWindow(FOV_Y_RAD, 1),
+      FOV_Y_RAD,
       ORIENTATION_FRAMES.ecliptic,
     );
     const decoded = decodeAim(framed);
@@ -107,9 +102,7 @@ describe('bodyHomePose', () => {
 
     // Teeth: a legacy-identity encode (no basis) decoded through the ecliptic
     // basis misses the aim — proving the parameter is load-bearing, not inert.
-    const legacyDecoded = decodeAim(
-      bodyHomePose(asSceneBodyId('earth'), SIM_DAYS, lensFramingWindow(FOV_Y_RAD, 1)),
-    );
+    const legacyDecoded = decodeAim(bodyHomePose(asSceneBodyId('earth'), SIM_DAYS, FOV_Y_RAD));
     const err = Math.hypot(
       legacyDecoded[0] - aim[0],
       legacyDecoded[1] - aim[1],
@@ -123,8 +116,8 @@ describe('bodyHomePose', () => {
     const marsRadiusM = outerBoundRadiusM(
       SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!.surface,
     );
-    const marsPose = bodyHomePose(asSceneBodyId('mars'), SIM_DAYS, lensFramingWindow(FOV_Y_RAD, 1));
-    const marsFraming = bodyLikeFraming(marsPos, marsRadiusM, lensFramingWindow(FOV_Y_RAD, 1));
+    const marsPose = bodyHomePose(asSceneBodyId('mars'), SIM_DAYS, FOV_Y_RAD);
+    const marsFraming = bodyLikeFraming(marsPos, marsRadiusM, FOV_Y_RAD);
 
     expect(marsPose.target).not.toEqual(pose.target);
     expect(marsPose.target).toEqual(marsFraming.target);
