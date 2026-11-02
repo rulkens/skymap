@@ -29,19 +29,20 @@
  *
  * Structures use FILL 2.2 (overflow, so the marker ring has faded); a body is
  * the OPPOSITE intent — you flew here to look at it. 0.4 puts the sphere's
- * apparent diameter at ~40% of the viewport height: dominant, with sky margin.
+ * apparent diameter at ~40% of the window's narrower side: dominant, with sky
+ * margin, and still whole on a portrait phone.
  */
 
 import type { FramingWindow } from '../../../@types/camera/FramingWindow';
 
-/** Apparent body radius at focus, as a multiple of the half-viewport-height. */
+/** Apparent body radius at focus, as a multiple of the window's narrower half-extent. */
 const BODY_FOCUS_FILL = 0.4;
 
 /**
  * Camera-target distance (Mpc) framing a body of physical radius `radiusMpc`
- * to a fixed fraction of the framing window's height.
+ * to a fixed fraction of the framing window's narrower side.
  * Pure and unclamped — scales linearly with the radius at every magnitude.
  */
 export function bodyFocusDistance(radiusMpc: number, framing: FramingWindow): number {
-  return radiusMpc / (BODY_FOCUS_FILL * framing.tanHalfY);
+  return radiusMpc / (BODY_FOCUS_FILL * Math.min(framing.tanHalfX, framing.tanHalfY));
 }

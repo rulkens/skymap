@@ -19,6 +19,12 @@ describe('structureFocusDistance', () => {
     expect(big).toBeCloseTo(small * 4, 5);
   });
 
+  it('fits by width in a portrait window', () => {
+    expect(structureFocusDistance(1, { tanHalfX: 0.3, tanHalfY: 0.6 })).toBe(
+      structureFocusDistance(1, { tanHalfX: 0.3, tanHalfY: 0.3 }),
+    );
+  });
+
   it('a 4 pc radius frames within tens of parsecs', () => {
     expect(structureFocusDistance(4e-6, lensFramingWindow(FOV60, 1))).toBeLessThan(1e-4);
   });
