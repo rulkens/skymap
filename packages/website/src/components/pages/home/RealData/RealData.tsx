@@ -12,14 +12,15 @@ import type { CSSProperties, ReactNode } from 'react';
 import { fact } from '../../../../data/fact.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { dataRowPath } from '../../../../utils/dataRowPath.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 import { revealDelay } from '../../../../utils/revealDelay.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import SectionHead from '../../../shared/layout/SectionHead/SectionHead.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
-import { COUNT_LABEL, KINDS, WINDOW_SIZES } from './RealData.constants.ts';
+import { COLUMNS } from '../../science/SourceTable/SourceTable.constants.ts';
+import { KINDS, WINDOW_SIZES } from './RealData.constants.ts';
 import styles from './RealData.module.css';
-import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 type RealDataProps = { title: string; children: ReactNode };
 
@@ -59,7 +60,7 @@ function RealData({ title, children }: RealDataProps) {
               <ul className={styles.names}>
                 {kind.sources.some((row) => row.count) && (
                   <li className={styles.countHead} aria-hidden>
-                    {COUNT_LABEL}
+                    {COLUMNS.count}
                   </li>
                 )}
                 {kind.sources.map((row) => (

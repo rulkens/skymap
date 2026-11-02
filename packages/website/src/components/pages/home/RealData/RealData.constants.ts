@@ -40,5 +40,3 @@ export const KINDS = [
 
 // A square window cut from a wide picture shows its full height, so the file is chosen for 16/9 of the window.
 export const WINDOW_SIZES = narrowSizes('29rem', '32rem');
-// The Science table's heading of the count.
-export const COUNT_LABEL = '# of objects';
