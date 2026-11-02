@@ -1,6 +1,6 @@
 /*
  * Wide, the picture spans the first three rows and the title and the question lie on its black above and
- * below the line from Earth to the Moon. The picture's ground is black, so it has no edge to hide.
+ * below the line from Earth to the Moon. The picture's ground is black and added as light, so it has no edge.
  */
 .root {
   position: relative;
@@ -49,7 +49,30 @@
     display: block;
     width: 100%;
     height: auto;
+    /* The picture's black would cover the site's star field in a band; added as light, it lets it through. */
+    mix-blend-mode: screen;
   }
+}
+
+/*
+ * The Moon's orbit from the picture's own camera, centred on it and taller (its row keeps the focal length), so
+ * the arc passes through the Moon and sweeps on under the words. It is light on transparency, laid over the
+ * picture's black, and fades out at the top and the bottom where its box ends. The pass also draws Earth's
+ * own orbit, a straight line through Earth along the rings: `--cut` masks it out, a thin quad on the line as
+ * measured on the master, in the shot's own pixels. A reshoot must measure it again.
+ */
+.ground {
+  --cut: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 960' preserveAspectRatio='none'%3E%3Cpath fill-rule='evenodd' d='M0 0H1600V960H0Z M0 491.9L1600 370.8V375.8L0 496.9Z'/%3E%3C/svg%3E");
+
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  translate: 0 -50%;
+  pointer-events: none;
+  opacity: 0.5;
+  mask-image: var(--cut), linear-gradient(transparent, #000 25%, #000 75%, transparent);
+  mask-size: 100% 100%;
+  mask-composite: intersect;
 }
 
 /*
@@ -241,6 +264,10 @@
     --gap-top: 8.45%;
     --gap-height: 80.9%;
     max-width: 30rem;
+  }
+
+  .ground {
+    --cut: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 1400' preserveAspectRatio='none'%3E%3Cpath fill-rule='evenodd' d='M0 0H500V1400H0Z M165.2 0H169.2L274.9 1400H270.9Z'/%3E%3C/svg%3E");
   }
 
   .earth,

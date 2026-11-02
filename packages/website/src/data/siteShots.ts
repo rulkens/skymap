@@ -1854,6 +1854,39 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'A small blue Earth at the bottom and a much smaller grey Moon far above it, with black between them.',
     credit: 'Earth: NASA Blue Marble. Moon: Solar System Scope',
   },
+  // The opening's ground: the Moon's orbit from the same camera, taller than the picture so the arc sweeps the
+  // whole section. The fov keeps the picture's focal length (tan(fov/2) scales with the height), so the two
+  // align centre on centre; the bodies are left out, as the picture above draws them.
+  {
+    id: 'class-earth-moon-orbits',
+    link: 'focus=body-earth&t=2026-10-18T12:00:00Z&pose=a,0,0,0,5.32,0.5,3e-14,-0.035,-0.245,-0.02',
+    settings: {
+      ...ORBITS,
+      keepPasses: ['orbit-trails'],
+      hidePasses: ['planets', 'textured-bodies', 'body-glints', ...HIDE_EARTH],
+      fovDeg: 19.09,
+      settleMs: 4000,
+    },
+    size: { width: 1600, height: 960 },
+    widths: [2880, 1440, 720],
+    title: 'The Moon’s orbit round Earth',
+    alt: 'A thin grey arc, the Moon’s orbit, sweeping wide round Earth through the Moon.',
+  },
+  {
+    id: 'class-earth-moon-orbits-tall',
+    link: 'focus=body-earth&t=2026-10-18T12:00:00Z&pose=a,0,0,0,5.32,0.5,3e-14,-1.6058,-0.245,-0.02',
+    settings: {
+      ...ORBITS,
+      keepPasses: ['orbit-trails'],
+      hidePasses: ['planets', 'textured-bodies', 'body-glints', ...HIDE_EARTH],
+      fovDeg: 41.13,
+      settleMs: 4000,
+    },
+    size: { width: 500, height: 1400 },
+    widths: [1000, 500],
+    title: 'The Moon’s orbit round Earth',
+    alt: 'A thin grey arc, the Moon’s orbit, sweeping wide round Earth through the Moon.',
+  },
   // The Domes page's exhibit chooser: each exhibit as it opens, in the frame of `dome-exhibit` and `class-exhibit`.
   {
     id: 'domes-exhibit-web',

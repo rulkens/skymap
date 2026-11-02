@@ -1,6 +1,7 @@
 /*
  * ScaleQuestion — the classroom page's opening, which runs a lesson on the reader: Earth and the Moon at true
- * scale across the window, named as the app names them, one question, and the answer behind a disclosure.
+ * scale across the window on the Moon's own orbit, named as the app names them, one question, and the answer
+ * behind a disclosure.
  * Opening it lays thirty Earth-sized rings in the gap, so the answer is seen as well as read. Native
  * `details`, so it works without script. Narrow, the picture stands upright with the Moon above.
  */
@@ -15,6 +16,7 @@ import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './ScaleQuestion.module.css';
 
 const SHOT = 'class-earth-moon';
+const ORBITS = 'class-earth-moon-orbits';
 // One ring per Earth that fits the gap (the `earth-moon-in-earths` fact).
 const RINGS = Array.from({ length: 30 }, (_, i) => i);
 
@@ -35,6 +37,9 @@ function ScaleQuestion() {
       <figure className={styles.figure}>
         <div className={styles.frame}>
           <Shot id={SHOT} tall="class-earth-moon-tall" sizes="100vw" eager />
+          <span className={styles.ground} aria-hidden="true">
+            <Shot id={ORBITS} tall="class-earth-moon-orbits-tall" sizes="100vw" alt="" eager />
+          </span>
           <span className={styles.earth} aria-hidden="true">
             Earth
           </span>
