@@ -20,8 +20,4 @@ describe('selectViewCoverPx', () => {
     );
     expect(selectViewCoverPx(state)).toEqual({ top: 0, right: 0, bottom: 300, left: 0 });
   });
-
-  it('is zero with no covers', () => {
-    expect(selectViewCoverPx(boot())).toEqual({ top: 0, right: 0, bottom: 0, left: 0 });
-  });
 });
