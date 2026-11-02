@@ -14,7 +14,7 @@
  */
 import { Source } from '../../../data/source';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
 

@@ -9,7 +9,7 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
-import type { SourceType } from '../data/SourceType';
+import type { GalaxyCatalogSourceType } from '../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyProvenanceSettings } from '../settings/GalaxyProvenanceSettings';
 
 export type GalaxyPointDrawSettings = {
@@ -57,7 +57,7 @@ export type GalaxyPointDrawSettings = {
    * closure resolves it to the catalog's string id and reads the value core
    * hands the pass.
    */
-  readonly fadeOpacityOf: (source: SourceType) => number;
+  readonly fadeOpacityOf: (source: GalaxyCatalogSourceType) => number;
   /**
    * `FrameView.viewSlot` — which view-slot buffer this call's
    * per-frame uniform/fade writes land in (Task 13b). `0` for the main view;

@@ -9,7 +9,7 @@
  */
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';

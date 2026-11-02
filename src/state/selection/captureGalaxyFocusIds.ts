@@ -16,7 +16,7 @@ import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { RootState } from '../../store/types';
 import type { SelectionResolver } from '../../@types/engine/selection/SelectionResolver';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
-import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { Tier } from '../../@types/data/Tier';
 
 /**

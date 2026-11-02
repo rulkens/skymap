@@ -1,5 +1,5 @@
-import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
+import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
 import type { BlackHoleId } from '../data/blackHole/BlackHoleId';
 import type { SceneBodyId } from '../scene/SceneBodyId';
 
