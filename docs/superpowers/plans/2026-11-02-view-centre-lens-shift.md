@@ -63,7 +63,7 @@ eased off-axis frustum plus a framing window, and framing fits the narrower side
 **Files:** spec + this plan (add), `docs/BACKLOG.md` (modify: drop the "View centre avoids the UI" line),
 `docs/backlog/2026-10-10-view-insets-lens-shift.md` (delete).
 
-- [ ] Commit "Lens shift: spec and plan".
+- [x] Commit "Lens shift: spec and plan".
 
 ### Task 1: Shell renderers build rays from the view's frustum — review: yes
 
@@ -99,12 +99,12 @@ eased off-axis frustum plus a framing window, and framing fits the narrower side
 Shader ray: `normalize(u.rayAxis + ndc.x * u.tanHalfX * u.camRight + ndc.y * u.tanHalfY * u.camUp)`.
 Update each `io.wesl` layout comment and the TS twins' offset constants.
 
-- [ ] Test `frustumRayAxis returns forward for a symmetric frustum`: `symmetricFrustum(1, 1.5)` → `out ≈ forward` (1e-12).
-- [ ] Test `frustumRayAxis tilts toward the shifted window centre`: frustum `{tanLeft:-0.5, tanRight:1.5, tanDown:-1, tanUp:1}`, orthonormal basis → `out ≈ forward + 0.5·right`.
-- [ ] `sphereNdcBounds(centre, depth, radius, tanLo, tanHi, pad)`: maps a tangent `t` to NDC as `2(t − tanLo)/(tanHi − tanLo) − 1`. Update the existing tests to pass `(−tanHalf, tanHalf)`, and add `sphereNdcBounds maps through an off-axis window`: `tanLo=0, tanHi=2`, a sphere straddling tangent 1 → bounds centred on NDC 0.
-- [ ] Implement, then `npm run typecheck:fast` and `npm test -- frustumRayAxis sphereNdcBounds horizonShell zoneOfAvoidance lightTime`.
-- [ ] Eye check (controller): `#focus=body-earth` zoomed out to the cosmic horizon, and a zone-of-avoidance view, before/after. They must look identical.
-- [ ] Commit.
+- [x] Test `frustumRayAxis returns forward for a symmetric frustum`: `symmetricFrustum(1, 1.5)` → `out ≈ forward` (1e-12).
+- [x] Test `frustumRayAxis tilts toward the shifted window centre`: frustum `{tanLeft:-0.5, tanRight:1.5, tanDown:-1, tanUp:1}`, orthonormal basis → `out ≈ forward + 0.5·right`.
+- [x] `sphereNdcBounds(centre, depth, radius, tanLo, tanHi, pad)`: maps a tangent `t` to NDC as `2(t − tanLo)/(tanHi − tanLo) − 1`. Update the existing tests to pass `(−tanHalf, tanHalf)`, and add `sphereNdcBounds maps through an off-axis window`: `tanLo=0, tanHi=2`, a sphere straddling tangent 1 → bounds centred on NDC 0.
+- [x] Implement, then `npm run typecheck:fast` and `npm test -- frustumRayAxis sphereNdcBounds horizonShell zoneOfAvoidance lightTime`.
+- [x] Eye check (controller): `#focus=body-earth` zoomed out to the cosmic horizon, and a zone-of-avoidance view, before/after. They must look identical.
+- [x] Commit.
 
 ### Task 2: The camera runtime owns the main-view frustum; the cursor ray reads it — review: yes
 
@@ -124,11 +124,11 @@ Update each `io.wesl` layout comment and the TS twins' offset constants.
 - `cursorRayBodyLocal(pose, pixel, viewportPx, frustum: ViewFrustum): BodyLocalRay`. It maps the pixel to NDC, then to tangents `rs = mix(tanLeft, tanRight, (ndcX+1)/2)` and `us = mix(tanDown, tanUp, (ndcY+1)/2)`.
 - `opticalCentrePx(frustum: ViewFrustum, viewportPx: Readonly<Vec2>): Vec2`, the CSS pixel the axis passes through (y-down). `surfaceZoomStep.ts:53` uses it as the cursorless anchor in place of `[w/2, h/2]`.
 
-- [ ] Test `opticalCentrePx is the canvas centre for a symmetric frustum`: `[800, 450]` for 1600×900.
-- [ ] Test `opticalCentrePx follows a shifted window`: `{tanLeft:-1, tanRight:3, tanDown:-1, tanUp:1}`, 400×200 → `[100, 100]`.
-- [ ] Test `cursorRayBodyLocal's ray through the optical centre is the forward column`, with an off-axis frustum (extend the existing test file).
-- [ ] Implement, then `npm run typecheck:fast` and the targeted tests (`cursorRay`, `surfaceZoom`, `draggedSurface`, `latchSurface`, `terrainPick`, `deriveView`, `stepCameraRuntime`).
-- [ ] Commit.
+- [x] Test `opticalCentrePx is the canvas centre for a symmetric frustum`: `[800, 450]` for 1600×900.
+- [x] Test `opticalCentrePx follows a shifted window`: `{tanLeft:-1, tanRight:3, tanDown:-1, tanUp:1}`, 400×200 → `[100, 100]`.
+- [x] Test `cursorRayBodyLocal's ray through the optical centre is the forward column`, with an off-axis frustum (extend the existing test file).
+- [x] Implement, then `npm run typecheck:fast` and the targeted tests (`cursorRay`, `surfaceZoom`, `draggedSurface`, `latchSurface`, `terrainPick`, `deriveView`, `stepCameraRuntime`).
+- [x] Commit.
 
 ### Task 3: Framing reads one framing window — review: yes
 
@@ -149,9 +149,9 @@ Update each `io.wesl` layout comment and the TS twins' offset constants.
   - `sphereFitDistance` uses `Math.atan(Math.min(framing.tanHalfX, framing.tanHalfY))`, the same value as today's `min(1, aspect)`.
 - **Keep `fovYRad` where it is a lens or rate, not a fit.** `resolveFocusMotion` and the geodesic `FocusMotion.fovYRad` path width keep the lens. `LiveCameraRuntime` keeps `fovYRad` for them.
 
-- [ ] No new test: this is a parameter sweep with identical numbers. Existing framing tests change only their arguments (`lensFramingWindow(fovY, aspect)`), never their expected values.
-- [ ] Implement, then `npm run typecheck:fast` and the targeted framing, saga and mission tests.
-- [ ] Commit.
+- [x] No new test: this is a parameter sweep with identical numbers. Existing framing tests change only their arguments (`lensFramingWindow(fovY, aspect)`), never their expected values.
+- [x] Implement, then `npm run typecheck:fast` and the targeted framing, saga and mission tests.
+- [x] Commit.
 
 ### Task 4: The HUD-stack hidden rule becomes a selector
 
@@ -159,8 +159,8 @@ Update each `io.wesl` layout comment and the TS twins' offset constants.
 
 **Interfaces:** `selectUiStackHidden(state: RootState): boolean`, which is `uiHidden || splashVisible || tourActive || takeover is an exhibit`, reading the same selectors App uses today.
 
-- [ ] No new test: a pure extraction, and the App interaction tests cover it.
-- [ ] Commit.
+- [x] No new test: a pure extraction, and the App interaction tests cover it.
+- [x] Commit.
 
 ### Task 5: Prep PR (controller)
 
