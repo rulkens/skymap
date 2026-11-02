@@ -1,0 +1,259 @@
+.root {
+  composes: wrap grid from '../../../../styles/layout.module.css';
+  row-gap: 3rem;
+  padding-block: var(--section-space) 3.5rem;
+}
+
+.line {
+  max-width: var(--measure-lead);
+  font-size: var(--text-lead);
+}
+
+.figure {
+  margin: 0;
+}
+
+.stage {
+  position: relative;
+}
+
+/* The view has no frame: its orbits thin out into the page, so the pieces float in the same space as Saturn. */
+.view {
+  position: relative;
+
+  & picture {
+    display: block;
+    mask-image: radial-gradient(ellipse 70% 72% at 50% 50%, #000 52%, transparent 100%);
+  }
+
+  & img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+.piece img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
+}
+
+/* A parameter's name in the address's own face and colour, then what it sets. */
+.tag {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  color: var(--site-text-dim);
+  font-size: var(--text-small);
+  white-space: nowrap;
+
+  & code {
+    color: var(--link-accent);
+    font-family: var(--font-family-mono);
+  }
+}
+
+.view .tag {
+  position: absolute;
+  top: 8%;
+  left: 6%;
+}
+
+/* Pointing at one half of a pair: its piece comes forward, the others fall back. */
+.view,
+.piece,
+.param {
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+.off {
+  opacity: 0.45;
+}
+
+/* The address: the one raised surface, laid over the view's foot. */
+.bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  margin-top: -2rem;
+  border: 1px solid rgb(232 238 255 / 0.22);
+  border-radius: 0.5rem;
+  background: rgb(14 17 26 / 0.86);
+  box-shadow: 0 1.25rem 3rem rgb(0 0 0 / 0.7);
+  backdrop-filter: blur(12px);
+  transition: border-color var(--duration-base) var(--ease-standard);
+
+  &:hover,
+  &:focus-within {
+    border-color: var(--link-accent);
+  }
+}
+
+.address {
+  flex: 1;
+  min-width: 0;
+  padding: 1rem 1.25rem;
+  /* An address field's own face and size, as AddressStrip's. */
+  font: 400 0.875rem / 1.6 var(--font-family-mono);
+  color: var(--site-text-faint);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.host {
+  color: var(--site-text-faint);
+}
+
+/* A parameter moves to the next line whole. */
+.param {
+  display: inline-block;
+  max-width: 100%;
+
+  & i {
+    font-style: normal;
+    color: var(--link-accent);
+  }
+
+  & b {
+    font-weight: 400;
+    color: var(--site-text-muted);
+  }
+}
+
+.param.on b {
+  color: var(--color-fg);
+}
+
+.caption {
+  margin-top: 1rem;
+}
+
+/*
+ * Wide, the words take four columns and the view the other eight; the card rises off the view's upper right and the
+ * clock hangs from its left edge into the gap beside the words, each near the size it has in the app.
+ */
+@media (min-width: 901px) {
+  .root {
+    align-items: center;
+  }
+
+  .words {
+    grid-column: 1 / span 4;
+    grid-row: 1;
+  }
+
+  .figure {
+    grid-column: 5 / -1;
+    grid-row: 1;
+  }
+
+  .piece {
+    position: absolute;
+    z-index: 1;
+  }
+
+  .card {
+    top: -12%;
+    right: -2%;
+    width: 30%;
+  }
+
+  .clock {
+    bottom: 16%;
+    left: -12%;
+    width: 46%;
+  }
+
+  /* Lean away from the pointer, as nearer layers would when the head moves; the card is the nearest. */
+  .piece > * {
+    transform: translate(
+      calc(var(--lean-x, 0) * var(--depth) * -1),
+      calc(var(--lean-y, 0) * var(--depth) * -1)
+    );
+    transition: transform 0.4s var(--ease-standard);
+  }
+
+  .clock {
+    --depth: 0.625rem;
+  }
+
+  .card {
+    --depth: 1.25rem;
+  }
+}
+
+/* Narrow, the view takes the window's width, the card stands over its right side and the clock over its foot. */
+@media (max-width: 900px) {
+  .stage {
+    display: grid;
+    margin-inline: calc(-1 * var(--gutter));
+  }
+
+  .view {
+    grid-area: 1 / 1;
+  }
+
+  .card {
+    grid-area: 1 / 1;
+    z-index: 1;
+    justify-self: end;
+    align-self: end;
+    width: 44%;
+    margin: 0 var(--gutter) -1rem 0;
+  }
+
+  .clock {
+    z-index: 1;
+    width: calc(100% - 2 * var(--gutter));
+    margin: 1.5rem auto 0;
+  }
+
+  .bar {
+    margin-top: 1rem;
+  }
+
+  .address {
+    padding: 0.75rem;
+  }
+}
+
+/* Wide, the pieces are nearer than the view: as the page scrolls they move against it, the card the most. */
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .card,
+    .clock {
+      animation: link-drift linear both;
+      animation-timeline: view();
+    }
+
+    .card {
+      --drift: 3rem;
+    }
+  }
+}
+
+@keyframes link-drift {
+  from {
+    translate: 0 var(--drift, 1.5rem);
+  }
+
+  to {
+    translate: 0 calc(-1 * var(--drift, 1.5rem));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piece > * {
+    transform: none;
+  }
+
+  .view,
+  .piece,
+  .param {
+    transition: none;
+  }
+}

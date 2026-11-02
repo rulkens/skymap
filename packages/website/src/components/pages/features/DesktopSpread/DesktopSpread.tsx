@@ -5,9 +5,8 @@
  * right, as they sit in the app; the three move apart a little as the page scrolls, and lean away from the
  * pointer, the nearer card the most, so the depth can be felt.
  */
-import type { PointerEvent } from 'react';
-
 import { fact } from '../../../../data/fact.ts';
+import { pointerLean } from '../../../../utils/pointerLean.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
@@ -27,17 +26,6 @@ const DISTANCE = fact('andromeda-distance').figure!;
 const RENDER_SIZES = '(max-width: 900px) 100vw, min(calc(83vw - 4rem), 64rem)';
 const PIECE_SIZES = '(max-width: 900px) 48vw, 20rem';
 
-// The pointer's place over the stage, -1 to 1 each way from its middle (0 once it leaves), for the pieces to lean by.
-const lean = (event: PointerEvent<HTMLDivElement>): void => {
-  const stage = event.currentTarget;
-  const box = stage.getBoundingClientRect();
-  const inside = event.type === 'pointermove';
-  const x = inside ? ((event.clientX - box.left) / box.width) * 2 - 1 : 0;
-  const y = inside ? ((event.clientY - box.top) / box.height) * 2 - 1 : 0;
-  stage.style.setProperty('--lean-x', x.toFixed(3));
-  stage.style.setProperty('--lean-y', y.toFixed(3));
-};
-
 function DesktopSpread({ title, line, href, label }: DesktopSpreadProps) {
   return (
     <section className={styles.root}>
@@ -51,7 +39,7 @@ function DesktopSpread({ title, line, href, label }: DesktopSpreadProps) {
         </div>
       </div>
       <figure className={styles.figure}>
-        <div className={styles.stage} onPointerMove={lean} onPointerLeave={lean}>
+        <div className={styles.stage} onPointerMove={pointerLean} onPointerLeave={pointerLean}>
           <div className={styles.render}>
             <Shot id={RENDER} sizes={RENDER_SIZES} />
           </div>

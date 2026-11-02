@@ -1688,6 +1688,47 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'The keys and mouse moves are the app’s own.',
     alt: 'A panel headed Navigation: drag to orbit the camera, wheel to zoom, H for the home view, F to focus, Esc to clear the selection and the search keys.',
   },
+  // Deep linking: one link taken apart. The view with the stars and labels off, and the card and the clock it opens with.
+  {
+    id: 'features-link-saturn',
+    link: 'focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,2.2e-14,0',
+    settings: {
+      hideLabels: true,
+      hideStructures: true,
+      hideGalaxyField: true,
+      hideCosmicWeb: true,
+      hideZoneOfAvoidance: true,
+      hideStars: true,
+      settleMs: 9000,
+    },
+    size: WIDE,
+    widths: [1920, 1280, 640],
+    title: 'Saturn and the orbits of its moons',
+    drawn: 'The planet’s position, its lit side and the tilt of its rings are computed for 7 October 2026 at 12:00 UTC; the ellipses are the moons’ orbits, drawn as lines.',
+    alt: 'Saturn with its rings nearly edge-on, inside the nested ellipses of its moons’ orbits, on black.',
+    credit: 'Saturn: Solar System Scope',
+  },
+  {
+    id: 'features-link-card',
+    link: 'focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,2.2e-14,0',
+    settings: INFO_CARD,
+    size: FEATURE,
+    widths: PIECE_WIDTHS,
+    title: 'Saturn’s card',
+    drawn: 'The distance is the camera’s, set by the link; the other figures are textbook values typed into the app.',
+    alt: 'The app’s card for Saturn, pinned: radius, distance, mass, gravity, day and year length, moons and a few lines about its rings.',
+  },
+  {
+    id: 'features-link-clock',
+    link: 'focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,2.2e-14,0',
+    // The pill alone: the toolbar around it is a wider, empty hit surface.
+    settings: { ui: true, element: '[aria-label="Time controls"] > div', settleMs: 6000 },
+    size: FEATURE,
+    widths: PIECE_WIDTHS,
+    title: 'The app’s clock',
+    drawn: 'The clock reads the moment the link sets.',
+    alt: 'The app’s clock: Now, a speed of one second a second, step and play buttons, and 2026-10-07 12:00 UTC.',
+  },
   // Cutouts: one subject on transparency. Stars and the galaxy field are off, so nothing else is in frame.
   {
     id: 'cut-voyager1',

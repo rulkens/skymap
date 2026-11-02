@@ -3,17 +3,15 @@ title: Features | Skymap
 description: What Skymap shows, in pictures and films. Places from a park in Copenhagen to the cosmic web, time, screens of all sizes and a link to every view.
 ---
 
-import AddressStrip from '../../../components/shared/links/AddressStrip/AddressStrip.tsx';
 import DesktopSpread from '../../../components/pages/features/DesktopSpread/DesktopSpread.tsx';
 import FeatureGallery from '../../../components/pages/features/FeatureGallery/FeatureGallery.tsx';
 import FeaturesHero from '../../../components/pages/features/FeaturesHero/FeaturesHero.tsx';
 import FeatureSection from '../../../components/shared/layout/FeatureSection/FeatureSection.tsx';
-import Figure from '../../../components/shared/media/Figure/Figure.tsx';
+import LinkSpread from '../../../components/pages/features/LinkSpread/LinkSpread.tsx';
 import Phone3D from '../../../components/shared/media/Phone3D/Phone3D.tsx';
 import RemoteDemo from '../../../components/shared/media/RemoteDemo/RemoteDemo.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
-import { siteShot } from '../../../data/siteShot';
 import { big, cosmicWeb, earth, milkyWay, missions, solarSystem, time } from './features.data';
 
 <FeaturesHero client:visible />
@@ -58,7 +56,4 @@ import { big, cosmicWeb, earth, milkyWay, missions, solarSystem, time } from './
   <RemoteDemo sizes="21rem" client:visible />
 </FeatureSection>
 
-<FeatureSection side="left" level={2} title="Deep linking" line="Every named object in Skymap has a unique link that you can share with friends, colleagues or on social media." href="/docs/guide/sharing/" label="Sharing a view">
-  <Figure id="guide-share-pose" sizes={big} showDrawn={false} />
-  <AddressStrip slot="small" hash={siteShot('guide-share-pose').link} />
-</FeatureSection>
+<LinkSpread title="Deep linking" line="Every named object in Skymap has a unique link that you can share with friends, colleagues or on social media." href="/docs/guide/sharing/" label="Sharing a view" client:visible />
