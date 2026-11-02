@@ -4,9 +4,10 @@
  * not there), each name a link to its data page beside the number of objects it gives the scene, as that table
  * counts them, and the count pointed at (the first, until then) stands large over the picture. Each picture is
  * a round window into the scene, no frame. Behind the title, the orbits of the stars round the Milky Way's
- * central black hole, one of the Stars sources, drift past more slowly than the page.
+ * central black hole, one of the Stars sources, drift past more slowly than the page. The title and the words
+ * under it (children) are the page's.
  */
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { fact } from '../../../../data/fact.ts';
 import { cx } from '../../../../utils/cx.ts';
@@ -14,26 +15,21 @@ import { dataRowPath } from '../../../../utils/dataRowPath.ts';
 import { revealDelay } from '../../../../utils/revealDelay.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import SectionHead from '../../../shared/layout/SectionHead/SectionHead.tsx';
-import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import { COUNT_LABEL, KINDS, WINDOW_SIZES } from './RealData.constants.ts';
 import styles from './RealData.module.css';
 
-function RealData() {
+type RealDataProps = { title: string; children: ReactNode };
+
+function RealData({ title, children }: RealDataProps) {
   return (
     <section className={styles.root} id="data">
       <div className={styles.orbits} aria-hidden>
         <Shot id="orbits-s-stars" sizes="(max-width: 900px) 44rem, 64rem" alt="" />
       </div>
-      <SectionHead title="Data you can count on" top>
-        <p>
-          Skymap places catalogued stars, galaxies and quasars in three dimensions. These are the
-          catalogues and the imagery it is built from.
-        </p>
-        <ObjLink size="small" hang href={sitePath('/science/#sources')}>
-          The sources, on the Science page
-        </ObjLink>
+      <SectionHead title={title} top>
+        {children}
       </SectionHead>
       <div className={styles.kinds}>
         {KINDS.map((kind, at) => {

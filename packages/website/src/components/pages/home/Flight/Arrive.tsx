@@ -8,18 +8,19 @@ import type { Ref } from 'react';
 import OpenApp from '../../../shared/links/OpenApp/OpenApp.tsx';
 import styles from './Arrive.module.css';
 
-type ArriveProps = { ref: Ref<HTMLDivElement> };
+/** `here` marks us on the picture; `invite` stands over Open app. */
+type ArriveProps = { ref: Ref<HTMLDivElement>; here: string; invite: string };
 
-function Arrive({ ref }: ArriveProps) {
+function Arrive({ ref, here, invite }: ArriveProps) {
   return (
     <div ref={ref} className={styles.arrive}>
       {/* Drawn on the picture, so they say nothing to a reader of the text alone. */}
       <span className={styles.horizon} aria-hidden="true" />
       <span className={styles.here} aria-hidden="true">
-        <span>You are here</span>
+        <span>{here}</span>
       </span>
       <div className={styles.words}>
-        <p>Try it yourself!</p>
+        <p>{invite}</p>
         <OpenApp />
       </div>
     </div>

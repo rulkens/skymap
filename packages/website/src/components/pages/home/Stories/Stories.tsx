@@ -6,12 +6,13 @@
  * cosmic web pulls back and the tour's caption slides in. The exhibit: the orbits open out, Jupiter settles on
  * its own orbit and the exhibit's title comes in from the side. All of it is CSS on the scroll. Narrow, under
  * reduced motion, or without scroll-driven animation nothing is pinned and each part sits by its picture.
+ * The words are the page's: the title, the line under it (children) and each part's.
  */
+import type { ReactNode } from 'react';
 
 import { HOME_LINKS } from '../../../../data/homeLinks.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
-import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
@@ -25,25 +26,27 @@ import {
   EXHIBIT_ACCENT,
 } from './Stories.constants.ts';
 
-function Stories() {
+type StoriesProps = {
+  title: string;
+  /** Each part's title, its line and its link's words; the exhibit's `guide` is its page in the docs. */
+  tour: { title: string; text: string; action: string };
+  exhibit: { title: string; text: string; action: string; guide: { label: string; href: string } };
+  children: ReactNode;
+};
+
+function Stories({ title, tour, exhibit, children }: StoriesProps) {
   return (
     <section className={styles.root} id="stories">
       <div className={styles.track}>
         <div className={styles.pin}>
           <div className={styles.words}>
-            <h2>Stories in the sky</h2>
-            <p className={styles.lead}>
-              Explore the universe through tours and exhibits, from the Voyager missions to the
-              cosmic web.
-            </p>
+            <h2>{title}</h2>
+            <div className={styles.lead}>{children}</div>
             <div className={cx(styles.part, styles.tourPart)} style={TOUR_ACCENT}>
-              <h3>The Long Way Out</h3>
-              <p>
-                The guided tour, from the Milky Way to the edge of the observable universe and back,
-                with a caption at every step.
-              </p>
+              <h3>{tour.title}</h3>
+              <p>{tour.text}</p>
               <ViewLink hang view={HOME_LINKS.tour}>
-                Start the tour
+                {tour.action}
               </ViewLink>
             </div>
           </div>
@@ -61,17 +64,14 @@ function Stories() {
             </figcaption>
           </figure>
           <div className={cx(styles.part, styles.exhibitPart)} style={EXHIBIT_ACCENT}>
-            <h3>Exhibits</h3>
-            <p>
-              One idea in one prepared view, such as the Solar System or the cosmic web, with notes
-              that say where the numbers come from.
-            </p>
+            <h3>{exhibit.title}</h3>
+            <p>{exhibit.text}</p>
             <div className={styles.links}>
               <ViewLink hang view={siteShot('stories-orbits').link}>
-                Open the Solar System exhibit
+                {exhibit.action}
               </ViewLink>
-              <ObjLink size="small" hang href={sitePath('/docs/guide/tours/')}>
-                Tours and exhibits
+              <ObjLink size="small" hang href={exhibit.guide.href}>
+                {exhibit.guide.label}
               </ObjLink>
             </div>
           </div>

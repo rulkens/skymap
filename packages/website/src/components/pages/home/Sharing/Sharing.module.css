@@ -9,7 +9,7 @@
   composes: wrap from '../../../../styles/layout.module.css';
 }
 
-.lead {
+.head p {
   max-width: var(--measure-lead);
   margin-bottom: 0;
   font-size: var(--text-lead);

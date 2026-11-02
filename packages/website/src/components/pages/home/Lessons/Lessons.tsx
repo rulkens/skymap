@@ -3,27 +3,36 @@
  * under the thing it asks about, cut out of its own view and floated on the page. The first two stand on one
  * horizon at one scale: a small Earth on 21 June and Jupiter eleven times wider, a hairline drawn between them as
  * the section scrolls in. Then Orion with the app's search riding over it, and
- * Andromeda. The questions are the classroom page's own (data/lessons.ts and its class features). The section
+ * Andromeda. The questions' views are the classroom page's own (data/lessons.ts and its class features). The section
  * stands on the field trip with no bus: Jezero crater across the window, the way in set in its sky, and
- * Perseverance, cut out with its shadow, driving up onto its own spot as the strip scrolls in.
+ * Perseverance, cut out with its shadow, driving up onto its own spot as the strip scrolls in. The words are
+ * the page's: the title, the line under it (children), each question's and the way in.
  */
+import type { ReactNode } from 'react';
+
 import { cx } from '../../../../utils/cx.ts';
-import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
-import { ANDROMEDA, EARTH, JUPITER, ORION, SCALE_LABEL } from './Lessons.constants.ts';
+import { SCALE_LABEL, VIEWS } from './Lessons.constants.ts';
 import LessonAsk from './LessonAsk.tsx';
 import styles from './Lessons.module.css';
 
-function Lessons() {
+type LessonsProps = {
+  title: string;
+  /** Each question, its line and its link's words, keyed by the view that answers it. */
+  asks: Record<keyof typeof VIEWS, { ask: string; line: string; action: string }>;
+  /** The way into the classroom page, set in Jezero's sky. */
+  more: { label: string; href: string };
+  children: ReactNode;
+};
+
+function Lessons({ title, asks, more, children }: LessonsProps) {
   return (
     <section className={styles.root} id="classroom">
       <div className={styles.head}>
-        <h2>Use it in the classroom</h2>
-        <p>
-          Give the class a link and a question: a field trip with no bus, and nothing to install.
-        </p>
+        <h2>{title}</h2>
+        {children}
       </div>
       <div className={styles.near}>
         <figure className={styles.horizon}>
@@ -40,8 +49,8 @@ function Lessons() {
             <ShotCaption label={SCALE_LABEL} />
           </figcaption>
         </figure>
-        <LessonAsk {...EARTH} className={styles.first} />
-        <LessonAsk {...JUPITER} className={styles.second} />
+        <LessonAsk {...asks.earth} hash={VIEWS.earth} className={styles.first} />
+        <LessonAsk {...asks.jupiter} hash={VIEWS.jupiter} className={styles.second} />
       </div>
       <div className={styles.far}>
         <div className={styles.part}>
@@ -53,7 +62,7 @@ function Lessons() {
               <Shot id="ui-search" sizes="(max-width: 900px) 84vw, 26rem" alt="" />
             </div>
           </figure>
-          <LessonAsk {...ORION} />
+          <LessonAsk {...asks.orion} hash={VIEWS.orion} />
         </div>
         <div className={styles.part}>
           <figure className={styles.figure}>
@@ -61,7 +70,7 @@ function Lessons() {
               <Shot id="lesson-andromeda" sizes="(max-width: 900px) 100vw, 36rem" />
             </div>
           </figure>
-          <LessonAsk {...ANDROMEDA} />
+          <LessonAsk {...asks.andromeda} hash={VIEWS.andromeda} />
         </div>
       </div>
       <figure className={styles.mars}>
@@ -75,8 +84,8 @@ function Lessons() {
           <Shot id="lessons-perseverance" sizes="(max-width: 900px) 260vw, 100vw" alt="" />
         </div>
         <div className={styles.more}>
-          <ObjLink hang href={sitePath('/classroom/')}>
-            Use Skymap in the classroom
+          <ObjLink hang href={more.href}>
+            {more.label}
           </ObjLink>
         </div>
         <figcaption className={styles.marsCaption}>

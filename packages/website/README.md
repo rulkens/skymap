@@ -5,8 +5,9 @@ The companion site in Astro, React and MDX. `npm run site` serves it on port 580
 ## Where things live
 
 - `src/pages/` holds thin routes. A landing page's words are in `src/content/pages/<page>/<page>.mdx`, beside its
-  `<page>.structure.yaml` (the headings the built page must have) and any page data. The docs are
-  `src/content/docs/`.
+  `<page>.structure.yaml` (the headings the built page must have) and any page data. A section component takes
+  its words from there as string props, children or a named slot (`<Fragment slot="title">`), never as a JSX
+  prop, which blanks the page. The docs are `src/content/docs/`.
 - `src/components/` has four homes: `shared/` (used across pages: `layout/`, `links/`, `media/`, `text/`),
   `pages/<page>/` (one page's sections), `docs/` (the docs' parts) and `site/` (nav, footer, star field).
 - `src/data/` holds the facts and manifests the pages are written from. A lookup by an unknown id throws, so a page
