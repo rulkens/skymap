@@ -14,6 +14,13 @@ The companion site in Astro, React and MDX. `npm run site` serves it on port 580
 - `src/utils/` is one function per file, `src/@types/` one type per file, as in the app.
 - `src/dev/` is the dev overlay, never in a build (see below).
 
+## Code shape
+
+A component file (`<Name>.tsx`) or hook file (`use<Name>.ts`) declares only its component or hook and its own
+`Props`. Its module-level constants (data, maps, sizes, patterns) live in `<Name>.constants.ts` beside it, and a helper
+is a `utils/<fn>.ts` (`dev/<area>/<fn>.ts` in the dev overlay), or a component file of its own when it renders.
+`tests/packages/website/componentFilePurity.test.ts` holds every component and hook to this.
+
 ## Styles
 
 Each component has its own `<Name>.module.css`. What several share lives in `src/styles/` as a vocabulary: a module
