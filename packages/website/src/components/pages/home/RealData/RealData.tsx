@@ -22,7 +22,7 @@ import styles from './RealData.module.css';
 // The title of each is a group of the table, which picks its sources.
 // `accent` is taken from the picture: the survey's warm near end, starlight, the orbits' gold, Earth's blue.
 // `counts` names what the large number counts where a source's own count does not (`countNoun`).
-// `fact` stands a sourced figure there instead, for a kind whose sources give no count: how close, how sharp.
+// `fact` stands a sourced figure there instead, for a kind whose sources give no count: orbits fitted, levels of detail.
 const KINDS = [
   {
     group: 'Galaxies and quasars',
@@ -32,7 +32,7 @@ const KINDS = [
   },
   { group: 'Stars', counts: 'stars', shot: 'render-stars', accent: '#f1e2c4' },
   { group: 'Solar system', fact: 'sci-ephemeris', shot: 'lesson-solar-system', accent: '#d9c27a' },
-  { group: 'Imagery', fact: 'geodanmark-orthophoto', shot: 'earth-terminator', accent: '#8fb6ff' },
+  { group: 'Imagery', fact: 'pipe-earth-tiles', shot: 'earth-terminator', accent: '#8fb6ff' },
 ];
 
 // A square window cut from a wide picture shows its full height, so the file is chosen for 16/9 of the window.
