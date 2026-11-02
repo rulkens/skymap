@@ -8,11 +8,12 @@
  * letting the saga trigger the render effect.
  */
 
-import { takeEvery, getContext } from 'typed-redux-saga';
+import { take, takeEvery, getContext } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
 import { settingsRoute, cameraRoute, timeRoute, tierRoute, viewCoverRoute } from '../constants';
 import type { ReconcileEffects } from './ReconcileEffects';
+import { sagaContextRegistered } from '../sagaContextRegistered';
 
 // WAKE_ROUTES — the registry of store routes whose writes affect the drawn
 // scene and must poke the passive render-on-demand scheduler. Settings, camera,
@@ -55,6 +56,10 @@ const isWakeWrite = (a: Action): boolean =>
   typeof a.type === 'string' && WAKE_ROUTES.has(a.type.split('/')[0]!);
 
 export function* watchWakeSaga() {
+  // A wake write can precede the engine (the phone cover probe measures on mount), and
+  // `getContext` is undefined until then; that throw would cancel every saga. The
+  // engine's first frame reads the store anyway, so earlier writes need no wake.
+  yield* take(sagaContextRegistered);
   yield* takeEvery(isWakeWrite, function* () {
     const fx = yield* getContext<ReconcileEffects>('reconcile');
     fx.requestRender();
