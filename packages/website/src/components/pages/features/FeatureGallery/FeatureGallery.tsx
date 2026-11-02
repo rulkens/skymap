@@ -12,7 +12,7 @@
 import type { CSSProperties } from 'react';
 import { useCallback } from 'react';
 
-import type { FeatureSlide } from '../../../../@types/FeatureSlide.ts';
+import type { FeatureSlide } from '../../../../@types/FeatureSlide';
 import { fact } from '../../../../data/fact.ts';
 import { SITE_LOOPS } from '../../../../data/siteLoops.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
