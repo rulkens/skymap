@@ -6,10 +6,10 @@
  */
 
 import type { RotationElements } from '../../@types/scene/RotationElements';
-import { LAYER_BODY_ROWS } from './layerBodyRows';
+import { APP_BODY_REGISTRY } from '../../compositions/appBodies';
 
 export function rotationRowById(id: string): RotationElements | null {
   return ROTATION_ELEMENTS.find((el) => el.id === id) ?? null;
 }
 
-export const ROTATION_ELEMENTS: readonly RotationElements[] = LAYER_BODY_ROWS.flatMap((row) => row.rotation ?? []);
+export const ROTATION_ELEMENTS: readonly RotationElements[] = APP_BODY_REGISTRY.flatMap((row) => row.rotation ?? []);

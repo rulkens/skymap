@@ -93,7 +93,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       sourceBgl,
       focusBgl,
       focusUniform,
-      store: deps.cb.store,
+      settings: () => deps.cb.store.getState().settings,
+      debugPanelOpen: () => deps.cb.store.getState().ui.debugPanelOpen,
       requestRender,
     };
     // Facts is erased to `undefined` at this boundary (`Layer<string, unknown>`), so

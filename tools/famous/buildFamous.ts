@@ -29,7 +29,7 @@ import {
   encodeGalaxyCatalog,
   GALAXY_CATALOG_DATA_PREFIX,
 } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import { resolveFamousOrientation } from './resolveFamousOrientation';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalaxyMetaEntry';

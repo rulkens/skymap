@@ -19,7 +19,8 @@ import {
   setStarCatalogChunkSlotsOverride,
 } from '../state/starCatalogs/slice';
 import { selectTier } from '../../../state/tier/selectors';
-import { SOURCE_REGISTRY, Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
+import { STAR_CATALOG_SOURCE_RECORD } from '../sources/starCatalogSourceRecord';
 import { selectStarChunkSlotsError } from '../../../state/engine/selectors';
 import type { StarCatalogTuningKey } from '../@types/StarCatalogTuningKey';
 
@@ -48,8 +49,7 @@ function StarCatalogTuningSectionContainer(): React.ReactElement {
 
   const slotError = useAppSelector(selectStarChunkSlotsError);
   const tier = useAppSelector(selectTier);
-  const gaia = SOURCE_REGISTRY[Source.GaiaStars];
-  const tierSlots = gaia.type === 'starCatalog' ? gaia.budgets[tier].slots : 0;
+  const tierSlots = STAR_CATALOG_SOURCE_RECORD[Source.GaiaStars].budgets[tier].slots;
 
   return (
     <StarCatalogTuningSection

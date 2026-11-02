@@ -12,7 +12,7 @@
  */
 
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 
 export type HorizonShellRenderer = {
   /** Human-readable identifier (`'horizonShellRenderer'`). */
@@ -21,14 +21,14 @@ export type HorizonShellRenderer = {
    * Issue the fullscreen-quad draw.  Encodes the uniform write and a
    * single `draw(6, 1)` call.  The shell is a sphere of fixed radius
    * (the comoving particle-horizon distance) centred at the world
-   * origin, intersected analytically per-pixel; the renderer derives
-   * the camera basis + FOV from `cam` to build the view rays.
+   * origin, intersected analytically per-pixel; the view rays come from
+   * `cam`'s basis spanned by `frustum` (the view's, so they match its `vp`).
    *
-   * `fadeAlpha` is the distance-fade in `[0, 1]` (see
-   * `render/horizonShellFadeAlpha`); the fragment shader multiplies it
-   * into the additive contribution so the shell ramps in with pull-back.
+   * `fadeAlpha` in `[0, 1]` is the pass's handed fade (the switch times the
+   * reach band in `visibility.ts`); the fragment shader multiplies it into
+   * the additive contribution so the shell ramps in with pull-back.
    */
-  draw(pass: GPURenderPassEncoder, cam: OrbitCamera, viewport: Vec2, fadeAlpha: number): void;
+  draw(pass: GPURenderPassEncoder, cam: OrbitCamera, frustum: ViewFrustum, fadeAlpha: number): void;
   /** Release the GPU buffers backing the uniform block. */
   destroy(): void;
 };

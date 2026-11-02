@@ -11,7 +11,7 @@
  * (the InfoCard never wires `CardHeader`'s `onFocus` for this arm).
  */
 export type ZoneOfAvoidanceInfo = {
-  /** Union tag — mirrors the SOURCE_REGISTRY 'zoneOfAvoidance' row type; what
+  /** Union tag — mirrors the APP_SOURCE_REGISTRY 'zoneOfAvoidance' row type; what
    *  every FocusableTarget table / guard keys on. */
   readonly type: 'zoneOfAvoidance';
   /** Headline shown in the InfoCard / palette row. */

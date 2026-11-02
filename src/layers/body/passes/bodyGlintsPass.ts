@@ -19,7 +19,7 @@ import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyGlintPick } from '../../../@types/rendering/bodyPickRenderer/BodyGlintPick';
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { bodySceneBodyPartition } from '../present/bodySceneBodyPartition';
@@ -33,7 +33,11 @@ import { bodyGlintBackdropFade } from '../../../utils/scene/bodyGlintBackdropFad
 import { packBodyGlints } from '../../../utils/scene/packBodyGlints';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../data/labels/solarSystemLabelMaxDistance';
+import { bandValueOf } from '../../../services/engine/presentation/bandValueOf';
+import { bodyVisibility } from '../visibility';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { EARTH_ENTRY } from '../sources/earth';
+import { PLANET_ENTRY } from '../sources/planet';
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
 import { MAX_GLINTS } from '../../../services/gpu/renderers/bodies/bodyGlintRenderer';
 import { BODY_GLINT_INSTANCE_FLOATS } from '../../../data/rendering/bodyGlintInstanceFloats';
@@ -42,9 +46,9 @@ import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 // Reused every frame: the hot path allocates nothing.
 const staging = new Float32Array(MAX_GLINTS * BODY_GLINT_INSTANCE_FLOATS);
 
-/** `pickEnabled` and `drawPick` must agree on the Earth caption gate, so it is spelled once. */
-function earthCaptionPickable(ctx: FrameView): boolean {
-  return ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC;
+/** Picks follow the captions, so `pickEnabled` and `drawPick` read the caption's own band. */
+function captionShown(ctx: FrameView, item: string): boolean {
+  return bandValueOf(visibilityEntryOf(bodyVisibility, 'label:body'), item, ctx) > 0;
 }
 
 export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
@@ -65,7 +69,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       const backdropFade = bodyGlintBackdropFade(ctx.drawCamPos, sceneBodyStates(state, ctx));
       return (
         (backdropFade > 0 && bodySceneBodyPartition(state, ctx, runtime).glints.length > 0) ||
-        earthCaptionPickable(ctx)
+        captionShown(ctx, EARTH_ENTRY.id)
       );
     },
 
@@ -100,7 +104,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
     // a sub-pixel planet stays pickable. Each id carries the STABLE `SCENE_PLANETS`
     // index (the `Source.Planet` code `planetsPass` also stamps), not its partition
     // slot, which shifts as a body crosses `BODY_GLINT_MAX_PX`. Pick follows the
-    // visible AFFORDANCE: within the caption range that is the body's flat-gated
+    // visible AFFORDANCE: while the caption band is above 0 that is the body's
     // label, so a glint dissolved to 0 stays clickable there; beyond it the skip
     // recomputes `draw`'s EXACT brightness against `GLINT_MIN_BRIGHTNESS`. Each point
     // carries a priority class (`glintBandClass`: 0 earth, 1 planet, 2 moon) that the
@@ -116,14 +120,15 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       const camPos = view.camPos;
       // The same far-dissolve alpha `draw` folds in, hoisted (per-frame constant).
       const backdropFade = bodyGlintBackdropFade(camPos, states);
+      const planetCaptionShown = captionShown(ctx, PLANET_ENTRY.id);
       const pickPoints: BodyGlintPick[] = [];
 
       // Earth is not in the partition (it rides `SCENE_EARTH`), so without this stamp the
       // Moon's 18 px footprint would own the area and steal the click. Class 0 is the
-      // shallowest band (`lib/pickDepthBands.wesl`). Gated on the caption range, not
+      // shallowest band (`lib/pickDepthBands.wesl`). Gated on the caption band, not
       // `earthPass.enabled`, which dies ten orders of magnitude earlier while the label
       // still shows; the stamp writes the SAME `Source.Earth` id the sphere pick does.
-      if (earthCaptionPickable(ctx)) {
+      if (captionShown(ctx, EARTH_ENTRY.id)) {
         const earthPos = states.get(SCENE_EARTH.id)!.positionMpc;
         pickPoints.push({
           posRelCamMpc: [
@@ -142,7 +147,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
 
         const positionMpc = states.get(body.id)!.positionMpc;
 
-        // Beyond the caption range no label invites the click, so a glint that renders
+        // Past the caption band no label invites the click, so a glint that renders
         // no pixels (unlit side, faded at the 3 px crossover, far-dissolved) must not
         // claim a pick footprint; within it the label carries the click.
         const diameterPx = bodyApparentDiameterPx({
@@ -158,11 +163,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
           diameterPx,
           backdropFade,
         );
-        if (
-          brightness <= GLINT_MIN_BRIGHTNESS &&
-          ctx.cam.distance >= SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC
-        )
-          continue;
+        if (brightness <= GLINT_MIN_BRIGHTNESS && !planetCaptionShown) continue;
 
         pickPoints.push({
           posRelCamMpc: [

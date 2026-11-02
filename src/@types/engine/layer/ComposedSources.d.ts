@@ -3,7 +3,7 @@ import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 
 /**
- * Every Layer's `SOURCE_REGISTRY` rows, composed into one record keyed by source code.
+ * Every Layer's `APP_SOURCE_REGISTRY` rows, composed into one record keyed by source code.
  * Type only — `composeSources(layers)` is D11's runtime fold and lands with PR-C's
  * source-row move (Ruling 8); nothing here has a consumer yet.
  */

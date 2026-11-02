@@ -2,7 +2,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 import type { StructureScale } from './StructureScale';
 
 /**
- * Structure-typed SOURCE_REGISTRY row — the marker-ring codes (galaxy cluster,
+ * Structure-typed APP_SOURCE_REGISTRY row — the marker-ring codes (galaxy cluster,
  * supercluster, void, galaxy group, and the Milky Way ones). No `.bin`, bands, or
  * depth, so it just adds `code` to the base. The `'structure'` discriminator covers
  * exactly the marker-ring set: famousGalaxy is also clickable but rides the

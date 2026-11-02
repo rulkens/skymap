@@ -23,9 +23,11 @@ import { createGalaxyPointRenderer } from '../../../../src/layers/galaxyCatalog/
 import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/@types/BuildRunner';
 import { VIEW_SLOT_COUNT } from '../../../../src/utils/gpu/createViewSlotUniformRing';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { Mat4 } from 'wgpu-matrix';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
@@ -35,8 +37,8 @@ const STATS = { magOffset: 0, medianAbsMag: -20.5 };
 // GalaxyPointRenderer keys its catalogs by the string `GalaxyCatalogId`; these
 // tests still reason in terms of the numeric `Source` codes, so resolve the
 // id at each upload call site through the registry.
-function idOf(source: (typeof Source)[keyof typeof Source]): GalaxyCatalogId {
-  return SOURCE_REGISTRY[source].id as GalaxyCatalogId;
+function idOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
+  return GALAXY_CATALOG_SOURCE_RECORD[source].id;
 }
 
 // `GPUBufferUsage` and friends come from the shared

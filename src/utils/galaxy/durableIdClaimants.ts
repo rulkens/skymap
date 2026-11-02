@@ -1,7 +1,7 @@
 import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
 import type { GalaxyDurableIdClaim } from '../../@types/data/galaxyCatalog/GalaxyDurableIdClaim';
 import type { GalaxyRecordSource } from '../../@types/data/galaxyCatalog/GalaxyRecordSource';
-import { SOURCE_REGISTRY } from '../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
 
 /**
  * The record sources whose registry row claims `prefix` ids, lowest rank first:
@@ -12,7 +12,7 @@ export function durableIdClaimants(
   prefix: GalaxyDurableIdClaim['prefix'],
 ): GalaxyRecordSource[] {
   const claimOf = (record: GalaxyRecordSource) =>
-    (SOURCE_REGISTRY[record.source] as GalaxyCatalogSourceEntry).durableId;
+    (APP_SOURCE_REGISTRY[record.source] as GalaxyCatalogSourceEntry).durableId;
   return [...records]
     .filter((record) => claimOf(record)?.prefix === prefix)
     .sort((a, b) => claimOf(a)!.rank - claimOf(b)!.rank);

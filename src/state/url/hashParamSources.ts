@@ -54,8 +54,8 @@
  *
  * `focus` narrows one step further, to `setSelectionRow` FOR THE FOCUS SLOT.
  * That action is the sole writer of all three derived rows, and the row's
- * `write` reads exactly one of them (`selectionRows.focus`, via
- * `selectFocusedFocusable`) — so the hover and select slots re-admit through the
+ * `write` reads exactly one of them (`selectionRows.focus` and the
+ * `focusId` landed with it) — so the hover and select slots re-admit through the
  * derived cache precisely the pointer-rate stream the named-action list exists
  * to keep out. Slot-blind, the list would be a `selection/*` prefix wearing a
  * disguise.
@@ -78,7 +78,7 @@ import type { Action } from '@reduxjs/toolkit';
 import type { HashParamSource } from '../../@types/state/url/HashParamSource';
 import { requestFocus } from '../selection/requestFocus';
 import { clearSelection } from '../selection/selectionSlice';
-import { selectFocusedFocusable, selectPendingFocusId } from '../selection/selectors';
+import { selectFocusId, selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { selectOrientation } from '../settings/selectors';
 import { setOrientation } from '../settings/core/orientationSlice';
@@ -93,7 +93,6 @@ import { EARTH_REF } from '../../data/selection/earthRef';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { isOrientationFrameId } from '../../utils/url/isOrientationFrameId';
 import { decodeFramedPose } from '../../utils/url/decodeFramedPose';
-import { focusIdOf } from '../../utils/selection/focusIdOf';
 
 /**
  * The `focus` row's third trigger: the derived-cache write, narrowed to the ONE
@@ -106,8 +105,8 @@ const isFocusSlotRow = (action: Action): boolean =>
   setSelectionRow.match(action) && action.payload.slot === 'focus';
 
 /**
- * `focus` — the selected/framed target. The write reuses `URL_HASH_FOR` (the
- * FocusableTarget → id-segment codec); the read names the subject, which
+ * `focus` — the selected/framed target. The write publishes the focus id the
+ * reconciler stored beside the focus row; the read names the subject, which
  * `navigateSaga` turns into a scene click plus a focus.
  *
  * Absence clears the selection — but only on a hashchange, which the reading
@@ -142,8 +141,8 @@ const focusSource: HashParamSource = {
     const pendingId = selectPendingFocusId(state);
     if (pendingId !== null) return pendingId;
 
-    const focused = selectFocusedFocusable(state);
-    if (focused === null) return null;
+    const focusId = selectFocusId(state);
+    if (focusId === null) return null;
 
     // Earth is the boot 'home' state: `wireInput` seeds it into focus so the
     // camera frames Earth, but home is the canonical EMPTY URL. Like the
@@ -154,11 +153,12 @@ const focusSource: HashParamSource = {
     // explicit `body-earth` from an old shared link still resolves on arrival.
     // The `EARTH_REF.type === 'body'` clause is a discriminant narrow (always
     // true) that lets TS reach `.id` on both tagged unions.
-    if (focused.type === 'body' && EARTH_REF.type === 'body' && focused.id === EARTH_REF.id) {
+    const focusRow = selectFocusRow(state);
+    if (focusRow?.type === 'body' && EARTH_REF.type === 'body' && focusRow.id === EARTH_REF.id) {
       return null;
     }
 
-    return focusIdOf(focused);
+    return focusId;
   },
   read: (value) => ({ view: { kind: 'focus', id: value } }),
   readAbsent: () => [clearSelection()],

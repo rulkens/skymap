@@ -7,7 +7,7 @@ import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequest
 import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { selectionRoute } from '../../../src/store/constants';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';

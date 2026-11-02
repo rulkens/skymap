@@ -1,4 +1,4 @@
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 
 /** Shared by the disk's selection row, label and emphasis, so they cannot drift. */

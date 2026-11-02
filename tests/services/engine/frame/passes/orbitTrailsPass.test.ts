@@ -19,7 +19,7 @@ import { mat4d } from 'wgpu-matrix';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
 import { orbitTrailsPass } from '../../../../../src/services/engine/frame/passes/orbitTrailsPass';
 import { gateOrbitTrailGroup } from '../../../../../src/services/engine/layer/gateOrbitTrailGroup';
-import { APP_VISIBILITY } from '../../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../../src/compositions/appVisibility';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -138,7 +138,12 @@ const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
 // cull stays enabled and `distance` alone drives the gate assertions.
 function makeCtx(distance: number): FrameView {
   return {
-    snapshot: { nowMs: 0, meshBodies: [], sceneBodies: sceneBodiesAt(CONST_J2000) },
+    snapshot: {
+      nowMs: 0,
+      meshBodies: [],
+      sceneBodies: sceneBodiesAt(CONST_J2000),
+      bodyStates: deriveBodyStates(CONST_J2000),
+    },
     cam: { distance },
     drawCamPos: [0, 0, 0],
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -153,6 +158,7 @@ function makeCtx(distance: number): FrameView {
 function makeDrawCtx(): FrameView {
   return {
     snapshot: {
+      bodyStates: deriveBodyStates(CONST_J2000),
       meshBodies: [],
       sceneBodies: sceneBodiesAt(CONST_J2000),
       simDays: CONST_J2000,
@@ -220,6 +226,7 @@ function makeNear0View(sampledRow: Slab | null = makeDepthRow()): SlabView {
 function makeEyeCtx(simDays: number, eye: Vec3): FrameView {
   return {
     snapshot: {
+      bodyStates: deriveBodyStates(simDays),
       meshBodies: [],
       sceneBodies: sceneBodiesAt(simDays),
       simDays,
@@ -287,7 +294,7 @@ describe('orbitTrailsPass.enabled', () => {
     // wholesale at galaxy zoom. Gate edge + a decade beyond, both derived so a
     // farther seed growing the gate carries.
     const gateState = {
-      visibilityEntries: APP_VISIBILITY,
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
       subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
     } as unknown as EngineState;
     const groups = [
@@ -311,7 +318,12 @@ describe('orbitTrailsPass.enabled', () => {
     // pass plan instead of packing zero records.
     const state = makeState(makeRendererSpy());
     const ctx = {
-      snapshot: { simDays: CONST_J2000, meshBodies: [], sceneBodies: sceneBodiesAt(CONST_J2000) },
+      snapshot: {
+        bodyStates: deriveBodyStates(CONST_J2000),
+        simDays: CONST_J2000,
+        meshBodies: [],
+        sceneBodies: sceneBodiesAt(CONST_J2000),
+      },
       cam: { distance: 1e-6 },
       drawCamPos: [1e-6, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -325,7 +337,12 @@ describe('orbitTrailsPass.enabled', () => {
     // region cull can drop the layer; the AU-to-lunar trails are ~1e-5 px there.
     const state = makeState(makeRendererSpy());
     const ctx = {
-      snapshot: { simDays: CONST_J2000, meshBodies: [], sceneBodies: sceneBodiesAt(CONST_J2000) },
+      snapshot: {
+        bodyStates: deriveBodyStates(CONST_J2000),
+        simDays: CONST_J2000,
+        meshBodies: [],
+        sceneBodies: sceneBodiesAt(CONST_J2000),
+      },
       cam: { distance: 8.178e-3 },
       drawCamPos: [8.178e-3, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -514,6 +531,7 @@ describe('orbitTrailsPass.draw', () => {
     // the one conic whose centre rides ~1 AU out on Earth.
     const ctx = {
       snapshot: {
+        bodyStates: deriveBodyStates(simDays),
         meshBodies: [],
         sceneBodies: sceneBodiesAt(simDays),
         simDays,
@@ -721,6 +739,7 @@ describe('orbitTrailsPass.draw', () => {
     const earthPos = deriveBodyStates(simDays).get(asSceneBodyId('earth'))!.positionMpc;
     const ctx = {
       snapshot: {
+        bodyStates: deriveBodyStates(simDays),
         meshBodies: [],
         sceneBodies: sceneBodiesAt(simDays),
         simDays,
@@ -779,6 +798,7 @@ describe('orbitTrailsPass.draw', () => {
     const renderer = makeRendererSpy();
     const farCtx = {
       snapshot: {
+        bodyStates: deriveBodyStates(CONST_J2000),
         simDays: CONST_J2000,
         focusBlend: 0,
         nowMs: 0,

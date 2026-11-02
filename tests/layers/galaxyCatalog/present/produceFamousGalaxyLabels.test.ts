@@ -9,7 +9,7 @@ import {
   MIN_LABEL_CLEARANCE_PX,
 } from '../../../../src/services/engine/presentation/leaderLineStyle';
 import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import {
   packSelection,
   PICK_SENTINEL_OFFSET,

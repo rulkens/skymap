@@ -26,6 +26,7 @@ import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusU
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -73,6 +74,7 @@ function makeState(
       orientation: 'equatorial',
       bodies: { items: {} },
     },
+    selection: { hover: null, select: null, focus: null },
     selectionRows: { hover: null, select: null, focus: null },
     selectionKindRows: overrides.selectionKindRows ?? [],
     slabRows: [],
@@ -83,6 +85,7 @@ function makeState(
       outputs: {
         displayed: absoluteArm(LAST_POSE),
         projection: PROJECTION,
+        frustum: symmetricFrustum(PROJECTION.fovYRad, PROJECTION.aspect),
         simDays: LAST_SIM_DAYS,
         upBasis: ORIENTATION_FRAMES.equatorial,
       },
@@ -129,6 +132,7 @@ describe('pickFrameContext', () => {
         // simDays does not affect the view-projection this test compares; any
         // valid epoch reproduces the same vp.
         simDays: 0,
+        bodyStates: deriveBodyStates(0),
       },
       { width: canvas.width, height: canvas.height },
     );

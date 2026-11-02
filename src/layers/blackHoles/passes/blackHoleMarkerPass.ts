@@ -14,7 +14,7 @@ import type { BodyPointPick } from '../../../@types/rendering/bodyPickRenderer/B
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BlackHolesRuntime } from '../@types/BlackHolesRuntime';
 import { BLACK_HOLES } from '../data/blackHoles';
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';

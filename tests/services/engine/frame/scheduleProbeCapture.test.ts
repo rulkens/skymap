@@ -45,6 +45,7 @@ function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
   const positionMpc = deriveBodyStates(SIM_DAYS).get(asSceneBodyId(bodyId))!.positionMpc;
   return {
     snapshot: {
+      bodyStates: deriveBodyStates(SIM_DAYS),
       simDays: SIM_DAYS,
       nowMs,
       meshBodies: SCENE_MESH_BODIES,

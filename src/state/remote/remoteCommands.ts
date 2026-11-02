@@ -6,7 +6,7 @@
  */
 
 import type { UnknownAction } from '@reduxjs/toolkit';
-import { APP_EXHIBITS } from '../../compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { RATE_LADDER } from '../../data/time/rateLadder';
@@ -44,7 +44,8 @@ function parsePaletteAction(raw: unknown): PaletteAction | undefined {
     }
     case 'exhibit': {
       const { exhibitId } = raw;
-      if (typeof exhibitId !== 'string' || !isKeyOf(APP_EXHIBITS, exhibitId)) return undefined;
+      if (typeof exhibitId !== 'string' || !isKeyOf(APP_EXHIBIT_REGISTRY, exhibitId))
+        return undefined;
       return { kind: 'exhibit', exhibitId };
     }
     case 'tour': {

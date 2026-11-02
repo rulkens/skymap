@@ -1,6 +1,6 @@
 ---
 name: add-famous
-description: Use when adding a galaxy to skymap's famous layer — the named Messier/Caldwell/notable galaxies that get a thumbnail quad on close approach and a rich InfoCard. Triggers like "/add-famous", "add a famous galaxy", "add M64 to the famous catalog", "curate a new galaxy thumbnail", or "put NGC 5128 in the famous layer". Also for re-curating an existing famous galaxy's thumbnail.
+description: Use when adding a galaxy to skymap's famous layer — the named Messier/Caldwell/notable galaxies that get a thumbnail quad on close approach and a rich InfoCard. Triggers like "/add-famous", "add a famous galaxy", "add M64 to the famous catalog", "curate a new galaxy thumbnail", or "put NGC 5128 in the famous layer". Also for re-curating an existing famous galaxy's thumbnail, and for adding a named star to the famous-star seed.
 ---
 
 # `/add-famous` — add a galaxy to the famous layer
@@ -328,6 +328,28 @@ the hi-res tile.
   checkout first.
 - About to commit `mask.jpg` or a `.tmp/` dir → stop; those are gitignored
   scratch (if they appear, the gitignore rule regressed — fix that, don't commit).
+
+## Famous stars — a separate seed
+
+Named stars use none of the galaxy steps above. Their seed is
+`data/seeds/famous_stars.seed.json`; `npm run build-famous-stars` regenerates
+`src/data/bodies/famousStars.generated.ts` and
+`tools/stars-rs/src/famous_ids.generated.rs`. Never hand-edit either generated
+file; commit seed and generated files together. Curation traps:
+
+- **RA from SIMBAD's HMS, not a WebFetch summary**: summaries drop the ×15
+  hours→degrees factor.
+- **V ≲ 2.5 stars are mostly Gaia-saturated**: `gaiaDr3` stays null and the
+  entry gets a `gaiaDr3Note`.
+- **Known duplicates**: adding any of η Cas (HIP 3821), δ Pav, β Hyi, χ Dra,
+  π³ Ori, μ Her, γ Lep or δ Eri to the seed would duplicate them.
+- **Dedup against Gaia**: a candidate is a duplicate when separation < 0.5 pc
+  AND |Δm| < 0.7 (a flat tolerance false-positives on distant stars). Scan
+  tooling must decode positions with `src/utils/math/mortonDecode3.ts`; a
+  hand-rolled decode corrupts z.
+- **Famous/HIP subtraction from the star bins happens only in `stars-rs`**
+  (via `famous_ids.generated.rs`); the TS path deliberately has no twin, so
+  don't port one.
 
 ## Related skills
 

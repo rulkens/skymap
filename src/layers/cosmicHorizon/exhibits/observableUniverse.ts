@@ -17,7 +17,7 @@ import { HORIZON_RADIUS_MPC } from '../data/horizonRadiusMpc';
 export const observableUniverse: Exhibit = {
   id: 'observableUniverse',
   label: 'Observable Universe',
-  settings: {},
+  settings: { cosmicHorizon: { enabled: true } },
   fitRadiusMpc: HORIZON_RADIUS_MPC,
   pose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 28600 },
   lede: 'Everything whose light has had time to reach us since the Big Bang. The shell is the far edge of that — a sphere some 46 billion light-years in every direction, centred on us.',

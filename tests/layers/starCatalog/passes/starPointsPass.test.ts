@@ -15,13 +15,11 @@ import { mat4 } from 'wgpu-matrix';
 import { starPointsPass } from '../../../../src/layers/starCatalog/passes/starPointsPass';
 import { gateOrbitTrailGroup } from '../../../../src/services/engine/layer/gateOrbitTrailGroup';
 import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes/index';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
-import { STAR_BACKDROP_DISSOLVE } from '../../../../src/layers/starCatalog/data/starBackdropDissolve';
-import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../src/utils/math/narrowMat4';
 import { starExposureRamp } from '../../../../src/utils/star/starExposureRamp';
@@ -33,7 +31,7 @@ import { positionedSeededStars } from '../../../../src/layers/starCatalog/presen
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../src/utils/camera/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../src/data/famousStarPickRadiusPx';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { makeSlab } from '../../../fixtures/makeSlab';
@@ -114,10 +112,13 @@ function makeCtx(
   } as unknown as FrameView;
 }
 
-// A camera 5 kpc down +z, inside the backdrop-dissolve band's live range (goneAt ~0.023 Mpc)
-// — yet still parsecs beyond every
-// seeded star, so all 24 non-Sun neighbours stay sub-pixel points.
+// A camera 5 kpc down +z, parsecs beyond every seeded star, so all 24 non-Sun neighbours
+// stay sub-pixel points.
 const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
+
+// 14 kpc out: every seeded star is a sub-pixel point, so the whole roster uploads, and the
+// exposure ramp is a genuine fraction there.
+const ROSTER_CAM_DISTANCE_MPC = 0.014;
 
 // Within MAX_ORBIT_EXTENT_MPC of the origin (Neptune's ~30 AU is ~1.5e-10 Mpc), so
 // orbitTrailsPass's sub-pixel bound treats every orbit as visible. NEAR_FIELD_CAM (5 kpc) is
@@ -196,16 +197,6 @@ describe('starPointsPass.enabled', () => {
     const seededOff = { famousStar: 0, gaiaStars: 1, sStar: 0, sun: 0 } as const;
     expect(pass.enabled(makeState(), makeCtx(NEAR_FIELD_CAM), VIEW_STUB, seededOff)).toBe(false);
   });
-
-  it('is disabled once the backdrop band has dissolved', () => {
-    // Just past the backdrop band's goneAt: the additive sprite field has faded to
-    // black, so the layer must disable outright (the "opacity 0 ⇒ no render" house
-    // rule) rather than draw invisible sprites and hold the (hdr, NEAR0) step open.
-    const beyondBand = STAR_BACKDROP_DISSOLVE.goneAt * 1.01;
-    const pass = starPointsPass(makeRuntime(makeRenderer()));
-    const state = makeState();
-    expect(pass.enabled(state, makeCtx([0, 0, beyondBand]), VIEW_STUB, ALL_ON)).toBe(false);
-  });
 });
 
 describe('the (hdr, NEAR0) render group above the foreground gate', () => {
@@ -215,7 +206,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
     // Both rows yield through their entries' bands, resolved here over the real entries with
     // every fade at 1.
     const gateState = {
-      visibilityEntries: APP_VISIBILITY,
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
       subsystems: {
         fades: { opacityOf: () => 1 },
         clipPlayer: { clipOpacityOf: () => 1 },
@@ -345,41 +336,8 @@ describe('starPointsPass.draw', () => {
     expect(renderer.draw).toHaveBeenCalledTimes(3);
   });
 
-  it('premultiplies each uploaded colour by the backdrop-dissolve alpha', () => {
-    // Camera parked mid-band (between the backdrop-dissolve fullAt and goneAt edges),
-    // where the dissolve alpha is a genuine fraction — the pin that fails if the
-    // scale is dropped (colours upload at full strength) or inverted. From ~14
-    // kpc every seeded star is a sub-pixel point, so the whole roster uploads.
-    const camDistMpc = (STAR_BACKDROP_DISSOLVE.fullAt + STAR_BACKDROP_DISSOLVE.goneAt) / 2;
-    const expectedFade = fadeBand(STAR_BACKDROP_DISSOLVE, camDistMpc);
-    expect(expectedFade).toBeGreaterThan(0);
-    expect(expectedFade).toBeLessThan(1);
-
-    const renderer = makeRenderer();
-    const camPos: Vec3 = [0, 0, camDistMpc];
-    const state = makeState();
-    starPointsPass(makeRuntime(renderer)).draw!(
-      PASS_STUB,
-      makeNear0View(camPos),
-      makeCtx(camPos),
-      state,
-      ALL_ON,
-    );
-
-    const uploaded = renderer.setStars.mock.calls[0]![0];
-    const uploadedProxima = uploaded.find((star) => star.id === PROXIMA.id)!;
-    expect(uploadedProxima.color).toEqual([
-      PROXIMA.color[0] * expectedFade,
-      PROXIMA.color[1] * expectedFade,
-      PROXIMA.color[2] * expectedFade,
-    ]);
-    expect(uploadedProxima.color).not.toEqual([...PROXIMA.color]);
-  });
-
   it('dims stars outside the focus sphere and leaves the focused one at full strength', () => {
-    const camDistMpc = (STAR_BACKDROP_DISSOLVE.fullAt + STAR_BACKDROP_DISSOLVE.goneAt) / 2;
-    const backdropFade = fadeBand(STAR_BACKDROP_DISSOLVE, camDistMpc);
-    const camPos: Vec3 = [0, 0, camDistMpc];
+    const camPos: Vec3 = [0, 0, ROSTER_CAM_DISTANCE_MPC];
     const focus: FocusUniformsValue = {
       center: PROXIMA.positionMpc,
       apparentRadiusMpc: 1e-6,
@@ -396,13 +354,12 @@ describe('starPointsPass.draw', () => {
     );
     const uploaded = renderer.setStars.mock.calls[0]![0];
     const colorOf = (id: string) => uploaded.find((star) => star.id === id)!.color;
-    expect(colorOf(PROXIMA.id)[0]).toBeCloseTo(PROXIMA.color[0] * backdropFade, 12);
-    expect(colorOf(SIRIUS.id)[0]).toBeCloseTo(SIRIUS.color[0] * backdropFade * 0.08, 12);
+    expect(colorOf(PROXIMA.id)[0]).toBeCloseTo(PROXIMA.color[0], 12);
+    expect(colorOf(SIRIUS.id)[0]).toBeCloseTo(SIRIUS.color[0] * 0.08, 12);
   });
 
   it("star points scale their colour by their catalog's value", () => {
-    const camDistMpc = (STAR_BACKDROP_DISSOLVE.fullAt + STAR_BACKDROP_DISSOLVE.goneAt) / 2;
-    const camPos: Vec3 = [0, 0, camDistMpc];
+    const camPos: Vec3 = [0, 0, ROSTER_CAM_DISTANCE_MPC];
     const colourOf = (fade: Record<keyof typeof ALL_ON, number>, id: string) => {
       const renderer = makeRenderer();
       starPointsPass(makeRuntime(renderer)).draw!(
@@ -424,11 +381,10 @@ describe('starPointsPass.draw', () => {
   });
 
   it('hands the renderer the sizePx slider and brightness × exposure-ramp factor', () => {
-    // Camera parked mid-band so the roster uploads and the exposure ramp is a
-    // genuine non-trivial factor. The layer must forward `starCatalogs.sizePx`
+    // The layer must forward `starCatalogs.sizePx`
     // verbatim and `brightness × starExposureRamp(camDistMpc, near, mid, far)` —
     // the SAME fold `starCatalogPass` applies — NOT the raw brightness trim.
-    const camDistMpc = (STAR_BACKDROP_DISSOLVE.fullAt + STAR_BACKDROP_DISSOLVE.goneAt) / 2;
+    const camDistMpc = ROSTER_CAM_DISTANCE_MPC;
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, camDistMpc];
     const state = makeState();
@@ -456,7 +412,7 @@ describe('starPointsPass.draw', () => {
   });
 
   it('uploads only the stars core admitted', () => {
-    const camDistMpc = (STAR_BACKDROP_DISSOLVE.fullAt + STAR_BACKDROP_DISSOLVE.goneAt) / 2;
+    const camDistMpc = ROSTER_CAM_DISTANCE_MPC;
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, camDistMpc];
     const state = makeState();

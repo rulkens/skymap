@@ -22,6 +22,8 @@
  */
 
 import { uiRoute } from '../../store/constants';
+import { selectTourActive } from '../tour/selectors';
+import { selectTakeoverSource } from '../takeover/selectors';
 import type { RootState } from '../../store/types';
 import type { UiState } from '../../@types/ui/UiState';
 import type { PaletteTabId } from '../../@types/palette/PaletteTabId';
@@ -40,3 +42,10 @@ export const selectSplashVisible = (state: RootState): boolean => selectUi(state
 
 export const selectSplashDismissedVersion = (state: RootState): number | null =>
   selectUi(state).splash.dismissedVersion;
+
+/** The HUD stack is faded out: hidden by Tab, under the splash, or yielded to a tour or exhibit. */
+export const selectUiStackHidden = (state: RootState): boolean =>
+  selectUiHidden(state) ||
+  selectSplashVisible(state) ||
+  selectTourActive(state) ||
+  selectTakeoverSource(state)?.kind === 'exhibit';

@@ -17,7 +17,7 @@ import {
   engineSourceCountReported,
   engineStatusChanged,
 } from '../../../../src/state/engine/engineSlice';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';

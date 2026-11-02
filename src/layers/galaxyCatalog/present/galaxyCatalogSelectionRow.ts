@@ -6,14 +6,14 @@
  * pgc-/sdss-/pos@/famous branches mutually exclusive (composeSelectionRows.ts).
  */
 
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
 type GalaxyCatalogRef = Extract<SelectionRef, { type: 'galaxyCatalog' }>;

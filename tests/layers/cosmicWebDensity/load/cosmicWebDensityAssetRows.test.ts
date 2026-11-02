@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
@@ -35,6 +35,7 @@ function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean): DemandCtx {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: 'medium',
+    selectedKinds: new Set(),
   };
 }
 

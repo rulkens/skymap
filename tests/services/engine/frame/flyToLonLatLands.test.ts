@@ -80,6 +80,7 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
           const p = h.bodies.get(ref.id)!.positionMpc;
           return { type: 'body', id: ref.id, label: ref.id, positionMpc: [p[0]!, p[1]!, p[2]!] };
         },
+        focusIdOf: () => null,
       },
     },
   };

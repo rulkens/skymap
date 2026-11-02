@@ -11,7 +11,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { createStarCatalogRenderer } from '../../../../src/layers/starCatalog/render/starCatalogRenderer';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
 import type { Octree } from '../../../../src/@types/octree/Octree';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';

@@ -65,6 +65,7 @@ export function scheduleProbeCapture(input: {
     nearMpc: row.nearMpc,
     nowMs: ctx.snapshot.nowMs,
     axes,
+    bodyStates: ctx.snapshot.bodyStates,
   });
   if (!capture.isReady) return null;
   const faces = new Map<CubeFace, CaptureFace>();

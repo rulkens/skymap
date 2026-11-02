@@ -1,5 +1,9 @@
 # Terrain F3b — the rest of the per-purpose routing
 
+> 2026-10-30 review: only the cloud deck is left (`CLOUD_SHELL_PARAMS.radiusRatio = 1.002`,
+> `src/layers/body/present/cloudShellParams.ts`). The F3c ray march shipped (#753), the
+> zoom-anchor file is deleted (#751) and site anchors use `siteGroundRadiusM`.
+
 `needs-design` — spec §12's `F3b` row, ground-truthed against the tree after #704,
 #719, #736, #738 and F3a (#744). The table it descends from is largely already
 satisfied; §12's row should be replaced by the item below (terrain under an

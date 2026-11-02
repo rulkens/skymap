@@ -5,7 +5,7 @@ import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
-import { Source } from '../../../../../src/data/sources';
+import { Source } from '../../../../../src/data/source';
 import { near0RingRadiusPx } from '../../../../../src/services/engine/helpers/near0RingRadiusPx';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
@@ -135,7 +135,7 @@ describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
     const farMpc = 1e-6; // far below the anchor distance ⇒ would clip un-clamped
     const view = farClippingView(farMpc);
     const ctx = {
-      snapshot: { simDays: 0, renderedTargets: new Set<string>() },
+      snapshot: { bodyStates: deriveBodyStates(0), simDays: 0, renderedTargets: new Set<string>() },
       drawPxPerRad: 1000,
     } as unknown as FrameView;
 
@@ -190,7 +190,11 @@ describe('near0SelectionRingPass.draw — live body position', () => {
     const state = stateWith(staleRow, renderer);
     const view = farClippingView(1); // farMpc 1 Mpc ⇒ no clamp at this scale
     const ctx = {
-      snapshot: { simDays, renderedTargets: new Set<string>() },
+      snapshot: {
+        bodyStates: deriveBodyStates(simDays),
+        simDays,
+        renderedTargets: new Set<string>(),
+      },
       drawPxPerRad: 1000,
     } as unknown as FrameView;
 

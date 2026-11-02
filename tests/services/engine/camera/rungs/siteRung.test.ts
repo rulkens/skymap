@@ -31,6 +31,7 @@ import type { RungCtx } from '../../../../../src/@types/camera/RungCtx';
 import type { SitePose } from '../../../../../src/@types/camera/SitePose';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../../src/utils/scene/asSurfaceSiteId';
+import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -54,6 +55,7 @@ function ctxFor(focusBodyId: SceneBodyId | null): RungCtx {
     focusBodyId,
     pivot: pivotFraming(null),
     viewportPx: [100, 100],
+    frustum: symmetricFrustum(Math.PI / 3, 1),
     fovYRad: Math.PI / 3,
     tuning: DEFAULT_CAMERA_TUNING,
   };

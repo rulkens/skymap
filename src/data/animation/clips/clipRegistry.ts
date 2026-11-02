@@ -31,7 +31,7 @@
 import type { Clip } from '../../../@types/animation/Clip';
 import type { ClipId } from '../../../@types/animation/ClipId';
 import { CONST_J2000 } from '../../time/constJ2000';
-import { cosmicFlows } from './cosmicFlows';
+import { cosmicFlows } from '../../../compositions/clips/cosmicFlows';
 import { flyout } from './flyout';
 import { earthFlyout } from './earthFlyout';
 import { earthCosmicWebLoop } from './earthCosmicWebLoop';

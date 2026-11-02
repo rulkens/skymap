@@ -21,7 +21,7 @@ import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTi
 import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -64,6 +64,7 @@ const UP: Mat3 = [1, 0, 0, 0, 0, -1, 0, 1, 0];
 // every fixture below can pass this SAME value rather than reading it off
 // the frame context, which carries no `cam` field.
 const CAM = assembleOrbitCamera(POSE, PROJECTION, BASIS, BASIS);
+const CANVAS_FRUSTUM = symmetricFrustum(CAM.fovYRad, CAM.aspect);
 
 function makeState(): EngineState {
   return {
@@ -90,6 +91,7 @@ function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
     altitudeMpc: POSE.distance,
     nowMs: 0,
     simDays: CONST_J2000,
+    bodyStates: deriveBodyStates(CONST_J2000),
   });
   if (!ctx.isReady) throw new Error('fixture not ready');
   return ctx;
@@ -111,7 +113,7 @@ function spec(overrides: Partial<ViewSpec> = {}): ViewSpec {
 function view(overrides: Partial<ViewSpec> = {}): { canvas: FrameView; v: FrameView } {
   const snapshot = frame();
   return {
-    canvas: deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS)),
+    canvas: deriveView(snapshot, CAM, mainViewSpec(CANVAS, CANVAS_FRUSTUM)),
     v: deriveView(snapshot, CAM, spec(overrides)),
   };
 }
@@ -150,7 +152,7 @@ describe('deriveView', () => {
 
   it('five dome-like specs derive five distinct vps from one frame', () => {
     const snapshot = frame();
-    const cam = basisOf(deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS)).vp);
+    const cam = basisOf(deriveView(snapshot, CAM, mainViewSpec(CANVAS, CANVAS_FRUSTUM)).vp);
     const camBasis: Mat3 = [...cam.right, ...cam.up, ...cam.forward];
     const faces = [[1, 0, 0, 0, 1, 0, 0, 0, 1] as Mat3, YAW_LEFT, YAW_RIGHT, BACK, UP].map(
       (rotation, slot) => {
@@ -237,7 +239,7 @@ describe('deriveView', () => {
 
   it('two views of one frame share the snapshot by reference', () => {
     const snapshot = frame();
-    const a = deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS));
+    const a = deriveView(snapshot, CAM, mainViewSpec(CANVAS, CANVAS_FRUSTUM));
     const b = deriveView(snapshot, CAM, spec({ rotation: YAW_RIGHT, slot: 1 }));
     // Reference equality, not value: a copied context would drift the moment
     // `runFrame` stamps focus on one of them, and the clock and body sample
@@ -299,7 +301,7 @@ describe('deriveView — the canvas view is the pre-split one', () => {
 
   it('the canvas view’s vp, drawCamPos and slab vps are bit-identical to the pre-split values', () => {
     const snapshot = frame();
-    const canvas = deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS));
+    const canvas = deriveView(snapshot, CAM, mainViewSpec(CANVAS, CANVAS_FRUSTUM));
     for (let i = 0; i < 16; i++) expect(canvas.vp[i]).toBe(VP[i]);
     for (let i = 0; i < 3; i++) expect(canvas.drawCamPos[i]).toBe(DRAW_CAM_POS[i]);
     expect(canvas.slabs).toHaveLength(2);
@@ -383,6 +385,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       nearMpc: overrides.nearMpc ?? CAPTURE_NEAR_MPC,
       nowMs: 0,
       axes: overrides.axes,
+      bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
     });
     return capture.isReady ? capture : null;
   }
@@ -424,6 +427,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         eyeMpc: CAPTURE_EYE_MPC,
         nearMpc: CAPTURE_NEAR_MPC,
         nowMs: 0,
+        bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
       }).isReady,
     ).toBe(false);
     expect(
@@ -432,6 +436,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         eyeMpc: CAPTURE_EYE_MPC,
         nearMpc: CAPTURE_NEAR_MPC,
         nowMs: 0,
+        bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
       }).isReady,
     ).toBe(false);
     expect(
@@ -440,6 +445,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         eyeMpc: CAPTURE_EYE_MPC,
         nearMpc: CAPTURE_NEAR_MPC,
         nowMs: 0,
+        bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
       }).isReady,
     ).toBe(false);
   });
@@ -606,6 +612,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       nearMpc: CUBEMAP_CAPTURES.probe.nearMpc,
       nowMs: 0,
       axes: voyager.orientation,
+      bodyStates,
     });
     expect(capture.isReady).toBe(true);
     if (!capture.isReady) return;
@@ -690,6 +697,7 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
       altitudeMpc: pose.distance,
       nowMs: 0,
       simDays: CONST_J2000,
+      bodyStates: deriveBodyStates(CONST_J2000),
     });
     if (!snapshot.isReady) throw new Error('fixture not ready');
     return { cam, snapshot: { ...snapshot, sceneBodies: positionedBodiesOf(bodies, STATES) } };

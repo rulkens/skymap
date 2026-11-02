@@ -48,7 +48,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { App } from './components/App/App';
-import { APP_LABELS_AND_GUIDES_ROWS } from './compositions/appLabelsAndGuidesRows';
+import { APP_LABELS_AND_GUIDES_REGISTRY } from './compositions/appLabelsAndGuidesRows';
 import { createLocalTransport } from './services/remote/createLocalTransport';
 import { remoteReceiverSaga } from './state/remote/remoteReceiverSaga';
 import { hasUrlGate } from './utils/url/hasUrlGate';
@@ -102,7 +102,7 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   });
   // `?remote` puts this page's pairing and command receiver on the local relay.
   if (hasUrlGate('remote')) {
-    runSaga(() => remoteReceiverSaga(createLocalTransport(), APP_LABELS_AND_GUIDES_ROWS));
+    runSaga(() => remoteReceiverSaga(createLocalTransport(), APP_LABELS_AND_GUIDES_REGISTRY));
   }
   // Store lives for the page lifetime; unsubscribe is intentionally not held.
   persistValues(store, PERSISTED_VALUES);

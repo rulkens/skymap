@@ -7,7 +7,7 @@ import type { SourceType } from '../src/@types/data/SourceType';
 // `tools/` and does not register `@types/node`. `buildAllBins.ts` re-exports
 // `crossMatch` from this same module, so the symbol is identical either way.
 import { crossMatch } from '../tools/catalog/crossMatch';
-import { Source } from '../src/data/sources';
+import { Source } from '../src/data/source';
 import type { ParsedRecord } from '../tools/parsers/common';
 
 /**

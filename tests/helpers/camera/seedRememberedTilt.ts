@@ -21,10 +21,12 @@ import type { SurfaceGestureMemory } from '../../../src/@types/camera/SurfaceGes
 import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 const CTX = {
   viewportPx: [100, 100] as const,
+  frustum: symmetricFrustum(Math.PI / 2, 1),
   fovYRad: Math.PI / 2,
   bodyRadiusM: 1,
   standoffRadii: SURFACE_STANDOFF_RADII,

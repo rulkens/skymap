@@ -7,6 +7,7 @@
  */
 
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -75,6 +76,7 @@ export function frameViewsAt(input: {
     altitudeMpc: distanceMpc,
     nowMs: 0,
     simDays,
+    bodyStates: deriveBodyStates(simDays),
   });
   if (!snapshot.isReady) throw new Error('frameViewsAt: frame not ready');
   return rotations.map((rotation, slot) =>

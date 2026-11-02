@@ -33,7 +33,7 @@ import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proce
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
 import { filamentsPass } from '../../src/layers/cosmicWebFilaments/passes/filamentsPass';
 import { gatePassByFade } from '../../src/services/engine/layer/gatePassByFade';
-import { APP_VISIBILITY } from '../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../src/compositions/appVisibility';
 import { cosmicWebDensityPass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
 import { milkyWayAggregatePass } from '../../src/layers/milkyWay/passes/milkyWayAggregatePass';
@@ -220,7 +220,7 @@ function makeCompositor(records: DrawRecord[]): any {
 // What `createLayers` gates each pass with: every fade resolves to 1 here.
 const PASS_GATE_STATE = {
   subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
-  visibilityEntries: APP_VISIBILITY,
+  visibilityEntries: APP_VISIBILITY_REGISTRY,
 } as unknown as Parameters<typeof gatePassByFade>[1];
 
 const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [

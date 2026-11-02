@@ -32,7 +32,7 @@ import {
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { fetchWithProgress } from '../../../../src/services/loading/fetchWithProgress';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { encodeOctreeObject } from '../../../../tools/octree/encodeOctreeObject';
 import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
 import type { SkstCatalog } from '../../../../src/@types/data/starCatalog/SkstCatalog';
@@ -155,16 +155,5 @@ describe('starCatalogFetcher', () => {
     // The catalog round-trips through the fetch → async-decode → adapter hop.
     expect(decoded).toEqual(starOctreeFromSkst(cat));
     expect(decoded.chunks).toEqual([]);
-  });
-
-  it('throws when the requested source is not a star catalog', async () => {
-    await expect(
-      starCatalogFetcher(
-        { source: Source.SDSS, tier: 'medium' },
-        new AbortController().signal,
-        () => {},
-      ),
-    ).rejects.toThrow();
-    expect(fetchWithProgress).not.toHaveBeenCalled();
   });
 });

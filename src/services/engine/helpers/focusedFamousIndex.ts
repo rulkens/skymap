@@ -1,4 +1,4 @@
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 
 /**

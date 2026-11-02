@@ -2,7 +2,7 @@
  * POPULATION_IDS — the fixed numeric id each population carries across the
  * CPU/GPU seam. `carveStarLayout`/`carveDustLayout` stamp these onto each
  * `PopulationRange`; the GPU compute passes switch on the same ids to pick a
- * formula. Append-only, like `sources.ts`'s source codes: renumbering one
+ * formula. Append-only, like the `Source` codes in `data/source.ts`: renumbering one
  * after this ships desyncs already-compiled shader code from this table.
  *
  * `globularCluster` (6) is the per-cluster loop (centre/radius/hue) — it

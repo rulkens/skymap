@@ -4,7 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import CommandPalette from '../../../src/components/CommandPalette/CommandPalette';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import type { CommandPaletteProps } from '../../../src/components/CommandPalette/CommandPalette';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';

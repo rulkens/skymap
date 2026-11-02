@@ -5,8 +5,8 @@
  */
 
 import type { SampledBody } from '../../@types/missions/SampledBody';
-import { LAYER_BODY_ROWS } from './layerBodyRows';
+import { APP_BODY_REGISTRY } from '../../compositions/appBodies';
 
-export const SAMPLED_BODIES: readonly SampledBody[] = LAYER_BODY_ROWS.flatMap((row) =>
+export const SAMPLED_BODIES: readonly SampledBody[] = APP_BODY_REGISTRY.flatMap((row) =>
   row.position.kind === 'sampled' ? [row.position.sampled] : [],
 );

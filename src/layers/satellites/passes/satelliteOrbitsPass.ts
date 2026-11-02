@@ -2,8 +2,8 @@
  * satelliteOrbitsPass — the selected and focused satellites' orbits as the same fading trail the
  * planets get, drawn by the Layer's OWN `OrbitTrailRenderer`: core's rewrites its instance buffer on
  * every `draw`, so a second draw in a frame would overwrite the planets' records before submit.
- * Alpha is the class fade times `satelliteLayerOpacity`. NEAR0, under the same occlusion as the
- * trails; no pick.
+ * Alpha is the class fade (its `nearEarth` band included) times `satelliteLayerOpacity`. NEAR0,
+ * under the same occlusion as the trails; no pick.
  */
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { SatellitesRuntime } from '../@types/SatellitesRuntime';
@@ -18,6 +18,8 @@ import { SATELLITE_POINT_STYLE } from '../../../data/satellites/satellitePointSt
 import { satelliteLayerOpacity } from '../subsystems/satelliteLayerOpacity';
 import { satelliteOrbitEllipse } from '../subsystems/satelliteOrbitEllipse';
 import { composeTemeToWorld } from '../subsystems/composeTemeToWorld';
+import { selectedSatelliteIndices } from '../subsystems/selectedSatelliteIndices';
+import { satrecOf } from '../load/satrecOf';
 
 export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'satellites'> {
   let staging = new Float32Array(0);
@@ -26,41 +28,35 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
     name: 'satellite-orbits',
     fade: 'satellites',
 
-    enabled(state, ctx, _view, fade) {
-      if (runtime.selected.tracked().length === 0) return false;
-      const earth = sceneBodyStates(state, ctx).get(SCENE_EARTH.id);
-      if (earth === undefined) return false;
-      return (
-        satelliteLayerOpacity(
-          runtime.propagator.catalog(),
-          ctx.snapshot.simDays,
-          ctx.drawCamPos,
-          earth.positionMpc,
-        ) > 0
-      );
+    enabled(state, ctx) {
+      const catalog = runtime.propagator.catalog();
+      if (selectedSatelliteIndices(state.selection, catalog).length === 0) return false;
+      return satelliteLayerOpacity(catalog, ctx.snapshot.simDays) > 0;
     },
 
     draw(pass, view, ctx, state, fade) {
       const earth = sceneBodyStates(state, ctx).get(SCENE_EARTH.id)!;
       const { simDays } = ctx.snapshot;
       const eye = ctx.drawCamPos;
-      const opacity = satelliteLayerOpacity(
-        runtime.propagator.catalog(),
-        simDays,
-        eye,
-        earth.positionMpc,
-      );
-      const tracked = runtime.selected.tracked();
-      if (staging.length < tracked.length * INSTANCE_FLOATS) {
-        staging = new Float32Array(tracked.length * INSTANCE_FLOATS);
+      const catalog = runtime.propagator.catalog()!;
+      const opacity = satelliteLayerOpacity(catalog, simDays);
+      const ks = selectedSatelliteIndices(state.selection, catalog);
+      if (staging.length < ks.length * INSTANCE_FLOATS) {
+        staging = new Float32Array(ks.length * INSTANCE_FLOATS);
       }
       const temeToWorld = composeTemeToWorld(earth.orientation, simDays);
 
       let count = 0;
-      for (const satellite of tracked) {
-        const classFade = fade[SATELLITE_CLASSES[satellite.classCode]!];
+      for (const k of ks) {
+        const classFade = fade[SATELLITE_CLASSES[catalog.classCode[k]!]!];
         if (classFade === 0) continue;
-        const orbit = satelliteOrbitEllipse(satellite, simDays, temeToWorld, earth.positionMpc);
+        const orbit = satelliteOrbitEllipse(
+          satrecOf(catalog, k),
+          catalog.epochMs[k]!,
+          simDays,
+          temeToWorld,
+          earth.positionMpc,
+        );
         if (orbit === null) continue;
         const wrote = writeOrbitTrailRecord(
           {

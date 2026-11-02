@@ -1,6 +1,6 @@
 /**
  * Selectable tone-mapping curves for the HDR post-process.  Mirrors
- * the pattern of `src/data/sources.ts` and `src/data/biasMode.ts`
+ * the pattern of `src/compositions/appSources.ts` and `src/data/biasMode.ts`
  * (numeric `as const` object + ALL_* array + label fn).  The numeric
  * values land verbatim in the shader's `curve: u32` uniform so DON'T
  * renumber without also updating the curve dispatch in `src/services/gpu/shaders/compositor/fragment.wesl`.

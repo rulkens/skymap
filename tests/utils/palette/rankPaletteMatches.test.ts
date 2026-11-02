@@ -4,7 +4,7 @@ import { bodySearch } from '../../../src/layers/body/present/bodySearch';
 import { craftSearch } from '../../../src/layers/missions/present/craftSearch';
 import { earthSceneSearch } from '../../../src/layers/earthScenes/present/earthSceneSearch';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';

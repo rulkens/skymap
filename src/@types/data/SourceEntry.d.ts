@@ -13,7 +13,7 @@ import type { CraftSourceEntry } from './craft/CraftSourceEntry';
 import type { SatelliteSourceEntry } from './satellite/SatelliteSourceEntry';
 
 /**
- * One row of the SOURCE_REGISTRY — discriminated by the `type` field
+ * One row of the APP_SOURCE_REGISTRY — discriminated by the `type` field
  * across twelve kinds: per-point galaxy catalogs, marker-ring structures, the
  * filament skeleton, the constellation figures, scalar-volume cubes, the
  * Milky-Way disk overlay, the peculiar-velocity flow field, star catalogs

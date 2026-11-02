@@ -15,7 +15,7 @@ import { makeReconcileEffects } from '../../../src/services/engine/wiring/makeRe
 import { seedVisibilityFades } from '../../../src/services/engine/wiring/seedVisibilityFades';
 import { applySceneEffect } from '../../../src/services/animation/applySceneEffect';
 import { hide, show } from '../../../src/services/engine/animation/effectHelpers';
-import { APP_VISIBILITY } from '../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import type { Action } from '@reduxjs/toolkit';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
@@ -34,7 +34,7 @@ function makeLive(boot: readonly Action[] = []) {
       return store.getState().settings;
     },
     subsystems: { fades, scheduler: { requestRender: vi.fn<() => void>() } },
-    visibilityEntries: [...APP_VISIBILITY],
+    visibilityEntries: [...APP_VISIBILITY_REGISTRY],
     visibilityGates: new Map(),
   } as unknown as EngineState;
   seedVisibilityFades(state);

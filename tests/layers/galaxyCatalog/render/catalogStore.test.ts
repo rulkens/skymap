@@ -22,9 +22,11 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { createCatalogStore } from '../../../../src/layers/galaxyCatalog/render/catalogStore';
 import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/@types/BuildRunner';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 /** Stats are the record source's to compute; these suites only exercise buffers. */
@@ -34,8 +36,8 @@ const STATS = { magOffset: 0, medianAbsMag: -20.5 };
 // still reason in terms of the numeric `Source` codes (the `loadedSources()`
 // iterator yields `source`), so resolve the id at each upload/unload call
 // site through the registry.
-function idOf(source: (typeof Source)[keyof typeof Source]): GalaxyCatalogId {
-  return SOURCE_REGISTRY[source].id as GalaxyCatalogId;
+function idOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
+  return GALAXY_CATALOG_SOURCE_RECORD[source].id;
 }
 
 // `GPUBufferUsage` and friends come from the shared

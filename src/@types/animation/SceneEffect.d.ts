@@ -47,7 +47,7 @@
  *
  * ### `args` are visibility addresses
  *
- * `show`/`hide`/`fade` name the addresses `APP_VISIBILITY` derives: show keys
+ * `show`/`hide`/`fade` name the addresses `APP_VISIBILITY_REGISTRY` derives: show keys
  * (`'flow'`, `'survey'`), label addresses (`'label:milkyWay'`) and, for
  * `show`/`hide`, one item of a per-item entry (`'survey:milliquas'`,
  * `'label:structure:void'`). `'labels'` is expanded at construction, so a stored
@@ -58,7 +58,7 @@
 
 import type { VisibilityAddress } from './VisibilityAddress';
 import type { ScopedVisibilityAddress } from './ScopedVisibilityAddress';
-import type { SettingsAction } from './SettingsAction';
+import type { SettingsAction } from '../../compositions/@types/SettingsAction';
 import type { SelectionRef } from '../engine/SelectionRef';
 import type { OrientationFrameId } from '../camera/OrientationFrameId';
 import type { Ease } from './Ease';

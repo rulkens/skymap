@@ -33,10 +33,14 @@ import type { ForegroundCaption } from '../../../../src/services/engine/presenta
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { fadeBand } from '../../../../src/utils/math/fadeBand';
+import { regionById } from '../../../../src/utils/regions/regionById';
+import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 // Earth: ~1 AU from the Sun (negligible at parsec scale) and, by
-// `SCALE_FADE_BANDS.starCaption`'s construction off the farthest catalogued
+// `STAR_MAP_CAPTION_BAND`'s construction off the farthest catalogued
 // star, within EVERY famous star's full-alpha band too — the one camera pose
 // that reads every seeded catalog at its unclipped target.
 const EARTH_POS = J2000_STATES.get(asSceneBodyId('earth'))!.positionMpc;
@@ -59,6 +63,7 @@ const SCENE_BODIES = positionedBodiesOf(
 function makeCtx(camPos: Vec3, focusBlend = 0): FrameView {
   return {
     snapshot: {
+      bodyStates: deriveBodyStates(CONST_J2000),
       simDays: CONST_J2000,
       nowMs: 0,
       meshBodies: SCENE_MESH_BODIES,
@@ -176,5 +181,32 @@ describe('produceStarCaptions', () => {
     const dimmed = at(0.25, 1);
     expect(fadeAlphaOf(dimmed, PROXIMA_ID)).toBeCloseTo(0.25 * fadeAlphaOf(at(1, 1), PROXIMA_ID)!);
     expect(fadeAlphaOf(dimmed, SUN_ID)).toBe(fadeAlphaOf(at(1, 1), SUN_ID));
+  });
+
+  it('fades each star map caption on its own distance from the eye, and not the Sun', () => {
+    // The star map's curve, in parsecs off the neighbourhood's extent. The eye backs away from
+    // Proxima along the Sun → Proxima line, so a band keyed on any other distance reads wrong.
+    const farthestPc = regionById('solar-neighbourhood').extentMpc / SCALE_UNITS.PC_TO_MPC;
+    const starMap = { fullAt: farthestPc * 1.1, goneAt: farthestPc * 2 };
+    const proxima = J2000_STATES.get(asSceneBodyId('proxima-centauri'))!.positionMpc;
+    const away = normalize3([proxima[0], proxima[1], proxima[2]]);
+    const alphasAt = (pc: number) => {
+      const d = pc * SCALE_UNITS.PC_TO_MPC;
+      const eye: Vec3 = [
+        proxima[0] + away[0] * d,
+        proxima[1] + away[1] * d,
+        proxima[2] + away[2] * d,
+      ];
+      const labels = produceStarCaptions()(makeState(), makeCtx(eye), handed(1)).labels;
+      return { proxima: fadeAlphaOf(labels, PROXIMA_ID)!, sun: fadeAlphaOf(labels, SUN_ID)! };
+    };
+
+    for (const pc of [farthestPc * 0.5, farthestPc * 1.55, farthestPc * 2.5]) {
+      const { proxima: alpha, sun } = alphasAt(pc);
+      expect(alpha).toBeCloseTo(fadeBand(starMap, pc), 9);
+      expect(sun).toBe(1);
+    }
+    expect(alphasAt(farthestPc * 1.55).proxima).toBeGreaterThan(0);
+    expect(alphasAt(farthestPc * 1.55).proxima).toBeLessThan(1);
   });
 });

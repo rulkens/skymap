@@ -1,7 +1,7 @@
 /**
  * satrecOf — catalog object k as a `satellite.js` satrec, through the OMM the file was built from
  * (`json2satrec` takes the epoch only as a string). The worker builds every one of them; the main
- * thread builds only the satellite the camera follows.
+ * thread builds the selected and focused satellites' satrecs, per frame.
  */
 import { json2satrec } from './satelliteJsCore';
 import type { SatelliteCatalog } from '../../../@types/satellites/SatelliteCatalog';

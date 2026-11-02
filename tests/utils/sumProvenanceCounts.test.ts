@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { sumProvenanceCounts } from '../../src/utils/sumProvenanceCounts';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 
 describe('sumProvenanceCounts', () => {
   it('accumulates total and per-axis estimated counts across sources', () => {

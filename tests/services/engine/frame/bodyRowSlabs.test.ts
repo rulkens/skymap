@@ -54,6 +54,7 @@ function camAtAuFromGalacticCentre(au: number): Vec3 {
 function makeCtx(camPos: Vec3, slabs: readonly Slab[]): FrameView {
   return {
     snapshot: {
+      bodyStates: deriveBodyStates(SIM_DAYS),
       simDays: SIM_DAYS,
       slabBodyCandidates: BLACK_HOLES.map(blackHoleSlabRow).filter((row) =>
         slabRowActive(row, camPos, deriveBodyStates(SIM_DAYS)),
@@ -77,7 +78,11 @@ const EARTH_STATE = {} as unknown as PassState;
 function earthCtxAt(rMpc: number): FrameView {
   const [x, y, z] = deriveBodyStates(SIM_DAYS).get(SCENE_EARTH.id)!.positionMpc;
   return {
-    snapshot: { simDays: SIM_DAYS, slabBodyCandidates: BODY_SLAB_ROWS },
+    snapshot: {
+      bodyStates: deriveBodyStates(SIM_DAYS),
+      simDays: SIM_DAYS,
+      slabBodyCandidates: BODY_SLAB_ROWS,
+    },
     slabs: [makeSlab(), EARTH_SLAB],
     bodyPose: (id: string) =>
       id === SCENE_EARTH.id

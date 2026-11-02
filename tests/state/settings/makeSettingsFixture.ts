@@ -63,6 +63,7 @@ import { pickingInitialState } from '../../../src/state/settings/core/pickingSli
 import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
 import { initialState as lightTimeInitialState } from '../../../src/layers/lightTime/state/lightTime/initialState';
+import { initialState as cosmicHorizonInitialState } from '../../../src/layers/cosmicHorizon/state/cosmicHorizon/initialState';
 import { initialState as galaxyCatalogsInitialState } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import { initialState as biasInitialState } from '../../../src/layers/galaxyCatalog/state/bias/initialState';
 import { initialState as thumbnailsInitialState } from '../../../src/layers/galaxyCatalog/state/thumbnails/initialState';
@@ -78,9 +79,9 @@ import { DEFAULT_FOCUS_MOVES } from '../../../src/data/camera/focusMoveDefaults'
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
-import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
-import type { StarCatalogId } from '../../../src/@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogId } from '../../../src/layers/starCatalog/@types/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
 import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { BodyItemSettings } from '../../../src/@types/settings/BodyItemSettings';
@@ -122,6 +123,7 @@ export function makeSettingsFixture(
     milkyWay: { ...milkyWayInitialState },
     zoneOfAvoidance: { ...zoneOfAvoidanceInitialState },
     lightTime: { ...lightTimeInitialState },
+    cosmicHorizon: { ...cosmicHorizonInitialState },
     blackHoles: { items: { ...blackHolesInitialState.items } },
     blackHoleLensingTuning: { ...blackHoleLensingTuningInitialState },
     cosmicWebFilaments: { ...filamentsInitialState },

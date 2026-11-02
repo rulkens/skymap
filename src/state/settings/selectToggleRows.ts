@@ -16,7 +16,7 @@ import { visibilityEntryOf } from '../../utils/visibility/visibilityEntryOf';
 import { visibilityClusterOf } from '../../utils/visibility/visibilityClusterOf';
 import { visibilitySwitchOf } from '../../utils/visibility/visibilitySwitchOf';
 import { setVisibility } from './setVisibilityAction';
-import { APP_VISIBILITY } from '../../compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../compositions/appVisibility';
 import type { ToggleRow } from '../../@types/settings/ToggleRow';
 import type { LayerToggleRow } from '../../@types/engine/layer/LayerToggleRow';
 import type { ShowEntry } from '../../@types/engine/layer/ShowEntry';
@@ -39,7 +39,7 @@ export function selectToggleRows(
     visibilitySwitchOf(state.settings, entry, item),
   );
   const entries = layerRows.map(
-    (row) => visibilityEntryOf(APP_VISIBILITY, row.toggle) as ShowEntry,
+    (row) => visibilityEntryOf(APP_VISIBILITY_REGISTRY, row.toggle) as ShowEntry,
   );
   const layerValues = entries.map((entry) => visibilitySwitchOf(state.settings, entry));
   return rowsMemo.get([layerRows, ...labelValues, ...layerValues], () => [

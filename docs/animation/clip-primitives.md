@@ -339,7 +339,7 @@ frame. They change what's _drawn_, not where the camera _is_.
 | `frameTo` | `frameTo(frame: OrientationFrameId, { over, ease? }) → SceneEffect` | Roll the horizon to another orientation frame over `over` seconds (`ease` defaults `'easeInOutCubic'`). The eye does **not** move and its aim does not change — only which way is up. Authored **in the clip**, never on the beat, so an act owns its pole; a clip pins the frame it started under, so a switch mid-clip cannot reinterpret its authored yaws. A tour restores the viewer's pre-tour frame when it ends.                               |
 
 **`args` are visibility addresses**, derived from every Layer's `visibility.ts`
-(`APP_VISIBILITY`): show keys (`'flow'`, `'survey'`, `'structureRing'`,
+(`APP_VISIBILITY_REGISTRY`): show keys (`'flow'`, `'survey'`, `'structureRing'`,
 `'milkyWayDisk'`, `'cosmicWebDensity'`, …) and label addresses (`'label:milkyWay'`,
 `'label:famousGalaxy'`, `'label:structure'`, …). A bare per-item address writes the
 cluster's section switch where it has one (`'cosmicWebDensity'`, `'starCatalog'`),

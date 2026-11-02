@@ -66,6 +66,20 @@ Without this, Vitest fetches `.wesl` files and rolldown tries to parse them as J
 
 Declaring `@builtin(position)` twice in one entry point (once on a member of the input struct and again on a bare parameter) fails ONLY at runtime: the build and the wesl linker both pass, and it is `device.createShaderModule` that rejects the module. Fix: read the position from the struct member and delete the bare parameter. Because nothing fails until module creation, the symptom is the same "Invalid ShaderModule" cascade as gotcha #3; the dev-mode compile logger (below) shows the real error.
 
+## Math and binding traps
+
+- **Multiply-by-zero does not neutralize a read in a bisect**: `0.0 * NaN` and `0.0 * Inf` are NaN. Replace the call with a literal (`let h = 0.0;`).
+- **f32 denormal flush on Mpc-unit magnitudes**: squaring ~1e-19 Mpc (`normalize`, `dot`, `length`) drops below 1.18e-38, flushes to 0, and `inverseSqrt(0)` is NaN. Tell: a camera-anchored black disc that grows on descent. Rescale to body radii at the vertex; keep value² ≥ ~1e-37.
+- **Renormalize after `invModel`**: `invModel * vec4(dir, 0.0)` has magnitude 1/scale, so anything treating `t` as a distance (march step, per-step opacity, attenuation) goes wrong. `normalize(...)` after the transform; AABB hit tests alone are fine unnormalized.
+- **`layout: 'auto'` bind groups are not interchangeable**: two pipelines with `'auto'` on the same `@group(N)` get distinct layouts, and a bind group built for one fails validation on the other (a pick texture reads back all zeros). Share the `GPUBuffer`/sampler/view, build each bind group against the consumer's own `getBindGroupLayout(N)`, or use one explicit `GPUPipelineLayout`.
+- **CPU-side math is wgpu-matrix, not gl-matrix**: the `dst` argument is LAST and optional; `mat4.create()` returns ZEROS (use `mat4.identity()`); `invert` is `inverse`, `scaleAndAdd` is `addScaled`; `mat4d`/`vec3d` are Float64. wgpu `Vec3` is a `Float32Array` (indexing gives `number | undefined`); skymap's `@types/math` `Vec3`/`Mat4` are tuples, so use those where you index.
+
+## File layout and moves
+
+- **One folder per shader** with `io.wesl` + `vertex.wesl` + `fragment.wesl`; variants are extra fragments over one vertex (`galaxyCatalog/points/`: `colorFragment.wesl` + `pickFragment.wesl`). A draw-type `if` inside a shared fragment is the wrong split: it belongs in the pipeline table. Ground a new layout in the existing tree and checkpoint it with the user for anything beyond a one-file tweak. No register-style locals (`g0`, `w2`).
+- **A shader move needs a hand sweep** of literals no tool rewrites (`npm run move-files` included): `import package::…`, TS `?static` specifiers, `wesl.toml`, `vite.config.ts`, and bare directory literals in scraper/parity tests (no trailing slash, no filename).
+- **Tool shader symlinks go at the LEAF**: the galaxy-renderer tool's `wesl.toml` glob follows a symlinked dir but not a real subdir of one, so `tools/galaxy-renderer/src/engine/shaders/milkyWay/field/` is a real dir of per-file symlinks. The wrong shape fails "module not found" only at the tool's shader-link time, and tool-only trees are linked only by the tool's vite build, so both builds are gates.
+
 ## Mitigations baked into skymap
 
 - **shaderCompileLogger.ts** — every renderer routes `device.createShaderModule` through `createShaderModuleWithDevLog(device, code, label)`, which logs the linked WGSL alongside any compile-time error in dev mode. The linked output carries no sourcemap, so Chrome's error line numbers refer to the LINKED output, not your source `.wesl` files. Reading the linked output in the dev console is the only way to map "error at line 142" back to a source file. The helper is at `src/services/gpu/shaderCompileLogger.ts`; copy the pattern into other projects.
@@ -119,4 +133,17 @@ Before debugging the shader itself, run through this checklist:
 2. `module not found`? The prefix must be `package::` (gotcha #1), and the last path segment names a function in a module, not a file (gotcha #3).
 3. Does `npm test` fail but `npm run build` pass? (gotcha #4) `vitest.config.ts` is missing `weslStaticPlugin`.
 
-If none of these apply, you're looking at a real WGSL bug — read the linked output via the dev-mode logger (above) to see what reached Chrome's compiler.
+If none of these apply, you're looking at a real WGSL bug — read the linked output via the dev-mode logger (above) to see what reached Chrome's compiler, then work it as below.
+
+## Working on a WGSL change
+
+WGSL fixes fail more often than TS fixes and nothing type-checks the maths, so go slower than in TS:
+
+- **List the failure modes before editing**: NaN paths, hard cutoffs, integration boundaries, additive magnification. Phrase a fix as "should help, because…" until the user has looked; offer a look between iterations instead of batching "obvious" fixes. If a change makes it worse, revert first, then think.
+- **Tint probe when the mechanism is uncertain**: a temporary uncommitted tint (labelled `TEMP DIAGNOSTIC -- DO NOT COMMIT`) colour-coding the competing hypotheses; one look over HMR (~2 s) shows the edit reaches the GPU, which path fires, and where. Revert it before tuning. Tune by binary-searching a hardcoded const with the user watching, then plumb the converged value to a setting; try existing live sliders first.
+- **Every new varying costs**: one extra flat `vec3` `@location` on the points `VSOut` once cost +1.5 ms (~21%) to save a `sqrt` + FMA. Fit the value into an existing 4-component slot first (regroup by consumer and rename, e.g. `ellipse: vec3`), or recompute in the fragment; if a slot must be added, measure with the `perf` skill and report it.
+- **`npm run galaxy-renderer:probe`** (plain and `?gpuTimings`) runs 1–2 min: start it in the background and edit nothing its vite server watches (`.wesl` and `src/` TS) until it finishes. HMR unmounts the Viewport mid-readback, and the resulting `orientationReadbackBuf used in submit while destroyed` errors (all steps ✓, `?t=<epoch>` module URLs) mean re-run on a quiet tree, not a bug.
+
+## For orchestrators
+
+Linker failures stay silent until a lazily gated draw fires, so an implementer that never saw this checklist reports success on a clean `tsc`. Step 1 of every shader brief: "invoke the `wesl-shaders` skill before editing any `.wesl` file", plus the gotchas above that apply to that task inlined. Read the produced `.wesl` yourself before accepting it.

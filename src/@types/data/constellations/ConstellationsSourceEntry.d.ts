@@ -1,7 +1,7 @@
 import type { SourceEntryBase } from '../SourceEntryBase';
 
 /**
- * Constellations-typed row of the SOURCE_REGISTRY — the true-3D asterism
+ * Constellations-typed row of the APP_SOURCE_REGISTRY — the true-3D asterism
  * stick-figure overlay. The classical constellation lines drawn between the
  * real heliocentric positions of their member stars, built at data time into
  * a single `constellations.json` artifact (not a tiered `.bin`, so no

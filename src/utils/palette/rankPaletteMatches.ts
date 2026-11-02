@@ -8,7 +8,7 @@ import { scoreAliasMatch } from './scoreAliasMatch';
 import { MILKY_WAY_NAMES } from '../../data/palette/milkyWayNames';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../data/bodies/seededStarCatalogsBySource';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
-import { APP_EXHIBITS } from '../../compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { EARTH_PLACES } from '../../data/palette/earthPlaces';
 import type { ScoredRow } from '../../@types/palette/ScoredRow';
@@ -66,7 +66,7 @@ export function rankPaletteMatches(
 
   // Scored on the registry label alone (spec §7.4), so a focus card never duplicates the object
   // it takes over to. `Tour.dev` tours are harnesses and stay out of search.
-  const exhibitScored: ScoredRow[] = Object.values(APP_EXHIBITS)
+  const exhibitScored: ScoredRow[] = Object.values(APP_EXHIBIT_REGISTRY)
     .map<ScoredRow>((exhibit) => {
       const raw = scoreFamousMatch(
         { id: exhibit.id, names: [exhibit.label], description: '' },

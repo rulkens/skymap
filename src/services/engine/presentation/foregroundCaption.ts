@@ -5,7 +5,7 @@
  * A `Label` whose tint, em height, and pixel clamps are ALWAYS authored —
  * unlike the general `Label`, where those fields are optional and fall back to
  * renderer defaults — tagged with a `kind` that drives the layer's declutter
- * priority (`CAPTION_PRIORITY`) and fade routing. Narrowing the required fields
+ * priority (`CAPTION_PRIORITY`). Narrowing the required fields
  * here states that guarantee once at the type, so the layer hands them to
  * `liftedLabelPlacement` (which requires plain `number`s) without a per-field
  * `?? default` that would silently mask a caption built without its colour or
@@ -33,7 +33,7 @@ export type ForegroundCaption = Label2D &
      *  craft-emphasis dim, which must not parse it back out of the `sceneBody-` id. */
     readonly bodyId?: string;
     /** Per-caption approach reveal, in Mpc of anchor-to-camera distance,
-     *  multiplied on top of the kind's `CAPTION_FADE_RULES` band. Any kind may
-     *  carry one; a caption without it rides its kind's reach alone. */
+     *  multiplied on top of the handed label value. For a fade that differs per
+     *  caption within one label item, which no entry band can express. */
     readonly revealBand?: FadeBand;
   };

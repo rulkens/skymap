@@ -4,9 +4,7 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
-import { SOURCE_REGISTRY } from '../../../data/sources';
 import { STAR_CATALOG_SOURCE_ROWS } from '../sources/starCatalogSourceRows';
 import { starCatalogVisibility } from '../visibility';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
@@ -17,8 +15,7 @@ const STAR_SHOW_ENTRY = visibilityEntryOf(starCatalogVisibility, 'starCatalog');
 
 export function starCatalogAssetRows(runtime: StarCatalogRuntime): readonly AssetWiringRow[] {
   const surveyRows = STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
-    ([source]): AssetWiringRow => {
-      const id = SOURCE_REGISTRY[source].id as StarCatalogId;
+    ([source, { id }]): AssetWiringRow => {
       return {
         key: source,
         slot: runtime.catalogs.get(source)!,

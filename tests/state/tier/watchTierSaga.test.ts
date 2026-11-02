@@ -25,7 +25,7 @@ import {
   updateSelectionHover,
 } from '../../../src/state/selection/selectionSlice';
 import { selectionRoute } from '../../../src/store/constants';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';

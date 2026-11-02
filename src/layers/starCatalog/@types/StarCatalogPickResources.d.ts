@@ -1,4 +1,4 @@
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { OctreeCutDraw } from '../../../@types/octree/OctreeCutDraw';
 
 /**
@@ -13,7 +13,7 @@ export type StarCatalogPickResources = {
   readonly drawBgl: GPUBindGroupLayout;
   readonly recordsBgl: GPUBindGroupLayout;
   /** Pool-sized (index records, then each chunk slot's); `null` when the source has no catalog. */
-  recordsBindGroup(source: SourceType): GPUBindGroup | null;
+  recordsBindGroup(source: StarCatalogSourceType): GPUBindGroup | null;
   /** The frame cut's leaf list; `null` until a frame has cut the source. */
-  leafDraw(source: SourceType): OctreeCutDraw | null;
+  leafDraw(source: StarCatalogSourceType): OctreeCutDraw | null;
 };

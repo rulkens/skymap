@@ -43,6 +43,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { ridesWheelTarget } from '../../../../src/services/engine/camera/ridesWheelTarget';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -75,6 +76,7 @@ function ctxOf(
       focusBodyId: focus?.type === 'body' ? focus.id : null,
       pivot: pivotFraming(focus),
       viewportPx: [1000, 1000] as const,
+      frustum: symmetricFrustum(Math.PI / 3, 1),
       fovYRad: Math.PI / 3,
       tuning: store.getState().camera.tuning,
     },
@@ -119,7 +121,7 @@ describe('replayInput', () => {
     // so such a write throws right here. The world at-rest notch, a followed
     // pan and the gesture edges cover every accumulator field.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
     const prev = deepFreeze({
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
       gesture: { ...EMPTY_SURFACE_GESTURE_MEMORY },
@@ -227,7 +229,7 @@ describe('replayInput', () => {
       roll: 1.4,
     });
     followStore.dispatch(commitCameraPose(nearEarth));
-    followStore.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    followStore.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
     const follow = {
       from: null,
       distanceTarget: 2.5 * EARTH_RADIUS_MPC,
@@ -295,7 +297,7 @@ describe('replayInput', () => {
     if (!isBodyArm(arm)) throw new Error('fixture: not a body arm');
     const radiusM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'earth')!.surface.datumRadiusM;
     const anchorFor = (px: Vec2): Vec3 => {
-      const ray = cursorRayBodyLocal(arm.pose, px, [1000, 1000], Math.PI / 3);
+      const ray = cursorRayBodyLocal(arm.pose, px, [1000, 1000], symmetricFrustum(Math.PI / 3, 1));
       const t = raySphereRoots(ray.originM, ray.dir, [0, 0, 0], radiusM)![0];
       return [
         ray.originM[0] + ray.dir[0] * t,
@@ -436,7 +438,7 @@ describe('replayInput', () => {
     // translation of the drag, no body motion mixed in — and an orbit step's
     // angular delta never touches it.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
     const prev = {
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
@@ -563,7 +565,7 @@ describe('replayInput', () => {
       distance: 4 * EARTH_RADIUS_MPC,
     });
     store.dispatch(commitCameraPose(nearEarth));
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
     const follow = {
       from: null,
       distanceTarget: 4 * EARTH_RADIUS_MPC,
@@ -607,7 +609,7 @@ describe('replayInput', () => {
         distance: distMpc,
         roll,
       });
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
     // Half an engage-edge down, so the in-band roll is fully authored (w = 1)
     // before the recession starts, wherever ruling 19's band is tuned to.
     const startHR = DEFAULT_CAMERA_TUNING.engageHR * 0.5;
@@ -697,7 +699,7 @@ describe('replayInput', () => {
   it('floors an in-gesture zoom at the focused body’s surface', () => {
     // A pinch spread far enough to blow through the surface in one step.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
 
     const next = replayInput(
       {

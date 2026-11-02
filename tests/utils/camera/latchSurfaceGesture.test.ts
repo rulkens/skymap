@@ -13,6 +13,7 @@ import type { GroundRadiusLookup } from '../../../src/@types/camera/GroundRadius
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 // Earth-scale bounds matching raycastTerrain.test.ts's own fixtures.
 const DATUM_M = 6_371_000;
@@ -43,6 +44,7 @@ describe('latchSurfaceGesture', () => {
       arm,
       step,
       VIEWPORT,
+      symmetricFrustum(FOV, 1),
       FOV,
       DATUM_M,
       peakField,

@@ -9,9 +9,8 @@
  * exercise the memoized `selectXFocusable` selectors through a live store to
  * verify the `buildFocusable` integration round-trips correctly.
  *
- * The derived `selectHoveredFocusable` / `selectSelectedFocusable` /
- * `selectFocusedFocusable` selectors each build a fresh `FocusableTarget` from
- * their slot's `SelectionRow` — the memoization means the same row reference
+ * The derived `selectHoveredFocusable` / `selectSelectedFocusable` selectors
+ * each build a fresh `FocusableTarget` from their slot's `SelectionRow` — the memoization means the same row reference
  * returns the same target reference, which is the core invariant tested here.
  */
 
@@ -21,7 +20,6 @@ import { createAppStore } from '../../../src/store/createAppStore';
 import {
   selectHoveredFocusable,
   selectSelectedFocusable,
-  selectFocusedFocusable,
   selectIsSelectionActive,
 } from '../../../src/state/selection/selectors';
 import {
@@ -32,7 +30,7 @@ import {
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants';
 import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';

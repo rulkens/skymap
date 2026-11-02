@@ -23,7 +23,7 @@ import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
-import { deriveBodyStates } from './deriveBodyStates';
+import { frameBodyStates } from './frameBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
@@ -40,6 +40,8 @@ import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
 import { selectPendingInput } from '../../../state/input/selectors';
+import { selectViewCoverPx } from '../../../state/viewCover/selectors';
+import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
 
 /**
@@ -85,10 +87,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const pending = selectPendingInput(stored);
   const steps = pendingToInputSteps(pending, canvasPx);
 
-  // Derived BEFORE the step: the follow driver aims at where the body is this frame,
-  // and this call primes the one-deep `deriveBodyStates` memo.
+  // Derived BEFORE the step: the follow driver aims at where the body is this frame. The
+  // ONE placement of the moving selection; the frame context takes this same Map.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
-  const bodyStates = deriveBodyStates(simDays);
+  const bodyStates = frameBodyStates(stored, state.selectionKindRows, simDays);
 
   const {
     next,
@@ -101,6 +103,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     simDays,
     rootState: stored,
     canvasPx,
+    // Only the mono rig's one view is the canvas the covers sit over.
+    coverPx: state.viewRig === 'mono' ? selectViewCoverPx(stored) : NO_INSETS_PX,
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
@@ -136,7 +140,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
-  // Shared with `pickFrameContext`; only `nowMs`/`poseBasis`/`upBasis`/`simDays` vary
+  // Shared with `pickFrameContext`; only the time, the bases and the body snapshot vary
   // between callers. Safe here because `state.cameraRuntime = next` above already
   // made `state`'s runtime THIS frame's.
   const { input, cam } = frameContextInputOf(state, {
@@ -145,6 +149,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     poseBasis,
     upBasis,
     simDays,
+    bodyStates,
   });
 
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
@@ -177,7 +182,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const canvas = deriveView(
     snapshot,
     cam,
-    mainViewSpec(cam, { width: deps.canvas.width, height: deps.canvas.height }),
+    mainViewSpec(
+      { width: deps.canvas.width, height: deps.canvas.height },
+      state.cameraRuntime.outputs.frustum,
+    ),
   );
   // The rig hands back specs; deriving views HERE, off the one shared `snapshot`,
   // makes the shared-snapshot invariant structural.

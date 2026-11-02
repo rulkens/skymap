@@ -6,7 +6,7 @@
  */
 
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from './@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
@@ -16,7 +16,7 @@ import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
-import { SOURCE_REGISTRY } from '../../data/sources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from './sources/galaxyCatalogSourceRecord';
 import { GALAXY_CATALOG_SOURCES } from './sources/galaxyCatalogSources';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, COSMO } from '../../services/engine/frame/slabs';
@@ -84,7 +84,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   const points = new Map<GalaxyCatalogSourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>(
     GALAXY_CATALOG_SOURCES.map((code) => [
       code,
-      wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[code], deps, {
+      wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[code], deps, {
         pointRenderer,
         catalogs,
         records,

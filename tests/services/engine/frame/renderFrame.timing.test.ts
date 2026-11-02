@@ -23,7 +23,7 @@ import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/mi
 import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
 import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
@@ -210,7 +210,7 @@ function makeCam(): OrbitCamera {
 // What `createLayers` gates each pass with: every fade resolves to 1 here.
 const PASS_GATE_STATE = {
   subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
-  visibilityEntries: APP_VISIBILITY,
+  visibilityEntries: APP_VISIBILITY_REGISTRY,
 } as unknown as Parameters<typeof gatePassByFade>[1];
 
 const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [

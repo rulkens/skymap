@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { gateComputeByFade } from '../../../../src/services/engine/layer/gateComputeByFade';
 import type { ContentCompute } from '../../../../src/@types/engine/frame/ContentCompute';
@@ -19,7 +19,7 @@ describe('gateComputeByFade', () => {
     fades.register({ address: 'flow' }, 1);
     const state = {
       subsystems: { fades, clipPlayer: { clipOpacityOf: () => 1 } },
-      visibilityEntries: APP_VISIBILITY,
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
     } as unknown as EngineState;
     const encode = vi.fn();
     const compute: ContentCompute<'flow'> = { name: 'c', scope: 'once', fade: 'flow', encode };

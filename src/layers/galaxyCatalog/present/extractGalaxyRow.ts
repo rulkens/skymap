@@ -12,9 +12,9 @@
  * the row stays JSON-serializable for the RTK slice; `buildGalaxyInfo` parses
  * it back with `BigInt(...)` where it needs the numeric identity.
  */
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
 

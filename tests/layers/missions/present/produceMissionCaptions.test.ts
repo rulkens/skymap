@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { MISSION_CRAFT_IDS } from '../../../../src/layers/missions/present/missionCraftIds';
 import { produceSceneBodyCaptions } from '../../../../src/layers/body/present/produceSceneBodyCaptions';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { SAMPLED_BODY_IDS } from '../../../../src/data/bodies/sampledBodyIds';
 import { MISSION_EMPHASIS_DIM } from '../../../../src/data/missions/missionTrailStyle';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -35,6 +35,7 @@ const SCENE_BODIES = positionedBodiesOf(
 function makeCtx(camPos: Vec3, distance: number): FrameView {
   return {
     snapshot: {
+      bodyStates: deriveBodyStates(CONST_J2000),
       simDays: CONST_J2000,
       nowMs: 0,
       meshBodies: SCENE_MESH_BODIES,
@@ -56,7 +57,7 @@ function makeState(): EngineState {
       missions: { craft: null },
       bodies: { items: makeBodyItems() },
     },
-    visibilityEntries: APP_VISIBILITY,
+    visibilityEntries: APP_VISIBILITY_REGISTRY,
   } as unknown as EngineState;
 }
 

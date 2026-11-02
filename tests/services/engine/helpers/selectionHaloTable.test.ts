@@ -5,7 +5,7 @@ import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_DISC_RADIUS_KPC,
 } from '../../../../src/data/milkyWay/galacticCenter';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
