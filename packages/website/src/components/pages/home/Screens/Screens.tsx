@@ -14,10 +14,11 @@ import { cx } from '../../../../utils/cx.ts';
 import { revealDelay } from '../../../../utils/revealDelay.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
+import { SLICES } from '../../../shared/media/Phone3D/Phone3D.constants.ts';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import styles from './Screens.module.css';
 import ScreenDevice from './ScreenDevice.tsx';
-import { KINDS, SLICES } from './Screens.constants.ts';
+import { KINDS } from './Screens.constants.ts';
 
 type ScreensProps = {
   title: ReactNode;
