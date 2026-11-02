@@ -6,7 +6,7 @@
  * name and produce it, so shelving it under `layers/` would import a Layer.
  */
 
-import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
 import type { StarInfoDetail } from './StarInfoDetail';
 
 export type StarInfo = {

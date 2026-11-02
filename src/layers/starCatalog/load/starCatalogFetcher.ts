@@ -9,7 +9,7 @@
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
 import type { Octree } from '../../../@types/octree/Octree';
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { STAR_CATALOG_SOURCE_RECORD } from '../sources/starCatalogSourceRecord';
 import {
   decodeSkstCatalog,
   STAR_CATALOG_DATA_PREFIX,
@@ -27,8 +27,8 @@ export const starCatalogFetcher: Fetcher<Octree<StarColumns>, StarCatalogReq> = 
   signal,
   onProgress,
 ) => {
-  const entry = APP_SOURCE_REGISTRY[req.source];
-  if (entry.type !== 'starCatalog' || entry.binBaseName === null) {
+  const entry = STAR_CATALOG_SOURCE_RECORD[req.source];
+  if (entry.binBaseName === null) {
     throw new Error(`starCatalogFetcher: source ${req.source} is not a streamed star catalog`);
   }
   if (entry.format === 'octree') {

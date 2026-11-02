@@ -1,5 +1,5 @@
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
-import type { StarCatalogId } from '../../../../@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { starSourcesInBand } from './starSourcesInBand';

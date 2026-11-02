@@ -8,7 +8,7 @@
  */
 
 import type { StarBody } from './StarBody';
-import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
 import type { Vec3 } from '../math/Vec3';
 
 export type PositionedStar = StarBody & {

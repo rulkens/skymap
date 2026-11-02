@@ -1,4 +1,4 @@
-import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 
 /**
  * GalaxyRow — the serializable projection of a single galaxy's CLOUD-SOURCED

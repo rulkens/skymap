@@ -1,4 +1,4 @@
-import type { SourceType } from '../data/SourceType';
+import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
 import type { Tier } from '../data/Tier';
 
 /**
@@ -8,4 +8,4 @@ import type { Tier } from '../data/Tier';
  * the same fetcher unchanged. `tier` selects the `-<tier>.bin` file for an
  * `skst` row and the chunk pool's size for an `octree` row.
  */
-export type StarCatalogReq = { readonly source: SourceType; readonly tier: Tier };
+export type StarCatalogReq = { readonly source: StarCatalogSourceType; readonly tier: Tier };

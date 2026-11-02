@@ -14,7 +14,7 @@
 import { structureMembership } from './structureMembership';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { maskHas } from '../../../utils/maskHas';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 

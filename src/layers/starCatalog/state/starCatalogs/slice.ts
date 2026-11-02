@@ -7,7 +7,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { StarCatalogId } from '../../../../@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 
 export const starCatalogsSlice = createSlice({
   name: 'settings/starCatalogs',

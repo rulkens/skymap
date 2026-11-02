@@ -1,4 +1,4 @@
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
 import type { ViewSlotUniformRing } from '../../../@types/rendering/ViewSlotUniformRing';
 
 /**
@@ -8,7 +8,7 @@ import type { ViewSlotUniformRing } from '../../../@types/rendering/ViewSlotUnif
  * bytes.
  */
 export type CatalogDrawEntry = {
-  source: SourceType;
+  source: GalaxyCatalogSourceType;
   count: number;
   vertexBuffer: GPUBuffer;
   fade: ViewSlotUniformRing;
