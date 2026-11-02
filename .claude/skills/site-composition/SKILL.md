@@ -60,7 +60,8 @@ states a rule, it is not repeated here.
 ## Space
 
 - Between sections: `--section-space`. Inside a section nothing exceeds half of it; prose stacks on
-  `--stack`, columns on `--col-gap`.
+  `--stack`, columns on `--col-gap`, and every other margin, padding and gap is a `--site-space-*` step
+  (3xs 0.25rem to 3xl 5rem, `styles/site.css`).
 - Proximity sets the groups: the gap inside a group is smaller than the gap between groups. A heading
   sits closer to its own text than to the section above it.
 - Use the weakest container that works: space, then one rule, then a background, then a border.

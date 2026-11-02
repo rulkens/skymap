@@ -49,6 +49,21 @@
   --measure: 44ch;
   --measure-lead: 52ch;
 
+  /*
+   * Every margin, padding and gap inside a section is a step of this scale (rem, so it grows with the
+   * reader's text size); the app's px `--space-*` is for its panels. What is not on it is geometry: a
+   * picture's size, an overlap, a tap area taken back by a negative margin, an optical nudge, an `em`.
+   */
+  --site-space-3xs: 0.25rem;
+  --site-space-2xs: 0.5rem;
+  --site-space-xs: 0.75rem;
+  --site-space-s: 1rem;
+  --site-space-m: 1.5rem;
+  --site-space-l: 2rem;
+  --site-space-xl: 2.5rem;
+  --site-space-2xl: 3.5rem;
+  --site-space-3xl: 5rem;
+
   /* One gap between sections; inside a section nothing exceeds half of it. */
   --gutter: 2.75rem;
   /* The one gap between columns of the page grid (`.grid`, styles/layout.module.css). */
@@ -57,7 +72,7 @@
   /* From the column's edge to the window's: `.wrap` centres a column at most `--wrap-max` wide, inside the gutter. */
   --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   --section-space: 9.375rem;
-  --stack: 1.5rem;
+  --stack: var(--site-space-m);
   --nav-height: 4.5rem;
   --tap: 2.75rem;
   /* How far the ring about a dome frame (Disc) stands outside it; its host leaves that room. */

@@ -15,9 +15,9 @@
   --edge: color-mix(in srgb, var(--color-accent) 38%, #000);
   display: inline-flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: var(--site-space-xs);
   min-height: 3.5rem;
-  padding: 0 1.5rem 0 1.25rem;
+  padding: 0 var(--site-space-m) 0 var(--site-space-m);
   border: 1px solid transparent;
   border-radius: 0.25rem;
   background:
@@ -114,9 +114,9 @@
 }
 
 .small {
-  gap: 0.5rem;
+  gap: var(--site-space-2xs);
   min-height: var(--tap);
-  padding: 0 1rem 0 0.75rem;
+  padding: 0 var(--site-space-s) 0 var(--site-space-xs);
   font-size: var(--text-small);
 }
 

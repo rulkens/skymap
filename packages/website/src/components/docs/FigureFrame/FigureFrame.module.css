@@ -9,7 +9,7 @@
 
 .caption {
   position: relative;
-  margin-top: 0.5rem;
+  margin-top: var(--site-space-2xs);
 
   /* On the label's last line, where "Open this view" stands, at the other end of it. One step more specific than the ring's own rules. */
   & a.enlarge {

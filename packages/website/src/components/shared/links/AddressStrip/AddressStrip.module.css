@@ -6,7 +6,7 @@
 .address {
   flex: 1;
   min-width: 0;
-  padding: 0.6875rem 0;
+  padding: var(--site-space-xs) 0;
   /* The one text under 16px on the site, with the BibTeX box: an address field's own face and size. */
   font: 400 0.875rem / 1.6 var(--font-family-mono);
   color: var(--site-text-dim);
@@ -44,10 +44,10 @@
   }
 
   & .address {
-    padding: 1rem 1.25rem;
+    padding: var(--site-space-s) var(--site-space-m);
 
     @media (max-width: 900px) {
-      padding: 0.75rem;
+      padding: var(--site-space-xs);
     }
   }
 }

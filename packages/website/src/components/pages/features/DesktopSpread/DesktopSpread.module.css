@@ -2,8 +2,8 @@
 .root {
   composes: wrap grid from '../../../../styles/layout.module.css';
   --color-accent: #e8b98f;
-  row-gap: 2.5rem;
-  padding-block: 3.5rem;
+  row-gap: var(--site-space-xl);
+  padding-block: var(--site-space-2xl);
 }
 
 /* The distance, set as a picture across the render's lower right, under the card. */
@@ -66,7 +66,7 @@
 }
 
 .caption {
-  margin-top: 0.5rem;
+  margin-top: var(--site-space-2xs);
 }
 
 /*
@@ -133,7 +133,7 @@
 @media (max-width: 900px) {
   .reading {
     grid-column: 1 / -1;
-    margin-top: 1rem;
+    margin-top: var(--site-space-s);
   }
 }
 

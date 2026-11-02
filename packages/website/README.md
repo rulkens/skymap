@@ -22,7 +22,9 @@ with no `.root` that a class takes with `composes: <class> from '…/styles/<mod
 - `type` (text styles), `layout` (column, rhythm, twelve-column grid), `links`, `ring` (the site's one control),
   `picture` (a picture's words), `sheet` (a dialog over the page), `motion` (drift, lean, feathered rim) and
   `a11y` (words for screen readers, the skip link).
-- `site.css` holds the tokens (colour, type scale, `--bleed`, `--disc-ring`) and the few global rules.
+- `site.css` holds the tokens (colour, type scale, the `--site-space-*` spacing scale, `--bleed`, `--disc-ring`)
+  and the few global rules. Every margin, padding and gap is a `--site-space-*` step; a raw length is geometry
+  (a picture's size, an overlap, a tap area taken back by a negative margin, an optical nudge, an `em`).
 
 ## Pictures and films
 

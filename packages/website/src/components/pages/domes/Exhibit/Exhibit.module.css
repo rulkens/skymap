@@ -22,7 +22,7 @@
 }
 
 .labels {
-  margin-top: 0.5rem;
+  margin-top: var(--site-space-2xs);
 }
 
 /*
@@ -63,7 +63,7 @@
 
 /* Doubled, to win over `bare`'s margin wherever the two land in the sheet. */
 .words .chooser {
-  margin: 0.5rem 0 2rem;
+  margin: var(--site-space-2xs) 0 var(--site-space-l);
   border-top: 1px solid var(--border-divider);
 
   & li {
@@ -133,6 +133,6 @@
   }
 
   .figure {
-    margin-bottom: 2rem;
+    margin-bottom: var(--site-space-l);
   }
 }

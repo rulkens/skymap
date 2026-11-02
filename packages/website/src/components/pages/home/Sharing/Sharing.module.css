@@ -17,7 +17,7 @@
 
 .window {
   position: relative;
-  margin-top: 3rem;
+  margin-top: var(--site-space-2xl);
 }
 
 /* The tabs and the bar, the one raised surface: lighter than the ground, over the top of the view it opens. */
@@ -30,8 +30,8 @@
 
 .tabs {
   display: flex;
-  gap: 0.25rem;
-  padding-inline: 0.5rem;
+  gap: var(--site-space-3xs);
+  padding-inline: var(--site-space-2xs);
 }
 
 /* The current tab is the bar's own surface, open into it; the others are words on the page. */
@@ -40,7 +40,7 @@
   min-width: 0;
   min-height: 2.25rem;
   margin-bottom: -1px;
-  padding: 0 1rem;
+  padding: 0 var(--site-space-s);
   border: 1px solid transparent;
   border-bottom: 0;
   border-radius: 0.5rem 0.5rem 0 0;
@@ -90,7 +90,7 @@
   flex: 1;
   min-width: 0;
   min-height: 3.5rem;
-  padding: 1rem 1.25rem;
+  padding: var(--site-space-s) var(--site-space-m);
   font: 400 var(--text-small) / 1.5 var(--font-family-mono);
   color: var(--site-text-faint);
   text-decoration: none;
@@ -166,7 +166,7 @@
   composes: wrap grid from '../../../../styles/layout.module.css';
   position: relative;
   z-index: 1;
-  row-gap: 2rem;
+  row-gap: var(--site-space-l);
   margin-top: -11rem;
 }
 
@@ -176,18 +176,18 @@
 
 /* A part stands under its parameter's name, on a rule in its colour. */
 .part {
-  padding-top: 1rem;
+  padding-top: var(--site-space-s);
   border-top: 1px solid var(--ink);
 
   & code {
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--site-space-2xs);
     font: 400 var(--text-small) / 1.5 var(--font-family-mono);
     color: var(--ink);
   }
 
   & h3 {
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--site-space-2xs);
   }
 
   & p {
@@ -223,7 +223,7 @@
 
 @media (max-width: 900px) {
   .window {
-    margin-top: 2rem;
+    margin-top: var(--site-space-l);
   }
 
   .chrome {
@@ -231,16 +231,16 @@
   }
 
   .tabs {
-    padding-inline: 0.25rem;
+    padding-inline: var(--site-space-3xs);
   }
 
   .tab {
     flex: 1 1 0;
-    padding: 0 0.625rem;
+    padding: 0 var(--site-space-xs);
   }
 
   .address {
-    padding: 0.75rem;
+    padding: var(--site-space-xs);
     font-size: 0.875rem;
   }
 

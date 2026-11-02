@@ -6,7 +6,7 @@
 .root {
   position: relative;
   height: 9rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--site-space-m);
   overflow-x: clip;
 
   & img {

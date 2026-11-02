@@ -1,6 +1,6 @@
 .root {
   margin-top: var(--stack);
-  padding-block: 0.875rem 0.25rem;
+  padding-block: var(--site-space-s) var(--site-space-3xs);
   border-top: 1px solid var(--border-divider);
 
   & + & {
@@ -9,7 +9,7 @@
 
   /* The last of a run closes it with the rule the first opened it with. */
   &:not(:has(+ .root)) {
-    margin-bottom: 2rem;
+    margin-bottom: var(--site-space-l);
     border-bottom: 1px solid var(--border-divider);
   }
 

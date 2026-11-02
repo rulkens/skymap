@@ -6,8 +6,8 @@
 .root {
   composes: grid from '../../../../styles/layout.module.css';
   composes: small from '../../../../styles/type.module.css';
-  row-gap: 1.5rem;
-  padding-block: 3rem 4rem;
+  row-gap: var(--site-space-m);
+  padding-block: var(--site-space-2xl) var(--site-space-2xl);
   border-top: 1px solid var(--border-divider);
   color: var(--site-text-dim);
 
@@ -25,18 +25,18 @@
 
 .head .why {
   max-width: 22rem;
-  margin-top: 0.75rem;
+  margin-top: var(--site-space-xs);
   color: var(--site-text-faint);
 }
 
 .body {
   display: grid;
-  row-gap: 2.5rem;
+  row-gap: var(--site-space-xl);
 }
 
 .group {
   display: grid;
-  row-gap: 0.5rem;
+  row-gap: var(--site-space-2xs);
 }
 
 .label {
@@ -49,8 +49,8 @@
 
 .row {
   display: grid;
-  gap: 0.25rem var(--col-gap);
-  padding-block: 0.75rem;
+  gap: var(--site-space-3xs) var(--col-gap);
+  padding-block: var(--site-space-xs);
   border-top: 1px solid var(--border-divider);
 
   & dt,
@@ -92,7 +92,7 @@
 
   .label {
     grid-column: span 2;
-    padding-top: 0.75rem;
+    padding-top: var(--site-space-xs);
   }
 
   .group:first-child .label {

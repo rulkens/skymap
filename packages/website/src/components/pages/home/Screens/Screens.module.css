@@ -37,7 +37,7 @@
 }
 
 .head {
-  margin-bottom: 2.5rem;
+  margin-bottom: var(--site-space-xl);
 
   & p {
     max-width: var(--measure-lead);
@@ -51,7 +51,7 @@
     text-align: center;
 
     & p {
-      margin-bottom: 1rem;
+      margin-bottom: var(--site-space-s);
     }
   }
 }
@@ -87,8 +87,8 @@
   grid-template-columns: repeat(4, auto);
   grid-template-rows: auto auto;
   justify-content: space-between;
-  row-gap: 2rem;
-  margin-top: 4rem;
+  row-gap: var(--site-space-l);
+  margin-top: var(--site-space-2xl);
 
   /* The floor: one hairline across the row, under every device. */
   &::after {
@@ -245,7 +245,7 @@
   text-align: center;
 
   & h3 {
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--site-space-2xs);
   }
 }
 
@@ -258,7 +258,7 @@
 
 .note {
   composes: small from '../../../../styles/type.module.css';
-  margin: 0 auto 0.5rem;
+  margin: 0 auto var(--site-space-2xs);
   color: var(--site-text-dim);
   text-wrap: balance;
 }
@@ -278,8 +278,8 @@
   .row {
     --h: 28vw;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 2rem;
-    row-gap: 1.25rem;
+    margin-top: var(--site-space-l);
+    row-gap: var(--site-space-m);
 
     &::after {
       content: none;
@@ -287,10 +287,10 @@
   }
 
   .part {
-    row-gap: 1.25rem;
+    row-gap: var(--site-space-m);
   }
 
   .part:nth-child(n + 3) {
-    margin-top: 1.5rem;
+    margin-top: var(--site-space-m);
   }
 }

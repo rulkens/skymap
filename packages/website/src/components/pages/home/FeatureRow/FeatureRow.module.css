@@ -35,7 +35,7 @@
 .subject {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--site-space-xs);
   text-decoration: none;
   color: var(--site-text-muted);
 

@@ -1,6 +1,6 @@
 .root {
   composes: grid from '../../../../styles/layout.module.css';
-  row-gap: 3rem;
+  row-gap: var(--site-space-2xl);
   align-items: center;
   --steer-accent: #8fb6ff;
   /* Where the rings sit: out in the margin as the site's link markers hang, so the words keep the left edge. */
@@ -12,14 +12,14 @@
 /* Each step (a heading and its lines) hangs a ring in the margin; a thin line runs from each ring to the next. */
 .track > * {
   position: relative;
-  padding-bottom: 2rem;
+  padding-bottom: var(--site-space-l);
 
   &:last-child {
     padding-bottom: 0;
   }
 
   & h3 {
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--site-space-2xs);
     font-size: var(--text-h3);
   }
 

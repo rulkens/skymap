@@ -1,6 +1,6 @@
 .root {
   composes: grid from '../../../../styles/layout.module.css';
-  row-gap: 2.5rem;
+  row-gap: var(--site-space-xl);
 
   & h2 {
     margin: 0;
@@ -14,7 +14,7 @@
 
   & > a {
     display: flex;
-    padding-block: 0.875rem;
+    padding-block: var(--site-space-s);
     border-top: 1px solid var(--border-divider);
   }
 }

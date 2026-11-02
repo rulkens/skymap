@@ -25,7 +25,7 @@
   z-index: 6;
   display: flex;
   align-items: center;
-  gap: 1.875rem;
+  gap: var(--site-space-l);
   /* Full width, on the gutter: the bar lines up with the hero's words, which are not in the page column. */
   padding-inline: var(--gutter);
   /* The launch control is as far from the right edge as from the top one. */
@@ -63,7 +63,7 @@
 .links,
 .list {
   display: flex;
-  gap: 1.875rem;
+  gap: var(--site-space-l);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -89,7 +89,7 @@ button.toggle {
 /* Same breakpoint as site.css. */
 @media (max-width: 900px) {
   .root {
-    gap: 1rem;
+    gap: var(--site-space-s);
   }
 
   .links {
@@ -111,7 +111,7 @@ button.toggle {
    * its own text, so the bar never pushes the page sideways.
    */
   .root {
-    gap: min(1rem, 3vw);
+    gap: min(var(--site-space-s), 3vw);
     padding-inline: min(var(--gutter), 5vw);
   }
 
@@ -145,7 +145,7 @@ button.toggle {
     margin: 0;
     flex-direction: column;
     gap: 0;
-    padding: 0.5rem var(--gutter) 1.5rem;
+    padding: var(--site-space-2xs) var(--gutter) var(--site-space-m);
     color: inherit;
     background: var(--color-bg);
     border: 0;
@@ -174,7 +174,7 @@ button.toggle {
 
 @media (max-width: 400px) {
   .root {
-    gap: min(0.75rem, 3vw);
+    gap: min(var(--site-space-xs), 3vw);
   }
 
   .mark {

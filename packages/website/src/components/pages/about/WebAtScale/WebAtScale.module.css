@@ -96,7 +96,7 @@
   }
 
   .figure {
-    margin-top: 2rem;
+    margin-top: var(--site-space-l);
   }
 
   .web {

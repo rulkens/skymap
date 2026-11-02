@@ -1,7 +1,7 @@
 /* The scroll box reaches into the margin, so the rings hung there are inside it and not clipped. */
 .root {
   overflow-x: auto;
-  margin: 0 0 1.5rem -1.5rem;
+  margin: 0 0 var(--site-space-m) -1.5rem;
   padding-left: 1.5rem;
 
   & table {
@@ -14,7 +14,7 @@
 
   & th,
   & td {
-    padding: 0.625rem 1rem 0.625rem 0;
+    padding: var(--site-space-xs) var(--site-space-s) var(--site-space-xs) 0;
     border-bottom: 1px solid var(--border-divider);
     text-align: left;
     vertical-align: top;
@@ -64,7 +64,7 @@
   }
 
   .root tbody th {
-    padding-left: 1.25rem;
+    padding-left: var(--site-space-m);
   }
 
   .root tbody th::before {
@@ -92,7 +92,7 @@
     }
 
     & tr {
-      padding-block: 0.75rem;
+      padding-block: var(--site-space-xs);
       border-bottom: 1px solid var(--border-divider);
     }
 
@@ -105,7 +105,7 @@
     & td {
       display: grid;
       grid-template-columns: 8rem minmax(0, 1fr);
-      padding-left: 1.25rem;
+      padding-left: var(--site-space-m);
     }
 
     & td::before {

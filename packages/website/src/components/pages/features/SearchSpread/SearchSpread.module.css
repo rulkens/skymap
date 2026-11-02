@@ -1,6 +1,6 @@
 .root {
   composes: wrap grid section from '../../../../styles/layout.module.css';
-  row-gap: 3rem;
+  row-gap: var(--site-space-2xl);
   align-items: center;
 }
 
@@ -29,7 +29,7 @@
   bottom: 92%;
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: var(--site-space-2xs);
   margin: 0;
   color: var(--site-text-dim);
   font-size: var(--text-small);

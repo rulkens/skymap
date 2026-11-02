@@ -4,7 +4,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 2.5rem 3rem;
+  gap: var(--site-space-xl) var(--site-space-2xl);
   --film-width: min(100%, 21rem);
   --phone-width: 12.5rem;
 

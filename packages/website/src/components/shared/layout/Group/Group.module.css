@@ -1,5 +1,5 @@
 .root {
-  margin-top: 3.5rem;
+  margin-top: var(--site-space-2xl);
 
   & h3 {
     margin: 0;
@@ -7,7 +7,7 @@
 }
 
 .big {
-  margin-top: 4.5rem;
+  margin-top: var(--site-space-3xl);
 
   & h3 {
     font-size: var(--text-ring-big);
@@ -19,7 +19,7 @@
 }
 
 .name {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--site-space-m);
 
   & p {
     max-width: var(--measure-lead);
@@ -29,7 +29,7 @@
 
 .lede {
   composes: grid from '../../../../styles/layout.module.css';
-  row-gap: 0.5rem;
+  row-gap: var(--site-space-2xs);
   align-items: baseline;
 }
 
@@ -45,6 +45,6 @@
 
 @media (max-width: 900px) {
   .big {
-    margin-top: 3.5rem;
+    margin-top: var(--site-space-2xl);
   }
 }

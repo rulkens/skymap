@@ -2,8 +2,8 @@
 .root {
   composes: grid from '../../../../styles/layout.module.css';
   align-items: last baseline;
-  row-gap: 1rem;
-  margin-bottom: 2.5rem;
+  row-gap: var(--site-space-s);
+  margin-bottom: var(--site-space-xl);
 
   & h2 {
     max-width: 20ch;

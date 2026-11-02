@@ -16,7 +16,7 @@
   gap: var(--gap);
   max-width: 100%;
   min-height: var(--tap);
-  padding: 0.375rem 0;
+  padding: var(--site-space-2xs) 0;
   border: 0;
   background: none;
   cursor: pointer;

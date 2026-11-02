@@ -1,8 +1,8 @@
 .root {
   composes: wrap grid from '../../../../styles/layout.module.css';
   align-items: center;
-  row-gap: 2rem;
-  padding-block: 3.5rem;
+  row-gap: var(--site-space-l);
+  padding-block: var(--site-space-2xl);
 }
 
 .part {
@@ -17,8 +17,8 @@
 .small {
   display: flex;
   align-items: flex-start;
-  gap: 1.5rem;
-  margin-top: 2rem;
+  gap: var(--site-space-m);
+  margin-top: var(--site-space-l);
 }
 
 /* A phone or a disc that is narrower than the column stands in its middle. */

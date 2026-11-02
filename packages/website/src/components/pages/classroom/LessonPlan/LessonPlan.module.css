@@ -9,7 +9,7 @@
 .bar {
   composes: bare from '../../../../styles/layout.module.css';
   display: flex;
-  margin-bottom: 5rem;
+  margin-bottom: var(--site-space-3xl);
 
   & li {
     flex: var(--minutes) 1 0;
@@ -19,7 +19,7 @@
   & a {
     position: relative;
     display: block;
-    padding: 1.25rem 0.75rem 0 0;
+    padding: var(--site-space-m) var(--site-space-xs) 0 0;
     color: var(--site-text-muted);
     text-decoration: none;
 
@@ -70,7 +70,7 @@
 
 .from {
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--site-space-3xs);
   font: var(--weight-small) var(--text-small) / 1.5 var(--font-family-mono);
   color: var(--accent);
 }
@@ -113,8 +113,8 @@
   & h3 {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin: 0 0 1rem;
+    gap: var(--site-space-xs);
+    margin: 0 0 var(--site-space-s);
   }
 
   & p {
@@ -122,27 +122,27 @@
   }
 
   & .prep {
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--site-space-xs);
   }
 
   & .label {
-    margin: 2.5rem 0 0.5rem;
+    margin: var(--site-space-xl) 0 var(--site-space-2xs);
   }
 
   & > a {
     align-self: start;
     justify-self: start;
-    margin-top: 1rem;
+    margin-top: var(--site-space-s);
   }
 }
 
 .part:nth-child(n + 3) .picture {
-  margin-top: 6rem;
+  margin-top: var(--site-space-3xl);
 }
 
 /* The picture dissolves at its edges into the page. */
 .picture {
-  margin-bottom: 2rem;
+  margin-bottom: var(--site-space-l);
   mask-image:
     linear-gradient(90deg, rgb(0 0 0 / 0), #000 6%, #000 94%, rgb(0 0 0 / 0)),
     linear-gradient(180deg, rgb(0 0 0 / 0), #000 6%, #000 90%, rgb(0 0 0 / 0));
@@ -183,12 +183,12 @@
 
 /* The parts' rhythm: a title close to its line, then the question and its answer as their own group. */
 .leave {
-  margin-top: 6rem;
-  padding-top: 2rem;
+  margin-top: var(--site-space-3xl);
+  padding-top: var(--site-space-l);
   border-top: 1px solid var(--border-divider);
 
   & h3 {
-    margin-bottom: 1rem;
+    margin-bottom: var(--site-space-s);
   }
 
   & > p {
@@ -197,7 +197,7 @@
   }
 
   & > .ask {
-    margin: 2.5rem 0 1rem;
+    margin: var(--site-space-xl) 0 var(--site-space-s);
   }
 }
 
@@ -221,7 +221,7 @@
 @media (max-width: 900px) {
   .bar {
     flex-direction: column;
-    margin-bottom: 2.5rem;
+    margin-bottom: var(--site-space-xl);
 
     & li {
       flex: none;
@@ -230,7 +230,7 @@
 
     & a {
       height: 100%;
-      padding: 0 0 1rem 1.5rem;
+      padding: 0 0 var(--site-space-s) var(--site-space-m);
 
       &::before {
         inset: 0 auto 0.25rem 0;
@@ -257,7 +257,7 @@
 
   .part:nth-child(n + 2) .picture,
   .leave {
-    margin-top: 3.5rem;
+    margin-top: var(--site-space-2xl);
   }
 
   .picture {

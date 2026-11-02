@@ -12,6 +12,6 @@
 
 @media (max-width: 900px) {
   .root > * + * {
-    margin-top: 4.5rem;
+    margin-top: var(--site-space-3xl);
   }
 }

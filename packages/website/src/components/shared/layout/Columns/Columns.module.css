@@ -1,6 +1,6 @@
 .root {
   composes: grid from '../../../../styles/layout.module.css';
-  row-gap: 2.5rem;
+  row-gap: var(--site-space-xl);
 
   & h3 {
     font-size: var(--text-lead);
@@ -24,7 +24,7 @@
 
   & li {
     max-width: var(--measure);
-    padding-block: 0.625rem;
+    padding-block: var(--site-space-xs);
     line-height: 1.45;
   }
 
@@ -46,7 +46,7 @@
 
 /* The auto margin replaces a link row's own (links.module.css); as padding, its gap stays in the longest column. */
 .root > * > div:has(> a):last-child {
-  padding-top: var(--row-top, 1.5rem);
+  padding-top: var(--row-top, var(--site-space-m));
 }
 
 .footLast > :last-child {

@@ -15,10 +15,10 @@
     grid-row: span 3;
     grid-template-rows: subgrid;
     grid-template-columns: auto 1fr;
-    column-gap: 1rem;
+    column-gap: var(--site-space-s);
     align-items: baseline;
-    row-gap: 0.75rem;
-    padding-top: 0.75rem;
+    row-gap: var(--site-space-xs);
+    padding-top: var(--site-space-xs);
     border-top: 1px solid var(--border-divider);
   }
 

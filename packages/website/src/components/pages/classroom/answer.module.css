@@ -8,7 +8,7 @@
   & summary {
     display: inline-flex;
     align-items: center;
-    gap: 0.875rem;
+    gap: var(--site-space-s);
     min-height: var(--tap);
     cursor: pointer;
     color: var(--accent, var(--color-accent));

@@ -9,8 +9,8 @@
   flex-wrap: wrap;
   align-items: end;
   justify-content: space-between;
-  gap: 1rem 2rem;
-  margin-bottom: 2.5rem;
+  gap: var(--site-space-s) var(--site-space-l);
+  margin-bottom: var(--site-space-xl);
 
   & h2,
   & p {
@@ -164,7 +164,7 @@
   top: 50%;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: var(--site-space-3xs);
   width: calc((var(--room) + 5) * var(--u));
   transform: translateY(-50%);
 
@@ -204,7 +204,7 @@
   & svg {
     width: 1rem;
     height: 1rem;
-    margin-left: 0.25rem;
+    margin-left: var(--site-space-3xs);
     stroke: var(--site-text-dim);
     transition: stroke 0.25s ease;
   }

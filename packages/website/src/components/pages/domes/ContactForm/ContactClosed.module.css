@@ -19,7 +19,7 @@
 .note {
   composes: small from '../../../../styles/type.module.css';
   max-width: none;
-  margin-top: 2rem;
-  margin-bottom: 0.5rem;
+  margin-top: var(--site-space-l);
+  margin-bottom: var(--site-space-2xs);
   color: var(--site-text-dim);
 }

@@ -48,7 +48,7 @@
   composes: wrap from '../../../../styles/layout.module.css';
   position: relative;
   width: 100%;
-  padding-bottom: 2rem;
+  padding-bottom: var(--site-space-l);
 
   & > * {
     margin-left: calc((100% + var(--col-gap)) * 7 / 12);
@@ -86,7 +86,7 @@
 
   .words {
     order: -1;
-    margin-block: 2rem 0;
+    margin-block: var(--site-space-l) 0;
     padding-top: 0;
 
     & > * {

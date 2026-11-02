@@ -103,6 +103,6 @@
     --x: calc(50% + 0.173 * var(--w));
     --y: calc(50% + 0.016 * var(--h));
     height: calc(0.6 * var(--h));
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--site-space-m);
   }
 }

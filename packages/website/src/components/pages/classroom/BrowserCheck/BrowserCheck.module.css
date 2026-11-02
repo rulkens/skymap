@@ -7,7 +7,7 @@
   position: relative;
   max-width: var(--measure-lead);
   margin: 0;
-  padding-left: 1.625rem;
+  padding-left: var(--site-space-m);
   font-size: var(--text-lead);
   color: var(--color-fg);
   text-wrap: balance;

@@ -29,7 +29,7 @@
 .focus,
 .front {
   position: absolute;
-  padding: 0.125rem 0.5rem;
+  padding: 0.125rem var(--site-space-2xs);
   border-radius: 0.25rem;
   color: var(--site-text-muted);
   font-size: var(--text-small);

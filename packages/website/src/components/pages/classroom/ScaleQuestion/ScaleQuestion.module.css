@@ -26,7 +26,7 @@
   padding-top: var(--open-top);
 
   & h1 {
-    margin-bottom: 1rem;
+    margin-bottom: var(--site-space-s);
   }
 }
 
@@ -103,7 +103,7 @@
     display: block;
     width: 1px;
     height: 0.625rem;
-    margin: 0.375rem auto 0;
+    margin: var(--site-space-2xs) auto 0;
     background: currentColor;
     opacity: 0.6;
   }
@@ -165,12 +165,12 @@
 
 .ask {
   grid-row: 3;
-  padding-bottom: 1.5rem;
+  padding-bottom: var(--site-space-m);
 }
 
 .question {
   max-width: 22ch;
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--site-space-xs);
   font: var(--weight-display) var(--text-ring-big) / var(--leading-display)
     var(--font-family-display);
   color: var(--color-fg);
@@ -179,7 +179,7 @@
 
 .answer {
   composes: answer from '../answer.module.css';
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--site-space-m);
 }
 
 /* Wide: the question and the answer on the left, the link and its note on the page grid's last five columns. */
@@ -199,13 +199,13 @@
   .act {
     grid-area: 1 / 8 / 3 / -1;
     align-self: end;
-    padding-bottom: 0.75rem;
+    padding-bottom: var(--site-space-xs);
   }
 }
 
 .caption {
   grid-row: 4;
-  padding-bottom: 2rem;
+  padding-bottom: var(--site-space-l);
 }
 
 /*
@@ -239,15 +239,15 @@
   .question {
     order: -1;
     margin-block: 0;
-    padding-top: 2rem;
+    padding-top: var(--site-space-l);
   }
 
   .answer {
-    margin-block: 1rem 1.25rem;
+    margin-block: var(--site-space-s) var(--site-space-m);
   }
 
   .act {
-    padding-bottom: 2rem;
+    padding-bottom: var(--site-space-l);
   }
 
   .frame {

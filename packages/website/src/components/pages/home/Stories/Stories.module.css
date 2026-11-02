@@ -11,13 +11,13 @@
 }
 
 .part p {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--site-space-xs);
 }
 
 .links {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 2.5rem;
+  column-gap: var(--site-space-xl);
 }
 
 /* A stage's scene stacks its layers; each layer's picture fills its box at the frame's own shape. */
@@ -129,13 +129,13 @@
   }
 
   .tourPart {
-    margin-top: 2.5rem;
+    margin-top: var(--site-space-xl);
   }
 
   .exhibitPart {
     grid-column: 8 / -1;
     grid-row: 2;
-    margin-top: 3rem;
+    margin-top: var(--site-space-2xl);
   }
 
   /* Its faded top slides under the part's foot. */
@@ -159,17 +159,17 @@
 
   .tourStage {
     order: 1;
-    margin: 1rem calc(-1 * var(--gutter)) 0;
+    margin: var(--site-space-s) calc(-1 * var(--gutter)) 0;
   }
 
   .tourPart {
     order: 2;
-    margin-top: 1.5rem;
+    margin-top: var(--site-space-m);
   }
 
   .exhibitPart {
     order: 3;
-    margin-top: 3rem;
+    margin-top: var(--site-space-2xl);
   }
 
   .exhibitStage {
@@ -199,7 +199,7 @@
   }
 
   .tourStage .label {
-    margin: 3.5rem var(--gutter) 0;
+    margin: var(--site-space-2xl) var(--gutter) 0;
   }
 
   /* A 5:4 cut of the frame's middle, at its full height: the frame is 1.28 cuts wide, so the ring's end is at 58.3%. */
@@ -374,12 +374,12 @@
     }
 
     .tourPart {
-      margin-top: 2rem;
+      margin-top: var(--site-space-l);
     }
 
     .exhibitPart {
       align-self: start;
-      margin-top: 1.5rem;
+      margin-top: var(--site-space-m);
     }
 
     .tourStage,

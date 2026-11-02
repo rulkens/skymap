@@ -28,12 +28,12 @@
   }
 
   & h3 {
-    margin-bottom: 0.625rem;
+    margin-bottom: var(--site-space-xs);
     color: var(--color-fg);
   }
 
   & p {
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--site-space-xs);
   }
 }
 
@@ -76,7 +76,7 @@
   --jupiter-x: 75%;
   position: relative;
   height: calc(0.767 * var(--jupiter));
-  margin: 2rem calc(-1 * var(--bleed)) 3.5rem;
+  margin: var(--site-space-l) calc(-1 * var(--bleed)) var(--site-space-2xl);
 }
 
 .earth,
@@ -120,13 +120,13 @@
 
 /* Orion and Andromeda, each a picture without a frame: a soft-edged window of sky. */
 .far {
-  margin-top: 6rem;
-  row-gap: 4rem;
+  margin-top: var(--site-space-3xl);
+  row-gap: var(--site-space-2xl);
 }
 
 .figure {
   position: relative;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--site-space-m);
 }
 
 /* One shape for both far views, so the two questions under them stand level. */
@@ -161,7 +161,7 @@
  */
 .mars {
   display: grid;
-  margin: 4rem calc(-1 * var(--bleed)) 0;
+  margin: var(--site-space-2xl) calc(-1 * var(--bleed)) 0;
 }
 
 .ground {
@@ -215,7 +215,7 @@
   grid-area: 1 / 1;
   align-self: start;
   justify-self: start;
-  margin: 4.5rem 0 0 var(--bleed);
+  margin: var(--site-space-3xl) 0 0 var(--bleed);
 }
 
 .marsCaption {
@@ -242,7 +242,7 @@
     --earth: 12vw;
     --earth-x: calc(var(--gutter) + 6vw);
     --jupiter-x: 70%;
-    margin: 2.5rem calc(-1 * var(--gutter)) 6rem;
+    margin: var(--site-space-xl) calc(-1 * var(--gutter)) var(--site-space-3xl);
     overflow-x: clip;
   }
 
@@ -252,11 +252,11 @@
   }
 
   .second {
-    margin-top: 2.5rem;
+    margin-top: var(--site-space-xl);
   }
 
   .far {
-    margin-top: 4rem;
+    margin-top: var(--site-space-2xl);
   }
 
   .figure {
@@ -279,7 +279,7 @@
   }
 
   .more {
-    margin: 2rem 0 0 var(--gutter);
+    margin: var(--site-space-l) 0 0 var(--gutter);
   }
 
   .mars {

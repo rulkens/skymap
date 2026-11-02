@@ -1,8 +1,8 @@
 /* Under a short rule on the page's middle line, where a section's own lead sits: beside the argument, not in it. */
 .root {
   max-width: 30rem;
-  margin: 4rem 0 0 calc((100% + var(--col-gap)) / 2);
-  padding-top: 1.25rem;
+  margin: var(--site-space-2xl) 0 0 calc((100% + var(--col-gap)) / 2);
+  padding-top: var(--site-space-m);
   color: var(--site-text);
   font-variant-numeric: tabular-nums;
   text-wrap: pretty;
@@ -23,7 +23,7 @@
 
 @media (max-width: 900px) {
   .root {
-    margin: 3rem 0 0 auto;
+    margin: var(--site-space-2xl) 0 0 auto;
   }
 
   .statements {

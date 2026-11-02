@@ -21,7 +21,7 @@
 }
 
 .cap {
-  padding: 1.25rem var(--gutter) 2.5rem;
+  padding: var(--site-space-m) var(--gutter) var(--site-space-xl);
 }
 
 .name {
@@ -76,7 +76,7 @@
   left: 0;
   bottom: 0;
   max-width: min(54rem, 100%);
-  padding: 0 3.5rem 3.5rem var(--gutter);
+  padding: 0 var(--site-space-2xl) var(--site-space-2xl) var(--gutter);
   opacity: 0;
   pointer-events: none;
   text-shadow: 0 0 0.5rem rgb(0 0 0 / 0.9);
@@ -101,7 +101,7 @@
 /* Upright screens: the words take the bottom. */
 @media (max-width: 760px) and (orientation: portrait) {
   :root[data-flight-live] .cap {
-    padding: 0 var(--gutter) 2.75rem;
+    padding: 0 var(--gutter) var(--site-space-xl);
   }
 
   :root[data-flight-live] .cap::before {
@@ -119,7 +119,7 @@
 @media (max-height: 520px) and (orientation: landscape) {
   :root[data-flight-live] .cap {
     max-width: 62%;
-    padding-bottom: 2rem;
+    padding-bottom: var(--site-space-l);
   }
 
   .name {

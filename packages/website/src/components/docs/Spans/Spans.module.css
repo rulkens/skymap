@@ -1,9 +1,9 @@
 .root {
-  margin: 2rem 0 2.5rem;
+  margin: var(--site-space-l) 0 var(--site-space-xl);
 
   & li {
     display: grid;
-    padding-bottom: 1.25rem;
+    padding-bottom: var(--site-space-m);
   }
 
   & b {
@@ -23,7 +23,7 @@
 .axis {
   position: relative;
   height: 0.4375rem;
-  margin-block: 0.25rem 0.5rem;
+  margin-block: var(--site-space-3xs) var(--site-space-2xs);
   background: linear-gradient(var(--border-divider), var(--border-divider)) center / 100% 1px
     no-repeat;
 }
@@ -77,7 +77,7 @@
   & span {
     position: absolute;
     top: 0;
-    padding-top: 0.5rem;
+    padding-top: var(--site-space-2xs);
     transform: translateX(-50%);
     white-space: nowrap;
   }

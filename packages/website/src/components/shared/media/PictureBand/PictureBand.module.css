@@ -98,7 +98,7 @@
   flex-direction: column;
   align-self: stretch;
   width: 100%;
-  padding-block: 5rem 2rem;
+  padding-block: var(--site-space-3xl) var(--site-space-l);
 
   & > :first-child {
     margin-top: auto;
@@ -182,7 +182,7 @@
     font-size: var(--text-small);
     font-weight: var(--weight-small);
     line-height: 1.5;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--site-space-2xs);
   }
 }
 
@@ -242,7 +242,7 @@
       --caption-foot: none;
       --caption-lift: 0rem;
       order: -1;
-      margin-bottom: 2.5rem;
+      margin-bottom: var(--site-space-xl);
       padding-top: 0;
     }
   }
@@ -273,18 +273,18 @@
 
       & > h1 {
         order: -2;
-        margin-top: 2rem;
+        margin-top: var(--site-space-l);
       }
 
       & > p:first-of-type {
         order: -1;
-        margin-bottom: 0.5rem;
+        margin-bottom: var(--site-space-2xs);
       }
 
       & > :last-child {
         order: 1;
         width: auto;
-        margin: -1.5rem var(--gutter) 2.5rem;
+        margin: -1.5rem var(--gutter) var(--site-space-xl);
       }
     }
   }

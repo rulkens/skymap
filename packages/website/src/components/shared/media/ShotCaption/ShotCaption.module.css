@@ -9,7 +9,7 @@
   width: 100%;
   max-width: 34rem;
   margin: 0;
-  padding-top: 0.5rem;
+  padding-top: var(--site-space-2xs);
   /*
    * A size under the page's small text: the label is the quietest words on the page. Not composed from `small`:
    * a composed class is copied into every composing module, and a later copy would override this size.

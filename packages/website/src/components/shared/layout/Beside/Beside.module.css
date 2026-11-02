@@ -1,6 +1,6 @@
 .root {
   composes: grid from '../../../../styles/layout.module.css';
-  row-gap: 2.5rem;
+  row-gap: var(--site-space-xl);
 }
 
 /* Two blocks of words: as Columns, a block's closing link stands on the foot of the row, level with its neighbour's. */
@@ -15,7 +15,7 @@
 }
 
 .root:not(.picture) > * > div:has(> a):last-child {
-  padding-top: var(--row-top, 1.5rem);
+  padding-top: var(--row-top, var(--site-space-m));
 }
 
 .picture {
