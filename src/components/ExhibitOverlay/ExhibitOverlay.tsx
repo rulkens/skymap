@@ -6,10 +6,12 @@
  * itself through its kind's Component; a container resolves the exhibit.
  */
 
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 import StopIcon from '../TourOverlay/StopIcon';
 import EyeIcon from './EyeIcon';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { useViewCover } from '../../hooks/useViewCover';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
 import styles from './ExhibitOverlay.module.css';
 
@@ -36,6 +38,15 @@ function ExhibitOverlay({
   // whole overlay arrives on the camera's clock rather than the takeover's.
   const clock = { '--exhibit-enter-delay': `${enterDelaySec}s` } as CSSProperties;
 
+  // Desktop: the notes column covers the right. Phone: the caption text covers
+  // the bottom; the kicker is its top line, since the caption box itself fills
+  // the first screen there.
+  const isMobile = useIsMobile();
+  const notesRef = useRef<HTMLDivElement>(null);
+  const kickerRef = useRef<HTMLDivElement>(null);
+  useViewCover('exhibitNotes', notesRef, 'right', !hidden && !isMobile && body.length > 0);
+  useViewCover('exhibitCaption', kickerRef, 'bottom', !hidden && isMobile);
+
   return (
     <div className={hidden ? `${styles.root} ${styles.hidden}` : styles.root} style={clock}>
       <div className={styles.content}>
@@ -43,13 +54,15 @@ function ExhibitOverlay({
         <div className={styles.vignetteNotes} aria-hidden="true" />
 
         <div className={styles.caption}>
-          <div className={styles.kicker}>Exhibit</div>
+          <div ref={kickerRef} className={styles.kicker}>
+            Exhibit
+          </div>
           <h1 className={styles.title}>{label}</h1>
           <p className={styles.lede}>{lede}</p>
         </div>
 
         {body.length > 0 ? (
-          <div className={styles.notes}>
+          <div ref={notesRef} className={styles.notes}>
             {body.map(({ kind, data }, i) => (
               // The group is what enters — a section and the hairline above it
               // are one beat, and `--i` is its place in the stagger.

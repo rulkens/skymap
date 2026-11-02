@@ -21,7 +21,7 @@ import LazyInfoCardContainer from './LazyInfoCardContainer';
 import LazyPhoneSettingsContainer from './LazyPhoneSettingsContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectSelectedFocusable } from '../../state/selection/selectors';
-import { selectPaletteOpen } from '../../state/ui/selectors';
+import { selectPaletteOpen, selectUiStackHidden } from '../../state/ui/selectors';
 import { reopenSplash, setPaletteOpen } from '../../state/ui/uiSlice';
 import { goHome } from '../../state/selection/goHome';
 import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
@@ -37,6 +37,7 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   const selectionKey = selected ? TARGET_IDENTITY_KEY[selected.type](selected) : null;
 
   const paletteOpen = useAppSelector(selectPaletteOpen);
+  const uiStackHidden = useAppSelector(selectUiStackHidden);
 
   const [layersOpen, setLayersOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
@@ -96,6 +97,8 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   return (
     <BottomStack
       timeOpen={timeOpen}
+      restingSheet={selectionKey !== null}
+      coverActive={!uiStackHidden}
       sheet={sheet}
       scale={<ScaleBracketContainer />}
       timeRow={<TimeBarContainer hidden={hidden} row />}
