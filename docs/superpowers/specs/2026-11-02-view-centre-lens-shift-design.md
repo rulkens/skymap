@@ -19,8 +19,9 @@ The orbit pivot, the thing you rotate around, should appear in the middle of the
   - phone (non-exhibit): the dock (tab bar) and the collapsed sheet strip;
   - desktop exhibit: the notes sidebar only (the bottom-left title block does not count);
   - phone exhibit: the caption block (title, lede) and the Exit button at the bottom.
-- Framing (focus fly-to, exhibit fit, mission camera, home, tours/clips, the follow driver) fits the subject
-  inside that uncovered area, on its **narrower side** (2026-11-02 ruling: portrait phones fit by width).
+- Framing (focus fly-to, exhibit fit, mission camera, home, tours/clips, the follow driver) keeps its
+  whole-canvas size, and the subject is centred in the uncovered area (§6: the earlier "fit the uncovered
+  area" and "narrower side" rulings were reversed after an eye check).
 - When the covered area changes (rotate the phone, enter or leave an exhibit, hide the UI), the shift eases.
 
 **Non-goals**
@@ -105,15 +106,15 @@ can't push the pivot off-screen or collapse the framing window.
 - `LiveCameraRuntime` publishes `framing` (replacing `aspect`) to the sagas. The follow driver reads the
   same window from its context.
 
-## 6. Framing in the uncovered area
+## 6. Size from the whole canvas; covers only shift
 
-The framing functions take the `FramingWindow`. Body and structure fills size against the
-**uncovered height** (`tanHalfY`), and `sphereFitDistance` keeps its limiting axis (`min`). The first
-build fitted bodies to the narrower side, per a ground-check ruling. On a portrait phone that shrank Earth
-from about 366 to 165 px across, and the eye check failed it. With the 0.4 fill, a body only overflows the
-width once the uncovered area is taller than 2.5:1, and phones are about 2:1. Height is on trial
-(owner, 2026-11-02, ruling after an eye check). The structure fill is not a fit: it is a distance at which the
-marker ring has faded past `markerMaxApparentRadiusPx`, judged against the canvas-height `drawPxPerRad`.
+Framing sizes every subject against the **whole canvas** (`lensFramingWindow`), never the covers, and the
+covers only move where the subject sits (owner, 2026-11-02, option A). Covers register after boot
+framing and deep links run, so a covered fit gave the same subject a different size depending on timing:
+boot home at the old size, a later Home press about 7% smaller. That was ruled not acceptable. A re-fit when
+covers arrive (option B) would make Earth visibly zoom after load, and would need a covers-settled
+signal. With the 0.4 body fill, a whole-canvas fit still sits well inside the uncovered sky (about 48% of
+it on a phone).
 
 ## 7. Ground preparation
 
