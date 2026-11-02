@@ -38,6 +38,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `bodies/makers/` | `bodies/makers/`                               | The Layer's own row builders (`heliocentricPlanet`, `satelliteBody`), imported by its `bodies/` rows only                                                                                                                                                                              |
 | `heightAt?`      | `heightAt.ts`                                  | Runtime-bound: the ground height core's camera reads; the datum with none. One provider per composition; boot throws on two                                                                                                                                                            |
 | —                | `utils/<area>/`                                | The Layer's own helpers, one function per file, mirroring `src/utils/<area>/`; a helper with a second Layer or core user stays in `src/utils/`                                                                                                                                         |
+| —                | `data/`                                        | The Layer's own constants and tables, one per file, flat; a constant with a second Layer or core user stays in `src/data/`                                                                                                                                                             |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
 
@@ -68,8 +69,8 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
   no `index.ts`.
 - **Types never live inline in implementation files.** A React component's own
   `Props` is the one exception.
-- **`passes/` files export only their one named symbol** — helpers go to
-  `src/utils/`, constants to `src/data/`. Ratchet:
+- **`passes/` files export only their one named symbol** — helpers go to the
+  Layer's `utils/`, constants to its `data/` (`src/utils/`, `src/data/` when shared). Ratchet:
   `tests/services/engine/frame/frameFilePurity.test.ts`.
 - **Pass names are globally unique.** `createLayers` throws at boot if two Layers
   answer to the same one, which is what catches a half-finished migration where
