@@ -1,4 +1,4 @@
-import type { StellarStreamsLook } from '../../layers/stellarStreams/@types/StellarStreamsLook';
+import type { StellarStreamsLook } from '../@types/StellarStreamsLook';
 
 /** Sharp streaks, then a wide faint haze that gives each stream a glowing body; `flow` is kpc per 8 s loop. */
 export const STELLAR_STREAMS_LOOKS: readonly [StellarStreamsLook, StellarStreamsLook] = [
