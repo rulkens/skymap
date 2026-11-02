@@ -16,6 +16,7 @@ import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
 import PressPictures from '../../../components/pages/about/PressPictures/PressPictures.tsx';
 import Quotable from '../../../components/pages/about/Quotable/Quotable.tsx';
 import Readouts from '../../../components/pages/about/Readouts/Readouts.tsx';
+import Specimens from '../../../components/pages/about/Specimens/Specimens.tsx';
 import WebAtScale from '../../../components/pages/about/WebAtScale/WebAtScale.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
@@ -106,6 +107,7 @@ import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
   <SectionHead title="Colophon" narrow>
     <p>How this site is made, as of {formatDate(fact('about-built-with').checked)}.</p>
   </SectionHead>
+  <Specimens />
   <Claims items={COLOPHON} />
 </Section>
 

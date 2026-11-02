@@ -17,6 +17,10 @@ export const HISTORY = { firstCommit: '2026-05-03', countedOn: '2026-10-05', com
 /** The people who make Skymap, set as a figure on the About page; `about-maker` says it in words. */
 export const MAKER_COUNT = 1;
 
+/** The site's two typefaces, named in the colophon's facts and set in themselves beside them. */
+export const DISPLAY_FACE = 'Cormorant Garamond';
+export const TEXT_FACE = 'Jost';
+
 /** The About page's claims, spread into FACTS. */
 export const ABOUT_FACTS: readonly Fact[] = [
   {
@@ -78,7 +82,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-display-face',
     about: 'app',
-    text: 'Headings are set in Cormorant Garamond by Christian Thalmann of Catharsis Fonts, published under the SIL Open Font Licence 1.1. It is also the face of the labels inside the app.',
+    text: `Headings are set in ${DISPLAY_FACE} by Christian Thalmann of Catharsis Fonts, published under the SIL Open Font Licence 1.1. It is also the face of the labels inside the app.`,
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: `the attributions file, ${IN_REPO}`,
     checked: CHECKED,
@@ -86,7 +90,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-text-face',
     about: 'app',
-    text: 'Text is set in Jost by indestructible type*, published under the SIL Open Font Licence 1.1.',
+    text: `Text is set in ${TEXT_FACE} by indestructible type*, published under the SIL Open Font Licence 1.1.`,
     source: 'https://github.com/indestructible-type/Jost',
     sourceLabel: 'the Jost project, on GitHub',
     checked: CHECKED,

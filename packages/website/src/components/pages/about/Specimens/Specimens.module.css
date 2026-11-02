@@ -1,0 +1,102 @@
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  align-items: start;
+  margin-bottom: calc(var(--section-space) / 2);
+}
+
+.faces {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: calc(2 * var(--stack));
+  margin: 0;
+
+  & dt {
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    color: var(--site-text-dim);
+  }
+
+  & dd {
+    margin: 0;
+  }
+}
+
+/* Each face's name in itself, at the heading size: the specimen is the section's picture. */
+.faces .display,
+.faces .body {
+  margin-block: 0.25rem 0.75rem;
+  font-size: var(--text-h2);
+  line-height: var(--leading-display);
+  color: var(--color-fg);
+}
+
+.display {
+  font-family: var(--font-family-display);
+  font-weight: var(--weight-display);
+  letter-spacing: -0.015em;
+}
+
+.body {
+  font-family: var(--font-body);
+  font-weight: var(--weight-body);
+}
+
+.fact {
+  composes: small from '../../../../styles/type.module.css';
+  max-width: 34rem;
+  color: var(--site-text-muted);
+
+  & a {
+    display: block;
+    width: fit-content;
+    padding-block: 0.625rem;
+    margin-bottom: -0.625rem;
+  }
+}
+
+.sky {
+  margin: 0;
+}
+
+/* Lines only on a transparent ground: added as light, the page's sky shows through; the edges fade out. */
+.cutout {
+  mix-blend-mode: plus-lighter;
+  mask-image: radial-gradient(closest-side, #000 70%, rgb(0 0 0 / 0));
+
+  & picture,
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+@media (min-width: 901px) {
+  .faces {
+    grid-row: 1;
+    grid-column: 1 / span 6;
+  }
+
+  .sky {
+    grid-row: 1;
+    grid-column: 7 / -1;
+  }
+
+  /* Out past the column to the window's right edge. */
+  .cutout {
+    width: calc(100% + var(--bleed));
+  }
+}
+
+@media (max-width: 900px) {
+  .sky {
+    margin-top: 2rem;
+  }
+
+  .cutout {
+    margin-inline: calc(-1 * var(--gutter));
+  }
+}

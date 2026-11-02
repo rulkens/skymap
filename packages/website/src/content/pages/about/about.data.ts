@@ -9,10 +9,9 @@ export const ALIVE = [
   { term: 'Version', value: pkg.version, id: 'about-version' },
   { term: 'Commits', value: HISTORY.commits.toLocaleString('en-GB'), id: 'about-history' },
 ];
+// The two typefaces' facts are printed by Specimens, beside their names set in themselves.
 export const COLOPHON = [
   { term: 'Pictures', id: 'about-pictures' },
-  { term: 'Headings', id: 'about-display-face' },
-  { term: 'Text', id: 'about-text-face' },
   { term: 'Font files', id: 'about-fonts-hosted' },
   { term: 'Pages', id: 'about-built-with' },
 ];
@@ -25,6 +24,8 @@ export const factIds = [
   'about-picture-licence',
   'about-picture-reuse',
   'gaia-licence',
+  'about-display-face',
+  'about-text-face',
   ...COLOPHON.map((item) => item.id),
 ];
 export const whatIs = fact('about-what-is').text;

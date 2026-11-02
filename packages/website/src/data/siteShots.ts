@@ -811,6 +811,28 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'A model. Every camera we have is inside it.',
     alt: 'A barred spiral galaxy at a slant, a bright bar at its centre and dust along its arms, with globular clusters scattered round it.',
   },
+  // The About page's colophon: the app's constellation names alone as light, set in the face the colophon names.
+  {
+    id: 'about-constellations',
+    link: 'pose=a,1.0452846326765347e-10,9.945218953682733e-10,0,-0.1140600480883037,0.4067189743213859,1e-9,0&t=2026-12-21T22:00:00Z',
+    settings: {
+      hideLabels: true,
+      hideStructures: true,
+      hideGalaxyField: true,
+      hideCosmicWeb: true,
+      hideZoneOfAvoidance: true,
+      hideStars: true,
+      constellations: true,
+      matte: 'emissive',
+      keepPasses: ['constellations'],
+      settleMs: 6000,
+    },
+    size: { width: 900, height: 600 },
+    widths: [1600, 800],
+    title: 'Orion and its neighbours, as the app names them',
+    drawn: 'The lines joining the stars are drawn.',
+    alt: 'Constellation figures drawn as thin lines round Orion, each named in a serif face: Gemini, Taurus, Canis Minor, Monoceros, Lepus, Canis Major, Eridanus.',
+  },
   {
     // New moon, so the Sun is behind the camera and both discs are fully lit.
     id: 'privacy-far-side',
