@@ -60,7 +60,10 @@ function Screens() {
         <Shot id="cut-saturn" sizes="48rem" alt="" />
       </div>
       <div className={styles.head}>
-        <h2>Explore the universe anywhere</h2>
+        <h2>
+          Explore the universe <br />
+          from anywhere
+        </h2>
         <p>
           The same view of Saturn on four screens. Skymap runs in a browser, with nothing to
           install.

@@ -17,7 +17,7 @@ sections:
       - heading: "Exhibits"
         job: "One idea told as a short exhibit."
         shots: [stories-orbits, cut-jupiter, stories-exhibit-title]
-  - heading: "Explore the universe anywhere"
+  - heading: "Explore the universe from anywhere"
     job: "Show that Skymap runs on phones, tablets, desktops and domes."
     component: "Screens"
     layout: "one row of four screens, same view, rising in size from the phone to the dome on one floor line, each turning on its own toward the pointer, none moving; two by two on a phone"
