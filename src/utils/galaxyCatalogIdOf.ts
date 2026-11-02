@@ -1,21 +1,12 @@
 /**
- * galaxyCatalogIdOf — resolve a numeric galaxy-catalog `Source` code to
- * its string `GalaxyCatalogId`.
- *
- * The registry types every entry's `.id` as the broad `SourceId` (which
- * spans structures, filaments, and volumes too), so a caller holding a
- * galaxy-catalog source code can't get a `GalaxyCatalogId` back without a
- * narrowing cast. That cast is sound only when the source is known to be a
- * galaxy catalog — so it lives here, in one place, rather than scattered
- * `as GalaxyCatalogId` assertions at every fade-id construction site. The
- * caller's obligation is simply "pass a galaxy-catalog source code"; the
- * unsafe step is named and contained.
+ * galaxyCatalogIdOf — a galaxy-catalog `Source` code's string `GalaxyCatalogId`,
+ * read off the Layer's own record so the id keeps its literal type.
  */
 
-import type { SourceType } from '../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyCatalogId } from '../layers/galaxyCatalog/@types/GalaxyCatalogId';
-import { APP_SOURCE_REGISTRY } from '../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
 
-export function galaxyCatalogIdOf(source: SourceType): GalaxyCatalogId {
-  return APP_SOURCE_REGISTRY[source].id as GalaxyCatalogId;
+export function galaxyCatalogIdOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
+  return GALAXY_CATALOG_SOURCE_RECORD[source].id;
 }

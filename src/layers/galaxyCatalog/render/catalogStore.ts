@@ -16,7 +16,6 @@
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../@types/GalaxyCatalogId';
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
-import type { SourceType } from '../../../@types/data/SourceType';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
@@ -185,7 +184,7 @@ export function createCatalogStore(init: {
 
   /** Fresh iterator per call, so a caller may `unload()` between iterations. */
   function* loadedSourcesGen(): IterableIterator<{
-    source: SourceType;
+    source: GalaxyCatalogSourceType;
     vertexBuffer: GPUBuffer;
     count: number;
     sourceBuffer: GPUBuffer;
@@ -202,7 +201,7 @@ export function createCatalogStore(init: {
     }
   }
   function loadedSources(): IterableIterator<{
-    source: SourceType;
+    source: GalaxyCatalogSourceType;
     vertexBuffer: GPUBuffer;
     count: number;
     sourceBuffer: GPUBuffer;
