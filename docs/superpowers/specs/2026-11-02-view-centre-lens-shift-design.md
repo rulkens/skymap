@@ -107,10 +107,12 @@ can't push the pivot off-screen or collapse the framing window.
 
 ## 6. Framing on the narrower side
 
-The framing functions take the `FramingWindow`. Body and structure fills, which size against the vertical
-half-angle today, use `min(tanHalfX, tanHalfY)`, as `sphereFitDistance` already does with `min(1, aspect)`.
+The framing functions take the `FramingWindow`. The body fill, which sizes against the vertical
+half-angle today, uses `min(tanHalfX, tanHalfY)`, as `sphereFitDistance` already does with `min(1, aspect)`.
 This changes framing on portrait phones even when nothing is covered (subjects come out smaller), which
-is the ruling. It lands as its own feature commit so it can be eye-checked on its own.
+is the ruling. The structure fill stays on `tanHalfY`: it is not a fit but a distance at which the marker
+ring has faded past `markerMaxApparentRadiusPx`, and that fade is judged against the canvas-height
+`drawPxPerRad`, so a width fill would leave the ring half-faded on portrait phones. It lands as its own feature commit so it can be eye-checked on its own.
 
 ## 7. Ground preparation
 

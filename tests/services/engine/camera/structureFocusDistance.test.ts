@@ -19,9 +19,9 @@ describe('structureFocusDistance', () => {
     expect(big).toBeCloseTo(small * 4, 5);
   });
 
-  it('fits by width in a portrait window', () => {
+  it('frames by height alone in a portrait window', () => {
     expect(structureFocusDistance(1, { tanHalfX: 0.3, tanHalfY: 0.6 })).toBe(
-      structureFocusDistance(1, { tanHalfX: 0.3, tanHalfY: 0.3 }),
+      structureFocusDistance(1, { tanHalfX: 0.6, tanHalfY: 0.6 }),
     );
   });
 

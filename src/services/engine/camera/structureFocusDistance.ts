@@ -24,8 +24,9 @@
  *   distance         = R / (FOCUS_FILL · tan(fovY / 2))
  *   ⇒ apparentRadiusPx = FOCUS_FILL · (viewportHeight / 2)
  *
- * The window's narrower side stands in for its height, so a portrait phone
- * fills by width, as `sphereFitDistance` does with `min(1, aspect)`.
+ * Height only, never the narrower side: this is not a fit. The fade judges the
+ * radius against the canvas-height `drawPxPerRad`, so a width fill would leave
+ * the ring half-faded on a portrait phone.
  *
  * One fill factor frames every structure to the same on-screen size. The fade
  * threshold is identical for all four structure categories, so a single factor
@@ -80,6 +81,5 @@ export function structureFocusDistance(apparentRadiusMpc: number, framing: Frami
   if (!Number.isFinite(apparentRadiusMpc) || apparentRadiusMpc <= 0) {
     return DEGENERATE_RADIUS_DISTANCE_MPC;
   }
-  const tanHalf = Math.min(framing.tanHalfX, framing.tanHalfY);
-  return Math.min(apparentRadiusMpc / (FOCUS_FILL * tanHalf), MAX_FRAMING_DISTANCE_MPC);
+  return Math.min(apparentRadiusMpc / (FOCUS_FILL * framing.tanHalfY), MAX_FRAMING_DISTANCE_MPC);
 }
