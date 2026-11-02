@@ -1762,6 +1762,16 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'The distance and size are catalogue values.',
     alt: 'The app’s card for the Andromeda Galaxy: a few lines about it, a photograph, its distance, light travel time, type and size.',
   },
+  // Find your way around: the search as a constellation's name leaves it, laid under the top bar (first-flight-topbar).
+  {
+    id: 'features-search-orion',
+    link: 'focus=body-earth',
+    settings: { ui: true, searchFor: 'Orion', element: '[role="dialog"][aria-label^="Search"]', settleMs: 4000 },
+    size: FEATURE,
+    widths: [1220, 610],
+    title: 'The search with “Orion” typed in',
+    alt: 'The app’s search box holding the word Orion, above its stars, Rigel, Betelgeuse, Bellatrix and more, each with its other names and catalogue numbers and tagged Orion, then the Orion Nebula and the Horsehead Nebula.',
+  },
   {
     id: 'ui-navigation',
     link: 'focus=m31&pose=a,0.57651,0.10877,0.51485,-1.0847,-0.5820,0.16,0',

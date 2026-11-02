@@ -10,6 +10,7 @@ import FeatureSection from '../../../components/shared/layout/FeatureSection/Fea
 import LinkSpread from '../../../components/pages/features/LinkSpread/LinkSpread.tsx';
 import Phone3D from '../../../components/shared/media/Phone3D/Phone3D.tsx';
 import RemoteDemo from '../../../components/shared/media/RemoteDemo/RemoteDemo.tsx';
+import SearchSpread from '../../../components/pages/features/SearchSpread/SearchSpread.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
 import { big, cosmicWeb, earth, milkyWay, missions, solarSystem, time } from './features.data';
@@ -31,6 +32,8 @@ import { big, cosmicWeb, earth, milkyWay, missions, solarSystem, time } from './
 <FeatureGallery side="left" title="The Milky Way" line="Stars from the catalogues, the constellations, and a model of our galaxy seen from outside." href="/docs/start/scene/#the-milky-way" label="The Milky Way" slides={milkyWay} sizes={big} client:visible />
 
 <FeatureGallery title="The cosmic web and deep space" line="Galaxies from the surveys, the filaments between them, and the flow of galaxies towards the Great Attractor." href="/docs/start/scene/#filaments-and-the-cosmic-web" label="Filaments and the cosmic web" slides={cosmicWeb} sizes={big} client:visible />
+
+<SearchSpread title="Find your way around" line="Search for a planet, a star, a galaxy or a place on Earth, and Skymap flies you there. The Home button brings you back to Earth." href="/docs/guide/finding/" label="Finding things" />
 
 <Section as="div">
   <SectionHead title="The universe in motion">
