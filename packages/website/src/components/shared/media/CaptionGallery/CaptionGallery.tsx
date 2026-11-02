@@ -13,8 +13,8 @@ import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { galleryKeyTarget } from '../../../../utils/galleryKeyTarget.ts';
 import { wrapIndex } from '../../../../utils/wrapIndex.ts';
-import { useGalleryState } from '../PictureBand/GalleryContext.ts';
-import changing from '../PictureBand/viewChange.module.css';
+import { useGalleryState } from '../gallery/GalleryContext.ts';
+import changing from '../gallery/viewChange.module.css';
 import ShotCaption from '../ShotCaption/ShotCaption.tsx';
 import styles from './CaptionGallery.module.css';
 

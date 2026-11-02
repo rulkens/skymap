@@ -7,8 +7,8 @@ import { shotSources } from '../../../../utils/shotSources.ts';
 import Shot from '../Shot/Shot.tsx';
 import Meteors from './Meteors.tsx';
 import styles from './PictureBand.module.css';
-import changing from './viewChange.module.css';
-import type { Gallery } from './useGallery.ts';
+import changing from '../gallery/viewChange.module.css';
+import type { Gallery } from '../gallery/useGallery.ts';
 
 export type BandProps = {
   views: readonly GalleryView[];

@@ -3,9 +3,9 @@ import { Children } from 'react';
 import type { ReactNode } from 'react';
 
 import { cx } from '../../../../utils/cx.ts';
-import { useGalleryState } from './GalleryContext.ts';
+import { useGalleryState } from '../gallery/GalleryContext.ts';
 import styles from './PictureBand.module.css';
-import changing from './viewChange.module.css';
+import changing from '../gallery/viewChange.module.css';
 
 type ViewWordsProps = { children: ReactNode };
 
