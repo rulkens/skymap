@@ -10,6 +10,7 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './AboutHero.module.css';
 import { ID } from './AboutHero.constants.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 type AboutHeroProps = { children: ReactNode };
 
@@ -17,7 +18,7 @@ function AboutHero({ children }: AboutHeroProps) {
   return (
     <section className={styles.root} data-opening="">
       <div className={styles.galaxy}>
-        <Shot id={ID} sizes="(max-width: 900px) 116vw, min(100vh, 62vw)" eager />
+        <Shot id={ID} sizes={narrowSizes('116vw', 'min(100vh, 62vw)')} eager />
       </div>
       <div className={styles.words}>{children}</div>
       <div className={styles.label}>

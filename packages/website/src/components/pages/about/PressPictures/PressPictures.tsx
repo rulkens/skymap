@@ -10,6 +10,7 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import styles from './PressPictures.module.css';
 import { press } from './PressPictures.constants.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 function PressPictures() {
   return (
@@ -19,7 +20,10 @@ function PressPictures() {
           <div className={styles.print}>
             <Shot
               id={row.shot}
-              sizes="(max-width: 900px) calc(100vw - 2.5rem), (max-width: 1239px) calc(50vw - 4.25rem), 34.5rem"
+              sizes={narrowSizes(
+                'calc(100vw - 2.5rem)',
+                '(max-width: 1239px) calc(50vw - 4.25rem), 34.5rem',
+              )}
             />
           </div>
           <div className={styles.label}>

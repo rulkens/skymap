@@ -13,6 +13,7 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './QuestionIndex.module.css';
 import { ROWS, VIEWER_SIZES } from './QuestionIndex.constants.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 function QuestionIndex() {
   const [shown, setShown] = useState(0);
@@ -30,7 +31,7 @@ function QuestionIndex() {
               <p className={styles.topic}>{row.topic}</p>
             )}
             <div className={styles.thumb} aria-hidden="true">
-              <Shot id={row.shot} sizes="(max-width: 900px) 5.5rem, 0px" alt="" />
+              <Shot id={row.shot} sizes={narrowSizes('5.5rem', '0px')} alt="" />
             </div>
             <h3>{row.ask}</h3>
             {row.factId && <p className={styles.readout}>{says(row.factId)}</p>}

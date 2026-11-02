@@ -17,6 +17,7 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './SourceTable.module.css';
 import { groups, COLUMNS } from './SourceTable.constants.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 type SourceTableProps = { children?: ReactNode; figure?: string };
 
@@ -122,7 +123,7 @@ function SourceTable({ children, figure }: SourceTableProps) {
           {figure && (
             <figure className={styles.figure}>
               <div className={styles.drift}>
-                <Shot id={figure} sizes="(max-width: 900px) 100vw, 36rem" />
+                <Shot id={figure} sizes={narrowSizes('100vw', '36rem')} />
               </div>
               <figcaption>
                 <ShotCaption id={figure} />

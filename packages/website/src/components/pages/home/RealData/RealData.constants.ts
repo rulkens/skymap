@@ -1,5 +1,6 @@
 import { DATA_SOURCES } from '../../../../data/dataSources.ts';
 import { countNoun } from '../../../../utils/countNoun.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 // The title of each is a group of the table, which picks its sources.
 // `accent` is taken from the picture: the survey's warm near end, starlight, the orbits' gold, Earth's blue.
@@ -38,6 +39,6 @@ export const KINDS = [
 }));
 
 // A square window cut from a wide picture shows its full height, so the file is chosen for 16/9 of the window.
-export const WINDOW_SIZES = '(max-width: 900px) 29rem, 32rem';
+export const WINDOW_SIZES = narrowSizes('29rem', '32rem');
 // The Science table's heading of the count.
 export const COUNT_LABEL = '# of objects';

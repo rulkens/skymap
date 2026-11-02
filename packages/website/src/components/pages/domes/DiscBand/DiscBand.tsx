@@ -12,6 +12,7 @@ import Disc from '../../../shared/media/Disc/Disc.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import DomeMarks from '../DomeMarks/DomeMarks.tsx';
 import styles from './DiscBand.module.css';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 type DiscBandProps = { id: string; note?: ReactNode; showDrawn?: boolean; children: ReactNode };
 
@@ -22,7 +23,7 @@ function DiscBand({ id, note, showDrawn = true, children }: DiscBandProps) {
       <figure>
         <div className={styles.room}>
           <div className={styles.fit} data-dome-turn>
-            <Disc id={id} sizes="(max-width: 900px) 85vw, min(44rem, 62vh)" eager />
+            <Disc id={id} sizes={narrowSizes('85vw', 'min(44rem, 62vh)')} eager />
             <DomeMarks />
           </div>
         </div>

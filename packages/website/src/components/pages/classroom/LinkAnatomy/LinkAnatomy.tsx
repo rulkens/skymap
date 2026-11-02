@@ -18,13 +18,14 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './LinkAnatomy.module.css';
 import { HASH, SHOT } from './LinkAnatomy.constants.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 function LinkAnatomy() {
   return (
     <div className={styles.root} style={{ '--accent': ACCENTS.jupiter } as CSSProperties}>
       <figure className={styles.figure}>
         <div className={styles.picture}>
-          <Shot id={SHOT} tall="classroom-hero-portrait" sizes="(max-width: 900px) 100vw, 60vw" />
+          <Shot id={SHOT} tall="classroom-hero-portrait" sizes={narrowSizes('100vw', '60vw')} />
         </div>
         <div className={styles.address}>
           {/* The address is the link, as a browser's is; the copy control sits outside it, a button cannot live in

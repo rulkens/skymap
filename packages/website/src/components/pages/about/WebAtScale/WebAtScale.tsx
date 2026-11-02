@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './WebAtScale.module.css';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 type WebAtScaleProps = { children: ReactNode };
 
@@ -19,7 +20,7 @@ function WebAtScale({ children }: WebAtScaleProps) {
       <div className={styles.words}>{children}</div>
       <figure className={styles.figure}>
         <div className={styles.web}>
-          <Shot id="about-web" sizes="(max-width: 900px) 150vw, 76rem" />
+          <Shot id="about-web" sizes={narrowSizes('150vw', '76rem')} />
         </div>
         <div className={styles.bar}>
           <Shot id="about-scale-bar" sizes="14rem" />

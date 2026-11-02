@@ -11,7 +11,8 @@ import type { FigureFrameSheet } from '../../../@types/FigureFrameSheet';
 import { WORKBENCHES, WORKBENCH_WIDTHS, WORKBENCH_WINDOW } from '../../../data/workbenches.ts';
 import FigureFrame from '../FigureFrame/FigureFrame.tsx';
 import ShotCaption from '../../shared/media/ShotCaption/ShotCaption.tsx';
-import { FILES, SIZES } from './WorkbenchFigure.constants.ts';
+import { COLUMN_SIZES } from '../DocFigure/DocFigure.constants.ts';
+import { FILES } from './WorkbenchFigure.constants.ts';
 
 type WorkbenchFigureProps = { id: string };
 
@@ -46,14 +47,14 @@ function WorkbenchFigure({ id }: WorkbenchFigureProps) {
           <source
             type="image/avif"
             srcSet={srcSet('avif')}
-            sizes={SIZES}
+            sizes={COLUMN_SIZES}
             width={WORKBENCH_WINDOW.width}
             height={WORKBENCH_WINDOW.height}
           />
           <img
             src={url(Math.min(...WORKBENCH_WIDTHS), 'webp')}
             srcSet={srcSet('webp')}
-            sizes={SIZES}
+            sizes={COLUMN_SIZES}
             width={WORKBENCH_WINDOW.width}
             height={WORKBENCH_WINDOW.height}
             alt={row.picture.alt}

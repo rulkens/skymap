@@ -15,6 +15,7 @@ import { shotSources } from '../../../utils/shotSources.ts';
 import FigureFrame from '../FigureFrame/FigureFrame.tsx';
 import Shot from '../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../shared/media/ShotCaption/ShotCaption.tsx';
+import { COLUMN_SIZES, WIDE_SIZES } from './DocFigure.constants.ts';
 
 type DocFigureProps = { id: string; eager?: boolean; wide?: boolean };
 
@@ -23,10 +24,7 @@ function DocFigure({ id, eager = false, wide: setWide = false }: DocFigureProps)
   const wide = setWide || docFigureWide(shot);
   const phone = SITE_SHOTS.find((row) => row.id === `${id}-phone`)?.id;
   const { full, width, height } = shotSources(id);
-  // The picture's box at each layout of DocsLayout: nine columns of the page grid, or the text's seven and then six.
-  const sizes = wide
-    ? '(max-width: 900px) 100vw, (max-width: 1239px) calc(75vw - 4.875rem), 53.25rem'
-    : '(max-width: 900px) 100vw, (max-width: 1199px) calc(58.33vw - 4.46rem), (max-width: 1239px) calc(50vw - 4.25rem), 34.5rem';
+  const sizes = wide ? WIDE_SIZES : COLUMN_SIZES;
   const sheet: FigureFrameSheet = {
     href: full,
     'data-enlarge': shot.title,

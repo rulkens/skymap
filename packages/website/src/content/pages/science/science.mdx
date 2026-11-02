@@ -29,6 +29,7 @@ import { fact } from '../../../data/fact';
 import { REPO_URL } from '../../../data/siteIdentity';
 import text from '../../../styles/type.module.css';
 import { formatDate } from '../../../utils/formatDate';
+import { narrowSizes } from '../../../utils/narrowSizes';
 import { sitePath } from '../../../utils/sitePath';
 import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.data';
 
@@ -70,7 +71,7 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
 
   <Group title="Derived" big>
     <p slot="lede">Computed from measurements by a method we can name.</p>
-    <FramePair start="science-web-points" end="science-web-density" sizes="(max-width: 900px) 100vw, 36rem" />
+    <FramePair start="science-web-points" end="science-web-density" sizes={narrowSizes('100vw', '36rem')} />
     <Claims items={DERIVED.slice(0, 6)} />
     {/* The traced filaments run down the claims about the large-scale structure, in the DESI fan's margin. */}
     <MarginSpine id="science-filaments-spine">

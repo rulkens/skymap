@@ -8,6 +8,7 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './Specimens.module.css';
 import { ID, SPECIMENS } from './Specimens.constants.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 function Specimens() {
   return (
@@ -28,7 +29,7 @@ function Specimens() {
       </dl>
       <figure className={styles.sky}>
         <div className={styles.cutout}>
-          <Shot id={ID} sizes="(max-width: 900px) 100vw, 50vw" />
+          <Shot id={ID} sizes={narrowSizes('100vw', '50vw')} />
         </div>
         <figcaption>
           <ShotCaption id={ID} showDrawn={false} />

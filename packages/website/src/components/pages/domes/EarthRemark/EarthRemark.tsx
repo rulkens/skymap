@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import styles from './EarthRemark.module.css';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 type EarthRemarkProps = { children: ReactNode };
 
@@ -14,7 +15,7 @@ function EarthRemark({ children }: EarthRemarkProps) {
   return (
     <div className={styles.root}>
       <div className={styles.earth} aria-hidden>
-        <Shot id="cut-earth" sizes="(max-width: 900px) 40rem, 72rem" alt="" />
+        <Shot id="cut-earth" sizes={narrowSizes('40rem', '72rem')} alt="" />
       </div>
       {children}
     </div>

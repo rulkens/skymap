@@ -24,6 +24,7 @@ import { fact } from '../../../data/fact';
 import { REPO_URL } from '../../../data/siteIdentity';
 import { siteShot } from '../../../data/siteShot';
 import text from '../../../styles/type.module.css';
+import { narrowSizes } from '../../../utils/narrowSizes';
 import { sitePath } from '../../../utils/sitePath';
 import { STEPS } from './domes.data';
 
@@ -71,7 +72,7 @@ import { STEPS } from './domes.data';
       <h3>Where it runs</h3>
       <p className={text.small}>The phone and the dome talk through the computer that runs Skymap for your dome, so it works wherever the dome runs Skymap itself.</p>
     </div>
-    <RemoteDemo slot="demo" sizes="(max-width: 900px) 100vw, 36rem" client:visible />
+    <RemoteDemo slot="demo" sizes={narrowSizes('100vw', '36rem')} client:visible />
   </Steer>
 </Section>
 

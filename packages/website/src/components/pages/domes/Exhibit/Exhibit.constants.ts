@@ -1,3 +1,5 @@
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
+
 // One row per exhibit, in the app's order; `accent` is a colour from its own picture. The first is shown first.
 export const EXHIBITS = [
   { name: 'Cosmic Flows', shot: 'dome-exhibit', accent: 'var(--site-accent-earth)' },
@@ -11,4 +13,4 @@ export const EXHIBITS = [
   },
 ];
 // The picture is set half as wide again as its frame, which cuts off the notes (`.frame` in the module).
-export const SIZES = '(max-width: 900px) 150vw, min(calc(88vw + 14rem), 82rem)';
+export const SIZES = narrowSizes('150vw', 'min(calc(88vw + 14rem), 82rem)');

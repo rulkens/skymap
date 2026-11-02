@@ -8,6 +8,7 @@ import type { CSSProperties, Ref } from 'react';
 
 import type { Place } from '../../../../@types/Place';
 import { cx } from '../../../../utils/cx.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import DiscFilm from '../../../shared/media/DiscFilm/DiscFilm.tsx';
 import Icon from '../../../shared/links/Icon/Icon.tsx';
@@ -54,7 +55,7 @@ function PlaceLink({
         <DiscFilm
           className={styles.disc}
           still={place.shot}
-          sizes="(min-width: 901px) 15vw, 45vw"
+          sizes={narrowSizes('45vw', '15vw')}
           film={film}
           playing={playing}
           screenRef={screenRef}

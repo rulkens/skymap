@@ -10,6 +10,7 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './DomeSky.module.css';
 import { ID } from './DomeSky.constants.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 type DomeSkyProps = { children: ReactNode };
 
@@ -19,7 +20,7 @@ function DomeSky({ children }: DomeSkyProps) {
       <figure className={styles.figure}>
         <div className={styles.ring}>
           <div className={styles.disc}>
-            <Shot id={ID} sizes="(max-width: 900px) 100vw, min(44rem, 54vw, 85svh)" />
+            <Shot id={ID} sizes={narrowSizes('100vw', 'min(44rem, 54vw, 85svh)')} />
           </div>
         </div>
         <figcaption className={styles.caption}>

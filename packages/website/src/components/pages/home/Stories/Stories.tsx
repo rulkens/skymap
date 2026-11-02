@@ -25,6 +25,7 @@ import {
   TOUR_ACCENT,
   EXHIBIT_ACCENT,
 } from './Stories.constants.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 type StoriesProps = {
   title: string;
@@ -56,7 +57,7 @@ function Stories({ title, tour, exhibit, children }: StoriesProps) {
                 <Shot id="stories-web" sizes={TOUR_SIZES} />
               </div>
               <div className={styles.tourCaption}>
-                <Shot id="stories-tour-caption" sizes="(max-width: 900px) 78vw, 22rem" />
+                <Shot id="stories-tour-caption" sizes={narrowSizes('78vw', '22rem')} />
               </div>
             </div>
             <figcaption className={styles.label}>
@@ -81,10 +82,10 @@ function Stories({ title, tour, exhibit, children }: StoriesProps) {
                 <Shot id="stories-orbits" sizes={EXHIBIT_SIZES} />
               </div>
               <div className={styles.planet}>
-                <Shot id="cut-jupiter" sizes="(max-width: 900px) 30vw, 16rem" alt="" />
+                <Shot id="cut-jupiter" sizes={narrowSizes('30vw', '16rem')} alt="" />
               </div>
               <div className={styles.title}>
-                <Shot id="stories-exhibit-title" sizes="(max-width: 900px) 84vw, 28rem" />
+                <Shot id="stories-exhibit-title" sizes={narrowSizes('84vw', '28rem')} />
               </div>
             </div>
             <figcaption className={styles.label}>

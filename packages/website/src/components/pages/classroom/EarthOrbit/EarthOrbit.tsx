@@ -8,12 +8,13 @@ import type { CSSProperties } from 'react';
 import { ACCENTS } from '../../../../content/pages/classroom/classroom.data.ts';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import styles from './EarthOrbit.module.css';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 function EarthOrbit() {
   return (
     <div className={styles.root} style={{ '--earth': ACCENTS.earth } as CSSProperties} aria-hidden>
       <div className={styles.orbits}>
-        <Shot id="orbits-inner" sizes="(max-width: 900px) 120vw, 64rem" alt="" />
+        <Shot id="orbits-inner" sizes={narrowSizes('120vw', '64rem')} alt="" />
       </div>
       <span className={styles.label}>Earth’s orbit</span>
     </div>

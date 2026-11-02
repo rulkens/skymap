@@ -6,6 +6,7 @@
  */
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import styles from './VoyagerPath.module.css';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 function VoyagerPath() {
   return (
@@ -16,7 +17,7 @@ function VoyagerPath() {
         </div>
       </div>
       <div className={styles.craft}>
-        <Shot id="cut-voyager1" sizes="(max-width: 900px) 70vw, 30rem" alt="" />
+        <Shot id="cut-voyager1" sizes={narrowSizes('70vw', '30rem')} alt="" />
       </div>
     </div>
   );

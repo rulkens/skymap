@@ -19,6 +19,7 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import { COUNT_LABEL, KINDS, WINDOW_SIZES } from './RealData.constants.ts';
 import styles from './RealData.module.css';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
 type RealDataProps = { title: string; children: ReactNode };
 
@@ -26,7 +27,7 @@ function RealData({ title, children }: RealDataProps) {
   return (
     <section className={styles.root} id="data">
       <div className={styles.orbits} aria-hidden>
-        <Shot id="orbits-s-stars" sizes="(max-width: 900px) 44rem, 64rem" alt="" />
+        <Shot id="orbits-s-stars" sizes={narrowSizes('44rem', '64rem')} alt="" />
       </div>
       <SectionHead title={title} top>
         {children}

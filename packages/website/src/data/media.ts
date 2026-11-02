@@ -1,7 +1,8 @@
 /**
  * The site's media queries, named once. CSS writes a name as custom media, `@media (--narrow)`, which no browser
  * reads yet, so `customMedia` (tools/site/customMedia.ts) writes the query in when the CSS is compiled; scripts
- * and `sizes` attributes take the string itself. A name that holds an `and` is not negated or nested.
+ * take the string itself, and an image's `sizes` most often `narrowSizes()` (utils/narrowSizes.ts). A name that
+ * holds an `and` is not negated or nested.
  */
 export const MEDIA = {
   /** The one layout break: one column, the phone's type and gutters (site.css). */
