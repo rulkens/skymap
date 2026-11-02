@@ -3,7 +3,7 @@ import sharp from 'sharp';
 
 import type { PictureMeasure } from '../@types/PictureMeasure';
 
-// Pictures that unmask or settle as they arrive need this long in view before they are shot.
+// Pictures that rise as they arrive (reveal.client.ts) need this long in view before they are shot.
 const REVEAL_MS = 700;
 
 /**
