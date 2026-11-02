@@ -124,11 +124,13 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   {
     id: 'dome-saturn',
-    link: 'focus=body-saturn&t=2017-10-15T12:00:00Z',
+    // The `saturn` row's pose, so the dome shows Saturn lit as Home's other screens do.
+    link: 'focus=body-saturn&t=2017-10-15T12:00:00Z&pose=a,0,0,0,3.75,0.38,9e-15,0',
     query: 'dome',
     settings: SUBJECT,
     size: DOME,
-    widths: [1200, 720],
+    // About's DomeSky draws it up to 44rem wide: 1408 device px on a 2x screen.
+    widths: [1600, 1200, 720],
     title: 'A fisheye frame from the app’s dome mode',
     caption: 'The whole sky in one disc. Saturn is near the front edge, its rings wide open in October 2017.',
     alt: 'A circular all-sky picture: stars and the band of the Milky Way, with Saturn and its open rings near the lower edge.',
