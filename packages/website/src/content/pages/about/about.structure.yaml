@@ -4,9 +4,6 @@ sections:
     job: "What is Skymap, in a sentence?"
   - heading: "Who makes it"
     job: "Who makes Skymap?"
-    parts:
-      - heading: "Open source, and maintained"
-        job: "Is Skymap open source, and is it still maintained?"
   - heading: "On a dome"
     job: "Can Skymap be shown on a dome?"
   - heading: "Get in touch"
@@ -16,6 +13,8 @@ sections:
         job: "How do I ask about a dome, a museum or a commission?"
       - heading: "For a fault, a correction or a question"
         job: "Where do I report a fault, a correction or a question?"
+  - heading: "Open source"
+    job: "Is Skymap open source, and is it still maintained?"
   - heading: "Pictures and their terms"
     job: "Which pictures may I reuse, and what credit do I print?"
     parts:

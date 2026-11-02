@@ -1,6 +1,6 @@
 ---
 title: 'About Skymap: who makes it and which pictures you may reuse'
-description: Skymap is made by one person, Alexander Rulkens, and is open source. Its version and history, how to get in touch, press pictures, and a colophon.
+description: Skymap is made by one person, Alexander Rulkens, and is open source. Who he is, how to get in touch, press pictures, and a colophon.
 ---
 
 import AboutHero from '../../../components/pages/about/AboutHero/AboutHero.tsx';
@@ -10,13 +10,12 @@ import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
 import Credits from '../../../components/shared/text/Credits/Credits.tsx';
 import DomeSky from '../../../components/pages/about/DomeSky/DomeSky.tsx';
 import ContactHead from '../../../components/pages/about/ContactHead/ContactHead.tsx';
-import MakerCount from '../../../components/pages/about/MakerCount/MakerCount.tsx';
+import MakerPortrait from '../../../components/pages/about/MakerPortrait/MakerPortrait.tsx';
 import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
 import PressPictures from '../../../components/pages/about/PressPictures/PressPictures.tsx';
 import Quotable from '../../../components/pages/about/Quotable/Quotable.tsx';
-import Readouts from '../../../components/pages/about/Readouts/Readouts.tsx';
 import WebAtScale from '../../../components/pages/about/WebAtScale/WebAtScale.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
@@ -28,7 +27,7 @@ import links from '../../../styles/links.module.css';
 import text from '../../../styles/type.module.css';
 import { formatDate } from '../../../utils/formatDate';
 import { sitePath } from '../../../utils/sitePath';
-import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
+import { COLOPHON, factIds, licence, makerProfile, whatIs } from './about.data';
 
 <AboutHero>
   <h1>About Skymap</h1>
@@ -47,19 +46,11 @@ import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
 </Section>
 
 <Section id="maker">
-  <MakerCount>
+  <MakerPortrait name={MAKER_NAME} alt="Alexander Rulkens, arms crossed, in a patterned shirt against a dark wall">
     <h2>Who makes it</h2>
-    <p>{fact('about-maker').text}</p>
-    <p>The “we” on this site is the project. Counted in people, it comes to one.</p>
-    <p>{fact('about-ai').text}</p>
+    <p>I’m Alexander Rulkens. I’ve loved astronomy since my school’s astronomy club, and I’ve written software for more than twenty years, among it design apps such as <a href="https://repper.app">Repper</a>. Skymap is where the two meet: data visualisation that shows the measured universe, and some of the awe that comes with it. It’s my way of giving something back to the astronomy community.</p>
     <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
-  </MakerCount>
-  <Readouts title="Open source, and maintained" items={ALIVE}>
-    <div className={links['link-row']}>
-      <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
-      <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite Skymap</ObjLink>
-    </div>
-  </Readouts>
+  </MakerPortrait>
 </Section>
 
 <Section id="dome">
@@ -93,6 +84,13 @@ import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
     </div>
   </Columns>
   <Note>What the site and the app load and keep is on the{' '}<a href={sitePath('/privacy/')}>privacy page</a>.</Note>
+</Section>
+
+<Section id="open-source">
+  <SectionHead title="Open source" narrow>
+    <p>Skymap is open source under the {licence} licence, and maintained.</p>
+    <ObjLink hang href={REPO_URL}>The repository on GitHub</ObjLink>
+  </SectionHead>
 </Section>
 
 <Section id="press">

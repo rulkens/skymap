@@ -1,0 +1,93 @@
+/* The name's baseline is the heading's: "Who makes it" answered on one line. */
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  align-items: first baseline;
+}
+
+/*
+ * As the app labels a body (milkyWayLabelStyle, leaderLineStyle): the name centred 6px over a stem. It holds
+ * still with the page, unlike its neighbours' pictures, since a drift would part the name from the heading.
+ */
+.figure {
+  --stem: var(--site-space-s);
+}
+
+/* His hair's crown is 56% across the picture: the name centres on it. */
+.name {
+  display: block;
+  width: max-content;
+  margin: 0 0 calc(var(--stem) + 6px) 56%;
+  translate: -50% 0;
+  font: var(--weight-display) var(--text-h3) / 1 var(--font-family-display);
+  color: var(--color-fg);
+}
+
+/*
+ * Cut at four by five, a tenth of the width off the top wall, so his face rises and his folded arms close the frame.
+ * The stem runs on into the picture to 6% of its height, just over his hair (the crown is at 6.8%).
+ */
+.frame {
+  position: relative;
+  aspect-ratio: 4 / 5;
+
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    left: 56%;
+    top: calc(-1 * var(--stem));
+    width: 1.5px;
+    height: calc(var(--stem) + 6%);
+    translate: -50% 0;
+    background: var(--color-fg);
+  }
+
+  & picture,
+  & img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 40%;
+  }
+
+  /*
+   * The wall dissolves into the sky: out to the left from the right edge, up from the foot, and down from the top
+   * on an eased ramp, since a straight one leaves a visible line across the evenly lit wall.
+   */
+  & picture {
+    --head:
+      rgb(0 0 0 / 0), rgb(0 0 0 / 0.15) 3%, rgb(0 0 0 / 0.5) 6%, rgb(0 0 0 / 0.85) 9%, #000 12%;
+    mask-image:
+      linear-gradient(180deg, var(--head), #000 64%, rgb(0 0 0 / 0)),
+      radial-gradient(100% 90% at 100% 45%, #000 45%, rgb(0 0 0 / 0));
+    mask-composite: intersect;
+  }
+}
+
+@media (--wide) {
+  .words {
+    grid-row: 1;
+    grid-column: 1 / span 6;
+  }
+
+  .figure {
+    grid-row: 1;
+    grid-column: 7 / -1;
+    justify-self: end;
+    width: min(100% + var(--bleed), 44rem);
+    margin-right: calc(-1 * var(--bleed));
+  }
+}
+
+/* Narrow: the photograph first, the window's width, fading only at its head and foot. */
+@media (--narrow) {
+  .figure {
+    order: -1;
+    margin: 0 calc(-1 * var(--gutter)) var(--site-space-m);
+  }
+
+  .frame picture {
+    mask-image: linear-gradient(180deg, var(--head), #000 70%, rgb(0 0 0 / 0));
+  }
+}
