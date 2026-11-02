@@ -17,6 +17,7 @@ import { fact } from '../../../../data/fact.ts';
 import { SITE_LOOPS } from '../../../../data/siteLoops.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
+import { linkTime } from '../../../../utils/linkTime.ts';
 import { wrapIndex } from '../../../../utils/wrapIndex.ts';
 import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import FeatureFilm from '../../../shared/media/FeatureFilm/FeatureFilm.tsx';
@@ -28,6 +29,7 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import FilmClock from '../FilmClock/FilmClock.tsx';
 import styles from './FeatureGallery.module.css';
+import { THUMB_SIZES, PIECE_SIZES, BAR_SIZES, CUTOUT_SIZES } from './FeatureGallery.constants.ts';
 
 type FeatureGalleryProps = {
   title: string;
@@ -43,16 +45,6 @@ type FeatureGalleryProps = {
   frameless?: boolean;
   under?: string;
 };
-
-const THUMB_SIZES = '6rem';
-// A piece is drawn at about three tenths of the picture, wider on a phone where it stands beside the caption.
-const PIECE_SIZES = '(max-width: 900px) 42vw, 13rem';
-// A bar is half the picture wide, and on a phone the column's width.
-const BAR_SIZES = '(max-width: 900px) 100vw, 22rem';
-const CUTOUT_SIZES = '(max-width: 900px) 70vw, 28rem';
-
-// The instant a shot's link sets the clock to.
-const linkTime = (link: string) => /(?:^|&)t=([^&]+)/.exec(link)?.[1];
 
 function FeatureGallery({ slides, sizes, frameless, under, ...section }: FeatureGalleryProps) {
   const films = slides.map(({ view }) => SITE_LOOPS.find((loop) => loop.id === view));
