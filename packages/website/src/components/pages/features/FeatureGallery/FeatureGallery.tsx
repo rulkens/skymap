@@ -1,6 +1,6 @@
 /*
  * FeatureGallery — a FeatureSection whose large visual is a slideshow of app views and whose small slot
- * is a row of thumbnails that choose the view. The state is PictureBand's (useGallery), so it moves on by
+ * is a row of thumbnails that choose the view. The state is the gallery's (useGallery), so it moves on by
  * itself every 9 s, waits while the reader is at the thumbnails, and fetches a later view only once warmed.
  * Each picture opens its own view in the app; only the current one can be reached, as the others sit
  * under `visibility: hidden`. Before the page's script runs the first view and its label stand.
@@ -9,20 +9,20 @@
  * film whose clock ran carries its clock (FilmClock) at its foot, and the section's accent follows the
  * slide. `frameless` lets cut-out renders float on the page; `under` lays a render behind the whole stage.
  */
-import type { CSSProperties, KeyboardEvent } from 'react';
-import { useCallback, useRef } from 'react';
+import type { CSSProperties } from 'react';
+import { useCallback } from 'react';
 
 import type { FeatureSlide } from '../../../../@types/FeatureSlide.ts';
 import { fact } from '../../../../data/fact.ts';
 import { SITE_LOOPS } from '../../../../data/siteLoops.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
-import { galleryKeyTarget } from '../../../../utils/galleryKeyTarget.ts';
 import { wrapIndex } from '../../../../utils/wrapIndex.ts';
 import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import FeatureFilm from '../../../shared/media/FeatureFilm/FeatureFilm.tsx';
 import FeatureSection from '../../../shared/layout/FeatureSection/FeatureSection.tsx';
 import { useGallery } from '../../../shared/media/gallery/useGallery.ts';
+import { useGalleryMarks } from '../../../shared/media/gallery/useGalleryMarks.ts';
 import changing from '../../../shared/media/gallery/viewChange.module.css';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
@@ -57,8 +57,8 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
   const films = slides.map(({ view }) => SITE_LOOPS.find((loop) => loop.id === view));
   const views = slides.map(({ view }, i) => films[i]?.shot ?? view);
   const gallery = useGallery(views.map((id) => ({ id })));
-  const { at, live, byReader, choose, marksRef, layers, warmed } = gallery;
-  const thumbs = useRef<(HTMLButtonElement | null)[]>([]);
+  const { at, live, byReader, choose, layers, warmed } = gallery;
+  const marks = useGalleryMarks(gallery);
   const root = useCallback(
     (el: HTMLDivElement | null) => {
       gallery.root.current = el;
@@ -66,13 +66,6 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
     [gallery.root],
   );
 
-  const onKeyDown = (event: KeyboardEvent) => {
-    const to = galleryKeyTarget(event.key, at, views.length - 1);
-    if (to === at) return;
-    event.preventDefault();
-    choose(to);
-    thumbs.current[wrapIndex(to, views.length)]?.focus();
-  };
   const current = (i: number) => (live ? i === at : i === 0);
   const changes = (i: number) =>
     cx(changing.view, !current(i) && changing.away, !warmed(i) && styles.cold);
@@ -91,26 +84,13 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
       <FeatureSection
         {...section}
         small={
-          <div
-            ref={marksRef}
-            className={cx(styles.thumbs, !live && styles.idle)}
-            role="group"
-            aria-label="Views"
-          >
+          <div className={cx(styles.thumbs, !live && styles.idle)} {...marks.group}>
             {views.map((id, i) => (
               <button
                 key={id}
-                ref={(el) => {
-                  thumbs.current[i] = el;
-                }}
                 className={cx(styles.thumb, slides[i]!.cutout && styles.cutThumb)}
-                type="button"
                 aria-label={siteShot(id).title}
-                title={siteShot(id).title}
-                aria-pressed={i === at}
-                tabIndex={i === at ? 0 : -1}
-                onClick={() => choose(i)}
-                onKeyDown={onKeyDown}
+                {...marks.mark(i)}
               >
                 {/* A slide's cut-out is its subject: at thumbnail size a drawing of thin paths reads as black. */}
                 <Shot id={slides[i]!.cutout ?? id} sizes={THUMB_SIZES} alt="" />

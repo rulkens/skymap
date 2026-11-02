@@ -6,19 +6,15 @@
  * parameter's colour in the bar. The bar leaves out the camera's numbers (`pose`) behind a faint `…`; the link and
  * the copy keep them, so the view opens as shown.
  */
-import type { KeyboardEvent } from 'react';
-import { useRef } from 'react';
-
 import { siteShot } from '../../../../data/siteShot.ts';
 import { appAddress } from '../../../../utils/appAddress.ts';
 import { cx } from '../../../../utils/cx.ts';
-import { galleryKeyTarget } from '../../../../utils/galleryKeyTarget.ts';
-import { wrapIndex } from '../../../../utils/wrapIndex.ts';
 import AddressText from '../../../shared/links/AddressText/AddressText.tsx';
 import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import CopyButton from '../../../shared/links/CopyButton/CopyButton.tsx';
 import OpenApp from '../../../shared/links/OpenApp/OpenApp.tsx';
 import { useGallery } from '../../../shared/media/gallery/useGallery.ts';
+import { useGalleryMarks } from '../../../shared/media/gallery/useGalleryMarks.ts';
 import changing from '../../../shared/media/gallery/viewChange.module.css';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
@@ -38,21 +34,13 @@ const SIZES = '(max-width: 900px) 133vw, 100vw';
 
 function Sharing() {
   const gallery = useGallery(VIEWS);
-  const { at, live, byReader, choose, marksRef, layers, warmed } = gallery;
-  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const { at, live, byReader, layers, warmed } = gallery;
+  const marks = useGalleryMarks(gallery);
   const now = live ? at : 0;
   const link = siteShot(VIEWS[now]!.id).link;
   const pairs = link.split('&');
   const kept = pairs.filter((pair) => !pair.startsWith('pose='));
   const typed = useTyped(kept.join('&') + (kept.length < pairs.length ? '&…' : ''));
-
-  const onKeyDown = (event: KeyboardEvent) => {
-    const to = galleryKeyTarget(event.key, at, VIEWS.length - 1);
-    if (to === at) return;
-    event.preventDefault();
-    choose(to);
-    tabs.current[wrapIndex(to, VIEWS.length)]?.focus();
-  };
 
   return (
     <section ref={gallery.root} className={styles.root} id="sharing">
@@ -65,21 +53,9 @@ function Sharing() {
       </div>
       <div className={styles.window}>
         <div className={styles.chrome}>
-          <div ref={marksRef} className={styles.tabs} role="group" aria-label="Views">
+          <div className={styles.tabs} {...marks.group}>
             {VIEWS.map((view, i) => (
-              <button
-                key={view.id}
-                ref={(el) => {
-                  tabs.current[i] = el;
-                }}
-                className={styles.tab}
-                type="button"
-                title={siteShot(view.id).title}
-                aria-pressed={i === now}
-                tabIndex={i === now ? 0 : -1}
-                onClick={() => choose(i)}
-                onKeyDown={onKeyDown}
-              >
+              <button key={view.id} className={styles.tab} {...marks.mark(i)}>
                 {view.tab}
               </button>
             ))}

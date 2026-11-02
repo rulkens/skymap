@@ -6,14 +6,10 @@
  * Before the page's script runs the markers stay hidden and the first label stands. `open={false}` leaves
  * out each label's address, where the words beside the pictures already link the views.
  */
-import type { KeyboardEvent } from 'react';
-import { useRef } from 'react';
-
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
-import { galleryKeyTarget } from '../../../../utils/galleryKeyTarget.ts';
-import { wrapIndex } from '../../../../utils/wrapIndex.ts';
 import { useGalleryState } from '../gallery/GalleryContext.ts';
+import { useGalleryMarks } from '../gallery/useGalleryMarks.ts';
 import changing from '../gallery/viewChange.module.css';
 import ShotCaption from '../ShotCaption/ShotCaption.tsx';
 import styles from './CaptionGallery.module.css';
@@ -21,40 +17,19 @@ import styles from './CaptionGallery.module.css';
 type CaptionGalleryProps = { showDrawn?: boolean; open?: boolean };
 
 function CaptionGallery({ showDrawn = true, open = true }: CaptionGalleryProps) {
-  const { views, at, live, byReader, choose, marksRef } = useGalleryState();
-  const marks = useRef<(HTMLButtonElement | null)[]>([]);
-  const last = views.length - 1;
-
-  const onKeyDown = (event: KeyboardEvent) => {
-    const to = galleryKeyTarget(event.key, at, last);
-    if (to === at) return;
-    event.preventDefault();
-    choose(to);
-    marks.current[wrapIndex(to, views.length)]?.focus();
-  };
+  const gallery = useGalleryState();
+  const { views, at, live, byReader } = gallery;
+  const marks = useGalleryMarks(gallery);
 
   return (
     <div className={styles.root}>
-      <div
-        ref={marksRef}
-        className={cx(styles.marks, !live && styles.idle)}
-        role="group"
-        aria-label="Views"
-      >
+      <div className={cx(styles.marks, !live && styles.idle)} {...marks.group}>
         {views.map((view, i) => (
           <button
             key={view.id}
-            ref={(el) => {
-              marks.current[i] = el;
-            }}
             className={styles.mark}
-            type="button"
             aria-label={siteShot(view.id).title}
-            title={siteShot(view.id).title}
-            aria-pressed={i === at}
-            tabIndex={i === at ? 0 : -1}
-            onClick={() => choose(i)}
-            onKeyDown={onKeyDown}
+            {...marks.mark(i)}
           />
         ))}
       </div>
