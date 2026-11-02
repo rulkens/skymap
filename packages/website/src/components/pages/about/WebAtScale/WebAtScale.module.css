@@ -1,7 +1,7 @@
 /*
  * `--frame` is the width the whole shot is drawn at. Only its middle is shown: the ball of filaments spans 17% to
  * 81% across and 2.5% to 100% down (of the width: 4% to 100% of a 16:10 frame), so the stage is 0.64 by 0.6
- * frames, its right edge on the window's.
+ * frames, its left edge on the window's: the hero's galaxy ran out to the right, so the web runs out to the left.
  */
 .root {
   composes: grid from '../../../../styles/layout.module.css';
@@ -36,12 +36,12 @@
 
 .web {
   top: 0;
-  right: calc(-1 * var(--bleed));
+  left: calc(-1 * var(--bleed));
   width: calc(0.64 * var(--frame));
   height: calc(0.6 * var(--frame));
   overflow: hidden;
   /* The fringe nearest the words fades out before it reaches them. */
-  mask-image: linear-gradient(90deg, rgb(0 0 0 / 0), #000 30%);
+  mask-image: linear-gradient(270deg, rgb(0 0 0 / 0), #000 30%);
 
   & picture {
     width: var(--frame);
@@ -49,10 +49,13 @@
   }
 }
 
-/* The bar's window was 1216 px wide and the shape of the web's frame; its element is 211 px of that. */
+/*
+ * The bar's window was 1216 px wide and the shape of the web's frame; its element is 211 px of that. It stands
+ * under the ball's thin lower right, where its label has calm black behind it.
+ */
 .bar {
-  top: calc(0.44 * var(--frame));
-  right: calc(-1 * var(--bleed) + 0.06 * var(--frame));
+  top: calc(0.5 * var(--frame));
+  left: calc(-1 * var(--bleed) + 0.38 * var(--frame));
   width: calc(211 / 1216 * var(--frame));
 }
 
@@ -100,11 +103,13 @@
 }
 
 @media (min-width: 901px) {
-  .words {
+  .figure {
+    grid-row: 1;
     grid-column: 1 / span 6;
   }
 
-  .figure {
+  .words {
+    grid-row: 1;
     grid-column: 7 / -1;
   }
 }
@@ -121,7 +126,7 @@
 
   .web {
     position: relative;
-    right: auto;
+    left: auto;
     margin-inline: calc(-1 * var(--gutter));
     mask-image: none;
   }
