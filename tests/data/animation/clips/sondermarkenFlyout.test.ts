@@ -26,7 +26,6 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
-import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 const BASIS = ORIENTATION_FRAMES.ecliptic;
 // aimAlong names no subject, so the resolver is never asked.
@@ -72,7 +71,7 @@ describe('sondermarkenFlyout', () => {
 
   it('ends the tilt with geographic north at the top of the frame', () => {
     const start = clip.data.start as CameraPose;
-    const resolved = resolveClipFoci(clip.data, NO_SELECTION, lensFramingWindow(1, 1), start, SIM_DAYS, BASIS);
+    const resolved = resolveClipFoci(clip.data, NO_SELECTION, 1, start, SIM_DAYS, BASIS);
     const pose = evaluateClip(resolved, 30, BASIS);
     const { view, earth } = eyeAndView(pose);
     const pole = rotateVec3ByTightMat3([0, 0, 1], earth.orientation);
@@ -85,7 +84,7 @@ describe('sondermarkenFlyout', () => {
   it('ends the tilt looking straight down, from above the ground', () => {
     // aimAlong resolves to angles at play time, as clipBodySaga does it.
     const start = clip.data.start as CameraPose;
-    const resolved = resolveClipFoci(clip.data, NO_SELECTION, lensFramingWindow(1, 1), start, SIM_DAYS, BASIS);
+    const resolved = resolveClipFoci(clip.data, NO_SELECTION, 1, start, SIM_DAYS, BASIS);
     const pose = evaluateClip(resolved, 30, BASIS);
     const { eyeLocalM, view, earth } = eyeAndView(pose);
     const r = Math.hypot(...eyeLocalM);

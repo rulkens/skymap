@@ -14,7 +14,6 @@ import { cameraRoute, settingsRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { Vec4 } from '../../../src/@types/math/Vec4';
 import type { LiveCameraRuntime } from '../../../src/store/types';
-import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -41,12 +40,7 @@ describe('watchOrientationChangeSaga', () => {
       middleware: (getDefault) => getDefault().concat(middleware),
     });
     middleware.run(watchOrientationChangeSaga);
-    cameraRuntime = () => ({
-      from: FROM,
-      fovYRad: 0.8,
-      framing: lensFramingWindow(0.8, 16 / 9),
-      upBasisQuat: LIVE_QUAT,
-    });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: LIVE_QUAT });
     middleware.setContext({ cameraRuntime: () => cameraRuntime() });
     return created;
   }

@@ -39,7 +39,6 @@ import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StarRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
-import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -97,12 +96,7 @@ describe('watchFocusTweenSaga', () => {
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
     mw.run(watchRequestFocusSaga);
-    cameraRuntime = () => ({
-      from: FROM,
-      fovYRad: 0.8,
-      framing: lensFramingWindow(0.8, 16 / 9),
-      upBasisQuat: [0, 0, 0, 1],
-    });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({
       selection: composeSelectionRows(
         () => [
@@ -169,12 +163,7 @@ describe('watchFocusTweenSaga', () => {
 
     // The camera comes online during wireInput; the engine then emits a status
     // pulse as the first catalog arrives (or the synthetic fallback fires).
-    cameraRuntime = () => ({
-      from: FROM,
-      fovYRad: 0.8,
-      framing: lensFramingWindow(0.8, 16 / 9),
-      upBasisQuat: [0, 0, 0, 1],
-    });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 1 }));
     await flush();
 

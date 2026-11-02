@@ -50,8 +50,6 @@
  *   projects it to a few pixels — the user reads it as "I didn't move".
  */
 
-import type { FramingWindow } from '../../../@types/camera/FramingWindow';
-
 /**
  * Apparent ring radius at focus, as a multiple of the half-viewport-height.
  * 2.2 overflows the viewport ~2.2:1, landing the marker past the close-approach
@@ -72,10 +70,13 @@ const MAX_FRAMING_DISTANCE_MPC = 800;
  * non-positive values return DEGENERATE_RADIUS_DISTANCE_MPC; positive infinity
  * clamps to the maximum.
  */
-export function structureFocusDistance(apparentRadiusMpc: number, framing: FramingWindow): number {
+export function structureFocusDistance(apparentRadiusMpc: number, fovYRad: number): number {
   if (apparentRadiusMpc === Number.POSITIVE_INFINITY) return MAX_FRAMING_DISTANCE_MPC;
   if (!Number.isFinite(apparentRadiusMpc) || apparentRadiusMpc <= 0) {
     return DEGENERATE_RADIUS_DISTANCE_MPC;
   }
-  return Math.min(apparentRadiusMpc / (FOCUS_FILL * framing.tanHalfY), MAX_FRAMING_DISTANCE_MPC);
+  return Math.min(
+    apparentRadiusMpc / (FOCUS_FILL * Math.tan(fovYRad / 2)),
+    MAX_FRAMING_DISTANCE_MPC,
+  );
 }

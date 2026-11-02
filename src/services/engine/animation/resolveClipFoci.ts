@@ -16,10 +16,10 @@
  * ### The id-bearing arms and their concrete replacements
  *
  *   - `moveTargetId(id, over, ease)` → `moveTarget(target, over, ease)`
- *     The target Vec3 comes from `focusFraming(row, framing).target`.
+ *     The target Vec3 comes from `focusFraming(row, fovYRad).target`.
  *
  *   - `dollyToId(id, over, ease)`   → `dollyTo(distance, over, ease)`
- *     The distance in Mpc comes from `focusFraming(row, framing).distance`.
+ *     The distance in Mpc comes from `focusFraming(row, fovYRad).distance`.
  *
  *   - `lookAtId(id, over, ease)`    → `aimAt({ yaw, pitch }, over, ease)`
  *     The bearing aims the view from the LIVE orbit target (`from.target`,
@@ -78,7 +78,6 @@ import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { FramingWindow } from '../../../@types/camera/FramingWindow';
 import { moveTarget, dollyTo, aimAt, spin } from './effectHelpers';
 import { focusFraming } from '../camera/focusFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
@@ -88,8 +87,8 @@ import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 
 /**
  * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
- * the composed resolver `resolve`, the live framing window, and the live
- * camera pose (`lookAtId` bearings are measured from
+ * the composed resolver `resolve`, the camera's current vertical FOV in
+ * radians, and the live camera pose (`lookAtId` bearings are measured from
  * its target; `strafeId` scales degrees into Mpc by its distance; `spinToId`
  * measures its bearing from the same target and its yaw delta from `from.yaw`
  * — callers pass `cameraRuntime.from`).
@@ -116,14 +115,14 @@ import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 export function resolveClipFoci(
   data: ClipData,
   resolve: SelectionResolver,
-  framing: FramingWindow,
+  fovYRad: number,
   from: CameraPose,
   simDays: number,
   frameBasis?: Mat3,
 ): ClipData {
   return {
     ...data,
-    timeline: data.timeline.map((e) => walkEffect(e, resolve, framing, from, simDays, frameBasis)),
+    timeline: data.timeline.map((e) => walkEffect(e, resolve, fovYRad, from, simDays, frameBasis)),
   };
 }
 
@@ -138,7 +137,7 @@ export function resolveClipFoci(
 function walkEffect(
   effect: Effect,
   resolve: SelectionResolver,
-  framing: FramingWindow,
+  fovYRad: number,
   from: CameraPose,
   simDays: number,
   frameBasis?: Mat3,
@@ -149,29 +148,29 @@ function walkEffect(
       return {
         kind: 'seq',
         children: effect.children.map((c) =>
-          walkEffect(c, resolve, framing, from, simDays, frameBasis),
+          walkEffect(c, resolve, fovYRad, from, simDays, frameBasis),
         ),
       };
     case 'all':
       return {
         kind: 'all',
         children: effect.children.map((c) =>
-          walkEffect(c, resolve, framing, from, simDays, frameBasis),
+          walkEffect(c, resolve, fovYRad, from, simDays, frameBasis),
         ),
       };
     case 'fork':
       return {
         kind: 'fork',
-        child: walkEffect(effect.child, resolve, framing, from, simDays, frameBasis),
+        child: walkEffect(effect.child, resolve, fovYRad, from, simDays, frameBasis),
       };
 
     // ── Id-bearing leaves — rewrite ─────────────────────────────────────────
     case 'moveTargetId': {
-      const { target } = resolveFraming(effect.id, resolve, framing, simDays);
+      const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       return moveTarget(target, effect.over, effect.ease);
     }
     case 'dollyToId': {
-      const { distance } = resolveFraming(effect.id, resolve, framing, simDays);
+      const { distance } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       // `scale` multiplies the DERIVED framing distance — the author's
       // tighter/looser knob that survives framing-math and catalog changes.
       return dollyTo(distance * (effect.scale ?? 1), effect.over, effect.ease);
@@ -180,7 +179,7 @@ function walkEffect(
     // target — baked here, so a lookAtId is only valid before the target
     // moves (see the `lookAtId` helper docstring).
     case 'lookAtId': {
-      const { target } = resolveFraming(effect.id, resolve, framing, simDays);
+      const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       const forward: Vec3 = [
         target[0] - from.target[0],
         target[1] - from.target[1],
@@ -206,7 +205,7 @@ function walkEffect(
     // the live camera distance, so the anchor slides ~byDeg degrees across the
     // frame regardless of scale.
     case 'strafeId': {
-      const { target } = resolveFraming(effect.id, resolve, framing, simDays);
+      const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       const forward: Vec3 = [
         target[0] - from.target[0],
         target[1] - from.target[1],
@@ -237,7 +236,7 @@ function walkEffect(
     // `lerpAngleShortest`'s fold (its result at t=1 IS `from.yaw` plus the
     // shortest delta) avoids re-deriving the mod-2π formula a second time.
     case 'spinToId': {
-      const { target } = resolveFraming(effect.id, resolve, framing, simDays);
+      const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       const forward: Vec3 = [
         target[0] - from.target[0],
         target[1] - from.target[1],
@@ -260,7 +259,7 @@ function walkEffect(
     case 'flyPath': {
       const waypoints = effect.waypoints.map((w) => {
         if (!('id' in w)) return w; // already concrete
-        const { target, distance, radius } = resolveFraming(w.id, resolve, framing, simDays);
+        const { target, distance, radius } = resolveFraming(w.id, resolve, fovYRad, simDays);
         return {
           at: target,
           distance,
@@ -321,7 +320,7 @@ function walkEffect(
 function resolveFraming(
   id: string,
   resolve: SelectionResolver,
-  framing: FramingWindow,
+  fovYRad: number,
   simDays: number,
 ): ReturnType<typeof focusFraming> {
   const ref = resolve.resolveFocusId(id);
@@ -338,5 +337,5 @@ function resolveFraming(
         `The catalog row may have unloaded between the readiness check and resolution.`,
     );
   }
-  return focusFraming(row, framing);
+  return focusFraming(row, fovYRad);
 }

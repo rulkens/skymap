@@ -8,13 +8,8 @@
 import { focusFraming } from './focusFraming';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { FramingWindow } from '../../../@types/camera/FramingWindow';
 
-export function framingPose(
-  row: SelectionRow,
-  framing: FramingWindow,
-  from: CameraPose,
-): CameraPose {
-  const { target, distance } = focusFraming(row, framing);
+export function framingPose(row: SelectionRow, fovYRad: number, from: CameraPose): CameraPose {
+  const { target, distance } = focusFraming(row, fovYRad);
   return { target, yaw: from.yaw, pitch: from.pitch, distance };
 }

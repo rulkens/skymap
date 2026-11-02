@@ -20,19 +20,18 @@
  * `focusDistanceRadii`, when a caller passes it (a `BlackHoleRow` field),
  * overrides the screen-fill formula with a fixed multiple of the radius
  * instead — Sgr A*'s arrival distance is an r_s count the user framed live,
- * not a window-dependent viewport fraction.
+ * not a FOV-dependent viewport fraction.
  */
 
 import { bodyFocusDistance } from './bodyFocusDistance';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { FramingWindow } from '../../../@types/camera/FramingWindow';
 import type { FocusFraming } from './focusFraming';
 
 export function bodyLikeFraming(
   positionMpc: Vec3,
   radiusM: number,
-  framing: FramingWindow,
+  fovYRad: number,
   focusDistanceRadii?: number,
 ): FocusFraming {
   const radiusMpc = radiusM * SCALE_UNITS.M_TO_MPC;
@@ -41,7 +40,7 @@ export function bodyLikeFraming(
     distance:
       focusDistanceRadii !== undefined
         ? radiusMpc * focusDistanceRadii
-        : bodyFocusDistance(radiusMpc, framing),
+        : bodyFocusDistance(radiusMpc, fovYRad),
     // A discrete object like a galaxy — its physical radius is a real pass-by
     // extent for flyPath's offset geometry.
     radius: radiusMpc,

@@ -51,7 +51,6 @@ import type { createAppStore } from './createAppStore';
 import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { SelectionResolver } from '../@types/engine/selection/SelectionResolver';
 import type { CameraPose } from '../@types/camera/CameraPose';
-import type { FramingWindow } from '../@types/camera/FramingWindow';
 import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
@@ -81,21 +80,21 @@ export type RunSaga = (saga: SagaFactory) => Task;
 /**
  * The live camera Resources the focus and orientation sagas read off the frame
  * loop. `watchFocusTweenSaga` seeds a camera tween from the visible `from` pose
- * (what the user sees this frame, so a re-focus hands off smoothly), sizes it
- * to `framing` (the window a subject must fit) and paces it by the lens
- * `fovYRad`.
+ * (what the user sees this frame, so a re-focus hands off smoothly) and the
+ * projection FOV (the structure arm frames a cluster to screen-fill).
  * `watchOrientationChangeSaga` seeds a frame roll from `upBasisQuat`: the
  * up-basis quaternion resolved THIS frame, so a re-switch mid-slerp composes
  * continuously instead of snapping the pole back to the committed frame. The
  * name is frame-agnostic (not `Focus…`) because both sagas share the snapshot.
  *
- * Fit-to-subject distances read `framing`, never `fovYRad`: the window carries
- * both half-angles, so a fit resolves the limiting axis at the live shape.
+ * `aspect` rides beside `fovYRad` for `sphereFitDistance` — a view's fit-to-
+ * radius pose needs both to resolve the limiting (horizontal vs vertical) FOV
+ * at the live viewport shape, not just the vertical lens angle.
  */
 export type LiveCameraRuntime = {
   from: CameraPose;
   fovYRad: number;
-  framing: FramingWindow;
+  aspect: number;
   upBasisQuat: Vec4;
 };
 /**

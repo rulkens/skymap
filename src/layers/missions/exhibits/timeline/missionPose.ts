@@ -61,6 +61,7 @@ export function missionPose(
   const mission: MissionCourse = { craftId, stops: stopsOf(data, craftId), cruise: data.cruise };
   const token = ctx.state.camera.aim;
   const now = ctx.elapsedMs;
+  const { fovYRad, aspect } = ctx.projection;
   const positionOf = (id: string) =>
     isSceneBodyId(id) ? ctx.bodies.get(id)?.positionMpc : undefined;
   // A new aim token also restarts the epoch these times are on; an easing one keeps the offsets.
@@ -71,7 +72,8 @@ export function missionPose(
     mission,
     ctx.simDays,
     positionOf,
-    ctx.framing,
+    fovYRad,
+    aspect,
     ctx.poseBasis,
     prev?.cruise ?? null,
   );
@@ -107,7 +109,8 @@ export function missionPose(
       : sphereFitDistance(
           Math.hypot(craft[0] - target[0], craft[1] - target[1], craft[2] - target[2]) *
             MISSION_FRAME_MARGIN,
-          ctx.framing,
+          fovYRad,
+          aspect,
         ) * offsets.zoom;
 
   // A first frame eases only after a re-aim (an entry cuts or arrives on a fly-in); a view change

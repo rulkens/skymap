@@ -64,7 +64,6 @@ vi.mock('../../../../src/services/engine/interaction/attachResizeWake', () => ({
 }));
 
 import { wireInput } from '../../../../src/services/engine/phases/wireInput';
-import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 // The registry itself: derives the wireInput-phase key set for the
 // phase-split assertion below, rather than a hand-written key list that
 // could drift from GPU_HANDLE_ROWS.
@@ -184,7 +183,7 @@ describe('wireInput', () => {
     // frame the render path decodes with).
     expect(homePoseSpy).toHaveBeenCalledWith(
       deps.composition.home,
-      lensFramingWindow((Math.PI / 180) * 60, deps.canvas.width / deps.canvas.height),
+      (Math.PI / 180) * 60,
       expect.any(Number),
       ORIENTATION_FRAMES.ecliptic,
     );

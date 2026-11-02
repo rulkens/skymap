@@ -14,7 +14,6 @@ import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { DriverCtx } from '../../../src/@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 import type { RootState } from '../../../src/store/types';
-import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 /** The rows that ride the wheel target: core's two follow rows and the mission's exhibit row. */
 const RIDES_WHEEL: ReadonlySet<string> = new Set(['followApproach', 'followHold', 'mission']);
@@ -51,7 +50,7 @@ export function makeDriverCtx(
     poseBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],
     simDays,
     bodies: args.bodies ?? deriveBodyStates(simDays),
-    framing: args.framing ?? lensFramingWindow(1, 1),
+    projection: args.projection ?? { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
     followDistanceTarget: args.followDistanceTarget ?? null,
   };
 }

@@ -6,15 +6,13 @@
  * live B(t). `simDays` (Julian days) is the instant the pick path reads — NOT
  * `deriveBodyStates`' memo key, which a between-frames
  * `deriveBodyStates(CONST_J2000)` can repoint under it. `frustum` is the main
- * view's, the one value draw and cursor-ray pick both read; `framing` is the
- * window a framed subject must fit.
+ * view's, the one value draw and cursor-ray pick both read.
  */
 
 import type { CameraProjection } from '../../camera/CameraProjection';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { Mat3 } from '../../math/Mat3';
 import type { ViewFrustum } from '../../camera/ViewFrustum';
-import type { FramingWindow } from '../../camera/FramingWindow';
 
 export type FrameOutputs = {
   readonly displayed: FramedCameraPose;
@@ -22,5 +20,4 @@ export type FrameOutputs = {
   readonly upBasis: Mat3;
   readonly projection: CameraProjection;
   readonly frustum: ViewFrustum;
-  readonly framing: FramingWindow;
 };

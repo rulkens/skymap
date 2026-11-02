@@ -51,7 +51,6 @@ import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { focusId } from '../../../src/utils/animation/focusId';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the drift Promise stub.
@@ -83,7 +82,7 @@ function collectTimelineNodes<T>(
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
-  framing: lensFramingWindow(0.8, 16 / 9),
+  aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
 };
 

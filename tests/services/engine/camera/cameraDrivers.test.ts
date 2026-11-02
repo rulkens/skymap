@@ -65,7 +65,6 @@ import type { CameraTweenDescriptor } from '../../../../src/@types/camera/Camera
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { OrientationFrameId } from '../../../../src/@types/camera/OrientationFrameId';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
-import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 /** A real-ish store so we can observe dispatches. */
 function makeStore() {
@@ -530,7 +529,7 @@ function makeFollowProduce(opts: {
         state: opts.state,
         elapsedMs,
         simDays: FOLLOW_SIM_DAYS,
-        framing: lensFramingWindow(FOLLOW_FOV, 1),
+        projection: { fovYRad: FOLLOW_FOV, aspect: 1, near: 0.01, far: 50000 },
         register: absoluteArm(BASE_POSE),
         winnerLastFrame: opts.winnerLastFrame ?? 'followApproach',
         followDistanceTarget: opts.followDistanceTarget ?? null,
@@ -650,11 +649,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // the Eased duration it has converged to the framing distance, monotonically.
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
     const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
-    const framingDistance = bodyLikeFraming(
-      livePos,
-      EARTH_ROW.radiusM,
-      lensFramingWindow(FOLLOW_FOV, 1),
-    ).distance;
+    const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
 
     const FROM: CameraPose = { target: [9, 9, 9], yaw: 0.2, pitch: 0.1, distance: 500 };
 
@@ -696,7 +691,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
           state: store.getState() as unknown as RootState,
           elapsedMs,
           simDays: FOLLOW_SIM_DAYS,
-          framing: lensFramingWindow(FOLLOW_FOV, 1),
+          projection: { fovYRad: FOLLOW_FOV, aspect: 1, near: 0.01, far: 50000 },
           register: absoluteArm(BASE_POSE),
           winnerLastFrame: 'followApproach',
         }),
@@ -733,9 +728,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
 
     // A ratio: at ~1e-15 Mpc an absolute tolerance cannot tell the two distances apart.
     const held = worldArmOf(produceFollow(DEFAULT_FOCUS_MOVES.eased.durationMs).pose).distance;
-    expect(
-      held / framingPose(marsRow, lensFramingWindow(FOLLOW_FOV, 1), BASE_POSE).distance,
-    ).toBeCloseTo(1, 9);
+    expect(held / framingPose(marsRow, FOLLOW_FOV, BASE_POSE).distance).toBeCloseTo(1, 9);
   });
 
   it('a drag-committed zoom sticks: follow re-eases to base.distance, not framing', () => {
@@ -750,11 +743,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // distance every frame (snap-back).
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
     const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
-    const framingDistance = bodyLikeFraming(
-      livePos,
-      EARTH_ROW.radiusM,
-      lensFramingWindow(FOLLOW_FOV, 1),
-    ).distance;
+    const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
 
     // The user's committed drag-zoom — vastly larger than Earth's ~1e-15 Mpc
     // framing distance, so 'stuck to base' vs 'snapped to framing' is unambiguous.
@@ -872,7 +861,7 @@ describe('the follow produce — the capture is returned, not written', () => {
     const ctx = makeDriverCtx({
       state: store.getState() as unknown as RootState,
       simDays: FOLLOW_SIM_DAYS,
-      framing: lensFramingWindow(FOLLOW_FOV, 1),
+      projection: { fovYRad: FOLLOW_FOV, aspect: 1, near: 0.01, far: 50000 },
       register: absoluteArm(BASE_POSE),
       winnerLastFrame: 'followApproach',
     });

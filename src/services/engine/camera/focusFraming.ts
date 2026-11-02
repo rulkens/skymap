@@ -16,7 +16,6 @@ import {
 } from '../../../data/milkyWay/galacticCenter';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { FramingWindow } from '../../../@types/camera/FramingWindow';
 
 /** kpc → Mpc; the fallback diameter mirrors `galaxyFocusDistance`. */
 const KPC_PER_MPC = 1000;
@@ -27,7 +26,7 @@ export type FocusFraming = Pick<CameraPose, 'target' | 'distance'> & {
   readonly radius: number;
 };
 
-export function focusFraming(row: SelectionRow, framing: FramingWindow): FocusFraming {
+export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
   switch (row.type) {
     case 'galaxyCatalog': {
       const dKpc =
@@ -44,7 +43,7 @@ export function focusFraming(row: SelectionRow, framing: FramingWindow): FocusFr
       return {
         target: [row.worldPos[0], row.worldPos[1], row.worldPos[2]],
         // The wider apparent extent is what the close-approach fade reads, so ring + label land past their fade-out.
-        distance: structureFocusDistance(row.apparentRadiusMpc ?? row.physicalRadiusMpc, framing),
+        distance: structureFocusDistance(row.apparentRadiusMpc ?? row.physicalRadiusMpc, fovYRad),
         // A volume you fly INTO, not past: `flyPath` skips knots with radius ≤ 0.
         radius: 0,
       };
@@ -63,7 +62,7 @@ export function focusFraming(row: SelectionRow, framing: FramingWindow): FocusFr
       return bodyLikeFraming(
         row.positionMpc,
         row.driver.footprintRadiusM,
-        framing,
+        fovYRad,
         row.driver.focusDistanceRadii,
       );
     // Unreachable by construction: `watchFocusTweenSaga` filters on `ROW_FOCUSABLE` (the one

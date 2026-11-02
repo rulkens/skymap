@@ -86,7 +86,7 @@ function* frameFocusSaga(runtime: LiveCameraRuntime): SagaGenerator<NavigateOutc
   // reports its pre-commit placeholder for one frame.
   const base = yield* select(selectCameraBase);
   const from = isWorldArm(base) ? base.pose : runtime.from;
-  yield* put(commitCameraPose(absoluteArm(framingPose(row, runtime.framing, from))));
+  yield* put(commitCameraPose(absoluteArm(framingPose(row, runtime.fovYRad, from))));
   return OK;
 }
 
@@ -95,7 +95,7 @@ function* homeSaga() {
   const runtime = yield* call(liveCameraRuntimeSaga);
   const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
   const frameBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
-  yield* put(commitCameraPose(homePose(home, runtime.framing, simDays, frameBasis)));
+  yield* put(commitCameraPose(homePose(home, runtime.fovYRad, simDays, frameBasis)));
   if (home.focus === null) return;
   // Cinema gates what the composition asked for, so it is an app-mode check
   // here rather than a composition knob.

@@ -1,6 +1,6 @@
 /**
  * bodyHomePose — the one canonical 'home' camera pose: the body, framed to fill
- * the framing window, viewed from its sunlit side with the terminator raking across the
+ * the lens, viewed from its sunlit side with the terminator raking across the
  * globe. This is the pose the Home pill, the `h`/`e` keys, and cold boot all
  * converge on, so it lives in exactly one place.
  *
@@ -55,7 +55,6 @@
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { FramingWindow } from '../../../@types/camera/FramingWindow';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import { focusFraming } from './focusFraming';
@@ -71,13 +70,13 @@ export const HOME_TERMINATOR_OFFSET_RAD = (Math.PI / 180) * 60;
 export function bodyHomePose(
   bodyId: SceneBodyId,
   simDays: number,
-  framing: FramingWindow,
+  fovYRad: number,
   frameBasis?: Mat3,
 ): CameraPose {
   const state = deriveBodyStates(simDays).get(bodyId);
   if (!state) throw new Error(`bodyHomePose: no derived state for id '${bodyId}'`);
   const bodyPos = state.positionMpc;
-  const { target, distance } = focusFraming(bodyRowAt(bodyId, bodyPos), framing);
+  const { target, distance } = focusFraming(bodyRowAt(bodyId, bodyPos), fovYRad);
 
   // `s` is the sun→body (pure-sunward) unit direction; `t` is perpendicular to
   // it and horizontal in the equatorial frame (never degenerate — the body never
