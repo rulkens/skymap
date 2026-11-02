@@ -1921,6 +1921,17 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: 'The Moon’s orbit round Earth',
     alt: 'A thin grey arc, the Moon’s orbit, sweeping wide round Earth through the Moon.',
   },
+  // Before the lesson's Limits: the app's data-size chip, set to the size a narrow screen gets.
+  {
+    id: 'class-tier-small',
+    link: `focus=body-moon&${NOON}`,
+    settings: { ui: true, dataSize: 'small', element: '[aria-label="Data tier"]', settleMs: 6000 },
+    size: FEATURE,
+    dpr: 3,
+    widths: [400],
+    title: 'The data size chip',
+    alt: 'The app’s data size chip, reading Small.',
+  },
   // The Domes page's exhibit chooser: each exhibit as it opens, in the frame of `dome-exhibit` and `class-exhibit`.
   {
     id: 'domes-exhibit-web',

@@ -3,6 +3,7 @@ title: Use Skymap in the classroom | Skymap
 description: Give pupils a question and a link; they find the answer at true scale, from the Moon to the galaxies. Ready-made questions and a 45-minute lesson.
 ---
 
+import BeforeArt from '../../../components/pages/classroom/BeforeArt/BeforeArt.tsx';
 import BrowserCheck from '../../../components/pages/classroom/BrowserCheck/BrowserCheck.tsx';
 import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
 import Credits from '../../../components/shared/text/Credits/Credits.tsx';
@@ -46,6 +47,7 @@ import { sitePath } from '../../../utils/sitePath';
   </SectionHead>
   <Columns count={3}>
     <div>
+      <BeforeArt art="sky" />
       <h3>What it runs on</h3>
       <p>A browser with <a href={sitePath('/docs/reference/glossary/#webgpu')}>WebGPU</a>, on by default as of 6 October 2026 in:</p>
       <ul>
@@ -58,6 +60,7 @@ import { sitePath } from '../../../utils/sitePath';
       <ObjLink size="small" hang href={sitePath('/docs/start/browsers/')}>Browser support and troubleshooting</ObjLink>
     </div>
     <div>
+      <BeforeArt art="phone" />
       <h3>Try one link first</h3>
       <p>Open one link on a pupil’s device before the lesson.</p>
       <ul>
@@ -69,6 +72,7 @@ import { sitePath } from '../../../utils/sitePath';
       </ul>
     </div>
     <div>
+      <BeforeArt art="limits" />
       <h3>Limits</h3>
       <p>Check these against your lesson.</p>
       <ul>
