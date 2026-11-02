@@ -57,7 +57,7 @@ Consequences, by construction:
   pick) follows the shift with no change of its own.
 
 The camera runtime builds the main-view frustum once per step (`FrameOutputs.frustum`), and every consumer
-reads that one value: `mainViewSpec(cam, sizePx, frustum)` for drawing and picking, and the surface
+reads that one value: `mainViewSpec(sizePx, frustum)` for drawing and picking, and the surface
 gesture contexts for cursor rays. Dome faces, cube/probe faces and any future rig build their own
 frustums, so the shift cannot reach them. In a non-mono view rig the runtime treats insets as zero.
 
@@ -120,14 +120,14 @@ every number unchanged on today's symmetric view. They ship as **one prep PR, be
 
 1. **Shell renderers read the view's four tangents.** `horizonShellRenderer.ts:154`,
    `zoneOfAvoidanceRenderer.ts:166` (and its pick packing) and `lightTimeSpheresRenderer.ts:105` stop
-   rebuilding a centred ray from `tan(cam.fovYRad / 2)` and the aspect. Their uniforms carry
-   `tanLeft/tanRight/tanDown/tanUp` from the view's frustum, and their shaders map NDC through them, as
-   `blackHoleLensing/vertex.wesl` does. `sphereNdcBounds` takes the frustum. This closes backlog item
+   rebuilding a centred ray from `tan(cam.fovYRad / 2)` and the aspect. Their uniforms keep their
+   size: the forward slot becomes `rayAxis` (forward tilted to the window centre, `frustumRayAxis`) and the
+   two scalars become `tanHalfY`/`tanHalfX`. `sphereNdcBounds` takes the tangent window `(tanLo, tanHi)`. This closes backlog item
    `2026-09-22-off-axis-fovy-reconstruction`: the greenfield shape (the camera keeps fovY as its lens, and
    ray builders read the view's frustum) replaces that item's "four tangents on `OrbitCamera`" fix, which
    would have touched 39 readers in 31 files.
 2. **The camera runtime owns the main-view frustum, and the cursor ray reads it.** `FrameOutputs.frustum`
-   (symmetric in prep) feeds `mainViewSpec(cam, sizePx, frustum)` and the surface gesture contexts.
+   (symmetric in prep) feeds `mainViewSpec(sizePx, frustum)` and the surface gesture contexts.
    `cursorRayBodyLocal(pose, pixel, viewportPx, frustum)` maps NDC through the frustum, for 5 callers.
    `surfaceZoomStep.ts:53`'s cursorless anchor becomes the optical-centre pixel of that frustum.
 3. ~~**Framing takes one framing window.**~~ Built, then reverted on the prep branch once framing was ruled
