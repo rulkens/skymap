@@ -1,6 +1,6 @@
 /*
  * viewChange.module.css — how the parts of a gallery band change with its view (PictureBand, CaptionGallery,
- * ViewWords). A vocabulary, not a component: no `.root`; a part takes `view` and, while it is not the
+ * Sharing, FeatureGallery). A vocabulary, not a component: no `.root`; a part takes `view` and, while it is not the
  * current view, `away`. Opacity only, so nothing is laid out again; a part sets its own pace with
  * `--view-out`, `--view-wait` and `--view-in`, words leaving before the next arrive.
  */

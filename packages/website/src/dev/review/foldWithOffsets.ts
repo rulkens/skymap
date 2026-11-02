@@ -13,7 +13,7 @@ const QUOTES: Record<string, string> = {
  * quotes and apostrophes are straight. Folding never changes the length of a
  * non-space character, so `at[i]` is where folded character i sits in `raw`.
  */
-export function foldText(raw: string): { text: string; at: number[] } {
+export function foldWithOffsets(raw: string): { text: string; at: number[] } {
   let text = '';
   const at: number[] = [];
   for (let i = 0; i < raw.length; i++) {

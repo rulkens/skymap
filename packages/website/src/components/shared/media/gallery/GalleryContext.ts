@@ -1,4 +1,4 @@
-/* GalleryContext — the current view of a gallery band, for the parts of its words that follow it (CaptionGallery, ViewWords). */
+/* GalleryContext — the current view of a gallery band, for the parts of its words that follow it (CaptionGallery). */
 import { createContext, useContext } from 'react';
 
 import type { GalleryState } from '../../../../@types/GalleryState';

@@ -5,8 +5,8 @@
  * `gap="none"` makes it a page's opening section: it fits the first screen, and
  * narrow its title and lead come before the picture. `zoom` enlarges a wide
  * picture past the right edge, to bring a centred subject out from under the words.
- * With `views` the band is a gallery: the words carry a CaptionGallery and a
- * ViewWords for anything else that follows the view, so it must be inside an island.
+ * With `views` the band is a gallery: the words carry a CaptionGallery, so it must
+ * be inside an island.
  */
 import type { ReactNode } from 'react';
 
