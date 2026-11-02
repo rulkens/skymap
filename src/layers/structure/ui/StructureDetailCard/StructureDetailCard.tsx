@@ -19,7 +19,7 @@ import ShotSummary from '../../../../components/InfoCard/ShotSummary/ShotSummary
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
 import { InfoTip } from '../../../../components/InfoTip/InfoTip';
-import { TIPS } from '../../../../components/InfoCard/tooltips';
+import { STRUCTURE_TIPS } from '../structureTips';
 import type { CardLayout } from '../../../../@types/components/infoCard/CardLayout';
 import styles from '../../../../components/InfoCard/cardChrome.module.css';
 import local from './StructureDetailCard.module.css';
@@ -56,17 +56,17 @@ function StructureDetailCard({
   const countRow =
     memberCount != null
       ? {
-          label: <InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>,
+          label: <InfoTip {...STRUCTURE_TIPS.memberCount}>Galaxies</InfoTip>,
           value: memberCount.toLocaleString(),
         }
       : null;
   const leadRows = [
     {
-      label: <InfoTip {...TIPS.structureDistance!}>Distance</InfoTip>,
+      label: <InfoTip {...STRUCTURE_TIPS.structureDistance}>Distance</InfoTip>,
       value: formatDistance(distanceMpc),
     },
     {
-      label: <InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>,
+      label: <InfoTip {...STRUCTURE_TIPS.structureRadius}>Radius</InfoTip>,
       value: formatDistance(target.physicalRadiusMpc),
     },
   ];
@@ -80,7 +80,7 @@ function StructureDetailCard({
     ...(target.category === 'galaxy-cluster' && target.abell !== undefined
       ? [
           {
-            label: <InfoTip {...TIPS.abell!}>Abell</InfoTip>,
+            label: <InfoTip {...STRUCTURE_TIPS.abell}>Abell</InfoTip>,
             value: formatAbellDesignation(target.abell),
           },
         ]
