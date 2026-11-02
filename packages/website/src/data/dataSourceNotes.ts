@@ -183,6 +183,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     title: 'Named galaxies, typed by hand',
     description:
       'The 81 galaxies Skymap knows by name, with the figures and the paragraph on each one’s card.',
+    about:
+      'This is a list we keep by hand of the galaxies Skymap knows by name, with what their cards show: names, position, distance, size, type and a paragraph. The names, positions, distances and sizes come from HyperLEDA. Most paragraphs come from Wikipedia, shortened; we wrote the rest.',
     shows: '“Famous” switch under Galaxy catalogs.',
     scene: 'nearby-galaxies',
     setting: 'galaxy-catalogs',
