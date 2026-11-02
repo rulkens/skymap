@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatAbellDesignation } from '../../../src/utils/format/formatAbellDesignation';
+import { formatAbellDesignation } from '../../../../../src/layers/structure/utils/format/formatAbellDesignation';
 
 describe('formatAbellDesignation', () => {
   it('expands an A-prefixed Abell number to "Abell ####"', () => {

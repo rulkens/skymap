@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { StructureInfo } from '../../../../@types/data/structure/StructureInfo';
 import { formatDistance } from '../../../../utils/format/formatDistance';
-import { formatAbellDesignation } from '../../../../utils/format/formatAbellDesignation';
+import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
 import { CATEGORY_DISPLAY_INFO } from '../../../../data/structure/categoryDisplayInfo';
 import { structureShotUrl } from '../../../../utils/structure/structureShotUrl';
 import { NEBULA_KIND_LABELS } from '../../../../data/structure/nebulaKindLabels';

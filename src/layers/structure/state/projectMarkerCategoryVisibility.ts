@@ -18,9 +18,9 @@
  * `useSyncExternalStore`'s snapshot stable.
  */
 
-import type { StructureId } from '../../@types/data/structure/StructureId';
-import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
-import { STRUCTURE_IDS } from '../../data/structure/structureIds';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
+import type { StructureItemSettings } from '../../../@types/settings/StructureItemSettings';
+import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 
 export function projectMarkerCategoryVisibility(
   items: Record<StructureId, StructureItemSettings>,
