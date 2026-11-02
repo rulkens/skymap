@@ -1,10 +1,11 @@
 /*
  * DeliveryColumn — one way to get Skymap onto a dome: its picture with the picture's title, its one
  * figure set large, its name, a sentence or two (the children), its line of every row of the
- * specification (domes.data.ts) and one link, to the picture's view. Both columns' pictures stand in
- * the same square mount, the shape of a dome frame, so the pair reads as one kind of thing. Its parts
- * are rows of Delivery's grid (thirteen, the count `grid-row` spans in the module), so they line up
- * with the column beside it.
+ * specification (domes.data.ts) and one link, to the picture's view. The picture is a fisheye disc:
+ * live, one that turns under a drag (domeTurn.client.ts), as someone steers it; a film, its frame in
+ * front of the `earlier` frames, fanned out behind it to the right, oldest furthest back. Its parts are
+ * rows of Delivery's grid (thirteen, the count `grid-row` spans in the module), so they line up with
+ * the column beside it.
  */
 import type { CSSProperties, ReactNode } from 'react';
 
@@ -12,6 +13,7 @@ import { DELIVERY_ROWS } from '../../../../content/pages/domes/domes.data.ts';
 import { appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
+import Disc from '../../../shared/media/Disc/Disc.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './DeliveryColumn.module.css';
@@ -27,23 +29,42 @@ type DeliveryColumnProps = {
   accent: string;
   /** The words of the link that opens the picture's view. */
   action: string;
+  /** Frames shown behind the picture, oldest first. */
+  earlier?: string[];
   children: ReactNode;
 };
 
-/** The mount's widest, in rem (`.mount` in the module); a wide picture fills its height, so it loads that much wider. */
-const MOUNT_REM = 22;
+// A phone's 70vw understates the disc on purpose: at 3x the full width would fetch the desktop file.
+const SIZES = '(max-width: 900px) 70vw, 20rem';
 
 function DeliveryColumn(props: DeliveryColumnProps) {
-  const { kind, title, shot, figure, measure, accent, action, children } = props;
-  const { size, link, query } = siteShot(shot);
-  const spread = Math.max(1, size.width / size.height);
-  // A phone's 100vw understates a wide picture on purpose: at 3x the full width would fetch the desktop file.
-  const sizes = `(max-width: 900px) 100vw, ${Math.ceil(MOUNT_REM * spread)}rem`;
+  const { kind, title, shot, figure, measure, accent, action, earlier = [], children } = props;
+  const { link, query } = siteShot(shot);
+  const turns = kind === 'live';
   return (
     <article className={styles.root} style={{ '--column-accent': accent } as CSSProperties}>
       <figure className={styles.figure}>
-        <div className={styles.mount}>
-          <Shot id={shot} sizes={sizes} />
+        <div className={styles.frames} style={{ '--count': earlier.length } as CSSProperties}>
+          {earlier.map((id, i) => (
+            <div
+              key={id}
+              className={styles.behind}
+              style={{ '--depth': earlier.length - i } as CSSProperties}
+            >
+              <Shot id={id} sizes={SIZES} alt="" />
+            </div>
+          ))}
+          <div
+            className={turns ? styles.turning : styles.front}
+            data-dome-turn={turns || undefined}
+          >
+            <Disc id={shot} sizes={SIZES} />
+            {turns && (
+              <svg className={styles.cue} viewBox="0 0 100 100" aria-hidden="true">
+                <path d="M67.1 3A50 50 0 0 1 95.3 28.9M95.4 24.5 95.3 28.9 91.8 26.1" />
+              </svg>
+            )}
+          </div>
         </div>
         <figcaption>
           <ShotCaption id={shot} showDrawn={false} open={false} />

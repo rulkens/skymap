@@ -24,31 +24,11 @@
 
 /* The largest disc the room holds, less the ring that stands outside it and the line under it that names the front. */
 .fit {
+  composes: turn from './domeTurn.module.css';
   position: relative;
   width: calc(min(100cqw, 100cqh - var(--front-line), 46.375rem) - 2 * var(--disc-ring));
   margin-bottom: var(--front-line);
   border-radius: 50%;
-
-  /* The sky turns inside the disc's round mask; domeTurn.client.ts sets the turn. */
-  & img {
-    rotate: var(--sky-turn, 0deg);
-  }
-}
-
-/* Once the turn works: a vertical swipe on a phone still scrolls the page. */
-.fit[data-turn-ready] {
-  cursor: grab;
-  touch-action: pan-y;
-  user-select: none;
-
-  &:active {
-    cursor: grabbing;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: calc(var(--disc-ring) + 0.25rem);
-  }
 }
 
 .caption {
