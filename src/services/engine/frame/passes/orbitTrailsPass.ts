@@ -61,6 +61,7 @@ export const orbitTrailsPass: ContentPass = {
       staging = new Float32Array(limit * INSTANCE_FLOATS);
     }
     const camPos = ctx.drawCamPos;
+    const { select, focus } = state.selection;
 
     // One record per VISIBLE conic; the layout lives in `writeOrbitTrailRecord`.
     let count = 0;
@@ -70,6 +71,13 @@ export const orbitTrailsPass: ContentPass = {
       const rows = group.rows;
       for (let i = 0; i < rows.length; i++) {
         const elements = rows[i]!;
+        if (
+          group.selectedOnly?.includes(elements.id) &&
+          !(select?.type === 'body' && select.id === elements.id) &&
+          !(focus?.type === 'body' && focus.id === elements.id)
+        ) {
+          continue;
+        }
         const body = states.get(elements.id)!;
         // `keplerianEllipse` returns FRESH vectors, so the in-place anchoring below cannot alias
         // across orbits. `deriveBodyStates` sets `orbit` for every element row.
