@@ -31,6 +31,7 @@ import styles from './FeatureGallery.module.css';
 
 type FeatureGalleryProps = {
   title: string;
+  id?: string;
   line: string;
   href: string;
   label: string;
