@@ -12,6 +12,7 @@ import type { ReactNode } from 'react';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { appAddress } from '../../../../utils/appAddress.ts';
 import { cx } from '../../../../utils/cx.ts';
+import { shownLink } from '../../../../utils/shownLink.ts';
 import AddressText from '../../../shared/links/AddressText/AddressText.tsx';
 import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import CopyButton from '../../../shared/links/CopyButton/CopyButton.tsx';
@@ -39,9 +40,7 @@ function Sharing({ title, focus, clock, children }: SharingProps) {
   const marks = useGalleryMarks(gallery);
   const now = live ? at : 0;
   const link = siteShot(VIEWS[now]!.id).link;
-  const pairs = link.split('&');
-  const kept = pairs.filter((pair) => !pair.startsWith('pose='));
-  const typed = useTyped(kept.join('&') + (kept.length < pairs.length ? '&…' : ''));
+  const typed = useTyped(shownLink(link));
 
   return (
     <section ref={gallery.root} className={styles.root} id="sharing">

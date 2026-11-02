@@ -34,7 +34,7 @@
 }
 
 .piece {
-  composes: drift from '../../../../styles/motion.module.css';
+  composes: drift lean from '../../../../styles/motion.module.css';
   position: relative;
   z-index: 1;
 
@@ -44,58 +44,6 @@
     height: auto;
     filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
   }
-}
-
-/* A parameter's name in the address's own face, in the view's colour, then what it sets. */
-.tag {
-  display: flex;
-  align-items: baseline;
-  gap: var(--site-space-2xs);
-  margin: 0 0 var(--site-space-2xs);
-  color: var(--site-text-dim);
-  font-size: var(--text-small);
-  white-space: nowrap;
-
-  & code {
-    color: var(--link-accent);
-    font-family: var(--font-family-mono);
-  }
-}
-
-/* On the address's left edge, with the clock's tag. */
-.view .tag {
-  position: absolute;
-  top: 8%;
-  left: 0;
-}
-
-/* A piece's picture keeps 6% of its width clear for its shadow: the tag lines up with the piece, not the picture. */
-.lean > .tag {
-  margin: 0 0 0 6%;
-}
-
-.clock .tag {
-  margin-bottom: -2.5%;
-}
-
-/* Inside the piece, so its lean's transition is not its dimming's. */
-.lean {
-  composes: lean from '../../../../styles/motion.module.css';
-}
-
-/* Pointing at one half of a pair: its piece comes forward, the others fall back. */
-.view,
-.piece,
-.param {
-  transition: opacity var(--duration-base) var(--ease-standard);
-}
-
-.off {
-  opacity: 0.45;
-}
-
-.param.on {
-  color: var(--link-accent);
 }
 
 /* The address lies over the view's foot. */
@@ -134,7 +82,7 @@
 
   /* Less the pictures' clear margins, the pieces line up with the address's ends. */
   .card {
-    top: -10%;
+    top: -5%;
     right: -1.4%;
     width: 36%;
   }
@@ -156,8 +104,8 @@
 }
 
 /*
- * Narrow, the view takes the window's width, the clock floats over its foot, and the card stands under it on the
- * right with its tag in the space to its left.
+ * Narrow, the view takes the window's width, the card rises off its lower right, and the clock floats over the
+ * card's foot on the left.
  */
 @media (--narrow) {
   .stage {
@@ -165,32 +113,18 @@
     margin-inline: calc(-1 * var(--gutter));
   }
 
-  .view .tag {
-    left: var(--gutter);
+  .card {
+    grid-row: 2;
+    justify-self: end;
+    width: 50%;
+    margin: -5rem calc(var(--gutter) - 2%) 0 0;
   }
 
   .clock {
-    grid-row: 2;
+    grid-row: 3;
     justify-self: start;
     width: 80%;
     margin: -2.5rem 0 0 calc(var(--gutter) - 4.8%);
-  }
-
-  .card {
-    grid-row: 3;
-    justify-self: end;
-    width: 50%;
-    margin: var(--site-space-m) calc(var(--gutter) - 2%) 0 0;
-
-    & .tag {
-      position: absolute;
-      top: 0;
-      right: 100%;
-      margin: 0;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 0;
-    }
   }
 
   .bar {
@@ -206,13 +140,5 @@
 
   .card {
     --drift: 3rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .view,
-  .piece,
-  .param {
-    transition: none;
   }
 }

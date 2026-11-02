@@ -4,11 +4,8 @@
  * element on the site: it depicts a real field, raised over the view it opens. Lines break only
  * between parameters. `plain` is the address among a docs page's text (Example): no box, and
  * words to read, the link being the control under it. `query` is a flag
- * before the `#`; `shown` prints a shorter address than the one copied; `param` gives each
- * parameter's span its props by key, for a figure that pairs a parameter with what it sets.
+ * before the `#`; `shown` prints a shorter address than the one copied (shownLink).
  */
-import type { HTMLAttributes } from 'react';
-
 import { appAddress } from '../../../../utils/appAddress.ts';
 import { cx } from '../../../../utils/cx.ts';
 import AddressText from '../AddressText/AddressText.tsx';
@@ -21,11 +18,10 @@ type AddressStripProps = {
   query?: string;
   shown?: string;
   plain?: boolean;
-  param?: (key: string) => HTMLAttributes<HTMLSpanElement>;
 };
 
-function AddressStrip({ hash, query, shown = hash, plain = false, param }: AddressStripProps) {
-  const shownAddress = <AddressText hash={shown} query={query} param={param} />;
+function AddressStrip({ hash, query, shown = hash, plain = false }: AddressStripProps) {
+  const shownAddress = <AddressText hash={shown} query={query} />;
   return (
     <div className={cx(styles.root, !plain && styles.raised)}>
       {plain ? (
