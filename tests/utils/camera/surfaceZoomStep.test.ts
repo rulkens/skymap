@@ -19,6 +19,7 @@ import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 const DATUM_M = 6_371_000;
 const PEAK_HEIGHT_M = 8000;
@@ -55,6 +56,7 @@ describe('surfaceZoomStep', () => {
       factor,
       [50, 50],
       VIEWPORT,
+      symmetricFrustum(FOV, 1),
       FOV,
       DATUM_M,
       SURFACE_STANDOFF_RADII,

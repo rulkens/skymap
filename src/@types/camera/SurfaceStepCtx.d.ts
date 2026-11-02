@@ -2,10 +2,13 @@ import type { CameraTuning } from './CameraTuning';
 import type { GroundRadiusLookup } from './GroundRadiusLookup';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
+import type { ViewFrustum } from './ViewFrustum';
 
 /** Everything the body arm's input and nudge cells read about the viewport and the host. */
 export type SurfaceStepCtx = {
   readonly viewportPx: Readonly<Vec2>;
+  /** Cursor rays map through it; `fovYRad` stays the lens for rates and tolerances. */
+  readonly frustum: ViewFrustum;
   readonly fovYRad: number;
   readonly bodyRadiusM: number;
   /** Descent-floor multiple of the datum (`bodyStandoffRadii`); a body may override the global. */

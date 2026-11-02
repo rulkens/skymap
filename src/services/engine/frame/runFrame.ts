@@ -178,7 +178,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const canvas = deriveView(
     snapshot,
     cam,
-    mainViewSpec(cam, { width: deps.canvas.width, height: deps.canvas.height }),
+    mainViewSpec(
+      { width: deps.canvas.width, height: deps.canvas.height },
+      state.cameraRuntime.outputs.frustum,
+    ),
   );
   // The rig hands back specs; deriving views HERE, off the one shared `snapshot`,
   // makes the shared-snapshot invariant structural.

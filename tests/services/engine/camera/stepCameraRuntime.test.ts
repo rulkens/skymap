@@ -74,6 +74,7 @@ import {
   toggleControlScheme,
 } from '../../../../src/state/settings/core/cameraControlsSlice';
 import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -200,6 +201,7 @@ describe('stepCameraRuntime', () => {
           focusBodyId: asSceneBodyId('earth'),
           pivot: pivotFraming(EARTH_ROW),
           viewportPx: [1000, 1000],
+          frustum: symmetricFrustum(Math.PI / 3, 1),
           fovYRad: Math.PI / 3,
           tuning: intent.tuning,
         },
