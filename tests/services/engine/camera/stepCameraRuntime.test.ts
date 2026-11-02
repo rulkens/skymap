@@ -75,6 +75,7 @@ import {
 } from '../../../../src/state/settings/core/cameraControlsSlice';
 import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { NO_INSETS_PX } from '../../../../src/data/layout/noInsetsPx';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -98,6 +99,7 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     simDays,
     rootState,
     canvasPx: [100, 100],
+    coverPx: NO_INSETS_PX,
     aspect: 1,
     steps: pendingToInputSteps(pending, [100, 100]),
     bodies: deriveBodyStates(simDays),
@@ -704,5 +706,35 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     const free = turn();
     expect(Math.abs(free)).toBeGreaterThan(1e-3);
     expect(turn(claimed)).toBeCloseTo(free, 9);
+  });
+});
+
+describe('the lens shift', () => {
+  it('a cover change renders until the shift settles; framing takes the target at once', () => {
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
+    h.frame(2);
+    const coverPx = { ...NO_INSETS_PX, bottom: 20 };
+    let nowMs = h.nowMs();
+    const step = () => {
+      nowMs += 16;
+      const out = stepCameraRuntime(h.state.cameraRuntime, inputsFor(h, nowMs, { coverPx }));
+      h.state.cameraRuntime = out.next;
+      for (const action of out.actions) h.store.dispatch(action);
+      return out;
+    };
+
+    const first = step();
+    const lensHalfY = Math.tan(first.next.outputs.projection.fovYRad / 2);
+    expect(first.requestRender).toBe(true);
+    expect(first.next.outputs.framing.tanHalfY).toBeCloseTo(0.8 * lensHalfY, 12);
+    expect(first.next.shiftNdc[1]).toBeGreaterThan(0);
+    expect(first.next.shiftNdc[1]).toBeLessThan(0.2);
+
+    let frames = 1;
+    while (frames < 200 && step().requestRender) frames += 1;
+    expect(h.state.cameraRuntime.shiftNdc).toEqual([0, 0.2]);
+    // τ = 80 ms at 16 ms frames lands inside 1e-4 of 0.2 in about 38 frames.
+    expect(frames).toBeGreaterThan(20);
+    expect(frames).toBeLessThan(80);
   });
 });

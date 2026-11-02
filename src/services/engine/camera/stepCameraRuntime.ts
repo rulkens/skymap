@@ -24,8 +24,10 @@ import { pickWinner, elapsedForWinner, settledMemory } from './cameraDrivers';
 import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
-import { lensFramingWindow } from '../../../utils/camera/lensFramingWindow';
-import { symmetricFrustum } from '../../../utils/camera/symmetricFrustum';
+import { coverShiftNdc } from '../../../utils/camera/coverShiftNdc';
+import { coveredFramingWindow } from '../../../utils/camera/coveredFramingWindow';
+import { easedShiftNdc } from '../../../utils/camera/easedShiftNdc';
+import { shiftedFrustum } from '../../../utils/camera/shiftedFrustum';
 import { ridesWheelTarget } from './ridesWheelTarget';
 import { releasedWorldArm } from './releasedWorldArm';
 import { frameKey } from './rungs/frameKey';
@@ -70,6 +72,7 @@ export function stepCameraRuntime(
     simDays,
     rootState: rawStored,
     canvasPx,
+    coverPx,
     aspect,
     steps,
     bodies,
@@ -122,8 +125,20 @@ export function stepCameraRuntime(
     near: NEAR_CLIP_MPC,
     far: FAR_CLIP_MPC,
   };
-  const frustum = symmetricFrustum(projection.fovYRad, aspect);
-  const framing = lensFramingWindow(projection.fovYRad, aspect);
+  // The navigator's clock is the step's: `lastNowMs` is last step's `nowMs`, null before the first.
+  const lastNowMs = prev.navigator.lastNowMs;
+  const shiftTarget = coverShiftNdc(coverPx, canvasPx);
+  const eased = easedShiftNdc(
+    lastNowMs === null ? null : prev.shiftNdc,
+    shiftTarget,
+    lastNowMs === null ? 0 : nowMs - lastNowMs,
+  );
+  const shiftNdc =
+    eased[0] === prev.shiftNdc[0] && eased[1] === prev.shiftNdc[1] ? prev.shiftNdc : eased;
+  const shiftSettled = shiftNdc[0] === shiftTarget[0] && shiftNdc[1] === shiftTarget[1];
+  const frustum = shiftedFrustum(projection.fovYRad, aspect, shiftNdc);
+  // The TARGET covers, not the eased shift: a fly-to that starts mid-ease must still land framed.
+  const framing = coveredFramingWindow(projection.fovYRad, aspect, coverPx, canvasPx);
   // `poseBasis` is the COMMITTED frame — the saga writes the destination into
   // `settings.orientation` when a switch starts, so the eye holds still through
   // a roll and only up rotates (`upBasis`, the live B(t)).
@@ -346,6 +361,7 @@ export function stepCameraRuntime(
       scheme: controls.scheme,
       own: own === undefined ? prev.own : { ...prev.own, [winnerId]: own },
       pivotBody: pivotBody ?? null,
+      shiftNdc,
       outputs: {
         displayed: projected.displayed,
         simDays,
@@ -356,7 +372,7 @@ export function stepCameraRuntime(
       },
     },
     actions,
-    requestRender: projected.requestRender || nav.moving,
+    requestRender: projected.requestRender || nav.moving || !shiftSettled,
     world: projected.world,
     rootState,
   };

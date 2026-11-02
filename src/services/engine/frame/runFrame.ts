@@ -40,6 +40,8 @@ import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
 import { selectPendingInput } from '../../../state/input/selectors';
+import { selectViewCoverPx } from '../../../state/viewCover/selectors';
+import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
 
 /**
@@ -101,6 +103,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     simDays,
     rootState: stored,
     canvasPx,
+    // Only the mono rig's one view is the canvas the covers sit over.
+    coverPx: state.viewRig === 'mono' ? selectViewCoverPx(stored) : NO_INSETS_PX,
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
