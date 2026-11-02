@@ -23,12 +23,20 @@ export function useViewCover(
 
     let lastReachPx: number | null = null;
     const measure = () => {
+      // Judged in the resting layout: inside a scrolled column (the phone
+      // exhibit) the rect moves with the scroll, so a re-measure would jump.
+      let scrollX = 0;
+      let scrollY = 0;
+      for (let p = el.parentElement; p; p = p.parentElement) {
+        scrollX += p.scrollLeft;
+        scrollY += p.scrollTop;
+      }
       const rect = el.getBoundingClientRect();
       const reach = {
-        top: rect.bottom,
-        right: window.innerWidth - rect.left,
-        bottom: window.innerHeight - rect.top,
-        left: rect.right,
+        top: rect.bottom + scrollY,
+        right: window.innerWidth - rect.left - scrollX,
+        bottom: window.innerHeight - rect.top - scrollY,
+        left: rect.right + scrollX,
       }[edge];
       const reachPx = Math.round(reach);
       if (reachPx === lastReachPx) return;
