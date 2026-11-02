@@ -13,7 +13,7 @@ import type { CSSProperties, KeyboardEvent } from 'react';
 import { useCallback, useRef } from 'react';
 
 import type { FeatureSlide } from '../../../../@types/FeatureSlide.ts';
-import { appLink } from '../../../../data/appLink.ts';
+import { APP_TAB, appLink } from '../../../../data/appLink.ts';
 import { fact } from '../../../../data/fact.ts';
 import { SITE_LOOPS } from '../../../../data/siteLoops.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
@@ -156,7 +156,7 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
                         linkLabel={`Open ${shot.title} in the app`}
                       />
                     ) : (
-                      <a href={href} aria-label={`Open ${shot.title} in the app`}>
+                      <a href={href} aria-label={`Open ${shot.title} in the app`} {...APP_TAB}>
                         <Shot id={id} sizes={sizes} alt="" eager={i > 0 && warmed(i)} />
                       </a>
                     )}

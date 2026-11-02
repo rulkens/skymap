@@ -7,7 +7,7 @@
 import type { CSSProperties } from 'react';
 
 import { ACCENTS, says } from '../../../../content/pages/classroom/classroom.data.ts';
-import { APP_BASE, appLink } from '../../../../data/appLink.ts';
+import { APP_BASE, APP_TAB, appLink } from '../../../../data/appLink.ts';
 import { HOME_LINKS } from '../../../../data/homeLinks.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import CopyButton from '../../../shared/links/CopyButton/CopyButton.tsx';
@@ -34,7 +34,7 @@ function LinkAnatomy() {
           {/* One line per part, so each part's number stands in the margin at its line's start. The address is
               the link, as a browser's is; the copy control sits outside it, a button cannot live in a link. */}
           <p className={styles.url}>
-            <a className={styles.link} href={appLink(HASH)}>
+            <a className={styles.link} href={appLink(HASH)} {...APP_TAB}>
               <span className={styles.host}>
                 {site.host}
                 {APP_BASE}#

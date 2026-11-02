@@ -9,7 +9,7 @@
 import type { KeyboardEvent } from 'react';
 import { useRef } from 'react';
 
-import { APP_BASE, appLink } from '../../../../data/appLink.ts';
+import { APP_BASE, APP_TAB, appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { galleryKeyTarget } from '../../../../utils/galleryKeyTarget.ts';
@@ -84,7 +84,7 @@ function Sharing() {
             ))}
           </div>
           <div className={styles.bar}>
-            <a className={styles.address} href={appLink(link)}>
+            <a className={styles.address} href={appLink(link)} {...APP_TAB}>
               <span className={styles.host}>
                 {site.host}
                 {APP_BASE}#

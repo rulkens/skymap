@@ -6,7 +6,7 @@
  */
 import type { ComponentPropsWithoutRef } from 'react';
 
-import { OPEN_APP_LABEL, appLink } from '../../../../data/appLink.ts';
+import { APP_TAB, OPEN_APP_LABEL, appLink } from '../../../../data/appLink.ts';
 import { cx } from '../../../../utils/cx.ts';
 import Icon from '../Icon/Icon.tsx';
 import styles from './OpenApp.module.css';
@@ -18,6 +18,7 @@ function OpenApp({ size = 'default', className, ...rest }: OpenAppProps) {
     <a
       className={cx(styles.root, size === 'small' && styles.small, className)}
       href={appLink()}
+      {...APP_TAB}
       {...rest}
     >
       <Icon name="app" />

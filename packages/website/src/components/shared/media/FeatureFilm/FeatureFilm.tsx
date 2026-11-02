@@ -4,11 +4,12 @@
  * its middle, shown on hover or focus, that stops and starts it. A visitor who asked for less motion or
  * less data gets the still, and only a wide film moves, when they press play. Without script there is
  * no film, so no button. `active` false holds it still (a slide of a gallery that is not the current one);
- * `href` makes the picture a link that lies under the button.
+ * `href` makes the picture a link into the app that lies under the button.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
+import { APP_TAB } from '../../../../data/appLink.ts';
 import { siteLoop } from '../../../../data/siteLoop.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { lessWanted } from '../../../../utils/lessWanted.ts';
@@ -69,7 +70,7 @@ function FeatureFilm({
         wide={wide}
         turnOn={turnOn}
       >
-        {href && <a className={styles.open} href={href} aria-label={linkLabel} />}
+        {href && <a className={styles.open} href={href} aria-label={linkLabel} {...APP_TAB} />}
         {ready && wide && (
           <button
             className={styles.button}

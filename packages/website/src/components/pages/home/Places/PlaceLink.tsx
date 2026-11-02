@@ -6,7 +6,7 @@
  */
 import type { CSSProperties, Ref } from 'react';
 
-import { appLink } from '../../../../data/appLink.ts';
+import { APP_TAB, appLink } from '../../../../data/appLink.ts';
 import type { Place } from '../../../../@types/Place';
 import { cx } from '../../../../utils/cx.ts';
 import DiscFilm from '../../../shared/media/DiscFilm/DiscFilm.tsx';
@@ -46,6 +46,7 @@ function PlaceLink({
       <a
         className={cx(styles.thing, playing && styles.playing)}
         href={appLink(place.hash)}
+        {...APP_TAB}
         onPointerEnter={onPlay}
         onPointerLeave={onStop}
         onFocus={(event) => event.currentTarget.matches(':focus-visible') && onPlay?.()}

@@ -1,6 +1,9 @@
 /** The only place the app's base path is written; the `/app` move changes this line. */
 export const APP_BASE = '/';
 
+/** Spread on every link into the app: it opens in a new tab, so the page that sent the reader stays where it was (owner, 2026-11-02). */
+export const APP_TAB = { target: '_blank', rel: 'noopener' } as const;
+
 /** The launch control's words (components/shared/links/OpenApp/OpenApp.tsx), for copy that quotes them. */
 export const OPEN_APP_LABEL = 'Open app';
 

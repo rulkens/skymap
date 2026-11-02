@@ -10,7 +10,7 @@
 import { Fragment } from 'react';
 import type { HTMLAttributes } from 'react';
 
-import { APP_BASE, appLink } from '../../../../data/appLink.ts';
+import { APP_BASE, APP_TAB, appLink } from '../../../../data/appLink.ts';
 import { cx } from '../../../../utils/cx.ts';
 import CopyButton from '../CopyButton/CopyButton.tsx';
 import styles from './AddressStrip.module.css';
@@ -61,7 +61,7 @@ function AddressStrip({ hash, query, shown = hash, plain = false, param }: Addre
       {plain ? (
         <span className={styles.address}>{shownAddress}</span>
       ) : (
-        <a className={styles.address} href={address}>
+        <a className={styles.address} href={address} {...APP_TAB}>
           {shownAddress}
         </a>
       )}
