@@ -20,10 +20,12 @@ import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 const R = 6_371_000;
 const VIEWPORT: Vec2 = [800, 600];
 const FOV = Math.PI / 2; // tanHalf = 1
+const FRUSTUM = symmetricFrustum(FOV, VIEWPORT[0] / VIEWPORT[1]);
 
 /** Sub-pixel by six orders of magnitude — the rotation is exact, not fitted. */
 const PIXEL_DIGITS = 6;
@@ -117,8 +119,8 @@ function pickPoint(ray: { originM: Vec3; dir: Vec3 }, radiusM: number): Vec3 {
 
 /** Run one drag and return the grabbed point plus the rotated pose. */
 function drag(pose: BodyFixedPose, prevPixel: Vec2, currPixel: Vec2) {
-  const prevRay = cursorRayBodyLocal(pose, prevPixel, VIEWPORT, FOV);
-  const currRay = cursorRayBodyLocal(pose, currPixel, VIEWPORT, FOV);
+  const prevRay = cursorRayBodyLocal(pose, prevPixel, VIEWPORT, FRUSTUM);
+  const currRay = cursorRayBodyLocal(pose, currPixel, VIEWPORT, FRUSTUM);
   const grabbedM = pickPoint(prevRay, R);
   const next = anchoredDragRotation(pose, prevRay, currRay, R);
   if (next === null) throw new Error('fixture drag was rejected');

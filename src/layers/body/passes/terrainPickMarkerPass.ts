@@ -9,7 +9,6 @@
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { frustumFovYRad } from '../../../utils/camera/frustumFovYRad';
 import { isSurfaceTileBodyId } from '../subsystems/surfaceTiles/isSurfaceTileBodyId';
 import { terrainPickUnderCursor } from '../present/terrainPickUnderCursor';
 
@@ -41,7 +40,7 @@ export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
         pose,
         cursorPx: cursorTexPx,
         viewportPx: view.viewportPx,
-        fovYRad: frustumFovYRad(ctx.frustum),
+        frustum: ctx.frustum,
       });
       if (pick === null) return;
 

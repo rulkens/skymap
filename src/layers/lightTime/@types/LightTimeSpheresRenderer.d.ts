@@ -4,7 +4,7 @@
  */
 
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { LightTimeLiveness } from './LightTimeLiveness';
 import type { Renderer } from '../../../@types/rendering/Renderer';
@@ -15,7 +15,7 @@ export type LightTimeSpheresRenderer = Renderer & {
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
     camPos: Readonly<Vec3>,
-    viewport: Vec2,
+    frustum: ViewFrustum,
     liveness: LightTimeLiveness,
   ): void;
 };

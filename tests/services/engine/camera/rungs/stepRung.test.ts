@@ -28,6 +28,7 @@ import type { FramedPose } from '../../../../../src/@types/camera/FramedPose';
 import type { RungCtx } from '../../../../../src/@types/camera/RungCtx';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import type { PositionedId } from '../../../../../src/@types/scene/PositionedId';
+import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
 
 const EARTH_RADIUS_M = 6371000;
 const DEIMOS_RADIUS_M = 6000;
@@ -91,6 +92,7 @@ function ctxFor(
     focusBodyId,
     pivot: { radiusMpc: null, floorMpc: 0 },
     viewportPx: [1920, 1080],
+    frustum: symmetricFrustum(1, 1920 / 1080),
     fovYRad: 1,
     tuning: TUNING,
   };
