@@ -1,9 +1,6 @@
 /** The only place the app's base path is written; the `/app` move changes this line. */
 export const APP_BASE = '/';
 
-/** Spread on every link into the app: it opens in a new tab, so the page that sent the reader stays where it was (owner, 2026-11-02). */
-export const APP_TAB = { target: '_blank', rel: 'noopener' } as const;
-
 /** The launch control's words (components/shared/links/OpenApp/OpenApp.tsx), for copy that quotes them. */
 export const OPEN_APP_LABEL = 'Open app';
 
@@ -13,7 +10,7 @@ const APP_ORIGIN = import.meta.env.MODE === 'development' ? String(import.meta.e
 /**
  * Root-absolute URL of the app (absolute to the live site on the dev server), with an optional
  * deep-link hash (`focus=body-earth`, no leading `#`) and an optional query flag (`dome`), which
- * the app reads before the hash.
+ * the app reads before the hash. A link renders it through AppLink; a copy control calls it for its text.
  */
 export function appLink(hash?: string, query?: string): string {
   return `${APP_ORIGIN}${APP_BASE}${query ? `?${query}` : ''}${hash ? `#${hash}` : ''}`;

@@ -8,7 +8,6 @@
  * given and sets the address at its foot, so the labels of a row of pictures put their addresses on one line.
  */
 import type { SiteShot } from '../../../../@types/SiteShot';
-import { appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import ViewLink from '../../links/ViewLink/ViewLink.tsx';
@@ -50,11 +49,11 @@ function ShotCaption({
       )}
       {view &&
         (view.link.startsWith('tour=') ? (
-          <ViewLink className={styles.view} href={appLink(view.link, view.query)}>
+          <ViewLink className={styles.view} view={view.link} query={view.query}>
             Start the tour
           </ViewLink>
         ) : (
-          <ViewLink className={styles.view} href={appLink(view.link, view.query)} />
+          <ViewLink className={styles.view} view={view.link} query={view.query} />
         ))}
       {!row && <div className={styles.room} />}
     </div>

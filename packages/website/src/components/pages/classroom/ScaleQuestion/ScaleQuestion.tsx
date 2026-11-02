@@ -8,7 +8,6 @@
 import type { CSSProperties } from 'react';
 
 import { ACCENTS, says } from '../../../../content/pages/classroom/classroom.data.ts';
-import { appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
@@ -62,7 +61,7 @@ function ScaleQuestion() {
             <p>{says('earth-moon-in-earths')}</p>
           </details>
           <div className={styles.act}>
-            <ViewLink hang href={appLink(siteShot(SHOT).link)}>
+            <ViewLink hang view={siteShot(SHOT).link}>
               Earth and the Moon
             </ViewLink>
           </div>

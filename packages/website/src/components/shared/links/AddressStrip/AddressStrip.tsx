@@ -10,8 +10,9 @@
 import { Fragment } from 'react';
 import type { HTMLAttributes } from 'react';
 
-import { APP_BASE, APP_TAB, appLink } from '../../../../data/appLink.ts';
+import { APP_BASE, appLink } from '../../../../data/appLink.ts';
 import { cx } from '../../../../utils/cx.ts';
+import AppLink from '../AppLink/AppLink.tsx';
 import CopyButton from '../CopyButton/CopyButton.tsx';
 import styles from './AddressStrip.module.css';
 
@@ -25,7 +26,6 @@ type AddressStripProps = {
 
 function AddressStrip({ hash, query, shown = hash, plain = false, param }: AddressStripProps) {
   const site = new URL(import.meta.env.SITE);
-  const address = appLink(hash, query);
   const params = shown.split('&').map((pair) => {
     const at = pair.indexOf('=');
     // A long value (a pose) may break after a comma, never inside a number.
@@ -61,11 +61,11 @@ function AddressStrip({ hash, query, shown = hash, plain = false, param }: Addre
       {plain ? (
         <span className={styles.address}>{shownAddress}</span>
       ) : (
-        <a className={styles.address} href={address} {...APP_TAB}>
+        <AppLink className={styles.address} view={hash} query={query}>
           {shownAddress}
-        </a>
+        </AppLink>
       )}
-      <CopyButton text={site.origin + address} label="Copy the address" />
+      <CopyButton text={site.origin + appLink(hash, query)} label="Copy the address" />
     </div>
   );
 }

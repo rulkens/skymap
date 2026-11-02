@@ -9,7 +9,6 @@
  */
 import type { CSSProperties } from 'react';
 
-import { appLink } from '../../../../data/appLink.ts';
 import { HOME_LINKS } from '../../../../data/homeLinks.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
@@ -45,10 +44,10 @@ function Stories() {
             <div className={cx(styles.part, styles.tourPart)} style={TOUR_ACCENT}>
               <h3>The Long Way Out</h3>
               <p>
-                The guided tour, from the Milky Way to the edge of the observable universe and
-                back, with a caption at every step.
+                The guided tour, from the Milky Way to the edge of the observable universe and back,
+                with a caption at every step.
               </p>
-              <ViewLink hang href={appLink(HOME_LINKS.tour)}>
+              <ViewLink hang view={HOME_LINKS.tour}>
                 Start the tour
               </ViewLink>
             </div>
@@ -73,7 +72,7 @@ function Stories() {
               that say where the numbers come from.
             </p>
             <div className={styles.links}>
-              <ViewLink hang href={appLink(siteShot('stories-orbits').link)}>
+              <ViewLink hang view={siteShot('stories-orbits').link}>
                 Open the Solar System exhibit
               </ViewLink>
               <ObjLink size="small" hang href={sitePath('/docs/guide/tours/')}>

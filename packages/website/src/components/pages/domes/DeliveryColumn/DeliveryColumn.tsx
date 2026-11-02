@@ -10,7 +10,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 
 import { DELIVERY_ROWS } from '../../../../content/pages/domes/domes.data.ts';
-import { appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Disc from '../../../shared/media/Disc/Disc.tsx';
@@ -84,7 +83,7 @@ function DeliveryColumn(props: DeliveryColumnProps) {
           </div>
         ))}
       </dl>
-      <ViewLink className={styles.link} hang href={appLink(link, query)}>
+      <ViewLink className={styles.link} hang view={link} query={query}>
         {action}
       </ViewLink>
     </article>

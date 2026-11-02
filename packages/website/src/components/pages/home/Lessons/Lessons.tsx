@@ -8,7 +8,6 @@
  * Perseverance, cut out with its shadow, driving up onto its own spot as the strip scrolls in.
  */
 import { CLASS_FEATURES } from '../../../../content/pages/classroom/classFeatures.ts';
-import { appLink } from '../../../../data/appLink.ts';
 import { LESSON_TOPICS } from '../../../../data/lessons.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
@@ -57,7 +56,7 @@ const words = (part: typeof EARTH, className?: string) => (
   <div className={cx(styles.words, className)}>
     <h3>{part.ask}</h3>
     <p className={styles.line}>{part.line}</p>
-    <ViewLink hang href={appLink(part.hash)}>
+    <ViewLink hang view={part.hash}>
       {part.action}
     </ViewLink>
   </div>

@@ -1,8 +1,8 @@
 /**
- * Three kinds of link, each with one look: the bare app is OpenApp's button, a
- * view in the app is a ViewLink (the view mark), a page of the site is the
- * ring under that page's icon. Read from the source, so a new page cannot hand
- * an app address to a page's ring or grow a second launch control.
+ * Every link into the app is an AppLink, so every one opens in a new tab, and each kind has one look: the bare
+ * app is OpenApp's button, a view as a control is ViewLink's ring under the view mark. Read from the source, so a
+ * new page cannot build an app address into a plain anchor, grow a second launch control, or mark a site page's
+ * ring as a view.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -11,20 +11,13 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = resolve(import.meta.dirname, '../../../packages/website/src');
 
-const VIEW_LINK_TAGS = ['ViewLink'];
-
-/** View addresses that are not a control of their own: file, how many, and why. */
-const OTHER_USES: Record<string, number> = {
-  // The address shown as text and copied, beside a picture.
+/** The files that build an app address themselves, and how many times. */
+const ADDRESS_BUILDERS: Record<string, number> = {
+  'components/shared/links/AppLink/AppLink.tsx': 1,
+  // The copy control's text: an address to paste, not a link.
   'components/shared/links/AddressStrip/AddressStrip.tsx': 1,
-  // The whole card is the link, its picture included; the launch drawing follows the name.
-  'components/pages/home/Places/PlaceLink.tsx': 1,
-  // Each slide is a link to its own view, the current one reachable; the caption under it carries the ViewLink.
-  'components/pages/features/FeatureGallery/FeatureGallery.tsx': 1,
-  // The address set large is the link, as a browser's is, and its copy control copies it.
-  'components/pages/classroom/LinkAnatomy/LinkAnatomy.tsx': 2,
-  // The address in the window's bar is the link, as a browser's is, and its copy control copies it.
-  'components/pages/home/Sharing/Sharing.tsx': 2,
+  'components/pages/home/Sharing/Sharing.tsx': 1,
+  'components/pages/classroom/LinkAnatomy/LinkAnatomy.tsx': 1,
 };
 
 const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
@@ -34,31 +27,37 @@ const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
     text: readFileSync(join(SRC, name), 'utf8'),
   }));
 
-/** The tag a call sits in: the nearest `<Name` before it. */
-const tagAt = (text: string, index: number) =>
-  /<([A-Za-z][\w.]*)[^<]*$/.exec(text.slice(0, index))?.[1];
-
 describe('app links', () => {
-  it('only OpenApp launches the app with no view', () => {
-    const bare = files.filter((file) => /appLink\(\s*\)/.test(file.text)).map((file) => file.name);
+  it('only AppLink and the copy controls build an app address', () => {
+    const builders: Record<string, number> = {};
+    for (const file of files) {
+      const count = file.text.match(/appLink\(/g)?.length;
+      if (count) builders[file.name] = count;
+    }
+    expect(builders).toEqual(ADDRESS_BUILDERS);
+  });
+
+  it('only OpenApp opens the app with no view', () => {
+    const bare = files
+      // An opening tag's attributes run to the first `>` that does not end an arrow.
+      .filter((file) =>
+        [...file.text.matchAll(/<AppLink\b((?:=>|[^>])*)>/g)].some(
+          (tag) => !/\bview=/.test(tag[1]!),
+        ),
+      )
+      .map((file) => file.name);
     expect(bare).toEqual(['components/shared/links/OpenApp/OpenApp.tsx']);
   });
 
-  it('an address of a view goes to a ViewLink and to nothing else', () => {
-    const other: Record<string, number> = {};
-    for (const file of files) {
-      for (const match of file.text.matchAll(/appLink\(\s*[^\s)]/g)) {
-        if (!VIEW_LINK_TAGS.includes(tagAt(file.text, match.index) ?? ''))
-          other[file.name] = (other[file.name] ?? 0) + 1;
-      }
-    }
-    expect(other).toEqual(OTHER_USES);
-  });
-
   it('only ViewLink puts the view mark on a ring', () => {
-    const marked = files
-      .filter((file) => /icon="(view|launch)"/.test(file.text))
+    const marked = files.filter((file) => /icon="(view|launch)"/.test(file.text));
+    expect(marked).toEqual([]);
+    const ringed = files
+      .filter((file) => /objLinkClass\(/.test(file.text))
       .map((file) => file.name);
-    expect(marked).toEqual(['components/shared/links/ViewLink/ViewLink.tsx']);
+    expect(ringed.sort()).toEqual([
+      'components/shared/links/ObjLink/ObjLink.tsx',
+      'components/shared/links/ViewLink/ViewLink.tsx',
+    ]);
   });
 });

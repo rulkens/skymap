@@ -4,17 +4,17 @@
  * its middle, shown on hover or focus, that stops and starts it. A visitor who asked for less motion or
  * less data gets the still, and only a wide film moves, when they press play. Without script there is
  * no film, so no button. `active` false holds it still (a slide of a gallery that is not the current one);
- * `href` makes the picture a link into the app that lies under the button.
+ * `view` (and `query`) makes the picture a link into the app that lies under the button.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
-import { APP_TAB } from '../../../../data/appLink.ts';
 import { siteLoop } from '../../../../data/siteLoop.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { lessWanted } from '../../../../utils/lessWanted.ts';
 import { loopUrl } from '../../../../utils/loopUrl.ts';
 import DiscFilm from '../DiscFilm/DiscFilm.tsx';
+import AppLink from '../../links/AppLink/AppLink.tsx';
 import Icon from '../../links/Icon/Icon.tsx';
 import styles from './FeatureFilm.module.css';
 
@@ -24,8 +24,9 @@ type FeatureFilmProps = {
   wide?: boolean;
   /** Whether the film may play; a gallery's other slides are held still. */
   active?: boolean;
-  /** Where the picture leads, named for assistive technology by `linkLabel`. */
-  href?: string;
+  /** The view in the app the picture leads to, named for assistive technology by `linkLabel`. */
+  view?: string;
+  query?: string;
   linkLabel?: string;
   /** The element that gets the film's `--turn`, where a neighbour moves with it. */
   turnOn?: RefObject<HTMLElement | null>;
@@ -36,7 +37,8 @@ function FeatureFilm({
   sizes,
   wide = false,
   active = true,
-  href,
+  view,
+  query,
   linkLabel,
   turnOn,
 }: FeatureFilmProps) {
@@ -70,7 +72,9 @@ function FeatureFilm({
         wide={wide}
         turnOn={turnOn}
       >
-        {href && <a className={styles.open} href={href} aria-label={linkLabel} {...APP_TAB} />}
+        {view && (
+          <AppLink className={styles.open} view={view} query={query} aria-label={linkLabel} />
+        )}
         {ready && wide && (
           <button
             className={styles.button}

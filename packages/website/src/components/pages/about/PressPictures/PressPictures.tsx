@@ -4,7 +4,6 @@
  * shows, the credit to print (with a control that copies it), the terms, and links to the view and the file. The
  * cards share their rows (subgrid), so the same line of two cards sits at the same height whatever its length.
  */
-import { appLink } from '../../../../data/appLink.ts';
 import { PRESS_PICTURES } from '../../../../data/pressPictures.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { shotSources } from '../../../../utils/shotSources.ts';
@@ -68,7 +67,7 @@ function PressPictures() {
             </div>
           </dl>
           <p className={styles.links}>
-            <ViewLink href={appLink(row.view.link, row.view.query)}>
+            <ViewLink view={row.view.link} query={row.view.query}>
               {row.view.link.startsWith('tour=') ? 'Start the tour' : 'Open this view'}
             </ViewLink>
             <ObjLink size="small" href={row.file}>

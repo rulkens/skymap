@@ -8,7 +8,6 @@
  */
 import type { CSSProperties } from 'react';
 
-import { appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
@@ -66,7 +65,7 @@ function Screens() {
           The same view of Saturn on four screens. Skymap runs in a browser, with nothing to
           install.
         </p>
-        <ViewLink href={appLink(siteShot('start-saturn').link)}>Open Saturn</ViewLink>
+        <ViewLink view={siteShot('start-saturn').link}>Open Saturn</ViewLink>
       </div>
       <div className={styles.row} data-turn>
         {PARTS.map((part, at) => (

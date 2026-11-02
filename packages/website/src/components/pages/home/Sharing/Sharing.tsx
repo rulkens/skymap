@@ -9,11 +9,12 @@
 import type { KeyboardEvent } from 'react';
 import { useRef } from 'react';
 
-import { APP_BASE, APP_TAB, appLink } from '../../../../data/appLink.ts';
+import { APP_BASE, appLink } from '../../../../data/appLink.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { galleryKeyTarget } from '../../../../utils/galleryKeyTarget.ts';
 import { wrapIndex } from '../../../../utils/wrapIndex.ts';
+import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import CopyButton from '../../../shared/links/CopyButton/CopyButton.tsx';
 import OpenApp from '../../../shared/links/OpenApp/OpenApp.tsx';
 import { useGallery } from '../../../shared/media/PictureBand/useGallery.ts';
@@ -84,7 +85,7 @@ function Sharing() {
             ))}
           </div>
           <div className={styles.bar}>
-            <a className={styles.address} href={appLink(link)} {...APP_TAB}>
+            <AppLink className={styles.address} view={link}>
               <span className={styles.host}>
                 {site.host}
                 {APP_BASE}#
@@ -95,7 +96,7 @@ function Sharing() {
                   {pair}
                 </span>
               ))}
-            </a>
+            </AppLink>
             <CopyButton text={site.origin + appLink(link)} label="Copy the address" />
           </div>
         </div>

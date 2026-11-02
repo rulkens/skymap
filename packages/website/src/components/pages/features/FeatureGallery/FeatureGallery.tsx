@@ -13,13 +13,13 @@ import type { CSSProperties, KeyboardEvent } from 'react';
 import { useCallback, useRef } from 'react';
 
 import type { FeatureSlide } from '../../../../@types/FeatureSlide.ts';
-import { APP_TAB, appLink } from '../../../../data/appLink.ts';
 import { fact } from '../../../../data/fact.ts';
 import { SITE_LOOPS } from '../../../../data/siteLoops.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { galleryKeyTarget } from '../../../../utils/galleryKeyTarget.ts';
 import { wrapIndex } from '../../../../utils/wrapIndex.ts';
+import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import FeatureFilm from '../../../shared/media/FeatureFilm/FeatureFilm.tsx';
 import FeatureSection from '../../../shared/layout/FeatureSection/FeatureSection.tsx';
 import { useGallery } from '../../../shared/media/PictureBand/useGallery.ts';
@@ -137,7 +137,6 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
             <div className={styles.frame}>
               {views.map((id, i) => {
                 const shot = siteShot(id);
-                const href = appLink(shot.link, shot.query);
                 return (
                   <div
                     key={id}
@@ -152,13 +151,18 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
                         sizes={sizes}
                         wide
                         active={current(i)}
-                        href={href}
+                        view={shot.link}
+                        query={shot.query}
                         linkLabel={`Open ${shot.title} in the app`}
                       />
                     ) : (
-                      <a href={href} aria-label={`Open ${shot.title} in the app`} {...APP_TAB}>
+                      <AppLink
+                        view={shot.link}
+                        query={shot.query}
+                        aria-label={`Open ${shot.title} in the app`}
+                      >
                         <Shot id={id} sizes={sizes} alt="" eager={i > 0 && warmed(i)} />
-                      </a>
+                      </AppLink>
                     )}
                   </div>
                 );

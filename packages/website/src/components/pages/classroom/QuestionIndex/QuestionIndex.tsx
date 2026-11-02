@@ -7,7 +7,6 @@
 import { useState } from 'react';
 
 import { CLASS_QUESTIONS, says } from '../../../../content/pages/classroom/classroom.data.ts';
-import { appLink } from '../../../../data/appLink.ts';
 import { LESSON_TOPICS } from '../../../../data/lessons.ts';
 import { cx } from '../../../../utils/cx.ts';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
@@ -43,7 +42,7 @@ function QuestionIndex() {
             </div>
             <h3>{row.ask}</h3>
             {row.factId && <p className={styles.readout}>{says(row.factId)}</p>}
-            <ViewLink href={appLink(row.lesson.hash)}>{row.lesson.title}</ViewLink>
+            <ViewLink view={row.lesson.hash}>{row.lesson.title}</ViewLink>
           </li>
         ))}
       </ol>

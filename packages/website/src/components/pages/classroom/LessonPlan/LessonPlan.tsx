@@ -9,7 +9,6 @@ import type { CSSProperties } from 'react';
 
 import { CLASS_FEATURES } from '../../../../content/pages/classroom/classFeatures.ts';
 import { says } from '../../../../content/pages/classroom/classroom.data.ts';
-import { appLink } from '../../../../data/appLink.ts';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import EarthOrbit from '../EarthOrbit/EarthOrbit.tsx';
@@ -55,7 +54,7 @@ function LessonPlan() {
             </p>
             <p className={styles.label}>Ask the class</p>
             <p className={styles.ask}>{part.ask}</p>
-            <ViewLink hang href={appLink(part.hash)}>
+            <ViewLink hang view={part.hash}>
               {part.action}
             </ViewLink>
           </article>
