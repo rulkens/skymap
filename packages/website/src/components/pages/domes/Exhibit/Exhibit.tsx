@@ -1,7 +1,7 @@
 /*
- * Exhibit — the page's section on a screen for a museum: the app's exhibits as each opens, running from the
- * window's left edge across seven columns with only a taste of their notes, and the title, the lead, the list of exhibits and the words (the
- * children) in the last four. Each name opens its exhibit in the app; pointing at it or reaching it with Tab shows its
+ * Exhibit — the page's section on a screen for a museum: the app's exhibits as each opens, cut short of their
+ * notes and running from the window's left edge across seven columns, and the title, the lead, the list of
+ * exhibits and the words (the children) in the last four. Each name opens its exhibit in the app; pointing at it or reaching it with Tab shows its
  * screen and its label (exhibitChooser.client.ts). Without script the first screen stays. Narrow, the title
  * comes first, then the picture across the window, then the words.
  */
@@ -23,7 +23,8 @@ const EXHIBITS = [
   { name: 'Observable Universe', shot: 'domes-exhibit-universe', accent: '#b8d4ff' },
 ];
 
-const SIZES = '(max-width: 900px) 100vw, min(calc(58vw + 9rem), 54rem)';
+// The picture is set half as wide again as its frame, which cuts off the notes (`.frame` in the module).
+const SIZES = '(max-width: 900px) 150vw, min(calc(88vw + 14rem), 82rem)';
 
 type ExhibitProps = { id: string; title: string; lead: string; children: ReactNode };
 

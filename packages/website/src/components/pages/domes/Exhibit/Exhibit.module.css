@@ -26,14 +26,14 @@
 }
 
 /*
- * Every exhibit's notes stand in the frame's right third. Only their first heading and a line or two show,
- * fading out, so they read as a screen of notes without competing with the section's own words.
+ * Every exhibit's notes stand in the screen's right third, and the frame shows only the two thirds left of them:
+ * the scene and the exhibit's own title and lead, so the notes' text never competes with the section's words.
+ * Each picture is set wider than the frame by that share and cut at the frame's right edge, which fades out.
  */
 .frame {
-  mask-image:
-    linear-gradient(90deg, #000 52%, rgb(0 0 0 / 0) 64%),
-    radial-gradient(28% 16% at 80% 8%, #000 40%, rgb(0 0 0 / 0));
-  mask-composite: add;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, #000 85%, rgb(0 0 0 / 0));
 }
 
 .screen {
@@ -47,7 +47,8 @@
 
 .frame img {
   display: block;
-  width: 100%;
+  width: calc(100% / 0.66);
+  max-width: none;
   height: auto;
 }
 
@@ -109,6 +110,11 @@
   .words {
     grid-column: 9 / -1;
     --cols: 4;
+  }
+
+  /* The picture is taller than the title and words; the room it leaves falls below the words, not between. */
+  .root {
+    grid-template-rows: auto 1fr;
   }
 
   .root > h2 {
