@@ -184,9 +184,9 @@ Update each `io.wesl` layout comment and the TS twins' offset constants.
 - Actions `viewCoverSet({ id, cover })` and `viewCoverCleared(id)`. State: `Partial<Record<CoverId, ViewCover>>`.
 - `selectViewCoverPx(state): InsetsPx` is the per-edge **max**, memoised. With no rows it is all zeros.
 
-- [ ] Test `selectViewCoverPx takes the max per edge`: phoneBottom bottom 140 + exhibitCaption bottom 300 → `bottom: 300`, the rest 0.
-- [ ] Test `selectViewCoverPx is zero with no covers`.
-- [ ] Implement, typecheck, targeted tests, commit.
+- [x] Test `selectViewCoverPx takes the max per edge`: phoneBottom bottom 140 + exhibitCaption bottom 300 → `bottom: 300`, the rest 0.
+- [x] Test `selectViewCoverPx is zero with no covers`.
+- [x] Implement, typecheck, targeted tests, commit.
 
 ### Task 7: Panels claim their cover — review: yes
 
@@ -206,11 +206,11 @@ Read [`ui-ux.md`](../conventions/ui-ux.md) and the `create-component` skill's co
 - Exhibit: on desktop, the notes column → `exhibitNotes`, `right`. On mobile, the caption block → `exhibitCaption`, `bottom`. Inactive while the eye toggle is hidden; the notes cover is also inactive when there are no notes.
 - Update `CoverId` (Task 6) to `'phoneBottom' | 'exhibitNotes' | 'exhibitCaption'` if Task 6 landed the older names.
 
-- [ ] Test `useViewCover clears its row when it turns inactive`.
-- [ ] Test `useViewCover reports the reach from its edge`: stub `getBoundingClientRect` and `innerHeight`, then assert `reachPx`.
-- [ ] Interaction test (ExhibitOverlay): the eye toggle clears the exhibit row, and pressing it again restores it.
-- [ ] Interaction test (BottomStack/PhoneHud): the probe takes the `restingSheet` class while a selection exists, including while Layers is open.
-- [ ] Implement, typecheck, targeted tests, commit.
+- [x] Test `useViewCover clears its row when it turns inactive`.
+- [x] Test `useViewCover reports the reach from its edge`: stub `getBoundingClientRect` and `innerHeight`, then assert `reachPx`.
+- [x] Interaction test (ExhibitOverlay): the eye toggle clears the exhibit row, and pressing it again restores it.
+- [x] Interaction test (BottomStack/PhoneHud): the probe takes the `restingSheet` class while a selection exists, including while Layers is open.
+- [x] Implement, typecheck, targeted tests, commit.
 
 ### Task 8: The camera runtime shifts the frustum and frames the uncovered area — review: yes
 
@@ -224,24 +224,24 @@ Read [`ui-ux.md`](../conventions/ui-ux.md) and the `create-component` skill's co
 - `coveredFramingWindow(fovYRad: number, aspect: number, insets: InsetsPx, canvasPx: Readonly<Vec2>): FramingWindow`, which applies the clamp and replaces `lensFramingWindow` in the runtime.
 - `easedShiftNdc(current: Readonly<Vec2> | null, target: Readonly<Vec2>, dtMs: number): Vec2`. `null` current means snap.
 
-- [ ] Test `coverShiftNdc lifts the axis above a bottom cover`: insets bottom 200 on 400×1000 → `[0, 0.2]`.
-- [ ] Test `coverShiftNdc moves the axis left of a right sidebar`: right 400 on 1600×900 → `[-0.25, 0]`.
-- [ ] Test `coverShiftNdc clamps a cover wider than the window`: right 1000 on 1000 wide → `cx = −0.6`.
-- [ ] Test `shiftedFrustum keeps its extents`: for shift `[0.3, −0.2]`, `tanRight − tanLeft = 2hx` and `tanUp − tanDown = 2hy`, and at shift `[0,0]` it equals `symmetricFrustum`.
-- [ ] Test `shiftedFrustum puts the axis at the shift`: the NDC of tangent 0 equals `shiftNdc`.
-- [ ] Test `coveredFramingWindow shrinks to the uncovered rect`: bottom 200 on 400×1000 → `tanHalfY = 0.8·hy`, `tanHalfX = hx`.
-- [ ] Test `easedShiftNdc snaps from null, approaches with τ = 80 ms, and stays continuous when the target jumps mid-ease`.
-- [ ] Test (stepCameraRuntime): a cover change yields `requestRender: true` until the shift settles, and `outputs.framing` uses the target from the first frame.
-- [ ] Implement, typecheck, targeted tests, commit.
+- [x] Test `coverShiftNdc lifts the axis above a bottom cover`: insets bottom 200 on 400×1000 → `[0, 0.2]`.
+- [x] Test `coverShiftNdc moves the axis left of a right sidebar`: right 400 on 1600×900 → `[-0.25, 0]`.
+- [x] Test `coverShiftNdc clamps a cover wider than the window`: right 1000 on 1000 wide → `cx = −0.6`.
+- [x] Test `shiftedFrustum keeps its extents`: for shift `[0.3, −0.2]`, `tanRight − tanLeft = 2hx` and `tanUp − tanDown = 2hy`, and at shift `[0,0]` it equals `symmetricFrustum`.
+- [x] Test `shiftedFrustum puts the axis at the shift`: the NDC of tangent 0 equals `shiftNdc`.
+- [x] Test `coveredFramingWindow shrinks to the uncovered rect`: bottom 200 on 400×1000 → `tanHalfY = 0.8·hy`, `tanHalfX = hx`.
+- [x] Test `easedShiftNdc snaps from null, approaches with τ = 80 ms, and stays continuous when the target jumps mid-ease`.
+- [x] Test (stepCameraRuntime): a cover change yields `requestRender: true` until the shift settles, and `outputs.framing` uses the target from the first frame.
+- [x] Implement, typecheck, targeted tests, commit.
 
 ### Task 9: Framing fits the narrower side
 
 **Files:** `src/services/engine/camera/{bodyFocusDistance,structureFocusDistance}.ts` + tests.
 
-- [ ] Change both to fill against `Math.min(framing.tanHalfX, framing.tanHalfY)`.
-- [ ] Test `bodyFocusDistance fits by width in a portrait window`: `{tanHalfX: 0.3, tanHalfY: 0.6}` gives the same distance as `{0.3, 0.3}`.
-- [ ] Update the expected values that change in existing tests (portrait fixtures only). Name each one in the commit body.
-- [ ] Commit.
+- [x] Change both to fill against `Math.min(framing.tanHalfX, framing.tanHalfY)`.
+- [x] Test `bodyFocusDistance fits by width in a portrait window`: `{tanHalfX: 0.3, tanHalfY: 0.6}` gives the same distance as `{0.3, 0.3}`.
+- [x] Update the expected values that change in existing tests (portrait fixtures only). Name each one in the commit body.
+- [x] Commit.
 
 ### Task 10: Verify and land (controller)
 
