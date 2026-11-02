@@ -10,7 +10,6 @@ import type { CSSProperties } from 'react';
 
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
-import { pointerLean } from '../../../../utils/pointerLean.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import AddressStrip from '../../../shared/links/AddressStrip/AddressStrip.tsx';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
@@ -65,18 +64,22 @@ function LinkSpread({ title, line, href, label }: LinkSpreadProps) {
         </ObjLink>
       </div>
       <figure className={styles.figure}>
-        <div className={styles.stage} onPointerMove={pointerLean} onPointerLeave={pointerLean}>
+        <div className={styles.stage} data-turn>
           <div className={cx(styles.view, state('pose'))} {...pair('pose')}>
             <Shot id={RENDER} sizes={RENDER_SIZES} />
             {tag('pose')}
           </div>
           <div className={cx(styles.piece, styles.card, state('focus'))} {...pair('focus')}>
-            {tag('focus')}
-            <Shot id="features-link-card" sizes={CARD_SIZES} />
+            <div className={styles.lean}>
+              {tag('focus')}
+              <Shot id="features-link-card" sizes={CARD_SIZES} />
+            </div>
           </div>
           <div className={cx(styles.piece, styles.clock, state('t'))} {...pair('t')}>
-            {tag('t')}
-            <Shot id="features-link-clock" sizes={CLOCK_SIZES} />
+            <div className={styles.lean}>
+              {tag('t')}
+              <Shot id="features-link-clock" sizes={CLOCK_SIZES} />
+            </div>
           </div>
         </div>
         <div className={styles.bar}>

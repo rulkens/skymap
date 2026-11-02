@@ -111,22 +111,13 @@
     justify-items: end;
   }
 
-  /* Lean away from the pointer, as nearer layers would when the head moves; the card is the nearest. */
-  .navigation > *,
-  .card > * {
-    transform: translate(
-      calc(var(--lean-x, 0) * var(--depth) * -1),
-      calc(var(--lean-y, 0) * var(--depth) * -1)
-    );
-    transition: transform 0.4s var(--ease-standard);
-  }
-
+  /* The card, the nearest, leans furthest from the pointer. */
   .navigation {
-    --depth: 0.625rem;
+    --depth: 1.25rem;
   }
 
   .card {
-    --depth: 1.25rem;
+    --depth: 2.5rem;
   }
 }
 
@@ -134,13 +125,6 @@
   .reading {
     grid-column: 1 / -1;
     margin-top: 1rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .navigation > *,
-  .card > * {
-    transform: none;
   }
 }
 
@@ -170,11 +154,11 @@
 
 /* Wide, the pieces are nearer than the galaxy: as the page scrolls they move against it, the card the most. */
 .navigation {
-  composes: drift from '../../../../styles/motion.module.css';
+  composes: drift lean from '../../../../styles/motion.module.css';
 }
 
 .card {
-  composes: drift from '../../../../styles/motion.module.css';
+  composes: drift lean from '../../../../styles/motion.module.css';
 }
 
 @media (min-width: 901px) {

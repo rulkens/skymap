@@ -70,12 +70,17 @@
 }
 
 /* A piece's picture keeps 6% of its width clear for its shadow: the tag lines up with the piece, not the picture. */
-.piece > .tag {
+.lean > .tag {
   margin: 0 0 0 6%;
 }
 
-.clock > .tag {
+.clock .tag {
   margin-bottom: -2.5%;
+}
+
+/* Inside the piece, so its lean's transition is not its dimming's. */
+.lean {
+  composes: lean from '../../../../styles/motion.module.css';
 }
 
 /* Pointing at one half of a pair: its piece comes forward, the others fall back. */
@@ -140,21 +145,13 @@
     width: 50%;
   }
 
-  /* Lean away from the pointer, as nearer layers would when the head moves; the card is the nearest. */
-  .piece > * {
-    transform: translate(
-      calc(var(--lean-x, 0) * var(--depth) * -1),
-      calc(var(--lean-y, 0) * var(--depth) * -1)
-    );
-    transition: transform 0.4s var(--ease-standard);
-  }
-
+  /* The card, the nearest, leans furthest from the pointer. */
   .clock {
-    --depth: 0.625rem;
+    --depth: 1.25rem;
   }
 
   .card {
-    --depth: 1.25rem;
+    --depth: 2.5rem;
   }
 }
 
@@ -213,10 +210,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .piece > * {
-    transform: none;
-  }
-
   .view,
   .piece,
   .param {

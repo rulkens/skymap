@@ -6,7 +6,6 @@
  * pointer, the nearer card the most, so the depth can be felt.
  */
 import { fact } from '../../../../data/fact.ts';
-import { pointerLean } from '../../../../utils/pointerLean.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
@@ -39,7 +38,7 @@ function DesktopSpread({ title, line, href, label }: DesktopSpreadProps) {
         </div>
       </div>
       <figure className={styles.figure}>
-        <div className={styles.stage} onPointerMove={pointerLean} onPointerLeave={pointerLean}>
+        <div className={styles.stage} data-turn>
           <div className={styles.render}>
             <Shot id={RENDER} sizes={RENDER_SIZES} />
           </div>

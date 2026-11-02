@@ -56,7 +56,7 @@
   }
 }
 
-/* The row's turn with the scroll, added to its rest pose and the pointer's turn (phoneTurn.client.ts). */
+/* The row's turn with the scroll, added to its rest pose and the pointer's turn (styles/pointer.client.ts). */
 @property --scroll-yaw {
   syntax: '<angle>';
   inherits: true;
@@ -171,7 +171,7 @@
 }
 
 /*
- * Each device faces the pointer from where it stands (`--look-x/y`, set on `.device` by phoneTurn.client.ts), so a
+ * Each device faces the pointer from where it stands (`--look-x/y`, set on `.device` by styles/pointer.client.ts), so a
  * device near the pointer swings while a far one barely moves. Set on `.device`, which never turns, so the turn
  * cannot feed back into the measure.
  */

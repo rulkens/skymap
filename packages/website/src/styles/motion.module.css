@@ -1,5 +1,5 @@
 /*
- * motion.module.css — the site's shared motion and its soft edge: a scroll drift and a feathered rim.
+ * motion.module.css — the site's shared motion and its soft edge: a scroll drift, a pointer lean and a feathered rim.
  * A vocabulary, not a component: it has no `.root`. A class takes one with
  * `composes: drift from '../../../../styles/motion.module.css'` and tunes it through custom properties only:
  * every importer's sheet repeats these rules, so a component that overrode them would win or lose by sheet order.
@@ -26,6 +26,18 @@
       animation-timeline: var(--drift-timeline, view());
     }
   }
+}
+
+/*
+ * Leans away from the pointer as a nearer layer would when the head moves, by `--depth` at a turn of 1, from the
+ * `--turn-x/y` its `[data-turn]` host is given (pointer.client.ts). Without `--depth` it stands still.
+ */
+.lean {
+  transform: translate(
+    calc(var(--turn-x, 0) * var(--depth) * -1),
+    calc(var(--turn-y, 0) * var(--depth) * -1)
+  );
+  transition: transform 0.4s var(--ease-standard);
 }
 
 /* The edges dissolve into the page: whole out to `--feather` of the way from the middle to the nearest side. */
