@@ -1,26 +1,29 @@
 /*
- * PressPictures — the pictures shown with their terms, in halves of the page grid: each with its
- * name, what it shows, the credit to print, the terms, and links to the view
- * and to the widest file the site holds. The cards share their rows (subgrid),
- * so the same line of two cards sits at the same height whatever its length.
+ * PressPictures — the pictures shown with their terms, as prints in halves of the page grid: each with a
+ * printer's crop marks at its corners, its name beside the pixel size of the widest file the site holds, what it
+ * shows, the credit to print (with a control that copies it), the terms, and links to the view and the file. The
+ * cards share their rows (subgrid), so the same line of two cards sits at the same height whatever its length.
  */
 import { appLink } from '../../../../data/appLink.ts';
 import { PRESS_PICTURES } from '../../../../data/pressPictures.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { shotSources } from '../../../../utils/shotSources.ts';
+import CopyButton from '../../../shared/links/CopyButton/CopyButton.tsx';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import styles from './PressPictures.module.css';
 
 const press = PRESS_PICTURES.map((row) => {
-  const shot = siteShot(row.shot);
-  // The manifest lists widths widest first, and the srcset keeps that order.
+  const sources = shotSources(row.shot);
+  // The manifest lists widths widest first, and the srcset keeps that order; the file keeps the shot's shape.
+  const width = siteShot(row.shot).widths[0]!;
   return {
     ...row,
-    view: shot,
-    file: shotSources(row.shot).webp.split(' ')[0]!,
-    width: shot.widths[0]!,
+    view: siteShot(row.shot),
+    file: sources.full,
+    pixels: `${width} × ${Math.round((width * sources.height) / sources.width)}`,
+    credit: `${row.credit}.`,
   };
 });
 
@@ -29,11 +32,18 @@ function PressPictures() {
     <ul className={styles.root}>
       {press.map((row) => (
         <li key={row.shot}>
-          <Shot
-            id={row.shot}
-            sizes="(max-width: 900px) calc(100vw - 2.5rem), (max-width: 1239px) calc(50vw - 4.25rem), 34.5rem"
-          />
-          <h3>{row.title}</h3>
+          <div className={styles.print}>
+            <Shot
+              id={row.shot}
+              sizes="(max-width: 900px) calc(100vw - 2.5rem), (max-width: 1239px) calc(50vw - 4.25rem), 34.5rem"
+            />
+          </div>
+          <div className={styles.label}>
+            <h3>{row.title}</h3>
+            <p className={styles.pixels}>
+              {row.pixels} <abbr title="pixels">px</abbr>
+            </p>
+          </div>
           <dl className={styles.terms}>
             <div>
               <dt>Shows</dt>
@@ -47,7 +57,10 @@ function PressPictures() {
             </div>
             <div>
               <dt>Credit to print</dt>
-              <dd>{row.credit}.</dd>
+              <dd className={styles.credit}>
+                <span>{row.credit}</span>
+                <CopyButton text={row.credit} label="Copy the credit" />
+              </dd>
             </div>
             <div>
               <dt>Reuse</dt>
@@ -59,7 +72,7 @@ function PressPictures() {
               {row.view.link.startsWith('tour=') ? 'Start the tour' : 'Open this view'}
             </ViewLink>
             <ObjLink size="small" href={row.file}>
-              {`The file, ${row.width.toLocaleString('en-GB')} pixels wide`}
+              The full-size file
             </ObjLink>
           </p>
         </li>

@@ -12,7 +12,72 @@
   }
 
   & h3 {
-    margin: 1rem 0 0.75rem;
+    margin: 0;
+  }
+}
+
+/*
+ * A printer's crop marks: at each corner two short lines on the picture's edges, `--mark-gap` clear of it,
+ * drawn outside the picture in the gutter, with nothing painted between.
+ */
+.print {
+  --mark-room: 1rem;
+  --mark: 0.625rem;
+  --mark-ink: linear-gradient(var(--border-hover), var(--border-hover));
+  position: relative;
+
+  & img {
+    display: block;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: calc(-1 * var(--mark-room));
+    pointer-events: none;
+    background:
+      var(--mark-ink) left 0 top var(--mark-room) / var(--mark) 1px,
+      var(--mark-ink) left var(--mark-room) top 0 / 1px var(--mark),
+      var(--mark-ink) right 0 top var(--mark-room) / var(--mark) 1px,
+      var(--mark-ink) right var(--mark-room) top 0 / 1px var(--mark),
+      var(--mark-ink) left 0 bottom var(--mark-room) / var(--mark) 1px,
+      var(--mark-ink) left var(--mark-room) bottom 0 / 1px var(--mark),
+      var(--mark-ink) right 0 bottom var(--mark-room) / var(--mark) 1px,
+      var(--mark-ink) right var(--mark-room) bottom 0 / 1px var(--mark);
+    background-repeat: no-repeat;
+  }
+}
+
+/* The name, and on the same line at the print's right edge the pixel size of the file. */
+.label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 1rem;
+  margin: 1.75rem 0 0.75rem;
+}
+
+.pixels {
+  margin: 0;
+  font-family: var(--font-family-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-text-faint);
+
+  & abbr {
+    text-decoration: none;
+  }
+}
+
+/* The copy control keeps its 44px for the thumb; its margin gives back what the line does not need. */
+.credit {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  & button {
+    margin-block: -0.625rem;
   }
 }
 
