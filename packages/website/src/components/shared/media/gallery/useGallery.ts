@@ -7,22 +7,12 @@
  * first load until `warmed` says the browser may fetch it.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { RefObject } from 'react';
 
-import type { GalleryState } from '../../../../@types/GalleryState';
+import type { Gallery } from '../../../../@types/Gallery';
 import type { GalleryView } from '../../../../@types/GalleryView';
 import { lessWanted } from '../../../../utils/lessWanted.ts';
 import { wrapIndex } from '../../../../utils/wrapIndex.ts';
 import { REST_SEC } from './useGallery.constants.ts';
-
-export type Gallery = GalleryState & {
-  /** The band's section, for the pointer and focus that warm the next view. */
-  root: RefObject<HTMLElement | null>;
-  /** One element per view, holding its picture. */
-  layers: RefObject<(HTMLElement | null)[]>;
-  /** Whether view `i` may be fetched. */
-  warmed: (i: number) => boolean;
-};
 
 export function useGallery(views: readonly GalleryView[], auto = true): Gallery {
   const count = views.length;

@@ -1,6 +1,6 @@
 /**
  * CLAUDE.md's `@types/` file shape: `.d.ts`, exporting at most one `type` alias named for the
- * file (zero exports = an ambient shim, always fine). The multi-export debt ledger is a ratchet,
+ * file (zero exports = an ambient shim, always fine). The multi-export and website `.ts` ledgers are ratchets,
  * same idiom as frameFilePurity.test.ts: an entry must still exist and still violate, or be removed.
  */
 import { readdirSync } from 'node:fs';
@@ -9,6 +9,7 @@ import { SyntaxKind } from 'ts-morph';
 import { describe, expect, it } from 'vitest';
 import { exportedDeclarations } from '../helpers/conventions/exportedDeclarations';
 import { TYPE_FILES_MULTI_EXPORT } from '../helpers/conventions/typeFilesMultiExport';
+import { TYPE_FILES_NOT_DECLARATIONS } from '../helpers/conventions/typeFilesNotDeclarations';
 import { walkFiles } from '../helpers/conventions/walkFiles';
 
 const SKIP_NAMES = new Set(['node_modules']);
@@ -30,7 +31,11 @@ function typesDirsUnder(root: string): string[] {
   return out;
 }
 
-const TYPES_DIRS = [...typesDirsUnder('src'), ...typesDirsUnder('tools')];
+const TYPES_DIRS = [
+  ...typesDirsUnder('src'),
+  ...typesDirsUnder('tools'),
+  ...typesDirsUnder('packages/website/src'),
+];
 const files = TYPES_DIRS.flatMap((dir) => walkFiles(dir, ['.ts']));
 expect(files.length).toBeGreaterThan(0);
 
@@ -49,8 +54,12 @@ function exportShapeViolation(file: string): boolean {
 }
 
 describe('@types files are .d.ts', () => {
-  it.each(files)('%s', (file) => {
+  it.each(files.filter((f) => !TYPE_FILES_NOT_DECLARATIONS.has(f)))('%s', (file) => {
     expect(file.endsWith('.d.ts')).toBe(true);
+  });
+
+  it.each([...TYPE_FILES_NOT_DECLARATIONS])('%s is still not .d.ts', (file) => {
+    expect(files).toContain(file);
   });
 });
 

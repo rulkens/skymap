@@ -8,8 +8,7 @@
  */
 import { useCallback, useEffect } from 'react';
 
-import type { FlightParts } from '../../../../@types/FlightParts';
-import type { FlightTimeline } from '../../../../@types/FlightTimeline';
+import type { FlightOptions } from '../../../../@types/FlightOptions';
 import { clamp } from '../../../../utils/clamp.ts';
 import { flightAt } from '../../../../utils/flightAt.ts';
 import { flightDistanceKm } from '../../../../utils/flightDistanceKm.ts';
@@ -27,16 +26,6 @@ import {
   FOLLOW_RATE,
   EARTH_RADIUS_KM,
 } from './useFlight.constants.ts';
-
-type FlightOptions = {
-  timeline: FlightTimeline;
-  videoUrl: string;
-  parts: FlightParts;
-  /** The stop being read changed. */
-  onShown: (stop: number) => void;
-  /** Stills from `from` to `to` are worth fetching now. */
-  onReach: (from: number, to: number) => void;
-};
 
 /** Brings the pose to the page and returns the click on a ring: scroll the flight to that stop. */
 export function useFlight({

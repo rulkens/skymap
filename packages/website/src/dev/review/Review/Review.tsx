@@ -5,17 +5,15 @@
  * the first save writes its file. Any other answer means no server to save to, so there is no review.
  */
 import { useEffect, useState } from 'react';
+import type { ComponentProps } from 'react';
 
 import type { DocsReview } from '../../../../../../tools/site/@types/DocsReview';
 import { wordsIn } from '../wordsIn';
 import ReviewPage from '../ReviewPage/ReviewPage.tsx';
-import type { JobMeta } from '../@types/JobMeta';
 import { BASE, ROUTE } from './Review.constants.ts';
 
-type Loaded = { article: Element; url: string; first: DocsReview; job: JobMeta | undefined };
-
 function Review() {
-  const [loaded, setLoaded] = useState<Loaded>();
+  const [loaded, setLoaded] = useState<ComponentProps<typeof ReviewPage>>();
 
   useEffect(() => {
     const article = document.getElementById('page') ?? document.getElementById('main');

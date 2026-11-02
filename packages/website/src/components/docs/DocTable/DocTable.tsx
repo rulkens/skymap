@@ -11,6 +11,7 @@
 import type { ReactNode } from 'react';
 
 import type { DocCell } from '../../../@types/DocCell';
+import type { DocTableCell } from '../../../@types/DocTableCell';
 import type { DocTableCols } from '../../../@types/DocTableCols';
 import { cx } from '../../../utils/cx.ts';
 import { slotHtml } from '../../../utils/slotHtml.ts';
@@ -26,13 +27,10 @@ type DocTableProps = {
   children?: ReactNode;
 };
 
-// A cell of a Markdown table arrives as the HTML inside it.
-type Cell = DocCell | { html: string };
-
 function DocTable({ cols: named, head: given, rows: data, children }: DocTableProps) {
   const fromSlot = data ? undefined : tableCells(slotHtml(children));
-  const head: readonly Cell[] = given ?? fromSlot!.head.map((html) => ({ html }));
-  const rows: readonly (readonly Cell[])[] =
+  const head: readonly DocTableCell[] = given ?? fromSlot!.head.map((html) => ({ html }));
+  const rows: readonly (readonly DocTableCell[])[] =
     data ?? fromSlot!.rows.map((row) => row.map((html) => ({ html })));
   const labels = given ?? fromSlot!.head.map((html) => html.replace(/<[^>]+>/g, '').trim());
   // A name in code is never broken, so it can be wider than a name column: a table of such names sets each over its words.

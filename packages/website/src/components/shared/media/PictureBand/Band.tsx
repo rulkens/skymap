@@ -1,6 +1,7 @@
 /* Band — the markup of a PictureBand: the picture (or the pictures of a gallery, one on another, with Meteors over their star fields) and the words. */
 import type { CSSProperties, ReactNode } from 'react';
 
+import type { Gallery } from '../../../../@types/Gallery';
 import type { GalleryView } from '../../../../@types/GalleryView';
 import { cx } from '../../../../utils/cx.ts';
 import { shotAspect } from '../../../../utils/shotAspect.ts';
@@ -9,7 +10,6 @@ import Shot from '../Shot/Shot.tsx';
 import Meteors from './Meteors.tsx';
 import styles from './PictureBand.module.css';
 import changing from '../gallery/viewChange.module.css';
-import type { Gallery } from '../gallery/useGallery.ts';
 
 export type BandProps = {
   views: readonly GalleryView[];
