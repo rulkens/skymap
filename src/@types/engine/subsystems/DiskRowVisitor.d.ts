@@ -13,7 +13,7 @@
  */
 
 import type { GalaxyColumnBlock } from '../../data/galaxyCatalog/GalaxyColumnBlock';
-import type { GalaxyCatalogSourceType } from '../../data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 
 export type DiskRowVisitor = {
   /** Source bit is clear this frame → clear this body's sticky map for it. */

@@ -1,4 +1,4 @@
-import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { OctreeCutDraw } from '../../../@types/octree/OctreeCutDraw';
 
 /**

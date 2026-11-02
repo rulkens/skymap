@@ -1,4 +1,4 @@
-import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { SurveyStarCatalogSourceEntry } from '../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
 
 /** One loaded survey catalog inside its crossfade band this frame — `starSourcesInBand`'s row. */

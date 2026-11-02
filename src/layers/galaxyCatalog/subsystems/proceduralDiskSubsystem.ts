@@ -39,7 +39,7 @@ import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVi
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { SlotStore } from '../../../@types/cache/SlotStore';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
 import type { ProceduralDiskFrameInput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameInput';

@@ -14,8 +14,8 @@
  */
 
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../@types/GalaxyCatalogId';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';

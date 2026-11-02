@@ -6,7 +6,7 @@
  * a just-hidden catalog stays in the mask while it fades instead of popping.
  */
 
-import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../@types/GalaxyCatalogId';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { maskWith } from '../../../utils/maskWith';

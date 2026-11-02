@@ -3,7 +3,7 @@
  * loaded survey catalogs whose handed value times crossfade at `camDistPc` is > 0.
  */
 
-import type { StarCatalogId } from '../../../../@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { StarSourceInBand } from '../../@types/StarSourceInBand';
 import { STAR_CATALOG_SOURCE_RECORD } from '../../sources/starCatalogSourceRecord';

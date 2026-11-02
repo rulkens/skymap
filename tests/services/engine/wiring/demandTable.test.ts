@@ -25,7 +25,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
-import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';

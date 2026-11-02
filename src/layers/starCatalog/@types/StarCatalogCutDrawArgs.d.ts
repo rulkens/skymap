@@ -4,7 +4,7 @@
  */
 
 import type { Vec2 } from '../../../@types/math/Vec2';
-import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { OctreeDrawStream } from '../../../@types/octree/OctreeDrawStream';
 import type { StarFocusSphere } from './StarFocusSphere';
 

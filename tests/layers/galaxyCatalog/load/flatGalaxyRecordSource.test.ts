@@ -11,7 +11,7 @@ import { flatGalaxyRecordSource } from '../../../../src/layers/galaxyCatalog/loa
 import { Source } from '../../../../src/data/source';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
-import type { GalaxyCatalogRegistryEntry } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
+import type { GalaxyCatalogRegistryEntry } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 

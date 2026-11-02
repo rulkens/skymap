@@ -25,7 +25,7 @@ import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
 import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousSubsystem';
 import type { TexturedDiskDeps } from '../../../@types/engine/subsystems/TexturedDiskDeps';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { TexturedDiskSubsystemWithTestSeam } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystemWithTestSeam';
 import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
 import { createDeadHostSet } from '../../../utils/network/createDeadHostSet';

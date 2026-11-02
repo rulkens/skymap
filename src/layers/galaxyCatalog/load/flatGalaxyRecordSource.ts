@@ -6,7 +6,7 @@
  */
 
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
+import type { GalaxyCatalogRegistryEntry } from '../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';

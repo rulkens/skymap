@@ -25,7 +25,7 @@ import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFloo
 import { nearestResolvableStar } from '../../../services/engine/helpers/nearestResolvableStar';
 import { STAR_CATALOG_SOURCE_RECORD } from '../sources/starCatalogSourceRecord';
 import { octreeResidency } from '../../../services/octree/octreeResidency';
-import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from '../@types/StarCatalogSourceType';
 import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
 /** The star this layer currently draws a sphere for — the presence memory. */

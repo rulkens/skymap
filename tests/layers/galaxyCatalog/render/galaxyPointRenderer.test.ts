@@ -26,7 +26,7 @@ import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bak
 import { Source } from '../../../../src/data/source';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Mat4 } from 'wgpu-matrix';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 

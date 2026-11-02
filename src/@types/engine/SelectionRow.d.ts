@@ -1,7 +1,7 @@
 import type { DriverGeometry } from './camera/DriverGeometry';
 import type { GalaxyRow } from './GalaxyRow';
 import type { StructureInfo } from '../data/structure/StructureInfo';
-import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
 import type { BodyInfo } from './BodyInfo';
 import type { CraftInfo } from './CraftInfo';
 import type { EarthSceneInfo } from './EarthSceneInfo';

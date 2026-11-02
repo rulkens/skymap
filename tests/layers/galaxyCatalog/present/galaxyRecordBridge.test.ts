@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyRecordBridge } from '../../../../src/layers/galaxyCatalog/present/galaxyRecordBridge';
 import { Source } from '../../../../src/data/source';
-import type { GalaxyCatalogSourceType } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';
 

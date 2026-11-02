@@ -3,7 +3,7 @@
  * upsample handle. Non-null throughout: `create` builds each before returning.
  */
 
-import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';

@@ -1,8 +1,8 @@
 import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
 import { flatGalaxyRecordSource } from '../../src/layers/galaxyCatalog/load/flatGalaxyRecordSource';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogRegistryEntry } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
-import type { GalaxyCatalogSourceType } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogRegistryEntry } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRegistryEntry';
+import type { GalaxyCatalogSourceType } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalaxyMetaEntry';

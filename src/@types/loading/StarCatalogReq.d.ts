@@ -1,4 +1,4 @@
-import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
 import type { Tier } from '../data/Tier';
 
 /**

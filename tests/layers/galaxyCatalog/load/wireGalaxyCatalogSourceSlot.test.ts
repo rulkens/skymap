@@ -27,7 +27,7 @@ import type { LayerCoreDeps } from '../../../../src/@types/engine/layer/LayerCor
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogFacts';
-import type { GalaxyCatalogSourceType } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 

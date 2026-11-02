@@ -10,7 +10,7 @@ import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
-import type { StarCatalogSourceType } from '../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from './@types/StarCatalogSourceType';
 
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';

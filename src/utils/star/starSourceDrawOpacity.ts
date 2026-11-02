@@ -1,5 +1,5 @@
 import type { SourceEntry } from '../../@types/data/SourceEntry';
-import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogId } from '../../layers/starCatalog/@types/StarCatalogId';
 import { starCrossfadeOpacity } from './starCrossfadeOpacity';
 
 /**

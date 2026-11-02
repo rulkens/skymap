@@ -25,7 +25,7 @@ import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bak
 import { Source } from '../../../../src/data/source';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 /** Stats are the record source's to compute; these suites only exercise buffers. */

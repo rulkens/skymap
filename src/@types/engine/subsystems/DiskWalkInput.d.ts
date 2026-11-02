@@ -11,7 +11,7 @@
 
 import type { GalaxyRecordSource } from '../../data/galaxyCatalog/GalaxyRecordSource';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
-import type { GalaxyCatalogSourceType } from '../../data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 
 export type DiskWalkInput = {
   readonly cam: OrbitCamera;

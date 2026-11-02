@@ -2,7 +2,7 @@
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
-import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
+import type { GalaxyCatalogRegistryEntry } from '../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
 import { Source } from '../../../data/source';

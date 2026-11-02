@@ -1,4 +1,4 @@
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
 import type { ViewSlotUniformRing } from '../../../@types/rendering/ViewSlotUniformRing';
 
 /**

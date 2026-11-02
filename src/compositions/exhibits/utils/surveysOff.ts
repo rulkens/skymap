@@ -6,7 +6,7 @@
  */
 
 import { initialState as galaxyCatalogsInitialState } from '../../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
-import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../../@types/settings/GalaxyCatalogItemSettings';
 
 // `galaxyCatalogs` has no cluster-level master gate (GalaxyCatalogSettings.d.ts),

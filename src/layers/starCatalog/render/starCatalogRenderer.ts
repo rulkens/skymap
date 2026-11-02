@@ -10,7 +10,7 @@
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StarCatalogRenderer } from '../@types/StarCatalogRenderer';
-import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from '../@types/StarCatalogSourceType';
 import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { StarCatalogPickResources } from '../@types/StarCatalogPickResources';

@@ -1,5 +1,5 @@
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from './GalaxyCatalogId';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
 import type { CatalogDrawEntry } from './CatalogDrawEntry';
