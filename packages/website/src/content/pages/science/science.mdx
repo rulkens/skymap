@@ -16,6 +16,7 @@ import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
 import PictureBand from '../../../components/shared/media/PictureBand/PictureBand.tsx';
+import ReadingIndex from '../../../components/pages/science/ReadingIndex/ReadingIndex.tsx';
 import Remark from '../../../components/shared/text/Remark/Remark.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import SectionNav from '../../../components/pages/science/SectionNav/SectionNav.tsx';
@@ -26,7 +27,6 @@ import SurveySpine from '../../../components/pages/science/SurveySpine/SurveySpi
 import Section from '../../../components/shared/layout/Section/Section.tsx';
 import { fact } from '../../../data/fact';
 import { REPO_URL } from '../../../data/siteIdentity';
-import links from '../../../styles/links.module.css';
 import text from '../../../styles/type.module.css';
 import { formatDate } from '../../../utils/formatDate';
 import { sitePath } from '../../../utils/sitePath';
@@ -79,7 +79,7 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
     <AcrossFigure id="milky-way-edge-on" />
     <Claims items={DRAWN} />
   </Group>
-  <Remark text={fact('astronomical-unit').short} />
+  <Remark text={fact('astronomical-unit').short} statements />
 </Section>
 
 <FullFigure id="science-zoa" />
@@ -121,18 +121,15 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
 </Section>
 
 <Section id="onward">
-  <h2>Further reading</h2>
-  <div className={links['link-row']}>
-    <ObjLink hang href={sitePath('/docs/data/')}>Data sources, one page each</ObjLink>
-    <ObjLink hang href={sitePath('/docs/science/')}>The methods in full</ObjLink>
-    <ObjLink hang href={sitePath('/docs/simplifications/')}>Known simplifications, in full</ObjLink>
-    <ObjLink hang href={sitePath('/docs/cite/')}>Cite Skymap</ObjLink>
-    <ObjLink hang href={sitePath('/classroom/')}>Use Skymap in the classroom</ObjLink>
-    <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
-  </div>
-  <div className={links['onward-row']}>
-    <OpenApp />
-  </div>
+  <ReadingIndex title="Further reading">
+    <div slot="foot"><OpenApp /></div>
+    <ObjLink href={sitePath('/docs/data/')}>Data sources, one page each</ObjLink>
+    <ObjLink href={sitePath('/docs/science/')}>The methods in full</ObjLink>
+    <ObjLink href={sitePath('/docs/simplifications/')}>Known simplifications, in full</ObjLink>
+    <ObjLink href={sitePath('/docs/cite/')}>Cite Skymap</ObjLink>
+    <ObjLink href={sitePath('/classroom/')}>Use Skymap in the classroom</ObjLink>
+    <ObjLink href={sitePath('/domes/')}>Domes and museums</ObjLink>
+  </ReadingIndex>
 </Section>
 
 <Section as="div">

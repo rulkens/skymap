@@ -15,8 +15,18 @@
   min-height: calc(4lh + 1.25rem);
 }
 
+/* Three columns in, as Claims sets its statements: the line the list above it ends on. */
+.statements {
+  max-width: 34rem;
+  margin-left: calc(3 * (100% + var(--col-gap)) / 12);
+}
+
 @media (max-width: 900px) {
   .root {
     margin: 3rem 0 0 auto;
+  }
+
+  .statements {
+    margin-left: 0;
   }
 }
