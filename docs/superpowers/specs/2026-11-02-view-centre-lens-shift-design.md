@@ -157,7 +157,8 @@ After the prep, the feature is growth: the `viewCover` slice, its selector and o
   test pins it.
 - **Risk: first-frame jump** while ResizeObservers report. The runtime starts at the first target with no
   ease, then eases.
-- **Decided while you were away (review these):**
+- **Decided while the owner was away, then reviewed one by one (2026-11-02):** the probe and the clamp
+  were kept; the late-cover call became moot under §6.
   - **No re-fit when covers arrive late** (builder check Q1), now moot: sizing ignores covers (§6).
   - **The 0.6 covered-fraction clamp** (Q2): the landscape phone exhibit caption can cover about half the
     height. The clamp bounds the worst case with one constant.
