@@ -8,6 +8,7 @@ import Claims from '../../../components/shared/text/Claims/Claims.tsx';
 import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
 import Credits from '../../../components/shared/text/Credits/Credits.tsx';
 import DomeSky from '../../../components/pages/about/DomeSky/DomeSky.tsx';
+import ContactHead from '../../../components/pages/about/ContactHead/ContactHead.tsx';
 import MakerCount from '../../../components/pages/about/MakerCount/MakerCount.tsx';
 import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
@@ -19,7 +20,7 @@ import WebAtScale from '../../../components/pages/about/WebAtScale/WebAtScale.ts
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
-import { CONTACT_ENDPOINT, ISSUES_URL } from '../../../data/contact';
+import { CONTACT_EMAIL, CONTACT_ENDPOINT, ISSUES_URL } from '../../../data/contact';
 import { fact } from '../../../data/fact';
 import { MAKER_NAME, REPO_URL } from '../../../data/siteIdentity';
 import links from '../../../styles/links.module.css';
@@ -69,16 +70,20 @@ import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
 </Section>
 
 <Section id="contact">
-  <h2>Get in touch</h2>
+  <ContactHead email={CONTACT_ENDPOINT ? undefined : CONTACT_EMAIL}>
+    <h2>Get in touch</h2>
+  </ContactHead>
   <Columns count={2}>
     <div>
       <h3>For a dome, a museum or a commission</h3>
       {CONTACT_ENDPOINT ? (
-        <p>The form on the domes page reaches us by email. Four fields, and one message is enough to start.</p>
+        <>
+          <p>The form on the domes page reaches us by email. Four fields, and one message is enough to start.</p>
+          <ObjLink hang size="small" href={sitePath('/domes/#contact')}>Write to us, on the domes page</ObjLink>
+        </>
       ) : (
-        <p>The contact form is not open yet. The domes page says how to reach us in the meantime.</p>
+        <p>Write to the address above. A few lines are enough: the dome or the room, the screen, the audience, and a date if there is one.</p>
       )}
-      <ObjLink hang size="small" href={sitePath('/domes/#contact')}>Write to us, on the domes page</ObjLink>
     </div>
     <div>
       <h3>For a fault, a correction or a question</h3>

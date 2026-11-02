@@ -1,0 +1,27 @@
+.root {
+  margin-bottom: calc(2 * var(--stack));
+}
+
+.title > * {
+  margin-bottom: 0;
+}
+
+/* The heading's face and size, in the link colour; on a narrow phone the address may break anywhere. */
+.address {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.5rem;
+  max-width: none;
+  margin: 0;
+  font: var(--weight-display) var(--text-h2) / var(--leading-display) var(--font-family-display);
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+
+  & a {
+    min-width: 0;
+    color: var(--color-accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.14em;
+  }
+}
