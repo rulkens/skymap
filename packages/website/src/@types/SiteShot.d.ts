@@ -6,8 +6,9 @@ import type { SiteShotSettings } from './SiteShotSettings';
  * `npm run site:shots` needs to take it again. `size` is the viewport in CSS
  * pixels (shot at `dpr` times that, 2 when absent), `widths` the files written, widest first being
  * no wider than the shot. `denseQuality` is the AVIF quality of every width
- * above the narrowest, for a row whose wider files are only ever drawn at 2x
- * or more, where coarser quality does not show. Its label (components/shared/media/ShotCaption/ShotCaption.tsx): `title`
+ * above the narrowest, which also take the coarser WebP of SHOT_ENCODING's
+ * `denseWebp`, for a row whose wider files are only ever drawn at 2x or more,
+ * where coarser quality does not show. Its label (components/shared/media/ShotCaption/ShotCaption.tsx): `title`
  * names what is shown, `caption` adds a sentence, `drawn` says what is data
  * and what is drawn, `credit` names third-party imagery; no full stop on the
  * first and the last.

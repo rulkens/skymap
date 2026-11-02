@@ -29,7 +29,7 @@ import { shotFrame } from './utils/shotFrame';
 
 const MASTERS_DIR = 'data/shots/site';
 const OUT_DIR = 'packages/website/src/assets/shots';
-const { dpr: DPR, avif: AVIF, webp: WEBP } = SHOT_ENCODING;
+const { dpr: DPR, avif: AVIF, webp: WEBP, denseWebp: DENSE_WEBP } = SHOT_ENCODING;
 
 const args = process.argv.slice(2);
 const valueOf = (flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined);
@@ -145,14 +145,14 @@ try {
       for (const width of shot.widths) {
         const resized = frame.clone().resize({ width, kernel: 'lanczos3' });
         const avif = join(OUT_DIR, `${name}-${width}.avif`);
-        const quality = width > narrowest ? (shot.denseQuality ?? AVIF.quality) : AVIF.quality;
+        const denseQuality = width > narrowest ? shot.denseQuality : undefined;
         await resized
           .clone()
-          .avif({ ...AVIF, quality })
+          .avif({ ...AVIF, quality: denseQuality ?? AVIF.quality })
           .toFile(avif);
         await resized
           .clone()
-          .webp(WEBP)
+          .webp(denseQuality === undefined ? WEBP : DENSE_WEBP)
           .toFile(join(OUT_DIR, `${name}-${width}.webp`));
         sizes.push(`${width}: ${Math.round(statSync(avif).size / 1024)} KB`);
       }
