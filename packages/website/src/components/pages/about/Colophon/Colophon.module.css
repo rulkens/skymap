@@ -1,0 +1,48 @@
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  align-items: center;
+}
+
+.sky {
+  margin: 0;
+}
+
+/* Lines only on a transparent ground: added as light, the page's sky shows through; the edges fade out. */
+.cutout {
+  composes: feather from '../../../../styles/motion.module.css';
+  mix-blend-mode: plus-lighter;
+
+  & picture,
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+@media (--wide) {
+  .facts {
+    grid-column: 1 / span 6;
+    --cols: 6;
+  }
+
+  .sky {
+    grid-column: 7 / -1;
+  }
+
+  /* Out past the column to the window's right edge. */
+  .cutout {
+    width: calc(100% + var(--bleed));
+  }
+}
+
+@media (--narrow) {
+  .sky {
+    margin-top: var(--site-space-l);
+  }
+
+  .cutout {
+    margin-inline: calc(-1 * var(--gutter));
+  }
+}
