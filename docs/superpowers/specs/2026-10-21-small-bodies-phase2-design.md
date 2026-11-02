@@ -120,8 +120,8 @@ About 960 MB of downloads; all gitignored under `data/raw/meshes/<id>/`.
   series follows. Its span is now 2007-01-01 to 2054-01-01, between the 2005
   and 2054 encounters, at `fitStep` 4 (232 ΔM + 197 Cartesian terms, 884 km;
   a step-10 trial on the slice reached 900 km). 2001–2060 also passed in a
-  trial, but saturated the terms at 931 km. Bennu holds its 2007/2054 correction outside the span, and its
-  ephemeris-test dates move inside it. (Its Horizons record starts
+  trial, but saturated the terms at 931 km. Bennu holds its 2007/2054
+  correction outside the span, and its ephemeris-test dates move inside it. (Its Horizons record starts
   2 s after midnight on 1900-01-02, so a 1900 span would start on the 3rd.)
 - **Rotation** — each row's `rotation` field, IAU pole form as Pluto's (not
   `tidallyLocked`, which throws without a host planet):
@@ -135,7 +135,8 @@ About 960 MB of downloads; all gitignored under `data/raw/meshes/<id>/`.
   `captionKind: 'smallBody'`). Datum = mean radius (Vesta 261.4 km, Ceres
   469.7 km, Bennu 242 m); `reliefM` = the baked mesh's measured extremes minus
   the datum, rounded outward. Seed albedos chosen by eye against the existing
-  rows, keeping the physical order Vesta ≫ Ceres > Bennu.
+  rows, Vesta brightest. Bennu, brightened at its eye check (2026-11-02),
+  shares Ceres's 0.30: the order Ceres > Bennu gave way to a readable Bennu.
 - **Palette tints, body facts** (`planet_facts.seed.json`: Rheasilvia, Ahuna
   Mons, the OSIRIS-REx sample), **search aliases** if needed.
 

@@ -44,12 +44,12 @@ export function meanAlbedo(
         e1[2]! * e2[0]! - e1[0]! * e2[2]!,
         e1[0]! * e2[1]! - e1[1]! * e2[0]!,
       ) / 2;
-    // glTF UVs put (0, 0) at the image's top-left, as the decoded rows run, and
-    // wrap (the default REPEAT sampler).
+    // glTF UVs put (0, 0) at the image's top-left, as the decoded rows run; they
+    // stay in [0, 1] (`writeMeshBinary` refuses others), so 1.0 is the only clamp.
     const u = (uvs[2 * a]! + uvs[2 * b]! + uvs[2 * c]!) / 3;
     const v = (uvs[2 * a + 1]! + uvs[2 * b + 1]! + uvs[2 * c + 1]!) / 3;
-    const x = Math.min(width - 1, Math.floor((u - Math.floor(u)) * width));
-    const y = Math.min(height - 1, Math.floor((v - Math.floor(v)) * height));
+    const x = Math.min(width - 1, Math.floor(u * width));
+    const y = Math.min(height - 1, Math.floor(v * height));
     const o = (y * width + x) * channels;
     for (let i = 0; i < 3; i++) sum[i]! += area * srgbToLinear(pixels[o + i]! / 255);
     totalArea += area;

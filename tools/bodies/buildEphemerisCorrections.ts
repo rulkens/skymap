@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
  * buildEphemerisCorrections — fit each `FITTED_BODIES` row's `Horizons − Kepler` residual
- * (over its span, 1900–2100 for most) into the committed `EPHEMERIS_CORRECTIONS` table. Kepler is the app's own path
- * (`keplerianPositionMpc(propagateElements(row, jd))`), so any element-row or frame edit needs a
- * rerun. A `fitMeanAnomaly` row (a moon, a small body) first fits a ΔM series to 300 km-equivalent
+ * (over its span, 1900–2100 for most) into the committed `EPHEMERIS_CORRECTIONS` table.
+ * Kepler is the app's own path (`keplerianPositionMpc(propagateElements(row, jd))`), so any
+ * element-row or frame edit needs a rerun. A `fitMeanAnomaly` row (a moon, a small body) first fits a ΔM series to 300 km-equivalent
  * (|ΔM|·a), so it stays on its own conic and its trail stays centred; the Cartesian fit then takes
  * what the shipped ΔM leaves. Fits on the row's coarse grid to 900 km, then verifies the ROUNDED
  * values, as parsed from the emitted file, through `correctionSeriesAt` on every raw row in

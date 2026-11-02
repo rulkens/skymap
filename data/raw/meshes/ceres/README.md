@@ -55,7 +55,8 @@ The shape is in **km**, in the IAU_CERES frame: +X the prime meridian (every
 Dawn system keeps the crater Kait at 0°), +Z the north pole, origin at the
 centre of mass. `MESH_SOURCES.ceres` keeps the source origin
 (`origin: 'source'`) and only undoes the glTF export's Y-up turn. The radius
-extremes about the 469.7 km datum set the row's `reliefM`.
+extremes about the 469.7 km datum set the row's `reliefM`; its top is the baked mesh's bound, a
+little over the DSK's.
 
 The mosaic is planetocentric, east-positive, centred on 180°, so its left edge
 is **0°** (Astropedia's "−180 to 180" text contradicts its own label). Shape

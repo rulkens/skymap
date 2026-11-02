@@ -48,6 +48,14 @@ describe('meanAlbedo()', () => {
     expect(meanAlbedo(pixels, 2, 1, geometry)).toEqual([1, 1, 1]);
   });
 
+  it('reads v downwards from the top row, as glTF does', () => {
+    // 1x2: white top row, black bottom row.
+    const pixels = new Uint8ClampedArray([255, 255, 255, 0, 0, 0]);
+    const geometry = surface({ uv: [0.5, 0.25], area: 1 });
+
+    expect(meanAlbedo(pixels, 1, 2, geometry)).toEqual([1, 1, 1]);
+  });
+
   it('weights by surface area, not by atlas texels', () => {
     const pixels = new Uint8ClampedArray([255, 255, 255, 0, 0, 0]);
     const geometry = surface({ uv: [0.25, 0.5], area: 3 }, { uv: [0.75, 0.5], area: 1 });

@@ -63,7 +63,8 @@ centre of mass. Its prime meridian is **Claudia″** (IAU 2015, Claudia crater a
 **0°** offset. Raw Dawn-Claudia products (Claudia at 356° E) would need +150°;
 none is used. `MESH_SOURCES.vesta` keeps the source origin (`origin: 'source'`)
 and only undoes the glTF export's Y-up turn. The radius extremes about the
-261.4 km datum set the row's `reliefM`.
+261.4 km datum set the row's `reliefM`; its top is the baked mesh's bound, a
+little over the DSK's.
 
 The mosaic is planetocentric, east-positive, left edge −180°.
 
@@ -76,7 +77,7 @@ The mosaic is planetocentric, east-positive, left edge −180°.
 2. `npm run prebake-mesh -- vesta` — keeps the full surface as the bake source,
    decimates a copy to 150k triangles, and bakes 4096² albedo, normal,
    roughness and metallic atlases selected-to-active onto it. 150k, as for
-   Phobos: the normal atlas carries the relief the triangles lose, at a quarter
-   of the 600k budget's download.
+   Phobos: the normal atlas carries the relief the triangles lose, with a
+   quarter of the 600k budget's geometry.
 3. `npm run build-meshes` — `small` and `medium` share the 150k mesh and differ
    only in atlas size (2048 / 4096).

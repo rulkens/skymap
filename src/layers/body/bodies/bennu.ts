@@ -26,8 +26,7 @@ export const BENNU: LayerBody = {
       // ecliptic J2000) at JDTDB 2461333.5:
       // horizons.api?format=text&COMMAND='101955;'&EPHEM_TYPE='ELEMENTS'&CENTER='500@10'
       // &TLIST='2461333.5'&TLIST_TYPE='JD'&TIME_TYPE='TDB'&REF_PLANE='ECLIPTIC'&OUT_UNITS='AU-D'.
-      // A fixed conic loses Bennu within decades (Earth encounters shift its n); the
-      // correction fit carries it across 2007–2054 only and holds outside.
+      // The correction fit covers 2007–2054 only (horizonsBodies.ts) and holds outside.
       id: asSceneBodyId('bennu'),
       focusId: asSceneBodyId('sun'),
       semiMajorMpc: 1.125916959208119 * SCALE_UNITS.AU_TO_MPC,

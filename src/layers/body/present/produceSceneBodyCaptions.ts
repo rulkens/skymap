@@ -1,5 +1,5 @@
 /**
- * produceSceneBodyCaptions — `Label2DProducer` candidate math for the Earth and planet captions
+ * produceSceneBodyCaptions — `Label2DProducer` candidate math for the Earth, planet and small-body captions
  * `sceneBodyLabels` keeps, composed by the shared `composeForegroundCaption`. Declutter, envelope
  * and lift run in `label2DDirector`; every candidate emits even at target 0 so a dropped id eases out.
  */
