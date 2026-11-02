@@ -35,6 +35,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../fixtures/starRowDriver';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 
@@ -66,7 +67,7 @@ const structureRow = (over: Partial<StructureInfo> = {}) =>
 describe('focusFraming', () => {
   it('galaxy arm — targets galaxy position and frames on its diameter', () => {
     const row = galaxyRow({ x: 1, y: 2, z: 3, diameterKpc: 40 });
-    const result = focusFraming(row, FOVY);
+    const result = focusFraming(row, lensFramingWindow(FOVY, 1));
     expect(result.target).toEqual([1, 2, 3]);
     expect(result.distance).toBe(galaxyFocusDistance(40));
     // radius = diameter/2 in Mpc — the pass-by offset unit (40 kpc → 0.02 Mpc).
@@ -75,15 +76,15 @@ describe('focusFraming', () => {
 
   it('structure arm — targets worldPos and frames on apparent radius via FOV', () => {
     const row = structureRow({ worldPos: [10, -20, 30], apparentRadiusMpc: 5 });
-    const result = focusFraming(row, FOVY);
+    const result = focusFraming(row, lensFramingWindow(FOVY, 1));
     expect(result.target).toEqual([10, -20, 30]);
-    expect(result.distance).toBe(structureFocusDistance(5, FOVY));
+    expect(result.distance).toBe(structureFocusDistance(5, lensFramingWindow(FOVY, 1)));
   });
 
   it('structure arm — falls back to physicalRadiusMpc when no apparentRadiusMpc', () => {
     const row = structureRow({ apparentRadiusMpc: undefined, physicalRadiusMpc: 2 });
-    const result = focusFraming(row, FOVY);
-    expect(result.distance).toBe(structureFocusDistance(2, FOVY));
+    const result = focusFraming(row, lensFramingWindow(FOVY, 1));
+    expect(result.distance).toBe(structureFocusDistance(2, lensFramingWindow(FOVY, 1)));
   });
 
   it('structure arm — returns radius 0 so a flyPath flies INTO it, never past it', () => {
@@ -91,11 +92,11 @@ describe('focusFraming', () => {
     // group / supercluster is a volume you approach head-on, so its pass-by
     // extent is 0 — the offset loop skips any knot with radius ≤ 0.
     const row = structureRow({ apparentRadiusMpc: 5, physicalRadiusMpc: 2 });
-    expect(focusFraming(row, FOVY).radius).toBe(0);
+    expect(focusFraming(row, lensFramingWindow(FOVY, 1)).radius).toBe(0);
   });
 
   it('milkyWay arm — targets galactic centre at the fixed view distance', () => {
-    const result = focusFraming({ type: 'milkyWay' }, FOVY);
+    const result = focusFraming({ type: 'milkyWay' }, lensFramingWindow(FOVY, 1));
     expect(result.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],
@@ -107,7 +108,7 @@ describe('focusFraming', () => {
 
   it('galaxy arm — target is a fresh array, not aliased from the row', () => {
     const row = galaxyRow({ x: 1, y: 2, z: 3 });
-    const result = focusFraming(row, FOVY);
+    const result = focusFraming(row, lensFramingWindow(FOVY, 1));
     // The row has no worldPos to alias — the target is constructed from x/y/z.
     // Confirm it is a real array, not undefined.
     expect(Array.isArray(result.target)).toBe(true);
@@ -116,7 +117,7 @@ describe('focusFraming', () => {
 
   it('structure arm — target is a fresh array, not aliased from worldPos', () => {
     const row = structureRow({ worldPos: [10, -20, 30] });
-    const result = focusFraming(row, FOVY);
+    const result = focusFraming(row, lensFramingWindow(FOVY, 1));
     expect(result.target).not.toBe(row.worldPos);
     expect(result.target).toEqual([10, -20, 30]);
   });
@@ -137,9 +138,11 @@ describe('focusFraming', () => {
 
   it('body arm — targets the body position and frames via bodyFocusDistance', () => {
     const row = bodyRow();
-    const result = focusFraming(row, FOVY);
+    const result = focusFraming(row, lensFramingWindow(FOVY, 1));
     expect(result.target).toEqual([4.8481e-12, 0, 0]);
-    expect(result.distance).toBe(bodyFocusDistance(EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC, FOVY));
+    expect(result.distance).toBe(
+      bodyFocusDistance(EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC, lensFramingWindow(FOVY, 1)),
+    );
   });
 
   it('body arm — distance is proportional to the physical radius (no clamp)', () => {
@@ -148,8 +151,11 @@ describe('focusFraming', () => {
     // the result stays proportional instead of being swallowed by a Mpc-scale
     // minimum like the galaxy / structure helpers apply.
     const marsRadiusM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'mars', 'test'));
-    const earth = focusFraming(bodyRow(), FOVY).distance;
-    const mars = focusFraming(bodyRow({ id: asSceneBodyId('mars'), label: 'Mars' }), FOVY).distance;
+    const earth = focusFraming(bodyRow(), lensFramingWindow(FOVY, 1)).distance;
+    const mars = focusFraming(
+      bodyRow({ id: asSceneBodyId('mars'), label: 'Mars' }),
+      lensFramingWindow(FOVY, 1),
+    ).distance;
     expect(mars / earth).toBeCloseTo(marsRadiusM / EARTH_RADIUS_M, 10);
     // Sanity of the regime: framing Earth lands within a handful of Earth
     // radii, i.e. far below any Mpc-scale clamp floor.
@@ -159,7 +165,7 @@ describe('focusFraming', () => {
   });
 
   it('body arm — radius is the physical radius in Mpc (a real pass-by extent)', () => {
-    const result = focusFraming(bodyRow(), FOVY);
+    const result = focusFraming(bodyRow(), lensFramingWindow(FOVY, 1));
     expect(result.radius).toBeCloseTo(EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC, 20);
   });
 
@@ -171,21 +177,21 @@ describe('focusFraming', () => {
     // FOV-dependent viewport fraction — this pins that the override replaces
     // bodyFocusDistance's tan(fovY/2) math rather than merely scaling it.
     const radiusMpc = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR) * SCALE_UNITS.M_TO_MPC;
-    const result = focusFraming(sgrAStarRow(), FOVY);
+    const result = focusFraming(sgrAStarRow(), lensFramingWindow(FOVY, 1));
     expect(result.distance / (radiusMpc * 30.4)).toBeCloseTo(1, 12);
-    expect(result.distance).not.toBe(bodyFocusDistance(radiusMpc, FOVY));
+    expect(result.distance).not.toBe(bodyFocusDistance(radiusMpc, lensFramingWindow(FOVY, 1)));
   });
 
   it('blackHole arm — focusDistanceRadii override is independent of FOV', () => {
     const row = sgrAStarRow();
-    const atFovA = focusFraming(row, 0.5).distance;
-    const atFovB = focusFraming(row, 1.4).distance;
+    const atFovA = focusFraming(row, lensFramingWindow(0.5, 1)).distance;
+    const atFovB = focusFraming(row, lensFramingWindow(1.4, 1)).distance;
     expect(atFovA).toBe(atFovB);
   });
 
   it('body arm — target is a fresh array, not aliased from positionMpc', () => {
     const row = bodyRow();
-    const result = focusFraming(row, FOVY);
+    const result = focusFraming(row, lensFramingWindow(FOVY, 1));
     expect(result.target).not.toBe(row.positionMpc);
     expect(result.target).toEqual(row.positionMpc);
   });
@@ -209,7 +215,7 @@ describe('focusFraming', () => {
         positionMpc,
         driver: bodyDriverGeometry('sun'),
       },
-      FOVY,
+      lensFramingWindow(FOVY, 1),
     );
     const starResult = focusFraming(
       {
@@ -222,7 +228,7 @@ describe('focusFraming', () => {
         radiusM,
         driver: starRowDriver(null, radiusM),
       },
-      FOVY,
+      lensFramingWindow(FOVY, 1),
     );
     expect(starResult).toEqual(bodyResult);
   });

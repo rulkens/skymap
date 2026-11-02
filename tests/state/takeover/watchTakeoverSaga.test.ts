@@ -102,6 +102,7 @@ import {
   type StructureRowFixture,
 } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
+import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -110,7 +111,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
-  aspect: 16 / 9,
+  framing: lensFramingWindow(0.8, 16 / 9),
   upBasisQuat: [0, 0, 0, 1],
 };
 

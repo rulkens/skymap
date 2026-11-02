@@ -11,11 +11,12 @@ import { GALACTIC_DISC_FORWARD, INITIAL_DISTANCE_MPC } from './cameraFraming';
 import type { EngineHomeConfig } from '../../../@types/engine/EngineHomeConfig';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { FramingWindow } from '../../../@types/camera/FramingWindow';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 export function homePose(
   home: EngineHomeConfig,
-  fovYRad: number,
+  framing: FramingWindow,
   simDays: number,
   frameBasis: Mat3,
 ): FramedCameraPose {
@@ -30,7 +31,7 @@ export function homePose(
           distance: INITIAL_DISTANCE_MPC,
           ...orbitAnglesLookingAlong(GALACTIC_DISC_FORWARD, frameBasis),
         }
-      : bodyHomePose(home.focus.ref.id, simDays, fovYRad, frameBasis);
+      : bodyHomePose(home.focus.ref.id, simDays, framing, frameBasis);
   // `target` copied: the framing's array is mutable and the commit must own its own.
   return absoluteArm({
     target: [pose.target[0], pose.target[1], pose.target[2]],

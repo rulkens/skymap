@@ -70,7 +70,7 @@ export function* watchFlyToLonLatSaga() {
     // Off the focused body, the eye stands where a click-to-focus frames it.
     const eyeRadiusM = sameBody
       ? Math.hypot(...bodyFixedEyeM(here))
-      : focusFraming(bodyRowAt(body, host.state.positionMpc), runtime.fovYRad).distance /
+      : focusFraming(bodyRowAt(body, host.state.positionMpc), runtime.framing).distance /
         SCALE_UNITS.M_TO_MPC;
     const rangeM = altKm !== undefined ? altKm * 1000 : eyeRadiusM - host.radiusM;
     const heading =

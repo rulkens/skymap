@@ -10,6 +10,7 @@
 import type { MissionCourse } from '../../@types/missions/MissionCourse';
 import type { MissionCameraFrame } from '../../@types/camera/MissionCameraFrame';
 import type { Mat3 } from '../../@types/math/Mat3';
+import type { FramingWindow } from '../../@types/camera/FramingWindow';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
@@ -31,8 +32,7 @@ export function missionCameraFrame(
   mission: MissionCourse,
   simDays: number,
   positionOf: (id: string) => Readonly<Vec3> | undefined,
-  fovYRad: number,
-  aspect: number,
+  framing: FramingWindow,
   poseBasis: Readonly<Mat3>,
   wasCruise: boolean | null,
 ): MissionCameraFrame | null {
@@ -66,7 +66,7 @@ export function missionCameraFrame(
     viewDirection,
     right,
     up,
-    distance: sphereFitDistance(frame.radiusMpc, fovYRad, aspect),
+    distance: sphereFitDistance(frame.radiusMpc, framing),
     stop: frame.stop,
     cruise,
   };

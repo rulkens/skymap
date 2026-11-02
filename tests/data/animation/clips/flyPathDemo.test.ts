@@ -20,6 +20,7 @@ import { evaluateClip } from '../../../../src/services/engine/camera/evaluateCli
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 const FOV_Y = 0.8;
 const TEST_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };
@@ -76,7 +77,7 @@ const RESOLVER = selectionResolverOver(STRUCTURES);
 
 /** Resolve foci + live start, then compile — the play-time pipeline. */
 function prepared() {
-  const foci = resolveClipFoci(flyPathDemo.data, RESOLVER, FOV_Y, TEST_POSE, SIM_DAYS);
+  const foci = resolveClipFoci(flyPathDemo.data, RESOLVER, lensFramingWindow(FOV_Y, 1), TEST_POSE, SIM_DAYS);
   return resolveClipStart(foci, TEST_POSE);
 }
 
@@ -97,7 +98,7 @@ describe('flyPathDemo clip', () => {
     expect(end.target[0]).toBeCloseTo(0, 2);
     expect(end.target[1]).toBeCloseTo(0, 2);
     expect(end.target[2]).toBeCloseTo(10, 2); // Sculptor worldPos
-    expect(end.distance).toBeCloseTo(structureFocusDistance(2, FOV_Y), 2);
+    expect(end.distance).toBeCloseTo(structureFocusDistance(2, lensFramingWindow(FOV_Y, 1)), 2);
   });
 
   it('moves the camera continuously through the take (no freeze, no teleport)', () => {

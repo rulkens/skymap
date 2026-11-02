@@ -29,6 +29,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 const BASIS = ORIENTATION_FRAMES.ecliptic;
 // The clip names no subject, so the resolver is never asked.
@@ -71,7 +72,7 @@ function expectSameShot(actual: CameraPose, expected: CameraPose, centreMpc: Vec
 describe('perseveranceToSondermarken', () => {
   const clip = perseveranceToSondermarken(SIM_DAYS);
   const start = clip.data.start as CameraPose;
-  const resolved = resolveClipFoci(clip.data, NO_SELECTION, 1, start, SIM_DAYS, BASIS);
+  const resolved = resolveClipFoci(clip.data, NO_SELECTION, lensFramingWindow(1, 1), start, SIM_DAYS, BASIS);
   const bodies = deriveBodyStates(SIM_DAYS);
   const mars = bodies.get(asSceneBodyId('mars'))!.positionMpc;
   const earth = bodies.get(asSceneBodyId('earth'))!.positionMpc;
@@ -124,7 +125,7 @@ describe('perseveranceToSondermarken', () => {
     (offsetDays) => {
       const simDays = SIM_DAYS + offsetDays;
       const c = perseveranceToSondermarken(simDays);
-      const data = resolveClipFoci(c.data, NO_SELECTION, 1, c.data.start as CameraPose, simDays, BASIS);
+      const data = resolveClipFoci(c.data, NO_SELECTION, lensFramingWindow(1, 1), c.data.start as CameraPose, simDays, BASIS);
       const b = deriveBodyStates(simDays);
       const [m, e] = [b.get(asSceneBodyId('mars'))!.positionMpc, b.get(asSceneBodyId('earth'))!.positionMpc];
       // The opening eye is ~1.3 m above the rover's radius, the tightest moment by design.

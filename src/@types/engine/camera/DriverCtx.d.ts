@@ -5,9 +5,9 @@
 
 import type { BodyState } from '../../scene/BodyState';
 import type { CameraPose } from '../../camera/CameraPose';
-import type { CameraProjection } from '../../camera/CameraProjection';
 import type { DriverId } from './DriverId';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { FramingWindow } from '../../camera/FramingWindow';
 import type { Mat3 } from '../../math/Mat3';
 import type { RootState } from '../../../store/types';
 import type { PositionedId } from '../../scene/PositionedId';
@@ -36,7 +36,7 @@ export type DriverCtx = {
   readonly poseBasis: Readonly<Mat3>;
   /** Julian days. */
   readonly simDays: number;
-  readonly projection: CameraProjection;
+  readonly framing: FramingWindow;
   /** This instant's body states — a frame-tagged keyframe converts through them. */
   readonly bodies: ReadonlyMap<PositionedId, BodyState>;
   /** Mpc; null on a frame with no swallowed wheel notch. */

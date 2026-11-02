@@ -55,7 +55,7 @@ export function* exhibitBodySaga(
   const playClip = yield* getContext<SagaContext['playClip']>('playClip');
   const orientation = yield* select(selectOrientation);
 
-  // `fitRadiusMpc` re-derives `pose.distance` against the LIVE lens + aspect,
+  // `fitRadiusMpc` re-derives `pose.distance` against the LIVE framing window,
   // not the authored fallback — a static distance can't fit a sphere at every
   // viewport shape (see `sphereFitDistance`). No wait: pre-bootstrap the
   // runtime is null and the authored `pose.distance` flies instead, same as
@@ -69,7 +69,7 @@ export function* exhibitBodySaga(
     exhibit.fitRadiusMpc !== undefined && rt !== null
       ? {
           ...authored,
-          distance: sphereFitDistance(exhibit.fitRadiusMpc, rt.fovYRad, rt.aspect),
+          distance: sphereFitDistance(exhibit.fitRadiusMpc, rt.framing),
         }
       : authored;
 

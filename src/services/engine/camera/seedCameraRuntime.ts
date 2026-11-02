@@ -20,6 +20,7 @@ import { EMPTY_TILT_MEMORY } from '../../../data/camera/emptyTiltMemory';
 import { NAV_AT_REST } from '../../../data/camera/openSpaceNavigation';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../data/time/constJ2000';
+import { lensFramingWindow } from '../../../utils/camera/lensFramingWindow';
 import { symmetricFrustum } from '../../../utils/camera/symmetricFrustum';
 
 export function seedCameraRuntime(args: {
@@ -52,6 +53,7 @@ export function seedCameraRuntime(args: {
       upBasis: [...ORIENTATION_FRAMES[settings.orientation]],
       projection: args.projection,
       frustum: symmetricFrustum(args.projection.fovYRad, args.projection.aspect),
+      framing: lensFramingWindow(args.projection.fovYRad, args.projection.aspect),
     },
   };
 }

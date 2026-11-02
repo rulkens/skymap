@@ -166,7 +166,7 @@ function followPose(
     // only an owed one seeds the framing distance.
     distanceTarget = memory.saturated
       ? committed.distance
-      : framingPose(focus, ctx.projection.fovYRad, from).distance;
+      : framingPose(focus, ctx.framing, from).distance;
   } else if (!ctx.lastWinnerRidesWheel) {
     distanceTarget = committed.distance;
   } else if (ctx.followDistanceTarget !== null) {

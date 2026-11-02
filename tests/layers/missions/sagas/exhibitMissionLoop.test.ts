@@ -32,6 +32,7 @@ import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDay
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { Transition } from '../../../../src/@types/navigation/Transition';
+import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 beforeAll(loadVoyagerStopWindows);
 beforeEach(() => vi.useFakeTimers({ now: Date.parse('2026-10-06') }));
@@ -61,7 +62,7 @@ async function hold(
     store.dispatch(setSimDays({ simDays: linkedDays, nowMs }));
     store.dispatch(pause({ nowMs }));
   }
-  const runtime = { fovYRad: 0.9, aspect: 16 / 9 };
+  const runtime = { fovYRad: 0.9, framing: lensFramingWindow(0.9, 16 / 9) };
   sagaMiddleware.setContext({ playClip, cameraRuntime: () => runtime });
   sagaMiddleware.run(function* () {
     yield* exhibitBodySaga(voyagerMissions, entry, atLinkedTime);

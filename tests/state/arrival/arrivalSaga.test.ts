@@ -70,6 +70,7 @@ import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { SatellitesRuntime } from '../../../src/layers/satellites/@types/SatellitesRuntime';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -82,7 +83,7 @@ const { catalog: SATELLITES } = buildSatelliteCatalog(
 const LIVE: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
   fovYRad: 0.8,
-  aspect: 1,
+  framing: lensFramingWindow(0.8, 1),
   upBasisQuat: [0, 0, 0, 1],
 };
 const BOOT_BASE = absoluteArm({ target: [0, 0, 0], yaw: 0.5, pitch: -0.2, distance: 9 });
@@ -327,7 +328,7 @@ describe('arrivalSaga', () => {
     // Framed against the wall-clock sun: the store's seed anchor is J2000.
     const now = unixMsToJulianDays(Date.now());
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-    const expected = worldArmOf(homePose(EARTH_HOME, LIVE.fovYRad, now, B));
+    const expected = worldArmOf(homePose(EARTH_HOME, LIVE.framing, now, B));
     const landed = worldArmOf(root.camera.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
     expect(landed.pitch).toBeCloseTo(expected.pitch, 3);
@@ -347,7 +348,7 @@ describe('arrivalSaga', () => {
     expect(seeded.orientation).toBe(selectOrientation(root));
     const simDays = deriveSimDays(root.time, performance.now());
     const expected = worldArmOf(
-      homePose(EARTH_HOME, LIVE.fovYRad, simDays, ORIENTATION_FRAMES.galactic),
+      homePose(EARTH_HOME, LIVE.framing, simDays, ORIENTATION_FRAMES.galactic),
     );
     const landed = worldArmOf(root.camera.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);

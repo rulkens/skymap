@@ -53,7 +53,7 @@ export function* clipBodySaga(id: ClipId): Generator {
         const resolved = resolveClipFoci(
           clip.data,
           selection,
-          rt.fovYRad,
+          rt.framing,
           rt.from,
           frozenSimDays,
           frameBasis,

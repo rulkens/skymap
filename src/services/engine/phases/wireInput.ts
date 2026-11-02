@@ -99,7 +99,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       far: FAR_CLIP_MPC,
     },
   });
-  store.dispatch(commitCameraPose(homePose(home, DEFAULT_FOV_Y_RAD, simDays, frameBasis)));
+  const { framing } = state.cameraRuntime.outputs;
+  store.dispatch(commitCameraPose(homePose(home, framing, simDays, frameBasis)));
 
   state.subsystems.resizeWake = attachResizeWake(state.subsystems.scheduler);
 }

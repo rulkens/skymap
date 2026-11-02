@@ -24,6 +24,7 @@ import { proseKind } from '../../../src/components/ExhibitOverlay/kinds/proseKin
 import type { Exhibit } from '../../../src/@types/exhibits/Exhibit';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { LiveCameraRuntime } from '../../../src/store/types';
+import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 const EXHIBIT: Exhibit = {
   id: 'cosmicFlows',
@@ -163,7 +164,7 @@ describe('exhibitBodySaga', () => {
   });
 
   it('re-derives pose.distance from fitRadiusMpc against the live runtime', async () => {
-    // A landscape aspect and a known FOV make the expected distance
+    // A landscape framing window makes the expected distance
     // computable by hand: sphereFitDistance's own tests own the formula, this
     // only asserts exhibitBodySaga actually threads the live runtime into it instead
     // of flying the authored fallback.
@@ -177,7 +178,7 @@ describe('exhibitBodySaga', () => {
     const cameraRuntime = (): LiveCameraRuntime => ({
       from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
       fovYRad: (Math.PI / 180) * 60,
-      aspect: 16 / 9,
+      framing: lensFramingWindow((Math.PI / 180) * 60, 16 / 9),
       upBasisQuat: [0, 0, 0, 1],
     });
     const { sagaMiddleware } = buildStore(playClip, cameraRuntime);

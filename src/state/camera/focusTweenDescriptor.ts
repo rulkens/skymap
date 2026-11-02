@@ -30,6 +30,7 @@
 import { framingPose } from '../../services/engine/camera/framingPose';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { FramingWindow } from '../../@types/camera/FramingWindow';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
 import type { FocusMotion } from '../../@types/camera/FocusMotion';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
@@ -39,8 +40,8 @@ import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId'
  *
  * `from` is the live produced pose (the camera the user actually sees), so an
  * in-flight tween hands off smoothly when the user re-focuses mid-animation.
- * `fovYRad` is the projection FOV the structure and body arms need to frame
- * their subject to screen-fill; the galaxy and Milky Way arms ignore it.
+ * `framing` is the window the structure and body arms fill with their
+ * subject; the galaxy and Milky Way arms ignore it.
  * `motion` is frozen onto the descriptor as given. `frame` is the orientation
  * live at the caller's dispatch time — stamped onto the descriptor so the tween
  * driver can re-express the pose if the setting changes mid-flight (same
@@ -49,9 +50,9 @@ import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId'
 export function focusTweenDescriptor(
   row: SelectionRow,
   from: CameraPose,
-  fovYRad: number,
+  framing: FramingWindow,
   motion: FocusMotion,
   frame: OrientationFrameId,
 ): CameraTweenDescriptor {
-  return { from, to: framingPose(row, fovYRad, from), motion, frame };
+  return { from, to: framingPose(row, framing, from), motion, frame };
 }

@@ -24,6 +24,7 @@ import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 const BODIES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = BODIES.get(asSceneBodyId('earth'))!.positionMpc;
@@ -51,7 +52,12 @@ function run(payload: FlyToLonLatPayload, runtime: LiveCameraRuntime | null = li
 }
 
 function liveRuntime(): LiveCameraRuntime {
-  return { from: FROM, fovYRad: Math.PI / 3, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] };
+  return {
+    from: FROM,
+    fovYRad: Math.PI / 3,
+    framing: lensFramingWindow(Math.PI / 3, 16 / 9),
+    upBasisQuat: [0, 0, 0, 1],
+  };
 }
 
 function tweenOf(a: UnknownAction | undefined): CameraTweenDescriptor {

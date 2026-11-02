@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
+import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 // The renderer's vertical FOV (wireInput.ts: 60°). Most assertions use it so
 // the expected distances match what the live camera actually produces.
@@ -12,21 +13,21 @@ const expectedDistance = (r: number, fovYRad: number): number => r / (2.2 * Math
 
 describe('structureFocusDistance', () => {
   it('scales the distance linearly with the apparent radius', () => {
-    const small = structureFocusDistance(1, FOV60);
-    const big = structureFocusDistance(4, FOV60);
+    const small = structureFocusDistance(1, lensFramingWindow(FOV60, 1));
+    const big = structureFocusDistance(4, lensFramingWindow(FOV60, 1));
     // 4× the radius → 4× the framing distance (both well inside the clamps).
     expect(big).toBeCloseTo(small * 4, 5);
   });
 
   it('a 4 pc radius frames within tens of parsecs', () => {
-    expect(structureFocusDistance(4e-6, FOV60)).toBeLessThan(1e-4);
+    expect(structureFocusDistance(4e-6, lensFramingWindow(FOV60, 1))).toBeLessThan(1e-4);
   });
 
   it('falls back to 0.1 Mpc for a NaN, zero or negative radius', () => {
     // Defensive: a structure with NaN / Infinity radius must not produce a NaN
     // framing distance.
-    expect(structureFocusDistance(Number.NaN, FOV60)).toBe(0.1);
-    expect(structureFocusDistance(Number.POSITIVE_INFINITY, FOV60)).toBe(800);
-    expect(structureFocusDistance(-1, FOV60)).toBe(0.1);
+    expect(structureFocusDistance(Number.NaN, lensFramingWindow(FOV60, 1))).toBe(0.1);
+    expect(structureFocusDistance(Number.POSITIVE_INFINITY, lensFramingWindow(FOV60, 1))).toBe(800);
+    expect(structureFocusDistance(-1, lensFramingWindow(FOV60, 1))).toBe(0.1);
   });
 });

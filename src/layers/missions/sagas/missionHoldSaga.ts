@@ -145,8 +145,7 @@ function* entryPose(mission: MissionCourse, days: number): Generator<unknown, Ca
     mission,
     days,
     (id) => bodyPositionMpcAt(id, days),
-    rt.fovYRad,
-    rt.aspect,
+    rt.framing,
     basis,
     null,
   );

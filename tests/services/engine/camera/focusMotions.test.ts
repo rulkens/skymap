@@ -27,6 +27,7 @@ import { relErr } from '../../../support/relErr';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 const FOV = Math.PI / 3;
 const ONE_DAY_PER_SEC = RATE_LADDER.findIndex((step) => step.label === '1 day/s');
@@ -116,7 +117,7 @@ describe('focusMotions', () => {
     h.focus('mars');
     const row = h.store.getState().selectionRows.focus!;
     const from = h.store.getState().camera.base.pose as CameraPose;
-    const to = framingPose(row, FOV, from);
+    const to = framingPose(row, lensFramingWindow(FOV, 1), from);
     h.store.dispatch(startCameraTween(geodesicMove(from, to)));
     // Mars drifts under the flight, so the hand-off frame must catch up to it.
     h.store.dispatch(resume({ nowMs: h.nowMs() }));

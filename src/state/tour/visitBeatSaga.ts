@@ -105,7 +105,7 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
     const enterClip = resolveClipFoci(
       beat.enterClip,
       selection,
-      rt.fovYRad,
+      rt.framing,
       rt.from,
       simDays,
       frameBasis,
@@ -131,7 +131,7 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   const dwellClip = resolveClipFoci(
     beat.dwellClip,
     selection,
-    rt.fovYRad,
+    rt.framing,
     rt.from,
     dwellSimDays,
     dwellBasis,

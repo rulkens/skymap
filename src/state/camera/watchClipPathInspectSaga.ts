@@ -77,7 +77,7 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   // Off-frame resolve — live sim instant, same derivation as watchGoHomeSaga,
   // so a body-targeting cue frames on where it is drawn now.
   const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
-  const resolved = resolveClipFoci(clip.data, selection, rt.fovYRad, rt.from, simDays, frameBasis);
+  const resolved = resolveClipFoci(clip.data, selection, rt.framing, rt.from, simDays, frameBasis);
   // Bake only the ACTIVATED pacing knobs into the flyPath nodes before
   // sampling, so the overlay AND the pinned (replayable) clip carry the
   // overrides — while inactive knobs let the clip's own authored value through.

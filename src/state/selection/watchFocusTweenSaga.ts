@@ -98,7 +98,7 @@ export function* watchFocusTweenSaga() {
 
       const frame = yield* select(selectOrientation);
       yield* put(
-        startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, motion, frame)),
+        startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.framing, motion, frame)),
       );
     }),
   );

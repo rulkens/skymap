@@ -19,6 +19,7 @@ import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 /** A valid `b`-tagged, 17-field arm for the `#pose=` arrival case below; the numbers are arbitrary. */
 const EARTH_ARM: FramedCameraPose = {
@@ -61,7 +62,7 @@ describe('hash history integrity', () => {
       cameraRuntime: () => ({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
         fovYRad: 0.8,
-        aspect: 1,
+        framing: lensFramingWindow(0.8, 1),
         upBasisQuat: [0, 0, 0, 1],
       }),
     });

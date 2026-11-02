@@ -20,6 +20,7 @@ import { composeSelectionRows } from '../../../src/services/engine/selection/com
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { cameraRoute } from '../../../src/store/constants';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
+import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
 const NO_MODS = { shift: false, ctrl: false, alt: false, meta: false };
@@ -37,7 +38,7 @@ describe('double-tap focus', () => {
       cameraRuntime: () => ({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 9 },
         fovYRad: 0.8,
-        aspect: 2,
+        framing: lensFramingWindow(0.8, 2),
         upBasisQuat: [0, 0, 0, 1],
       }),
     });

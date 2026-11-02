@@ -37,6 +37,7 @@ import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
+import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 // ---------------------------------------------------------------------------
 // Shared starting pose for most tests.
@@ -578,7 +579,7 @@ describe('a move after a composite continues from where it ended', () => {
     const data = resolveClipFoci(
       { ...neighbourhoodFlythrough, start: START },
       resolve,
-      FOV_Y,
+      lensFramingWindow(FOV_Y, 1),
       START,
       0,
     );

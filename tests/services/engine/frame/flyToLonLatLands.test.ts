@@ -44,6 +44,7 @@ import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness'
 import type { SimBodyId } from '../../../helpers/camera/SimBodyId';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 // Past the flight, then a further stretch the result must survive unchanged.
 const FLIGHT_FRAMES = Math.ceil(FLY_TO_LON_LAT_TWEEN_MS / 16) + 10;
@@ -71,7 +72,7 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
       cameraRuntime: () => ({
         from: liveWorldPose(h.state),
         fovYRad: h.state.cameraRuntime.outputs.projection.fovYRad,
-        aspect: h.state.cameraRuntime.outputs.projection.aspect,
+        framing: h.state.cameraRuntime.outputs.framing,
         upBasisQuat: liveUpBasisQuat(h.state.cameraRuntime),
       }),
       selection: {
@@ -171,7 +172,8 @@ describe('flyToLonLat through the frame loop', () => {
     // The distance the follow driver frames a focused Mars at (harness FOV 60°).
     const footprintM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'mars', 'test'));
     const framingM =
-      bodyFocusDistance(footprintM * SCALE_UNITS.M_TO_MPC, Math.PI / 3) / SCALE_UNITS.M_TO_MPC;
+      bodyFocusDistance(footprintM * SCALE_UNITS.M_TO_MPC, lensFramingWindow(Math.PI / 3, 1)) /
+      SCALE_UNITS.M_TO_MPC;
     flyAndHold(h, () => fly({ body: asSceneBodyId('mars'), lonDeg: 137, latDeg: -5 }), 'mars', {
       lonDeg: 137,
       latDeg: -5,

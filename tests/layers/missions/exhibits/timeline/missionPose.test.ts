@@ -35,6 +35,7 @@ import { unixMsToJulianDays } from '../../../../../src/utils/time/unixMsToJulian
 import { makeDriverCtx } from '../../../../helpers/camera/makeDriverCtx';
 import { loadVoyagerStopWindows } from '../../../../helpers/missions/loadVoyagerStopWindows';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { lensFramingWindow } from '../../../../../src/utils/camera/lensFramingWindow';
 
 const neptune = MISSION_EVENTS.find((e) => e.id === 'voyager2-neptune') as MissionEvent;
 const tc = unixMsToJulianDays(missionEventMs(neptune));
@@ -91,7 +92,7 @@ function ctxAt(
     state: store.getState(),
     simDays,
     poseBasis: BASIS,
-    projection: { fovYRad: FOV, aspect: ASPECT, near: 0, far: 1 },
+    framing: lensFramingWindow(FOV, ASPECT),
     winnerLastFrame,
   });
   return { ...ctx, own: ownOf(store, mission) };
@@ -267,7 +268,7 @@ describe('missionPose', () => {
         simDays,
         elapsedMs: wallMs,
         poseBasis: BASIS,
-        projection: { fovYRad: FOV, aspect: ASPECT, near: 0, far: 1 },
+        framing: lensFramingWindow(FOV, ASPECT),
         winnerLastFrame: 'mission',
         authoredWorld: shown,
       });
@@ -354,7 +355,7 @@ describe('missionPose', () => {
           simDays,
           elapsedMs: f * FRAME_MS,
           poseBasis: BASIS,
-          projection: { fovYRad: FOV, aspect: ASPECT, near: 0, far: 1 },
+          framing: lensFramingWindow(FOV, ASPECT),
           winnerLastFrame: 'mission',
           ...(register && { register: absoluteArm(register), authoredWorld: register }),
         }),
@@ -399,7 +400,7 @@ describe('missionPose', () => {
           simDays: days,
           elapsedMs: ms,
           poseBasis: BASIS,
-          projection: { fovYRad: FOV, aspect: ASPECT, near: 0, far: 1 },
+          framing: lensFramingWindow(FOV, ASPECT),
           winnerLastFrame: 'mission',
           ...(shown && { authoredWorld: shown }),
         });
@@ -448,7 +449,7 @@ describe('missionPose', () => {
           simDays,
           elapsedMs: f * FRAME_MS,
           poseBasis: BASIS,
-          projection: { fovYRad: FOV, aspect: ASPECT, near: 0, far: 1 },
+          framing: lensFramingWindow(FOV, ASPECT),
           winnerLastFrame: 'mission',
           ...(shown && { authoredWorld: shown }),
         });

@@ -30,6 +30,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { lensFramingWindow } from '../../../../src/utils/camera/lensFramingWindow';
 
 const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);
@@ -38,7 +39,7 @@ const R_SATURN_M = 58232000;
 const R_SATURN_MPC = R_SATURN_M * SCALE_UNITS.M_TO_MPC;
 // The harness settings put fovDeg 60 on the store; runFrame stamps it onto
 // the projection every frame, so the framing target is computed at π/3.
-const FRAMING_MPC = bodyFocusDistance(R_SATURN_MPC, Math.PI / 3);
+const FRAMING_MPC = bodyFocusDistance(R_SATURN_MPC, lensFramingWindow(Math.PI / 3, 1));
 
 function distTo(eye: Readonly<Vec3>, body: BodyState): number {
   return Math.hypot(

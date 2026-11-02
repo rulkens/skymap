@@ -49,6 +49,7 @@ import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
+import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 /**
  * Boot the saga against a given arrival hash, and hand back the levers a case
@@ -91,7 +92,7 @@ function buildHarness(arrivalBody: string) {
     cameraRuntime: () => ({
       from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
       fovYRad: 0.8,
-      aspect: 1,
+      framing: lensFramingWindow(0.8, 1),
       upBasisQuat: [0, 0, 0, 1],
     }),
   });

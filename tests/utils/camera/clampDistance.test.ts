@@ -17,6 +17,7 @@ import {
 } from '../../../src/utils/camera/clampDistance';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { bodyFocusDistance } from '../../../src/services/engine/camera/bodyFocusDistance';
+import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 /**
  * The galaxy-focus tween's minimum end distance (0.15 Mpc) is the lowest
@@ -61,7 +62,7 @@ describe('clampDistance — floored at a precomputed body surface', () => {
     // Cross-check between two constants that have to stay ordered: the standoff
     // must sit INSIDE the screen-fill framing distance, or every fresh body focus
     // would be clamped and land somewhere other than where the framing asked for.
-    const framing = bodyFocusDistance(EARTH_RADIUS_MPC, (Math.PI / 180) * 60);
+    const framing = bodyFocusDistance(EARTH_RADIUS_MPC, lensFramingWindow((Math.PI / 180) * 60, 1));
     expect(clampDistance(framing, EARTH_FLOOR_MPC)).toBe(framing);
   });
 });

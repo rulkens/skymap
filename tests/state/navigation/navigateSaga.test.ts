@@ -57,6 +57,7 @@ import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { Transition } from '../../../src/@types/navigation/Transition';
+import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -92,7 +93,7 @@ function build() {
     cameraRuntime: () => ({
       from: { target: [0, 0, 0], yaw: 0.5, pitch: -0.2, distance: 9 },
       fovYRad: 0.8,
-      aspect: 16 / 9,
+      framing: lensFramingWindow(0.8, 16 / 9),
       upBasisQuat: [0, 0, 0, 1],
     }),
     home: { focus: null, seedSelection: false },
@@ -193,7 +194,7 @@ describe('navigateSaga', () => {
     expect(h.commits()).toBe(1);
     const { fitRadiusMpc } = APP_EXHIBIT_REGISTRY.observableUniverse;
     expect(worldArmOf(h.store.getState().camera.base).distance).toBe(
-      sphereFitDistance(fitRadiusMpc!, 0.8, 16 / 9),
+      sphereFitDistance(fitRadiusMpc!, lensFramingWindow(0.8, 16 / 9)),
     );
     expect(selectTakeoverSource(h.store.getState())).toEqual({
       kind: 'exhibit',

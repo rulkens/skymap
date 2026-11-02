@@ -32,6 +32,7 @@ import type { ClipId } from '../../../src/@types/animation/ClipId';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
+import { lensFramingWindow } from '../../../src/utils/camera/lensFramingWindow';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -46,7 +47,7 @@ const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: ()
 const RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
   fovYRad: 0.8,
-  aspect: 16 / 9,
+  framing: lensFramingWindow(0.8, 16 / 9),
   upBasisQuat: [0, 0, 0, 1],
 };
 
