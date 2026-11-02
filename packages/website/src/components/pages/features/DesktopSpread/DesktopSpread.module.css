@@ -1,7 +1,7 @@
 /* The accent is the galaxy's core, from the render. */
 .root {
   composes: wrap grid from '../../../../styles/layout.module.css';
-  --color-accent: #e8b98f;
+  --color-accent: var(--site-accent-galaxy-core);
   row-gap: var(--site-space-xl);
   padding-block: var(--site-space-2xl);
 }

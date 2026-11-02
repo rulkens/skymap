@@ -32,6 +32,10 @@ with no `.root` that a class takes with `composes: <class> from '…/styles/<mod
 - `site.css` holds the tokens (colour, type scale, the `--site-space-*` spacing scale, `--bleed`, `--disc-ring`)
   and the few global rules. Every margin, padding and gap is a `--site-space-*` step; a raw length is geometry
   (a picture's size, an overlap, a tap area taken back by a negative margin, an optical nudge, an `em`).
+- A colour is a token: lines are `--site-line` and `--site-line-strong`, another alpha of a token is
+  `color-mix(in srgb, var(--color-fg) 30%, transparent)`, and a colour taken from a picture is its subject's
+  `--site-accent-*` (a component's `.constants.ts` passes it on as `'var(--site-accent-orbits)'`). The colours
+  sampled per slide in `content/pages/features/features.data.ts` are data, like the shots they come from.
 
 ## Pictures and films
 

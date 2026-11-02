@@ -14,7 +14,7 @@
     min-height: var(--tap);
     margin-top: var(--site-space-2xs);
     padding: var(--site-space-xs) var(--site-space-xs);
-    border: 1px solid rgb(232 238 255 / 0.45);
+    border: 1px solid var(--site-line-strong);
     border-radius: 0.25rem;
     background: transparent;
     color: var(--color-fg);
@@ -26,7 +26,7 @@
     }
 
     &[aria-invalid='true'] {
-      border-color: #ff9d8a;
+      border-color: var(--site-error);
     }
   }
 
@@ -44,5 +44,5 @@
 .error {
   composes: small from '../../../../styles/type.module.css';
   margin: var(--site-space-2xs) 0 0;
-  color: #ffb4a6;
+  color: var(--site-error-text);
 }

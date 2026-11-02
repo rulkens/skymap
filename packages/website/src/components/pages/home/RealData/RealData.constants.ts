@@ -10,11 +10,21 @@ export const KINDS = [
     group: 'Galaxies and quasars',
     counts: 'galaxies and quasars',
     shot: 'features-desi',
-    accent: '#e8a774',
+    accent: 'var(--site-accent-survey)',
   },
-  { group: 'Stars', counts: 'stars', shot: 'render-stars', accent: '#f1e2c4' },
-  { group: 'Solar system', fact: 'sci-ephemeris', shot: 'lesson-solar-system', accent: '#d9c27a' },
-  { group: 'Imagery', fact: 'pipe-earth-tiles', shot: 'earth-terminator', accent: '#8fb6ff' },
+  { group: 'Stars', counts: 'stars', shot: 'render-stars', accent: 'var(--site-accent-starlight)' },
+  {
+    group: 'Solar system',
+    fact: 'sci-ephemeris',
+    shot: 'lesson-solar-system',
+    accent: 'var(--site-accent-orbits)',
+  },
+  {
+    group: 'Imagery',
+    fact: 'pipe-earth-tiles',
+    shot: 'earth-terminator',
+    accent: 'var(--site-accent-earth)',
+  },
 ].map((kind) => ({
   ...kind,
   // The Science table's count: what the app draws, or what the source holds where the build does not count

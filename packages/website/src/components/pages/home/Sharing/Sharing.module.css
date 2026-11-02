@@ -1,8 +1,8 @@
 /* The two parameters' colours: `focus` a clear blue, the clock `t` a planet's gold. */
 .root {
   composes: section from '../../../../styles/layout.module.css';
-  --focus-ink: #8fb6ff;
-  --clock-ink: #e6c98f;
+  --focus-ink: var(--site-accent-earth);
+  --clock-ink: var(--site-accent-planet);
 }
 
 .head {
@@ -57,7 +57,7 @@
   &[aria-pressed='true'] {
     position: relative;
     z-index: 1;
-    border-color: rgb(232 238 255 / 0.22);
+    border-color: var(--site-line);
     background: rgb(14 17 26);
     color: var(--color-fg);
     cursor: default;
@@ -73,7 +73,7 @@
 .bar {
   display: flex;
   align-items: center;
-  border: 1px solid rgb(232 238 255 / 0.22);
+  border: 1px solid var(--site-line);
   border-radius: 0.5rem;
   background: rgb(14 17 26 / 0.86);
   box-shadow: 0 1.25rem 3rem rgb(0 0 0 / 0.7);
@@ -82,7 +82,7 @@
 
   &:hover,
   &:focus-within {
-    border-color: rgb(232 238 255 / 0.4);
+    border-color: var(--site-line-strong);
   }
 }
 

@@ -1,6 +1,6 @@
 /* The rim is the page's control border (AddressStrip): the frame reads as an outline, not an object. */
 .root {
-  --rim: rgb(232 238 255 / 0.28);
+  --rim: color-mix(in srgb, var(--color-fg) 28%, transparent);
   width: 100%;
 }
 

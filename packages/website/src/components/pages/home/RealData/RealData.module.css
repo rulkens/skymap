@@ -121,7 +121,7 @@
     justify-content: space-between;
     gap: var(--site-space-s);
     padding-block: var(--site-space-2xs);
-    border-top: 1px solid rgb(232 238 255 / 0.1);
+    border-top: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
   }
 
   & a {

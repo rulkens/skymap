@@ -26,7 +26,7 @@
 
 /* The field is a raised surface, as Home's window bar (Sharing): lighter than the view it lies over. */
 .raised {
-  border: 1px solid rgb(232 238 255 / 0.22);
+  border: 1px solid var(--site-line);
   border-radius: 0.5rem;
   background: rgb(14 17 26 / 0.86);
   box-shadow: 0 1.25rem 3rem rgb(0 0 0 / 0.7);

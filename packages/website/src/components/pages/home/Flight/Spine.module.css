@@ -26,11 +26,11 @@
 /* The rail stays in the sky's own greys: the picture is the subject, the rail only says where we are. */
 .spine::before {
   bottom: 0;
-  background: rgb(232 238 255 / 0.14);
+  background: color-mix(in srgb, var(--color-fg) 14%, transparent);
 }
 
 .fill {
-  background: rgb(232 238 255 / 0.45);
+  background: var(--site-line-strong);
 }
 
 .dot {
@@ -40,7 +40,7 @@
   height: 0.9375rem;
   margin-top: -0.46875rem;
   padding: 0;
-  border: 1px solid rgb(232 238 255 / 0.4);
+  border: 1px solid var(--site-line-strong);
   border-radius: 50%;
   background: #000;
   cursor: pointer;
@@ -63,7 +63,7 @@
     content: '';
     position: absolute;
     inset: -0.375rem;
-    border: 1px solid rgb(232 238 255 / 0.5);
+    border: 1px solid var(--site-line-strong);
     border-radius: 50%;
     opacity: 0;
     transform: scale(1.6);

@@ -16,7 +16,7 @@
   }
 
   & thead tr {
-    border-bottom: 1px solid rgb(232 238 255 / 0.2);
+    border-bottom: 1px solid var(--site-line);
   }
 
   & tbody tr + tr {
@@ -104,7 +104,7 @@
 }
 
 .over tbody tr:first-child {
-  border-top: 1px solid rgb(232 238 255 / 0.2);
+  border-top: 1px solid var(--site-line);
 }
 
 /* A stacked cell is led by its column's heading, so the heading row keeps only the headings of true columns. */
@@ -151,7 +151,7 @@
     }
 
     & tbody tr:first-child {
-      border-top: 1px solid rgb(232 238 255 / 0.2);
+      border-top: 1px solid var(--site-line);
     }
   }
 

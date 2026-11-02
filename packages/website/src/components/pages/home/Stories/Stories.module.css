@@ -439,7 +439,7 @@
         bottom: 0;
         left: -2.75rem;
         width: 1px;
-        background: rgb(232 238 255 / 0.16);
+        background: color-mix(in srgb, var(--color-fg) 16%, transparent);
       }
 
       &::after {

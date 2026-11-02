@@ -54,7 +54,7 @@ button.open {
   width: 100%;
   padding: var(--site-space-3xs) 0 var(--site-space-2xs);
   border: 0;
-  border-bottom: 1px solid rgb(232 238 255 / 0.2);
+  border-bottom: 1px solid var(--site-line);
   border-radius: 0;
   background: none;
   color: var(--color-fg);

@@ -5,7 +5,7 @@
 .summary {
   margin-bottom: var(--site-space-m);
   padding: var(--site-space-s);
-  border: 1px solid #ff9d8a;
+  border: 1px solid var(--site-error);
   border-radius: 0.25rem;
 
   & p {
@@ -16,7 +16,7 @@
   & a {
     display: block;
     padding-block: var(--site-space-2xs);
-    color: #ffb4a6;
+    color: var(--site-error-text);
   }
 }
 

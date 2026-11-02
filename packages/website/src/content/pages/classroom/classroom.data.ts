@@ -5,7 +5,7 @@ import { fact } from '../../../data/fact';
 export const says = (id: string): string => fact(id).short ?? fact(id).text;
 
 /** Colours sampled from the renders a section is built on, for the lines, rings and names drawn over them. */
-export const ACCENTS = { earth: '#8fb6ff', jupiter: '#dcb68a' } as const;
+export const ACCENTS = { earth: 'var(--site-accent-earth)', jupiter: 'var(--site-accent-planet)' } as const;
 
 /**
  * The ready-made questions, in the order of data/lessons.ts's topics. Each is answered by opening

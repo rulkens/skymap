@@ -10,5 +10,5 @@ export const EXHIBIT_LABEL = {
   credit: siteShot('cut-jupiter').credit,
 };
 // Each part's line takes its picture's colour: the web's violet, the orbits' gold.
-export const TOUR_ACCENT = { '--accent': '#c98cf2' } as CSSProperties;
-export const EXHIBIT_ACCENT = { '--accent': '#d9c27a' } as CSSProperties;
+export const TOUR_ACCENT = { '--accent': 'var(--site-accent-web)' } as CSSProperties;
+export const EXHIBIT_ACCENT = { '--accent': 'var(--site-accent-orbits)' } as CSSProperties;

@@ -100,10 +100,10 @@
     margin-bottom: -1rem;
     background: linear-gradient(
       90deg,
-      rgb(232 238 255 / 0),
-      rgb(232 238 255 / 0.22) 12%,
-      rgb(232 238 255 / 0.22) 88%,
-      rgb(232 238 255 / 0)
+      transparent,
+      var(--site-line) 12%,
+      var(--site-line) 88%,
+      transparent
     );
   }
 }

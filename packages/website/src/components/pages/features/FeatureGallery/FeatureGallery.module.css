@@ -2,7 +2,8 @@
 @property --slide-accent {
   syntax: '<color>';
   inherits: true;
-  initial-value: #8fb8ff;
+  /* --site-accent-earth: an initial value cannot be a var(). */
+  initial-value: #8fb6ff;
 }
 
 /* What reaches past the stage (a render under it) is cut at the window's sides, never scrolled to. */

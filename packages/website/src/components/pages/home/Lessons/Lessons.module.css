@@ -107,7 +107,7 @@
   left: calc(var(--earth-x) + 0.3175 * var(--earth) + 1rem);
   right: calc(100% - var(--jupiter-x) + 0.3835 * var(--jupiter) + 1rem);
   height: 1px;
-  background: rgb(232 238 255 / 0.22);
+  background: var(--site-line);
   transform-origin: left;
 }
 

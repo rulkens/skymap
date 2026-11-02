@@ -2,7 +2,7 @@
   composes: grid from '../../../../styles/layout.module.css';
   row-gap: var(--site-space-2xl);
   align-items: center;
-  --steer-accent: #8fb6ff;
+  --steer-accent: var(--site-accent-earth);
   /* Where the rings sit: out in the margin as the site's link markers hang, so the words keep the left edge. */
   --ring-x: -1.75rem;
   --ring-size: 0.625rem;

@@ -27,6 +27,27 @@
   --site-text-dim: #9aa7c9;
   /* The names of a picture label's parts: the dimmest text that still holds 4.5:1 on the page's black (6.2:1). */
   --site-text-faint: #7f8bab;
+  /* The page's foreground as a line: a rule or a frame's hairline, and the edge of a field or a mark. */
+  --site-line: color-mix(in srgb, var(--color-fg) 22%, transparent);
+  --site-line-strong: color-mix(in srgb, var(--color-fg) 45%, transparent);
+  /* A form's error: the field's edge and the words that say what is wrong. */
+  --site-error: #ff9d8a;
+  --site-error-text: #ffb4a6;
+
+  /*
+   * Colours sampled from the renders, one per subject, for the lines, rings and names drawn over them.
+   * Components pass them on as `var(--site-accent-…)` (from CSS, or as a style value from their .constants.ts).
+   */
+  --site-accent-earth: #8fb6ff;
+  --site-accent-orbits: #d9c27a;
+  --site-accent-web: #d98fe6;
+  --site-accent-planet: #dbc29e;
+  --site-accent-galaxy-core: #e8b98f;
+  --site-accent-survey: #e8a774;
+  --site-accent-starlight: #f1e2c4;
+  --site-accent-dome: #c9b8ff;
+  --site-accent-zoa: #aaa6ff;
+  --site-accent-universe: #b8d4ff;
 
   --font-family-display: 'Cormorant Site', ui-serif, Georgia, serif;
   --font-body: 'Jost Variable', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
@@ -196,7 +217,7 @@ kbd {
   display: inline-block;
   min-width: 1.5em;
   padding: 0 0.3em;
-  border: 1px solid rgb(232 238 255 / 0.3);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 30%, transparent);
   border-radius: 0.1875rem;
   font: var(--weight-small) 0.8125em / 1.45 var(--font-family-mono);
   color: var(--color-fg);
