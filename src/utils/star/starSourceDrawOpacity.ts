@@ -1,5 +1,5 @@
-import type { SourceEntry } from '../../@types/data/SourceEntry';
-import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
+import type { SurveyStarCatalogSourceEntry } from '../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
+import type { StarCatalogId } from '../../layers/starCatalog/@types/StarCatalogId';
 import { starCrossfadeOpacity } from './starCrossfadeOpacity';
 
 /**
@@ -10,14 +10,9 @@ import { starCrossfadeOpacity } from './starCrossfadeOpacity';
  * GPU cut as the source's opacity multiplier. Two readers, one predicate, no drift.
  */
 export function starSourceDrawOpacity(
-  entry: SourceEntry,
+  entry: Pick<SurveyStarCatalogSourceEntry, 'crossfadePc'> & { readonly id: StarCatalogId },
   fade: Readonly<Record<StarCatalogId, number>>,
   camDistPc: number,
 ): number {
-  // Only a SURVEY row ships a bin, so only it can be loaded and drawn.
-  if (entry.type !== 'starCatalog' || entry.binBaseName === null) return 0;
-  // `SourceEntryBase.id` widens to `string`; a `starCatalog` row's id is a
-  // `StarCatalogId` by construction of `APP_SOURCE_REGISTRY`, which is where the
-  // literal survives. Callers passing a registry row cannot violate this.
-  return fade[entry.id as StarCatalogId] * starCrossfadeOpacity(entry.crossfadePc, camDistPc);
+  return fade[entry.id] * starCrossfadeOpacity(entry.crossfadePc, camDistPc);
 }

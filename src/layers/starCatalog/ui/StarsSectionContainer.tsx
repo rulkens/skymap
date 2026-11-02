@@ -46,7 +46,7 @@ import {
 } from '../state/starCatalogs/slice';
 import { STAR_CATALOG_IDS } from '../../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
-import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogId } from '../@types/StarCatalogId';
 import type { SourceType } from '../../../@types/data/SourceType';
 
 function StarsSectionContainer(): React.ReactElement {

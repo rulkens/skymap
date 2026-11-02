@@ -1,6 +1,6 @@
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogId } from './GalaxyCatalogId';
+import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
 import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
 import type { CatalogDrawEntry } from './CatalogDrawEntry';
 
@@ -11,7 +11,7 @@ export type CatalogStore = {
   totalCount(): number;
   /** Narrow public projection consumed by the pick program. */
   loadedSources(): IterableIterator<{
-    source: SourceType;
+    source: GalaxyCatalogSourceType;
     vertexBuffer: GPUBuffer;
     count: number;
     sourceBuffer: GPUBuffer;

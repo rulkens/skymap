@@ -3,7 +3,7 @@
  * upsample handle. Non-null throughout: `create` builds each before returning.
  */
 
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
@@ -20,9 +20,12 @@ import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
 export type StarCatalogRuntime = {
   /** One slot per survey source. */
-  readonly catalogs: ReadonlyMap<SourceType, AssetSlot<Octree<StarColumns>, StarCatalogReq>>;
+  readonly catalogs: ReadonlyMap<
+    StarCatalogSourceType,
+    AssetSlot<Octree<StarColumns>, StarCatalogReq>
+  >;
   /** A source's chunk stream while its committed index names chunks; the slot's commit fills it and release clears it. */
-  readonly chunkStreams: Map<SourceType, OctreeChunkStream<StarColumns>>;
+  readonly chunkStreams: Map<StarCatalogSourceType, OctreeChunkStream<StarColumns>>;
   readonly famousStarsMeta: AssetSlot<FamousStarsPayload, void>;
   readonly renderer: StarCatalogRenderer;
   readonly pickRenderer: StarCatalogPickRenderer;
