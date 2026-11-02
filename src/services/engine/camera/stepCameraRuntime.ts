@@ -126,15 +126,11 @@ export function stepCameraRuntime(
     far: FAR_CLIP_MPC,
   };
   // The navigator's clock is the step's: `lastNowMs` is last step's `nowMs`, null before the first.
+  // The shift borrows it, so a navigator reset to NAV_AT_REST mid-session snaps the next cover ease.
   const lastNowMs = prev.navigator.lastNowMs;
   const shiftTarget = coverShiftNdc(coverPx, canvasPx);
-  const eased = easedShiftNdc(
-    lastNowMs === null ? null : prev.shiftNdc,
-    shiftTarget,
-    lastNowMs === null ? 0 : nowMs - lastNowMs,
-  );
   const shiftNdc =
-    eased[0] === prev.shiftNdc[0] && eased[1] === prev.shiftNdc[1] ? prev.shiftNdc : eased;
+    lastNowMs === null ? shiftTarget : easedShiftNdc(prev.shiftNdc, shiftTarget, nowMs - lastNowMs);
   const shiftSettled = shiftNdc[0] === shiftTarget[0] && shiftNdc[1] === shiftTarget[1];
   const frustum = shiftedFrustum(projection.fovYRad, aspect, shiftNdc);
   // The TARGET covers, not the eased shift: a fly-to that starts mid-ease must still land framed.

@@ -3,9 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { easedShiftNdc } from '../../../src/utils/camera/easedShiftNdc';
 
 describe('easedShiftNdc', () => {
-  it('snaps from null, approaches with τ = 80 ms, and stays continuous when the target jumps mid-ease', () => {
-    expect(easedShiftNdc(null, [0.2, -0.1], 16)).toEqual([0.2, -0.1]);
-
+  it('approaches with τ = 80 ms and stays continuous when the target jumps mid-ease', () => {
     const one = easedShiftNdc([0, 0], [0, 0.2], 16);
     expect(one[1]).toBeCloseTo(0.2 * (1 - Math.exp(-16 / 80)), 12);
 

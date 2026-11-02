@@ -11,7 +11,7 @@ import PhoneHudContainer from '../../../src/components/containers/PhoneHudContai
 import { createTestStore } from '../../support/createTestStore';
 import stackStyles from '../../../src/components/BottomStack/BottomStack.module.css';
 import { viewCoverRoute } from '../../../src/store/constants';
-import { setPaletteOpen, setUiHidden } from '../../../src/state/ui/uiSlice';
+import { dismissSplash, setPaletteOpen, setUiHidden } from '../../../src/state/ui/uiSlice';
 import { selectSplashVisible } from '../../../src/state/ui/selectors';
 import type { FocusableTarget } from '../../../src/@types/engine/FocusableTarget';
 
@@ -108,7 +108,7 @@ describe('PhoneHudContainer', () => {
 
   it('reopens the splash from the About dock item', () => {
     const { store } = setup();
-    store.dispatch({ type: 'ui/dismissSplash', payload: 1 });
+    store.dispatch(dismissSplash(1));
     expect(selectSplashVisible(store.getState())).toBe(false);
     fireEvent.click(dockButton('About skymap'));
     expect(selectSplashVisible(store.getState())).toBe(true);
@@ -158,7 +158,7 @@ describe('PhoneHudContainer', () => {
   it('drops the phone cover while the HUD stack is hidden', () => {
     const { store } = setup();
     const cover = () => store.getState()[viewCoverRoute].phoneBottom;
-    act(() => void store.dispatch({ type: 'ui/dismissSplash', payload: 1 }));
+    act(() => void store.dispatch(dismissSplash(1)));
     act(() => void store.dispatch(setUiHidden(false)));
     expect(cover()).toMatchObject({ edge: 'bottom' });
     act(() => void store.dispatch(setUiHidden(true)));
@@ -168,7 +168,7 @@ describe('PhoneHudContainer', () => {
   // An unstable cover callback would clear and re-set the row on every render.
   it('leaves the cover row alone when the container re-renders', () => {
     const { store } = setup();
-    act(() => void store.dispatch({ type: 'ui/dismissSplash', payload: 1 }));
+    act(() => void store.dispatch(dismissSplash(1)));
     act(() => void store.dispatch(setUiHidden(false)));
     const covers = store.getState()[viewCoverRoute];
     expect(covers.phoneBottom).toBeDefined();

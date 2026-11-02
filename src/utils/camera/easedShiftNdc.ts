@@ -1,8 +1,7 @@
 /**
  * easedShiftNdc — one frame of the lens shift's exponential approach to its
  * target. In NDC, so a resize or rotation mid-ease stays continuous; a pure
- * function of its inputs, so the recorder stays deterministic. `null` (no
- * frame before this one) snaps.
+ * function of its inputs, so the recorder stays deterministic.
  */
 
 import type { Vec2 } from '../../@types/math/Vec2';
@@ -15,12 +14,7 @@ const DT_CAP_MS = 1000 / 30;
 // the caller's settled test is plain equality with the target.
 const SETTLED_NDC = 1e-4;
 
-export function easedShiftNdc(
-  current: Readonly<Vec2> | null,
-  target: Readonly<Vec2>,
-  dtMs: number,
-): Vec2 {
-  if (current === null) return [target[0], target[1]];
+export function easedShiftNdc(current: Readonly<Vec2>, target: Readonly<Vec2>, dtMs: number): Vec2 {
   const k = 1 - Math.exp(-Math.min(Math.max(dtMs, 0), DT_CAP_MS) / LENS_SHIFT_EASE_TAU_MS);
   const x = current[0] + (target[0] - current[0]) * k;
   const y = current[1] + (target[1] - current[1]) * k;
