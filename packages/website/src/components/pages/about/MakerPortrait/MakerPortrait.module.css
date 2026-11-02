@@ -1,46 +1,11 @@
-/* The name's baseline is the heading's: "Who makes it" answered on one line. */
 .root {
   composes: grid from '../../../../styles/layout.module.css';
-  align-items: first baseline;
+  align-items: start;
 }
 
-/*
- * As the app labels a body (milkyWayLabelStyle, leaderLineStyle): the name centred 6px over a stem. It holds
- * still with the page, unlike its neighbours' pictures, since a drift would part the name from the heading.
- */
-.figure {
-  --stem: var(--site-space-s);
-}
-
-/* His hair's crown is 56% across the picture: the name centres on it. */
-.name {
-  display: block;
-  width: max-content;
-  margin: 0 0 calc(var(--stem) + 6px) 56%;
-  translate: -50% 0;
-  font: var(--weight-display) var(--text-h3) / 1 var(--font-family-display);
-  color: var(--color-fg);
-}
-
-/*
- * Cut at four by five, a tenth of the width off the top wall, so his face rises and his folded arms close the frame.
- * The stem runs on into the picture to 6% of its height, just over his hair (the crown is at 6.8%).
- */
+/* Cut at four by five, a tenth of the width off the top wall, so his face rises and his folded arms close the frame. */
 .frame {
-  position: relative;
   aspect-ratio: 4 / 5;
-
-  &::before {
-    content: '';
-    position: absolute;
-    z-index: 1;
-    left: 56%;
-    top: calc(-1 * var(--stem));
-    width: 1.5px;
-    height: calc(var(--stem) + 6%);
-    translate: -50% 0;
-    background: var(--color-fg);
-  }
 
   & picture,
   & img {
