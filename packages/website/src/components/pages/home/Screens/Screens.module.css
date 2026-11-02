@@ -137,14 +137,11 @@
 /*
  * Each part on its own: `--aim-x` is the pointer's offset from this device, in row widths (`--turn-x` is from the
  * row's middle, phoneTurn.client.ts; `--at` is where the device's middle stands in the row), so each turns toward
- * the pointer from where it stands. `--shift-*` moves it against the pointer by its size: the dome, nearest and
- * largest, the most. Without a pointer `--aim-x` leaves each device facing the row's middle and nothing shifts.
+ * the pointer from where it stands and none moves. Without a pointer each device faces the row's middle.
  */
 .part {
   --dh: calc(var(--h) * var(--s));
   --aim-x: calc(var(--turn-x, 0) + 0.5 - var(--at));
-  --shift-x: calc(var(--turn-x, 0) * var(--s) * -1.25rem);
-  --shift-y: calc(var(--turn-y, 0) * var(--s) * -0.5rem);
   display: grid;
   grid-row: span 2;
   grid-template-rows: subgrid;
@@ -198,8 +195,6 @@
 .device {
   align-self: end;
   perspective: 1400px;
-  translate: var(--shift-x) var(--shift-y);
-  transition: translate var(--duration-reveal) var(--ease-enter);
 }
 
 /* Turned as the phone's case is (Phone3D), each by its own aim. */
@@ -293,7 +288,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .device,
   .body {
     transition: none;
   }

@@ -1,8 +1,8 @@
 /*
  * Screens — Home's row of the screens Skymap runs on, each showing Saturn: a phone, a tablet, a desktop and a
  * dome, rising in size from the phone to the dome on one floor line, each with the depth of a case. Each turns
- * toward the pointer from where it stands and shifts against it by its size, and all turn a little with the
- * scroll (phoneTurn.client.ts sets the pointer's offset on the row). Wide, the title is centred over the row, the
+ * on its own toward the pointer from where it stands, none moving, and all turn a little with the scroll
+ * (phoneTurn.client.ts sets the pointer's offset on the row). Wide, the title is centred over the row, the
  * page's one centred head, and the planet they all show floats free beside it, drifting a little with the scroll.
  * Narrow, the row is two by two.
  */
