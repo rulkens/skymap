@@ -20,8 +20,10 @@ const MIN_PX_PER_DEG = 12;
 // Sirius (Hp −1.1) gets the top of each range, the faintest stars baked (Hp 6) the bottom. Radii in CSS px.
 const MAG_BRIGHT = -1;
 const MAG_FAINT = 6;
-const ALPHA = [0.25, 0.8] as const;
-const RADIUS = [0.75, 2] as const;
+const ALPHA = [0.3, 1] as const;
+const RADIUS = [0.7, 3.2] as const;
+// A star is solid to about its RADIUS, then a dim halo runs out to RADIUS / CORE, so the brightest few glow.
+const CORE = 0.4;
 const CLEARED =
   'h1, h2, h3, h4, p, li, dt, dd, th, td, blockquote, figcaption, pre, img, picture, video, canvas, svg, a, button, input, textarea, select, label, figure, [data-starless]';
 // A star fades from nothing at PAD px from a box to full at PAD + FEATHER.
@@ -57,7 +59,7 @@ function mount(field: StarField) {
   for (let i = 0; i < n; i++) {
     const t = Math.min(1, Math.max(0, (MAG_FAINT - field.mag[i]!) / (MAG_FAINT - MAG_BRIGHT)));
     alpha[i] = ALPHA[0] + (ALPHA[1] - ALPHA[0]) * t;
-    radius[i] = RADIUS[0] + (RADIUS[1] - RADIUS[0]) * t * t;
+    radius[i] = RADIUS[0] + (RADIUS[1] - RADIUS[0]) * t ** 2.5;
   }
 
   // Cleared boxes in page coordinates, four numbers each; the canvas's own place on the screen.
@@ -121,7 +123,7 @@ function mount(field: StarField) {
     field.layers.forEach((layer, l) => {
       const offset = scroll * rates[l]!;
       for (let i = start; i < layer.end; i++) {
-        const r = radius[i]! * 2;
+        const r = radius[i]! / CORE;
         const x = cx - field.across[i]! * scale;
         if (x < -r || x > width + r) continue;
         let y = (field.along[i]! * scale - offset + cy) % loop;
@@ -210,8 +212,9 @@ function sprite(colour: string): HTMLCanvasElement {
   const g = c.getContext('2d')!;
   const glow = g.createRadialGradient(16, 16, 0, 16, 16, 16);
   glow.addColorStop(0, colour);
-  glow.addColorStop(0.4, colour);
-  glow.addColorStop(1, 'transparent');
+  glow.addColorStop(CORE * 0.75, colour);
+  glow.addColorStop(CORE * 1.25, `${colour}40`);
+  glow.addColorStop(1, `${colour}00`);
   g.fillStyle = glow;
   g.fillRect(0, 0, 32, 32);
   return c;

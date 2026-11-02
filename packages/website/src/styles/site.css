@@ -106,9 +106,9 @@ html:has(dialog[open]) {
   overflow: hidden;
 }
 
+/* No ground of its own: the root's black shows through, and the star field (z-index −1) sits between them. */
 body {
   margin: 0;
-  background: var(--color-bg);
   color: var(--site-text);
   font: var(--weight-body) var(--text-body) / var(--leading-body) var(--font-body);
   -webkit-font-smoothing: antialiased;

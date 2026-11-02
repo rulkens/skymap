@@ -70,6 +70,8 @@ function Flight({ stops, videoUrl }: FlightProps) {
       className={styles.root}
       // What a feedback note reads to say where in the film it was (flightState in dev/feedback/Feedback).
       data-flight
+      // The film is its own sky: the page's star field stays off it (site/StarField).
+      data-starless
       data-timeline={JSON.stringify(TIMELINE)}
       style={{ '--units': TIMELINE.units.toFixed(3) } as CSSProperties}
     >
