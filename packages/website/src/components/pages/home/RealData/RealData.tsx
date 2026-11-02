@@ -9,6 +9,8 @@
 import type { CSSProperties } from 'react';
 
 import { DATA_SOURCES } from '../../../../data/dataSources.ts';
+import { fact } from '../../../../data/fact.ts';
+import { cx } from '../../../../utils/cx.ts';
 import { dataRowPath } from '../../../../utils/dataRowPath.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import SectionHead from '../../../shared/layout/SectionHead/SectionHead.tsx';
@@ -20,6 +22,7 @@ import styles from './RealData.module.css';
 // The title of each is a group of the table, which picks its sources.
 // `accent` is taken from the picture: the survey's warm near end, starlight, the orbits' gold, Earth's blue.
 // `counts` names what the large number counts where a source's own count does not (`countNoun`).
+// `fact` stands a sourced figure there instead, for a kind whose sources give no count: how close, how sharp.
 const KINDS = [
   {
     group: 'Galaxies and quasars',
@@ -28,8 +31,8 @@ const KINDS = [
     accent: '#e8a774',
   },
   { group: 'Stars', counts: 'stars', shot: 'render-stars', accent: '#f1e2c4' },
-  { group: 'Solar system', shot: 'lesson-solar-system', accent: '#d9c27a' },
-  { group: 'Imagery', shot: 'earth-terminator', accent: '#8fb6ff' },
+  { group: 'Solar system', fact: 'sci-ephemeris', shot: 'lesson-solar-system', accent: '#d9c27a' },
+  { group: 'Imagery', fact: 'geodanmark-orthophoto', shot: 'earth-terminator', accent: '#8fb6ff' },
 ];
 
 // A square window cut from a wide picture shows its full height, so the file is chosen for 16/9 of the window.
@@ -59,7 +62,6 @@ const countNoun = (id: string, rows: string | undefined, group: string) => {
   return noun && !GENERIC.includes(noun) ? noun : (SOURCE_NOUN[id] ?? group);
 };
 const delay = (at: number) => ({ '--reveal-delay': `${at * 60}ms` }) as CSSProperties;
-
 function RealData() {
   return (
     <section className={styles.root} id="data">
@@ -76,47 +78,56 @@ function RealData() {
         </ObjLink>
       </SectionHead>
       <div className={styles.kinds}>
-        {KINDS.map((kind, at) => (
-          <div
-            key={kind.group}
-            className={styles.kind}
-            style={{ '--kind-accent': kind.accent } as CSSProperties}
-          >
-            <figure className={styles.figure}>
-              <div className={styles.window} style={delay(at)} data-reveal="rise">
-                <Shot id={kind.shot} sizes={WINDOW_SIZES} />
-              </div>
-              <figcaption className={styles.caption}>
-                <ShotCaption id={kind.shot} showDrawn={false} foot />
-              </figcaption>
-            </figure>
-            <h3>{kind.group}</h3>
-            <ul className={styles.names}>
-              {sources(kind.group).some((row) => row.count) && (
-                <li className={styles.countHead} aria-hidden>
-                  {COUNT_LABEL}
-                </li>
-              )}
-              {sources(kind.group).map((row) => (
-                <li key={row.id}>
-                  <a href={sitePath(dataRowPath(row.entries))}>{shortName(row.name)}</a>
-                  {row.count && (
-                    <>
-                      <span className={styles.count}>{row.count}</span>
-                      <span className={styles.big} aria-hidden>
-                        {row.count.split(' ')[0]}
-                        <small>
-                          {kind.counts ? `${countNoun(row.id, row.rows, kind.counts)} from ` : ''}
-                          {shortName(row.name)}
-                        </small>
-                      </span>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        {KINDS.map((kind, at) => {
+          const figure = kind.fact ? fact(kind.fact).figure : undefined;
+          return (
+            <div
+              key={kind.group}
+              className={styles.kind}
+              style={{ '--kind-accent': kind.accent } as CSSProperties}
+            >
+              <figure className={styles.figure}>
+                <div className={styles.window} style={delay(at)} data-reveal="rise">
+                  <Shot id={kind.shot} sizes={WINDOW_SIZES} />
+                </div>
+                {figure && (
+                  <p className={cx(styles.big, styles.held)}>
+                    {figure.value}
+                    <small>{figure.measure}</small>
+                  </p>
+                )}
+                <figcaption className={styles.caption}>
+                  <ShotCaption id={kind.shot} showDrawn={false} foot />
+                </figcaption>
+              </figure>
+              <h3>{kind.group}</h3>
+              <ul className={styles.names}>
+                {sources(kind.group).some((row) => row.count) && (
+                  <li className={styles.countHead} aria-hidden>
+                    {COUNT_LABEL}
+                  </li>
+                )}
+                {sources(kind.group).map((row) => (
+                  <li key={row.id}>
+                    <a href={sitePath(dataRowPath(row.entries))}>{shortName(row.name)}</a>
+                    {row.count && (
+                      <>
+                        <span className={styles.count}>{row.count}</span>
+                        <span className={styles.big} aria-hidden>
+                          {row.count.split(' ')[0]}
+                          <small>
+                            {kind.counts ? `${countNoun(row.id, row.rows, kind.counts)} from ` : ''}
+                            {shortName(row.name)}
+                          </small>
+                        </span>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

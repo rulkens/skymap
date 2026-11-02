@@ -165,15 +165,16 @@
   }
 }
 
-/* The count as a picture: large over the window's lower half, the source's name under it in the kind's colour. */
+/*
+ * The count as a picture: large over the window's lower half, the source's name under it in the kind's colour.
+ * Hung from the top so every figure stands on one line however many lines its words take.
+ */
 .big {
   position: absolute;
   inset: 0 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   aspect-ratio: 1;
-  padding-bottom: 26%;
   font: var(--weight-display) var(--text-ring-big) / 1 var(--font-family-display);
   color: var(--color-fg);
   font-variant-numeric: lining-nums;
@@ -185,6 +186,12 @@
   opacity: 0;
   transition: opacity var(--duration-base) var(--ease-standard);
 
+  /* The drop above the figure, a share of the window's own height (a padding would take the column's width). */
+  &::before {
+    content: '';
+    flex: 0 0 45%;
+  }
+
   & small {
     display: block;
     margin-top: 0.375rem;
@@ -195,6 +202,12 @@
 
 .kind:not(:has(.names li:is(:hover, :focus-within))) .names li:nth-child(2) .big,
 .names li:is(:hover, :focus-within) .big {
+  opacity: 1;
+}
+
+/* A kind with no counts holds its one figure there for good. */
+.held {
+  margin: 0;
   opacity: 1;
 }
 
