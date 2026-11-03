@@ -15,15 +15,9 @@ import { subtitleOpacity } from '../../utils/animation/subtitleOpacity';
 import styles from './TourOverlay.module.css';
 
 export type TourCaptionProps = {
-  /**
-   * Interactive-session chrome. `false` (cinema mode) drops the beat-counter
-   * readout — a "02 / 14" reads as UI inside a recorded film — and sheds the
-   * nav clearance (`captionNoChrome`).
-   */
+  /** `false` (cinema mode): the nav is unmounted, so the caption sheds its nav clearance. */
   readonly hasChrome?: boolean;
   readonly caption: BeatCaption;
-  readonly index: number;
-  readonly total: number;
   readonly dwellSec: number;
   readonly dwellNonce: number;
   readonly paused: boolean;
@@ -32,14 +26,10 @@ export type TourCaptionProps = {
 function TourCaption({
   hasChrome = true,
   caption,
-  index,
-  total,
   dwellSec,
   dwellNonce,
   paused,
 }: TourCaptionProps): ReactNode {
-  const readout = `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
-  const label = hasChrome ? `${caption.title} · ${readout}` : caption.title;
   const schedule = lineSchedule(caption.lines, dwellSec);
   const elapsed = useDwellElapsed(dwellNonce, paused);
   // jsdom has no matchMedia.
@@ -47,7 +37,7 @@ function TourCaption({
 
   return (
     <div className={cx(styles.caption, !hasChrome && styles.captionNoChrome)}>
-      <div className={styles.label}>{label}</div>
+      <div className={styles.label}>{caption.title}</div>
       <div className={styles.lines}>
         {caption.lines.map((line, i) => (
           <p

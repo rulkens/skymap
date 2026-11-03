@@ -25,8 +25,6 @@ import styles from '../../../src/components/TourOverlay/TourOverlay.module.css';
 
 const captionProps = (over: Partial<React.ComponentProps<typeof TourCaption>> = {}) => ({
   caption: { title: 'The Virgo Cluster', lines: ['First line here.', 'Second line follows.'] },
-  index: 0,
-  total: 3,
   dwellSec: 10,
   dwellNonce: 1,
   paused: false,
@@ -34,13 +32,8 @@ const captionProps = (over: Partial<React.ComponentProps<typeof TourCaption>> = 
 });
 
 describe('TourCaption', () => {
-  it('labels the beat title with the zero-padded readout', () => {
+  it('labels the beat with its title alone, no beat counter', () => {
     render(<TourCaption {...captionProps()} />);
-    expect(screen.getByText('The Virgo Cluster · 01 / 03')).toBeInTheDocument();
-  });
-
-  it('drops the beat counter without chrome (cinema), keeping the title', () => {
-    render(<TourCaption {...captionProps({ hasChrome: false })} />);
     expect(screen.getByText('The Virgo Cluster')).toBeInTheDocument();
     expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
   });
@@ -124,7 +117,6 @@ describe('TourOverlay', () => {
   const baseProps = () => ({
     caption: { title: 'The Virgo Cluster', lines: ['One.'] } as BeatCaption,
     index: 0,
-    total: 3,
     paused: false,
     dwellSec: 8,
     dwellNonce: 0,
@@ -151,11 +143,10 @@ describe('TourOverlay', () => {
     expect(screen.getByText(/The Virgo Cluster/)).toBeInTheDocument();
   });
 
-  it('mounts transport + beat counter with chrome (interactive default)', () => {
+  it('mounts the transport with chrome (interactive default)', () => {
     render(<TourOverlay {...baseProps()} dwellNonce={1} />);
 
     expect(screen.getByRole('button', { name: 'Exit tour' })).toBeInTheDocument();
-    expect(screen.getByText('The Virgo Cluster · 01 / 03')).toBeInTheDocument();
     // Interactive captions keep their nav clearance — no cinema layout class.
     const captionRoot = screen.getByText(/The Virgo Cluster/).parentElement!;
     expect(captionRoot.classList.contains(styles.captionNoChrome!)).toBe(false);

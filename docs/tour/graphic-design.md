@@ -28,7 +28,7 @@ frame's own margin). Centre and top stay clear for the subject.
 │                                        │
 │              (hero visual)             │
 │                                        │
-│          NEAREST NEIGHBOUR · 03 / 14   │
+│           NEAREST NEIGHBOUR            │
 │   This is Andromeda, the nearest large │
 │            galaxy to ours.             │
 │              ◂  ▶  ■  ▸                │
@@ -39,9 +39,8 @@ frame's own margin). Centre and top stay clear for the subject.
 
 1. **Subtitles** (every beat) — two parts:
    - **Label** — the beat `title`, mono 10px, `0.18em` tracking, uppercase,
-     `--color-fg-label`. With chrome it carries the readout
-     (`NEAREST NEIGHBOUR · 03 / 14`); in cinema mode the title alone. It holds
-     for the whole dwell.
+     `--color-fg-muted`. The title alone, no beat counter. It holds for the
+     whole dwell.
    - **Line** — one entry of the beat's `lines`, serif 500,
      `clamp(19px, 1.1vw + 8px, 27px)`, line-height 1.3, `text-wrap: balance`,
      at most ~54ch. Lines share one grid cell, so the block never jumps in

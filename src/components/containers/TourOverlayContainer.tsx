@@ -29,7 +29,6 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectTourCaption,
   selectTourBeatIndex,
-  selectTourTotal,
   selectTourPaused,
   selectTourDwellSec,
   selectTourDwellNonce,
@@ -41,7 +40,6 @@ import { exitTakeover } from '../../state/takeover/takeoverActions';
 function TourOverlayContainer(): React.ReactElement {
   const caption = useAppSelector(selectTourCaption);
   const index = useAppSelector(selectTourBeatIndex);
-  const total = useAppSelector(selectTourTotal);
   const paused = useAppSelector(selectTourPaused);
   const dwellSec = useAppSelector(selectTourDwellSec);
   const dwellNonce = useAppSelector(selectTourDwellNonce);
@@ -59,7 +57,6 @@ function TourOverlayContainer(): React.ReactElement {
       hasChrome={!isCinemaMode()}
       caption={caption}
       index={index}
-      total={total}
       paused={paused}
       dwellSec={dwellSec}
       dwellNonce={dwellNonce}

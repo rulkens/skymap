@@ -20,7 +20,7 @@
  * The nav, by contrast, is always visible (you can scrub or exit mid-fly) —
  * in an interactive session. `hasChrome={false}` (cinema mode, the recorder's
  * capture surface) is the same overlay in its recorded-film presentation:
- * the caption stays, the transport nav and the beat counter are not mounted
+ * the caption stays, the transport nav is not mounted
  * at all. A boolean prop rather than a second overlay component, because the
  * dwell-gated caption timing — the one real behaviour here — is identical in
  * both modes and must not fork.
@@ -38,14 +38,13 @@ import styles from './TourOverlay.module.css';
 
 export type TourOverlayProps = {
   /**
-   * Interactive-session chrome: the transport nav + the beat counter.
+   * Interactive-session chrome: the transport nav.
    * `false` = cinema presentation (caption only). Defaults to true so the
    * interactive path needs no opt-in.
    */
   readonly hasChrome?: boolean;
   readonly caption: BeatCaption | null;
   readonly index: number;
-  readonly total: number;
   readonly paused: boolean;
   readonly dwellSec: number;
   readonly dwellNonce: number;
@@ -60,7 +59,6 @@ function TourOverlay({
   hasChrome = true,
   caption,
   index,
-  total,
   paused,
   dwellSec,
   dwellNonce,
@@ -99,8 +97,6 @@ function TourOverlay({
             key={index}
             hasChrome={hasChrome}
             caption={caption}
-            index={index}
-            total={total}
             dwellSec={dwellSec}
             dwellNonce={dwellNonce}
             paused={paused}
