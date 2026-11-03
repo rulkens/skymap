@@ -10,7 +10,7 @@
 
 import { packSelection } from '../../../data/selectionEncoding';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
+import type { GalaxyRecordSource } from '../@types/GalaxyRecordSource';
 import type { StructureMembershipResult } from '../@types/StructureMembershipResult';
 
 /** O(total galaxy count), single-digit ms for ~2.5M galaxies (spec §4.2). */

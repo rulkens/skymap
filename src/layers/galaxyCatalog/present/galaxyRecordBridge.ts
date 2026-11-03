@@ -7,13 +7,13 @@
  */
 
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
-import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
+import type { GalaxyRecordSource } from '../@types/GalaxyRecordSource';
 import type { GalaxyRecordBridge } from '../@types/GalaxyRecordBridge';
 
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
 import { angularSepSqArcsec } from '../../../utils/math/angularSepSqArcsec';
-import { durableIdClaimants } from '../../../utils/galaxy/durableIdClaimants';
+import { durableIdClaimants } from '../utils/galaxy/durableIdClaimants';
 
 /** A memo slot whose lookup has not settled; a settled slot holds the value itself (null included). */
 const PENDING = Symbol('pending');

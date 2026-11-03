@@ -5,14 +5,14 @@
  * knows how to drive one; the "solo run" idiom lives here once.
  */
 
-import type { DiskPlannerWalk } from '../../../../src/@types/engine/subsystems/DiskPlannerWalk';
-import type { DiskRowVisitor } from '../../../../src/@types/engine/subsystems/DiskRowVisitor';
-import type { ProceduralDiskSubsystem } from '../../../../src/@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
-import type { TexturedDiskSubsystem } from '../../../../src/@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
-import type { TexturedDiskFrameInput } from '../../../../src/@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameInput';
-import type { TexturedDiskFrameOutput } from '../../../../src/@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameOutput';
-import type { ProceduralDiskFrameInput } from '../../../../src/@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameInput';
-import type { ProceduralDiskFrameOutput } from '../../../../src/@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameOutput';
+import type { DiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/@types/DiskPlannerWalk';
+import type { DiskRowVisitor } from '../../../../src/layers/galaxyCatalog/@types/DiskRowVisitor';
+import type { ProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/@types/ProceduralDiskSubsystem';
+import type { TexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/@types/TexturedDiskSubsystem';
+import type { TexturedDiskFrameInput } from '../../../../src/layers/galaxyCatalog/@types/TexturedDiskFrameInput';
+import type { TexturedDiskFrameOutput } from '../../../../src/layers/galaxyCatalog/@types/TexturedDiskFrameOutput';
+import type { ProceduralDiskFrameInput } from '../../../../src/layers/galaxyCatalog/@types/ProceduralDiskFrameInput';
+import type { ProceduralDiskFrameOutput } from '../../../../src/layers/galaxyCatalog/@types/ProceduralDiskFrameOutput';
 
 /** A visitor that ignores every walk callback — the "other slot" in solo runs. */
 export function noopDiskRowVisitor(): DiskRowVisitor {

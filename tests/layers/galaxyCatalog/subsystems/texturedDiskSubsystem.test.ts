@@ -19,11 +19,11 @@ import { runTexturedSolo } from '../../../services/engine/subsystems/diskWalkHar
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { HiResFamousSubsystem } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousSubsystem';
+import type { HiResFamousSubsystem } from '../../../../src/layers/galaxyCatalog/@types/HiResFamousSubsystem';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
-import type { HiResFamousPerGalaxyState } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousPerGalaxyState';
-import type { HiResFamousFrameOutput } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameOutput';
+import type { HiResFamousPerGalaxyState } from '../../../../src/layers/galaxyCatalog/@types/HiResFamousPerGalaxyState';
+import type { HiResFamousFrameOutput } from '../../../../src/layers/galaxyCatalog/@types/HiResFamousFrameOutput';
 import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';
 
 function makeFakeDevice(): GPUDevice {

@@ -1,7 +1,7 @@
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from './GalaxyCatalogId';
 import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
-import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
+import type { GalaxyPointStats } from './GalaxyPointStats';
 import type { CatalogDrawEntry } from './CatalogDrawEntry';
 
 /** The per-catalog GPU-resource store — see `catalogStore.ts`'s module header. */

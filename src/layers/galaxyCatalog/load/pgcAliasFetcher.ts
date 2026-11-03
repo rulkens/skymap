@@ -22,8 +22,8 @@
  * makes retry policy honest — a 5xx flake retries, a 404 gives up.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { PgcAliasJsonShape } from '../../../@types/loading/PgcAliasJsonShape';
-import type { PgcAliasMap } from '../../../@types/loading/PgcAliasMap';
+import type { PgcAliasJsonShape } from '../@types/PgcAliasJsonShape';
+import type { PgcAliasMap } from '../@types/PgcAliasMap';
 import { dataUrl, HttpError } from '../../../services/loading/fetchWithProgress';
 
 /**

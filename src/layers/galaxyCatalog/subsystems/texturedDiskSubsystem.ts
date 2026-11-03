@@ -21,29 +21,29 @@
 
 import { Source } from '../../../data/source';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
-import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousSubsystem';
-import type { TexturedDiskDeps } from '../../../@types/engine/subsystems/TexturedDiskDeps';
+import type { DiskInstance } from '../@types/DiskInstance';
+import type { DiskRowVisitor } from '../@types/DiskRowVisitor';
+import type { HiResFamousSubsystem } from '../@types/HiResFamousSubsystem';
+import type { TexturedDiskDeps } from '../@types/TexturedDiskDeps';
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
-import type { TexturedDiskSubsystemWithTestSeam } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystemWithTestSeam';
-import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
+import type { TexturedDiskSubsystemWithTestSeam } from '../@types/TexturedDiskSubsystemWithTestSeam';
+import { fetchGalaxyBitmap } from '../utils/network/fetchGalaxyBitmap';
 import { createDeadHostSet } from '../../../utils/network/createDeadHostSet';
 import { cartesianToRaDec, smoothstep } from '../../../utils/math/index';
-import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
-import { loadFadeAlpha } from '../../../utils/render/disk/loadFadeAlpha';
-import { purgeStrideWindow } from '../../../utils/render/disk/purgeStrideWindow';
-import { byDistanceToCamera } from '../../../utils/render/disk/byDistanceToCamera';
-import { galaxyCacheKey } from '../../../utils/render/disk/galaxyCacheKey';
-import { resolveDiskPlacement } from '../../../utils/render/disk/resolveDiskPlacement';
-import { hiResLayerFold } from '../../../utils/render/disk/hiResLayerFold';
+import { diskQuadExtentMpc } from '../utils/render/disk/diskQuadExtentMpc';
+import { loadFadeAlpha } from '../utils/render/disk/loadFadeAlpha';
+import { purgeStrideWindow } from '../utils/render/disk/purgeStrideWindow';
+import { byDistanceToCamera } from '../utils/render/disk/byDistanceToCamera';
+import { galaxyCacheKey } from '../utils/render/disk/galaxyCacheKey';
+import { resolveDiskPlacement } from '../utils/render/disk/resolveDiskPlacement';
+import { hiResLayerFold } from '../utils/render/disk/hiResLayerFold';
 import {
   APPARENT_SIZE_THRESHOLD_PX,
   FADE_BAND_PX,
   DISK_THRESHOLD_PX,
-} from '../../../data/galaxyLodBands';
-import type { TexturedDiskFrameInput } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameInput';
-import type { TexturedDiskFrameOutput } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameOutput';
+} from '../data/galaxyLodBands';
+import type { TexturedDiskFrameInput } from '../@types/TexturedDiskFrameInput';
+import type { TexturedDiskFrameOutput } from '../@types/TexturedDiskFrameOutput';
 
 /** Load-fade duration once a bitmap lands (ms). */
 const LOAD_FADE_MS = 400;

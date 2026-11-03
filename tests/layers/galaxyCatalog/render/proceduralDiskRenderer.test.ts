@@ -21,7 +21,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createProceduralDiskRenderer } from '../../../../src/layers/galaxyCatalog/render/proceduralDiskRenderer';
 import { FLOATS_PER_INSTANCE } from '../../../../src/layers/galaxyCatalog/render/instancedQuadRenderer';
 import { packSelection } from '../../../../src/data/selectionEncoding';
-import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/ProceduralDiskInstance';
+import type { ProceduralDiskInstance } from '../../../../src/layers/galaxyCatalog/@types/ProceduralDiskInstance';
 
 function makeStubInit() {
   const writeBufferCalls: Array<{ data: Float32Array; offset: number }> = [];

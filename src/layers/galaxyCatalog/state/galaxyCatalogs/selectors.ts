@@ -3,7 +3,7 @@ import { createSelector } from '@reduxjs/toolkit';
 import { selectSettings } from '../../../../state/settings/selectSettings';
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../../sources/galaxyCatalogSourceRows';
 import { maskWith } from '../../../../utils/maskWith';
-import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
+import type { GalaxyCatalogSettings } from '../../@types/GalaxyCatalogSettings';
 import type { GalaxyProvenanceSettings } from '../../../../@types/settings/GalaxyProvenanceSettings';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */

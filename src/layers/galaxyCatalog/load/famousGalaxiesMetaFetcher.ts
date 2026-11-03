@@ -13,7 +13,7 @@
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
-import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
+import type { FamousGalaxiesPayload } from '../@types/FamousGalaxiesPayload';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import { HttpError, dataUrl } from '../../../services/loading/fetchWithProgress';
 

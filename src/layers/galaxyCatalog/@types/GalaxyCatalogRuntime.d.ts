@@ -7,25 +7,25 @@
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
-import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
+import type { GalaxyRecordSource } from './GalaxyRecordSource';
 import type { GalaxyCatalogFacts } from './GalaxyCatalogFacts';
 import type { GalaxyRecordBridge } from './GalaxyRecordBridge';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
+import type { FamousGalaxiesPayload } from './FamousGalaxiesPayload';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
-import type { HiResFamousReq } from '../../../@types/loading/HiResFamousReq';
-import type { HiResFamousPair } from '../../../@types/engine/subsystems/HiResFamousPair';
-import type { PgcAliasMap } from '../../../@types/loading/PgcAliasMap';
+import type { HiResFamousReq } from './HiResFamousReq';
+import type { HiResFamousPair } from './HiResFamousPair';
+import type { PgcAliasMap } from './PgcAliasMap';
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { TextureAtlas } from '../../../services/gpu/resources/textureAtlas';
-import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
-import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
-import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
-import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointRenderer';
-import type { GalaxyPickRenderer } from '../../../@types/rendering/GalaxyPickRenderer';
-import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
-import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
+import type { ProceduralDiskSubsystem } from './ProceduralDiskSubsystem';
+import type { TexturedDiskSubsystem } from './TexturedDiskSubsystem';
+import type { DiskPlannerWalk } from './DiskPlannerWalk';
+import type { GalaxyPointRenderer } from './GalaxyPointRenderer';
+import type { GalaxyPickRenderer } from './GalaxyPickRenderer';
+import type { TexturedDiskRenderer } from './TexturedDiskRenderer';
+import type { ProceduralDiskRenderer } from './ProceduralDiskRenderer';
 
 export type GalaxyCatalogRuntime = {
   /** The CPU-side catalog mirror, kept for the flat-only readers (hi-res famous, famous labels). */

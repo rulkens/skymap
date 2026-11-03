@@ -7,8 +7,8 @@
  */
 
 import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
-import type { BuildAliasIndexInput } from '../../../@types/engine/BuildAliasIndexInput';
-import { durableIdClaimants } from '../../../utils/galaxy/durableIdClaimants';
+import type { BuildAliasIndexInput } from '../@types/BuildAliasIndexInput';
+import { durableIdClaimants } from '../utils/galaxy/durableIdClaimants';
 
 export function buildAliasIndex(input: BuildAliasIndexInput): AliasIndexEntry[] {
   const { records, aliasMap } = input;

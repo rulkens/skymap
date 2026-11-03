@@ -6,15 +6,15 @@
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
-import { createHiResFamousTexture } from '../../../services/gpu/resources/hiResFamousTexture';
+import { createHiResFamousTexture } from './hiResFamousTexture';
 import { createHiResFamousSubsystem } from '../subsystems/hiResFamousSubsystem';
 import { HI_RES_LAYER_COUNT } from '../data/hiResLayerCount';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { HiResFamousPair } from '../../../@types/engine/subsystems/HiResFamousPair';
-import type { HiResFamousReq } from '../../../@types/loading/HiResFamousReq';
-import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
-import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
+import type { HiResFamousPair } from '../@types/HiResFamousPair';
+import type { HiResFamousReq } from '../@types/HiResFamousReq';
+import type { TexturedDiskRenderer } from '../@types/TexturedDiskRenderer';
+import type { TexturedDiskSubsystem } from '../@types/TexturedDiskSubsystem';
 
 export function wireHiResFamousSlot(deps: {
   readonly device: GPUDevice;

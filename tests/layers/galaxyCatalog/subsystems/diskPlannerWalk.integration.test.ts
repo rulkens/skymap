@@ -28,11 +28,11 @@ import {
   runTexturedSolo,
 } from '../../../services/engine/subsystems/diskWalkHarness';
 import { cartesianToRaDec } from '../../../../src/utils/math/index';
-import { galaxyCacheKey } from '../../../../src/utils/render/disk/galaxyCacheKey';
+import { galaxyCacheKey } from '../../../../src/layers/galaxyCatalog/utils/render/disk/galaxyCacheKey';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   APPARENT_SIZE_THRESHOLD_PX,
-} from '../../../../src/data/galaxyLodBands';
+} from '../../../../src/layers/galaxyCatalog/data/galaxyLodBands';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';

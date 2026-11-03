@@ -20,30 +20,30 @@
 
 import { Source } from '../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
-import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
+import { pickColourIndex } from '../data/colourIndex';
 import { absoluteFromApparent, cartesianToRaDec, smoothstep } from '../../../utils/math/index';
-import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
-import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
-import { purgeStrideWindow } from '../../../utils/render/disk/purgeStrideWindow';
-import { byDistanceToCamera } from '../../../utils/render/disk/byDistanceToCamera';
-import { galaxyCacheKey } from '../../../utils/render/disk/galaxyCacheKey';
-import { maybeEmitProceduralDisk } from '../../../utils/render/disk/maybeEmitProceduralDisk';
+import { galaxySbAmp } from '../utils/galaxy/galaxySbAmp';
+import { diskQuadExtentMpc } from '../utils/render/disk/diskQuadExtentMpc';
+import { purgeStrideWindow } from '../utils/render/disk/purgeStrideWindow';
+import { byDistanceToCamera } from '../utils/render/disk/byDistanceToCamera';
+import { galaxyCacheKey } from '../utils/render/disk/galaxyCacheKey';
+import { maybeEmitProceduralDisk } from '../utils/render/disk/maybeEmitProceduralDisk';
 import {
   APPARENT_SIZE_THRESHOLD_PX,
   FADE_BAND_PX,
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
-} from '../../../data/galaxyLodBands';
+} from '../data/galaxyLodBands';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
+import type { DiskRowVisitor } from '../@types/DiskRowVisitor';
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { SlotStore } from '../../../@types/cache/SlotStore';
-import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
+import type { ProceduralDiskInstance } from '../@types/ProceduralDiskInstance';
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
-import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
-import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
-import type { ProceduralDiskFrameInput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameInput';
-import type { ProceduralDiskFrameOutput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameOutput';
+import type { GalaxyRecordSource } from '../@types/GalaxyRecordSource';
+import type { ProceduralDiskSubsystem } from '../@types/ProceduralDiskSubsystem';
+import type { ProceduralDiskFrameInput } from '../@types/ProceduralDiskFrameInput';
+import type { ProceduralDiskFrameOutput } from '../@types/ProceduralDiskFrameOutput';
 
 export type ProceduralDiskDeps = {
   /**

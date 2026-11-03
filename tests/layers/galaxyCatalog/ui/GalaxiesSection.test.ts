@@ -30,7 +30,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import GalaxiesSection from '../../../../src/layers/galaxyCatalog/ui/GalaxiesSection';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
-import type { BiasMode as BiasModeT } from '../../../../src/@types/data/galaxyCatalog/BiasMode';
+import type { BiasMode as BiasModeT } from '../../../../src/layers/galaxyCatalog/@types/BiasMode';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { Source } from '../../../../src/data/source';
 

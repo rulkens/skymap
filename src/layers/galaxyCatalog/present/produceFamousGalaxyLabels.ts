@@ -53,7 +53,7 @@ import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCat
 import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
-import { focusedFamousIndex } from '../../../services/engine/helpers/focusedFamousIndex';
+import { focusedFamousIndex } from './focusedFamousIndex';
 import { famousDisplayName } from '../../../services/engine/helpers/famousDisplayName';
 import { FAMOUS_LABEL_STYLE } from '../../../services/engine/presentation/famousLabelStyle';
 import { liftedLabelPlacement } from '../../../services/engine/presentation/liftedLabelPlacement';

@@ -7,7 +7,7 @@
 
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from './@types/GalaxyCatalogSourceType';
-import type { GalaxyRecordSource } from '../../@types/data/galaxyCatalog/GalaxyRecordSource';
+import type { GalaxyRecordSource } from './@types/GalaxyRecordSource';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';

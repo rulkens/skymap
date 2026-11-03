@@ -30,8 +30,8 @@
 import vsCode from '../../../services/gpu/shaders/galaxyCatalog/points/vertex.wesl?static';
 import pickFsCode from '../../../services/gpu/shaders/galaxyCatalog/points/pickFragment.wesl?static';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { PickSourceDraw } from '../../../@types/rendering/PickSourceDraw';
-import type { GalaxyPickRenderer } from '../../../@types/rendering/GalaxyPickRenderer';
+import type { PickSourceDraw } from '../@types/PickSourceDraw';
+import type { GalaxyPickRenderer } from '../@types/GalaxyPickRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';

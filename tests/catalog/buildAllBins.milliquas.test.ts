@@ -24,7 +24,7 @@ import { recordsToCloud } from '../../tools/catalog/buildAllBins';
 import {
   encodeGalaxyCatalog,
   decodeGalaxyCatalog,
-} from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+} from '../../src/layers/galaxyCatalog/data/galaxyCatalogFormat';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
 
 describe('buildAllBins — Milliquas smoke', () => {

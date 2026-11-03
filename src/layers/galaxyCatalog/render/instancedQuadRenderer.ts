@@ -60,8 +60,8 @@
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { InstancedQuadConfig } from '../../../@types/rendering/InstancedQuadConfig';
-import type { InstancedQuadRenderer } from '../../../@types/rendering/InstancedQuadRenderer';
+import type { InstancedQuadConfig } from '../@types/InstancedQuadConfig';
+import type { InstancedQuadRenderer } from '../@types/InstancedQuadRenderer';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';

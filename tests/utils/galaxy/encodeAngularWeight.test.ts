@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { decodeAngularWeight } from '../../../src/utils/galaxy/decodeAngularWeight';
+import { decodeAngularWeight } from '../../../src/layers/galaxyCatalog/utils/galaxy/decodeAngularWeight';
 import { encodeAngularWeight } from '../../../src/utils/galaxy/encodeAngularWeight';
 
 describe('encodeAngularWeight / decodeAngularWeight', () => {

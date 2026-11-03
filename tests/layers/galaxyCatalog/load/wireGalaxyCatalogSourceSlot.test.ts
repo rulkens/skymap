@@ -28,7 +28,7 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogFacts';
 import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
-import type { GalaxyRecordSource } from '../../../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
+import type { GalaxyRecordSource } from '../../../../src/layers/galaxyCatalog/@types/GalaxyRecordSource';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 /** A zero-filled catalog: the commit builds its record source over every column. */

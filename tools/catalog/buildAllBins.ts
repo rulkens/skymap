@@ -69,7 +69,7 @@ import { parseFamousSeed } from '../parsers/famousSeed';
 import { DESI_PATCHES, DESI_TRACER_FILE_KEYS } from './desiPatches';
 import type { DesiPatch } from './desiPatches';
 
-import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import { encodeGalaxyCatalog } from '../../src/layers/galaxyCatalog/data/galaxyCatalogFormat';
 import { raDecZToCartesian } from '../../src/utils/math/index';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
@@ -89,7 +89,7 @@ import {
   tierTarget,
   tierFilenameForSource,
   fluxSupplementMagLimitFor,
-} from '../../src/data/tierTargets';
+} from '../../src/layers/galaxyCatalog/data/tierTargets';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 import { selectTierRecords } from './selectTierRecords';
 import { rawDataPath } from '../utils/io/rawDataRegistry';

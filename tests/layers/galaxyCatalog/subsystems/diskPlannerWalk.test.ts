@@ -22,7 +22,7 @@ import {
   DISK_ROW_ACCEPT_BUDGET,
 } from '../../../../src/layers/galaxyCatalog/subsystems/diskPlannerWalk';
 import { noopDiskRowVisitor } from '../../../services/engine/subsystems/diskWalkHarness';
-import type { DiskRowVisitor } from '../../../../src/@types/engine/subsystems/DiskRowVisitor';
+import type { DiskRowVisitor } from '../../../../src/layers/galaxyCatalog/@types/DiskRowVisitor';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';

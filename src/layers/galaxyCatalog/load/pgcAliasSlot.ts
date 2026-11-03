@@ -14,7 +14,7 @@
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { pgcAliasFetcher } from './pgcAliasFetcher';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { PgcAliasMap } from '../../../@types/loading/PgcAliasMap';
+import type { PgcAliasMap } from '../@types/PgcAliasMap';
 
 export function createPgcAliasSlot(): AssetSlot<PgcAliasMap, void> {
   return createAssetSlot<PgcAliasMap, void>({

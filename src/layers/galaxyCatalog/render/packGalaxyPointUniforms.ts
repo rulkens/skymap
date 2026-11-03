@@ -23,7 +23,7 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { GalaxyPointDrawSettings } from '../../../@types/rendering/GalaxyPointDrawSettings';
+import type { GalaxyPointDrawSettings } from '../@types/GalaxyPointDrawSettings';
 import { PROVENANCE_FILTER_CODE } from '../../../data/provenanceFilter';
 import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
 

@@ -25,7 +25,7 @@ import {
   runProceduralSolo,
   runTexturedSolo,
 } from '../../../services/engine/subsystems/diskWalkHarness';
-import { paddedRadiusMpc } from '../../../../src/utils/paddedRadiusMpc';
+import { paddedRadiusMpc } from '../../../../src/layers/galaxyCatalog/utils/paddedRadiusMpc';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';

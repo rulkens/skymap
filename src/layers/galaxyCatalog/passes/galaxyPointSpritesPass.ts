@@ -15,7 +15,7 @@ import { pickUniformBytesOf } from '../render/pickUniformBytesOf';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
-} from '../../../data/galaxyLodBands';
+} from '../data/galaxyLodBands';
 
 export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPass<'survey'> {
   return {

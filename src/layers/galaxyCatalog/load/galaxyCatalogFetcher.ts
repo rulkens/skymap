@@ -14,8 +14,8 @@
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import { decodeGalaxyCatalog } from '../../../data/galaxyCatalog/galaxyCatalogFormat';
-import { tierFilenameForSource } from '../../../data/tierTargets';
+import { decodeGalaxyCatalog } from '../data/galaxyCatalogFormat';
+import { tierFilenameForSource } from '../data/tierTargets';
 import { dataUrl, fetchWithProgress } from '../../../services/loading/fetchWithProgress';
 
 export const galaxyCatalogFetcher: Fetcher<GalaxyCatalog, GalaxyCatalogReq> = async (

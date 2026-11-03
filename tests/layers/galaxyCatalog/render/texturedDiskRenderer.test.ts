@@ -12,7 +12,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createTexturedDiskRenderer } from '../../../../src/layers/galaxyCatalog/render/texturedDiskRenderer';
 import { FLOATS_PER_INSTANCE } from '../../../../src/layers/galaxyCatalog/render/instancedQuadRenderer';
-import type { DiskInstance } from '../../../../src/@types/rendering/DiskInstance';
+import type { DiskInstance } from '../../../../src/layers/galaxyCatalog/@types/DiskInstance';
 import type { FocusUniformsBgl } from '../../../../src/@types/rendering/FocusUniformsBgl';
 
 // Stub focus BGL (forwarded into the pipeline layout) + shared focus bind

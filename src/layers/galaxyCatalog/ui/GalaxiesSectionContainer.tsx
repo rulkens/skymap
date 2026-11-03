@@ -30,7 +30,7 @@ import {
 import { setBiasMode, setAbsMagLimit } from '../state/bias/slice';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
-import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
+import type { BiasMode as BiasModeT } from '../@types/BiasMode';
 import type { LayerMainSectionProps } from '../../../@types/engine/layer/LayerMainSectionProps';
 
 function GalaxiesSectionContainer({ title }: LayerMainSectionProps): React.ReactElement {

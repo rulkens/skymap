@@ -11,7 +11,7 @@ import { Source } from '../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
 import { maskHas } from '../../../utils/maskHas';
 import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
-import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
+import type { BiasMode as BiasModeT } from '../@types/BiasMode';
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
 import Slider from '../../../components/common/Slider/Slider';

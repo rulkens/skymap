@@ -14,11 +14,11 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { CatalogPoints } from '../../@types/CatalogPoints';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { dataUrl, fetchWithProgress } from '../../../../src/services/loading/fetchWithProgress';
-import { tierTarget, tierFilenameForSource } from '../../../../src/data/tierTargets';
+import { tierTarget, tierFilenameForSource } from '../../../../src/layers/galaxyCatalog/data/tierTargets';
 import {
   decodeGalaxyCatalog,
   emptyGalaxyCatalog,
-} from '../../../../src/data/galaxyCatalog/galaxyCatalogFormat';
+} from '../../../../src/layers/galaxyCatalog/data/galaxyCatalogFormat';
 
 async function fetchSourceCatalog(source: SourceType, tier: Tier): Promise<GalaxyCatalog> {
   if (tierTarget(source, tier) === 0) return emptyGalaxyCatalog();

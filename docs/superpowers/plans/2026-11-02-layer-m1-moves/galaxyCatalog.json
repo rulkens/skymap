@@ -244,10 +244,6 @@
     "to": "src/layers/galaxyCatalog/data/galaxyLodBands.ts"
   },
   {
-    "from": "src/data/network/deadHostStreak.ts",
-    "to": "src/layers/galaxyCatalog/data/deadHostStreak.ts"
-  },
-  {
     "from": "src/data/pickPaddingPx.ts",
     "to": "src/layers/galaxyCatalog/data/pickPaddingPx.ts"
   },

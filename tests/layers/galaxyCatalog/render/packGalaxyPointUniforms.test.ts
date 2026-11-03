@@ -18,7 +18,7 @@ import {
   PICK_PASS_BYTE_OFFSET,
 } from '../../../../src/layers/galaxyCatalog/render/galaxyPointVertexLayout';
 import type { Mat4 } from 'wgpu-matrix';
-import type { GalaxyPointDrawSettings } from '../../../../src/@types/rendering/GalaxyPointDrawSettings';
+import type { GalaxyPointDrawSettings } from '../../../../src/layers/galaxyCatalog/@types/GalaxyPointDrawSettings';
 import type { ProvenanceFilter } from '../../../../src/@types/settings/ProvenanceFilter';
 import { PROVENANCE_FILTER_CODE } from '../../../../src/data/provenanceFilter';
 import { packSelection } from '../../../../src/data/selectionEncoding';

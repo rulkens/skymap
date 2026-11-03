@@ -9,7 +9,7 @@ import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { famousGalaxiesMetaFetcher } from './famousGalaxiesMetaFetcher';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
+import type { FamousGalaxiesPayload } from '../@types/FamousGalaxiesPayload';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyCatalogFacts } from '../@types/GalaxyCatalogFacts';

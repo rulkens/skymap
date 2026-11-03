@@ -9,7 +9,7 @@ import { Source } from '../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { HI_RES_LAYER_SIDE_BY_TIER } from '../data/hiResLayerSideByTier';
-import { tierTarget } from '../../../data/tierTargets';
+import { tierTarget } from '../data/tierTargets';
 import type { Tier } from '../../../@types/data/Tier';
 import { galaxyCatalogRequest } from '../../../services/engine/wiring/galaxyCatalogRequest';
 

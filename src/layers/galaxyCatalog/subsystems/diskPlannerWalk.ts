@@ -19,16 +19,16 @@
  * shared loop.
  */
 
-import { strideWindow } from '../../../utils/render/disk/strideWindow';
-import { maxVisibleCamDistSq } from '../../../utils/render/disk/maxVisibleCamDistSq';
-import { apparentSizePxAtDistance } from '../../../utils/render/disk/apparentSizePxAtDistance';
-import { PROCEDURAL_DISK_FADE_START_PX } from '../../../data/galaxyLodBands';
+import { strideWindow } from '../utils/render/disk/strideWindow';
+import { maxVisibleCamDistSq } from '../utils/render/disk/maxVisibleCamDistSq';
+import { apparentSizePxAtDistance } from '../utils/render/disk/apparentSizePxAtDistance';
+import { PROCEDURAL_DISK_FADE_START_PX } from '../data/galaxyLodBands';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
-import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { DiskWalkInput } from '../../../@types/engine/subsystems/DiskWalkInput';
+import type { DiskPlannerWalk } from '../@types/DiskPlannerWalk';
+import type { DiskRowVisitor } from '../@types/DiskRowVisitor';
+import type { DiskWalkInput } from '../@types/DiskWalkInput';
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
-import type { DiskPlannerWalkDeps } from '../../../@types/engine/subsystems/DiskPlannerWalkDeps';
+import type { DiskPlannerWalkDeps } from '../@types/DiskPlannerWalkDeps';
 
 /**
  * Per-frame cap on rows admitted into the two onRow bodies. The distance

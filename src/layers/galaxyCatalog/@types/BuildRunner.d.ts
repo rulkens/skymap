@@ -1,5 +1,5 @@
-import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
-import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
+import type { BuildPointInterleavedBufferInput } from './BuildPointInterleavedBufferInput';
+import type { BuildPointInterleavedBufferResult } from './BuildPointInterleavedBufferResult';
 
 /**
  * How a catalog's interleaved vertex buffer gets baked. Production hands over

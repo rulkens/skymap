@@ -57,8 +57,8 @@
 import vsCode from '../../../services/gpu/shaders/galaxyCatalog/proceduralDisks/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/galaxyCatalog/proceduralDisks/fragment.wesl?static';
 import pickFsCode from '../../../services/gpu/shaders/galaxyCatalog/proceduralDisks/pickFragment.wesl?static';
-import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
-import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
+import type { ProceduralDiskInstance } from '../@types/ProceduralDiskInstance';
+import type { ProceduralDiskRenderer } from '../@types/ProceduralDiskRenderer';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';

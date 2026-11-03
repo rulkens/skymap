@@ -8,14 +8,14 @@
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRegistryEntry } from '../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
+import type { GalaxyRecordSource } from '../@types/GalaxyRecordSource';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 
-import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenance';
-import { galaxyMagOffset } from '../../../utils/galaxy/galaxyMagOffset';
+import { countEstimatedProvenance } from '../utils/countEstimatedProvenance';
+import { galaxyMagOffset } from '../utils/galaxy/galaxyMagOffset';
 import { galaxyMedianAbsMag } from '../../../utils/galaxy/galaxyMedianAbsMag';
-import { buildObjIdLookup } from '../../../utils/galaxy/buildObjIdLookup';
-import { nearestRowByDirection } from '../../../utils/galaxy/nearestRowByDirection';
+import { buildObjIdLookup } from '../utils/galaxy/buildObjIdLookup';
+import { nearestRowByDirection } from '../utils/galaxy/nearestRowByDirection';
 import { extractGalaxyRow } from '../present/extractGalaxyRow';
 
 export function flatGalaxyRecordSource(

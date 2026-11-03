@@ -23,7 +23,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../../../src/data/source';
 import { createHiResFamousSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/hiResFamousSubsystem';
-import { createHiResFamousTexture } from '../../../../src/services/gpu/resources/hiResFamousTexture';
+import { createHiResFamousTexture } from '../../../../src/layers/galaxyCatalog/load/hiResFamousTexture';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
@@ -393,7 +393,7 @@ describe('createHiResFamousSubsystem', () => {
     // the argument shape (rather than being inferred as never[]).
     const fetcher = vi.fn(
       async (
-        _args: import('../../../../src/@types/loading/FetchGalaxyBitmapInput').FetchGalaxyBitmapInput,
+        _args: import('../../../../src/layers/galaxyCatalog/@types/FetchGalaxyBitmapInput').FetchGalaxyBitmapInput,
       ) => makeFakeBitmap(),
     );
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });

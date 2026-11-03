@@ -33,11 +33,11 @@
 
 import { packGalaxyPointUniforms } from './packGalaxyPointUniforms';
 import { SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
-import { PICK_PADDING_PX } from '../../../data/pickPaddingPx';
+import { PICK_PADDING_PX } from '../data/pickPaddingPx';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
-} from '../../../data/galaxyLodBands';
+} from '../data/galaxyLodBands';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';

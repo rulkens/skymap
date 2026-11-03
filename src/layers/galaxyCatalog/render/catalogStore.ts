@@ -16,9 +16,9 @@
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../@types/GalaxyCatalogId';
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
-import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
-import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
-import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
+import type { BuildPointInterleavedBufferInput } from '../@types/BuildPointInterleavedBufferInput';
+import type { BuildPointInterleavedBufferResult } from '../@types/BuildPointInterleavedBufferResult';
+import type { GalaxyPointStats } from '../@types/GalaxyPointStats';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { CatalogDrawEntry } from '../@types/CatalogDrawEntry';
@@ -27,7 +27,7 @@ import type { BuildRunner } from '../@types/BuildRunner';
 import type { LoadedSource } from '../@types/LoadedSource';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
-import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
+import { cloneGalaxyCatalogForTransfer } from '../data/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 import { createViewSlotUniformRing } from '../../../utils/gpu/createViewSlotUniformRing';
 

@@ -36,8 +36,8 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { GalaxyPointDrawSettings } from '../../../@types/rendering/GalaxyPointDrawSettings';
-import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointRenderer';
+import type { GalaxyPointDrawSettings } from '../@types/GalaxyPointDrawSettings';
+import type { GalaxyPointRenderer } from '../@types/GalaxyPointRenderer';
 import type { Vec2 } from '../../../@types/math/Vec2';
 
 // `?static` runs the WESL linker at build time and hands back a plain

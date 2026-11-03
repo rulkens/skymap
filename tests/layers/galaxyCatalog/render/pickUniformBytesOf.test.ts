@@ -21,7 +21,7 @@ import { describe, it, expect } from 'vitest';
 import { pickUniformBytesOf } from '../../../../src/layers/galaxyCatalog/render/pickUniformBytesOf';
 import { packGalaxyPointUniforms } from '../../../../src/layers/galaxyCatalog/render/packGalaxyPointUniforms';
 import { SELECTION_NONE_SENTINEL } from '../../../../src/data/selectionEncoding';
-import { PICK_PADDING_PX } from '../../../../src/data/pickPaddingPx';
+import { PICK_PADDING_PX } from '../../../../src/layers/galaxyCatalog/data/pickPaddingPx';
 import {
   SELECTED_PACKED_BYTE_OFFSET,
   POINT_SIZE_BYTE_OFFSET,
@@ -30,7 +30,7 @@ import {
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
-} from '../../../../src/data/galaxyLodBands';
+} from '../../../../src/layers/galaxyCatalog/data/galaxyLodBands';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';

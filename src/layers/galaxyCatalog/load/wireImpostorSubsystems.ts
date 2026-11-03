@@ -12,10 +12,10 @@ import { createDiskPlannerWalk } from '../subsystems/diskPlannerWalk';
 
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { TextureAtlas } from '../../../services/gpu/resources/textureAtlas';
-import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
-import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
-import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
-import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
+import type { DiskPlannerWalk } from '../@types/DiskPlannerWalk';
+import type { ProceduralDiskSubsystem } from '../@types/ProceduralDiskSubsystem';
+import type { TexturedDiskSubsystem } from '../@types/TexturedDiskSubsystem';
+import type { TexturedDiskRenderer } from '../@types/TexturedDiskRenderer';
 
 export function wireImpostorSubsystems(deps: {
   readonly device: GPUDevice;
