@@ -1,7 +1,7 @@
 /**
  * MILKY_WAY_SLIDER_FIELDS — the one enumeration of the Milky-Way star cloud's
  * tuning knobs, with the UI metadata each needs. Same shape as
- * `data/flow/flowFields.ts`: label, range, granularity and formatting live in
+ * `layers/flow/streamlines/data/flowFields.ts`: label, range, granularity and formatting live in
  * ONE row per knob, and the DebugPanel section iterates this list rather than
  * re-spelling sliders by hand. A parity test
  * (`tests/data/milkyWay/milkyWaySliderFields.test.ts`) fails if a
