@@ -53,6 +53,7 @@ Every Layer task below runs this recipe. Its PR is a draft off `origin/main`, op
    If a `from` path no longer exists, delete that entry from the manifest in this PR and say so in the PR body.
 2. **Move: one commit, nothing but the move.** Run `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>.json`.
    Never use `git mv` with hand-edited imports, and never an ad-hoc ts-morph or sed import rewrite.
+   Commit any manifest entry you add by hand in the move commit itself, so that commit replays from its own manifest.
 2a. **Regroup into modules: one commit, pure move.**
    - Write `docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>-modules.json`, mapping every Layer file outside the root keep-list (the ADR 0014 root files, `sources/`, `state/`, `bodies/`, `exhibits/` and contract-only `@types/`) to `<L>/<concern>/<role>/<file>`.
    - Run it with `--dry`, then `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>-modules.json`.
@@ -65,9 +66,9 @@ Every Layer task below runs this recipe. Its PR is a draft off `origin/main`, op
    - `.module.css` files beside a moved component (`move-files` is TS-only; `git mv` the CSS in the move commit), CSS `@import`, and `composes … from` paths in CSS modules. A stale CSS specifier passes `tsc`.
    - `.wesl` `package::` imports, and the website's `.astro`/`.mdx` imports.
    - Allow-lists that hold paths as strings, such as `tests/helpers/conventions/inlineTypeFiles.ts` and `CORE_ALLOWED`.
-   - Faceted and parity tests (`*.parity.test.ts`, `*.facet.test.ts`), which `move-files` doesn't drag.
-   - Tests that compute a repo root with `resolve(here, '../..')`: after a move they fail with ENOENT at runtime only.
-   - Website source links in `packages/website/src/data/docs*Facts.ts`.
+   - Tests whose subject moved but whose name doesn't mirror it: `*.parity.test.ts`, `*.facet.test.ts`, and tests of several files at once (cosmicWebDensity: add `tests/utils/clampVolume.test.ts` → the Layer's mirror path). A test moves only if it sits in a moved file's old mirror folder. Parity tests that mirror a core shader (`tests/services/gpu/shaders/famousStarPickRadius.parity.test.ts`, `starCullSlack.parity.test.ts`) stay.
+   - Tests that compute a repo root with `resolve(here, '../..')`: after a move they fail with ENOENT at runtime only. Fix by recounting the `..`, or switch to `join(process.cwd(), …)` as the shader parity tests do.
+   - Website source links in `packages/website/src/data/docs*Facts.ts`. `tests/packages/website/facts.test.ts` fails CI on a stale link. `tests/packages/website/docsRenderingFacts.test.ts:16,17,85` reads `src/data/galaxyLodBands.ts`, `src/data/bodies/surfaceTileParams.ts` and `src/data/scene/heightTileFormat.ts` by path. Point every link at the post-regroup path.
 
    Grep `src tools tests packages .claude docs/*.md` for every moved basename's old path and fix what is live. Leave history alone: completed plans, completed specs and grill transcripts.
 4. **Owner drift.** A typecheck or `layerImportBoundary` failure saying a core file imports a moved file means that file
@@ -124,8 +125,8 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
 ### Task 3 (batch B): flow, cosmicWebDensity, zoneOfAvoidance
 
 - **flow:** [`flow.json`](2026-11-02-layer-m1-moves/flow.json), 14 files, 507 lines, including the ride-along `createReseedLatch` and the S2 `flowFieldConstants`. Smoke: the Cosmic Flows exhibit (`#exhibit=cosmicFlows`), where streamlines animate.
-- **cosmicWebDensity:** [`cosmicWebDensity.json`](2026-11-02-layer-m1-moves/cosmicWebDensity.json), 14 files, 604 lines, including the S2 `scalarFieldPalettes`. `volumeFieldRenderer` and `createScalarVolumePass` stay, as ruled. Smoke: the Cosmic Web exhibit (`#exhibit=cosmicWeb`).
-- **zoneOfAvoidance:** [`zoneOfAvoidance.json`](2026-11-02-layer-m1-moves/zoneOfAvoidance.json), 9 files, 223 lines. Smoke: the Zone of Avoidance exhibit (`#exhibit=zoneOfAvoidance`).
+- **cosmicWebDensity:** [`cosmicWebDensity.json`](2026-11-02-layer-m1-moves/cosmicWebDensity.json), 14 files, 604 lines, including the S2 `scalarFieldPalettes`. `volumeFieldRenderer` and `createScalarVolumePass` stay, as ruled. Blind spots: `tests/helpers/conventions/inlineTypeFiles.ts:19` (`scalarFieldPalettes.ts`), and add `tests/utils/clampVolume.test.ts` to the manifest by hand. Smoke: the Cosmic Web exhibit (`#exhibit=cosmicWeb`).
+- **zoneOfAvoidance:** [`zoneOfAvoidance.json`](2026-11-02-layer-m1-moves/zoneOfAvoidance.json), 9 files, 223 lines. Blind spot: `packages/website/src/data/scienceFacts.ts:214` links `zoneOfAvoidanceShell.ts`. Smoke: the Zone of Avoidance exhibit (`#exhibit=zoneOfAvoidance`).
 
 ### Task 4 (batch C): constellations, lightTime, satellites
 
@@ -137,7 +138,7 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
 
 - **earthScenes:** [`earthScenes.json`](2026-11-02-layer-m1-moves/earthScenes.json), 1 file. `earthSceneBodyIds` moving deletes the `EARTH_SCENE_BODY_IDS` ledger row. Smoke: one Earth scene deep link from `src/layers/earthScenes/bodies/`.
 - **cosmicHorizon:** [`cosmicHorizon.json`](2026-11-02-layer-m1-moves/cosmicHorizon.json), 1 file (`CosmicHorizonSettings`). Smoke: `#exhibit=observableUniverse`.
-- **milkyWay:** [`milkyWay.json`](2026-11-02-layer-m1-moves/milkyWay.json), 14 files, 550 lines: the v1 helpers go to `render/` and `present/`, and `milkyWayFacts` moving deletes the "Milky Way facts" ledger row. It also takes its M4 part: the 7 Milky Way-only keys (`sunToCentre`, `milkyWayStars`, `milkyWayMass`, `oldestStars`, `galacticYear`, `centralBlackHole`, `morphology`) move to `src/layers/milkyWay/ui/milkyWayTips.tsx` the way Task 1 did it. `diameter` stays in core `TIPS` (shared with `GalaxyDetailCard`), so `MilkyWayDetailCard` keeps `TIPS.diameter!` until Task 7. Blind spot: `src/services/engine/galaxyGenerator/v1/README.md` names the moved v1 helpers by bare name; repoint it. Smoke: the Milky Way card's tooltips.
+- **milkyWay:** [`milkyWay.json`](2026-11-02-layer-m1-moves/milkyWay.json), 14 files, 550 lines: the v1 helpers go to `render/` and `present/`, and `milkyWayFacts` moving deletes the "Milky Way facts" ledger row. It also takes its M4 part: the 7 Milky Way-only keys (`sunToCentre`, `milkyWayStars`, `milkyWayMass`, `oldestStars`, `galacticYear`, `centralBlackHole`, `morphology`) move to `src/layers/milkyWay/ui/milkyWayTips.tsx` the way Task 1 did it. `diameter` stays in core `TIPS` (shared with `GalaxyDetailCard`), so `MilkyWayDetailCard` keeps `TIPS.diameter!` until Task 7. Blind spot: `src/services/engine/galaxyGenerator/v1/README.md` names the moved v1 helpers by bare name; repoint it. Blind spot: `tools/galaxy-renderer/src/ui/ControlsPanel/ControlsPanel.tsx:735` names `src/data/milkyWay/milkyWaySliderFields.ts`. Smoke: the Milky Way card's tooltips.
 
 ### Task 6 (batch E): missions, body, starCatalog
 
@@ -148,6 +149,7 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
 
 **body:**
 - Manifest: [`body.json`](2026-11-02-layer-m1-moves/body.json), 38 files, 1,165 lines: M1 plus the S2 body texture and surface-tile registries, the `SurfaceTile*` types and `src/utils/surfaceTiles/*`.
+- Blind spots: website `docsReferenceFacts.ts:434` (`EarthSettings`) and `docsRenderingFacts.ts:154` (`surfaceTileParams`), `tests/packages/website/docsRenderingFacts.test.ts:17,85`, and `tools/textures/writeBodyAtlas.ts:96` (its "Source of truth" header).
 - Blind spot: `tools/textures/writeBodyAtlas.ts:93,201,204` writes `bodyAtlas.generated.ts` by path.
 - Smoke: `#focus=body-mars`, where surface tiles stream, and the Earth slider fields.
 
@@ -159,12 +161,18 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
   - Add a `{ slot: 'detailCard', content: { type: 'starCatalog', Detail, Compact } }` row to `src/layers/starCatalog/layer.ts`, and drop the `starCatalog` arm of `CORE_DETAIL_CARDS` (`src/components/InfoCard/detailCardTable.ts:25-28`). Change the line 2 header ("core's two FocusableTarget arms") and the line 19 comment ("The two kinds") to one kind.
   - Add a manifest file for these moves (`starCatalog-m2.json`) and run it as its own move commit.
 - M4: the 13 star keys move to `src/layers/starCatalog/ui/starTips.tsx`.
+- Blind spots: website `docsScienceFacts.ts:81,208,229` and `scienceFacts.ts:335`.
 - Smoke: a seeded star card (`#focus=star-sirius`) with its tooltips, and the star field at NEAR0.
 
 ### Task 7: galaxyCatalog, last and alone
 
 - **Manifest:** [`galaxyCatalog.json`](2026-11-02-layer-m1-moves/galaxyCatalog.json), 92 files, 3,329 lines, including the S2 `galaxyCatalogFormat` and `tierTargets`.
 - **Blind spot:** `buildPointInterleavedBuffer.worker.ts` is imported with a `?worker` suffix, so repoint it by hand and check that the bake runs in the dev server.
+- **More blind spots:**
+  - Website: `docsScienceFacts.ts:44,51`, `docsDataFacts.ts:49`, `docsRenderingFacts.ts:71`, `scienceFacts.ts:193`.
+  - Path strings in tests: `tests/packages/website/docsRenderingFacts.test.ts:16`, `tests/tools/utils/refactor/loadRefactorProject.test.ts:24` (a `resolve('src/data/galaxyCatalog/galaxyCatalogFormat.ts')` string) and `inlineTypeFiles.ts:17,93,116`.
+  - `vi.mock` path: `tests/layers/galaxyCatalog/load/wireHiResFamousSlot.test.ts:22`.
+  - Inline `import('…')` type: `tests/layers/galaxyCatalog/subsystems/hiResFamousSubsystem.test.ts:396`. Check that `move-files` rewrites it.
 - **M2, galaxy half:**
   - `GalaxyDetailCard/` and `CompactCard/` move to `src/layers/galaxyCatalog/ui/`, their `.module.css` handled as in Task 6 (`git mv`, repoint `composes … from` and the TSX's chrome imports). `GalaxyProvenanceSection.module.css` likewise: `composes: muted from './debugSection.module.css'` needs repointing.
   - Add a `detailCard` row to `layer.ts`.

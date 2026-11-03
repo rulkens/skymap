@@ -58,9 +58,11 @@ proposes it); shaders (they stay in `src/services/gpu/shaders/<family>/`); core'
 - Module boundaries are where a Layer would split if it ever became two.
 
 ### Negative
-- Every existing Layer is restructured once. The M1 plan absorbs it for the Layers it still has to move
-  (batches C–E, Task 7), as a second move commit per PR; the Layers already moved are allow-listed until
-  their own regroup PR.
+- Every existing Layer is restructured once. The M1 plan absorbs it: every Layer PR from batch A on regroups
+  its whole Layer, as a second move commit. Batch A (#999–#1001) is being reworked into modules in its own
+  PRs, so none of its Layers is allow-listed. Structure, the pilot, is the one Layer already moved without
+  modules; it stays allow-listed (`LEGACY_TOP_LEVEL_UTILS` in `layerFolderShape.test.ts`) until its own
+  regroup PR.
 - A module map is a judgment call per Layer, so each restructure PR carries one for review.
 - `src/layers/README.md`'s "folder layout is the contract" table changes: contract members map to root files
   and the composition-read folders; the rest of the table becomes "lives in its concern module".
