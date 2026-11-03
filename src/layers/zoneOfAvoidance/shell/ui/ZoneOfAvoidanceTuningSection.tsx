@@ -17,7 +17,7 @@ import {
 } from '../data/zoneOfAvoidanceSliderFields';
 import CopyButton from '../../../../components/common/CopyButton/CopyButton';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
-import sliderStyles from '../../../components/DebugPanel/DebugSlider.module.css';
+import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
 
 export type ZoneOfAvoidanceTuningSectionProps = {
   zoneOfAvoidance: ZoneOfAvoidanceSettings;

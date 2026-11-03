@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react';
 import type { ZoneOfAvoidanceInfo } from '../../../../../@types/engine/ZoneOfAvoidanceInfo';
 import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
-import styles from '../../../../components/InfoCard/compactChrome.module.css';
+import styles from '../../../../../components/InfoCard/compactChrome.module.css';
 import local from './CompactZoneOfAvoidanceCard.module.css';
 
 export type CompactZoneOfAvoidanceCardProps = {

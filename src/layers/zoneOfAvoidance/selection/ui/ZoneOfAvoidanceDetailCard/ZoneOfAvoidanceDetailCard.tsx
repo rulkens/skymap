@@ -18,7 +18,7 @@ import { cardShotUrl } from '../../../../../utils/palette/cardShotUrl';
 import DescriptionBlock from '../../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../../components/InfoCard/WikipediaRow/WikipediaRow';
 import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
-import styles from '../../../../components/InfoCard/cardChrome.module.css';
+import styles from '../../../../../components/InfoCard/cardChrome.module.css';
 import zoa from './ZoneOfAvoidanceDetailCard.module.css';
 
 export type ZoneOfAvoidanceDetailCardProps = {
