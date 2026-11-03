@@ -1,0 +1,117 @@
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  row-gap: var(--site-space-2xs);
+  margin: 0 0 var(--site-space-xl);
+}
+
+/* `--split` is the one value the script moves: the top layer's clip and the handle's place both read it. */
+.frame {
+  --split: 50%;
+  position: relative;
+  display: grid;
+}
+
+.layer,
+.top {
+  position: relative;
+  grid-area: 1 / 1;
+}
+
+.top {
+  clip-path: inset(0 calc(100% - var(--split)) 0 0);
+}
+
+.edgeStart,
+.edgeEnd {
+  position: absolute;
+  top: var(--site-space-xs);
+  margin: 0;
+  font: var(--weight-small) var(--text-small) / 1.2 var(--font-body);
+  color: var(--color-fg);
+  text-shadow: 0 0 0.5rem var(--color-bg);
+}
+
+.edgeStart {
+  left: var(--site-space-xs);
+}
+
+.edgeEnd {
+  right: var(--site-space-xs);
+}
+
+/* The handle is a tap wide and the frame tall; the line and the ring marker are drawn at its centre. */
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--split);
+  width: var(--tap);
+  translate: -50% 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 50%;
+    width: 1px;
+    background: var(--site-line-strong);
+  }
+
+  &::after {
+    --mark: 1.625rem;
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--mark);
+    height: var(--mark);
+    translate: -50% -50%;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-bg) 60%, transparent);
+  }
+}
+
+/* Once the drag works: a vertical swipe on a phone still scrolls the page; a sideways one moves the divider. */
+.frame[data-compare-ready] {
+  cursor: ew-resize;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+@media (hover: hover) {
+  .frame[data-compare-ready]:hover .handle::after {
+    background: var(--color-accent);
+  }
+}
+
+/* Focused, the marker is selected as a ring control is (ring.module.css); its halo is the focus ring. */
+.handle:focus-visible {
+  outline: none;
+
+  &::before {
+    background: var(--color-accent);
+  }
+
+  &::after {
+    background: var(--color-accent);
+    box-shadow:
+      0 0 0 0.3125rem var(--color-bg),
+      0 0 0 0.375rem var(--color-accent);
+  }
+}
+
+.captions {
+  display: grid;
+  align-content: end;
+  gap: var(--site-space-s);
+}
+
+@media (--wide) {
+  .frame {
+    grid-column: span 8;
+  }
+
+  .captions {
+    grid-column: span 4;
+  }
+}
