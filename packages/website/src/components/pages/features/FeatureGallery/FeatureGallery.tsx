@@ -2,8 +2,8 @@
  * FeatureGallery — a FeatureSection whose large visual is a slideshow of app views and whose small slot is a row of
  * thumbnails that choose the view. The state is the gallery's (useGallery), so it moves on by itself every 9 s,
  * waits while the reader is at the thumbnails, and fetches a later view only once warmed. Each picture opens its
- * own view in the app; only the current one can be reached, as the others sit under `visibility: hidden`. Before
- * the page's script runs the first view and its label stand. Everything a slide brings (data/FeatureSlide) changes
+ * own view in the app where a link can (shotLink); only the current one can be reached, as the others sit under
+ * `visibility: hidden`. Before the page's script runs the first view and its label stand. Everything a slide brings (data/FeatureSlide) changes
  * with it: its piece of the app's interface hangs across the picture's outer edge, its figure stands in the inner
  * top corner in its own colour, a film whose clock ran carries its clock (FilmClock) at its foot, and the section's
  * accent follows it. `frameless` lets cut-outs float on the page; `under` lays a render behind the whole stage.
@@ -17,6 +17,7 @@ import { SITE_LOOPS } from '../../../../data/siteLoops.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { linkTime } from '../../../../utils/linkTime.ts';
+import { shotLink } from '../../../../utils/shotLink.ts';
 import { wrapIndex } from '../../../../utils/wrapIndex.ts';
 import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import FeatureFilm from '../../../shared/media/FeatureFilm/FeatureFilm.tsx';
@@ -113,6 +114,8 @@ function FeatureGallery({ slides, frameless, under, ...section }: FeatureGallery
             <div className={styles.frame}>
               {views.map((id, i) => {
                 const shot = siteShot(id);
+                const link = shotLink(id);
+                const picture = <Shot id={id} sizes={SIZES} alt="" eager={i > 0 && warmed(i)} />;
                 return (
                   <div
                     key={id}
@@ -127,18 +130,20 @@ function FeatureGallery({ slides, frameless, under, ...section }: FeatureGallery
                         sizes={SIZES}
                         wide
                         active={current(i)}
-                        view={shot.link}
+                        view={link}
                         query={shot.query}
                         linkLabel={`Open ${shot.title} in the app`}
                       />
-                    ) : (
+                    ) : link ? (
                       <AppLink
-                        view={shot.link}
+                        view={link}
                         query={shot.query}
                         aria-label={`Open ${shot.title} in the app`}
                       >
-                        <Shot id={id} sizes={SIZES} alt="" eager={i > 0 && warmed(i)} />
+                        {picture}
                       </AppLink>
+                    ) : (
+                      picture
                     )}
                   </div>
                 );
