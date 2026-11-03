@@ -28,15 +28,6 @@ export async function shootPairedRemote(
     .getByRole('status')
     .filter({ hasText: /^Connected$/ })
     .waitFor({ timeout: CONNECT_TIMEOUT_MS });
-  // The remote only learns the focused object's name from a search result, so a search names it in the header.
-  const name = shot.settings?.searchFor;
-  if (name) {
-    await phone.getByRole('searchbox', { name: 'Search' }).fill(name);
-    await phone
-      .locator('header')
-      .getByText(name, { exact: true })
-      .waitFor({ timeout: CONNECT_TIMEOUT_MS });
-  }
   if (!screen) return phone.screenshot({ type: 'png' });
   const length = await phone.evaluate(() => document.documentElement.scrollHeight);
   if (length !== shot.size.height) {
