@@ -19,7 +19,6 @@ import { inputRoute, uiRoute } from '../../../src/store/constants';
 import { createMemoryTransport } from '../../helpers/remote/createMemoryTransport';
 import { REMOTE_PROTOCOL_VERSION } from '../../../src/data/remote/remoteProtocolVersion';
 import { APP_LAYER_SWITCH_ROWS } from '../../../src/compositions/appLayerSwitchRows';
-import { FLOW_SECTION_TITLE } from '../../../src/layers/flow/streamlines/data/flowSectionTitle';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
 
 const NO_MODS = { shift: false, ctrl: false, alt: false, meta: false };
@@ -217,7 +216,7 @@ describe('remoteReceiverSaga', () => {
     if (last?.kind !== 'status') throw new Error('no status sent');
     expect(last.status.layers).toContainEqual({
       id: 'flow',
-      label: FLOW_SECTION_TITLE,
+      label: 'Flow',
       enabled: !before,
     });
   });
