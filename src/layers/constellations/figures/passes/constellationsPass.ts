@@ -5,15 +5,15 @@
  * would clip, so this row projects through NEAR0 instead, still on the HDR tone-map.
  */
 
-import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';
-import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
-import { narrowMat4 } from '../../../utils/math/narrowMat4';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { ConstellationsRuntime } from '../../@types/ConstellationsRuntime';
+import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { CONSTELLATION_LINE_HALFWIDTH_PX } from '../data/constellationLineHalfwidthPx';
 import { CONSTELLATION_LINE_COLOR } from '../data/constellationLineColor';
-import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
-import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
-import { constellationsVisibility } from '../visibility';
+import { visibilityEntryOf } from '../../../../utils/visibility/visibilityEntryOf';
+import { emphasisOf } from '../../../../services/engine/presentation/emphasisOf';
+import { constellationsVisibility } from '../../visibility';
 
 export function constellationsPass(runtime: ConstellationsRuntime): ContentPass<'constellations'> {
   const entry = visibilityEntryOf(constellationsVisibility, 'constellations');

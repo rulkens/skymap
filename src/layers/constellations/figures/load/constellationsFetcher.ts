@@ -18,10 +18,10 @@
  * so it is unit-tested without the network.
  */
 
-import type { Fetcher } from '../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
-import { makeJsonFetcher } from '../../../services/loading/fetchers/jsonFetcher';
-import { dataUrl } from '../../../services/loading/fetchWithProgress';
+import { makeJsonFetcher } from '../../../../services/loading/fetchers/jsonFetcher';
+import { dataUrl } from '../../../../services/loading/fetchWithProgress';
 
 const CONSTELLATIONS_FILE = 'constellations.json';
 

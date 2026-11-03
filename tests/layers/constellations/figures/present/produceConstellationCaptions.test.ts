@@ -10,15 +10,15 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
-import { NEIGHBOURHOOD_RECEDE_KPC } from '../../../../src/data/bands/neighbourhoodRecedeKpc';
-import { SOLAR_SYSTEM_CAPTION_RECEDE } from '../../../../src/data/bands/solarSystemCaptionRecede';
-import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { produceConstellationCaptions } from '../../../../../src/layers/constellations/figures/present/produceConstellationCaptions';
+import { NEIGHBOURHOOD_RECEDE_KPC } from '../../../../../src/data/bands/neighbourhoodRecedeKpc';
+import { SOLAR_SYSTEM_CAPTION_RECEDE } from '../../../../../src/data/bands/solarSystemCaptionRecede';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { ConstellationsRuntime } from '../../../../../src/layers/constellations/@types/ConstellationsRuntime';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 // Where the solar-system captions have faded out.
 const CAPTION_GONE_MPC = SOLAR_SYSTEM_CAPTION_RECEDE.out[1];

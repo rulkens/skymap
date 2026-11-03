@@ -1,4 +1,4 @@
-import type { Vec4 } from '../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../@types/math/Vec4';
 
 /** Style fields the constellation label producer reads. */
 export type ConstellationLabelStyle = {
