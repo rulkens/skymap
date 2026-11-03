@@ -1161,7 +1161,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'remote-room-size',
     about: 'app',
     text: 'A room holds the dome and up to three phones or laptops. A fourth is turned away.',
-    source: `${REPO_BLOB}/tools/utils/vite/attachRemoteRelay.ts`,
+    source: `${REPO_BLOB}/tools/utils/remote/attachRemoteRelay.ts`,
     sourceLabel: `the relay’s rooms, ${IN_REPO}`,
     checked: REMOTE_CHECKED,
   },
