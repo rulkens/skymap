@@ -15,7 +15,7 @@ import type { BlackHolesRuntime } from '../../@types/BlackHolesRuntime';
 import { BLACK_HOLES } from '../../markers/data/blackHoles';
 import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
-import { packBlackHoleLensingUniforms } from '../utils/gpu/packBlackHoleLensingUniforms';
+import { packBlackHoleLensingUniforms } from '../render/packBlackHoleLensingUniforms';
 import { lensEdgeFadeEndRs } from '../utils/lensEdgeFadeEndRs';
 import { skyCaptureBandAlpha } from '../../../../services/engine/frame/skyCaptureBandAlpha';
 import { blackHoleAnchorId } from '../../markers/present/blackHoleAnchorId';

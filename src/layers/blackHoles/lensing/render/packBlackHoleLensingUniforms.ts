@@ -72,14 +72,14 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { Vec2 } from '../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
-import type { Mat3 } from '../../../../../@types/math/Mat3';
-import type { ViewFrustum } from '../../../../../@types/camera/ViewFrustum';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Mat3 } from '../../../../@types/math/Mat3';
+import type { ViewFrustum } from '../../../../@types/camera/ViewFrustum';
 import {
   CAMERA_UNIFORM_BYTES,
   writeCameraPrefix,
-} from '../../../../../services/gpu/lib/cameraUniforms';
+} from '../../../../services/gpu/lib/cameraUniforms';
 
 /** f32 count of `BlackHoleLensingUniforms` — 80-byte cam prefix (20) + 12
  *  scalars + anchorPosRelCamM (3) + tuning knobs (4 scalars + emissionTint's

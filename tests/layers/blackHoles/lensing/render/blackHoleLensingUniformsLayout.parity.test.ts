@@ -22,10 +22,10 @@ import { dirname, resolve } from 'node:path';
 import {
   packBlackHoleLensingUniforms,
   BLACK_HOLE_LENSING_UNIFORM_FLOATS,
-} from '../../../../../../src/layers/blackHoles/lensing/utils/gpu/packBlackHoleLensingUniforms';
-import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
-import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
+} from '../../../../../src/layers/blackHoles/lensing/render/packBlackHoleLensingUniforms';
+import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../../../..');

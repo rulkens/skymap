@@ -19,7 +19,7 @@ import fsCode from '../../../../services/gpu/shaders/bodies/blackHoleLensing/fra
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { PREMULTIPLIED_OVER_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { buildSchwarzschildDeflectionLut } from '../utils/buildSchwarzschildDeflectionLut';
-import { BLACK_HOLE_LENSING_UNIFORM_FLOATS } from '../utils/gpu/packBlackHoleLensingUniforms';
+import { BLACK_HOLE_LENSING_UNIFORM_FLOATS } from './packBlackHoleLensingUniforms';
 
 // Dense enough for the fragment's 2-tap lerp to look smooth near the critical
 // impact parameter; quadrature is cheap CPU-side, so no reason to skimp.
