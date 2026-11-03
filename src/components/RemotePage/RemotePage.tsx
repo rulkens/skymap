@@ -11,6 +11,7 @@ import { useRemoteLink } from './useRemoteLink';
 import JoinField from './JoinField/JoinField';
 import LinkStatus from './LinkStatus/LinkStatus';
 import LostNotice from './LostNotice/LostNotice';
+import VersionNotice from './VersionNotice/VersionNotice';
 import AxisHoldButtons from './AxisHoldButtons/AxisHoldButtons';
 import Trackpad from './Trackpad/Trackpad';
 import SearchSection from './SearchSection/SearchSection';
@@ -59,6 +60,7 @@ function RemotePage() {
         {link === 'connected' && <span className={styles.focus}>{focus ?? 'Nothing focused'}</span>}
       </header>
       {link === 'lost' && <LostNotice room={room} onChangeCode={() => join(null)} />}
+      {(link === 'domeOlder' || link === 'domeNewer') && <VersionNotice state={link} />}
       <div className={styles.steer}>
         <Trackpad onEvent={sendDevice} axis={openspace ? axis : null}>
           {openspace && <AxisHoldButtons axis={axis} onChange={setAxis} />}

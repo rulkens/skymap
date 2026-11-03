@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import RemotePage from '../../../src/components/RemotePage/RemotePage';
 import { createLocalTransport } from '../../../src/services/remote/createLocalTransport';
+import { REMOTE_PROTOCOL_VERSION } from '../../../src/data/remote/remoteProtocolVersion';
+import { HELLO_INTERVAL_MS } from '../../../src/data/remote/helloIntervalMs';
 import type { DomeStatus } from '../../../src/@types/remote/DomeStatus';
 import type { RemoteLinkStatus } from '../../../src/@types/remote/RemoteLinkStatus';
 
@@ -65,10 +67,13 @@ const menu = {
   exhibits: [{ id: 'cosmicWeb', label: 'Cosmic Web' }],
   clips: [{ id: 'flyout', label: 'Fly to Horizon' }],
 };
-const sendMenu = (): void => act(() => deliver(JSON.stringify({ kind: 'menu', menu })));
-const sendStatus = (scheme: 'skymap' | 'openspace' = 'skymap'): void =>
+const v = REMOTE_PROTOCOL_VERSION;
+const sendMenu = (): void => act(() => deliver(JSON.stringify({ v, kind: 'menu', menu })));
+const sendStatus = (scheme: 'skymap' | 'openspace' = 'skymap', sentV = v): void =>
   act(() =>
-    deliver(JSON.stringify({ kind: 'status', status: { ...status, controls: { scheme } } })),
+    deliver(
+      JSON.stringify({ v: sentV, kind: 'status', status: { ...status, controls: { scheme } } }),
+    ),
   );
 const messages = (kind: string): Record<string, unknown>[] =>
   sent.map((s) => JSON.parse(s)).filter((m) => m.kind === kind);
@@ -106,6 +111,41 @@ describe('RemotePage', () => {
     expect(screen.getByText('Dome not there')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Change code' }));
     expect(screen.getByLabelText(/Room code/)).toBeTruthy();
+  });
+
+  it('a dome of another version names the page to reload, not dome not there', () => {
+    render(<RemotePage />);
+    sendStatus('skymap', v - 1);
+    expect(screen.getByText('Dome needs a reload')).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toMatch(/older Skymap than this remote/);
+    expect(screen.queryByRole('button', { name: 'Change code' })).toBeNull();
+    // A dome that keeps answering at another version is there, so silence never takes over.
+    act(() => void vi.advanceTimersByTime(2000));
+    sendStatus('skymap', v + 1);
+    act(() => void vi.advanceTimersByTime(2000));
+    expect(screen.getByText('Remote needs a reload')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Reload page' })).toBeTruthy();
+    sendStatus();
+    expect(screen.getByText('Connected')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('every message the page sends carries the protocol version', () => {
+    linkOpen = false;
+    render(<RemotePage />);
+    act(() => resizePad());
+    linkOpen = true;
+    act(() => reportStatus('open'));
+    act(() => void vi.advanceTimersByTime(HELLO_INTERVAL_MS));
+    sendStatus();
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'andro' } });
+    act(() => void vi.advanceTimersByTime(200));
+    const all = sent.map((s) => JSON.parse(s) as Record<string, unknown>);
+    expect(new Set(all.map((m) => m.kind))).toEqual(
+      new Set(['hello', 'device', 'command', 'search']),
+    );
+    expect(all.filter((m) => m.v !== v)).toEqual([]);
   });
 
   it('hold buttons show only under openspace, and a held axis rides the next press only', () => {
@@ -182,7 +222,9 @@ describe('RemotePage', () => {
     const pageA = within(render(<RemotePage />).container);
     const pageB = within(render(<RemotePage />).container);
     // Search waits for the dome's first status.
-    act(() => delivers.forEach((listener) => listener(JSON.stringify({ kind: 'status', status }))));
+    act(() =>
+      delivers.forEach((listener) => listener(JSON.stringify({ v, kind: 'status', status }))),
+    );
     for (const page of [pageA, pageB]) {
       fireEvent.change(page.getByRole('searchbox'), { target: { value: 'andro' } });
     }
@@ -190,6 +232,7 @@ describe('RemotePage', () => {
     const fromA = messages('search')[0]!.from;
     const requestA = messages('search').find((m) => m.from === fromA)!;
     const resultsForA = JSON.stringify({
+      v,
       kind: 'searchResults',
       requestId: requestA.requestId,
       matches: [{ name: 'Andromeda', kind: 'galaxy', action: { kind: 'focus', focusId: 'm31' } }],

@@ -13,6 +13,8 @@ const TEXT = {
   connected: 'Connected',
   looking: 'Looking for the dome',
   lost: 'Dome not there',
+  domeOlder: 'Dome needs a reload',
+  domeNewer: 'Remote needs a reload',
 } as const;
 
 function LinkStatus({ state }: LinkStatusProps): ReactNode {

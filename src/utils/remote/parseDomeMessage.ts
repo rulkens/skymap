@@ -1,12 +1,15 @@
 /**
- * parseDomeMessage — the remote page's inbound parser: text off the relay
- * becomes a `DomeMessage`, or null. It checks every field the page reads has
- * the right primitive type, so a stray or stale message cannot crash a render;
- * ids are checked as strings only, since the remote just echoes them back and
- * the dome's own parser validates them against its registries.
+ * parseDomeMessage — the remote page's inbound parser. Null for text that is no
+ * dome message: the room also carries every other phone's messages, which must
+ * never read as a version mismatch, so the kind is checked before the version.
+ * A dome kind returns the sender's `v`, and the message only at this page's own
+ * version: another version's body is not this page's shape to judge. The body
+ * check covers every field the page reads, so a stray message cannot crash a
+ * render; ids are checked as strings only, since the dome validates them.
  */
 
 import { isRecord } from '../object/isRecord';
+import { REMOTE_PROTOCOL_VERSION } from '../../data/remote/remoteProtocolVersion';
 import type { DomeMessage } from '../../@types/remote/DomeMessage';
 
 function isAction(raw: unknown): boolean {
@@ -73,24 +76,25 @@ const isMenu = (raw: unknown): boolean =>
     (list) => Array.isArray(list) && list.every(isMenuItem),
   );
 
-export function parseDomeMessage(text: string): DomeMessage | null {
+const IS_BODY: Record<DomeMessage['kind'], (raw: Record<string, unknown>) => boolean> = {
+  status: (raw) => isStatus(raw.status),
+  menu: (raw) => isMenu(raw.menu),
+  searchResults: ({ requestId, matches }) =>
+    typeof requestId === 'string' && Array.isArray(matches) && matches.every(isMatch),
+};
+
+export function parseDomeMessage(text: string): { v: number; message: DomeMessage | null } | null {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
   } catch {
     return null;
   }
-  if (!isRecord(raw)) return null;
-  if (raw.kind === 'status') {
-    return isStatus(raw.status) ? (raw as DomeMessage) : null;
+  if (!isRecord(raw) || typeof raw.kind !== 'string' || !Object.hasOwn(IS_BODY, raw.kind)) {
+    return null;
   }
-  if (raw.kind === 'menu') {
-    return isMenu(raw.menu) ? (raw as DomeMessage) : null;
-  }
-  if (raw.kind === 'searchResults') {
-    const { requestId, matches } = raw;
-    if (typeof requestId !== 'string' || !Array.isArray(matches)) return null;
-    return matches.every(isMatch) ? (raw as DomeMessage) : null;
-  }
-  return null;
+  const v = raw.v ?? 1;
+  if (typeof v !== 'number') return null;
+  const isBody = IS_BODY[raw.kind as DomeMessage['kind']];
+  return { v, message: v === REMOTE_PROTOCOL_VERSION && isBody(raw) ? (raw as DomeMessage) : null };
 }

@@ -183,23 +183,23 @@ Rules (spec, "The protocol version"):
   signal).
 
 Tests first (TDD):
-- [ ] `parseDomeMessage`: `it('returns the version and no message for a status of another version')`: a status at
+- [x] `parseDomeMessage`: `it('returns the version and no message for a status of another version')`: a status at
       `v: 1`, at `v: 3` and with no `v` returns `{ v: 1 | 3 | 1, message: null }`.
-- [ ] `parseDomeMessage`: `it("returns null for another phone's message, whatever its version")`: a `hello` and a
+- [x] `parseDomeMessage`: `it("returns null for another phone's message, whatever its version")`: a `hello` and a
       `command` at `v: 1` and `v: 2` return `null`. (Regression guard: in a shared room these would otherwise read
       as a mismatch.)
-- [ ] `parseRemoteMessage`: `it('drops a command, device event or search of another version')`: `v` missing and
+- [x] `parseRemoteMessage`: `it('drops a command, device event or search of another version')`: `v` missing and
       `v: 3` return `null` for each kind.
-- [ ] `parseRemoteMessage`: `it('accepts a hello at any version')`: `v` missing, `1` and `3` each return a hello.
-- [ ] `RemotePage`: `it('a dome of another version names the page to reload, not dome not there')`: a status at
+- [x] `parseRemoteMessage`: `it('accepts a hello at any version')`: `v` missing, `1` and `3` each return a hello.
+- [x] `RemotePage`: `it('a dome of another version names the page to reload, not dome not there')`: a status at
       `v: 1` shows "Dome needs a reload" and the dome-reload notice and no "Change code"; a status at `v: 3` shows
       "Remote needs a reload" with a "Reload page" button; a matching status after that shows "Connected".
-- [ ] `RemotePage`: `it('every message the page sends carries the protocol version')`: after a heartbeat, a resize
+- [x] `RemotePage`: `it('every message the page sends carries the protocol version')`: after a heartbeat, a resize
       resend on link open, a command and a search, every entry in `sent` has `v === REMOTE_PROTOCOL_VERSION`.
-- [ ] Fixtures: every hand-built message in the four test files gains `v: REMOTE_PROTOCOL_VERSION` (import the
+- [x] Fixtures: every hand-built message in the four test files gains `v: REMOTE_PROTOCOL_VERSION` (import the
       constant, never a literal `2`); without it the saga tests' commands are dropped.
-- [ ] Implement until green. `npm run typecheck:fast`; `npx vitest run tests/utils/remote tests/components/RemotePage tests/state/remote tests/remote`.
-- [ ] Commit: "Remote protocol: every message carries a version; a phone facing another version says which page to reload."
+- [x] Implement until green. `npm run typecheck:fast`; `npx vitest run tests/utils/remote tests/components/RemotePage tests/state/remote tests/remote`.
+- [x] Commit: "Remote protocol: every message carries a version; a phone facing another version says which page to reload."
 
 ### Task 4: The status names what runs and what is focused
 

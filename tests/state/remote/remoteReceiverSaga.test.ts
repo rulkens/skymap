@@ -17,6 +17,7 @@ import { setRate, pause, resume } from '../../../src/state/time/timeSlice';
 import { setUiHidden } from '../../../src/state/ui/uiSlice';
 import { inputRoute, uiRoute } from '../../../src/store/constants';
 import { createMemoryTransport } from '../../helpers/remote/createMemoryTransport';
+import { REMOTE_PROTOCOL_VERSION } from '../../../src/data/remote/remoteProtocolVersion';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
 
 const NO_MODS = { shift: false, ctrl: false, alt: false, meta: false };
@@ -54,7 +55,7 @@ async function setup() {
   mw.run(remoteReceiverSaga, link.transport, []);
   await settle();
   const say = async (message: object) => {
-    link.fromRemote(JSON.stringify(message));
+    link.fromRemote(JSON.stringify({ v: REMOTE_PROTOCOL_VERSION, ...message }));
     await settle();
   };
   const device = (from: string, ...events: DeviceEvent[]) =>
@@ -212,7 +213,11 @@ describe('remoteReceiverSaga', () => {
   it('a hello is answered with the menu', async () => {
     const { link, say } = await setup();
     await say({ from: 'a', kind: 'hello' });
-    expect(link.sent).toContainEqual({ kind: 'menu', menu: REMOTE_MENU });
+    expect(link.sent).toContainEqual({
+      v: REMOTE_PROTOCOL_VERSION,
+      kind: 'menu',
+      menu: REMOTE_MENU,
+    });
   });
 
   it('the first hello pairs and hides the UI, and a later one never hides it again', async () => {

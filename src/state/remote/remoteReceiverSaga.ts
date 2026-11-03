@@ -38,6 +38,7 @@ import { parseRemoteMessage } from '../../utils/remote/parseRemoteMessage';
 import { rankPaletteMatches } from '../../utils/palette/rankPaletteMatches';
 import { remoteSearchMatches } from '../../utils/remote/remoteSearchMatches';
 import { REMOTE_SILENCE_MS } from '../../data/remote/remoteSilenceMs';
+import { REMOTE_PROTOCOL_VERSION } from '../../data/remote/remoteProtocolVersion';
 import type { DeviceEvent } from '../../@types/input/DeviceEvent';
 import type { DomeMessage } from '../../@types/remote/DomeMessage';
 import type { RemoteId } from '../../@types/remote/RemoteId';
@@ -71,6 +72,7 @@ export function* remoteReceiverSaga(
   const send = (message: DomeMessage): void => link.send(JSON.stringify(message));
   const sendStatus = (state: RootState): void =>
     send({
+      v: REMOTE_PROTOCOL_VERSION,
       kind: 'status',
       status: selectDomeStatus(state, selectToggleRows(state, layerRows), performance.now()),
     });
@@ -126,7 +128,7 @@ export function* remoteReceiverSaga(
             yield* put(setUiHidden(true));
           }
           sendStatus(yield* select());
-          send({ kind: 'menu', menu: REMOTE_MENU });
+          send({ v: REMOTE_PROTOCOL_VERSION, kind: 'menu', menu: REMOTE_MENU });
           break;
         }
         case 'command': {
@@ -165,7 +167,8 @@ export function* remoteReceiverSaga(
             message.query,
           );
           const matches = remoteSearchMatches(ranked);
-          send({ kind: 'searchResults', requestId: message.requestId, matches });
+          const { requestId } = message;
+          send({ v: REMOTE_PROTOCOL_VERSION, kind: 'searchResults', requestId, matches });
           break;
         }
       }
