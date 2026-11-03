@@ -19,7 +19,7 @@ import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 import { frustumRayAxis } from '../../../utils/camera/frustumRayAxis';
 import { sphereNdcBounds } from '../../../utils/math/sphereNdcBounds';
-import { LIGHT_TIME_SPHERES } from '../../../data/lightTime/lightTimeSpheres';
+import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
 import vsCode from '../../../services/gpu/shaders/lightTime/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/lightTime/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';

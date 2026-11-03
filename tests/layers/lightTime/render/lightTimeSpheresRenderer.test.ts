@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { createLightTimeSpheresRenderer } from '../../../../src/layers/lightTime/render/lightTimeSpheresRenderer';
-import { LIGHT_TIME_SPHERES } from '../../../../src/data/lightTime/lightTimeSpheres';
+import { LIGHT_TIME_SPHERES } from '../../../../src/layers/lightTime/data/lightTimeSpheres';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { ViewFrustum } from '../../../../src/@types/camera/ViewFrustum';
