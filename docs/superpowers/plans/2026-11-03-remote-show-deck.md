@@ -103,13 +103,13 @@ export const REMOTE_GLYPHS: Record<RemoteGlyph, ReactNode>;
 The `AxisHoldButtons` and `SchemeSwitch` tables change `icon: <OrbitIcon />` to `glyph: 'orbit'` and render
 `<RemoteIcon glyph={…} />`. A larger icon is sized by its parent's CSS (`svg { width; height }`), never by a prop.
 
-- [ ] Write the three new files; the seven paths come byte-for-byte from the files being deleted.
-- [ ] Repoint the three importers; delete the seven files.
-- [ ] No new test: pixel-identical, and the existing `RemotePage` tests render every icon.
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage tests/remote`.
-- [ ] Verify pixel-identity: shoot the remote before and after (Task 11's command, default state), and diff the two
+- [x] Write the three new files; the seven paths come byte-for-byte from the files being deleted.
+- [x] Repoint the three importers; delete the seven files.
+- [x] No new test: pixel-identical, and the existing `RemotePage` tests render every icon.
+- [x] `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage tests/remote`.
+- [x] Verify pixel-identity: shoot the remote before and after (Task 11's command, default state), and diff the two
       PNGs with `diffScreenshots` (`tools/site/utils/diffScreenshots.ts:17`, called from a scratchpad script); `changed === 0`.
-- [ ] Commit: "Remote icons: one RemoteIcon and a glyph table, so a new glyph is a row."
+- [x] Commit: "Remote icons: one RemoteIcon and a glyph table, so a new glyph is a row."
 
 ### Task 2: Prep 2, the hook owns the link state
 

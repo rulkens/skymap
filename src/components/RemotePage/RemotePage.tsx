@@ -19,7 +19,7 @@ import ExhibitSection from './ExhibitSection/ExhibitSection';
 import TimeSection from './TimeSection/TimeSection';
 import ToggleSection from './ToggleSection/ToggleSection';
 import SetupSection from './SetupSection/SetupSection';
-import HomeIcon from './HomeIcon';
+import RemoteIcon from './RemoteIcon/RemoteIcon';
 import SchemeSwitch from './SchemeSwitch/SchemeSwitch';
 import type { RemoteNavAxis } from '../../@types/remote/RemoteNavAxis';
 import controls from './remoteControls.module.css';
@@ -69,7 +69,7 @@ function RemotePage() {
             className={cx(controls.button, styles.home)}
             onClick={() => sendCommand({ name: 'home', payload: null })}
           >
-            <HomeIcon />
+            <RemoteIcon glyph="home" />
             Home
           </button>
           {scheme && (

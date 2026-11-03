@@ -9,10 +9,8 @@ import { useEffect } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import cx from 'classnames';
 import type { RemoteNavAxis } from '../../../@types/remote/RemoteNavAxis';
-import OrbitIcon from './OrbitIcon';
-import LookIcon from './LookIcon';
-import RollIcon from './RollIcon';
-import ZoomIcon from './ZoomIcon';
+import type { RemoteGlyph } from '../../../@types/remote/RemoteGlyph';
+import RemoteIcon from '../RemoteIcon/RemoteIcon';
 import styles from './AxisHoldButtons.module.css';
 
 export type AxisHoldButtonsProps = {
@@ -21,11 +19,11 @@ export type AxisHoldButtonsProps = {
   readonly onChange: (axis: RemoteNavAxis) => void;
 };
 
-const BUTTONS: readonly { id: RemoteNavAxis; label: string; icon: ReactNode }[] = [
-  { id: 'orbit', label: 'Orbit (default)', icon: <OrbitIcon /> },
-  { id: 'look', label: 'Hold to look around', icon: <LookIcon /> },
-  { id: 'roll', label: 'Hold to roll', icon: <RollIcon /> },
-  { id: 'zoom', label: 'Hold to zoom', icon: <ZoomIcon /> },
+const BUTTONS: readonly { id: RemoteNavAxis; label: string; glyph: RemoteGlyph }[] = [
+  { id: 'orbit', label: 'Orbit (default)', glyph: 'orbit' },
+  { id: 'look', label: 'Hold to look around', glyph: 'look' },
+  { id: 'roll', label: 'Hold to roll', glyph: 'roll' },
+  { id: 'zoom', label: 'Hold to zoom', glyph: 'zoom' },
 ];
 
 const isHoldKey = (event: KeyboardEvent): boolean => event.key === ' ' || event.key === 'Enter';
@@ -48,7 +46,7 @@ function AxisHoldButtons({ axis, onChange }: AxisHoldButtonsProps): ReactNode {
 
   return (
     <div className={styles.root}>
-      {BUTTONS.map(({ id, label, icon }) => (
+      {BUTTONS.map(({ id, label, glyph }) => (
         <button
           key={id}
           type="button"
@@ -70,7 +68,7 @@ function AxisHoldButtons({ axis, onChange }: AxisHoldButtonsProps): ReactNode {
             if (isHoldKey(event)) release();
           }}
         >
-          {icon}
+          <RemoteIcon glyph={glyph} />
         </button>
       ))}
     </div>
