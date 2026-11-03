@@ -12,7 +12,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
 import { composeRenderTargetRows } from '../../../src/services/engine/layer/composeRenderTargetRows';
 import { STAR_AGGREGATES_TARGET } from '../../../src/layers/starCatalog/render/starAggregatesTarget';
-import { MILKY_WAY_AGGREGATE_TARGET } from '../../../src/layers/milkyWay/render/milkyWayAggregateTarget';
+import { MILKY_WAY_AGGREGATE_TARGET } from '../../../src/layers/milkyWay/cloud/render/milkyWayAggregateTarget';
 import { cosmicWebDensityLayer } from '../../../src/layers/cosmicWebDensity/layer';
 import { blackHolesLayer } from '../../../src/layers/blackHoles/layer';
 import { SCALE_FADE_BANDS } from '../../../src/data/scaleFadeBands';

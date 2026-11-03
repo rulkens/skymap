@@ -61,7 +61,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'layers/body/passes/planetsPass': 1,
   'layers/body/passes/ringsPass': 1,
   'layers/body/passes/texturedBodiesPass': 2,
-  'layers/milkyWay/passes/milkyWayPass': 1,
+  'layers/milkyWay/cloud/passes/milkyWayPass': 1,
   'layers/starCatalog/passes/fieldStarSpherePass': 6,
   'layers/starCatalog/passes/starPointsPass': 1,
 };

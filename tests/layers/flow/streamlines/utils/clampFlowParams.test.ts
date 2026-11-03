@@ -1,0 +1,36 @@
+import { describe, it, expect } from 'vitest';
+import { clampFlowParams } from '../../../../../src/layers/flow/streamlines/utils/clampFlowParams';
+import {
+  MAX_PARTICLES,
+  MIN_TRAIL_STEP,
+} from '../../../../../src/layers/flow/streamlines/data/flowFieldConstants';
+import { DEFAULT_FLOW } from '../../../../../src/layers/flow/state/defaults';
+import type { FlowSettings } from '../../../../../src/@types/settings/FlowSettings';
+
+// Build a full FlowSettings from the seed + overrides so the test never
+// hand-maintains the whole shape.
+const flowWith = (overrides: Partial<FlowSettings>): FlowSettings => ({
+  ...DEFAULT_FLOW,
+  ...overrides,
+});
+
+describe('clampFlowParams', () => {
+  it('clampFlowParams caps count at MAX_PARTICLES and rounds', () => {
+    expect(clampFlowParams(flowWith({ count: 1e9 })).count).toBe(MAX_PARTICLES);
+    expect(clampFlowParams(flowWith({ count: 3.7 })).count).toBe(4);
+  });
+
+  it('clampFlowParams floors trail at MIN_TRAIL_STEP', () => {
+    // A zero step stalls the advect compute loop — the GPU-hang guard.
+    expect(clampFlowParams(flowWith({ trail: 0 })).trail).toBe(MIN_TRAIL_STEP);
+  });
+
+  it('clampFlowParams does not mutate the input', () => {
+    const input = flowWith({ count: 1e9, trail: 0, flowSpeed: -5, intensity: 2 });
+    clampFlowParams(input);
+    expect(input.count).toBe(1e9);
+    expect(input.trail).toBe(0);
+    expect(input.flowSpeed).toBe(-5);
+    expect(input.intensity).toBe(2);
+  });
+});

@@ -50,17 +50,17 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     heading: 'Cosmic web density (tuning)',
     shows:
       'For each density field: intensity, contrast, trim, density, exposure and one of 21 colour palettes.',
-    file: 'src/layers/cosmicWebDensity/ui/CosmicWebDensityTuningSection.tsx',
+    file: 'src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensityTuningSection.tsx',
   },
   {
     heading: 'Flow tuning',
     shows: 'The flow ribbons: how many, the length of their trails, speed, and how they are spread.',
-    file: 'src/layers/flow/ui/FlowTuningSection.tsx',
+    file: 'src/layers/flow/streamlines/ui/FlowTuningSection.tsx',
   },
   {
     heading: 'Zone of Avoidance tuning',
     shows: 'The strength, falloff, edge and two colours of the band.',
-    file: 'src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSection.tsx',
+    file: 'src/layers/zoneOfAvoidance/shell/ui/ZoneOfAvoidanceTuningSection.tsx',
   },
   {
     heading: 'Local Bubble tuning',
@@ -76,7 +76,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   {
     heading: 'Milky Way tuning',
     shows: 'The size, exposure, softness and number of the points the Milky Way is drawn with.',
-    file: 'src/layers/milkyWay/ui/MilkyWayTuningSection.tsx',
+    file: 'src/layers/milkyWay/tuning/ui/MilkyWayTuningSection.tsx',
   },
   {
     heading: 'Star catalog tuning',

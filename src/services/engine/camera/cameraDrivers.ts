@@ -17,6 +17,7 @@ import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
 import type { RootState } from '../../../store/types';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
@@ -42,7 +43,6 @@ import { EASED_FOCUS_EASE } from '../../../data/camera/focusMoveDefaults';
 import { lerp } from '../../../utils/math/lerp';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
-import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 
@@ -213,6 +213,7 @@ function framedClipArm(
   from: Readonly<Mat3>,
   to: Readonly<Mat3>,
   bodies: ReadonlyMap<PositionedId, BodyState>,
+  terrainHeightAt: TerrainHeightAtLookup,
 ): FramedCameraPose {
   const { frame, channels } = evaluated;
   // No decode cell reads a basis TODAY. The day one does — a site row reading
@@ -221,7 +222,7 @@ function framedClipArm(
     bodies,
     poseBasis: to,
     upBasis: to,
-    terrainHeightAt: datumOnlyTerrainHeight,
+    terrainHeightAt,
   });
   return isWorldArm(decoded) ? absoluteArm(reencodePose(decoded.pose, from, to)) : decoded;
 }
@@ -252,9 +253,10 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         frameBasis: pinned,
         bodies: ctx.bodies,
         playback: clip,
+        terrainHeightAt: ctx.terrainHeightAt,
       });
       return {
-        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
+        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies, ctx.terrainHeightAt),
         memory: settledMemory(mem),
       };
     },
@@ -330,8 +332,15 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         frameBasis: pinned,
         bodies: ctx.bodies,
         playback: tween,
+        terrainHeightAt: ctx.terrainHeightAt,
       });
-      const framed = framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies);
+      const framed = framedClipArm(
+        evaluated,
+        pinned,
+        ctx.poseBasis,
+        ctx.bodies,
+        ctx.terrainHeightAt,
+      );
       const offset = tween.from.lookOffset;
       if (offset === undefined || !isWorldArm(framed))
         return { pose: framed, memory: settledMemory(mem) };

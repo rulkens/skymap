@@ -74,6 +74,8 @@ export const bodyRung: ClimbRow<'body'> = {
     }),
   },
 
+  identity: (frame) => frame.body,
+
   host(frame, ctx) {
     const state = ctx.bodies.get(frame.body);
     const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === frame.body);

@@ -4,9 +4,9 @@
  */
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { OrbitTrailRenderer } from '../../../@types/rendering/orbitTrailRenderer/OrbitTrailRenderer';
-import type { SatellitePointRenderer } from './SatellitePointRenderer';
-import type { SatellitePropagator } from './SatellitePropagator';
-import type { SimRateTracker } from './SimRateTracker';
+import type { SatellitePointRenderer } from '../points/@types/SatellitePointRenderer';
+import type { SatellitePropagator } from '../sweep/@types/SatellitePropagator';
+import type { SimRateTracker } from '../sweep/@types/SimRateTracker';
 
 export type SatellitesRuntime = {
   readonly renderer: SatellitePointRenderer;

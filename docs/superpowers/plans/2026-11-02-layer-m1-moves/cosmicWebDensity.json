@@ -1,33 +1,5 @@
 [
   {
-    "from": "src/@types/data/volume/CosmicWebDensityFieldId.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/CosmicWebDensityFieldId.d.ts"
-  },
-  {
-    "from": "src/@types/engine/frame/ScalarVolumePassRow.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/ScalarVolumePassRow.d.ts"
-  },
-  {
-    "from": "src/@types/rendering/FieldEntry.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/FieldEntry.d.ts"
-  },
-  {
-    "from": "src/@types/rendering/VolumeFieldLiveness.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/VolumeFieldLiveness.d.ts"
-  },
-  {
-    "from": "src/@types/rendering/VolumeFieldRenderer.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/VolumeFieldRenderer.d.ts"
-  },
-  {
-    "from": "src/@types/settings/VolumeFieldSettings.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/VolumeFieldSettings.d.ts"
-  },
-  {
-    "from": "src/data/volume/scalarFieldPalettes.ts",
-    "to": "src/layers/cosmicWebDensity/data/scalarFieldPalettes.ts"
-  },
-  {
     "from": "src/utils/clampVolumeContrast.ts",
     "to": "src/layers/cosmicWebDensity/utils/clampVolumeContrast.ts"
   },
@@ -40,10 +12,6 @@
     "to": "src/layers/cosmicWebDensity/utils/clampVolumeExposure.ts"
   },
   {
-    "from": "src/utils/clampVolumeFieldSettings.ts",
-    "to": "src/layers/cosmicWebDensity/utils/clampVolumeFieldSettings.ts"
-  },
-  {
     "from": "src/utils/clampVolumeIntensity.ts",
     "to": "src/layers/cosmicWebDensity/utils/clampVolumeIntensity.ts"
   },
@@ -54,5 +22,9 @@
   {
     "from": "src/utils/volume/deriveVolumeLiveness.ts",
     "to": "src/layers/cosmicWebDensity/utils/volume/deriveVolumeLiveness.ts"
+  },
+  {
+    "from": "tests/utils/clampVolume.test.ts",
+    "to": "tests/layers/cosmicWebDensity/utils/clampVolume.test.ts"
   }
 ]

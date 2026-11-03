@@ -14,6 +14,8 @@ import type { TiltMemory } from './TiltMemory';
 /** One rung's table row: its kind, how to resolve its current host body, its empty memory, its channel pair, its input step and its nudge. */
 export type RungRow<K extends RungKind> = {
   readonly kind: K;
+  /** What the frame tag's value names, for `frameKey`: '' for the world arm, else the body or site id. */
+  identity(frame: FrameOf[K]): string;
   host(frame: FrameOf[K], ctx: RungBasisCtx): HostBody | null;
   /** How a clip's four animation channels read in this rung's frame. */
   readonly channels: RungChannels<K>;

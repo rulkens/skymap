@@ -52,7 +52,7 @@ vi.mock('../../../../src/services/loading/fetchers/famousStarsMetaFetcher', () =
 // The structure-catalog slot fires `.load({})` at boot; mock its fetcher so
 // the test doesn't network.  An empty catalog is enough: only whether it
 // fetched is asserted here.
-vi.mock('../../../../src/layers/structure/load/structureCatalogFetcher', () => ({
+vi.mock('../../../../src/layers/structure/catalog/load/structureCatalogFetcher', () => ({
   structureCatalogFetcher: vi.fn(async () => ({
     catalog: {
       count: 0,
@@ -68,16 +68,19 @@ vi.mock('../../../../src/layers/structure/load/structureCatalogFetcher', () => (
 
 // MCPM is default-on, so the demand loop fires its load at boot.  Mock the
 // fetcher so the slot resolves without networking.
-vi.mock('../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityFetcher', () => ({
-  cosmicWebDensityFetcher: vi.fn(async () => ({
-    dims: [4, 4, 4],
-    voxels: new Float32Array(64),
-    valueMin: 0,
-    valueMax: 1,
-    frame: 'supergalactic',
-    boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
-  })),
-}));
+vi.mock(
+  '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityFetcher',
+  () => ({
+    cosmicWebDensityFetcher: vi.fn(async () => ({
+      dims: [4, 4, 4],
+      voxels: new Float32Array(64),
+      valueMin: 0,
+      valueMax: 1,
+      frame: 'supergalactic',
+      boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
+    })),
+  }),
+);
 
 // wireSlots awaits loadDataManifest() before reevaluateDemand. Default resolves immediately; the
 // deferred-manifest test overrides it once with mockReturnValueOnce.
@@ -104,11 +107,11 @@ import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetR
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { structureCatalogFetcher } from '../../../../src/layers/structure/load/structureCatalogFetcher';
-import { createStructureCatalogSlot } from '../../../../src/layers/structure/load/structureCatalogSlot';
-import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
-import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/load/createCosmicWebDensitySlot';
-import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
+import { structureCatalogFetcher } from '../../../../src/layers/structure/catalog/load/structureCatalogFetcher';
+import { createStructureCatalogSlot } from '../../../../src/layers/structure/catalog/load/structureCatalogSlot';
+import { structureAssetRows } from '../../../../src/layers/structure/catalog/load/structureAssetRows';
+import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/densityCubes/load/createCosmicWebDensitySlot';
+import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/filaments/load/filamentFetcher';

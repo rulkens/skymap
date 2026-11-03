@@ -5,7 +5,7 @@
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
-import type { FlowFieldRenderer } from '../../../@types/rendering/FlowFieldRenderer';
+import type { FlowFieldRenderer } from '../streamlines/@types/FlowFieldRenderer';
 
 export type FlowRuntime = {
   readonly renderer: FlowFieldRenderer;
