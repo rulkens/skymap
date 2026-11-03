@@ -21,7 +21,7 @@ import {
   blackHoleLensingSliderPatch,
 } from './blackHoleLensingSliderFields';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
-import sliderStyles from '../../../components/DebugPanel/DebugSlider.module.css';
+import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
 
 export type BlackHoleLensingTuningSectionProps = {
   tuning: BlackHoleLensingTuning;

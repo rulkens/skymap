@@ -26,7 +26,7 @@ the rows come from the same fold. `near0SphereBodies` follows without a second l
 ## Caveat: the Sgr A* lens anchor
 
 blackHoles' row is anchored on a place, not a body (`blackHoleAnchorId`, a `PlaceId`: the Galactic
-Centre, `src/layers/blackHoles/present/blackHoleSlabRow.ts`), and its `hosts` line is `lens`, not a body
+Centre, `src/layers/blackHoles/markers/present/blackHoleSlabRow.ts`), and its `hosts` line is `lens`, not a body
 draw. A roster derived from `slabRows` anchors would catch it; the declaration must stay per body, and
 the lens row must remain a Layer `slabs` row with no body behind it.
 

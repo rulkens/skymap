@@ -19,7 +19,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 
 // Occlusion is the shared compose's concern, covered beside core's captions.
-vi.mock('../../../../src/services/engine/frame/sceneOccluderBodies', () => ({
+vi.mock('../../../../../src/services/engine/frame/sceneOccluderBodies', () => ({
   sceneOccluderBodies: () => [],
 }));
 

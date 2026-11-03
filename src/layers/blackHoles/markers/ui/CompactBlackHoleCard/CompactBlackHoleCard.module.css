@@ -3,5 +3,5 @@
  * chrome is the shared compactChrome vocabulary.
  */
 .root {
-  composes: infoCardCompact from '../../../../components/InfoCard/compactChrome.module.css';
+  composes: infoCardCompact from '../../../../../components/InfoCard/compactChrome.module.css';
 }

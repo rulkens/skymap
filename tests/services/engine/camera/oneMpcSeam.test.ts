@@ -112,7 +112,7 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     "framing-bridge precedent — the SelectionRow's radiusM to Mpc bridge feeding clampDistance's floor argument (zoom floor, pinch floor, follow driver's distance target all derive from it), not a pose re-derivation",
   ],
   [
-    'src/layers/blackHoles/present/blackHoleLensEnvelopeM.ts',
+    'src/layers/blackHoles/lensing/present/blackHoleLensEnvelopeM.ts',
     'fade precedent — bridges a metre distance to Mpc only to test it against the capture band Mpc goneAt, no slab MVP involved',
   ],
 ]);

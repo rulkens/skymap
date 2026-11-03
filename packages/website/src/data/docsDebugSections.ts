@@ -71,7 +71,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     heading: 'Sgr A* lens tuning',
     shows:
       'The drawn ring of gas round the black hole (its radii, tilt, flicker and colour) and the size of the sky picture that is bent round it.',
-    file: 'src/layers/blackHoles/ui/BlackHoleLensingTuningSection.tsx',
+    file: 'src/layers/blackHoles/lensing/ui/BlackHoleLensingTuningSection.tsx',
   },
   {
     heading: 'Milky Way tuning',

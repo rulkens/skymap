@@ -864,7 +864,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'card-black-hole',
     about: 'app',
     text: 'The card of the black hole at the centre of the Milky Way gives its designation, Sagittarius A*, its mass in millions of solar masses, the radius of its event horizon and its distance from the Sun.',
-    source: `${REPO_BLOB}/src/layers/blackHoles/ui/BlackHoleDetailCard/BlackHoleDetailCard.tsx`,
+    source: `${REPO_BLOB}/src/layers/blackHoles/markers/ui/BlackHoleDetailCard/BlackHoleDetailCard.tsx`,
     sourceLabel: `the black hole’s card, ${IN_REPO}`,
     checked: CHECKED,
   },

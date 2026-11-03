@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import type { BlackHoleInfo } from '../../../../../@types/engine/BlackHoleInfo';
 import { formatDistance } from '../../../../../utils/format/formatDistance';
 import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
-import styles from '../../../../components/InfoCard/compactChrome.module.css';
+import styles from '../../../../../components/InfoCard/compactChrome.module.css';
 import local from './CompactBlackHoleCard.module.css';
 
 export type CompactBlackHoleCardProps = {
