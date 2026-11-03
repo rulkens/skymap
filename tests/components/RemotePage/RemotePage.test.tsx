@@ -233,6 +233,55 @@ describe('RemotePage', () => {
     expect(document.activeElement).toBe(screen.getByRole('searchbox'));
   });
 
+  it('Escape in a filled search field clears it and keeps the sheet; in an empty one, or while composing, only the empty one closes', () => {
+    render(<RemotePage />);
+    sendStatus();
+    openSheet('Search');
+    const field = screen.getByRole('searchbox') as HTMLInputElement;
+    fireEvent.change(field, { target: { value: 'andro' } });
+    fireEvent.keyDown(field, { key: 'Escape' });
+    act(() => void vi.advanceTimersByTime(SHEET_LEAVE_MS));
+    expect(field.value).toBe('');
+    expect(screen.queryByRole('dialog')).toBeTruthy();
+    fireEvent.keyDown(field, { key: 'Escape', isComposing: true });
+    act(() => void vi.advanceTimersByTime(SHEET_LEAVE_MS));
+    expect(screen.queryByRole('dialog')).toBeTruthy();
+    fireEvent.keyDown(field, { key: 'Escape' });
+    act(() => void vi.advanceTimersByTime(SHEET_LEAVE_MS));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it("a reopened search starts empty, without the last search's results", () => {
+    render(<RemotePage />);
+    sendStatus();
+    openSheet('Search');
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'andro' } });
+    act(() => void vi.advanceTimersByTime(200));
+    act(() =>
+      deliver(
+        JSON.stringify({
+          v,
+          kind: 'searchResults',
+          requestId: messages('search')[0]!.requestId,
+          matches: [
+            { name: 'Andromeda', kind: 'galaxy', action: { kind: 'focus', focusId: 'm31' } },
+          ],
+        }),
+      ),
+    );
+    expect(screen.queryByRole('button', { name: /Andromeda/ })).toBeTruthy();
+    closeSheet();
+    openSheet('Search');
+    expect(screen.queryByRole('button', { name: /Andromeda/ })).toBeNull();
+  });
+
+  it('a dome with no label toggles says so in the Labels sheet', () => {
+    render(<RemotePage />);
+    sendWith({ toggles: [] });
+    openSheet('Labels');
+    expect(screen.getByText('The dome lists no labels')).toBeTruthy();
+  });
+
   it('three seconds without a status shows dome not there, with a way back to the code', () => {
     render(<RemotePage />);
     sendStatus();
@@ -258,6 +307,19 @@ describe('RemotePage', () => {
     sendStatus();
     expect(screen.getByText('Connected')).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('the deck is inert under both version notices', () => {
+    render(<RemotePage />);
+    sendStatus();
+    const tile = screen.getByRole('button', { name: 'Exhibits' });
+    expect(tile.closest('[inert]')).toBeNull();
+    sendStatus('skymap', v - 1);
+    expect(tile.closest('[inert]')).not.toBeNull();
+    sendStatus();
+    expect(tile.closest('[inert]')).toBeNull();
+    sendStatus('skymap', v + 1);
+    expect(tile.closest('[inert]')).not.toBeNull();
   });
 
   it('every message the page sends carries the protocol version', () => {

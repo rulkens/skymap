@@ -19,6 +19,11 @@ export type SearchSectionProps = {
 function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
   const [query, setQuery] = useState('');
   useEffect(() => {
+    // Empty clears at once, which also drops the last search's results when the sheet reopens.
+    if (query === '') {
+      onSearch('');
+      return;
+    }
     const timer = setTimeout(() => onSearch(query.trim()), DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [query, onSearch]);
@@ -36,6 +41,12 @@ function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
         autoCorrect="off"
         spellCheck={false}
         onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          // Escape clears a filled field; the sheet's own Escape handler only sees it once the field is empty.
+          if (e.key !== 'Escape' || e.nativeEvent.isComposing || query === '') return;
+          e.stopPropagation();
+          setQuery('');
+        }}
       />
       {query.trim() !== '' && matches.length === 0 && (
         <p className={styles.empty}>No match for “{query.trim()}”</p>

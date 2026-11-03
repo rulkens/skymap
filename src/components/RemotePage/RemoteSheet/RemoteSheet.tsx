@@ -44,7 +44,8 @@ function RemoteSheet({ id, onClose, initialFocus = 'heading', note, children }: 
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setLeaving(true);
+      // An IME composition uses Escape to cancel; a filled search field stops it to clear itself first.
+      if (e.key === 'Escape' && !e.isComposing) setLeaving(true);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);

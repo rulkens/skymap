@@ -12,7 +12,7 @@ export type ToggleSectionProps = {
 };
 
 function ToggleSection({ toggles, onCommand }: ToggleSectionProps) {
-  if (toggles.length === 0) return null;
+  if (toggles.length === 0) return <p className={styles.empty}>The dome lists no labels</p>;
   return (
     <div className={styles.list}>
       {toggles.map((toggle) => (
