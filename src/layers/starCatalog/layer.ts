@@ -29,6 +29,8 @@ import { STAR_AGGREGATES_TARGET } from './render/starAggregatesTarget';
 import { S_STAR_ORBITAL_ELEMENTS } from '../../data/bodies/sStarOrbitalElements';
 import StarsSectionContainer from './ui/StarsSectionContainer';
 import StarCatalogTuningSectionContainer from './ui/StarCatalogTuningSectionContainer';
+import StarDetailCard from './card/ui/StarDetailCard/StarDetailCard';
+import CompactStarCard from './card/ui/CompactStarCard/CompactStarCard';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 
 export const starCatalogLayer = defineLayer({
@@ -68,5 +70,9 @@ export const starCatalogLayer = defineLayer({
     { slot: 'main', content: StarsSectionContainer },
     { slot: 'debug', content: StarCatalogTuningSectionContainer },
     { slot: 'labelsAndGuides', content: { toggle: 'sStarTrails', label: 'S-star trails' } },
+    {
+      slot: 'detailCard',
+      content: { type: 'starCatalog', Detail: StarDetailCard, Compact: CompactStarCard },
+    },
   ],
 });
