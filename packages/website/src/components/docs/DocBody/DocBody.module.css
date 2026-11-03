@@ -15,13 +15,13 @@
 
   /* The gap above a heading is always larger than the one below it. */
   & h2 {
-    margin: 3.5rem 0 1rem;
+    margin: var(--site-space-2xl) 0 var(--site-space-s);
     font-size: 2rem;
     line-height: 1.1;
   }
 
   & h3:where(:not([data-embed] *)) {
-    margin: 2.5rem 0 0.75rem;
+    margin: var(--site-space-xl) 0 var(--site-space-xs);
   }
 
   /*
@@ -39,12 +39,12 @@
 
   & :is(ul, ol):where(:not([data-embed] *)) {
     margin: 0 0 var(--stack);
-    padding-left: 1.5rem;
+    padding-left: var(--site-space-m);
     color: var(--site-text-muted);
   }
 
   & li:where(:not([data-embed] *)) {
-    margin-block: 0.5rem;
+    margin-block: var(--site-space-2xs);
   }
 
   & li > :is(ul, ol) {
@@ -89,7 +89,7 @@
   }
 
   & dt:where(:not([data-embed] *)) {
-    padding-top: 0.75rem;
+    padding-top: var(--site-space-xs);
     border-top: 1px solid var(--border-divider);
     color: var(--color-fg);
   }
@@ -100,13 +100,13 @@
   }
 
   & dd:where(:not([data-embed] *)) {
-    margin: 0 0 0.75rem;
+    margin: 0 0 var(--site-space-xs);
     color: var(--site-text-muted);
   }
 
   /* `--figure-out` is how far a wide figure runs past the text's right edge (DocFigure). */
   & figure {
-    margin: 2.5rem var(--figure-out, 0) 2.5rem 0;
+    margin: var(--site-space-xl) var(--figure-out, 0) var(--site-space-xl) 0;
   }
 
   /*
@@ -126,7 +126,7 @@
     vertical-align: middle;
   }
 
-  @media (max-width: 900px) {
+  @media (--narrow) {
     --doc-measure: 35rem;
   }
 }

@@ -16,10 +16,12 @@ const DRAG_SLOP_PX = 6;
 /** Travel past which a release flips the sheet; shorter drags spring back. */
 const SNAP_PX = 40;
 
-/** Changing `resetKey` (new content) returns the sheet to the peek, scrolled to the top. */
+/**
+ * Changing `resetKey` (new content) returns the sheet to the peek, scrolled to the top.
+ * Expanded, the sheet drags only from a `[data-sheet-grip]` element; elsewhere its content scrolls.
+ */
 export function useSheetDrag(resetKey: string): SheetDrag {
   const sheetRef = useRef<HTMLElement>(null);
-  const handleRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ id: number; startY: number; moved: boolean } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -29,12 +31,14 @@ export function useSheetDrag(resetKey: string): SheetDrag {
     setExpanded(false);
   }
 
+  // After the commit, never in the release handler: a scroll call flushes style, and
+  // a flush between clearing `--drag` and the class swap starts the snap from open.
   useEffect(() => {
-    sheetRef.current?.scrollTo({ top: 0 });
-  }, [resetKey]);
+    if (!expanded) sheetRef.current?.scrollTo({ top: 0 });
+  }, [expanded, resetKey]);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLElement>): void => {
-    if (expanded && !handleRef.current?.contains(e.target as Node)) return;
+    if (expanded && !(e.target as Element).closest('[data-sheet-grip]')) return;
     drag.current = { id: e.pointerId, startY: e.clientY, moved: false };
   };
 
@@ -63,15 +67,11 @@ export function useSheetDrag(resetKey: string): SheetDrag {
     sheet.style.removeProperty('--drag');
     const dy = e.type === 'pointercancel' ? 0 : e.clientY - d.startY;
     if (dy < -SNAP_PX) setExpanded(true);
-    else if (dy > SNAP_PX) {
-      setExpanded(false);
-      sheet.scrollTo({ top: 0 });
-    }
+    else if (dy > SNAP_PX) setExpanded(false);
   };
 
   return {
     sheetRef,
-    handleRef,
     expanded,
     dragging,
     handlers: {

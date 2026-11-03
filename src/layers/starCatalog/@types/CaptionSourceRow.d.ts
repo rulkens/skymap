@@ -1,5 +1,5 @@
 import type { LabelItemOf } from '../../../@types/animation/LabelItemOf';
-import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { StarBody } from '../../../@types/scene/StarBody';
 import type { StarCaptionStyle } from './StarCaptionStyle';
 

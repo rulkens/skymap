@@ -2,11 +2,11 @@
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
-import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
+import type { GalaxyCatalogRegistryEntry } from '../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
 import { Source } from '../../../data/source';
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { HI_RES_LAYER_SIDE_BY_TIER } from '../data/hiResLayerSideByTier';
 import { tierTarget } from '../../../data/tierTargets';
@@ -37,7 +37,7 @@ export function galaxyCatalogAssetRows(
   runtime: GalaxyCatalogRuntime,
 ): readonly (AssetWiringRow | CompanionAssetRow)[] {
   return [
-    ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(runtime, APP_SOURCE_REGISTRY[code])),
+    ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(runtime, GALAXY_CATALOG_SOURCE_RECORD[code])),
 
     // Loads once the Famous slot leaves `idle`.
     {

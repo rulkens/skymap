@@ -150,15 +150,6 @@ See the refinement above. Backlogged as `2026-10-28-per-body-slab-declaration.md
 ### J14. Sgr A* sky capture: ~25
 `data/rendering/cubemapCaptures.ts` hard-codes the `sgrAStar` row, `SKY_CAPTURE_KEYS = ['sgrAStar','solarSystem']`, and `SCALE_FADE_BANDS.sgrAStarLensing`. blackHoles imports `cubemapCaptures` 5 times. **Joint:** Layer-declared sky captures. The `solarSystem` capture is mesh-probe infrastructure and stays.
 
-### J16. 13 galaxyCatalog/starCatalog files read `APP_SOURCE_REGISTRY` for their own rows
-galaxyCatalog `create.ts`, `load/galaxyCatalogAssetRows.ts`, `render/catalogStore.ts`, `state/galaxyCatalogs/selectors.ts`, `subsystems/proceduralDiskSubsystem.ts`, `ui/GalaxiesSection.tsx`; starCatalog `load/installStarPool.ts`, `load/starCatalogAssetRows.ts`, `load/starCatalogFetcher.ts`, `load/starCatalogSlot.ts`, `passes/fieldStarSpherePass.ts`, `render/cut/starSourcesInBand.ts`, `ui/StarCatalogTuningSectionContainer.tsx`. Per composition spec §4.7 a Layer's id-domain types and lookups derive from its own `sources` tuple, and only cross-Layer readers take the composed registry; path-only today, moved from `data/sources`.
-
-**Ruled design (2026-10-30; do after GLADE octree PR #932 lands, converting #932's three new readers in the same change):**
-- galaxyCatalog and starCatalog each build `<LAYER>_SOURCE_RECORD = sourceRecordOf(<LAYER>_SOURCE_ROWS)` in their `sources/`; `appSources.ts` spreads those records.
-- `GalaxyCatalogSourceType` / `StarCatalogSourceType` derive from the Layer's own rows, not the composed registry; wide `SourceType` params narrow to them, dropping the runtime `.type` guards and `as …Id` casts.
-- `starCatalogAssetRows` uses the row's own `entry.id`.
-- A new `layerImportBoundary` sweep forbids any `src/layers/` file importing `src/compositions/` (empty allow-list).
-
 ---
 
 ## STAYS: shared or infrastructure

@@ -66,6 +66,7 @@ function bodyAt(
   return {
     id: asSceneBodyId(id),
     label: id,
+    captionKind: 'planet',
     resolvePx: 3,
     surface: { datumRadiusM: radiusM, reliefM },
     albedo: [0.5, 0.5, 0.5],

@@ -156,15 +156,4 @@ describe('starCatalogFetcher', () => {
     expect(decoded).toEqual(starOctreeFromSkst(cat));
     expect(decoded.chunks).toEqual([]);
   });
-
-  it('throws when the requested source is not a star catalog', async () => {
-    await expect(
-      starCatalogFetcher(
-        { source: Source.SDSS, tier: 'medium' },
-        new AbortController().signal,
-        () => {},
-      ),
-    ).rejects.toThrow();
-    expect(fetchWithProgress).not.toHaveBeenCalled();
-  });
 });

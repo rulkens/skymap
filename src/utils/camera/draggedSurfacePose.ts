@@ -2,6 +2,7 @@ import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { DragStep } from '../../@types/camera/DragStep';
 import type { DraggedSurfacePose } from '../../@types/camera/DraggedSurfacePose';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
+import type { ViewFrustum } from '../../@types/camera/ViewFrustum';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { TILT_GAIN } from '../../data/camera/tiltGain';
@@ -24,13 +25,14 @@ export function draggedSurfacePose(
   gesture: SurfaceGesture,
   step: DragStep,
   viewportPx: Readonly<Vec2>,
+  frustum: ViewFrustum,
   fovYRad: number,
 ): DraggedSurfacePose {
-  const currRay = cursorRayBodyLocal(arm, step.endPx, viewportPx, fovYRad);
+  const currRay = cursorRayBodyLocal(arm, step.endPx, viewportPx, frustum);
   let mode = gesture.mode;
 
   if (mode === 'pan') {
-    const prevRay = cursorRayBodyLocal(arm, gesture.prevPixel, viewportPx, fovYRad);
+    const prevRay = cursorRayBodyLocal(arm, gesture.prevPixel, viewportPx, frustum);
     const rotated = anchoredDragRotation(arm, prevRay, currRay, gesture.anchorRadiusM);
     if (rotated !== null) return { pose: rotated, mode };
     // A null answer covers a miss AND a grazing hit, and the two degrade

@@ -41,6 +41,7 @@ import {
   arrivalRoute,
   inputRoute,
   remoteRoute,
+  viewCoverRoute,
 } from './constants';
 import settingsReducer from '../state/settings/settingsReducer';
 import uiReducer from '../state/ui/uiSlice';
@@ -55,6 +56,7 @@ import timeReducer from '../state/time/timeSlice';
 import arrivalReducer from '../state/arrival/arrivalSlice';
 import inputReducer from '../state/input/inputSlice';
 import remoteReducer from '../state/remote/remoteSlice';
+import viewCoverReducer from '../state/viewCover/viewCoverSlice';
 
 export const rootReducer = combineReducers({
   [settingsRoute]: settingsReducer,
@@ -70,4 +72,5 @@ export const rootReducer = combineReducers({
   [arrivalRoute]: arrivalReducer,
   [inputRoute]: inputReducer,
   [remoteRoute]: remoteReducer,
+  [viewCoverRoute]: viewCoverReducer,
 });

@@ -4,10 +4,10 @@ import { produceStructureLabels } from '../../../../src/layers/structure/present
 import { createStructureStore } from '../../../../src/layers/structure/load/createStructureStore';
 import { STRUCTURE_ID_CODES } from '../../../../src/data/structure/structureIds';
 import { makeStructureFade } from '../../../fixtures/makeStructureFade';
-import { MARKER_RADIUS_RETUNE } from '../../../../src/data/markerRadiusRetune';
+import { MARKER_RADIUS_RETUNE } from '../../../../src/layers/structure/data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../../src/layers/structure/data/structureLabelAboveGapPx';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
-import { structurePickId } from '../../../../src/utils/picking/structurePickId';
+import { structurePickId } from '../../../../src/layers/structure/utils/picking/structurePickId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';

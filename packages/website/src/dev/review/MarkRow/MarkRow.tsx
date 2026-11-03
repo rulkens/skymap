@@ -8,9 +8,7 @@ import { cx } from '../../../utils/cx.ts';
 import NoteField from '../NoteField/NoteField.tsx';
 import { truncate } from '../truncate';
 import styles from './MarkRow.module.css';
-
-const STATES = ['cut', 'keep', 'rewrite', 'good'] as const;
-const PASSAGE_CHARS = 90;
+import { STATES, PASSAGE_CHARS } from './MarkRow.constants.ts';
 
 type MarkRowProps = {
   mark: DocsReviewMark;

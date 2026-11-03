@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { MARKER_RADIUS_RETUNE } from '../../../../src/data/markerRadiusRetune';
+import { MARKER_RADIUS_RETUNE } from '../../../../src/layers/structure/data/markerRadiusRetune';
 
 describe('structureMarker/io.wesl ↔ markerRadiusRetune.ts parity', () => {
   it('the shader factor matches the TS mirror', () => {

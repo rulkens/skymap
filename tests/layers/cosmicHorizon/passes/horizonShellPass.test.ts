@@ -1,7 +1,7 @@
 /**
  * horizonShellPass — the `draw` call's arguments, against stub state + ctx with no GPU
- * device. `draw` must thread the resolved `SlabView`'s `viewportPx` rather than reading
- * `ctx.canvasSize` directly, and hand the core-resolved fade to the shader as its alpha.
+ * device. `draw` must hand the view's own frustum (its rays must match its `vp`) and the
+ * core-resolved fade to the shader as its alpha.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -11,6 +11,7 @@ import { horizonShellPass } from '../../../../src/layers/cosmicHorizon/passes/ho
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -76,6 +77,7 @@ function makeCtx(): FrameView {
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
     drawCamPos,
+    frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     // Nothing in this file reads bodyPose — a stub that never resolves a
     // body is a safe default.
@@ -109,7 +111,7 @@ describe('horizonShellPass.draw', () => {
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(ctx.cam);
-    expect(args[2]).toEqual(view.viewportPx);
+    expect(args[2]).toBe(ctx.frustum);
     expect(args[3]).toBe(0.37);
   });
 });

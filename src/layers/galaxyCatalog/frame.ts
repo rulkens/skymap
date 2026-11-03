@@ -13,7 +13,7 @@
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { PassState } from '../../@types/engine/frame/PassState';
-import type { SourceType } from '../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from './@types/GalaxyCatalogSourceType';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
@@ -112,7 +112,7 @@ export function galaxyCatalogPlanner(
         // hidden catalog's disks fade out with the point sprites instead of
         // popping once the fade ends and the mask drops the source. The handed
         // value itself, clip included.
-        sourceOpacity: (source: SourceType) => fade[galaxyCatalogIdOf(source)],
+        sourceOpacity: (source: GalaxyCatalogSourceType) => fade[galaxyCatalogIdOf(source)],
       };
       runtime.diskPlannerWalk.runFrame(
         sharedInput,

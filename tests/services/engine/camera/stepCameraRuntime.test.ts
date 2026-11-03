@@ -81,6 +81,8 @@ import {
   toggleControlScheme,
 } from '../../../../src/state/settings/core/cameraControlsSlice';
 import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { NO_INSETS_PX } from '../../../../src/data/layout/noInsetsPx';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -104,6 +106,7 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     simDays,
     rootState,
     canvasPx: [100, 100],
+    coverPx: NO_INSETS_PX,
     aspect: 1,
     steps: pendingToInputSteps(pending, [100, 100]),
     bodies: deriveBodyStates(simDays),
@@ -207,6 +210,7 @@ describe('stepCameraRuntime', () => {
           focusBodyId: asSceneBodyId('earth'),
           pivot: pivotFraming(EARTH_ROW),
           viewportPx: [1000, 1000],
+          frustum: symmetricFrustum(Math.PI / 3, 1),
           fovYRad: Math.PI / 3,
           tuning: intent.tuning,
         },
@@ -747,6 +751,8 @@ describe('a clip fov channel drives the drawn lens', () => {
     const drawn = h.state.cameraRuntime.outputs.projection.fovYRad;
     expect(drawn).toBeLessThan(1);
     expect(drawn).toBeGreaterThan(0.25);
+    // The renderer draws from the frustum, so the driven lens must reach it too.
+    expect(h.state.cameraRuntime.outputs.frustum.tanUp).toBeCloseTo(Math.tan(drawn / 2), 12);
     expect(h.store.getState().camera.lens).toBe(DEFAULT_FOV_Y_RAD);
   });
 
@@ -776,5 +782,33 @@ describe('a clip fov channel drives the drawn lens', () => {
 
     expect(h.store.getState().camera.clip).not.toBeNull();
     expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(0.5);
+  });
+});
+
+describe('the lens shift', () => {
+  it('a cover change renders until the shift settles', () => {
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
+    h.frame(2);
+    const coverPx = { ...NO_INSETS_PX, bottom: 20 };
+    let nowMs = h.nowMs();
+    const step = () => {
+      nowMs += 16;
+      const out = stepCameraRuntime(h.state.cameraRuntime, inputsFor(h, nowMs, { coverPx }));
+      h.state.cameraRuntime = out.next;
+      for (const action of out.actions) h.store.dispatch(action);
+      return out;
+    };
+
+    const first = step();
+    expect(first.requestRender).toBe(true);
+    expect(first.next.shiftNdc[1]).toBeGreaterThan(0);
+    expect(first.next.shiftNdc[1]).toBeLessThan(0.2);
+
+    let frames = 1;
+    while (frames < 200 && step().requestRender) frames += 1;
+    expect(h.state.cameraRuntime.shiftNdc).toEqual([0, 0.2]);
+    // τ = 80 ms at 16 ms frames lands inside 1e-4 of 0.2 in about 38 frames.
+    expect(frames).toBeGreaterThan(20);
+    expect(frames).toBeLessThan(80);
   });
 });

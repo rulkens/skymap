@@ -16,6 +16,7 @@ import type { RungMemory } from '../../camera/RungMemory';
 import type { TiltMemory } from '../../camera/TiltMemory';
 import type { FrameOutputs } from './FrameOutputs';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
+import type { Vec2 } from '../../math/Vec2';
 
 export type CameraRuntime = {
   /** The AUTHORED pose (pre-projection — a projected one walks ~8,500 km/frame,
@@ -45,5 +46,7 @@ export type CameraRuntime = {
   readonly pivotBody: SceneBodyId | null;
   /** Last frame's driver-drawn lens (a clip's `fov`), committed to `camera.lens` when that row hands off. */
   readonly drivenLens: number | null;
+  /** The lens shift drawn last frame, in NDC: eased toward the covers' target, so it is memory. */
+  readonly shiftNdc: Readonly<Vec2>;
   readonly outputs: FrameOutputs;
 };

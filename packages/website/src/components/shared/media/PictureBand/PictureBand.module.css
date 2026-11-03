@@ -11,14 +11,6 @@
   background: #000;
 }
 
-.half {
-  margin-top: calc(var(--section-space) / 2);
-}
-
-.full {
-  margin-top: var(--section-space);
-}
-
 .back {
   position: absolute;
   inset: 0;
@@ -41,18 +33,6 @@
     background:
       linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 16%, rgb(0 0 0 / 0) 84%, #000 100%),
       linear-gradient(90deg, rgb(0 0 0 / 0.88) 0%, rgb(0 0 0 / 0.6) 34%, rgb(0 0 0 / 0) 58%);
-  }
-}
-
-.right .back {
-  & img {
-    object-position: 30% 50%;
-  }
-
-  &::after {
-    background:
-      linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 16%, rgb(0 0 0 / 0) 84%, #000 100%),
-      linear-gradient(270deg, rgb(0 0 0 / 0.9) 0%, rgb(0 0 0 / 0.65) 32%, rgb(0 0 0 / 0) 56%);
   }
 }
 
@@ -98,7 +78,7 @@
   flex-direction: column;
   align-self: stretch;
   width: 100%;
-  padding-block: 5rem 2rem;
+  padding-block: var(--site-space-3xl) var(--site-space-l);
 
   & > :first-child {
     margin-top: auto;
@@ -114,17 +94,7 @@
   }
 }
 
-/* The eighth line of the page grid. */
-.right .copy > * {
-  margin-left: calc((100% + var(--col-gap)) * 7 / 12);
-}
-
-/* Words that follow the view: one cell, so the tallest reserves the room. */
-.words {
-  composes: view-words from '../../../../styles/picture.module.css';
-}
-
-@media (min-width: 901px) {
+@media (--wide) {
   /* Never taller than the picture's own shape, so a tall window does not crop it to a strip. */
   .none {
     min-height: min(56.25vw, var(--first-screen));
@@ -139,11 +109,6 @@
 
     & > * {
       max-width: min(27rem, 38vw);
-    }
-
-    /* An address's longest parameter, a pose, is 44 characters: at 28rem it stays on one line, in any window. */
-    & > .words {
-      max-width: 28rem;
     }
 
     /* A page's title is large text and may run past the words' column, over the picture: two lines, never three. */
@@ -177,17 +142,17 @@
 }
 
 /* On a short window an opening section's paragraphs under the lead are set small: at 16px Jost is 400. */
-@media (min-width: 901px) and (max-height: 720px) {
+@media (--wide) and (max-height: 720px) {
   .none .copy > p + p {
     font-size: var(--text-small);
     font-weight: var(--weight-small);
     line-height: 1.5;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--site-space-2xs);
   }
 }
 
 /* Narrow: the picture first, fading into the words below it. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     display: block;
     min-height: 0;
@@ -203,8 +168,7 @@
     }
 
     &::after,
-    .none &::after,
-    .right &::after {
+    .none &::after {
       background: linear-gradient(
         180deg,
         #000 0%,
@@ -242,13 +206,9 @@
       --caption-foot: none;
       --caption-lift: 0rem;
       order: -1;
-      margin-bottom: 2.5rem;
+      margin-bottom: var(--site-space-xl);
       padding-top: 0;
     }
-  }
-
-  .right .copy > * {
-    margin-left: 0;
   }
 
   /*
@@ -273,23 +233,23 @@
 
       & > h1 {
         order: -2;
-        margin-top: 2rem;
+        margin-top: var(--site-space-l);
       }
 
       & > p:first-of-type {
         order: -1;
-        margin-bottom: 0.5rem;
+        margin-bottom: var(--site-space-2xs);
       }
 
       & > :last-child {
         order: 1;
         width: auto;
-        margin: -1.5rem var(--gutter) 2.5rem;
+        margin: -1.5rem var(--gutter) var(--site-space-xl);
       }
     }
   }
 
-  @media (max-width: 700px) {
+  @media (--phone) {
     .stack {
       aspect-ratio: var(--shape-tall);
     }

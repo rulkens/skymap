@@ -6,12 +6,12 @@
  * acknowledgements are put together from those rows, the shot's address and
  * the citation, so the example cannot fall behind any of them.
  */
-import { APP_BASE } from '../../../data/appLink.ts';
 import { CITATION } from '../../../data/citation.ts';
 import { CITE_REFS } from '../../../data/citeRefs.ts';
 import { dataEntry } from '../../../data/dataPages.ts';
 import { PRESS_PICTURES } from '../../../data/pressPictures.ts';
 import { siteShot } from '../../../data/siteShot.ts';
+import { appAddress } from '../../../utils/appAddress.ts';
 import { asksAcknowledgement } from '../../../utils/asksAcknowledgement.ts';
 import { citationText } from '../../../utils/citationText.ts';
 import CopyButton from '../../shared/links/CopyButton/CopyButton.tsx';
@@ -35,7 +35,7 @@ function CiteCaption({ picture, cite }: CiteCaptionProps) {
     .link.split('&')
     .filter((part) => !part.startsWith('pose='))
     .join('&');
-  const address = `${new URL(import.meta.env.SITE).host}${APP_BASE}#${view}`;
+  const address = appAddress(view);
   const cited = `${CITATION.authors[0]!.family} ${CITATION.released.slice(0, 4)}`;
   const asking = entries.filter((entry) =>
     asksAcknowledgement(entry.record.fields.Attribution ?? ''),

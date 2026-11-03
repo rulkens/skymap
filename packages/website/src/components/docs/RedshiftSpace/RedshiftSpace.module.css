@@ -40,6 +40,6 @@
 
 .caption {
   composes: small from '../../../styles/type.module.css';
-  margin-top: 0.75rem;
+  margin-top: var(--site-space-xs);
   color: var(--site-text-muted);
 }

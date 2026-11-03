@@ -8,7 +8,7 @@ that fall outside that — both discovered the hard way during the GPU-renderers
 folder reorg (PR #436), where the manual grep after each move was the only thing
 standing between a stale path and a silent production break.
 
-## The two blind spots
+## The three blind spots
 
 **Class 1 — Vite query-suffixed specifiers.** `import w from './x.worker?worker'`
 _is_ a real import declaration in the AST, but `./x.worker?worker` doesn't resolve
@@ -19,6 +19,17 @@ shaders), `?worker`, `?url`, `?raw`, `?inline`.
 renderers/galaxyPointRenderer')` isn't a specifier at all — it's a string argument.
 Nothing type-checks it. There are 20 such `vi.mock` literals in the renderer
 tests alone.
+
+**Class 3 — CSS files.** The tool globs only `.ts`/`.tsx`, so moving a component
+folder leaves its `.module.css` behind, and nothing rewrites CSS-side paths:
+`composes: x from '../cardChrome.module.css'` and `@import`. An ambient
+`*.module.css` declaration means a stale `import styles from …` passes `tsc` too.
+The Layer M1 moves (`docs/superpowers/plans/2026-11-02-layer-m1-moves.md`, Tasks 6
+and 7: four InfoCard cards and the provenance debug section) work around it by hand.
+The fix: a `.css`/`.module.css` `from` moves like any file (its mirror rule: a
+sibling `.module.css` travels with a moved `.tsx` of the same basename), and the
+rewrite pass also re-derives relative `composes … from` and `@import` paths in
+every CSS file under `src/` and `packages/website/`.
 
 ## Why this is worth tooling rather than discipline
 
@@ -93,6 +104,8 @@ signal the heuristic is wrong, not that the list needs extending.
 - `tools/utils/refactor/rewritePathLiterals.ts` + the two extractors (+ tests —
   `tests/tools/utils/refactor/` already mirrors this dir).
 - `tools/utils/refactor/findDanglingPaths.ts` + test.
+- CSS (class 3): move `.css` files and rewrite `composes … from` / `@import`
+  paths; the dangling-path guard covers CSS specifiers too.
 - Wire both into `tools/dev/moveFiles.ts`; the guard runs last and gates the exit
   code. `--dry` should report what it _would_ rewrite and what dangles.
 - Update the tool's docblock: its "What this does NOT rewrite" section is

@@ -1,5 +1,5 @@
 import type { SeededStarCatalogId } from '../../../@types/data/starCatalog/SeededStarCatalogId';
-import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 
 /** Where a seeded star sits in its own seed table: how a star pass finds its bodies among
  * the frame's scene bodies, by its own data. */

@@ -15,5 +15,6 @@ export function satelliteBody(spec: BodySpec): PlanetBody {
     surface: { datumRadiusM: spec.datumRadiusM, reliefM: spec.reliefM ?? [0, 0] },
     albedo: spec.albedo,
     resolvePx: BODY_GLINT_MAX_PX,
+    captionKind: 'planet',
   };
 }

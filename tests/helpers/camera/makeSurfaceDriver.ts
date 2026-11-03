@@ -21,6 +21,7 @@ import type { SurfaceGestureMemory } from '../../../src/@types/camera/SurfaceGes
 import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 export function makeSurfaceDriver() {
   let memory: SurfaceGestureMemory = EMPTY_SURFACE_GESTURE_MEMORY;
@@ -37,6 +38,7 @@ export function makeSurfaceDriver() {
     ): BodyFixedPose => {
       const out = surfaceStep(memory, tilt, arm, step, {
         viewportPx,
+        frustum: symmetricFrustum(fovYRad, viewportPx[0] / viewportPx[1]),
         fovYRad,
         bodyRadiusM,
         standoffRadii: SURFACE_STANDOFF_RADII,

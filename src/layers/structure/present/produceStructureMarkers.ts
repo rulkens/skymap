@@ -43,9 +43,9 @@ import {
   RING_PICK_MIN_ALPHA,
 } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
-import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
+import { structureIdOf } from './structureIdOf';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
-import { structurePickId } from '../../../utils/picking/structurePickId';
+import { structurePickId } from '../utils/picking/structurePickId';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
 import { structureVisibility } from '../visibility';

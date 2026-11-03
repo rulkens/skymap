@@ -4,6 +4,8 @@ import { createLightTimeSpheresRenderer } from '../../../../src/layers/lightTime
 import { LIGHT_TIME_SPHERES } from '../../../../src/data/lightTime/lightTimeSpheres';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { ViewFrustum } from '../../../../src/@types/camera/ViewFrustum';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 // Float indices of the uniform block — `src/services/gpu/shaders/lightTime/io.wesl`, restated so a silent
 // renderer-side shift fails here rather than on screen.
@@ -17,7 +19,11 @@ const CENTRE: Vec3 = [5e-6, -2e-6, 1e-6];
 const CAM = { yaw: 0, pitch: 0, fovYRad: Math.PI / 3, aspect: 1 } as OrbitCamera;
 
 /** Draws once and returns the uniform floats the renderer uploaded. */
-function drawUniforms(camPos: Vec3, opacities: readonly number[]): Float32Array {
+function drawUniforms(
+  camPos: Vec3,
+  opacities: readonly number[],
+  frustum: ViewFrustum = symmetricFrustum(CAM.fovYRad, 1),
+): Float32Array {
   const writeBuffer = vi.fn();
   const device = {
     createShaderModule: () => ({ getCompilationInfo: () => Promise.resolve({ messages: [] }) }),
@@ -33,7 +39,7 @@ function drawUniforms(camPos: Vec3, opacities: readonly number[]): Float32Array 
     setBindGroup: vi.fn(),
     draw: vi.fn(),
   } as unknown as GPURenderPassEncoder;
-  createLightTimeSpheresRenderer(device, 'rgba16float').draw(pass, CAM, camPos, [800, 800], {
+  createLightTimeSpheresRenderer(device, 'rgba16float').draw(pass, CAM, camPos, frustum, {
     centre: CENTRE,
     opacities,
   });
@@ -44,6 +50,28 @@ const opacitiesWith = (entries: Record<number, number>) =>
   LIGHT_TIME_SPHERES.map((_, i) => entries[i] ?? 0);
 
 describe('createLightTimeSpheresRenderer', () => {
+  it('packs an off-axis frustum: ray axis tilted to the window centre, x and y half-extents apart', () => {
+    const hour = LIGHT_TIME_SPHERES[2]!.radiusMpc;
+    // Window centre at tangent (0.5, −0.2); the sphere sits on the view axis (tangent 0, 0).
+    const u = drawUniforms([CENTRE[0], CENTRE[1], CENTRE[2] + 5 * hour], opacitiesWith({ 2: 1 }), {
+      tanLeft: -0.5,
+      tanRight: 1.5,
+      tanDown: -1,
+      tanUp: 0.6,
+    });
+
+    expect([u[0], u[1], u[2]].map((v) => v!.toFixed(6))).toEqual([
+      '0.500000',
+      '-0.200000',
+      '-1.000000',
+    ]);
+    expect(u[3]).toBeCloseTo(0.8, 6); // tanHalfY
+    expect(u[7]).toBeCloseTo(1, 6); // tanHalfX
+    // Tangent 0 is NDC x = −0.5, y = 0.25 in this window: the rect centres there.
+    expect((u[RECT]! + u[RECT + 2]!) / 2).toBeCloseTo(-0.5, 3);
+    expect((u[RECT + 1]! + u[RECT + 3]!) / 2).toBeCloseTo(0.25, 3);
+  });
+
   it('packs only visible spheres, in table order, with c = |ro|² − 1 and the count', () => {
     const second = LIGHT_TIME_SPHERES[0]!.radiusMpc;
     const hour = LIGHT_TIME_SPHERES[2]!.radiusMpc;

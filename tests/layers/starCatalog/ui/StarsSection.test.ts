@@ -26,7 +26,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import StarsSection from '../../../../src/layers/starCatalog/ui/StarsSection';
-import type { StarCatalogId } from '../../../../src/@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogId } from '../../../../src/layers/starCatalog/@types/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../../src/@types/settings/StarCatalogItemSettings';
 
 function items(gaiaEnabled: boolean): Record<StarCatalogId, StarCatalogItemSettings> {

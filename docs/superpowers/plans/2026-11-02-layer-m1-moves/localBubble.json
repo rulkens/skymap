@@ -1,0 +1,30 @@
+[
+  {
+    "from": "src/@types/rendering/LocalBubbleRenderer.d.ts",
+    "to": "src/layers/localBubble/@types/LocalBubbleRenderer.d.ts"
+  },
+  {
+    "from": "src/@types/settings/LocalBubbleSettings.d.ts",
+    "to": "src/layers/localBubble/@types/LocalBubbleSettings.d.ts"
+  },
+  {
+    "from": "src/data/localBubble/localBubbleSliderFields.ts",
+    "to": "src/layers/localBubble/data/localBubbleSliderFields.ts"
+  },
+  {
+    "from": "src/data/localBubble/localBubbleTint.ts",
+    "to": "src/layers/localBubble/data/localBubbleTint.ts"
+  },
+  {
+    "from": "src/data/localBubble/shellVertexFormats.ts",
+    "to": "src/layers/localBubble/data/shellVertexFormats.ts"
+  },
+  {
+    "from": "src/data/shellMesh/shellMeshFormat.ts",
+    "to": "src/layers/localBubble/data/shellMeshFormat.ts"
+  },
+  {
+    "from": "src/utils/clampLocalBubbleIntensity.ts",
+    "to": "src/layers/localBubble/utils/clampLocalBubbleIntensity.ts"
+  }
+]
