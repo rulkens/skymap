@@ -856,7 +856,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'card-milky-way',
     about: 'app',
     text: 'The Milky Way’s card gives its type, the Sun’s distance from the centre, the diameter of the disc, a range for the number of stars, the mass in stars and in total, the age of the oldest stars, the time and speed of the Sun’s orbit, and the central black hole with its mass. The diameter, the Sun’s distance, the orbit time and the black hole’s mass are the values the scene is drawn with. The others are figures from the literature.',
-    source: `${REPO_BLOB}/src/layers/milkyWay/ui/MilkyWayDetailCard/MilkyWayDetailCard.tsx`,
+    source: `${REPO_BLOB}/src/layers/milkyWay/card/ui/MilkyWayDetailCard/MilkyWayDetailCard.tsx`,
     sourceLabel: `the Milky Way’s card, ${IN_REPO}`,
     checked: CHECKED,
   },
