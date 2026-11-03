@@ -90,12 +90,17 @@
     width: 31%;
   }
 
+  /* The card, the nearest, leans furthest from the pointer and moves the most against the scroll. */
   .navigation {
+    --depth: 1.25rem;
+    --drift: 1.5rem;
     bottom: 2%;
     left: -15%;
   }
 
   .card {
+    --depth: 2.5rem;
+    --drift: 3rem;
     top: -10%;
     right: 3%;
   }
@@ -105,22 +110,6 @@
     right: 4%;
     bottom: 6%;
     justify-items: end;
-  }
-
-  /* The card, the nearest, leans furthest from the pointer. */
-  .navigation {
-    --depth: 1.25rem;
-  }
-
-  .card {
-    --depth: 2.5rem;
-  }
-}
-
-@media (--narrow) {
-  .reading {
-    grid-column: 1 / -1;
-    margin-top: var(--site-space-s);
   }
 }
 
@@ -146,23 +135,18 @@
     z-index: 1;
     margin-top: -3rem;
   }
+
+  .reading {
+    grid-column: 1 / -1;
+    margin-top: var(--site-space-s);
+  }
 }
 
-/* Wide, the pieces are nearer than the galaxy: as the page scrolls they move against it, the card the most. */
+/* Wide, the pieces are nearer than the galaxy: as the page scrolls they move against it. */
 .navigation {
   composes: drift lean from '../../../../styles/motion.module.css';
 }
 
 .card {
   composes: drift lean from '../../../../styles/motion.module.css';
-}
-
-@media (--wide) {
-  .navigation {
-    --drift: 1.5rem;
-  }
-
-  .card {
-    --drift: 3rem;
-  }
 }

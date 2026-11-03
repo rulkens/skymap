@@ -40,7 +40,19 @@
   display: contents;
 }
 
+/*
+ * Where Earth, the Moon and the gap between them are in the picture, in fractions of its box, measured from
+ * the master of `class-earth-moon` (and of its upright cut below). A reshoot must measure them again.
+ */
 .frame {
+  --earth-x: 11.09%;
+  --earth-top: 46.2%;
+  --moon-x: 90.06%;
+  --moon-top: 48.2%;
+  --gap-left: 12.406%;
+  --gap-width: 77.313%;
+  --gap-top: 47.064%;
+  --gap-height: 6.872%;
   position: relative;
   grid-area: 1 / 1 / 4;
   align-self: center;
@@ -70,21 +82,6 @@
   mask-image: var(--cut), linear-gradient(transparent, #000 25%, #000 75%, transparent);
   mask-size: 100% 100%;
   mask-composite: intersect;
-}
-
-/*
- * Where Earth, the Moon and the gap between them are in the picture, in fractions of its box, measured from
- * the master of `class-earth-moon` (and of its upright cut below). A reshoot must measure them again.
- */
-.frame {
-  --earth-x: 11.09%;
-  --earth-top: 46.2%;
-  --moon-x: 90.06%;
-  --moon-top: 48.2%;
-  --gap-left: 12.406%;
-  --gap-width: 77.313%;
-  --gap-top: 47.064%;
-  --gap-height: 6.872%;
 }
 
 /* A name as the app writes one: the display face, with a short line down to the thing it names. */

@@ -71,26 +71,24 @@
     position: absolute;
   }
 
-  /* Less the pictures' clear margins, the pieces line up with the address's ends. */
+  /*
+   * Less the pictures' clear margins, the pieces line up with the address's ends. They are nearer than the view:
+   * the card, the nearest, leans furthest from the pointer and moves the most against the scroll.
+   */
   .card {
+    --depth: 2.5rem;
+    --drift: 3rem;
     top: -5%;
     right: -1.4%;
     width: 36%;
   }
 
   .clock {
+    --depth: 1.25rem;
+    --drift: 1.5rem;
     bottom: 14%;
     left: -3%;
     width: 50%;
-  }
-
-  /* The card, the nearest, leans furthest from the pointer. */
-  .clock {
-    --depth: 1.25rem;
-  }
-
-  .card {
-    --depth: 2.5rem;
   }
 }
 
@@ -120,16 +118,5 @@
 
   .bar {
     margin-top: var(--site-space-m);
-  }
-}
-
-/* Wide, the pieces are nearer than the view: as the page scrolls they move against it, the card the most. */
-@media (--wide) {
-  .clock {
-    --drift: 1.5rem;
-  }
-
-  .card {
-    --drift: 3rem;
   }
 }
