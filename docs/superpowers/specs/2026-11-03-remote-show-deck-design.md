@@ -26,13 +26,20 @@ and axis buttons) stays as shipped, apart from its icons.
 | Version field | One protocol version on every message (owner, 2026-11-03). **Revises** the ruling "No version field" (same spec, "Messages"): a phone tab can outlive the dome's build, and a skewed phone must say so instead of reading as "Dome not there" (see "The protocol version") |
 | Red-light palette | In (owner, 2026-11-03), as one token block (see "Red light") |
 | PR packaging | One PR, the preps as its first commits (owner, 2026-11-03) |
+| Layers tile | In (owner, 2026-11-03): one switch per data Layer, like the Labels sheet, added with no remote code per Layer (see "The Layers sheet") |
+| Layer contract growth | Approved for the Layers tile only (owner, 2026-11-03): a `main` ui entry carries `title`, which core hands its section as a prop; nothing else on the Layer contract, `ReconcileEffects` or `SagaContext` grows |
 
 ## Ground preparation
 
 Ground check run 2026-11-03, re-checked after the checkpoint added the version field: of 13 touchpoints, two are
 special cases the current structure forces, and two prep commits create their joints. Three wire types change:
-`DomeStatus`, and `DomeMessage` and `RemoteMessage` gain the version. `RemoteMenu`, `RemoteCommandPayloads`, the
-Layer contract, `ReconcileEffects` and `SagaContext` do not change.
+`DomeStatus`, and `DomeMessage` and `RemoteMessage` gain the version. `RemoteMenu`, `ReconcileEffects` and
+`SagaContext` do not change; `RemoteCommandPayloads` and the Layer contract change only for the Layers tile.
+
+**The Layers tile's ground.** A Layer's human name lived only as a JSX literal in its section component, so the
+remote had nothing to list. By the owner's contract ruling, the `main` ui entry gains a required `title`, the one
+place the name is written; `SettingsSections` passes it to the section as its `title` prop. The title change rides
+its own commit, so it can land as its own PR off main.
 
 **Prep 1 — the remote's icons become one component and a glyph table.** Seven icon files repeat the same
 24-unit, 1.75-stroke wrapper (`RemotePage/HomeIcon.tsx:7-15`, `AxisHoldButtons/{Orbit,Look,Roll,Zoom}Icon.tsx`,
@@ -79,7 +86,7 @@ old field.
 
 - The now card: the running tour, exhibit or clip; beat ticks and Previous / Pause / Next for a tour; one Stop for
   any kind. The clock is the Time sheet's alone (owner, 2026-11-03).
-- The tile library and its seven sheets: Search, Tours, Exhibits, Clips, Time, Labels, Setup.
+- The tile library and its eight sheets: Search, Tours, Exhibits, Clips, Time, Layers, Labels, Setup.
 - One icon set for the whole remote, the top part's icons included (prep 1).
 - `DomeStatus.takeover` and `DomeStatus.focus.name`.
 - The protocol version on every message, and the phone's "other version" state.
@@ -90,7 +97,7 @@ old field.
 - The duplicate entries: "Cosmic Flows" as both exhibit and clip, "Galactic Centre" twice in the label toggles
   (owner ruling: backlogged on another branch). The deck keeps them apart by kind (separate sheets, the kind on the
   card); the running marker matches on kind and id, since exhibit and clip share the id `cosmicFlows`.
-- New commands or toggles (backlog "More controls on the phone remote"); jump to beat.
+- New commands or toggles (backlog "More controls on the phone remote"), the Layers tile apart; jump to beat.
 - A build hash: the protocol version is the whole check.
 - Keeping the phone's screen awake (Wake Lock) during a show.
 - The app's own HUD icons, which use another grid (adjacent finding).
@@ -116,6 +123,7 @@ export type RemoteTakeover =
    time: { ... };       // unchanged
    controls: { ... };   // unchanged
    toggles: readonly { ... }[]; // unchanged
++  layers: readonly { id: string; label: string; enabled: boolean }[]; // shaped like `toggles`
  };
 ```
 
@@ -124,9 +132,19 @@ export type RemoteTakeover =
   menu lacks (a `dev` clip), the card shows the kind's noun ("Clip").
 - **`focus.id` goes.** The phone read it only to look a name up in its own search results (`focusNameFrom.ts`),
   which is deleted. `DomeStatus` is "what the remote renders"; an unread id would contradict that.
-- `RemoteMenu` and `RemoteCommandPayloads` do not change: every control the deck has sends a command that exists
-  today (`tourPrev`, `tourTogglePause`, `tourAdvance`, `exitTakeover`, `timePause`, `timeResume`, `goTo`,
-  `clipStart`).
+- `RemoteMenu` does not change, and every control but a Layers switch sends a command that exists today
+  (`tourPrev`, `tourTogglePause`, `tourAdvance`, `exitTakeover`, `timePause`, `timeResume`, `goTo`, `clipStart`).
+
+### The Layers sheet
+
+`RemoteCommandPayloads` gains `layerSet: { id: string; enabled: boolean }`, resolved like `toggleSet` through the
+rows the status lists. `layerSwitchRows` derives the rows from the composition, in its order: every Layer with a
+`main` ui entry gives one, labelled by its `title` and switching the Layer's one show entry that is not already a
+Labels & Guides toggle (starCatalog's `starCatalog`, not `sStarTrails`); two such entries, or none, throw. A row
+reads and writes its whole entry as a tour cue on that key does (`setVisibilityActionsFor`): the section switch
+where the Layer has one, else every item, so Galaxies and Structures read on while any item shows, as the panel's
+tri-state masters flip. The Milky Way has no `main` section, so it has no row. The version stays 2: it has not
+shipped.
 
 ### The protocol version
 
@@ -228,7 +246,7 @@ const REMOTE_TAKEOVER: {
 
 ```ts
 // src/@types/remote/RemoteSheetId.d.ts
-export type RemoteSheetId = 'search' | 'tours' | 'exhibits' | 'clips' | 'time' | 'labels' | 'setup';
+export type RemoteSheetId = 'search' | 'tours' | 'exhibits' | 'clips' | 'time' | 'layers' | 'labels' | 'setup';
 
 // src/data/remote/remoteSheets.ts — the tiles, in order
 export const REMOTE_SHEETS: readonly { id: RemoteSheetId; label: string; glyph: RemoteGlyph }[];
@@ -248,7 +266,9 @@ export const REMOTE_SHOW_KINDS: {
   Play time, at the top of the Time sheet), `ShowList` (the Tours, Exhibits and
   Clips sheets: one component, a kind prop, rows from `REMOTE_SHOW_KINDS`), `RemoteSheet` (the bottom sheet), and
   the tiles. The Search, Time, Labels and Setup sheets are today's `SearchSection`, `TimeSection`, `ToggleSection`
-  and `SetupSection`, restyled. `RemotePage` picks a sheet's body from a `Record<RemoteSheetId, …>`, never a chain.
+  and `SetupSection`, restyled; the Layers sheet is a second `ToggleSection` over `status.layers`, with the same
+  "n of m on" note and the empty text "The dome lists no layers". `RemotePage` picks a sheet's body from a
+  `Record<RemoteSheetId, …>`, never a chain.
 - **Deleted.** `TourSection` and `ExhibitSection` (`NowCard` and `ShowList` replace them), the "Exit exhibit or
   clip" button (Stop on the card replaces it), `focusNameFrom.ts` and its test.
 - **One control per job on screen.** The clock lives in the Time sheet only: `TimeRow` atop it, then direction,
@@ -274,8 +294,8 @@ block lacks fails CI instead of showing blue in red light.
 
 ## Interaction
 
-**The deck, top to bottom:** header, pad, Home row (unchanged), the now card, the tiles (Search two columns wide,
-then Tours, Exhibits; Clips, Time, Labels, Setup).
+**The deck, top to bottom:** header, pad, Home row (unchanged), the now card, the tiles in three columns (Search
+two columns wide, then Tours; Exhibits, Clips, Time; Layers, Labels, Setup).
 
 **Now card states:**
 

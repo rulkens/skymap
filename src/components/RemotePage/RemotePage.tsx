@@ -78,7 +78,22 @@ function RemotePage() {
       <ShowList kind="clip" menu={menu} takeover={takeover} onCommand={startAndClose(close)} />
     ),
     time: () => status && <TimeSection time={status.time} onCommand={sendCommand} />,
-    labels: () => status && <ToggleSection toggles={status.toggles} onCommand={sendCommand} />,
+    layers: () =>
+      status && (
+        <ToggleSection
+          toggles={status.layers}
+          empty="The dome lists no layers"
+          onSet={(id, enabled) => sendCommand({ name: 'layerSet', payload: { id, enabled } })}
+        />
+      ),
+    labels: () =>
+      status && (
+        <ToggleSection
+          toggles={status.toggles}
+          empty="The dome lists no labels"
+          onSet={(id, enabled) => sendCommand({ name: 'toggleSet', payload: { id, enabled } })}
+        />
+      ),
     setup: () => (
       <SetupSection
         onAddPhone={() => sendCommand({ name: 'togglePairing', payload: null })}
@@ -89,11 +104,11 @@ function RemotePage() {
   };
 
   // Only the sheets that have a state to show beside their heading.
+  const countOn = (rows: readonly { enabled: boolean }[] = []): string =>
+    `${rows.filter((row) => row.enabled).length} of ${rows.length} on`;
   const sheetNote: Partial<Record<RemoteSheetId, () => string>> = {
-    labels: () => {
-      const toggles = status?.toggles ?? [];
-      return `${toggles.filter((t) => t.enabled).length} of ${toggles.length} on`;
-    },
+    layers: () => countOn(status?.layers),
+    labels: () => countOn(status?.toggles),
   };
 
   if (!room) {

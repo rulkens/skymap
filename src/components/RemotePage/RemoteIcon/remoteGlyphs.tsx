@@ -75,6 +75,7 @@ export const REMOTE_GLYPHS: Record<RemoteGlyph, ReactNode> = {
       <path d="M12 7.5V12l3 2" />
     </>
   ),
+  layers: <path d="M12 4 3.5 8.5 12 13l8.5-4.5zM3.5 12.5 12 17l8.5-4.5M3.5 16.5 12 21l8.5-4.5" />,
   labels: (
     <>
       <path d="M3.5 12.5v-7a2 2 0 0 1 2-2h7l8 8a1.6 1.6 0 0 1 0 2.3l-6.7 6.7a1.6 1.6 0 0 1-2.3 0z" />

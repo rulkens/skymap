@@ -13,6 +13,7 @@ export const REMOTE_SHEETS: readonly {
   { id: 'exhibits', label: 'Exhibits', glyph: 'exhibit' },
   { id: 'clips', label: 'Clips', glyph: 'clip' },
   { id: 'time', label: 'Time', glyph: 'time' },
+  { id: 'layers', label: 'Layers', glyph: 'layers' },
   { id: 'labels', label: 'Labels', glyph: 'labels' },
   { id: 'setup', label: 'Setup', glyph: 'setup' },
 ];

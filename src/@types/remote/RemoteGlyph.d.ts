@@ -13,6 +13,7 @@ export type RemoteGlyph =
   | 'clip'
   | 'stop'
   | 'time'
+  | 'layers'
   | 'labels'
   | 'setup'
   | 'phone'
