@@ -1,115 +1,82 @@
 # Tour — graphic design
 
-How the tour's on-screen text looks. It inherits the splash's **film-title
-language** so the splash and the tour read as one film: the splash is the
-opening credit; each stage is a title card / lower-third in the same system.
-Grounded in `src/components/Splash/Splash.module.css` + the tokens in
-`src/styles/global.css`. We can refine the splash where the tour's needs
-suggest it (see § Refinements).
+How the tour's on-screen text looks. The narration reads like **film
+subtitles**: one line at a time, centred at the bottom, over the live scene.
+It keeps the splash's type (Cormorant Garamond + mono label) so the splash and
+the tour read as one film. Code: `src/components/TourOverlay/`; tokens in
+`src/styles/global.css`.
 
 ## Tokens (from `src/styles/global.css`)
 
 | Token | Value | Use |
 |---|---|---|
-| `--font-family-display` | `Cormorant Garamond`, serif | titles (stage + opening) |
-| `--font-family-mono` | `ui-monospace`, SF Mono | eyebrow, narration, hints |
-| `--color-fg` | `#e8eeff` | narration body |
-| `--color-fg-muted` | `rgba(200,220,255,.85)` | eyebrow, hints |
-| `--color-accent` | `#a8d0ff` | hairlines, underline beat |
+| `--font-family-display` | `Cormorant Garamond`, serif | subtitle lines |
+| `--font-family-mono` | `ui-monospace`, SF Mono | beat label, hints |
+| `--color-fg-label` | muted | beat label |
 | `--color-bg` | `#000` | scrim base |
 
-White (`#fff`) for the title itself, matching the splash.
+White (`#fff`) for the subtitle line itself.
 
 ## Layout
 
-Text lives in the **bottom-left** corner — same anchor as the splash
-(`left/bottom: 80px`, `max-width ~520px`, desktop). Centre + right stay clear
-for the hero visual. Keeping the tour in the splash's corner means launching
-the tour reads as the splash *continuing*, not a new surface.
+One position for every beat: a block centred above the transport controls
+(`width: min(72ch, 92vw)`; in cinema mode, with no controls, it drops to the
+frame's own margin). Centre and top stay clear for the subject.
 
 ```
 ┌────────────────────────────────────────┐
 │                                        │
 │              (hero visual)             │
 │                                        │
-│   EYEBROW · scale                      │
-│   Stage Title                          │
-│   ── (accent draw)                     │
-│   Narration line one,                  │
-│   narration line two.                  │
+│          NEAREST NEIGHBOUR · 03 / 14   │
+│   This is Andromeda, the nearest large │
+│            galaxy to ours.             │
+│              ◂  ▶  ■  ▸                │
 └────────────────────────────────────────┘
 ```
 
-## The three text surfaces
+## The two text layers
 
-1. **Opening / closing card** (stages 00, 10) — the hero title. Serif,
-   largest (~64px desktop), optionally centred-left and a touch higher than a
-   stage card. Carries the tour title / closing line. The most "credit"-like.
-2. **Stage lower-third** (stages 01–09) — the working card. Three stacked
-   parts:
-   - **Eyebrow** — mono 10px, `0.18em` tracking, uppercase, muted, with a
-     32px accent hairline prefix (splash's `.label`). Shows the **scale**:
-     `2.5 MILLION LIGHT-YEARS`. Reinforces powers-of-ten without crowding the
-     narration.
-   - **Title** — `--font-family-display` serif, ~38px, white. The stage
-     `title`.
-   - **Narration** — mono ~15px, line-height ~1.6, `--color-fg`. The stage
-     `narration`. (Slightly larger than the splash's 13px body — it reads
-     against a moving scene.)
-3. **Diegetic labels** — the engine's world-anchored MSDF names (M31, Virgo,
-   void names) keep their **existing** style. They're the diegetic layer; the
-   lower-third is the editorial layer. Don't restyle them; the declutter pass
-   already keeps them apart, and they sit in a different region than the
-   bottom-left card.
+1. **Subtitles** (every beat) — two parts:
+   - **Label** — the beat `title`, mono 10px, `0.18em` tracking, uppercase,
+     `--color-fg-label`. With chrome it carries the readout
+     (`NEAREST NEIGHBOUR · 03 / 14`); in cinema mode the title alone. It holds
+     for the whole dwell.
+   - **Line** — one entry of the beat's `lines`, serif 500,
+     `clamp(19px, 1.1vw + 8px, 27px)`, line-height 1.3, `text-wrap: balance`,
+     at most ~54ch. Lines share one grid cell, so the block never jumps in
+     height when they swap.
+2. **Diegetic labels** — the engine's world-anchored MSDF names (M31, Virgo,
+   void names) keep their own style. They are the scene's layer; subtitles are
+   the editorial layer.
+
+## Authoring and timing
+
+- Authors write `caption: { title, lines }`; each line is a phrase-sized
+  subtitle, broken where it reads well. Plain text only.
+- Lines share the beat's **dwell** (`lineSchedule`): contiguous slices
+  weighted by length, with a floor so a short line still holds. Text appears
+  as the stage settles; to put words over motion, author the motion as the
+  beat's dwell (`neighbourhoodFlythrough`).
+- `tests/data/animation/tours/subtitleFit.test.ts` fails when any line gets
+  less than `SUBTITLE_MIN_READ_SEC` — lengthen the dwell or re-break the
+  lines; never lower the floor.
 
 ## Legibility scrim
 
-Each card carries a localized **radial vignette** at bottom-left (splash's
-`.vignette`, `ellipse at 20% 90%`) so text stays legible over both bright
-scenes (Milky Way, cosmic web) and dark ones (voids). Keep it **constant**
-(always-on, subtle) rather than scene-adaptive — simpler and robust across the
-5-decade brightness swing. Centre/right stay undimmed so the hero reads.
+One **bottom band** (a `linear-gradient` to transparent), always on, so lines
+stay legible over bright scenes (Milky Way, cosmic web) and dark ones (voids)
+alike. Constant, not scene-adaptive.
 
-## Motion signatures (reuse the splash's)
+## Motion
 
-- **Reveal** — staggered fade-up: each part `translateY(8px)→0`, `opacity
-  0→1`, `0.4s ease-out`, eyebrow → title → narration stagger (~80ms).
-  Triggered when the stage **settles** (not during travel).
-- **Underline beat** — the title's accent draw-line slides out from the
-  baseline (splash's `.title::after`, `0→80px`). The splash's "camera
-  focusing" signature, per stage — the strongest thread tying every card to
-  the opening credit.
-- **Exit** — reverse fade (down + out) **before** the next camera move begins.
-- All three are the cinematography doc's "text timing" made concrete.
+- Each line fades in (~300 ms, ease-out) at its slice start and out
+  (~300 ms, ease-in) at its slice end; no slide. The timing is CSS animation
+  keyed on the dwell, paused with the tour — the dwell ring's mechanism — so
+  recordings stay deterministic.
+- `prefers-reduced-motion`: lines swap with no fade.
 
-## Progress + exit affordance
+## Mobile
 
-- **Progress** — an optional very-low-opacity accent **hairline along the
-  bottom edge**, filling over the tour's ~2½ min. Lets the viewer gauge length
-  without breaking immersion. Subtle enough to ignore; cut it if it reads as
-  chrome.
-- **Exit hint** — a faint mono line (`press any key to exit`), bottom-right,
-  fading out after ~4s. The tour cancels on any input (per `goal.md`); this
-  tells the viewer once, then gets out of the way.
-
-## Reduced motion + mobile
-
-- `prefers-reduced-motion`: no fade-up, no underline draw — text appears
-  instantly (mirrors the splash's reduced-motion block).
-- Mobile (<768px): full-width bottom column, `left/right: 24px`, title
-  ~32px, narration ~14px. Same as the splash's mobile reflow. The exit hint
-  becomes `tap to exit`.
-
-## Refinements (where the tour suggests evolving the splash)
-
-- **Shared title primitive.** The opening card (stage 00) and the splash use
-  the same bottom-left serif-title-+-eyebrow-+-draw-line treatment. Consider
-  factoring that into a shared component so the splash can **dissolve into**
-  the tour: the splash title fades, the tour title rises in the *same spot* —
-  one continuous credit. Today they're separate components with duplicated CSS.
-- **One eyebrow grammar.** Splash eyebrow is `SKYMAP · INTRO`; the tour's is a
-  scale (`2.5 MILLION LIGHT-YEARS`). Keep the *form* identical (hairline +
-  mono + tracking) so they're visibly the same system.
-- **Title-card register.** If the opening/closing cards want to sit centred
-  rather than bottom-left, that's a deliberate divergence from the splash —
-  decide it consciously; the safe default is to stay in the splash's corner.
+At phone width the block spans `92vw`, the line steps down to 19px and wraps
+inside it; the label wraps rather than running off-screen.
