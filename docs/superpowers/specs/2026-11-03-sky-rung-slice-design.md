@@ -96,8 +96,9 @@ Sites from searching `rungKindOf(` (12) and `is(Site|Body|World)Arm(` (21) under
 
 ### 4.1 Eye and basis
 
-- **Eye.** On the host, at the spot's lon/lat, at `radius + terrainHeightAt(lon, lat) +
-  SKY_EYE_HEIGHT_M` along the sphere radial, derived each time and never stored. Earth's terrain is
+- **Eye.** On the host, at the spot's lon/lat, at the host's ground radius
+  (`groundRadiusAtM`: datum + live terrain; a shape-model body's hull outer bound) +
+  `SKY_EYE_HEIGHT_M` along the sphere radial, derived each time and never stored. Earth's terrain is
   geodetic WGS84 laid straight onto the sphere (`SurfaceFixedSite.latDeg`), so the radial is the
   same up the terrain renderer draws.
 - **Basis.** `siteEyeFrame` at the spot, turned by azimuth about up and then by altitude. Roll is

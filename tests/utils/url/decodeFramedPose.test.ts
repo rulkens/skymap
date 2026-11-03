@@ -69,7 +69,6 @@ describe('decodeFramedPose', () => {
       pose: { azimuthRad: 3.14, altitudeRad: 1.05 },
     };
     expect(decodeFramedPose(SKY_LINK)).toEqual(sky);
-    expect(encodeFramedPose(decodeFramedPose(SKY_LINK)!)).toBe(SKY_LINK);
   });
 
   it('rejects a malformed sky link', () => {

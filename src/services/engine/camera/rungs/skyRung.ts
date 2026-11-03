@@ -9,7 +9,7 @@ import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
 import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
 import { skyPoseFromBodyArm } from '../../../../utils/camera/skyPoseFromBodyArm';
 import { skyPoseToBodyArm } from '../../../../utils/camera/skyPoseToBodyArm';
-import { skySpotRadial } from '../../../../utils/camera/skySpotRadial';
+import { skySpotRadial } from '../../../../utils/geo/skySpotRadial';
 import { hostOf } from './hostOf';
 import { hostOrThrow } from './hostOrThrow';
 import { isSkyArm } from './isSkyArm';

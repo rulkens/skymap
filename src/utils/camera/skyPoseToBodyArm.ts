@@ -12,7 +12,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { SKY_EYE_HEIGHT_M } from '../../data/camera/skyEyeHeightM';
 import { canonicalBasisAt } from './canonicalBasisAt';
 import { siteEyeFrame } from './siteEyeFrame';
-import { skySpotRadial } from './skySpotRadial';
+import { skySpotRadial } from '../geo/skySpotRadial';
 
 export function skyPoseToBodyArm(
   pose: SkyPose,

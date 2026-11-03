@@ -12,7 +12,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { dot3 } from '../math/dot3';
 import { refAzimuthOf } from './refAzimuthOf';
 import { siteEyeFrame } from './siteEyeFrame';
-import { skySpotRadial } from './skySpotRadial';
+import { skySpotRadial } from '../geo/skySpotRadial';
 
 export function skyPoseFromBodyArm(arm: BodyFixedPose, spot: SkySpot): SkyPose {
   const { east, north, localUp } = siteEyeFrame(skySpotRadial(spot));

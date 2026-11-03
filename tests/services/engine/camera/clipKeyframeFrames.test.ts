@@ -20,7 +20,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
 import { rowFor } from '../../../../src/services/engine/camera/rungs/rowFor';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
-import { skySpotRadial } from '../../../../src/utils/camera/skySpotRadial';
+import { skySpotRadial } from '../../../../src/utils/geo/skySpotRadial';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { decodeBodyFixedChannels } from '../../../../src/utils/camera/decodeBodyFixedChannels';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';

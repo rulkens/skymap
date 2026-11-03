@@ -4,7 +4,9 @@
  * parts are cos(tilt) and sin(tilt) long, so they trade places there. For a
  * roll-free pose the two agree; while a roll is still bleeding out the chosen
  * one is what the user means by "north is up". ONE home for the source rule —
- * the engaged settle and the camera debug readout both call THIS.
+ * the engaged settle and the camera debug readout both call THIS. Its zenith
+ * side reads forward (a golden trace pins it); `skyPoseFromBodyArm` alone,
+ * whose views reach straight up, reads −screen-up there.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
