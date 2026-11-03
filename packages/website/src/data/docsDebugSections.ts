@@ -76,7 +76,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   {
     heading: 'Milky Way tuning',
     shows: 'The size, exposure, softness and number of the points the Milky Way is drawn with.',
-    file: 'src/layers/milkyWay/ui/MilkyWayTuningSection.tsx',
+    file: 'src/layers/milkyWay/tuning/ui/MilkyWayTuningSection.tsx',
   },
   {
     heading: 'Star catalog tuning',

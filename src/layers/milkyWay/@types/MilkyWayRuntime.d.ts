@@ -5,9 +5,9 @@
  * returning, which is what lets the passes read them without a null check.
  */
 
-import type { MilkyWayCloud } from '../../../@types/galaxy/MilkyWayCloud';
-import type { MilkyWayCloudRenderer } from './MilkyWayCloudRenderer';
-import type { MilkyWayPickRenderer } from './MilkyWayPickRenderer';
+import type { MilkyWayCloud } from '../cloud/@types/MilkyWayCloud';
+import type { MilkyWayCloudRenderer } from '../cloud/@types/MilkyWayCloudRenderer';
+import type { MilkyWayPickRenderer } from '../picking/@types/MilkyWayPickRenderer';
 import type { AdditiveUpsample } from '../../../@types/rendering/AdditiveUpsample';
 
 export type MilkyWayRuntime = {

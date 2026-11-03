@@ -45,7 +45,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'surface-controls',
     about: 'app',
-    text: 'When the camera comes down to less than about half the body’s radius above the planet or moon it is focused on, the controls change. A drag that starts on the ground slides the ground under the pointer, a drag that starts on the sky looks around, and a drag with the right or the middle button tilts the view towards the horizon and turns it.',
+    text: 'When the camera comes down to less than about half the body’s radius above the planet or moon it is focused on, the controls change. A drag that starts on the ground slides the ground under the pointer, a drag that starts on the sky looks around, and a drag with the right or the middle button, or with two fingers on a touch screen, tilts the view towards the horizon and turns it.',
     source: `${REPO_BLOB}/src/utils/camera/latchSurfaceGesture.ts`,
     sourceLabel: `the controls near a surface, ${IN_REPO}`,
     checked: CHECKED,
@@ -125,9 +125,9 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'touch-gestures',
     about: 'app',
-    text: 'On a touch screen two fingers zoom and do nothing else. Sliding the view and tilting it near a surface need the right or the middle mouse button, so a touch screen has neither.',
-    source: `${REPO_BLOB}/src/data/input/controlBindings.ts`,
-    sourceLabel: `the pointer bindings, ${IN_REPO}`,
+    text: 'On a touch screen two fingers moving apart or together zoom. Near a surface, two fingers sliding the same way tilt the view towards the horizon and turn it; anywhere else they do nothing. Sliding the view sideways needs the right or the middle mouse button, so a touch screen cannot.',
+    source: `${REPO_BLOB}/src/utils/input/recognize.ts`,
+    sourceLabel: `the touch gestures, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
@@ -856,7 +856,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'card-milky-way',
     about: 'app',
     text: 'The Milky Way’s card gives its type, the Sun’s distance from the centre, the diameter of the disc, a range for the number of stars, the mass in stars and in total, the age of the oldest stars, the time and speed of the Sun’s orbit, and the central black hole with its mass. The diameter, the Sun’s distance, the orbit time and the black hole’s mass are the values the scene is drawn with. The others are figures from the literature.',
-    source: `${REPO_BLOB}/src/layers/milkyWay/ui/MilkyWayDetailCard/MilkyWayDetailCard.tsx`,
+    source: `${REPO_BLOB}/src/layers/milkyWay/card/ui/MilkyWayDetailCard/MilkyWayDetailCard.tsx`,
     sourceLabel: `the Milky Way’s card, ${IN_REPO}`,
     checked: CHECKED,
   },
