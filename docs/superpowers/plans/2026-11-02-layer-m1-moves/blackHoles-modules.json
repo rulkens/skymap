@@ -142,5 +142,13 @@
   {
     "from": "src/layers/blackHoles/lensing/@types/BlackHoleLensingTuning.d.ts",
     "to": "src/layers/blackHoles/@types/BlackHoleLensingTuning.d.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/lensing/utils/gpu/packBlackHoleLensingUniforms.ts",
+    "to": "src/layers/blackHoles/lensing/render/packBlackHoleLensingUniforms.ts"
+  },
+  {
+    "from": "tests/layers/blackHoles/lensing/utils/gpu/blackHoleLensingUniformsLayout.parity.test.ts",
+    "to": "tests/layers/blackHoles/lensing/render/blackHoleLensingUniformsLayout.parity.test.ts"
   }
 ]
