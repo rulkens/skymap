@@ -1,0 +1,14 @@
+appId: com.rulkens.skymap
+productName: Skymap
+directories:
+  output: release
+files:
+  - build/**
+  - package.json
+mac:
+  target: dmg
+win:
+  target:
+    - target: nsis
+      arch: x64
+publish: null

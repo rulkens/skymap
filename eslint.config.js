@@ -52,14 +52,7 @@ const plugins = {
 
 export default tseslint.config(
   {
-    ignores: [
-      'dist',
-      'coverage',
-      'public',
-      'node_modules',
-      'tools/stars-rs/target',
-      '**/*.wesl',
-    ],
+    ignores: ['dist', 'coverage', 'public', 'node_modules', 'tools/stars-rs/target', '**/*.wesl'],
   },
 
   // Product code → root tsconfig.json (discovered via projectService).
@@ -81,6 +74,20 @@ export default tseslint.config(
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: { project: './tsconfig.tools.json', tsconfigRootDir: import.meta.dirname },
+    },
+    rules: { ...CORRECTNESS_RULES, ...CONVENTION_RULES, ...COMMENT_RULES },
+  },
+
+  // Desktop app (Electron main process, Node) → its own tsconfig.
+  {
+    files: ['packages/desktop/**/*.ts'],
+    plugins,
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        project: './packages/desktop/tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     rules: { ...CORRECTNESS_RULES, ...CONVENTION_RULES, ...COMMENT_RULES },
   },

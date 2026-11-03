@@ -120,6 +120,7 @@
     "lint:fix": "eslint . --fix",
     "move-files": "tsx tools/dev/moveFiles.ts",
     "site": "npm run dev --workspace @skymap/website",
+    "desktop": "npm run dev --workspace @skymap/desktop",
     "site:build": "npm run build --workspace @skymap/website",
     "site:check": "npm run check --workspace @skymap/website",
     "site:media": "tsx tools/site/buildHeroMedia.ts",
