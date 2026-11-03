@@ -4,7 +4,7 @@
  * `layers/flow/streamlines/data/flowFields.ts`: label, range, granularity and formatting live in
  * ONE row per knob, and the DebugPanel section iterates this list rather than
  * re-spelling sliders by hand. A parity test
- * (`tests/data/milkyWay/milkyWaySliderFields.test.ts`) fails if a
+ * (`tests/layers/milkyWay/tuning/data/milkyWaySliderFields.test.ts`) fails if a
  * `MilkyWayTuning` leaf is added without a matching row.
  *
  * The RANGES test whether a much larger, much dimmer-per-sprite splat reads
