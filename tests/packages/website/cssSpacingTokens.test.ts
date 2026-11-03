@@ -1,8 +1,8 @@
 /**
  * The website's margins, paddings and gaps are steps of the spacing scale (`--site-space-*`, styles/site.css),
- * or `--bleed` / `--tap-reach`: one rhythm that grows with the reader's text size. A literal rem, px or em
- * length in one of those properties counts (0 does not). ALLOWED is today's debt per file: exact, and it
- * only ever goes down.
+ * or `--bleed` / `--tap-reach`: one rhythm that grows with the reader's text size. A literal rem or px
+ * length in one of those properties counts (0 does not); an `em` follows its own text, which site.css
+ * allows off the scale. ALLOWED is today's debt per file: exact, and it only ever goes down.
  */
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
@@ -12,12 +12,12 @@ import { walkFiles } from '../../helpers/conventions/walkFiles';
 
 const SITE = 'packages/website/src';
 const SPACING = /^(margin|padding)(-[a-z-]+)?$|^(row-|column-)?gap$/;
-const LENGTH = /(?<![\w.-])-?(\d*\.?\d+)(rem|px|em)(?![\w-])/g;
+const LENGTH = /(?<![\w.-])-?(\d*\.?\d+)(rem|px)(?![\w-])/g;
 
 const ALLOWED: Readonly<Record<string, number>> = {
   'components/docs/CiteCaption/CiteCaption.module.css': 1,
   'components/docs/DocBody/DocBody.module.css': 3,
-  'components/docs/DocsMap/DocsMap.module.css': 2,
+  'components/docs/DocsMap/DocsMap.module.css': 1,
   'components/docs/DocsNav/DocsNav.module.css': 6,
   'components/docs/DocsSearch/DocsSearch.module.css': 1,
   'components/docs/Links/Links.module.css': 1,
@@ -25,7 +25,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'components/docs/RecordText/RecordText.module.css': 1,
   'components/docs/Row/Row.module.css': 1,
   'components/pages/about/AboutHero/AboutHero.module.css': 2,
-  'components/pages/domes/ContactForm/ContactClosed.module.css': 1,
   'components/pages/domes/DomeMarks/DomeMarks.module.css': 1,
   'components/pages/domes/EarthRemark/EarthRemark.module.css': 1,
   'components/pages/domes/LicenceTable/LicenceTable.module.css': 3,
@@ -33,9 +32,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'components/pages/features/FeatureGallery/FeatureGallery.module.css': 3,
   'components/pages/features/FilmClock/FilmClock.module.css': 2,
   'components/pages/features/LinkSpread/LinkSpread.module.css': 3,
-  'components/pages/home/Flight/Intro.module.css': 2,
   'components/pages/home/Flight/Spine.module.css': 3,
-  'components/pages/home/Flight/Stops.module.css': 1,
   'components/pages/home/Places/Places.module.css': 1,
   'components/pages/home/Screens/Screens.module.css': 1,
   'components/pages/home/Sharing/Sharing.module.css': 5,
@@ -44,12 +41,10 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'components/shared/media/PictureBand/PictureBand.module.css': 3,
   'components/shared/media/ShotCaption/ShotCaption.module.css': 1,
   'components/site/Footer/Footer.module.css': 3,
-  'components/site/Nav/Nav.module.css': 3,
   'dev/review/ModeSwitch/ModeSwitch.module.css': 1,
   'dev/review/ReviewPage/ReviewPage.module.css': 2,
   'layouts/DocsLayout/DocsLayout.module.css': 3,
   'styles/ring.module.css': 3,
-  'styles/site.css': 2,
 };
 
 const sheets = walkFiles(SITE, ['.css']).map((m) => relative(SITE, m));

@@ -90,7 +90,7 @@
     grid-column: 1 / -1;
   }
 
-  .cells li::before {
+  .cells li + li::before {
     content: none;
   }
 }
