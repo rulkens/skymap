@@ -26,6 +26,17 @@ export type DebugSettings = {
    */
   disabledPasses: Record<string, boolean>;
   /**
+   * The frame clears white instead of black (the `hdr` row's clear). Only the
+   * site shot tool sets it, to take a subject's alpha from a black/white pair.
+   */
+  matteWhite: boolean;
+  /**
+   * A uniform fill light on mesh bodies (craft, shape-model moons), as a fraction
+   * of sunlight from every direction: 0 is the app's own look. Only the site shot
+   * tool sets it, to open up a craft's shadow side against black space.
+   */
+  meshAmbient: number;
+  /**
    * Decouples the frame's pass SHAPE from GPU-timing collection: `'auto'`
    * reproduces the timing-derived choice, keeping `?gpuTimings` byte-identical.
    */

@@ -8,7 +8,6 @@
  * the search reads. ObjectFinder narrows the rows through the `data-object*`
  * hooks below; without script this is a plain list.
  */
-import { appLink } from '../../../data/appLink.ts';
 import { OBJECT_ROWS, OBJECT_SECTIONS } from '../../../data/objectCatalogue.ts';
 import { objectSectionRows } from '../../../utils/objectSectionRows.ts';
 import { objectSubLists } from '../../../utils/objectSubLists.ts';
@@ -46,7 +45,7 @@ function ObjectList({ section: id }: ObjectListProps) {
                 {row.link ? (
                   <ViewLink
                     className={styles.open}
-                    href={appLink(row.link)}
+                    view={row.link}
                     aria-label={`Open ${row.name} in the app`}
                     data-pagefind-ignore
                   >

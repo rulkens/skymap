@@ -157,6 +157,8 @@ export function makeSettingsFixture(
       >,
       terrainPickMarkerRadiusM: TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M,
       disabledPasses: {},
+      matteWhite: false,
+      meshAmbient: 0,
       renderStrategy: 'auto',
       clipPathInspect: {
         clipId: null,

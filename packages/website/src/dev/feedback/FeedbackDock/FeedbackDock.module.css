@@ -5,12 +5,12 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.5rem;
+  gap: var(--space-4);
   max-width: calc(100vw - 2rem);
 }
 
 /* On a phone the review bar sits along the foot (ReviewBar sets --review-bar while it shows). */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     bottom: calc(1rem + var(--review-bar, 0px));
   }
@@ -24,7 +24,7 @@
 
 .root .toggle {
   min-height: 2.25rem;
-  padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+  padding: var(--space-2) var(--space-6) var(--space-2) var(--space-4);
   background: #000;
   color: var(--color-fg);
 }
@@ -36,7 +36,7 @@
   max-width: 100%;
   max-height: 40vh;
   overflow-y: auto;
-  padding: 0.5rem 0.75rem;
+  padding: var(--space-4) var(--space-6);
   background: #05070d;
   border: 1px solid rgba(168, 208, 255, 0.5);
   color: var(--color-fg);
@@ -49,7 +49,7 @@
 .list li {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-4);
 }
 
 .text {
@@ -62,6 +62,6 @@
 
 .list .delete {
   min-height: 2rem;
-  padding: 0.125rem 0.25rem;
+  padding: var(--space-1) var(--space-2);
   background: none;
 }

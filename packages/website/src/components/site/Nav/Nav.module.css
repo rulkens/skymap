@@ -6,17 +6,26 @@
 }
 
 .ground {
-  z-index: 1;
+  /* Just under the bar, so a section's own layers (a raised heading, a reveal veil) pass under the ground too. */
+  z-index: 5;
   margin-bottom: calc(-1 * var(--nav-height));
   background: var(--color-bg);
   border-bottom: 1px solid var(--border-divider);
+}
+
+/* Where the browser can blur what passes under it, the ground lets it through, softened. */
+@supports (backdrop-filter: blur(1px)) {
+  .ground {
+    background: rgb(0 0 0 / 0.7);
+    backdrop-filter: blur(16px) saturate(1.2);
+  }
 }
 
 .root {
   z-index: 6;
   display: flex;
   align-items: center;
-  gap: 1.875rem;
+  gap: var(--site-space-l);
   /* Full width, on the gutter: the bar lines up with the hero's words, which are not in the page column. */
   padding-inline: var(--gutter);
   /* The launch control is as far from the right edge as from the top one. */
@@ -54,7 +63,7 @@
 .links,
 .list {
   display: flex;
-  gap: 1.875rem;
+  gap: var(--site-space-l);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -78,9 +87,9 @@ button.toggle {
 }
 
 /* Same breakpoint as site.css. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
-    gap: 1rem;
+    gap: var(--site-space-s);
   }
 
   .links {
@@ -102,7 +111,7 @@ button.toggle {
    * its own text, so the bar never pushes the page sideways.
    */
   .root {
-    gap: min(1rem, 3vw);
+    gap: min(var(--site-space-s), 3vw);
     padding-inline: min(var(--gutter), 5vw);
   }
 
@@ -136,7 +145,7 @@ button.toggle {
     margin: 0;
     flex-direction: column;
     gap: 0;
-    padding: 0.5rem var(--gutter) 1.5rem;
+    padding: var(--site-space-2xs) var(--gutter) var(--site-space-m);
     color: inherit;
     background: var(--color-bg);
     border: 0;
@@ -165,7 +174,7 @@ button.toggle {
 
 @media (max-width: 400px) {
   .root {
-    gap: min(0.75rem, 3vw);
+    gap: min(var(--site-space-xs), 3vw);
   }
 
   .mark {

@@ -1,89 +1,75 @@
 ---
 title: 'About Skymap: who makes it and which pictures you may reuse'
-description: Skymap is made by one person, Alexander Rulkens, and is open source. Its version and history, how to get in touch, press pictures, and a colophon.
+description: Skymap is made by one person, Alexander Rulkens, and is open source. Who he is, how to get in touch, press pictures, and a colophon.
 ---
 
-import Beside from '../../../components/shared/layout/Beside/Beside.tsx';
+import AboutHero from '../../../components/pages/about/AboutHero/AboutHero.tsx';
 import Claims from '../../../components/shared/text/Claims/Claims.tsx';
+import Colophon from '../../../components/pages/about/Colophon/Colophon.tsx';
 import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
 import Credits from '../../../components/shared/text/Credits/Credits.tsx';
-import Figure from '../../../components/shared/media/Figure/Figure.tsx';
+import DomeSky from '../../../components/pages/about/DomeSky/DomeSky.tsx';
+import ContactHead from '../../../components/pages/about/ContactHead/ContactHead.tsx';
+import MakerPortrait from '../../../components/pages/about/MakerPortrait/MakerPortrait.tsx';
 import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
-import PictureBand from '../../../components/shared/media/PictureBand/PictureBand.tsx';
 import PressPictures from '../../../components/pages/about/PressPictures/PressPictures.tsx';
-import Quotable from '../../../components/pages/about/Quotable/Quotable.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
-import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
-import { CONTACT_ENDPOINT, ISSUES_URL } from '../../../data/contact';
+import { CONTACT_EMAIL, CONTACT_ENDPOINT, ISSUES_URL } from '../../../data/contact';
 import { fact } from '../../../data/fact';
-import { MAKER_NAME, REPO_URL } from '../../../data/siteIdentity';
+import { MAKER_NAME, MAKER_SITE, REPO_URL } from '../../../data/siteIdentity';
 import links from '../../../styles/links.module.css';
 import text from '../../../styles/type.module.css';
 import { formatDate } from '../../../utils/formatDate';
 import { sitePath } from '../../../utils/sitePath';
-import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
+import { COLOPHON, factIds, licence, makerProfile, whatIs } from './about.data';
 
-<PictureBand id="about-milky-way" gap="none" eager>
+<AboutHero>
   <h1>About Skymap</h1>
-  <p className={text.say}>Skymap is made by one person. This page says who, how to reach us and which pictures you may reuse.</p>
-  <ShotCaption id="about-milky-way" />
-</PictureBand>
-
-<Section id="what">
-  <h2>What Skymap is</h2>
-  <Quotable>{whatIs}</Quotable>
+  <p className={text.say}>{whatIs}</p>
   <div className={links['onward-row']}>
     <OpenApp />
     <ObjLink href={sitePath('/science/')}>The science behind Skymap</ObjLink>
   </div>
-</Section>
+</AboutHero>
 
 <Section id="maker">
-  <Columns count={2} footLast>
-    <div>
-      <h2>Who makes it</h2>
-      <p>{fact('about-maker').text}</p>
-      <p>The “we” on this site is the project. Counted in people, it comes to one.</p>
-      <p>{fact('about-ai').text}</p>
+  <MakerPortrait alt="Alexander Rulkens, arms crossed, in a patterned shirt against a dark wall">
+    <h2>About me</h2>
+    <p>I’m Alexander Rulkens. I’ve loved astronomy since my school’s astronomy club, and I’ve written software for more than twenty years, among it design apps such as <a href="https://repper.app">Repper</a>. Skymap is where the two meet: data visualisation that shows the measured universe, and some of the awe that comes with it. It’s my way of giving something back to the astronomy community.</p>
+    <div className={links['link-row']}>
       <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
+      <ObjLink hang size="small" href={MAKER_SITE}>rulkens.com</ObjLink>
     </div>
-    <div>
-      <h3>Open source, and maintained</h3>
-      <Claims items={ALIVE} narrow />
-      <div className={links['link-row']}>
-        <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
-        <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite Skymap</ObjLink>
-      </div>
-    </div>
-  </Columns>
+  </MakerPortrait>
 </Section>
 
 <Section id="dome">
-  <Beside picture="28rem" wordsFirst>
-    <Figure id="dome-saturn" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 23.75rem), 26rem" disc />
-    <div>
-      <h2>On a dome</h2>
-      <p>Skymap renders a fisheye picture for a dome theatre, live from the app or as a 4K film.</p>
-      <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
-    </div>
-  </Beside>
+  <DomeSky>
+    <h2>On a dome</h2>
+    <p>Skymap renders a fisheye picture for a dome theatre, live from the app or as a 4K film.</p>
+    <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
+  </DomeSky>
 </Section>
 
 <Section id="contact">
-  <h2>Get in touch</h2>
+  <ContactHead email={CONTACT_ENDPOINT ? undefined : CONTACT_EMAIL}>
+    <h2>Get in touch</h2>
+  </ContactHead>
   <Columns count={2}>
     <div>
       <h3>For a dome, a museum or a commission</h3>
       {CONTACT_ENDPOINT ? (
-        <p>The form on the domes page reaches us by email. Four fields, and one message is enough to start.</p>
+        <>
+          <p>The form on the domes page reaches us by email. Four fields, and one message is enough to start.</p>
+          <ObjLink hang size="small" href={sitePath('/domes/#contact')}>Write to us, on the domes page</ObjLink>
+        </>
       ) : (
-        <p>The contact form is not open yet. The domes page says how to reach us in the meantime.</p>
+        <p>Write to the address above. A few lines are enough: the dome or the room, the screen, the audience, and a date if there is one.</p>
       )}
-      <ObjLink hang size="small" href={sitePath('/domes/#contact')}>Write to us, on the domes page</ObjLink>
     </div>
     <div>
       <h3>For a fault, a correction or a question</h3>
@@ -92,6 +78,13 @@ import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
     </div>
   </Columns>
   <Note>What the site and the app load and keep is on the{' '}<a href={sitePath('/privacy/')}>privacy page</a>.</Note>
+</Section>
+
+<Section id="open-source">
+  <SectionHead title="Open source" narrow>
+    <p>Skymap is open source under the {licence} licence, and maintained.</p>
+    <ObjLink hang href={REPO_URL}>The repository on GitHub</ObjLink>
+  </SectionHead>
 </Section>
 
 <Section id="press">
@@ -106,7 +99,9 @@ import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
   <SectionHead title="Colophon" narrow>
     <p>How this site is made, as of {formatDate(fact('about-built-with').checked)}.</p>
   </SectionHead>
-  <Claims items={COLOPHON} />
+  <Colophon>
+    <Claims items={COLOPHON} narrow />
+  </Colophon>
 </Section>
 
 <Section as="div">

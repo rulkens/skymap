@@ -73,5 +73,6 @@ export const DOCS_DATA_FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data pipeline notes, ${IN_REPO}`,
     checked: CHECKED,
+    figure: { value: '17', measure: 'levels of detail on Earth' },
   },
 ];

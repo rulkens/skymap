@@ -34,6 +34,7 @@ import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
 import { bodySelectionRow } from './present/bodySelectionRow';
 import { bodySearch } from './present/bodySearch';
 import { BODY_TRAIL_ELEMENTS } from './present/bodyTrailElements';
+import { SMALL_BODY_TRAIL_IDS } from './present/smallBodyTrailIds';
 import { produceSceneBodyCaptions } from './present/produceSceneBodyCaptions';
 import { bodyLayerExhibits } from './exhibits/exhibits';
 import { NEAR0 } from '../../services/engine/frame/slabs';
@@ -90,7 +91,11 @@ export const bodyLayer = defineLayer({
         produceLabels: produceSceneBodyCaptions,
       },
     ],
-    orbitTrails: { show: 'orbitTrails', rows: BODY_TRAIL_ELEMENTS },
+    orbitTrails: {
+      show: 'orbitTrails',
+      rows: BODY_TRAIL_ELEMENTS,
+      selectedOnly: SMALL_BODY_TRAIL_IDS,
+    },
   }),
   selection: () => [bodySelectionRow()],
   search: () => bodySearch(),

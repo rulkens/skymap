@@ -1,12 +1,12 @@
 .root {
   composes: wrap from '../../../../styles/layout.module.css';
-  padding-top: 3.5rem;
+  padding-top: var(--site-space-2xl);
 }
 
 .heading {
   composes: small from '../../../../styles/type.module.css';
   max-width: none;
-  margin: 0 0 0.875rem;
+  margin: 0 0 var(--site-space-s);
   color: var(--site-text-dim);
 }
 
@@ -35,10 +35,10 @@
   composes: glyph-ring from '../../../../styles/ring.module.css';
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--site-space-m);
   height: 100%;
   min-height: var(--tap);
-  padding: 1.75rem 0;
+  padding: var(--site-space-l) 0;
   color: var(--color-fg);
   text-decoration: none;
 
@@ -55,9 +55,9 @@
 }
 
 /* Narrow: a contents list, drawing beside the words, two columns while they fit. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
-    padding-top: 2.5rem;
+    padding-top: var(--site-space-xl);
   }
 
   .cells {
@@ -76,8 +76,8 @@
   .link {
     flex-direction: row;
     align-items: flex-start;
-    gap: 1.25rem;
-    padding: 1.25rem 0 1.25rem 0.4375rem;
+    gap: var(--site-space-m);
+    padding: var(--site-space-m) 0 var(--site-space-m) var(--site-space-2xs);
   }
 
   .name {

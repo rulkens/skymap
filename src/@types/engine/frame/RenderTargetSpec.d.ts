@@ -35,8 +35,11 @@ export type RenderTargetSpec = {
    * under the NEAR0 `foreground:0` row's reversed-Z convention), supplied by
    * `depthClearValueFor` when `executeFrame`'s `depthAttachment` opens the
    * pass, not fixed table data.
+   *
+   * A FUNCTION for a row whose clear is a live setting (`hdr`, white under the
+   * debug matte), resolved per pass by `clearValueOf` — the `scale` shape.
    */
-  clearValue: GPUColor;
+  clearValue: GPUColor | ((state: EngineState) => GPUColor);
   /**
    * 2d-array layer count for this row (absent ⇒ 1, an ordinary 2d texture).
    * Independent of `fixedSizePx` — a canvas-scaled row can carry layers too
