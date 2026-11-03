@@ -8,7 +8,7 @@ export const MEDIA = {
   /** The one layout break: one column, the phone's type and gutters (site.css). */
   narrow: '(max-width: 900px)',
   wide: '(min-width: 901px)',
-  /** Tables and lists of the docs fold their columns. */
+  /** Tables and lists fold their columns. */
   phone: '(max-width: 699px)',
   tablet: '(min-width: 700px)',
   /** The docs set their figures out into the margin. */
