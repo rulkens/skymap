@@ -234,6 +234,12 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
 - [ ] **Path-based object links with share previews** `needs-design` — `/<kind>/<slug>` paths for identity, hash for view state, so shared links unfurl; needs Worker tag injection and permanent hash aliases. → [details](backlog/2026-10-05-path-based-object-links.md)
 - [ ] **Unify thumbnail lookups** `ready` — structure rows already resolve via `structureShotUrl`; move the palette's milkyWay/star/layer rows and Body/Star cards onto one resolver and delete `SHOT_CARD_IDS`. → [details](backlog/2026-10-11-thumbnail-lookup-unify.md)
+- [ ] **A public relay for the phone remote** `ready` — the relay lives only in Vite's dev server, so a dome needs a clone, Node and a terminal (Windows unverified); the Durable Object relay is spec'd. → [details](backlog/2026-11-03-remote-public-relay.md)
+- [ ] **A dome without internet, and data that fails silently** `needs-design` — `fetch-data` skips textures and Earth tiles, and off port 5173 every data fetch fails CORS with nothing on screen. → [details](backlog/2026-11-03-offline-dome-data.md)
+- [ ] **The dome doesn't know which phones steer it** `needs-design` — nothing shows a phone joining or dropping, any phone with the code steers, and a fourth is refused without being told. → [details](backlog/2026-11-03-remote-who-is-connected.md)
+- [ ] **A dome reload gives a new room code** `needs-design` — the room is made fresh on every load (`remoteReceiverSaga.ts:56`, spec "Pairing"), so every phone pairs again.
+- [ ] **The remote's header reads "Focused"** `needs-design` — `DomeStatus.focus` carries only the id, so the phone names the object only if its own last search listed it (`focusNameFrom.ts`); the status names no running exhibit either.
+- [ ] **More controls on the phone remote** `needs-design` — no command for data size, exposure, other layers, captions, full screen or showing the dome's interface (Tab on its keyboard). → [details](backlog/2026-11-03-remote-more-controls.md)
 
 ## Docs & process
 
