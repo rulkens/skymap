@@ -7,9 +7,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createLocalBubbleSlot } from '../../../../src/layers/localBubble/load/localBubbleSlot';
-import { encodeShellMesh } from '../../../../src/data/shellMesh/shellMeshFormat';
+import { encodeShellMesh } from '../../../../src/layers/localBubble/data/shellMeshFormat';
 import { useFetchMock } from '../../../setup/fetchMock';
-import type { LocalBubbleRenderer } from '../../../../src/@types/rendering/LocalBubbleRenderer';
+import type { LocalBubbleRenderer } from '../../../../src/layers/localBubble/@types/LocalBubbleRenderer';
 
 const fetch = useFetchMock();
 

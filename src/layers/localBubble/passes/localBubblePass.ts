@@ -7,7 +7,7 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { LocalBubbleRuntime } from '../@types/LocalBubbleRuntime';
-import { clampLocalBubbleIntensity } from '../../../utils/clampLocalBubbleIntensity';
+import { clampLocalBubbleIntensity } from '../utils/clampLocalBubbleIntensity';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
 import { localBubbleVisibility } from '../visibility';

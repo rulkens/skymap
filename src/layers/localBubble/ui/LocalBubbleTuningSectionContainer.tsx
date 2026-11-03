@@ -8,7 +8,7 @@ import { memo, useCallback } from 'react';
 import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectLocalBubble } from '../state/localBubble/selectors';
-import { LOCAL_BUBBLE_SLIDER_FIELDS } from '../../../data/localBubble/localBubbleSliderFields';
+import { LOCAL_BUBBLE_SLIDER_FIELDS } from '../data/localBubbleSliderFields';
 import { setLocalBubbleIntensity } from '../state/localBubble/slice';
 
 function LocalBubbleTuningSectionContainer(): React.ReactElement {
