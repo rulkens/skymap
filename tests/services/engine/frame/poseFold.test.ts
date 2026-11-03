@@ -88,12 +88,8 @@ import { SITE_RUNG } from '../../../../src/data/camera/siteRung';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
-import {
-  endDrag,
-  commitCameraPose,
-  startCameraTween,
-} from '../../../../src/state/camera/cameraSlice';
-import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
+import { commitCameraPose, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { all, tween } from '../../../../src/services/engine/animation/effectHelpers';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -429,7 +425,6 @@ describe('runFrame — the regime fold', () => {
     h.moveTo([52, 50]);
     h.frame(1);
     h.release();
-    h.store.dispatch(endDrag());
     h.frame(2);
     const panOffset = h.state.cameraRuntime.follow?.panOffset ?? [0, 0, 0];
     const panM = Math.hypot(...panOffset) * SCALE_UNITS.MPC_TO_M;
@@ -785,7 +780,7 @@ describe('runFrame — the regime fold', () => {
     expect(state.cameraRuntime.register.pose.frame).toBe('absolute');
     expect(store.getState().camera.base.frame).toBe('absolute');
 
-    store.dispatch(endDrag());
+    store.dispatch(inputGestureEnded({ source: 'canvas' }));
     runFrame(state, deps, 16);
 
     expect(state.cameraRuntime.register.pose.frame).toEqual(EARTH_ARM);

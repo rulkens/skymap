@@ -102,6 +102,7 @@ import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
 import { compileClip } from '../animation/compileClip';
 import { lerpInSpace } from '../animation/channelSpace';
 import { EASE } from '../animation/ease';
@@ -533,6 +534,8 @@ type FrameDeps = {
   readonly basis: Mat3;
   /** Memo owner: the leg-start conversion is captured once per playback. */
   readonly owner: object;
+  /** The live ground; a call that passes none (tests, golden traces) folds at datum. */
+  readonly terrainHeightAt: TerrainHeightAtLookup;
 };
 
 function frameDepsOf(opts: ClipFrameOptions): FrameDeps {
@@ -542,7 +545,12 @@ function frameDepsOf(opts: ClipFrameOptions): FrameDeps {
       'evaluateFramedClip: a frame-tagged keyframe needs `bodies`, `frameBasis` and `playback`',
     );
   }
-  return { bodies, basis: frameBasis, owner: playback };
+  return {
+    bodies,
+    basis: frameBasis,
+    owner: playback,
+    terrainHeightAt: opts.terrainHeightAt ?? datumOnlyTerrainHeight,
+  };
 }
 
 function convertChannels(
@@ -554,13 +562,11 @@ function convertChannels(
   if (sameFrame(from, to)) return channels;
   // The clip's one steady basis serves as BOTH rung bases: its absolute angles
   // were authored through it, and a leg start has no separate up to read.
-  // No terrain lookup reaches this pure evaluator (`ClipFrameOptions` carries
-  // none), so a clip authored to bank along a slope crosses it at datum height.
   const ctx = {
     bodies: deps.bodies,
     poseBasis: deps.basis,
     upBasis: deps.basis,
-    terrainHeightAt: datumOnlyTerrainHeight,
+    terrainHeightAt: deps.terrainHeightAt,
   };
   const world = foldToWorld(rowFor(from).channels.decode(channels, from, ctx), ctx);
   return rowFor(to).channels.encode(world, to, ctx);

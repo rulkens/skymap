@@ -115,6 +115,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'src/layers/blackHoles/lensing/present/blackHoleLensEnvelopeM.ts',
     'fade precedent — bridges a metre distance to Mpc only to test it against the capture band Mpc goneAt, no slab MVP involved',
   ],
+  [
+    'src/layers/missions/craft/utils/meshBodyCaption.ts',
+    "fade precedent — bridges a seed's metre reveal distance to the Mpc revealBand the label fade reads, no slab MVP involved",
+  ],
 ]);
 
 function scaleUnitsMembersUsed(file: string): string[] {
