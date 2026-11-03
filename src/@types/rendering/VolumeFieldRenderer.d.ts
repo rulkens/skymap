@@ -12,7 +12,7 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 import type { ScalarCube } from '../data/volume/ScalarCube';
-import type { VolumeFieldSettings } from '../../layers/cosmicWebDensity/@types/VolumeFieldSettings';
+import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { VolumeFieldDefaults } from '../data/volume/VolumeFieldDefaults';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';

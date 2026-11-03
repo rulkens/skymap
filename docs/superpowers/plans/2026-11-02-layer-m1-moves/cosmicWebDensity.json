@@ -1,13 +1,5 @@
 [
   {
-    "from": "src/@types/rendering/VolumeFieldLiveness.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/VolumeFieldLiveness.d.ts"
-  },
-  {
-    "from": "src/@types/settings/VolumeFieldSettings.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/VolumeFieldSettings.d.ts"
-  },
-  {
     "from": "src/utils/clampVolumeContrast.ts",
     "to": "src/layers/cosmicWebDensity/utils/clampVolumeContrast.ts"
   },
@@ -18,10 +10,6 @@
   {
     "from": "src/utils/clampVolumeExposure.ts",
     "to": "src/layers/cosmicWebDensity/utils/clampVolumeExposure.ts"
-  },
-  {
-    "from": "src/utils/clampVolumeFieldSettings.ts",
-    "to": "src/layers/cosmicWebDensity/utils/clampVolumeFieldSettings.ts"
   },
   {
     "from": "src/utils/clampVolumeIntensity.ts",

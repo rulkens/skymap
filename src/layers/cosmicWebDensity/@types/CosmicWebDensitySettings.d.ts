@@ -6,7 +6,7 @@
  */
 
 import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldSettings } from './VolumeFieldSettings';
+import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 
 export type CosmicWebDensitySettings = {
   /** False short-circuits both volume passes before any GPU cost, after its fade-out. */

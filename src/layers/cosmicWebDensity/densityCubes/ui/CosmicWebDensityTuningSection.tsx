@@ -8,7 +8,7 @@
 import type { ReactElement } from 'react';
 import type { CosmicWebDensitySettings } from '../../@types/CosmicWebDensitySettings';
 import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldSettings } from '../../@types/VolumeFieldSettings';
+import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
 import DebugSection from '../../../../components/DebugPanel/DebugSection';
 import DensityFieldTuningRow from './DensityFieldTuningRow';

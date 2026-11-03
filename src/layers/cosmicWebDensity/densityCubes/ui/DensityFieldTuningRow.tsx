@@ -5,7 +5,7 @@
 
 import type { ReactElement } from 'react';
 import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldSettings } from '../../@types/VolumeFieldSettings';
+import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
 import DebugSlider from '../../../../components/DebugPanel/DebugSlider';
 import { PaletteSelect } from '../../../../components/common/PaletteSelect/PaletteSelect';

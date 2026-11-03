@@ -6,7 +6,7 @@
  */
 
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
-import type { VolumeFieldLiveness } from '../../../layers/cosmicWebDensity/densityCubes/@types/VolumeFieldLiveness';
+import type { VolumeFieldLiveness } from '../../rendering/VolumeFieldLiveness';
 import type { FadeParam } from '../../animation/FadeParam';
 import type { ShowKey } from '../../animation/ShowKey';
 import type { PassState } from './PassState';

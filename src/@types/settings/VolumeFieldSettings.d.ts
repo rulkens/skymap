@@ -14,8 +14,8 @@
  * which carry only visibility (and an optional label axis).
  */
 
-import type { DataItemSettings } from '../../../@types/settings/DataItemSettings';
-import type { ScalarFieldPaletteId } from '../../../@types/data/volume/ScalarFieldPaletteId';
+import type { DataItemSettings } from './DataItemSettings';
+import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 
 export type VolumeFieldSettings = DataItemSettings & {
   /** Linear mix-in weight in [0, 1].  Seeded by the owning Layer's `initialState` literal. */

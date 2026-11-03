@@ -4,10 +4,6 @@
     "to": "src/layers/cosmicWebDensity/densityCubes/@types/CosmicWebDensityReq.d.ts"
   },
   {
-    "from": "src/layers/cosmicWebDensity/@types/VolumeFieldLiveness.d.ts",
-    "to": "src/layers/cosmicWebDensity/densityCubes/@types/VolumeFieldLiveness.d.ts"
-  },
-  {
     "from": "src/layers/cosmicWebDensity/utils/clampVolumeContrast.ts",
     "to": "src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeContrast.ts"
   },
@@ -18,10 +14,6 @@
   {
     "from": "src/layers/cosmicWebDensity/utils/clampVolumeExposure.ts",
     "to": "src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeExposure.ts"
-  },
-  {
-    "from": "src/layers/cosmicWebDensity/utils/clampVolumeFieldSettings.ts",
-    "to": "src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeFieldSettings.ts"
   },
   {
     "from": "src/layers/cosmicWebDensity/utils/clampVolumeIntensity.ts",

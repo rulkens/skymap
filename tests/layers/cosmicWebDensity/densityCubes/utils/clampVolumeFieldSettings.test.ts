@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { clampVolumeFieldSettings } from '../../../../../src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeFieldSettings';
-import type { VolumeFieldSettings } from '../../../../../src/layers/cosmicWebDensity/@types/VolumeFieldSettings';
+import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 
 // Out-of-range raw values that force every scalar clamp to fire.
 // intensity > 1 (clampVolumeIntensity ceiling is 1)
