@@ -121,7 +121,7 @@
   },
   {
     "from": "src/layers/milkyWay/ui/formatMilkyWayTuningDefaults.ts",
-    "to": "src/layers/milkyWay/tuning/ui/formatMilkyWayTuningDefaults.ts"
+    "to": "src/layers/milkyWay/tuning/utils/formatMilkyWayTuningDefaults.ts"
   },
   {
     "from": "src/layers/milkyWay/ui/MilkyWayTuningSection.tsx",
