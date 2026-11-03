@@ -1,6 +1,5 @@
 [
   { "from": "src/layers/localBubble/@types/LocalBubbleRenderer.d.ts", "to": "src/layers/localBubble/shell/@types/LocalBubbleRenderer.d.ts" },
-  { "from": "src/layers/localBubble/@types/LocalBubbleSettings.d.ts", "to": "src/layers/localBubble/shell/@types/LocalBubbleSettings.d.ts" },
   { "from": "src/layers/localBubble/data/localBubbleSliderFields.ts", "to": "src/layers/localBubble/shell/data/localBubbleSliderFields.ts" },
   { "from": "src/layers/localBubble/data/localBubbleTint.ts", "to": "src/layers/localBubble/shell/data/localBubbleTint.ts" },
   { "from": "src/layers/localBubble/data/shellMeshFormat.ts", "to": "src/layers/localBubble/shell/data/shellMeshFormat.ts" },

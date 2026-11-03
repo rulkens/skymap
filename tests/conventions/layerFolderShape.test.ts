@@ -47,7 +47,6 @@ const NOT_YET_REGROUPED: ReadonlySet<string> = new Set([
   'flow',
   'galaxyCatalog',
   'lightTime',
-  'localBubble',
   'milkyWay',
   'missions',
   'satellites',
