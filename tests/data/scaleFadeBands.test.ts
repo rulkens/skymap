@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { SCALE_FADE_BANDS } from '../../src/data/scaleFadeBands';
-import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/data/starBackdropDissolve';
+import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/seededStars/data/starBackdropDissolve';
 import { FOREGROUND_RECEDE } from '../../src/data/bands/foregroundRecede';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
 import { regionById } from '../../src/utils/regions/regionById';

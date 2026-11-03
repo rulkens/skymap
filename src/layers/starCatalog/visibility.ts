@@ -6,7 +6,7 @@ import { SOLAR_SYSTEM_CAPTION_RECEDE } from '../../data/bands/solarSystemCaption
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
-import { STAR_BACKDROP_DISSOLVE } from './data/starBackdropDissolve';
+import { STAR_BACKDROP_DISSOLVE } from './seededStars/data/starBackdropDissolve';
 import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
 import { SUN_ENTRY } from './sources/sun';
 import { S_STAR_ENTRY } from './sources/s-star';

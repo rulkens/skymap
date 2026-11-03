@@ -1,0 +1,19 @@
+import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { OctreeCutDraw } from '../../../../@types/octree/OctreeCutDraw';
+
+/**
+ * What the pick renderer shares with the visual star renderer: the three bind
+ * group layouts (its pipeline is group-equivalent), each source's records bind
+ * group, and the frame cut's leaf list. The lookups are live functions: a tier
+ * swap unloads and reloads a source.
+ */
+export type StarCatalogPickResources = {
+  readonly cameraBgl: GPUBindGroupLayout;
+  /** `@group(1)`: the GPU cut's node table, fades and one draw list. */
+  readonly drawBgl: GPUBindGroupLayout;
+  readonly recordsBgl: GPUBindGroupLayout;
+  /** Pool-sized (index records, then each chunk slot's); `null` when the source has no catalog. */
+  recordsBindGroup(source: StarCatalogSourceType): GPUBindGroup | null;
+  /** The frame cut's leaf list; `null` until a frame has cut the source. */
+  leafDraw(source: StarCatalogSourceType): OctreeCutDraw | null;
+};

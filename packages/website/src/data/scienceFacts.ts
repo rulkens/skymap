@@ -334,7 +334,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sim-exposure',
     text: 'Brightness is adjusted for a screen. The exposure applied to stars rises nearly fivefold as the camera pulls back from 1 parsec to 10 kiloparsecs, because a monitor cannot adapt to the dark as an eye does.',
-    source: `${REPO_BLOB}/src/utils/star/starExposureRamp.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/photometry/utils/starExposureRamp.ts`,
     sourceLabel: `the star exposure ramp, ${IN_REPO}`,
     checked: CHECKED,
   },
