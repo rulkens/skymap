@@ -28,7 +28,7 @@ import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galactic
 import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/picking/present/structureSelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
-import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/present/starCatalogSelectionRow';
+import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/source';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
