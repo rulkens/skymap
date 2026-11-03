@@ -37,7 +37,7 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/layers/structure/load/structureCatalogToStructures.ts',
   'src/layers/structure/present/resolveStructureFromPick.ts',
   'src/layers/structure/present/structureSelectionRow.ts',
-  'src/layers/zoneOfAvoidance/present/zoneOfAvoidanceSelectionRow.ts',
+  'src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow.ts',
   'src/services/engine/animation/applyPathTuning.ts',
   'src/services/engine/animation/buildDwellWarp.ts',
   'src/services/engine/animation/buildPathTrack.ts',
