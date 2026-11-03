@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { encodeFilaments, decodeFilaments } from '../../../src/data/filament/filamentBinaryFormat';
-import type { FilamentCloud } from '../../../src/@types/data/filament/FilamentCloud';
+import { encodeFilaments, decodeFilaments } from '../../../../../src/layers/cosmicWebFilaments/filaments/data/filamentBinaryFormat';
+import type { FilamentCloud } from '../../../../../src/@types/data/filament/FilamentCloud';
 
 function makeFixture(): FilamentCloud {
   // Two strips: A has 3 vertices, B has 2.  Total 5 vertices.

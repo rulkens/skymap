@@ -35,7 +35,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 // (famousGalaxiesMeta, filaments, the density cubes) just need to reach `ready`. The per-source point
 // slots, the only ones with a commit step, are injected as fakes.
 
-vi.mock('../../../../src/layers/cosmicWebFilaments/load/filamentFetcher', () => ({
+vi.mock('../../../../src/layers/cosmicWebFilaments/filaments/load/filamentFetcher', () => ({
   filamentFetcher: vi.fn(async () => ({
     stripCount: 0,
     vertexCount: 0,
@@ -111,7 +111,7 @@ import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDens
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
-import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/load/filamentFetcher';
+import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/filaments/load/filamentFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';

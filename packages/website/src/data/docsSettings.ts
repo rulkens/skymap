@@ -345,7 +345,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'cosmic-web-filaments',
     title: 'Cosmic web filaments',
-    file: 'src/layers/cosmicWebFilaments/ui/CosmicWebFilamentsSection.tsx',
+    file: 'src/layers/cosmicWebFilaments/filaments/ui/CosmicWebFilamentsSection.tsx',
     rows: [
       {
         name: 'Cosmic web filaments',
