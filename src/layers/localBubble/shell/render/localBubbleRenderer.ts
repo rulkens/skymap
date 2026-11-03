@@ -29,7 +29,7 @@ import type { LocalBubbleRenderer } from '../@types/LocalBubbleRenderer';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
-import shellCode from '../../../services/gpu/shaders/localBubble/shell.wesl?static';
+import shellCode from '../../../../services/gpu/shaders/localBubble/shell.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { SHELL_VERTEX_FORMAT } from '../data/shellVertexFormats';
