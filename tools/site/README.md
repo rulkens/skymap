@@ -101,7 +101,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## Shot requests
 
-A page designer who wants a different picture and does not reshoot it alone files a request for whoever runs the shoot. Each is one JSON file (`@types/ShotRequest.d.ts`) in `.superpowers/sdd/2026-10-05-companion-website/shot-requests/` (gitignored), named `<UTC time>-<requester>-<subject>.json`, and checked on every write and listing.
+A page designer who wants a different picture and does not reshoot it alone files a request for whoever runs the shoot. Each is one JSON file (`@types/ShotRequest.d.ts`) in `.superpowers/site/shot-requests/` (gitignored; the root is `SITE_NOTES_ROOT.ts`), named `<UTC time>-<requester>-<subject>.json`, and checked on every write and listing.
 
 ```
 npm run site:requests -- list [--open]

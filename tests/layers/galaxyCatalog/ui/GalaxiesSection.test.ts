@@ -42,6 +42,7 @@ const PARTIAL_MASK = (1 << Source.SDSS) | (1 << Source.TwoMRS);
 
 function baseProps() {
   return {
+    title: 'Galaxies',
     sourceMask: ALL_ON_MASK,
     onToggleSource: vi.fn<(source: SourceType, visible: boolean) => void>(),
     pointSize: 2.5,

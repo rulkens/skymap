@@ -157,7 +157,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-horizon-shell',
     text: 'The sphere at the edge of the observable universe is drawn at 14.3 gigaparsecs (46.6 thousand million light-years). It marks the particle horizon of a cosmological model: how far away, today, the most distant matter is from which any signal could have reached us. The matter whose glow we see as the microwave background is a little nearer.',
-    source: `${REPO_BLOB}/src/layers/cosmicHorizon/data/horizonRadiusGpc.ts`,
+    source: `${REPO_BLOB}/src/layers/cosmicHorizon/horizon/data/horizonRadiusGpc.ts`,
     sourceLabel: `the horizon radius, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -213,7 +213,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-zoa-band',
     text: 'The blue Zone of Avoidance band is a guide we draw along the plane of the Milky Way, set to 10 degrees towards the galactic centre and 3 degrees away from it. The shortage of galaxies behind it is in the catalogues.',
-    source: `${REPO_BLOB}/src/data/zoneOfAvoidance/zoneOfAvoidanceShell.ts`,
+    source: `${REPO_BLOB}/src/layers/zoneOfAvoidance/shell/data/zoneOfAvoidanceShell.ts`,
     sourceLabel: `the band’s shape, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -257,7 +257,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sim-horizon-h0',
     text: 'The sphere at 14.3 gigaparsecs fits a Hubble constant near 67. With the 70 we use for galaxies and the same matter density, the same model gives about 13.6 gigaparsecs. The sphere is drawn about 5 per cent too far out for the galaxies inside it.',
-    source: `${REPO_BLOB}/src/layers/cosmicHorizon/data/horizonRadiusGpc.ts`,
+    source: `${REPO_BLOB}/src/layers/cosmicHorizon/horizon/data/horizonRadiusGpc.ts`,
     sourceLabel: `the horizon radius, ${IN_REPO}`,
     checked: CHECKED,
   },

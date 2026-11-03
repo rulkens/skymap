@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { structureLayer } from '../../../src/layers/structure/layer';
-import { createStructureStore } from '../../../src/layers/structure/load/createStructureStore';
+import { createStructureStore } from '../../../src/layers/structure/catalog/load/createStructureStore';
 import { CONTENT_PASSES } from '../../../src/services/engine/frame/passes';
 import { FRAME_ORDER_PASS_NAMES } from '../../../src/services/engine/frame/frameOrderPassNames';
 import { COSMO, NEAR0 } from '../../../src/services/engine/frame/slabs';

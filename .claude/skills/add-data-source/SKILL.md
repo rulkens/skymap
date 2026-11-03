@@ -176,13 +176,13 @@ walk you to anything missed.
 | 2   | Registry row       | `src/layers/structure/sources/<x>.ts` (new, a `StructureSourceEntry`) + import and line in `src/layers/structure/sources/structureSourceRows.ts`                                                | `id`, `scale`, the copy fields `detailLabel` / `shortLabel` / `plural`          |
 | 3   | Non-survey guard   | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                                                                    | Keeps the `switch` exhaustive; a structure has no galaxy type                                   |
 | 4   | Record arm         | `src/@types/data/structure/StructureInfo.d.ts` (`XRecord` + the union)                                                                              | The category's own fields, if any (`nebulaKind`)                                                   |
-| 5   | Style row          | `src/layers/structure/present/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
+| 5   | Style row          | `src/layers/structure/markers/present/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
 | 6   | Distance band      | `src/layers/structure/visibility.ts`  | Nothing to edit: the category joins `STRUCTURE_IDS_BY_SCALE` through its registry row's `scale` and takes that scale's band (below) |
-| 7   | Build switch       | `src/layers/structure/load/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
+| 7   | Build switch       | `src/layers/structure/catalog/load/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
 | 8   | Seed parser        | `tools/parsers/parseStructureSeed.ts`                                                                                                               | Per-category fields: what is required, what is rejected elsewhere                               |
-| 9   | Card row (if any)  | `src/layers/structure/ui/StructureDetailCard/StructureDetailCard.tsx`; copy in `src/data/structure/` (`nebulaKindLabels.ts`, which stays in core)                       | A per-category fact such as a nebula's Type                                                     |
+| 9   | Card row (if any)  | `src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard.tsx`; copy in `src/data/structure/` (`nebulaKindLabels.ts`, which stays in core)                       | A per-category fact such as a nebula's Type                                                     |
 | 10  | Seed rows          | `data/seeds/structure_anchors.seed.json` (plain `git add`)                                                                                          | The data; fields below                                                                          |
-| 11  | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/layers/structure/load/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm |
+| 11  | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/layers/structure/catalog/load/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm |
 
 ### Source code (step 1)
 
@@ -254,7 +254,7 @@ prefix), the search chip and palette rows, default marker and label visibility,
 (chosen by `scale`). Counts and the palette's search list are the structure
 Layer's facts (`counts`, `searchList`), published by
 `load/wireStructureProjection.ts` off the store, with no per-category row.
-`BULK_CATALOG_CATEGORIES` in `src/layers/structure/load/structureAssetRows.ts`
+`BULK_CATALOG_CATEGORIES` in `src/layers/structure/catalog/load/structureAssetRows.ts`
 is the one list not derived: add the category **only if** it has a bulk
 `.ccat`, which a seed-only category does not.
 

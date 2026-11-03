@@ -72,7 +72,7 @@ Three kinds of content share the scene; this section says which is which.
 ### Milky Way
 
 - **Gaussian splats, no raymarch**: disc, bulge, arm, dust, and HII components are instanced Gaussian ellipsoids; each fragment evaluates its Gaussian along the view ray in closed form ([fieldSplat](../src/services/gpu/shaders/milkyWay/field/fieldSplat/fragment.wesl)).
-- **Two passes**: emission accumulates additively at reduced resolution; dust is a separate multiplicative pass applying per-channel transmittance ([milkyWayCloudRenderer.ts](../src/layers/milkyWay/render/milkyWayCloudRenderer.ts)).
+- **Two passes**: emission accumulates additively at reduced resolution; dust is a separate multiplicative pass applying per-channel transmittance ([milkyWayCloudRenderer.ts](../src/layers/milkyWay/cloud/render/milkyWayCloudRenderer.ts)).
 - **Workbench**: the analytic-galaxy machinery was developed at [/galaxy/](https://skymap.rulkens.com/galaxy/) ([tools/galaxy-renderer/](../tools/galaxy-renderer/)), which renders full procedural Hubble-sequence galaxies.
 
 ### Solar system
@@ -88,10 +88,10 @@ Three kinds of content share the scene; this section says which is which.
 
 ### Large-scale overlays
 
-- **Filaments and constellations**: instanced screen-aligned quad segments blended additively, since native line primitives are locked to one pixel ([filamentRenderer.ts](../src/layers/filaments/render/filamentRenderer.ts), [constellationRenderer.ts](../src/layers/constellations/render/constellationRenderer.ts)); constellation endpoints resolve to real catalogue stars at build time.
-- **Structure markers**: world-sized halo-plus-ring billboards scaled by each structure's physical radius; voids draw only the ring, a halo would imply matter where the structure is defined by absence ([structureMarkerRenderer.ts](../src/layers/structure/render/structureMarkerRenderer.ts)).
+- **Filaments and constellations**: instanced screen-aligned quad segments blended additively, since native line primitives are locked to one pixel ([filamentRenderer.ts](../src/layers/filaments/render/filamentRenderer.ts), [constellationRenderer.ts](../src/layers/constellations/figures/render/constellationRenderer.ts)); constellation endpoints resolve to real catalogue stars at build time.
+- **Structure markers**: world-sized halo-plus-ring billboards scaled by each structure's physical radius; voids draw only the ring, a halo would imply matter where the structure is defined by absence ([structureMarkerRenderer.ts](../src/layers/structure/markers/render/structureMarkerRenderer.ts)).
 - **Zone of avoidance**: a reduced-resolution analytic raymarch of a galactic-latitude wedge, captioned in curved MSDF lettering ([band.wesl](../src/services/gpu/shaders/zoneOfAvoidance/band.wesl)).
-- **Horizon shell**: the particle horizon at 14.3 Gpc, a Fresnel-rimmed sphere evaluated analytically per fragment ([horizonShellRenderer.ts](../src/layers/cosmicHorizon/render/horizonShellRenderer.ts)).
+- **Horizon shell**: the particle horizon at 14.3 Gpc, a Fresnel-rimmed sphere evaluated analytically per fragment ([horizonShellRenderer.ts](../src/layers/cosmicHorizon/horizon/render/horizonShellRenderer.ts)).
 
 ### Volumes and flow
 

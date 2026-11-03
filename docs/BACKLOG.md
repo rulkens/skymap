@@ -91,6 +91,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Frame-tagged clip keyframes have no per-endpoint authoring validation** `needs-design` — a straddling channel tween silently freezes. → [details](backlog/2026-09-11-clip-per-endpoint-tag-authoring-validation.md)
 - [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
+- [ ] **turnCameraArm reads the site tag by hand** `ready` — `tools/site/utils/turnCameraArm.ts` tests `'site' in arm.frame` outside `rungs/`; route it through `isSiteArm`. → [details](backlog/2026-11-03-turn-camera-arm-site-tag.md)
+- [ ] **framedClipArm decodes with the current basis** `deferred` — `cameraDrivers.ts` passes the current basis where the clip pinned another; harmless until a `decode` cell reads a basis. → [details](backlog/2026-11-03-framed-clip-arm-decode-basis.md)
 - [ ] **Earth point in the URL hash** `needs-design` — `#site=lon,lat[,alt]` snapping over a coordinate via the existing `flyToLonLat` saga; the typable subset of the pose codec. → [details](backlog/2026-09-15-earth-point-url-hash.md)
 - [ ] **Sub-pixel craft and scene glints can't be picked** `ready` — `glintsPassOver` (missions, earthScenes, blackHoles) has no `drawPick`, so an unresolved craft drawn as a glint takes no click.
 
@@ -248,6 +250,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Website docs pages into folders with structure files** `ready` — the 27 docs pages get a folder and a `.structure.yaml` each like the landing pages (job moves out of front matter), and `components/docs/` is sub-grouped by kind.
 - [ ] **Famous-curator suite runtime cost** `deferred` — real sharp encodes + tmpdir I/O dominate suite wall-clock; cache fixtures, shrink images, or tag a slow-suite split. → [details](backlog/2026-07-10-famous-curator-suite-runtime-cost.md)
+- [ ] **Constants files: `<thing>.constants.ts`, one thing per file** `ready` — the suffix keeps "constant" visible outside `data/`; plus a ratchet refusing functions in `data/` (49 today). Own PRs after Layer M1. → [details](backlog/2026-11-03-constants-file-convention.md)
 - [ ] **move-files: untracked references** `ready` — ts-morph skips `?worker`/`?static` specifiers, `vi.mock` literals and CSS files (`.module.css` left behind, `composes … from` unrewritten); a stale `?worker` is silent on BOTH tsc and vite build. Rewrite them, then fail loudly on anything still dangling. → [details](backlog/2026-07-14-move-files-untracked-references.md)
 - [ ] **refactor `extract` drops type imports** `ready` — a confirmed bug: the extracted file loses its type-only imports and does not compile. → [details](backlog/2026-07-21-refactor-cli-followups.md)
 - [ ] **refactor `extract` crashes on a type alias into a `.d.ts`** `ready` — "node that was removed or forgotten" instead of a move or a refusal; repro at `393be6506^`. → [details](backlog/2026-11-02-refactor-extract-crash.md)

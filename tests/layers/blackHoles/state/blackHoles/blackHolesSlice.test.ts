@@ -10,7 +10,7 @@ import {
 } from '../../../../../src/layers/blackHoles/state/blackHoles/slice';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../../../src/layers/blackHoles/sources/blackHoleSourceRows';
 import { SGR_A_STAR_ENTRY } from '../../../../../src/layers/blackHoles/sources/sgrAStar';
-import type { BlackHolesSettings } from '../../../../../src/@types/settings/BlackHolesSettings';
+import type { BlackHolesSettings } from '../../../../../src/layers/blackHoles/@types/BlackHolesSettings';
 
 describe('blackHolesSlice', () => {
   it('the initial blackHoles.items has a row for every black-hole id', () => {

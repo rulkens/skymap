@@ -18,7 +18,7 @@ import {
   FADE,
   DENS_SCALE,
   SPEED_COLOR_MAX,
-} from '../../../../src/data/flow/flowFieldConstants';
+} from '../../../../src/layers/flow/streamlines/data/flowFieldConstants';
 import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';

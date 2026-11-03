@@ -7,7 +7,7 @@
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { ShellMesh } from '../../../@types/data/shellMesh/ShellMesh';
-import type { LocalBubbleRenderer } from '../../../@types/rendering/LocalBubbleRenderer';
+import type { LocalBubbleRenderer } from '../shell/@types/LocalBubbleRenderer';
 
 export type LocalBubbleRuntime = {
   readonly renderer: LocalBubbleRenderer;

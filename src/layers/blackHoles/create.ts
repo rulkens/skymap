@@ -9,7 +9,7 @@ import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { BlackHolesRuntime } from './@types/BlackHolesRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
-import { createBlackHoleLensingRenderer } from './render/blackHoleLensingRenderer';
+import { createBlackHoleLensingRenderer } from './lensing/render/blackHoleLensingRenderer';
 import { createBodyGlintRenderer } from '../../services/gpu/renderers/bodies/bodyGlintRenderer';
 
 export function create(deps: LayerCoreDeps): BlackHolesRuntime {

@@ -22,7 +22,6 @@ export type CameraState = {
   base: FramedCameraPose;
   tween: CameraTweenDescriptor | null;
   autoRotate: { active: boolean; rate: number };
-  dragging: boolean;
   clip: { data: ClipData; frame: OrientationFrameId } | null;
   frameTween: FrameTween | null;
   /** The last re-aim an exhibit's hold asked for; null before any. */

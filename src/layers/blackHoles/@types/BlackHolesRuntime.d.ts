@@ -4,7 +4,7 @@
  * so the passes read them without a null check.
  */
 
-import type { BlackHoleLensingRenderer } from './BlackHoleLensingRenderer';
+import type { BlackHoleLensingRenderer } from '../lensing/@types/BlackHoleLensingRenderer';
 import type { BodyGlintRenderer } from '../../../@types/rendering/BodyGlintRenderer';
 
 export type BlackHolesRuntime = {

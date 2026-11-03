@@ -40,6 +40,7 @@ function items(gaiaEnabled: boolean): Record<StarCatalogId, StarCatalogItemSetti
 
 function baseProps() {
   return {
+    title: 'Stars',
     enabled: true,
     items: items(true),
     sizePx: 2.5,

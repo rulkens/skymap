@@ -90,6 +90,11 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
             yield* flush();
             yield* put(inputGestureStarted({ source, intent: held }));
             break;
+          case 'tiltStart':
+            held = 'tilt';
+            yield* flush();
+            yield* put(inputGestureStarted({ source, intent: held }));
+            break;
           case 'heldEnd':
             yield* flush();
             yield* put(inputGestureEnded({ source }));

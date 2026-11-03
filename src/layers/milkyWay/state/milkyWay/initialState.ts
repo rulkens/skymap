@@ -7,7 +7,7 @@
  */
 
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import type { MilkyWaySettings } from '../../../../@types/settings/MilkyWaySettings';
+import type { MilkyWaySettings } from '../../@types/MilkyWaySettings';
 
 export const initialState: MilkyWaySettings = {
   enabled: true,

@@ -18,12 +18,13 @@ import { foldToWorld } from './rungs/foldToWorld';
 import { hostOf } from './rungs/hostOf';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
+import { rungKindOf } from './rungs/rungKindOf';
 import { sameFrame } from './rungs/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../state/selection/selectors';
-import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
+import cameraReducer, { commitCameraPose } from '../../../state/camera/cameraSlice';
 
 import type { ClimbableKind } from '../../../@types/camera/ClimbableKind';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
@@ -131,6 +132,11 @@ export function replayInput(
     if (moves && (camera.clip !== null || (!worldArm && hostOf(base.frame, ctx) === null))) {
       return true;
     }
+    // The two-finger drag is a surface handle (owner ruling 2026-11-03): only
+    // the body rung reads it, so space and a site's turntable stay put.
+    if (step.kind === 'drag' && step.mode === 'tilt' && rungKindOf(base.frame) !== 'body') {
+      return true;
+    }
     // Which pose to step is arbitration, not rung arithmetic: an edge moves none
     // (and so never pays the fold), the world arm steps the live register folded
     // down — AUTHORED, not displayed (R12b-1), so a drag composes below the tilt
@@ -191,8 +197,8 @@ export function replayInput(
         break;
 
       case 'gestureEnd': {
-        // ONE commit site for both arms: bake the register into `base` before
-        // `endDrag`. Skipped while a clip owns the camera and across an arm
+        // ONE commit site for both arms: bake the register into `base`. Skipped
+        // while a clip owns the camera and across an arm
         // mismatch — the fold owns regime edges; a commit here must never flip one.
         // Skipped while a navigator row authors the release: its edge commit bakes
         // the nudged register, once.
@@ -202,7 +208,6 @@ export function replayInput(
         navAuthors = false;
         navSteps.push(step);
         stepRegister(step);
-        emit(endDrag());
         break;
       }
 

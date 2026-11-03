@@ -12,7 +12,7 @@ import { factsKind } from '../../../components/ExhibitOverlay/kinds/factsKind';
 import { proseKind } from '../../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../../components/ExhibitOverlay/kinds/sourcesKind';
 import type { Exhibit } from '../../../@types/exhibits/Exhibit';
-import { HORIZON_RADIUS_MPC } from '../data/horizonRadiusMpc';
+import { HORIZON_RADIUS_MPC } from '../horizon/data/horizonRadiusMpc';
 
 export const observableUniverse: Exhibit = {
   id: 'observableUniverse',

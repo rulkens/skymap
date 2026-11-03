@@ -13,11 +13,12 @@ import { parseArgs } from 'node:util';
 
 import { SITE_SHOTS } from '../../packages/website/src/data/siteShots';
 import type { ShotRequest } from './@types/ShotRequest';
+import { SITE_NOTES_ROOT } from './SITE_NOTES_ROOT';
 import { parseSize } from './utils/parseSize';
 import { shotRequestFileName } from './utils/shotRequestFileName';
 import { shotRequestProblems } from './utils/shotRequestProblems';
 
-const DIR = '.superpowers/sdd/2026-10-05-companion-website/shot-requests';
+const DIR = join(SITE_NOTES_ROOT, 'shot-requests');
 const SHOT_IDS = SITE_SHOTS.map((shot) => shot.id);
 
 const { positionals, values } = parseArgs({

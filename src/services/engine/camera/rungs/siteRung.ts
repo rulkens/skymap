@@ -74,6 +74,8 @@ export const siteRung: ClimbRow<'site'> = {
     }),
   },
 
+  identity: (frame) => frame.site,
+
   host(frame, ctx) {
     const site = siteRowOf(frame.site);
     if (site === null) return null;

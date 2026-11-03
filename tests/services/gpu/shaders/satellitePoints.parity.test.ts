@@ -11,7 +11,7 @@ import {
   SATELLITE_INSTANCE_STRIDE,
   SATELLITE_UNIFORM_BYTES,
   SATELLITE_UNIFORM_OFFSETS,
-} from '../../../../src/layers/satellites/render/satellitePointRenderer';
+} from '../../../../src/layers/satellites/points/render/satellitePointRenderer';
 
 const io = readFileSync(
   join(process.cwd(), 'src/services/gpu/shaders/satellites/points/io.wesl'),

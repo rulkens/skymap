@@ -6,10 +6,10 @@
  */
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { SatellitesRuntime } from './@types/SatellitesRuntime';
-import type { SatelliteSweep } from './@types/SatelliteSweep';
+import type { SatelliteSweep } from './sweep/@types/SatelliteSweep';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
-import { satelliteLayerOpacity } from './subsystems/satelliteLayerOpacity';
-import { sweepDue } from './subsystems/sweepDue';
+import { satelliteLayerOpacity } from './points/subsystems/satelliteLayerOpacity';
+import { sweepDue } from './sweep/subsystems/sweepDue';
 import { SATELLITE_CLASSES } from '../../data/satellites/satelliteClasses';
 
 const IDLE = { value: undefined, awake: false, settling: false } as const;
