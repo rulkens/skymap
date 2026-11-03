@@ -56,9 +56,11 @@ const DOCS_WIDTHS = [2400, ...FEATURE_WIDTHS];
 const PHONE = { width: 400, height: 560 };
 const PHONE_WIDTHS = [800];
 const DOME = { width: 1024, height: 1024 };
-// The Science page's two-up comparison: one camera, two layers, so the frames must share a size.
+// Two layers seen by one camera, so the frames must share a size: the Science page's compare frame, the Settings page's pairs.
 const PAIR = { width: 800, height: 800 };
 const PAIR_WIDTHS = [1120, 640];
+// The compare frame spans the column (72rem), which a 2x screen fills from 2240: its rows are shot at 3x for it.
+const COMPARE_WIDTHS = [2240, 1120, 640];
 // Aimed 250 Mpc out towards Coma, inside the volume the density map covers, so both layers fill the frame.
 const WEB_POSE = 'pose=a,-211,-56,116,2.1,0.35,420,0';
 const POINTS_ONLY: SiteShotSettings = { hideLabels: true, hideStructures: true, hideCosmicWeb: true, hideZoneOfAvoidance: true };
@@ -750,7 +752,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: WEB_POSE,
     settings: { ...POINTS_ONLY, settleMs: 4000 },
     size: PAIR,
-    widths: PAIR_WIDTHS,
+    dpr: 3,
+    widths: COMPARE_WIDTHS,
     title: 'Catalogued galaxies, one point each',
     caption: 'Around a spot 250 megaparsecs away.',
     drawn: 'Direction is observed; distance is computed from redshift.',
@@ -761,7 +764,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: WEB_POSE,
     settings: { hideLabels: true, hideStructures: true, hideZoneOfAvoidance: true, hideGalaxyField: true, settleMs: 6000 },
     size: PAIR,
-    widths: PAIR_WIDTHS,
+    dpr: 3,
+    widths: COMPARE_WIDTHS,
     title: 'The same view as the glow of the cosmic web',
     caption: 'Its gold knots sit where the points crowd.',
     drawn: 'The map exists only inside the volume its SDSS galaxies fill, which is why it stops at the lower left.',
