@@ -8,15 +8,15 @@
 
 import { memo, useCallback } from 'react';
 import CosmicWebFilamentsSection from './CosmicWebFilamentsSection';
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import {
   selectCosmicWebFilamentsEnabled,
   selectCosmicWebFilamentsIntensity,
-} from '../state/cosmicWebFilaments/selectors';
+} from '../../state/cosmicWebFilaments/selectors';
 import {
   setCosmicWebFilamentsEnabled,
   setCosmicWebFilamentsIntensity,
-} from '../state/cosmicWebFilaments/slice';
+} from '../../state/cosmicWebFilaments/slice';
 
 function CosmicWebFilamentsSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

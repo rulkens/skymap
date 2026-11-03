@@ -34,21 +34,21 @@
  */
 import vsCode from '../../../services/gpu/shaders/filaments/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/filaments/fragment.wesl?static';
-import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
-import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { FilamentCloud } from '../../../../@types/data/filament/FilamentCloud';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { FilamentRenderer } from '../@types/FilamentRenderer';
 import type { Mat4 } from 'wgpu-matrix';
-import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
+import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { clampFilamentIntensity } from '../utils/clampFilamentIntensity';
-import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
+import { writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
 import {
   UNIT_QUAD_STRIP_CORNERS,
   UNIT_QUAD_VERTEX_LAYOUT,
-} from '../../../services/gpu/lib/unitQuad';
-import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
+} from '../../../../services/gpu/lib/unitQuad';
+import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { buildSegmentInstances, FLOATS_PER_SEGMENT } from './buildSegmentInstances';
 
 // Uniform block layout, mirroring 'struct Uniforms' in

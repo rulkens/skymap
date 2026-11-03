@@ -1,0 +1,66 @@
+[
+  {
+    "from": "src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsSettings.d.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/@types/CosmicWebFilamentsSettings.d.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/@types/FilamentRenderer.d.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/@types/FilamentRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/@types/FilamentReq.d.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/@types/FilamentReq.d.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/data/filamentBaseTint.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/data/filamentBaseTint.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/data/filamentBinaryFormat.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/data/filamentBinaryFormat.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/data/filamentHotTint.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/data/filamentHotTint.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/data/filamentLineHalfwidthPx.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/data/filamentLineHalfwidthPx.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/load/filamentFetcher.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/load/filamentFetcher.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/load/filamentsAssetRows.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/load/filamentsAssetRows.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/load/filamentSlot.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/load/filamentSlot.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/passes/filamentsPass.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/passes/filamentsPass.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/render/buildSegmentInstances.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/render/buildSegmentInstances.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/render/filamentRenderer.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/render/filamentRenderer.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/ui/CosmicWebFilamentsSection.tsx",
+    "to": "src/layers/cosmicWebFilaments/filaments/ui/CosmicWebFilamentsSection.tsx"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/ui/CosmicWebFilamentsSectionContainer.tsx",
+    "to": "src/layers/cosmicWebFilaments/filaments/ui/CosmicWebFilamentsSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/utils/clampFilamentIntensity.ts",
+    "to": "src/layers/cosmicWebFilaments/filaments/utils/clampFilamentIntensity.ts"
+  }
+]

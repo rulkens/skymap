@@ -9,8 +9,8 @@
  */
 
 import { memo } from 'react';
-import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
-import Slider from '../../../components/common/Slider/Slider';
+import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
+import Slider from '../../../../components/common/Slider/Slider';
 import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
 
 export type CosmicWebFilamentsSectionProps = {

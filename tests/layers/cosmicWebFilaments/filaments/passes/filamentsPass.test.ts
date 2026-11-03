@@ -4,14 +4,14 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
-import { filamentsPass } from '../../../../src/layers/cosmicWebFilaments/passes/filamentsPass';
-import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
-import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
-import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { CosmicWebFilamentsRuntime } from '../../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import { filamentsPass } from '../../../../../src/layers/cosmicWebFilaments/filaments/passes/filamentsPass';
+import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
+import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';
+import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { CosmicWebFilamentsRuntime } from '../../../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 
 function makeCtx(focusBlend: number): FrameView {
   const vp = new Float32Array(16) as unknown as Mat4;

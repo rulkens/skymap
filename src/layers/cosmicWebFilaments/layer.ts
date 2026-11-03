@@ -11,9 +11,9 @@ import { cosmicWebFilamentsVisibility } from './visibility';
 import { FILAMENTS_SOURCE_ROWS } from './sources/filamentsSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
-import { filamentsAssetRows } from './load/filamentsAssetRows';
-import { filamentsPass } from './passes/filamentsPass';
-import CosmicWebFilamentsSectionContainer from './ui/CosmicWebFilamentsSectionContainer';
+import { filamentsAssetRows } from './filaments/load/filamentsAssetRows';
+import { filamentsPass } from './filaments/passes/filamentsPass';
+import CosmicWebFilamentsSectionContainer from './filaments/ui/CosmicWebFilamentsSectionContainer';
 
 export const cosmicWebFilamentsLayer = defineLayer({
   name: 'cosmicWebFilaments',

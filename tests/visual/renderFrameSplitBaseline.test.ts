@@ -31,7 +31,7 @@ import type { FrameContentPlanner } from '../../src/@types/engine/frame/FrameCon
 import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
-import { filamentsPass } from '../../src/layers/cosmicWebFilaments/passes/filamentsPass';
+import { filamentsPass } from '../../src/layers/cosmicWebFilaments/filaments/passes/filamentsPass';
 import { gatePassByFade } from '../../src/services/engine/layer/gatePassByFade';
 import { APP_VISIBILITY_REGISTRY } from '../../src/compositions/appVisibility';
 import { cosmicWebDensityPass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';

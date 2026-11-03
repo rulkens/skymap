@@ -1,7 +1,7 @@
 /** The Layer's one asset row: demand + request only; `slot` comes from the runtime. */
 
-import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { CosmicWebFilamentsRuntime } from '../@types/CosmicWebFilamentsRuntime';
+import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
+import type { CosmicWebFilamentsRuntime } from '../../@types/CosmicWebFilamentsRuntime';
 
 export function filamentsAssetRows(runtime: CosmicWebFilamentsRuntime): readonly AssetWiringRow[] {
   return [
