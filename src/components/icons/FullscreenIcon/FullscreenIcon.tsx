@@ -1,30 +1,26 @@
 /**
- * FullscreenIcon — four corner brackets, pointing outward to enter full screen
- * and inward to leave it, so the state never rests on colour alone. Inherits
- * currentColor from its PillButton.
+ * FullscreenIcon: four corner brackets, pointing outward to enter full screen and
+ * inward to leave it, so the state never rests on colour alone.
  */
 
 import type { ReactNode } from 'react';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
-const ENTER = 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4';
-const EXIT = 'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4';
-
-export type FullscreenIconProps = {
+export type FullscreenIconProps = Pick<IconProps, 'size'> & {
   readonly active: boolean;
 };
 
-function FullscreenIcon({ active }: FullscreenIconProps): ReactNode {
+function FullscreenIcon({ size, active }: FullscreenIconProps): ReactNode {
   return (
-    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+    <Icon size={size}>
       <path
-        d={active ? EXIT : ENTER}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d={
+          active
+            ? 'M9 3v6H3M21 9h-6V3M15 21v-6h6M3 15h6v6'
+            : 'M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6'
+        }
       />
-    </svg>
+    </Icon>
   );
 }
 

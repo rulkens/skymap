@@ -1,22 +1,13 @@
-/**
- * ExternalLinkIcon — the arrow-out-of-box glyph trailing a source title, so a
- * link that leaves the app reads as one before it is clicked. Inherits
- * currentColor from the accent-tinted title row.
- */
+/** ExternalLinkIcon: arrow out to the upper right, trailing a link that leaves the app. */
 
 import type { ReactNode } from 'react';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
-function ExternalLinkIcon(): ReactNode {
+function ExternalLinkIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (
-    <svg viewBox="0 0 12 12" width="9" height="9" aria-hidden="true" focusable="false">
-      <path
-        d="M3.5 8.5 L8.5 3.5 M4.5 3.5 H8.5 V7.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-    </svg>
+    <Icon size={size}>
+      <path d="M7 17 17 7M9 7h8v8" />
+    </Icon>
   );
 }
 

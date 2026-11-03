@@ -1,22 +1,16 @@
-/**
- * NextIcon — right-pointing triangle for the tour nav's "next beat" button.
- * Inherits currentColor from its parent button, mirroring PrevIcon.
- */
+/** NextIcon: skip forward, a solid right-pointing triangle and a bar. */
 
 import type { ReactNode } from 'react';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
-function NextIcon(): ReactNode {
+function NextIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (
-    <svg
-      data-testid="next-icon"
-      viewBox="0 0 16 16"
-      width="13"
-      height="13"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M4 3 L13 8 L4 13 Z" fill="currentColor" />
-    </svg>
+    <Icon size={size}>
+      <path d="M17.5 5.5v13" />
+      <g fill="currentColor" stroke="none">
+        <path d="M4.625 5.8v12.4a.875.875 0 0 0 1.371.721l9-6.2a.875.875 0 0 0 0-1.442l-9-6.2A.875.875 0 0 0 4.625 5.8z" />
+      </g>
+    </Icon>
   );
 }
 

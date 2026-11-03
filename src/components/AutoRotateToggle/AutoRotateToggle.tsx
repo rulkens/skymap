@@ -27,7 +27,7 @@ function AutoRotateToggle({ playing, onToggle, hidden = false }: AutoRotateToggl
       aria-pressed={playing}
       tooltip={playing ? 'Pause rotation' : 'Auto-rotate'}
     >
-      {playing ? <PauseIcon /> : <PlayIcon />}
+      {playing ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
     </PillButton>
   );
 }

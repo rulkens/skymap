@@ -25,7 +25,7 @@ function FullscreenToggle({ active, onToggle, hidden = false }: FullscreenToggle
       aria-pressed={active}
       tooltip={active ? 'Exit full screen' : 'Full screen'}
     >
-      <FullscreenIcon active={active} />
+      <FullscreenIcon size={14} active={active} />
     </PillButton>
   );
 }

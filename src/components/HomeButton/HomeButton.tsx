@@ -19,7 +19,7 @@ export type HomeButtonProps = {
 function HomeButton({ onClick, hidden = false }: HomeButtonProps): ReactNode {
   return (
     <PillButton onClick={onClick} hidden={hidden} aria-label="Fly camera home" tooltip="Home view">
-      <HomeIcon />
+      <HomeIcon size={14} />
     </PillButton>
   );
 }

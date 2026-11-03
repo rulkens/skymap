@@ -1,36 +1,17 @@
-/**
- * InfoIcon — circled-? glyph. Inline SVG so it inherits currentColor
- * from the button it sits inside; no separate CSS module since the
- * caller owns sizing via className.
- */
+/** InfoIcon: circled question mark. */
 
 import type { ReactNode } from 'react';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
-export type InfoIconProps = {
-  readonly className?: string;
-};
-
-function InfoIcon({ className }: InfoIconProps): ReactNode {
+function InfoIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (
-    <svg
-      className={className}
-      viewBox="0 0 16 16"
-      width="14"
-      height="14"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M6.5 6 Q6.5 4.5 8 4.5 Q9.5 4.5 9.5 6 Q9.5 7 8 7.5 L8 9"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="8" cy="11.25" r="0.85" fill="currentColor" />
-    </svg>
+    <Icon size={size}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M9.75 9.5Q9.75 7.25 12 7.25T14.25 9.5Q14.25 11 12 11.75v1.5" />
+      <g fill="currentColor" stroke="none">
+        <circle cx="12" cy="16.75" r="1.275" />
+      </g>
+    </Icon>
   );
 }
 

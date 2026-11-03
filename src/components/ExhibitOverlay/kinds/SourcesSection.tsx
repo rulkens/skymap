@@ -29,7 +29,7 @@ function SourcesSection({ data }: SourcesSectionProps): ReactNode {
               <span className={styles.sourceText}>
                 <span className={styles.sourceTitle}>
                   {link.title}
-                  <ExternalLinkIcon />
+                  <ExternalLinkIcon size={9} />
                 </span>
                 <span className={styles.sourceCitation}>{link.citation}</span>
               </span>

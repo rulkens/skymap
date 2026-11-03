@@ -1,24 +1,15 @@
-/**
- * StopIcon — a real filled square (the media "stop" glyph) for the tour's
- * exit button. Replaces the former hairline ✕, which read as too small and
- * incidental next to the chunky pause ring. Inherits currentColor so the
- * circular stop button's muted/hover tint cascades in.
- */
+/** StopIcon: solid rounded square, the media stop glyph. */
 
 import type { ReactNode } from 'react';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
-function StopIcon(): ReactNode {
+function StopIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (
-    <svg
-      data-testid="stop-icon"
-      viewBox="0 0 16 16"
-      width="13"
-      height="13"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor" />
-    </svg>
+    <Icon size={size}>
+      <g fill="currentColor" stroke="none">
+        <rect x="5.125" y="5.125" width="13.75" height="13.75" rx="2.375" />
+      </g>
+    </Icon>
   );
 }
 

@@ -1,25 +1,19 @@
-/**
- * EyeIcon — the exhibit overlay's hide-UI toggle glyph, struck through while the UI is hidden.
- * Inherits currentColor so the toggle's muted/hover tint cascades in.
- */
+/** EyeIcon: an open eye, struck through while what it toggles is hidden. */
 
 import type { ReactNode } from 'react';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
-function EyeIcon({ struck }: { readonly struck: boolean }): ReactNode {
+export type EyeIconProps = Pick<IconProps, 'size'> & {
+  readonly struck: boolean;
+};
+
+function EyeIcon({ size, struck }: EyeIconProps): ReactNode {
   return (
-    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
-      <path
-        d="M1 8c1.8-3 4-4.5 7-4.5S13.2 5 15 8c-1.8 3-4 4.5-7 4.5S2.8 11 1 8z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-      <circle cx="8" cy="8" r="2" fill="currentColor" />
-      {struck && (
-        <path d="M2.5 13.5l11-11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      )}
-    </svg>
+    <Icon size={size}>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="2.75" />
+      {struck && <path d="M4 20 20 4" />}
+    </Icon>
   );
 }
 
