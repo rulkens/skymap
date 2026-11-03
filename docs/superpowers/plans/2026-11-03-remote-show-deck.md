@@ -245,24 +245,24 @@ reads `status.focus?.name`; `RemotePage` stops importing `focusNameFrom` (the fi
 `TourSection` gets `status.takeover` narrowed to its tour arm until Task 8 replaces it.
 
 Tests first:
-- [ ] `selectDomeStatus`: replace "reports no tour when none runs" and "reports the running tour's beat and count"
+- [x] `selectDomeStatus`: replace "reports no tour when none runs" and "reports the running tour's beat and count"
       with:
   - `it('reports a running exhibit by kind and id, without its entry')`: `takeoverStarted({ kind: 'exhibit', id: 'cosmicFlows', entry: 'fly' })` gives exactly `{ kind: 'exhibit', id: 'cosmicFlows' }`;
   - `it('reports a running clip by kind and id')`;
   - `it("reports a running tour's beat, count and paused state")`: the old test's assertions under `takeover`;
   - `it('reports nothing running as null')`.
-- [ ] `selectDomeStatus`: replace "reports a focused body's id, Earth included" with
+- [x] `selectDomeStatus`: replace "reports a focused body's id, Earth included" with
       `it("names a focused body, Earth included")` → `{ name: 'Earth' }`, and add
       `it("names a focused galaxy as its card does")`: a famous galaxy's focus row reports the card's display name
       (`famousDisplayName`'s common name), not its catalogue designation.
-- [ ] `parseDomeMessage`: `it('accepts a status with each takeover kind')`; `it('drops an unknown takeover kind and a tour without beatCount')`;
+- [x] `parseDomeMessage`: `it('accepts a status with each takeover kind')`; `it('drops an unknown takeover kind and a tour without beatCount')`;
       the "accepts a full status" fixture moves to the new shape.
-- [ ] `RemotePage`: `it('the header names the focus the dome reports')`: a status with `focus: { name: 'Andromeda' }`
+- [x] `RemotePage`: `it('the header names the focus the dome reports')`: a status with `focus: { name: 'Andromeda' }`
       shows "Andromeda"; `focus: null` shows "Nothing focused". The fixture `status` moves to `takeover`.
-- [ ] No test for `TARGET_NAME` rows on their own: the compiler forces a row per kind, and the two selector tests
+- [x] No test for `TARGET_NAME` rows on their own: the compiler forces a row per kind, and the two selector tests
       cover the two field families most likely to be picked wrong.
-- [ ] Implement until green; `npm run typecheck:fast`; `npx vitest run tests/state/remote tests/utils/remote tests/components/RemotePage tests/state/selection`.
-- [ ] Commit: "Dome status: what runs as a takeover union and the focus by name, replacing the tour field and the focus id."
+- [x] Implement until green; `npm run typecheck:fast`; `npx vitest run tests/state/remote tests/utils/remote tests/components/RemotePage tests/state/selection`.
+- [x] Commit: "Dome status: what runs as a takeover union and the focus by name, replacing the tour field and the focus id."
 
 ### Task 5: The deck's tables and the new glyphs
 

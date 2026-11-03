@@ -1,14 +1,14 @@
 /** TourSection — start a tour; while one runs, step back, pause and step on. */
 
 import cx from 'classnames';
-import type { DomeStatus } from '../../../@types/remote/DomeStatus';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import type { RemoteMenu } from '../../../@types/remote/RemoteMenu';
+import type { RemoteTakeover } from '../../../@types/remote/RemoteTakeover';
 import controls from '../remoteControls.module.css';
 
 export type TourSectionProps = {
   tours: RemoteMenu['tours'];
-  tour: DomeStatus['tour'];
+  tour: Extract<RemoteTakeover, { kind: 'tour' }> | null;
   onCommand: (command: RemoteCommand) => void;
 };
 

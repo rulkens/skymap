@@ -14,7 +14,7 @@ vi.mock('../../../src/services/remote/createLocalTransport', () => ({
 
 const status: DomeStatus = {
   focus: null,
-  tour: { id: 'grandTour', beatIndex: 2, beatCount: 9, paused: true },
+  takeover: { kind: 'tour', id: 'grandTour', beatIndex: 2, beatCount: 9, paused: true },
   time: { simDays: 2_451_545, rateIndex: 3, direction: 1, paused: false, mode: 'manual' },
   controls: { scheme: 'skymap' },
   toggles: [{ id: 'constellations', label: 'Constellations', enabled: false }],
@@ -69,10 +69,18 @@ const menu = {
 };
 const v = REMOTE_PROTOCOL_VERSION;
 const sendMenu = (): void => act(() => deliver(JSON.stringify({ v, kind: 'menu', menu })));
-const sendStatus = (scheme: 'skymap' | 'openspace' = 'skymap', sentV = v): void =>
+const sendStatus = (
+  scheme: 'skymap' | 'openspace' = 'skymap',
+  sentV = v,
+  focus: DomeStatus['focus'] = null,
+): void =>
   act(() =>
     deliver(
-      JSON.stringify({ v: sentV, kind: 'status', status: { ...status, controls: { scheme } } }),
+      JSON.stringify({
+        v: sentV,
+        kind: 'status',
+        status: { ...status, focus, controls: { scheme } },
+      }),
     ),
   );
 const messages = (kind: string): Record<string, unknown>[] =>
@@ -86,6 +94,14 @@ describe('RemotePage', () => {
     expect(screen.getByText(/beat 3 of 9, paused/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
     expect(commands()).toContainEqual({ name: 'tourTogglePause', payload: null });
+  });
+
+  it('the header names the focus the dome reports', () => {
+    render(<RemotePage />);
+    sendStatus('skymap', v, { name: 'Andromeda' });
+    expect(screen.getByText('Andromeda')).toBeTruthy();
+    sendStatus();
+    expect(screen.getByText('Nothing focused')).toBeTruthy();
   });
 
   it('the menu lists the tours, exhibits and clips, and a button sends its id', () => {

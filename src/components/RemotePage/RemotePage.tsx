@@ -6,7 +6,6 @@
 
 import { useEffect, useState } from 'react';
 import cx from 'classnames';
-import { focusNameFrom } from '../../utils/remote/focusNameFrom';
 import { useRemoteLink } from './useRemoteLink';
 import JoinField from './JoinField/JoinField';
 import LinkStatus from './LinkStatus/LinkStatus';
@@ -51,13 +50,13 @@ function RemotePage() {
     );
   }
 
-  const focus = status?.focus ? (focusNameFrom(status.focus.id, matches) ?? 'Focused') : null;
-
   return (
     <main className={styles.root}>
       <header className={styles.header}>
         <LinkStatus state={link} />
-        {link === 'connected' && <span className={styles.focus}>{focus ?? 'Nothing focused'}</span>}
+        {link === 'connected' && (
+          <span className={styles.focus}>{status?.focus?.name ?? 'Nothing focused'}</span>
+        )}
       </header>
       {link === 'lost' && <LostNotice room={room} onChangeCode={() => join(null)} />}
       {(link === 'domeOlder' || link === 'domeNewer') && <VersionNotice state={link} />}
@@ -87,7 +86,11 @@ function RemotePage() {
       {status && (
         <div className={styles.sections} inert={link !== 'connected'}>
           <SearchSection matches={matches} onSearch={search} onCommand={sendCommand} />
-          <TourSection tours={menu?.tours ?? []} tour={status.tour} onCommand={sendCommand} />
+          <TourSection
+            tours={menu?.tours ?? []}
+            tour={status.takeover?.kind === 'tour' ? status.takeover : null}
+            onCommand={sendCommand}
+          />
           <ExhibitSection menu={menu} onCommand={sendCommand} />
           <TimeSection time={status.time} onCommand={sendCommand} />
           <ToggleSection toggles={status.toggles} onCommand={sendCommand} />

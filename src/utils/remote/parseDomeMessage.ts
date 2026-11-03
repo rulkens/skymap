@@ -30,12 +30,22 @@ function isAction(raw: unknown): boolean {
   }
 }
 
-const isTour = (raw: unknown): boolean =>
-  isRecord(raw) &&
-  typeof raw.id === 'string' &&
-  Number.isFinite(raw.beatIndex) &&
-  Number.isFinite(raw.beatCount) &&
-  typeof raw.paused === 'boolean';
+function isTakeover(raw: unknown): boolean {
+  if (!isRecord(raw) || typeof raw.id !== 'string') return false;
+  switch (raw.kind) {
+    case 'tour':
+      return (
+        Number.isFinite(raw.beatIndex) &&
+        Number.isFinite(raw.beatCount) &&
+        typeof raw.paused === 'boolean'
+      );
+    case 'exhibit':
+    case 'clip':
+      return true;
+    default:
+      return false;
+  }
+}
 
 const isTime = (raw: unknown): boolean =>
   isRecord(raw) &&
@@ -53,8 +63,8 @@ const isToggle = (raw: unknown): boolean =>
 
 const isStatus = (raw: unknown): boolean =>
   isRecord(raw) &&
-  (raw.focus === null || (isRecord(raw.focus) && typeof raw.focus.id === 'string')) &&
-  (raw.tour === null || isTour(raw.tour)) &&
+  (raw.focus === null || (isRecord(raw.focus) && typeof raw.focus.name === 'string')) &&
+  (raw.takeover === null || isTakeover(raw.takeover)) &&
   isTime(raw.time) &&
   isRecord(raw.controls) &&
   (raw.controls.scheme === 'skymap' || raw.controls.scheme === 'openspace') &&

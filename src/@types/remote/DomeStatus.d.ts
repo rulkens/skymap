@@ -1,10 +1,10 @@
 import type { ControlSchemeId } from '../engine/camera/ControlSchemeId';
-import type { TourId } from '../animation/tour/TourId';
+import type { RemoteTakeover } from './RemoteTakeover';
 
-/** A full snapshot of what the remote renders; `focus.id` is the durable focus id (the URL's `focus` param). */
+/** A full snapshot of what the remote renders; `focus.name` is the name the focus card headlines. */
 export type DomeStatus = {
-  focus: { id: string } | null;
-  tour: { id: TourId; beatIndex: number; beatCount: number; paused: boolean } | null;
+  focus: { name: string } | null;
+  takeover: RemoteTakeover | null;
   time: {
     simDays: number;
     rateIndex: number;

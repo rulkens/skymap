@@ -9,8 +9,8 @@ const status: DomeMessage = {
   v,
   kind: 'status',
   status: {
-    focus: { id: 'body-earth' },
-    tour: { id: 'grandTour', beatIndex: 2, beatCount: 9, paused: false },
+    focus: { name: 'Earth' },
+    takeover: { kind: 'tour', id: 'grandTour', beatIndex: 2, beatCount: 9, paused: false },
     time: { simDays: 9400.5, rateIndex: 3, direction: -1, paused: true, mode: 'manual' },
     controls: { scheme: 'skymap' },
     toggles: [{ id: 'labels', label: 'Labels', enabled: true }],
@@ -21,8 +21,31 @@ const text = (msg: unknown): string => JSON.stringify(msg);
 describe('parseDomeMessage', () => {
   it('accepts a full status', () => {
     expect(parseDomeMessage(text(status))).toEqual({ v, message: status });
-    const idle = { v, kind: 'status', status: { ...status.status, focus: null, tour: null } };
+    const idle = { v, kind: 'status', status: { ...status.status, focus: null, takeover: null } };
     expect(parseDomeMessage(text(idle))).toEqual({ v, message: idle });
+  });
+
+  it('accepts a status with each takeover kind', () => {
+    if (status.kind !== 'status') throw new Error('fixture');
+    for (const takeover of [
+      status.status.takeover,
+      { kind: 'exhibit', id: 'cosmicFlows' },
+      { kind: 'clip', id: 'flyout' },
+    ]) {
+      const message = { v, kind: 'status', status: { ...status.status, takeover } };
+      expect(parseDomeMessage(text(message))).toEqual({ v, message });
+    }
+  });
+
+  it('drops an unknown takeover kind and a tour without beatCount', () => {
+    if (status.kind !== 'status') throw new Error('fixture');
+    for (const takeover of [
+      { kind: 'quiz', id: 'cosmicFlows' },
+      { kind: 'tour', id: 'grandTour', beatIndex: 2, paused: false },
+    ]) {
+      const message = { v, kind: 'status', status: { ...status.status, takeover } };
+      expect(parseDomeMessage(text(message))).toEqual({ v, message: null });
+    }
   });
 
   it('drops a status with a missing time field', () => {
