@@ -14,7 +14,7 @@ control scheme and `toggleSet`. `toggleSet` covers the Labels & Guides rows only
 - captions;
 - full screen;
 - showing or hiding the dome's interface: pairing hides it
-  (`src/state/remote/remoteReceiverSaga.ts:133`), and only Tab on the dome's keyboard brings it back.
+  (`src/state/remote/remoteReceiverSaga.ts:145`), and only Tab on the dome's keyboard brings it back.
 
 **Rulings to revisit.** The dome-remote spec limited toggles to Labels & Guides and left the Display,
 Earth and Structures settings sections out

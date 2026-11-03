@@ -20,7 +20,9 @@ import { createMemoryTransport } from '../../helpers/remote/createMemoryTranspor
 import { REMOTE_PROTOCOL_VERSION } from '../../../src/data/remote/remoteProtocolVersion';
 import { APP_LAYER_SWITCH_ROWS } from '../../../src/compositions/appLayerSwitchRows';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
+import type { RelayRoom } from '../../../src/@types/remote/RelayRoom';
 
+const ROOM: RelayRoom = { code: 'ROOM0000', origin: 'https://10.0.0.2:5173', onSky: true };
 const NO_MODS = { shift: false, ctrl: false, alt: false, meta: false };
 let t = 0;
 const resize = (widthPx = 200, heightPx = 100): DeviceEvent => ({
@@ -41,7 +43,7 @@ const press = (kind: 'down' | 'up'): DeviceEvent => ({
 
 const settle = () => vi.advanceTimersByTimeAsync(0);
 
-async function setup() {
+async function setup(room: RelayRoom = ROOM) {
   const actions: UnknownAction[] = [];
   const record: Middleware = () => (next) => (action) => {
     actions.push(action as UnknownAction);
@@ -54,6 +56,7 @@ async function setup() {
   });
   const link = createMemoryTransport();
   mw.run(remoteReceiverSaga, link.transport, [], APP_LAYER_SWITCH_ROWS);
+  link.room(room);
   await settle();
   const say = async (message: object) => {
     link.fromRemote(JSON.stringify({ v: REMOTE_PROTOCOL_VERSION, ...message }));
@@ -78,14 +81,42 @@ afterEach(() => {
 });
 
 describe('remoteReceiverSaga', () => {
-  it('opens its room and reports the pairing address', async () => {
+  it('pairs on the first room frame', async () => {
     const { store, link } = await setup();
-    expect(link.opened()).toBe('ROOM0000');
+    expect(link.hosted()).toBe(true);
     expect(selectRemote(store.getState())).toEqual({
       phase: 'waiting',
       code: 'ROOM0000',
-      pairingUrl: 'http://192.168.1.2:5173/remote.html#ROOM0000',
+      pairingUrl: 'https://10.0.0.2:5173/remote.html#ROOM0000',
     });
+  });
+
+  it('a room frame with onSky false pairs without a pairing url', async () => {
+    const { store } = await setup({ ...ROOM, onSky: false });
+    expect(selectRemote(store.getState())).toEqual({
+      phase: 'waiting',
+      code: 'ROOM0000',
+      pairingUrl: null,
+    });
+  });
+
+  it("a second room frame re-pairs and ends every remote's open input", async () => {
+    const { store, actions, device, input, link, say } = await setup();
+    await device('a', resize(), press('down'));
+    await say({ from: 'a', kind: 'hello' });
+    link.room({ ...ROOM, code: 'ROOM1111' });
+    await settle();
+    const ended = actions.filter((a) => inputGestureEnded.match(a)).map((a) => a.payload.source);
+    expect(ended).toEqual(['remote:a']);
+    expect(input().sources).toEqual({});
+    expect(selectRemote(store.getState())).toEqual({
+      phase: 'waiting',
+      code: 'ROOM1111',
+      pairingUrl: 'https://10.0.0.2:5173/remote.html#ROOM1111',
+    });
+    // Within its silence window, the remote must still count as new to the new room.
+    await say({ from: 'a', kind: 'hello' });
+    expect(selectRemote(store.getState()).phase).toBe('paired');
   });
 
   it("a command message dispatches exactly its row's actions", async () => {
