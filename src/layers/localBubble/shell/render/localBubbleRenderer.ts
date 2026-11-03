@@ -24,18 +24,18 @@
 
 import { mat4 } from 'wgpu-matrix';
 
-import type { ShellMesh } from '../../../@types/data/shellMesh/ShellMesh';
-import type { LocalBubbleRenderer } from '../../../@types/rendering/LocalBubbleRenderer';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { ShellMesh } from '../../../../@types/data/shellMesh/ShellMesh';
+import type { LocalBubbleRenderer } from '../@types/LocalBubbleRenderer';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 
-import shellCode from '../../../services/gpu/shaders/localBubble/shell.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
-import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
-import { SHELL_VERTEX_FORMAT } from '../../../data/localBubble/shellVertexFormats';
-import { FRAME_TO_WORLD } from '../../../data/frameToWorld';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { LOCAL_BUBBLE_TINT } from '../../../data/localBubble/localBubbleTint';
+import shellCode from '../../../../services/gpu/shaders/localBubble/shell.wesl?static';
+import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
+import { SHELL_VERTEX_FORMAT } from '../data/shellVertexFormats';
+import { FRAME_TO_WORLD } from '../../../../data/frameToWorld';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { LOCAL_BUBBLE_TINT } from '../data/localBubbleTint';
 
 // f32 indices into the uniform block — see module header's byte table.
 const UNIFORMS_BYTES = 176;

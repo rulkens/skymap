@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
  * The shell's Fresnel-rim colour (RGB). Eye-tuned, not derived — the design
