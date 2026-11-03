@@ -103,7 +103,7 @@ packages/desktop/
   src/sync/pruneOrphans.ts         idempotent: delete keys not in the local inventory
   src/control/                     control window page + preload bridge
   assets/dome-grid.png
-package.json          "workspaces": ["packages/*"], "desktop" script
+package.json          "desktop" script (workspaces already lists packages/*)
 .env.desktop          VITE_DATA_BASE_URL= (empty), no VITE_COUNTERSCALE_URL
 .gitignore            carve-out for .env.desktop beside .env.production
 ```
@@ -136,7 +136,7 @@ on the first pairing and on every rotation. **Taken:** one path for pairing and 
 
 ### 3.3 Joint verdicts
 
-- **Sync:** growth. A field on every `R2SyncGroup` row, a Vite mode, one workspaces line.
+- **Sync:** growth. A field on every `R2SyncGroup` row, a Vite mode, one script line.
 - **Relay:** two bolt-ons today.
   - It lives in the Vite plugin folder (`tools/utils/vite/attachRemoteRelay.ts:17`), so the desktop
     would import Vite-plugin code at runtime.
