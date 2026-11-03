@@ -8,8 +8,8 @@ docs page, 2026-11-03.
 
 **Current state.**
 
-- `tools/utils/vite/remoteRelayPlugin.ts:32-33` wires the relay into `configureServer` and
-  `configurePreviewServer` only; `tools/utils/vite/attachRemoteRelay.ts` is the room-per-path broadcaster.
+- `tools/utils/vite/remoteRelayPlugin.ts:34-35` wires the relay into `configureServer` and
+  `configurePreviewServer` only; `tools/utils/remote/attachRemoteRelay.ts` is the room-per-path broadcaster.
 - `src/services/remote/createLocalTransport.ts:24` opens `/__remote/<room>` on the page's own host, and
   both sides hard-code it: the dome at `src/main.tsx:105`, the phone at
   `src/components/RemotePage/useRemoteLink.ts:50`.
