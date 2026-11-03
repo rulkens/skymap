@@ -3,6 +3,7 @@ import { composeForegroundCaption } from '../../../src/utils/labels/composeForeg
 import type { CaptionComposeContext } from '../../../src/@types/rendering/CaptionComposeContext';
 import type { FocusUniformsValue } from '../../../src/@types/rendering/FocusUniformsValue';
 import type { ForegroundCaption } from '../../../src/services/engine/presentation/foregroundCaption';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 const ctxWith = (focus: FocusUniformsValue): CaptionComposeContext => ({
@@ -71,14 +72,32 @@ describe('composeForegroundCaption handed value', () => {
 describe('composeForegroundCaption scene-depth cutoff', () => {
   // worldEm 1e-6 Mpc at 1e-3 Mpc with 1000 px/rad: a 2 px subject.
   const resolved: ForegroundCaption = { ...caption, kind: 'meshBody' };
-  // The same subject 1000× farther: 0.002 px, far under the terrain texel that
+  // A rover on its host's ground, ~1e-5 px: far under the terrain texel that
   // would be asked whether it hides it.
-  const subPixel: ForegroundCaption = { ...caption, kind: 'meshBody', worldPos: [1, 0, 0] };
+  const rover: ForegroundCaption = {
+    ...caption,
+    kind: 'meshBody',
+    worldPos: [1e-12, 0, 0],
+    worldEmMpc: 1e-20,
+  };
+  // A star 0.002 px across, a megaparsec past that ground.
+  const star: ForegroundCaption = { ...caption, worldPos: [1, 0, 0] };
+  // The host's centre stands one datum radius past the rover, its relief band spanning it.
+  const datumM = 1e-12 * SCALE_UNITS.MPC_TO_M;
+  const onHost: CaptionComposeContext = {
+    ...ctxWith(ZERO_FOCUS),
+    occluders: [{ positionMpc: [2e-12, 0, 0], radiusM: datumM - 5e3, outerRadiusM: datumM + 5e3 }],
+  };
 
-  it('asks the sampled depth only once the subject spans a pixel', () => {
-    const near = composeForegroundCaption(ctxWith(ZERO_FOCUS), resolved, 1);
-    expect(near.occludeNearKm).toBeGreaterThan(0);
-    const far = composeForegroundCaption(ctxWith(ZERO_FOCUS), subPixel, 1);
-    expect(far.occludeNearKm).toBeLessThan(0);
+  it('asks the sampled depth of a subject spanning a pixel', () => {
+    expect(composeForegroundCaption(onHost, resolved, 1).occludeNearKm).toBeGreaterThan(0);
+  });
+
+  it("skips the sampled depth of a sub-pixel subject inside a body's relief band", () => {
+    expect(composeForegroundCaption(onHost, rover, 1).occludeNearKm).toBeLessThan(0);
+  });
+
+  it('asks the sampled depth of a sub-pixel subject off every ground, so terrain hides a star', () => {
+    expect(composeForegroundCaption(onHost, star, 1).occludeNearKm).toBeGreaterThan(0);
   });
 });
