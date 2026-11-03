@@ -98,7 +98,7 @@
 
 /* Two by two, every part on the same seven rows, so the questions and the links line up across a row. */
 .parts {
-  composes: grid from '../../../../styles/layout.module.css';
+  composes: grid halves from '../../../../styles/layout.module.css';
   row-gap: 0;
 }
 
@@ -200,10 +200,6 @@
 }
 
 @media (--wide) {
-  .part {
-    grid-column: span 6;
-  }
-
   /* The last question sits under the bar's end, where the bell is: on the right column of the parts above. */
   .leave {
     width: calc((100% - var(--col-gap)) / 2);

@@ -104,10 +104,7 @@
 
 /* The steps, numbered in rings like the parts of the address they write. */
 .steps {
-  composes: grid thirds from '../../../../styles/layout.module.css';
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  composes: grid thirds bare from '../../../../styles/layout.module.css';
   counter-reset: step;
 }
 

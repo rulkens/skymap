@@ -42,8 +42,7 @@
   color: var(--site-text-dim);
 }
 
-.near,
-.far {
+.near {
   composes: grid from '../../../../styles/layout.module.css';
 }
 
@@ -113,6 +112,7 @@
 
 /* Orion and Andromeda, each a picture without a frame: a soft-edged window of sky. */
 .far {
+  composes: grid halves from '../../../../styles/layout.module.css';
   margin-top: var(--site-space-3xl);
   row-gap: var(--site-space-2xl);
 }
@@ -210,10 +210,6 @@
 
   .near > .second {
     grid-column: 7 / span 5;
-  }
-
-  .far > .part {
-    grid-column: span 6;
   }
 }
 
