@@ -16,6 +16,8 @@
 // line near the eye, one far below it drowns in f32 noise. The homogeneous
 // tangent below is valid for either sign, and a behind endpoint's corner goes
 // off-screen along it: the visible part of such a segment projects to a ray.
+// That corner is the real segment point projecting there, so its w stays
+// positive and every attribute interpolates perspective-correct.
 //
 // camera.wesl stays MINIMAL (the CameraUniforms layout and 'worldToClip'); this
 // compound vocabulary is built on top of it, for thick-line renderers only.
@@ -23,12 +25,25 @@
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
 
-// segmentScreenTangent — the unit NDC direction of a segment's projection,
-// from a toward b, for any signs of the two clip w. d(x/w)/dt at an endpoint is
-// (xb*wa - xa*wb) over a positive square, so this needs no divide; with both
-// endpoints in front it equals normalize(bNdc - aNdc).
+// segmentHomogeneousTangent — the unnormalised screen tangent H from a toward
+// b, for any signs of the two clip w: d(x/w)/dt at an endpoint is
+// (xb*wa - xa*wb) over a positive square, so it needs no divide.
+fn segmentHomogeneousTangent(aClip: vec4<f32>, bClip: vec4<f32>) -> vec2<f32> {
+  return bClip.xy * aClip.w - aClip.xy * bClip.w;
+}
+
+// segmentScreenTangent — H as a unit NDC direction; with both endpoints in
+// front it equals normalize(bNdc - aNdc).
 fn segmentScreenTangent(aClip: vec4<f32>, bClip: vec4<f32>) -> vec2<f32> {
-  return normalize(bClip.xy * aClip.w - aClip.xy * bClip.w);
+  return normalize(segmentHomogeneousTangent(aClip, bClip));
+}
+
+// SegmentCorner — a corner's clip-space vertex and its parameter t along the
+// segment (0 at a, 1 at b). A caller carrying a world attribute per corner
+// writes mix(a, b, t): t is a world parameter, never a screen one.
+struct SegmentCorner {
+  clip: vec4<f32>,
+  t: f32,
 }
 
 // expandSegmentQuad — expand one instanced-quad corner into a clip-space
@@ -42,45 +57,53 @@ fn segmentScreenTangent(aClip: vec4<f32>, bClip: vec4<f32>) -> vec2<f32> {
 // halfWidthPx : half the line width in CSS pixels. Callers holding a FULL
 //               pixel width pass 'width * 0.5'.
 //
-// Returns the offset clip-space vertex with the selected endpoint's z and w,
-// so depth and perspective-correct interpolation are preserved. A corner whose
-// endpoint is behind the eye takes the in-front endpoint's z and w instead, and
-// a segment wholly behind the eye returns vec4(0): a degenerate, culled quad.
+// Returns the offset clip-space vertex and its t. A corner in front is its
+// endpoint's, z and w untouched. A segment wholly behind the eye returns a zero
+// clip: a degenerate, culled quad.
 fn expandSegmentQuad(
   cam: CameraUniforms,
   aWorld: vec3<f32>,
   bWorld: vec3<f32>,
   corner: vec2<f32>,
   halfWidthPx: f32,
-) -> vec4<f32> {
+) -> SegmentCorner {
   let aClip = worldToClip(cam, aWorld);
   let bClip = worldToClip(cam, bWorld);
   let aFront = aClip.w > 0.0;
   let bFront = bClip.w > 0.0;
   if (!aFront && !bFront) {
-    return vec4<f32>(0.0);
+    return SegmentCorner(vec4<f32>(0.0), 0.0);
   }
 
-  // The perpendicular comes from the homogeneous tangent, so it holds even
-  // with one endpoint behind the eye.
-  let tangent = segmentScreenTangent(aClip, bClip);
+  let h = segmentHomogeneousTangent(aClip, bClip);
+  let hLen = length(h);
+  let tangent = h / hLen;
   let perp = vec2<f32>(-tangent.y, tangent.x);
 
-  // This corner's endpoint. A behind one becomes a point past the screen edge
-  // along the tangent from the in-front end: 'length(frontNdc) + 4' NDC units
-  // leaves the [-1, 1] square from any start.
   let isB = corner.x > 0.5;
-  let front = select(bClip, aClip, aFront);
-  let frontNdc = front.xy / front.w;
-  let offScreen = frontNdc + select(-tangent, tangent, aFront) * (length(frontNdc) + 4.0);
-  let chosen = select(aClip, bClip, isB);
-  let chosenFront = select(aFront, bFront, isB);
-  let ndc = select(offScreen, chosen.xy / chosen.w, chosenFront);
-  let zw = select(front.zw, chosen.zw, chosenFront);
+  var clip = select(aClip, bClip, isB);
+  var t = select(0.0, 1.0, isB);
+  if (!select(aFront, bFront, isB)) {
+    // Walk s from the front end toward this one until the projection is d NDC
+    // out, past the [-1, 1] square from any start. Solving
+    // s|H| = d·wF·w(s) gives the forms below: all terms positive, so neither
+    // s nor w(s) cancels even when the point lies metres from an eye whose
+    // front end is 10⁹ m away.
+    let front = select(bClip, aClip, isB);
+    let frontNdc = front.xy / front.w;
+    let d = length(frontNdc) + 4.0;
+    let denom = hLen + d * front.w * (front.w - clip.w);
+    let s = d * front.w * front.w / denom;
+    let w = front.w * hLen / denom;
+    let ndc = frontNdc + select(-tangent, tangent, aFront) * d;
+    // Depth keeps the front end's z/w: the real point's z would cancel in f32
+    // on a standard-Z slab, and no caller depth-tests these lines.
+    clip = vec4<f32>(ndc * w, front.z / front.w * w, w);
+    t = select(1.0 - s, s, aFront);
+  }
 
   // Half-width in pixels -> NDC: one NDC unit is half the viewport in pixels.
-  // corner.y in [0,1] maps to the +/- side; the result is re-multiplied by w
-  // to return to clip space.
+  // corner.y in [0,1] maps to the +/- side; re-multiplying by w returns to clip.
   let offsetNdc = perp * (halfWidthPx / (cam.viewportPx * 0.5)) * (corner.y * 2.0 - 1.0);
-  return vec4<f32>((ndc + offsetNdc) * zw.y, zw.x, zw.y);
+  return SegmentCorner(vec4<f32>(clip.xy + offsetNdc * clip.w, clip.z, clip.w), t);
 }

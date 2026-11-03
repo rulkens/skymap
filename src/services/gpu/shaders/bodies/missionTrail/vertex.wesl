@@ -33,17 +33,11 @@ fn vs(@builtin(vertex_index) vid: u32, seg: TrailSegment) -> VSOut {
     return out;
   }
 
-  let p = expandSegmentQuad(u.cam, a, b, corner, 0.5 * u.widthPx);
+  let q = expandSegmentQuad(u.cam, a, b, corner, 0.5 * u.widthPx);
   // Depthless HDR target: pin z mid-range so no near/far plane clips the quad.
-  out.clip = vec4<f32>(p.xy, 0.5 * p.w, p.w);
-  // The occlusion test reads the eye-relative point. A corner whose end is
-  // behind the eye sits off-screen along the trail, so it carries the point
-  // where the trail crosses the eye plane: a ratio of w, with no slide to a
-  // near-zero w that f32 cannot resolve at trail distances.
-  let crossing = a + (b - a) * (aClip.w / (aClip.w - bClip.w));
-  let aKm = select(crossing, a, aClip.w > 0.0);
-  let bKm = select(crossing, b, bClip.w > 0.0);
-  out.relKm = select(aKm, bKm, corner.x > 0.5) * MPC_TO_KM;
+  out.clip = vec4<f32>(q.clip.xy, 0.5 * q.clip.w, q.clip.w);
+  // The occlusion test reads the eye-relative point under each fragment.
+  out.relKm = mix(a, b, q.t) * MPC_TO_KM;
   out.side = corner.y * 2.0 - 1.0;
   return out;
 }

@@ -71,9 +71,9 @@ fn endpointGapPx(appMag : f32) -> f32 {
 fn vs(in : PerVertex) -> VSOut {
   // 1. Thickness/base clip via the shared helper. 'u.halfWidthPx' is already a
   //    half-width, so it passes straight through. 'base.w' is the SELECTED
-  //    endpoint's w (the in-front end's for a corner behind the eye), which the
-  //    gap step below re-uses to convert its NDC offset back to clip space.
-  let base = expandSegmentQuad(u.cam, in.aWorld, in.bWorld, in.uv, u.halfWidthPx);
+  //    endpoint's w (the off-screen point's for a corner behind the eye), which
+  //    the gap step below re-uses to convert its NDC offset back to clip space.
+  let base = expandSegmentQuad(u.cam, in.aWorld, in.bWorld, in.uv, u.halfWidthPx).clip;
 
   // 2. Screen-space tangent, from the helper's own homogeneous form, so it
   //    holds with an endpoint behind the eye (a divided tangent flips there).
