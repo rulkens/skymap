@@ -1,29 +1,17 @@
 // lib/segmentQuad.wesl — instanced-quad thick-line expansion vocabulary.
 //
-// Four renderers draw screen-space thick lines the same way: filaments,
-// markerLines, constellations and mission trails. Each emits one instance per
-// segment and expands it into a screen-aligned rectangle in the vertex stage,
-// because WebGPU's 'line-list' topology is always 1 pixel wide on most
-// platforms (no 'setLineWidth' exists, by spec). Getting the expansion's order
-// wrong (subtracting clip vectors with different w before dividing, or
-// forgetting the w re-multiply) yields foreshortened or non-uniform widths that
-// are hard to spot, so there is exactly one definition to audit.
+// Screen-space thick lines as instanced quads, expanded in the vertex stage
+// because WebGPU 'line-list' is 1 px wide (no 'setLineWidth'). One definition
+// to audit: dividing before subtracting clip vectors, then re-multiplying by w,
+// is easy to get subtly wrong.
 //
-// ## An endpoint behind the eye
-//
-// Dividing an endpoint with w < 0 flips its NDC, which folds the quad across
-// the screen. No w threshold fixes that: one above the near plane cuts visible
-// line near the eye, one far below it drowns in f32 noise. The homogeneous
-// tangent below is valid for either sign, and a behind endpoint's corner goes
-// off-screen along it: the visible part of such a segment projects to a ray.
-// That corner is the real segment point projecting there, so its w stays
-// positive and world attributes interpolate perspective-correct by t. Its w is
-// also tiny next to the front end's, so a perspective-weighted ACROSS-width
-// coordinate (uv.y, a side) collapses to 0 or 1 and the line vanishes: callers
-// declare those varyings @interpolate(linear), the screen-space quantity they are.
-//
-// camera.wesl stays MINIMAL (the CameraUniforms layout and 'worldToClip'); this
-// compound vocabulary is built on top of it, for thick-line renderers only.
+// An endpoint behind the eye (w < 0) flips its NDC and folds the quad, and no w
+// threshold fixes it: above the near plane it cuts visible line, far below it
+// drowns in f32 noise. The homogeneous tangent holds for either sign, and the
+// behind corner is the real segment point projecting off-screen along it, so
+// world attributes interpolate perspective-correct by t. That w is tiny next to
+// the front end's, so callers declare across-width varyings (uv.y, a side)
+// @interpolate(linear), or the line vanishes.
 
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;

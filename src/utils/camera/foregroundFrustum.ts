@@ -52,8 +52,7 @@
  * in front of the near plane. The wide margin to 1.7 m is
  * affordable because NEAR0 is reversed-Z with an infinite far plane
  * (`SLAB_REVERSED_Z`, `slabs.ts`), which spreads depth precision
- * near-uniformly regardless of how small near gets; nothing here is a
- * depth-buffer constraint, only the degenerate-matrix guard above.
+ * near-uniformly regardless of how small near gets.
  */
 export const MIN_NEAR_MPC = 1.6e-23;
 
