@@ -7,7 +7,6 @@
 import package::bodies::missionTrail::io::TrailSegment;
 import package::bodies::missionTrail::io::TrailUniforms;
 import package::bodies::missionTrail::io::VSOut;
-import package::lib::camera::worldToClip;
 import package::lib::segmentQuad::expandSegmentQuad;
 
 @group(0) @binding(2) var<uniform> u: TrailUniforms;
@@ -22,17 +21,8 @@ fn vs(@builtin(vertex_index) vid: u32, seg: TrailSegment) -> VSOut {
 
   let a = (seg.aHi - u.camHi) + (seg.aLo - u.camLo);
   let b = (seg.bHi - u.camHi) + (seg.bLo - u.camLo);
-  let aClip = worldToClip(u.cam, a);
-  let bClip = worldToClip(u.cam, b);
-
-  // A zero-length segment (a head on a vertex) has no tangent; drop it. One
-  // with an end behind the eye projects to a ray, never short on screen.
-  var out: VSOut; // zero-initialised: an early return is a degenerate, clipped vertex
-  let dPx = (bClip.xy / bClip.w - aClip.xy / aClip.w) * 0.5 * u.cam.viewportPx;
-  if (aClip.w > 0.0 && bClip.w > 0.0 && dot(dPx, dPx) < 1e-10) {
-    return out;
-  }
-
+  // A zero-length segment (a head on a vertex) comes back degenerate.
+  var out: VSOut;
   let q = expandSegmentQuad(u.cam, a, b, corner, 0.5 * u.widthPx);
   // Depthless HDR target: pin z mid-range so no near/far plane clips the quad.
   out.clip = vec4<f32>(q.clip.xy, 0.5 * q.clip.w, q.clip.w);
