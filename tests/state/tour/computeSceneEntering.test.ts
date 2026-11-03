@@ -34,7 +34,7 @@ const clip = (timeline: ClipData['timeline']): ClipData => ({ start: 'live', tim
 // DWELL clip (dwell cues must count toward the prefix too).
 const BEATS: readonly BeatData[] = [
   {
-    caption: { title: 'strip' },
+    caption: { title: 'strip', lines: ['x'] },
     enterClip: clip([
       hide(['cosmicWebDensity', 'cosmicWebFilaments', 'survey'], 0),
       scene(setLabelsFocusedOnly(true)),
@@ -42,12 +42,12 @@ const BEATS: readonly BeatData[] = [
     dwellClip: dwellDrift(1),
   },
   {
-    caption: { title: 'survey reveal' },
+    caption: { title: 'survey reveal', lines: ['x'] },
     enterClip: clip([show(['survey:2mrs'], 1)]),
     dwellClip: dwellDrift(1),
   },
   {
-    caption: { title: 'web reveal' },
+    caption: { title: 'web reveal', lines: ['x'] },
     enterClip: clip([show(['cosmicWebFilaments'], 9)]),
     dwellClip: clip([show(['cosmicWebDensity'], 2)]),
   },

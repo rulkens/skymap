@@ -1,6 +1,6 @@
 /**
  * TourOverlay — composes the guided-tour HUD over the live 3D scene: a
- * localized vignette + the per-beat caption + the always-on navigation
+ * bottom vignette band + the per-beat subtitle caption + the always-on navigation
  * cluster.
  *
  * Purely presentational. A container resolves the active beat's caption +
@@ -20,7 +20,7 @@
  * The nav, by contrast, is always visible (you can scrub or exit mid-fly) —
  * in an interactive session. `hasChrome={false}` (cinema mode, the recorder's
  * capture surface) is the same overlay in its recorded-film presentation:
- * the caption stays, the transport nav and the beat counter are not mounted
+ * the caption stays, the transport nav is not mounted
  * at all. A boolean prop rather than a second overlay component, because the
  * dwell-gated caption timing — the one real behaviour here — is identical in
  * both modes and must not fork.
@@ -31,7 +31,6 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
-import cx from 'classnames';
 import type { BeatCaption } from '../../@types/animation/tour/BeatCaption';
 import TourCaption from './TourCaption';
 import TourNav from './TourNav';
@@ -39,15 +38,13 @@ import styles from './TourOverlay.module.css';
 
 export type TourOverlayProps = {
   /**
-   * Interactive-session chrome: the transport nav + the beat counter.
+   * Interactive-session chrome: the transport nav.
    * `false` = cinema presentation (caption only). Defaults to true so the
    * interactive path needs no opt-in.
    */
   readonly hasChrome?: boolean;
   readonly caption: BeatCaption | null;
-  readonly label: string | null;
   readonly index: number;
-  readonly total: number;
   readonly paused: boolean;
   readonly dwellSec: number;
   readonly dwellNonce: number;
@@ -58,22 +55,10 @@ export type TourOverlayProps = {
   readonly onExit: () => void;
 };
 
-// The vignette class follows the caption's anchor corner, so it darkens
-// under the text rather than the opposite half of the canvas.
-const VIGNETTE_CLASS = {
-  'top-left': styles.vignetteTopLeft,
-  'top-center': styles.vignetteTopCenter,
-  'top-right': styles.vignetteTopRight,
-  'bottom-left': styles.vignetteBottomLeft,
-  'bottom-right': styles.vignetteBottomRight,
-} as const;
-
 function TourOverlay({
   hasChrome = true,
   caption,
-  label,
   index,
-  total,
   paused,
   dwellSec,
   dwellNonce,
@@ -97,25 +82,24 @@ function TourOverlay({
   }, [dwellNonce]);
 
   const showCaption = inDwell && caption !== null;
-  const vignetteClass = caption ? VIGNETTE_CLASS[caption.position ?? 'bottom-left'] : undefined;
 
   return (
     <div className={styles.root}>
       {showCaption && caption ? (
         <>
-          <div className={cx(styles.vignette, vignetteClass)} aria-hidden="true" />
+          <div className={styles.vignette} aria-hidden="true" />
           {/*
            * Keyed on the beat index so each beat re-mounts the caption and
-           * replays the staggered fade-up reveal rather than cross-fading
-           * text in place.
+           * replays the label's fade-up and restarts the line clock rather
+           * than cross-fading text in place.
            */}
           <TourCaption
             key={index}
             hasChrome={hasChrome}
             caption={caption}
-            label={label}
-            index={index}
-            total={total}
+            dwellSec={dwellSec}
+            dwellNonce={dwellNonce}
+            paused={paused}
           />
         </>
       ) : null}
