@@ -21,7 +21,8 @@ export type RemoteSheetProps = {
   readonly initialFocus?: 'heading' | 'field';
   /** A short state beside the heading, such as "2 of 9 on". */
   readonly note?: string;
-  readonly children: ReactNode;
+  /** Given the sheet's own close, so a body can slide it out the way Close does. */
+  readonly children: (close: () => void) => ReactNode;
 };
 
 function RemoteSheet({ id, onClose, initialFocus = 'heading', note, children }: RemoteSheetProps) {
@@ -74,7 +75,7 @@ function RemoteSheet({ id, onClose, initialFocus = 'heading', note, children }: 
           Close
         </button>
       </div>
-      <div className={styles.body}>{children}</div>
+      <div className={styles.body}>{children(() => setLeaving(true))}</div>
     </section>
   );
 }

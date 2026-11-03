@@ -301,8 +301,8 @@ title wraps to two lines at most.
 - Not modal: `role="dialog"` with `aria-modal="false"` and `aria-labelledby` its heading; no focus trap, no dim.
 - **Focus order.** Opening moves focus to the sheet's heading; the Search sheet focuses its field instead.
   Closing returns focus to the tile that opened it. Tab order is header, pad buttons, Home row, then the sheet.
-- A list row starts its item and leaves the sheet open, so the operator sees the row marked as running and the
-  card under it updates on close. The running row has `aria-current` and the doubled border `.on` already uses,
+- A list row starts its item and closes the sheet (owner, 2026-11-03), so the operator lands on the now card with
+  the show's controls. The running row has `aria-current` and the doubled border `.on` already uses,
   matched on kind and id.
 - Laptop width (64 rem and up, today's two columns): the deck takes the right column and its sheet opens inside
   that column, so the pad is never covered.

@@ -25,6 +25,7 @@ import RemoteSheet from './RemoteSheet/RemoteSheet';
 import LibraryTiles from './LibraryTiles/LibraryTiles';
 import NowCard from './NowCard/NowCard';
 import SchemeSwitch from './SchemeSwitch/SchemeSwitch';
+import type { RemoteCommand } from '../../@types/remote/RemoteCommand';
 import type { RemoteNavAxis } from '../../@types/remote/RemoteNavAxis';
 import type { RemoteSheetId } from '../../@types/remote/RemoteSheetId';
 import controls from './remoteControls.module.css';
@@ -58,13 +59,24 @@ function RemotePage() {
 
   // Rendered only inside the deck, which exists once a status has arrived.
   const takeover = status?.takeover ?? null;
-  const sheetBody: Record<RemoteSheetId, () => ReactNode> = {
+  // A started show closes its sheet, so the now card with its controls is what the operator sees.
+  const startAndClose =
+    (close: () => void) =>
+    (command: RemoteCommand): void => {
+      sendCommand(command);
+      close();
+    };
+  const sheetBody: Record<RemoteSheetId, (close: () => void) => ReactNode> = {
     search: () => <SearchSection matches={matches} onSearch={search} onCommand={sendCommand} />,
-    tours: () => <ShowList kind="tour" menu={menu} takeover={takeover} onCommand={sendCommand} />,
-    exhibits: () => (
-      <ShowList kind="exhibit" menu={menu} takeover={takeover} onCommand={sendCommand} />
+    tours: (close) => (
+      <ShowList kind="tour" menu={menu} takeover={takeover} onCommand={startAndClose(close)} />
     ),
-    clips: () => <ShowList kind="clip" menu={menu} takeover={takeover} onCommand={sendCommand} />,
+    exhibits: (close) => (
+      <ShowList kind="exhibit" menu={menu} takeover={takeover} onCommand={startAndClose(close)} />
+    ),
+    clips: (close) => (
+      <ShowList kind="clip" menu={menu} takeover={takeover} onCommand={startAndClose(close)} />
+    ),
     time: () => status && <TimeSection time={status.time} onCommand={sendCommand} />,
     labels: () => status && <ToggleSection toggles={status.toggles} onCommand={sendCommand} />,
     setup: () => (
@@ -145,7 +157,7 @@ function RemotePage() {
               note={sheetNote[openSheet]?.()}
               onClose={closeSheet}
             >
-              {sheetBody[openSheet]()}
+              {sheetBody[openSheet]}
             </RemoteSheet>
           )}
         </div>

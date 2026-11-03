@@ -178,24 +178,29 @@ describe('RemotePage', () => {
     expect(marked()).toHaveLength(0);
   });
 
-  it("a show row sends its kind's start command, and waits for the menu", () => {
+  it("a show row sends its kind's start command and closes its sheet, and waits for the menu", () => {
     render(<RemotePage />);
     sendStatus();
     openSheet('Exhibits');
     expect(screen.getByText("Waiting for the dome's lists")).toBeTruthy();
     sendMenu();
+    const startFrom = (sheet: string, row: string): void => {
+      openSheet(sheet);
+      fireEvent.click(screen.getByRole('button', { name: row }));
+      act(() => void vi.advanceTimersByTime(SHEET_LEAVE_MS));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: sheet }));
+    };
     fireEvent.click(screen.getByRole('button', { name: 'Cosmic Web' }));
     expect(commands()).toContainEqual({
       name: 'goTo',
       payload: { kind: 'exhibit', exhibitId: 'cosmicWeb' },
     });
-    closeSheet();
-    openSheet('Clips');
-    fireEvent.click(screen.getByRole('button', { name: 'Fly to Horizon' }));
+    act(() => void vi.advanceTimersByTime(SHEET_LEAVE_MS));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    startFrom('Clips', 'Fly to Horizon');
     expect(commands()).toContainEqual({ name: 'clipStart', payload: { clipId: 'flyout' } });
-    closeSheet();
-    openSheet('Tours');
-    fireEvent.click(screen.getByRole('button', { name: 'The Long Way Out' }));
+    startFrom('Tours', 'The Long Way Out');
     expect(commands()).toContainEqual({
       name: 'goTo',
       payload: { kind: 'tour', tourId: 'grandTour' },

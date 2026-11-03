@@ -1,6 +1,5 @@
 /**
  * ShowList — the Tours, Exhibits or Clips sheet: one row per menu item, the running one marked.
- * A tap starts the item and leaves the sheet open, so the mark moves under the operator's thumb.
  * Exhibits and clips can share an id, so "running" matches on kind as well as id.
  */
 
