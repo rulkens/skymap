@@ -34,8 +34,14 @@
   align-items: start;
 }
 
+@media (--two-up) {
+  .groups > div {
+    grid-column: span 4;
+  }
+}
+
 /* Four columns of the page grid for the name; the three lists start on its fifth, eighth and eleventh lines. */
-@media (min-width: 1101px) {
+@media (--laptop) {
   .brand {
     grid-column: span 4;
   }
@@ -51,12 +57,6 @@
 
   .groups > div:last-child {
     grid-column: span 2;
-  }
-}
-
-@media (min-width: 561px) and (max-width: 1100px) {
-  .groups > div {
-    grid-column: span 4;
   }
 }
 
@@ -139,7 +139,7 @@
   color: var(--site-text-dim);
 }
 
-@media (max-width: 1100px) {
+@media not all and (--laptop) {
   .groups {
     padding-top: 0;
   }

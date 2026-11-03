@@ -86,7 +86,7 @@
   }
 }
 
-@media (min-width: 561px) and (--narrow) {
+@media (--two-up) and (--narrow) {
   .pages > li {
     grid-column: span 6;
   }

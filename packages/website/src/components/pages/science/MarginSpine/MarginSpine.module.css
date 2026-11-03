@@ -134,7 +134,7 @@
 }
 
 /* Below this the margin is too narrow for the picture to read as one: a band lies across the window over the lists. */
-@media (max-width: 1099px) {
+@media not all and (--laptop) {
   .spine {
     position: static;
     display: flex;
