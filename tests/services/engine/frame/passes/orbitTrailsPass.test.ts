@@ -25,7 +25,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
-import { BODY_TRAIL_ELEMENTS } from '../../../../../src/layers/body/present/bodyTrailElements';
+import { BODY_TRAIL_ELEMENTS } from '../../../../../src/layers/body/orbitTrails/data/bodyTrailElements';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { eccentricAnomalyFromMean } from '../../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';

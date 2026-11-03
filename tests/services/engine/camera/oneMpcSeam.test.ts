@@ -40,10 +40,10 @@ const TS_FILES: readonly string[] = [
 // files and this whole test would vacuously pass — assert the sweep found
 // real content, and specifically the files each finding was written about.
 const KNOWN_ANCHOR_FILES: readonly string[] = [
-  'src/layers/body/passes/earthPass.ts',
+  'src/layers/body/earth/passes/earthPass.ts',
   'src/services/engine/frame/timing/timedSlots.ts',
   'src/services/engine/frame/visibleSlabBodies.ts',
-  'src/layers/body/render/planetRenderer.ts',
+  'src/layers/body/spheres/render/planetRenderer.ts',
   'src/services/engine/camera/cameraDrivers.ts',
   'src/services/camera/applyInputToCamera.ts',
   'src/utils/camera/computeViewProj.ts',
@@ -56,19 +56,19 @@ const WESL_FILES: readonly string[] = walkFiles('src/services/gpu/shaders/bodies
 // names its category so a NEW use needs its own line.
 const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
-    'src/layers/body/passes/earthPass.ts',
+    'src/layers/body/earth/passes/earthPass.ts',
     'cull/fade precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull and cloudDeckFade (both outside the body-slab path, both Mpc-shaped APIs)',
   ],
   [
-    'src/layers/body/passes/surfaceTilesPass.ts',
+    'src/layers/body/surfaceTiles/patch/passes/surfaceTilesPass.ts',
     'fade precedent — bridges radiusM to Mpc for cloudDeckFade alone, so a patch and the base globe dissolve the deck shadow together (outside the body-slab path)',
   ],
   [
-    'src/layers/body/passes/cloudShellPass.ts',
+    'src/layers/body/clouds/passes/cloudShellPass.ts',
     'cull/fade precedent — bridges radiusM to Mpc for the same apparentSizePx cull and for cloudDeckFade (outside the body-slab path)',
   ],
   [
-    'src/layers/body/passes/ringsPass.ts',
+    'src/layers/body/rings/passes/ringsPass.ts',
     'cull/fade precedent — bridges the ring outer radius/distance to Mpc to call the shared apparentSizePx sub-pixel cull (outside the body-slab path)',
   ],
   [
@@ -76,7 +76,7 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'candidacy-math precedent — the pixel-floor/frustum roster gate runs entirely in Mpc (camPosMpc, positionMpc); ruled correct in radar-seams-tests.md finding 1, not a re-derivation of a slab MVP',
   ],
   [
-    'src/layers/body/load/bodyTextureLoadRadius.ts',
+    'src/layers/body/textures/load/bodyTextureLoadRadius.ts',
     'candidacy-math precedent — converts a body radius to an Mpc load-distance threshold for the texture-demand gate, no slab MVP involved',
   ],
   [
@@ -84,7 +84,7 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'candidacy-math precedent — same shape as bodyTextureLoadRadius.ts: converts a mesh body radius to an Mpc load-distance threshold for the mesh-demand gate, no slab MVP involved',
   ],
   [
-    'src/layers/body/present/atmosphereDrawList.ts',
+    'src/layers/body/atmosphere/present/atmosphereDrawList.ts',
     'cull precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull, same shape as earthPass/cloudShellPass',
   ],
   [

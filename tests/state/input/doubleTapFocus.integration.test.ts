@@ -14,7 +14,7 @@ import { inputSourceSaga } from '../../../src/state/input/inputSourceSaga';
 import { watchFocusSelectedSaga } from '../../../src/state/selection/watchFocusSelectedSaga';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
-import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';

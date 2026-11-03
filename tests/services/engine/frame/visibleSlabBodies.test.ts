@@ -13,7 +13,7 @@ import { BLACK_HOLES } from '../../../../src/layers/blackHoles/markers/data/blac
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
-import { bodyLayerSlabRow } from '../../../../src/layers/body/present/bodyLayerSlabRow';
+import { bodyLayerSlabRow } from '../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';

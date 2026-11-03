@@ -4,9 +4,9 @@ import {
   HEIGHT_CODE_BYTES,
   HEIGHT_POSTS_PER_TILE,
   HEIGHT_TILE_POST_COUNT,
-} from '../../../src/data/scene/heightTileFormat';
-import { codeHeightM } from '../../../src/utils/surfaceTiles/codeHeightM';
-import { decodeHeightTileHeader } from '../../../src/utils/surfaceTiles/decodeHeightTileHeader';
+} from '../../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
+import { codeHeightM } from '../../../src/layers/body/surfaceTiles/format/utils/codeHeightM';
+import { decodeHeightTileHeader } from '../../../src/layers/body/surfaceTiles/format/utils/decodeHeightTileHeader';
 
 /**
  * decodeHeightTile — decoded Terrain-RGB pixels plus the `SHGT` chunk to posts,
