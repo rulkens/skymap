@@ -98,7 +98,7 @@
 
 /* Two by two, every part on the same seven rows, so the questions and the links line up across a row. */
 .parts {
-  composes: grid from '../../../../styles/layout.module.css';
+  composes: grid halves from '../../../../styles/layout.module.css';
   row-gap: 0;
 }
 
@@ -108,14 +108,6 @@
   grid-template-rows: subgrid;
   align-content: start;
   scroll-margin-top: calc(var(--nav-height) + 2rem);
-
-  /* Two groups, each tight inside and apart from the other: what the part is, then what to ask and open. */
-  & h3 {
-    display: flex;
-    align-items: center;
-    gap: var(--site-space-xs);
-    margin: 0 0 var(--site-space-s);
-  }
 
   & p {
     margin: 0;
@@ -155,18 +147,13 @@
   color: var(--site-text-dim);
 }
 
-/* The part's number in a ring, as the clock bar marks its start and the link steps further down number theirs. */
-.part h3::before {
-  content: attr(data-n);
-  display: inline-grid;
-  flex: none;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border: 1px solid var(--accent);
-  border-radius: 50%;
-  font: var(--weight-small) var(--text-small) / 1 var(--font-body);
-  color: var(--accent);
+/*
+ * The part's number in a ring, as the clock bar marks its start and the link steps further down number theirs.
+ * Two groups, each tight inside and apart from the other: what the part is, then what to ask and open.
+ */
+.title {
+  composes: numbered from '../../../../styles/ring.module.css';
+  margin: 0 0 var(--site-space-s);
 }
 
 /* The question is what the teacher reads out: the display face, a step under the part's title. */
@@ -200,10 +187,6 @@
 }
 
 @media (--wide) {
-  .part {
-    grid-column: span 6;
-  }
-
   /* The last question sits under the bar's end, where the bell is: on the right column of the parts above. */
   .leave {
     width: calc((100% - var(--col-gap)) / 2);

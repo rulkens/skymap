@@ -14,7 +14,6 @@ export const factIds = [
   'about-what-is',
   'about-maker',
   'about-licence',
-  'about-picture-licence',
   'about-picture-reuse',
   'gaia-licence',
   ...COLOPHON.map((item) => item.id),

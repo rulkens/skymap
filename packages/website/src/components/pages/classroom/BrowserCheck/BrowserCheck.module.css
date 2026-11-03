@@ -4,11 +4,10 @@
  * can align to.
  */
 .root {
+  composes: lead from '../../../../styles/type.module.css';
   position: relative;
-  max-width: var(--measure-lead);
   margin: 0;
   padding-left: var(--site-space-m);
-  font-size: var(--text-lead);
   color: var(--color-fg);
   text-wrap: balance;
 

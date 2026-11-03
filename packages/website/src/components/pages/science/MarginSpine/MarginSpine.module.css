@@ -84,19 +84,11 @@
   from {
     translate: 0 -100%;
   }
-
-  to {
-    translate: 0 0;
-  }
 }
 
 @keyframes spine-hold-down {
   from {
     translate: 0 100%;
-  }
-
-  to {
-    translate: 0 0;
   }
 }
 
@@ -104,19 +96,11 @@
   from {
     translate: -100% 0;
   }
-
-  to {
-    translate: 0 0;
-  }
 }
 
 @keyframes spine-hold-across {
   from {
     translate: 100% 0;
-  }
-
-  to {
-    translate: 0 0;
   }
 }
 
@@ -150,7 +134,7 @@
 }
 
 /* Below this the margin is too narrow for the picture to read as one: a band lies across the window over the lists. */
-@media (max-width: 1099px) {
+@media not all and (--laptop) {
   .spine {
     position: static;
     display: flex;
@@ -182,10 +166,8 @@
     display: block;
 
     & img {
-      display: block;
       width: min(130%, 60rem);
       max-width: none;
-      height: auto;
       margin-left: calc(var(--gutter) - 0.21 * min(130%, 60rem));
     }
   }
