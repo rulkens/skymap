@@ -1,6 +1,6 @@
 # Sky rung, prep (PR 1) — plan
 
-> **Spec.** [`specs/2026-11-03-sky-rung-slice-design.md`](../specs/2026-11-03-sky-rung-slice-design.md)
+> **Spec.** [`specs/2026-11-03-sky-rung-slice-design.md`](../../specs/2026-11-03-sky-rung-slice-design.md)
 > §3.3 (P1, P2). The slice itself (§4–§6) is PR 2, planned separately.
 > **Branch.** `sky-rung-prep`, off main. Both tasks preserve behaviour; CI is the gate (lean SDD,
 > `conventions/sdd-execution.md`).
@@ -49,7 +49,7 @@ readonly terrainHeightAt?: TerrainHeightAtLookup;   // ClipFrameOptions; absent 
   report it.
 - No new test: behaviour-preserving. `frameKey.test.ts`, `oneTagReader.test.ts` and
   `tests/services/engine/camera/rungs/*.test.ts` are the guard and must pass unchanged.
-- [ ] Done: `npm run typecheck:fast` clean; `npx vitest run tests/services/engine/camera` green; commit
+- [x] Done: `npm run typecheck:fast` clean; `npx vitest run tests/services/engine/camera` green; commit
       `refactor(camera): frame tags are one key; each rung row names its frame's identity`.
 
 ### Task 2: Clip legs fold against the live ground (P2)
@@ -72,7 +72,7 @@ the focus-move driver `:329`), `src/services/engine/camera/evaluateClip.ts` (`co
 - `makeDriverCtx` defaults `terrainHeightAt` to `datumOnlyTerrainHeight` and accepts an override.
 - No new test: no row's conversion reads the lookup yet (only `bodyRung.host`'s floor closure, at
   input time), so this is plumbing. The slice PR's sky → body leg test guards it.
-- [ ] Done: typecheck clean; `npx vitest run tests/services/engine tests/layers/missions` green; commit
+- [x] Done: typecheck clean; `npx vitest run tests/services/engine tests/layers/missions` green; commit
       `refactor(camera): the clip evaluator gets the live terrain lookup`.
 
 ### Task 3: Backlog the adjacent findings
@@ -84,13 +84,13 @@ the focus-move driver `:329`), `src/services/engine/camera/evaluateClip.ts` (`co
 - "**framedClipArm decodes with the current basis** `deferred`: `cameraDrivers.ts` passes the current
   basis where the clip pinned another. Harmless until a `decode` cell reads a basis."
 - Follow the index-line format of `docs/BACKLOG.md` (title, readiness tag, one clause, `→ [details]`).
-- [ ] Done: commit `docs(backlog): two camera findings from the sky-rung ground check`.
+- [x] Done: commit `docs(backlog): two camera findings from the sky-rung ground check`.
 
 ## Definition of Done
 
-- [ ] `rungKindOf` has no per-kind branch; `frameBodyId.ts` is gone; every row has `identity`.
-- [ ] `frameKey` output is byte-identical for absolute, body and site frames (existing tests unchanged).
-- [ ] `DriverCtx` carries `terrainHeightAt`; `convertChannels` and `framedClipArm` no longer
+- [x] `rungKindOf` has no per-kind branch; `frameBodyId.ts` is gone; every row has `identity`.
+- [x] `frameKey` output is byte-identical for absolute, body and site frames (existing tests unchanged).
+- [x] `DriverCtx` carries `terrainHeightAt`; `convertChannels` and `framedClipArm` no longer
       hard-code the datum.
-- [ ] The two findings are backlogged.
-- [ ] Out of scope: the sky rung itself (PR 2), any behaviour change.
+- [x] The two findings are backlogged.
+- [x] Out of scope: the sky rung itself (PR 2), any behaviour change.
