@@ -5,12 +5,12 @@ settings. Found while writing the "Setting up a dome" docs page, 2026-11-03.
 
 **Current state.** The remote's command set is `RemoteCommandPayloads`
 (`src/@types/remote/RemoteCommandPayloads.d.ts`): go-to, home, pairing, tour, clip, exhibit exit, time,
-control scheme and `toggleSet`. `toggleSet` covers the Labels & Guides rows only
-(`src/state/settings/selectToggleRows.ts`, shown by
-`src/components/RemotePage/ToggleSection/ToggleSection.tsx`). There is no command for:
+control scheme, `toggleSet` and `layerSet`. `toggleSet` covers the Labels & Guides rows
+(`src/state/settings/selectToggleRows.ts`) and `layerSet` one switch per data Layer
+(`src/utils/layer/layerSwitchRows.ts`), both shown by
+`src/components/RemotePage/ToggleSection/ToggleSection.tsx`. There is no command for:
 
 - data size (tier) or exposure;
-- the layer switches outside Labels & Guides;
 - captions;
 - full screen;
 - showing or hiding the dome's interface: pairing hides it
