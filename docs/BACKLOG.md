@@ -240,6 +240,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **A dome reload gives a new room code** `needs-design` — the room is made fresh on every load (`remoteReceiverSaga.ts:56`, spec "Pairing"), so every phone pairs again.
 - [ ] **The remote's header reads "Focused"** `needs-design` — `DomeStatus.focus` carries only the id, so the phone names the object only if its own last search listed it (`focusNameFrom.ts`); the status names no running exhibit either.
 - [ ] **More controls on the phone remote** `needs-design` — no command for data size, exposure, other layers, captions, full screen or showing the dome's interface (Tab on its keyboard). → [details](backlog/2026-11-03-remote-more-controls.md)
+- [ ] **Duplicate names in the remote's menus** `ready` — "Cosmic Flows" is both an exhibit and a clip (`src/data/exhibits/cosmicFlows.ts`, `src/data/animation/clips/cosmicFlows.ts`) and "Galactic Centre" shows twice in the label switches; rename or merge so each entry reads once.
 
 ## Docs & process
 
