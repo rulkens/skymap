@@ -25,6 +25,7 @@ work: it lands no feature, and its only design choices are the rulings below.
 | 2026-11-02 | Files that became single-Layer after the original list are sorted by the STAYS rules: generic helpers (S5) stay. Of the tools-shared files, only the S2 formats and registries move. |
 | 2026-11-02 | A moved helper lands in a new Layer `utils/<area>/` folder that mirrors `src/utils/<area>/`. |
 | 2026-11-02 | Cadence: the structure Layer goes first as the pilot, then the rest run three PRs at a time. |
+| 2026-11-03 | Layers are organised by concern modules ([ADR 0014](../../adrs/0014-layers-organised-by-concern-modules.md)). Every Layer PR from batch A on regroups its whole Layer, existing files and just-moved ones alike. Structure (Task 1) and any Layer already moved are regrouped in their own PR. |
 
 The Layer contract does not change. Every M-item uses an existing member, such as `ui: { slot: 'detailCard' }`
 or `ui: { slot: 'debug' }`. If a task seems to need a new or wider member, stop and report it.
@@ -42,20 +43,31 @@ a file added by hand follows the same rules.
 | `src/services/**`, `src/state/**` | the Layer folder its importers sit in (`render/`, `load/`, `present/`, `ui/`), mapped per file in the generator; a Layer's `state/` holds slice files only (`tests/conventions/layerStateShape.test.ts`) |
 | `src/components/**/<Card>/` | `src/layers/<L>/ui/<Card>/` (M2 and M6) |
 
+These are the M1 landing spots. Step 2a ("Regroup") then moves every Layer file outside the root keep-list into its concern module, so a manifest's `to` is an intermediate path, not the final one. The existing manifests stay as they are.
+
 ## Per-PR recipe
 
 Every Layer task below runs this recipe. Its PR is a draft off `origin/main`, opened from an isolation worktree.
 
-1. **Refresh.** Run `git merge origin/main`, then `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>.json --dry`.
+1. **Refresh.** First run `npm ci --prefer-offline --no-audit --no-fund`: an isolation worktree has no `node_modules`, and `tsconfig.json`'s `satellite.js/dist/*` path resolves only inside the worktree. Then run `git merge origin/main`, then `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>.json --dry`.
    If a `from` path no longer exists, delete that entry from the manifest in this PR and say so in the PR body.
 2. **Move: one commit, nothing but the move.** Run `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>.json`.
    Never use `git mv` with hand-edited imports, and never an ad-hoc ts-morph or sed import rewrite.
+2a. **Regroup into modules: one commit, pure move.**
+   - Write `docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>-modules.json`, mapping every Layer file outside the root keep-list (the ADR 0014 root files, `sources/`, `state/`, `bodies/`, `exhibits/` and contract-only `@types/`) to `<L>/<concern>/<role>/<file>`.
+   - Run it with `--dry`, then `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>-modules.json`.
+   - `git mv` each `.module.css` in the same commit, by the rule in step 3.
+   - List the module map (each module, then what it holds) in the PR body.
+   - Delete the Layer's rows from `OVERSIZED_FOLDERS` and `LEGACY_TOP_LEVEL_UTILS` in `tests/conventions/layerFolderShape.test.ts`, if it has any.
 3. **Blind spots: one commit.** `move-files` misses these:
    - `?worker`, `?url` and `?raw` import specifiers. A stale path still passes `tsc` and `vite build`, and breaks only at runtime.
    - String-literal paths: a generator's output path, `vi.mock(...)` paths, `new URL(...)`.
    - `.module.css` files beside a moved component (`move-files` is TS-only; `git mv` the CSS in the move commit), CSS `@import`, and `composes … from` paths in CSS modules. A stale CSS specifier passes `tsc`.
    - `.wesl` `package::` imports, and the website's `.astro`/`.mdx` imports.
    - Allow-lists that hold paths as strings, such as `tests/helpers/conventions/inlineTypeFiles.ts` and `CORE_ALLOWED`.
+   - Faceted and parity tests (`*.parity.test.ts`, `*.facet.test.ts`), which `move-files` doesn't drag.
+   - Tests that compute a repo root with `resolve(here, '../..')`: after a move they fail with ENOENT at runtime only.
+   - Website source links in `packages/website/src/data/docs*Facts.ts`.
 
    Grep `src tools tests packages .claude docs/*.md` for every moved basename's old path and fix what is live. Leave history alone: completed plans, completed specs and grill transcripts.
 4. **Owner drift.** A typecheck or `layerImportBoundary` failure saying a core file imports a moved file means that file
