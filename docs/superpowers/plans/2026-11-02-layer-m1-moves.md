@@ -126,7 +126,7 @@ Structure is merged role-first, so it takes step 2a on its own: `structure-modul
 
 ### Task 2 (batch A, three PRs in parallel): blackHoles, cosmicWebFilaments, localBubble
 
-- **blackHoles:** [`blackHoles.json`](2026-11-02-layer-m1-moves/blackHoles.json), 8 files, 325 lines, including the ride-along `packBlackHoleLensingUniforms`. Smoke: `#focus=body-sgr-a-star`, where the lensing ring still bends the backdrop.
+- **blackHoles:** [`blackHoles.json`](2026-11-02-layer-m1-moves/blackHoles.json), 8 files, 325 lines, including the ride-along `packBlackHoleLensingUniforms`. Smoke: `#focus=blackhole-sgr-a-star`, where the lensing ring still bends the backdrop.
 - **cosmicWebFilaments:** [`cosmicWebFilaments.json`](2026-11-02-layer-m1-moves/cosmicWebFilaments.json), 8 files, 204 lines, including the S2 `filamentBinaryFormat` (imported by `tools/`). Smoke: Filaments toggle on, seen from 300 Mpc.
 - **localBubble:** [`localBubble.json`](2026-11-02-layer-m1-moves/localBubble.json), 7 files, 231 lines, including the S2 `shellMeshFormat`. Smoke: Local Bubble shell visible from 1 kpc.
 

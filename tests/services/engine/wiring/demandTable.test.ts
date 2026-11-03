@@ -33,7 +33,7 @@ import { expandCompanionRows } from '../../../../src/utils/loading/expandCompani
 import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetRows';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
+import { structureAssetRows } from '../../../../src/layers/structure/catalog/load/structureAssetRows';
 import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 

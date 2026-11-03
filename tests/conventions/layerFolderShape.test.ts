@@ -48,7 +48,6 @@ const NOT_YET_REGROUPED: ReadonlySet<string> = new Set([
   'missions',
   'satellites',
   'starCatalog',
-  'structure',
 ]);
 
 function directories(dir: string): string[] {

@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { Source } from '../../../../src/data/source';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
-import { structurePickId } from '../../../../src/layers/structure/utils/picking/structurePickId';
+import { structurePickId } from '../../../../src/layers/structure/picking/utils/structurePickId';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { milkyWaySelectionRow } from '../../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow';
@@ -17,7 +17,7 @@ import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers
 import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/present/starCatalogSelectionRow';
 import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import { bodySelectionRow } from '../../../../src/layers/body/present/bodySelectionRow';
-import { structureSelectionRow } from '../../../../src/layers/structure/present/structureSelectionRow';
+import { structureSelectionRow } from '../../../../src/layers/structure/picking/present/structureSelectionRow';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { galaxyRowRuntime } from '../../../support/selectionResolverOver';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';

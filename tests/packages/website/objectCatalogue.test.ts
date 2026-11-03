@@ -19,7 +19,7 @@ import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
 import { SEEDED_STAR_CATALOGS } from '../../../src/data/bodies/seededStarCatalogs';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../src/data/palette/earthPlaces';
-import { buildStaticAnchorStructures } from '../../../src/layers/structure/load/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../../src/layers/structure/catalog/load/buildStaticAnchorStructures';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../src/layers/blackHoles/sources/blackHoleSourceRows';
 import { encodeBlackHoleFocusId } from '../../../src/layers/blackHoles/markers/present/encodeBlackHoleFocusId';
 import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
