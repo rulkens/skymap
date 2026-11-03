@@ -31,7 +31,7 @@ Eight formats, each a magic + version header followed by fixed- or variable-size
 | SCFD   | `0x44464353` | 3       | Self-describing scalar or vector field cube (density volumes, the CF4++ flow field). 96-byte header + f16 voxel array.                                            | [`scalarFieldFormat.ts`](../src/data/volume/scalarFieldFormat.ts)              |
 | FILA   | `0x414C4946` | 1       | DisPerSE filament skeleton as variable-length polyline strips. 16-byte header + strip-offset table + vertex array.                                                | [`filamentBinaryFormat.ts`](../src/data/filament/filamentBinaryFormat.ts)      |
 | SATG   | `0x47544153` | 1       | Earth-satellite SGP4 mean elements, columnar: ten f64 element columns, NORAD ids, class bytes, then names and COSPAR ids as a UTF-8 string table. 24-byte header. | [`writeSatelliteCatalog.ts`](../tools/utils/io/writeSatelliteCatalog.ts) |
-| SHEL   | `0x4C454853` | 1       | Baked Local Bubble shell mesh: f16 or f32 positions + normals (pc, 4 components each) and u32 indices, frame tag and centre in a 32-byte header.                  | [`shellMeshFormat.ts`](../src/data/shellMesh/shellMeshFormat.ts)               |
+| SHEL   | `0x4C454853` | 1       | Baked Local Bubble shell mesh: f16 or f32 positions + normals (pc, 4 components each) and u32 indices, frame tag and centre in a 32-byte header.                  | [`shellMeshFormat.ts`](../src/layers/localBubble/data/shellMeshFormat.ts)               |
 
 ## `public/data/` layout
 
