@@ -27,6 +27,7 @@ import Thumbnail from '../../../../../components/InfoCard/Thumbnail/Thumbnail';
 import DescriptionBlock from '../../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../../../../components/InfoTip/InfoTip';
 import { TIPS } from '../../../../../components/InfoCard/tooltips';
+import { MILKY_WAY_TIPS } from '../milkyWayTips';
 import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
 import styles from '../../../../../components/InfoCard/cardChrome.module.css';
 import mw from './MilkyWayDetailCard.module.css';
@@ -78,10 +79,10 @@ function MilkyWayDetailCard({
         {layout === 'panel' && thumbnail}
         <div className={styles.cardSummary}>
           <div className={styles.cardTypeLine}>
-            <InfoTip {...TIPS.morphology!}>{target.typeString}</InfoTip>
+            <InfoTip {...MILKY_WAY_TIPS.morphology}>{target.typeString}</InfoTip>
           </div>
           <div className={styles.cardDistLine}>
-            <InfoTip {...TIPS.sunToCentre!}>{SUN_TO_CENTRE_TEXT}</InfoTip>
+            <InfoTip {...MILKY_WAY_TIPS.sunToCentre}>{SUN_TO_CENTRE_TEXT}</InfoTip>
           </div>
         </div>
       </div>
@@ -89,27 +90,27 @@ function MilkyWayDetailCard({
       <div className={styles.cardSection}>
         <CardRow label={<InfoTip {...TIPS.diameter!}>Diameter</InfoTip>} value={DIAMETER_TEXT} />
         <CardRow
-          label={<InfoTip {...TIPS.milkyWayStars!}>Stars</InfoTip>}
+          label={<InfoTip {...MILKY_WAY_TIPS.milkyWayStars}>Stars</InfoTip>}
           value={MILKY_WAY_FACTS.starCountRange}
         />
         <CardRow
-          label={<InfoTip {...TIPS.milkyWayMass!}>Stellar mass</InfoTip>}
+          label={<InfoTip {...MILKY_WAY_TIPS.milkyWayMass}>Stellar mass</InfoTip>}
           value={MILKY_WAY_FACTS.stellarMassText}
         />
         <CardRow
-          label={<InfoTip {...TIPS.milkyWayMass!}>Total mass</InfoTip>}
+          label={<InfoTip {...MILKY_WAY_TIPS.milkyWayMass}>Total mass</InfoTip>}
           value={MILKY_WAY_FACTS.totalMassText}
         />
         <CardRow
-          label={<InfoTip {...TIPS.oldestStars!}>Oldest stars</InfoTip>}
+          label={<InfoTip {...MILKY_WAY_TIPS.oldestStars}>Oldest stars</InfoTip>}
           value={MILKY_WAY_FACTS.oldestStarsAgeText}
         />
         <CardRow
-          label={<InfoTip {...TIPS.galacticYear!}>Galactic year</InfoTip>}
+          label={<InfoTip {...MILKY_WAY_TIPS.galacticYear}>Galactic year</InfoTip>}
           value={GALACTIC_YEAR_TEXT}
         />
         <CardRow
-          label={<InfoTip {...TIPS.centralBlackHole!}>Black hole</InfoTip>}
+          label={<InfoTip {...MILKY_WAY_TIPS.centralBlackHole}>Black hole</InfoTip>}
           value={BLACK_HOLE_TEXT}
         />
       </div>
