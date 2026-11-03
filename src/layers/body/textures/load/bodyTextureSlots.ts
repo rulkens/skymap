@@ -8,7 +8,7 @@
 
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
 import { bodyTextureFetcher } from './bodyTextureFetcher';
-import { ALL_BODY_TEXTURE_KEYS } from '../../../../data/bodies/bodyTextureKeys';
+import { ALL_BODY_TEXTURE_KEYS } from '../data/bodyTextureKeys';
 import { hostBodyId } from '../present/hostBodyId';
 import { bodyTextureSlotKey } from './bodyTextureSlotKey';
 import { isTexturedBodyKey } from '../present/isTexturedBodyKey';

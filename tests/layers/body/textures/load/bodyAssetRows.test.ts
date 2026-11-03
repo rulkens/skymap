@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { bodyAssetRows } from '../../../../../src/layers/body/textures/load/bodyAssetRows';
-import { ALL_BODY_TEXTURE_KEYS } from '../../../../../src/data/bodies/bodyTextureKeys';
+import { ALL_BODY_TEXTURE_KEYS } from '../../../../../src/layers/body/textures/data/bodyTextureKeys';
 import { loadRadiusMpc } from '../../../../../src/layers/body/textures/load/bodyTextureLoadRadius';
 import { distanceMpc } from '../../../../../src/utils/math/distanceMpc';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';

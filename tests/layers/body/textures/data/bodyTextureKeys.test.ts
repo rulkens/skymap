@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { ALL_BODY_TEXTURE_KEYS } from '../../../src/data/bodies/bodyTextureKeys';
-import { BODY_TEXTURE_REGISTRY } from '../../../src/layers/body/textures/data/bodyTextureRegistry';
-import { SCENE_RINGS } from '../../../src/data/bodies/sceneRings';
+import { ALL_BODY_TEXTURE_KEYS } from '../../../../../src/layers/body/textures/data/bodyTextureKeys';
+import { BODY_TEXTURE_REGISTRY } from '../../../../../src/layers/body/textures/data/bodyTextureRegistry';
+import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 
 describe('ALL_BODY_TEXTURE_KEYS', () => {
   it("enumerates each body's registry kinds plus one surface entry per ring", () => {

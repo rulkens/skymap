@@ -8,11 +8,11 @@
  * sync. `bodyTextureSlots` mints slots from it and `bodyAssetRows` maps over it.
  */
 
-import { BODY_TEXTURE_REGISTRY } from '../../layers/body/textures/data/bodyTextureRegistry';
-import { SCENE_RINGS } from './sceneRings';
-import type { BodyTextureId } from '../../@types/data/BodyTextureId';
-import type { BodyTextureKey } from '../../@types/data/BodyTextureKey';
-import type { TextureKind } from '../../@types/data/TextureKind';
+import { BODY_TEXTURE_REGISTRY } from './bodyTextureRegistry';
+import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
+import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
+import type { BodyTextureKey } from '../../../../@types/data/BodyTextureKey';
+import type { TextureKind } from '../../../../@types/data/TextureKind';
 
 export const ALL_BODY_TEXTURE_KEYS: readonly BodyTextureKey[] = [
   ...(Object.keys(BODY_TEXTURE_REGISTRY) as BodyTextureId[]).flatMap((bodyId) =>
