@@ -7,8 +7,8 @@
  * builds per-pixel view rays from the camera basis and `ctx.frustum`, transforming no vertices.
  */
 
-import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { CosmicHorizonRuntime } from '../@types/CosmicHorizonRuntime';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { CosmicHorizonRuntime } from '../../@types/CosmicHorizonRuntime';
 
 export function horizonShellPass(runtime: CosmicHorizonRuntime): ContentPass<'cosmicHorizon'> {
   return {
