@@ -4,7 +4,7 @@
  * default off of.
  */
 
-import type { LocalBubbleSettings } from '../../@types/LocalBubbleSettings';
+import type { LocalBubbleSettings } from '../../shell/@types/LocalBubbleSettings';
 
 export const initialState: LocalBubbleSettings = {
   enabled: false,

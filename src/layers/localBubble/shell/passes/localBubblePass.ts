@@ -5,12 +5,12 @@
  * composes the shell's focus emphasis on it (the shell is never a focus).
  */
 
-import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { LocalBubbleRuntime } from '../@types/LocalBubbleRuntime';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { LocalBubbleRuntime } from '../../@types/LocalBubbleRuntime';
 import { clampLocalBubbleIntensity } from '../utils/clampLocalBubbleIntensity';
-import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
-import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
-import { localBubbleVisibility } from '../visibility';
+import { visibilityEntryOf } from '../../../../utils/visibility/visibilityEntryOf';
+import { emphasisOf } from '../../../../services/engine/presentation/emphasisOf';
+import { localBubbleVisibility } from '../../visibility';
 
 export function localBubblePass(runtime: LocalBubbleRuntime): ContentPass<'localBubble'> {
   const entry = visibilityEntryOf(localBubbleVisibility, 'localBubble');

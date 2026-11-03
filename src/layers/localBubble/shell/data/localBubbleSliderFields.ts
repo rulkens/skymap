@@ -1,4 +1,4 @@
-import type { SliderField } from '../../../@types/data/SliderField';
+import type { SliderField } from '../../../../@types/data/SliderField';
 
 /** The Local Bubble's one tuning knob, shown in the DebugPanel. */
 export const LOCAL_BUBBLE_SLIDER_FIELDS: readonly SliderField<'intensity'>[] = [

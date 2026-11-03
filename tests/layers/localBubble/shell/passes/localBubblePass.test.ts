@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { localBubblePass } from '../../../../src/layers/localBubble/passes/localBubblePass';
-import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
-import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { LocalBubbleRuntime } from '../../../../src/layers/localBubble/@types/LocalBubbleRuntime';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
+import { localBubblePass } from '../../../../../src/layers/localBubble/shell/passes/localBubblePass';
+import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import type { LocalBubbleRuntime } from '../../../../../src/layers/localBubble/@types/LocalBubbleRuntime';
+import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 
 // Inside the shell's distance window (full from 1 to 4 kpc), so only the value moves.
 const VIEW = {

@@ -1,7 +1,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import type { LocalBubbleSettings } from '../../@types/LocalBubbleSettings';
+import type { LocalBubbleSettings } from '../../shell/@types/LocalBubbleSettings';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
 export const selectRoute = createSelector(

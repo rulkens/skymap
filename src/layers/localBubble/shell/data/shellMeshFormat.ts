@@ -29,11 +29,11 @@
  * multiple of 4 for both `s` (2 for f16, 4 for f32), so every block below the
  * header is a plain typed-array view with no padding to reason about.
  */
-import type { ScalarFieldFrameKind } from '../../../@types/data/volume/ScalarFieldFrameKind';
-import type { ShellMesh } from '../../../@types/data/shellMesh/ShellMesh';
-import type { ShellMeshDtype } from '../../../@types/data/shellMesh/ShellMeshDtype';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { FRAME_KIND_TO_ID, ID_TO_FRAME_KIND } from '../../../data/volume/scalarFieldFormat';
+import type { ScalarFieldFrameKind } from '../../../../@types/data/volume/ScalarFieldFrameKind';
+import type { ShellMesh } from '../../../../@types/data/shellMesh/ShellMesh';
+import type { ShellMeshDtype } from '../../../../@types/data/shellMesh/ShellMeshDtype';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import { FRAME_KIND_TO_ID, ID_TO_FRAME_KIND } from '../../../../data/volume/scalarFieldFormat';
 
 const MAGIC = 0x4c454853; // "SHEL" little-endian
 const VERSION = 1;

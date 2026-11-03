@@ -1,4 +1,4 @@
-import type { ShellMeshDtype } from '../../../@types/data/shellMesh/ShellMeshDtype';
+import type { ShellMeshDtype } from '../../../../@types/data/shellMesh/ShellMeshDtype';
 
 /**
  * `.shell` dtype → the WebGPU vertex format its raw bytes upload as. f16
