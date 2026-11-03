@@ -8,8 +8,8 @@ import { describe, it, expect } from 'vitest';
 
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/present/blackHoleSlabRow';
-import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
+import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSlabRow';
+import { BLACK_HOLES } from '../../../../src/layers/blackHoles/markers/data/blackHoles';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';

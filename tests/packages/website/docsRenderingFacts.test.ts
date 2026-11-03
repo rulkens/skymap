@@ -99,7 +99,7 @@ describe('rendering rows and the constants behind them', () => {
     );
     const lens = text('render-lens');
     expect(lens).toContain(
-      `For ${one('src/layers/blackHoles/render/blackHoleLensingRenderer.ts', 'LUT_SAMPLE_COUNT')} rays`,
+      `For ${one('src/layers/blackHoles/lensing/render/blackHoleLensingRenderer.ts', 'LUT_SAMPLE_COUNT')} rays`,
     );
     expect(lens).toContain(
       `in ${one('src/services/gpu/shaders/bodies/blackHoleLensing/fragment.wesl', 'MARCH_STEPS')} steps`,

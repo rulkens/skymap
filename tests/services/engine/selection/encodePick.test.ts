@@ -13,7 +13,7 @@ import { structurePickId } from '../../../../src/layers/structure/utils/picking/
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { milkyWaySelectionRow } from '../../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceSelectionRow';
-import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
 import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/present/starCatalogSelectionRow';
 import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import { bodySelectionRow } from '../../../../src/layers/body/present/bodySelectionRow';

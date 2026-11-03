@@ -34,7 +34,7 @@ import { CATEGORY_DISPLAY_INFO } from '../../../src/data/structure/categoryDispl
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../../src/data/toneMapCurve';
-import { BLACK_HOLE_FOCUS_PREFIX } from '../../../src/layers/blackHoles/present/blackHoleFocusPrefix';
+import { BLACK_HOLE_FOCUS_PREFIX } from '../../../src/layers/blackHoles/markers/present/blackHoleFocusPrefix';
 import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
