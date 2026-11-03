@@ -66,5 +66,9 @@
   {
     "from": "src/layers/zoneOfAvoidance/ui/CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard.tsx",
     "to": "src/layers/zoneOfAvoidance/selection/ui/CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard.tsx"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/shell/ui/formatZoneOfAvoidanceTuningDefaults.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/utils/formatZoneOfAvoidanceTuningDefaults.ts"
   }
 ]

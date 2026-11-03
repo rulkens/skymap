@@ -10,7 +10,7 @@ import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';
 import type { HexString } from '../../../../@types/math/HexString';
 import { hexToLinearRgb } from '../../../../utils/color/hexToLinearRgb';
 import { linearRgbToHex } from '../../../../utils/color/linearRgbToHex';
-import { formatZoneOfAvoidanceTuningDefaults } from './formatZoneOfAvoidanceTuningDefaults';
+import { formatZoneOfAvoidanceTuningDefaults } from '../utils/formatZoneOfAvoidanceTuningDefaults';
 import {
   ZONE_OF_AVOIDANCE_SLIDER_FIELDS,
   zoneOfAvoidanceSliderPatch,

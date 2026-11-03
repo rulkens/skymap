@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatZoneOfAvoidanceTuningDefaults } from '../../../../../src/layers/zoneOfAvoidance/shell/ui/formatZoneOfAvoidanceTuningDefaults';
+import { formatZoneOfAvoidanceTuningDefaults } from '../../../../../src/layers/zoneOfAvoidance/shell/utils/formatZoneOfAvoidanceTuningDefaults';
 import type { ZoneOfAvoidanceTuning } from '../../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceTuning';
 import type { ZoneOfAvoidanceSettings } from '../../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceSettings';
 
