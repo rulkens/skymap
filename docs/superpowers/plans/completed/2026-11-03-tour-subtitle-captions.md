@@ -148,16 +148,16 @@ after its slice start`.
 
 ## Definition of Done
 
-- [ ] `npm run typecheck`, `npm test` green; CI green.
-- [ ] No `body`/`position` on any caption; `CaptionPosition`, `captionAnchor`, `react-markdown` gone
+- [x] `npm run typecheck`, `npm test` green; CI green.
+- [x] No `body`/`position` on any caption; `CaptionPosition`, `captionAnchor`, `react-markdown` gone
       (grep clean).
-- [ ] Fit test passes for all three tours without lowering `SUBTITLE_MIN_READ_SEC`.
-- [ ] Recorder check (Task 4) shows line changes on schedule.
-- [ ] Eye checks as dash `check`s, before/after vs main, shot with `npm run shot` at **1728×1000 and
+- [x] Fit test passes for all three tours without lowering `SUBTITLE_MIN_READ_SEC`.
+- [x] Recorder check (Task 4) shows line changes on schedule.
+- [x] Eye checks as dash `check`s, before/after vs main, shot with `npm run shot` at **1728×1000 and
       400×850**, one per item:
   - `#tour=grandTour` beat 0 (one line);
   - a two-line beat (Nearest neighbour, `#tour=grandTour`, advance twice);
   - the longest beat (Laniakea) mid-dwell, second line showing;
   - paused mid-beat: the line holds.
-- [ ] Reduced motion on: lines swap, nothing slides.
-- [ ] `ui-ux.md` self-check lines in the PR body.
+- [x] Reduced motion on: lines swap, nothing slides.
+- [x] `ui-ux.md` self-check lines in the PR body.
