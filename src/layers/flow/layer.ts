@@ -11,11 +11,11 @@ import { FLOW_SOURCE_ROWS } from './sources/flowSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { flowPlanner } from './frame';
-import { flowAssetRows } from './load/flowAssetRows';
-import { flowFieldPass } from './passes/flowFieldPass';
-import { flowCompute } from './computes/flowCompute';
-import FlowSectionContainer from './ui/FlowSectionContainer';
-import FlowTuningSectionContainer from './ui/FlowTuningSectionContainer';
+import { flowAssetRows } from './streamlines/load/flowAssetRows';
+import { flowFieldPass } from './streamlines/passes/flowFieldPass';
+import { flowCompute } from './streamlines/computes/flowCompute';
+import FlowSectionContainer from './streamlines/ui/FlowSectionContainer';
+import FlowTuningSectionContainer from './streamlines/ui/FlowTuningSectionContainer';
 
 export const flowLayer = defineLayer({
   name: 'flow',

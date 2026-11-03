@@ -26,7 +26,7 @@ import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategor
 import { APP_COMPOSITION } from '../../../src/compositions/app';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
-import { FLOW_SLIDER_FIELDS } from '../../../src/layers/flow/data/flowFields';
+import { FLOW_SLIDER_FIELDS } from '../../../src/layers/flow/streamlines/data/flowFields';
 import { orientationFrameLabel } from '../../../src/data/orientation/orientationFrameLabel';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
