@@ -29,7 +29,13 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import FilmClock from '../FilmClock/FilmClock.tsx';
 import styles from './FeatureGallery.module.css';
-import { THUMB_SIZES, PIECE_SIZES, BAR_SIZES, CUTOUT_SIZES } from './FeatureGallery.constants.ts';
+import {
+  SIZES,
+  THUMB_SIZES,
+  PIECE_SIZES,
+  BAR_SIZES,
+  CUTOUT_SIZES,
+} from './FeatureGallery.constants.ts';
 
 type FeatureGalleryProps = {
   title: string;
@@ -40,13 +46,11 @@ type FeatureGalleryProps = {
   side?: 'left' | 'right';
   // The first slide stands before the script runs.
   slides: readonly FeatureSlide[];
-  // How wide the large picture is drawn (the page's `big`).
-  sizes: string;
   frameless?: boolean;
   under?: string;
 };
 
-function FeatureGallery({ slides, sizes, frameless, under, ...section }: FeatureGalleryProps) {
+function FeatureGallery({ slides, frameless, under, ...section }: FeatureGalleryProps) {
   const films = slides.map(({ view }) => SITE_LOOPS.find((loop) => loop.id === view));
   const views = slides.map(({ view }, i) => films[i]?.shot ?? view);
   const gallery = useGallery(views.map((id) => ({ id })));
@@ -103,7 +107,7 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
             {under && (
               <div className={styles.under} aria-hidden>
                 <div className={styles.drift}>
-                  <Shot id={under} sizes={sizes} />
+                  <Shot id={under} sizes={SIZES} />
                 </div>
               </div>
             )}
@@ -121,7 +125,7 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
                     {films[i] ? (
                       <FeatureFilm
                         film={films[i].id}
-                        sizes={sizes}
+                        sizes={SIZES}
                         wide
                         active={current(i)}
                         view={shot.link}
@@ -134,7 +138,7 @@ function FeatureGallery({ slides, sizes, frameless, under, ...section }: Feature
                         query={shot.query}
                         aria-label={`Open ${shot.title} in the app`}
                       >
-                        <Shot id={id} sizes={sizes} alt="" eager={i > 0 && warmed(i)} />
+                        <Shot id={id} sizes={SIZES} alt="" eager={i > 0 && warmed(i)} />
                       </AppLink>
                     )}
                   </div>
