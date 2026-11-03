@@ -65,7 +65,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   {
     heading: 'Local Bubble tuning',
     shows: 'The intensity of the shell.',
-    file: 'src/layers/localBubble/ui/LocalBubbleTuningSectionContainer.tsx',
+    file: 'src/layers/localBubble/shell/ui/LocalBubbleTuningSectionContainer.tsx',
   },
   {
     heading: 'Sgr A* lens tuning',
