@@ -8,9 +8,9 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { CosmicWebFilamentsRuntime } from '../@types/CosmicWebFilamentsRuntime';
-import { FILAMENT_LINE_HALFWIDTH_PX } from '../../../data/filament/filamentLineHalfwidthPx';
-import { FILAMENT_BASE_TINT } from '../../../data/filament/filamentBaseTint';
-import { FILAMENT_HOT_TINT } from '../../../data/filament/filamentHotTint';
+import { FILAMENT_LINE_HALFWIDTH_PX } from '../data/filamentLineHalfwidthPx';
+import { FILAMENT_BASE_TINT } from '../data/filamentBaseTint';
+import { FILAMENT_HOT_TINT } from '../data/filamentHotTint';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
 import { cosmicWebFilamentsVisibility } from '../visibility';

@@ -3,9 +3,9 @@
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { filamentFetcher } from './filamentFetcher';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { FilamentReq } from '../../../@types/loading/FilamentReq';
+import type { FilamentReq } from '../@types/FilamentReq';
 import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
-import type { FilamentRenderer } from '../../../@types/rendering/FilamentRenderer';
+import type { FilamentRenderer } from '../@types/FilamentRenderer';
 
 export function createFilamentSlot(
   renderer: FilamentRenderer,

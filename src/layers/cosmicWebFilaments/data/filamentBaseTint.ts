@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 /**
  * Sparse end of the density tint ramp (RGB). Luminance-matched to

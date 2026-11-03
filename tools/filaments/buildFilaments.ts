@@ -84,7 +84,7 @@ import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl';
 import {
   encodeFilaments,
   FILAMENT_DATA_PREFIX,
-} from '../../src/data/filament/filamentBinaryFormat';
+} from '../../src/layers/cosmicWebFilaments/data/filamentBinaryFormat';
 import { FormatVersionError } from '../../src/data/formatVersionError';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../src/data/source';

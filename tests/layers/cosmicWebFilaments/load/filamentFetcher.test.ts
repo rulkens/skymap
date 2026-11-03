@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/load/filamentFetcher';
-import { encodeFilaments } from '../../../../src/data/filament/filamentBinaryFormat';
+import { encodeFilaments } from '../../../../src/layers/cosmicWebFilaments/data/filamentBinaryFormat';
 import { useFetchMock } from '../../../setup/fetchMock';
 
 const fetch = useFetchMock();
