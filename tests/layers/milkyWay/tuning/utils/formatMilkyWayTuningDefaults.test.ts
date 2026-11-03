@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatMilkyWayTuningDefaults } from '../../../../../src/layers/milkyWay/tuning/ui/formatMilkyWayTuningDefaults';
+import { formatMilkyWayTuningDefaults } from '../../../../../src/layers/milkyWay/tuning/utils/formatMilkyWayTuningDefaults';
 import type { MilkyWayTuning } from '../../../../../src/@types/settings/MilkyWayTuning';
 
 const defaults: MilkyWayTuning = {

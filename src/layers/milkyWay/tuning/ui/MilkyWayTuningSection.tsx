@@ -11,7 +11,7 @@ import type { MilkyWaySettings } from '../../@types/MilkyWaySettings';
 import type { MilkyWayTuning } from '../../../../@types/settings/MilkyWayTuning';
 import { MILKY_WAY_SLIDER_FIELDS, milkyWaySliderPatch } from '../data/milkyWaySliderFields';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import { formatMilkyWayTuningDefaults } from './formatMilkyWayTuningDefaults';
+import { formatMilkyWayTuningDefaults } from '../utils/formatMilkyWayTuningDefaults';
 import CopyButton from '../../../../components/common/CopyButton/CopyButton';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
 
