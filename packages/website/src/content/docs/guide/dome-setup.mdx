@@ -79,33 +79,49 @@ If the picture stutters, the steps under [When it stutters](/docs/guide/screens-
 
 The phone shows what the dome reports, so a tap shows on the phone once the dome has done it. The sections below the Home button appear once the dome answers.
 
-<Table
-  cols="detail"
-  head={['Part of the remote', 'What it does']}
-  rows={[
-    [
-      'Top line',
-      'Connected, Looking for the dome or Dome not there; the focused object’s name where the phone’s last search listed it, else Focused or Nothing focused',
-    ],
-    ['Drag pad', 'One finger turns the view about the focus, two fingers pinch to zoom'],
-    ['Home', 'Flies to the home view, as H does'],
-    [
-      'Camera controls',
-      'The Skymap and OpenSpace schemes; under OpenSpace, hold a button on the pad and drag to look around, roll or zoom',
-    ],
-    ['Search', 'Type a name, tap a match to fly there'],
-    ['Tours', 'Starts a tour; while one runs, its beat, Previous, Pause or Resume, and Next'],
-    [
-      'Exhibits and clips',
-      'Opens an exhibit or plays a prepared camera move; Exit exhibit or clip ends either',
-    ],
-    ['Time', 'Play or Pause, Reverse or Forward, Go live, Slower, Faster, and a date to jump to'],
-    ['Labels', 'The switches of Labels & Guides, folded until tapped'],
-    ['Setup', 'Add a phone, which shows the pairing card on the dome again'],
+<AnnotatedShot
+  id="guide-remote"
+  parts={[
+    {
+      name: 'Top line',
+      does: 'Connected, Looking for the dome or Dome not there; the focused object’s name where the phone’s last search listed it, else Focused or Nothing focused',
+      box: [0, 0, 390, 44],
+    },
+    {
+      name: 'Drag pad',
+      does: 'One finger turns the view about the focus, two fingers pinch to zoom',
+      box: [16, 44, 358, 340],
+    },
+    { name: 'Home', does: 'Flies to the home view, as H does', box: [16, 392, 254, 44] },
+    {
+      name: 'Camera controls',
+      does: 'The Skymap and OpenSpace schemes; under OpenSpace, hold a button on the pad and drag to look around, roll or zoom',
+      box: [278, 392, 96, 44],
+    },
+    { name: 'Search', does: 'Type a name, tap a match to fly there', box: [0, 452, 390, 107] },
+    {
+      name: 'Tours',
+      does: 'Starts a tour; while one runs, its beat, Previous, Pause or Resume, and Next',
+      box: [0, 559, 390, 114],
+    },
+    {
+      name: 'Exhibits and clips',
+      does: 'Opens an exhibit or plays a prepared camera move; Exit exhibit or clip ends either',
+      box: [0, 673, 390, 609],
+    },
+    {
+      name: 'Time',
+      does: 'Play or Pause, Reverse or Forward, Go live, Slower, Faster, and a date to jump to',
+      box: [0, 1282, 390, 273],
+    },
+    { name: 'Labels', does: 'The switches of Labels & Guides, folded until tapped', box: [0, 1555, 390, 69] },
+    {
+      name: 'Setup',
+      does: 'Add a phone, which shows the pairing card on the dome again',
+      box: [0, 1624, 390, 99],
+    },
   ]}
 />
-
-<Figure id="features-remote" />
 
 ## Add another phone
 

@@ -1441,6 +1441,17 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'A round all-sky picture in a black window. Low in the disc, over Saturn, a light card reads Pair a remote above a QR code and an eight-character room code; a flat copy of the QR code sits in the top left corner of the window.',
     credit: 'Saturn: Solar System Scope',
   },
+  {
+    id: 'guide-remote',
+    link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,4.6e-16,0`,
+    query: 'dome',
+    settings: { ...SUBJECT, remote: true, screenHeight: 844, settleMs: 4000 },
+    size: { width: 390, height: 1739 },
+    dpr: 3,
+    widths: [780, 520],
+    title: 'The whole remote on a phone',
+    alt: 'The remote page on a phone, down its whole length: a line reading Connected, a drag pad, a Home button beside two buttons for the camera controls, then Search, Tours, Exhibits and clips, Time, the folded Labels and Setup.',
+  },
   // The docs' Reference pages.
   {
     id: 'ref-settings',
