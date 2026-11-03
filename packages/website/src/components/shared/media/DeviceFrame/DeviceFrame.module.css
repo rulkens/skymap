@@ -8,10 +8,6 @@
   overflow: hidden;
   background: var(--color-bg);
   box-shadow: 0 0 0 1px var(--rim);
-
-  & img {
-    width: 100%;
-  }
 }
 
 .tablet .screen {

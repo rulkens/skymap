@@ -9,5 +9,5 @@ export const SUBJECT_ZOOM: Readonly<Record<string, number>> = {
   'cut-saturn': 1.1,
   'cut-voyager1': 1.3,
   'render-milky-way': 1.4,
-  'features-filaments': 1.3,
+  'filaments-derived': 1.3,
 };

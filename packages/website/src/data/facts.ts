@@ -278,14 +278,6 @@ export const FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
-    id: 'no-account',
-    about: 'app',
-    text: 'Skymap has no accounts. The one thing it keeps in your browser is a note that you have seen the welcome screen.',
-    source: `${REPO_BLOB}/src/state/persistedValues.ts`,
-    sourceLabel: 'what Skymap stores in the browser, in the Skymap repository',
-    checked: CHECKED,
-  },
-  {
     id: 'webgpu-required',
     about: 'app',
     text: 'Skymap draws with WebGPU. A browser without it is shown a short page that says so and links to a table of browsers that have it; none of the map’s data is loaded.',
@@ -347,14 +339,6 @@ export const FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/src/components/SettingsPanel/TierChip.tsx`,
     sourceLabel: 'the data size control, in the Skymap repository',
     checked: '2026-10-07',
-  },
-  {
-    id: 'english-only',
-    about: 'app',
-    text: 'The app’s interface, its tour captions and its exhibit notes are written in English only.',
-    source: `${REPO_BLOB}/src/components/Splash/Splash.constants.ts`,
-    sourceLabel: 'the app’s welcome text, in the Skymap repository',
-    checked: CHECKED,
   },
   {
     id: 'exhibits',

@@ -46,13 +46,6 @@
       rgb(0 0 0 / 0) var(--reach)
     );
   mask-composite: intersect;
-
-  & img {
-    display: block;
-    width: 100%;
-    max-width: none;
-    height: auto;
-  }
 }
 
 .craft {
@@ -67,13 +60,6 @@
   mix-blend-mode: screen;
   --feather: 80%;
   view-timeline-name: --voyager;
-
-  & img {
-    display: block;
-    width: 100%;
-    max-width: none;
-    height: auto;
-  }
 }
 
 /* The whole line by default: without scroll-driven animation, or with reduced motion, nothing is left to draw. */

@@ -48,8 +48,8 @@ export const milkyWay: readonly FeatureSlide[] = [
 export const cosmicWeb: readonly FeatureSlide[] = [
   { view: 'features-flow', piece: 'ui-settings-flow', fact: 'laniakea-size', accent: '#e6b894' },
   { view: 'features-web-density', piece: 'ui-settings-density', fact: 'survey-gaps', accent: '#ee8be7' },
-  { view: 'features-filaments', piece: 'ui-settings-filaments', fact: 'sci-filaments', accent: '#bca3d6' },
-  { view: 'features-galaxies', piece: 'ui-settings-galaxies', fact: 'observable-edge', accent: '#d3baa6' },
+  { view: 'filaments-derived', piece: 'ui-settings-filaments', fact: 'sci-filaments', accent: '#bca3d6' },
+  { view: 'galaxies-measured', piece: 'ui-settings-galaxies', fact: 'observable-edge', accent: '#d3baa6' },
   { view: 'features-desi', piece: 'ui-settings-desi', fact: 'desi-dr1-count', accent: '#9fb6da' },
 ];
 

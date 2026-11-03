@@ -147,12 +147,6 @@
     linear-gradient(90deg, rgb(0 0 0 / 0), #000 6%, #000 94%, rgb(0 0 0 / 0)),
     linear-gradient(180deg, rgb(0 0 0 / 0), #000 6%, #000 90%, rgb(0 0 0 / 0));
   mask-composite: intersect;
-
-  & img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
 }
 
 .prep,

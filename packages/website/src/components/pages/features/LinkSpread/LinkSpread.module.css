@@ -25,12 +25,6 @@
     display: block;
     mask-image: radial-gradient(ellipse 58% 62% at 50% 50%, #000 38%, transparent 90%);
   }
-
-  & img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
 }
 
 .piece {

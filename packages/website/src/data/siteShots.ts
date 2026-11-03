@@ -570,27 +570,6 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'A loose cluster of bright blue-white stars on a dark field of fainter ones.',
   },
   {
-    id: 'features-filaments',
-    link: 'pose=a,0,0,0,2.1,0.35,260,0',
-    settings: { hideLabels: true, hideStructures: true, hideCosmicWeb: true, filaments: true, settleMs: 4000 },
-    size: WIDE,
-    widths: [1920, 1280, 640],
-    title: 'The filaments of the cosmic web',
-    drawn: 'Traced by an algorithm through the positions of catalogued galaxies.',
-    alt: 'Bright branching violet threads spreading from a dense core across a field of galaxies.',
-  },
-  {
-    id: 'features-galaxies',
-    link: 'pose=a,0,0,0,0.9,0.55,1500,0',
-    settings: { hideLabels: true, hideStructures: true, hideCosmicWeb: true, settleMs: 2000 },
-    size: WIDE,
-    widths: [1920, 1280, 640],
-    title: 'Every galaxy and quasar in the catalogues',
-    caption: 'From about 4.9 billion light-years out.',
-    drawn: 'Each point’s direction on the sky is measured. Its distance is derived.',
-    alt: 'A glowing cloud of points in two fans, with dark gaps between them.',
-  },
-  {
     id: 'features-desi',
     // Looks straight down on the fan's plane (its pole is at RA 57.5°, Dec +59.4°) at mid-fan, rolled to lay it across 16:9.
     link: 'pose=a,-1479.2,-2321.8,1631.3,2.7856,0.6666,6000,1.3',

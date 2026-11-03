@@ -28,13 +28,6 @@
     mix-blend-mode: screen;
     mask-image: radial-gradient(closest-side, #000 76%, rgb(0 0 0 / 0) 84%);
   }
-
-  & img {
-    display: block;
-    width: 100%;
-    max-width: none;
-    height: auto;
-  }
 }
 
 /* Narrow: a smaller globe stands out past the right edge, above the sentence. */

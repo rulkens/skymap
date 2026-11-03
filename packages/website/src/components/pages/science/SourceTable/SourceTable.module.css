@@ -137,12 +137,8 @@
   margin: -6% 0 -12%;
   pointer-events: none;
 
-  & picture,
-  & img {
+  & picture {
     display: block;
-    width: 100%;
-    max-width: none;
-    height: auto;
   }
 }
 

@@ -18,12 +18,8 @@
   pointer-events: none;
   mix-blend-mode: plus-lighter;
 
-  & picture,
-  & img {
+  & picture {
     display: block;
-    width: 100%;
-    max-width: none;
-    height: auto;
   }
 }
 

@@ -17,12 +17,8 @@
   margin: -12% 0 -12% -25%;
   mask-image: linear-gradient(transparent 22%, #000 40%, #000 60%, transparent 78%);
 
-  & picture,
-  & img {
+  & picture {
     display: block;
-    width: 100%;
-    max-width: none;
-    height: auto;
   }
 }
 

@@ -23,13 +23,6 @@
     radial-gradient(closest-side, #000 70%, rgb(0 0 0 / 0)),
     linear-gradient(180deg, #000 60%, rgb(0 0 0 / 0) 76%);
   mask-composite: intersect;
-
-  & img {
-    display: block;
-    width: 100%;
-    max-width: none;
-    height: auto;
-  }
 }
 
 @media (--narrow) {

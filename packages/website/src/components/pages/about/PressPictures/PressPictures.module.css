@@ -26,10 +26,6 @@
   --mark-ink: linear-gradient(var(--border-hover), var(--border-hover));
   position: relative;
 
-  & img {
-    display: block;
-  }
-
   &::before {
     content: '';
     position: absolute;

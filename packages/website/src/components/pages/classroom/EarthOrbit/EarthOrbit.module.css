@@ -32,13 +32,6 @@
     linear-gradient(180deg, #000 83%, rgb(0 0 0 / 0) 88%);
   mask-composite: intersect;
 
-  & img {
-    display: block;
-    width: 100%;
-    max-width: none;
-    height: auto;
-  }
-
   /*
    * The Sun at its place in the frame. At this scale its disc would be under a tenth of a rem, so it is drawn
    * as a point of light with a glow, the first thing the orbits draw out from.

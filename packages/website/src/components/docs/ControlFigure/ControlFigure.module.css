@@ -17,12 +17,6 @@
   border: 1px solid var(--border-divider);
   border-radius: 0.75rem;
   background: color-mix(in srgb, var(--color-fg) 4%, transparent);
-
-  & img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
 }
 
 .keys {

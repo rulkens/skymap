@@ -8,12 +8,6 @@
   height: 9rem;
   margin-bottom: var(--site-space-m);
   overflow-x: clip;
-
-  & img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
 }
 
 .saturn,
