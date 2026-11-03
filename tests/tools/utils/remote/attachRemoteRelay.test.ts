@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import { connect } from 'node:net';
+import type { AddressInfo, Socket } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 import type { RelayOptions } from '../../../../tools/@types/remote/RelayOptions';
@@ -9,9 +10,11 @@ import { attachRemoteRelay } from '../../../../tools/utils/remote/attachRemoteRe
 
 const servers: Server[] = [];
 const sockets: WebSocket[] = [];
+const rawSockets: Socket[] = [];
 
 afterEach(() => {
   for (const socket of sockets.splice(0)) socket.terminate();
+  for (const raw of rawSockets.splice(0)) raw.destroy();
   for (const server of servers.splice(0)) server.close();
 });
 
@@ -41,6 +44,18 @@ async function open(port: number, path: string, autoPong = true) {
     socket.once('error', reject);
   });
   return { socket, heard, closed };
+}
+
+/** A hand-written upgrade request, for targets and frames a well-behaved client never sends. */
+async function rawUpgrade(port: number, target: string): Promise<Socket> {
+  const raw = connect(port, '127.0.0.1');
+  rawSockets.push(raw);
+  await new Promise((resolve) => raw.once('connect', resolve));
+  raw.write(
+    `GET ${target} HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n` +
+      'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n',
+  );
+  return raw;
 }
 
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 50));
@@ -163,12 +178,55 @@ describe('attachRemoteRelay', () => {
     expect(host.heard).toEqual([frame('ROOM0000'), 'small']);
   });
 
-  it('a fifth socket is refused', async () => {
+  it('a fifth socket is refused and the first four stay open', async () => {
     const { port } = await startRelay();
-    await open(port, 'host');
-    for (let i = 0; i < 3; i++) await open(port, 'ROOM0000');
+    const first = [await open(port, 'host')];
+    for (let i = 0; i < 3; i++) first.push(await open(port, 'ROOM0000'));
     const fifth = await open(port, 'ROOM0000');
     expect(await fifth.closed).toBe(1008);
+    await settle();
+    expect(first.map(({ socket }) => socket.readyState)).toEqual(Array(4).fill(WebSocket.OPEN));
+  });
+
+  it('an empty last asks codeFor for a fresh code', async () => {
+    const asked: (string | null)[] = [];
+    const { port } = await startRelay({ codeFor: (last) => (asked.push(last), 'ROOM0000') });
+    await open(port, 'host?last=');
+    expect(asked).toEqual([null]);
+  });
+
+  it('rotate onto a code a live host holds replaces that host and kicks its remotes', async () => {
+    const { port, handle } = await startRelay();
+    const moving = await open(port, 'host');
+    const holder = await open(port, 'host?last=TAKEN000');
+    const holderRemote = await open(port, 'TAKEN000');
+    handle.rotate('ROOM0000', 'TAKEN000');
+    expect(await holder.closed).toBe(4002);
+    expect(await holderRemote.closed).toBe(4001);
+    const fresh = await open(port, 'TAKEN000');
+    fresh.socket.send('to the mover');
+    await settle();
+    expect(moving.heard).toEqual([frame('ROOM0000'), frame('TAKEN000'), 'to the mover']);
+  });
+
+  it('a refused socket that then sends an invalid frame leaves the relay running', async () => {
+    const { port } = await startRelay();
+    const raw = await rawUpgrade(port, '/__remote/NOPE2345');
+    await new Promise((resolve) => raw.once('data', resolve));
+    raw.write(Buffer.from([0x83, 0x00]));
+    await settle();
+    const host = await open(port, 'host');
+    await settle();
+    expect(host.heard).toEqual([frame('ROOM0000')]);
+  });
+
+  it('an unparseable absolute-form target leaves the relay running', async () => {
+    const { port } = await startRelay();
+    await rawUpgrade(port, 'http://[bad/__remote/x');
+    await settle();
+    const host = await open(port, 'host');
+    await settle();
+    expect(host.heard).toEqual([frame('ROOM0000')]);
   });
 
   it('a socket that stops answering pings is dropped and frees its slot', async () => {

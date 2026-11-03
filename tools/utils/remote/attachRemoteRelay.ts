@@ -67,7 +67,6 @@ export function attachRemoteRelay(server: Server, options: RelayOptions): RelayH
       const text = data.toString();
       if (Buffer.byteLength(text) <= MAX_MESSAGE_BYTES) onText(text);
     });
-    ws.on('error', () => {});
   };
 
   const host = (ws: WebSocket, code: RoomCode): void => {
@@ -92,6 +91,11 @@ export function attachRemoteRelay(server: Server, options: RelayOptions): RelayH
     announce(ws, code);
   };
 
+  const kickRemotes = (code: RoomCode): void => {
+    for (const remote of remotesOf.get(code) ?? []) remote.close(ROOM_ROTATED_CLOSE_CODE);
+    remotesOf.delete(code);
+  };
+
   const join = (ws: WebSocket, code: RoomCode): void => {
     const remotes = remotesOf.get(code);
     if (!hostOf.has(code) || remotes === undefined || remotes.size + 1 >= MAX_SOCKETS_PER_ROOM) {
@@ -105,24 +109,31 @@ export function attachRemoteRelay(server: Server, options: RelayOptions): RelayH
     ws.on('close', () => remotes.delete(ws));
   };
 
+  // Never throw here: an absolute-form target like `http://[bad/…` would end the process.
   server.on('upgrade', (request, socket, head) => {
-    const url = new URL(request.url ?? '', 'http://relay');
-    if (!url.pathname.startsWith(REMOTE_PATH_PREFIX)) return;
+    const target = request.url ?? '';
+    const queryAt = target.indexOf('?');
+    const path = queryAt < 0 ? target : target.slice(0, queryAt);
+    if (!path.startsWith(REMOTE_PATH_PREFIX)) return;
     wss.handleUpgrade(request, socket, head, (ws) => {
-      if (url.pathname !== HOST_PATH)
-        return join(ws, url.pathname.slice(REMOTE_PATH_PREFIX.length));
-      if (options.mayHost(request)) host(ws, options.codeFor(url.searchParams.get('last')));
-      else ws.close(POLICY_VIOLATION);
+      // Before any close: a refused peer's bad frame would otherwise throw uncaught.
+      ws.on('error', () => {});
+      if (path !== HOST_PATH) return join(ws, path.slice(REMOTE_PATH_PREFIX.length));
+      if (!options.mayHost(request)) return ws.close(POLICY_VIOLATION);
+      const last = new URLSearchParams(queryAt < 0 ? '' : target.slice(queryAt + 1)).get('last');
+      host(ws, options.codeFor(last || null));
     });
   });
 
   return {
     rotate: (from, to) => {
       const ws = hostOf.get(from);
-      for (const remote of remotesOf.get(from) ?? []) remote.close(ROOM_ROTATED_CLOSE_CODE);
-      remotesOf.delete(from);
       hostOf.delete(from);
+      kickRemotes(from);
       if (ws === undefined) return;
+      // Rotating onto a held code replaces that code's host, as a newer host would.
+      hostOf.get(to)?.close(HOST_REPLACED_CLOSE_CODE);
+      kickRemotes(to);
       hostOf.set(to, ws);
       codeOf.set(ws, to);
       remotesOf.set(to, new Set());
