@@ -132,10 +132,12 @@ describe('RemotePage', () => {
     expect(screen.getByRole('heading', { name: 'Clip' })).toBeTruthy();
   });
 
-  it('Pause time sends timePause, and Play time timeResume when paused', () => {
+  it('the clock is only in the Time sheet: Pause time sends timePause, Play time timeResume', () => {
     render(<RemotePage />);
     sendWith({ takeover: null });
     expect(screen.getByText('Nothing running')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Pause time' })).toBeNull();
+    openSheet('Time');
     fireEvent.click(screen.getByRole('button', { name: 'Pause time' }));
     expect(commands()).toContainEqual({ name: 'timePause', payload: null });
     sendWith({ takeover: null, time: { ...status.time, paused: true } });

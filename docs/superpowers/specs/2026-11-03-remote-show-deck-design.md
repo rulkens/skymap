@@ -78,7 +78,7 @@ old field.
 ## Scope
 
 - The now card: the running tour, exhibit or clip; beat ticks and Previous / Pause / Next for a tour; one Stop for
-  any kind; the time row with Pause time.
+  any kind. The clock is the Time sheet's alone (owner, 2026-11-03).
 - The tile library and its seven sheets: Search, Tours, Exhibits, Clips, Time, Labels, Setup.
 - One icon set for the whole remote, the top part's icons included (prep 1).
 - `DomeStatus.takeover` and `DomeStatus.focus.name`.
@@ -245,14 +245,14 @@ export const REMOTE_SHOW_KINDS: {
 ```
 
 - **Components.** `NowCard` (the running item and its controls), `TimeRow` (the clock's state and Pause time /
-  Play time, placed on the card and at the top of the Time sheet), `ShowList` (the Tours, Exhibits and
+  Play time, at the top of the Time sheet), `ShowList` (the Tours, Exhibits and
   Clips sheets: one component, a kind prop, rows from `REMOTE_SHOW_KINDS`), `RemoteSheet` (the bottom sheet), and
   the tiles. The Search, Time, Labels and Setup sheets are today's `SearchSection`, `TimeSection`, `ToggleSection`
   and `SetupSection`, restyled. `RemotePage` picks a sheet's body from a `Record<RemoteSheetId, …>`, never a chain.
 - **Deleted.** `TourSection` and `ExhibitSection` (`NowCard` and `ShowList` replace them), the "Exit exhibit or
   clip" button (Stop on the card replaces it), `focusNameFrom.ts` and its test.
-- **One control per job on screen.** The open Time sheet covers the card, so `TimeRow` sits in both and only one is
-  ever visible; the rest of the Time sheet is direction, rate, date and Go live. Stop lives on the card only.
+- **One control per job on screen.** The clock lives in the Time sheet only: `TimeRow` atop it, then direction,
+  rate, date and Go live. Stop lives on the card only.
 
 ### Red light
 
@@ -287,7 +287,6 @@ then Tours, Exhibits; Clips, Time, Labels, Setup).
 | Clip | "Clip" | clip label | Stop clip |
 | Nothing | "Nothing running" | none | the line "Start a tour, exhibit or clip below" |
 
-The time row ("Live, 1 s/s"; "2026-11-03, paused") and its Pause time / Play time button show in every state.
 The eyebrow and the time text are `role="status"`. Ticks are `aria-hidden`; the eyebrow carries the beat. The
 title wraps to two lines at most.
 

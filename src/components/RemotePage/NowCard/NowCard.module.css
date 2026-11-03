@@ -112,8 +112,3 @@
   border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
   color: var(--color-fg);
 }
-
-.time {
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border-divider);
-}

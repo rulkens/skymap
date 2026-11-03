@@ -1,5 +1,5 @@
 /**
- * NowCard — what runs on the dome, with the controls of that show, and the clock's row beneath.
+ * NowCard — what runs on the dome, with the controls of that show. The clock lives in the Time sheet.
  * The dome sends the kind and id only; the label is looked up in the menu, and a missing one
  * (no menu yet, a dev clip) falls back to the kind's noun.
  */
@@ -7,9 +7,7 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import RemoteIcon from '../RemoteIcon/RemoteIcon';
-import TimeRow from '../TimeRow/TimeRow';
 import { REMOTE_SHOW_KINDS } from '../../../data/remote/remoteShowKinds';
-import type { DomeStatus } from '../../../@types/remote/DomeStatus';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import type { RemoteMenu } from '../../../@types/remote/RemoteMenu';
 import type { RemoteMenuItem } from '../../../@types/remote/RemoteMenuItem';
@@ -20,11 +18,10 @@ import styles from './NowCard.module.css';
 export type NowCardProps = {
   readonly takeover: RemoteTakeover | null;
   readonly menu: RemoteMenu | null;
-  readonly time: DomeStatus['time'];
   readonly onCommand: (command: RemoteCommand) => void;
 };
 
-function NowCard({ takeover, menu, time, onCommand }: NowCardProps): ReactNode {
+function NowCard({ takeover, menu, onCommand }: NowCardProps): ReactNode {
   const kind = takeover ? REMOTE_SHOW_KINDS[takeover.kind] : null;
   const items: readonly RemoteMenuItem<string>[] = (kind && menu?.[kind.list]) || [];
   const title =
@@ -99,9 +96,6 @@ function NowCard({ takeover, menu, time, onCommand }: NowCardProps): ReactNode {
           </div>
         </>
       )}
-      <div className={styles.time}>
-        <TimeRow time={time} onCommand={onCommand} />
-      </div>
     </section>
   );
 }
