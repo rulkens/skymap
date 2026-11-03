@@ -1,11 +1,3 @@
-.root {
-  composes: notice from '../remoteControls.module.css';
-}
-
-.text {
-  composes: noticeText from '../remoteControls.module.css';
-}
-
 .code {
   letter-spacing: var(--letter-spacing-wider);
   color: var(--color-accent);

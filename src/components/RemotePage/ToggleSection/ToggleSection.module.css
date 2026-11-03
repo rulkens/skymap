@@ -18,11 +18,6 @@
   border-top: 1px solid var(--border-divider);
 }
 
-.label {
-  flex: 1;
-  min-width: 0;
-}
-
 .empty {
   margin: 0;
   color: var(--color-fg-tertiary);

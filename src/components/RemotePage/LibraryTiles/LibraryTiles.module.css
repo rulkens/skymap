@@ -4,7 +4,8 @@
   gap: var(--space-4);
 }
 
-/* The glyph above its label; 52 px, taller than the 44 px floor because a thumb finds these in the dark. */
+/* The glyph above its label; 52 px, taller than the 44 px floor because a thumb finds these in the
+   dark. */
 .tile {
   display: flex;
   flex-direction: column;

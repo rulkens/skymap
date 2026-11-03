@@ -42,7 +42,7 @@ function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
         spellCheck={false}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => {
-          // Escape clears a filled field; the sheet's own Escape handler only sees it once the field is empty.
+          // Escape clears a filled field; the sheet's Escape handler only sees it once empty.
           if (e.key !== 'Escape' || e.nativeEvent.isComposing || query === '') return;
           e.stopPropagation();
           setQuery('');
@@ -59,7 +59,7 @@ function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
               className={cx(controls.button, controls.row)}
               onClick={() => onCommand({ name: 'goTo', payload: match.action })}
             >
-              <span className={styles.name}>{match.name}</span>
+              <span className={controls.grow}>{match.name}</span>
               <span className={styles.kind}>{match.kind}</span>
             </button>
           </li>

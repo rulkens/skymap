@@ -25,7 +25,8 @@ export type ShowListProps = {
 function ShowList({ kind, menu, takeover, onCommand }: ShowListProps): ReactNode {
   if (!menu) return <p className={styles.waiting}>Waiting for the dome's lists</p>;
   const { list, glyph, start } = REMOTE_SHOW_KINDS[kind];
-  // Each row's id comes from this kind's own list, so it is the id `start` takes; the union of the three kinds hides that from the compiler.
+  // Each row's id comes from this kind's own list, so it is the id `start` takes; the union of the
+  // three kinds hides that from the compiler.
   const items: readonly RemoteMenuItem<string>[] = menu[list];
   const startItem = start as (id: string) => RemoteCommand;
   return (
@@ -41,7 +42,7 @@ function ShowList({ kind, menu, takeover, onCommand }: ShowListProps): ReactNode
               onClick={() => onCommand(startItem(id))}
             >
               <RemoteIcon glyph={glyph} />
-              <span className={styles.label}>{label}</span>
+              <span className={controls.grow}>{label}</span>
               <RemoteIcon glyph="play" />
             </button>
           </li>

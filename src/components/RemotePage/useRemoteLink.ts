@@ -2,8 +2,11 @@
  * useRemoteLink — the remote page's whole conversation with the dome as plain React state: the
  * link, a `hello` every second, the latest status and menu, "the dome is gone" after three silent
  * seconds, and which page needs a reload when the dome speaks another protocol version. The id is
- * per page load, so a reload is a new remote to the dome. Every time the link opens, the last trackpad size goes again: the dome attaches a remote's input only after a
- * `resize`, and the pad's first one is sent while the socket is still connecting, so it is lost.
+ * per page load, so a reload is a new remote to the dome.
+ *
+ * Every time the link opens, the last trackpad size goes again: the dome attaches a remote's input
+ * only after a `resize`, and the pad's first one is sent while the socket is still connecting, so
+ * it is lost.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

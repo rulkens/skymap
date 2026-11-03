@@ -17,7 +17,7 @@ function ToggleSection({ toggles, onCommand }: ToggleSectionProps) {
     <div className={styles.list}>
       {toggles.map((toggle) => (
         <label key={toggle.id} className={cx(controls.row, styles.row)}>
-          <span className={styles.label}>{toggle.label}</span>
+          <span className={controls.grow}>{toggle.label}</span>
           <input
             type="checkbox"
             role="switch"

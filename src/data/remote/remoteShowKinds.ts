@@ -1,4 +1,7 @@
-/** REMOTE_SHOW_KINDS: per takeover kind, the menu list it reads, its noun and the command that starts one. */
+/**
+ * REMOTE_SHOW_KINDS: per takeover kind, the menu list it reads, its noun and the command that
+ * starts one.
+ */
 
 import type { RemoteShowKind } from '../../@types/remote/RemoteShowKind';
 import type { RemoteTakeover } from '../../@types/remote/RemoteTakeover';

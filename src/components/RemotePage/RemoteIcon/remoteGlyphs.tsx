@@ -1,4 +1,7 @@
-/** REMOTE_GLYPHS: the inner paths of each remote glyph, drawn on a 24-unit grid inside `RemoteIcon`'s stroke frame. */
+/**
+ * REMOTE_GLYPHS: the inner paths of each remote glyph, drawn on a 24-unit grid inside
+ * `RemoteIcon`'s stroke frame.
+ */
 
 import type { ReactNode } from 'react';
 import type { RemoteGlyph } from '../../../@types/remote/RemoteGlyph';

@@ -8,6 +8,7 @@
  * render; ids are checked as strings only, since the dome validates them.
  */
 
+import { isKeyOf } from '../object/isKeyOf';
 import { isRecord } from '../object/isRecord';
 import { REMOTE_PROTOCOL_VERSION } from '../../data/remote/remoteProtocolVersion';
 import type { DomeMessage } from '../../@types/remote/DomeMessage';
@@ -100,11 +101,11 @@ export function parseDomeMessage(text: string): { v: number; message: DomeMessag
   } catch {
     return null;
   }
-  if (!isRecord(raw) || typeof raw.kind !== 'string' || !Object.hasOwn(IS_BODY, raw.kind)) {
+  if (!isRecord(raw) || typeof raw.kind !== 'string' || !isKeyOf(IS_BODY, raw.kind)) {
     return null;
   }
   const v = raw.v ?? 1;
   if (typeof v !== 'number') return null;
-  const isBody = IS_BODY[raw.kind as DomeMessage['kind']];
+  const isBody = IS_BODY[raw.kind];
   return { v, message: v === REMOTE_PROTOCOL_VERSION && isBody(raw) ? (raw as DomeMessage) : null };
 }

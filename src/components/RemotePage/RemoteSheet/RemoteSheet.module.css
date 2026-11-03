@@ -1,4 +1,5 @@
-/* Fixed to the viewport's bottom on a phone. Its top stops at the pad's vertical midpoint, so the pad's upper half stays live. */
+/* Fixed to the viewport's bottom on a phone. Its top stops at the pad's vertical midpoint, so the
+   pad's upper half stays live. */
 .root {
   position: fixed;
   inset: auto 0 0;

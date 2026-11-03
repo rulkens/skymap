@@ -1,7 +1,8 @@
 /**
  * useRedLight — the phone's red-light preference: read once from localStorage, written on change,
  * mirrored as `data-light` on <html>, where `remote.css` swaps the palette. It never reaches the
- * dome. Storage can be blocked (private windows), so every access is guarded and the default is off.
+ * dome. Storage can be blocked (private windows), so every access is guarded and the default is
+ * off.
  */
 
 import { useCallback, useLayoutEffect, useState } from 'react';

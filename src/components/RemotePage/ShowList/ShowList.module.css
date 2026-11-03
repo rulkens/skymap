@@ -2,11 +2,6 @@
   text-align: left;
 }
 
-.label {
-  flex: 1;
-  min-width: 0;
-}
-
 .row > svg {
   flex: none;
 }

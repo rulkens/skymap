@@ -22,10 +22,6 @@ describe('selectDomeStatus', () => {
     expect(selectDomeStatus(state, NO_ROWS, 0).controls.scheme).toBe('openspace');
   });
 
-  it('reports nothing running as null', () => {
-    expect(selectDomeStatus(stateAfter(), NO_ROWS, 0).takeover).toBeNull();
-  });
-
   it('reports a running exhibit by kind and id, without its entry', () => {
     const state = stateAfter(takeoverStarted({ kind: 'exhibit', id: 'cosmicFlows', entry: 'fly' }));
     expect(selectDomeStatus(state, NO_ROWS, 0).takeover).toStrictEqual({

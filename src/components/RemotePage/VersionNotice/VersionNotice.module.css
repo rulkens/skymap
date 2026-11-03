@@ -1,7 +1,0 @@
-.root {
-  composes: notice from '../remoteControls.module.css';
-}
-
-.text {
-  composes: noticeText from '../remoteControls.module.css';
-}

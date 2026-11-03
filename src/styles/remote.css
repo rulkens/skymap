@@ -7,7 +7,8 @@ body {
   font-family: var(--font-family-mono);
 }
 
-/* Red light keeps the dome's dark-adapted eyes: every colour token the remote reads, in one hue. The parity test lists them. */
+/* Red light keeps the dome's dark-adapted eyes: every colour token the remote reads, in one hue.
+   The parity test lists them. */
 :root[data-light='red'] {
   --color-fg: #ff8a78;
   --color-fg-base: #f07a68;

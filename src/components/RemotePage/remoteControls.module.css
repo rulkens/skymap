@@ -1,4 +1,5 @@
-/* Shared vocabulary of the remote's controls, applied with cx() beside each component's own class. */
+/* Shared vocabulary of the remote's controls, applied with cx() beside each component's own
+   class. */
 .stack {
   display: flex;
   flex-direction: column;
@@ -53,6 +54,11 @@
   gap: var(--space-6);
   width: 100%;
   min-height: 48px;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
 }
 
 .row > svg:first-child {

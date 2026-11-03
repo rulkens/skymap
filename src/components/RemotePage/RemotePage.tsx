@@ -132,7 +132,7 @@ function RemotePage() {
             <LibraryTiles
               onOpen={(id, tile) => {
                 openerRef.current = tile;
-                // The sheet's height assumes the pad is on screen under the header, which a scrolled page is not.
+                // The sheet's height assumes the pad sits under the header; scrolling breaks that.
                 window.scrollTo({ top: 0 });
                 setOpenSheet(id);
               }}

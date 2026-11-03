@@ -1,4 +1,7 @@
-/** TimeRow — the clock's state in words and its Pause time / Play time button; on the now card and atop the Time sheet. */
+/**
+ * TimeRow — the clock's state in words and its Pause time / Play time button; on the now card and
+ * atop the Time sheet.
+ */
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
