@@ -9,7 +9,7 @@
 
 import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
-import { missionMeshesPass } from '../../../../../src/layers/missions/passes/missionMeshesPass';
+import { missionMeshesPass } from '../../../../../src/layers/missions/craft/passes/missionMeshesPass';
 import { near0SelectionRingPass } from '../../../../../src/services/engine/frame/passes/near0SelectionRingPass';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { deriveSlabs, slabViewOf, NEAR0 } from '../../../../../src/services/engine/frame/slabs';
@@ -23,7 +23,7 @@ import { bodyRelativePose } from '../../../../../src/services/engine/camera/body
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
 import { bodyLayerSlabRow } from '../../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
-import { meshBodyCaption } from '../../../../../src/utils/labels/meshBodyCaption';
+import { meshBodyCaption } from '../../../../../src/layers/missions/craft/utils/meshBodyCaption';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_BODIES } from '../../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';

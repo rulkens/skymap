@@ -10,8 +10,9 @@ import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { selectSatellites } from '../../state/satellites/selectors';
 import { setVisibility } from '../../../../state/settings/setVisibilityAction';
 import type { SatelliteClass } from '../../../../@types/satellites/SatelliteClass';
+import type { LayerMainSectionProps } from '../../../../@types/engine/layer/LayerMainSectionProps';
 
-function SatellitesSectionContainer(): React.ReactElement {
+function SatellitesSectionContainer({ title }: LayerMainSectionProps): React.ReactElement {
   const dispatch = useAppDispatch();
   const { enabled, items } = useAppSelector(selectSatellites);
   const onToggleMaster = useCallback(
@@ -25,6 +26,7 @@ function SatellitesSectionContainer(): React.ReactElement {
   );
   return (
     <SatellitesSection
+      title={title}
       enabled={enabled}
       items={items}
       onToggleMaster={onToggleMaster}

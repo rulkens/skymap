@@ -13,6 +13,7 @@ import type { SatelliteClass } from '../../../../@types/satellites/SatelliteClas
 import type { SatellitesSettings } from '../../@types/SatellitesSettings';
 
 type SatellitesSectionProps = {
+  title: string;
   enabled: boolean;
   items: SatellitesSettings['items'];
   onToggleMaster: (enabled: boolean) => void;
@@ -20,6 +21,7 @@ type SatellitesSectionProps = {
 };
 
 function SatellitesSection({
+  title,
   enabled,
   items,
   onToggleMaster,
@@ -28,7 +30,7 @@ function SatellitesSection({
   const allEnabled = SATELLITE_CLASSES.every((cls) => items[cls].enabled);
   return (
     <CollapsibleSection
-      title="Satellites"
+      title={title}
       headerToggle={enabled}
       headerToggleIndeterminate={enabled && !allEnabled}
       onHeaderToggleChange={onToggleMaster}

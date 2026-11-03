@@ -40,7 +40,11 @@ export const cosmicWebDensityLayer = defineLayer({
   passes: (runtime) => [cosmicWebDensityPass(runtime), cosmicWebDensityUpsamplePass(runtime)],
   assets: cosmicWebDensityAssetRows,
   ui: [
-    { slot: 'main', content: CosmicWebDensitySectionContainer },
+    {
+      slot: 'main',
+      content: CosmicWebDensitySectionContainer,
+      title: 'Cosmic web density',
+    },
     { slot: 'debug', content: CosmicWebDensityTuningSectionContainer },
   ],
 });

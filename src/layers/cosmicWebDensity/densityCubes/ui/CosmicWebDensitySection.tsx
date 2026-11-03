@@ -13,6 +13,7 @@ import CollapsibleSection from '../../../../components/SettingsPanel/Collapsible
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 
 export type CosmicWebDensitySectionProps = {
+  title: string;
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
   items: CosmicWebDensitySettings['items'];
@@ -20,17 +21,14 @@ export type CosmicWebDensitySectionProps = {
 };
 
 function CosmicWebDensitySection({
+  title,
   enabled,
   onEnabledChange,
   items,
   onRowEnabledChange,
 }: CosmicWebDensitySectionProps) {
   return (
-    <CollapsibleSection
-      title="Cosmic web density"
-      headerToggle={enabled}
-      onHeaderToggleChange={onEnabledChange}
-    >
+    <CollapsibleSection title={title} headerToggle={enabled} onHeaderToggleChange={onEnabledChange}>
       {COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => (
         <div className={styles.panelRow} key={entry.id}>
           <label htmlFor={`toggle-cosmic-web-density-${entry.id}`}>{entry.label}</label>

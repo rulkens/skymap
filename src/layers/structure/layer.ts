@@ -55,7 +55,7 @@ export const structureLayer = defineLayer({
   }),
   selection: (runtime) => [structureSelectionRow(runtime.store)],
   ui: [
-    { slot: 'main', content: StructuresSectionContainer },
+    { slot: 'main', content: StructuresSectionContainer, title: 'Structures' },
     {
       slot: 'detailCard',
       content: {

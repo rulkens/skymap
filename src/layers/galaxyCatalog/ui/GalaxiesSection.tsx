@@ -39,6 +39,7 @@ const TOGGLEABLE_SOURCES: readonly GalaxyCatalogSourceType[] = [
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 type GalaxiesSectionProps = {
+  title: string;
   /** Bitmask of currently-visible galaxy catalog sources. */
   sourceMask: number;
   /** Called when the user toggles a single catalog on or off. */
@@ -87,6 +88,7 @@ type GalaxiesSectionProps = {
  * slider, depth-fade toggle, and density-correction controls.
  */
 function GalaxiesSection({
+  title,
   sourceMask,
   onToggleSource,
   sourceCounts,
@@ -129,7 +131,7 @@ function GalaxiesSection({
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <CollapsibleSection
-      title="Galaxies"
+      title={title}
       headerToggle={galaxiesMaster.allOn}
       headerToggleIndeterminate={galaxiesMaster.indeterminate}
       onHeaderToggleChange={galaxiesMaster.onToggle}
