@@ -16,6 +16,7 @@ const items = (debris: boolean) => ({
   other: { enabled: true },
 });
 const props = (over: Partial<Parameters<typeof SatellitesSection>[0]> = {}) => ({
+  title: 'Satellites',
   enabled: true,
   items: items(true),
   onToggleMaster: vi.fn<(on: boolean) => void>(),

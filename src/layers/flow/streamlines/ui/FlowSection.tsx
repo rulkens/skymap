@@ -29,6 +29,7 @@ import FlowRow from './FlowRow';
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 export type FlowSectionProps = {
+  title: string;
   /** Current flow state: master enable + all look/motion knobs. */
   flow: FlowSettings;
   /** Called when the header master toggle flips the layer's enable gate. */
@@ -43,10 +44,10 @@ export type FlowSectionProps = {
  * Renders the Flow thematic group: a master enable on the section header and
  * `FlowRow` (mode switch + intensity slider) in the body.
  */
-function FlowSection({ flow, onEnabledChange, onFlowChange }: FlowSectionProps) {
+function FlowSection({ title, flow, onEnabledChange, onFlowChange }: FlowSectionProps) {
   return (
     <CollapsibleSection
-      title="Flow"
+      title={title}
       headerToggle={flow.enabled}
       onHeaderToggleChange={onEnabledChange}
     >

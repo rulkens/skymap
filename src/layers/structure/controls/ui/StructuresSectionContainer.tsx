@@ -16,8 +16,9 @@ import { selectStructureCounts } from '../../../../state/engine/selectors';
 import { setStructureItemEnabled } from '../../state/structures/slice';
 import { projectMarkerCategoryVisibility } from './projectMarkerCategoryVisibility';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
+import type { LayerMainSectionProps } from '../../../../@types/engine/layer/LayerMainSectionProps';
 
-function StructuresSectionContainer(): React.ReactElement {
+function StructuresSectionContainer({ title }: LayerMainSectionProps): React.ReactElement {
   const dispatch = useAppDispatch();
 
   const structureCounts = useAppSelector(selectStructureCounts);
@@ -39,6 +40,7 @@ function StructuresSectionContainer(): React.ReactElement {
 
   return (
     <StructuresSection
+      title={title}
       markerCategoryVisibility={markerCategoryVisibility}
       onSetMarkerCategoryVisibility={onSetMarkerCategoryVisibility}
       structureCounts={structureCounts}

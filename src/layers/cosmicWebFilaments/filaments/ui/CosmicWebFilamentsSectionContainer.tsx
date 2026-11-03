@@ -17,8 +17,9 @@ import {
   setCosmicWebFilamentsEnabled,
   setCosmicWebFilamentsIntensity,
 } from '../../state/cosmicWebFilaments/slice';
+import type { LayerMainSectionProps } from '../../../../@types/engine/layer/LayerMainSectionProps';
 
-function CosmicWebFilamentsSectionContainer(): React.ReactElement {
+function CosmicWebFilamentsSectionContainer({ title }: LayerMainSectionProps): React.ReactElement {
   const dispatch = useAppDispatch();
   const enabled = useAppSelector(selectCosmicWebFilamentsEnabled);
   const intensity = useAppSelector(selectCosmicWebFilamentsIntensity);
@@ -35,6 +36,7 @@ function CosmicWebFilamentsSectionContainer(): React.ReactElement {
 
   return (
     <CosmicWebFilamentsSection
+      title={title}
       enabled={enabled}
       onEnabledChange={onEnabledChange}
       intensity={intensity}
