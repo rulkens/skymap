@@ -175,7 +175,8 @@ export function parseDomeMessage(text: string): { v: number; message: DomeMessag
 | `domeOlder` | "Dome needs a reload" | "The dome runs an older Skymap than this remote. Reload the dome's page, then scan its new code." | none: the phone cannot reload the dome |
 | `domeNewer` | "Remote needs a reload" | "This remote runs an older Skymap than the dome. Reload this page." | Reload page |
 
-  The deck is `inert` and dimmed in both, as it is when the dome is lost. A dome reload makes a new room code
+  The deck is `inert` and dimmed in both, as it is when the dome is lost; a phone that meets the other version
+  on its first contact has no status yet, so it shows the notice with no deck under it. A dome reload makes a new room code
   (backlogged), which the `domeOlder` notice says plainly. A dome message of the phone's own version that fails
   validation is a bug, not skew, and still drops.
 
