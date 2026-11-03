@@ -24,7 +24,7 @@ that the `input` slice (`src/state/input/inputSlice.ts`)
 collapses per frame and `replayInput` (`src/services/engine/camera/replayInput.ts`)
 replays through one path — the surface controller in a body arm, the world-arm
 fold otherwise. `gestureEnd` is the single commit site: it bakes the register,
-drops the surface latch, and clears `dragging`. Nothing downstream can tell a
+and drops the surface latch. Nothing downstream can tell a
 synthesized step from a real one. Both features therefore live in the
 aggregator, with `nowMs` passed into `drain()`. No change to the controller,
 the drivers, the fold, or the authored/displayed two-box.

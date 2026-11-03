@@ -83,7 +83,7 @@ export function missionPose(
   // ease into it below departs from what the visitor saw, so the reset does not snap.
   const viewChanged = prev !== null && (frame.stop !== prev.stop || frame.cruise !== prev.cruise);
   let offsets: MissionOffsets = viewChanged ? NO_MISSION_OFFSETS : kept;
-  const dragged = ctx.state.camera.dragging;
+  const dragged = ctx.state.input.owner !== null;
   const touched = dragged || ctx.followDistanceTarget !== null;
   if (dragged) {
     // The drag rung stepped last frame's pose; its view and distance ARE the new offsets, re-posed
