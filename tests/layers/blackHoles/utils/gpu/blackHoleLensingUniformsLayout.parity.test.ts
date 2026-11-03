@@ -28,7 +28,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(here, '../../..');
+const repoRoot = resolve(here, '../../../../..');
 const weslPath = resolve(repoRoot, 'src/services/gpu/shaders/lib/blackHoleLensing.wesl');
 
 /** std140 alignment + size for the types BlackHoleLensingUniforms uses.

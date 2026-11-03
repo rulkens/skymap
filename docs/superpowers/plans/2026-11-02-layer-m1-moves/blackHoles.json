@@ -30,5 +30,9 @@
   {
     "from": "src/utils/palette/focusShotUrl.ts",
     "to": "src/layers/blackHoles/utils/palette/focusShotUrl.ts"
+  },
+  {
+    "from": "tests/utils/gpu/blackHoleLensingUniformsLayout.parity.test.ts",
+    "to": "tests/layers/blackHoles/utils/gpu/blackHoleLensingUniformsLayout.parity.test.ts"
   }
 ]

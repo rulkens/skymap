@@ -180,7 +180,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-lens',
     text: 'For 512 rays that pass a non-rotating black hole at different distances, the app computes the deflection of each and keeps them in a lookup table. Near Sagittarius A* the sky around the camera is drawn into the six faces of a cube map. A pixel whose ray falls in is black; any other looks its deflection up and samples the cube in the bent direction. The glowing disc is ray-marched in 48 steps.',
-    source: `${REPO_BLOB}/src/utils/lensing/buildSchwarzschildDeflectionLut.ts`,
+    source: `${REPO_BLOB}/src/layers/blackHoles/utils/lensing/buildSchwarzschildDeflectionLut.ts`,
     sourceLabel: `the table of bent light, ${IN_REPO}`,
     checked: CHECKED,
   },
