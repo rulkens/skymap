@@ -2,7 +2,7 @@
 
 import { voyagerMissions } from '../../../src/layers/missions/exhibits/voyagerMissions';
 import { missionTimelineKind } from '../../../src/layers/missions/exhibits/timeline/missionTimelineKind';
-import type { MissionTimeline } from '../../../src/@types/exhibits/MissionTimeline';
+import type { MissionTimeline } from '../../../src/layers/missions/timeline/@types/MissionTimeline';
 
 export function voyagerTimeline(): MissionTimeline {
   const section = voyagerMissions.body.find((s) => s.kind === missionTimelineKind);
