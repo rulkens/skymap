@@ -296,12 +296,12 @@ export const REMOTE_SHEETS: readonly { readonly id: RemoteSheetId; readonly labe
 // Search, Tours, Exhibits, Clips, Time, Labels, Setup
 ```
 
-- [ ] Add the glyph rows from Appendix A (rows 8 onward). `stop` is the mockup's `exit`; `redLight` is its `moon`.
-- [ ] Write the four files.
-- [ ] No test: tables the compiler checks, and the tile order is a static literal the diff shows (`testing.md`,
+- [x] Add the glyph rows from Appendix A (rows 8 onward). `stop` is the mockup's `exit`; `redLight` is its `moon`.
+- [x] Write the four files.
+- [x] No test: tables the compiler checks, and the tile order is a static literal the diff shows (`testing.md`,
       no registry restatements).
-- [ ] `npm run typecheck:fast`.
-- [ ] Commit: "Remote deck: glyph rows, the sheet table and the per-kind show table."
+- [x] `npm run typecheck:fast`.
+- [x] Commit: "Remote deck: glyph rows, the sheet table and the per-kind show table."
 
 ### Task 6: The bottom sheet and the tile library
 
