@@ -42,14 +42,12 @@ const NOT_YET_REGROUPED: ReadonlySet<string> = new Set([
   'cosmicHorizon',
   'cosmicWebDensity',
   'earthScenes',
-  'flow',
   'galaxyCatalog',
   'lightTime',
   'milkyWay',
   'missions',
   'satellites',
   'starCatalog',
-  'zoneOfAvoidance',
 ]);
 
 function directories(dir: string): string[] {

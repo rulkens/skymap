@@ -55,12 +55,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   {
     heading: 'Flow tuning',
     shows: 'The flow ribbons: how many, the length of their trails, speed, and how they are spread.',
-    file: 'src/layers/flow/ui/FlowTuningSection.tsx',
+    file: 'src/layers/flow/streamlines/ui/FlowTuningSection.tsx',
   },
   {
     heading: 'Zone of Avoidance tuning',
     shows: 'The strength, falloff, edge and two colours of the band.',
-    file: 'src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSection.tsx',
+    file: 'src/layers/zoneOfAvoidance/shell/ui/ZoneOfAvoidanceTuningSection.tsx',
   },
   {
     heading: 'Local Bubble tuning',

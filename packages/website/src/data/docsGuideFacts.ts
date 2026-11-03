@@ -375,7 +375,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'real-seconds',
     about: 'app',
     text: 'The flow ribbons and the camera in a tour move in real seconds. The clock’s speed does not change them, and pausing the clock does not stop them.',
-    source: `${REPO_BLOB}/src/layers/flow/render/flowFieldRenderer.ts`,
+    source: `${REPO_BLOB}/src/layers/flow/streamlines/render/flowFieldRenderer.ts`,
     sourceLabel: `how the flow ribbons advance, ${IN_REPO}`,
     checked: CHECKED,
   },
