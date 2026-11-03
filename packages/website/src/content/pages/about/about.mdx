@@ -1,6 +1,6 @@
 ---
-title: 'About Skymap: who makes it and which pictures you may reuse'
-description: Skymap is made by one person, Alexander Rulkens, and is open source. Who he is, how to get in touch, press pictures, and a colophon.
+title: 'About Skymap'
+description: Skymap is made by one person, Alexander Rulkens, and is open source. Who he is, how to get in touch, a press kit, and a colophon.
 ---
 
 import AboutHero from '../../../components/pages/about/AboutHero/AboutHero.tsx';
@@ -14,7 +14,7 @@ import MakerPortrait from '../../../components/pages/about/MakerPortrait/MakerPo
 import Note from '../../../components/shared/text/Note/Note.tsx';
 import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
-import PressPictures from '../../../components/pages/about/PressPictures/PressPictures.tsx';
+import PressKit from '../../../components/pages/about/PressKit/PressKit.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
@@ -88,11 +88,11 @@ import { COLOPHON, factIds, licence, makerProfile, whatIs } from './about.data';
 </Section>
 
 <Section id="press">
-  <SectionHead title="Pictures and their terms" narrow>
-    <p>{fact('about-picture-licence').text} {fact('about-picture-reuse').text} Each picture below lists what is in it and the credit to print. Its <a href={sitePath('/docs/guide/sharing/')}>address</a> opens the same view in the app, where you can take your own; the same terms follow that picture.</p>
+  <SectionHead title="Press kit" narrow>
+    <p>The logo and the app icon, seven pictures, a portrait, a short film and a fact sheet, in one zip file. Its credits.txt names what is in each picture and the full credit to print; every credit opens with ours.</p>
   </SectionHead>
-  <PressPictures />
-  <Note>{fact('gaia-licence').text}{' '}<a href={fact('gaia-licence').source}>{fact('gaia-licence').sourceLabel}</a>. Pictures that show Earth close up or a photograph of a galaxy are not offered here, because their imagery has terms we cannot pass on in one line. The <a href={sitePath('/docs/credits/')}>credits page</a> has every source.</Note>
+  <PressKit label="Download the press kit" creditLabel="Credit to print" copyLabel="Copy the credit" />
+  <Note>{fact('about-picture-reuse').text} {fact('gaia-licence').text}{' '}<a href={fact('gaia-licence').source}>{fact('gaia-licence').sourceLabel}</a>. The <a href={sitePath('/docs/credits/')}>credits page</a> has every source.</Note>
 </Section>
 
 <Section id="colophon">

@@ -11,6 +11,7 @@
 
 import { memo, useCallback } from 'react';
 import PillButton from '../common/PillButton/PillButton';
+import PlayCircleIcon from '../icons/PlayCircleIcon/PlayCircleIcon';
 import { useAppDispatch } from '../../store/hooks';
 import { startTour } from '../../state/tour/tourActions';
 
@@ -24,12 +25,8 @@ function TourDebugPillContainer({ hidden }: { hidden: boolean }): React.ReactEle
       aria-label="Start the grand tour (debug)"
       tooltip="Grand tour"
     >
-      {/* Play triangle in a ring — distinct from AutoRotateToggle's bare
-          triangle so the two pills read differently at a glance. */}
-      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
-        <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M6.5 5 L11 8 L6.5 11 Z" fill="currentColor" />
-      </svg>
+      {/* Ringed, so it reads apart from AutoRotateToggle's bare triangle. */}
+      <PlayCircleIcon size={14} />
     </PillButton>
   );
 }

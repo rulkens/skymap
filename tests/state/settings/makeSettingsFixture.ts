@@ -82,9 +82,9 @@ import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverla
 import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
 import type { StarCatalogId } from '../../../src/layers/starCatalog/@types/StarCatalogId';
-import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
+import type { StarCatalogItemSettings } from '../../../src/layers/starCatalog/@types/StarCatalogItemSettings';
 import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
-import type { BodyItemSettings } from '../../../src/@types/settings/BodyItemSettings';
+import type { BodyItemSettings } from '../../../src/layers/body/@types/BodyItemSettings';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../src/@types/settings/StructureItemSettings';
 

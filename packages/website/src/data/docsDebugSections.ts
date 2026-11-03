@@ -82,25 +82,25 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     heading: 'Star catalog tuning',
     shows:
       'How far away stars are still drawn one by one (Detail), how wide the glow of a distant region spreads, the exposure at the near, middle and far camera distances, and a cap on how bright a glow may be. A picker sets the size of the pool of star chunks held in memory; a size the device cannot hold is refused and the reason is shown under it.',
-    file: 'src/layers/starCatalog/ui/StarCatalogTuningSection.tsx',
+    file: 'src/layers/starCatalog/controls/ui/StarCatalogTuningSection.tsx',
   },
   {
     heading: 'Surface Tiles',
     shows:
       'Near Earth or Mars: how many ground tiles are held and at what depth. Ten buttons fly to test sites, from Søndermarken and Everest to the four Mars rover sites, and two switches flatten the terrain or drop the tiles’ skirts.',
-    file: 'src/layers/body/ui/SurfaceTileAtlasSection.tsx',
+    file: 'src/layers/body/surfaceTiles/debug/ui/SurfaceTileAtlasSection.tsx',
   },
   {
     heading: 'Terrain pick marker',
     shows:
       'The size of the marker drawn where the pointer meets the ground, and the height of the terrain under it.',
-    file: 'src/layers/body/ui/TerrainPickMarkerTuningSection.tsx',
+    file: 'src/layers/body/terrainPick/ui/TerrainPickMarkerTuningSection.tsx',
   },
   {
     heading: 'Earth tuning',
     shows:
       'Three sliders for Earth: how bright its atmosphere is drawn, how much light the night side keeps, and how wide the Sun’s glint on the oceans is.',
-    file: 'src/layers/body/ui/EarthTuningSectionContainer.tsx',
+    file: 'src/layers/body/earth/ui/EarthTuningSectionContainer.tsx',
   },
   {
     heading: 'Debug Overlays',

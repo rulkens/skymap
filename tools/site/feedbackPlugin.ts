@@ -12,12 +12,13 @@ import { join, resolve } from 'node:path';
 import type { Plugin } from 'vite';
 
 import type { FeedbackNote } from './@types/FeedbackNote';
+import { SITE_NOTES_ROOT } from './SITE_NOTES_ROOT';
 import { feedbackIndexLine } from './utils/feedbackIndexLine';
 import { feedbackNoteStem } from './utils/feedbackNoteStem';
 import { isFeedbackNote } from './utils/isFeedbackNote';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
-const FEEDBACK_DIR = join(REPO_ROOT, '.superpowers/sdd/2026-10-05-companion-website/feedback');
+const FEEDBACK_DIR = join(REPO_ROOT, SITE_NOTES_ROOT, 'feedback');
 const MAX_BODY_BYTES = 1_000_000;
 
 const INDEX_HEADER = [

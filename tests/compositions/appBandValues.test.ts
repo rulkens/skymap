@@ -13,7 +13,7 @@ import { CONST_J2000 } from '../../src/data/time/constJ2000';
 import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';
 import { STAR_CATALOG_IDS } from '../../src/data/starCatalog/starCatalogIds';
 import { SEEDED_STAR_CATALOGS } from '../../src/data/bodies/seededStarCatalogs';
-import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/data/starBackdropDissolve';
+import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/seededStars/data/starBackdropDissolve';
 import { FAMOUS_STAR_ENTRY } from '../../src/layers/starCatalog/sources/famous-star';
 import { SUN_ENTRY } from '../../src/layers/starCatalog/sources/sun';
 import { S_STAR_ENTRY } from '../../src/layers/starCatalog/sources/s-star';

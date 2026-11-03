@@ -431,7 +431,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'ref-settings-earth',
     about: 'app',
     text: 'The three sliders under Earth change Earth alone. The other planets and the moons keep fixed values for the same three things.',
-    source: `${REPO_BLOB}/src/@types/settings/EarthSettings.d.ts`,
+    source: `${REPO_BLOB}/src/layers/body/@types/EarthSettings.d.ts`,
     sourceLabel: `Earth’s settings, ${IN_REPO}`,
     checked: CHECKED,
   },

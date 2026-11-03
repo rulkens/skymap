@@ -172,7 +172,7 @@ button.toggle {
   }
 }
 
-@media (max-width: 400px) {
+@media (--small-phone) {
   .root {
     gap: min(var(--site-space-xs), 3vw);
   }

@@ -22,9 +22,7 @@ import { warnIfWrongCheckout } from '../utils/browser/warnIfWrongCheckout';
 import { SHOT_ENCODING } from './shotEncoding';
 import { captureSiteShot } from './utils/captureSiteShot';
 import { makeSiteOgCard } from './utils/makeSiteOgCard';
-import { openSiteShot } from './utils/openSiteShot';
 import { parseSize } from './utils/parseSize';
-import { shootMatte } from './utils/shootMatte';
 import { shotFrame } from './utils/shotFrame';
 
 const MASTERS_DIR = 'data/shots/site';
@@ -54,18 +52,11 @@ if (tryLink !== undefined) {
   try {
     const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: DPR });
     const page = await context.newPage();
-    let master: Buffer;
-    if (settings.matte) {
-      await openSiteShot(page, base, shot);
-      const matte = await shootMatte(page, shot);
-      master = matte.master;
-      if (matte.shadow) {
-        await shotFrame(matte.shadow, settings.crop, DPR)
-          .png()
-          .toFile(file.replace(/\.png$/, '-shadow.png'));
-      }
-    } else {
-      master = await captureSiteShot(page, base, shot);
+    const { master, shadow } = await captureSiteShot(page, base, shot);
+    if (shadow) {
+      await shotFrame(shadow, settings.crop, DPR)
+        .png()
+        .toFile(file.replace(/\.png$/, '-shadow.png'));
     }
     await warnIfWrongCheckout(page);
     await shotFrame(master, settings.crop, DPR).png().toFile(file);
@@ -107,15 +98,9 @@ try {
       const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: dpr });
       try {
         const page = await context.newPage();
-        // A matte row is drawn twice (black, then white) by shootMatte; every other row is one capture.
-        if (shot.settings?.matte) {
-          await openSiteShot(page, base!, shot);
-          const { master: cutout, shadow } = await shootMatte(page, shot);
-          writeFileSync(master, cutout);
-          if (shadow) writeFileSync(shadowMaster, shadow);
-        } else {
-          writeFileSync(master, await captureSiteShot(page, base!, shot));
-        }
+        const { master: png, shadow } = await captureSiteShot(page, base!, shot);
+        writeFileSync(master, png);
+        if (shadow) writeFileSync(shadowMaster, shadow);
         if (warnCheckout) await warnIfWrongCheckout(page);
         warnCheckout = false;
       } catch (err) {

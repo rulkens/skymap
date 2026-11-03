@@ -1,13 +1,11 @@
 /*
- * Flight — the hero. A sticky full-height stage inside a tall track; scrolling
- * moves along the flight without a rest (useFlight) and never changes scroll
- * speed or direction. The stills are the flight at every width (Stops). On a
- * wide screen with a capable connection the film loads after first paint and
- * plays over them; the layout never depends on it, so a film that fails to
- * arrive moves nothing. The page decides the stage once, before first paint
- * (prePaintScript.ts); this island takes over from that state when it hydrates.
- * Without script the same list reads top to bottom as captioned pictures. The
- * words are the page's (home.mdx); the tagline comes as a slot for its line break.
+ * Flight — the hero. A sticky full-height stage inside a tall track; scrolling moves along the flight without a
+ * rest (useFlight) and never changes scroll speed or direction. The stills are the flight at every width (Stops).
+ * On a wide screen with a capable connection the film loads after first paint and plays over them; the layout never
+ * depends on it, so a film that fails to arrive moves nothing. The page decides the stage once, before first paint
+ * (prePaintScript.ts); this island takes over from that state when it hydrates. Without script the same list reads
+ * top to bottom as captioned pictures. The words are the page's (home.mdx); the tagline comes as a slot for its
+ * line break.
  */
 import { createRef, useCallback, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';

@@ -49,7 +49,6 @@
   flex: none;
   width: min(100%, (100dvh - var(--bar)) * var(--shape), var(--file));
   max-width: none;
-  height: auto;
   margin: auto;
   cursor: auto;
 }

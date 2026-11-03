@@ -9,7 +9,7 @@ import Citation from '../../../components/shared/text/Citation/Citation.tsx';
 import Claims from '../../../components/shared/text/Claims/Claims.tsx';
 import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
 import Credits from '../../../components/shared/text/Credits/Credits.tsx';
-import FramePair from '../../../components/pages/science/FramePair/FramePair.tsx';
+import FrameCompare from '../../../components/pages/science/FrameCompare/FrameCompare.tsx';
 import FullFigure from '../../../components/pages/science/FullFigure/FullFigure.tsx';
 import Group from '../../../components/shared/layout/Group/Group.tsx';
 import MarginSpine from '../../../components/pages/science/MarginSpine/MarginSpine.tsx';
@@ -71,7 +71,7 @@ import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.
 
   <Group title="Derived" big>
     <p slot="lede">Computed from measurements by a method we can name.</p>
-    <FramePair start="science-web-points" end="science-web-density" sizes={narrowSizes('100vw', '36rem')} />
+    <FrameCompare start="science-web-points" startLabel="Points" end="science-web-density" endLabel="Density field" sizes={narrowSizes('100vw', '72rem')} />
     <Claims items={DERIVED.slice(0, 6)} />
     {/* The traced filaments run down the claims about the large-scale structure, in the DESI fan's margin. */}
     <MarginSpine id="science-filaments-spine">
