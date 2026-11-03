@@ -43,8 +43,8 @@ import type { OctreeNodeTable } from '../../../../../src/@types/octree/OctreeNod
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { SkstCatalog } from '../../../../../src/@types/data/starCatalog/SkstCatalog';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import { starOctreeFromSkst } from '../../../../../src/utils/star/starOctreeFromSkst';
-import type { StarColumns } from '../../../../../src/@types/data/starCatalog/StarColumns';
+import { starOctreeFromSkst } from '../../../../../src/layers/starCatalog/utils/star/starOctreeFromSkst';
+import type { StarColumns } from '../../../../../src/layers/starCatalog/@types/StarColumns';
 import { STAR_COLUMN_SCHEMA } from '../../../../../src/data/octree/starOctreeFamily';
 
 const ROOT = 6;

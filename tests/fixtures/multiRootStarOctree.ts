@@ -10,7 +10,7 @@
  *   chunk row 1  level 1 [0,2)³  a star at (0.5,0.5,0.5) pc, under index row 1 (ordinal 5)
  */
 import type { OctreeChunk } from '../../src/@types/octree/OctreeChunk';
-import type { StarColumns } from '../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../src/layers/starCatalog/@types/StarColumns';
 import type { Octree } from '../../src/@types/octree/Octree';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import {

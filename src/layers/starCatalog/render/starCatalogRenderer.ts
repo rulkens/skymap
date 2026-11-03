@@ -22,7 +22,7 @@ import type { OctreeChunkHost } from '../../../@types/octree/OctreeChunkHost';
 import type { OctreePoolLayout } from '../../../@types/octree/OctreePoolLayout';
 import { recordOrdinal } from '../../../utils/octree/recordOrdinal';
 import { poolRecordIndex } from '../../../utils/octree/poolRecordIndex';
-import { GPU_RECORD_WORDS, packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
+import { GPU_RECORD_WORDS, packStarGpuRecords } from '../utils/star/packStarGpuRecords';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
@@ -40,7 +40,7 @@ import {
 } from './starCatalogLayout';
 import { createOctreeCutGpu } from '../../../services/gpu/octree/octreeCutGpu';
 import { WORD_BYTES } from '../../../services/gpu/octree/octreeCutLayout';
-import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../@types/StarColumns';
 
 const GPU_RECORD_BYTES = GPU_RECORD_WORDS * WORD_BYTES;
 

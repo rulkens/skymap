@@ -82,10 +82,10 @@ import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates'
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { seededStarsHandedZero } from '../present/seededStarsHandedZero';
-import { starExposureRamp } from '../../../utils/star/starExposureRamp';
+import { starExposureRamp } from '../utils/star/starExposureRamp';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
-import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../data/famousStarPickRadiusPx';
+import { FAMOUS_STAR_PICK_RADIUS_PX } from '../data/famousStarPickRadiusPx';
 import { regionOfBody } from '../../../utils/regions/regionOfBody';
 import { projectToScreenPx } from '../../../utils/camera/projectToScreenPx';
 import { focusAlphaMultiplier } from '../../../utils/structure/focusAlphaMultiplier';

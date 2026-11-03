@@ -7,7 +7,7 @@
  * has nothing to fetch, so the guard below excludes it.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
+import type { StarCatalogReq } from '../@types/StarCatalogReq';
 import type { Octree } from '../../../@types/octree/Octree';
 import { STAR_CATALOG_SOURCE_RECORD } from '../sources/starCatalogSourceRecord';
 import {
@@ -16,11 +16,11 @@ import {
 } from '../../../data/starCatalog/starCatalogFormat';
 import { octreeIndexPath } from '../../../utils/octree/octreeIndexPath';
 import { decodeOctreeIndex } from '../../../data/octree/decodeOctreeIndex';
-import { starOctreeFromSkst } from '../../../utils/star/starOctreeFromSkst';
+import { starOctreeFromSkst } from '../utils/star/starOctreeFromSkst';
 import { octreeFromIndex } from '../../../utils/octree/octreeFromIndex';
-import { starColumnsOf } from '../../../utils/star/starColumnsOf';
+import { starColumnsOf } from '../utils/star/starColumnsOf';
 import { dataUrl, fetchWithProgress } from '../../../services/loading/fetchWithProgress';
-import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../@types/StarColumns';
 
 export const starCatalogFetcher: Fetcher<Octree<StarColumns>, StarCatalogReq> = async (
   req,

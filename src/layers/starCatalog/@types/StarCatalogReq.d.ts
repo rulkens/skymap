@@ -1,5 +1,5 @@
-import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
-import type { Tier } from '../data/Tier';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
+import type { Tier } from '../../../@types/data/Tier';
 
 /**
  * Request shape for `starCatalogFetcher`: which star-catalog source, and at

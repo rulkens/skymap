@@ -6,10 +6,10 @@
 import { STAR_CATALOG_SOURCE_RECORD } from '../sources/starCatalogSourceRecord';
 import { installOctreePool } from '../../../services/octree/installOctreePool';
 import { octreeChunkPath } from '../../../utils/octree/octreeChunkPath';
-import { starColumnsOf } from '../../../utils/star/starColumnsOf';
+import { starColumnsOf } from '../utils/star/starColumnsOf';
 import type { StarCatalogSourceType } from '../@types/StarCatalogSourceType';
 import type { Tier } from '../../../@types/data/Tier';
-import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../@types/StarColumns';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
 

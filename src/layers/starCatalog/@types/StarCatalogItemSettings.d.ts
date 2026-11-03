@@ -20,7 +20,7 @@
  * has, for no gain over a seeded-but-unread boolean.
  */
 
-import type { DataItemSettings } from './DataItemSettings';
+import type { DataItemSettings } from '../../../@types/settings/DataItemSettings';
 
 export type StarCatalogItemSettings = DataItemSettings & {
   /** Whether this star catalog's text labels are shown (famous-star names, a future catalog). */

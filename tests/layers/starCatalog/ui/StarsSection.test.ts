@@ -27,7 +27,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import StarsSection from '../../../../src/layers/starCatalog/ui/StarsSection';
 import type { StarCatalogId } from '../../../../src/layers/starCatalog/@types/StarCatalogId';
-import type { StarCatalogItemSettings } from '../../../../src/@types/settings/StarCatalogItemSettings';
+import type { StarCatalogItemSettings } from '../../../../src/layers/starCatalog/@types/StarCatalogItemSettings';
 
 function items(gaiaEnabled: boolean): Record<StarCatalogId, StarCatalogItemSettings> {
   return {

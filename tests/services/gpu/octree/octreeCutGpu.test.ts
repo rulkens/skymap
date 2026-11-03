@@ -8,7 +8,7 @@ import { createOctreeCutGpu } from '../../../../src/services/gpu/octree/octreeCu
 import { FADE_STEP_FLOAT_INDEX } from '../../../../src/services/gpu/octree/octreeCutLayout';
 import { NODE_FADE_MAX_DT_MS, NODE_FADE_MS } from '../../../../src/data/octree/octreeNodeFade';
 import { Source } from '../../../../src/data/source';
-import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
+import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/utils/star/starOctreeFromSkst';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 
 const CATALOG = starOctreeFromSkst({

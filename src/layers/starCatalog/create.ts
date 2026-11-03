@@ -28,7 +28,7 @@ import type { OctreePoolHost } from '../../@types/octree/OctreePoolHost';
 import { createStarCatalogSlot } from './load/starCatalogSlot';
 import { createFamousStarsMetaSlot } from './load/famousStarsMetaSlot';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
-import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from './@types/StarColumns';
 
 export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntime {
   // `star-<id>` splits seeded from survey on the all-digits test

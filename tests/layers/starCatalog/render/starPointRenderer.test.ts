@@ -14,7 +14,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createStarPointRenderer } from '../../../../src/layers/starCatalog/render/starPointRenderer';
-import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
+import type { PositionedStar } from '../../../../src/layers/starCatalog/@types/PositionedStar';
 import { Source } from '../../../../src/data/source';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 

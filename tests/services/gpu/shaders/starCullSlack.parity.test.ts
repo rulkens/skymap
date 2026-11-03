@@ -18,7 +18,7 @@ import {
   STAR_SIZE_REF_PX,
   STAR_GLOW_MIN_PX,
   STAR_PICK_MIN_RADIUS_PX,
-} from '../../../../src/data/starCullSlack';
+} from '../../../../src/layers/starCatalog/data/starCullSlack';
 
 describe('starPhotometry.wesl / starCatalog/vertex.wesl ↔ starCullSlack.ts parity', () => {
   const photometryText = readFileSync(

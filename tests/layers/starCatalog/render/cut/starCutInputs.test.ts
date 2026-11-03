@@ -8,18 +8,18 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { starCutInputs } from '../../../../../src/layers/starCatalog/render/cut/starCutInputs';
 import { FLOATS_PER_VIEW } from '../../../../../src/services/gpu/octree/octreeCutLayout';
-import { STAR_PICK_MIN_RADIUS_PX } from '../../../../../src/data/starCullSlack';
+import { STAR_PICK_MIN_RADIUS_PX } from '../../../../../src/layers/starCatalog/data/starCullSlack';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
-import { starCrossfadeOpacity } from '../../../../../src/utils/star/starCrossfadeOpacity';
+import { starCrossfadeOpacity } from '../../../../../src/layers/starCatalog/utils/star/starCrossfadeOpacity';
 import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { StarCatalogSettings } from '../../../../../src/@types/settings/StarCatalogSettings';
+import type { StarCatalogSettings } from '../../../../../src/layers/starCatalog/@types/StarCatalogSettings';
 import type { Octree } from '../../../../../src/@types/octree/Octree';
 import type { Tier } from '../../../../../src/@types/data/Tier';
-import type { StarColumns } from '../../../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../../../src/layers/starCatalog/@types/StarColumns';
 
 // Distinct per tier so a test can tell which tier's budget the cut read.
 vi.mock('../../../../../src/layers/starCatalog/sources/gaia-stars', async (importOriginal) => {

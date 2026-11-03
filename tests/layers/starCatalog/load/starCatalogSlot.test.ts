@@ -13,7 +13,7 @@ import type { OctreeChunkStream } from '../../../../src/@types/octree/OctreeChun
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogRenderer } from '../../../../src/layers/starCatalog/@types/StarCatalogRenderer';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../../src/layers/starCatalog/@types/StarColumns';
 
 const fetchSpy = vi.hoisted(() => vi.fn(async () => ({ recordCount: 0, nodes: { count: 0 } })));
 vi.mock('../../../../src/layers/starCatalog/load/starCatalogFetcher', () => ({

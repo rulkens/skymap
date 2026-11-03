@@ -1,5 +1,5 @@
-import type { SurveyStarCatalogSourceEntry } from '../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
-import type { StarCatalogId } from '../../layers/starCatalog/@types/StarCatalogId';
+import type { SurveyStarCatalogSourceEntry } from '../../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import { starCrossfadeOpacity } from './starCrossfadeOpacity';
 
 /**

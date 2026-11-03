@@ -18,12 +18,12 @@ import type { OctreeCutSpec } from '../../@types/octree/OctreeCutSpec';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 import { NODE_FADE_MS } from '../../data/octree/octreeNodeFade';
-import { STAR_PLAN_INTERVAL_FRAMES } from '../../data/starPlanIntervalFrames';
+import { STAR_PLAN_INTERVAL_FRAMES } from './data/starPlanIntervalFrames';
 import { starCutInputs } from './render/cut/starCutInputs';
 import { sameOctreeCut } from '../../utils/octree/sameOctreeCut';
 import { resizeStarPools } from './load/resizeStarPools';
 import { planOctreeChunks } from '../../utils/octree/planOctreeChunks';
-import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from './@types/StarColumns';
 
 export function starCatalogPlanner(
   runtime: StarCatalogRuntime,

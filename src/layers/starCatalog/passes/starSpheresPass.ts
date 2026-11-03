@@ -66,7 +66,7 @@ import { sceneBodyPresentation } from '../../../services/engine/frame/sceneBodyP
 import { positionedSeededStars } from '../present/positionedSeededStars';
 import { SEEDED_STAR_REFS } from '../present/seededStarRefs';
 import { seededStarsHandedZero } from '../present/seededStarsHandedZero';
-import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
+import { drawFlooredSpherePick } from '../render/drawFlooredSpherePick';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 
 export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass<'starCatalog'> {

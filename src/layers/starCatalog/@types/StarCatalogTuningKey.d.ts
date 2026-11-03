@@ -1,4 +1,4 @@
-import type { StarCatalogSettings } from '../../../@types/settings/StarCatalogSettings';
+import type { StarCatalogSettings } from './StarCatalogSettings';
 
 /** The star-catalog settings leaves the Debug panel's tuning board edits as sliders. */
 export type StarCatalogTuningKey = keyof Pick<

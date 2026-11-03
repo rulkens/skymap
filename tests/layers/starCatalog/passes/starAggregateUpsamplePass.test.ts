@@ -17,9 +17,9 @@ import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Octree } from '../../../../src/@types/octree/Octree';
-import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
+import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/utils/star/starOctreeFromSkst';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../../src/layers/starCatalog/@types/StarColumns';
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;

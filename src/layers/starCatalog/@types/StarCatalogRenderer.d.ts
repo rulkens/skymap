@@ -12,7 +12,7 @@ import type { StarCatalogPickResources } from './StarCatalogPickResources';
 import type { StarCutInputs } from './StarCutInputs';
 import type { StarCatalogCutDrawArgs } from './StarCatalogCutDrawArgs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
-import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from './StarColumns';
 
 export type StarCatalogRenderer = Renderer & {
   /**

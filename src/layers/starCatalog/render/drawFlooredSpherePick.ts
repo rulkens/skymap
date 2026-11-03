@@ -69,7 +69,7 @@ import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { camPosLocal } from '../../../utils/camera/camPosLocal';
 import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { minPickRadiusMpc } from './minPickRadiusMpc';
+import { minPickRadiusMpc } from '../../../services/engine/helpers/minPickRadiusMpc';
 
 export function drawFlooredSpherePick(
   pickRenderer: BodyPickRenderer,

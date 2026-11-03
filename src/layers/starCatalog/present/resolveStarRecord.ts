@@ -14,7 +14,7 @@ import type { OctreeResidency } from '../../../@types/octree/OctreeResidency';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
 import { OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
 import { octreeNodeOriginRelCamMpc } from '../../../utils/octree/octreeNodeOriginRelCamMpc';
-import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../@types/StarColumns';
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];

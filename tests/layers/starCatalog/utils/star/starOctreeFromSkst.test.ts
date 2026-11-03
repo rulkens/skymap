@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { starOctreeFromSkst } from '../../../src/utils/star/starOctreeFromSkst';
-import { buildStarOctree } from '../../../tools/stars/buildStarOctree';
-import type { OctreeLeafStar } from '../../../tools/stars/buildStarOctree';
+import { starOctreeFromSkst } from '../../../../../src/layers/starCatalog/utils/star/starOctreeFromSkst';
+import { buildStarOctree } from '../../../../../tools/stars/buildStarOctree';
+import type { OctreeLeafStar } from '../../../../../tools/stars/buildStarOctree';
 import {
   lutIndexToAbsMag,
   packStarRecord,
   unpackStarRecord,
   RECORD_BYTES,
-} from '../../../src/data/starCatalog/starCatalogFormat';
+} from '../../../../../src/data/starCatalog/starCatalogFormat';
 
 describe('starOctreeFromSkst', () => {
   it('a v1 aggregate becomes a node whose blob is its record and whose own count is zero', () => {

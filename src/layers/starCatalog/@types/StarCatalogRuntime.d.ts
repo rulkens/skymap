@@ -6,7 +6,7 @@
 import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
+import type { StarCatalogReq } from './StarCatalogReq';
 import type { FamousStarsPayload } from './FamousStarsPayload';
 import type { StarCatalogRenderer } from './StarCatalogRenderer';
 import type { StarCatalogPickRenderer } from './StarCatalogPickRenderer';
@@ -16,7 +16,7 @@ import type { StarAggregateUpsample } from './StarAggregateUpsample';
 import type { StarCatalogFacts } from './StarCatalogFacts';
 import type { OctreeChunkStream } from '../../../@types/octree/OctreeChunkStream';
 import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
-import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from './StarColumns';
 
 export type StarCatalogRuntime = {
   /** One slot per survey source. */

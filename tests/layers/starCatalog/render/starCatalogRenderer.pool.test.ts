@@ -21,7 +21,7 @@ import { Source } from '../../../../src/data/source';
 import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
 import type { Octree } from '../../../../src/@types/octree/Octree';
 import type { OctreeChunk } from '../../../../src/@types/octree/OctreeChunk';
-import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../../src/layers/starCatalog/@types/StarColumns';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/starOctreeFamily';
 

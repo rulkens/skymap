@@ -21,12 +21,12 @@ import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { STAR_RESOLVE_PX } from '../../../data/bodies/starResolvePx';
 import { starTintFromBpRp } from '../../../utils/color/starTintFromBpRp';
-import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
-import { nearestResolvableStar } from '../../../services/engine/helpers/nearestResolvableStar';
+import { drawFlooredSpherePick } from '../render/drawFlooredSpherePick';
+import { nearestResolvableStar } from '../render/nearestResolvableStar';
 import { STAR_CATALOG_SOURCE_RECORD } from '../sources/starCatalogSourceRecord';
 import { octreeResidency } from '../../../services/octree/octreeResidency';
 import type { StarCatalogSourceType } from '../@types/StarCatalogSourceType';
-import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../@types/StarColumns';
 
 /** The star this layer currently draws a sphere for — the presence memory. */
 type PresentStar = { ordinal: number; positionMpc: Vec3; bpRp: number };

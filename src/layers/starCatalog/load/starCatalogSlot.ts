@@ -11,10 +11,10 @@ import { installStarPool } from './installStarPool';
 import { STAR_CATALOG_SOURCE_RECORD } from '../sources/starCatalogSourceRecord';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Octree } from '../../../@types/octree/Octree';
-import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
+import type { StarCatalogReq } from '../@types/StarCatalogReq';
 import type { StarCatalogSourceType } from '../@types/StarCatalogSourceType';
 import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
-import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../@types/StarColumns';
 
 export function createStarCatalogSlot(
   source: StarCatalogSourceType,

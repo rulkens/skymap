@@ -15,7 +15,7 @@ import { Source } from '../../../../src/data/source';
 import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
 import type { Octree } from '../../../../src/@types/octree/Octree';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
-import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../../src/layers/starCatalog/@types/StarColumns';
 
 // The cut's own GPU resources are not under test; stub it to always have a list.
 vi.mock('../../../../src/services/gpu/octree/octreeCutGpu', () => ({

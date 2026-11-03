@@ -1,4 +1,4 @@
-import { fadeBand } from '../math/fadeBand';
+import { fadeBand } from '../../../../utils/math/fadeBand';
 
 /**
  * Full (1) inside `crossfadePc.inner`, gone (0) past `crossfadePc.outer`. This

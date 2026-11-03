@@ -17,7 +17,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../src/data/famousStarPickRadiusPx';
+import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../src/layers/starCatalog/data/famousStarPickRadiusPx';
 
 describe('starPointPick.wesl ↔ famousStarPickRadiusPx.ts parity', () => {
   it('the shader footprint matches the TS mirror the pick layer measures against', () => {

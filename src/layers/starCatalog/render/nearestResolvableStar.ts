@@ -10,7 +10,7 @@
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreeResidency } from '../../../@types/octree/OctreeResidency';
-import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../@types/StarColumns';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
 import { NO_CHUNK_REF, OCTANTS, OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../../data/scaleUnits';

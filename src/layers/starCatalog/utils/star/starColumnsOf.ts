@@ -1,6 +1,6 @@
-import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
-import type { ColumnId } from '../../@types/octree/ColumnId';
-import type { OctreeColumn } from '../../@types/octree/OctreeColumn';
+import type { StarColumns } from '../../@types/StarColumns';
+import type { ColumnId } from '../../../../@types/octree/ColumnId';
+import type { OctreeColumn } from '../../../../@types/octree/OctreeColumn';
 
 /** The star family's three required columns, narrowed to the stores `STAR_COLUMN_SCHEMA` declares. */
 export function starColumnsOf(

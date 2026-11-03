@@ -9,13 +9,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { createOctreeChunkStream } from '../../../src/services/octree/octreeChunkStream';
 import { NO_CHUNK_REF } from '../../../src/data/octree/octreeFormat';
 import { octreeChunkPath } from '../../../src/utils/octree/octreeChunkPath';
-import { starColumnsOf } from '../../../src/utils/star/starColumnsOf';
+import { starColumnsOf } from '../../../src/layers/starCatalog/utils/star/starColumnsOf';
 import { encodeOctreeObject } from '../../../tools/octree/encodeOctreeObject';
 import type { Octree } from '../../../src/@types/octree/Octree';
 import type { OctreeChunkRef } from '../../../src/@types/octree/OctreeChunkRef';
 import type { ColumnId } from '../../../src/@types/octree/ColumnId';
 import type { OctreeRawColumn } from '../../../tools/@types/octree/OctreeRawColumn';
-import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../src/layers/starCatalog/@types/StarColumns';
 import { STAR_COLUMN_SCHEMA } from '../../../src/data/octree/starOctreeFamily';
 
 /** Chunks 0–2 are rooted in the index; 3 in chunk 0's row, 4 in chunk 3's. Two records each. */

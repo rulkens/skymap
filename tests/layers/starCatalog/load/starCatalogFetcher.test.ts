@@ -31,7 +31,7 @@ import {
   packStarRecord,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { fetchWithProgress } from '../../../../src/services/loading/fetchWithProgress';
-import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
+import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/utils/star/starOctreeFromSkst';
 import { Source } from '../../../../src/data/source';
 import { encodeOctreeObject } from '../../../../tools/octree/encodeOctreeObject';
 import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';

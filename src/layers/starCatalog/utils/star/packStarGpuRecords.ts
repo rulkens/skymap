@@ -3,8 +3,8 @@
  * the photometry re-quantised to the frozen LUT indices (the columns hold bin centres,
  * so nothing is lost). w0 = x | y << 16; w1 = z | absMagIdx << 16 | colorIdx << 23.
  */
-import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
-import { absMagToLutIndex, bpRpToColorIdx } from '../../data/starCatalog/starCatalogFormat';
+import type { StarColumns } from '../../@types/StarColumns';
+import { absMagToLutIndex, bpRpToColorIdx } from '../../../../data/starCatalog/starCatalogFormat';
 
 export const GPU_RECORD_WORDS = 2;
 export const GPU_ABSMAG_SHIFT = 16;

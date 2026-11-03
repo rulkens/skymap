@@ -13,14 +13,14 @@ import {
   GPU_COLOR_SHIFT,
   GPU_RECORD_WORDS,
   packStarGpuRecords,
-} from '../../../src/utils/star/packStarGpuRecords';
+} from '../../../../../src/layers/starCatalog/utils/star/packStarGpuRecords';
 import {
   colorIdxToBpRp,
   lutIndexToAbsMag,
   STAR_ABSMAG_LEVELS,
   STAR_COLORIDX_LEVELS,
-} from '../../../src/data/starCatalog/starCatalogFormat';
-import { OFFSET_FRACTION_LEVELS } from '../../../src/data/octree/octreeFormat';
+} from '../../../../../src/data/starCatalog/starCatalogFormat';
+import { OFFSET_FRACTION_LEVELS } from '../../../../../src/data/octree/octreeFormat';
 
 const vertex = readFileSync(
   join(process.cwd(), 'src/services/gpu/shaders/starCatalog/vertex.wesl'),

@@ -7,7 +7,7 @@ import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { StarSourceInBand } from '../../@types/StarSourceInBand';
 import { STAR_CATALOG_SOURCE_RECORD } from '../../sources/starCatalogSourceRecord';
-import { starSourceDrawOpacity } from '../../../../utils/star/starSourceDrawOpacity';
+import { starSourceDrawOpacity } from '../../utils/star/starSourceDrawOpacity';
 
 export function starSourcesInBand(
   runtime: Pick<StarCatalogRuntime, 'renderer'>,

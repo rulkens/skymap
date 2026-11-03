@@ -12,7 +12,7 @@ import type { OctreeChunk } from '../../../src/@types/octree/OctreeChunk';
 import type { OctreeNodeTable } from '../../../src/@types/octree/OctreeNodeTable';
 import type { Octree } from '../../../src/@types/octree/Octree';
 import type { OctreeCutSpec } from '../../../src/@types/octree/OctreeCutSpec';
-import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../src/layers/starCatalog/@types/StarColumns';
 
 // Rows (level, morton) ascending: A, B, C, E, D at level 4, then the root.
 const MORTONS = [0, 1, 2, 4, 7];

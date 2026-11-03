@@ -10,7 +10,7 @@ import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@
 import type { Octree } from '../../../../../src/@types/octree/Octree';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
-import type { StarColumns } from '../../../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../../../src/layers/starCatalog/@types/StarColumns';
 
 type Runtime = Pick<StarCatalogRuntime, 'renderer'>;
 

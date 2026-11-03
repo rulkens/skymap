@@ -19,9 +19,9 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { Source } from '../../../src/data/source';
 import { mat4d } from 'wgpu-matrix';
 import { makeSlab } from '../../fixtures/makeSlab';
-import { STAR_PLAN_INTERVAL_FRAMES } from '../../../src/data/starPlanIntervalFrames';
+import { STAR_PLAN_INTERVAL_FRAMES } from '../../../src/layers/starCatalog/data/starPlanIntervalFrames';
 import { EYE_SLACK_MPC, NODE_FADE_MS } from '../../../src/data/octree/octreeNodeFade';
-import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../src/layers/starCatalog/@types/StarColumns';
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;

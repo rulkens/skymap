@@ -20,7 +20,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { residencyOf } from '../../../fixtures/residencyOf';
 
 import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
-import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
+import { resolveStarRecord } from '../../../../src/layers/starCatalog/present/resolveStarRecord';
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
 import type { OctreeResidency } from '../../../../src/@types/octree/OctreeResidency';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../tools/stars/buildStarOctree';
@@ -29,7 +29,7 @@ import {
   decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import type { Octree } from '../../../../src/@types/octree/Octree';
-import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
+import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/utils/star/starOctreeFromSkst';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { STAR_RESOLVE_PX } from '../../../../src/data/bodies/starResolvePx';
@@ -42,7 +42,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../../src/layers/starCatalog/@types/StarColumns';
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;

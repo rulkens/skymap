@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { residencyOf } from '../../../fixtures/residencyOf';
-import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
+import { resolveStarRecord } from '../../../../src/layers/starCatalog/present/resolveStarRecord';
 import { buildStarOctree, STAR_LEAF_CAPACITY } from '../../../../tools/stars/buildStarOctree';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../tools/stars/buildStarOctree';
 import {
   encodeSkstCatalog,
   decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
-import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
+import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/utils/star/starOctreeFromSkst';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { hoistedStarOctree } from '../../../fixtures/hoistedStarOctree';
 import type { OctreeResidency } from '../../../../src/@types/octree/OctreeResidency';
-import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../../src/layers/starCatalog/@types/StarColumns';
 
 /** No chunk resident: a v1 catalog has none. */
 const NONE: OctreeResidency<StarColumns> = residencyOf();

@@ -46,7 +46,7 @@ import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSec
 import Slider from '../../../components/common/Slider/Slider';
 import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
 import type { StarCatalogId } from '../@types/StarCatalogId';
-import type { StarCatalogItemSettings } from '../../../@types/settings/StarCatalogItemSettings';
+import type { StarCatalogItemSettings } from '../@types/StarCatalogItemSettings';
 import type { SourceEntryBase } from '../../../@types/data/SourceEntryBase';
 
 // ── Props ──────────────────────────────────────────────────────────────────────

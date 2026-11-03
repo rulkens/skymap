@@ -4,19 +4,19 @@
  * its blob, already at `firstRecord`. The 10-bit in-box offsets widen to the 16-bit
  * fraction of the box. One SKST object is the whole catalog, so there are no chunks.
  */
-import type { SkstCatalog } from '../../@types/data/starCatalog/SkstCatalog';
-import type { Octree } from '../../@types/octree/Octree';
-import type { OctreeNodeTable } from '../../@types/octree/OctreeNodeTable';
-import { NO_CHUNK_REF, OCTANTS } from '../../data/octree/octreeFormat';
+import type { SkstCatalog } from '../../../../@types/data/starCatalog/SkstCatalog';
+import type { Octree } from '../../../../@types/octree/Octree';
+import type { OctreeNodeTable } from '../../../../@types/octree/OctreeNodeTable';
+import { NO_CHUNK_REF, OCTANTS } from '../../../../data/octree/octreeFormat';
 import {
   colorIdxToBpRp,
   lutIndexToAbsMag,
   RECORD_BYTES,
   unpackStarRecord,
-} from '../../data/starCatalog/starCatalogFormat';
-import { octreeIndex } from '../octree/octreeIndex';
-import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
-import { STAR_COLUMN_SCHEMA } from '../../data/octree/starOctreeFamily';
+} from '../../../../data/starCatalog/starCatalogFormat';
+import { octreeIndex } from '../../../../utils/octree/octreeIndex';
+import type { StarColumns } from '../../@types/StarColumns';
+import { STAR_COLUMN_SCHEMA } from '../../../../data/octree/starOctreeFamily';
 
 /** 10-bit v1 offset → 16-bit fraction of the box. */
 const OFFSET_WIDEN_SHIFT = 6;

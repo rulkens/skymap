@@ -1,6 +1,6 @@
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
-import type { StarCatalogSettings } from '../../../../@types/settings/StarCatalogSettings';
+import type { StarCatalogSettings } from '../../@types/StarCatalogSettings';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { StarCutInputs } from '../../@types/StarCutInputs';
@@ -10,11 +10,11 @@ import {
   STAR_GLOW_MIN_PX,
   STAR_PICK_MIN_RADIUS_PX,
   STAR_SIZE_REF_PX,
-} from '../../../../data/starCullSlack';
+} from '../../data/starCullSlack';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
-import { starExposureRamp } from '../../../../utils/star/starExposureRamp';
+import { starExposureRamp } from '../../utils/star/starExposureRamp';
 import { starSourcesInBand } from './starSourcesInBand';
 import { FLOATS_PER_VIEW } from '../../../../services/gpu/octree/octreeCutLayout';
 

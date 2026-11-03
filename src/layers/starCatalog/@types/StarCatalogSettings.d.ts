@@ -3,7 +3,7 @@
  * per-catalog `items`.
  */
 
-import type { StarCatalogId } from '../../layers/starCatalog/@types/StarCatalogId';
+import type { StarCatalogId } from './StarCatalogId';
 import type { StarCatalogItemSettings } from './StarCatalogItemSettings';
 
 export type StarCatalogSettings = {

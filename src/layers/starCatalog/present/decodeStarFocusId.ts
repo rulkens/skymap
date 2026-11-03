@@ -7,11 +7,11 @@
  * is what keeps a seed id from ever looking like a bin index.
  */
 
-import { STAR_FOCUS_PREFIX } from './starFocusId';
-import { Source } from '../../data/source';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../data/bodies/seededStarCatalogsBySource';
-import { seedIndexOfBody } from '../../utils/picking/seedIndexOfBody';
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
+import { STAR_FOCUS_PREFIX } from '../../../services/url/starFocusId';
+import { Source } from '../../../data/source';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarCatalogsBySource';
+import { seedIndexOfBody } from '../../../utils/picking/seedIndexOfBody';
+import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 
 export function decodeStarFocusId(
   id: string,
