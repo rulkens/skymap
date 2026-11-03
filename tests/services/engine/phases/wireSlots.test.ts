@@ -52,7 +52,7 @@ vi.mock('../../../../src/services/loading/fetchers/famousStarsMetaFetcher', () =
 // The structure-catalog slot fires `.load({})` at boot; mock its fetcher so
 // the test doesn't network.  An empty catalog is enough: only whether it
 // fetched is asserted here.
-vi.mock('../../../../src/layers/structure/load/structureCatalogFetcher', () => ({
+vi.mock('../../../../src/layers/structure/catalog/load/structureCatalogFetcher', () => ({
   structureCatalogFetcher: vi.fn(async () => ({
     catalog: {
       count: 0,

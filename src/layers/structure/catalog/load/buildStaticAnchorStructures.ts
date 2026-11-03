@@ -53,7 +53,7 @@ import type { StructureInfo } from '../../../../@types/data/structure/StructureI
 // validated at build time by `tools/parsers/parseStructureSeed.ts` (run via
 // `buildStructures.ts`), so this module trusts the cast and skips a runtime
 // re-validator.
-import structureSeedJson from '../../../../../data/seeds/structure_anchors.seed';
+import structureSeedJson from '../../../../../data/seeds/structure_anchors.seed.json';
 
 /**
  * Minimal shape we need from each seed entry — a strict subset of

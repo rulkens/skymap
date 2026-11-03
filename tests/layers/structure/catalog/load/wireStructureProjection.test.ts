@@ -19,7 +19,7 @@ import type { StructureInfo } from '../../../../../src/@types/data/structure/Str
 import type { StructureCatalogPayload } from '../../../../../src/layers/structure/catalog/@types/StructureCatalogPayload';
 import type { StructureFacts } from '../../../../../src/layers/structure/@types/StructureFacts';
 
-vi.mock('../../../../src/layers/structure/load/buildStaticAnchorStructures', () => ({
+vi.mock('../../../../../src/layers/structure/catalog/load/buildStaticAnchorStructures', () => ({
   buildStaticAnchorStructures: vi.fn((): StructureInfo[] =>
     ['galaxy-cluster-virgo', 'galaxy-cluster-fornax'].map(
       (id) =>
@@ -35,7 +35,7 @@ vi.mock('../../../../src/layers/structure/load/buildStaticAnchorStructures', () 
   ),
 }));
 
-vi.mock('../../../../src/layers/structure/load/structureCatalogFetcher', () => ({
+vi.mock('../../../../../src/layers/structure/catalog/load/structureCatalogFetcher', () => ({
   structureCatalogFetcher: vi.fn(),
 }));
 

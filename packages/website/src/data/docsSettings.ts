@@ -6,7 +6,7 @@ const SWITCH = 'On or off';
 const PANEL = 'src/components/SettingsPanel';
 const GALAXIES = 'src/layers/galaxyCatalog/ui/GalaxiesSection.tsx';
 const STARS = 'src/layers/starCatalog/ui/StarsSection.tsx';
-const STRUCTURES = 'src/layers/structure/ui/StructuresSection/StructuresSection.tsx';
+const STRUCTURES = 'src/layers/structure/controls/ui/StructuresSection/StructuresSection.tsx';
 const LABELS = `${PANEL}/LabelsAndGuidesSection.tsx`;
 const DISPLAY = `${PANEL}/DisplaySection.tsx`;
 

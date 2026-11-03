@@ -25,10 +25,10 @@ import type { StructureInfo } from '../../../../../src/@types/data/structure/Str
 // mechanism rather than by output stability alone. The `mock` prefix lets
 // vitest's hoisted factory reference the counter.
 const mockCardRenderProbe = { count: 0 };
-vi.mock('../../../../src/layers/structure/ui/StructureDetailCard/StructureDetailCard', async () => {
+vi.mock('../../../../../src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard', async () => {
   const actual = await vi.importActual<
     typeof import('../../../../../src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard')
-  >('../../../../src/layers/structure/ui/StructureDetailCard/StructureDetailCard');
+  >('../../../../../src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard');
   return {
     ...actual,
     default: (props: Parameters<typeof actual.default>[0]) => {
