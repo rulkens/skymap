@@ -2,8 +2,8 @@
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { CommonServerOptions, Connect, Plugin, PreviewServer, ViteDevServer } from 'vite';
-import { attachRemoteRelay, REMOTE_PATH_PREFIX } from './attachRemoteRelay.ts';
-import { listRemoteOrigins } from './listRemoteOrigins.ts';
+import { attachRemoteRelay, REMOTE_PATH_PREFIX } from '../remote/attachRemoteRelay.ts';
+import { listRemoteOrigins } from '../remote/listRemoteOrigins.ts';
 
 function wire(server: ViteDevServer | PreviewServer, options: CommonServerOptions): void {
   const http = server.httpServer as Server | null;

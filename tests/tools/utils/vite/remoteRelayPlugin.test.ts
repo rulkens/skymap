@@ -3,8 +3,8 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
-import { attachRemoteRelay } from '../../../../tools/utils/vite/attachRemoteRelay';
-import { listRemoteOrigins } from '../../../../tools/utils/vite/listRemoteOrigins';
+import { attachRemoteRelay } from '../../../../tools/utils/remote/attachRemoteRelay';
+import { listRemoteOrigins } from '../../../../tools/utils/remote/listRemoteOrigins';
 
 const servers: Server[] = [];
 const sockets: WebSocket[] = [];
