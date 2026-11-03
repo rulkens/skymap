@@ -23,7 +23,7 @@ import { buildStaticAnchorStructures } from '../../../src/layers/structure/catal
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../src/layers/blackHoles/sources/blackHoleSourceRows';
 import { encodeBlackHoleFocusId } from '../../../src/layers/blackHoles/markers/present/encodeBlackHoleFocusId';
 import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
-import { decodeStarFocusId } from '../../../src/layers/starCatalog/present/decodeStarFocusId';
+import { decodeStarFocusId } from '../../../src/layers/starCatalog/selection/utils/decodeStarFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { STAR_FOCUS_PREFIX } from '../../../src/services/url/starFocusId';
 import { isRegistryBodyId } from '../../../src/utils/scene/isRegistryBodyId';

@@ -54,8 +54,8 @@ import type {
 } from '../../support/selectionResolverOver';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { Octree } from '../../../src/@types/octree/Octree';
-import { starOctreeFromSkst } from '../../../src/layers/starCatalog/utils/star/starOctreeFromSkst';
-import type { StarColumns } from '../../../src/layers/starCatalog/@types/StarColumns';
+import { starOctreeFromSkst } from '../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
+import type { StarColumns } from '../../../src/layers/starCatalog/survey/@types/StarColumns';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));

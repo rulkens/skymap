@@ -14,9 +14,9 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { createLabel2DDirector } from '../../../../src/services/engine/subsystems/label2DDirector';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
-import { produceStarCaptions } from '../../../../src/layers/starCatalog/present/produceStarCaptions';
+import { produceStarCaptions } from '../../../../src/layers/starCatalog/captions/present/produceStarCaptions';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { STAR_MAP_CAPTION_BAND } from '../../../../src/layers/starCatalog/data/starMapCaptionBand';
+import { STAR_MAP_CAPTION_BAND } from '../../../../src/layers/starCatalog/captions/data/starMapCaptionBand';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
