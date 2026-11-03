@@ -8,7 +8,7 @@ import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { create } from './create';
 import { destroy } from './destroy';
 import { stellarStreamsPlanner } from './frame';
-import { stellarStreamsPass } from './passes/stellarStreamsPass';
+import { stellarStreamsPass } from './streaks/passes/stellarStreamsPass';
 
 export const stellarStreamsLayer = defineLayer({
   name: 'stellarStreams',

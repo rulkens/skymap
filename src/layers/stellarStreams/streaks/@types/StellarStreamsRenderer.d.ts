@@ -1,5 +1,5 @@
-import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { StellarStreamsLook } from './StellarStreamsLook';
 
 export type StellarStreamsRenderer = {

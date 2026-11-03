@@ -8,7 +8,7 @@ import type { StellarStreamsRuntime } from './@types/StellarStreamsRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { dataUrl } from '../../services/loading/fetchWithProgress';
-import { createStellarStreamsRenderer } from './render/stellarStreamsRenderer';
+import { createStellarStreamsRenderer } from './streaks/render/stellarStreamsRenderer';
 
 export function create(deps: LayerCoreDeps): StellarStreamsRuntime {
   const renderer = createStellarStreamsRenderer(deps.ctx.device, HDR_TARGET_FORMAT);

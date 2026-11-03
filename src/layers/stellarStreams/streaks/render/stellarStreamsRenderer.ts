@@ -8,10 +8,10 @@
 
 import type { StellarStreamsRenderer } from '../@types/StellarStreamsRenderer';
 
-import streamsCode from '../../../services/gpu/shaders/stellarStreams/streams.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
-import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
-import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
+import streamsCode from '../../../../services/gpu/shaders/stellarStreams/streams.wesl?static';
+import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
+import { writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
 
 const UNIFORMS_BYTES = 128;
 const RECORD_F32 = 10;

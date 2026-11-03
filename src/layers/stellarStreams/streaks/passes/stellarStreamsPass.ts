@@ -4,10 +4,10 @@
  * so halo streams in front of the disc are not darkened by it.
  */
 
-import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { StellarStreamsRuntime } from '../@types/StellarStreamsRuntime';
-import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
-import { narrowMat4 } from '../../../utils/math/narrowMat4';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { StellarStreamsRuntime } from '../../@types/StellarStreamsRuntime';
+import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { STELLAR_STREAMS_LOOKS } from '../data/stellarStreamsLooks';
 
 export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass {
