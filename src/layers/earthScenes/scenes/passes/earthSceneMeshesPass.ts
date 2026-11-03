@@ -4,8 +4,8 @@
  * stays claimed by the `body` selection kind.
  */
 
-import { meshBodiesPassOver } from '../../../services/engine/frame/meshBodiesPassOver';
-import { EARTH_SCENE_BODY_IDS } from '../../../data/bodies/earthSceneBodyIds';
+import { meshBodiesPassOver } from '../../../../services/engine/frame/meshBodiesPassOver';
+import { EARTH_SCENE_BODY_IDS } from '../data/earthSceneBodyIds';
 
 export const earthSceneMeshesPass = meshBodiesPassOver(
   'earth-scene-meshes',

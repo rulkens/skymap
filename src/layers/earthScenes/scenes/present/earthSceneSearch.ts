@@ -3,10 +3,10 @@
  * chipped 'Earth'. Static, so it yields once; its id is the `body-<id>` the `earthScene` kind claims.
  */
 
-import { EARTH_SCENES_BODY_ROWS } from '../bodies/earthScenesBodyRows';
-import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
-import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
-import type { LayerSearchEntry } from '../../../@types/engine/layer/LayerSearchEntry';
+import { EARTH_SCENES_BODY_ROWS } from '../../bodies/earthScenesBodyRows';
+import { isMeshBody } from '../../../../utils/meshBodies/isMeshBody';
+import { BODY_FOCUS_PREFIX } from '../../../../services/url/bodyFocusId';
+import type { LayerSearchEntry } from '../../../../@types/engine/layer/LayerSearchEntry';
 
 export async function* earthSceneSearch(): AsyncIterable<readonly LayerSearchEntry[]> {
   yield EARTH_SCENES_BODY_ROWS.map((row) => row.body)

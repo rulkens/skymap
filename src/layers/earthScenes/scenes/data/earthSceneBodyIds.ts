@@ -1,5 +1,5 @@
-import { EARTH_SCENES_BODY_ROWS } from '../../layers/earthScenes/bodies/earthScenesBodyRows';
-import { isMeshBody } from '../../utils/meshBodies/isMeshBody';
+import { EARTH_SCENES_BODY_ROWS } from '../../bodies/earthScenesBodyRows';
+import { isMeshBody } from '../../../../utils/meshBodies/isMeshBody';
 
 /**
  * The mesh bodies of the earthScenes Layer: its draw roster, and the ids its `earthScene`
