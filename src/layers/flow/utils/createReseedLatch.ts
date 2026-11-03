@@ -21,7 +21,7 @@
  * at compare time — it's encoded only when the render path runs (D4).
  */
 
-import type { ReseedLatch } from '../@types/rendering/ReseedLatch';
+import type { ReseedLatch } from '../@types/ReseedLatch';
 
 export function createReseedLatch(): ReseedLatch {
   let armed = false;

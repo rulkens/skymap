@@ -32,10 +32,10 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { Vec2 } from '../math/Vec2';
-import type { ScalarCube } from '../data/volume/ScalarCube';
-import type { FlowSettings } from '../settings/FlowSettings';
-import type { ClaimTimestampWrites } from '../gpu/timing/ClaimTimestampWrites';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
+import type { FlowSettings } from '../../../@types/settings/FlowSettings';
+import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 
 export type FlowFieldRenderer = {
   /**

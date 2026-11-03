@@ -9,7 +9,7 @@
  * the lower clamp defends against a non-monotonic clock.
  */
 
-import { MAX_FRAME_DELTA_SEC } from '../data/flow/flowFieldConstants';
+import { MAX_FRAME_DELTA_SEC } from '../data/flowFieldConstants';
 
 export function flowFrameDeltaSec(nowMs: number, lastNowMs: number | null): number {
   if (lastNowMs === null) return 0;

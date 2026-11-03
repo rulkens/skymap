@@ -26,9 +26,9 @@
  * list covers exactly the *numeric* leaves of `DEFAULT_FLOW`, so a new numeric
  * knob can't silently skip the panels.
  */
-import type { FlowSettings } from '../../@types/settings/FlowSettings';
-import type { FlowSliderKey } from '../../@types/data/flow/FlowSliderKey';
-import type { FlowSliderField } from '../../@types/data/flow/FlowSliderField';
+import type { FlowSettings } from '../../../@types/settings/FlowSettings';
+import type { FlowSliderKey } from '../@types/FlowSliderKey';
+import type { FlowSliderField } from '../@types/FlowSliderField';
 import { MAX_PARTICLES } from './flowFieldConstants';
 
 export const FLOW_SLIDER_FIELDS: readonly FlowSliderField[] = [

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createReseedLatch } from '../../src/utils/createReseedLatch';
+import { createReseedLatch } from '../../../../src/layers/flow/utils/createReseedLatch';
 
 describe('createReseedLatch', () => {
   it('consume returns true once after arm, then false', () => {

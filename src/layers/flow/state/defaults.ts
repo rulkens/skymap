@@ -4,7 +4,7 @@
  * carries the asset, not the look, so retune them here.
  */
 
-import { MAX_PARTICLES } from '../../../data/flow/flowFieldConstants';
+import { MAX_PARTICLES } from '../data/flowFieldConstants';
 import type { FlowSettings } from '../../../@types/settings/FlowSettings';
 
 /**

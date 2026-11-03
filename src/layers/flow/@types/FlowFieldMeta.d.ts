@@ -20,8 +20,8 @@
  * decoded cube — no second fetch, no `boxMpcPerH`.
  */
 
-import type { Vec3 } from '../../math/Vec3';
-import type { ScalarFieldFrameKind } from '../volume/ScalarFieldFrameKind';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { ScalarFieldFrameKind } from '../../../@types/data/volume/ScalarFieldFrameKind';
 
 export type FlowFieldMeta = {
   /** Cube edge length in voxels; the cube is N³ (`dims[0]`). */

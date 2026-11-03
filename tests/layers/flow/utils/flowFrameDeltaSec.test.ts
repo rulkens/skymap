@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { flowFrameDeltaSec } from '../../src/utils/flowFrameDeltaSec';
-import { MAX_FRAME_DELTA_SEC } from '../../src/data/flow/flowFieldConstants';
+import { flowFrameDeltaSec } from '../../../../src/layers/flow/utils/flowFrameDeltaSec';
+import { MAX_FRAME_DELTA_SEC } from '../../../../src/layers/flow/data/flowFieldConstants';
 
 describe('flowFrameDeltaSec', () => {
   it('returns elapsed seconds for a normal frame gap', () => {
