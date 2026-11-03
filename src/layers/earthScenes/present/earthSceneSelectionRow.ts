@@ -9,7 +9,7 @@ import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import { isSceneBodyId } from '../../../utils/scene/isSceneBodyId';
-import { EARTH_SCENE_BODY_IDS } from '../../../data/bodies/earthSceneBodyIds';
+import { EARTH_SCENE_BODY_IDS } from '../data/earthSceneBodyIds';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';

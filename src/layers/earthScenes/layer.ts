@@ -11,7 +11,7 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { earthSceneMeshesPass } from './passes/earthSceneMeshesPass';
 import { glintsPassOver } from '../../services/engine/frame/glintsPassOver';
-import { EARTH_SCENE_BODY_IDS } from '../../data/bodies/earthSceneBodyIds';
+import { EARTH_SCENE_BODY_IDS } from './data/earthSceneBodyIds';
 import { earthSceneSelectionRow } from './present/earthSceneSelectionRow';
 import { earthSceneSearch } from './present/earthSceneSearch';
 import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
