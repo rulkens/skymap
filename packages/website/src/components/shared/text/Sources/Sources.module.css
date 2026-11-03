@@ -1,6 +1,6 @@
 .root {
   composes: small from '../../../../styles/type.module.css';
-  padding-block: 1rem;
+  padding-block: var(--site-space-s);
   border-top: 1px solid var(--border-divider);
   color: var(--site-text-dim);
 }
@@ -16,12 +16,12 @@
 
 .root ol {
   max-width: 62rem;
-  margin: 0.5rem 0 1rem;
-  padding-left: 1.5rem;
+  margin: var(--site-space-2xs) 0 var(--site-space-s);
+  padding-left: var(--site-space-m);
 }
 
 .root li {
-  padding-block: 0.25rem;
+  padding-block: var(--site-space-3xs);
 }
 
 /* When we last looked is a footnote to the footnote: the site's dimmest text. */

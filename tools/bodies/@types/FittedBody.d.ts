@@ -7,4 +7,7 @@ export type FittedBody = {
   id: string;
   fitStep: number;
   outside: 'hold' | 'off';
+  /** Fit a ΔM phase series before the Cartesian channel — needed where a fixed conic drifts
+   *  far along-track (moons, small bodies); the planets' conics don't. */
+  fitMeanAnomaly: boolean;
 };

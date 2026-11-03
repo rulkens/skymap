@@ -15,7 +15,7 @@ import type { ReactNode } from 'react';
 import DocBody from '../../components/docs/DocBody/DocBody.tsx';
 import ObjLink from '../../components/shared/links/ObjLink/ObjLink.tsx';
 import Sources from '../../components/shared/text/Sources/Sources.tsx';
-import type { DocsPlace } from '../../@types/DocsPlace.ts';
+import type { DocsPlace } from '../../@types/DocsPlace';
 import { landingLabel } from '../../utils/landingLabel.ts';
 import { sitePath } from '../../utils/sitePath.ts';
 import { tocSections } from '../../utils/tocSections.ts';

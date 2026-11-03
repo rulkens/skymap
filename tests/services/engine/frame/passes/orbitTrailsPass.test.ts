@@ -248,13 +248,18 @@ function makeRendererSpy() {
 }
 
 // The default roster is core's group at fade 1; `groups` swaps in groups with their own fades,
-// `impostorOn` drives the debug overlay.
+// `impostorOn` drives the debug overlay, `selection` the selected/focused refs.
 function makeState(
   orbitTrailRenderer: unknown,
-  opts: { impostorOn?: boolean; groups?: EngineState['orbitTrailGroups'] } = {},
+  opts: {
+    impostorOn?: boolean;
+    groups?: EngineState['orbitTrailGroups'];
+    selection?: Partial<EngineState['selection']>;
+  } = {},
 ): EngineState {
   return {
     gpu: { orbitTrailRenderer },
+    selection: { select: null, focus: null, ...opts.selection },
     settings: {
       debug: {
         overlays: { 'orbit-trail-impostor': opts.impostorOn ?? false },
@@ -513,6 +518,35 @@ describe('orbitTrailsPass.draw', () => {
     expect(staging[17]).toBeCloseTo(0.5);
     expect(staging[INSTANCE_FLOATS + 17]).toBeCloseTo(0.25);
   });
+
+  it.each([
+    ['nothing selected', {}, 1],
+    ['the row selected', { select: { type: 'body', id: 'venus' } }, 2],
+    ['the row focused', { focus: { type: 'body', id: 'venus' } }, 2],
+    ['another body selected', { select: { type: 'body', id: 'mercury' } }, 1],
+  ] as const)(
+    'draws a selectedOnly row only while it is selected or focused (%s)',
+    (_, selection, expected) => {
+      const mercury = BODY_TRAIL_ELEMENTS.find((e) => e.id === 'mercury')!;
+      const venus = BODY_TRAIL_ELEMENTS.find((e) => e.id === 'venus')!;
+      const groups = [
+        {
+          show: 'orbitTrails' as const,
+          rows: [mercury, venus],
+          selectedOnly: [venus.id],
+          fade: () => 1,
+        },
+      ];
+      const renderer = makeRendererSpy();
+      orbitTrailsPass.draw(
+        PASS_STUB,
+        makeNear0View(),
+        makeDrawCtx(),
+        makeState(renderer, { groups, selection: selection as Partial<EngineState['selection']> }),
+      );
+      expect(renderer.draw.mock.calls[0]![1].count).toBe(expected);
+    },
+  );
 
   it('rides a moon trail centre on its propagated parent, not the J2000 centre', () => {
     composeMock.mockClear();

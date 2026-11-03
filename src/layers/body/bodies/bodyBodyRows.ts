@@ -1,5 +1,5 @@
 /**
- * bodyBodyRows — the planet and moon rows, each carrying identity, orbit and rotation.
+ * bodyBodyRows — the planet, moon and small-body rows, each carrying identity, orbit and rotation.
  * Orbits: JPL SSD approx_pos.html Table 1 (planets), sats/elem (moons); JPL's `L`/`ϖ` columns
  * are converted inline (`ω = ϖ − Ω`, `M = L − ϖ`, likewise the rates) so every transcription
  * stays checkable against the source. Rotation (Archinal et al. 2018): Ẇ is live everywhere;
@@ -41,6 +41,9 @@ import { PUCK } from './puck';
 import { TRITON } from './triton';
 import { PROTEUS } from './proteus';
 import { NEREID } from './nereid';
+import { VESTA } from './vesta';
+import { CERES } from './ceres';
+import { BENNU } from './bennu';
 
 export const BODY_BODY_ROWS: readonly LayerBody[] = [
   EARTH,
@@ -76,4 +79,7 @@ export const BODY_BODY_ROWS: readonly LayerBody[] = [
   TRITON,
   PROTEUS,
   NEREID,
+  VESTA,
+  CERES,
+  BENNU,
 ];

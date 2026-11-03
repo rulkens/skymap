@@ -11,6 +11,7 @@ import ring from '../../../../styles/ring.module.css';
 type IconProps = { name: IconName };
 
 function Icon({ name }: IconProps) {
+  const paths = ICONS[name];
   return (
     <svg
       className={ring.glyph}
@@ -19,7 +20,9 @@ function Icon({ name }: IconProps) {
       aria-hidden="true"
       focusable="false"
     >
-      <path d={ICONS[name]} />
+      {(typeof paths === 'string' ? [paths] : paths).map((d) => (
+        <path key={d} d={d} />
+      ))}
     </svg>
   );
 }

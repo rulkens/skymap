@@ -10,7 +10,11 @@ const CONNECT_TIMEOUT_MS = 20_000;
  * reads "Connected". It opens in the dome's own context at the row's size, so
  * the phone and the dome that pairs with it share a relay and a clock.
  */
-export async function shootPairedRemote(dome: Page, base: string, shot: SiteShot): Promise<Buffer> {
+export async function shootPairedRemote(
+  dome: Page,
+  base: string,
+  shot: Pick<SiteShot, 'size' | 'settings'>,
+): Promise<Buffer> {
   const code = await dome.evaluate(
     () => (window as unknown as SkymapWindow).__skymap!.getState().remote.code,
   );

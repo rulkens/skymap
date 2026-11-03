@@ -72,6 +72,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     sourceLabel: 'NASA Jovian satellite fact sheet',
     checked: CHECKED,
     short: 'At 6 hours per second Io, the innermost of the four large moons, laps Jupiter in about 7 seconds.',
+    figure: { value: '1.77', measure: 'days for Io to go round Jupiter' },
   },
   {
     id: 'search-scope',
@@ -116,5 +117,14 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     sourceLabel: `the cards’ explanations, ${IN_REPO}`,
     checked: CHECKED,
     short: 'Underlined words on a card explain themselves when pointed at.',
+  },
+  {
+    // (384,400 − 6,371 − 1,737) km of gap over Earth's 12,742 km is 29.5; centre to centre over a diameter is 30.2.
+    id: 'earth-moon-in-earths',
+    text: 'The Moon is on average 384,400 km from Earth, and Earth is 12,742 km across, so about 30 Earths would fit in the gap between them.',
+    short: 'About 30. The Moon is on average 384,400 km away, and Earth is 12,742 km across.',
+    source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html',
+    sourceLabel: 'NASA Moon fact sheet',
+    checked: '2026-10-30',
   },
 ];

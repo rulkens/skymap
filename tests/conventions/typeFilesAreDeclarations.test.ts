@@ -30,7 +30,11 @@ function typesDirsUnder(root: string): string[] {
   return out;
 }
 
-const TYPES_DIRS = [...typesDirsUnder('src'), ...typesDirsUnder('tools')];
+const TYPES_DIRS = [
+  ...typesDirsUnder('src'),
+  ...typesDirsUnder('tools'),
+  ...typesDirsUnder('packages/website/src'),
+];
 const files = TYPES_DIRS.flatMap((dir) => walkFiles(dir, ['.ts']));
 expect(files.length).toBeGreaterThan(0);
 
