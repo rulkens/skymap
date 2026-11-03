@@ -45,7 +45,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'surface-controls',
     about: 'app',
-    text: 'When the camera comes down to less than about half the body’s radius above the planet or moon it is focused on, the controls change. A drag that starts on the ground slides the ground under the pointer, a drag that starts on the sky looks around, and a drag with the right or the middle button tilts the view towards the horizon and turns it.',
+    text: 'When the camera comes down to less than about half the body’s radius above the planet or moon it is focused on, the controls change. A drag that starts on the ground slides the ground under the pointer, a drag that starts on the sky looks around, and a drag with the right or the middle button, or with two fingers on a touch screen, tilts the view towards the horizon and turns it.',
     source: `${REPO_BLOB}/src/utils/camera/latchSurfaceGesture.ts`,
     sourceLabel: `the controls near a surface, ${IN_REPO}`,
     checked: CHECKED,
@@ -125,9 +125,9 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'touch-gestures',
     about: 'app',
-    text: 'On a touch screen two fingers zoom and do nothing else. Sliding the view and tilting it near a surface need the right or the middle mouse button, so a touch screen has neither.',
-    source: `${REPO_BLOB}/src/data/input/controlBindings.ts`,
-    sourceLabel: `the pointer bindings, ${IN_REPO}`,
+    text: 'On a touch screen two fingers moving apart or together zoom. Near a surface, two fingers sliding the same way tilt the view towards the horizon and turn it; anywhere else they do nothing. Sliding the view sideways needs the right or the middle mouse button, so a touch screen cannot.',
+    source: `${REPO_BLOB}/src/utils/input/recognize.ts`,
+    sourceLabel: `the touch gestures, ${IN_REPO}`,
     checked: CHECKED,
   },
   {

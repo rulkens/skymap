@@ -709,6 +709,40 @@ describe('stepCameraRuntime — the openspace scheme', () => {
   });
 });
 
+describe('a two-finger tilt drag', () => {
+  // The recognizer's own shape: a one-finger press, then the second finger's
+  // lock ends it and opens the drag in ONE frame. `null` only lifts.
+  const dragged = (intent: 'tilt' | 'pan' | null, engage: boolean) => {
+    const h = makeCameraSimHarness({ focusBody: 'earth', bootHR: 2 });
+    h.frame(40);
+    if (engage) diveUntilEngaged(h, { body: 'earth' });
+    h.press('orbit', [50, 50]);
+    h.frame(1);
+    h.release();
+    if (intent !== null) h.press(intent, [50, 50]);
+    for (let i = 1; i <= 5; i += 1) {
+      h.moveTo([50 + i, 50 - 2 * i]);
+      h.frame(1);
+    }
+    h.release();
+    h.frame(1);
+    return h.store.getState().camera.base;
+  };
+
+  it('tilts and turns a body arm exactly as a right-drag does', () => {
+    const tilted = dragged('tilt', true);
+    expect(tilted.frame).toEqual({ body: 'earth' });
+    expect(tilted).not.toEqual(dragged(null, true));
+    expect(tilted).toEqual(dragged('pan', true));
+  });
+
+  it('moves nothing off a planet, where a right-drag would slide', () => {
+    expect(dragged('tilt', false).frame).toBe('absolute');
+    expect(dragged('pan', false)).not.toEqual(dragged(null, false));
+    expect(dragged('tilt', false)).toEqual(dragged(null, false));
+  });
+});
+
 describe('the lens shift', () => {
   it('a cover change renders until the shift settles', () => {
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });

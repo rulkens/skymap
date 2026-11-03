@@ -125,11 +125,14 @@ describe('recognize', () => {
       down(0, 0.4, 0.5, { id: 1, type: 'touch' }),
       down(1, 0.6, 0.5, { id: 2, type: 'touch' }),
     ];
+    const stacked = [
+      down(0, 0.5, 0.3, { id: 1, type: 'touch' }),
+      down(1, 0.5, 0.5, { id: 2, type: 'touch' }),
+    ];
     const horiz = run([...pair, move(2, 0.7, 0.5, { id: 2, type: 'touch' })]);
-    const vert = run([...pair, move(2, 0.6, 0.6, { id: 2, type: 'touch' })]);
+    const vert = run([...stacked, move(2, 0.5, 0.6, { id: 2, type: 'touch' })]);
     expect((horiz.at(-1) as Extract<Gesture, { kind: 'pinch' }>).ratio).toBeCloseTo(40 / 60, 12);
-    const pinch = vert.at(-1) as Extract<Gesture, { kind: 'pinch' }>;
-    expect(pinch.ratio).toBeCloseTo(40 / Math.hypot(40, 10), 12);
+    expect((vert.at(-1) as Extract<Gesture, { kind: 'pinch' }>).ratio).toBeCloseTo(20 / 30, 12);
   });
 
   it('lifting one of two pinch fingers leaves the survivor inert until it lifts, then heldEnd', () => {
@@ -153,6 +156,65 @@ describe('recognize', () => {
       up(3, 0.4, 0.5, { id: 1, ...t }),
     ]);
     expect(kinds(g)).not.toContain('tap');
+  });
+
+  describe('two fingers moving together', () => {
+    const t = { type: 'touch' as const };
+    // Span 40 px on the 200 × 100 surface. Contacts report one at a time, as a
+    // browser delivers them, each step 3 px further up than the last.
+    const pair = [down(0, 0.4, 0.5, { id: 1, ...t }), down(1, 0.6, 0.5, { id: 2, ...t })];
+    const together = (steps: number): DeviceEvent[] =>
+      Array.from({ length: steps }, (_, i) => {
+        const y = 0.5 - 0.03 * (i + 1);
+        return [
+          move(10 + 2 * i, 0.4, y, { id: 1, ...t }),
+          move(11 + 2 * i, 0.6, y, { id: 2, ...t }),
+        ];
+      }).flat();
+
+    it('end the one-finger gesture and start a tilt at the pair midpoint', () => {
+      // Step 3's second contact takes the midpoint to 9 px, past the lock.
+      const g = run([...pair, ...together(3)]);
+      expect(kinds(g)).toEqual(['heldStart', 'heldEnd', 'tiltStart', 'drag']);
+      expect(g[2]).toEqual({ kind: 'tiltStart', at: { x: 0.5, y: 0.5 } });
+      const drag = g[3] as Extract<Gesture, { kind: 'drag' }>;
+      expect(drag.dx).toBeCloseTo(0, 12);
+      expect(drag.dy).toBeCloseTo(-0.09, 12);
+    });
+
+    it('then drag by the midpoint, never pinching, and never tap on release', () => {
+      const g = run([
+        ...pair,
+        ...together(5),
+        up(30, 0.4, 0.35, { id: 1, ...t }),
+        up(31, 0.6, 0.35, { id: 2, ...t }),
+      ]);
+      expect(kinds(g).filter((k) => k !== 'drag')).toEqual([
+        'heldStart',
+        'heldEnd',
+        'tiltStart',
+        'heldEnd',
+      ]);
+      const drags = g.filter((x) => x.kind === 'drag');
+      expect(drags.reduce((s, d) => s + d.dy, 0)).toBeCloseTo(-0.15, 12);
+      expect(drags.at(-1)!.at.y).toBeCloseTo(0.35, 12);
+    });
+
+    it('a shared move under the lock stays undecided and emits nothing', () => {
+      expect(kinds(run([...pair, ...together(2)]))).toEqual(['heldStart']);
+    });
+
+    it('a second finger that starts late still tilts', () => {
+      // On a phone one finger leads: here by 9 px before the other moves at all.
+      const lead = [0.47, 0.44, 0.41].map((y, i) => move(2 + i, 0.4, y, { id: 1, ...t }));
+      const g = run([...pair, ...lead, move(5, 0.6, 0.41, { id: 2, ...t })]);
+      expect(kinds(g)).toEqual(['heldStart', 'heldEnd', 'tiltStart', 'drag']);
+    });
+
+    it('one finger moving along the pair while the other rests pinches', () => {
+      const g = run([...pair, move(2, 0.7, 0.5, { id: 2, ...t })]);
+      expect(kinds(g)).toEqual(['heldStart', 'pinch']);
+    });
   });
 
   it('a move from a pointer that did not start the drag emits nothing', () => {

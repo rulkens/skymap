@@ -33,12 +33,12 @@ export function latchSurfaceGesture(
     raycastTerrain(ray, innerBoundRadiusM, outerBoundRadiusM, groundRadiusAtM, toleranceM) ??
     pickOnBody(ray, bodyRadiusM);
 
-  // The secondary drag (right / middle button) is the tilt handle. Its anchor
-  // falls back to the nadir footprint, so tilt always has a ground point to
-  // orbit whatever the cursor is over — on the resident terrain, not the
-  // datum, since `groundRadiusAtM` under the exact nadir direction already
-  // IS that footprint with no march required.
-  if (step.mode === 'pan') {
+  // The secondary drag (right / middle button, or two fingers) is the tilt
+  // handle. Its anchor falls back to the nadir footprint, so tilt always has a
+  // ground point to orbit whatever the cursor is over — on the resident
+  // terrain, not the datum, since `groundRadiusAtM` under the exact nadir
+  // direction already IS that footprint with no march required.
+  if (step.mode !== 'orbit') {
     const nadir = normalize3(bodyFixedEyeM(arm));
     const nadirGroundRadiusM = groundRadiusAtM(nadir);
     const anchorLocalM: Vec3 = pick?.pointM ?? [
