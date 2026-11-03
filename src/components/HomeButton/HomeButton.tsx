@@ -9,7 +9,7 @@
 
 import { memo, type ReactNode } from 'react';
 import PillButton from '../common/PillButton/PillButton';
-import HomeIcon from './HomeIcon';
+import HomeIcon from '../icons/HomeIcon/HomeIcon';
 
 export type HomeButtonProps = {
   readonly onClick: () => void;

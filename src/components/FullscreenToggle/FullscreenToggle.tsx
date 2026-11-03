@@ -7,7 +7,7 @@
 
 import { memo, type ReactNode } from 'react';
 import PillButton from '../common/PillButton/PillButton';
-import FullscreenIcon from './FullscreenIcon';
+import FullscreenIcon from '../icons/FullscreenIcon/FullscreenIcon';
 
 export type FullscreenToggleProps = {
   readonly active: boolean;

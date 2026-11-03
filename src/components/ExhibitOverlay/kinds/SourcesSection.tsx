@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 
-import ExternalLinkIcon from '../ExternalLinkIcon';
+import ExternalLinkIcon from '../../icons/ExternalLinkIcon/ExternalLinkIcon';
 import type { ExhibitSourcesSection } from '../../../@types/exhibits/ExhibitSourcesSection';
 import styles from '../ExhibitOverlay.module.css';
 

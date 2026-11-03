@@ -8,8 +8,8 @@
 
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
-import StopIcon from '../TourOverlay/StopIcon';
-import EyeIcon from './EyeIcon';
+import StopIcon from '../icons/StopIcon/StopIcon';
+import EyeIcon from '../icons/EyeIcon/EyeIcon';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useViewCover } from '../../hooks/useViewCover';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';

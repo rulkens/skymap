@@ -23,11 +23,11 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import NavButton from './NavButton';
-import PrevIcon from './PrevIcon';
-import NextIcon from './NextIcon';
+import PrevIcon from '../icons/PrevIcon/PrevIcon';
+import NextIcon from '../icons/NextIcon/NextIcon';
 import PauseIcon from './PauseIcon';
 import PlayIcon from './PlayIcon';
-import StopIcon from './StopIcon';
+import StopIcon from '../icons/StopIcon/StopIcon';
 import styles from './TourOverlay.module.css';
 
 export type TourNavProps = {

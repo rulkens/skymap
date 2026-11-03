@@ -8,7 +8,7 @@
 
 import { memo, type ReactNode } from 'react';
 import PillButton from '../common/PillButton/PillButton';
-import InfoIcon from './InfoIcon';
+import InfoIcon from '../icons/InfoIcon/InfoIcon';
 
 export type AboutPillProps = {
   readonly onClick: () => void;
