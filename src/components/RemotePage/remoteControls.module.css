@@ -152,4 +152,5 @@
   margin: 0;
   font-size: var(--font-size-input);
   line-height: var(--line-height-base);
+  text-wrap: pretty;
 }
