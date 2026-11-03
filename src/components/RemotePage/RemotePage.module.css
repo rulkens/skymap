@@ -6,6 +6,7 @@
   padding-bottom: max(var(--space-8), env(safe-area-inset-bottom, 0px));
   /* The show's transport is glanced at in the dark, so it is taller than --touch-target. */
   --show-target: 56px;
+  --tile-target: 52px;
   /* The pad's height, read by the pad and by the sheet that must leave its upper half uncovered.
      38vh, not 40: a running tour's card and the tiles then fit a 390×844 phone without scrolling. */
   --pad-height: max(38vh, 14rem);
@@ -70,27 +71,100 @@
   gap: var(--space-4);
 }
 
-/* A laptop has the width for the pad and the deck side by side; the pad stays put while the deck scrolls. */
-@media (min-width: 64rem) {
+/* A laptop has the width for the pad and the deck side by side; a phone held sideways has the width
+   but not the height. Both lay the deck beside the pad and open a sheet inside the deck's column.
+   The landscape query is repeated in RemoteSheet.module.css: keep the two in step. */
+@media (min-width: 64rem), (orientation: landscape) and (max-height: 500px) {
   .root {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
-    max-width: 72rem;
-    --pad-height: max(60vh, 14rem);
   }
 
   .root > :not(.steer, .deck) {
     grid-column: 1 / -1;
   }
 
+  /* The sheet is positioned against the deck here, so it stays in this column. */
+  .deck {
+    position: relative;
+  }
+}
+
+/* The pad stays put while the deck scrolls. */
+@media (min-width: 64rem) {
+  .root {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    max-width: 72rem;
+    --pad-height: max(60vh, 14rem);
+  }
+
   .steer {
     position: sticky;
     top: var(--touch-target);
   }
+}
 
-  /* The sheet is positioned against the deck here, so it stays in this column. */
+/* Sideways on a phone the page is one screen tall and never scrolls: the pad fills the left under
+   the header, Home tops the right column, and the deck below it scrolls on its own. The steer
+   wrapper dissolves so its children take grid cells; the root's padding is the only gutter, which
+   is where the notch's inset lands. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .root {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    column-gap: var(--space-6);
+    align-items: stretch;
+    height: 100dvh;
+    max-width: none;
+    margin: 0;
+    padding-inline: max(var(--space-8), env(safe-area-inset-left, 0px))
+      max(var(--space-8), env(safe-area-inset-right, 0px));
+    padding-block: max(var(--space-3), env(safe-area-inset-top, 0px))
+      max(var(--space-3), env(safe-area-inset-bottom, 0px));
+    overflow: hidden;
+    /* Both fill their column; the shorter screen takes a little off the touch targets. */
+    --pad-height: 100%;
+    --show-target: 48px;
+    --tile-target: var(--touch-target);
+  }
+
+  .root > .header {
+    grid-column: 1;
+    padding: 0 0 var(--space-4);
+  }
+
+  .steer {
+    display: contents;
+  }
+
+  .surface {
+    display: grid;
+    grid-area: 3 / 1;
+    min-height: 0;
+  }
+
+  .homeRow {
+    grid-area: 1 / 2;
+    padding-bottom: var(--space-4);
+  }
+
   .deck {
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    grid-area: 3 / 2;
+    min-height: 0;
+    padding: 0;
+  }
+
+  /* Scrolls here, not on the deck, so the sheet laid over the deck always fills what is visible. */
+  .library {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .root > :not(.steer, .deck, .header) {
+    margin-inline: 0;
   }
 }

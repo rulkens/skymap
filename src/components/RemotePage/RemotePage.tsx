@@ -130,9 +130,11 @@ function RemotePage() {
       {link === 'lost' && <LostNotice room={room} onChangeCode={() => join(null)} />}
       {(link === 'domeOlder' || link === 'domeNewer') && <VersionNotice state={link} />}
       <div className={styles.steer}>
-        <Trackpad onEvent={sendDevice} axis={openspace ? axis : null}>
-          {openspace && <AxisHoldButtons axis={axis} onChange={setAxis} />}
-        </Trackpad>
+        <div className={styles.surface}>
+          <Trackpad onEvent={sendDevice} axis={openspace ? axis : null}>
+            {openspace && <AxisHoldButtons axis={axis} onChange={setAxis} />}
+          </Trackpad>
+        </div>
         <div className={styles.homeRow}>
           <button
             type="button"

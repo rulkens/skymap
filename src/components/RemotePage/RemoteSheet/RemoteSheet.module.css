@@ -74,16 +74,49 @@
   overscroll-behavior: contain;
 }
 
-/* The deck is the right column: the sheet covers the column, never the pad. */
-@media (min-width: 64rem) {
+/* The deck is the right column, on a laptop and on a phone held sideways: the sheet covers the
+   column, never the pad. The landscape query repeats RemotePage.module.css's: keep the two in step. */
+@media (min-width: 64rem), (orientation: landscape) and (max-height: 500px) {
   .root {
     position: absolute;
-    inset: 0 var(--space-8) auto;
     width: auto;
     min-height: 100%;
-    max-height: calc(100dvh - var(--touch-target) - var(--space-12));
     border: 1px solid var(--border-control);
     border-radius: var(--radius-2xl);
+  }
+}
+
+@media (min-width: 64rem) {
+  .root {
+    inset: 0 var(--space-8) auto;
+    max-height: calc(100dvh - var(--touch-target) - var(--space-12));
+  }
+}
+
+/* The deck is a screen tall at most, so the sheet fills it and its body scrolls. It comes in from
+   the right, where the column sits. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .root {
+    inset: 0;
+    max-height: none;
+    padding: var(--space-6);
+    animation-name: slideIn;
+  }
+
+  .leaving {
+    animation-name: slideOut;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slideOut {
+  to {
+    transform: translateX(100%);
   }
 }
 

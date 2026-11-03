@@ -5,6 +5,7 @@
 /* touch-action: none keeps the browser from panning or zooming the page and cancelling the drag.
    The dot grid marks it as a surface to drag on rather than an empty box. */
 .pad {
+  box-sizing: border-box;
   height: var(--pad-height);
   background:
     radial-gradient(circle, var(--border-control) 1px, transparent 1.5px) center / var(--space-12)
