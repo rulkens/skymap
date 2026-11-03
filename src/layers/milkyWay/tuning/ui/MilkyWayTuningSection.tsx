@@ -9,10 +9,7 @@
 import type { ReactElement } from 'react';
 import type { MilkyWaySettings } from '../../@types/MilkyWaySettings';
 import type { MilkyWayTuning } from '../../../../@types/settings/MilkyWayTuning';
-import {
-  MILKY_WAY_SLIDER_FIELDS,
-  milkyWaySliderPatch,
-} from '../data/milkyWaySliderFields';
+import { MILKY_WAY_SLIDER_FIELDS, milkyWaySliderPatch } from '../data/milkyWaySliderFields';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { formatMilkyWayTuningDefaults } from './formatMilkyWayTuningDefaults';
 import CopyButton from '../../../../components/common/CopyButton/CopyButton';
