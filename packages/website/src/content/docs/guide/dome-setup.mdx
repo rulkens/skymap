@@ -77,55 +77,62 @@ If the picture stutters, the steps under [When it stutters](/docs/guide/screens-
 
 ## Fly from the phone
 
-The phone shows what the dome reports, so a tap shows on the phone once the dome has done it. The sections below the Home button appear once the dome answers.
+The phone shows what the dome reports, so a tap shows on the phone once the dome has done it. The tiles below the Home button appear once the dome answers. A tile opens its sheet over the lower part of the page, and the drag pad above it keeps working; Close or Escape shuts the sheet. Starting a tour, an exhibit or a clip shuts it too, so the card with that show’s controls is in view.
 
 <AnnotatedShot
   id="guide-remote"
   parts={[
     {
       name: 'Top line',
-      does: 'Connected, Looking for the dome or Dome not there; the focused object’s name where the phone’s last search listed it, else Focused or Nothing focused',
+      does: 'Connected, Looking for the dome or Dome not there, and the name of what the dome has focused, else Nothing focused; Dome needs a reload or Remote needs a reload when the phone and the dome run different versions of Skymap',
       box: [0, 0, 390, 44],
     },
     {
       name: 'Drag pad',
       does: 'One finger turns the view about the focus, two fingers pinch to zoom',
-      box: [16, 44, 358, 340],
+      box: [16, 44, 358, 321],
     },
-    { name: 'Home', does: 'Flies to the home view, as H does', box: [16, 392, 254, 44] },
+    { name: 'Home', does: 'Flies to the home view, as H does', box: [16, 373, 254, 44] },
     {
       name: 'Camera controls',
       does: 'The Skymap and OpenSpace schemes; under OpenSpace, hold a button on the pad and drag to look around, roll or zoom',
-      box: [278, 392, 96, 44],
+      box: [278, 373, 96, 44],
     },
-    { name: 'Search', does: 'Type a name, tap a match to fly there', box: [0, 452, 390, 107] },
     {
-      name: 'Tours',
-      does: 'Starts a tour; while one runs, its beat, Previous, Pause or Resume, and Next',
-      box: [0, 559, 390, 114],
+      name: 'Now running',
+      does: 'Only while a tour, an exhibit or a clip runs: its name and Stop; for a tour, its beat, Previous, Pause or Resume, and Next',
+      box: [16, 433, 358, 185],
     },
+    { name: 'Search', does: 'Type a name, tap a match to fly there', box: [16, 626, 236, 52] },
+    { name: 'Tours', does: 'The tours; tap one to start it', box: [260, 626, 114, 52] },
     {
       name: 'Exhibits and clips',
-      does: 'Opens an exhibit or plays a prepared camera move; Exit exhibit or clip ends either',
-      box: [0, 673, 390, 609],
+      does: 'Two lists: tap an exhibit to open it, or a clip to play its prepared camera move',
+      box: [16, 686, 236, 52],
     },
     {
       name: 'Time',
-      does: 'Play or Pause, Reverse or Forward, Go live, Slower, Faster, and a date to jump to',
-      box: [0, 1282, 390, 273],
+      does: 'The dome’s clock in UTC; Slower, Pause or Play, and Faster; a list of every speed; Reverse; a date and time in UTC to set; Back to now when off real time',
+      box: [260, 686, 114, 52],
     },
-    { name: 'Labels', does: 'The switches of Labels & Guides, folded until tapped', box: [0, 1555, 390, 69] },
+    {
+      name: 'Layers and labels',
+      does: 'A switch for each of the dome’s layers, and the switches of Labels & Guides',
+      box: [16, 746, 236, 52],
+    },
     {
       name: 'Setup',
-      does: 'Add a phone, which shows the pairing card on the dome again',
-      box: [0, 1624, 390, 99],
+      does: 'Add a phone, which shows the pairing card on the dome again; Red light, which turns the remote red for a dark dome',
+      box: [260, 746, 114, 52],
     },
   ]}
 />
 
+Held sideways, a phone shows the drag pad on the left, with Home, the card and the tiles on the right.
+
 ## Add another phone
 
-On a phone that is connected, tap Add a phone under Setup. The dome shows the card again, with the same room code, until the new phone connects; a second tap hides it. Every connected phone can steer.
+On a phone that is connected, tap Setup, then Add a phone. The dome shows the card again, with the same room code, until the new phone connects; a second tap hides it. Every connected phone can steer.
 
 <Fact id="remote-room-size" />
 
@@ -143,6 +150,7 @@ On a phone that is connected, tap Add a phone under Setup. The dome shows the ca
 - **The QR code opens a `localhost` address on the phone.** The server was started without `--host`. Stop it with <Keys of="Ctrl+C" /> and start it with the command under [Run Skymap for a phone remote](#run-skymap-for-a-phone-remote).
 - **The phone’s browser cannot open the page.** The phone does not reach the dome’s computer: check that both are on the same network and that the firewall allows port 5173. A guest Wi-Fi often keeps its devices apart.
 - **The phone reads Looking for the dome, then Dome not there.** The room code is not the one the dome shows, or the dome’s page came from skymap.rulkens.com, which has no relay, or the room already holds three phones.
+- **The phone reads Dome needs a reload or Remote needs a reload.** The dome’s page and the phone’s page come from different versions of Skymap. Reload the page it names: tap Reload page on the phone, or reload the dome’s page and scan its new code.
 - **The dome shows no card.** Its address has no `?remote`, or a phone has paired already: tap Add a phone on that phone.
 - **The phone cannot read the card off the monitor.** The card is bent to the fisheye. Scan the flat QR code in the top left corner.
 - **The QR code holds an address on another network.** On a computer with more than one network the QR code holds the first Network address. On the phone, open `http://` followed by the address on the phone’s network, `:5173/remote.html`, and type the room code.
