@@ -69,6 +69,18 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  transition: var(--transition-fade);
+}
+
+/* Under an open sheet the card and tiles fade out, so no half-cut control pokes above the sheet. */
+.library[inert] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library {
+    transition: none;
+  }
 }
 
 /* A laptop has the width for the pad and the deck side by side; a phone held sideways has the width
