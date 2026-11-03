@@ -6,3 +6,21 @@ body {
   color: var(--color-fg);
   font-family: var(--font-family-mono);
 }
+
+/* Red light keeps the dome's dark-adapted eyes: every colour token the remote reads, in one hue. The parity test lists them. */
+:root[data-light='red'] {
+  --color-fg: #ff8a78;
+  --color-fg-base: #f07a68;
+  --color-fg-muted: rgba(240, 110, 90, 0.85);
+  --color-fg-tertiary: rgba(240, 110, 90, 0.68);
+  --color-fg-dim: rgba(220, 90, 70, 0.5);
+  --color-accent: #ff6a52;
+  --surface-panel: rgba(28, 4, 2, 0.8);
+  --surface-card-strong: rgba(28, 4, 2, 0.85);
+  --surface-control: rgba(90, 16, 10, 0.45);
+  --surface-control-active: rgba(130, 24, 14, 0.6);
+  --border-card: rgba(255, 90, 70, 0.2);
+  --border-control: rgba(255, 90, 70, 0.28);
+  --border-divider: rgba(255, 90, 70, 0.13);
+  --border-hover: rgba(255, 110, 90, 0.4);
+}

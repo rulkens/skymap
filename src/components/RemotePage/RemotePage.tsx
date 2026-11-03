@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import { useRemoteLink } from './useRemoteLink';
+import { useRedLight } from './useRedLight';
 import JoinField from './JoinField/JoinField';
 import LinkStatus from './LinkStatus/LinkStatus';
 import LostNotice from './LostNotice/LostNotice';
@@ -34,6 +35,7 @@ const roomFromHash = (): string | null => location.hash.slice(1) || null;
 function RemotePage() {
   const [room, setRoom] = useState(roomFromHash);
   const { status, link, menu, matches, sendCommand, sendDevice, search } = useRemoteLink(room);
+  const [redLight, setRedLight] = useRedLight();
   const [axis, setAxis] = useState<RemoteNavAxis>('orbit');
   const scheme = status?.controls.scheme;
   const openspace = scheme === 'openspace';
@@ -66,7 +68,11 @@ function RemotePage() {
     time: () => status && <TimeSection time={status.time} onCommand={sendCommand} />,
     labels: () => status && <ToggleSection toggles={status.toggles} onCommand={sendCommand} />,
     setup: () => (
-      <SetupSection onAddPhone={() => sendCommand({ name: 'togglePairing', payload: null })} />
+      <SetupSection
+        onAddPhone={() => sendCommand({ name: 'togglePairing', payload: null })}
+        redLight={redLight}
+        onRedLight={setRedLight}
+      />
     ),
   };
 

@@ -461,15 +461,15 @@ export function useRedLight(): readonly [on: boolean, set: (on: boolean) => void
 - `--color-bg` stays `#000`, and so does `theme-color` in `remote.html`.
 
 Tests first:
-- [ ] `tests/styles/remoteRedLightParity.test.ts`: `it('red light redefines every colour token the remote reads')`.
+- [x] `tests/styles/remoteRedLightParity.test.ts`: `it('red light redefines every colour token the remote reads')`.
       Collect every `var(--color-*|--surface-*|--border-*)` name read in `src/components/RemotePage/**/*.css` and
       `src/styles/remote.css`, minus `--color-bg`. Each must be declared inside the `:root[data-light='red']` block.
       This guards a silent bug (blue in red light) that no other check sees.
-- [ ] `RemotePage`: `it('the red-light switch turns the palette red, and a reloaded page keeps it')`: click the
+- [x] `RemotePage`: `it('the red-light switch turns the palette red, and a reloaded page keeps it')`: click the
       switch; `document.documentElement.dataset.light === 'red'`; unmount, render again, and it is still `'red'`.
-- [ ] Implement; `npm run typecheck:fast`; `npx vitest run tests/styles tests/components/RemotePage`.
-- [ ] Shoot 390×844 with red light on and look at it beside `red.png`.
-- [ ] Commit: "Remote red light: one token block and a Setup switch, kept on the phone."
+- [x] Implement; `npm run typecheck:fast`; `npx vitest run tests/styles tests/components/RemotePage`.
+- [x] Shoot 390×844 with red light on and look at it beside `red.png`.
+- [x] Commit: "Remote red light: one token block and a Setup switch, kept on the phone."
 
 ### Task 10: Deletions
 

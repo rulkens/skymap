@@ -61,7 +61,10 @@ beforeEach(() => {
     }),
   });
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  localStorage.clear();
+});
 
 const menu = {
   tours: [{ id: 'grandTour', label: 'The Long Way Out' }],
@@ -326,6 +329,23 @@ describe('RemotePage', () => {
       name: 'toggleSet',
       payload: { id: 'constellations', enabled: true },
     });
+  });
+
+  it('the red-light switch turns the palette red, and a reloaded page keeps it', () => {
+    const first = render(<RemotePage />);
+    sendStatus();
+    expect(document.documentElement.dataset.light).toBeUndefined();
+    openSheet('Setup');
+    fireEvent.click(screen.getByRole('switch', { name: 'Red light' }));
+    expect(document.documentElement.dataset.light).toBe('red');
+    first.unmount();
+    expect(document.documentElement.dataset.light).toBeUndefined();
+    render(<RemotePage />);
+    expect(document.documentElement.dataset.light).toBe('red');
+    sendStatus();
+    openSheet('Setup');
+    fireEvent.click(screen.getByRole('switch', { name: 'Red light' }));
+    expect(document.documentElement.dataset.light).toBeUndefined();
   });
 
   it('the trackpad size reaches the dome once the link opens', () => {
