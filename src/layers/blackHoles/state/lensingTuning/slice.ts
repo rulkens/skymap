@@ -3,7 +3,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
+import type { BlackHoleLensingTuning } from '../../lensing/@types/BlackHoleLensingTuning';
 
 export const blackHoleLensingTuningSlice = createSlice({
   name: 'settings/blackHoleLensingTuning',

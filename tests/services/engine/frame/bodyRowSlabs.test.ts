@@ -21,8 +21,8 @@ import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/f
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
-import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/present/blackHoleSlabRow';
-import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
+import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSlabRow';
+import { BLACK_HOLES } from '../../../../src/layers/blackHoles/markers/data/blackHoles';
 import { slabRowActive } from '../../../../src/utils/frame/slabRowActive';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { atmosphereDrawList } from '../../../../src/layers/body/present/atmosphereDrawList';

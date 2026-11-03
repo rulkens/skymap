@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { blackHoleSearch } from '../../../src/layers/blackHoles/present/blackHoleSearch';
+import { blackHoleSearch } from '../../../src/layers/blackHoles/markers/present/blackHoleSearch';
 import { bodySearch } from '../../../src/layers/body/present/bodySearch';
 import { craftSearch } from '../../../src/layers/missions/present/craftSearch';
 import { earthSceneSearch } from '../../../src/layers/earthScenes/present/earthSceneSearch';

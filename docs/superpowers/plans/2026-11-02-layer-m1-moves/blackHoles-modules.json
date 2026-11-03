@@ -1,0 +1,134 @@
+[
+  {
+    "from": "src/layers/blackHoles/@types/BlackHoleLensingRenderer.d.ts",
+    "to": "src/layers/blackHoles/lensing/@types/BlackHoleLensingRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/@types/BlackHoleLensingSliderField.d.ts",
+    "to": "src/layers/blackHoles/lensing/@types/BlackHoleLensingSliderField.d.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/@types/BlackHoleLensingSliderKey.d.ts",
+    "to": "src/layers/blackHoles/lensing/@types/BlackHoleLensingSliderKey.d.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/@types/BlackHoleLensingTuning.d.ts",
+    "to": "src/layers/blackHoles/lensing/@types/BlackHoleLensingTuning.d.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/@types/SchwarzschildDeflectionLut.d.ts",
+    "to": "src/layers/blackHoles/lensing/@types/SchwarzschildDeflectionLut.d.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/@types/BlackHoleItemSettings.d.ts",
+    "to": "src/layers/blackHoles/markers/@types/BlackHoleItemSettings.d.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/@types/BlackHolesSettings.d.ts",
+    "to": "src/layers/blackHoles/markers/@types/BlackHolesSettings.d.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/data/blackHoles.ts",
+    "to": "src/layers/blackHoles/markers/data/blackHoles.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/data/schwarzschildLutDomain.ts",
+    "to": "src/layers/blackHoles/lensing/data/schwarzschildLutDomain.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/passes/blackHoleLensingPass.ts",
+    "to": "src/layers/blackHoles/lensing/passes/blackHoleLensingPass.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/passes/blackHoleMarkerPass.ts",
+    "to": "src/layers/blackHoles/markers/passes/blackHoleMarkerPass.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/present/blackHoleLensEnvelopeM.ts",
+    "to": "src/layers/blackHoles/lensing/present/blackHoleLensEnvelopeM.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/render/blackHoleLensingRenderer.ts",
+    "to": "src/layers/blackHoles/lensing/render/blackHoleLensingRenderer.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/render/skyCubemapTarget.ts",
+    "to": "src/layers/blackHoles/lensing/render/skyCubemapTarget.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/ui/blackHoleLensingSliderFields.ts",
+    "to": "src/layers/blackHoles/lensing/ui/blackHoleLensingSliderFields.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/ui/BlackHoleLensingTuningSection.tsx",
+    "to": "src/layers/blackHoles/lensing/ui/BlackHoleLensingTuningSection.tsx"
+  },
+  {
+    "from": "src/layers/blackHoles/ui/BlackHoleLensingTuningSectionContainer.tsx",
+    "to": "src/layers/blackHoles/lensing/ui/BlackHoleLensingTuningSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/blackHoles/ui/BlackHoleDetailCard/BlackHoleDetailCard.tsx",
+    "to": "src/layers/blackHoles/markers/ui/BlackHoleDetailCard/BlackHoleDetailCard.tsx"
+  },
+  {
+    "from": "src/layers/blackHoles/ui/CompactBlackHoleCard/CompactBlackHoleCard.tsx",
+    "to": "src/layers/blackHoles/markers/ui/CompactBlackHoleCard/CompactBlackHoleCard.tsx"
+  },
+  {
+    "from": "src/layers/blackHoles/utils/gpu/packBlackHoleLensingUniforms.ts",
+    "to": "src/layers/blackHoles/lensing/utils/gpu/packBlackHoleLensingUniforms.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/utils/lensing/buildSchwarzschildDeflectionLut.ts",
+    "to": "src/layers/blackHoles/lensing/utils/buildSchwarzschildDeflectionLut.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/utils/lensing/lensEdgeFadeEndRs.ts",
+    "to": "src/layers/blackHoles/lensing/utils/lensEdgeFadeEndRs.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/utils/palette/focusShotUrl.ts",
+    "to": "src/layers/blackHoles/markers/utils/focusShotUrl.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/present/blackHoleAnchorId.ts",
+    "to": "src/layers/blackHoles/markers/present/blackHoleAnchorId.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/present/blackHoleFocusPrefix.ts",
+    "to": "src/layers/blackHoles/markers/present/blackHoleFocusPrefix.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/present/blackHoleMarkerBrightness.ts",
+    "to": "src/layers/blackHoles/markers/present/blackHoleMarkerBrightness.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/present/blackHolePickable.ts",
+    "to": "src/layers/blackHoles/markers/present/blackHolePickable.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/present/blackHoleSearch.ts",
+    "to": "src/layers/blackHoles/markers/present/blackHoleSearch.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/present/blackHoleSelectionRow.ts",
+    "to": "src/layers/blackHoles/markers/present/blackHoleSelectionRow.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/present/blackHoleSlabRow.ts",
+    "to": "src/layers/blackHoles/markers/present/blackHoleSlabRow.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/present/encodeBlackHoleFocusId.ts",
+    "to": "src/layers/blackHoles/markers/present/encodeBlackHoleFocusId.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/present/produceBlackHoleCaptions.ts",
+    "to": "src/layers/blackHoles/markers/present/produceBlackHoleCaptions.ts"
+  },
+  {
+    "from": "tests/layers/blackHoles/utils/gpu/blackHoleLensingUniformsLayout.parity.test.ts",
+    "to": "tests/layers/blackHoles/lensing/utils/gpu/blackHoleLensingUniformsLayout.parity.test.ts"
+  }
+]

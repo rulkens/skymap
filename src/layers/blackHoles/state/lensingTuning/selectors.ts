@@ -1,7 +1,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
+import type { BlackHoleLensingTuning } from '../../lensing/@types/BlackHoleLensingTuning';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
 export const selectRoute = createSelector(
