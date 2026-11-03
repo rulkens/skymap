@@ -51,6 +51,11 @@
   outline: none;
 }
 
+.note {
+  font-size: var(--font-size-lg);
+  font-variant-numeric: tabular-nums;
+}
+
 .close {
   display: flex;
   align-items: center;
@@ -58,8 +63,11 @@
   margin-left: auto;
 }
 
+/* The padding gives a focus ring (2px outline + 2px offset) room inside the scroll box's clip. */
 .body {
   min-height: 0;
+  margin: -4px;
+  padding: 4px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }

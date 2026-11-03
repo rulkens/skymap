@@ -15,8 +15,7 @@ import VersionNotice from './VersionNotice/VersionNotice';
 import AxisHoldButtons from './AxisHoldButtons/AxisHoldButtons';
 import Trackpad from './Trackpad/Trackpad';
 import SearchSection from './SearchSection/SearchSection';
-import TourSection from './TourSection/TourSection';
-import ExhibitSection from './ExhibitSection/ExhibitSection';
+import ShowList from './ShowList/ShowList';
 import TimeSection from './TimeSection/TimeSection';
 import ToggleSection from './ToggleSection/ToggleSection';
 import SetupSection from './SetupSection/SetupSection';
@@ -59,20 +58,24 @@ function RemotePage() {
   const takeover = status?.takeover ?? null;
   const sheetBody: Record<RemoteSheetId, () => ReactNode> = {
     search: () => <SearchSection matches={matches} onSearch={search} onCommand={sendCommand} />,
-    tours: () => (
-      <TourSection
-        tours={menu?.tours ?? []}
-        tour={takeover?.kind === 'tour' ? takeover : null}
-        onCommand={sendCommand}
-      />
+    tours: () => <ShowList kind="tour" menu={menu} takeover={takeover} onCommand={sendCommand} />,
+    exhibits: () => (
+      <ShowList kind="exhibit" menu={menu} takeover={takeover} onCommand={sendCommand} />
     ),
-    exhibits: () => <ExhibitSection menu={menu} onCommand={sendCommand} />,
-    clips: () => <ExhibitSection menu={menu} onCommand={sendCommand} />,
+    clips: () => <ShowList kind="clip" menu={menu} takeover={takeover} onCommand={sendCommand} />,
     time: () => status && <TimeSection time={status.time} onCommand={sendCommand} />,
     labels: () => status && <ToggleSection toggles={status.toggles} onCommand={sendCommand} />,
     setup: () => (
       <SetupSection onAddPhone={() => sendCommand({ name: 'togglePairing', payload: null })} />
     ),
+  };
+
+  // Only the sheets that have a state to show beside their heading.
+  const sheetNote: Partial<Record<RemoteSheetId, () => string>> = {
+    labels: () => {
+      const toggles = status?.toggles ?? [];
+      return `${toggles.filter((t) => t.enabled).length} of ${toggles.length} on`;
+    },
   };
 
   if (!room) {
@@ -131,6 +134,7 @@ function RemotePage() {
             <RemoteSheet
               id={openSheet}
               initialFocus={openSheet === 'search' ? 'field' : 'heading'}
+              note={sheetNote[openSheet]?.()}
               onClose={closeSheet}
             >
               {sheetBody[openSheet]()}

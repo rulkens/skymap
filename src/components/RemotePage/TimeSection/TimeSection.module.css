@@ -1,3 +1,32 @@
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+/* Slower and Faster flank the rate they change, so the number reads between the two presses. */
+.rate {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.rateLabel {
+  min-width: 4.5rem;
+  color: var(--color-fg-base);
+  font-size: var(--font-size-input);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
 .date {
   display: flex;
   flex-direction: column;
@@ -6,6 +35,12 @@
   font-size: var(--font-size-input);
 }
 
+.dateLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
 .input {
-  composes: input from '../remoteControls.module.css';
+  min-width: 0;
 }

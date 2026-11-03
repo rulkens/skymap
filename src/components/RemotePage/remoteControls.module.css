@@ -1,33 +1,17 @@
-/* Shared vocabulary of the remote's sections; each section composes from it. */
-.section {
+/* Shared vocabulary of the remote's sheet bodies; each composes with it by class name. */
+.stack {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-8);
-  border-top: 1px solid var(--border-section);
 }
 
-.heading {
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  letter-spacing: var(--letter-spacing-wider);
-  text-transform: uppercase;
-  color: var(--color-fg-tertiary);
-}
-
-/* Grids, not wrapping flex: a wrapped flex row leaves an orphan stretched across the next line. */
-.row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
-  gap: var(--space-4);
-}
-
-/* Named items (tours, exhibits, matches) need room for two words a line. */
-.menu {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: var(--space-4);
+  padding: 0;
+  list-style: none;
 }
 
 .button {
@@ -61,6 +45,20 @@
   cursor: default;
 }
 
+/* One tappable line: its leading glyph, a growing label, an optional trailing mark. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  width: 100%;
+  min-height: 48px;
+}
+
+.row > svg:first-child {
+  flex: none;
+  color: var(--color-fg-tertiary);
+}
+
 .input {
   min-height: var(--touch-target);
   padding: var(--space-4) var(--space-6);
@@ -77,6 +75,50 @@
   border-color: var(--color-accent);
   box-shadow: inset 0 0 0 1px var(--color-accent);
   color: var(--color-accent);
+}
+
+.on > svg:first-child {
+  color: inherit;
+}
+
+/* A switch, not a tick box: the thumb moves and takes the accent, so on survives without colour vision. */
+.switch {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-control);
+  border-radius: 6px;
+  cursor: inherit;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-md);
+  background: var(--color-fg-dim);
+}
+
+.switch:checked {
+  background: var(--surface-control);
+  border-color: var(--color-accent);
+}
+
+.switch:checked::after {
+  left: 21px;
+  background: var(--color-accent);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .status {

@@ -19,10 +19,12 @@ export type RemoteSheetProps = {
   readonly onClose: () => void;
   /** 'field' focuses the first input (Search); the default is the heading. */
   readonly initialFocus?: 'heading' | 'field';
+  /** A short state beside the heading, such as "2 of 9 on". */
+  readonly note?: string;
   readonly children: ReactNode;
 };
 
-function RemoteSheet({ id, onClose, initialFocus = 'heading', children }: RemoteSheetProps) {
+function RemoteSheet({ id, onClose, initialFocus = 'heading', note, children }: RemoteSheetProps) {
   const headingId = useId();
   const rootRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -61,6 +63,7 @@ function RemoteSheet({ id, onClose, initialFocus = 'heading', children }: Remote
         <h2 id={headingId} ref={headingRef} tabIndex={-1} className={styles.title}>
           {sheet.label}
         </h2>
+        {note && <span className={styles.note}>{note}</span>}
         <button
           type="button"
           className={cx(controls.button, styles.close)}

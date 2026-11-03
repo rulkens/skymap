@@ -1,6 +1,7 @@
 /** SearchSection — type a name, get the dome's matches, tap one to fly there. */
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useState } from 'react';
+import cx from 'classnames';
 import { MAX_SEARCH_QUERY_CHARS } from '../../../data/remote/maxSearchQueryChars';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import type { RemoteSearchMatch } from '../../../@types/remote/RemoteSearchMatch';
@@ -17,21 +18,17 @@ export type SearchSectionProps = {
 
 function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
   const [query, setQuery] = useState('');
-  const headingId = useId();
   useEffect(() => {
     const timer = setTimeout(() => onSearch(query.trim()), DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [query, onSearch]);
 
   return (
-    <section className={controls.section}>
-      <h2 id={headingId} className={controls.heading}>
-        Search
-      </h2>
+    <div className={controls.stack}>
       <input
         className={controls.input}
         type="search"
-        aria-labelledby={headingId}
+        aria-label="Search"
         placeholder="Andromeda, Saturn"
         value={query}
         maxLength={MAX_SEARCH_QUERY_CHARS}
@@ -43,20 +40,21 @@ function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
       {query.trim() !== '' && matches.length === 0 && (
         <p className={styles.empty}>No match for “{query.trim()}”</p>
       )}
-      <ul className={styles.list}>
+      <ul className={controls.rows}>
         {matches.map((match, i) => (
           <li key={`${i}-${match.name}`}>
             <button
               type="button"
-              className={controls.button}
+              className={cx(controls.button, controls.row)}
               onClick={() => onCommand({ name: 'goTo', payload: match.action })}
             >
-              {match.name} <span className={styles.kind}>{match.kind}</span>
+              <span className={styles.name}>{match.name}</span>
+              <span className={styles.kind}>{match.kind}</span>
             </button>
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   );
 }
 

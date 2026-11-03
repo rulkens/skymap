@@ -1,5 +1,6 @@
 /** ToggleSection — one switch per label layer, in the order the dome reports them. */
 
+import cx from 'classnames';
 import type { DomeStatus } from '../../../@types/remote/DomeStatus';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import controls from '../remoteControls.module.css';
@@ -12,20 +13,15 @@ export type ToggleSectionProps = {
 
 function ToggleSection({ toggles, onCommand }: ToggleSectionProps) {
   if (toggles.length === 0) return null;
-  const on = toggles.filter((toggle) => toggle.enabled).length;
   return (
-    <section className={controls.section}>
-      <div className={styles.head}>
-        <h2 className={controls.heading}>Labels</h2>
-        <span className={styles.count}>
-          {on} of {toggles.length} on
-        </span>
-      </div>
+    <div className={styles.list}>
       {toggles.map((toggle) => (
-        <label key={toggle.id} className={styles.row}>
+        <label key={toggle.id} className={cx(controls.row, styles.row)}>
+          <span className={styles.label}>{toggle.label}</span>
           <input
             type="checkbox"
-            className={styles.box}
+            role="switch"
+            className={controls.switch}
             checked={toggle.enabled}
             onChange={(e) =>
               onCommand({
@@ -34,10 +30,9 @@ function ToggleSection({ toggles, onCommand }: ToggleSectionProps) {
               })
             }
           />
-          {toggle.label}
         </label>
       ))}
-    </section>
+    </div>
   );
 }
 

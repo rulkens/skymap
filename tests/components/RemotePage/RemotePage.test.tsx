@@ -147,22 +147,55 @@ describe('RemotePage', () => {
     expect(screen.getByText('Nothing focused')).toBeTruthy();
   });
 
-  it('the menu lists the tours, exhibits and clips, and a button sends its id', () => {
+  it('the running exhibit is marked in Exhibits and not in Clips, though they share its id', () => {
+    render(<RemotePage />);
+    act(() =>
+      deliver(
+        JSON.stringify({
+          v,
+          kind: 'menu',
+          menu: {
+            ...menu,
+            exhibits: [{ id: 'cosmicFlows', label: 'Cosmic Flows' }],
+            clips: [{ id: 'cosmicFlows', label: 'Cosmic Flows' }],
+          },
+        }),
+      ),
+    );
+    sendWith({ takeover: { kind: 'exhibit', id: 'cosmicFlows' } });
+    const marked = (): HTMLElement[] =>
+      screen
+        .getByRole('dialog')
+        .querySelectorAll<HTMLElement>('[aria-current]') as unknown as HTMLElement[];
+    openSheet('Exhibits');
+    expect(marked()).toHaveLength(1);
+    closeSheet();
+    openSheet('Clips');
+    expect(marked()).toHaveLength(0);
+  });
+
+  it("a show row sends its kind's start command, and waits for the menu", () => {
     render(<RemotePage />);
     sendStatus();
     openSheet('Exhibits');
-    expect(screen.queryByRole('button', { name: 'Cosmic Web' })).toBeNull();
+    expect(screen.getByText("Waiting for the dome's lists")).toBeTruthy();
     sendMenu();
     fireEvent.click(screen.getByRole('button', { name: 'Cosmic Web' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Fly to Horizon' }));
     expect(commands()).toContainEqual({
       name: 'goTo',
       payload: { kind: 'exhibit', exhibitId: 'cosmicWeb' },
     });
+    closeSheet();
+    openSheet('Clips');
+    fireEvent.click(screen.getByRole('button', { name: 'Fly to Horizon' }));
     expect(commands()).toContainEqual({ name: 'clipStart', payload: { clipId: 'flyout' } });
     closeSheet();
     openSheet('Tours');
-    expect(screen.getByRole('button', { name: 'The Long Way Out' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'The Long Way Out' }));
+    expect(commands()).toContainEqual({
+      name: 'goTo',
+      payload: { kind: 'tour', tourId: 'grandTour' },
+    });
   });
 
   it('a tile opens its sheet with focus inside, and Escape closes it with focus back on the tile', () => {
@@ -288,7 +321,7 @@ describe('RemotePage', () => {
     render(<RemotePage />);
     sendStatus();
     openSheet('Labels');
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Constellations' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Constellations' }));
     expect(commands()).toContainEqual({
       name: 'toggleSet',
       payload: { id: 'constellations', enabled: true },

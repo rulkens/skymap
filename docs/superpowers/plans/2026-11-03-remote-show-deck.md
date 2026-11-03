@@ -427,14 +427,14 @@ type ShowListProps<K extends RemoteTakeover['kind']> = {
 - **Search sheet:** today's field and results, restyled as list rows.
 
 Tests first:
-- [ ] `it('the running exhibit is marked in Exhibits and not in Clips, though they share its id')`: the menu has
+- [x] `it('the running exhibit is marked in Exhibits and not in Clips, though they share its id')`: the menu has
       exhibit `cosmicFlows` and clip `cosmicFlows`, with `takeover: { kind: 'exhibit', id: 'cosmicFlows' }`. Open
       Exhibits: one row with `aria-current`. Open Clips: none. (Regression: exhibit and clip share the id.)
-- [ ] `it('a show row sends its kind's start command')`: an exhibit row sends `goTo` exhibit, a clip row
+- [x] `it('a show row sends its kind's start command')`: an exhibit row sends `goTo` exhibit, a clip row
       `clipStart`, a tour row `goTo` tour. This replaces the menu test rewritten in Task 6.
-- [ ] Toggle switches are driven with `fireEvent.click`, never `fireEvent.change` (`testing.md`).
-- [ ] Implement; `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage tests/remote`.
-- [ ] Commit: "Remote deck: Tours, Exhibits and Clips as one list per kind, with Time, Labels, Search and Setup restyled as sheets."
+- [x] Toggle switches are driven with `fireEvent.click`, never `fireEvent.change` (`testing.md`).
+- [x] Implement; `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage tests/remote`.
+- [x] Commit: "Remote deck: Tours, Exhibits and Clips as one list per kind, with Time, Labels, Search and Setup restyled as sheets."
 
 ### Task 9: The red-light palette
 
