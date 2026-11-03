@@ -395,7 +395,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'satellites',
     title: 'Satellites',
-    file: 'src/layers/satellites/ui/SatellitesSection.tsx',
+    file: 'src/layers/satellites/controls/ui/SatellitesSection.tsx',
     rows: [
       {
         name: 'Satellites',

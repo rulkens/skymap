@@ -45,7 +45,6 @@ const NOT_YET_REGROUPED: ReadonlySet<string> = new Set([
   'lightTime',
   'milkyWay',
   'missions',
-  'satellites',
   'starCatalog',
 ]);
 
