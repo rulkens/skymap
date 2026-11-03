@@ -1,28 +1,30 @@
-/** Vite plugin: hosts the remote relay and the origins list on the dev and preview servers. */
+/** Vite plugin: hosts the remote relay on the dev and preview servers. */
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import type { CommonServerOptions, Connect, Plugin, PreviewServer, ViteDevServer } from 'vite';
-import { attachRemoteRelay, REMOTE_PATH_PREFIX } from '../remote/attachRemoteRelay.ts';
+import type { CommonServerOptions, Plugin, PreviewServer, ViteDevServer } from 'vite';
+import { newLocalRoomCode } from '../../../src/utils/remote/newLocalRoomCode';
+import { attachRemoteRelay } from '../remote/attachRemoteRelay.ts';
 import { listRemoteOrigins } from '../remote/listRemoteOrigins.ts';
 
 function wire(server: ViteDevServer | PreviewServer, options: CommonServerOptions): void {
   const http = server.httpServer as Server | null;
   if (http === null) return;
-  attachRemoteRelay(http);
   // Vite binds localhost alone unless `host` is set (`--host`), as its own printUrls reads it.
   const exposed =
     options.host !== undefined && options.host !== false && options.host !== 'localhost';
-  const origins = (): string[] =>
-    listRemoteOrigins((http.address() as AddressInfo).port, exposed, Boolean(options.https));
-  const serveOrigins: Connect.NextHandleFunction = (_request, response) => {
-    response.setHeader('content-type', 'application/json');
-    response.end(JSON.stringify(origins()));
-  };
-  server.middlewares.use(`${REMOTE_PATH_PREFIX}origins`, serveOrigins);
+  // Never empty: localhost is always last.
+  const firstOrigin = (): string =>
+    listRemoteOrigins((http.address() as AddressInfo).port, exposed, Boolean(options.https))[0]!;
+  attachRemoteRelay(http, {
+    codeFor: (last) => last ?? newLocalRoomCode(),
+    lanOrigin: firstOrigin,
+    mayHost: () => true,
+    pairingOnSky: true,
+  });
   const printUrls = server.printUrls.bind(server);
   server.printUrls = () => {
     printUrls();
-    server.config.logger.info(`  ➜  Remote:  ${origins()[0]}/remote.html`);
+    server.config.logger.info(`  ➜  Remote:  ${firstOrigin()}/remote.html`);
   };
 }
 
