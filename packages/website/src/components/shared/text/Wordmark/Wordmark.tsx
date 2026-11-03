@@ -6,14 +6,14 @@
 import { useId } from 'react';
 
 import styles from './Wordmark.module.css';
-import { TRAIL } from './Wordmark.constants.ts';
+import { FADE, TRAIL, VIEW_BOX } from './Wordmark.constants.ts';
 
 function Wordmark() {
   // An id per drawing: the nav and the footer both hold one.
   const fade = `trail-${useId().replace(/[^\w-]/g, '')}`;
   const { from, bend, to } = TRAIL;
   return (
-    <svg className={styles.root} viewBox="-2 -82 352 113" role="img" aria-label="Skymap">
+    <svg className={styles.root} viewBox={VIEW_BOX.join(' ')} role="img" aria-label="Skymap">
       <defs>
         <linearGradient
           id={fade}
@@ -23,9 +23,9 @@ function Wordmark() {
           y1="0"
           y2="0"
         >
-          <stop offset="0" stopColor="rgb(232 238 255 / 0.95)" />
-          <stop offset="0.55" stopColor="rgb(200 220 255 / 0.45)" />
-          <stop offset="1" stopColor="rgb(168 208 255 / 0)" />
+          <stop offset="0" stopColor={FADE[0]} />
+          <stop offset="0.55" stopColor={FADE[1]} />
+          <stop offset="1" stopColor={FADE[2]} />
         </linearGradient>
       </defs>
       <path

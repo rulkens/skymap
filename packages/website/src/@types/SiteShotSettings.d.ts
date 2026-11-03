@@ -51,6 +51,10 @@ export type SiteShotSettings = {
   open?: readonly string[];
   /** With `query: 'dome'`: the dome opens with `?remote`, and the picture is a phone's remote page paired to it, not the dome; `searchFor` is then typed into the remote's search, which is how its header gets the focused object's name. */
   remote?: true;
+  /** With `remote`: the phone's screen height in CSS px; the picture is then the remote down its whole length, which the row's `size.height` must equal. */
+  screenHeight?: number;
+  /** With `query: 'dome'` and `ui`: the dome opens with `?remote`, and the picture is its window before a phone pairs, the pairing card on the disc and the flat code in the corner. */
+  pairing?: true;
   /** Keep this part of the frame only, in the viewport's CSS pixels: a phone's cut of a wide interface shot. */
   crop?: { left: number; top: number; width: number; height: number };
   /** With `ui`: a CSS selector of one element of the app's interface; the picture is that element alone on a transparent ground, with a margin for its shadow. Not with `crop`. */

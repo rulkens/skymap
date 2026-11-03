@@ -1,6 +1,6 @@
 /*
- * type.module.css — named text styles that components share: the small size, a date, running prose
- * and an opening section's lead. A vocabulary, not a component: no `.root`; take a class with
+ * type.module.css — named text styles that components share: the small size, a date, running prose,
+ * a section's lead and an opening section's. A vocabulary, not a component: no `.root`; take a class with
  * `composes: small from '../../../../styles/type.module.css'`.
  */
 
@@ -19,6 +19,13 @@
 /* Running paragraphs of a section, at the lead's measure, which is wider than a column's. */
 .prose p {
   max-width: var(--measure-lead);
+}
+
+/* A section's lead under its title: `lead` on the paragraph, `leads` on a head whose paragraphs come from a slot. */
+.lead,
+.leads p {
+  max-width: var(--measure-lead);
+  font-size: var(--text-lead);
 }
 
 /*

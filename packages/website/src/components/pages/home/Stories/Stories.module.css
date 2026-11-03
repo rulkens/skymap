@@ -33,12 +33,6 @@
   position: relative;
 }
 
-/* The title's cut-out has 48 of its 1120 px of shadow margin before its words, 1.2rem at the 28rem drawn here: so
- * it starts that far before the column line its words stand on. */
-.title {
-  --inset: 1.2rem;
-}
-
 /* The tour: the web on a plate that dissolves into the page, and the tour's caption off the plate, nearest. */
 .plate {
   overflow: hidden;
@@ -88,7 +82,10 @@
   --drift: 3rem;
 }
 
+/* The title's cut-out has 48 of its 1120 px of shadow margin before its words, 1.2rem at the 28rem drawn here: so
+ * it starts that far before the column line its words stand on. */
 .title {
+  --inset: 1.2rem;
   position: absolute;
   bottom: 2%;
   left: calc(var(--bleed) - var(--inset));
@@ -441,14 +438,6 @@
       }
     }
 
-    .tourStage {
-      animation: hand-off linear both;
-    }
-
-    .exhibitStage {
-      animation: hand-off linear both reverse;
-    }
-
     .tourPart {
       animation: dim linear both;
     }
@@ -465,10 +454,12 @@
     }
 
     .tourStage {
+      animation: hand-off linear both;
       animation-range: contain 42% contain 50%;
     }
 
     .exhibitStage {
+      animation: hand-off linear both reverse;
       animation-range: contain 50% contain 58%;
     }
 

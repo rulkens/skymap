@@ -28,14 +28,6 @@
     "to": "src/layers/starCatalog/data/famousStarPickRadiusPx.ts"
   },
   {
-    "from": "src/data/starCatalog/starBinCodec.ts",
-    "to": "src/layers/starCatalog/data/starBinCodec.ts"
-  },
-  {
-    "from": "src/data/starCatalog/starCatalogFormat.ts",
-    "to": "src/layers/starCatalog/data/starCatalogFormat.ts"
-  },
-  {
     "from": "src/data/starCullSlack.ts",
     "to": "src/layers/starCatalog/data/starCullSlack.ts"
   },
@@ -62,10 +54,6 @@
   {
     "from": "src/services/url/decodeStarFocusId.ts",
     "to": "src/layers/starCatalog/present/decodeStarFocusId.ts"
-  },
-  {
-    "from": "src/utils/color/starTintFromBpRp.ts",
-    "to": "src/layers/starCatalog/utils/color/starTintFromBpRp.ts"
   },
   {
     "from": "src/utils/star/packStarGpuRecords.ts",

@@ -9,14 +9,14 @@
 
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { BodyRuntime } from './@types/BodyRuntime';
-import { planSurfaceTiles } from './subsystems/surfaceTiles/planSurfaceTiles';
-import { surfaceTileOverOf } from './subsystems/surfaceTiles/surfaceTileOverOf';
-import { surfaceTileDebugSnapshotOf } from './subsystems/surfaceTiles/surfaceTileDebugSnapshotOf';
-import { bodySurfaceTier } from './load/bodySurfaceTier';
+import { planSurfaceTiles } from './surfaceTiles/plan/subsystems/planSurfaceTiles';
+import { surfaceTileOverOf } from './surfaceTiles/plan/subsystems/surfaceTileOverOf';
+import { surfaceTileDebugSnapshotOf } from './surfaceTiles/debug/subsystems/surfaceTileDebugSnapshotOf';
+import { bodySurfaceTier } from './textures/load/bodySurfaceTier';
 import {
   NO_TERRAIN_PICK_MARKER_READOUT,
   terrainPickMarkerReadoutOf,
-} from './present/terrainPickMarkerReadoutOf';
+} from './terrainPick/present/terrainPickMarkerReadoutOf';
 
 export function surfaceTilePlanner(
   runtime: BodyRuntime,

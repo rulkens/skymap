@@ -32,7 +32,7 @@ function Band({ views, zoom, gallery, children }: BandProps) {
   return (
     <section
       ref={gallery?.root}
-      className={cx(styles.root, styles.none, zoom !== 1 && styles.zoomed)}
+      className={cx(styles.root, zoom !== 1 && styles.zoomed)}
       // The opening section of a page: only `npm run site:fold` reads this, to measure it against the first screen.
       data-opening=""
       style={

@@ -1,8 +1,4 @@
 import type { FeatureSlide } from '../../../@types/FeatureSlide';
-import { narrowSizes } from '../../../utils/narrowSizes.ts';
-
-// The large visual takes seven of the page grid's twelve columns.
-export const big = narrowSizes('100vw', 'min(calc(58vw - 4rem), 41rem)');
 
 // Each gallery's slides. An accent is sampled from its picture: tests/packages/website/featureSlides.test.ts
 // recomputes every one and prints the value to paste here when a picture is shot again.

@@ -3,8 +3,7 @@
  * ShotCaption per view in one cell, under a row of ring markers, one per view,
  * that choose the view. A host treats it as a single label (it draws the same
  * foot). The markers sit close and centred: a quiet row, not a control bar.
- * Before the page's script runs the markers stay hidden and the first label stands. `open={false}` leaves
- * out each label's address, where the words beside the pictures already link the views.
+ * Before the page's script runs the markers stay hidden and the first label stands.
  */
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
@@ -14,9 +13,7 @@ import changing from '../gallery/viewChange.module.css';
 import ShotCaption from '../ShotCaption/ShotCaption.tsx';
 import styles from './CaptionGallery.module.css';
 
-type CaptionGalleryProps = { showDrawn?: boolean; open?: boolean };
-
-function CaptionGallery({ showDrawn = true, open = true }: CaptionGalleryProps) {
+function CaptionGallery() {
   const gallery = useGalleryState();
   const { views, at, live, byReader } = gallery;
   const marks = useGalleryMarks(gallery);
@@ -40,7 +37,7 @@ function CaptionGallery({ showDrawn = true, open = true }: CaptionGalleryProps) 
             key={view.id}
             className={cx(changing.view, (live ? i !== at : i !== 0) && changing.away)}
           >
-            <ShotCaption id={view.id} showDrawn={showDrawn} open={open} />
+            <ShotCaption id={view.id} showDrawn={false} />
           </div>
         ))}
       </div>

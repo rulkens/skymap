@@ -504,10 +504,6 @@
   filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.85));
   animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
 }
-.hideToggle svg {
-  width: 18px;
-  height: 18px;
-}
 /* Dimmer at rest while everything else is gone, still readable. */
 .hidden .hideToggle {
   color: var(--color-fg-dim);

@@ -4,10 +4,10 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { bodySceneBodyPartition } from '../../../../src/layers/body/present/bodySceneBodyPartition';
+import { bodySceneBodyPartition } from '../../../../src/layers/body/slabs/present/bodySceneBodyPartition';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
 import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySlabRosterIds';
-import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
+import { produceMissionCaptions } from '../../../../src/layers/missions/craft/present/produceMissionCaptions';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { EARTH_SCENE_BODY_IDS } from '../../../../src/layers/earthScenes/scenes/data/earthSceneBodyIds';

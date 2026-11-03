@@ -85,7 +85,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-star-card',
     text: 'The temperature on a field star’s card comes from the colour C = BP − RP by the relation of Mucciarelli, Bellazzini and Massari (2021), taken at the Sun’s metal content; the paper gives its scatter as 60 to 80 kelvin. A star brighter than absolute magnitude 4.0 and redder than 0.9 is treated as a giant, any other as a dwarf. The luminosity adds the bolometric correction of Andrae and others (2018), which we use only between 4,000 and 8,000 kelvin, and takes the Sun’s bolometric magnitude as 4.74. The radius follows from the two, in solar units.',
-    source: `${REPO_BLOB}/src/utils/astro/deriveStarProperties.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/card/utils/deriveStarProperties.ts`,
     sourceLabel: `the star estimates, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -101,7 +101,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-atmosphere-earth',
     text: 'Earth’s table holds three ingredients. Air molecules scatter 5.8, 13.6 and 33.1 millionths of the light per metre in red, green and blue, thinning by a factor e every 8 kilometres of height: this is why the sky is blue. Aerosols have a scale height of 1.2 kilometres, and ozone absorbs in a layer centred 25 kilometres up. The other eight tables mix published values, values derived from them and values adjusted by eye; the file marks which is which.',
-    source: `${REPO_BLOB}/src/layers/body/present/atmosphereParams.ts`,
+    source: `${REPO_BLOB}/src/layers/body/atmosphere/data/atmosphereParams.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -219,7 +219,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'depart-star-dust',
     text: 'Stars are drawn as catalogued, with no correction for dust: a star behind dust is dimmer and redder than it is, and reads cooler on its card.',
-    source: `${REPO_BLOB}/src/utils/astro/starLuminositySolar.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/card/utils/starLuminositySolar.ts`,
     sourceLabel: `the star luminosity estimate, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -233,7 +233,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'depart-earth-barycentre',
     text: 'Earth is drawn at the Earth-Moon barycentre, the point the pair turn about, since that is what JPL’s elements and our fit describe. The real Earth’s centre is off that point, always on the side away from the Moon.',
-    source: `${REPO_BLOB}/src/layers/body/bodies/earth.ts`,
+    source: `${REPO_BLOB}/src/layers/body/bodies/planets/earth.ts`,
     sourceLabel: `the orbital elements, ${IN_REPO}`,
     checked: CHECKED,
   },

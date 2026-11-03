@@ -27,7 +27,7 @@ const UNIFORM_PHASE: f32 = 1.0 / (4.0 * PI);
 const EXTINCTION_EPS: f32 = 1e-7;
 
 // ScatteringParams — per-body constants the bakes integrate; written by
-// 'layers/body/render/packScatteringParams.ts'. Keep in lockstep: a byte-layout
+// 'layers/body/atmosphere/render/packScatteringParams.ts'. Keep in lockstep: a byte-layout
 // drift raises no GPU error and iOS answers it with a dropped frame. Coefficients
 // are 1/km and radii/heights km.
 //

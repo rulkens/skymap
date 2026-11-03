@@ -33,11 +33,10 @@ import { feedbackPlugin } from '../../tools/site/feedbackPlugin.ts';
 import { jsxSourceAttributes } from '../../tools/site/jsxSourceAttributes.ts';
 import { reviewPlugin } from '../../tools/site/reviewPlugin.ts';
 import { shotFilesReload } from '../../tools/site/shotFilesReload.ts';
-import { BASE, INDEXABLE } from './src/data/site.ts';
+import { BASE, INDEXABLE, SITE_ORIGIN } from './src/data/site.ts';
 import { robotsTxt } from './src/utils/robotsTxt.ts';
 import { sitemapXml } from './src/utils/sitemapXml.ts';
 
-const site = 'https://skymap.rulkens.com';
 const publicDir = resolve(import.meta.dirname, '../../public');
 
 const isFile = (path) => {
@@ -97,10 +96,10 @@ const crawlFiles = {
     'astro:build:done': ({ dir, pages }) => {
       if (!INDEXABLE) return;
       const urls = pages
-        .map((p) => new URL(p.pathname, site + BASE).href)
+        .map((p) => new URL(p.pathname, SITE_ORIGIN + BASE).href)
         .filter((u) => !u.endsWith('/404/'));
       writeFileSync(join(fileURLToPath(dir), 'sitemap.xml'), sitemapXml(urls));
-      writeFileSync(join(fileURLToPath(dir), 'robots.txt'), robotsTxt(`${site}/sitemap.xml`));
+      writeFileSync(join(fileURLToPath(dir), 'robots.txt'), robotsTxt(`${SITE_ORIGIN}/sitemap.xml`));
     },
   },
 };
@@ -131,7 +130,7 @@ const searchIndex = {
 const generateScopedName = (name, file) => `${basename(dirname(file))}-${name}`;
 
 export default defineConfig({
-  site,
+  site: SITE_ORIGIN,
   base: BASE,
   outDir: INDEXABLE ? distDir : resolve(distDir, toolPages.website),
   trailingSlash: 'always',

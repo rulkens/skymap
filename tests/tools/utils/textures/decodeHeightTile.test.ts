@@ -13,12 +13,12 @@ import {
   HEIGHT_TILE_CHUNK_FOURCC,
   HEIGHT_TILE_POST_COUNT,
   HEIGHT_TILE_VERSION,
-} from '../../../../src/data/scene/heightTileFormat';
+} from '../../../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
 import { readRiffChunk } from '../../../../src/utils/image/readRiffChunk';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
-import { codeHeightM } from '../../../../src/utils/surfaceTiles/codeHeightM';
+import { codeHeightM } from '../../../../src/layers/body/surfaceTiles/format/utils/codeHeightM';
 import { decodeHeightTile } from '../../../../tools/utils/textures/decodeHeightTile';
-import { decodeHeightTileHeader } from '../../../../src/utils/surfaceTiles/decodeHeightTileHeader';
+import { decodeHeightTileHeader } from '../../../../src/layers/body/surfaceTiles/format/utils/decodeHeightTileHeader';
 import { heightCode } from '../../../../tools/utils/textures/heightCode';
 import { encodeHeightTile } from '../../../../tools/utils/textures/encodeHeightTile';
 

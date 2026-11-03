@@ -24,5 +24,11 @@ export const cosmicWebFilamentsLayer = defineLayer({
   destroy,
   passes: (runtime) => [filamentsPass(runtime)],
   assets: filamentsAssetRows,
-  ui: [{ slot: 'main', content: CosmicWebFilamentsSectionContainer }],
+  ui: [
+    {
+      slot: 'main',
+      content: CosmicWebFilamentsSectionContainer,
+      title: 'Cosmic web filaments',
+    },
+  ],
 });

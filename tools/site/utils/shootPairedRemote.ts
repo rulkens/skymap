@@ -20,7 +20,9 @@ export async function shootPairedRemote(
   );
   if (!code) throw new Error('the dome has no room code; is it open with ?remote?');
   const phone = await dome.context().newPage();
-  await phone.setViewportSize(shot.size);
+  const screen = shot.settings?.screenHeight;
+  // The drag pad is a share of the screen's height, so a long picture is a phone's screen shot down its length.
+  await phone.setViewportSize(screen ? { ...shot.size, height: screen } : shot.size);
   await phone.goto(`${base.replace(/\/+$/, '')}/remote.html#${code}`, { waitUntil: 'load' });
   await phone
     .getByRole('status')
@@ -29,11 +31,16 @@ export async function shootPairedRemote(
   // The remote only learns the focused object's name from a search result, so a search names it in the header.
   const name = shot.settings?.searchFor;
   if (name) {
-    await phone.getByRole('searchbox', { name: 'Search the sky' }).fill(name);
+    await phone.getByRole('searchbox', { name: 'Search' }).fill(name);
     await phone
       .locator('header')
       .getByText(name, { exact: true })
       .waitFor({ timeout: CONNECT_TIMEOUT_MS });
   }
-  return phone.screenshot({ type: 'png' });
+  if (!screen) return phone.screenshot({ type: 'png' });
+  const length = await phone.evaluate(() => document.documentElement.scrollHeight);
+  if (length !== shot.size.height) {
+    throw new Error(`the remote is ${length} px long; set the row's size.height to ${length}`);
+  }
+  return phone.screenshot({ type: 'png', fullPage: true });
 }

@@ -24,7 +24,7 @@ import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../state/selection/selectors';
-import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
+import cameraReducer, { commitCameraPose } from '../../../state/camera/cameraSlice';
 
 import type { ClimbableKind } from '../../../@types/camera/ClimbableKind';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
@@ -188,7 +188,7 @@ export function replayInput(
     return true;
   };
 
-  for (const [i, step] of steps.entries()) {
+  for (const step of steps) {
     switch (step.kind) {
       case 'gestureStart':
         // The latch itself is the rung's; the first drag step takes it, carrying
@@ -197,8 +197,8 @@ export function replayInput(
         break;
 
       case 'gestureEnd': {
-        // ONE commit site for both arms: bake the register into `base` before
-        // `endDrag`. Skipped while a clip owns the camera and across an arm
+        // ONE commit site for both arms: bake the register into `base`. Skipped
+        // while a clip owns the camera and across an arm
         // mismatch — the fold owns regime edges; a commit here must never flip one.
         // Skipped while a navigator row authors the release: its edge commit bakes
         // the nudged register, once.
@@ -208,10 +208,6 @@ export function replayInput(
         navAuthors = false;
         navSteps.push(step);
         stepRegister(step);
-        // A start later in this drain is a handoff (the second finger's lock, a
-        // source takeover): its `inputGestureStarted` already raised the flag, and
-        // lowering it here would leave the new gesture driving nothing.
-        if (!steps.slice(i + 1).some((s) => s.kind === 'gestureStart')) emit(endDrag());
         break;
       }
 

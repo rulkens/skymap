@@ -6,8 +6,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { surfaceTilePlanner } from '../../../src/layers/body/frame';
-import { createSurfaceTileStream } from '../../../src/layers/body/subsystems/surfaceTiles/surfaceTileStream';
-import { IDLE_SURFACE_TILE_PLAN } from '../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
+import { createSurfaceTileStream } from '../../../src/layers/body/surfaceTiles/stream/subsystems/surfaceTileStream';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../src/layers/body/surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
 import { throttleWithTrailingCall } from '../../../src/utils/throttle/throttleWithTrailingCall';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import type { BodyRuntime } from '../../../src/layers/body/@types/BodyRuntime';
