@@ -266,6 +266,7 @@ export function stepCameraRuntime(
       simDays,
       projection,
       bodies,
+      terrainHeightAt,
       followDistanceTarget: drained.followDistanceTarget,
     },
     // Same status a tween or clip has: an outside commit delivers the framing
