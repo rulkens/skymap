@@ -1,4 +1,4 @@
-import { SATELLITE_SWEEP_TIMING } from '../../../data/satellites/satelliteSweepTiming';
+import { SATELLITE_SWEEP_TIMING } from '../data/satelliteSweepTiming';
 
 /** Opacity of the uploaded sweep by its absolute sim age: full, then a linear fade to nothing. */
 export function sweepAgeOpacity(simAgeMs: number): number {

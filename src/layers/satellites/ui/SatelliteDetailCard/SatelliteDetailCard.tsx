@@ -9,7 +9,7 @@ import cx from 'classnames';
 import type { SatelliteInfo } from '../../../../@types/engine/SatelliteInfo';
 import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
 import type { CardLayout } from '../../../../@types/components/infoCard/CardLayout';
-import { SATELLITE_CLASS_EYEBROWS } from '../../../../data/satellites/satelliteClassEyebrows';
+import { SATELLITE_CLASS_EYEBROWS } from '../../data/satelliteClassEyebrows';
 import { formatSimClock } from '../../../../utils/time/formatSimClock';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
 import CardRow from '../../../../components/InfoCard/CardRow/CardRow';

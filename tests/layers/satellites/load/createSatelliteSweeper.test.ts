@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { json2satrec, propagate } from 'satellite.js';
 import { createSatelliteSweeper } from '../../../../src/layers/satellites/load/createSatelliteSweeper';
 import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
-import { HUBBLE_NORAD_ID } from '../../../../src/data/satellites/hubbleNoradId';
+import { HUBBLE_NORAD_ID } from '../../../../src/layers/satellites/data/hubbleNoradId';
 import { ISS, GOES_18 } from '../fixtures/celestrakRecords';
 import type { CelestrakOmm } from '../../../../tools/@types/satellites/CelestrakOmm';
 

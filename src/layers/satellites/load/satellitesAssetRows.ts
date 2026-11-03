@@ -9,7 +9,7 @@
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SATELLITE_FADES } from '../../../data/satellites/satelliteFades';
+import { SATELLITE_FADES } from '../data/satelliteFades';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
 import { visibilitySwitchOf } from '../../../utils/visibility/visibilitySwitchOf';

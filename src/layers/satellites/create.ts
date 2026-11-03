@@ -6,7 +6,7 @@
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { SatellitesRuntime } from './@types/SatellitesRuntime';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
-import { SATELLITE_SWEEP_TIMING } from '../../data/satellites/satelliteSweepTiming';
+import { SATELLITE_SWEEP_TIMING } from './data/satelliteSweepTiming';
 import { createSatellitePointRenderer } from './render/satellitePointRenderer';
 import { createOrbitTrailRenderer } from '../../services/gpu/renderers/bodies/orbitTrailRenderer';
 import { createSatellitePropagator } from './subsystems/createSatellitePropagator';

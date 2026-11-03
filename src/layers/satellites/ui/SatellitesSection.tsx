@@ -8,9 +8,9 @@ import { memo } from 'react';
 import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
 import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
 import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
-import { SATELLITE_CLASS_LABELS } from '../../../data/satellites/satelliteClassLabels';
+import { SATELLITE_CLASS_LABELS } from '../data/satelliteClassLabels';
 import type { SatelliteClass } from '../../../@types/satellites/SatelliteClass';
-import type { SatellitesSettings } from '../../../@types/settings/SatellitesSettings';
+import type { SatellitesSettings } from '../@types/SatellitesSettings';
 
 type SatellitesSectionProps = {
   enabled: boolean;

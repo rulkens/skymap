@@ -14,7 +14,7 @@ import { sceneOccluderSpheres } from '../../../services/engine/frame/sceneOcclud
 import { writeOrbitTrailRecord } from '../../../utils/orbit/writeOrbitTrailRecord';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
-import { SATELLITE_POINT_STYLE } from '../../../data/satellites/satellitePointStyle';
+import { SATELLITE_POINT_STYLE } from '../data/satellitePointStyle';
 import { satelliteLayerOpacity } from '../subsystems/satelliteLayerOpacity';
 import { satelliteOrbitEllipse } from '../subsystems/satelliteOrbitEllipse';
 import { composeTemeToWorld } from '../subsystems/composeTemeToWorld';

@@ -28,7 +28,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { sweepAgeOpacity } from '../subsystems/sweepAgeOpacity';
 import { satelliteLayerOpacity } from '../subsystems/satelliteLayerOpacity';
 import { composeTemeToWorld } from '../subsystems/composeTemeToWorld';
-import { SATELLITE_SWEEP_TIMING } from '../../../data/satellites/satelliteSweepTiming';
+import { SATELLITE_SWEEP_TIMING } from '../data/satelliteSweepTiming';
 
 export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satellites'> {
   const opacityOf = (simDays: number): number => {

@@ -17,7 +17,7 @@ import fsCode from '../../../services/gpu/shaders/satellites/points/fragment.wes
 import pickCode from '../../../services/gpu/shaders/satellites/points/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
-import { SATELLITE_POINT_STYLE } from '../../../data/satellites/satellitePointStyle';
+import { SATELLITE_POINT_STYLE } from '../data/satellitePointStyle';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../services/engine/frame/slabs';
 import { pickDepthFormat } from '../../../services/engine/frame/pickProgram';
 import { resolveDepthCompare } from '../../../utils/gpu/resolveDepthCompare';

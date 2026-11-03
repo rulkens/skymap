@@ -10,7 +10,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEnco
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
-import { SATELLITE_FOCUS_GEOMETRY } from '../../../data/satellites/satelliteFocusGeometry';
+import { SATELLITE_FOCUS_GEOMETRY } from '../data/satelliteFocusGeometry';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { catalogIndexOf } from '../subsystems/catalogIndexOf';
