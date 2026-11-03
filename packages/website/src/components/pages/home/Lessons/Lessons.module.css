@@ -157,10 +157,10 @@
   margin: var(--site-space-2xl) calc(-1 * var(--bleed)) 0;
 }
 
-.ground {
+.ground,
+.rover {
   grid-area: 1 / 1;
   aspect-ratio: 1440 / 420;
-  mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 38%, #000 86%, rgb(0 0 0 / 0));
 
   & picture {
     display: block;
@@ -168,11 +168,13 @@
   }
 
   & img {
-    width: 100%;
-    max-width: none;
     height: 100%;
     object-fit: cover;
   }
+}
+
+.ground {
+  mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 38%, #000 86%, rgb(0 0 0 / 0));
 }
 
 /*
@@ -181,22 +183,8 @@
  * ground. `--drive` runs along the slope under the wheels, which climbs about 0.13 to the right.
  */
 .rover {
-  grid-area: 1 / 1;
-  aspect-ratio: 1440 / 420;
   pointer-events: none;
   --drive: 2.5rem;
-
-  & picture {
-    display: block;
-    height: 100%;
-  }
-
-  & img {
-    width: 100%;
-    max-width: none;
-    height: 100%;
-    object-fit: cover;
-  }
 }
 
 .shadow {
@@ -321,25 +309,16 @@
 
     .span {
       animation: draw linear both;
+      animation-timeline: --horizon;
       animation-range: entry 60% cover 50%;
-    }
-
-    .search > picture {
-      animation: arrive linear both;
-      animation-range: entry 80% cover 50%;
     }
 
     .search > picture {
       --from-x: 2.5rem;
       --from-y: 0;
-    }
-
-    .span {
-      animation-timeline: --horizon;
-    }
-
-    .search > picture {
+      animation: arrive linear both;
       animation-timeline: --orion;
+      animation-range: entry 80% cover 50%;
     }
 
     /* The rover parks on its own spot as the strip reaches the middle of the window. */
