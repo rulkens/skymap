@@ -6,7 +6,7 @@
  * this list rather than re-spelling sliders by hand. `color` and
  * `labelColor` (each a `Vec3`) aren't here — the section wires each as a
  * native `<input type="color">` row instead. A parity test
- * (`tests/data/zoneOfAvoidance/zoneOfAvoidanceSliderFields.test.ts`) fails if
+ * (`tests/layers/zoneOfAvoidance/shell/data/zoneOfAvoidanceSliderFields.test.ts`) fails if
  * a scalar `ZoneOfAvoidanceTuning` leaf is added without a matching row.
  */
 import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';
