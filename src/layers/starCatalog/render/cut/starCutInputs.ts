@@ -1,7 +1,7 @@
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { StarCatalogSettings } from '../../../../@types/settings/StarCatalogSettings';
-import type { StarCatalogId } from '../../../../@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { StarCutInputs } from '../../@types/StarCutInputs';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';

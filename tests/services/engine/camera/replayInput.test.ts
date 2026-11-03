@@ -43,6 +43,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { ridesWheelTarget } from '../../../../src/services/engine/camera/ridesWheelTarget';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -75,6 +76,7 @@ function ctxOf(
       focusBodyId: focus?.type === 'body' ? focus.id : null,
       pivot: pivotFraming(focus),
       viewportPx: [1000, 1000] as const,
+      frustum: symmetricFrustum(Math.PI / 3, 1),
       fovYRad: Math.PI / 3,
       tuning: store.getState().camera.tuning,
     },
@@ -295,7 +297,7 @@ describe('replayInput', () => {
     if (!isBodyArm(arm)) throw new Error('fixture: not a body arm');
     const radiusM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'earth')!.surface.datumRadiusM;
     const anchorFor = (px: Vec2): Vec3 => {
-      const ray = cursorRayBodyLocal(arm.pose, px, [1000, 1000], Math.PI / 3);
+      const ray = cursorRayBodyLocal(arm.pose, px, [1000, 1000], symmetricFrustum(Math.PI / 3, 1));
       const t = raySphereRoots(ray.originM, ray.dir, [0, 0, 0], radiusM)![0];
       return [
         ray.originM[0] + ray.dir[0] * t,

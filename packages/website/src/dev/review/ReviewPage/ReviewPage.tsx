@@ -21,10 +21,11 @@ import type { ChipMade } from '../@types/ChipMade';
 import type { JobMeta } from '../@types/JobMeta';
 import type { ReviewOpen } from '../@types/ReviewOpen';
 import type { ReviewReveal } from '../@types/ReviewReveal';
-import type { ReviewSection } from '../@types/ReviewSection';
+import { claimKeysIntro } from '../claimKeysIntro';
 import { describeApply } from '../describeApply';
 import { flashMark } from '../flashMark';
 import { itemKey } from '../itemKey';
+import { marksOf } from '../marksOf';
 import { ownerMark } from '../ownerMark';
 import { normalizeHeading } from '../../../../../../tools/site/utils/normalizeHeading';
 import { readStructureJobs } from '../readStructureJobs';
@@ -42,25 +43,8 @@ import ReviewBar from '../ReviewBar/ReviewBar.tsx';
 import SectionIcons from '../SectionIcons/SectionIcons.tsx';
 import SelectionChip from '../SelectionChip/SelectionChip.tsx';
 import SectionPanel from '../SectionPanel/SectionPanel.tsx';
+import { HIDE_KEY, NEXT_STATE } from './ReviewPage.constants.ts';
 import reviewPage from './ReviewPage.module.css';
-
-const HIDE_KEY = 'skymap-review-hide-cut';
-const KEYS_SEEN_KEY = 'skymap-review-keys-seen';
-const NEXT_STATE = { cut: 'keep', keep: 'rewrite', rewrite: 'good', good: 'cut' } as const;
-
-/** True the first time in this browser, so the Keys box opens by itself once and is closed after that until asked for. */
-function claimKeysIntro(): boolean {
-  try {
-    if (localStorage.getItem(KEYS_SEEN_KEY)) return false;
-    localStorage.setItem(KEYS_SEEN_KEY, '1');
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const marksOf = (section: ReviewSection): DocsReviewMark[] =>
-  section.items.flatMap((item) => (item.kind === 'mark' ? [item.mark] : []));
 
 type ReviewPageProps = {
   article: Element;

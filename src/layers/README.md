@@ -20,7 +20,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `destroy`        | `destroy.ts`                                   | Releases exactly what `create` took                                                                                                                                                                                                                                                    |
 | `planners?`      | `frame.ts`                                     | Per-frame content planning; appended to `state.planners` by `createLayers`                                                                                                                                                                                                             |
 | `settings?`      | `state/`                                       | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional                                                                                                                                                                  |
-| `sources?`       | `sources/`                                     | One `APP_SOURCE_REGISTRY` row per file, + the rows array                                                                                                                                                                                                                               |
+| `sources?`       | `sources/`                                     | One `APP_SOURCE_REGISTRY` row per file, + the rows array; optional code-keyed `<layer>SourceRecord.ts` for the Layer's own lookups (Layers never import `APP_SOURCE_REGISTRY`); its id types live in its `@types/`                                                                     |
 | `sagas?`         | `sagas/`                                       | One saga per file                                                                                                                                                                                                                                                                      |
 | `search?`        | `present/`                                     | Palette rows, an async iterable; each yield replaces the Layer's previous snapshot                                                                                                                                                                                                     |
 | `sourceCounts?`  | `load/`                                        | Per-source counts, an async iterable, on the same terms as `search?`                                                                                                                                                                                                                   |
@@ -37,14 +37,17 @@ function is a root file named for it; a member that is a collection is a folder.
 | `bodies?`        | `bodies/`                                      | One body row per file, + the rows array. Leaf data: imports types, `src/data` constants and makers, and pure utils; never a body table, `layer.ts` or a pass. `compositions/appBodies.ts` collects them by import, a host's Layer (body's Earth) before the Layers whose rows orbit it |
 | `bodies/makers/` | `bodies/makers/`                               | The Layer's own row builders (`heliocentricPlanet`, `satelliteBody`), imported by its `bodies/` rows only                                                                                                                                                                              |
 | `heightAt?`      | `heightAt.ts`                                  | Runtime-bound: the ground height core's camera reads; the datum with none. One provider per composition; boot throws on two                                                                                                                                                            |
+| —                | `utils/<area>/`                                | The Layer's own helpers, one function per file, mirroring `src/utils/<area>/`; a helper with a second Layer or core user stays in `src/utils/`                                                                                                                                         |
+| —                | `data/`                                        | The Layer's own constants and tables, one per file, flat; a constant with a second Layer or core user stays in `src/data/`                                                                                                                                                             |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
 
 - **`load/`** — fetchers, `AssetSlot`s and the wiring that binds them.
 - **`render/`** — GPU pipeline objects: renderers, vertex layouts, uniform packers.
 - **`@types/`** — the Layer's **own** contract types, one per file, filename = the
-  type. `<Name>Runtime.d.ts` is always here. Types shared with core or with a sibling
-  Layer stay under `src/@types/` instead.
+  type. `<Name>Runtime.d.ts` is always here, and so are the Layer's settings and
+  renderer types. Types shared with core or with a sibling Layer stay under
+  `src/@types/` instead.
 
 An exhibit's notes are sections, each `section(kind, data)`. A **section kind**
 (`ExhibitSectionKind`) carries its `Component`, and optionally a `hold` (the saga that
@@ -66,8 +69,8 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
   no `index.ts`.
 - **Types never live inline in implementation files.** A React component's own
   `Props` is the one exception.
-- **`passes/` files export only their one named symbol** — helpers go to
-  `src/utils/`, constants to `src/data/`. Ratchet:
+- **`passes/` files export only their one named symbol** — helpers go to the
+  Layer's `utils/`, constants to its `data/` (`src/utils/`, `src/data/` when shared). Ratchet:
   `tests/services/engine/frame/frameFilePurity.test.ts`.
 - **Pass names are globally unique.** `createLayers` throws at boot if two Layers
   answer to the same one, which is what catches a half-finished migration where

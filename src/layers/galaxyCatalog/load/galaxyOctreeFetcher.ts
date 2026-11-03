@@ -5,9 +5,9 @@
  * reports the error the way a flat point slot does.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { GalaxyOctreeReq } from '../../../@types/loading/GalaxyOctreeReq';
+import type { GalaxyOctreeReq } from '../@types/GalaxyOctreeReq';
 import type { GalaxyOctreePayload } from '../@types/GalaxyOctreePayload';
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
 import { decodeOctreeIndex } from '../../../data/octree/decodeOctreeIndex';
 import { decodeOctreeInfo } from '../../../data/octree/decodeOctreeInfo';
 import { GALAXY_INFO_REQUIRED_COLUMNS } from '../../../data/octree/galaxyOctreeFamily';
@@ -22,7 +22,7 @@ export const galaxyOctreeFetcher: Fetcher<GalaxyOctreePayload, GalaxyOctreeReq> 
   signal,
   onProgress,
 ) => {
-  const { binBaseName } = APP_SOURCE_REGISTRY[req.source];
+  const { binBaseName } = GALAXY_CATALOG_SOURCE_RECORD[req.source];
   // The index carries the bar; the info object is a fraction of its size.
   const [indexBuf, infoBuf] = await Promise.all([
     fetchWithProgress(dataUrl(octreeIndexPath('galaxy', binBaseName)), signal, onProgress),

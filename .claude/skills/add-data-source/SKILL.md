@@ -58,7 +58,7 @@ galaxy-catalog sources (SDSS, 2MRS, GLADE, …) each get their own
 `sources/<id>.ts` row file inside the Layer; `sources/galaxyCatalogSourceRows.ts`
 lists them in draw/UI order and the Layer composes them into the global
 `APP_SOURCE_REGISTRY` (`src/compositions/appSources.ts`, still the single cross-Layer table —
-the `Source` code enum stays global, per the layer-composition spec). Adding a
+the `Source` code enum stays global, per the layer-composition spec). The Layer's own files read their rows through its `sources/<layer>SourceRecord.ts` (rows keyed by code), never `APP_SOURCE_REGISTRY`: Layers do not import `compositions/` (`layerImportBoundary`). Its `GalaxyCatalogId` and `GalaxyCatalogSourceType` live in the Layer's `@types/`, derived from those rows. Adding a
 tenth survey is a new row file plus a line in that list, not a new Layer.
 
 A genuinely **new Layer** (a new family with its own renderers/settings/passes,
@@ -135,8 +135,8 @@ renderer/layer order the galaxy catalogs use:
 
 - **Registry row + id domain** — a `type: 'starCatalog'` `APP_SOURCE_REGISTRY` row
   (`src/layers/starCatalog/sources/gaia-stars.ts` is the template). `StarCatalogId`
-  (`@types/data/starCatalog/StarCatalogId`) is the `type: 'starCatalog'`
-  narrowing of the source-entry union, and `STAR_CATALOG_IDS`
+  (`src/layers/starCatalog/@types/StarCatalogId`) is derived from the Layer's own
+  `STAR_CATALOG_SOURCE_RECORD` rows, and `STAR_CATALOG_IDS`
   (`src/data/starCatalog/starCatalogIds.ts`) its auto-widening runtime list —
   the star-only analogue of the galaxy-catalog id domain. Add the row and both
   widen with no further edit.

@@ -16,6 +16,7 @@ import type { RungMemory } from '../../camera/RungMemory';
 import type { TiltMemory } from '../../camera/TiltMemory';
 import type { FrameOutputs } from './FrameOutputs';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
+import type { Vec2 } from '../../math/Vec2';
 
 export type CameraRuntime = {
   /** The AUTHORED pose (pre-projection — a projected one walks ~8,500 km/frame,
@@ -43,5 +44,7 @@ export type CameraRuntime = {
   readonly own: Readonly<Partial<Record<DriverId, unknown>>>;
   /** The last winner's `pivotBody`: the wheel's pivot over the focus while it frames a body. */
   readonly pivotBody: SceneBodyId | null;
+  /** The lens shift drawn last frame, in NDC: eased toward the covers' target, so it is memory. */
+  readonly shiftNdc: Readonly<Vec2>;
   readonly outputs: FrameOutputs;
 };

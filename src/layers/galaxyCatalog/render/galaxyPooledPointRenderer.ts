@@ -9,7 +9,7 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { GalaxyColumns } from '../../../@types/data/galaxyCatalog/GalaxyColumns';
 import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
 import type { GalaxyPointDrawSettings } from '../../../@types/rendering/GalaxyPointDrawSettings';
@@ -36,7 +36,7 @@ import { createOctreeCutGpu } from '../../../services/gpu/octree/octreeCutGpu';
 import { WORD_BYTES } from '../../../services/gpu/octree/octreeCutLayout';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { GALAXY_OCTREE_FAMILY } from '../../../data/octree/galaxyOctreeFamily';
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
 import { GALAXY_GPU_RECORD_WORDS } from '../../../data/galaxyCatalog/galaxyGpuRecordWords';
 import {
   createViewSlotUniformRing,
@@ -125,9 +125,9 @@ export function createGalaxyPooledPointRenderer(init: {
   const fadeScratch = new Float32Array(FADE_UNIFORM_BYTES / 4);
   const blobScratch = new Float32Array(POOLED_BLOB_WORDS);
 
-  const sources = new Map<SourceType, LoadedPooledSource>();
+  const sources = new Map<GalaxyCatalogSourceType, LoadedPooledSource>();
 
-  function freeBuffers(source: SourceType): void {
+  function freeBuffers(source: GalaxyCatalogSourceType): void {
     sources.get(source)?.buffers.forEach((b) => b.destroy());
     sources.delete(source);
   }
@@ -141,7 +141,7 @@ export function createGalaxyPooledPointRenderer(init: {
   }
 
   function upload(
-    source: SourceType,
+    source: GalaxyCatalogSourceType,
     octree: Octree<GalaxyColumns>,
     pool: OctreePoolShape,
     stats: GalaxyPointStats,
@@ -162,13 +162,11 @@ export function createGalaxyPooledPointRenderer(init: {
     });
     device.queue.writeBuffer(recordsBuffer, 0, packed);
 
-    const entry = APP_SOURCE_REGISTRY[source];
+    const entry = GALAXY_CATALOG_SOURCE_RECORD[source];
     const sourceBuffer = uniformBuffer(`galaxy-pooled-source-${source}`, SOURCE_UNIFORM_BYTES);
     const sourceWords = new ArrayBuffer(SOURCE_UNIFORM_BYTES);
     new Uint32Array(sourceWords)[0] = source;
-    if (entry.type === 'galaxyCatalog') {
-      new Float32Array(sourceWords).set([entry.sbBoost, entry.falloffHalfMpc], 1);
-    }
+    new Float32Array(sourceWords).set([entry.sbBoost, entry.falloffHalfMpc], 1);
     device.queue.writeBuffer(sourceBuffer, 0, sourceWords);
 
     const absMag = octree.columns.find((c) => c.id === 'absMag');
@@ -220,7 +218,7 @@ export function createGalaxyPooledPointRenderer(init: {
     });
   }
 
-  function unload(source: SourceType): void {
+  function unload(source: GalaxyCatalogSourceType): void {
     const entry = sources.get(source);
     if (entry === undefined) return;
     // An octree with no records is the cut's release.
@@ -242,7 +240,7 @@ export function createGalaxyPooledPointRenderer(init: {
   }
 
   function uploadChunk(
-    source: SourceType,
+    source: GalaxyCatalogSourceType,
     slot: number,
     chunk: OctreeChunk<GalaxyColumns>,
     hostSlot: number | null,
@@ -266,7 +264,11 @@ export function createGalaxyPooledPointRenderer(init: {
     entry.slotRuns[slot] = run;
   }
 
-  function evictChunk(source: SourceType, slot: number, hostSlot: number | null): void {
+  function evictChunk(
+    source: GalaxyCatalogSourceType,
+    slot: number,
+    hostSlot: number | null,
+  ): void {
     const entry = sources.get(source);
     const run = entry?.slotRuns[slot] ?? null;
     if (entry === undefined || run === null) return;
@@ -280,13 +282,13 @@ export function createGalaxyPooledPointRenderer(init: {
     }
   }
 
-  function recordOrdinalOf(source: SourceType, poolIndex: number): number | null {
+  function recordOrdinalOf(source: GalaxyCatalogSourceType, poolIndex: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(poolIndex) || poolIndex < 0) return null;
     return recordOrdinal(entry.octree.records.count, entry.pickSlotRuns, poolIndex);
   }
 
-  function poolRecordIndexOf(source: SourceType, ordinal: number): number | null {
+  function poolRecordIndexOf(source: GalaxyCatalogSourceType, ordinal: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(ordinal) || ordinal < 0) return null;
     return poolRecordIndex(entry.octree.records.count, entry.slotRuns, ordinal);
@@ -306,7 +308,9 @@ export function createGalaxyPooledPointRenderer(init: {
     if (capture) cut.submitCapture(frameCut);
     const { viewSlot } = settings;
     let bound = false;
-    for (const { source } of frameCut.cut.sources) {
+    for (const { source: code } of frameCut.cut.sources) {
+      // The cut holds only the sources this renderer uploaded.
+      const source = code as GalaxyCatalogSourceType;
       const entry = sources.get(source);
       const opacity = settings.fadeOpacityOf(source);
       if (entry === undefined || opacity === 0) continue;
@@ -330,9 +334,12 @@ export function createGalaxyPooledPointRenderer(init: {
     }
   }
 
-  function pickDraws(include: (source: SourceType) => boolean): PooledPickSourceDraw[] {
+  function pickDraws(
+    include: (source: GalaxyCatalogSourceType) => boolean,
+  ): PooledPickSourceDraw[] {
     if (frameCut === null) return [];
-    return frameCut.cut.sources.flatMap(({ source }) => {
+    return frameCut.cut.sources.flatMap(({ source: code }) => {
+      const source = code as GalaxyCatalogSourceType;
       const entry = sources.get(source);
       const leaf = cut.drawOf(source, 'leaf', false);
       if (entry === undefined || leaf === null || !include(source)) return [];

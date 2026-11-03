@@ -28,9 +28,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DEV_PORTS } from '../../tools/utils/io/devPorts.ts';
 import { distDir } from '../../tools/utils/io/distDir.ts';
 import { toolPages } from '../../tools/utils/io/toolPages.ts';
+import { customMedia } from '../../tools/site/customMedia.ts';
 import { feedbackPlugin } from '../../tools/site/feedbackPlugin.ts';
 import { jsxSourceAttributes } from '../../tools/site/jsxSourceAttributes.ts';
 import { reviewPlugin } from '../../tools/site/reviewPlugin.ts';
+import { shotFilesReload } from '../../tools/site/shotFilesReload.ts';
 import { BASE, INDEXABLE } from './src/data/site.ts';
 import { robotsTxt } from './src/utils/robotsTxt.ts';
 import { sitemapXml } from './src/utils/sitemapXml.ts';
@@ -81,6 +83,7 @@ const devRootStatics = {
               jsxSourceAttributes(resolve(import.meta.dirname, 'src')),
               feedbackPlugin(`${BASE}__feedback`),
               reviewPlugin(BASE),
+              shotFilesReload(resolve(import.meta.dirname, 'src')),
             ],
           },
         });
@@ -140,6 +143,7 @@ export default defineConfig({
   integrations: [react(), mdx(), devRootStatics, crawlFiles, searchIndex],
   vite: {
     envDir: resolve(import.meta.dirname, '../..'),
-    css: { modules: { generateScopedName } },
+    // `@media (--narrow)` and the other names of src/data/media.ts (tools/site/customMedia.ts).
+    css: { modules: { generateScopedName }, postcss: { plugins: [customMedia()] } },
   },
 });

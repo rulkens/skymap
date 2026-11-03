@@ -1,4 +1,4 @@
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 

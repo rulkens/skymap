@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyColumns } from '../../../../src/@types/data/galaxyCatalog/GalaxyColumns';
 import type { GalaxyRecordSource } from '../../../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';

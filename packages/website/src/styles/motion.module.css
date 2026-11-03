@@ -1,0 +1,46 @@
+/*
+ * motion.module.css — the site's shared motion and its soft edge: a scroll drift, a pointer lean and a feathered rim.
+ * A vocabulary, not a component: it has no `.root`. A class takes one with
+ * `composes: drift from '../../../../styles/motion.module.css'` and tunes it through custom properties only:
+ * every importer's sheet repeats these rules, so a component that overrode them would win or lose by sheet order.
+ */
+
+/*
+ * While it crosses the window the element runs `--drift` ahead of the page (negative lags), at rest at mid-window:
+ * on its own view, or on the view timeline an ancestor names in `--drift-timeline`. Without `--drift` it holds still.
+ */
+@keyframes drift {
+  from {
+    translate: 0 var(--drift, 0px);
+  }
+
+  to {
+    translate: 0 calc(-1 * var(--drift, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .drift {
+      animation: drift linear both;
+      animation-timeline: var(--drift-timeline, view());
+    }
+  }
+}
+
+/*
+ * Leans away from the pointer as a nearer layer would when the head moves, by `--depth` at a turn of 1, from the
+ * `--turn-x/y` its `[data-turn]` host is given (pointer.client.ts). Without `--depth` it stands still.
+ */
+.lean {
+  transform: translate(
+    calc(var(--turn-x, 0) * var(--depth) * -1),
+    calc(var(--turn-y, 0) * var(--depth) * -1)
+  );
+  transition: transform 0.4s var(--ease-standard);
+}
+
+/* The edges dissolve into the page: whole out to `--feather` of the way from the middle to the nearest side. */
+.feather {
+  mask-image: radial-gradient(closest-side, #000 var(--feather, 70%), rgb(0 0 0 / 0));
+}

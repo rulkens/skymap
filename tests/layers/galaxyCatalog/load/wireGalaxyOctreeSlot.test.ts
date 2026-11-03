@@ -17,7 +17,7 @@ import { Source } from '../../../../src/data/source';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { octreePoolShape } from '../../../../src/utils/octree/octreePoolShape';
 import type { GalaxyColumns } from '../../../../src/@types/data/galaxyCatalog/GalaxyColumns';
-import type { GalaxyCatalogSourceType } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { OctreeChunkStream } from '../../../../src/@types/octree/OctreeChunkStream';

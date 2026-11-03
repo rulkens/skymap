@@ -500,6 +500,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     source: NASA_GLOSSARY,
     sourceLabel: NASA_GLOSSARY_LABEL,
     checked: CHECKED,
+    figure: { value: '88', measure: 'constellations divide the whole sky' },
   },
   {
     id: 'gloss-dwarf-planet',

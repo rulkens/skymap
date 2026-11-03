@@ -19,7 +19,7 @@
  */
 
 import { Source } from '../../../data/source';
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
 import { absoluteFromApparent, cartesianToRaDec, smoothstep } from '../../../utils/math/index';
 import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
 import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
@@ -38,7 +38,7 @@ import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVi
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { SlotStore } from '../../../@types/cache/SlotStore';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
 import type { ProceduralDiskFrameInput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameInput';
@@ -58,13 +58,16 @@ export function createProceduralDiskSubsystem(
 ): ProceduralDiskSubsystem {
   const atlas = deps.atlas;
 
-  const stickyProcDisksBySource = new Map<SourceType, Map<number, ProceduralDiskInstance>>();
+  const stickyProcDisksBySource = new Map<
+    GalaxyCatalogSourceType,
+    Map<number, ProceduralDiskInstance>
+  >();
 
   // Initialised to a frozen empty output so consumers that read
   // `lastOutput` before the first frame see valid data.
   let lastOutput: ProceduralDiskFrameOutput = { instances: [] };
 
-  function stickyFor(source: SourceType): Map<number, ProceduralDiskInstance> {
+  function stickyFor(source: GalaxyCatalogSourceType): Map<number, ProceduralDiskInstance> {
     let sticky = stickyProcDisksBySource.get(source);
     if (!sticky) {
       sticky = new Map();
@@ -131,8 +134,7 @@ export function createProceduralDiskSubsystem(
         // intrinsically bright galaxies bloom in the disk view too.
         const absMag = absoluteFromApparent(block.magG[i]!, dMpcFromOrigin);
         const rawSb = galaxySbAmp(absMag, medianAbsMag, dKpcRow);
-        const regEntry = APP_SOURCE_REGISTRY[source];
-        const sbBoost = regEntry.type === 'galaxyCatalog' ? regEntry.sbBoost : 1;
+        const sbBoost = GALAXY_CATALOG_SOURCE_RECORD[source].sbBoost;
         // sourceOpacity is the survey-fade term (see beginBlock above) — folded
         // in here because sbAmp is the sole brightness/alpha multiplier the
         // fragment shader reads (proceduralDisks/fragment.wesl's `intensity`).

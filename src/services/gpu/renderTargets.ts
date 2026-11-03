@@ -77,6 +77,10 @@ import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
 import { depthClearValueFor } from '../../utils/gpu/depthClearValueFor';
 
+const OPAQUE_BLACK: GPUColor = { r: 0, g: 0, b: 0, a: 1 };
+// Below `DEFAULT_BLOOM_THRESHOLD` (2.0 raw HDR), so the matte's background never blooms.
+const MATTE_WHITE: GPUColor = { r: 1, g: 1, b: 1, a: 1 };
+
 /** `farDepthView`'s placeholder texture — 1 texel is enough, every read is the same far value. */
 const FAR_DEPTH_PLACEHOLDER_PX = 1;
 
@@ -110,13 +114,15 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // hdr and swap clear opaque black (a=1); every other row clears to a=0 so
     // its upsample/composite adds nothing for a fragment it didn't reach —
     // WebGPU defaults an omitted clearValue to {0,0,0,0}, so dropping either
-    // a=1 row here would be a silent visual change.
+    // a=1 row here would be a silent visual change. hdr's clear IS the frame's
+    // background: the site shot tool turns it white (`debug.matteWhite`) and
+    // takes the subject's alpha from the black/white pair.
     {
       id: 'hdr',
       format: HDR_TARGET_FORMAT,
       depth: null,
       scale: 1,
-      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+      clearValue: (state) => (state.settings.debug.matteWhite ? MATTE_WHITE : OPAQUE_BLACK),
     },
     // Transparent (a=0) so the later OVER composite leaves every pixel the
     // foreground did not draw unchanged — an empty foreground frame

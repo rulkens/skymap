@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import type { GalaxyCatalogSourceType } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { SourceCountReport } from '../../../../src/@types/engine/layer/SourceCountReport';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';

@@ -7,8 +7,8 @@
  */
 
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogRegistryEntry } from '../@types/GalaxyCatalogRegistryEntry';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { ProvenanceCounts } from '../../../@types/engine/ProvenanceCounts';

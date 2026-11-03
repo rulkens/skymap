@@ -1,14 +1,13 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import { APP_SOURCE_REGISTRY } from '../../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_ROWS } from '../../sources/galaxyCatalogSourceRows';
 import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
-import { galaxyCatalogFormatOf } from '../../../../utils/galaxyCatalogFormatOf';
+import { galaxyCatalogFormatOf } from '../../utils/galaxyCatalogFormatOf';
 import { maskWith } from '../../../../utils/maskWith';
 import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
 import type { GalaxyCatalogFormat } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
-import type { GalaxyCatalogSourceType } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 import type { GalaxyProvenanceSettings } from '../../../../@types/settings/GalaxyProvenanceSettings';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
@@ -61,11 +60,8 @@ export const selectGalaxyFalloffStrength = createSelector(
  */
 export const selectVisibleSourceMask = createSelector([selectRoute], (route) => {
   let mask = 0;
-  for (const src of GALAXY_CATALOG_SOURCES) {
-    // `src ∈ GALAXY_CATALOG_SOURCES` ⇒ its registry id is a galaxy catalog id; the broad
-    // `SourceId` typing on `.id` doesn't know that, so the cast is safe.
-    const id = APP_SOURCE_REGISTRY[src].id as GalaxyCatalogId;
-    if (route.items[id].enabled) mask = maskWith(mask, src);
+  for (const [code, { id }] of GALAXY_CATALOG_SOURCE_ROWS) {
+    if (route.items[id].enabled) mask = maskWith(mask, code);
   }
   return mask;
 });

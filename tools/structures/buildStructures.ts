@@ -43,7 +43,7 @@ import { parseStructureSeed, type StructureSeedEntry } from '../parsers/parseStr
 import {
   encodeStructureCatalog,
   STRUCTURE_CATALOG_DATA_PREFIX,
-} from '../../src/data/structure/structureCatalogFormat';
+} from '../../src/layers/structure/data/structureCatalogFormat';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 import { dedupeByProximity } from '../curation/dedupeByProximity';

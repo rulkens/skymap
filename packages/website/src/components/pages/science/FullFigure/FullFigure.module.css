@@ -28,5 +28,5 @@
 
 .caption {
   composes: wrap from '../../../../styles/layout.module.css';
-  margin-top: 0.5rem;
+  margin-top: var(--site-space-2xs);
 }

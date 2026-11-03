@@ -10,7 +10,7 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { pickUniformBytesOf } from '../render/pickUniformBytesOf';
@@ -58,7 +58,7 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
     // Pick takes exactly the sources the draw takes: the same handed value, so a
     // catalog that is invisible, faded or clipped to 0 is not clickable either.
     drawPick(pass, view, ctx, state, fade) {
-      const visible = (source: SourceType) => fade[galaxyCatalogIdOf(source)] !== 0;
+      const visible = (source: GalaxyCatalogSourceType) => fade[galaxyCatalogIdOf(source)] !== 0;
       const sources = Array.from(runtime.pointRenderer.loadedSources()).filter((s) =>
         visible(s.source),
       );

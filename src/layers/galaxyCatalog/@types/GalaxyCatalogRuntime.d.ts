@@ -6,7 +6,7 @@
 
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { GalaxyCatalogFacts } from './GalaxyCatalogFacts';
 import type { GalaxyRecordBridge } from './GalaxyRecordBridge';
@@ -27,7 +27,7 @@ import type { GalaxyPickRenderer } from '../../../@types/rendering/GalaxyPickRen
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 import type { GalaxyColumns } from '../../../@types/data/galaxyCatalog/GalaxyColumns';
-import type { GalaxyOctreeReq } from '../../../@types/loading/GalaxyOctreeReq';
+import type { GalaxyOctreeReq } from './GalaxyOctreeReq';
 import type { OctreeChunkStream } from '../../../@types/octree/OctreeChunkStream';
 import type { GalaxyOctreePayload } from './GalaxyOctreePayload';
 import type { GalaxyPooledPointRenderer } from './GalaxyPooledPointRenderer';

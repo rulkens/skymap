@@ -8,8 +8,8 @@
 import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
 import type { GalaxyCatalogFormat } from '../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
 import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import type { GalaxyCatalogRegistryEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
-import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogRegistryEntry } from '../../layers/galaxyCatalog/@types/GalaxyCatalogRegistryEntry';
+import type { GalaxyCatalogSourceType } from '../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 
 export function galaxyFormatsFromSearch(
   search: string,

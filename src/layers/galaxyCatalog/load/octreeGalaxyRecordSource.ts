@@ -6,7 +6,7 @@
  * record bridge defers on. Only `namedPgcs` answers `hasDurableId`: the palette asks it
  * synchronously, and the shards are not loaded to answer it.
  */
-import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
+import type { GalaxyCatalogRegistryEntry } from '../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyColumnBlock } from '../../../@types/data/galaxyCatalog/GalaxyColumnBlock';
 import type { GalaxyOctreeObject } from '../../../@types/data/galaxyCatalog/GalaxyOctreeObject';
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';

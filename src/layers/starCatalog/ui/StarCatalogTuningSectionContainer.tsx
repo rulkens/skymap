@@ -20,7 +20,7 @@ import {
 } from '../state/starCatalogs/slice';
 import { selectTier } from '../../../state/tier/selectors';
 import { Source } from '../../../data/source';
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { STAR_CATALOG_SOURCE_RECORD } from '../sources/starCatalogSourceRecord';
 import { selectStarPoolRecordsError } from '../../../state/engine/selectors';
 import type { StarCatalogTuningKey } from '../@types/StarCatalogTuningKey';
 
@@ -49,8 +49,7 @@ function StarCatalogTuningSectionContainer(): React.ReactElement {
 
   const poolRecordsError = useAppSelector(selectStarPoolRecordsError);
   const tier = useAppSelector(selectTier);
-  const gaia = APP_SOURCE_REGISTRY[Source.GaiaStars];
-  const tierPoolRecords = gaia.type === 'starCatalog' ? gaia.budgets[tier].poolRecords : 0;
+  const tierPoolRecords = STAR_CATALOG_SOURCE_RECORD[Source.GaiaStars].budgets[tier].poolRecords;
 
   return (
     <StarCatalogTuningSection

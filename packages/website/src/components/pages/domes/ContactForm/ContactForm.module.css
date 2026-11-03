@@ -3,20 +3,20 @@
 }
 
 .summary {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  border: 1px solid #ff9d8a;
+  margin-bottom: var(--site-space-m);
+  padding: var(--site-space-s);
+  border: 1px solid var(--site-error);
   border-radius: 0.25rem;
 
   & p {
-    margin: 0 0 0.25rem;
+    margin: 0 0 var(--site-space-3xs);
     color: var(--color-fg);
   }
 
   & a {
     display: block;
-    padding-block: 0.5rem;
-    color: #ffb4a6;
+    padding-block: var(--site-space-2xs);
+    color: var(--site-error-text);
   }
 }
 
@@ -29,7 +29,7 @@
 /* The widget is 65px tall; the space is kept so it does not push the button down when it appears. */
 .check {
   min-height: 65px;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--site-space-m);
 }
 
 .leave {
@@ -46,6 +46,6 @@
 
 .status {
   min-height: 1.6em;
-  margin: 0.75rem 0 0;
+  margin: var(--site-space-xs) 0 0;
   color: var(--color-fg);
 }

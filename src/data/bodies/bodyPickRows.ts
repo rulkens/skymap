@@ -16,4 +16,7 @@ export const BODY_PICK_ROWS: Readonly<
 > = {
   earth: [SCENE_EARTH],
   planet: SCENE_PLANETS,
+  // The one body source with no table of its own: its bodies live in SCENE_PLANETS and pick
+  // as Source.Planet; the row carries the checkbox.
+  'small-body': [],
 };

@@ -6,7 +6,7 @@
  * into the pulse `resolveFocusRefDeferringSaga` already retries on.
  */
 
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { GalaxyRecordBridge } from '../@types/GalaxyRecordBridge';
 

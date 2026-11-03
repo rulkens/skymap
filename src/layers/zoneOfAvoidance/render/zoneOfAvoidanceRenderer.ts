@@ -14,6 +14,7 @@ import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
+import { frustumRayAxis } from '../../../utils/camera/frustumRayAxis';
 import vsCode from '../../../services/gpu/shaders/zoneOfAvoidance/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/zoneOfAvoidance/fragment.wesl?static';
 import fsPickCode from '../../../services/gpu/shaders/zoneOfAvoidance/fragmentPick.wesl?static';
@@ -27,6 +28,7 @@ import type { ZoneOfAvoidanceRenderer } from '../../../@types/rendering/ZoneOfAv
 import type { ZoneOfAvoidanceShell } from '../../../@types/rendering/ZoneOfAvoidanceShell';
 import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { PickWindow } from '../../../@types/engine/frame/PickWindow';
 import type { PickWindowNdc } from '../../../@types/engine/frame/PickWindowNdc';
@@ -134,6 +136,7 @@ export function createZoneOfAvoidanceRenderer(
   // Plain Vec3 tuples so the per-component reads below index cleanly under
   // noUncheckedIndexedAccess; `orbitForwardOf` writes into them in place.
   const fwd: Vec3 = [0, 0, 0];
+  const rayAxis: Vec3 = [0, 0, 0];
   // Frame-pole reference up, allocated once and rewritten in place each frame.
   const upRefScratch: Vec3 = [0, 0, 0];
   // Roll-adjusted screen basis, allocated once and rewritten in place each
@@ -147,7 +150,7 @@ export function createZoneOfAvoidanceRenderer(
   // written once above.
   function writeUniforms(
     cam: OrbitCamera,
-    viewport: Vec2,
+    frustum: ViewFrustum,
     tuning: ZoneOfAvoidanceTuning,
     shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
@@ -161,9 +164,7 @@ export function createZoneOfAvoidanceRenderer(
     imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.upBasis, upRefScratch), basis);
     const right = basis.right;
     const up = basis.up;
-
-    const aspect = viewport[1] > 0 ? viewport[0] / viewport[1] : cam.aspect;
-    const tanHalfFovY = Math.tan(cam.fovYRad / 2);
+    frustumRayAxis(fwd, right, up, frustum, rayAxis);
     // The tuning knob is a normalised [0, 1] fraction of the shell's radial
     // span (see the type + io.wesl's byte table); the shader's
     // exponential distance-decay term wants an absolute Mpc e-folding
@@ -172,16 +173,16 @@ export function createZoneOfAvoidanceRenderer(
     // leave the uniform holding a value with no name of its own).
     const radialFalloffMpc = tuning.radialFalloff * (shell.outerRadiusMpc - shell.innerRadiusMpc);
 
-    // camForward (floats 0..2) + tanHalfFovY (float 3).
-    f32[0] = fwd[0];
-    f32[1] = fwd[1];
-    f32[2] = fwd[2];
-    f32[3] = tanHalfFovY;
-    // camRight (floats 4..6) + aspect (float 7).
+    // rayAxis (floats 0..2) + tanHalfY (float 3).
+    f32[0] = rayAxis[0];
+    f32[1] = rayAxis[1];
+    f32[2] = rayAxis[2];
+    f32[3] = (frustum.tanUp - frustum.tanDown) / 2;
+    // camRight (floats 4..6) + tanHalfX (float 7).
     f32[4] = right[0];
     f32[5] = right[1];
     f32[6] = right[2];
-    f32[7] = aspect;
+    f32[7] = (frustum.tanRight - frustum.tanLeft) / 2;
     // camUp (floats 8..10) + innerRadiusMpc (float 11).
     f32[8] = up[0];
     f32[9] = up[1];
@@ -216,31 +217,32 @@ export function createZoneOfAvoidanceRenderer(
   function draw(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
-    viewport: Vec2,
+    frustum: ViewFrustum,
     tuning: ZoneOfAvoidanceTuning,
     shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
   ): void {
     // Every call, since drawPick shares this buffer and leaves its own rect.
-    writeUniforms(cam, viewport, tuning, shell, fadeAlpha, WHOLE_CANVAS_NDC);
+    writeUniforms(cam, frustum, tuning, shell, fadeAlpha, WHOLE_CANVAS_NDC);
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.draw(6, 1);
   }
 
   // Pick twin of `draw`: same quad, uniforms and `bindGroup` against the
-  // r32uint pick pipeline. The camera basis keeps the canvas aspect; only
-  // the window rect says which part of the canvas the target covers.
+  // r32uint pick pipeline. The rays keep the canvas frustum; only the window
+  // rect says which part of the canvas the target covers.
   function drawPick(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
+    frustum: ViewFrustum,
     canvasPx: Vec2,
     window: PickWindow,
     tuning: ZoneOfAvoidanceTuning,
     shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
   ): void {
-    writeUniforms(cam, canvasPx, tuning, shell, fadeAlpha, pickWindowNdc(window, canvasPx));
+    writeUniforms(cam, frustum, tuning, shell, fadeAlpha, pickWindowNdc(window, canvasPx));
     pass.setPipeline(pickPipeline);
     pass.setBindGroup(0, bindGroup);
     pass.draw(6, 1);

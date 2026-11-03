@@ -10,7 +10,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/components/CommandPalette/usePaletteSearch.ts',
   'src/components/DebugPanel/CameraBandBar.tsx',
   'src/components/DebugPanel/GpuTimingsSection.tsx',
-  'src/components/InfoCard/tooltips.tsx',
   'src/components/TimeBar/TimeBar.tsx',
   'src/components/common/Button/Button.tsx',
   'src/data/bodies/makers/meshBody.ts',

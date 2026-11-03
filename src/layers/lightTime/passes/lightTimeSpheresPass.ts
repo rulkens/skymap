@@ -15,11 +15,11 @@ export function lightTimeSpheresPass(runtime: LightTimeRuntime): ContentPass<'li
     enabled: (_state, ctx, _view, fade) => deriveLightTimeLiveness(ctx, fade) !== null,
 
     // `ctx.cam`, not `view.vp`: the renderer builds its own view rays from the
-    // camera basis rather than transforming vertices.
-    draw(pass, view, ctx, _state, fade) {
+    // camera basis and `ctx.frustum` rather than transforming vertices.
+    draw(pass, _view, ctx, _state, fade) {
       const liveness = deriveLightTimeLiveness(ctx, fade);
       if (liveness === null) return;
-      runtime.renderer.draw(pass, ctx.cam, ctx.drawCamPos, view.viewportPx, liveness);
+      runtime.renderer.draw(pass, ctx.cam, ctx.drawCamPos, ctx.frustum, liveness);
     },
   };
 }

@@ -96,10 +96,11 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-ephemeris',
-    text: 'Planet positions are Kepler orbits from JPL’s published elements plus a fitted correction that matches JPL Horizons to within 1,000 km from 1900 to 2100. What is fitted is Mercury, Venus, the Earth-Moon barycentre and, from Mars to Neptune, the centre of mass of each planet with its moons. Of the moons, 18 that belong to Jupiter, Saturn, Uranus and Neptune are fitted to the same bound against their planet. Earth’s Moon is not: it follows mean orbital elements.',
+    text: 'Planet positions are Kepler orbits from JPL’s published elements plus a fitted correction that matches JPL Horizons to within 1,000 km from 1900 to 2100. What is fitted is Mercury, Venus, the Earth-Moon barycentre and, from Mars to Neptune, the centre of mass of each planet with its moons. Of the moons, 18 that belong to Jupiter, Saturn, Uranus and Neptune are fitted to the same bound against their planet, 26 orbits in all. Earth’s Moon is not: it follows mean orbital elements.',
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data pipeline notes, ${IN_REPO}`,
     checked: CHECKED,
+    figure: { value: '26', measure: 'orbits fitted to JPL Horizons' },
   },
   {
     id: 'sci-density-field',
@@ -114,6 +115,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/tools/filaments/buildFilaments.ts`,
     sourceLabel: `the filament build, ${IN_REPO}`,
     checked: CHECKED,
+    figure: { value: '5', measure: 'standard deviations clear of the noise, or a ridge is not kept' },
   },
   {
     id: 'sci-flows',

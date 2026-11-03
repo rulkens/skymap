@@ -8,13 +8,12 @@
 
 import { memo } from 'react';
 import { Source } from '../../../data/source';
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../sources/galaxyCatalogSourceRecord';
 import { maskHas } from '../../../utils/maskHas';
 import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
-import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalogFormat } from '../../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
 import Slider from '../../../components/common/Slider/Slider';
 import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
@@ -27,7 +26,7 @@ import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
  * pencil-beam, dec-band wedge, and Sloan Great Wall sit last as
  * footprint-limited appendices to that ladder.
  */
-const TOGGLEABLE_SOURCES: readonly SourceType[] = [
+const TOGGLEABLE_SOURCES: readonly GalaxyCatalogSourceType[] = [
   Source.FamousGalaxy,
   Source.TwoMRS,
   Source.SDSS,
@@ -44,14 +43,14 @@ type GalaxiesSectionProps = {
   /** Bitmask of currently-visible galaxy catalog sources. */
   sourceMask: number;
   /** Called when the user toggles a single catalog on or off. */
-  onToggleSource: (source: SourceType, visible: boolean) => void;
+  onToggleSource: (source: GalaxyCatalogSourceType, visible: boolean) => void;
   /**
    * Per-source loaded point counts. Absent entries (catalog not yet loaded)
    * render the toggle without a count rather than a misleading "0".
    */
-  sourceCounts?: Partial<Record<SourceType, number>>;
+  sourceCounts?: Partial<Record<GalaxyCatalogSourceType, number>>;
   /** Each galaxy source's streaming format; a source with an octree row shows its choice. */
-  formats: Partial<Record<SourceType, GalaxyCatalogFormat>>;
+  formats: Partial<Record<GalaxyCatalogSourceType, GalaxyCatalogFormat>>;
   /** Called when the user picks Octree or Flat files for a source. */
   onFormatChange: (source: GalaxyCatalogSourceType, format: GalaxyCatalogFormat) => void;
   /** Current point size in pixels. */
@@ -149,15 +148,12 @@ function GalaxiesSection({
       <CollapsibleSection title="Galaxy catalogs" defaultOpen>
         {TOGGLEABLE_SOURCES.map((s) => {
           const count = sourceCounts?.[s];
-          const entry = APP_SOURCE_REGISTRY[s];
-          const hasOctree =
-            entry.type === 'galaxyCatalog' &&
-            'octree' in entry &&
-            Object.keys(entry.tierTargets).length > 0;
+          const entry = GALAXY_CATALOG_SOURCE_RECORD[s];
+          const hasOctree = 'octree' in entry && Object.keys(entry.tierTargets).length > 0;
           return (
             <div className={styles.panelRow} key={s}>
               <label htmlFor={`toggle-source-${s}`}>
-                {APP_SOURCE_REGISTRY[s].label}
+                {entry.label}
                 {count !== undefined && (
                   <span className={styles.sourceCount}>{count.toLocaleString()}</span>
                 )}
@@ -167,12 +163,7 @@ function GalaxiesSection({
                   className={styles.modeSelect}
                   aria-label={`${entry.label} format`}
                   value={formats[s]}
-                  onChange={(e) =>
-                    onFormatChange(
-                      s as GalaxyCatalogSourceType,
-                      e.target.value as GalaxyCatalogFormat,
-                    )
-                  }
+                  onChange={(e) => onFormatChange(s, e.target.value as GalaxyCatalogFormat)}
                 >
                   <option value="octree">Octree</option>
                   <option value="skmp">Flat files</option>

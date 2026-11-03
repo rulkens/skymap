@@ -29,7 +29,7 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
 import type { DiskWalkInput } from '../../../@types/engine/subsystems/DiskWalkInput';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { DiskPlannerWalkDeps } from '../../../@types/engine/subsystems/DiskPlannerWalkDeps';
 import type { DiskBlockBounds } from '../../../@types/engine/subsystems/DiskBlockBounds';
 import type { GalaxyColumnBlock } from '../../../@types/data/galaxyCatalog/GalaxyColumnBlock';
@@ -54,7 +54,10 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
   // The shared stride cursors: which row each block's decimated window resumes
   // from next frame, by source then ordinal base, with the block's row count so
   // an evicted block's ordinals can be purged. One map for BOTH bodies.
-  const strideStartBySource = new Map<SourceType, Map<number, { next: number; count: number }>>();
+  const strideStartBySource = new Map<
+    GalaxyCatalogSourceType,
+    Map<number, { next: number; count: number }>
+  >();
   // This source's blocks walked this frame: a chunked source's evicted block
   // leaves a cursor (and sticky disks) behind that only this prune removes.
   const visited = new Set<number>();

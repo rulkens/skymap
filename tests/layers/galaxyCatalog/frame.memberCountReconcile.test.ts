@@ -12,7 +12,7 @@ import { galaxyCatalogIdOf } from '../../../src/utils/galaxyCatalogIdOf';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
-import type { SourceType } from '../../../src/@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
@@ -34,7 +34,7 @@ const CLUSTER: SelectionRow = {
 };
 
 /** The two catalogs this file's fixtures populate. */
-const SDSS_AND_TWOMRS: readonly SourceType[] = [Source.SDSS, Source.TwoMRS];
+const SDSS_AND_TWOMRS: readonly GalaxyCatalogSourceType[] = [Source.SDSS, Source.TwoMRS];
 
 function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>): GalaxyCatalog {
   const flat = new Float32Array(positions.length * 3);
@@ -47,7 +47,7 @@ const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
 
 /** `visible` are the catalogs core hands a value above 0: they are the mask. */
-function fadeOf(visible: readonly SourceType[] = SDSS_AND_TWOMRS) {
+function fadeOf(visible: readonly GalaxyCatalogSourceType[] = SDSS_AND_TWOMRS) {
   return makeGalaxyCatalogFade(
     Object.fromEntries(visible.map((s) => [galaxyCatalogIdOf(s), 1])),
     0,

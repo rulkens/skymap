@@ -5,7 +5,7 @@
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { StarCatalogPickResources } from './StarCatalogPickResources';
@@ -21,21 +21,21 @@ export type StarCatalogRenderer = Renderer & {
    * Commit one catalog's index to per-source GPU buffers sized for `pool`, replacing any
    * earlier upload.
    */
-  upload(source: SourceType, octree: Octree<StarColumns>, pool: OctreePoolShape): void;
+  upload(source: StarCatalogSourceType, octree: Octree<StarColumns>, pool: OctreePoolShape): void;
   /**
    * Land a chunk in a slot: its records and rows at `runs` past the index's, then every root's
    * resident bit, written in the rows of `hostSlot` (its parent's slot; null when the index
    * holds its roots).
    */
   uploadChunk(
-    source: SourceType,
+    source: StarCatalogSourceType,
     slot: number,
     chunk: OctreeChunk<StarColumns>,
     hostSlot: number | null,
     runs: OctreeChunkRuns,
   ): void;
   /** Free a slot: every root of its chunk stops refining, then its rows' live counts are cleared. */
-  evictChunk(source: SourceType, slot: number, hostSlot: number | null): void;
+  evictChunk(source: StarCatalogSourceType, slot: number, hostSlot: number | null): void;
   /**
    * Called by every star pick draw: `recordOrdinal` reads the slots as that draw saw them. The
    * DEV pick overlay records the same draws each frame, so with it on the snapshot follows the
@@ -48,11 +48,11 @@ export type StarCatalogRenderer = Renderer & {
    * of the last pick draw, so a slot evicted and refilled before the readback still names the
    * star that was drawn; the selection row then finds its chunk gone, never another star.
    */
-  recordOrdinal(source: SourceType, poolIndex: number): number | null;
+  recordOrdinal(source: StarCatalogSourceType, poolIndex: number): number | null;
   /** The inverse: null when the ordinal's chunk is not resident. */
-  poolRecordIndex(source: SourceType, ordinal: number): number | null;
+  poolRecordIndex(source: StarCatalogSourceType, ordinal: number): number | null;
   /** Every committed catalog — the star analogue of `catalogStore.entries()`. */
-  loadedCatalogs(): Iterable<{ source: SourceType; octree: Octree<StarColumns> }>;
+  loadedCatalogs(): Iterable<{ source: StarCatalogSourceType; octree: Octree<StarColumns> }>;
   /** What the sibling `starCatalogPickRenderer` shares; see {@link StarCatalogPickResources}. */
   pickResources(): StarCatalogPickResources;
   /**

@@ -8,7 +8,7 @@ import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FadeValueOf } from '../../../@types/animation/FadeValueOf';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { GalaxyPointDrawSettings } from '../../../@types/rendering/GalaxyPointDrawSettings';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import {
@@ -46,6 +46,6 @@ export function galaxyPointDrawSettingsOf(
     // @group(3): the engine owns one focus buffer, written once per frame in
     // renderFrame. At rest (blend 0) the shader multiplier is 1.0.
     focusBindGroup,
-    fadeOpacityOf: (source: SourceType) => fade[galaxyCatalogIdOf(source)],
+    fadeOpacityOf: (source: GalaxyCatalogSourceType) => fade[galaxyCatalogIdOf(source)],
   };
 }

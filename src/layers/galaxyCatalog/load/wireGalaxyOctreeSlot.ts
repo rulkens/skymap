@@ -5,16 +5,16 @@
  * source; release drops the stream, the GPU pool and that record source.
  */
 
-import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
+import type { GalaxyCatalogRegistryEntry } from '../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { GalaxyColumns } from '../../../@types/data/galaxyCatalog/GalaxyColumns';
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { ProvenanceCounts } from '../../../@types/engine/ProvenanceCounts';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { GalaxyOctreeReq } from '../../../@types/loading/GalaxyOctreeReq';
+import type { GalaxyOctreeReq } from '../@types/GalaxyOctreeReq';
 import type { OctreeChunkStream } from '../../../@types/octree/OctreeChunkStream';
 import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
 import type { GalaxyCatalogFacts } from '../@types/GalaxyCatalogFacts';
@@ -64,7 +64,7 @@ export function wireGalaxyOctreeSlot(
       // The pack reads the catalog stats, which `OctreePoolHost`'s upload does not carry.
       const host: OctreePoolHost<GalaxyColumns> = {
         renderer: {
-          upload: (s, o, n) => renderer.upload(s, o, n, record.stats),
+          upload: (_, o, n) => renderer.upload(source, o, n, record.stats),
           uploadChunk: renderer.uploadChunk,
           evictChunk: renderer.evictChunk,
         },

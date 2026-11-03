@@ -8,8 +8,8 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
 import type { GalaxyCatalogFormat } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
-import type { GalaxyCatalogSourceType } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { ProvenanceAxisId } from '../../../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../../../@types/settings/ProvenanceFilter';
 import type { GalaxyOctreeTuningKey } from '../../@types/GalaxyOctreeTuningKey';

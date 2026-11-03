@@ -3,11 +3,11 @@
 }
 
 .caption {
-  margin-top: 0.5rem;
+  margin-top: var(--site-space-2xs);
 }
 
 /* The frames meet in the middle of a gap of the page grid; their labels keep to its columns either side. */
-@media (min-width: 901px) {
+@media (--wide) {
   .start,
   .end {
     --cols: 6;
@@ -28,7 +28,7 @@
   margin: var(--disc-ring) auto;
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .ringed {
     max-width: min(85%, 78svh);
   }

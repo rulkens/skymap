@@ -4,7 +4,7 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
 import type { GalaxyColumns } from '../../../@types/data/galaxyCatalog/GalaxyColumns';
 import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
@@ -28,19 +28,19 @@ export type GalaxyPooledPointRenderer = Omit<
   readonly pickLayouts: GalaxyPooledPickLayouts;
   /** `OctreePoolHost`'s upload plus the catalog stats the record pack reads; the slot adapts it. */
   upload(
-    source: SourceType,
+    source: GalaxyCatalogSourceType,
     octree: Octree<GalaxyColumns>,
     pool: OctreePoolShape,
     stats: GalaxyPointStats,
   ): void;
   /** Free the source's pool and cut. */
-  unload(source: SourceType): void;
+  unload(source: GalaxyCatalogSourceType): void;
   /** Pin the slot table a pick readback resolves against: the one its draw saw. */
   snapshotPickSlots(): void;
   /** Pool index (a pick's) → catalog ordinal, through the pick snapshot; null when not resolvable. */
-  recordOrdinal(source: SourceType, poolIndex: number): number | null;
+  recordOrdinal(source: GalaxyCatalogSourceType, poolIndex: number): number | null;
   /** Catalog ordinal → pool index through the live slots; null when its chunk is not resident. */
-  poolRecordIndex(source: SourceType, ordinal: number): number | null;
+  poolRecordIndex(source: GalaxyCatalogSourceType, ordinal: number): number | null;
   /** This frame's cut inputs (or none), and whether the cut is re-taken or only re-uniformed. */
   setFrameCut(inputs: OctreeCutInputs | null, recut: boolean): void;
   encodeCut(encoder: GPUCommandEncoder, claimTimestampWrites: ClaimTimestampWrites): void;
@@ -55,6 +55,6 @@ export type GalaxyPooledPointRenderer = Omit<
     blob: Pick<GalaxyCatalogSettings, GalaxyBlobTuningKey>,
   ): void;
   /** The live leaf draws of the frame-cut sources `include` keeps (blobs are not galaxies). */
-  pickDraws(include: (source: SourceType) => boolean): PooledPickSourceDraw[];
+  pickDraws(include: (source: GalaxyCatalogSourceType) => boolean): PooledPickSourceDraw[];
   destroy(): void;
 };

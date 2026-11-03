@@ -6,7 +6,7 @@
  */
 
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogSourceType } from './@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
@@ -19,7 +19,7 @@ import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/G
 import type { GalaxyColumns } from '../../@types/data/galaxyCatalog/GalaxyColumns';
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 
-import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from './sources/galaxyCatalogSourceRecord';
 import { GALAXY_CATALOG_SOURCES } from './sources/galaxyCatalogSources';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, COSMO } from '../../services/engine/frame/slabs';
@@ -100,7 +100,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   const points = new Map<GalaxyCatalogSourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>(
     GALAXY_CATALOG_SOURCES.map((code) => [
       code,
-      wireGalaxyCatalogSourceSlot(APP_SOURCE_REGISTRY[code], deps, {
+      wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[code], deps, {
         pointRenderer,
         catalogs,
         records,
@@ -111,10 +111,11 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   );
   const octreePoints = new Map(
     GALAXY_CATALOG_SOURCES.filter(
-      (code) => (APP_SOURCE_REGISTRY[code] as GalaxyCatalogSourceEntry).octree !== undefined,
+      (code) =>
+        (GALAXY_CATALOG_SOURCE_RECORD[code] as GalaxyCatalogSourceEntry).octree !== undefined,
     ).map((code) => [
       code,
-      wireGalaxyOctreeSlot(APP_SOURCE_REGISTRY[code], deps, {
+      wireGalaxyOctreeSlot(GALAXY_CATALOG_SOURCE_RECORD[code], deps, {
         pooledPointRenderer,
         chunkStreams,
         records,

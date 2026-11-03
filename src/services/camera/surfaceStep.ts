@@ -33,6 +33,7 @@ export function surfaceStep(
 } {
   const {
     viewportPx,
+    frustum,
     fovYRad,
     bodyRadiusM,
     standoffRadii,
@@ -51,6 +52,7 @@ export function surfaceStep(
         step.factor,
         step.cursorPx,
         viewportPx,
+        frustum,
         fovYRad,
         bodyRadiusM,
         standoffRadii,
@@ -75,6 +77,7 @@ export function surfaceStep(
           arm,
           step,
           viewportPx,
+          frustum,
           fovYRad,
           bodyRadiusM,
           groundRadiusAtM,
@@ -82,7 +85,7 @@ export function surfaceStep(
           outerBoundRadiusM,
         )
       : prev.gesture;
-  const { pose, mode } = draggedSurfacePose(arm, gesture, step, viewportPx, fovYRad);
+  const { pose, mode } = draggedSurfacePose(arm, gesture, step, viewportPx, frustum, fovYRad);
   // One floor site, after every position write — `anchoredZoomStep` owns its
   // own, so the zoom arm above is already floored.
   const settled = settledDragPose(arm, pose, mode, tilt, {

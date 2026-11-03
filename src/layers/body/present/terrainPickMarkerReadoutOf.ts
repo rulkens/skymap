@@ -8,7 +8,6 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { TerrainPickMarkerReadout } from '../@types/TerrainPickMarkerReadout';
-import { frustumFovYRad } from '../../../utils/camera/frustumFovYRad';
 import { terrainPickUnderCursor } from './terrainPickUnderCursor';
 
 export const NO_TERRAIN_PICK_MARKER_READOUT: TerrainPickMarkerReadout = {
@@ -34,7 +33,7 @@ export function terrainPickMarkerReadoutOf(
           pose,
           cursorPx,
           viewportPx: [view.canvasSize.width, view.canvasSize.height],
-          fovYRad: frustumFovYRad(view.frustum),
+          frustum: view.frustum,
         });
   return {
     heightM: pick === null ? null : tiles.stream.heightAt(bodyId, pick.pointM, params),

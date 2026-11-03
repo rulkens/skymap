@@ -7,7 +7,7 @@ import type { FamousGalaxyMetaEntry } from '../loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../engine/StructureSearchEntry';
 import type { StarBody } from '../scene/StarBody';
-import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
 import type { Exhibit } from '../exhibits/Exhibit';
 import type { Tour } from '../animation/tour/Tour';
 import type { EarthPlace } from './EarthPlace';

@@ -5,8 +5,8 @@
  */
 
 import type { GalaxyCatalogFormat } from '../data/galaxyCatalog/GalaxyCatalogFormat';
-import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogSourceType } from '../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
 import type { GalaxyProvenanceSettings } from './GalaxyProvenanceSettings';
 
