@@ -34,8 +34,8 @@ import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texture
 import { filamentsPass } from '../../src/layers/cosmicWebFilaments/filaments/passes/filamentsPass';
 import { gatePassByFade } from '../../src/services/engine/layer/gatePassByFade';
 import { APP_VISIBILITY_REGISTRY } from '../../src/compositions/appVisibility';
-import { cosmicWebDensityPass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
-import { cosmicWebDensityUpsamplePass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
+import { cosmicWebDensityPass } from '../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityPass';
+import { cosmicWebDensityUpsamplePass } from '../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityUpsamplePass';
 import { milkyWayAggregatePass } from '../../src/layers/milkyWay/passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from '../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from '../../src/layers/milkyWay/passes/milkyWayPass';

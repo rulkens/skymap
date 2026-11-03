@@ -7,12 +7,12 @@
 import { describe, it, expect } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { deriveCosmicWebDensityLiveness } from '../../../../src/layers/cosmicWebDensity/present/deriveCosmicWebDensityLiveness';
-import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
-import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
-import type { PassState } from '../../../../src/@types/engine/frame/PassState';
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
+import { deriveCosmicWebDensityLiveness } from '../../../../../src/layers/cosmicWebDensity/densityCubes/present/deriveCosmicWebDensityLiveness';
+import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSettings';
+import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';
+import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import type { CosmicWebDensityRuntime } from '../../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 
 const RUNTIME = {
   renderer: {

@@ -5,15 +5,15 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../../src/services/loading/fetchWithProgress', () => ({
+vi.mock('../../../../../src/services/loading/fetchWithProgress', () => ({
   dataUrl: (path: string) => `/data/${path}`,
   fetchWithProgress: vi.fn(),
 }));
 
-import { cosmicWebDensityFetcher } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityFetcher';
-import { encodeScalarField } from '../../../../src/data/volume/scalarFieldFormat';
-import { fetchWithProgress } from '../../../../src/services/loading/fetchWithProgress';
-import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
+import { cosmicWebDensityFetcher } from '../../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityFetcher';
+import { encodeScalarField } from '../../../../../src/data/volume/scalarFieldFormat';
+import { fetchWithProgress } from '../../../../../src/services/loading/fetchWithProgress';
+import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
 
 const fakeCube: ScalarCube = {
   dims: [2, 2, 2],

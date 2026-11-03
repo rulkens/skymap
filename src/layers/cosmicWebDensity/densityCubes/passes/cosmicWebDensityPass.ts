@@ -4,10 +4,10 @@
  * composites into HDR. Both gate on `deriveCosmicWebDensityLiveness`.
  */
 
-import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { CosmicWebDensityRuntime } from '../@types/CosmicWebDensityRuntime';
-import { createScalarVolumePass } from '../../../services/engine/frame/passes/createScalarVolumePass';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
+import type { CosmicWebDensityRuntime } from '../../@types/CosmicWebDensityRuntime';
+import { createScalarVolumePass } from '../../../../services/engine/frame/passes/createScalarVolumePass';
 import { deriveCosmicWebDensityLiveness } from '../present/deriveCosmicWebDensityLiveness';
 
 export function cosmicWebDensityPass(

@@ -4,14 +4,14 @@
  * as a commit that never fires, so a missing optional cube draws nothing.
  */
 
-import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
+import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
 import type { CosmicWebDensityReq } from '../@types/CosmicWebDensityReq';
 import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
-} from '../../../data/volume/scalarFieldFormat';
-import { dataUrl, fetchWithProgress } from '../../../services/loading/fetchWithProgress';
+} from '../../../../data/volume/scalarFieldFormat';
+import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
 
 export const cosmicWebDensityFetcher: Fetcher<ScalarCube, CosmicWebDensityReq> = async (
   req,

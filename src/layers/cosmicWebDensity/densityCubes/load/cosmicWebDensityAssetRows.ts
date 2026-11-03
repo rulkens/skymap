@@ -4,11 +4,11 @@
  * calls `renderer.unload(id)` or its GPU textures leak on evict.
  */
 
-import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { CosmicWebDensityRuntime } from '../@types/CosmicWebDensityRuntime';
+import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
+import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
+import type { CosmicWebDensityRuntime } from '../../@types/CosmicWebDensityRuntime';
 
-import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../sources/cosmicWebDensitySourceRows';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
 
 const PRIORITY: Record<CosmicWebDensityFieldId, number> = {
   mcpm: 70, // the largest single boot payload, and it only reads at the widest rung

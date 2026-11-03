@@ -14,10 +14,10 @@ import { describe, it, expect } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import type { ReactNode } from 'react';
-import CosmicWebDensitySectionContainer from '../../../../src/layers/cosmicWebDensity/ui/CosmicWebDensitySectionContainer';
-import { createTestStore } from '../../../support/createTestStore';
-import { selectCosmicWebDensityFieldItems } from '../../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/selectors';
-import type { AppStore } from '../../../../src/store/types';
+import CosmicWebDensitySectionContainer from '../../../../../src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensitySectionContainer';
+import { createTestStore } from '../../../../support/createTestStore';
+import { selectCosmicWebDensityFieldItems } from '../../../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/selectors';
+import type { AppStore } from '../../../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
   return ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;

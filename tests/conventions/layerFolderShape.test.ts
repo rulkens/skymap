@@ -40,7 +40,6 @@ const NOT_YET_REGROUPED: ReadonlySet<string> = new Set([
   'body',
   'constellations',
   'cosmicHorizon',
-  'cosmicWebDensity',
   'earthScenes',
   'galaxyCatalog',
   'lightTime',

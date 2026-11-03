@@ -4,9 +4,9 @@
  * so the two cannot disagree about whether the offscreen was written.
  */
 
-import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { CosmicWebDensityRuntime } from '../@types/CosmicWebDensityRuntime';
-import { createUpsamplePass } from '../../../services/engine/frame/passes/createUpsamplePass';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { CosmicWebDensityRuntime } from '../../@types/CosmicWebDensityRuntime';
+import { createUpsamplePass } from '../../../../services/engine/frame/passes/createUpsamplePass';
 import { deriveCosmicWebDensityLiveness } from '../present/deriveCosmicWebDensityLiveness';
 
 export function cosmicWebDensityUpsamplePass(

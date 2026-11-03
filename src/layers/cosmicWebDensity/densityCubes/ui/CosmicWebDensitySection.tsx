@@ -6,11 +6,11 @@
  */
 
 import { memo } from 'react';
-import type { CosmicWebDensitySettings } from '../@types/CosmicWebDensitySettings';
-import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
-import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../sources/cosmicWebDensitySourceRows';
-import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
-import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
+import type { CosmicWebDensitySettings } from '../../@types/CosmicWebDensitySettings';
+import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
+import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
+import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 
 export type CosmicWebDensitySectionProps = {
   enabled: boolean;

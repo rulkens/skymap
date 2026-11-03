@@ -8,16 +8,16 @@
 
 import { memo, useCallback } from 'react';
 import CosmicWebDensitySection from './CosmicWebDensitySection';
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import {
   selectCosmicWebDensityEnabled,
   selectCosmicWebDensityFieldItems,
-} from '../state/cosmicWebDensity/selectors';
+} from '../../state/cosmicWebDensity/selectors';
 import {
   setCosmicWebDensityEnabled,
   writeCosmicWebDensityField,
-} from '../state/cosmicWebDensity/slice';
-import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
+} from '../../state/cosmicWebDensity/slice';
+import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
 
 function CosmicWebDensitySectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
