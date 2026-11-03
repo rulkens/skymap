@@ -1,4 +1,4 @@
-// src/data/missions/missionEvents.generated.ts
+// src/layers/missions/events/data/missionEvents.generated.ts
 // !!! GENERATED FILE — DO NOT EDIT BY HAND !!!
 // Regenerate with:  npm run fetch-horizons -- voyager1 voyager2 && npm run fetch-voyager-windows && npm run build-spacecraft-tracks
 // Source of truth:  data/raw/horizons/{500@10,500@5..500@8,500@599,500@699,500@606,500@799,500@899}/ (JPL Horizons); launch, boundary and milestone instants are cited literals
