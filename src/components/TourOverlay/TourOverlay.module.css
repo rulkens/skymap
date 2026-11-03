@@ -90,22 +90,6 @@
   line-height: 1.3;
   text-wrap: balance;
   color: #ffffff;
-  /* Two fixed 300 ms fades; `both` on the in-fade keeps opacity 1 through the hold,
-   * and the out-fade only runs from its own delay. */
-  animation:
-    subtitleIn 300ms ease-out var(--in-delay) both,
-    subtitleOut 300ms ease-in var(--out-delay) forwards;
-}
-
-@keyframes subtitleIn {
-  to {
-    opacity: 1;
-  }
-}
-@keyframes subtitleOut {
-  to {
-    opacity: 0;
-  }
 }
 
 /* The dwell ring keeps its sweep: it is live progress, not decoration. */
@@ -114,19 +98,6 @@
     animation: none;
     opacity: 1;
     transform: none;
-  }
-  /* Swap with no fade: opacity steps straight to 1 and back to 0. */
-  .line {
-    animation: subtitleLineStep var(--dur) linear var(--in-delay) forwards;
-  }
-}
-@keyframes subtitleLineStep {
-  0%,
-  99.9% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
   }
 }
 

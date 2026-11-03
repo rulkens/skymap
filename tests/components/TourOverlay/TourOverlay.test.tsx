@@ -11,8 +11,8 @@
 // `() => void` fields under tsc — a bare `vi.fn()` infers a too-wide type and
 // fails the typecheck against the typed props.
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import TourCaption from '../../../src/components/TourOverlay/TourCaption';
 import TourNav from '../../../src/components/TourOverlay/TourNav';
 import TourOverlay from '../../../src/components/TourOverlay/TourOverlay';
@@ -45,24 +45,42 @@ describe('TourCaption', () => {
     expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
   });
 
-  it('pausing freezes the subtitle line', () => {
-    render(<TourCaption {...captionProps({ paused: true })} />);
-    for (const el of [
-      screen.getByText('First line here.'),
-      screen.getByText('Second line follows.'),
-    ]) {
-      expect(el.style.animationPlayState).toBe('paused');
-    }
-  });
+  describe('on the frame clock', () => {
+    let frame: ((ms: number) => void) | null = null;
+    beforeEach(() => {
+      vi.stubGlobal('requestAnimationFrame', (cb: (ms: number) => void) => {
+        frame = cb;
+        return 1;
+      });
+      vi.stubGlobal('cancelAnimationFrame', () => {
+        frame = null;
+      });
+    });
+    afterEach(() => vi.unstubAllGlobals());
+    const advance = (ms: number) => act(() => frame!(ms));
+    const opacity = (text: string) => screen.getByText(text).style.opacity;
 
-  it('each line starts at its schedule slice', () => {
-    const props = captionProps();
-    render(<TourCaption {...props} />);
-    const slices = lineSchedule(props.caption.lines, props.dwellSec);
-    props.caption.lines.forEach((line, i) => {
-      expect(screen.getByText(line).style.getPropertyValue('--in-delay')).toBe(
-        `${slices[i]!.startSec}s`,
-      );
+    it('the second line shows after its slice start', () => {
+      const props = captionProps();
+      const { startSec } = lineSchedule(props.caption.lines, props.dwellSec)[1]!;
+      render(<TourCaption {...props} />);
+      advance(0);
+      advance(1000);
+      expect(opacity('Second line follows.')).toBe('0');
+      advance(1000 + (startSec + 1) * 1000);
+      expect(opacity('Second line follows.')).toBe('1');
+      expect(opacity('First line here.')).toBe('0');
+    });
+
+    it('pausing freezes the subtitle line', () => {
+      const { rerender } = render(<TourCaption {...captionProps()} />);
+      advance(0);
+      advance(500);
+      rerender(<TourCaption {...captionProps({ paused: true })} />);
+      // Paused: the clock stops asking for frames, so elapsed cannot advance.
+      expect(frame).toBeNull();
+      rerender(<TourCaption {...captionProps({ paused: false })} />);
+      expect(frame).not.toBeNull();
     });
   });
 });

@@ -2,16 +2,17 @@
  * TourCaption — a beat's subtitles: the beat title as a small mono label, then
  * the narration one line at a time, bottom-centre.
  *
- * Line changes are CSS animations whose delay/duration come from `lineSchedule`,
- * keyed on `dwellNonce` and frozen by `paused` — the same mechanism as the dwell
- * ring in TourNav, so the lines and the ring can never disagree about the dwell.
+ * Line opacity is a pure function of the dwell clock (`useDwellElapsed`) over the
+ * `lineSchedule` slices — not CSS animation delays, which the cinema recorder's
+ * virtual time never elapses.
  */
 
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { BeatCaption } from '../../@types/animation/tour/BeatCaption';
 import { lineSchedule } from '../../utils/animation/lineSchedule';
-import { SUBTITLE_FADE_SEC } from '../../data/animation/subtitleTiming';
+import { useDwellElapsed } from '../../hooks/useDwellElapsed';
+import { subtitleOpacity } from '../../utils/animation/subtitleOpacity';
 import styles from './TourOverlay.module.css';
 
 export type TourCaptionProps = {
@@ -41,26 +42,23 @@ function TourCaption({
   const readout = `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
   const label = hasChrome ? `${caption.title} · ${readout}` : caption.title;
   const schedule = lineSchedule(caption.lines, dwellSec);
+  const elapsed = useDwellElapsed(dwellNonce, paused);
+  // jsdom has no matchMedia.
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
   return (
     <div className={cx(styles.caption, !hasChrome && styles.captionNoChrome)}>
       <div className={styles.label}>{label}</div>
-      <div className={styles.lines} key={dwellNonce}>
-        {caption.lines.map((line, i) => {
-          const { startSec, endSec } = schedule[i]!;
-          // Fades are fixed-length in CSS; only their start times vary per line.
-          const style = {
-            '--in-delay': `${startSec}s`,
-            '--out-delay': `${Math.max(startSec, endSec - SUBTITLE_FADE_SEC)}s`,
-            '--dur': `${endSec - startSec}s`,
-            animationPlayState: paused ? 'paused' : 'running',
-          } as CSSProperties;
-          return (
-            <p key={line} className={styles.line} style={style}>
-              {line}
-            </p>
-          );
-        })}
+      <div className={styles.lines}>
+        {caption.lines.map((line, i) => (
+          <p
+            key={line}
+            className={styles.line}
+            style={{ opacity: subtitleOpacity(schedule[i]!, elapsed, reduced) }}
+          >
+            {line}
+          </p>
+        ))}
       </div>
     </div>
   );

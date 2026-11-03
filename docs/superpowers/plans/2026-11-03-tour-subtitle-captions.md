@@ -102,6 +102,37 @@ Load the `create-component` skill first; read `docs/superpowers/conventions/ui-u
   scheduled time (± 1 frame). If CSS animations don't follow virtual time, **stop and report** — the
   fallback is ruling B (an rAF dwell-elapsed hook), which is the user's call.
 
+### Task 3b — line timing moves to a frame clock (ruling B, 2026-11-03)
+
+Task 4 failed: in a cinema take, CSS `animation-delay`s of several seconds never elapse under the
+recorder's virtual time (line 2 never appeared). The user ruled B.
+
+**Files:** `src/hooks/useDwellElapsed.ts`, `src/utils/animation/subtitleOpacity.ts`,
+`src/components/TourOverlay/TourCaption.tsx`, `src/components/TourOverlay/TourOverlay.module.css`,
+`tests/utils/animation/subtitleOpacity.test.ts`, `tests/components/TourOverlay/TourOverlay.test.tsx`
+
+```ts
+// seconds of dwell elapsed: rAF-accumulated, frozen while `paused`, reset when `dwellNonce` changes
+export function useDwellElapsed(dwellNonce: number, paused: boolean): number;
+
+// 0..1: ramps in over SUBTITLE_FADE_SEC from startSec, out over SUBTITLE_FADE_SEC to endSec;
+// `stepped` (reduced motion) → 1 inside the slice, 0 outside
+export function subtitleOpacity(
+  slice: { readonly startSec: number; readonly endSec: number },
+  tSec: number,
+  stepped: boolean,
+): number;
+```
+
+- `TourCaption` sets each line's `opacity` inline from `subtitleOpacity(schedule[i], elapsed, reduced)`;
+  no line CSS animations or animation delays remain (`subtitleIn`/`subtitleOut`/`subtitleLineStep`
+  and the `--in-delay`/`--out-delay`/`--dur` vars go). Lines still share one grid cell.
+- Tests: `subtitleOpacity` — 0 before start, 1 mid-slice, ramp midpoint ≈ 0.5 at `startSec + fade/2`,
+  0 after end, stepped has no ramp. Replace the two overlay tests with `pausing freezes the subtitle
+line` (fake timers / mocked rAF: elapsed stops advancing while paused) and `the second line shows
+after its slice start`.
+- Re-run Task 4's recorder check.
+
 ### Task 5 — docs
 
 **Files:** `docs/tour/graphic-design.md`, `docs/tour/implementation-notes.md`,
