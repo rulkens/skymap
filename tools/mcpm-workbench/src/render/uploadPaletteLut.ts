@@ -11,7 +11,7 @@
  * opacity from Polyphorm's `opticalThickness * r` instead (spec §15 decision 6).
  */
 import type { ScalarFieldPaletteId } from '../../../../src/@types/data/volume/ScalarFieldPaletteId';
-import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../src/layers/cosmicWebDensity/data/scalarFieldPalettes';
+import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../src/layers/cosmicWebDensity/densityCubes/data/scalarFieldPalettes';
 
 export function uploadPaletteLut(device: GPUDevice, id: ScalarFieldPaletteId): GPUTexture {
   const texture = device.createTexture({
