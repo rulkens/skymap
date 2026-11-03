@@ -64,16 +64,6 @@
   background: var(--color-accent);
 }
 
-.icon {
-  width: 1.5rem;
-  height: 1.5rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .label {
   white-space: nowrap;
 }

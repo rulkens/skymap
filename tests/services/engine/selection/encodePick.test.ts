@@ -16,7 +16,7 @@ import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoida
 import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
 import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
-import { bodySelectionRow } from '../../../../src/layers/body/present/bodySelectionRow';
+import { bodySelectionRow } from '../../../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../../src/layers/structure/picking/present/structureSelectionRow';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { galaxyRowRuntime } from '../../../support/selectionResolverOver';

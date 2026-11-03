@@ -50,21 +50,27 @@ function LinkAnatomy() {
       </figure>
       <ol className={styles.steps}>
         <li className={styles.step}>
-          <h3>Find the object</h3>
+          <h3 className={styles.title} data-n="1">
+            Find the object
+          </h3>
           <p>
             Open <a href={sitePath('/docs/guide/finding/#open-the-search')}>the search</a>, type a
             name and press Enter. {says('double-click-focus')}
           </p>
         </li>
         <li className={styles.step}>
-          <h3>Set the date</h3>
+          <h3 className={styles.title} data-n="2">
+            Set the date
+          </h3>
           <p>
             Select <a href={sitePath('/docs/guide/time/#set-a-date-and-time')}>the clock</a> at the
             bottom right, type a date and a time, and press Enter. {says('date-entry-utc')}
           </p>
         </li>
         <li className={styles.step}>
-          <h3>Copy the address</h3>
+          <h3 className={styles.title} data-n="3">
+            Copy the address
+          </h3>
           <p>{says('lesson-link')} Paste it into a lesson plan or a slide.</p>
           <ObjLink size="small" hang href={sitePath('/docs/guide/sharing/')}>
             Sharing a view

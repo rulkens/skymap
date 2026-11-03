@@ -15,7 +15,7 @@ to a Layer must also land in that core roster, or NEAR0 draws it a second time a
 - `bodySlabRosterIds` (`src/services/engine/frame/bodySlabRosterIds.ts`) builds that set from
   `SCENE_PLANETS` and the frame's present mesh bodies. It is static on purpose: deriving it from
   `state.slabRows` would let any Layer's slab row, whatever sits at its anchor, suppress a NEAR0 sphere.
-- The body Layer declares its Earth and planet rows in `src/layers/body/present/bodySlabRows.ts`;
+- The body Layer declares its Earth and planet rows in `src/layers/body/slabs/present/bodySlabRows.ts`;
   the roster and those rows are two lists that must agree.
 
 ## Idea

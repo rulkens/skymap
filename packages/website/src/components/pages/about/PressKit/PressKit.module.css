@@ -1,0 +1,58 @@
+.root {
+  margin-top: var(--site-space-2xl);
+}
+
+/* Four across the page grid on a wide screen, two on a narrow one; each picture cut to one shape. */
+.thumbs {
+  composes: grid quarters bare from '../../../../styles/layout.module.css';
+  row-gap: var(--col-gap);
+
+  @media (--narrow) {
+    & > li {
+      grid-column: span 6;
+    }
+  }
+
+  & img {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+}
+
+/* The link under the left half, the credit under the right, on the lines the section head above uses. */
+.take {
+  composes: grid halves from '../../../../styles/layout.module.css';
+  row-gap: var(--site-space-l);
+  align-items: end;
+  margin-top: var(--site-space-xl);
+}
+
+.download {
+  margin: 0;
+}
+
+/* Inside the ring link, which sets the display face: the size is in the text's. */
+.size {
+  composes: small from '../../../../styles/type.module.css';
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--site-text-faint);
+}
+
+.label {
+  composes: small from '../../../../styles/type.module.css';
+  margin: 0 0 var(--site-space-3xs);
+  color: var(--site-text-dim);
+}
+
+/* The copy control keeps its 44px for the thumb; its margin gives back what the line does not need. */
+.credit {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--site-space-2xs);
+  margin: 0;
+
+  & button {
+    margin-block: calc(-1 * var(--tap-reach));
+  }
+}

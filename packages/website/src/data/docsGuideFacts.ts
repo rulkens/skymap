@@ -2,6 +2,7 @@ import type { Fact } from '../@types/Fact';
 import { REPO_BLOB } from './siteIdentity';
 
 const CHECKED = '2026-10-07';
+const REMOTE_CHECKED = '2026-11-03';
 const IN_REPO = 'in the Skymap repository';
 
 /**
@@ -1139,6 +1140,38 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/tools/record/README.md`,
     sourceLabel: `the recorder’s instructions, ${IN_REPO}`,
     checked: CHECKED,
+  },
+  {
+    id: 'remote-relay',
+    about: 'app',
+    text: 'The phone and the dome exchange messages through a relay in the server that npm run dev starts from the Skymap repository. The published site has no relay, so for a phone remote the dome’s computer runs that server itself.',
+    source: `${REPO_BLOB}/tools/utils/vite/remoteRelayPlugin.ts`,
+    sourceLabel: `the relay in the development server, ${IN_REPO}`,
+    checked: REMOTE_CHECKED,
+  },
+  {
+    id: 'remote-pairing',
+    about: 'app',
+    text: 'With ?remote in its address the app shows a card with a QR code and a room code of eight characters until a phone connects. In dome mode the card is drawn on the disc at the front of the dome, and a flat copy of the QR code sits in the top left corner of the window.',
+    source: `${REPO_BLOB}/src/components/PairingOverlay/PairingOverlay.tsx`,
+    sourceLabel: `the pairing card, ${IN_REPO}`,
+    checked: REMOTE_CHECKED,
+  },
+  {
+    id: 'remote-room-size',
+    about: 'app',
+    text: 'A room holds the dome and up to three phones or laptops. A fourth is turned away.',
+    source: `${REPO_BLOB}/tools/utils/vite/attachRemoteRelay.ts`,
+    sourceLabel: `the relay’s rooms, ${IN_REPO}`,
+    checked: REMOTE_CHECKED,
+  },
+  {
+    id: 'remote-lost',
+    about: 'app',
+    text: 'A phone calls the dome every second. After three seconds without an answer it reads Dome not there, and the dome lets go of that phone’s drag. Both sides try to connect again every second.',
+    source: `${REPO_BLOB}/src/components/RemotePage/useRemoteLink.ts`,
+    sourceLabel: `the remote’s link to the dome, ${IN_REPO}`,
+    checked: REMOTE_CHECKED,
   },
   {
     id: 'settings-size-cost',

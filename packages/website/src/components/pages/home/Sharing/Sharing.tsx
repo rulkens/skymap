@@ -9,9 +9,9 @@
  */
 import type { ReactNode } from 'react';
 
-import { siteShot } from '../../../../data/siteShot.ts';
 import { appAddress } from '../../../../utils/appAddress.ts';
 import { cx } from '../../../../utils/cx.ts';
+import { requireShotLink } from '../../../../utils/requireShotLink.ts';
 import { shownLink } from '../../../../utils/shownLink.ts';
 import AddressText from '../../../shared/links/AddressText/AddressText.tsx';
 import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
@@ -39,7 +39,7 @@ function Sharing({ title, focus, clock, children }: SharingProps) {
   const { at, live, byReader, layers, warmed } = gallery;
   const marks = useGalleryMarks(gallery);
   const now = live ? at : 0;
-  const link = siteShot(VIEWS[now]!.id).link;
+  const link = requireShotLink(VIEWS[now]!.id);
   const typed = useTyped(shownLink(link));
 
   return (
@@ -59,11 +59,7 @@ function Sharing({ title, focus, clock, children }: SharingProps) {
           </div>
           <div className={styles.bar}>
             <AppLink className={styles.address} view={link}>
-              <AddressText
-                hash={typed}
-                head={styles.host}
-                param={(key) => ({ className: INKS[key] })}
-              />
+              <AddressText hash={typed} param={(key) => ({ className: INKS[key] })} />
             </AppLink>
             <CopyButton text={appAddress(link)} label="Copy the address" />
           </div>

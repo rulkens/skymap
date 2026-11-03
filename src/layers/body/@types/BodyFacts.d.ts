@@ -1,5 +1,5 @@
-import type { SurfaceTileDebugSnapshot } from './SurfaceTileDebugSnapshot';
-import type { TerrainPickMarkerReadout } from './TerrainPickMarkerReadout';
+import type { SurfaceTileDebugSnapshot } from '../surfaceTiles/debug/@types/SurfaceTileDebugSnapshot';
+import type { TerrainPickMarkerReadout } from '../terrainPick/@types/TerrainPickMarkerReadout';
 
 /** What the body Layer publishes into `state.engine.body`: the DebugPanel's two tile readouts. */
 export type BodyFacts = {

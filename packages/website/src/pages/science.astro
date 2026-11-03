@@ -13,3 +13,7 @@ const structure = (await getEntry('pageStructures', 'science'))!.data;
 <Base {...entry.data} {...structure} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Science', path: '/science/' }])]}>
   <Content />
 </Base>
+
+<script>
+  import '../components/pages/science/FrameCompare/frameCompare.client.ts';
+</script>

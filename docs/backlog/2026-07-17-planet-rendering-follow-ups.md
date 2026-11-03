@@ -5,14 +5,14 @@ merge-blocking, all next-touch material. Evidence lives in the feature PR's
 review record.
 
 1. **Saturn pole dual-source** — `orbitPlaneFrames.ts:89` and
-   `layers/body/bodies/saturn.ts:47` author the same IAU pole as two literals, pinned by
+   `layers/body/bodies/planets/saturn.ts:47` author the same IAU pole as two literals, pinned by
    a parity test rather than derived. Defensible (Mars/Jupiter frames use
    deliberately rounded independent poles); derive Saturn's frame from
    `rotationRowById('saturn')` if either site is next touched.
 2. **@types runtime type-shape tests** — a few Plan 01 tests assert type shapes
    at runtime; judge against `testing.md` ("will it fail on a real bug?") and
    delete the ones that can't.
-3. **`UNIFORM_BUFFER_SIZE = 96` hardcode** — `layers/body/render/ringRenderer.ts:24`
+3. **`UNIFORM_BUFFER_SIZE = 96` hardcode** — `layers/body/rings/render/ringRenderer.ts:24`
    restates the ring uniform byte size beside the packer's own length (the
    textured-body renderer already derives its own); derive one from the other.
 
