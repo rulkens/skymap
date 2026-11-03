@@ -6,7 +6,7 @@
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
-import type { CosmicWebDensityFieldId } from './@types/CosmicWebDensityFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from './@types/CosmicWebDensityRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';

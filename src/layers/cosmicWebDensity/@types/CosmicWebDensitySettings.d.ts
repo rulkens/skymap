@@ -5,7 +5,7 @@
  * toggle before its cube lazy-loads.
  */
 
-import type { CosmicWebDensityFieldId } from './CosmicWebDensityFieldId';
+import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 
 export type CosmicWebDensitySettings = {

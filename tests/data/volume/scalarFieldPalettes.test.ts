@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../../src/layers/cosmicWebDensity/densityCubes/data/scalarFieldPalettes';
+import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../src/data/volume/scalarFieldPalettes';
 
 describe('scalar field palettes', () => {
   it('produces a 256×4 RGBA8 LUT', () => {

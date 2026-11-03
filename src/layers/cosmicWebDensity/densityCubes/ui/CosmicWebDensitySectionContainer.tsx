@@ -17,7 +17,7 @@ import {
   setCosmicWebDensityEnabled,
   writeCosmicWebDensityField,
 } from '../../state/cosmicWebDensity/slice';
-import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityFieldId';
+import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
 
 function CosmicWebDensitySectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

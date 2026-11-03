@@ -20,10 +20,6 @@
     "to": "src/layers/cosmicWebDensity/densityCubes/@types/VolumeFieldRenderer.d.ts"
   },
   {
-    "from": "src/layers/cosmicWebDensity/data/scalarFieldPalettes.ts",
-    "to": "src/layers/cosmicWebDensity/densityCubes/data/scalarFieldPalettes.ts"
-  },
-  {
     "from": "src/layers/cosmicWebDensity/utils/clampVolumeContrast.ts",
     "to": "src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeContrast.ts"
   },

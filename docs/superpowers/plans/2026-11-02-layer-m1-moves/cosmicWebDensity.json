@@ -1,9 +1,5 @@
 [
   {
-    "from": "src/@types/data/volume/CosmicWebDensityFieldId.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/CosmicWebDensityFieldId.d.ts"
-  },
-  {
     "from": "src/@types/engine/frame/ScalarVolumePassRow.d.ts",
     "to": "src/layers/cosmicWebDensity/@types/ScalarVolumePassRow.d.ts"
   },
@@ -22,10 +18,6 @@
   {
     "from": "src/@types/settings/VolumeFieldSettings.d.ts",
     "to": "src/layers/cosmicWebDensity/@types/VolumeFieldSettings.d.ts"
-  },
-  {
-    "from": "src/data/volume/scalarFieldPalettes.ts",
-    "to": "src/layers/cosmicWebDensity/data/scalarFieldPalettes.ts"
   },
   {
     "from": "src/utils/clampVolumeContrast.ts",
