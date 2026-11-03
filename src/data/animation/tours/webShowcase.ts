@@ -66,8 +66,10 @@ export const webShowcase: Tour = {
     {
       caption: {
         title: 'The Milky Way',
-        body: "Home — a few hundred billion stars, and the one vantage point in this entire map you're looking out **from**.",
-        position: 'bottom-left',
+        lines: [
+          'Home — a few hundred billion stars,',
+          "and the one vantage point in this entire map you're looking out from.",
+        ],
       },
       dwellClip: dwellDrift(8),
       enterClip: establishTheWeb,
@@ -75,8 +77,10 @@ export const webShowcase: Tour = {
     {
       caption: {
         title: 'The Virgo Cluster',
-        body: 'Two thousand galaxies bound by gravity — the dense heart of the supercluster we call **home**, 54 million light-years away.',
-        position: 'bottom-left',
+        lines: [
+          'Two thousand galaxies bound by gravity —',
+          'the dense heart of the supercluster we call home, 54 million light-years away.',
+        ],
       },
       dwellClip: dwellDrift(10),
       enterClip: flyAndFocusOnClip(focusId('galaxy-cluster-virgo-m87')),
@@ -84,8 +88,10 @@ export const webShowcase: Tour = {
     {
       caption: {
         title: 'M87',
-        body: "The cluster's giant — a trillion stars around a black hole six billion times the Sun's mass, the **first ever photographed**.",
-        position: 'bottom-right',
+        lines: [
+          "The cluster's giant — a trillion stars",
+          "around a black hole six billion times the Sun's mass, the first ever photographed.",
+        ],
       },
       dwellClip: dwellDrift(10),
       enterClip: flyToClip(focusId('m87')),
