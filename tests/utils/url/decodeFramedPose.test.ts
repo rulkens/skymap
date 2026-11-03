@@ -27,6 +27,8 @@ const SITE_ARM: FramedCameraPose = {
   pose: { siteId: asSurfaceSiteId('curiosity'), headingRad: 1.2, elevationRad: 0.3, rangeM: 12.5 },
 };
 
+const SKY_LINK = 'k,earth,0.21859354349348772,0.9716130157244841,3.14,1.05';
+
 const WORLD_ARM: FramedCameraPose = {
   frame: 'absolute',
   pose: { target: [1, 2, 3], yaw: 0.7, pitch: -0.2, distance: 5.5, roll: 0.42 },
@@ -53,6 +55,29 @@ describe('decodeFramedPose', () => {
     const got = worldArmOf(decodeFramedPose(encodeFramedPose(offset))!).lookOffset!;
     expect(got[0]).toBeCloseTo(0.3, 12);
     expect(got[1]).toBeCloseTo(-0.125, 12);
+  });
+
+  it('reads a sky link back to the framed pose it was written from', () => {
+    const sky: FramedCameraPose = {
+      frame: {
+        sky: {
+          body: asSceneBodyId('earth'),
+          lonRad: 0.21859354349348772,
+          latRad: 0.9716130157244841,
+        },
+      },
+      pose: { azimuthRad: 3.14, altitudeRad: 1.05 },
+    };
+    expect(decodeFramedPose(SKY_LINK)).toEqual(sky);
+    expect(encodeFramedPose(decodeFramedPose(SKY_LINK)!)).toBe(SKY_LINK);
+  });
+
+  it('rejects a malformed sky link', () => {
+    expect(decodeFramedPose(SKY_LINK.replace('earth', 'notabody'))).toBeNull();
+    expect(decodeFramedPose(SKY_LINK.replace(',1.05', ',1.6'))).toBeNull();
+    expect(decodeFramedPose(SKY_LINK.replace(',3.14', ',Infinity'))).toBeNull();
+    expect(decodeFramedPose(`${SKY_LINK},0`)).toBeNull();
+    expect(decodeFramedPose(SKY_LINK.replace(',1.05', ''))).toBeNull();
   });
 
   it('rejects an unrecognised tag', () => {
