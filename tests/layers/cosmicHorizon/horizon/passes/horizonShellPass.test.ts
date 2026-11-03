@@ -7,16 +7,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { horizonShellPass } from '../../../../src/layers/cosmicHorizon/passes/horizonShellPass';
-import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
-import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
-import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { Slab } from '../../../../src/@types/engine/frame/Slab';
-import type { CosmicHorizonRuntime } from '../../../../src/layers/cosmicHorizon/@types/CosmicHorizonRuntime';
+import { horizonShellPass } from '../../../../../src/layers/cosmicHorizon/horizon/passes/horizonShellPass';
+import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
+import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
+import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
+import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
+import type { CosmicHorizonRuntime } from '../../../../../src/layers/cosmicHorizon/@types/CosmicHorizonRuntime';
 
 // ── Stub builders ───────────────────────────────────────────────────────────
 
