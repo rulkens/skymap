@@ -11,8 +11,8 @@ import type { DetailCardTable } from '../../@types/components/infoCard/DetailCar
 import type { DetailCardEntry } from '../../@types/components/infoCard/DetailCardEntry';
 import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
-import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
-import CompactCard from './CompactCard/CompactCard';
+import GalaxyDetailCard from '../../layers/galaxyCatalog/card/ui/GalaxyDetailCard/GalaxyDetailCard';
+import CompactCard from '../../layers/galaxyCatalog/card/ui/CompactCard/CompactCard';
 
 /** The one kind no Layer claims; every other arm arrives via `layerUiContents`. */
 const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {

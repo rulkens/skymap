@@ -20,7 +20,7 @@ import {
 import type { Mat4 } from 'wgpu-matrix';
 import type { GalaxyPointDrawSettings } from '../../../../src/layers/galaxyCatalog/@types/GalaxyPointDrawSettings';
 import type { ProvenanceFilter } from '../../../../src/@types/settings/ProvenanceFilter';
-import { PROVENANCE_FILTER_CODE } from '../../../../src/data/provenanceFilter';
+import { PROVENANCE_FILTER_CODE } from '../../../../src/layers/galaxyCatalog/provenance/data/provenanceFilter';
 import { packSelection } from '../../../../src/data/selectionEncoding';
 
 // ─── Fixture ──────────────────────────────────────────────────────────────────

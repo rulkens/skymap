@@ -5,10 +5,10 @@
  */
 
 import type { ReactNode } from 'react';
-import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
-import { formatDistance } from '../../../utils/format/formatDistance';
-import { formatLookback } from '../../../utils/format/formatLookback';
-import CardRow from '../CardRow/CardRow';
+import type { GalaxyInfo } from '../../../../../@types/engine/GalaxyInfo';
+import { formatDistance } from '../../../../../utils/format/formatDistance';
+import { formatLookback } from '../../../../../utils/format/formatLookback';
+import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
 import styles from '../compactChrome.module.css';
 import local from './CompactCard.module.css';
 

@@ -13,10 +13,10 @@
  * just move that branch into every call site instead of removing it.
  */
 
-import { PROVENANCE_AXES } from '../data/provenanceAxes';
-import type { SourceType } from '../@types/data/SourceType';
-import type { ProvenanceAxisId } from '../@types/settings/ProvenanceAxisId';
-import type { ProvenanceCounts } from '../@types/engine/ProvenanceCounts';
+import { PROVENANCE_AXES } from '../../../../data/provenanceAxes';
+import type { SourceType } from '../../../../@types/data/SourceType';
+import type { ProvenanceAxisId } from '../../../../@types/settings/ProvenanceAxisId';
+import type { ProvenanceCounts } from '../../../../@types/engine/ProvenanceCounts';
 
 export function sumProvenanceCounts(
   bySource: Partial<Record<SourceType, ProvenanceCounts>>,

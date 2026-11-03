@@ -6,7 +6,7 @@
  * both keyed by the union) means a new filter mode can't be half-added.
  */
 
-import type { ProvenanceFilter } from '../@types/settings/ProvenanceFilter';
+import type { ProvenanceFilter } from '../../../../@types/settings/ProvenanceFilter';
 
 /**
  * Shader-side encoding, packed into the points `Uniforms` as a u32.  These

@@ -41,13 +41,13 @@
 
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import cx from 'classnames';
-import type { GalaxyProvenanceSettings } from '../../@types/settings/GalaxyProvenanceSettings';
-import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
-import type { ProvenanceFilter } from '../../@types/settings/ProvenanceFilter';
-import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
-import { PROVENANCE_AXES } from '../../data/provenanceAxes';
-import { PROVENANCE_FILTER_OPTIONS } from '../../data/provenanceFilter';
-import DebugSection from './DebugSection';
+import type { GalaxyProvenanceSettings } from '../../../../@types/settings/GalaxyProvenanceSettings';
+import type { ProvenanceAxisId } from '../../../../@types/settings/ProvenanceAxisId';
+import type { ProvenanceFilter } from '../../../../@types/settings/ProvenanceFilter';
+import type { ProvenanceCounts } from '../../../../@types/engine/ProvenanceCounts';
+import { PROVENANCE_AXES } from '../../../../data/provenanceAxes';
+import { PROVENANCE_FILTER_OPTIONS } from '../data/provenanceFilter';
+import DebugSection from '../../../../components/DebugPanel/DebugSection';
 import styles from './GalaxyProvenanceSection.module.css';
 
 const SHOW_HINT =

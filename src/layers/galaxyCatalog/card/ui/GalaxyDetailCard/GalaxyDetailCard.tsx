@@ -10,17 +10,17 @@
 
 import { Fragment, type ReactNode } from 'react';
 import cx from 'classnames';
-import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
-import { formatDistance } from '../../../utils/format/formatDistance';
-import { formatDiameterKpc } from '../../../utils/format/formatDiameterKpc';
-import { formatLookback } from '../../../utils/format/formatLookback';
-import Thumbnail from '../Thumbnail/Thumbnail';
-import CardHeader from '../CardHeader/CardHeader';
-import CardRow from '../CardRow/CardRow';
-import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
-import { InfoTip } from '../../InfoTip/InfoTip';
-import { TIPS } from '../tooltips';
-import type { CardLayout } from '../../../@types/components/infoCard/CardLayout';
+import type { GalaxyInfo } from '../../../../../@types/engine/GalaxyInfo';
+import { formatDistance } from '../../../../../utils/format/formatDistance';
+import { formatDiameterKpc } from '../../../../../utils/format/formatDiameterKpc';
+import { formatLookback } from '../../../../../utils/format/formatLookback';
+import Thumbnail from '../../../../../components/InfoCard/Thumbnail/Thumbnail';
+import CardHeader from '../../../../../components/InfoCard/CardHeader/CardHeader';
+import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
+import DescriptionBlock from '../../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
+import { InfoTip } from '../../../../../components/InfoTip/InfoTip';
+import { TIPS } from '../../../../../components/InfoCard/tooltips';
+import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
 import styles from '../cardChrome.module.css';
 import local from './GalaxyDetailCard.module.css';
 

@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { sumProvenanceCounts } from '../../src/utils/sumProvenanceCounts';
-import { Source } from '../../src/data/source';
+import { sumProvenanceCounts } from '../../../../../src/layers/galaxyCatalog/provenance/utils/sumProvenanceCounts';
+import { Source } from '../../../../../src/data/source';
 
 describe('sumProvenanceCounts', () => {
   it('accumulates total and per-axis estimated counts across sources', () => {
