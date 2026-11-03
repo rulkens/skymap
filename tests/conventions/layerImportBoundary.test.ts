@@ -105,7 +105,6 @@ const CORE_ALLOWED: Readonly<Record<string, number>> = {
   '@types/settings/StarCatalogSettings.d': 1,
   'components/containers/GalaxyProvenanceSectionContainer': 2,
   'data/bodies/seededStarCatalogsBySource': 1,
-  'data/milkyWay/milkyWayFacts': 1,
   'services/engine/helpers/refOf': 1,
   'services/engine/wiring/galaxyCatalogRequest': 2,
   'state/selection/captureGalaxyFocusIds': 1,

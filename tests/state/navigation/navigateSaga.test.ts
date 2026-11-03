@@ -46,7 +46,7 @@ import { arrived } from '../../../src/state/arrival/arrivalSlice';
 import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/picking/present/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
+import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { sphereFitDistance } from '../../../src/utils/camera/sphereFitDistance';

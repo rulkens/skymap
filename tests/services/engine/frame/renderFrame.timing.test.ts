@@ -19,9 +19,9 @@ import { createFramePlannerResultStore } from '../../../../src/services/engine/f
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityUpsamplePass';
-import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/milkyWayAggregatePass';
-import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
-import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
+import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/cloud/passes/milkyWayAggregatePass';
+import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/cloud/passes/milkyWayUpsamplePass';
+import { milkyWayPass } from '../../../../src/layers/milkyWay/cloud/passes/milkyWayPass';
 import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
