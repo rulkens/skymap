@@ -1,10 +1,13 @@
 /**
- * useDwellElapsed — seconds of the current dwell that have played, driven by
- * requestAnimationFrame timestamp deltas rather than CSS animation delays: the
- * cinema recorder steps rAF in virtual time but never elapses multi-second CSS
- * delays. Frozen while paused, reset when `dwellNonce` changes (a new dwell).
+ * useDwellElapsed — seconds of the current dwell that have played, frozen while
+ * paused and reset when `dwellNonce` changes (a new dwell). Ticked by a timer
+ * reading `performance.now()`, not by rAF or CSS delays: under the recorder's
+ * CDP virtual time, rAF and CSS animation timelines stall once the frame goes
+ * quiet (~2 s into a dwell), while timers advance with the budget, as the
+ * dwell saga's own `delay` does.
  */
 import { useEffect, useRef, useState } from 'react';
+import { SUBTITLE_TICK_MS } from '../data/animation/subtitleTiming';
 
 export function useDwellElapsed(dwellNonce: number, paused: boolean): number {
   const [elapsed, setElapsed] = useState(0);
@@ -17,18 +20,14 @@ export function useDwellElapsed(dwellNonce: number, paused: boolean): number {
 
   useEffect(() => {
     if (paused) return;
-    let lastMs: number | null = null;
-    let id = 0;
-    const tick = (nowMs: number) => {
-      if (lastMs !== null) {
-        accSec.current += (nowMs - lastMs) / 1000;
-        setElapsed(accSec.current);
-      }
+    let lastMs = performance.now();
+    const id = setInterval(() => {
+      const nowMs = performance.now();
+      accSec.current += (nowMs - lastMs) / 1000;
       lastMs = nowMs;
-      id = requestAnimationFrame(tick);
-    };
-    id = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(id);
+      setElapsed(accSec.current);
+    }, SUBTITLE_TICK_MS);
+    return () => clearInterval(id);
   }, [dwellNonce, paused]);
 
   return elapsed;

@@ -17,8 +17,10 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 - **Captions are subtitles: `{ title, lines }`.** The overlay shows the title
   as a small label and one `lines` entry at a time, centred at the bottom;
   `body`, markdown and the five `position` anchors are gone. Lines share the
-  dwell by length (`lineSchedule`), timed by CSS animations keyed on the dwell
-  nonce and paused with the tour, like the dwell ring. Authoring rules: break
+  dwell by length (`lineSchedule`); a timer-ticked dwell clock
+  (`useDwellElapsed`) sets each line's opacity. Not CSS delays or rAF: under
+  the recorder's CDP virtual time both stall ~2 s into a quiet dwell (line 2
+  never showed), while timers advance with the budget. Authoring rules: break
   lines where they read well; text over motion means authoring the motion as
   the dwell; `subtitleFit.test.ts` is the guard — a line below its reading
   floor fails the suite, so lengthen the dwell or re-break the copy.

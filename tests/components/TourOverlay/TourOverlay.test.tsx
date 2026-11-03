@@ -45,42 +45,36 @@ describe('TourCaption', () => {
     expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
   });
 
-  describe('on the frame clock', () => {
-    let frame: ((ms: number) => void) | null = null;
+  describe('on the dwell clock', () => {
     beforeEach(() => {
-      vi.stubGlobal('requestAnimationFrame', (cb: (ms: number) => void) => {
-        frame = cb;
-        return 1;
-      });
-      vi.stubGlobal('cancelAnimationFrame', () => {
-        frame = null;
-      });
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'performance'] });
     });
-    afterEach(() => vi.unstubAllGlobals());
-    const advance = (ms: number) => act(() => frame!(ms));
+    afterEach(() => vi.useRealTimers());
+    const advance = (sec: number) => act(() => vi.advanceTimersByTime(sec * 1000));
     const opacity = (text: string) => screen.getByText(text).style.opacity;
 
     it('the second line shows after its slice start', () => {
       const props = captionProps();
       const { startSec } = lineSchedule(props.caption.lines, props.dwellSec)[1]!;
       render(<TourCaption {...props} />);
-      advance(0);
-      advance(1000);
+      advance(1);
       expect(opacity('Second line follows.')).toBe('0');
-      advance(1000 + (startSec + 1) * 1000);
+      advance(startSec);
       expect(opacity('Second line follows.')).toBe('1');
       expect(opacity('First line here.')).toBe('0');
     });
 
     it('pausing freezes the subtitle line', () => {
-      const { rerender } = render(<TourCaption {...captionProps()} />);
-      advance(0);
-      advance(500);
+      const props = captionProps();
+      const { startSec } = lineSchedule(props.caption.lines, props.dwellSec)[1]!;
+      const { rerender } = render(<TourCaption {...props} />);
+      advance(1);
       rerender(<TourCaption {...captionProps({ paused: true })} />);
-      // Paused: the clock stops asking for frames, so elapsed cannot advance.
-      expect(frame).toBeNull();
+      advance(startSec + 1);
+      expect(opacity('First line here.')).toBe('1');
       rerender(<TourCaption {...captionProps({ paused: false })} />);
-      expect(frame).not.toBeNull();
+      advance(startSec);
+      expect(opacity('Second line follows.')).toBe('1');
     });
   });
 });

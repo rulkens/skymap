@@ -3,8 +3,7 @@
  * the narration one line at a time, bottom-centre.
  *
  * Line opacity is a pure function of the dwell clock (`useDwellElapsed`) over the
- * `lineSchedule` slices — not CSS animation delays, which the cinema recorder's
- * virtual time never elapses.
+ * `lineSchedule` slices, so a recorded take shows the same lines as a live run.
  */
 
 import type { ReactNode } from 'react';

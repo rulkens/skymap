@@ -112,7 +112,9 @@ recorder's virtual time (line 2 never appeared). The user ruled B.
 `tests/utils/animation/subtitleOpacity.test.ts`, `tests/components/TourOverlay/TourOverlay.test.tsx`
 
 ```ts
-// seconds of dwell elapsed: rAF-accumulated, frozen while `paused`, reset when `dwellNonce` changes
+// seconds of dwell elapsed: frozen while `paused`, reset when `dwellNonce` changes.
+// Amended after the re-run of Task 4: rAF also stalls ~2 s into a quiet dwell under virtual time,
+// so the clock is a SUBTITLE_TICK_MS setInterval reading performance.now() (timers follow the budget).
 export function useDwellElapsed(dwellNonce: number, paused: boolean): number;
 
 // 0..1: ramps in over SUBTITLE_FADE_SEC from startSec, out over SUBTITLE_FADE_SEC to endSec;

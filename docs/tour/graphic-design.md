@@ -71,9 +71,10 @@ alike. Constant, not scene-adaptive.
 ## Motion
 
 - Each line fades in (~300 ms, ease-out) at its slice start and out
-  (~300 ms, ease-in) at its slice end; no slide. The timing is CSS animation
-  keyed on the dwell, paused with the tour — the dwell ring's mechanism — so
-  recordings stay deterministic.
+  (~300 ms, ease-in) at its slice end; no slide. Opacity is computed from a
+  dwell clock (`useDwellElapsed`) that a timer ticks and the tour's pause
+  freezes — not CSS animation delays or rAF, which stall under the recorder's
+  virtual time.
 - `prefers-reduced-motion`: lines swap with no fade.
 
 ## Mobile
