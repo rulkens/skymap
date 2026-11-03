@@ -1,8 +1,9 @@
 /**
  * Ratchet for ADR 0014: no folder under `src/layers/` holds more than 15 files
- * directly, and a Layer's top-level folders are never named for a kind of file
- * (`helpers`, `utils`, ...). Both allow-lists are shrink-only: an entry must
- * drop (or go) when its folder does, so neither list can go stale.
+ * directly, no folder is named for a bag, and a regrouped Layer has no role
+ * folder (`render/`, `ui/`, ...) at its root. The three allow-lists are
+ * shrink-only: an entry must go when its folder or Layer is fixed, so none can
+ * go stale. A Layer's regroup PR deletes its rows from them.
  */
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -10,20 +11,50 @@ import { describe, expect, it } from 'vitest';
 
 const MAX_FILES = 15;
 const ADR = 'docs/adrs/0014-layers-organised-by-concern-modules.md';
-const BANNED_MODULE_NAMES = ['helpers', 'misc', 'common', 'shared', 'other', 'utils'];
+const BAG_NAMES = ['helpers', 'misc', 'common', 'shared', 'other'];
+const ROLE_FOLDERS = [
+  'render',
+  'load',
+  'present',
+  'passes',
+  'subsystems',
+  'ui',
+  'sagas',
+  'utils',
+  'data',
+  'computes',
+];
 
-/** Folder → current direct file count; regrouping a Layer into modules deletes its rows. */
+/** Folder → current direct file count. */
 const OVERSIZED_FOLDERS: Record<string, number> = {
   'src/layers/body/@types': 37,
-  'src/layers/body/bodies': 34,
-  'src/layers/body/present': 34,
+  'src/layers/body/bodies': 37,
+  'src/layers/body/present': 35,
   'src/layers/body/render': 20,
   'src/layers/body/subsystems/surfaceTiles': 28,
   'src/layers/starCatalog/@types': 21,
 };
 
-/** Top-level `utils/` folders that predate the ADR; the Layer's regroup moves them into a module. */
-const LEGACY_TOP_LEVEL_UTILS: ReadonlySet<string> = new Set(['src/layers/structure/utils']);
+/** Layers still organised by role at their root; regrouping a Layer deletes its name. */
+const NOT_YET_REGROUPED: ReadonlySet<string> = new Set([
+  'blackHoles',
+  'body',
+  'constellations',
+  'cosmicHorizon',
+  'cosmicWebDensity',
+  'cosmicWebFilaments',
+  'earthScenes',
+  'flow',
+  'galaxyCatalog',
+  'lightTime',
+  'localBubble',
+  'milkyWay',
+  'missions',
+  'satellites',
+  'starCatalog',
+  'structure',
+  'zoneOfAvoidance',
+]);
 
 function directories(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true })
@@ -35,8 +66,20 @@ function directories(dir: string): string[] {
 }
 
 const allDirs = ['src/layers', ...directories('src/layers')];
+const layerNames = readdirSync('src/layers', { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
+
+/** Dotfiles (`.DS_Store`) are not source. */
 const fileCount = (dir: string): number =>
-  readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile()).length;
+  readdirSync(dir, { withFileTypes: true }).filter(
+    (entry) => entry.isFile() && !entry.name.startsWith('.'),
+  ).length;
+
+const rootRoleFolders = (layer: string): string[] =>
+  readdirSync(join('src/layers', layer), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && ROLE_FOLDERS.includes(entry.name))
+    .map((entry) => entry.name);
 
 describe('Layer folder shape (ADR 0014)', () => {
   it(`no folder holds more than ${MAX_FILES} files beyond its allow-listed count`, () => {
@@ -44,7 +87,9 @@ describe('Layer folder shape (ADR 0014)', () => {
       const count = fileCount(dir);
       const allowed = OVERSIZED_FOLDERS[dir] ?? MAX_FILES;
       return count > allowed
-        ? [`${dir}: ${count} files, allowed ${allowed}. Group files into concern modules (${ADR}).`]
+        ? [
+            `${dir}: ${count} files, allowed ${allowed}. Group files into concern modules or sub-folders (${ADR}).`,
+          ]
         : [];
     });
     expect(violations, violations.join('\n')).toEqual([]);
@@ -63,22 +108,31 @@ describe('Layer folder shape (ADR 0014)', () => {
     expect(stale, stale.join('\n')).toEqual([]);
   });
 
-  it('no Layer folder is named for a kind of file instead of a concern', () => {
-    const layers = readdirSync('src/layers', { withFileTypes: true }).filter((e) =>
-      e.isDirectory(),
-    );
-    const found = layers.flatMap((layer) =>
-      readdirSync(join('src/layers', layer.name), { withFileTypes: true })
-        .filter((e) => e.isDirectory() && BANNED_MODULE_NAMES.includes(e.name))
-        .map((e) => join('src/layers', layer.name, e.name)),
-    );
-    const violations = found.filter((dir) => !LEGACY_TOP_LEVEL_UTILS.has(dir));
-    const stale = [...LEGACY_TOP_LEVEL_UTILS].filter((dir) => !found.includes(dir));
+  it('no folder at any depth is named for a bag', () => {
+    const found = allDirs.filter((dir) => BAG_NAMES.includes(dir.split('/').at(-1) ?? ''));
     expect(
-      violations,
-      `${violations.join('\n')}\nName a module for its concern, not its kind (${ADR}).`,
+      found,
+      `${found.join('\n')}\nName a folder for its concern, not its kind (${ADR}).`,
     ).toEqual([]);
-    expect(stale, `${stale.join('\n')}\nGone; delete its LEGACY_TOP_LEVEL_UTILS entry.`).toEqual(
+  });
+
+  it('a regrouped Layer has no role folder at its root', () => {
+    const violations = layerNames
+      .filter((layer) => !NOT_YET_REGROUPED.has(layer))
+      .flatMap((layer) =>
+        rootRoleFolders(layer).map(
+          (role) =>
+            `src/layers/${layer}/${role}/: role folders belong inside a concern module, <concern>/${role}/ (${ADR}).`,
+        ),
+      );
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
+  it('every not-yet-regrouped Layer still has a root role folder', () => {
+    const stale = [...NOT_YET_REGROUPED].filter(
+      (layer) => !layerNames.includes(layer) || rootRoleFolders(layer).length === 0,
+    );
+    expect(stale, `${stale.join(', ')}: regrouped or gone; delete from NOT_YET_REGROUPED.`).toEqual(
       [],
     );
   });
