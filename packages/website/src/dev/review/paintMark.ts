@@ -1,5 +1,5 @@
 import type { DocsReviewMark } from '../../../../../tools/site/@types/DocsReviewMark';
-import { foldText } from './foldText';
+import { foldWithOffsets } from './foldWithOffsets';
 import { locateText } from './locateText';
 import reviewPage from './ReviewPage/ReviewPage.module.css';
 import { reviewBlockOf } from './reviewBlockOf';
@@ -21,7 +21,7 @@ function tag(el: Element, mark: DocsReviewMark): void {
 // The outermost block whose whole text is the mark's: a list item, not just the paragraph inside it.
 function wholeBlock(node: Text, want: string): Element | null {
   const same = (el: Element): boolean =>
-    foldText(el.textContent ?? '').text.replaceAll(' ', '') === want.replaceAll(' ', '');
+    foldWithOffsets(el.textContent ?? '').text.replaceAll(' ', '') === want.replaceAll(' ', '');
   let block = reviewBlockOf(node);
   if (!block || !same(block)) return null;
   for (
@@ -46,7 +46,7 @@ function tagSection(heading: Element): void {
 export function paintMark(root: Element, mark: DocsReviewMark): boolean {
   const portions = locateText(root, mark.text);
   if (!portions?.length) return false;
-  const block = wholeBlock(portions[0]!.node, foldText(mark.text).text.trim());
+  const block = wholeBlock(portions[0]!.node, foldWithOffsets(mark.text).text.trim());
   if (block) {
     tag(block, mark);
     if (mark.state === 'cut' && /^h[1-6]$/.test(block.localName)) tagSection(block);

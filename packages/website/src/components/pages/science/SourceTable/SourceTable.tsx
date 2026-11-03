@@ -5,27 +5,23 @@
  * has taken the table display away. Narrow, the same rows are a list of closed
  * disclosures, a source's name and what it gives showing: two dozen stacked
  * tables were eleven phone screens. No script. The children are notes on how
- * to read it, under a rule at its foot. A source's name leads to its data page.
+ * to read it, under a rule at its foot. A source's name leads to its data page. `figure` floats a cut-out of
+ * something the table leaves out beside the notes, drifting across them with the scroll.
  */
 import type { ReactNode } from 'react';
 
-import { DATA_SOURCES } from '../../../../data/dataSources.ts';
 import { dataRowPath } from '../../../../utils/dataRowPath.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
+import Shot from '../../../shared/media/Shot/Shot.tsx';
+import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './SourceTable.module.css';
+import { groups, COLUMNS } from './SourceTable.constants.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
-type SourceTableProps = { children?: ReactNode };
+type SourceTableProps = { children?: ReactNode; figure?: string };
 
-// One count per source: what the app draws, or what the source holds where our build does not count.
-const sources = DATA_SOURCES.map((row) => ({ ...row, count: row.drawn ?? row.rows }));
-const groups = [...new Set(sources.map((row) => row.group))].map((name) => ({
-  name,
-  rows: sources.filter((row) => row.group === name),
-}));
-const COLUMNS = { release: 'Release / Paper', count: '# of objects', licence: 'Licence' } as const;
-
-function SourceTable({ children }: SourceTableProps) {
+function SourceTable({ children, figure }: SourceTableProps) {
   return (
     <>
       <table role="table" className={styles.table}>
@@ -121,7 +117,21 @@ function SourceTable({ children }: SourceTableProps) {
           </section>
         ))}
       </div>
-      {children && <div className={styles.notes}>{children}</div>}
+      {children && (
+        <div className={styles.notes}>
+          <div className={styles.text}>{children}</div>
+          {figure && (
+            <figure className={styles.figure}>
+              <div className={styles.drift}>
+                <Shot id={figure} sizes={narrowSizes('100vw', '36rem')} />
+              </div>
+              <figcaption>
+                <ShotCaption id={figure} />
+              </figcaption>
+            </figure>
+          )}
+        </div>
+      )}
     </>
   );
 }

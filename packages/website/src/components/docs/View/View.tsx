@@ -7,13 +7,12 @@
  */
 import type { ReactNode } from 'react';
 
-import { appLink } from '../../../data/appLink.ts';
 import ViewLink from '../../shared/links/ViewLink/ViewLink.tsx';
 
 type ViewProps = { to: string; query?: string; children?: ReactNode };
 
 function View({ to, query, children }: ViewProps) {
-  return <ViewLink href={appLink(to, query)}>{children}</ViewLink>;
+  return <ViewLink view={to} query={query}>{children}</ViewLink>;
 }
 
 export default View;

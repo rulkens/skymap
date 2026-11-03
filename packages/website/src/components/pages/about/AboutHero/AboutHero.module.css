@@ -1,0 +1,101 @@
+/* The galaxy's core sits 49% across its square frame (measured on the cut-out): `left` puts it at 72% of the window. */
+.root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: var(--first-screen);
+  overflow: clip;
+}
+
+.galaxy {
+  --box: min(var(--first-screen), 62vw);
+  position: absolute;
+  top: 50%;
+  left: calc(72vw - 0.49 * var(--box));
+  width: var(--box);
+  aspect-ratio: 1;
+  translate: 0 -50%;
+  pointer-events: none;
+  mix-blend-mode: plus-lighter;
+
+  & picture {
+    display: block;
+  }
+}
+
+.words {
+  composes: wrap from '../../../../styles/layout.module.css';
+  position: relative;
+  width: 100%;
+  margin-block: auto;
+  padding-top: var(--open-top);
+
+  & > p {
+    max-width: min(34rem, 44vw);
+  }
+}
+
+/* The label stands under the galaxy, on the page grid's eighth line. */
+.label {
+  composes: wrap from '../../../../styles/layout.module.css';
+  position: relative;
+  width: 100%;
+  padding-bottom: var(--site-space-m);
+
+  & > * {
+    margin-left: calc((100% + var(--col-gap)) * 7 / 12);
+  }
+}
+
+@keyframes hero-fall {
+  to {
+    rotate: -10deg;
+    scale: 0.88;
+    translate: 0 -30%;
+  }
+}
+
+/* From its own -50% to -30%: it lags the page as the page leaves, turning away. */
+@media (--wide) and (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .root {
+      view-timeline-name: --about-hero;
+    }
+
+    .galaxy {
+      animation: hero-fall linear both;
+      animation-timeline: --about-hero;
+      animation-range: exit 0% exit 100%;
+    }
+  }
+}
+
+/* Narrow: the words, then the galaxy across the window, then its label. */
+@media (--narrow) {
+  .root {
+    min-height: 0;
+  }
+
+  .words {
+    order: -1;
+    margin-block: var(--site-space-l) 0;
+    padding-top: 0;
+
+    & > p {
+      max-width: none;
+    }
+  }
+
+  .galaxy {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 116vw;
+    margin: -1rem 0 -2rem -8vw;
+    translate: none;
+  }
+
+  .label > * {
+    margin-left: 0;
+  }
+}
