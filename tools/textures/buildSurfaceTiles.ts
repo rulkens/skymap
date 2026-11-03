@@ -42,17 +42,17 @@ import { fileURLToPath } from 'node:url';
 
 import sharp, { type Sharp } from 'sharp';
 
-import type { SurfaceTileProduct } from '../../src/layers/body/@types/SurfaceTileProduct';
-import type { SurfaceTileBodyId } from '../../src/layers/body/@types/SurfaceTileBodyId';
-import type { SurfaceTileManifest } from '../../src/layers/body/@types/SurfaceTileManifest';
-import type { SurfaceTileManifestBand } from '../../src/layers/body/@types/SurfaceTileManifestBand';
-import type { SurfaceTileBand } from '../../src/layers/body/@types/SurfaceTileBand';
-import { SURFACE_TILE_PX } from '../../src/layers/body/data/surfaceTileParams';
-import { HEIGHT_POSTS_PER_TILE } from '../../src/layers/body/data/heightTileFormat';
-import { surfaceTilePath } from '../../src/layers/body/utils/surfaceTiles/surfaceTilePath';
-import { surfaceTileBandFromBounds } from '../../src/layers/body/utils/surfaceTiles/surfaceTileBandFromBounds';
-import { surfaceTileColumns } from '../../src/layers/body/utils/surfaceTiles/surfaceTileColumns';
-import { surfaceTileInBand } from '../../src/layers/body/utils/surfaceTiles/surfaceTileInBand';
+import type { SurfaceTileProduct } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
+import type { SurfaceTileBodyId } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBodyId';
+import type { SurfaceTileManifest } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
+import type { SurfaceTileManifestBand } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifestBand';
+import type { SurfaceTileBand } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBand';
+import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
+import { HEIGHT_POSTS_PER_TILE } from '../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
+import { surfaceTilePath } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
+import { surfaceTileBandFromBounds } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileBandFromBounds';
+import { surfaceTileColumns } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
+import { surfaceTileInBand } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileInBand';
 import { parseFlags } from '../utils/cli/args';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { mergeSurfaceTileManifest } from '../utils/textures/mergeSurfaceTileManifest';

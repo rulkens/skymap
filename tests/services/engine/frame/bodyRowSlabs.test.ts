@@ -25,9 +25,9 @@ import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/markers/pres
 import { BLACK_HOLES } from '../../../../src/layers/blackHoles/markers/data/blackHoles';
 import { slabRowActive } from '../../../../src/utils/frame/slabRowActive';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { atmosphereDrawList } from '../../../../src/layers/body/present/atmosphereDrawList';
-import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
-import { atmosphereInsideBand } from '../../../../src/layers/body/present/atmosphereInsideBand';
+import { atmosphereDrawList } from '../../../../src/layers/body/atmosphere/present/atmosphereDrawList';
+import { BODY_SLAB_ROWS } from '../../../../src/layers/body/slabs/present/bodySlabRows';
+import { atmosphereInsideBand } from '../../../../src/layers/body/atmosphere/present/atmosphereInsideBand';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { makeSlab } from '../../../fixtures/makeSlab';

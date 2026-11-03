@@ -12,7 +12,7 @@ import {
   SITE_GROUND_UPS_ENU,
 } from '../../src/data/bodies/siteGroundHeights.generated';
 import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
-import { surfaceTilePath } from '../../src/layers/body/utils/surfaceTiles/surfaceTilePath';
+import { surfaceTilePath } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { tilePostAtLatLon } from '../utils/textures/siteTerrain/tilePostAtLatLon';
 import { deepestBandLevel } from '../utils/textures/siteTerrain/deepestBandLevel';

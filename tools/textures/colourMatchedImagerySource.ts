@@ -12,7 +12,7 @@
 import sharp from 'sharp';
 
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
-import { SURFACE_TILE_PX } from '../../src/layers/body/data/surfaceTileParams';
+import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import type { GreyRaster } from '../@types/image/GreyRaster';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';

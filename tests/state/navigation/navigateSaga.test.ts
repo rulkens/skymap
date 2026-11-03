@@ -43,7 +43,7 @@ import {
 } from '../../../src/state/selection/selectors';
 import { selectArrival } from '../../../src/state/arrival/selectors';
 import { arrived } from '../../../src/state/arrival/arrivalSlice';
-import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/picking/present/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';

@@ -21,7 +21,7 @@ import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
-import { bodyLayerSlabRow } from '../../../../../src/layers/body/present/bodyLayerSlabRow';
+import { bodyLayerSlabRow } from '../../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
 import { meshBodyCaption } from '../../../../../src/utils/labels/meshBodyCaption';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';

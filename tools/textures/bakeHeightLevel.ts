@@ -14,9 +14,9 @@ import sharp from 'sharp';
 import type { HeightSource } from './@types/HeightSource';
 import type { HeightTile } from './@types/HeightTile';
 import { voidFilledHeightSource } from './voidFilledHeightSource';
-import { HEIGHT_POSTS_PER_TILE } from '../../src/layers/body/data/heightTileFormat';
-import { surfaceTilePath } from '../../src/layers/body/utils/surfaceTiles/surfaceTilePath';
-import { surfaceTileColumns } from '../../src/layers/body/utils/surfaceTiles/surfaceTileColumns';
+import { HEIGHT_POSTS_PER_TILE } from '../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
+import { surfaceTilePath } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
+import { surfaceTileColumns } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
 import { encodeHeightTile } from '../utils/textures/encodeHeightTile';
 import { decimateHeightGrid } from '../utils/textures/decimateHeightGrid';
 import { flattenWaterComponents } from '../utils/textures/flattenWaterComponents';
@@ -26,7 +26,7 @@ import { quantizeHeightGrid } from '../utils/textures/quantizeHeightGrid';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
-import { SURFACE_TILE_PX } from '../../src/layers/body/data/surfaceTileParams';
+import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 
 /** Post intervals per tile edge: 129 posts, 128 gaps, the 129th shared with
  *  the next tile (§5.4.1). */

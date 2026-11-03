@@ -15,11 +15,11 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { bodyLayerWithoutGpu } from '../../../helpers/engine/bodyLayerWithoutGpu';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
-import { bodyTextureSlotKey } from '../../../../src/layers/body/load/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from '../../../../src/layers/body/textures/load/bodyTextureSlotKey';
 import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/layers/body/surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
 import type { ShowKey } from '../../../../src/@types/animation/ShowKey';

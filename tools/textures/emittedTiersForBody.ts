@@ -1,7 +1,7 @@
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { Tier } from '../../src/@types/data/Tier';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
-import { BODY_TEXTURE_REGISTRY } from '../../src/layers/body/data/bodyTextureRegistry';
+import { BODY_TEXTURE_REGISTRY } from '../../src/layers/body/textures/data/bodyTextureRegistry';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 
 /**

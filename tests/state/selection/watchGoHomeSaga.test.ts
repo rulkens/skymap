@@ -17,7 +17,7 @@ import { watchGoHomeSaga } from '../../../src/state/selection/watchGoHomeSaga';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { goHome } from '../../../src/state/selection/goHome';
 import { startCameraTween } from '../../../src/state/camera/cameraSlice';
-import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';

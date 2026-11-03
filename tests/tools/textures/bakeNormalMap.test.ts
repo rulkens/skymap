@@ -22,7 +22,7 @@
 
 import { expect, it } from 'vitest';
 
-import { BODY_TEXTURE_REGISTRY } from '../../../src/layers/body/data/bodyTextureRegistry';
+import { BODY_TEXTURE_REGISTRY } from '../../../src/layers/body/textures/data/bodyTextureRegistry';
 import {
   bakeNormalMap,
   DEFAULT_EXAGGERATION,

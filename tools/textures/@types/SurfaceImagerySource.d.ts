@@ -1,4 +1,4 @@
-import type { SurfaceTileProvenance } from '../../../src/layers/body/@types/SurfaceTileProvenance';
+import type { SurfaceTileProvenance } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProvenance';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 
 /**

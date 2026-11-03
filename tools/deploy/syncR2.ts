@@ -28,7 +28,7 @@ import { purgeCloudflareCache } from './r2/purgeCloudflareCache';
 import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv';
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
-import { SURFACE_TILE_REGISTRY } from '../../src/layers/body/data/surfaceTileRegistry';
+import { SURFACE_TILE_REGISTRY } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
 import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
 
 const DATA_DIR = 'public/data';

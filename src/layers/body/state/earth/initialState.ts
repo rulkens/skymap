@@ -4,8 +4,8 @@
  * overrides are no-ops at the default.
  */
 
-import { ATMOSPHERE_PARAMS } from '../../present/atmosphereParams';
-import { EARTH_SURFACE_PARAMS } from '../../data/earthSurfaceParams';
+import { ATMOSPHERE_PARAMS } from '../../atmosphere/data/atmosphereParams';
+import { EARTH_SURFACE_PARAMS } from '../../surfaceTiles/format/data/earthSurfaceParams';
 import type { EarthSettings } from '../../@types/EarthSettings';
 
 export const initialState: EarthSettings = {

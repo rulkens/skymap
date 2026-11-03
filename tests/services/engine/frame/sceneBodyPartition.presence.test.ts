@@ -4,7 +4,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { bodySceneBodyPartition } from '../../../../src/layers/body/present/bodySceneBodyPartition';
+import { bodySceneBodyPartition } from '../../../../src/layers/body/slabs/present/bodySceneBodyPartition';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
 import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySlabRosterIds';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';

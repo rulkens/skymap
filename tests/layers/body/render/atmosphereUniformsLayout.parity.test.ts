@@ -12,7 +12,7 @@ import { dirname, resolve } from 'node:path';
 import {
   packAtmosphereUniforms,
   ATMOSPHERE_UNIFORM_FLOATS,
-} from '../../../../src/layers/body/render/packAtmosphereUniforms';
+} from '../../../../src/layers/body/atmosphere/render/packAtmosphereUniforms';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const here = dirname(fileURLToPath(import.meta.url));

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../src/data/bodies/bodyTextureKeys';
-import { BODY_TEXTURE_REGISTRY } from '../../../src/layers/body/data/bodyTextureRegistry';
+import { BODY_TEXTURE_REGISTRY } from '../../../src/layers/body/textures/data/bodyTextureRegistry';
 import { SCENE_RINGS } from '../../../src/data/bodies/sceneRings';
 
 describe('ALL_BODY_TEXTURE_KEYS', () => {

@@ -24,7 +24,7 @@ import { assetArtifactUrl, groupAssetDir } from './manifest/geo3dLayout';
 import { publishAsset } from './manifest/publishAsset';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
-import { SURFACE_TILE_PX } from '../../src/layers/body/data/surfaceTileParams';
+import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import type { BoundsM } from '../scene-workbench/@types/BoundsM';
 import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { PointCloudAsset } from '../scene-workbench/@types/PointCloudAsset';

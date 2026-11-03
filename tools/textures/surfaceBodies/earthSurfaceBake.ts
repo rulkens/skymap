@@ -5,8 +5,8 @@
  */
 
 import { TIER_LADDER } from '../../../src/data/tierLadder';
-import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/data/surfaceTileRegistry';
-import { baseLevelForTier } from '../../../src/layers/body/utils/surfaceTiles/baseLevelForTier';
+import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
+import { baseLevelForTier } from '../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { BMNG_QUADRANT_KEYS } from '../../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../utils/io/bmngVintage';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';

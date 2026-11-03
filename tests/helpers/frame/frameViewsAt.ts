@@ -19,7 +19,7 @@ import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 import { cross3 } from '../../../src/utils/math/cross3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../src/utils/math/mat3FromColumns';
-import { BODY_SLAB_ROWS } from '../../../src/layers/body/present/bodySlabRows';
+import { BODY_SLAB_ROWS } from '../../../src/layers/body/slabs/present/bodySlabRows';
 import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 

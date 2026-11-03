@@ -16,7 +16,7 @@ import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 import { bodyFootprintRadiusM } from '../../../src/utils/scene/bodyFootprintRadiusM';
-import { MARS_DATUM_RADIUS_M } from '../../../src/layers/body/data/marsSurfaceParams';
+import { MARS_DATUM_RADIUS_M } from '../../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
 import { formatDistance } from '../../../src/utils/format/formatDistance';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
