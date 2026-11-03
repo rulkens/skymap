@@ -1,7 +1,4 @@
-/**
- * ToggleSection — one switch per label layer, in the order the dome reports them. Folded shut by
- * default: it is the longest list on the page and the least used during a show.
- */
+/** ToggleSection — one switch per label layer, in the order the dome reports them. */
 
 import type { DomeStatus } from '../../../@types/remote/DomeStatus';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
@@ -17,13 +14,13 @@ function ToggleSection({ toggles, onCommand }: ToggleSectionProps) {
   if (toggles.length === 0) return null;
   const on = toggles.filter((toggle) => toggle.enabled).length;
   return (
-    <details className={controls.section}>
-      <summary className={styles.root}>
+    <section className={controls.section}>
+      <div className={styles.head}>
         <h2 className={controls.heading}>Labels</h2>
         <span className={styles.count}>
           {on} of {toggles.length} on
         </span>
-      </summary>
+      </div>
       {toggles.map((toggle) => (
         <label key={toggle.id} className={styles.row}>
           <input
@@ -40,7 +37,7 @@ function ToggleSection({ toggles, onCommand }: ToggleSectionProps) {
           {toggle.label}
         </label>
       ))}
-    </details>
+    </section>
   );
 }
 

@@ -1,0 +1,90 @@
+/* Fixed to the viewport's bottom on a phone. Its top stops at the pad's vertical midpoint, so the pad's upper half stays live. */
+.root {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 3;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: min(100%, 40rem);
+  max-height: calc(100dvh - var(--touch-target) - var(--space-12) - var(--pad-height, 40vh) / 2);
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-8) max(var(--space-8), env(safe-area-inset-bottom, 0px));
+  background: var(--color-bg);
+  border-top: 1px solid var(--border-control);
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  animation: rise 200ms ease-out;
+}
+
+.leaving {
+  animation: sink 150ms ease-in forwards;
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sink {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-fg-tertiary);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-input);
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.title:focus {
+  outline: none;
+}
+
+.close {
+  composes: button from '../remoteControls.module.css';
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+}
+
+.body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The deck is the right column: the sheet covers the column, never the pad. */
+@media (min-width: 64rem) {
+  .root {
+    position: absolute;
+    inset: 0 var(--space-8) auto;
+    width: auto;
+    min-height: 100%;
+    max-height: calc(100dvh - var(--touch-target) - var(--space-12));
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-2xl);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .leaving {
+    animation: none;
+  }
+
+  .leaving {
+    visibility: hidden;
+  }
+}

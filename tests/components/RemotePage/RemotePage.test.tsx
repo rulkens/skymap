@@ -5,6 +5,7 @@ import RemotePage from '../../../src/components/RemotePage/RemotePage';
 import { createLocalTransport } from '../../../src/services/remote/createLocalTransport';
 import { REMOTE_PROTOCOL_VERSION } from '../../../src/data/remote/remoteProtocolVersion';
 import { HELLO_INTERVAL_MS } from '../../../src/data/remote/helloIntervalMs';
+import { SHEET_LEAVE_MS } from '../../../src/data/remote/sheetLeaveMs';
 import type { DomeStatus } from '../../../src/@types/remote/DomeStatus';
 import type { RemoteLinkStatus } from '../../../src/@types/remote/RemoteLinkStatus';
 
@@ -83,6 +84,12 @@ const sendStatus = (
       }),
     ),
   );
+const openSheet = (name: string, scope: Pick<typeof screen, 'getByRole'> = screen): void =>
+  void fireEvent.click(scope.getByRole('button', { name }));
+const closeSheet = (): void => {
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  act(() => void vi.advanceTimersByTime(SHEET_LEAVE_MS));
+};
 const messages = (kind: string): Record<string, unknown>[] =>
   sent.map((s) => JSON.parse(s)).filter((m) => m.kind === kind);
 const commands = (): unknown[] => messages('command').map((m) => m.command);
@@ -91,6 +98,7 @@ describe('RemotePage', () => {
   it('a status renders the running tour and its controls', () => {
     render(<RemotePage />);
     sendStatus();
+    openSheet('Tours');
     expect(screen.getByText(/beat 3 of 9, paused/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
     expect(commands()).toContainEqual({ name: 'tourTogglePause', payload: null });
@@ -107,6 +115,7 @@ describe('RemotePage', () => {
   it('the menu lists the tours, exhibits and clips, and a button sends its id', () => {
     render(<RemotePage />);
     sendStatus();
+    openSheet('Exhibits');
     expect(screen.queryByRole('button', { name: 'Cosmic Web' })).toBeNull();
     sendMenu();
     fireEvent.click(screen.getByRole('button', { name: 'Cosmic Web' }));
@@ -116,7 +125,33 @@ describe('RemotePage', () => {
       payload: { kind: 'exhibit', exhibitId: 'cosmicWeb' },
     });
     expect(commands()).toContainEqual({ name: 'clipStart', payload: { clipId: 'flyout' } });
+    closeSheet();
+    openSheet('Tours');
     expect(screen.getByRole('button', { name: 'The Long Way Out' })).toBeTruthy();
+  });
+
+  it('a tile opens its sheet with focus inside, and Escape closes it with focus back on the tile', () => {
+    render(<RemotePage />);
+    sendStatus();
+    const tile = screen.getByRole('button', { name: 'Exhibits' });
+    fireEvent.click(tile);
+    const sheet = screen.getByRole('dialog', { name: 'Exhibits' });
+    expect(sheet.contains(document.activeElement)).toBe(true);
+    // The pad and Home stay live under an open sheet; the tiles do not.
+    expect(tile.closest('[inert]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Home' }).closest('[inert]')).toBeNull();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    act(() => void vi.advanceTimersByTime(SHEET_LEAVE_MS));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(tile.closest('[inert]')).toBeNull();
+    expect(document.activeElement).toBe(tile);
+  });
+
+  it('the search tile opens with the search field focused', () => {
+    render(<RemotePage />);
+    sendStatus();
+    openSheet('Search');
+    expect(document.activeElement).toBe(screen.getByRole('searchbox'));
   });
 
   it('three seconds without a status shows dome not there, with a way back to the code', () => {
@@ -155,6 +190,7 @@ describe('RemotePage', () => {
     act(() => void vi.advanceTimersByTime(HELLO_INTERVAL_MS));
     sendStatus();
     fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+    openSheet('Search');
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'andro' } });
     act(() => void vi.advanceTimersByTime(200));
     const all = sent.map((s) => JSON.parse(s) as Record<string, unknown>);
@@ -216,6 +252,7 @@ describe('RemotePage', () => {
   it('toggling a row sends toggleSet', () => {
     render(<RemotePage />);
     sendStatus();
+    openSheet('Labels');
     fireEvent.click(screen.getByRole('checkbox', { name: 'Constellations' }));
     expect(commands()).toContainEqual({
       name: 'toggleSet',
@@ -242,6 +279,7 @@ describe('RemotePage', () => {
       delivers.forEach((listener) => listener(JSON.stringify({ v, kind: 'status', status }))),
     );
     for (const page of [pageA, pageB]) {
+      openSheet('Search', page);
       fireEvent.change(page.getByRole('searchbox'), { target: { value: 'andro' } });
     }
     act(() => void vi.advanceTimersByTime(200));

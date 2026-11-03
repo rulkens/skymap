@@ -1,10 +1,11 @@
 /**
- * RemotePage — the phone-or-laptop remote: a trackpad that steers the dome's camera, then
- * sections that send named commands. The dome owns all state; this page only renders its latest
- * status, so nothing here is optimistic, and the sections that need the dome wait for it.
+ * RemotePage — the phone-or-laptop remote: a trackpad that steers the dome's camera, then a deck
+ * of tiles whose sheets send named commands. The dome owns all state; this page only renders its
+ * latest status, so nothing here is optimistic, and the deck waits for the dome's first status.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import cx from 'classnames';
 import { useRemoteLink } from './useRemoteLink';
 import JoinField from './JoinField/JoinField';
@@ -20,8 +21,11 @@ import TimeSection from './TimeSection/TimeSection';
 import ToggleSection from './ToggleSection/ToggleSection';
 import SetupSection from './SetupSection/SetupSection';
 import RemoteIcon from './RemoteIcon/RemoteIcon';
+import RemoteSheet from './RemoteSheet/RemoteSheet';
+import LibraryTiles from './LibraryTiles/LibraryTiles';
 import SchemeSwitch from './SchemeSwitch/SchemeSwitch';
 import type { RemoteNavAxis } from '../../@types/remote/RemoteNavAxis';
+import type { RemoteSheetId } from '../../@types/remote/RemoteSheetId';
 import controls from './remoteControls.module.css';
 import styles from './RemotePage.module.css';
 
@@ -40,6 +44,34 @@ function RemotePage() {
   const join = (code: string | null): void => {
     location.hash = code ?? '';
     setRoom(code);
+  };
+
+  const [openSheet, setOpenSheet] = useState<RemoteSheetId | null>(null);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
+  const closeSheet = useCallback(() => setOpenSheet(null), []);
+  // After the close commits, so the tile is no longer inert.
+  useEffect(() => {
+    if (openSheet === null) openerRef.current?.focus();
+  }, [openSheet]);
+
+  // Rendered only inside the deck, which exists once a status has arrived.
+  const takeover = status?.takeover ?? null;
+  const sheetBody: Record<RemoteSheetId, () => ReactNode> = {
+    search: () => <SearchSection matches={matches} onSearch={search} onCommand={sendCommand} />,
+    tours: () => (
+      <TourSection
+        tours={menu?.tours ?? []}
+        tour={takeover?.kind === 'tour' ? takeover : null}
+        onCommand={sendCommand}
+      />
+    ),
+    exhibits: () => <ExhibitSection menu={menu} onCommand={sendCommand} />,
+    clips: () => <ExhibitSection menu={menu} onCommand={sendCommand} />,
+    time: () => status && <TimeSection time={status.time} onCommand={sendCommand} />,
+    labels: () => status && <ToggleSection toggles={status.toggles} onCommand={sendCommand} />,
+    setup: () => (
+      <SetupSection onAddPhone={() => sendCommand({ name: 'togglePairing', payload: null })} />
+    ),
   };
 
   if (!room) {
@@ -84,17 +116,24 @@ function RemotePage() {
         </div>
       </div>
       {status && (
-        <div className={styles.sections} inert={link !== 'connected'}>
-          <SearchSection matches={matches} onSearch={search} onCommand={sendCommand} />
-          <TourSection
-            tours={menu?.tours ?? []}
-            tour={status.takeover?.kind === 'tour' ? status.takeover : null}
-            onCommand={sendCommand}
-          />
-          <ExhibitSection menu={menu} onCommand={sendCommand} />
-          <TimeSection time={status.time} onCommand={sendCommand} />
-          <ToggleSection toggles={status.toggles} onCommand={sendCommand} />
-          <SetupSection onAddPhone={() => sendCommand({ name: 'togglePairing', payload: null })} />
+        <div className={styles.deck} inert={link !== 'connected'}>
+          <div className={styles.library} inert={openSheet !== null}>
+            <LibraryTiles
+              onOpen={(id, tile) => {
+                openerRef.current = tile;
+                setOpenSheet(id);
+              }}
+            />
+          </div>
+          {openSheet && (
+            <RemoteSheet
+              id={openSheet}
+              initialFocus={openSheet === 'search' ? 'field' : 'heading'}
+              onClose={closeSheet}
+            >
+              {sheetBody[openSheet]()}
+            </RemoteSheet>
+          )}
         </div>
       )}
     </main>

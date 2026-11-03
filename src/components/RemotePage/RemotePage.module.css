@@ -7,7 +7,7 @@
   color-scheme: dark;
 }
 
-/* Sticky so a lost link shows wherever the page is scrolled; opaque so sections slide under it. */
+/* Sticky so a lost link shows wherever the page is scrolled; opaque so the deck slides under it. */
 .header {
   position: sticky;
   top: 0;
@@ -51,11 +51,21 @@
   gap: var(--space-3);
 }
 
-.sections[inert] {
+.deck {
+  padding: 0 var(--space-8) var(--space-6);
+}
+
+.deck[inert] {
   opacity: 0.4;
 }
 
-/* A laptop has the width for the pad and the sections side by side; the pad stays put while they scroll. */
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* A laptop has the width for the pad and the deck side by side; the pad stays put while the deck scrolls. */
 @media (min-width: 64rem) {
   .root {
     display: grid;
@@ -65,7 +75,7 @@
     --pad-height: 60vh;
   }
 
-  .root > :not(.steer, .sections) {
+  .root > :not(.steer, .deck) {
     grid-column: 1 / -1;
   }
 
@@ -74,7 +84,8 @@
     top: var(--touch-target);
   }
 
-  .sections > :first-child {
-    border-top: none;
+  /* The sheet is positioned against the deck here, so it stays in this column. */
+  .deck {
+    position: relative;
   }
 }

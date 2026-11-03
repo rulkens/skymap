@@ -341,13 +341,13 @@ Behaviour (spec, "Sheets"):
 - Tiles are 52 px tall with the glyph above the label; Search is two columns wide, glyph and label in a row.
 
 Tests first:
-- [ ] `it('a tile opens its sheet with focus inside, and Escape closes it with focus back on the tile')`.
-- [ ] `it('the search tile opens with the search field focused')`.
-- [ ] Rewrite "the menu lists the tours, exhibits and clips…" and "toggling a row sends toggleSet" to open their
+- [x] `it('a tile opens its sheet with focus inside, and Escape closes it with focus back on the tile')`.
+- [x] `it('the search tile opens with the search field focused')`.
+- [x] Rewrite "the menu lists the tours, exhibits and clips…" and "toggling a row sends toggleSet" to open their
       sheet first; their assertions are unchanged.
-- [ ] Implement; `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage tests/remote`.
-- [ ] Shoot 390×844 with the Exhibits sheet open (Task 11's script) and look at it beside `library.png`.
-- [ ] Commit: "Remote deck: the tile library and its bottom sheets, the pad's upper half left live."
+- [x] Implement; `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage tests/remote`.
+- [x] Shoot 390×844 with the Exhibits sheet open (Task 11's script) and look at it beside `library.png`.
+- [x] Commit: "Remote deck: the tile library and its bottom sheets, the pad's upper half left live."
 
 ### Task 7: The now card and the time row
 
