@@ -4,7 +4,7 @@
  * `inputSourceSaga` under `remote:<id>`, commands map to actions through the
  * registry, searches rank as the palette does, and a status and the menu go out per
  * `hello`, and a status on store change, throttled. It only dispatches; nothing here
- * reaches the engine. `layerRows` must be one array for the session: it keys
+ * reaches the engine. `guideRows` must be one array for the session: it keys
  * `selectToggleRows`'s single-slot memo.
  */
 
@@ -34,6 +34,7 @@ import { runRemoteCommand } from '../../utils/remote/runRemoteCommand';
 import { REMOTE_MENU } from './remoteMenu';
 import { selectDomeStatus } from './selectDomeStatus';
 import { selectToggleRows } from '../settings/selectToggleRows';
+import { selectLayerSwitchRows } from '../settings/selectLayerSwitchRows';
 import { parseRemoteMessage } from '../../utils/remote/parseRemoteMessage';
 import { rankPaletteMatches } from '../../utils/palette/rankPaletteMatches';
 import { remoteSearchMatches } from '../../utils/remote/remoteSearchMatches';
@@ -52,7 +53,8 @@ const STATUS_MIN_INTERVAL_MS = 250;
 
 export function* remoteReceiverSaga(
   transport: RemoteTransport,
-  layerRows: readonly LayerToggleRow[],
+  guideRows: readonly LayerToggleRow[],
+  switchRows: readonly LayerToggleRow[],
 ): SagaIterator {
   const code = transport.newRoom();
   const origins = yield* call(transport.pairingOrigins);
@@ -70,12 +72,15 @@ export function* remoteReceiverSaga(
   const watchdogs = new Map<RemoteId, Task>();
 
   const send = (message: DomeMessage): void => link.send(JSON.stringify(message));
-  const sendStatus = (state: RootState): void =>
-    send({
-      v: REMOTE_PROTOCOL_VERSION,
-      kind: 'status',
-      status: selectDomeStatus(state, selectToggleRows(state, layerRows), performance.now()),
-    });
+  const rowsOf = (state: RootState) => ({
+    toggleRows: selectToggleRows(state, guideRows),
+    layerRows: selectLayerSwitchRows(state, switchRows),
+  });
+  const sendStatus = (state: RootState): void => {
+    const { toggleRows, layerRows } = rowsOf(state);
+    const status = selectDomeStatus(state, toggleRows, layerRows, performance.now());
+    send({ v: REMOTE_PROTOCOL_VERSION, kind: 'status', status });
+  };
   // END reaches the pump, whose `finally` ends an open gesture and detaches.
   const closeSource = (from: RemoteId): void => {
     sources.get(from)?.close();
@@ -132,10 +137,10 @@ export function* remoteReceiverSaga(
           break;
         }
         case 'command': {
-          const toggleRows = selectToggleRows(yield* select(), layerRows);
+          const rows = rowsOf(yield* select());
           for (const action of runRemoteCommand(message.command, {
             nowMs: performance.now(),
-            toggleRows,
+            ...rows,
           })) {
             yield* put(action);
           }

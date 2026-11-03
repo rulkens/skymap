@@ -70,7 +70,9 @@ const isStatus = (raw: unknown): boolean =>
   isRecord(raw.controls) &&
   (raw.controls.scheme === 'skymap' || raw.controls.scheme === 'openspace') &&
   Array.isArray(raw.toggles) &&
-  raw.toggles.every(isToggle);
+  raw.toggles.every(isToggle) &&
+  Array.isArray(raw.layers) &&
+  raw.layers.every(isToggle);
 
 const isMatch = (raw: unknown): boolean =>
   isRecord(raw) &&

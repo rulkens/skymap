@@ -25,6 +25,8 @@ import { isRecord } from '../../utils/object/isRecord';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { RemoteCommandPayloads } from '../../@types/remote/RemoteCommandPayloads';
 import type { RemoteCommandSpec } from '../../@types/remote/RemoteCommandSpec';
+import type { RemoteCommandEnv } from '../../@types/remote/RemoteCommandEnv';
+import type { ToggleRow } from '../../@types/settings/ToggleRow';
 
 const MAX_FOCUS_ID_CHARS = 256;
 const MAX_ALT_KM = 1e6;
@@ -68,6 +70,20 @@ function parsePaletteAction(raw: unknown): PaletteAction | undefined {
 const noPayloadRow = (action: () => UnknownAction): RemoteCommandSpec<null> => ({
   parse: noPayload,
   toActions: () => [action()],
+});
+
+/** Sets one row of the env's `rows` by id; an id the rows lack builds nothing. */
+const rowSetRow = (
+  rows: (env: RemoteCommandEnv) => readonly ToggleRow[],
+): RemoteCommandSpec<{ id: string; enabled: boolean }> => ({
+  parse: (raw) =>
+    isRecord(raw) && typeof raw.id === 'string' && typeof raw.enabled === 'boolean'
+      ? { id: raw.id, enabled: raw.enabled }
+      : undefined,
+  toActions: ({ id, enabled }, env) => {
+    const row = rows(env).find((r) => r.id === id);
+    return row ? [...row.set(enabled)] : [];
+  },
 });
 
 export const REMOTE_COMMANDS: {
@@ -121,14 +137,6 @@ export const REMOTE_COMMANDS: {
         : undefined,
     toActions: ({ scheme }) => [setControlScheme(scheme)],
   },
-  toggleSet: {
-    parse: (raw) =>
-      isRecord(raw) && typeof raw.id === 'string' && typeof raw.enabled === 'boolean'
-        ? { id: raw.id, enabled: raw.enabled }
-        : undefined,
-    toActions: ({ id, enabled }, { toggleRows }) => {
-      const row = toggleRows.find((r) => r.id === id);
-      return row ? [row.set(enabled)] : [];
-    },
-  },
+  toggleSet: rowSetRow((env) => env.toggleRows),
+  layerSet: rowSetRow((env) => env.layerRows),
 };

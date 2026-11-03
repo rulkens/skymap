@@ -26,7 +26,15 @@ const ENV: RemoteCommandEnv = {
       id: 'toggle-orbit-trails',
       label: 'Orbit trails',
       enabled: false,
-      set: (enabled) => ({ type: 'test/setTrails', payload: enabled }),
+      set: (enabled) => [{ type: 'test/setTrails', payload: enabled }],
+    },
+  ],
+  layerRows: [
+    {
+      id: 'flow',
+      label: 'Flow',
+      enabled: true,
+      set: (enabled) => [{ type: 'test/setFlow', payload: enabled }],
     },
   ],
 };
@@ -179,6 +187,19 @@ describe('toggleSet', () => {
 
   it('rejects an unknown id', () => {
     expect(run('toggleSet', { id: 'toggle-nope', enabled: true })).toEqual([]);
+  });
+});
+
+describe('layerSet', () => {
+  it('builds its actions from the Layers rows, never the label toggles', () => {
+    expect(run('layerSet', { id: 'flow', enabled: false })).toEqual([
+      { type: 'test/setFlow', payload: false },
+    ]);
+    expect(run('layerSet', { id: 'toggle-orbit-trails', enabled: true })).toEqual([]);
+  });
+
+  it('rejects a malformed payload', () => {
+    expect(run('layerSet', { id: 'flow' })).toBeNull();
   });
 });
 

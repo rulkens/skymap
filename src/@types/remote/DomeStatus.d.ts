@@ -14,4 +14,6 @@ export type DomeStatus = {
   };
   controls: { scheme: ControlSchemeId };
   toggles: readonly { id: string; label: string; enabled: boolean }[];
+  /** One per Layer with a settings section, in composition order: its whole show switch. */
+  layers: readonly { id: string; label: string; enabled: boolean }[];
 };

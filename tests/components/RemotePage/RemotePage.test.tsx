@@ -19,6 +19,10 @@ const status: DomeStatus = {
   time: { simDays: 2_451_545, rateIndex: 3, direction: 1, paused: false, mode: 'manual' },
   controls: { scheme: 'skymap' },
   toggles: [{ id: 'constellations', label: 'Constellations', enabled: false }],
+  layers: [
+    { id: 'survey', label: 'Galaxies', enabled: true },
+    { id: 'flow', label: 'Flow', enabled: false },
+  ],
 };
 
 // One listener per rendered page, in render order.

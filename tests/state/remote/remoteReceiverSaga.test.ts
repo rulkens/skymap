@@ -18,6 +18,8 @@ import { setUiHidden } from '../../../src/state/ui/uiSlice';
 import { inputRoute, uiRoute } from '../../../src/store/constants';
 import { createMemoryTransport } from '../../helpers/remote/createMemoryTransport';
 import { REMOTE_PROTOCOL_VERSION } from '../../../src/data/remote/remoteProtocolVersion';
+import { APP_LAYER_SWITCH_ROWS } from '../../../src/compositions/appLayerSwitchRows';
+import { FLOW_SECTION_TITLE } from '../../../src/layers/flow/streamlines/data/flowSectionTitle';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
 
 const NO_MODS = { shift: false, ctrl: false, alt: false, meta: false };
@@ -52,7 +54,7 @@ async function setup() {
     middleware: (g) => g().concat(record, mw),
   });
   const link = createMemoryTransport();
-  mw.run(remoteReceiverSaga, link.transport, []);
+  mw.run(remoteReceiverSaga, link.transport, [], APP_LAYER_SWITCH_ROWS);
   await settle();
   const say = async (message: object) => {
     link.fromRemote(JSON.stringify({ v: REMOTE_PROTOCOL_VERSION, ...message }));
@@ -199,6 +201,25 @@ describe('remoteReceiverSaga', () => {
     expect(link.sent).toContainEqual(
       expect.objectContaining({ kind: 'searchResults', requestId: 'r-7' }),
     );
+  });
+
+  it('a Layers row flips its Layer through layerSet, and the next status reports it', async () => {
+    const { store, say, statuses } = await setup();
+    const before = store.getState().settings.flow.enabled;
+    await say({
+      from: 'a',
+      kind: 'command',
+      command: { name: 'layerSet', payload: { id: 'flow', enabled: !before } },
+    });
+    expect(store.getState().settings.flow.enabled).toBe(!before);
+    await vi.advanceTimersByTimeAsync(1000);
+    const last = statuses().at(-1);
+    if (last?.kind !== 'status') throw new Error('no status sent');
+    expect(last.status.layers).toContainEqual({
+      id: 'flow',
+      label: FLOW_SECTION_TITLE,
+      enabled: !before,
+    });
   });
 
   it('a hello is answered with a status', async () => {

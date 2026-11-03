@@ -1,6 +1,6 @@
 /**
  * selectDomeStatus — the snapshot a dome sends its remotes. The
- * caller passes the toggle rows in, with the dome's own `nowMs`.
+ * caller passes the toggle and Layer rows in, with the dome's own `nowMs`.
  * `focus` is named from the focus row, as its info card names it. The
  * exhibit's `entry` stays home: the remote shows what runs, not how it arrived.
  */
@@ -38,6 +38,7 @@ const REMOTE_TAKEOVER: {
 export function selectDomeStatus(
   state: RootState,
   toggleRows: readonly ToggleRow[],
+  layerRows: readonly ToggleRow[],
   nowMs: number,
 ): DomeStatus {
   const focused = selectFocusedFocusable(state);
@@ -60,5 +61,6 @@ export function selectDomeStatus(
     },
     controls: { scheme: selectCameraControls(state).scheme },
     toggles: toggleRows.map(({ id, label, enabled }) => ({ id, label, enabled })),
+    layers: layerRows.map(({ id, label, enabled }) => ({ id, label, enabled })),
   };
 }

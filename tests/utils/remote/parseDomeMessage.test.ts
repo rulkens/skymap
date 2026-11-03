@@ -14,6 +14,7 @@ const status: DomeMessage = {
     time: { simDays: 9400.5, rateIndex: 3, direction: -1, paused: true, mode: 'manual' },
     controls: { scheme: 'skymap' },
     toggles: [{ id: 'labels', label: 'Labels', enabled: true }],
+    layers: [{ id: 'flow', label: 'Flow', enabled: false }],
   },
 };
 const text = (msg: unknown): string => JSON.stringify(msg);
@@ -54,6 +55,21 @@ describe('parseDomeMessage', () => {
     expect(
       parseDomeMessage(text({ v, kind: 'status', status: { ...status.status, time } })),
     ).toEqual({ v, message: null });
+  });
+
+  it('drops a status whose layers are missing or malformed', () => {
+    if (status.kind !== 'status') throw new Error('fixture');
+    const { layers: _layers, ...noLayers } = status.status;
+    for (const body of [
+      noLayers,
+      { ...status.status, layers: [{ id: 'flow', label: 'Flow', enabled: 'yes' }] },
+      { ...status.status, layers: [{ id: 'flow', enabled: true }] },
+    ]) {
+      expect(parseDomeMessage(text({ v, kind: 'status', status: body }))).toEqual({
+        v,
+        message: null,
+      });
+    }
   });
 
   it('returns the version and no message for a status of another version', () => {
