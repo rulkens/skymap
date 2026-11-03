@@ -4,7 +4,7 @@
  * dome. Storage can be blocked (private windows), so every access is guarded and the default is off.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 
 const STORAGE_KEY = 'skymap.remote.redLight';
 
@@ -18,7 +18,8 @@ const readPreference = (): boolean => {
 
 export function useRedLight(): readonly [on: boolean, set: (on: boolean) => void] {
   const [on, setOn] = useState(readPreference);
-  useEffect(() => {
+  // Before the first paint: an effect would show one frame in the blue palette.
+  useLayoutEffect(() => {
     if (!on) return;
     document.documentElement.dataset.light = 'red';
     return () => {
