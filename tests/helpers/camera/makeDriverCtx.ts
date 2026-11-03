@@ -51,6 +51,7 @@ export function makeDriverCtx(
     simDays,
     bodies: args.bodies ?? deriveBodyStates(simDays),
     projection: args.projection ?? { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
+    terrainHeightAt: args.terrainHeightAt ?? datumOnlyTerrainHeight,
     followDistanceTarget: args.followDistanceTarget ?? null,
   };
 }

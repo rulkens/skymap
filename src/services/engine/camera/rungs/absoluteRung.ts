@@ -8,6 +8,7 @@ import { frameAlignedRoll } from '../frameAlignedRoll';
 export const absoluteRung: RungRow<'absolute'> = {
   kind: 'absolute',
   host: () => null,
+  identity: () => '',
   emptyMemory: null,
 
   // This arm's channels ARE its pose, so both cells hand theirs back by reference.
