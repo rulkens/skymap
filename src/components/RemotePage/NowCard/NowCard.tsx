@@ -1,5 +1,5 @@
 /**
- * NowCard — what runs on the dome, with the controls of that show. The clock lives in the Time sheet.
+ * NowCard — what runs on the dome, with the controls of that show; the page shows it only while one runs.
  * The dome sends the kind and id only; the label is looked up in the menu, and a missing one
  * (no menu yet, a dev clip) falls back to the kind's noun.
  */
@@ -16,45 +16,38 @@ import controls from '../remoteControls.module.css';
 import styles from './NowCard.module.css';
 
 export type NowCardProps = {
-  readonly takeover: RemoteTakeover | null;
+  readonly takeover: RemoteTakeover;
   readonly menu: RemoteMenu | null;
   readonly onCommand: (command: RemoteCommand) => void;
 };
 
 function NowCard({ takeover, menu, onCommand }: NowCardProps): ReactNode {
-  const kind = takeover ? REMOTE_SHOW_KINDS[takeover.kind] : null;
-  const items: readonly RemoteMenuItem<string>[] = (kind && menu?.[kind.list]) || [];
-  const title =
-    takeover && kind && (items.find((item) => item.id === takeover.id)?.label ?? kind.noun);
-  const tour = takeover?.kind === 'tour' ? takeover : null;
+  const kind = REMOTE_SHOW_KINDS[takeover.kind];
+  const items: readonly RemoteMenuItem<string>[] = menu?.[kind.list] ?? [];
+  const title = items.find((item) => item.id === takeover.id)?.label ?? kind.noun;
+  const tour = takeover.kind === 'tour' ? takeover : null;
   const eyebrow = tour
     ? `Tour ${tour.beatIndex + 1}/${tour.beatCount}${tour.paused ? ', paused' : ''}`
-    : (kind?.noun ?? 'Nothing running');
+    : kind.noun;
 
   return (
     <section className={styles.root} aria-label="Now running">
       <div className={styles.head}>
-        {kind && <RemoteIcon glyph={kind.glyph} />}
+        <RemoteIcon glyph={kind.glyph} />
         <p role="status" className={styles.eyebrow}>
           {eyebrow}
         </p>
-        {kind && (
-          <button
-            type="button"
-            className={cx(controls.button, styles.stop)}
-            aria-label={`Stop ${kind.noun.toLowerCase()}`}
-            onClick={() => onCommand({ name: 'exitTakeover', payload: null })}
-          >
-            <RemoteIcon glyph="stop" />
-            Stop
-          </button>
-        )}
+        <button
+          type="button"
+          className={cx(controls.button, styles.stop)}
+          aria-label={`Stop ${kind.noun.toLowerCase()}`}
+          onClick={() => onCommand({ name: 'exitTakeover', payload: null })}
+        >
+          <RemoteIcon glyph="stop" />
+          Stop
+        </button>
       </div>
-      {title ? (
-        <h2 className={styles.title}>{title}</h2>
-      ) : (
-        <p className={styles.idle}>Start a tour, exhibit or clip below</p>
-      )}
+      <h2 className={styles.title}>{title}</h2>
       {tour && (
         <>
           <div className={styles.ticks} aria-hidden="true">

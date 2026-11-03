@@ -135,7 +135,7 @@ describe('RemotePage', () => {
   it('the clock is only in the Time sheet: Pause time sends timePause, Play time timeResume', () => {
     render(<RemotePage />);
     sendWith({ takeover: null });
-    expect(screen.getByText('Nothing running')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Now running' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Pause time' })).toBeNull();
     openSheet('Time');
     fireEvent.click(screen.getByRole('button', { name: 'Pause time' }));

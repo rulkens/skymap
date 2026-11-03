@@ -140,7 +140,7 @@ function RemotePage() {
       {status && (
         <div className={styles.deck} inert={link !== 'connected'}>
           <div className={styles.library} inert={openSheet !== null}>
-            <NowCard takeover={takeover} menu={menu} onCommand={sendCommand} />
+            {takeover && <NowCard takeover={takeover} menu={menu} onCommand={sendCommand} />}
             <LibraryTiles
               onOpen={(id, tile) => {
                 openerRef.current = tile;

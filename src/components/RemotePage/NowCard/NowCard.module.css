@@ -52,12 +52,6 @@
   color: var(--color-fg);
 }
 
-.idle {
-  margin: 0;
-  color: var(--color-fg-tertiary);
-  text-wrap: pretty;
-}
-
 .ticks {
   display: flex;
   align-items: center;

@@ -285,7 +285,7 @@ then Tours, Exhibits; Clips, Time, Labels, Setup).
 | Tour paused | "Tour, beat 6 of 14, paused" | tour label | ticks; Previous, Resume, Next; Stop tour |
 | Exhibit | "Exhibit" | exhibit label | Stop exhibit |
 | Clip | "Clip" | clip label | Stop clip |
-| Nothing | "Nothing running" | none | the line "Start a tour, exhibit or clip below" |
+| Nothing | no card (owner, 2026-11-03): the tiles sit under the Home row | | |
 
 The eyebrow and the time text are `role="status"`. Ticks are `aria-hidden`; the eyebrow carries the beat. The
 title wraps to two lines at most.
