@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 
-import { createLightTimeSpheresRenderer } from '../../../../src/layers/lightTime/render/lightTimeSpheresRenderer';
-import { LIGHT_TIME_SPHERES } from '../../../../src/data/lightTime/lightTimeSpheres';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { ViewFrustum } from '../../../../src/@types/camera/ViewFrustum';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { createLightTimeSpheresRenderer } from '../../../../../src/layers/lightTime/spheres/render/lightTimeSpheresRenderer';
+import { LIGHT_TIME_SPHERES } from '../../../../../src/layers/lightTime/spheres/data/lightTimeSpheres';
+import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { ViewFrustum } from '../../../../../src/@types/camera/ViewFrustum';
+import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
 
 // Float indices of the uniform block — `src/services/gpu/shaders/lightTime/io.wesl`, restated so a silent
 // renderer-side shift fails here rather than on screen.

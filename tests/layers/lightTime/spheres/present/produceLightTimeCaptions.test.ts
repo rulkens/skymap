@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
-import { produceLightTimeCaptions } from '../../../../src/layers/lightTime/present/produceLightTimeCaptions';
-import { LIGHT_TIME_SPHERES } from '../../../../src/data/lightTime/lightTimeSpheres';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { produceLightTimeCaptions } from '../../../../../src/layers/lightTime/spheres/present/produceLightTimeCaptions';
+import { LIGHT_TIME_SPHERES } from '../../../../../src/layers/lightTime/spheres/data/lightTimeSpheres';
+import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const EARTH: Vec3 = [5e-6, -2e-6, 1e-6];
 const HOUR = LIGHT_TIME_SPHERES[2]!;

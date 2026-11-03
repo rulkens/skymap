@@ -5,15 +5,12 @@
  * its show value, the captions their label value). `null` when no sphere would draw.
  */
 
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
+import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { LightTimeLiveness } from '../@types/LightTimeLiveness';
-import {
-  LIGHT_TIME_APPROACH_BAND,
-  LIGHT_TIME_RECEDE_BAND,
-} from '../../../data/lightTime/lightTimeFadeBands';
-import { fadeWindow } from '../../../utils/math/fadeWindow';
-import { EARTH_REF } from '../../../data/selection/earthRef';
-import { LIGHT_TIME_SPHERES } from '../../../data/lightTime/lightTimeSpheres';
+import { LIGHT_TIME_APPROACH_BAND, LIGHT_TIME_RECEDE_BAND } from '../data/lightTimeFadeBands';
+import { fadeWindow } from '../../../../utils/math/fadeWindow';
+import { EARTH_REF } from '../../../../data/selection/earthRef';
+import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
 
 export function deriveLightTimeLiveness(
   ctx: Pick<FrameView, 'snapshot' | 'drawCamPos'>,

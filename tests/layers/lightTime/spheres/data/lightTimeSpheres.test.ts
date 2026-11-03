@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LIGHT_TIME_SPHERES } from '../../../src/data/lightTime/lightTimeSpheres';
+import { LIGHT_TIME_SPHERES } from '../../../../../src/layers/lightTime/spheres/data/lightTimeSpheres';
 
 describe('LIGHT_TIME_SPHERES', () => {
   it('radii strictly ascend and ids are unique', () => {

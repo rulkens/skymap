@@ -8,22 +8,22 @@
  * Uniform layout: TWIN `shaders/lightTime/io.wesl` (192 bytes).
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
-import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
+import type { ViewFrustum } from '../../../../@types/camera/ViewFrustum';
+import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
 import type { LightTimeSpheresRenderer } from '../@types/LightTimeSpheresRenderer';
 import type { LightTimeLiveness } from '../@types/LightTimeLiveness';
-import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../utils/camera/frameUp';
-import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
-import { frustumRayAxis } from '../../../utils/camera/frustumRayAxis';
-import { sphereNdcBounds } from '../../../utils/math/sphereNdcBounds';
-import { LIGHT_TIME_SPHERES } from '../../../data/lightTime/lightTimeSpheres';
-import vsCode from '../../../services/gpu/shaders/lightTime/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/lightTime/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
-import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
+import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
+import { frustumRayAxis } from '../../../../utils/camera/frustumRayAxis';
+import { sphereNdcBounds } from '../../../../utils/math/sphereNdcBounds';
+import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
+import vsCode from '../../../../services/gpu/shaders/lightTime/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/lightTime/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 
 /** Slots in the WESL `spheres` array; the distance window never opens more at once. */
 const MAX_VISIBLE = 4;

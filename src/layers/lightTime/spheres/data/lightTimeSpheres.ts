@@ -1,7 +1,7 @@
 /** Light-travel-distance spheres centred on Earth: radius in Mpc plus caption text. */
 
-import type { LightTimeSphere } from '../../layers/lightTime/@types/LightTimeSphere';
-import { SCALE_UNITS } from '../scaleUnits';
+import type { LightTimeSphere } from '../@types/LightTimeSphere';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
 
 const LY = SCALE_UNITS.LY_TO_MPC;
 const SECONDS_PER_YEAR = 31_557_600;
