@@ -182,10 +182,8 @@
     display: block;
 
     & img {
-      display: block;
       width: min(130%, 60rem);
       max-width: none;
-      height: auto;
       margin-left: calc(var(--gutter) - 0.21 * min(130%, 60rem));
     }
   }

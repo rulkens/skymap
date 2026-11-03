@@ -46,9 +46,6 @@
   align-self: center;
 
   & img {
-    display: block;
-    width: 100%;
-    height: auto;
     /* The picture's black would cover the site's star field in a band; added as light, it lets it through. */
     mix-blend-mode: screen;
   }

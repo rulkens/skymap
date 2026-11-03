@@ -48,8 +48,6 @@
   filter: brightness(calc(1 - 0.15 * var(--depth)));
 
   & img {
-    display: block;
-    width: 100%;
     height: 100%;
     rotate: -90deg;
   }

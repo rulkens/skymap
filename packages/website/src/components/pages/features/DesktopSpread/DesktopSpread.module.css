@@ -42,20 +42,13 @@
 }
 
 /* The render has no frame: its edges dissolve into the page, so the pieces stand in the same space as the galaxy. */
-.render {
+.render picture {
   display: block;
-
-  & picture {
-    display: block;
-    mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 58%, transparent 100%);
-  }
+  mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 58%, transparent 100%);
 }
 
 .navigation img,
 .card img {
-  display: block;
-  width: 100%;
-  height: auto;
   filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
 }
 

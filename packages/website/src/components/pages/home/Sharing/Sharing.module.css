@@ -140,8 +140,6 @@
   }
 
   & img {
-    width: 100%;
-    max-width: none;
     height: 100%;
     object-fit: cover;
   }
