@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { deriveStarProperties } from '../../../src/utils/astro/deriveStarProperties';
+import { deriveStarProperties } from '../../../../../src/layers/starCatalog/card/utils/deriveStarProperties';
 
 // The card-facing composition. Ground-truth numbers are computed independently
 // from the pinned formulas; the extrapolated flag is asserted at both colour

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { starTeffK } from '../../../src/utils/astro/starTeffK';
+import { starTeffK } from '../../../../../src/layers/starCatalog/card/utils/starTeffK';
 
 // Ground-truth kelvin values are computed independently from the pinned
 // Mucciarelli+21 coefficients (see the util's docblock) — these assert the

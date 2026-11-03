@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isGiantStar } from '../../../src/utils/astro/isGiantStar';
+import { isGiantStar } from '../../../../../src/layers/starCatalog/card/utils/isGiantStar';
 
 // The CMD split is a conjunction: bright AND red. Each test flips exactly one
 // side of the AND so a failure pins which half of the rule broke — not a

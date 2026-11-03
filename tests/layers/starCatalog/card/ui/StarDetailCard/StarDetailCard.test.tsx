@@ -8,14 +8,14 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
-import StarDetailCard from '../../../src/components/InfoCard/StarDetailCard/StarDetailCard';
-import { buildFocusable } from '../../../src/services/engine/helpers/buildFocusable';
-import { SGR_A_STAR_ENTRY } from '../../../src/layers/blackHoles/sources/sgrAStar';
-import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import { Source } from '../../../src/data/source';
-import { starRowDriver } from '../../fixtures/starRowDriver';
-import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStarMetaEntry';
-import type { StarInfo } from '../../../src/@types/engine/StarInfo';
+import StarDetailCard from '../../../../../../src/layers/starCatalog/card/ui/StarDetailCard/StarDetailCard';
+import { buildFocusable } from '../../../../../../src/services/engine/helpers/buildFocusable';
+import { SGR_A_STAR_ENTRY } from '../../../../../../src/layers/blackHoles/sources/sgrAStar';
+import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
+import { Source } from '../../../../../../src/data/source';
+import { starRowDriver } from '../../../../../fixtures/starRowDriver';
+import type { FamousStarMetaEntry } from '../../../../../../src/@types/loading/FamousStarMetaEntry';
+import type { StarInfo } from '../../../../../../src/@types/engine/StarInfo';
 
 // A Sun-like dwarf 12 pc out: absMag 4.67, BP−RP 0.82 (in range → no '~').
 const fieldStar: StarInfo = {

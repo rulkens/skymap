@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { starLuminositySolar } from '../../../src/utils/astro/starLuminositySolar';
+import { starLuminositySolar } from '../../../../../src/layers/starCatalog/card/utils/starLuminositySolar';
 
 // L/L☉ = 10^(−0.4·(M_bol − 4.74)) with M_bol = absMagG + BC_G(T). Ground truth
 // computed independently from the pinned formula — asserts the composition with

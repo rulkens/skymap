@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { starWikipediaTitle } from '../../../src/utils/format/starWikipediaTitle';
+import { starWikipediaTitle } from '../../../../../src/layers/starCatalog/card/utils/starWikipediaTitle';
 
 describe('starWikipediaTitle', () => {
   it('overrides names whose plain slug lands on a disambiguation or wrong topic', () => {

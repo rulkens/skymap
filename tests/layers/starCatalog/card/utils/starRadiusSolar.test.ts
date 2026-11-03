@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { starRadiusSolar } from '../../../src/utils/astro/starRadiusSolar';
+import { starRadiusSolar } from '../../../../../src/layers/starCatalog/card/utils/starRadiusSolar';
 
 // R/R☉ = √(L/L☉)·(5772/T)². Ground truth computed independently from the
 // Stefan–Boltzmann relation — asserts the √L and (T☉/T)² factors are wired the

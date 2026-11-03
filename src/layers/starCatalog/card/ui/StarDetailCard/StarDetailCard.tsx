@@ -9,27 +9,27 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { StarInfo } from '../../../@types/engine/StarInfo';
-import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { deriveStarProperties } from '../../../utils/astro/deriveStarProperties';
-import { formatDistance } from '../../../utils/format/formatDistance';
-import { formatScalar } from '../../../utils/format/formatScalar';
-import { starWikipediaTitle } from '../../../utils/format/starWikipediaTitle';
-import { cardShotUrl } from '../../../utils/palette/cardShotUrl';
-import { SHOT_CARD_IDS } from '../../../data/palette/shotCardIds';
-import { STAR_FOCUS_PREFIX } from '../../../services/url/starFocusId';
-import CardHeader from '../CardHeader/CardHeader';
-import CardRow from '../CardRow/CardRow';
-import type { CardRowProps } from '../CardRow/CardRow';
-import ShotSummary from '../ShotSummary/ShotSummary';
-import Thumbnail from '../Thumbnail/Thumbnail';
-import WikipediaRow from '../WikipediaRow/WikipediaRow';
-import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
-import { InfoTip } from '../../InfoTip/InfoTip';
-import { TIPS } from '../tooltips';
-import type { CardLayout } from '../../../@types/components/infoCard/CardLayout';
-import styles from '../cardChrome.module.css';
+import type { StarInfo } from '../../../../../@types/engine/StarInfo';
+import type { FocusableTarget } from '../../../../../@types/engine/FocusableTarget';
+import { SCALE_UNITS } from '../../../../../data/scaleUnits';
+import { deriveStarProperties } from '../../utils/deriveStarProperties';
+import { formatDistance } from '../../../../../utils/format/formatDistance';
+import { formatScalar } from '../../../../../utils/format/formatScalar';
+import { starWikipediaTitle } from '../../utils/starWikipediaTitle';
+import { cardShotUrl } from '../../../../../utils/palette/cardShotUrl';
+import { SHOT_CARD_IDS } from '../../../../../data/palette/shotCardIds';
+import { STAR_FOCUS_PREFIX } from '../../../../../services/url/starFocusId';
+import CardHeader from '../../../../../components/InfoCard/CardHeader/CardHeader';
+import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
+import type { CardRowProps } from '../../../../../components/InfoCard/CardRow/CardRow';
+import ShotSummary from '../../../../../components/InfoCard/ShotSummary/ShotSummary';
+import Thumbnail from '../../../../../components/InfoCard/Thumbnail/Thumbnail';
+import WikipediaRow from '../../../../../components/InfoCard/WikipediaRow/WikipediaRow';
+import DescriptionBlock from '../../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
+import { InfoTip } from '../../../../../components/InfoTip/InfoTip';
+import { TIPS } from '../../../../../components/InfoCard/tooltips';
+import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
+import styles from '../../../../../components/InfoCard/cardChrome.module.css';
 import local from './StarDetailCard.module.css';
 
 type StarDetailCardProps = {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { bolometricCorrectionG } from '../../../src/utils/astro/bolometricCorrectionG';
+import { bolometricCorrectionG } from '../../../../../src/layers/starCatalog/card/utils/bolometricCorrectionG';
 
 // The Andrae+18 quartic is pinned to ΔT = T − 5772. At the anchor T = 5772 it
 // collapses to the constant term (0.06). The clamp to [4000, 8000] is the

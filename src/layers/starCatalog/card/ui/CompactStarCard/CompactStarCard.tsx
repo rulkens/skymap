@@ -7,9 +7,9 @@
  */
 
 import type { ReactNode } from 'react';
-import type { StarInfo } from '../../../@types/engine/StarInfo';
-import CardRow from '../CardRow/CardRow';
-import styles from '../compactChrome.module.css';
+import type { StarInfo } from '../../../../../@types/engine/StarInfo';
+import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
+import styles from '../../../../../components/InfoCard/compactChrome.module.css';
 import local from './CompactStarCard.module.css';
 
 type CompactStarCardProps = {
