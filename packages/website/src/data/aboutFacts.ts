@@ -1,18 +1,12 @@
 import type { Fact } from '../@types/Fact';
 import pkg from '../../../../package.json';
 import sitePkg from '../../package.json';
-import { CITATION } from './citation';
-import { MAKER_NAME, REPO_BLOB, REPO_URL } from './siteIdentity';
-import { formatDate } from '../utils/formatDate';
+import { MAKER_NAME, REPO_BLOB } from './siteIdentity';
 
 const CHECKED = '2026-10-06';
 const IN_REPO = 'in the Skymap repository';
 
-/**
- * The About page's claims, spread into FACTS. The history row is a count from
- * `git log` on the main branch at the date it names: re-count and re-date it
- * together, never one without the other.
- */
+/** The About page's claims, spread into FACTS. */
 export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-what-is',
@@ -44,22 +38,6 @@ export const ABOUT_FACTS: readonly Fact[] = [
     text: `The source code is open under the ${pkg.license} licence: anyone may use it, copy it, change it and pass it on, provided the copyright notice stays with it.`,
     source: `${REPO_BLOB}/LICENSE`,
     sourceLabel: `the licence file, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'about-version',
-    about: 'app',
-    text: `The current release is version ${pkg.version}, dated ${formatDate(CITATION.released)}. It is the fifth tagged release; the first is dated 5 May 2026.`,
-    source: `${REPO_URL}/tags`,
-    sourceLabel: 'the release tags, on GitHub',
-    checked: CHECKED,
-  },
-  {
-    id: 'about-history',
-    about: 'app',
-    text: 'The first commit in the repository is dated 3 May 2026. As of 5 October 2026 its main branch holds 1,550 commits.',
-    source: `${REPO_URL}/commits/main`,
-    sourceLabel: 'the commit history, on GitHub',
     checked: CHECKED,
   },
   {

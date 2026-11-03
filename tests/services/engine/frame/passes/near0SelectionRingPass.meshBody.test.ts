@@ -136,7 +136,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
       selectionRingRenderer: { draw: ringDraw },
     },
     selectionRows: { select: row, focus: row, hover: null },
-    settings: { galaxyCatalogs: { sizePx: 2 } },
+    settings: { galaxyCatalogs: { sizePx: 2 }, debug: { meshAmbient: 0 } },
   } as unknown as EngineState;
 
   const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.hostId === 'earth');

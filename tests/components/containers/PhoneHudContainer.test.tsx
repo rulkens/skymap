@@ -9,7 +9,9 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import PhoneHudContainer from '../../../src/components/containers/PhoneHudContainer';
 import { createTestStore } from '../../support/createTestStore';
-import { setPaletteOpen, setUiHidden } from '../../../src/state/ui/uiSlice';
+import stackStyles from '../../../src/components/BottomStack/BottomStack.module.css';
+import { viewCoverRoute } from '../../../src/store/constants';
+import { dismissSplash, setPaletteOpen, setUiHidden } from '../../../src/state/ui/uiSlice';
 import { selectSplashVisible } from '../../../src/state/ui/selectors';
 import type { FocusableTarget } from '../../../src/@types/engine/FocusableTarget';
 
@@ -57,6 +59,7 @@ function setup() {
 }
 
 const dockButton = (name: string) => screen.getByRole('button', { name });
+const coverProbe = () => document.querySelector(`.${stackStyles.coverProbe}`);
 
 beforeEach(() => {
   selected = null;
@@ -105,7 +108,7 @@ describe('PhoneHudContainer', () => {
 
   it('reopens the splash from the About dock item', () => {
     const { store } = setup();
-    store.dispatch({ type: 'ui/dismissSplash', payload: 1 });
+    store.dispatch(dismissSplash(1));
     expect(selectSplashVisible(store.getState())).toBe(false);
     fireEvent.click(dockButton('About skymap'));
     expect(selectSplashVisible(store.getState())).toBe(true);
@@ -134,5 +137,42 @@ describe('PhoneHudContainer', () => {
     fireEvent.click(dockButton('Search'));
     act(() => void store.dispatch(setPaletteOpen(false)));
     expect(document.activeElement).toBe(dockButton('Search'));
+  });
+
+  it('keeps the resting sheet in the cover probe while Layers hides the card', async () => {
+    const { select } = setup();
+    // Layers alone is transient: it never claims a resting sheet.
+    fireEvent.click(dockButton('Layers'));
+    expect(await screen.findByText('layers content')).toBeInTheDocument();
+    expect(coverProbe()).not.toHaveClass(stackStyles.restingSheet as string);
+
+    select(structure('virgo'));
+    expect(await screen.findByText('card')).toBeInTheDocument();
+    expect(coverProbe()).toHaveClass(stackStyles.restingSheet as string);
+
+    fireEvent.click(dockButton('Layers'));
+    expect(await screen.findByText('layers content')).toBeInTheDocument();
+    expect(coverProbe()).toHaveClass(stackStyles.restingSheet as string);
+  });
+
+  it('drops the phone cover while the HUD stack is hidden', () => {
+    const { store } = setup();
+    const cover = () => store.getState()[viewCoverRoute].phoneBottom;
+    act(() => void store.dispatch(dismissSplash(1)));
+    act(() => void store.dispatch(setUiHidden(false)));
+    expect(cover()).toMatchObject({ edge: 'bottom' });
+    act(() => void store.dispatch(setUiHidden(true)));
+    expect(cover()).toBeUndefined();
+  });
+
+  // An unstable cover callback would clear and re-set the row on every render.
+  it('leaves the cover row alone when the container re-renders', () => {
+    const { store } = setup();
+    act(() => void store.dispatch(dismissSplash(1)));
+    act(() => void store.dispatch(setUiHidden(false)));
+    const covers = store.getState()[viewCoverRoute];
+    expect(covers.phoneBottom).toBeDefined();
+    act(() => void store.dispatch(setPaletteOpen(true)));
+    expect(store.getState()[viewCoverRoute]).toBe(covers);
   });
 });

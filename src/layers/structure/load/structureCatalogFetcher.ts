@@ -31,13 +31,13 @@
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { StructureCatalogReq } from '../@types/StructureCatalogReq';
-import type { StructureCatalogPayload } from '../../../@types/loading/structureCatalogPayload/StructureCatalogPayload';
+import type { StructureCatalogPayload } from '../@types/StructureCatalogPayload';
 import {
   decodeStructureCatalog,
   STRUCTURE_CATALOG_DATA_PREFIX,
-} from '../../../data/structure/structureCatalogFormat';
+} from '../data/structureCatalogFormat';
 import { HttpError, dataUrl } from '../../../services/loading/fetchWithProgress';
-import type { StructureMetaEntry } from '../../../@types/loading/structureCatalogPayload/StructureMetaEntry';
+import type { StructureMetaEntry } from '../@types/StructureMetaEntry';
 
 /**
  * Parse `structures_meta.json` content. Throws on a non-array root. Public so it

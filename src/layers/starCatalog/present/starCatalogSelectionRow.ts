@@ -23,7 +23,7 @@ import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/clampDistance';
 import type { DriverGeometry } from '../../../@types/engine/camera/DriverGeometry';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
-import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
+import type { StarCatalogSourceType } from '../@types/StarCatalogSourceType';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';

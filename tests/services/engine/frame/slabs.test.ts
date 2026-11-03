@@ -68,10 +68,11 @@ function makeCosmoVp(): Mat4 {
 
 const NO_POSE: BodyPoseProvider = () => null;
 
-function makePlanet(overrides: Partial<PlanetBody> = {}): PlanetBody {
+function makePlanet(overrides: Partial<Omit<PlanetBody, 'captionKind'>> = {}): PlanetBody {
   return {
     id: asSceneBodyId('test-planet'),
     label: 'Test Planet',
+    captionKind: 'planet',
     resolvePx: 3,
     surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
     albedo: [1, 1, 1],

@@ -6,8 +6,6 @@
  */
 
 import { initialState as galaxyCatalogsInitialState } from '../../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
-import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../@types/settings/GalaxyCatalogItemSettings';
 
 // `galaxyCatalogs` has no cluster-level master gate (GalaxyCatalogSettings.d.ts),
 // so "surveys off" means every survey row disabled, not a single flag.
@@ -18,5 +16,5 @@ export const SURVEYS_OFF = {
       id,
       { ...item, enabled: id === 'famousGalaxy' && item.enabled },
     ]),
-  ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
+  ) as typeof galaxyCatalogsInitialState.items,
 };

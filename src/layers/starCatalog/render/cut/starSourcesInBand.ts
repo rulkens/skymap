@@ -3,10 +3,10 @@
  * loaded survey catalogs whose handed value times crossfade at `camDistPc` is > 0.
  */
 
-import type { StarCatalogId } from '../../../../@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { StarSourceInBand } from '../../@types/StarSourceInBand';
-import { APP_SOURCE_REGISTRY } from '../../../../compositions/appSources';
+import { STAR_CATALOG_SOURCE_RECORD } from '../../sources/starCatalogSourceRecord';
 import { starSourceDrawOpacity } from '../../../../utils/star/starSourceDrawOpacity';
 
 export function starSourcesInBand(
@@ -16,8 +16,8 @@ export function starSourcesInBand(
 ): readonly StarSourceInBand[] {
   const result: StarSourceInBand[] = [];
   for (const { source } of runtime.renderer.loadedCatalogs()) {
-    const entry = APP_SOURCE_REGISTRY[source];
-    if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
+    const entry = STAR_CATALOG_SOURCE_RECORD[source];
+    if (entry.binBaseName === null) continue;
     const crossfade = starSourceDrawOpacity(entry, fade, camDistPc);
     if (crossfade > 0) result.push({ source, entry, crossfade });
   }

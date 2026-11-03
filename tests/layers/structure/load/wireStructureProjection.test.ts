@@ -16,7 +16,7 @@ import { structureCatalogFetcher } from '../../../../src/layers/structure/load/s
 import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { StructureCatalogPayload } from '../../../../src/@types/loading/structureCatalogPayload/StructureCatalogPayload';
+import type { StructureCatalogPayload } from '../../../../src/layers/structure/@types/StructureCatalogPayload';
 import type { StructureFacts } from '../../../../src/layers/structure/@types/StructureFacts';
 
 vi.mock('../../../../src/layers/structure/load/buildStaticAnchorStructures', () => ({

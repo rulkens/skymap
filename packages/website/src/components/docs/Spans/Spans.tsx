@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 
 import { cx } from '../../../utils/cx.ts';
 import styles from './Spans.module.css';
+import { OPEN_FROM } from './Spans.constants.ts';
 
 type SpansProps = {
   label: string;
@@ -20,9 +21,6 @@ type SpansProps = {
   spans: readonly { name: string; text: string; from: number; to?: number }[];
   children?: ReactNode;
 };
-
-// Where an endless span turns from a line into dashes.
-const OPEN_FROM = 88;
 
 function Spans({ label, min, max, ticks, spans, children }: SpansProps) {
   const x = (value: number) => ((value - min) / (max - min)) * 100;

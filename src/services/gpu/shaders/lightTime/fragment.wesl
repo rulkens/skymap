@@ -18,9 +18,9 @@ const VISIBLE_FLOOR: f32 = 0.0005;
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let rd = normalize(
-    u.camForward
-    + input.ndc.x * u.tanHalfFovY * u.aspect * u.camRight
-    + input.ndc.y * u.tanHalfFovY * u.camUp,
+    u.rayAxis
+    + input.ndc.x * u.tanHalfX * u.camRight
+    + input.ndc.y * u.tanHalfY * u.camUp,
   );
 
   var sum = vec3<f32>(0.0);

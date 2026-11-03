@@ -14,6 +14,7 @@ import type { Epoch } from './Epoch';
 import type { InputStep } from '../../camera/InputStep';
 import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
 import type { Vec2 } from '../../math/Vec2';
+import type { InsetsPx } from '../../layout/InsetsPx';
 import type { RootState } from '../../../store/types';
 import type { PositionedId } from '../../scene/PositionedId';
 
@@ -22,6 +23,8 @@ export type StepInputs = {
   readonly simDays: number;
   readonly rootState: RootState;
   readonly canvasPx: Readonly<Vec2>;
+  /** Resting UI's reach in from each canvas edge, CSS px like `canvasPx`. */
+  readonly coverPx: InsetsPx;
   /** `canvas.width / canvas.height` after `resizeCanvasToDisplay`. */
   readonly aspect: number;
   readonly steps: readonly InputStep[];

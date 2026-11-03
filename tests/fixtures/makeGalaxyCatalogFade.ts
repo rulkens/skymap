@@ -8,7 +8,7 @@
 import { GALAXY_CATALOG_SOURCES } from '../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import { galaxyCatalogIdOf } from '../../src/utils/galaxyCatalogIdOf';
 
-import type { GalaxyCatalogId } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 export function makeGalaxyCatalogFade(
   overrides: Partial<Record<GalaxyCatalogId, number>> = {},

@@ -34,16 +34,19 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { TILT_GAIN } from '../../../src/data/camera/tiltGain';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { angleBetween } from '../../helpers/math/angleBetween';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
 const FOV = Math.PI / 2; // tan(FOV/2) = 1 — one NDC unit is one eye-distance
+const FRUSTUM = symmetricFrustum(FOV, 1);
 
 /** Columns right | up | forward. Nadir: at +Z looking down, screen-up = +Y. */
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 const POLE: Vec3 = [0, 0, 1];
 const CTX = {
   viewportPx: VIEWPORT,
+  frustum: FRUSTUM,
   fovYRad: FOV,
   bodyRadiusM: R,
   standoffRadii: SURFACE_STANDOFF_RADII,
@@ -200,7 +203,7 @@ function northUpOffset(pose: BodyFixedPose): number {
 
 /** The surface point under a pixel, or null if that ray misses the body. */
 function pickThrough(pose: BodyFixedPose, px: Vec2): Vec3 | null {
-  const ray = cursorRayBodyLocal(pose, px, VIEWPORT, FOV);
+  const ray = cursorRayBodyLocal(pose, px, VIEWPORT, FRUSTUM);
   const roots = raySphereRoots(ray.originM, ray.dir, [0, 0, 0], R);
   if (roots === null || roots[0] <= 0) return null;
   return [
@@ -369,7 +372,7 @@ describe('surfaceStep', () => {
     // `window` (the iOS implicit-capture fix), so dragging past the canvas
     // edge is an ordinary case the arm must handle.
     const start = poseAt([0, 0, 2], basisAtTilt(1.1));
-    const startRay = cursorRayBodyLocal(start, [60, 85], VIEWPORT, FOV);
+    const startRay = cursorRayBodyLocal(start, [60, 85], VIEWPORT, FRUSTUM);
     const t0 = raySphereRoots(startRay.originM, startRay.dir, [0, 0, 0], R)![0];
     const anchor: Vec3 = [
       startRay.originM[0] + startRay.dir[0] * t0,

@@ -1,7 +1,8 @@
 /**
- * sceneBodyLabels — name captions for Earth and the planets (craft caption through the
- * missions Layer; stars, the Sun and the Galactic Centre through theirs). Tints come from the
- * body records (planet `albedo`, a fixed Earth blue), so no colour table drifts from the seeds.
+ * sceneBodyLabels — name captions for Earth, the planets and small bodies (craft caption
+ * through the missions Layer; stars, the Sun and the Galactic Centre through theirs). Tints come
+ * from the body records (planet `albedo`, a fixed Earth blue), so no colour table drifts from
+ * the seeds.
  *
  * Captions go through the NEAR0 slab view (`labelsNearPass`, `view.vp`), not `ctx.vp`: the
  * main projection's near plane is 0.01 Mpc and the bodies sit ~1e-13 Mpc away, so it would
@@ -46,7 +47,7 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
         bodyFootprintRadiusM(planet),
         bodyStates.get(planet.id)!.positionMpc,
         compressBrightness(planet.albedo, PLANET_TINT_GAMMA),
-        'planet',
+        planet.captionKind,
       ),
     ),
   ];

@@ -8,7 +8,7 @@
 import type { StructureStore } from './StructureStore';
 import type { StructureMarkerRenderer } from './StructureMarkerRenderer';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { StructureCatalogPayload } from '../../../@types/loading/structureCatalogPayload/StructureCatalogPayload';
+import type { StructureCatalogPayload } from './StructureCatalogPayload';
 import type { StructureCatalogReq } from './StructureCatalogReq';
 
 export type StructureRuntime = {

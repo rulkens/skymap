@@ -18,6 +18,7 @@ import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { selectPendingInput } from '../../../src/state/input/selectors';
+import { selectViewCoverPx } from '../../../src/state/viewCover/selectors';
 import { inputConsumed } from '../../../src/state/input/inputSlice';
 import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
@@ -38,6 +39,7 @@ export function simulateCameraFrame(
     simDays,
     rootState: stored,
     canvasPx,
+    coverPx: selectViewCoverPx(stored),
     aspect: deps.canvas.width / deps.canvas.height,
     steps: pendingToInputSteps(pending, canvasPx),
     bodies: deriveBodyStates(simDays),

@@ -9,6 +9,7 @@ import { getCollection, render } from 'astro:content';
 
 import Caveat from '../../components/shared/text/Caveat/Caveat.tsx';
 import CodeBlock from '../../components/shared/text/CodeBlock/CodeBlock.tsx';
+import ControlFigure from '../../components/docs/ControlFigure/ControlFigure.tsx';
 import DocFigure from '../../components/docs/DocFigure/DocFigure.tsx';
 import DocLink from '../../components/docs/DocLink/DocLink.tsx';
 import DocTable from '../../components/docs/DocTable/DocTable.tsx';
@@ -50,6 +51,7 @@ const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)]
       table: DocTable,
       Table: DocTable,
       Figure: DocFigure,
+      Control: ControlFigure,
       Fact: FactText,
       Example,
       View,

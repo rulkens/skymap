@@ -10,7 +10,7 @@ import { surfaceOrbitScale } from './surfaceOrbitScale';
 import { surfaceZoomStep } from './surfaceZoomStep';
 
 /**
- * The body arm's pixel-free motion: zoom (anchored at screen centre, settling
+ * The body arm's pixel-free motion: zoom (anchored at the optical centre, settling
  * itself) → orbit → look, then ONE drag settle, then roll. Roll is applied
  * after the settle, which would level it away; it moves no eye and keeps
  * forward, so neither the floor nor the tilt memory would have seen it.
@@ -31,6 +31,7 @@ export function nudgedSurfacePose(
           Math.exp(zoom),
           null,
           ctx.viewportPx,
+          ctx.frustum,
           ctx.fovYRad,
           ctx.bodyRadiusM,
           ctx.standoffRadii,

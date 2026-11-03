@@ -16,7 +16,7 @@
 }
 
 /* On a phone the bar goes to the foot, so the page makes room there instead. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .on {
     scroll-padding-top: 0;
   }

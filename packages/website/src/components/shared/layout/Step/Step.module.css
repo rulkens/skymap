@@ -1,6 +1,6 @@
 .root {
   min-width: 0;
-  padding-block: 1.5rem 2rem;
+  padding-block: var(--site-space-m) var(--site-space-l);
   border-top: 1px solid var(--border-divider);
   counter-increment: step;
 
@@ -12,7 +12,7 @@
   & h3::before {
     content: counter(step);
     display: block;
-    margin-bottom: var(--numeral-gap, 0.5rem);
+    margin-bottom: var(--numeral-gap, var(--site-space-2xs));
     font-size: var(--numeral-size, var(--text-ring-big));
     line-height: var(--numeral-leading, 1.1);
     color: var(--site-text-dim);
