@@ -29,7 +29,7 @@ export async function shootPairedRemote(
   // The remote only learns the focused object's name from a search result, so a search names it in the header.
   const name = shot.settings?.searchFor;
   if (name) {
-    await phone.getByRole('searchbox', { name: 'Search the sky' }).fill(name);
+    await phone.getByRole('searchbox', { name: 'Search' }).fill(name);
     await phone
       .locator('header')
       .getByText(name, { exact: true })
