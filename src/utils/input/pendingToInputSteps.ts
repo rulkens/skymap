@@ -29,7 +29,7 @@ export function pendingToInputSteps(
         duringGesture: step.held,
         cursorPx: step.at === null ? null : unitToViewPx(step.at, viewPx),
       });
-    } else if (step.intent === 'orbit' || step.intent === 'pan') {
+    } else if (step.intent === 'orbit' || step.intent === 'pan' || step.intent === 'tilt') {
       // A drag always carries its pointer: the body arm casts a ray through it.
       if (step.at === null) continue;
       const start = {
