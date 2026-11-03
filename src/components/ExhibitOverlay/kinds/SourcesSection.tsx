@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 
-import ExternalLinkIcon from '../ExternalLinkIcon';
+import ExternalLinkIcon from '../../icons/ExternalLinkIcon/ExternalLinkIcon';
 import type { ExhibitSourcesSection } from '../../../@types/exhibits/ExhibitSourcesSection';
 import styles from '../ExhibitOverlay.module.css';
 
@@ -29,7 +29,7 @@ function SourcesSection({ data }: SourcesSectionProps): ReactNode {
               <span className={styles.sourceText}>
                 <span className={styles.sourceTitle}>
                   {link.title}
-                  <ExternalLinkIcon />
+                  <ExternalLinkIcon size={9} />
                 </span>
                 <span className={styles.sourceCitation}>{link.citation}</span>
               </span>

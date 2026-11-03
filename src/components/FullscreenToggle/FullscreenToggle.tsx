@@ -7,7 +7,7 @@
 
 import { memo, type ReactNode } from 'react';
 import PillButton from '../common/PillButton/PillButton';
-import FullscreenIcon from './FullscreenIcon';
+import FullscreenIcon from '../icons/FullscreenIcon/FullscreenIcon';
 
 export type FullscreenToggleProps = {
   readonly active: boolean;
@@ -25,7 +25,7 @@ function FullscreenToggle({ active, onToggle, hidden = false }: FullscreenToggle
       aria-pressed={active}
       tooltip={active ? 'Exit full screen' : 'Full screen'}
     >
-      <FullscreenIcon active={active} />
+      <FullscreenIcon size={14} active={active} />
     </PillButton>
   );
 }
