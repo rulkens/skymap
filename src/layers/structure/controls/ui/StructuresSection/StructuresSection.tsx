@@ -25,7 +25,7 @@ import { STRUCTURE_IDS } from '../../../../../data/structure/structureIds';
 import { STRUCTURE_IDS_BY_SCALE } from '../../../../../data/structure/structureIdsByScale';
 import { CATEGORY_DISPLAY_INFO } from '../../../../../data/structure/categoryDisplayInfo';
 import CollapsibleSection from '../../../../../components/SettingsPanel/CollapsibleSection';
-import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
+import styles from '../../../../../components/SettingsPanel/SettingsPanel.module.css';
 import type { StructureId } from '../../../../../@types/data/structure/StructureId';
 import type { StructureScale } from '../../../../../@types/data/structure/StructureScale';
 import { STRUCTURE_SCALE_TITLES } from '../../data/structureScaleTitles';

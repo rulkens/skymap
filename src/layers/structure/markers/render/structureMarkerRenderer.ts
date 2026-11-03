@@ -57,12 +57,12 @@ import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../../data/structure/st
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import haloVsCode from '../../../services/gpu/shaders/structureMarker/halo.wesl?static';
-import haloFsCode from '../../../services/gpu/shaders/structureMarker/halo.wesl?static';
-import ringVsCode from '../../../services/gpu/shaders/structureMarker/ring.wesl?static';
-import ringFsCode from '../../../services/gpu/shaders/structureMarker/ring.wesl?static';
-import ringPickVsCode from '../../../services/gpu/shaders/structureMarker/ring.wesl?static';
-import ringPickFsCode from '../../../services/gpu/shaders/structureMarker/ringPick.wesl?static';
+import haloVsCode from '../../../../services/gpu/shaders/structureMarker/halo.wesl?static';
+import haloFsCode from '../../../../services/gpu/shaders/structureMarker/halo.wesl?static';
+import ringVsCode from '../../../../services/gpu/shaders/structureMarker/ring.wesl?static';
+import ringFsCode from '../../../../services/gpu/shaders/structureMarker/ring.wesl?static';
+import ringPickVsCode from '../../../../services/gpu/shaders/structureMarker/ring.wesl?static';
+import ringPickFsCode from '../../../../services/gpu/shaders/structureMarker/ringPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
