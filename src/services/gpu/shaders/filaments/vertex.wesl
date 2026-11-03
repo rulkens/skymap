@@ -41,10 +41,11 @@ fn vs(in : PerVertex) -> VSOut {
   // segment-quad helper. 'u.halfWidthPx' is already a half-width, so it
   // passes straight through.
   var out : VSOut;
-  out.clip = expandSegmentQuad(u.cam, in.startPos, in.endPos, in.uv, u.halfWidthPx);
-  // Pass uv.y through for the fragment falloff; lerp density between
-  // start/end based on uv.x.
+  let q = expandSegmentQuad(u.cam, in.startPos, in.endPos, in.uv, u.halfWidthPx);
+  out.clip = q.clip;
+  // Pass uv.y through for the fragment falloff; density follows the corner's
+  // world parameter, which differs from uv.x for a corner behind the eye.
   out.uv = in.uv;
-  out.density = mix(in.startDensity, in.endDensity, in.uv.x);
+  out.density = mix(in.startDensity, in.endDensity, q.t);
   return out;
 }
