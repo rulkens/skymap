@@ -114,7 +114,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-touch',
     about: 'app',
-    text: 'From a touch screen the scene takes four gestures: a drag with one finger, a pinch with two, a tap and a double-tap.',
+    text: 'From a touch screen the scene takes five gestures: a drag with one finger, a pinch with two, a drag with two, a tap and a double-tap.',
     source: POINTER,
     sourceLabel: `the mouse, wheel and touch handlers, ${IN_REPO}`,
     checked: CHECKED,

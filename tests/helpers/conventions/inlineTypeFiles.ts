@@ -21,7 +21,7 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/layers/body/passes/cloudShellPass.ts',
   'src/layers/body/render/atmosphereShellRenderer.ts',
   'src/layers/body/render/texturedBodyRenderer.ts',
-  'src/layers/cosmicHorizon/render/horizonShellRenderer.ts',
+  'src/layers/cosmicHorizon/horizon/render/horizonShellRenderer.ts',
   'src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow.ts',
   'src/layers/galaxyCatalog/present/produceFamousGalaxyLabels.ts',
   'src/layers/galaxyCatalog/render/proceduralDiskRenderer.ts',

@@ -18,6 +18,7 @@ import { foldToWorld } from './rungs/foldToWorld';
 import { hostOf } from './rungs/hostOf';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
+import { rungKindOf } from './rungs/rungKindOf';
 import { sameFrame } from './rungs/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
@@ -131,6 +132,11 @@ export function replayInput(
     if (moves && (camera.clip !== null || (!worldArm && hostOf(base.frame, ctx) === null))) {
       return true;
     }
+    // The two-finger drag is a surface handle (owner ruling 2026-11-03): only
+    // the body rung reads it, so space and a site's turntable stay put.
+    if (step.kind === 'drag' && step.mode === 'tilt' && rungKindOf(base.frame) !== 'body') {
+      return true;
+    }
     // Which pose to step is arbitration, not rung arithmetic: an edge moves none
     // (and so never pays the fold), the world arm steps the live register folded
     // down — AUTHORED, not displayed (R12b-1), so a drag composes below the tilt
@@ -182,7 +188,7 @@ export function replayInput(
     return true;
   };
 
-  for (const step of steps) {
+  for (const [i, step] of steps.entries()) {
     switch (step.kind) {
       case 'gestureStart':
         // The latch itself is the rung's; the first drag step takes it, carrying
@@ -202,7 +208,10 @@ export function replayInput(
         navAuthors = false;
         navSteps.push(step);
         stepRegister(step);
-        emit(endDrag());
+        // A start later in this drain is a handoff (the second finger's lock, a
+        // source takeover): its `inputGestureStarted` already raised the flag, and
+        // lowering it here would leave the new gesture driving nothing.
+        if (!steps.slice(i + 1).some((s) => s.kind === 'gestureStart')) emit(endDrag());
         break;
       }
 
