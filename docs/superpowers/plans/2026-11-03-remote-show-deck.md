@@ -477,11 +477,11 @@ Tests first:
 - Delete: `src/components/RemotePage/TourSection/`, `src/components/RemotePage/ExhibitSection/`, `src/utils/remote/focusNameFrom.ts`, `tests/utils/remote/focusNameFrom.test.ts`
 - Modify: `src/components/RemotePage/remoteControls.module.css` (rules no file composes any more), `RemotePage.module.css` (`.sections` and its media rules if unused)
 
-- [ ] Confirm zero importers first: `npm run refactor -- refs src/utils/remote/focusNameFrom.ts#focusNameFrom`, and
+- [x] Confirm zero importers first: `npm run refactor -- refs src/utils/remote/focusNameFrom.ts#focusNameFrom`, and
       the same `<file>#<symbol>` form for `TourSection` and `ExhibitSection`. Then `git rm` the files by path.
-- [ ] Remove the CSS rules nothing composes any more (grep each class name across `src/components/RemotePage`).
-- [ ] No test: deletions (`plan-style.md`). `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage tests/utils/remote tests/remote`.
-- [ ] Commit: "Remote: delete the tour and exhibit sections and the search-based focus name the deck replaced."
+- [x] Remove the CSS rules nothing composes any more (grep each class name across `src/components/RemotePage`).
+- [x] No test: deletions (`plan-style.md`). `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage tests/utils/remote tests/remote`.
+- [x] Commit: "Remote: delete the tour and exhibit sections and the search-based focus name the deck replaced."
 
 ### Task 11: Visual check with the owner (controller)
 

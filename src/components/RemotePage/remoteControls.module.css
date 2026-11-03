@@ -1,4 +1,4 @@
-/* Shared vocabulary of the remote's sheet bodies; each composes with it by class name. */
+/* Shared vocabulary of the remote's controls, applied with cx() beside each component's own class. */
 .stack {
   display: flex;
   flex-direction: column;
@@ -120,12 +120,6 @@
 .switch:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-}
-
-.status {
-  margin: 0;
-  font-size: var(--font-size-input);
-  font-variant-numeric: tabular-nums;
 }
 
 @media (hover: hover) {
