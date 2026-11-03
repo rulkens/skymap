@@ -17,7 +17,6 @@ import { cosmicWebDensityPass } from './densityCubes/passes/cosmicWebDensityPass
 import { cosmicWebDensityUpsamplePass } from './densityCubes/passes/cosmicWebDensityUpsamplePass';
 import { cosmicWebDensityAssetRows } from './densityCubes/load/cosmicWebDensityAssetRows';
 import CosmicWebDensitySectionContainer from './densityCubes/ui/CosmicWebDensitySectionContainer';
-import { COSMIC_WEB_DENSITY_SECTION_TITLE } from './densityCubes/data/cosmicWebDensitySectionTitle';
 import CosmicWebDensityTuningSectionContainer from './densityCubes/ui/CosmicWebDensityTuningSectionContainer';
 
 export const cosmicWebDensityLayer = defineLayer({
@@ -44,7 +43,7 @@ export const cosmicWebDensityLayer = defineLayer({
     {
       slot: 'main',
       content: CosmicWebDensitySectionContainer,
-      title: COSMIC_WEB_DENSITY_SECTION_TITLE,
+      title: 'Cosmic web density',
     },
     { slot: 'debug', content: CosmicWebDensityTuningSectionContainer },
   ],

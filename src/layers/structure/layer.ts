@@ -20,7 +20,6 @@ import { structureMarkersNearPass } from './markers/passes/structureMarkersNearP
 import { produceStructureLabels } from './markers/present/produceStructureLabels';
 import { structureSelectionRow } from './picking/present/structureSelectionRow';
 import StructuresSectionContainer from './controls/ui/StructuresSectionContainer';
-import { STRUCTURES_SECTION_TITLE } from './controls/data/structuresSectionTitle';
 import StructureDetailCardContainer from './cards/ui/StructureDetailCardContainer';
 import CompactStructureCard from './cards/ui/CompactStructureCard/CompactStructureCard';
 import type { StructureFacts } from './@types/StructureFacts';
@@ -56,7 +55,7 @@ export const structureLayer = defineLayer({
   }),
   selection: (runtime) => [structureSelectionRow(runtime.store)],
   ui: [
-    { slot: 'main', content: StructuresSectionContainer, title: STRUCTURES_SECTION_TITLE },
+    { slot: 'main', content: StructuresSectionContainer, title: 'Structures' },
     {
       slot: 'detailCard',
       content: {

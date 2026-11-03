@@ -28,7 +28,6 @@ import { produceStarCaptions } from './present/produceStarCaptions';
 import { STAR_AGGREGATES_TARGET } from './render/starAggregatesTarget';
 import { S_STAR_ORBITAL_ELEMENTS } from '../../data/bodies/sStarOrbitalElements';
 import StarsSectionContainer from './ui/StarsSectionContainer';
-import { STARS_SECTION_TITLE } from './data/starsSectionTitle';
 import StarCatalogTuningSectionContainer from './ui/StarCatalogTuningSectionContainer';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 
@@ -66,7 +65,7 @@ export const starCatalogLayer = defineLayer({
   selection: (runtime) => [starCatalogSelectionRow(runtime)],
   planners: (runtime) => [starCatalogPlanner(runtime)],
   ui: [
-    { slot: 'main', content: StarsSectionContainer, title: STARS_SECTION_TITLE },
+    { slot: 'main', content: StarsSectionContainer, title: 'Stars' },
     { slot: 'debug', content: StarCatalogTuningSectionContainer },
     { slot: 'labelsAndGuides', content: { toggle: 'sStarTrails', label: 'S-star trails' } },
   ],

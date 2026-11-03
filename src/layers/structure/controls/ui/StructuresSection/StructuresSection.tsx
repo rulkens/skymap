@@ -25,7 +25,6 @@ import { STRUCTURE_IDS } from '../../../../../data/structure/structureIds';
 import { STRUCTURE_IDS_BY_SCALE } from '../../../../../data/structure/structureIdsByScale';
 import { CATEGORY_DISPLAY_INFO } from '../../../../../data/structure/categoryDisplayInfo';
 import CollapsibleSection from '../../../../../components/SettingsPanel/CollapsibleSection';
-import { STRUCTURES_SECTION_TITLE } from '../../data/structuresSectionTitle';
 import styles from '../../../../../components/SettingsPanel/SettingsPanel.module.css';
 import type { StructureId } from '../../../../../@types/data/structure/StructureId';
 import type { StructureScale } from '../../../../../@types/data/structure/StructureScale';
@@ -34,6 +33,7 @@ import { STRUCTURE_SCALE_TITLES } from '../../data/structureScaleTitles';
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 type StructuresSectionProps = {
+  title: string;
   /** Per-category marker visibility (ring on/off for each structure category). */
   markerCategoryVisibility: Readonly<Record<StructureId, boolean>>;
   /** Called when the user toggles a single marker category on or off. */
@@ -58,6 +58,7 @@ type StructuresSectionProps = {
  * thumbnail).
  */
 function StructuresSection({
+  title,
   markerCategoryVisibility,
   onSetMarkerCategoryVisibility,
   structureCounts,
@@ -86,7 +87,7 @@ function StructuresSection({
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <CollapsibleSection
-      title={STRUCTURES_SECTION_TITLE}
+      title={title}
       headerToggle={structuresMaster.allOn}
       headerToggleIndeterminate={structuresMaster.indeterminate}
       onHeaderToggleChange={structuresMaster.onToggle}

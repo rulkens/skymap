@@ -10,11 +10,11 @@
 
 import { memo } from 'react';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
-import { COSMIC_WEB_FILAMENTS_SECTION_TITLE } from '../data/cosmicWebFilamentsSectionTitle';
 import Slider from '../../../../components/common/Slider/Slider';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 
 export type CosmicWebFilamentsSectionProps = {
+  title: string;
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
   intensity: number;
@@ -22,17 +22,14 @@ export type CosmicWebFilamentsSectionProps = {
 };
 
 function CosmicWebFilamentsSection({
+  title,
   enabled,
   onEnabledChange,
   intensity,
   onIntensityChange,
 }: CosmicWebFilamentsSectionProps) {
   return (
-    <CollapsibleSection
-      title={COSMIC_WEB_FILAMENTS_SECTION_TITLE}
-      headerToggle={enabled}
-      onHeaderToggleChange={onEnabledChange}
-    >
+    <CollapsibleSection title={title} headerToggle={enabled} onHeaderToggleChange={onEnabledChange}>
       {/* Shown only while the layer is on — the slider would have no
           visible effect otherwise. */}
       {enabled && (

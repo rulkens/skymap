@@ -10,10 +10,10 @@ import type { CosmicWebDensitySettings } from '../../@types/CosmicWebDensitySett
 import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
-import { COSMIC_WEB_DENSITY_SECTION_TITLE } from '../data/cosmicWebDensitySectionTitle';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 
 export type CosmicWebDensitySectionProps = {
+  title: string;
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
   items: CosmicWebDensitySettings['items'];
@@ -21,17 +21,14 @@ export type CosmicWebDensitySectionProps = {
 };
 
 function CosmicWebDensitySection({
+  title,
   enabled,
   onEnabledChange,
   items,
   onRowEnabledChange,
 }: CosmicWebDensitySectionProps) {
   return (
-    <CollapsibleSection
-      title={COSMIC_WEB_DENSITY_SECTION_TITLE}
-      headerToggle={enabled}
-      onHeaderToggleChange={onEnabledChange}
-    >
+    <CollapsibleSection title={title} headerToggle={enabled} onHeaderToggleChange={onEnabledChange}>
       {COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => (
         <div className={styles.panelRow} key={entry.id}>
           <label htmlFor={`toggle-cosmic-web-density-${entry.id}`}>{entry.label}</label>

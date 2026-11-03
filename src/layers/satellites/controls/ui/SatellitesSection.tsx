@@ -6,7 +6,6 @@
 
 import { memo } from 'react';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
-import { SATELLITES_SECTION_TITLE } from '../data/satellitesSectionTitle';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 import { SATELLITE_CLASSES } from '../../../../data/satellites/satelliteClasses';
 import { SATELLITE_CLASS_LABELS } from '../data/satelliteClassLabels';
@@ -14,6 +13,7 @@ import type { SatelliteClass } from '../../../../@types/satellites/SatelliteClas
 import type { SatellitesSettings } from '../../@types/SatellitesSettings';
 
 type SatellitesSectionProps = {
+  title: string;
   enabled: boolean;
   items: SatellitesSettings['items'];
   onToggleMaster: (enabled: boolean) => void;
@@ -21,6 +21,7 @@ type SatellitesSectionProps = {
 };
 
 function SatellitesSection({
+  title,
   enabled,
   items,
   onToggleMaster,
@@ -29,7 +30,7 @@ function SatellitesSection({
   const allEnabled = SATELLITE_CLASSES.every((cls) => items[cls].enabled);
   return (
     <CollapsibleSection
-      title={SATELLITES_SECTION_TITLE}
+      title={title}
       headerToggle={enabled}
       headerToggleIndeterminate={enabled && !allEnabled}
       onHeaderToggleChange={onToggleMaster}

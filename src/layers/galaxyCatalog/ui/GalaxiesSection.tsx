@@ -14,7 +14,6 @@ import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
-import { GALAXIES_SECTION_TITLE } from '../data/galaxiesSectionTitle';
 import Slider from '../../../components/common/Slider/Slider';
 import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
 
@@ -40,6 +39,7 @@ const TOGGLEABLE_SOURCES: readonly GalaxyCatalogSourceType[] = [
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 type GalaxiesSectionProps = {
+  title: string;
   /** Bitmask of currently-visible galaxy catalog sources. */
   sourceMask: number;
   /** Called when the user toggles a single catalog on or off. */
@@ -88,6 +88,7 @@ type GalaxiesSectionProps = {
  * slider, depth-fade toggle, and density-correction controls.
  */
 function GalaxiesSection({
+  title,
   sourceMask,
   onToggleSource,
   sourceCounts,
@@ -130,7 +131,7 @@ function GalaxiesSection({
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <CollapsibleSection
-      title={GALAXIES_SECTION_TITLE}
+      title={title}
       headerToggle={galaxiesMaster.allOn}
       headerToggleIndeterminate={galaxiesMaster.indeterminate}
       onHeaderToggleChange={galaxiesMaster.onToggle}
