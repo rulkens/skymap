@@ -25,3 +25,9 @@ body {
   --border-divider: rgba(255, 90, 70, 0.13);
   --border-hover: rgba(255, 110, 90, 0.4);
 }
+
+/* The browser draws a native picker's icon white, past every token; this chain takes white to
+   --color-fg-muted's red. */
+:root[data-light='red'] ::-webkit-calendar-picker-indicator {
+  filter: brightness(0.5) sepia(1) saturate(4) hue-rotate(-42deg) brightness(0.94);
+}
