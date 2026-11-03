@@ -29,7 +29,7 @@ const roomFromHash = (): string | null => location.hash.slice(1) || null;
 
 function RemotePage() {
   const [room, setRoom] = useState(roomFromHash);
-  const { status, domeThere, menu, matches, sendCommand, sendDevice, search } = useRemoteLink(room);
+  const { status, link, menu, matches, sendCommand, sendDevice, search } = useRemoteLink(room);
   const [axis, setAxis] = useState<RemoteNavAxis>('orbit');
   const scheme = status?.controls.scheme;
   const openspace = scheme === 'openspace';
@@ -55,10 +55,10 @@ function RemotePage() {
   return (
     <main className={styles.root}>
       <header className={styles.header}>
-        <LinkStatus state={!domeThere ? 'lost' : status ? 'connected' : 'looking'} />
-        {status && domeThere && <span className={styles.focus}>{focus ?? 'Nothing focused'}</span>}
+        <LinkStatus state={link} />
+        {link === 'connected' && <span className={styles.focus}>{focus ?? 'Nothing focused'}</span>}
       </header>
-      {!domeThere && <LostNotice room={room} onChangeCode={() => join(null)} />}
+      {link === 'lost' && <LostNotice room={room} onChangeCode={() => join(null)} />}
       <div className={styles.steer}>
         <Trackpad onEvent={sendDevice} axis={openspace ? axis : null}>
           {openspace && <AxisHoldButtons axis={axis} onChange={setAxis} />}
@@ -83,7 +83,7 @@ function RemotePage() {
         </div>
       </div>
       {status && (
-        <div className={styles.sections} inert={!domeThere}>
+        <div className={styles.sections} inert={link !== 'connected'}>
           <SearchSection matches={matches} onSearch={search} onCommand={sendCommand} />
           <TourSection tours={menu?.tours ?? []} tour={status.tour} onCommand={sendCommand} />
           <ExhibitSection menu={menu} onCommand={sendCommand} />

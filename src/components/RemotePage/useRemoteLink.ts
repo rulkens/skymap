@@ -13,6 +13,7 @@ import { newLocalRoomCode } from '../../utils/remote/newLocalRoomCode';
 import { HELLO_INTERVAL_MS } from '../../data/remote/helloIntervalMs';
 import { REMOTE_SILENCE_MS } from '../../data/remote/remoteSilenceMs';
 import type { DeviceEvent } from '../../@types/input/DeviceEvent';
+import type { DomeLinkState } from '../../@types/remote/DomeLinkState';
 import type { DomeStatus } from '../../@types/remote/DomeStatus';
 import type { RemoteCommand } from '../../@types/remote/RemoteCommand';
 import type { RemoteLink } from '../../@types/remote/RemoteLink';
@@ -25,7 +26,7 @@ import type { RoomCode } from '../../@types/remote/RoomCode';
 export function useRemoteLink(room: RoomCode | null): RemoteSession {
   const [status, setStatus] = useState<DomeStatus | null>(null);
   const [menu, setMenu] = useState<RemoteMenu | null>(null);
-  const [domeThere, setDomeThere] = useState(true);
+  const [domeLink, setDomeLink] = useState<DomeLinkState>('looking');
   const [matches, setMatches] = useState<readonly RemoteSearchMatch[]>([]);
   const linkRef = useRef<RemoteLink | null>(null);
   const [from] = useState(() => newLocalRoomCode());
@@ -39,7 +40,7 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
     let silence: ReturnType<typeof setTimeout>;
     const armSilence = (): void => {
       clearTimeout(silence);
-      silence = setTimeout(() => setDomeThere(false), REMOTE_SILENCE_MS);
+      silence = setTimeout(() => setDomeLink('lost'), REMOTE_SILENCE_MS);
     };
     const hello = (): void => link.send(JSON.stringify({ from, kind: 'hello' }));
     armSilence();
@@ -55,7 +56,7 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
       if (!message) return;
       if (message.kind === 'status') {
         setStatus(message.status);
-        setDomeThere(true);
+        setDomeLink('connected');
         armSilence();
       } else if (message.kind === 'menu') {
         setMenu(message.menu);
@@ -98,5 +99,5 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
     [send, from],
   );
 
-  return { status, domeThere, menu, matches, sendCommand, sendDevice, search };
+  return { status, link: domeLink, menu, matches, sendCommand, sendDevice, search };
 }

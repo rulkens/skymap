@@ -132,11 +132,11 @@ export type DomeLinkState = 'looking' | 'connected' | 'lost';
 `'looking'` before. `LinkStatus` takes `state: DomeLinkState`. `RemotePage` reads `link` at the four sites
 (header text, focus name only when `connected`, `LostNotice` when `lost`, sections `inert` unless `connected`).
 
-- [ ] Change the type, the hook and the four sites; no behaviour change.
-- [ ] No new test: the existing `RemotePage` test "three seconds without a status shows dome not there, with a
+- [x] Change the type, the hook and the four sites; no behaviour change.
+- [x] No new test: the existing `RemotePage` test "three seconds without a status shows dome not there, with a
       way back to the code" covers it.
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage`.
-- [ ] Commit: "Remote link: the hook reports one link state instead of a domeThere flag the page combined with the status."
+- [x] `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage`.
+- [x] Commit: "Remote link: the hook reports one link state instead of a domeThere flag the page combined with the status."
 
 ### Task 3: The protocol version on every remote message
 
