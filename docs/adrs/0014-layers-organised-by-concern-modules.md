@@ -17,7 +17,7 @@ spread across six role folders each, so following one feature means opening six 
 tree says which renderer, subsystem, pass and types belong together.
 
 The folders are also growing into bags. At `03972d396` the largest are body `@types/` (37 files), body
-`bodies/` (36), body `present/` (34) and starCatalog `@types/` (21). The Layer M1 moves would add 55 types to
+`bodies/` (34), body `present/` (34) and starCatalog `@types/` (21). The Layer M1 moves would add 55 types to
 galaxyCatalog `@types/` (66 total), 20 to body `@types/` (57) and 34 helpers to missions `utils/`. One Layer
 already shows the alternative: body's `subsystems/surfaceTiles/` groups 28 files by what they are for.
 
@@ -31,21 +31,30 @@ What stays by role, at the Layer root:
 
 - the root files: `layer.ts`, `create.ts`, `destroy.ts`, `frame.ts`, `visibility.ts`, `heightAt.ts`;
 - the folders the composition root imports leaf by leaf: `sources/`, `state/`, `bodies/`, `exhibits/`;
-- `@types/` for the Layer's contract types only: `<Name>Runtime`, its facts, its id and source types.
+- `@types/` for the Layer's contract types only: `<Name>Runtime`, its facts, its settings types (`StructureSettings`,
+  `CosmicWebDensitySettings`), its id and source types.
+
+A root folder over the cap groups its leaves in subfolders (`bodies/planets/`, `bodies/moons/`), still imported by
+the composition root leaf by leaf; the root stays free of concern modules.
 
 Everything else lives in a concern module: `src/layers/<L>/<concern>/`, named for the thing
 (`disks/`, `pointSprites/`, `hiResFamous/`, `aliases/`), never for a kind (`helpers/`, `misc/`, `common/`,
 `shared/`, `other/`, `utils/`). Inside a module, files sit in the same role folders a Layer uses today, and
 only the ones it needs: `disks/render/`, `disks/subsystems/`, `disks/passes/`, `disks/load/`,
 `disks/present/`, `disks/ui/`, `disks/sagas/`, `disks/@types/`, plus `disks/utils/` for its helpers and
-`disks/data/` for its constants (role folders; the bag-name ban applies to module names). So a module reads as a small Layer: what it is for from its name, what each
-file does from the folder it sits in. Store-reaching files stay in `ui/` and `sagas/`, which the
+`disks/data/` for its constants. A module's `utils/` is flat: one function per file, no `<area>` subfolders unless
+it passes the cap. So a module reads as a small Layer: what it is for from its name, what each file does from the
+folder it sits in. A non-contract type lives in the `@types/` of the module that produces its values; sibling
+modules import it from there, and it never sits in the root `@types/`. Store-reaching files stay in `ui/` and `sagas/`, which the
 store-boundary sweep keys on. A module whose role folder outgrows the cap splits into sub-modules
 (`disks/procedural/`, `disks/textured/`), each with its own role folders.
 
 **The cap:** no folder under `src/layers/` holds more than 15 files directly. A ratchet test
 (`tests/conventions/layerFolderShape.test.ts`) enforces it with today's offenders allow-listed at their
-current counts, which only shrink, and refuses the bag names above as module names.
+current counts, which only shrink. It also refuses the bag names `helpers`, `misc`, `common`, `shared` and `other`
+at any depth, and refuses a role folder (`render`, `load`, `present`, `passes`, `subsystems`, `ui`, `sagas`,
+`utils`, `data`, `computes`) directly under a Layer once that Layer is regrouped. A shrink-only set of Layer
+names not yet regrouped exempts the rest; a Layer's regroup PR deletes its name.
 
 **What this ADR does not decide:** the module map of any particular Layer (each Layer's restructure PR
 proposes it); shaders (they stay in `src/services/gpu/shaders/<family>/`); core's own `src/` layout.
@@ -58,11 +67,9 @@ proposes it); shaders (they stay in `src/services/gpu/shaders/<family>/`); core'
 - Module boundaries are where a Layer would split if it ever became two.
 
 ### Negative
-- Every existing Layer is restructured once. The M1 plan absorbs it: every Layer PR from batch A on regroups
-  its whole Layer, as a second move commit. Batch A (#999–#1001) is being reworked into modules in its own
-  PRs, so none of its Layers is allow-listed. Structure, the pilot, is the one Layer already moved without
-  modules; it stays allow-listed (`LEGACY_TOP_LEVEL_UTILS` in `layerFolderShape.test.ts`) until its own
-  regroup PR.
+- Every existing Layer is restructured once. The M1 plan absorbs it: batch A's open PRs (#999–#1001) add the
+  regroup commit before merging, and structure is the only merged Layer, so it regroups in its own task. Until
+  a Layer regroups, its name sits in the not-yet-regrouped set of `layerFolderShape.test.ts`.
 - A module map is a judgment call per Layer, so each restructure PR carries one for review.
 - `src/layers/README.md`'s "folder layout is the contract" table changes: contract members map to root files
   and the composition-read folders; the rest of the table becomes "lives in its concern module".

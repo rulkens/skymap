@@ -6,7 +6,7 @@ frame. Core composes Layers; it does not reach inside one.
 
 The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 `defineLayer` (`src/services/engine/layer/defineLayer.ts`) and assembled by
-`createLayers`. `src/layers/galaxyCatalog/` is the reference implementation.
+`createLayers`. `src/layers/galaxyCatalog/` is the reference implementation for the contract; follow ADR 0014 for folders.
 
 ## Where things go
 
@@ -29,9 +29,9 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 | `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import                                                                                                                                                                               |
 | `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                                                                                                                                                                                        |
 | `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                                                                                                                                                                                            |
-| —               | `@types/`                                      | The Layer's **contract** types only, one per file, filename = the type: `<Name>Runtime`, its facts, its id and source types. Types shared with core or a sibling Layer stay under `src/@types/`                                                                                        |
+| —               | `@types/`                                      | The Layer's **contract** types only, one per file, filename = the type: `<Name>Runtime`, its facts, its settings types (`StructureSettings` and the like), its id and source types. Types shared with core or a sibling Layer stay under `src/@types/`                                 |
 
-**Every other contract member and all runtime machinery live in a concern module,** `<concern>/<role>/`. The members that are collections (`sagas?`, `ui?`, `passes`, `assets?`, `search?`, `sourceCounts?`, `slabs?`, `guides?`, `selection?`) are still declared in `layer.ts`; each imports its leaves from the module that owns the concern. A module uses only the role folders it needs:
+**Every other contract member and all runtime machinery live in a concern module,** `<concern>/<role>/`. The members that are collections (`sagas?`, `ui?`, `passes`, `computes?`, `assets?`, `search?`, `sourceCounts?`, `slabs?`, `guides?`, `selection?`) are still declared in `layer.ts`; each imports its leaves from the module that owns the concern. A module uses only the role folders it needs:
 
 | Role folder   | Holds                                                                                                                                                                                        |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -47,18 +47,18 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 | `data/`       | The module's constants and tables, one per file; a constant with a second Layer or core user stays in `src/data/`                                                                            |
 | `computes/`   | Compute passes                                                                                                                                                                               |
 
-A module whose role folder outgrows 15 files splits into sub-modules, each with its own role folders. Module names say what the thing is for; `helpers`, `misc`, `common`, `shared`, `other` and `utils` are refused as module names.
+A module's `utils/` is flat: one function per file, no `<area>` subfolders unless it passes the cap. A non-contract type lives in the `@types/` of the module that produces its values; sibling modules import it from there, and it never sits in the root `@types/`. A module whose role folder outgrows 15 files splits into sub-modules, each with its own role folders. A root folder over the cap (`bodies/`, `sources/`, `exhibits/`) groups its leaves in subfolders (`bodies/planets/`, `bodies/moons/`), still imported by the composition root leaf by leaf. Module names say what the thing is for; `helpers`, `misc`, `common`, `shared`, `other` and `utils` are refused as module names.
 
 An **illustrative** tree, not today's: a galaxyCatalog regrouped into modules.
 
 ```
 galaxyCatalog/
   layer.ts  create.ts  destroy.ts  frame.ts  visibility.ts
-  sources/  state/  exhibits/
+  sources/  state/
   @types/                      GalaxyCatalogRuntime.d.ts …
   pointSprites/{render,passes,load,data}/
   disks/{render,subsystems,passes,@types,utils}/
-  hiResFamous/{load,render,subsystems}/
+  hiResFamous/{load,render,subsystems,ui,sagas}/
   aliases/{load,present,utils}/
 ```
 

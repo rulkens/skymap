@@ -25,7 +25,7 @@ work: it lands no feature, and its only design choices are the rulings below.
 | 2026-11-02 | Files that became single-Layer after the original list are sorted by the STAYS rules: generic helpers (S5) stay. Of the tools-shared files, only the S2 formats and registries move. |
 | 2026-11-02 | A moved helper lands in a new Layer `utils/<area>/` folder that mirrors `src/utils/<area>/`. |
 | 2026-11-02 | Cadence: the structure Layer goes first as the pilot, then the rest run three PRs at a time. |
-| 2026-11-03 | Layers are organised by concern modules ([ADR 0014](../../adrs/0014-layers-organised-by-concern-modules.md)). Every Layer PR from batch A on regroups its whole Layer, existing files and just-moved ones alike. Structure (Task 1) and any Layer already moved are regrouped in their own PR. |
+| 2026-11-03 | Layers are organised by concern modules ([ADR 0014](../../adrs/0014-layers-organised-by-concern-modules.md)). Every Layer PR from batch A on regroups its whole Layer, existing files and just-moved ones alike. Batch A's open PRs add the regroup commit before merging; structure is the only merged Layer, so it regroups in its own task (1b). |
 
 The Layer contract does not change. Every M-item uses an existing member, such as `ui: { slot: 'detailCard' }`
 or `ui: { slot: 'debug' }`. If a task seems to need a new or wider member, stop and report it.
@@ -49,23 +49,26 @@ These are the M1 landing spots. Step 2a ("Regroup") then moves every Layer file 
 
 Every Layer task below runs this recipe. Its PR is a draft off `origin/main`, opened from an isolation worktree.
 
-1. **Refresh.** First run `npm ci --prefer-offline --no-audit --no-fund`: an isolation worktree has no `node_modules`, and `tsconfig.json`'s `satellite.js/dist/*` path resolves only inside the worktree. Then run `git merge origin/main`, then `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>.json --dry`.
+1. **Refresh.** Run `git merge origin/main`, then `npm ci --prefer-offline --no-audit --no-fund` (after the merge, so a lockfile change is picked up; an isolation worktree has no `node_modules`, and `tsconfig.json`'s `satellite.js/dist/*` path resolves only inside the worktree), then `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>.json --dry`.
    If a `from` path no longer exists, delete that entry from the manifest in this PR and say so in the PR body.
 2. **Move: one commit, nothing but the move.** Run `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>.json`.
    Never use `git mv` with hand-edited imports, and never an ad-hoc ts-morph or sed import rewrite.
    Commit any manifest entry you add by hand in the move commit itself, so that commit replays from its own manifest.
-2a. **Regroup into modules: one commit, pure move.**
-   - Write `docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>-modules.json`, mapping every Layer file outside the root keep-list (the ADR 0014 root files, `sources/`, `state/`, `bodies/`, `exhibits/` and contract-only `@types/`) to `<L>/<concern>/<role>/<file>`.
-   - Run it with `--dry`, then `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>-modules.json`.
-   - `git mv` each `.module.css` in the same commit, by the rule in step 3.
-   - List the module map (each module, then what it holds) in the PR body.
-   - Delete the Layer's rows from `OVERSIZED_FOLDERS` and `LEGACY_TOP_LEVEL_UTILS` in `tests/conventions/layerFolderShape.test.ts`, if it has any.
+   - **Regroup into modules: one commit, pure move.**
+     - Write `docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>-modules.json`, mapping every Layer file outside the root keep-list (the ADR 0014 root files, `sources/`, `state/`, `bodies/`, `exhibits/` and contract-only `@types/`) to `<L>/<concern>/<role>/<file>`. A module's `utils/` is flat: one function per file, no `<area>` subfolders unless it passes the cap.
+     - A role folder that would pass 15 files splits into sub-modules `<L>/<concern>/<sub>/<role>/`.
+     - For the big four Layers (body, galaxyCatalog, missions, starCatalog), post the module map for the owner's ruling BEFORE running the manifest. For every other Layer, the map goes in the PR body (each module, then what it holds).
+     - Run it with `--dry`, then `npm run move-files -- --manifest docs/superpowers/plans/2026-11-02-layer-m1-moves/<L>-modules.json`.
+     - `git mv` each `.module.css` in the same commit, by the rule in step 3.
+     - After every move, run `find src/layers/<L> tests/layers/<L> -type d -empty -delete`.
+     - Recount relative `?static`, `?worker` and `?url` paths whenever a file goes deeper: `move-files` doesn't rewrite them. localBubble's `shell.wesl?static` broke ~15 test files.
+     - Check that every `vi.mock` target and inline `import('…')` in the moved tests resolves. 39 tests under `tests/layers` hold such strings.
 3. **Blind spots: one commit.** `move-files` misses these:
    - `?worker`, `?url` and `?raw` import specifiers. A stale path still passes `tsc` and `vite build`, and breaks only at runtime.
    - String-literal paths: a generator's output path, `vi.mock(...)` paths, `new URL(...)`.
    - `.module.css` files beside a moved component (`move-files` is TS-only; `git mv` the CSS in the move commit), CSS `@import`, and `composes … from` paths in CSS modules. A stale CSS specifier passes `tsc`.
    - `.wesl` `package::` imports, and the website's `.astro`/`.mdx` imports.
-   - Allow-lists that hold paths as strings, such as `tests/helpers/conventions/inlineTypeFiles.ts` and `CORE_ALLOWED`.
+   - Allow-lists that hold paths as strings, such as `tests/helpers/conventions/inlineTypeFiles.ts` and `CORE_ALLOWED`. The `ALLOWED` rows of `tests/services/engine/frame/frameFilePurity.test.ts` are keyed by a pass's path relative to `src/`, so a row key changes when its pass moves.
    - Tests whose subject moved but whose name doesn't mirror it: `*.parity.test.ts`, `*.facet.test.ts`, and tests of several files at once (cosmicWebDensity: add `tests/utils/clampVolume.test.ts` → the Layer's mirror path). A test moves only if it sits in a moved file's old mirror folder. Parity tests that mirror a core shader (`tests/services/gpu/shaders/famousStarPickRadius.parity.test.ts`, `starCullSlack.parity.test.ts`) stay.
    - Tests that compute a repo root with `resolve(here, '../..')`: after a move they fail with ENOENT at runtime only. Fix by recounting the `..`, or switch to `join(process.cwd(), …)` as the shader parity tests do.
    - Website source links in `packages/website/src/data/docs*Facts.ts`. `tests/packages/website/facts.test.ts` fails CI on a stale link. `tests/packages/website/docsRenderingFacts.test.ts:16,17,85` reads `src/data/galaxyLodBands.ts`, `src/data/bodies/surfaceTileParams.ts` and `src/data/scene/heightTileFormat.ts` by path. Point every link at the post-regroup path.
@@ -75,6 +78,7 @@ Every Layer task below runs this recipe. Its PR is a draft off `origin/main`, op
    gained a core user after `03972d396`. Move it back with `npm run move-files -- <to> <from>`, delete its manifest
    entry, and name it in the PR body. Don't add a `CORE_ALLOWED` row to keep it moved.
 5. **Ratchet and ledger.**
+   - In `tests/conventions/layerFolderShape.test.ts`, delete the Layer's name from `NOT_YET_REGROUPED` and its rows from `OVERSIZED_FOLDERS`, if it has any.
    - Delete each `CORE_ALLOWED` entry (in `tests/conventions/layerImportBoundary.test.ts`) whose file left core, or lower its count.
    - In `src/compositions/README.md`, delete each ledger row whose core table is gone, and remove the moved files from the two "id-domain types (type-only core readers)" rows.
    - Recount the tally line from the table; never by arithmetic.
@@ -115,6 +119,10 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
 - Open a galaxy cluster card: `#focus=galaxy-cluster-virgo-m87`.
 - Check the Distance, Radius and Galaxies tooltips open; on `#focus=galaxy-cluster-coma-a1656`, the Abell tooltip too.
 - Check the structure ring labels draw and the category toggles in the Structures section still hide rings.
+
+### Task 1b (with batch B): structure regroup
+
+Structure is merged role-first, so it takes step 2a on its own: `structure-modules.json`, the module map in the PR body, and its name deleted from `NOT_YET_REGROUPED`.
 
 ### Task 2 (batch A, three PRs in parallel): blackHoles, cosmicWebFilaments, localBubble
 
@@ -198,7 +206,7 @@ Moves earn no new tests (see `testing.md`). Mirrored tests travel with their fil
 
 **What exists:**
 - Every path in the 17 manifests (321 files, about 10,300 lines) and the M2/M6 extras lives under its Layer. No `from` path exists at HEAD, except entries dropped as owner drift and named in a PR body.
-- `src/layers/<L>/utils/<area>/` exists where helpers moved, and `src/layers/README.md` has its row.
+- Every Layer is regrouped: the not-yet-regrouped set in `layerFolderShape.test.ts` is empty and `OVERSIZED_FOLDERS` holds only ruled exceptions.
 - `CORE_DETAIL_CARDS` is gone. The galaxy and star cards arrive through each Layer's `ui` `detailCard` row.
 - `TIPS` is split. `structureTips`, `milkyWayTips`, `starTips` and `galaxyTips` live in their Layers with typed keys. Core `TIPS` holds body and shared keys only, and no `TIPS.*!` is left.
 - The ledger rows `GalaxyProvenanceSectionContainer`, `EARTH_SCENE_BODY_IDS`, light-time spheres and Milky Way facts are deleted. The two id-domain type-reader rows list only the files still in core. `CORE_ALLOWED` shrank and has no new row.
