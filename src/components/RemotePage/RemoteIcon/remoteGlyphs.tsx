@@ -64,7 +64,11 @@ export const REMOTE_GLYPHS: Record<RemoteGlyph, ReactNode> = {
   clip: (
     <path d="M3.5 8.5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2zM15.5 10.5l5-3v9l-5-3z" />
   ),
-  stop: <path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14M10 8l-4 4 4 4M6 12h9" />,
+  stop: (
+    <g fill="currentColor">
+      <rect x="6" y="6" width="12" height="12" rx="1.5" />
+    </g>
+  ),
   time: (
     <>
       <circle cx="12" cy="12" r="8.5" />

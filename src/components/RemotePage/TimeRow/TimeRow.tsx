@@ -1,6 +1,6 @@
 /**
- * TimeRow — the clock's state in words and its Pause time / Play time button; on the now card and
- * atop the Time sheet.
+ * TimeRow — the clock's state in words and its Pause / Play button; on the now card and atop the
+ * Time sheet. The button reads "Pause" but is named "Pause time", apart from the tour's Pause.
  */
 
 import type { ReactNode } from 'react';
@@ -31,10 +31,11 @@ function TimeRow({ time, onCommand }: TimeRowProps): ReactNode {
       <button
         type="button"
         className={cx(controls.button, styles.button)}
+        aria-label={time.paused ? 'Play time' : 'Pause time'}
         onClick={() => onCommand({ name: time.paused ? 'timeResume' : 'timePause', payload: null })}
       >
         <RemoteIcon glyph={time.paused ? 'play' : 'pause'} />
-        {time.paused ? 'Play time' : 'Pause time'}
+        {time.paused ? 'Play' : 'Pause'}
       </button>
     </div>
   );

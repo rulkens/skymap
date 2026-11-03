@@ -31,7 +31,7 @@ function NowCard({ takeover, menu, time, onCommand }: NowCardProps): ReactNode {
     takeover && kind && (items.find((item) => item.id === takeover.id)?.label ?? kind.noun);
   const tour = takeover?.kind === 'tour' ? takeover : null;
   const eyebrow = tour
-    ? `Tour, beat ${tour.beatIndex + 1} of ${tour.beatCount}${tour.paused ? ', paused' : ''}`
+    ? `Tour ${tour.beatIndex + 1}/${tour.beatCount}${tour.paused ? ', paused' : ''}`
     : (kind?.noun ?? 'Nothing running');
 
   return (
@@ -45,10 +45,11 @@ function NowCard({ takeover, menu, time, onCommand }: NowCardProps): ReactNode {
           <button
             type="button"
             className={cx(controls.button, styles.stop)}
+            aria-label={`Stop ${kind.noun.toLowerCase()}`}
             onClick={() => onCommand({ name: 'exitTakeover', payload: null })}
           >
             <RemoteIcon glyph="stop" />
-            Stop {kind.noun.toLowerCase()}
+            Stop
           </button>
         )}
       </div>

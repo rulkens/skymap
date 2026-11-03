@@ -108,11 +108,11 @@ describe('RemotePage', () => {
       takeover: { kind: 'tour', id: 'grandTour', beatIndex: 5, beatCount: 14, paused: false },
     });
     expect(screen.getByRole('heading', { name: 'The Long Way Out' })).toBeTruthy();
-    expect(screen.getByText('Tour, beat 6 of 14')).toBeTruthy();
+    expect(screen.getByText('Tour 6/14')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
     expect(commands()).toContainEqual({ name: 'tourTogglePause', payload: null });
     sendStatus();
-    expect(screen.getByText('Tour, beat 3 of 9, paused')).toBeTruthy();
+    expect(screen.getByText('Tour 3/9, paused')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Resume' })).toBeTruthy();
   });
 
