@@ -67,7 +67,7 @@ import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { NavVelocity } from '../../../../src/@types/camera/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
-import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
+import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import {
   setControlScheme,
   setFrictionOn,
@@ -195,6 +195,7 @@ describe('stepCameraRuntime', () => {
         follow: null,
         tilt: { ...EMPTY_TILT_MEMORY, rememberedTiltRad, hostId: asSceneBodyId('earth') },
         intent,
+        gestureHeld: false,
         ctx: {
           bodies: BODIES,
           poseBasis: B,
@@ -451,6 +452,10 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     steps: readonly InputStep[],
     schemes?: StepInputs['schemes'],
   ) {
+    // `wireInput` dispatches the release outside the loop, as it does the press.
+    if (steps.some((s) => s.kind === 'gestureEnd')) {
+      h.store.dispatch(inputGestureEnded({ source: 'canvas' }));
+    }
     const nowMs = nextNow(h);
     clocks.set(h, nowMs);
     const out = stepCameraRuntime(

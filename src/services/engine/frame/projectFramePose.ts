@@ -51,8 +51,10 @@ export function projectFramePose(args: {
   readonly focus: SelectionRow | null;
   readonly follow: FollowMemory | null;
   readonly tilt: TiltMemory;
-  /** The frame's effective camera intent: `base.frame` IS the regime, `dragging` skips the fold. */
+  /** The frame's effective camera intent: `base.frame` IS the regime. */
   readonly intent: CameraState;
+  /** A held gesture skips the fold. */
+  readonly gestureHeld: boolean;
   readonly ctx: RungCtx;
 }): {
   readonly register: FramedCameraPose;
@@ -63,7 +65,17 @@ export function projectFramePose(args: {
   readonly actions: readonly UnknownAction[];
   readonly requestRender: boolean;
 } {
-  const { render, authoredOverride, pivotsOnFocusedBody, focus, follow, tilt, intent, ctx } = args;
+  const {
+    render,
+    authoredOverride,
+    pivotsOnFocusedBody,
+    focus,
+    follow,
+    tilt,
+    intent,
+    gestureHeld,
+    ctx,
+  } = args;
   const { bodies, poseBasis, upBasis, tuning } = ctx;
 
   // The pin SETS the target (never adds), so baking the displayed pose into
@@ -106,10 +118,10 @@ export function projectFramePose(args: {
   // winner authored: `tween`/`clip` are not arm-gated, so reading the produced
   // pose as the regime swaps §4's disengage test for the engage one
   // mid-animation. Free while the two agree — `refoldTo` answers by reference.
-  const target = intent.dragging ? regime : stepRung(refoldTo(displayed, regime, ctx), ctx);
+  const target = gestureHeld ? regime : stepRung(refoldTo(displayed, regime, ctx), ctx);
   // One whole skip, never a clamp or a latch, retried next frame: a live gesture
   // (ruled, Q6).
-  if (!intent.dragging) {
+  if (!gestureHeld) {
     // The arm being LEFT, not the arm the winner happened to author in: an
     // approach owed from inside an arm produces a world pose there, and reading
     // `displayed` would skip the normalisation on exactly those crossings.

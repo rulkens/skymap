@@ -17,8 +17,8 @@ import { MISSION_EVENTS } from '../../../../../src/data/missions/missionEvents.g
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import { missionPose } from '../../../../../src/layers/missions/exhibits/timeline/missionPose';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { aimCamera, endDrag } from '../../../../../src/state/camera/cameraSlice';
-import { inputGestureStarted } from '../../../../../src/state/input/inputSlice';
+import { aimCamera } from '../../../../../src/state/camera/cameraSlice';
+import { inputGestureEnded, inputGestureStarted } from '../../../../../src/state/input/inputSlice';
 import { setMissionCraft } from '../../../../../src/layers/missions/state/missions/slice';
 import { absoluteArm } from '../../../../../src/utils/camera/absoluteArm';
 import { rootReducer } from '../../../../../src/store/rootReducer';
@@ -143,7 +143,7 @@ describe('missionPose', () => {
     // The pose the same mission shows once those offsets are in the store.
     const shown = worldPose(ctxAt(missionOf(want), tc));
     const ctx = ctxAt(missionOf(), tc, 'mission');
-    const dragging = { ...ctx.state, camera: { ...ctx.state.camera, dragging: true } };
+    const dragging = { ...ctx.state, input: { ...ctx.state.input, owner: 'canvas' as const } };
     const payload = poseAt({ ...ctx, state: dragging, authoredWorld: shown }).own!.offsets;
     expect(payload.yaw).toBeCloseTo(want.yaw, 9);
     expect(payload.pitch).toBeCloseTo(want.pitch, 9);
@@ -376,7 +376,7 @@ describe('missionPose', () => {
     expect(out).toBe(0);
     expect(Math.abs(own.offsets.yaw)).toBeGreaterThan(0.2);
     const held = shown!;
-    store.dispatch(endDrag());
+    store.dispatch(inputGestureEnded({ source: 'canvas' }));
     const released = frame(f);
     // The aim moves on with the craft as on any frame; the view and its distance hold.
     expect(Math.abs(released.yaw - held.yaw)).toBeLessThan(0.005);

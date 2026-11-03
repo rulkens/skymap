@@ -20,13 +20,13 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { RootState } from '../../../../src/store/types';
 
 /**
- * A RootState carrying the two slices shouldKeepTicking reads: the camera slice
- * and the time slice. Both default to their AT-REST value — camera still, clock
+ * A RootState carrying the slices shouldKeepTicking reads: camera, input (the
+ * held gesture) and time. All default to their AT-REST value — camera still, clock
  * live (so `selectIsManualPlaying` is false); a case flips exactly one.
  */
 function rootWithCamera(
   over: {
-    dragging?: boolean;
+    gestureHeld?: boolean;
     tween?: unknown;
     autoRotateActive?: boolean;
     timeMode?: 'live' | 'manual';
@@ -35,7 +35,6 @@ function rootWithCamera(
 ): RootState {
   return {
     camera: {
-      dragging: over.dragging ?? false,
       tween: over.tween ?? null,
       autoRotate: { active: over.autoRotateActive ?? false },
       clip: null,
@@ -45,6 +44,7 @@ function rootWithCamera(
       // fixture carries the at-rest arm every real store boots with.
       base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
     },
+    input: { owner: over.gestureHeld ? 'canvas' : null },
     time: {
       mode: over.timeMode ?? 'live',
       paused: over.paused ?? false,
@@ -103,10 +103,16 @@ describe('shouldKeepTicking', () => {
     expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(false);
   });
 
-  it('a dragging camera → true (selectCameraActive)', () => {
+  it('a held gesture → true (selectCameraActive)', () => {
     const state = makeState({});
     expect(
-      shouldKeepTicking(state, rootWithCamera({ dragging: true }), 1000, NO_ANIM, CAMERA_DRIVERS),
+      shouldKeepTicking(
+        state,
+        rootWithCamera({ gestureHeld: true }),
+        1000,
+        NO_ANIM,
+        CAMERA_DRIVERS,
+      ),
     ).toBe(true);
   });
 
