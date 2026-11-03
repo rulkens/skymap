@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
-import { HITCHHIKER_ORBIT_PERIOD_DAYS } from '../../../src/layers/missions/data/hitchhikerOrbit';
+import { HITCHHIKER_ORBIT_PERIOD_DAYS } from '../../../src/layers/missions/craft/data/hitchhikerOrbit';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // The whale's rotation row and its orbit row are one physical claim written

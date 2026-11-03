@@ -11,7 +11,7 @@ import {
   HITCHHIKER_ORBIT_PERIOD_DAYS,
   HITCHHIKER_ORBIT_SEMI_MAJOR_KM,
   PETUNIA_TRAIL_OFFSET_DEG,
-} from '../data/hitchhikerOrbit';
+} from '../craft/data/hitchhikerOrbit';
 
 export const PETUNIAS: LayerBody = {
   body: meshBody({

@@ -1,9 +1,9 @@
-import ExhibitTimelineContainer from '../../ui/ExhibitTimelineContainer';
-import { missionHoldSaga } from '../../sagas/missionHoldSaga';
-import { missionShortcuts } from '../../ui/missionShortcuts';
+import ExhibitTimelineContainer from '../../timeline/ui/ExhibitTimelineContainer';
+import { missionHoldSaga } from '../../timeline/sagas/missionHoldSaga';
+import { missionShortcuts } from '../../timeline/ui/missionShortcuts';
 import { missionPose } from './missionPose';
 import type { ExhibitSectionKind } from '../../../../@types/exhibits/ExhibitSectionKind';
-import type { MissionTimeline } from '../../@types/MissionTimeline';
+import type { MissionTimeline } from '../../timeline/@types/MissionTimeline';
 
 /** A scrubbable mission timeline; its hold runs the clock, its camera row follows the craft. */
 export const missionTimelineKind: ExhibitSectionKind<MissionTimeline> = {

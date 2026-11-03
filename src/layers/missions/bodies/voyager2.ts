@@ -6,8 +6,8 @@
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
 import { meshBody } from '../../../data/bodies/makers/meshBody';
 import { VOYAGER_2_GREEN } from '../../../data/bodies/palette';
-import { CAPE_CANAVERAL_LC41 } from '../data/capeCanaveralLc41';
-import { launchIsoOf } from '../utils/missions/launchIsoOf';
+import { CAPE_CANAVERAL_LC41 } from '../craft/data/capeCanaveralLc41';
+import { launchIsoOf } from '../events/utils/launchIsoOf';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 const LAUNCH = launchIsoOf('voyager2');

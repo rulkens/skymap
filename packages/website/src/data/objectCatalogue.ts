@@ -16,7 +16,7 @@ import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 import { buildStaticAnchorStructures } from '../../../../src/layers/structure/catalog/load/buildStaticAnchorStructures';
 import { encodeBlackHoleFocusId } from '../../../../src/layers/blackHoles/markers/present/encodeBlackHoleFocusId';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../../src/layers/blackHoles/sources/blackHoleSourceRows';
-import { CRAFT_SEARCH_NAMES } from '../../../../src/layers/missions/present/craftSearch';
+import { CRAFT_SEARCH_NAMES } from '../../../../src/layers/missions/craft/present/craftSearch';
 import { BODY_FOCUS_PREFIX } from '../../../../src/services/url/bodyFocusId';
 import { encodeStarFocusId } from '../../../../src/services/url/encodeStarFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../../src/services/url/milkyWayFocusId';

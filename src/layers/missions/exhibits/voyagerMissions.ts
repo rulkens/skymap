@@ -10,13 +10,13 @@ import { initialState as galaxyCatalogsInitialState } from '../../galaxyCatalog/
 import { initialState as structuresInitialState } from '../../structure/state/structures/initialState';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../@types/settings/StructureItemSettings';
-import { MISSION_EVENTS } from '../data/missionEvents.generated';
+import { MISSION_EVENTS } from '../events/data/missionEvents.generated';
 import { section } from '../../../utils/exhibits/section';
 import { proseKind } from '../../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../../components/ExhibitOverlay/kinds/sourcesKind';
 import { missionTimelineKind } from './timeline/missionTimelineKind';
 import type { Exhibit } from '../../../@types/exhibits/Exhibit';
-import type { MissionTimeline } from '../@types/MissionTimeline';
+import type { MissionTimeline } from '../timeline/@types/MissionTimeline';
 
 /** Held down so the trails read against the sky, as in the solar-system exhibit. */
 const STARFIELD_BRIGHTNESS = 0.3;
