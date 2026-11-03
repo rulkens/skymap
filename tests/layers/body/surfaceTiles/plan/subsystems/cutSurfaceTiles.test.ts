@@ -16,13 +16,14 @@ import { mat4, mat4d } from 'wgpu-matrix';
 
 import { cutSurfaceTiles } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
-import { earthTexelMetres } from '../../../../../../src/layers/body/surfaceTiles/patch/subsystems/earthTexelMetres';
 import { surfaceTileXyForUv } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileXyForUv';
 import { surfaceTileColumns } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
 import { surfaceTileInBand } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileInBand';
 import { equirectUvToDirection } from '../../../../../../src/utils/math/equirectUvToDirection';
 import { IDENTITY_MAT3 } from '../../../../../../src/utils/math/identityMat3';
 import {
+  EARTH_EQUATORIAL_CIRCUMFERENCE_M,
+  SURFACE_EQUIRECT_BASE_WIDTH_PX,
   SURFACE_TILE_LOD_BIAS,
   SURFACE_TILE_PX,
 } from '../../../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
@@ -130,7 +131,8 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
 function expectedLevel(altitudeKm: number): number {
   const gmpp = (altitudeKm * 1000 * 2 * Math.tan(FOV_Y_RAD / 2)) / VIEWPORT[1];
   let z = BASE_LEVEL;
-  while (earthTexelMetres(z) > gmpp) z++;
+  // Equatorial ground metres per texel at level z; level 4 is the 8192-wide base texture.
+  while (EARTH_EQUATORIAL_CIRCUMFERENCE_M / (SURFACE_EQUIRECT_BASE_WIDTH_PX << z) > gmpp) z++;
   return z;
 }
 

@@ -4,9 +4,7 @@ import { surfaceTileColumns } from './surfaceTileColumns';
 /**
  * surfaceTileXyForUv — which tile of level `z` contains the mesh uv `uv`.
  *
- * This function and `earthTileCentreUv` are the ONLY two places the mesh's uv
- * convention meets the tile grid's, written as independent formulas so
- * round-tripping a tile through both is a real test.
+ * The one place the mesh's uv convention meets the tile grid's.
  *
  * `cubeSphereMesh` bakes `v = lat / π + 0.5`, so `v = 0` is the SOUTH pole,
  * but tile row 0 is the NORTH edge — every tiled raster format counts rows

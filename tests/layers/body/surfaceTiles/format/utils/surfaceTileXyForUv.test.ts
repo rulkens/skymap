@@ -1,12 +1,11 @@
 /**
- * earthTileXyForUv / earthTileCentreUv — the mesh-uv ⇔ tile-grid conversion pair.
+ * surfaceTileXyForUv — the mesh-uv to tile-grid conversion, pinned to hand-computed tiles.
  *
- * Spec test 1. This is a ROUND TRIP, not a mirror: the two functions are written
- * as independent formulas (see `earthTileXyForUv`'s header), so composing them
- * exercises both the `1 - v` south-first flip and the `columns / 2` row count.
- * An off-by-one in either samples the wrong latitude band, which on a globe reads
- * as "the texture is subtly wrong" rather than as an obvious break — precisely
- * the kind of fault a visual pass can miss and a round trip cannot.
+ * Level z has 2^z columns and 2^(z-1) rows at 512 px tiles. Expected tiles are
+ * written out literally from tile centres (u = (x + 0.5) / cols, v = 1 - (y + 0.5) / rows),
+ * so an off-by-one in the `1 - v` south-first flip or in the `cols / 2` row count samples
+ * the wrong latitude band, which on a globe reads as "subtly wrong" rather than as a
+ * break a visual pass would catch.
  *
  * The wrap/clamp asymmetry gets its own cases because treating longitude and
  * latitude identically is the classic plate-carrée bug.
@@ -14,34 +13,35 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { surfaceTileCentreUv } from '../../../../../../src/layers/body/surfaceTiles/patch/subsystems/surfaceTileCentreUv';
 import { surfaceTileColumns } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
 import { surfaceTileXyForUv } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileXyForUv';
 import { SURFACE_TILE_PX } from '../../../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 
-/** Levels 5 (the shallowest the virtual texture requests) through 13 (the
- *  deepest either candidate source carries real detail at). */
-const LEVELS = [5, 6, 7, 8, 9, 10, 11, 12, 13];
+describe('surfaceTileXyForUv', () => {
+  it('maps the corner, antimeridian and mid-grid tile centres at level 5 (32 x 16 tiles)', () => {
+    const cases: ReadonlyArray<readonly [number, number, number, number, string]> = [
+      [0.5 / 32, 1 - 0.5 / 16, 0, 0, 'north-west'],
+      [31.5 / 32, 1 - 0.5 / 16, 31, 0, 'north-east'],
+      [0.5 / 32, 1 - 15.5 / 16, 0, 15, 'south-west'],
+      [31.5 / 32, 1 - 15.5 / 16, 31, 15, 'south-east'],
+      [16.5 / 32, 1 - 8.5 / 16, 16, 8, 'prime meridian, equator'],
+      [31.5 / 32, 1 - 8.5 / 16, 31, 8, 'antimeridian, mid-latitude'],
+      [1.5 / 32, 1 - 1.5 / 16, 1, 1, 'one in from the north-west'],
+    ];
+    for (const [u, v, x, y, label] of cases) {
+      expect(surfaceTileXyForUv([u, v], 5, SURFACE_TILE_PX), label).toEqual([x, y]);
+    }
+  });
 
-describe('earthTileXyForUv / earthTileCentreUv', () => {
-  it('round-trips every corner, the antimeridian column and the mid-grid, at levels 5 to 13', () => {
-    for (const z of LEVELS) {
-      const cols = surfaceTileColumns(z, SURFACE_TILE_PX);
-      const rows = cols / 2;
-      const probes: ReadonlyArray<readonly [number, number]> = [
-        [0, 0], // north-west: longitude -180, latitude +90
-        [cols - 1, 0], // north-east
-        [0, rows - 1], // south-west
-        [cols - 1, rows - 1], // south-east
-        [cols / 2, rows / 2], // the prime meridian / equator corner
-        [cols - 1, rows / 2], // the antimeridian, mid-latitude
-        [1, 1],
-        [cols - 2, rows - 2],
-      ];
-      for (const [x, y] of probes) {
-        const uv = surfaceTileCentreUv([x, y], z, SURFACE_TILE_PX);
-        expect(surfaceTileXyForUv(uv, z, SURFACE_TILE_PX), `z${z} tile ${x},${y}`).toEqual([x, y]);
-      }
+  it('maps the corner tile centres at level 13 (8192 x 4096 tiles)', () => {
+    const cases: ReadonlyArray<readonly [number, number, number, number, string]> = [
+      [0.5 / 8192, 1 - 0.5 / 4096, 0, 0, 'north-west'],
+      [8191.5 / 8192, 1 - 0.5 / 4096, 8191, 0, 'north-east'],
+      [0.5 / 8192, 1 - 4095.5 / 4096, 0, 4095, 'south-west'],
+      [8191.5 / 8192, 1 - 4095.5 / 4096, 8191, 4095, 'south-east'],
+    ];
+    for (const [u, v, x, y, label] of cases) {
+      expect(surfaceTileXyForUv([u, v], 13, SURFACE_TILE_PX), label).toEqual([x, y]);
     }
   });
 

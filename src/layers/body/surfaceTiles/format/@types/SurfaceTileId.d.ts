@@ -4,7 +4,7 @@
  * Level `z`'s equirectangular width is `512 << z` texels (`z = 4` is today's
  * 8192x4096 base). `x` counts east from -180, `y` counts south from +90 —
  * opposite the mesh's south-first `v`; reconciled once in
- * `surfaceTileXyForUv` / `surfaceTileCentreUv`. Deliberately NOT cube-sphere:
+ * `surfaceTileXyForUv`. Deliberately NOT cube-sphere:
  * both imagery sources are EPSG:4326 rasters, so that would resample every
  * pixel twice.
  */
