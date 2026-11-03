@@ -5,12 +5,12 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { constellationsAssetRows } from '../../../../src/layers/constellations/load/constellationsAssetRows';
-import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
-import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
-import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
-import type { UiState } from '../../../../src/@types/ui/UiState';
+import { constellationsAssetRows } from '../../../../../src/layers/constellations/figures/load/constellationsAssetRows';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
+import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
+import type { ConstellationsRuntime } from '../../../../../src/layers/constellations/@types/ConstellationsRuntime';
+import type { UiState } from '../../../../../src/@types/ui/UiState';
 
 const RUNTIME = { slot: { __mockSlot: true } } as unknown as ConstellationsRuntime;
 const ROW = constellationsAssetRows(RUNTIME)[0]!;

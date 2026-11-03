@@ -5,12 +5,12 @@
  * `ForegroundCaption`s on the NEAR0 slab instead.
  */
 
-import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ForegroundCaption } from '../../../services/engine/presentation/foregroundCaption';
+import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { ForegroundCaption } from '../../../../services/engine/presentation/foregroundCaption';
 import { CONSTELLATION_LABEL_STYLE } from './constellationLabelStyle';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 
 export function constellationCaptions(artifact: ConstellationsArtifact): ForegroundCaption[] {
   const style = CONSTELLATION_LABEL_STYLE;

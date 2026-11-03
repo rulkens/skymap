@@ -15,9 +15,9 @@
  * renderer.
  */
 
-import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
+import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
 import type { ConstellationInstances } from '../@types/ConstellationInstances';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
 
 /** f32 per instance — mirrors the 32-byte stride in `constellations/io.wesl`. */
 export const FLOATS_PER_SEGMENT = 8;

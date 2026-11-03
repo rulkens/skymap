@@ -10,16 +10,16 @@
  * field: the anchor is empty space at a figure centroid, not a body.
  */
 
-import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
-import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
-import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';
+import type { Label2D } from '../../../../@types/rendering/Label2D';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
+import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
+import type { ConstellationsRuntime } from '../../@types/ConstellationsRuntime';
 import { constellationCaptions } from './constellationCaptions';
 import {
   CAPTION_PRIORITY,
   CAPTION_TIER_SCALE,
-} from '../../../services/engine/presentation/captionPriority';
+} from '../../../../services/engine/presentation/captionPriority';
 
 // Below every scene-body caption: a figure name always yields to a body
 // caption in a screen-space collision. One constant for every figure — their

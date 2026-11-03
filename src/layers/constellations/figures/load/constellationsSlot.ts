@@ -12,11 +12,11 @@
  * `installSlotReadyWake`'s job, not the factory's; this subscriber only warns.
  */
 
-import { createAssetSlot } from '../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../services/loading/AssetSlot';
 import { constellationsFetcher } from './constellationsFetcher';
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
-import type { ConstellationRenderer } from '../../../@types/rendering/ConstellationRenderer';
+import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
+import type { ConstellationRenderer } from '../@types/ConstellationRenderer';
 
 export function createConstellationsSlot(
   renderer: ConstellationRenderer,

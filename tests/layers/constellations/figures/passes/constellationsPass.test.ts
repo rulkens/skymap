@@ -4,14 +4,14 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { constellationsPass } from '../../../../src/layers/constellations/passes/constellationsPass';
-import { NEAR0, slabViewOf } from '../../../../src/services/engine/frame/slabs';
-import { makeSlab } from '../../../fixtures/makeSlab';
-import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
-import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import { constellationsPass } from '../../../../../src/layers/constellations/figures/passes/constellationsPass';
+import { NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
+import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';
+import type { ConstellationsRuntime } from '../../../../../src/layers/constellations/@types/ConstellationsRuntime';
+import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 
 function makeCtx(camPos: readonly [number, number, number], focusBlend = 0): FrameView {
   const near0Slab: Slab = makeSlab();
