@@ -52,7 +52,10 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { VolumeFieldRenderer } from '../../../../layers/cosmicWebDensity/densityCubes/@types/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../../layers/cosmicWebDensity/densityCubes/@types/FieldEntry';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
-import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../layers/cosmicWebDensity/densityCubes/data/scalarFieldPalettes';
+import {
+  buildPaletteLut,
+  PALETTE_LUT_SIZE,
+} from '../../../../layers/cosmicWebDensity/densityCubes/data/scalarFieldPalettes';
 import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';

@@ -68,16 +68,19 @@ vi.mock('../../../../src/layers/structure/load/structureCatalogFetcher', () => (
 
 // MCPM is default-on, so the demand loop fires its load at boot.  Mock the
 // fetcher so the slot resolves without networking.
-vi.mock('../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityFetcher', () => ({
-  cosmicWebDensityFetcher: vi.fn(async () => ({
-    dims: [4, 4, 4],
-    voxels: new Float32Array(64),
-    valueMin: 0,
-    valueMax: 1,
-    frame: 'supergalactic',
-    boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
-  })),
-}));
+vi.mock(
+  '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityFetcher',
+  () => ({
+    cosmicWebDensityFetcher: vi.fn(async () => ({
+      dims: [4, 4, 4],
+      voxels: new Float32Array(64),
+      valueMin: 0,
+      valueMax: 1,
+      frame: 'supergalactic',
+      boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
+    })),
+  }),
+);
 
 // wireSlots awaits loadDataManifest() before reevaluateDemand. Default resolves immediately; the
 // deferred-manifest test overrides it once with mockReturnValueOnce.
