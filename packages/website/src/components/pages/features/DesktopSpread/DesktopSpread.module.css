@@ -14,13 +14,8 @@
 }
 
 .value {
+  composes: figure-value from '../../../../styles/picture.module.css';
   color: var(--color-accent);
-  font-size: var(--text-h2);
-  font-weight: 300;
-  line-height: 0.9;
-  letter-spacing: -0.04em;
-  text-shadow: 0 0 2rem rgb(0 0 0 / 0.8);
-  white-space: nowrap;
 }
 
 .measure {

@@ -5,8 +5,7 @@
 }
 
 .line {
-  max-width: var(--measure-lead);
-  font-size: var(--text-lead);
+  composes: lead from '../../../../styles/type.module.css';
 }
 
 .figure {

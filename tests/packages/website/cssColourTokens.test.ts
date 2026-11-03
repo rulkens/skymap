@@ -18,8 +18,8 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'components/pages/about/MakerPortrait/MakerPortrait.module.css': 5,
   'components/pages/classroom/EarthOrbit/EarthOrbit.module.css': 4,
   'components/pages/classroom/LinkAnatomy/LinkAnatomy.module.css': 1,
-  'components/pages/features/DesktopSpread/DesktopSpread.module.css': 2,
-  'components/pages/features/FeatureGallery/FeatureGallery.module.css': 5,
+  'components/pages/features/DesktopSpread/DesktopSpread.module.css': 1,
+  'components/pages/features/FeatureGallery/FeatureGallery.module.css': 4,
   'components/pages/features/FilmClock/FilmClock.module.css': 5,
   'components/pages/features/LinkSpread/LinkSpread.module.css': 1,
   'components/pages/home/Flight/Arrive.module.css': 3,
@@ -53,7 +53,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'dev/review/ReviewPage/ReviewPage.module.css': 8,
   'dev/review/SectionIcons/SectionIcons.module.css': 3,
   'dev/review/SelectionChip/SelectionChip.module.css': 2,
-  'styles/picture.module.css': 2,
+  'styles/picture.module.css': 3,
 };
 
 const NAMED = new Set(

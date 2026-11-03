@@ -4,10 +4,10 @@
 
 /* Title over its line on one left edge: RealData, next, opens on a split head. */
 .head {
+  composes: leads from '../../../../styles/type.module.css';
+
   & p {
-    max-width: var(--measure-lead);
     margin-bottom: 0;
-    font-size: var(--text-lead);
   }
 }
 
