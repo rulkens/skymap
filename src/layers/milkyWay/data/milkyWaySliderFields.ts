@@ -20,9 +20,9 @@
  * offscreen; `starCount` regenerates the cloud outright (destroy + allocate +
  * compute dispatch) when it no longer matches the buffers in force.
  */
-import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
-import type { MilkyWaySliderKey } from '../../@types/data/milkyWay/MilkyWaySliderKey';
-import type { MilkyWaySliderField } from '../../@types/data/milkyWay/MilkyWaySliderField';
+import type { MilkyWayTuning } from '../../../@types/settings/MilkyWayTuning';
+import type { MilkyWaySliderKey } from '../@types/MilkyWaySliderKey';
+import type { MilkyWaySliderField } from '../@types/MilkyWaySliderField';
 
 export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
   {

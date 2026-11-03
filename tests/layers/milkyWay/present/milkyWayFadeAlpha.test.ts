@@ -6,12 +6,12 @@
  * camera distance at which the disc spans exactly `fullPx`/`gonePx`.
  */
 import { describe, it, expect } from 'vitest';
-import { milkyWayFadeAlpha } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayFadeAlpha';
+import { milkyWayFadeAlpha } from '../../../../src/layers/milkyWay/present/milkyWayFadeAlpha';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,
-} from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/data/milkyWay/milkyWayRadiusMpc';
+} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 
 // Project-default camera: 60° vertical fov into a 720-px-tall viewport.
 const FOV_Y_RAD = Math.PI / 3;

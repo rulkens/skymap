@@ -1,4 +1,4 @@
-import type { MilkyWayTuning } from '../../settings/MilkyWayTuning';
+import type { MilkyWayTuning } from '../../../@types/settings/MilkyWayTuning';
 
 /**
  * Keys of `MilkyWaySettings` that surface as numeric sliders — i.e. every

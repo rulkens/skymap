@@ -18,17 +18,17 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import type { Mat3 } from '../../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../src/data/milkyWay/galacticCenter';
 import {
   GAL_X_EQ,
   GAL_Y_EQ,
   GAL_Z_EQ,
   ORIENTATION_FRAMES,
-} from '../../../../../src/data/orientation/orientationFrames';
-import { MILKY_WAY_MODEL_SCALE } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import { milkyWayModelMatrix } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayModelMatrix';
+} from '../../../../src/data/orientation/orientationFrames';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { milkyWayModelMatrix } from '../../../../src/layers/milkyWay/render/milkyWayModelMatrix';
 
 /**
  * Scrape the three galactic basis vectors from `util.wesl`. Each is declared

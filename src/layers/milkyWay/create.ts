@@ -10,7 +10,7 @@ import type { MilkyWayRuntime } from './@types/MilkyWayRuntime';
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createMilkyWayPickRenderer } from './render/milkyWayPickRenderer';
-import { createMilkyWayCloud } from '../../services/engine/galaxyGenerator/v1/milkyWayCloud';
+import { createMilkyWayCloud } from './render/milkyWayCloud';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { createMilkyWayCloudRenderer } from './render/milkyWayCloudRenderer';
 import { createAdditiveUpsample } from '../../services/gpu/passes/additiveUpsample';

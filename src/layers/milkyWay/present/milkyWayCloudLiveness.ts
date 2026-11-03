@@ -12,7 +12,7 @@
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import { milkyWayFadeAlpha } from '../../../services/engine/galaxyGenerator/v1/milkyWayFadeAlpha';
+import { milkyWayFadeAlpha } from './milkyWayFadeAlpha';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
 import { milkyWayVisibility } from '../visibility';

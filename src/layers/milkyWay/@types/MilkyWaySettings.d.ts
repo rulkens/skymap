@@ -16,7 +16,7 @@
  * (`structures` / `galaxyCatalogs`), a singleton overlay has no `items` row, so
  * both axes are flat fields here.
  */
-import type { MilkyWayTuning } from './MilkyWayTuning';
+import type { MilkyWayTuning } from '../../../@types/settings/MilkyWayTuning';
 
 export type MilkyWaySettings = {
   /** The generated star+dust point cloud at the galactic centre. */

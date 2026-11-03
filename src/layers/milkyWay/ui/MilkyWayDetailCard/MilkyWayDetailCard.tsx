@@ -10,7 +10,7 @@ import cx from 'classnames';
 import type { MilkyWayInfo } from '../../../../@types/engine/MilkyWayInfo';
 import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
 import { MILKY_WAY_INFO } from '../../../../data/milkyWay/milkyWayInfo';
-import { MILKY_WAY_FACTS } from '../../../../data/milkyWay/milkyWayFacts';
+import { MILKY_WAY_FACTS } from '../../data/milkyWayFacts';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_DISC_RADIUS_KPC,
@@ -18,7 +18,7 @@ import {
 import { SGR_A_STAR_MASS_SOLAR } from '../../../../data/bodies/sgrAStarMassSolar';
 import { formatDiameterKpc } from '../../../../utils/format/formatDiameterKpc';
 import { formatDistance } from '../../../../utils/format/formatDistance';
-import { galacticYearMyr } from '../../../../utils/astro/galacticYearMyr';
+import { galacticYearMyr } from '../../utils/astro/galacticYearMyr';
 import { cardShotUrl } from '../../../../utils/palette/cardShotUrl';
 import { MILKY_WAY_FOCUS_ID } from '../../../../services/url/milkyWayFocusId';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';

@@ -5,7 +5,7 @@
  * inverse is memoised alongside `milkyWayModelCached`'s forward matrix.
  */
 import { mat4, vec3 } from 'wgpu-matrix';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { milkyWayModelCached } from './milkyWayModelCached';
 
 let cachedInverse: Float32Array | null = null;

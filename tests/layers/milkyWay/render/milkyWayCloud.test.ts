@@ -20,15 +20,15 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 
-import { createMilkyWayCloud } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCloud';
-import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../src/data/milkyWay/milkyWayGalaxyParams';
-import { MILKY_WAY_STARS_PER_TIER } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import { carveStarLayout } from '../../../../../src/services/engine/galaxyGenerator/v1/carveStarLayout';
-import { carveDustLayout } from '../../../../../src/services/engine/galaxyGenerator/v1/carveDustLayout';
-import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
-import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/v1/splitStarBudget';
-import { GEN_RECORD_BYTES } from '../../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
-import { GENERATION_UBO } from '../../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
+import { createMilkyWayCloud } from '../../../../src/layers/milkyWay/render/milkyWayCloud';
+import { MILKY_WAY_GALAXY_PARAMS } from '../../../../src/data/milkyWay/milkyWayGalaxyParams';
+import { MILKY_WAY_STARS_PER_TIER } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { carveStarLayout } from '../../../../src/services/engine/galaxyGenerator/v1/carveStarLayout';
+import { carveDustLayout } from '../../../../src/services/engine/galaxyGenerator/v1/carveDustLayout';
+import { classifyHubbleType } from '../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
+import { splitStarBudget } from '../../../../src/services/engine/galaxyGenerator/v1/splitStarBudget';
+import { GEN_RECORD_BYTES } from '../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
+import { GENERATION_UBO } from '../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
 
 /** A stub GPUBuffer that records its descriptor and whether it was destroyed. */
 type StubBuffer = GPUBuffer & {

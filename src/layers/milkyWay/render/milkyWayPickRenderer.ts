@@ -17,7 +17,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import { createDummyFadeBindGroup } from '../../../services/gpu/lib/dummyFade';
 import { Source } from '../../../data/source';
 import { MILKY_WAY_CENTER_WORLD } from '../../../data/milkyWay/galacticCenter';
-import { MILKY_WAY_PICK_MIN_SIZE_PX } from '../../../data/milkyWay/milkyWayPickMinSizePx';
+import { MILKY_WAY_PICK_MIN_SIZE_PX } from '../data/milkyWayPickMinSizePx';
 import { MILKY_WAY_RADIUS_MPC } from '../../../data/milkyWay/milkyWayRadiusMpc';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
 import vsCode from '../../../services/gpu/shaders/milkyWay/pick/vertex.wesl?static';

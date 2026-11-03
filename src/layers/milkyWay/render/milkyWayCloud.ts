@@ -10,19 +10,19 @@
  * processes a queue in submission order, so the compute passes below see the
  * `writeBuffer`'d UBO with no readback and no fence needed.
  */
-import type { MilkyWayCloud } from '../../../../@types/galaxy/MilkyWayCloud';
-import type { MilkyWayCloudBuffers } from '../../../../@types/galaxy/MilkyWayCloudBuffers';
-import { MILKY_WAY_GALAXY_PARAMS } from '../../../../data/milkyWay/milkyWayGalaxyParams';
-import { carveDustLayout } from './carveDustLayout';
-import { carveStarLayout } from './carveStarLayout';
-import { classifyHubbleType } from '../shared/classifyHubbleType';
-import { createGenerationPipelines } from './createGenerationPipelines';
-import { describeGalaxy } from '../shared/describeGalaxy';
-import { encodeGeneration } from './encodeGeneration';
-import { GEN_RECORD_BYTES } from './genRecordBytes';
-import { GENERATION_UBO } from '../shared/generationUboLayout';
-import { packGenerationUniforms } from './packGenerationUniforms';
-import { splitStarBudget } from './splitStarBudget';
+import type { MilkyWayCloud } from '../@types/MilkyWayCloud';
+import type { MilkyWayCloudBuffers } from '../@types/MilkyWayCloudBuffers';
+import { MILKY_WAY_GALAXY_PARAMS } from '../../../data/milkyWay/milkyWayGalaxyParams';
+import { carveDustLayout } from '../../../services/engine/galaxyGenerator/v1/carveDustLayout';
+import { carveStarLayout } from '../../../services/engine/galaxyGenerator/v1/carveStarLayout';
+import { classifyHubbleType } from '../../../services/engine/galaxyGenerator/shared/classifyHubbleType';
+import { createGenerationPipelines } from '../../../services/engine/galaxyGenerator/v1/createGenerationPipelines';
+import { describeGalaxy } from '../../../services/engine/galaxyGenerator/shared/describeGalaxy';
+import { encodeGeneration } from '../../../services/engine/galaxyGenerator/v1/encodeGeneration';
+import { GEN_RECORD_BYTES } from '../../../services/engine/galaxyGenerator/v1/genRecordBytes';
+import { GENERATION_UBO } from '../../../services/engine/galaxyGenerator/shared/generationUboLayout';
+import { packGenerationUniforms } from '../../../services/engine/galaxyGenerator/v1/packGenerationUniforms';
+import { splitStarBudget } from '../../../services/engine/galaxyGenerator/v1/splitStarBudget';
 
 export function createMilkyWayCloud(device: GPUDevice, starCount: number): MilkyWayCloud {
   // Built once, reused by every regenerate: pipelines are stateless shader

@@ -53,9 +53,9 @@
  * Built once per call with no module-level mutable state; callers cache the
  * result (the placement never changes).
  */
-import { GAL_X_EQ, GAL_Y_EQ, GAL_Z_EQ } from '../../../../data/orientation/orientationFrames';
-import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
-import { MILKY_WAY_MODEL_SCALE } from './milkyWayCalibration';
+import { GAL_X_EQ, GAL_Y_EQ, GAL_Z_EQ } from '../../../data/orientation/orientationFrames';
+import { MILKY_WAY_CENTER_WORLD } from '../../../data/milkyWay/galacticCenter';
+import { MILKY_WAY_MODEL_SCALE } from '../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 
 export function milkyWayModelMatrix(): Float32Array {
   const k = MILKY_WAY_MODEL_SCALE;

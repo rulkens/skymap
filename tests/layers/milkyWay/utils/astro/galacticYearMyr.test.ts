@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { galacticYearMyr } from '../../../src/utils/astro/galacticYearMyr';
+import { galacticYearMyr } from '../../../../../src/layers/milkyWay/utils/astro/galacticYearMyr';
 
 describe('galacticYearMyr', () => {
   it('gives ~219 Myr for R0 = 8.178 kpc and v = 229 km/s', () => {

@@ -1,5 +1,5 @@
 /** MILKY_WAY_FACTS — literature values the card can't derive; sourced inline. */
-import type { MilkyWayFacts } from '../../layers/milkyWay/@types/MilkyWayFacts';
+import type { MilkyWayFacts } from '../@types/MilkyWayFacts';
 
 export const MILKY_WAY_FACTS: MilkyWayFacts = {
   starCountRange: '100–400 billion',

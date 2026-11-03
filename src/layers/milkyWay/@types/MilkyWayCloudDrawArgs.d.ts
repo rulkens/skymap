@@ -9,7 +9,7 @@
 
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { MilkyWayCloudBuffers } from '../../../@types/galaxy/MilkyWayCloudBuffers';
+import type { MilkyWayCloudBuffers } from './MilkyWayCloudBuffers';
 import type { MilkyWayTuning } from '../../../@types/settings/MilkyWayTuning';
 
 export type MilkyWayCloudDrawArgs = {

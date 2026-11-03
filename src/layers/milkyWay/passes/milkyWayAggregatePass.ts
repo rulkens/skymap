@@ -13,8 +13,8 @@
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { MilkyWayRuntime } from '../@types/MilkyWayRuntime';
 import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
-import { milkyWayCamPosModel } from '../../../services/engine/galaxyGenerator/v1/milkyWayCamPosModel';
-import { milkyWayModelCached } from '../../../services/engine/galaxyGenerator/v1/milkyWayModelCached';
+import { milkyWayCamPosModel } from '../render/milkyWayCamPosModel';
+import { milkyWayModelCached } from '../render/milkyWayModelCached';
 
 export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDisk'> {
   return {
