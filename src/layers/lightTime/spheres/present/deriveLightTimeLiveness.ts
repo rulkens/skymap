@@ -7,10 +7,7 @@
 
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { LightTimeLiveness } from '../@types/LightTimeLiveness';
-import {
-  LIGHT_TIME_APPROACH_BAND,
-  LIGHT_TIME_RECEDE_BAND,
-} from '../data/lightTimeFadeBands';
+import { LIGHT_TIME_APPROACH_BAND, LIGHT_TIME_RECEDE_BAND } from '../data/lightTimeFadeBands';
 import { fadeWindow } from '../../../../utils/math/fadeWindow';
 import { EARTH_REF } from '../../../../data/selection/earthRef';
 import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
