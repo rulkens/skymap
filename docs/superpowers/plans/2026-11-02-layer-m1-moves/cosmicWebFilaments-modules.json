@@ -62,5 +62,9 @@
   {
     "from": "src/layers/cosmicWebFilaments/utils/clampFilamentIntensity.ts",
     "to": "src/layers/cosmicWebFilaments/filaments/utils/clampFilamentIntensity.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebFilaments/filaments/@types/CosmicWebFilamentsSettings.d.ts",
+    "to": "src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsSettings.d.ts"
   }
 ]
