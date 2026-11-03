@@ -298,17 +298,17 @@ describe('frame-tagged keyframes', () => {
     const data: ClipData = {
       start: START,
       timeline: [
-        // One second, not zero-length: two legs opening at one instant order
-        // by track, not by timeline, and the body leg would never be reached.
+        // A zero-length snap, then the rise from the same instant: the leg that
+        // runs on from a shared instant owns it.
         all([
-          tween('yaw', { to: 0.4, over: 1, frame: SPOT }),
-          tween('pitch', { to: 0.3, over: 1, frame: SPOT }),
+          tween('yaw', { to: 0.4, over: 0, frame: SPOT }),
+          tween('pitch', { to: 0.3, over: 0, frame: SPOT }),
         ]),
         tween('distance', { to: 5e3, over: 4, frame: EARTH }),
       ],
     };
 
-    const framed = evaluateFramedClip(data, 1, {
+    const framed = evaluateFramedClip(data, 0, {
       ...opts(),
       terrainHeightAt: () => terrainM,
     });
