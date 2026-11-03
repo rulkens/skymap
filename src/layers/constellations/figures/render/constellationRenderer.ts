@@ -43,8 +43,8 @@
  * bindings the upload mutates.
  */
 
-import vsCode from '../../../services/gpu/shaders/constellations/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/constellations/fragment.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/constellations/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/constellations/fragment.wesl?static';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { ConstellationRenderer } from '../@types/ConstellationRenderer';
 import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
