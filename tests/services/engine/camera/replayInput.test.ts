@@ -187,9 +187,9 @@ describe('replayInput', () => {
     expect(register.yaw).toBeCloseTo(-50 * 0.005, 6);
   });
 
-  it('the returned actions are the four dispatch sites, in order', () => {
+  it('the returned actions are the three dispatch sites, in order', () => {
     // Body arm: an at-rest notch commits itself, a drag folds into the
-    // register only, and the release commits the register THEN ends the drag.
+    // register only, and the release commits the register.
     const store = makeStore();
     const arm = earthArm(2);
     store.dispatch(commitCameraPose(arm));
@@ -211,7 +211,6 @@ describe('replayInput', () => {
     expect(body.actions.map((a) => a.type)).toEqual([
       'camera/commitCameraPose',
       'camera/commitCameraPose',
-      'camera/endDrag',
     ]);
     expect(body.actions[0]!.payload).not.toBe(arm);
     expect(body.actions[1]!.payload).toBe(body.register);
@@ -401,7 +400,7 @@ describe('replayInput', () => {
       ctxOf(store),
     );
 
-    expect(next.actions.map((a) => a.type)).toEqual(['camera/endDrag']);
+    expect(next.actions).toEqual([]);
     expect(next.register).toBe(arm);
   });
 

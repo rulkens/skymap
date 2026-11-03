@@ -221,7 +221,6 @@
     },
     "actions": [
       "camera/commitCameraPose",
-      "camera/endDrag",
       "engine/engineScaleChanged"
     ]
   },
@@ -2526,7 +2525,6 @@
     },
     "actions": [
       "camera/commitCameraPose",
-      "camera/endDrag",
       "engine/engineScaleChanged"
     ]
   },

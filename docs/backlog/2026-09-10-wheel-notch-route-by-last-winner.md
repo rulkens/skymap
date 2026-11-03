@@ -49,9 +49,9 @@ both of its arguments are replay OUTPUTS:
 
 - `pickWinner(drivers, rootState, approachDone)` reads the POST-replay EFFECTIVE
   `rootState` — the snapshot with the replay's own actions folded through the camera
-  reducer (`src/services/engine/camera/stepCameraRuntime.ts:89-95`). That is
-  load-bearing, not incidental: the drivers must see this frame's commits, `endDrag`
-  above all, or `orbitDrag` wins one frame too long.
+  reducer (`src/services/engine/camera/stepCameraRuntime.ts`). The drivers must see
+  this frame's release commit. Whether a gesture is held is NOT a replay output: it
+  is `input.owner`, already final in the pre-replay snapshot.
 - `approachDone` is `drained.follow.saturated` (`stepCameraRuntime.ts:100-101`) —
   the replay's follow memory.
 
@@ -61,7 +61,7 @@ runs AFTER the pick, consuming `winner.epoch` (`stepCameraRuntime.ts:104-112`).
 
 Two directions, neither worked through:
 
-- Pick from the PRE-replay snapshot and re-establish the `endDrag` guarantee some
+- Pick from the PRE-replay snapshot, with the release commit re-established some
   other way — the gesture-end edge is present in the drained steps themselves,
   before the replay folds it.
 - Split the pick in two: a ROUTE decision above the replay, needing only the

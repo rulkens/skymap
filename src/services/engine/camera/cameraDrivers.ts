@@ -43,6 +43,7 @@ import { EASED_FOCUS_EASE } from '../../../data/camera/focusMoveDefaults';
 import { lerp } from '../../../utils/math/lerp';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
+import { selectGestureHeld } from '../../../state/input/selectors';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 
@@ -268,7 +269,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // orbits AROUND a moving body; a no-op on a body arm, so one row serves
     // both arms.
     pivotsOnFocusedBody: true,
-    isActive: (s, activity) => s.camera.dragging && !activity.dragClaimed,
+    isActive: (s, activity) => selectGestureHeld(s) && !activity.dragClaimed,
     // The AUTHORED register, pre-projection (R12b-1): producing the displayed
     // pose here re-pins its tilted angles and walks the eye every held frame.
     pose: (ctx, mem) => ({ pose: ctx.register, memory: mem }),
@@ -416,14 +417,14 @@ export const OPENSPACE_DRIVERS: readonly CameraDriver[] = CAMERA_DRIVERS.flatMap
           priority: 80,
           // Any open gesture, as `orbitDrag`: a pinch, or a drag latched under skymap
           // before a toggle, moves the register with no navigator input at all.
-          isActive: (s: RootState, a: DriverActivity) => s.camera.dragging && !a.dragClaimed,
+          isActive: (s: RootState, a: DriverActivity) => selectGestureHeld(s) && !a.dragClaimed,
         },
         {
           ...NAVIGATOR_ROW,
           id: 'openSpaceCoast',
           priority: 50,
           isActive: (s: RootState, a: DriverActivity) =>
-            !s.camera.dragging && a.navMoving && !a.dragClaimed,
+            !selectGestureHeld(s) && a.navMoving && !a.dragClaimed,
         },
       ],
 );
