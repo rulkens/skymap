@@ -9,7 +9,7 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 
-import type { ScalarFieldPaletteId } from '../../../../@types/data/volume/ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 
 export type FieldEntry = {
   /**

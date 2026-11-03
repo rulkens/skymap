@@ -10,7 +10,7 @@
 
 import type { ShowKey } from '../../../../@types/animation/ShowKey';
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { ScalarVolumePassRow } from '../../../../layers/cosmicWebDensity/densityCubes/@types/ScalarVolumePassRow';
+import type { ScalarVolumePassRow } from '../../../../@types/engine/frame/ScalarVolumePassRow';
 
 export function createScalarVolumePass<Id extends string, K extends ShowKey = ShowKey>(
   row: ScalarVolumePassRow<Id, K>,

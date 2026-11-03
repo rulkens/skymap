@@ -1,19 +1,7 @@
 [
   {
-    "from": "src/@types/engine/frame/ScalarVolumePassRow.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/ScalarVolumePassRow.d.ts"
-  },
-  {
-    "from": "src/@types/rendering/FieldEntry.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/FieldEntry.d.ts"
-  },
-  {
     "from": "src/@types/rendering/VolumeFieldLiveness.d.ts",
     "to": "src/layers/cosmicWebDensity/@types/VolumeFieldLiveness.d.ts"
-  },
-  {
-    "from": "src/@types/rendering/VolumeFieldRenderer.d.ts",
-    "to": "src/layers/cosmicWebDensity/@types/VolumeFieldRenderer.d.ts"
   },
   {
     "from": "src/@types/settings/VolumeFieldSettings.d.ts",

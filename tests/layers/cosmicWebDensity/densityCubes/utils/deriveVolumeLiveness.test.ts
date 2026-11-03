@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 
 import { deriveVolumeLiveness } from '../../../../../src/layers/cosmicWebDensity/densityCubes/utils/deriveVolumeLiveness';
 import { clampVolumeIntensity } from '../../../../../src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeIntensity';
-import type { VolumeFieldRenderer } from '../../../../../src/layers/cosmicWebDensity/densityCubes/@types/VolumeFieldRenderer';
+import type { VolumeFieldRenderer } from '../../../../../src/@types/rendering/VolumeFieldRenderer';
 import type { VolumeFieldSettings } from '../../../../../src/layers/cosmicWebDensity/@types/VolumeFieldSettings';
 
 type FieldId = 'mcpm';

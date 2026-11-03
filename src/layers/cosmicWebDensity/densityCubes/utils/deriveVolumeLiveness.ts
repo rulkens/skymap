@@ -7,7 +7,7 @@
  * this stays a projection of its three arguments only.
  */
 
-import type { VolumeFieldRenderer } from '../@types/VolumeFieldRenderer';
+import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
 import type { VolumeFieldLiveness } from '../@types/VolumeFieldLiveness';
 import type { VolumeFieldSettings } from '../../@types/VolumeFieldSettings';
 import { clampVolumeFieldSettings } from './clampVolumeFieldSettings';
