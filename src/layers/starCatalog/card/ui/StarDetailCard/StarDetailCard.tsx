@@ -27,7 +27,7 @@ import Thumbnail from '../../../../../components/InfoCard/Thumbnail/Thumbnail';
 import WikipediaRow from '../../../../../components/InfoCard/WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../../../../components/InfoTip/InfoTip';
-import { TIPS } from '../../../../../components/InfoCard/tooltips';
+import { STAR_TIPS } from '../starTips';
 import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
 import styles from '../../../../../components/InfoCard/cardChrome.module.css';
 import local from './StarDetailCard.module.css';
@@ -52,27 +52,27 @@ function photometryRows(detail: Extract<StarInfo['detail'], { kind: 'photometry'
   return (
     <div className={styles.cardSection}>
       <CardRow
-        label={<InfoTip {...TIPS.starApparentMag!}>Apparent mag (G)</InfoTip>}
+        label={<InfoTip {...STAR_TIPS.starApparentMag}>Apparent mag (G)</InfoTip>}
         value={detail.apparentMag.toFixed(2)}
       />
       <CardRow
-        label={<InfoTip {...TIPS.starAbsoluteMag!}>Absolute mag</InfoTip>}
+        label={<InfoTip {...STAR_TIPS.starAbsoluteMag}>Absolute mag</InfoTip>}
         value={detail.absMag.toFixed(2)}
       />
       <CardRow
-        label={<InfoTip {...TIPS.colourBpRp!}>Colour BP−RP</InfoTip>}
+        label={<InfoTip {...STAR_TIPS.colourBpRp}>Colour BP−RP</InfoTip>}
         value={detail.bpRp.toFixed(2)}
       />
       <CardRow
-        label={<InfoTip {...TIPS.starDerived!}>Temperature</InfoTip>}
+        label={<InfoTip {...STAR_TIPS.starDerived}>Temperature</InfoTip>}
         value={`${approx}${formatScalar(derived.teffK)} K`}
       />
       <CardRow
-        label={<InfoTip {...TIPS.starDerived!}>Luminosity</InfoTip>}
+        label={<InfoTip {...STAR_TIPS.starDerived}>Luminosity</InfoTip>}
         value={`${approx}${formatScalar(derived.luminositySolar)} L☉`}
       />
       <CardRow
-        label={<InfoTip {...TIPS.starDerived!}>Radius</InfoTip>}
+        label={<InfoTip {...STAR_TIPS.starDerived}>Radius</InfoTip>}
         value={`${approx}${formatScalar(derived.radiusSolar)} R☉`}
       />
     </div>
@@ -97,38 +97,38 @@ function curatedRows(
           <CardRow key={i} {...row} />
         ))}
         <CardRow
-          label={<InfoTip {...TIPS.spectralType!}>Spectral type</InfoTip>}
+          label={<InfoTip {...STAR_TIPS.spectralType}>Spectral type</InfoTip>}
           value={meta.spectralType}
         />
         <CardRow
-          label={<InfoTip {...TIPS.stellarTemperature!}>Temperature</InfoTip>}
+          label={<InfoTip {...STAR_TIPS.stellarTemperature}>Temperature</InfoTip>}
           value={`${meta.temperatureK.toLocaleString()} K`}
         />
         {meta.luminositySolar != null && (
           <CardRow
-            label={<InfoTip {...TIPS.stellarLuminosity!}>Luminosity</InfoTip>}
+            label={<InfoTip {...STAR_TIPS.stellarLuminosity}>Luminosity</InfoTip>}
             value={`${meta.luminositySolar.toLocaleString()} L☉`}
           />
         )}
         <CardRow
-          label={<InfoTip {...TIPS.stellarRadius!}>Radius</InfoTip>}
+          label={<InfoTip {...STAR_TIPS.stellarRadius}>Radius</InfoTip>}
           value={`${meta.radiusSolar.toLocaleString()} R☉`}
         />
         {meta.massSolar != null && (
           <CardRow
-            label={<InfoTip {...TIPS.stellarMass!}>Mass</InfoTip>}
+            label={<InfoTip {...STAR_TIPS.stellarMass}>Mass</InfoTip>}
             value={`${meta.massSolar.toLocaleString()} M☉`}
           />
         )}
         {meta.ageGyr != null && (
           <CardRow
-            label={<InfoTip {...TIPS.stellarAge!}>Age</InfoTip>}
+            label={<InfoTip {...STAR_TIPS.stellarAge}>Age</InfoTip>}
             value={`${meta.ageGyr.toLocaleString()} Gyr`}
           />
         )}
         {meta.variable && (
           <CardRow
-            label={<InfoTip {...TIPS.variability!}>Variability</InfoTip>}
+            label={<InfoTip {...STAR_TIPS.variability}>Variability</InfoTip>}
             value={`${meta.variable.type} (mag ${meta.variable.magRange[0]}–${meta.variable.magRange[1]})`}
           />
         )}
@@ -210,22 +210,22 @@ function StarDetailCard({
   const leadRows: Extract<CardRowProps, { value: ReactNode }>[] = [];
   if (detail.kind === 'curated') {
     leadRows.push({
-      label: <InfoTip {...TIPS.constellation!}>Constellation</InfoTip>,
+      label: <InfoTip {...STAR_TIPS.constellation}>Constellation</InfoTip>,
       value: detail.meta.constellation,
     });
     if (target.distancePc > 0) {
       leadRows.push({
-        label: <InfoTip {...TIPS.starDistance!}>Distance</InfoTip>,
+        label: <InfoTip {...STAR_TIPS.starDistance}>Distance</InfoTip>,
         value: formatDistance(target.distancePc * SCALE_UNITS.PC_TO_MPC),
       });
     }
     leadRows.push(
       {
-        label: <InfoTip {...TIPS.starApparentMag!}>Apparent mag (V)</InfoTip>,
+        label: <InfoTip {...STAR_TIPS.starApparentMag}>Apparent mag (V)</InfoTip>,
         value: detail.meta.magV.toFixed(2),
       },
       {
-        label: <InfoTip {...TIPS.starAbsoluteMag!}>Absolute mag</InfoTip>,
+        label: <InfoTip {...STAR_TIPS.starAbsoluteMag}>Absolute mag</InfoTip>,
         value: detail.meta.absMag.toFixed(2),
       },
     );
@@ -269,7 +269,7 @@ function StarDetailCard({
       {detail.kind !== 'curated' && target.distancePc > 0 && (
         <div className={styles.cardSection}>
           <CardRow
-            label={<InfoTip {...TIPS.starDistance!}>Distance</InfoTip>}
+            label={<InfoTip {...STAR_TIPS.starDistance}>Distance</InfoTip>}
             value={formatDistance(target.distancePc * SCALE_UNITS.PC_TO_MPC)}
           />
         </div>
