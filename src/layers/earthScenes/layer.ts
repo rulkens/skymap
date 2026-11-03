@@ -9,11 +9,11 @@ import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { EARTH_SCENES_BODY_ROWS } from './bodies/earthScenesBodyRows';
 import { create } from './create';
 import { destroy } from './destroy';
-import { earthSceneMeshesPass } from './passes/earthSceneMeshesPass';
+import { earthSceneMeshesPass } from './scenes/passes/earthSceneMeshesPass';
 import { glintsPassOver } from '../../services/engine/frame/glintsPassOver';
-import { EARTH_SCENE_BODY_IDS } from './data/earthSceneBodyIds';
-import { earthSceneSelectionRow } from './present/earthSceneSelectionRow';
-import { earthSceneSearch } from './present/earthSceneSearch';
+import { EARTH_SCENE_BODY_IDS } from './scenes/data/earthSceneBodyIds';
+import { earthSceneSelectionRow } from './scenes/present/earthSceneSelectionRow';
+import { earthSceneSearch } from './scenes/present/earthSceneSearch';
 import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 

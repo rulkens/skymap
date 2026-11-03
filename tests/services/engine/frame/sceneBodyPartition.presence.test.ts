@@ -10,7 +10,7 @@ import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySla
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { EARTH_SCENE_BODY_IDS } from '../../../../src/layers/earthScenes/data/earthSceneBodyIds';
+import { EARTH_SCENE_BODY_IDS } from '../../../../src/layers/earthScenes/scenes/data/earthSceneBodyIds';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
