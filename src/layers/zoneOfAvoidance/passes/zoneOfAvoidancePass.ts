@@ -7,7 +7,7 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { ZoneOfAvoidanceRuntime } from '../@types/ZoneOfAvoidanceRuntime';
-import { ZONE_OF_AVOIDANCE_SHELL } from '../../../data/zoneOfAvoidance/zoneOfAvoidanceShell';
+import { ZONE_OF_AVOIDANCE_SHELL } from '../data/zoneOfAvoidanceShell';
 
 export function zoneOfAvoidancePass(
   runtime: ZoneOfAvoidanceRuntime,

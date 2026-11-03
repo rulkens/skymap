@@ -12,7 +12,7 @@ import { FONT_IDS } from '../../../data/fonts';
 import {
   ZONE_OF_AVOIDANCE_LABEL_TEXT,
   ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT,
-} from '../../../data/zoneOfAvoidance/zoneOfAvoidanceLabelText';
+} from '../data/zoneOfAvoidanceLabelText';
 
 /** Curved-lettering circle radius, Mpc — visual-pass placeholder. */
 const LABEL_RADIUS_MPC = 40;

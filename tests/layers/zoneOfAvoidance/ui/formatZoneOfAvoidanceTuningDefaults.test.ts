@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatZoneOfAvoidanceTuningDefaults } from '../../../../src/layers/zoneOfAvoidance/ui/formatZoneOfAvoidanceTuningDefaults';
-import type { ZoneOfAvoidanceTuning } from '../../../../src/@types/settings/ZoneOfAvoidanceTuning';
-import type { ZoneOfAvoidanceSettings } from '../../../../src/@types/settings/ZoneOfAvoidanceSettings';
+import type { ZoneOfAvoidanceTuning } from '../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceSettings } from '../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceSettings';
 
 // Parses the formatter's output back into a plain object the same way a
 // human pasting it into defaults.ts would rely on it working: as a literal

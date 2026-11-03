@@ -1,4 +1,4 @@
-import type { ZoneOfAvoidanceTuning } from '../../settings/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceTuning } from './ZoneOfAvoidanceTuning';
 
 /**
  * Keys of `ZoneOfAvoidanceTuning` that surface as numeric DebugPanel

@@ -14,13 +14,13 @@
  * click only registers where the band's density is perceptible.
  */
 
-import type { OrbitCamera } from '../camera/OrbitCamera';
-import type { ViewFrustum } from '../camera/ViewFrustum';
-import type { Vec2 } from '../math/Vec2';
-import type { PickWindow } from '../engine/frame/PickWindow';
-import type { ZoneOfAvoidanceTuning } from '../settings/ZoneOfAvoidanceTuning';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { PickWindow } from '../../../@types/engine/frame/PickWindow';
+import type { ZoneOfAvoidanceTuning } from './ZoneOfAvoidanceTuning';
 import type { ZoneOfAvoidanceShell } from './ZoneOfAvoidanceShell';
-import type { Renderer } from './Renderer';
+import type { Renderer } from '../../../@types/rendering/Renderer';
 
 export type ZoneOfAvoidanceRenderer = Renderer & {
   /**

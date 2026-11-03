@@ -5,8 +5,8 @@
  */
 
 import type { ReactElement } from 'react';
-import type { ZoneOfAvoidanceSettings } from '../../../@types/settings/ZoneOfAvoidanceSettings';
-import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceSettings } from '../@types/ZoneOfAvoidanceSettings';
+import type { ZoneOfAvoidanceTuning } from '../@types/ZoneOfAvoidanceTuning';
 import type { HexString } from '../../../@types/math/HexString';
 import { hexToLinearRgb } from '../../../utils/color/hexToLinearRgb';
 import { linearRgbToHex } from '../../../utils/color/linearRgbToHex';
@@ -14,7 +14,7 @@ import { formatZoneOfAvoidanceTuningDefaults } from './formatZoneOfAvoidanceTuni
 import {
   ZONE_OF_AVOIDANCE_SLIDER_FIELDS,
   zoneOfAvoidanceSliderPatch,
-} from '../../../data/zoneOfAvoidance/zoneOfAvoidanceSliderFields';
+} from '../data/zoneOfAvoidanceSliderFields';
 import CopyButton from '../../../components/common/CopyButton/CopyButton';
 import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
 import sliderStyles from '../../../components/DebugPanel/DebugSlider.module.css';

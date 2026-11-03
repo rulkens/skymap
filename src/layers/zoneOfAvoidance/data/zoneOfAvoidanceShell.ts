@@ -3,7 +3,7 @@
  * placeholders, Mpc / degrees. The renderer, not this file, converts the
  * radial span into an e-folding length; see `writeUniforms`.
  */
-import type { ZoneOfAvoidanceShell } from '../../@types/rendering/ZoneOfAvoidanceShell';
+import type { ZoneOfAvoidanceShell } from '../@types/ZoneOfAvoidanceShell';
 
 export const ZONE_OF_AVOIDANCE_SHELL: ZoneOfAvoidanceShell = {
   innerRadiusMpc: 3,

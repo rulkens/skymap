@@ -9,9 +9,9 @@
  * (`tests/data/zoneOfAvoidance/zoneOfAvoidanceSliderFields.test.ts`) fails if
  * a scalar `ZoneOfAvoidanceTuning` leaf is added without a matching row.
  */
-import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
-import type { ZoneOfAvoidanceSliderKey } from '../../@types/data/zoneOfAvoidance/ZoneOfAvoidanceSliderKey';
-import type { ZoneOfAvoidanceSliderField } from '../../@types/data/zoneOfAvoidance/ZoneOfAvoidanceSliderField';
+import type { ZoneOfAvoidanceTuning } from '../@types/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceSliderKey } from '../@types/ZoneOfAvoidanceSliderKey';
+import type { ZoneOfAvoidanceSliderField } from '../@types/ZoneOfAvoidanceSliderField';
 
 export const ZONE_OF_AVOIDANCE_SLIDER_FIELDS: readonly ZoneOfAvoidanceSliderField[] = [
   {

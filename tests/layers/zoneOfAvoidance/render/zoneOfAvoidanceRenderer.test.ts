@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createZoneOfAvoidanceRenderer } from '../../../../src/layers/zoneOfAvoidance/render/zoneOfAvoidanceRenderer';
-import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../src/data/zoneOfAvoidance/zoneOfAvoidanceShell';
+import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../src/layers/zoneOfAvoidance/data/zoneOfAvoidanceShell';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { ZoneOfAvoidanceTuning } from '../../../../src/@types/settings/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceTuning } from '../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceTuning';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 // Minimal mock GPUDevice — Vitest runs in Node without a WebGPU surface.

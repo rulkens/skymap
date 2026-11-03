@@ -12,7 +12,7 @@ import { ZoneOfAvoidanceTuningSection } from './ZoneOfAvoidanceTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectZoneOfAvoidance } from '../state/zoneOfAvoidance/selectors';
 import { setZoneOfAvoidanceTuning } from '../state/zoneOfAvoidance/slice';
-import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceTuning } from '../@types/ZoneOfAvoidanceTuning';
 
 function ZoneOfAvoidanceTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

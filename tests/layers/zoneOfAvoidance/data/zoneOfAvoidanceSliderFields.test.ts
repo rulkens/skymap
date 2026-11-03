@@ -9,9 +9,9 @@
  * editing the default and reloading. This test fails in that case.
  */
 import { describe, it, expect } from 'vitest';
-import { ZONE_OF_AVOIDANCE_SLIDER_FIELDS } from '../../../src/data/zoneOfAvoidance/zoneOfAvoidanceSliderFields';
-import { DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../../../src/layers/zoneOfAvoidance/state/defaults';
-import type { ZoneOfAvoidanceTuning } from '../../../src/@types/settings/ZoneOfAvoidanceTuning';
+import { ZONE_OF_AVOIDANCE_SLIDER_FIELDS } from '../../../../src/layers/zoneOfAvoidance/data/zoneOfAvoidanceSliderFields';
+import { DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../../../../src/layers/zoneOfAvoidance/state/defaults';
+import type { ZoneOfAvoidanceTuning } from '../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceTuning';
 
 describe('ZONE_OF_AVOIDANCE_SLIDER_FIELDS — parity with the tuning knobs', () => {
   it('covers exactly the scalar keys of ZoneOfAvoidanceTuning', () => {

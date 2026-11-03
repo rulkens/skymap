@@ -9,7 +9,7 @@
  * load-bearing part.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 export type ZoneOfAvoidanceTuning = {
   /** Additive brightness of the band at full presence (galactic plane, b=0). */
