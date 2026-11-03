@@ -42,8 +42,9 @@ beforeEach(() => {
   } as unknown as typeof ResizeObserver;
   location.hash = '#ABCD2345';
   vi.mocked(createLocalTransport).mockReturnValue({
-    newRoom: () => 'ABCD2345',
-    pairingOrigins: async () => [],
+    host: () => {
+      throw new Error('a remote never hosts');
+    },
     open: () => ({
       send: (text) => void (linkOpen && sent.push(text)),
       onText: (listener) => {
