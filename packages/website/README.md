@@ -65,7 +65,8 @@ one of these marks its markup with a data attribute and leaves the work to the s
 
 On the dev server only, `Base.astro` mounts `src/dev/overlay/DevOverlay`. It has two tools: feedback, which pins a
 note to an element, and review, which marks the docs' text. Their dev-server halves (`tools/site/feedbackPlugin.ts`
-and `reviewPlugin.ts`) store notes as JSON under `.superpowers/` (gitignored), with an `index.md` of every note.
+and `reviewPlugin.ts`) store notes as JSON under `.superpowers/site/feedback/` and `.superpowers/site/review/`
+(gitignored; the root is `tools/site/SITE_NOTES_ROOT.ts`), with an `index.md` of every feedback note.
 
 ## Checks
 

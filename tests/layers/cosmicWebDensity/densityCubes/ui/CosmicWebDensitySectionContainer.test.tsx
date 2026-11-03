@@ -30,7 +30,7 @@ describe('CosmicWebDensitySectionContainer', () => {
       false,
     );
 
-    const { container } = render(<CosmicWebDensitySectionContainer />, {
+    const { container } = render(<CosmicWebDensitySectionContainer title="Cosmic web density" />, {
       wrapper: makeWrapper(store),
     });
     const checkboxes = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
@@ -42,7 +42,7 @@ describe('CosmicWebDensitySectionContainer', () => {
 
   it('lists every source row, the workbench included', () => {
     const { store } = createTestStore();
-    const { getByText } = render(<CosmicWebDensitySectionContainer />, {
+    const { getByText } = render(<CosmicWebDensitySectionContainer title="Cosmic web density" />, {
       wrapper: makeWrapper(store),
     });
 

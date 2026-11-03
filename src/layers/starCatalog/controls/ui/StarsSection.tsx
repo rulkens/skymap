@@ -52,6 +52,7 @@ import type { SourceEntryBase } from '../../../../@types/data/SourceEntryBase';
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 type StarsSectionProps = {
+  title: string;
   /** Master gate: whether the star-catalogs layer is shown at all. */
   enabled: boolean;
   /** Per-catalog visibility (+ inert `labelEnabled`), keyed by star catalog id. */
@@ -83,6 +84,7 @@ type StarsSectionProps = {
  * and a default-open "Star catalogs" sub-section of per-catalog checkboxes.
  */
 function StarsSection({
+  title,
   enabled,
   items,
   counts,
@@ -100,7 +102,7 @@ function StarsSection({
 
   return (
     <CollapsibleSection
-      title="Stars"
+      title={title}
       headerToggle={enabled}
       headerToggleIndeterminate={indeterminate}
       onHeaderToggleChange={onToggleMaster}

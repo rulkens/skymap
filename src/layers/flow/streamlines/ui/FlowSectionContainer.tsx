@@ -25,8 +25,9 @@ import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { selectFlow } from '../../state/flow/selectors';
 import { setFlow, setFlowEnabled } from '../../state/flow/slice';
 import type { FlowFieldDefaults } from '../../../../@types/data/flow/FlowFieldDefaults';
+import type { LayerMainSectionProps } from '../../../../@types/engine/layer/LayerMainSectionProps';
 
-function FlowSectionContainer(): React.ReactElement {
+function FlowSectionContainer({ title }: LayerMainSectionProps): React.ReactElement {
   const dispatch = useAppDispatch();
   const flow = useAppSelector(selectFlow);
 
@@ -40,7 +41,14 @@ function FlowSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
-  return <FlowSection flow={flow} onEnabledChange={onEnabledChange} onFlowChange={onFlowChange} />;
+  return (
+    <FlowSection
+      title={title}
+      flow={flow}
+      onEnabledChange={onEnabledChange}
+      onFlowChange={onFlowChange}
+    />
+  );
 }
 
 export default memo(FlowSectionContainer);

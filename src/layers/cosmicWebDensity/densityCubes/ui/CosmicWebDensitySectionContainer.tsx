@@ -18,8 +18,9 @@ import {
   writeCosmicWebDensityField,
 } from '../../state/cosmicWebDensity/slice';
 import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
+import type { LayerMainSectionProps } from '../../../../@types/engine/layer/LayerMainSectionProps';
 
-function CosmicWebDensitySectionContainer(): React.ReactElement {
+function CosmicWebDensitySectionContainer({ title }: LayerMainSectionProps): React.ReactElement {
   const dispatch = useAppDispatch();
   const enabled = useAppSelector(selectCosmicWebDensityEnabled);
   const items = useAppSelector(selectCosmicWebDensityFieldItems);
@@ -37,6 +38,7 @@ function CosmicWebDensitySectionContainer(): React.ReactElement {
 
   return (
     <CosmicWebDensitySection
+      title={title}
       enabled={enabled}
       onEnabledChange={onEnabledChange}
       items={items}

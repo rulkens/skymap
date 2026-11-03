@@ -48,8 +48,9 @@ import { STAR_CATALOG_IDS } from '../../../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { SourceType } from '../../../../@types/data/SourceType';
+import type { LayerMainSectionProps } from '../../../../@types/engine/layer/LayerMainSectionProps';
 
-function StarsSectionContainer(): React.ReactElement {
+function StarsSectionContainer({ title }: LayerMainSectionProps): React.ReactElement {
   const dispatch = useAppDispatch();
 
   const { enabled, sizePx, brightness, items } = useAppSelector(selectStarCatalogs);
@@ -91,6 +92,7 @@ function StarsSectionContainer(): React.ReactElement {
 
   return (
     <StarsSection
+      title={title}
       enabled={enabled}
       items={items}
       counts={counts}
