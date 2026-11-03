@@ -131,10 +131,8 @@ describe('App cinema mode', () => {
     store.dispatch(dwellStarted({ dwellSec: 8 }));
     const { container, getByText, queryByText } = renderApp(store);
 
-    // The caption proves the overlay mounted: beat-0 title + the series
-    // label (kicker), the film's only text.
+    // The caption proves the overlay mounted: beat-0 title (label) + first subtitle line.
     expect(getByText('The Milky Way')).toBeInTheDocument();
-    expect(getByText('Named Cosmic Web')).toBeInTheDocument();
     // Cinema is captions ONLY: no beat counter ("· 01 / 03") and no
     // transport buttons — they'd render straight into the recording.
     expect(queryByText(/\d{2} \/ \d{2}/)).toBeNull();

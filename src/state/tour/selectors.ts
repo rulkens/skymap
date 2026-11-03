@@ -49,9 +49,6 @@ export const selectActiveTour = (state: RootState): Tour | null => {
   return (tourRegistry as Record<string, Tour>)[source.id] ?? null;
 };
 
-export const selectTourLabel = (state: RootState): string | null =>
-  selectActiveTour(state)?.label ?? null;
-
 export const selectTourTotal = (state: RootState): number =>
   selectActiveTour(state)?.beats.length ?? 0;
 

@@ -31,7 +31,6 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
-import cx from 'classnames';
 import type { BeatCaption } from '../../@types/animation/tour/BeatCaption';
 import TourCaption from './TourCaption';
 import TourNav from './TourNav';
@@ -45,7 +44,6 @@ export type TourOverlayProps = {
    */
   readonly hasChrome?: boolean;
   readonly caption: BeatCaption | null;
-  readonly label: string | null;
   readonly index: number;
   readonly total: number;
   readonly paused: boolean;
@@ -58,20 +56,9 @@ export type TourOverlayProps = {
   readonly onExit: () => void;
 };
 
-// The vignette class follows the caption's anchor corner, so it darkens
-// under the text rather than the opposite half of the canvas.
-const VIGNETTE_CLASS = {
-  'top-left': styles.vignetteTopLeft,
-  'top-center': styles.vignetteTopCenter,
-  'top-right': styles.vignetteTopRight,
-  'bottom-left': styles.vignetteBottomLeft,
-  'bottom-right': styles.vignetteBottomRight,
-} as const;
-
 function TourOverlay({
   hasChrome = true,
   caption,
-  label,
   index,
   total,
   paused,
@@ -97,13 +84,12 @@ function TourOverlay({
   }, [dwellNonce]);
 
   const showCaption = inDwell && caption !== null;
-  const vignetteClass = caption ? VIGNETTE_CLASS[caption.position ?? 'bottom-left'] : undefined;
 
   return (
     <div className={styles.root}>
       {showCaption && caption ? (
         <>
-          <div className={cx(styles.vignette, vignetteClass)} aria-hidden="true" />
+          <div className={styles.vignette} aria-hidden="true" />
           {/*
            * Keyed on the beat index so each beat re-mounts the caption and
            * replays the staggered fade-up reveal rather than cross-fading
@@ -113,9 +99,11 @@ function TourOverlay({
             key={index}
             hasChrome={hasChrome}
             caption={caption}
-            label={label}
             index={index}
             total={total}
+            dwellSec={dwellSec}
+            dwellNonce={dwellNonce}
+            paused={paused}
           />
         </>
       ) : null}

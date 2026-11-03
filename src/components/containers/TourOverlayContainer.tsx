@@ -15,8 +15,8 @@
  * not gate on `active` itself — when mounted, a tour is running.
  *
  * Cinema mode (`?cinema`) is a PRESENTATION MODE of the same overlay, not a
- * second component: a recorded film keeps the editorial caption (series label
- * + title + body) and drops the interactive chrome (transport buttons + the
+ * second component: a recorded film keeps the editorial caption (title +
+ * subtitles) and drops the interactive chrome (transport buttons + the
  * beat counter, which read as UI inside a recording). The container reads
  * `isCinemaMode()` once and hands a single `chrome` boolean down, so the leaf
  * components stay pure views with no URL parsing braided into them.
@@ -28,7 +28,6 @@ import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectTourCaption,
-  selectTourLabel,
   selectTourBeatIndex,
   selectTourTotal,
   selectTourPaused,
@@ -41,7 +40,6 @@ import { exitTakeover } from '../../state/takeover/takeoverActions';
 
 function TourOverlayContainer(): React.ReactElement {
   const caption = useAppSelector(selectTourCaption);
-  const label = useAppSelector(selectTourLabel);
   const index = useAppSelector(selectTourBeatIndex);
   const total = useAppSelector(selectTourTotal);
   const paused = useAppSelector(selectTourPaused);
@@ -60,7 +58,6 @@ function TourOverlayContainer(): React.ReactElement {
     <TourOverlay
       hasChrome={!isCinemaMode()}
       caption={caption}
-      label={label}
       index={index}
       total={total}
       paused={paused}
