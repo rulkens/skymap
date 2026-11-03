@@ -68,6 +68,7 @@ function bodyAt(id: string, posKm: number, albedo: Vec3): SeededPlanet {
   return {
     id: asSceneBodyId(id),
     label: id,
+    captionKind: 'planet',
     positionMpc: [posKm * KM, 0, 0],
     resolvePx: 3,
     surface: { datumRadiusM: 160000, reliefM: [0, 0] },
@@ -210,6 +211,7 @@ describe('bodyGlintsPass.draw — far-dissolve brightness scaling', () => {
       const body: SeededPlanet = {
         id: asSceneBodyId('jupiter'),
         label: 'jupiter',
+        captionKind: 'planet',
         positionMpc: [camX + OFF, 0, 0], // just beyond the camera → lit, ~2 px glint
         resolvePx: 3,
         surface: { datumRadiusM: 160000, reliefM: [0, 0] },
@@ -236,6 +238,7 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
   const earthWithinGate: SeededPlanet = {
     id: asSceneBodyId('earth'),
     label: 'Earth',
+    captionKind: 'planet',
     positionMpc: [1_100_000 * KM, 0, 0],
     resolvePx: 3,
     surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
@@ -341,6 +344,7 @@ function makePickRenderer() {
 const EARTH_RESOLVED: SeededPlanet = {
   id: asSceneBodyId('earth'),
   label: 'Earth',
+  captionKind: 'planet',
   positionMpc: [1_100_000 * KM, 0, 0],
   resolvePx: 3,
   surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
@@ -402,6 +406,7 @@ describe('bodyGlintsPass.drawPick', () => {
     const marsFar: SeededPlanet = {
       id: asSceneBodyId('mars'),
       label: 'mars',
+      captionKind: 'planet',
       positionMpc: [CAPTION_GONE_MPC, 0, 0],
       resolvePx: 3,
       surface: { datumRadiusM: 160000, reliefM: [0, 0] },
@@ -429,6 +434,7 @@ describe('bodyGlintsPass.drawPick', () => {
     const litFar: SeededPlanet = {
       id: asSceneBodyId('jupiter'),
       label: 'jupiter',
+      captionKind: 'planet',
       positionMpc: [camFar[0] + 1e5 * KM, 0, 0], // just beyond the camera → lit, ~2 px glint
       resolvePx: 3,
       surface: { datumRadiusM: 160000, reliefM: [0, 0] },
@@ -504,6 +510,7 @@ describe('bodyGlintsPass.drawPick', () => {
     const earthSubPixel: SeededPlanet = {
       id: asSceneBodyId('earth'),
       label: 'Earth',
+      captionKind: 'planet',
       positionMpc: [1_100_000 * KM, 0, 0],
       resolvePx: 3,
       surface: { datumRadiusM: 6371000, reliefM: [0, 0] },

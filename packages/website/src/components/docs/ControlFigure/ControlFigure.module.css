@@ -1,0 +1,43 @@
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--site-space-xs) var(--site-space-l);
+  margin: var(--site-space-m) 0;
+}
+
+/*
+ * The piece at its size in the app, smaller where the column is narrower, on a plate a shade above the page so
+ * it reads as the app's and not as a link of this page. The file's own margin round the control (24px, for its
+ * shadow in tools/site shootElement) is the plate's padding.
+ */
+.piece {
+  flex: 0 1 var(--piece);
+  min-width: 0;
+  border: 1px solid var(--border-divider);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--color-fg) 4%, transparent);
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: var(--site-space-2xs) var(--site-space-xs);
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--site-text-dim);
+}
+
+.key {
+  display: contents;
+
+  & dt {
+    justify-self: start;
+  }
+
+  & dd {
+    margin: 0;
+  }
+}

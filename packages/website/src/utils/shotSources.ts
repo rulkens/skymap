@@ -12,12 +12,15 @@ const FILES = import.meta.glob<string>('../assets/shots/*.{avif,webp}', {
  * The committed files of one shot as srcsets. The runner wrote them at the
  * manifest's widths, so nothing is resized at build; a width with no file
  * means `npm run site:shots` has not been run since the row changed.
+ * `shadow` gives a `shadow` row's multiply layer, written beside its cut-out.
  */
-export function shotSources(id: string): ShotSources {
+export function shotSources(id: string, shadow = false): ShotSources {
   const shot = siteShot(id);
+  const name = shadow ? `${id}-shadow` : id;
   const url = (width: number, ext: string) => {
-    const file = FILES[`../assets/shots/${id}-${width}.${ext}`];
-    if (!file) throw new Error(`No ${ext} at ${width}px for shot "${id}": run npm run site:shots`);
+    const file = FILES[`../assets/shots/${name}-${width}.${ext}`];
+    if (!file)
+      throw new Error(`No ${ext} at ${width}px for shot "${name}": run npm run site:shots`);
     return file;
   };
   const srcset = (ext: string) =>

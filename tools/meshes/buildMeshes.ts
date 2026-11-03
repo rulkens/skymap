@@ -50,6 +50,7 @@ import { enuOffsetM } from '../utils/geo/enuOffsetM';
 import { meshAnchorSite } from '../utils/meshes/meshAnchorSite';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
 import { simplifyToTriangles } from '../utils/meshes/simplifyToTriangles';
+import { triangleArea } from '../utils/meshes/triangleArea';
 import { quote } from '../utils/codegen/quote';
 import { MESH_ASSET_ROW_FIELDS } from './meshAssetRowFields';
 import { generateTangents } from './generateTangents';
@@ -424,16 +425,10 @@ function mergeGeometry(
   } else if (origin.kind === 'surfaceCentroid') {
     let totalArea = 0;
     for (let i = 0; i < indices.length; i += 3) {
+      const area = triangleArea(positions, indices[i]!, indices[i + 1]!, indices[i + 2]!);
       const a = indices[i]! * 3;
       const b = indices[i + 1]! * 3;
       const c = indices[i + 2]! * 3;
-      const ux = positions[b]! - positions[a]!;
-      const uy = positions[b + 1]! - positions[a + 1]!;
-      const uz = positions[b + 2]! - positions[a + 2]!;
-      const vx = positions[c]! - positions[a]!;
-      const vy = positions[c + 1]! - positions[a + 1]!;
-      const vz = positions[c + 2]! - positions[a + 2]!;
-      const area = 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
       cx += (area * (positions[a]! + positions[b]! + positions[c]!)) / 3;
       cy += (area * (positions[a + 1]! + positions[b + 1]! + positions[c + 1]!)) / 3;
       cz += (area * (positions[a + 2]! + positions[b + 2]! + positions[c + 2]!)) / 3;
@@ -737,6 +732,7 @@ async function bakeTier(
     new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
     info.width,
     info.height,
+    geometry,
   ).map((c, i) => (baseColorTexture ? c * factor[i]! : c)) as Vec3;
 
   return {

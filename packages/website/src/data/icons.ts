@@ -1,14 +1,14 @@
 import type { IconName } from '../@types/IconName';
 
 /**
- * One path per icon, drawn for this site on a 24 by 24 grid for a 1.5 stroke
- * with round caps and no fill (components/shared/links/Icon/Icon.tsx). Each is shown at 20px,
- * so separate strokes keep about 3 units between their centre lines.
+ * One path per icon, or a few for an icon whose parts move on their own, drawn for this site on a 24 by 24
+ * grid for a 1.5 stroke with round caps and no fill (components/shared/links/Icon/Icon.tsx). Each is shown
+ * at 20px, so separate strokes keep about 3 units between their centre lines.
  */
 const VIEW =
   'M3.5 8.5V5a1.5 1.5 0 0 1 1.5-1.5h3.5M15.5 3.5H19A1.5 1.5 0 0 1 20.5 5v3.5M20.5 15.5V19a1.5 1.5 0 0 1-1.5 1.5h-3.5M8.5 20.5H5A1.5 1.5 0 0 1 3.5 19v-3.5M9.75 12a2.25 2.25 0 1 0 4.5 0a2.25 2.25 0 1 0-4.5 0';
 
-export const ICONS: Record<IconName, string> = {
+export const ICONS: Record<IconName, string | readonly string[]> = {
   // A star as the eye sees it, with its four rays: somebody looking up.
   visitor: 'M12 3c.6 4.8 4.2 8.4 9 9-4.8.6-8.4 4.2-9 9-.6-4.8-4.2-8.4-9-9 4.8-.6 8.4-4.2 9-9z',
   // A classroom globe: the sphere, its tilted mount and a foot.
@@ -21,8 +21,12 @@ export const ICONS: Record<IconName, string> = {
   docs: 'M12 7v13M12 7C9.8 5.4 6.6 4.8 3 5.2v13c3.6-.4 6.8.2 9 1.8M12 7c2.2-1.6 5.4-2.2 9-1.8v13c-3.6-.4-6.8.2-9 1.8',
   // Four tiles: the things Skymap can do, side by side.
   features: 'M5 3.5h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5zM15.5 3.5h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5zM5 14h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5zM15.5 14h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5z',
-  // The app: a window with its bar, and a star in it.
-  app: 'M4.5 4h15A1.5 1.5 0 0 1 21 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5v-13A1.5 1.5 0 0 1 4.5 4zM3 7.75h18M12 10.75c.3 2.1 1.4 3.2 3.5 3.5-2.1.3-3.2 1.4-3.5 3.5-.3-2.1-1.4-3.2-3.5-3.5 2.1-.3 3.2-1.4 3.5-3.5z',
+  // The app: the ring it draws about what you select, around a star. Two strokes, ring then star, so the
+  // button can draw the one and lift the other (OpenApp).
+  app: [
+    'M12 3.5a8.5 8.5 0 1 1 0 17a8.5 8.5 0 1 1 0-17',
+    'M12 8.5c.3 2 1.5 3.2 3.5 3.5-2 .3-3.2 1.5-3.5 3.5-.3-2-1.5-3.2-3.5-3.5 2-.3 3.2-1.5 3.5-3.5z',
+  ],
   // One exact view: a viewfinder's corners about the point it is aimed at. Drawn to be shown at 16px.
   view: VIEW,
   // A link that leaves the site: an arrow out of a frame.

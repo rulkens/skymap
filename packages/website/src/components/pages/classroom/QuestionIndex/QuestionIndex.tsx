@@ -1,0 +1,58 @@
+/*
+ * QuestionIndex — the ready-made questions as an index, by topic, beside one large picture of the view the
+ * question in hand opens. Pointing at or focusing a question brings its picture forward and lights its words,
+ * the others dimmed; without script the first stays. Narrow, there is no viewer: each question carries a
+ * small picture of its own. Each question's link names the view it opens.
+ */
+import { useState } from 'react';
+
+import { says } from '../../../../content/pages/classroom/classroom.data.ts';
+import { cx } from '../../../../utils/cx.ts';
+import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
+import Shot from '../../../shared/media/Shot/Shot.tsx';
+import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
+import styles from './QuestionIndex.module.css';
+import { ROWS, VIEWER_SIZES } from './QuestionIndex.constants.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
+
+function QuestionIndex() {
+  const [shown, setShown] = useState(0);
+  return (
+    <div className={styles.root}>
+      <ol className={styles.list}>
+        {ROWS.map((row, at) => (
+          <li
+            key={row.shot}
+            className={cx(styles.row, at === shown && styles.shown)}
+            onPointerEnter={() => setShown(at)}
+            onFocus={() => setShown(at)}
+          >
+            {(at === 0 || ROWS[at - 1]!.topic !== row.topic) && (
+              <p className={styles.topic}>{row.topic}</p>
+            )}
+            <div className={styles.thumb} aria-hidden="true">
+              <Shot id={row.shot} sizes={narrowSizes('5.5rem', '0px')} alt="" />
+            </div>
+            <h3>{row.ask}</h3>
+            {row.factId && <p className={styles.readout}>{says(row.factId)}</p>}
+            <ViewLink view={row.lesson.hash}>{row.lesson.title}</ViewLink>
+          </li>
+        ))}
+      </ol>
+      <figure className={styles.viewer} aria-hidden="true">
+        <div className={styles.stack}>
+          {ROWS.map((row, at) => (
+            <div key={row.shot} className={cx(styles.slide, at === shown && styles.on)}>
+              <Shot id={row.shot} sizes={VIEWER_SIZES} alt="" />
+            </div>
+          ))}
+        </div>
+        <figcaption>
+          <ShotCaption id={ROWS[shown]!.shot} showDrawn={false} showTitle={false} open={false} />
+        </figcaption>
+      </figure>
+    </div>
+  );
+}
+
+export default QuestionIndex;

@@ -35,6 +35,7 @@ function planet(id: string, px: number): PositionedSceneBody {
   const body: PlanetBody = {
     id: asSceneBodyId(id),
     label: id,
+    captionKind: 'planet',
     surface: { datumRadiusM: radiusForPx(px), reliefM: [0, 0] },
     albedo: [0.5, 0.5, 0.5],
     resolvePx: 3,

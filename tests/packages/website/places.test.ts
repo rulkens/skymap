@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { PLACES } from '../../../packages/website/src/data/places';
+import { PLACES } from '../../../packages/website/src/content/pages/home/places';
 import { fact } from '../../../packages/website/src/data/fact';
 import { siteShot } from '../../../packages/website/src/data/siteShot';
 import { appLink, APP_BASE } from '../../../packages/website/src/data/appLink';

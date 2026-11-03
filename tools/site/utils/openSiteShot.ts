@@ -8,7 +8,11 @@ import { siteShotActions } from './siteShotActions';
 import { siteShotUrl } from './siteShotUrl';
 
 /** Opens a manifest picture in the app at `base`, applies its row's settings and waits until the frame holds still. */
-export async function openSiteShot(page: Page, base: string, shot: SiteShot): Promise<void> {
+export async function openSiteShot(
+  page: Page,
+  base: string,
+  shot: Pick<SiteShot, 'link' | 'query' | 'settings'>,
+): Promise<void> {
   await bootHookedPage(page, siteShotUrl(base, shot));
   await dispatchActions(page, siteShotActions(shot));
   const settled = () =>
