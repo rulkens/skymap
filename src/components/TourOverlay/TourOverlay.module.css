@@ -108,6 +108,7 @@
   }
 }
 
+/* The dwell ring keeps its sweep: it is live progress, not decoration. */
 @media (prefers-reduced-motion: reduce) {
   .label {
     animation: none;
@@ -262,61 +263,5 @@
   }
   to {
     stroke-dashoffset: 106.8;
-  }
-}
-
-/* ── Reduced motion ─────────────────────────────────────────────────
- * Snap everything in (no fade-up, no underline draw), exactly like the
- * splash. The dwell ring keeps its (informative) sweep — it is a live
- * progress indicator, not decorative motion, so it is intentionally not
- * disabled here; the autoplay timer it mirrors still runs. */
-@media (prefers-reduced-motion: reduce) {
-  .label,
-  .title,
-  .body {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-  .captionCenter .label,
-  .captionCenter .title,
-  .captionCenter .body {
-    transform: none;
-  }
-  .title::after {
-    animation: none;
-    width: 72px;
-  }
-}
-
-/* ── Mobile ─────────────────────────────────────────────────────────
- * Tighten the inset and shrink the title, mirroring the splash's mobile
- * reflow so the caption fits a narrow viewport above the nav. */
-@media (max-width: 768px) {
-  .caption {
-    max-width: none;
-    left: 24px;
-    right: 24px;
-  }
-  .captionCenter {
-    left: 24px;
-    right: 24px;
-    transform: none;
-  }
-  .captionBottom {
-    bottom: 72px;
-  }
-  /* Same nav-clearance drop as desktop, to the mobile 24px side inset. */
-  .captionNoChrome.captionBottom {
-    bottom: 24px;
-  }
-  .captionTop {
-    top: 56px;
-  }
-  .title {
-    font-size: 30px;
-  }
-  .body {
-    max-width: none;
   }
 }
