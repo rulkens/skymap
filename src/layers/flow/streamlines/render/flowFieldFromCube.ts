@@ -19,7 +19,7 @@
 import type { FlowField } from '../@types/FlowField';
 import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
 import { gpuTextureFormatForChannels } from '../../../../utils/gpu/gpuTextureFormatForChannels';
-import { flowFieldMetaFromCube } from '../data/flowFieldMetaFromCube';
+import { flowFieldMetaFromCube } from '../utils/flowFieldMetaFromCube';
 
 export function flowFieldFromCube(device: GPUDevice, cube: ScalarCube): FlowField {
   const meta = flowFieldMetaFromCube(cube);
