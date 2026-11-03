@@ -25,6 +25,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **Rename "rung" to "arm" across the camera** `ready` — one name for the camera's regimes (owner ruling); `CAMERA_RUNGS`/`RungKind`/`rungs/` vs `isBodyArm`/"the world arm" today, ~480 lines. → [details](backlog/2026-11-04-rename-rung-to-arm.md)
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
 - [ ] **A selection kind's facts live in its Layer** `needs-design` — a new kind edits 14 core tables (focusable, halo, framing, label, URL hash, exhibit picking); ruled: they move onto the Layer's `SelectionKindRow`. Also carries J2 (per-kind presentation). → [details](backlog/2026-10-28-selection-kind-facts-in-the-layer.md)
