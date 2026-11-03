@@ -1,0 +1,186 @@
+[
+  {
+    "from": "src/layers/satellites/load/createSatelliteSweeper.ts",
+    "to": "src/layers/satellites/sweep/load/createSatelliteSweeper.ts"
+  },
+  {
+    "from": "src/layers/satellites/load/satelliteJsCore.ts",
+    "to": "src/layers/satellites/sweep/load/satelliteJsCore.ts"
+  },
+  {
+    "from": "src/layers/satellites/load/satellitePropagation.worker.ts",
+    "to": "src/layers/satellites/sweep/load/satellitePropagation.worker.ts"
+  },
+  {
+    "from": "src/layers/satellites/load/satrecOf.ts",
+    "to": "src/layers/satellites/sweep/load/satrecOf.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/createSatellitePropagator.ts",
+    "to": "src/layers/satellites/sweep/subsystems/createSatellitePropagator.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/composeTemeToWorld.ts",
+    "to": "src/layers/satellites/sweep/subsystems/composeTemeToWorld.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/createSimRateTracker.ts",
+    "to": "src/layers/satellites/sweep/subsystems/createSimRateTracker.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/temeKmToWorldMpc.ts",
+    "to": "src/layers/satellites/sweep/subsystems/temeKmToWorldMpc.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/satellitePositionMpc.ts",
+    "to": "src/layers/satellites/sweep/subsystems/satellitePositionMpc.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/sweepDue.ts",
+    "to": "src/layers/satellites/sweep/subsystems/sweepDue.ts"
+  },
+  {
+    "from": "src/layers/satellites/@types/SatelliteSweep.d.ts",
+    "to": "src/layers/satellites/sweep/@types/SatelliteSweep.d.ts"
+  },
+  {
+    "from": "src/layers/satellites/@types/SatellitePropagator.d.ts",
+    "to": "src/layers/satellites/sweep/@types/SatellitePropagator.d.ts"
+  },
+  {
+    "from": "src/layers/satellites/@types/SatelliteWorkerReply.d.ts",
+    "to": "src/layers/satellites/sweep/@types/SatelliteWorkerReply.d.ts"
+  },
+  {
+    "from": "src/layers/satellites/@types/SatelliteWorkerRequest.d.ts",
+    "to": "src/layers/satellites/sweep/@types/SatelliteWorkerRequest.d.ts"
+  },
+  {
+    "from": "src/layers/satellites/@types/SimRateTracker.d.ts",
+    "to": "src/layers/satellites/sweep/@types/SimRateTracker.d.ts"
+  },
+  {
+    "from": "src/layers/satellites/data/satelliteSweepTiming.ts",
+    "to": "src/layers/satellites/sweep/data/satelliteSweepTiming.ts"
+  },
+  {
+    "from": "src/layers/satellites/data/hubbleNoradId.ts",
+    "to": "src/layers/satellites/sweep/data/hubbleNoradId.ts"
+  },
+  {
+    "from": "src/layers/satellites/load/parseSatelliteCatalog.ts",
+    "to": "src/layers/satellites/catalog/load/parseSatelliteCatalog.ts"
+  },
+  {
+    "from": "src/layers/satellites/load/satellitesAssetRows.ts",
+    "to": "src/layers/satellites/catalog/load/satellitesAssetRows.ts"
+  },
+  {
+    "from": "src/layers/satellites/load/satellitesSlot.ts",
+    "to": "src/layers/satellites/catalog/load/satellitesSlot.ts"
+  },
+  {
+    "from": "src/layers/satellites/load/satellitesSourceCounts.ts",
+    "to": "src/layers/satellites/catalog/load/satellitesSourceCounts.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/catalogIndexOf.ts",
+    "to": "src/layers/satellites/catalog/subsystems/catalogIndexOf.ts"
+  },
+  {
+    "from": "src/layers/satellites/render/satellitePointRenderer.ts",
+    "to": "src/layers/satellites/points/render/satellitePointRenderer.ts"
+  },
+  {
+    "from": "src/layers/satellites/passes/satellitesPass.ts",
+    "to": "src/layers/satellites/points/passes/satellitesPass.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/satelliteLayerOpacity.ts",
+    "to": "src/layers/satellites/points/subsystems/satelliteLayerOpacity.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/satelliteOpacity.ts",
+    "to": "src/layers/satellites/points/subsystems/satelliteOpacity.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/sweepAgeOpacity.ts",
+    "to": "src/layers/satellites/points/subsystems/sweepAgeOpacity.ts"
+  },
+  {
+    "from": "src/layers/satellites/@types/SatellitePointFrame.d.ts",
+    "to": "src/layers/satellites/points/@types/SatellitePointFrame.d.ts"
+  },
+  {
+    "from": "src/layers/satellites/@types/SatellitePointRenderer.d.ts",
+    "to": "src/layers/satellites/points/@types/SatellitePointRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/satellites/data/satellitePointStyle.ts",
+    "to": "src/layers/satellites/points/data/satellitePointStyle.ts"
+  },
+  {
+    "from": "src/layers/satellites/data/satelliteFades.ts",
+    "to": "src/layers/satellites/points/data/satelliteFades.ts"
+  },
+  {
+    "from": "src/layers/satellites/passes/satelliteOrbitsPass.ts",
+    "to": "src/layers/satellites/orbits/passes/satelliteOrbitsPass.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/satelliteOrbitEllipse.ts",
+    "to": "src/layers/satellites/orbits/subsystems/satelliteOrbitEllipse.ts"
+  },
+  {
+    "from": "src/layers/satellites/subsystems/selectedSatelliteIndices.ts",
+    "to": "src/layers/satellites/orbits/subsystems/selectedSatelliteIndices.ts"
+  },
+  {
+    "from": "src/layers/satellites/present/encodeSatelliteFocusId.ts",
+    "to": "src/layers/satellites/focus/present/encodeSatelliteFocusId.ts"
+  },
+  {
+    "from": "src/layers/satellites/present/satelliteFocusPrefix.ts",
+    "to": "src/layers/satellites/focus/present/satelliteFocusPrefix.ts"
+  },
+  {
+    "from": "src/layers/satellites/present/satellitesSearch.ts",
+    "to": "src/layers/satellites/focus/present/satellitesSearch.ts"
+  },
+  {
+    "from": "src/layers/satellites/present/satellitesSelectionRow.ts",
+    "to": "src/layers/satellites/focus/present/satellitesSelectionRow.ts"
+  },
+  {
+    "from": "src/layers/satellites/present/satelliteTransientId.ts",
+    "to": "src/layers/satellites/focus/present/satelliteTransientId.ts"
+  },
+  {
+    "from": "src/layers/satellites/ui/CompactSatelliteCard/CompactSatelliteCard.tsx",
+    "to": "src/layers/satellites/focus/ui/CompactSatelliteCard/CompactSatelliteCard.tsx"
+  },
+  {
+    "from": "src/layers/satellites/ui/SatelliteDetailCard/SatelliteDetailCard.tsx",
+    "to": "src/layers/satellites/focus/ui/SatelliteDetailCard/SatelliteDetailCard.tsx"
+  },
+  {
+    "from": "src/layers/satellites/data/satelliteClassEyebrows.ts",
+    "to": "src/layers/satellites/focus/data/satelliteClassEyebrows.ts"
+  },
+  {
+    "from": "src/layers/satellites/data/satelliteFocusGeometry.ts",
+    "to": "src/layers/satellites/focus/data/satelliteFocusGeometry.ts"
+  },
+  {
+    "from": "src/layers/satellites/ui/SatellitesSection.tsx",
+    "to": "src/layers/satellites/controls/ui/SatellitesSection.tsx"
+  },
+  {
+    "from": "src/layers/satellites/ui/SatellitesSectionContainer.tsx",
+    "to": "src/layers/satellites/controls/ui/SatellitesSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/satellites/data/satelliteClassLabels.ts",
+    "to": "src/layers/satellites/controls/data/satelliteClassLabels.ts"
+  }
+]

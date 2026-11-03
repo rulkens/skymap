@@ -43,7 +43,6 @@ const NOT_YET_REGROUPED: ReadonlySet<string> = new Set([
   'galaxyCatalog',
   'milkyWay',
   'missions',
-  'satellites',
   'starCatalog',
 ]);
 
