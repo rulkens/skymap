@@ -5,9 +5,9 @@
  * compile error, which also makes it non-indexable by a plain `SceneBodyId`.
  */
 
-import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
+import { SURFACE_TILE_REGISTRY } from '../../data/surfaceTileRegistry';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
-import type { SurfaceTileBodyId } from '../../../../@types/data/SurfaceTileBodyId';
+import type { SurfaceTileBodyId } from '../../@types/SurfaceTileBodyId';
 import type { PositionedId } from '../../../../@types/scene/PositionedId';
 
 export function isSurfaceTileBodyId(id: PositionedId): id is SceneBodyId & SurfaceTileBodyId {

@@ -4,11 +4,11 @@
  * cannot index, so the key is widened to the plain `SurfaceTileBodyId` first.
  */
 
-import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
+import { SURFACE_TILE_REGISTRY } from '../../data/surfaceTileRegistry';
 import { isSurfaceTileBodyId } from './isSurfaceTileBodyId';
 import type { PositionedId } from '../../../../@types/scene/PositionedId';
-import type { SurfaceTileBodyId } from '../../../../@types/data/SurfaceTileBodyId';
-import type { SurfaceTileSpec } from '../../../../@types/data/SurfaceTileSpec';
+import type { SurfaceTileBodyId } from '../../@types/SurfaceTileBodyId';
+import type { SurfaceTileSpec } from '../../@types/SurfaceTileSpec';
 
 export function surfaceTileSpecOf(id: PositionedId): SurfaceTileSpec | null {
   if (!isSurfaceTileBodyId(id)) return null;

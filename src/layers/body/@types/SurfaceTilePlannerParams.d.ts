@@ -8,7 +8,7 @@
  * here, since every consumer of this type wants the same one today.
  */
 
-import type { SurfaceTileBand } from '../../../@types/scene/SurfaceTileBand';
+import type { SurfaceTileBand } from './SurfaceTileBand';
 
 export type SurfaceTilePlannerParams = {
   /** Tile edge in pixels, from the manifest — also the atlas's slot edge. */

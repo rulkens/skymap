@@ -8,9 +8,9 @@
 
 import type { SurfaceCutTile } from './SurfaceCutTile';
 import type { SurfaceTileRequest } from './SurfaceTileRequest';
-import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
+import type { SurfaceTileId } from './SurfaceTileId';
 import type { SurfaceTilePlannerParams } from './SurfaceTilePlannerParams';
-import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
+import type { SurfaceTileBodyId } from './SurfaceTileBodyId';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { SurfaceTileVerdict } from './SurfaceTileVerdict';
 

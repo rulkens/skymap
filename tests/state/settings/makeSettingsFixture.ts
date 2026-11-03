@@ -84,7 +84,7 @@ import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/Gal
 import type { StarCatalogId } from '../../../src/layers/starCatalog/@types/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
 import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
-import type { BodyItemSettings } from '../../../src/@types/settings/BodyItemSettings';
+import type { BodyItemSettings } from '../../../src/layers/body/@types/BodyItemSettings';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../src/@types/settings/StructureItemSettings';
 

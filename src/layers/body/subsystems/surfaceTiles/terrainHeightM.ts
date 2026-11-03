@@ -1,16 +1,16 @@
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { ResidentHeightLookup } from '../../@types/ResidentHeightLookup';
-import { SURFACE_TILE_PX } from '../../../../data/bodies/surfaceTileParams';
+import { SURFACE_TILE_PX } from '../../data/surfaceTileParams';
 import { TEXTURE_PRIME_MERIDIAN_U } from '../../../../data/bodies/texturePrimeMeridianU';
 import {
   HEIGHT_CODE_BYTES,
   HEIGHT_GRID_POSTS_PER_EDGE,
-} from '../../../../data/scene/heightTileFormat';
-import { codeHeightM } from '../../../../utils/surfaceTiles/codeHeightM';
+} from '../../data/heightTileFormat';
+import { codeHeightM } from '../../utils/surfaceTiles/codeHeightM';
 import { deepestResidentAncestor } from './deepestResidentAncestor';
-import { latticeHeightSample } from '../../../../utils/surfaceTiles/latticeHeightSample';
-import { surfaceTileColumns } from '../../../../utils/surfaceTiles/surfaceTileColumns';
-import { surfaceTileXyForUv } from '../../../../utils/surfaceTiles/surfaceTileXyForUv';
+import { latticeHeightSample } from '../../utils/surfaceTiles/latticeHeightSample';
+import { surfaceTileColumns } from '../../utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileXyForUv } from '../../utils/surfaceTiles/surfaceTileXyForUv';
 
 /** Grid posts span this many cells (17 posts, 16 cells): the ×16 vs ×17 trap
  *  (spec F1) — using the post COUNT as the fraction's divisor is wrong by a

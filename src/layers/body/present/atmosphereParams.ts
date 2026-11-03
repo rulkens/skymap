@@ -12,7 +12,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
-import type { AtmosphereParams } from '../../../@types/scene/AtmosphereParams';
+import type { AtmosphereParams } from '../@types/AtmosphereParams';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 
 // Throws at module load on a typo'd id: an unresolved seed would otherwise silently

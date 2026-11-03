@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SURFACE_TILE_REGISTRY } from '../../../../../src/data/bodies/surfaceTileRegistry';
+import { SURFACE_TILE_REGISTRY } from '../../../../../src/layers/body/data/surfaceTileRegistry';
 import { surfaceTileSpecOf } from '../../../../../src/layers/body/subsystems/surfaceTiles/surfaceTileSpecOf';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 

@@ -25,18 +25,18 @@ import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
 import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapFluidEvents';
 import { BODY_AMBIENT_LIGHT } from '../../../../src/data/bodies/bodyAmbientLight';
-import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
+import { EARTH_SURFACE_PARAMS } from '../../../../src/layers/body/data/earthSurfaceParams';
 import {
   SURFACE_TILE_MESH_RESOLUTION,
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,
   SURFACE_TILE_SKIRT_DEPTH_FRACTION,
-} from '../../../../src/data/bodies/surfaceTileParams';
+} from '../../../../src/layers/body/data/surfaceTileParams';
 import {
   HEIGHT_CODE_OFFSET_M,
   HEIGHT_CODE_STEP_M,
   HEIGHT_POSTS_PER_TILE,
-} from '../../../../src/data/scene/heightTileFormat';
+} from '../../../../src/layers/body/data/heightTileFormat';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 

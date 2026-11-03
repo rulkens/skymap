@@ -15,25 +15,25 @@ import { describe, it, expect } from 'vitest';
 import { mat4, mat4d } from 'wgpu-matrix';
 
 import { cutSurfaceTiles } from '../../../../../src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles';
-import { baseLevelForTier } from '../../../../../src/utils/surfaceTiles/baseLevelForTier';
+import { baseLevelForTier } from '../../../../../src/layers/body/utils/surfaceTiles/baseLevelForTier';
 import { earthTexelMetres } from '../../../../../src/layers/body/subsystems/surfaceTiles/earthTexelMetres';
-import { surfaceTileXyForUv } from '../../../../../src/utils/surfaceTiles/surfaceTileXyForUv';
-import { surfaceTileColumns } from '../../../../../src/utils/surfaceTiles/surfaceTileColumns';
-import { surfaceTileInBand } from '../../../../../src/utils/surfaceTiles/surfaceTileInBand';
+import { surfaceTileXyForUv } from '../../../../../src/layers/body/utils/surfaceTiles/surfaceTileXyForUv';
+import { surfaceTileColumns } from '../../../../../src/layers/body/utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileInBand } from '../../../../../src/layers/body/utils/surfaceTiles/surfaceTileInBand';
 import { equirectUvToDirection } from '../../../../../src/utils/math/equirectUvToDirection';
 import { IDENTITY_MAT3 } from '../../../../../src/utils/math/identityMat3';
 import {
   SURFACE_TILE_LOD_BIAS,
   SURFACE_TILE_PX,
-} from '../../../../../src/data/bodies/surfaceTileParams';
+} from '../../../../../src/layers/body/data/surfaceTileParams';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFrustum';
-import { MARS_DATUM_RADIUS_M } from '../../../../../src/data/bodies/marsSurfaceParams';
-import type { SurfaceTileId } from '../../../../../src/@types/data/SurfaceTileId';
-import type { SurfaceTileBand } from '../../../../../src/@types/scene/SurfaceTileBand';
+import { MARS_DATUM_RADIUS_M } from '../../../../../src/layers/body/data/marsSurfaceParams';
+import type { SurfaceTileId } from '../../../../../src/layers/body/@types/SurfaceTileId';
+import type { SurfaceTileBand } from '../../../../../src/layers/body/@types/SurfaceTileBand';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
 import { angleBetween } from '../../../../helpers/math/angleBetween';

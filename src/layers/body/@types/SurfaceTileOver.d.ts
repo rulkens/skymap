@@ -5,7 +5,7 @@
  * atlases, and the readout).
  */
 
-import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
+import type { SurfaceTileBodyId } from './SurfaceTileBodyId';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { Vec3 } from '../../../@types/math/Vec3';
 

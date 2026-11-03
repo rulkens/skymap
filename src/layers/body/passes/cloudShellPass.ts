@@ -19,7 +19,7 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { CLOUD_SHELL_PARAMS } from '../present/cloudShellParams';
-import { EARTH_SURFACE_PARAMS } from '../../../data/bodies/earthSurfaceParams';
+import { EARTH_SURFACE_PARAMS } from '../data/earthSurfaceParams';
 import { bodyTextureSlotKey } from '../load/bodyTextureSlotKey';
 import { cloudDeckFade } from '../present/cloudDeckFade';
 import { composeBodySlabMvp } from '../../../utils/camera/composeBodySlabMvp';

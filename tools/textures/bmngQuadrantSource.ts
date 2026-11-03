@@ -33,7 +33,7 @@ import { existsSync } from 'node:fs';
 
 import sharp from 'sharp';
 
-import { levelFittingWidth } from '../../src/utils/surfaceTiles/levelFittingWidth';
+import { levelFittingWidth } from '../../src/layers/body/utils/surfaceTiles/levelFittingWidth';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 

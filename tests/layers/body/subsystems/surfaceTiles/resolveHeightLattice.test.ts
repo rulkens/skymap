@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { resolveHeightLattice } from '../../../../../src/layers/body/subsystems/surfaceTiles/resolveHeightLattice';
-import type { SurfaceTileId } from '../../../../../src/@types/data/SurfaceTileId';
+import type { SurfaceTileId } from '../../../../../src/layers/body/@types/SurfaceTileId';
 
 const BASE_LEVEL = 4;
 

@@ -1,4 +1,4 @@
-import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
+import type { SurfaceTileManifest } from '../@types/SurfaceTileManifest';
 import { dataUrl } from '../../../services/loading/fetchWithProgress';
 
 /**

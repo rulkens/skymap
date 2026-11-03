@@ -1,4 +1,4 @@
-import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
+import type { SurfaceTileId } from './SurfaceTileId';
 
 /**
  * SurfaceTileRequest — one tile the planner wants resident this frame, with

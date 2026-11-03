@@ -9,7 +9,7 @@ import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { BodyRuntime } from './@types/BodyRuntime';
 import type { BodyFacts } from './@types/BodyFacts';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
-import { SURFACE_TILE_MESH_RESOLUTION } from '../../data/bodies/surfaceTileParams';
+import { SURFACE_TILE_MESH_RESOLUTION } from './data/surfaceTileParams';
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';
 import { createBodyGlintRenderer } from '../../services/gpu/renderers/bodies/bodyGlintRenderer';
 import { createEarthRenderer } from './render/earthRenderer';

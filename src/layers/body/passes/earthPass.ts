@@ -20,7 +20,7 @@ import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../render/packEarthSurfaceUniforms';
-import { EARTH_SURFACE_PARAMS } from '../../../data/bodies/earthSurfaceParams';
+import { EARTH_SURFACE_PARAMS } from '../data/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../present/cloudShellParams';
 import { cloudDeckFade } from '../present/cloudDeckFade';
 import { bodyCameraDistanceMpc } from '../present/bodyCameraDistanceMpc';

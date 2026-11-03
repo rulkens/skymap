@@ -8,7 +8,7 @@
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { bodyAtlasFetcher } from './bodyAtlasFetcher';
-import { BODY_ATLAS_GRID, BODY_ATLAS_LAYOUT } from '../../../data/bodies/bodyAtlas.generated';
+import { BODY_ATLAS_GRID, BODY_ATLAS_LAYOUT } from '../data/bodyAtlas.generated';
 import { atlasTileRect } from '../../../utils/gpu/atlasTileRect';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';

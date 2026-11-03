@@ -6,7 +6,7 @@
  */
 
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
-import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
+import { BODY_TEXTURE_REGISTRY } from '../data/bodyTextureRegistry';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../present/hostBodyId';

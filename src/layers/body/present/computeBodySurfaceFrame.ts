@@ -1,6 +1,6 @@
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { PreparedBodySurfaceFrame } from '../../../@types/engine/frame/PreparedBodySurfaceFrame';
+import type { PreparedBodySurfaceFrame } from '../@types/PreparedBodySurfaceFrame';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { sceneBodyForId } from './sceneBodyForId';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';

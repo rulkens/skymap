@@ -8,7 +8,7 @@
  * sync. `bodyTextureSlots` mints slots from it and `bodyAssetRows` maps over it.
  */
 
-import { BODY_TEXTURE_REGISTRY } from './bodyTextureRegistry';
+import { BODY_TEXTURE_REGISTRY } from '../../layers/body/data/bodyTextureRegistry';
 import { SCENE_RINGS } from './sceneRings';
 import type { BodyTextureId } from '../../@types/data/BodyTextureId';
 import type { BodyTextureKey } from '../../@types/data/BodyTextureKey';

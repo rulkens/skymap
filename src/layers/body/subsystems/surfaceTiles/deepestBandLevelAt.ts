@@ -1,4 +1,4 @@
-import type { SurfaceTileBand } from '../../../../@types/scene/SurfaceTileBand';
+import type { SurfaceTileBand } from '../../@types/SurfaceTileBand';
 import type { LonLatDeg } from '../../../../@types/scene/LonLatDeg';
 
 /**

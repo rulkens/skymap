@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { surfaceTileBandRefineAllowed } from '../../../../../src/layers/body/subsystems/surfaceTiles/surfaceTileBandRefineAllowed';
-import type { SurfaceTileBand } from '../../../../../src/@types/scene/SurfaceTileBand';
+import type { SurfaceTileBand } from '../../../../../src/layers/body/@types/SurfaceTileBand';
 
 const uv = (u0: number, u1: number, v0: number, v1: number) => [u0, u1, v0, v1] as const;
 

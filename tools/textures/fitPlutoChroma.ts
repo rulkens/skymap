@@ -17,7 +17,7 @@ import sharp from 'sharp';
 
 import type { Vec2 } from '../../src/@types/math/Vec2';
 import type { Vec3 } from '../../src/@types/math/Vec3';
-import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
+import { BODY_TEXTURE_REGISTRY } from '../../src/layers/body/data/bodyTextureRegistry';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 

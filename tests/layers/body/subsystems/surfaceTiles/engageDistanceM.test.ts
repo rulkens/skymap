@@ -9,14 +9,14 @@ import { mat4d } from 'wgpu-matrix';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { engageDistanceM } from '../../../../../src/layers/body/subsystems/surfaceTiles/engageDistanceM';
 import { cutSurfaceTiles } from '../../../../../src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles';
-import { surfaceTileBandFromBounds } from '../../../../../src/utils/surfaceTiles/surfaceTileBandFromBounds';
+import { surfaceTileBandFromBounds } from '../../../../../src/layers/body/utils/surfaceTiles/surfaceTileBandFromBounds';
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { frustumPerspectiveF64 } from '../../../../../src/utils/camera/frustumPerspectiveF64';
 import { frustumCornerMagnification } from '../../../../../src/utils/camera/frustumCornerMagnification';
 import {
   SURFACE_TILE_LOD_BIAS,
   SURFACE_TILE_PX,
-} from '../../../../../src/data/bodies/surfaceTileParams';
+} from '../../../../../src/layers/body/data/surfaceTileParams';
 
 const R = 6.371e6;
 /** The small tier's base level: the farthest-engaging one. */

@@ -9,8 +9,8 @@
  * per-product residency maps `residentSlot` and the terrain queries answer from.
  */
 
-import type { SurfaceTileId } from '../../../../@types/data/SurfaceTileId';
-import type { SurfaceTileBodyId } from '../../../../@types/data/SurfaceTileBodyId';
+import type { SurfaceTileId } from '../../@types/SurfaceTileId';
+import type { SurfaceTileBodyId } from '../../@types/SurfaceTileBodyId';
 import type { ResidentSlot } from '../../@types/ResidentSlot';
 import type { ResidentSurfaceTile } from '../../@types/ResidentSurfaceTile';
 import type { SurfaceTilePlan } from '../../@types/SurfaceTilePlan';
@@ -29,8 +29,8 @@ import { createTileStreamSubsystem } from '../../../../services/engine/subsystem
 import { TextureAtlas } from '../../../../services/gpu/resources/textureAtlas';
 import { uploadBitmapToAtlas } from '../../../../utils/gpu/uploadBitmapToAtlas';
 import { closeBitmap } from '../../../../utils/gpu/closeBitmap';
-import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
-import { surfaceTilePath } from '../../../../utils/surfaceTiles/surfaceTilePath';
+import { SURFACE_TILE_REGISTRY } from '../../data/surfaceTileRegistry';
+import { surfaceTilePath } from '../../utils/surfaceTiles/surfaceTilePath';
 import { fetchSurfaceTileManifest } from '../../load/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../load/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../load/fetchHeightTile';
@@ -42,8 +42,8 @@ import {
   SURFACE_TILE_CONCURRENCY,
   HEIGHT_TILE_ATLAS_SIDE,
   HEIGHT_ATLAS_SLOTS_PER_ROW,
-} from '../../../../data/bodies/surfaceTileParams';
-import { HEIGHT_POSTS_PER_TILE } from '../../../../data/scene/heightTileFormat';
+} from '../../data/surfaceTileParams';
+import { HEIGHT_POSTS_PER_TILE } from '../../data/heightTileFormat';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
 /** Terrain-RGB codes the shader decodes (`lattice.wesl`'s `postHeightM`), so

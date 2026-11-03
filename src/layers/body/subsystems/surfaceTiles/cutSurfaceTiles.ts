@@ -1,14 +1,14 @@
-import type { SurfaceTileId } from '../../../../@types/data/SurfaceTileId';
-import type { SurfaceTileBand } from '../../../../@types/scene/SurfaceTileBand';
+import type { SurfaceTileId } from '../../@types/SurfaceTileId';
+import type { SurfaceTileBand } from '../../@types/SurfaceTileBand';
 import type { SurfaceTileDemand } from '../../@types/SurfaceTileDemand';
 import type { SurfaceTileRequest } from '../../@types/SurfaceTileRequest';
 import type { SurfaceCutTile } from '../../@types/SurfaceCutTile';
 import type { ResolvedTileResidency } from '../../@types/ResolvedTileResidency';
 import type { TileCamera } from '../../@types/TileCamera';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import { surfaceTileColumns } from '../../../../utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileColumns } from '../../utils/surfaceTiles/surfaceTileColumns';
 import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
-import { surfaceTileInBand } from '../../../../utils/surfaceTiles/surfaceTileInBand';
+import { surfaceTileInBand } from '../../utils/surfaceTiles/surfaceTileInBand';
 import { equirectUvToDirection } from '../../../../utils/math/equirectUvToDirection';
 import { surfacePatchAnchor } from './surfacePatchAnchor';
 import { balanceSurfaceCut } from './balanceSurfaceCut';

@@ -1,8 +1,8 @@
 import { resolve } from 'node:path';
 
 import type { HeightTile } from '../../../textures/@types/HeightTile';
-import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
-import { surfaceTilePath } from '../../../../src/utils/surfaceTiles/surfaceTilePath';
+import type { SurfaceTileManifest } from '../../../../src/layers/body/@types/SurfaceTileManifest';
+import { surfaceTilePath } from '../../../../src/layers/body/utils/surfaceTiles/surfaceTilePath';
 import { readHeightTileFile } from '../readHeightTileFile';
 import { sampleHeightTileM } from './sampleHeightTileM';
 import { tilePostAtLatLon } from './tilePostAtLatLon';

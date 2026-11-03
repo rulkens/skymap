@@ -1,7 +1,7 @@
 import {
   EARTH_EQUATORIAL_CIRCUMFERENCE_M,
   SURFACE_EQUIRECT_BASE_WIDTH_PX,
-} from '../../../../data/bodies/surfaceTileParams';
+} from '../../data/surfaceTileParams';
 
 /**
  * earthTexelMetres — ground metres covered by one texel at pyramid level `z`,

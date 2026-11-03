@@ -2,7 +2,7 @@ import {
   HEIGHT_CODE_MAX,
   HEIGHT_CODE_OFFSET_M,
   HEIGHT_CODE_STEP_M,
-} from '../../../src/data/scene/heightTileFormat';
+} from '../../../src/layers/body/data/heightTileFormat';
 
 /** heightCode — metres to the 24-bit Terrain-RGB code; throws rather than clamp,
  *  since a clamped post would silently disagree with the header bounds. */

@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { deepestBandLevelAt } from '../../../../../src/layers/body/subsystems/surfaceTiles/deepestBandLevelAt';
-import type { SurfaceTileBand } from '../../../../../src/@types/scene/SurfaceTileBand';
+import type { SurfaceTileBand } from '../../../../../src/layers/body/@types/SurfaceTileBand';
 
 /** uBounds/vBounds built the same way `derivePlannerParams` builds them from
  *  a `LonLatBounds`, so the fixture matches the real manifest shape. */

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { surfaceTileColumns } from '../../../../../src/utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileColumns } from '../../../../../src/layers/body/utils/surfaceTiles/surfaceTileColumns';
 import { equirectUvToDirection } from '../../../../../src/utils/math/equirectUvToDirection';
 import { patchOriginRelEyeM } from '../../../../../src/layers/body/subsystems/surfaceTiles/patchOriginRelEyeM';
 import { surfacePatchAnchor } from '../../../../../src/layers/body/subsystems/surfaceTiles/surfacePatchAnchor';
-import { SURFACE_TILE_PX } from '../../../../../src/data/bodies/surfaceTileParams';
+import { SURFACE_TILE_PX } from '../../../../../src/layers/body/data/surfaceTileParams';
 
 /** The walk's own uv footprint for tile `(z, x, y)` — `cutSurfaceTiles.ts:131-141`. */
 function tileFootprint(z: number, x: number, y: number) {

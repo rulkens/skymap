@@ -1,6 +1,6 @@
-import type { SurfaceTileId } from '../../../../@types/data/SurfaceTileId';
+import type { SurfaceTileId } from '../../@types/SurfaceTileId';
 import type { SurfaceCutTile } from '../../@types/SurfaceCutTile';
-import { HEIGHT_POSTS_PER_TILE } from '../../../../data/scene/heightTileFormat';
+import { HEIGHT_POSTS_PER_TILE } from '../../data/heightTileFormat';
 import { deepestResidentAncestor } from './deepestResidentAncestor';
 
 /**

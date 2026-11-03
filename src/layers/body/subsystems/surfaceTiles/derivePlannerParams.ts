@@ -7,11 +7,11 @@
  * that holds only at the shipped 512 px edge.
  */
 
-import type { SurfaceTileManifest } from '../../../../@types/scene/SurfaceTileManifest';
-import type { SurfaceTileBand } from '../../../../@types/scene/SurfaceTileBand';
+import type { SurfaceTileManifest } from '../../@types/SurfaceTileManifest';
+import type { SurfaceTileBand } from '../../@types/SurfaceTileBand';
 import type { SurfaceTilePlannerParams } from '../../@types/SurfaceTilePlannerParams';
-import { surfaceTileBandFromBounds } from '../../../../utils/surfaceTiles/surfaceTileBandFromBounds';
-import { SURFACE_TILE_LOD_BIAS, SURFACE_TILE_PX } from '../../../../data/bodies/surfaceTileParams';
+import { surfaceTileBandFromBounds } from '../../utils/surfaceTiles/surfaceTileBandFromBounds';
+import { SURFACE_TILE_LOD_BIAS, SURFACE_TILE_PX } from '../../data/surfaceTileParams';
 
 export function derivePlannerParams(
   fetched: SurfaceTileManifest,

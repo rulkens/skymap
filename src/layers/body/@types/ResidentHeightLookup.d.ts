@@ -1,4 +1,4 @@
-import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
+import type { SurfaceTileId } from './SurfaceTileId';
 import type { HeightTileHeader } from '../../../@types/scene/HeightTileHeader';
 
 /** ResidentHeightLookup — probes one tile's atlas residency for `terrainHeightM`'s

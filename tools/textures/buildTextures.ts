@@ -20,7 +20,7 @@ import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import type { ChromaCalibration } from '../../src/@types/scene/ChromaCalibration';
 import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
-import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
+import { BODY_TEXTURE_REGISTRY } from '../../src/layers/body/data/bodyTextureRegistry';
 import { SCENE_PLANETS } from '../../src/data/bodies/scenePlanets';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';

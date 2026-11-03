@@ -1,5 +1,5 @@
-import type { SurfaceTileBand } from '../../../../@types/scene/SurfaceTileBand';
-import { surfaceTileBandOverlapsUv } from '../../../../utils/surfaceTiles/surfaceTileBandOverlapsUv';
+import type { SurfaceTileBand } from '../../@types/SurfaceTileBand';
+import { surfaceTileBandOverlapsUv } from '../../utils/surfaceTiles/surfaceTileBandOverlapsUv';
 
 /**
  * surfaceTileBandRefineAllowed — true when some band overlapping this tile's uv

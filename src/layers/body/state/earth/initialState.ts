@@ -5,8 +5,8 @@
  */
 
 import { ATMOSPHERE_PARAMS } from '../../present/atmosphereParams';
-import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
-import type { EarthSettings } from '../../../../@types/settings/EarthSettings';
+import { EARTH_SURFACE_PARAMS } from '../../data/earthSurfaceParams';
+import type { EarthSettings } from '../../@types/EarthSettings';
 
 export const initialState: EarthSettings = {
   // `earth` is a definitional atmosphere-table row, so this index read is non-null.

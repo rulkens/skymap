@@ -9,9 +9,9 @@ import { tileCamerasOf } from '../../../../../src/layers/body/subsystems/surface
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { cutSurfaceTiles } from '../../../../../src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles';
-import { baseLevelForTier } from '../../../../../src/utils/surfaceTiles/baseLevelForTier';
+import { baseLevelForTier } from '../../../../../src/layers/body/utils/surfaceTiles/baseLevelForTier';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
-import { SURFACE_TILE_PX } from '../../../../../src/data/bodies/surfaceTileParams';
+import { SURFACE_TILE_PX } from '../../../../../src/layers/body/data/surfaceTileParams';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';

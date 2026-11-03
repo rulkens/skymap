@@ -8,7 +8,7 @@
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import { BODY_ATLAS_FILENAME } from '../../../data/bodies/bodyAtlas.generated';
+import { BODY_ATLAS_FILENAME } from '../data/bodyAtlas.generated';
 import { dataUrl } from '../../../services/loading/fetchWithProgress';
 
 export const bodyAtlasFetcher: Fetcher<ImageBitmap, void> = async (_req, signal) => {

@@ -1,4 +1,4 @@
-import type { SurfaceTileId } from '../../../../@types/data/SurfaceTileId';
+import type { SurfaceTileId } from '../../@types/SurfaceTileId';
 
 /**
  * deepestResidentAncestor — climb `tile`'s OWN ancestor chain, deepest first,

@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { SurfaceTileId } from '../../../../../src/@types/data/SurfaceTileId';
+import type { SurfaceTileId } from '../../../../../src/layers/body/@types/SurfaceTileId';
 import type { HeightTileHeader } from '../../../../../src/@types/scene/HeightTileHeader';
 import { equirectUvToDirection } from '../../../../../src/utils/math/equirectUvToDirection';
 import {
@@ -18,9 +18,9 @@ import {
   HEIGHT_CODE_MAX,
   HEIGHT_GRID_BYTES,
   HEIGHT_GRID_POSTS_PER_EDGE,
-} from '../../../../../src/data/scene/heightTileFormat';
+} from '../../../../../src/layers/body/data/heightTileFormat';
 import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
-import { codeHeightM } from '../../../../../src/utils/surfaceTiles/codeHeightM';
+import { codeHeightM } from '../../../../../src/layers/body/utils/surfaceTiles/codeHeightM';
 import { terrainHeightM } from '../../../../../src/layers/body/subsystems/surfaceTiles/terrainHeightM';
 
 const BASE_LEVEL = 0;

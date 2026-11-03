@@ -8,7 +8,7 @@
 
 import type { EarthBody } from '../../../@types/scene/EarthBody';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
-import type { AtmosphereParams } from '../../../@types/scene/AtmosphereParams';
+import type { AtmosphereParams } from './AtmosphereParams';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 export type AtmosphereDrawEntry = {

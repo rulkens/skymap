@@ -5,10 +5,10 @@
  * answers for the engaged body's atlases.
  */
 
-import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
-import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
+import type { SurfaceTileId } from './SurfaceTileId';
+import type { SurfaceTileBodyId } from './SurfaceTileBodyId';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
-import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
+import type { SurfaceTileManifest } from './SurfaceTileManifest';
 import type { ResidentSlot } from './ResidentSlot';
 
 export type SurfaceTileResidency = {

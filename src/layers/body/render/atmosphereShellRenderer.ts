@@ -13,7 +13,7 @@
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { AtmosphereShellDepth } from '../@types/AtmosphereShellDepth';
 import type { AtmosphereShellRenderer } from '../@types/AtmosphereShellRenderer';
-import type { AtmosphereParams } from '../../../@types/scene/AtmosphereParams';
+import type { AtmosphereParams } from '../@types/AtmosphereParams';
 import { uvSphereMesh } from '../../../utils/math/uvSphereMesh';
 import { ATMOSPHERE_UNIFORM_FLOATS } from './packAtmosphereUniforms';
 import { packScatteringParams, SCATTERING_PARAMS_BYTES } from './packScatteringParams';

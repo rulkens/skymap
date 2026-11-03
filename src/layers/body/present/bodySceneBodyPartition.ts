@@ -9,7 +9,7 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { SceneBodyPartition } from '../../../@types/engine/frame/SceneBodyPartition';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { BodyRuntime } from '../@types/BodyRuntime';
-import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
+import { bodyTextureSpec } from '../data/bodyTextureRegistry';
 import { BODY_SCENE_BODY_IDS } from './bodySceneBodyIds';
 import { sceneBodyPartition } from '../../../services/engine/frame/sceneBodyPartition';
 

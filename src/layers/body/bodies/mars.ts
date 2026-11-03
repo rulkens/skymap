@@ -8,7 +8,7 @@ import {
   MARS_AREOID_RELIEF_M,
   MARS_DATUM_OFFSET_M,
   MARS_DATUM_RADIUS_M,
-} from '../../../data/bodies/marsSurfaceParams';
+} from '../data/marsSurfaceParams';
 
 export const MARS: LayerBody = {
   body: heliocentricPlanet({

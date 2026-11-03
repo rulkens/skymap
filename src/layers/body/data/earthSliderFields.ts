@@ -1,5 +1,5 @@
 import type { SliderField } from '../../../@types/data/SliderField';
-import type { EarthSettings } from '../../../@types/settings/EarthSettings';
+import type { EarthSettings } from '../@types/EarthSettings';
 
 /** The Earth tuning knobs shown in the DebugPanel. */
 export const EARTH_SLIDER_FIELDS: readonly SliderField<keyof EarthSettings>[] = [

@@ -1,8 +1,8 @@
 import type { SurfaceCutTile } from '../../@types/SurfaceCutTile';
-import type { SurfaceTileBand } from '../../../../@types/scene/SurfaceTileBand';
+import type { SurfaceTileBand } from '../../@types/SurfaceTileBand';
 import { packSurfaceTileKey as packTile } from './packSurfaceTileKey';
-import { surfaceTileColumns } from '../../../../utils/surfaceTiles/surfaceTileColumns';
-import { surfaceTileInBand } from '../../../../utils/surfaceTiles/surfaceTileInBand';
+import { surfaceTileColumns } from '../../utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileInBand } from '../../utils/surfaceTiles/surfaceTileInBand';
 
 /**
  * balanceSurfaceCut — steps edge-neighbouring leaves onto HEIGHT levels no

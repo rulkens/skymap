@@ -7,9 +7,9 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { SurfaceTileManifest } from '../../../../../src/@types/scene/SurfaceTileManifest';
+import type { SurfaceTileManifest } from '../../../../../src/layers/body/@types/SurfaceTileManifest';
 import { derivePlannerParams } from '../../../../../src/layers/body/subsystems/surfaceTiles/derivePlannerParams';
-import { SURFACE_TILE_PX } from '../../../../../src/data/bodies/surfaceTileParams';
+import { SURFACE_TILE_PX } from '../../../../../src/layers/body/data/surfaceTileParams';
 
 const BASE_LEVEL = 4;
 const PROVENANCE = { sourceId: 'test', attribution: 'test', vintage: 'test' };

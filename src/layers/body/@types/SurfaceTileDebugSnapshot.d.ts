@@ -1,4 +1,4 @@
-import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
+import type { SurfaceTileBodyId } from './SurfaceTileBodyId';
 
 /**
  * SurfaceTileDebugSnapshot — `surfaceTileStream`'s residency for the DebugPanel,

@@ -9,8 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SurfaceTileDemand } from '../../../../../src/layers/body/@types/SurfaceTileDemand';
 import type { SurfaceCutTile } from '../../../../../src/layers/body/@types/SurfaceCutTile';
-import type { SurfaceTileId } from '../../../../../src/@types/data/SurfaceTileId';
-import type { SurfaceTileManifest } from '../../../../../src/@types/scene/SurfaceTileManifest';
+import type { SurfaceTileId } from '../../../../../src/layers/body/@types/SurfaceTileId';
+import type { SurfaceTileManifest } from '../../../../../src/layers/body/@types/SurfaceTileManifest';
 import type { SurfaceTileResidency } from '../../../../../src/layers/body/@types/SurfaceTileResidency';
 import type { SurfaceTileOver } from '../../../../../src/layers/body/@types/SurfaceTileOver';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -30,7 +30,7 @@ vi.mock('../../../../../src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles'
 import { planSurfaceTiles } from '../../../../../src/layers/body/subsystems/surfaceTiles/planSurfaceTiles';
 import { tileBodiesInView } from '../../../../../src/layers/body/subsystems/surfaceTiles/tileBodiesInView';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { baseLevelForTier } from '../../../../../src/utils/surfaceTiles/baseLevelForTier';
+import { baseLevelForTier } from '../../../../../src/layers/body/utils/surfaceTiles/baseLevelForTier';
 import { isSurfaceTileBodyId } from '../../../../../src/layers/body/subsystems/surfaceTiles/isSurfaceTileBodyId';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';

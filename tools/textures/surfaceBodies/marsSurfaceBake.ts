@@ -9,13 +9,13 @@ import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import {
   MARS_DATUM_OFFSET_M,
   MARS_IAU_SPHERE_RADIUS_M,
-} from '../../../src/data/bodies/marsSurfaceParams';
+} from '../../../src/layers/body/data/marsSurfaceParams';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
-import { SURFACE_TILE_PX } from '../../../src/data/bodies/surfaceTileParams';
-import { SURFACE_TILE_REGISTRY } from '../../../src/data/bodies/surfaceTileRegistry';
+import { SURFACE_TILE_PX } from '../../../src/layers/body/data/surfaceTileParams';
+import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/data/surfaceTileRegistry';
 import { TIER_LADDER } from '../../../src/data/tierLadder';
-import { baseLevelForTier } from '../../../src/utils/surfaceTiles/baseLevelForTier';
+import { baseLevelForTier } from '../../../src/layers/body/utils/surfaceTiles/baseLevelForTier';
 import { rawDataPath, type RawDataKey } from '../../utils/io/rawDataRegistry';
 import { heightLatticeStepDeg } from '../../utils/textures/heightLatticeStepDeg';
 import { surfaceTileBounds } from '../../utils/scene/surfaceTileBounds';

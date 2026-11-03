@@ -11,7 +11,7 @@
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { SurfaceTileOver } from '../../@types/SurfaceTileOver';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
-import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
+import { SURFACE_TILE_REGISTRY } from '../../data/surfaceTileRegistry';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
 import { isSurfaceTileBodyId } from './isSurfaceTileBodyId';

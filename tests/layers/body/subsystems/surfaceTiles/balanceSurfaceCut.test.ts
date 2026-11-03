@@ -14,10 +14,10 @@
 import { describe, it, expect } from 'vitest';
 
 import { balanceSurfaceCut } from '../../../../../src/layers/body/subsystems/surfaceTiles/balanceSurfaceCut';
-import { surfaceTileColumns } from '../../../../../src/utils/surfaceTiles/surfaceTileColumns';
-import { SURFACE_TILE_PX } from '../../../../../src/data/bodies/surfaceTileParams';
+import { surfaceTileColumns } from '../../../../../src/layers/body/utils/surfaceTiles/surfaceTileColumns';
+import { SURFACE_TILE_PX } from '../../../../../src/layers/body/data/surfaceTileParams';
 import type { SurfaceCutTile } from '../../../../../src/layers/body/@types/SurfaceCutTile';
-import type { SurfaceTileBand } from '../../../../../src/@types/scene/SurfaceTileBand';
+import type { SurfaceTileBand } from '../../../../../src/layers/body/@types/SurfaceTileBand';
 
 /** `heightLevel` defaults to the leaf's own level (`levelDelta` 0). */
 function leafAt(z: number, x: number, y: number, heightLevel = z): SurfaceCutTile {

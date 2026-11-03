@@ -1,9 +1,9 @@
 import type { TilePostPosition } from '../../../textures/@types/TilePostPosition';
-import { SURFACE_TILE_PX } from '../../../../src/data/bodies/surfaceTileParams';
+import { SURFACE_TILE_PX } from '../../../../src/layers/body/data/surfaceTileParams';
 import { TEXTURE_PRIME_MERIDIAN_U } from '../../../../src/data/bodies/texturePrimeMeridianU';
 import { degToRad } from '../../../../src/utils/math/degToRad';
-import { surfaceTileColumns } from '../../../../src/utils/surfaceTiles/surfaceTileColumns';
-import { surfaceTileXyForUv } from '../../../../src/utils/surfaceTiles/surfaceTileXyForUv';
+import { surfaceTileColumns } from '../../../../src/layers/body/utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileXyForUv } from '../../../../src/layers/body/utils/surfaceTiles/surfaceTileXyForUv';
 
 /**
  * tilePostAtLatLon — which level-`z` tile holds a lat/lon, and where in it.

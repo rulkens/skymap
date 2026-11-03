@@ -1,12 +1,12 @@
 import type { HeightTileImage } from '../@types/HeightTileImage';
-import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
+import type { SurfaceTileId } from '../@types/SurfaceTileId';
 import {
   HEIGHT_POSTS_PER_TILE,
   HEIGHT_TILE_CHUNK_FOURCC,
-} from '../../../data/scene/heightTileFormat';
+} from '../data/heightTileFormat';
 import { readRiffChunk } from '../../../utils/image/readRiffChunk';
-import { decodeHeightTileHeader } from '../../../utils/surfaceTiles/decodeHeightTileHeader';
-import { surfaceTilePath } from '../../../utils/surfaceTiles/surfaceTilePath';
+import { decodeHeightTileHeader } from '../utils/surfaceTiles/decodeHeightTileHeader';
+import { surfaceTilePath } from '../utils/surfaceTiles/surfaceTilePath';
 import { dataUrl } from '../../../services/loading/fetchWithProgress';
 
 // An in-flight fetch pins a queue pipe and keeps the render-on-demand loop

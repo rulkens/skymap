@@ -8,7 +8,7 @@ import type { CloudShellRenderer } from './CloudShellRenderer';
 import type { AtmosphereShellRenderer } from './AtmosphereShellRenderer';
 import type { BodyGlintRenderer } from '../../../@types/rendering/BodyGlintRenderer';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
+import type { BodyTextureReq } from './BodyTextureReq';
 import type { BodyTextureSlotKey } from '../../../@types/data/BodyTextureSlotKey';
 import type { SurfaceTileStream } from './SurfaceTileStream';
 import type { SurfaceTilePlan } from './SurfaceTilePlan';

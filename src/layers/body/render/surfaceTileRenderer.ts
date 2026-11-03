@@ -32,8 +32,8 @@ import {
 import {
   SURFACE_TILE_CROSSFADE_MS,
   HEIGHT_ATLAS_SLOTS_PER_ROW,
-} from '../../../data/bodies/surfaceTileParams';
-import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
+} from '../data/surfaceTileParams';
+import { HEIGHT_POSTS_PER_TILE } from '../data/heightTileFormat';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
 

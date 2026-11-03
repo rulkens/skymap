@@ -5,7 +5,7 @@
  * lens's `engageDistanceM`, never because the body left the view.
  */
 
-import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
+import type { SurfaceTileBodyId } from './SurfaceTileBodyId';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 
 export type SurfaceTileVerdict =

@@ -9,7 +9,7 @@
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
+import type { BodyTextureReq } from '../@types/BodyTextureReq';
 import { bodyTextureFilename } from '../../../utils/bodyTextures/bodyTextureFilename';
 import { isLinearTextureKind } from '../../../utils/bodyTextures/isLinearTextureKind';
 import { dataUrl } from '../../../services/loading/fetchWithProgress';

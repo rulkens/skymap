@@ -27,7 +27,7 @@ import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyRelativePose';
 import { innerBoundRadiusM } from '../../../../src/utils/occlusion/innerBoundRadiusM';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
-import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
+import { EARTH_SURFACE_PARAMS } from '../../../../src/layers/body/data/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../src/layers/body/present/cloudShellParams';
 import { Source } from '../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';

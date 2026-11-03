@@ -7,7 +7,7 @@ import { memo, useCallback } from 'react';
 import type { ActionCreatorWithPayload } from '@reduxjs/toolkit';
 import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import type { EarthSettings } from '../../../@types/settings/EarthSettings';
+import type { EarthSettings } from '../@types/EarthSettings';
 import { EARTH_SLIDER_FIELDS } from '../data/earthSliderFields';
 import { selectEarth } from '../state/earth/selectors';
 import { setAtmosphereExposure, setAmbientLight, setOceanRoughness } from '../state/earth/slice';

@@ -17,30 +17,30 @@ vi.mock('../../../../../src/layers/body/load/fetchHeightTile', () => ({
   fetchHeightTile: vi.fn(),
 }));
 
-import type { SurfaceTileManifest } from '../../../../../src/@types/scene/SurfaceTileManifest';
+import type { SurfaceTileManifest } from '../../../../../src/layers/body/@types/SurfaceTileManifest';
 import type { SurfaceTilePlan } from '../../../../../src/layers/body/@types/SurfaceTilePlan';
-import type { SurfaceTileId } from '../../../../../src/@types/data/SurfaceTileId';
+import type { SurfaceTileId } from '../../../../../src/layers/body/@types/SurfaceTileId';
 import type { HeightTileImage } from '../../../../../src/layers/body/@types/HeightTileImage';
 import { createSurfaceTileStream } from '../../../../../src/layers/body/subsystems/surfaceTiles/surfaceTileStream';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
 import { fetchSurfaceTileManifest } from '../../../../../src/layers/body/load/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../../../src/layers/body/load/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../../../src/layers/body/load/fetchHeightTile';
-import { baseLevelForTier } from '../../../../../src/utils/surfaceTiles/baseLevelForTier';
+import { baseLevelForTier } from '../../../../../src/layers/body/utils/surfaceTiles/baseLevelForTier';
 import { derivePlannerParams } from '../../../../../src/layers/body/subsystems/surfaceTiles/derivePlannerParams';
 import { isSurfaceTileBodyId } from '../../../../../src/layers/body/subsystems/surfaceTiles/isSurfaceTileBodyId';
 import { equirectUvToDirection } from '../../../../../src/utils/math/equirectUvToDirection';
-import { codeHeightM } from '../../../../../src/utils/surfaceTiles/codeHeightM';
+import { codeHeightM } from '../../../../../src/layers/body/utils/surfaceTiles/codeHeightM';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
-} from '../../../../../src/data/bodies/surfaceTileParams';
+} from '../../../../../src/layers/body/data/surfaceTileParams';
 import {
   HEIGHT_GRID_BYTES,
   HEIGHT_POSTS_PER_TILE,
-} from '../../../../../src/data/scene/heightTileFormat';
+} from '../../../../../src/layers/body/data/heightTileFormat';
 
 function tileBody(id: string) {
   const bodyId = asSceneBodyId(id);

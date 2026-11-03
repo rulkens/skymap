@@ -1,5 +1,5 @@
 import type { Vec2 } from '../../../../@types/math/Vec2';
-import { surfaceTileColumns } from '../../../../utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileColumns } from '../../utils/surfaceTiles/surfaceTileColumns';
 
 /**
  * surfaceTileCentreUv — the mesh uv at the centre of tile `[x, y]` of level `z`.

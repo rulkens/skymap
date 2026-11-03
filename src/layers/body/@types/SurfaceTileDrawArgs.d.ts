@@ -1,7 +1,7 @@
 import type { SurfaceCutTile } from './SurfaceCutTile';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { SurfaceEffect } from '../../../@types/data/SurfaceEffect';
-import type { SurfaceTileShading } from '../../../@types/data/SurfaceTileShading';
+import type { SurfaceTileShading } from './SurfaceTileShading';
 import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SURFACE_TILE_REGISTRY } from '../../../../src/data/bodies/surfaceTileRegistry';
+import { SURFACE_TILE_REGISTRY } from '../../../../src/layers/body/data/surfaceTileRegistry';
 import { SURFACE_TILE_SHADER_VARIANTS } from '../../../../src/layers/body/render/surfaceTileShaderVariants';
 import { surfaceEffectsKey } from '../../../../src/layers/body/subsystems/surfaceTiles/surfaceEffectsKey';
 

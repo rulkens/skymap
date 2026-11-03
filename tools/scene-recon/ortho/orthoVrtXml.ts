@@ -10,7 +10,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { surfaceTileColumns } from '../../../src/utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileColumns } from '../../../src/layers/body/utils/surfaceTiles/surfaceTileColumns';
 import type { TileIndexRect } from '../../@types/scene/TileIndexRect';
 
 export type OrthoVrtSpec = {

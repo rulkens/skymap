@@ -1,6 +1,6 @@
-import { SURFACE_TILE_MESH_RESOLUTION } from '../../../../src/data/bodies/surfaceTileParams';
-import { HEIGHT_POSTS_PER_TILE } from '../../../../src/data/scene/heightTileFormat';
-import { latticeHeightSample } from '../../../../src/utils/surfaceTiles/latticeHeightSample';
+import { SURFACE_TILE_MESH_RESOLUTION } from '../../../../src/layers/body/data/surfaceTileParams';
+import { HEIGHT_POSTS_PER_TILE } from '../../../../src/layers/body/data/heightTileFormat';
+import { latticeHeightSample } from '../../../../src/layers/body/utils/surfaceTiles/latticeHeightSample';
 
 /** Cells across the full raster (129 posts, 128 cells) — the same ×16 vs ×17
  *  trap `terrainHeightM.ts` guards against, here at the raster's own stride. */

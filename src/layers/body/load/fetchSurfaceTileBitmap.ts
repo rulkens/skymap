@@ -1,5 +1,5 @@
-import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
-import { surfaceTilePath } from '../../../utils/surfaceTiles/surfaceTilePath';
+import type { SurfaceTileId } from '../@types/SurfaceTileId';
+import { surfaceTilePath } from '../utils/surfaceTiles/surfaceTilePath';
 import { dataUrl } from '../../../services/loading/fetchWithProgress';
 
 // An in-flight fetch pins a queue pipe and keeps the render-on-demand loop

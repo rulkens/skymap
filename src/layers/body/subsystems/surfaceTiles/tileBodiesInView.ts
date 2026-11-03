@@ -7,7 +7,7 @@
 
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
-import type { SurfaceTileBodyId } from '../../../../@types/data/SurfaceTileBodyId';
+import type { SurfaceTileBodyId } from '../../@types/SurfaceTileBodyId';
 import { isSurfaceTileBodyId } from './isSurfaceTileBodyId';
 import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
 import { visibleBodyRows } from '../../../../services/engine/frame/visibleBodyRows';

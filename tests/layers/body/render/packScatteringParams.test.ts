@@ -12,8 +12,8 @@ import {
   SCATTERING_PARAMS_BYTES,
   MAX_CONSTITUENTS,
 } from '../../../../src/layers/body/render/packScatteringParams';
-import type { AtmosphereParams } from '../../../../src/@types/scene/AtmosphereParams';
-import type { AtmosphereConstituent } from '../../../../src/@types/scene/AtmosphereConstituent';
+import type { AtmosphereParams } from '../../../../src/layers/body/@types/AtmosphereParams';
+import type { AtmosphereConstituent } from '../../../../src/layers/body/@types/AtmosphereConstituent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // Exponential profile + Henyey-Greenstein phase — tags (0, 1).

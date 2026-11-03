@@ -4,7 +4,7 @@
  * `ResidentSlot.readyAtMs`).
  */
 
-import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
+import type { SurfaceTileId } from './SurfaceTileId';
 
 export type ResidentSurfaceTile = {
   readonly tile: SurfaceTileId;
