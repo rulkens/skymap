@@ -6,13 +6,13 @@
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { SatellitesRuntime } from './@types/SatellitesRuntime';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
-import { SATELLITE_SWEEP_TIMING } from './data/satelliteSweepTiming';
-import { createSatellitePointRenderer } from './render/satellitePointRenderer';
+import { SATELLITE_SWEEP_TIMING } from './sweep/data/satelliteSweepTiming';
+import { createSatellitePointRenderer } from './points/render/satellitePointRenderer';
 import { createOrbitTrailRenderer } from '../../services/gpu/renderers/bodies/orbitTrailRenderer';
-import { createSatellitePropagator } from './subsystems/createSatellitePropagator';
-import { createSatellitesSlot } from './load/satellitesSlot';
-import { createSimRateTracker } from './subsystems/createSimRateTracker';
-import SatellitePropagationWorker from './load/satellitePropagation.worker?worker';
+import { createSatellitePropagator } from './sweep/subsystems/createSatellitePropagator';
+import { createSatellitesSlot } from './catalog/load/satellitesSlot';
+import { createSimRateTracker } from './sweep/subsystems/createSimRateTracker';
+import SatellitePropagationWorker from './sweep/load/satellitePropagation.worker?worker';
 
 export function create(deps: LayerCoreDeps): SatellitesRuntime {
   const renderer = createSatellitePointRenderer({

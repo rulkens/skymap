@@ -20,7 +20,7 @@ import { craftSelectionRow } from '../../../../src/layers/missions/present/craft
 import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/present/earthSceneSelectionRow';
 import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow';
 import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
-import { satellitesSelectionRow } from '../../../../src/layers/satellites/present/satellitesSelectionRow';
+import { satellitesSelectionRow } from '../../../../src/layers/satellites/focus/present/satellitesSelectionRow';
 import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';

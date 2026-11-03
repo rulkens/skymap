@@ -9,17 +9,17 @@ import { satellitesLayerSettings } from './state/slices';
 import { satellitesVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
-import { satellitesAssetRows } from './load/satellitesAssetRows';
-import { satellitesSourceCounts } from './load/satellitesSourceCounts';
+import { satellitesAssetRows } from './catalog/load/satellitesAssetRows';
+import { satellitesSourceCounts } from './catalog/load/satellitesSourceCounts';
 import { satellitesPlanner } from './frame';
-import { satellitesPass } from './passes/satellitesPass';
-import { satelliteOrbitsPass } from './passes/satelliteOrbitsPass';
-import SatellitesSectionContainer from './ui/SatellitesSectionContainer';
-import SatelliteDetailCard from './ui/SatelliteDetailCard/SatelliteDetailCard';
-import CompactSatelliteCard from './ui/CompactSatelliteCard/CompactSatelliteCard';
+import { satellitesPass } from './points/passes/satellitesPass';
+import { satelliteOrbitsPass } from './orbits/passes/satelliteOrbitsPass';
+import SatellitesSectionContainer from './controls/ui/SatellitesSectionContainer';
+import SatelliteDetailCard from './focus/ui/SatelliteDetailCard/SatelliteDetailCard';
+import CompactSatelliteCard from './focus/ui/CompactSatelliteCard/CompactSatelliteCard';
 import { SATELLITES_SOURCE_ROWS } from './sources/satellitesSourceRows';
-import { satellitesSelectionRow } from './present/satellitesSelectionRow';
-import { satellitesSearch } from './present/satellitesSearch';
+import { satellitesSelectionRow } from './focus/present/satellitesSelectionRow';
+import { satellitesSearch } from './focus/present/satellitesSearch';
 
 export const satellitesLayer = defineLayer({
   name: 'satellites',

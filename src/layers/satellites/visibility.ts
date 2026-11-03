@@ -4,7 +4,7 @@
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SATELLITE_CLASSES } from '../../data/satellites/satelliteClasses';
-import { SATELLITE_FADES as F } from './data/satelliteFades';
+import { SATELLITE_FADES as F } from './points/data/satelliteFades';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 
 export const satellitesVisibility = [
