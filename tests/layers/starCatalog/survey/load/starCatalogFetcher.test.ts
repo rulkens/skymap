@@ -6,15 +6,17 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../../src/services/loading/fetchWithProgress', () => ({
+vi.mock('../../../../../src/services/loading/fetchWithProgress', () => ({
   dataUrl: (path: string) => `/data/${path}`,
   fetchWithProgress: vi.fn(),
 }));
 
 const row = vi.hoisted(() => ({ format: 'skst' as 'skst' | 'octree' }));
-vi.mock('../../../../src/layers/starCatalog/sources/gaia-stars', async (importOriginal) => {
+vi.mock('../../../../../src/layers/starCatalog/sources/gaia-stars', async (importOriginal) => {
   const mod =
-    await importOriginal<typeof import('../../../../../src/layers/starCatalog/sources/gaia-stars')>();
+    await importOriginal<
+      typeof import('../../../../../src/layers/starCatalog/sources/gaia-stars')
+    >();
   return {
     GAIA_STARS_ENTRY: {
       ...mod.GAIA_STARS_ENTRY,

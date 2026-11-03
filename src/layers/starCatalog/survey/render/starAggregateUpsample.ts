@@ -26,8 +26,8 @@
  * the LOD-symmetry the split exists to restore.
  */
 
-import vsCode from '../../../services/gpu/shaders/starAggregateUpsample/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/starAggregateUpsample/fragment.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/starAggregateUpsample/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/starAggregateUpsample/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import type { StarAggregateUpsample } from '../@types/StarAggregateUpsample';

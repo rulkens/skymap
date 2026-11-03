@@ -37,10 +37,13 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { StarRenderer } from '../@types/StarRenderer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
-import { BODY_SPHERE_RINGS, BODY_SPHERE_SEGMENTS } from '../../../../data/bodies/sphereTessellation';
+import {
+  BODY_SPHERE_RINGS,
+  BODY_SPHERE_SEGMENTS,
+} from '../../../../data/bodies/sphereTessellation';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import vsCode from '../../../services/gpu/shaders/bodies/star/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/bodies/star/fragment.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/bodies/star/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/bodies/star/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 
 /**

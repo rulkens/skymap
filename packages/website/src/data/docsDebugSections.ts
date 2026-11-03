@@ -82,7 +82,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     heading: 'Star catalog tuning',
     shows:
       'How far away stars are still drawn one by one (Detail), how wide the glow of a distant region spreads, the exposure at the near, middle and far camera distances, and a cap on how bright a glow may be. A picker sets the size of the pool of star chunks held in memory; a size the device cannot hold is refused and the reason is shown under it.',
-    file: 'src/layers/starCatalog/ui/StarCatalogTuningSection.tsx',
+    file: 'src/layers/starCatalog/controls/ui/StarCatalogTuningSection.tsx',
   },
   {
     heading: 'Surface Tiles',

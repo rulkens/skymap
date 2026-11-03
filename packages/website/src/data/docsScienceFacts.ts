@@ -85,7 +85,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-star-card',
     text: 'The temperature on a field star’s card comes from the colour C = BP − RP by the relation of Mucciarelli, Bellazzini and Massari (2021), taken at the Sun’s metal content; the paper gives its scatter as 60 to 80 kelvin. A star brighter than absolute magnitude 4.0 and redder than 0.9 is treated as a giant, any other as a dwarf. The luminosity adds the bolometric correction of Andrae and others (2018), which we use only between 4,000 and 8,000 kelvin, and takes the Sun’s bolometric magnitude as 4.74. The radius follows from the two, in solar units.',
-    source: `${REPO_BLOB}/src/utils/astro/deriveStarProperties.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/card/utils/deriveStarProperties.ts`,
     sourceLabel: `the star estimates, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -219,7 +219,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'depart-star-dust',
     text: 'Stars are drawn as catalogued, with no correction for dust: a star behind dust is dimmer and redder than it is, and reads cooler on its card.',
-    source: `${REPO_BLOB}/src/utils/astro/starLuminositySolar.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/card/utils/starLuminositySolar.ts`,
     sourceLabel: `the star luminosity estimate, ${IN_REPO}`,
     checked: CHECKED,
   },

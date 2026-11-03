@@ -1,5 +1,5 @@
 /**
- * Tuning anchors for `utils/star/starExposureRamp.ts` — see that function's
+ * Tuning anchors for `../utils/starExposureRamp.ts` — see that function's
  * header for the ramp's design; this file is the data half.
  */
 

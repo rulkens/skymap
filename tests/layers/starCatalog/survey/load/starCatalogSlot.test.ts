@@ -16,7 +16,7 @@ import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 const fetchSpy = vi.hoisted(() => vi.fn(async () => ({ recordCount: 0, nodes: { count: 0 } })));
-vi.mock('../../../../src/layers/starCatalog/load/starCatalogFetcher', () => ({
+vi.mock('../../../../../src/layers/starCatalog/survey/load/starCatalogFetcher', () => ({
   starCatalogFetcher: fetchSpy,
 }));
 

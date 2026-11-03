@@ -18,7 +18,7 @@ import type { StarCatalogCutDrawArgs } from '../../../../../src/layers/starCatal
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 // The cut's own GPU resources are not under test; stub it to always have a list.
-vi.mock('../../../../src/services/gpu/octree/octreeCutGpu', () => ({
+vi.mock('../../../../../src/services/gpu/octree/octreeCutGpu', () => ({
   createOctreeCutGpu: () => ({
     drawBgl: {},
     upload: vi.fn(),

@@ -12,7 +12,11 @@ import type { Octree } from '../../../../@types/octree/Octree';
 import type { OctreeResidency } from '../../../../@types/octree/OctreeResidency';
 import type { StarColumns } from '../../survey/@types/StarColumns';
 import type { OctreeNodeTable } from '../../../../@types/octree/OctreeNodeTable';
-import { NO_CHUNK_REF, OCTANTS, OFFSET_FRACTION_LEVELS } from '../../../../data/octree/octreeFormat';
+import {
+  NO_CHUNK_REF,
+  OCTANTS,
+  OFFSET_FRACTION_LEVELS,
+} from '../../../../data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { octreeIndex } from '../../../../utils/octree/octreeIndex';
 import { lowerBoundNodeRow } from '../../../../utils/octree/lowerBoundNodeRow';

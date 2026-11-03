@@ -23,8 +23,8 @@ import type { OctreePoolLayout } from '../../../../@types/octree/OctreePoolLayou
 import { recordOrdinal } from '../../../../utils/octree/recordOrdinal';
 import { poolRecordIndex } from '../../../../utils/octree/poolRecordIndex';
 import { GPU_RECORD_WORDS, packStarGpuRecords } from '../utils/packStarGpuRecords';
-import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
