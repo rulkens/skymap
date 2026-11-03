@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { SampledTrack } from '../../../../../src/@types/scene/SampledTrack';
 import { hermiteTrackVelAt } from '../../../../../src/layers/missions/missionCamera/utils/hermiteTrackVelAt';
 import { hermiteTrackAt } from '../../../../../src/utils/orbit/hermiteTrackAt';
-import FLYBY from '../../../../fixtures/voyager2NeptuneFlyby';
+import FLYBY from '../../../../fixtures/voyager2NeptuneFlyby.json';
 
 const track: SampledTrack = {
   id: 'voyager2',

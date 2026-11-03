@@ -39,7 +39,6 @@ const OVERSIZED_FOLDERS: Record<string, number> = {
 const NOT_YET_REGROUPED: ReadonlySet<string> = new Set([
   'body',
   'galaxyCatalog',
-  'missions',
   'starCatalog',
 ]);
 

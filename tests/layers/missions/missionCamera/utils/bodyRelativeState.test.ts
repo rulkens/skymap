@@ -5,7 +5,7 @@ import { MISSION_EVENTS } from '../../../../../src/layers/missions/events/data/m
 import { trajectoryRegistry } from '../../../../../src/services/bodies/trajectoryRegistry';
 import { bodyRelativeState } from '../../../../../src/layers/missions/missionCamera/utils/bodyRelativeState';
 import { unixMsToJulianDays } from '../../../../../src/utils/time/unixMsToJulianDays';
-import FLYBY from '../../../../../fixtures/voyager2NeptuneFlyby';
+import FLYBY from '../../../../fixtures/voyager2NeptuneFlyby.json';
 
 const neptune = MISSION_EVENTS.find((e) => e.id === 'voyager2-neptune') as MissionEvent;
 const tc = unixMsToJulianDays(Date.parse(neptune.iso));
