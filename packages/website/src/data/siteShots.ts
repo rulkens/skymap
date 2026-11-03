@@ -407,7 +407,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     dpr: 3,
     widths: [780],
     title: 'The remote on a phone',
-    alt: 'The remote page on a phone: it reads Connected with Earth as the focused object, above a drag pad, a Home button with two buttons for the camera controls, and a search for Earth with its matches.',
+    alt: 'The remote page on a phone: it reads Connected with Earth as the focused object, above a drag pad, a Home button with two buttons for the camera controls, and tiles for Search, Tours, Exhibits, Clips, Time, Layers, Labels and Setup.',
   },
   {
     id: 'features-time-jupiter',
@@ -1443,14 +1443,14 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   {
     id: 'guide-remote',
-    link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,4.6e-16,0`,
+    link: 'tour=grandTour',
     query: 'dome',
-    settings: { ...SUBJECT, remote: true, screenHeight: 844, settleMs: 4000 },
-    size: { width: 390, height: 1739 },
+    settings: { ...SUBJECT, remote: true, settleMs: 4000 },
+    size: { width: 390, height: 844 },
     dpr: 3,
     widths: [780, 520],
-    title: 'The whole remote on a phone',
-    alt: 'The remote page on a phone, down its whole length: a line reading Connected, a drag pad, a Home button beside two buttons for the camera controls, then Search, Tours, Exhibits and clips, Time, the folded Labels and Setup.',
+    title: 'The remote on a phone during a tour',
+    alt: 'The remote page on a phone: a line reading Connected with the Milky Way as the focused object, a drag pad, a Home button beside two buttons for the camera controls, a card for the running tour The Long Way Out at beat 1 of 14 with Stop, Previous, Pause and Next, then tiles for Search, Tours, Exhibits, Clips, Time, Layers, Labels and Setup.',
   },
   // The docs' Reference pages.
   {
