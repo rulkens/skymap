@@ -1,0 +1,192 @@
+.root {
+  position: relative;
+  view-timeline: --margin-spine block;
+}
+
+/*
+ * The margin past the statements, which Claims sets three columns in and at most 34rem wide, out to the window's
+ * edge, from the first list's head to the last list's foot. It lies over the lists' rules, never their words.
+ */
+.spine {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: calc(-1 * var(--bleed));
+  bottom: 0;
+  left: calc(3 * (100% + var(--col-gap)) / 12 + 34rem + var(--col-gap));
+  display: flex;
+  flex-direction: column;
+  gap: var(--site-space-m);
+  margin: 0;
+  overflow-x: clip;
+  pointer-events: none;
+}
+
+/* A soft pool of the page's ground under the words hides a list's rule that crosses them, with no edge in the sky. */
+.caption {
+  position: relative;
+  isolation: isolate;
+  max-width: 13rem;
+  padding-block: var(--site-space-2xs);
+  pointer-events: auto;
+
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -1.5rem -3rem;
+    background: radial-gradient(closest-side, var(--color-bg) 60%, transparent);
+  }
+}
+
+.reach {
+  overflow: clip;
+}
+
+/*
+ * The picture's left edge on the margin's. No edge of its frame shows: its top and left edges are feathered, what
+ * the window leaves fades out, and so does its foot.
+ */
+.down {
+  flex: 1;
+  min-height: 0;
+  mask-image: linear-gradient(#000 calc(100% - 10rem), transparent);
+
+  & .hold {
+    height: 100%;
+  }
+
+  & picture,
+  & img {
+    display: block;
+    width: auto;
+    max-width: none;
+    height: 100%;
+  }
+
+  & img {
+    mask-image:
+      linear-gradient(to right, transparent, #000 2rem, #000 70%, transparent),
+      linear-gradient(transparent, #000 2rem);
+    mask-composite: intersect;
+  }
+}
+
+.across {
+  display: none;
+}
+
+/*
+ * The scroll draws the picture out from its top: the clip slides down while the picture inside it slides back, so
+ * the picture stands still and its lit part ends three quarters down the window until its foot is in.
+ */
+@keyframes spine-reach-down {
+  from {
+    translate: 0 -100%;
+  }
+
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes spine-hold-down {
+  from {
+    translate: 0 100%;
+  }
+
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes spine-reach-across {
+  from {
+    translate: -100% 0;
+  }
+
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes spine-hold-across {
+  from {
+    translate: 100% 0;
+  }
+
+  to {
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .down {
+      animation: spine-reach-down linear both;
+      animation-timeline: --margin-spine;
+      animation-range: cover 25vh cover calc(100% - 75vh);
+
+      & .hold {
+        animation: spine-hold-down linear both;
+        animation-timeline: --margin-spine;
+        animation-range: cover 25vh cover calc(100% - 75vh);
+      }
+    }
+
+    .across {
+      mask-image: linear-gradient(to right, #000 calc(100% - 6rem), transparent);
+      animation: spine-reach-across linear both;
+      animation-timeline: view();
+      animation-range: entry 50% cover 50%;
+
+      & .hold {
+        animation: spine-hold-across linear both;
+        animation-timeline: view();
+        animation-range: entry 50% cover 50%;
+      }
+    }
+  }
+}
+
+/* Below this the margin is too narrow for the picture to read as one: a band lies across the window over the lists. */
+@media (max-width: 1099px) {
+  .spine {
+    position: static;
+    display: flex;
+    margin: 0 calc(-1 * var(--gutter)) var(--site-space-xl);
+    overflow-x: clip;
+  }
+
+  .margin-only {
+    display: none;
+  }
+
+  .caption {
+    order: 1;
+    max-width: none;
+    padding: 0;
+    margin-inline: var(--gutter);
+
+    &::before {
+      content: none;
+    }
+  }
+
+  .down {
+    display: none;
+  }
+
+  /* The band's tip, a fifth into its frame, on the text's left edge. */
+  .across {
+    display: block;
+
+    & img {
+      display: block;
+      width: min(130%, 60rem);
+      max-width: none;
+      height: auto;
+      margin-left: calc(var(--gutter) - 0.21 * min(130%, 60rem));
+    }
+  }
+}

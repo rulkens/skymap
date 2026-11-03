@@ -23,4 +23,6 @@ export type PlanetBody = {
   readonly albedo: Vec3; // flat lit colour (no texture yet), linear RGB
   /** Apparent diameter (px) at or above which the body draws resolved; below it, a point or glint. */
   readonly resolvePx: number;
+  /** Which caption kind, and so which label checkbox, the row's name rides. */
+  readonly captionKind: 'planet' | 'smallBody';
 };

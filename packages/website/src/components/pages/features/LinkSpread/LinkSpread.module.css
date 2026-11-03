@@ -1,0 +1,138 @@
+.root {
+  composes: wrap grid from '../../../../styles/layout.module.css';
+  row-gap: var(--site-space-2xl);
+  padding-block: var(--section-space) var(--site-space-2xl);
+}
+
+.line {
+  max-width: var(--measure-lead);
+  font-size: var(--text-lead);
+}
+
+.figure {
+  margin: 0;
+}
+
+.stage {
+  position: relative;
+}
+
+/* The view has no frame: its orbits thin out into the page, so the pieces float in the same space as Saturn. */
+.view {
+  position: relative;
+
+  & picture {
+    display: block;
+    mask-image: radial-gradient(ellipse 58% 62% at 50% 50%, #000 38%, transparent 90%);
+  }
+}
+
+.piece {
+  composes: drift lean from '../../../../styles/motion.module.css';
+  position: relative;
+  z-index: 1;
+
+  & img {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
+  }
+}
+
+/* The address lies over the view's foot. */
+.bar {
+  position: relative;
+  z-index: 2;
+  margin-top: -2rem;
+}
+
+.caption {
+  margin-top: var(--site-space-s);
+}
+
+/*
+ * Wide, the words take five columns and the view the other seven; the card rises off the view's upper right and the
+ * clock floats over its lower left, each near the size it has in the app.
+ */
+@media (--wide) {
+  .root {
+    align-items: center;
+  }
+
+  .words {
+    grid-column: 1 / span 5;
+    grid-row: 1;
+  }
+
+  .figure {
+    grid-column: 6 / -1;
+    grid-row: 1;
+  }
+
+  .piece {
+    position: absolute;
+  }
+
+  /* Less the pictures' clear margins, the pieces line up with the address's ends. */
+  .card {
+    top: -5%;
+    right: -1.4%;
+    width: 36%;
+  }
+
+  .clock {
+    bottom: 14%;
+    left: -3%;
+    width: 50%;
+  }
+
+  /* The card, the nearest, leans furthest from the pointer. */
+  .clock {
+    --depth: 1.25rem;
+  }
+
+  .card {
+    --depth: 2.5rem;
+  }
+}
+
+/*
+ * Narrow, the view takes the window's width, the card rises off its lower right, and the clock floats over the
+ * card's foot on the left.
+ */
+@media (--narrow) {
+  .stage {
+    display: grid;
+    margin-inline: calc(-1 * var(--gutter));
+  }
+
+  .card {
+    grid-row: 2;
+    justify-self: end;
+    width: 50%;
+    margin: -5rem calc(var(--gutter) - 2%) 0 0;
+  }
+
+  .clock {
+    grid-row: 3;
+    justify-self: start;
+    width: 80%;
+    margin: -2.5rem 0 0 calc(var(--gutter) - 4.8%);
+  }
+
+  .bar {
+    margin-top: var(--site-space-m);
+  }
+}
+
+/* Wide, the pieces are nearer than the view: as the page scrolls they move against it, the card the most. */
+@media (--wide) {
+  .clock {
+    --drift: 1.5rem;
+  }
+
+  .card {
+    --drift: 3rem;
+  }
+}

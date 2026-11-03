@@ -13,3 +13,8 @@ const structure = (await getEntry('pageStructures', 'domes'))!.data;
 <Base {...entry.data} {...structure} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Domes and museums', path: '/domes/' }])]}>
   <Content />
 </Base>
+
+<script>
+  import '../components/pages/domes/DiscBand/domeTurn.client.ts';
+  import '../components/pages/domes/Exhibit/exhibitChooser.client.ts';
+</script>

@@ -41,7 +41,7 @@
 }
 
 /* Named spans for children that come from a slot: equal columns by their count. */
-@media (min-width: 901px) {
+@media (--wide) {
   .grid.halves > * {
     grid-column: span 6;
     --cols: 6;

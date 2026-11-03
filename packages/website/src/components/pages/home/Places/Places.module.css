@@ -1,7 +1,7 @@
-/* Half a section gap: this continues the lead above it. */
+/* A whole section gap: the flight's full-bleed stage ends on a hard edge and needs the room. */
 .root {
   composes: wrap from '../../../../styles/layout.module.css';
-  padding-top: calc(var(--section-space) / 2);
+  padding-top: var(--section-space);
 }
 
 .head {
@@ -9,8 +9,8 @@
   flex-wrap: wrap;
   align-items: end;
   justify-content: space-between;
-  gap: 1rem 2rem;
-  margin-bottom: 2.5rem;
+  gap: var(--site-space-s) var(--site-space-l);
+  margin-bottom: var(--site-space-xl);
 
   & h2,
   & p {
@@ -164,7 +164,7 @@
   top: 50%;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: var(--site-space-3xs);
   width: calc((var(--room) + 5) * var(--u));
   transform: translateY(-50%);
 
@@ -204,7 +204,7 @@
   & svg {
     width: 1rem;
     height: 1rem;
-    margin-left: 0.25rem;
+    margin-left: var(--site-space-3xs);
     stroke: var(--site-text-dim);
     transition: stroke 0.25s ease;
   }
@@ -225,7 +225,7 @@
   color: var(--site-text-dim);
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .field {
     max-width: none;
     aspect-ratio: 1000 / var(--wide-height);

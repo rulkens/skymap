@@ -6,25 +6,13 @@
  * (`mode` stays 'off'). One film plays at a time: `current` is its place.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { RefObject } from 'react';
 
+import type { PlaceFilms } from '../../../../@types/PlaceFilms';
 import { lessWanted } from '../../../../utils/lessWanted.ts';
-
-const DWELL_MS = 350;
-
-type Mode = 'off' | 'hover' | 'band';
-
-type PlaceFilms = {
-  mode: Mode;
-  current: string | null;
-  play: (id: string) => void;
-  stop: (id: string) => void;
-  /** Each disc's screen, by place, for the band a no-hover screen plays from. */
-  screens: RefObject<Map<string, HTMLElement>>;
-};
+import { DWELL_MS } from './usePlaceFilms.constants.ts';
 
 export function usePlaceFilms(ids: readonly string[]): PlaceFilms {
-  const [mode, setMode] = useState<Mode>('off');
+  const [mode, setMode] = useState<PlaceFilms['mode']>('off');
   const [current, setCurrent] = useState<string | null>(null);
   const screens = useRef(new Map<string, HTMLElement>());
   const playing = useRef<string | null>(null);

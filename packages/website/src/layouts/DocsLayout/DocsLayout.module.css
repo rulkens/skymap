@@ -7,27 +7,27 @@
   --docs-bar: 0rem;
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     --docs-bar: 3.75rem;
   }
 }
 
 .page {
-  padding-block: 2rem 5rem;
+  padding-block: var(--site-space-l) var(--site-space-3xl);
 }
 
 .opening {
-  margin-bottom: 2rem;
+  margin-bottom: var(--site-space-l);
 }
 
 .where {
   composes: small from '../../styles/type.module.css';
   composes: tap-links from '../../styles/links.module.css';
   display: flex;
-  gap: 0.5rem;
+  gap: var(--site-space-2xs);
   max-width: none;
-  margin: 0 0 1.25rem;
+  margin: 0 0 var(--site-space-m);
   color: var(--site-text-faint);
 }
 
@@ -47,7 +47,7 @@
 
 /* A reading page's title: the largest type on it, and well under a landing page's, whose title has a picture to hold. */
 .opening h1 {
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--site-space-m);
   font-size: var(--text-doc-title);
 }
 
@@ -64,13 +64,13 @@
 }
 
 .footer {
-  margin-top: 4.5rem;
+  margin-top: var(--site-space-3xl);
 }
 
 .turns {
   composes: grid from '../../styles/layout.module.css';
-  row-gap: 1.5rem;
-  padding-top: 2rem;
+  row-gap: var(--site-space-m);
+  padding-top: var(--site-space-l);
   border-top: 1px solid var(--border-divider);
 }
 
@@ -100,7 +100,7 @@
 }
 
 .footer .links {
-  margin-block: 2rem 2.5rem;
+  margin-block: var(--site-space-l) var(--site-space-xl);
 }
 
 .toc {
@@ -109,15 +109,15 @@
 }
 
 .tocLabel {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--site-space-2xs);
   color: var(--site-text-dim);
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .page {
     grid-column: 4 / span 7;
     --cols: 7;
-    padding-block: 2.5rem 7.5rem;
+    padding-block: var(--site-space-xl) 7.5rem;
   }
 
   .turn {
@@ -131,14 +131,14 @@
 }
 
 /* Where the window would set the line, the text's own measure does (DocBody has the same). */
-@media (max-width: 900px) {
+@media (--narrow) {
   .opening .lead {
     max-width: 35rem;
   }
 }
 
 /* Room for the third part: the text gives up a column and the page's headings stand beside it. */
-@media (min-width: 1200px) {
+@media (--broad) {
   .page {
     grid-column: 4 / span 6;
     --cols: 6;
@@ -152,7 +152,7 @@
     top: var(--nav-height);
     align-self: start;
     max-height: calc(100svh - var(--nav-height));
-    padding-block: 2.625rem 3rem;
+    padding-block: var(--site-space-xl) var(--site-space-2xl);
     /* Room for the mark of the section being read, which hangs left of the text edge. */
     margin-left: -1rem;
     padding-left: 1rem;

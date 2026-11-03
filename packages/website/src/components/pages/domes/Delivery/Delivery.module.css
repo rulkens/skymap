@@ -1,0 +1,17 @@
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  row-gap: 0;
+}
+
+@media (--wide) {
+  .root > * {
+    grid-column: span 6;
+    --cols: 6;
+  }
+}
+
+@media (--narrow) {
+  .root > * + * {
+    margin-top: var(--site-space-3xl);
+  }
+}

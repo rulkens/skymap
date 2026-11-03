@@ -7,7 +7,7 @@
 .byHand {
   composes: small from '../../../styles/type.module.css';
   max-width: var(--doc-measure);
-  margin: 0.25rem 0 0.5rem;
+  margin: var(--site-space-3xs) 0 var(--site-space-2xs);
   color: var(--site-text-dim);
 }
 
@@ -21,8 +21,8 @@
   composes: tap-links from '../../../styles/links.module.css';
   display: flex;
   flex-wrap: wrap;
-  gap: 0 1.5rem;
-  margin-top: 0.5rem;
+  gap: 0 var(--site-space-m);
+  margin-top: var(--site-space-2xs);
 }
 
 /* The developer's part of the page: closed until asked for. The ring fills while it is open (styles/ring.module.css). */
@@ -30,13 +30,13 @@
   margin: 0 0 var(--stack);
 
   & > :not(summary) {
-    margin-top: 0.5rem;
+    margin-top: var(--site-space-2xs);
   }
 
   /* One step more specific than the ring's own colour. */
   & .summaryRing {
     max-width: var(--doc-measure);
-    margin: 0.25rem 0 0.5rem;
+    margin: var(--site-space-3xs) 0 var(--site-space-2xs);
     color: var(--site-text-dim);
   }
 }

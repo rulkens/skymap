@@ -1,0 +1,261 @@
+/* The two parameters' colours: `focus` a clear blue, the clock `t` a planet's gold. */
+.root {
+  composes: section from '../../../../styles/layout.module.css';
+  --focus-ink: var(--site-accent-earth);
+  --clock-ink: var(--site-accent-planet);
+}
+
+.head {
+  composes: wrap from '../../../../styles/layout.module.css';
+}
+
+.head p {
+  max-width: var(--measure-lead);
+  margin-bottom: 0;
+  font-size: var(--text-lead);
+}
+
+.window {
+  position: relative;
+  margin-top: var(--site-space-2xl);
+}
+
+/* The tabs and the bar, the one raised surface: lighter than the ground, over the top of the view it opens. */
+.chrome {
+  position: relative;
+  z-index: 2;
+  width: min(58rem, calc(100% - 2 * var(--gutter)));
+  margin: 0 auto -1.75rem;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--site-space-3xs);
+  padding-inline: var(--site-space-2xs);
+}
+
+/* The current tab is the bar's own surface, open into it; the others are words on the page. */
+.tab {
+  flex: 0 1 9rem;
+  min-width: 0;
+  min-height: 2.25rem;
+  margin-bottom: -1px;
+  padding: 0 var(--site-space-s);
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: none;
+  font: var(--weight-small) 0.875rem / 1 var(--font-body);
+  color: var(--site-text-faint);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: var(--transition-color);
+
+  &[aria-pressed='true'] {
+    position: relative;
+    z-index: 1;
+    border-color: var(--site-line);
+    background: rgb(14 17 26);
+    color: var(--color-fg);
+    cursor: default;
+  }
+}
+
+@media (hover: hover) {
+  .tab:not([aria-pressed='true']):hover {
+    color: var(--site-text-muted);
+  }
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--site-line);
+  border-radius: 0.5rem;
+  background: rgb(14 17 26 / 0.86);
+  box-shadow: 0 1.25rem 3rem rgb(0 0 0 / 0.7);
+  backdrop-filter: blur(12px);
+  transition: border-color var(--duration-base) var(--ease-standard);
+
+  &:hover,
+  &:focus-within {
+    border-color: var(--site-line-strong);
+  }
+}
+
+.address {
+  flex: 1;
+  min-width: 0;
+  min-height: 3.5rem;
+  padding: var(--site-space-s) var(--site-space-m);
+  font: 400 var(--text-small) / 1.5 var(--font-family-mono);
+  color: var(--site-text-faint);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.host {
+  color: var(--site-text-faint);
+}
+
+/* A parameter and the part about it share a colour: its words in the bar, the part's name and rule. */
+.focus {
+  --ink: var(--focus-ink);
+}
+
+.clock {
+  --ink: var(--clock-ink);
+}
+
+.address .focus,
+.address .clock {
+  color: var(--ink);
+}
+
+/* The view across the window, dissolving into the page at its sides and over its foot, where the words stand. */
+.stage {
+  position: relative;
+  height: min(56.25vw, 78svh);
+  overflow: hidden;
+  mask-image:
+    linear-gradient(180deg, #000 52%, rgb(0 0 0 / 0.45) 72%, rgb(0 0 0 / 0.12) 86%, rgb(0 0 0 / 0)),
+    linear-gradient(90deg, rgb(0 0 0 / 0), #000 7%, #000 93%, rgb(0 0 0 / 0));
+  mask-composite: intersect;
+}
+
+/* As Stories' views: the next arrives from a touch larger, the last leaves faster. */
+.layer {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity var(--duration-reveal) var(--ease-enter),
+    scale calc(var(--duration-reveal) + 50ms) var(--ease-enter);
+
+  & picture {
+    display: block;
+    height: 100%;
+  }
+
+  & img {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.away {
+  opacity: 0;
+  scale: 1.04;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-base) var(--ease-leave),
+    scale 0s linear var(--duration-base),
+    visibility 0s linear var(--duration-base);
+}
+
+.cold {
+  display: none;
+}
+
+/* The picture's label, the two parts and the way in, standing on the picture's foot. */
+.foot {
+  composes: wrap grid from '../../../../styles/layout.module.css';
+  position: relative;
+  z-index: 1;
+  row-gap: var(--site-space-l);
+  margin-top: -11rem;
+}
+
+.labels {
+  composes: view-words from '../../../../styles/picture.module.css';
+}
+
+/* A part stands under its parameter's name, on a rule in its colour. */
+.part {
+  padding-top: var(--site-space-s);
+  border-top: 1px solid var(--ink);
+
+  & code {
+    display: block;
+    margin-bottom: var(--site-space-2xs);
+    font: 400 var(--text-small) / 1.5 var(--font-family-mono);
+    color: var(--ink);
+  }
+
+  & h3 {
+    margin-bottom: var(--site-space-2xs);
+  }
+
+  & p {
+    margin-bottom: 0;
+    color: var(--site-text-muted);
+  }
+}
+
+@media (--wide) {
+  .part:nth-child(2) {
+    grid-column: 1 / span 4;
+    grid-row: 1;
+  }
+
+  .part:nth-child(3) {
+    grid-column: 5 / span 4;
+    grid-row: 1;
+  }
+
+  /* The picture's label at the top of the last columns, the way in at their foot, on the parts' last line. */
+  .labels {
+    grid-column: 9 / -1;
+    grid-row: 1;
+  }
+
+  .open {
+    grid-column: 10 / -1;
+    grid-row: 1;
+    align-self: end;
+    justify-self: end;
+  }
+}
+
+@media (--narrow) {
+  .window {
+    margin-top: var(--site-space-l);
+  }
+
+  .chrome {
+    margin-bottom: -1.25rem;
+  }
+
+  .tabs {
+    padding-inline: var(--site-space-3xs);
+  }
+
+  .tab {
+    flex: 1 1 0;
+    padding: 0 var(--site-space-xs);
+  }
+
+  .address {
+    padding: var(--site-space-xs);
+    font-size: 0.875rem;
+  }
+
+  .stage {
+    height: 75vw;
+  }
+
+  .foot {
+    margin-top: -3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer,
+  .away {
+    transition: none;
+  }
+}
