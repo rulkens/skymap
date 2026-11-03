@@ -4,7 +4,7 @@ import { structureSelectionRow } from '../../src/layers/structure/picking/presen
 import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import { galaxyRecordBridge } from '../../src/layers/galaxyCatalog/present/galaxyRecordBridge';
 import { starCatalogSelectionRow } from '../../src/layers/starCatalog/present/starCatalogSelectionRow';
-import { milkyWaySelectionRow } from '../../src/layers/milkyWay/present/milkyWaySelectionRow';
+import { milkyWaySelectionRow } from '../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import { galaxyRecordsOver } from './galaxyRecordsOver';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';

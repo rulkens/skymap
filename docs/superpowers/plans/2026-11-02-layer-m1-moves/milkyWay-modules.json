@@ -1,0 +1,134 @@
+[
+  {
+    "from": "src/layers/milkyWay/@types/MilkyWayCloud.d.ts",
+    "to": "src/layers/milkyWay/cloud/@types/MilkyWayCloud.d.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/@types/MilkyWayCloudBuffers.d.ts",
+    "to": "src/layers/milkyWay/cloud/@types/MilkyWayCloudBuffers.d.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/@types/MilkyWayCloudDrawArgs.d.ts",
+    "to": "src/layers/milkyWay/cloud/@types/MilkyWayCloudDrawArgs.d.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/@types/MilkyWayCloudRenderer.d.ts",
+    "to": "src/layers/milkyWay/cloud/@types/MilkyWayCloudRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/passes/milkyWayAggregatePass.ts",
+    "to": "src/layers/milkyWay/cloud/passes/milkyWayAggregatePass.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/passes/milkyWayPass.ts",
+    "to": "src/layers/milkyWay/cloud/passes/milkyWayPass.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/passes/milkyWayUpsamplePass.ts",
+    "to": "src/layers/milkyWay/cloud/passes/milkyWayUpsamplePass.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/present/milkyWayCloudLiveness.ts",
+    "to": "src/layers/milkyWay/cloud/present/milkyWayCloudLiveness.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/present/milkyWayFadeAlpha.ts",
+    "to": "src/layers/milkyWay/cloud/present/milkyWayFadeAlpha.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/render/milkyWayAggregateTarget.ts",
+    "to": "src/layers/milkyWay/cloud/render/milkyWayAggregateTarget.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/render/milkyWayCamPosModel.ts",
+    "to": "src/layers/milkyWay/cloud/render/milkyWayCamPosModel.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/render/milkyWayCloud.ts",
+    "to": "src/layers/milkyWay/cloud/render/milkyWayCloud.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/render/milkyWayCloudRenderer.ts",
+    "to": "src/layers/milkyWay/cloud/render/milkyWayCloudRenderer.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/render/milkyWayModelCached.ts",
+    "to": "src/layers/milkyWay/cloud/render/milkyWayModelCached.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/render/milkyWayModelMatrix.ts",
+    "to": "src/layers/milkyWay/cloud/render/milkyWayModelMatrix.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/@types/MilkyWayPickRenderer.d.ts",
+    "to": "src/layers/milkyWay/picking/@types/MilkyWayPickRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/data/milkyWayPickMinSizePx.ts",
+    "to": "src/layers/milkyWay/picking/data/milkyWayPickMinSizePx.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/present/milkyWayPickId.ts",
+    "to": "src/layers/milkyWay/picking/present/milkyWayPickId.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/render/milkyWayPickRenderer.ts",
+    "to": "src/layers/milkyWay/picking/render/milkyWayPickRenderer.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/data/milkyWayFacts.ts",
+    "to": "src/layers/milkyWay/card/data/milkyWayFacts.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/present/milkyWayLabelStyle.ts",
+    "to": "src/layers/milkyWay/card/present/milkyWayLabelStyle.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/present/milkyWaySelectionRow.ts",
+    "to": "src/layers/milkyWay/card/present/milkyWaySelectionRow.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/present/produceMilkyWayLabel.ts",
+    "to": "src/layers/milkyWay/card/present/produceMilkyWayLabel.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/ui/CompactMilkyWayCard/CompactMilkyWayCard.tsx",
+    "to": "src/layers/milkyWay/card/ui/CompactMilkyWayCard/CompactMilkyWayCard.tsx"
+  },
+  {
+    "from": "src/layers/milkyWay/ui/MilkyWayDetailCard/MilkyWayDetailCard.tsx",
+    "to": "src/layers/milkyWay/card/ui/MilkyWayDetailCard/MilkyWayDetailCard.tsx"
+  },
+  {
+    "from": "src/layers/milkyWay/utils/astro/galacticYearMyr.ts",
+    "to": "src/layers/milkyWay/card/utils/galacticYearMyr.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/@types/MilkyWaySliderField.d.ts",
+    "to": "src/layers/milkyWay/tuning/@types/MilkyWaySliderField.d.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/@types/MilkyWaySliderKey.d.ts",
+    "to": "src/layers/milkyWay/tuning/@types/MilkyWaySliderKey.d.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/data/milkyWaySliderFields.ts",
+    "to": "src/layers/milkyWay/tuning/data/milkyWaySliderFields.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/sagas/reseedMilkyWayStarCountSaga.ts",
+    "to": "src/layers/milkyWay/tuning/sagas/reseedMilkyWayStarCountSaga.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/ui/formatMilkyWayTuningDefaults.ts",
+    "to": "src/layers/milkyWay/tuning/ui/formatMilkyWayTuningDefaults.ts"
+  },
+  {
+    "from": "src/layers/milkyWay/ui/MilkyWayTuningSection.tsx",
+    "to": "src/layers/milkyWay/tuning/ui/MilkyWayTuningSection.tsx"
+  },
+  {
+    "from": "src/layers/milkyWay/ui/MilkyWayTuningSectionContainer.tsx",
+    "to": "src/layers/milkyWay/tuning/ui/MilkyWayTuningSectionContainer.tsx"
+  }
+]

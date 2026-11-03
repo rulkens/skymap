@@ -11,7 +11,7 @@ import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { structurePickId } from '../../../../src/layers/structure/picking/utils/structurePickId';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { milkyWaySelectionRow } from '../../../../src/layers/milkyWay/present/milkyWaySelectionRow';
+import { milkyWaySelectionRow } from '../../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow';
 import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
 import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/present/starCatalogSelectionRow';
