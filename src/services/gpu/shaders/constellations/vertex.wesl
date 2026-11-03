@@ -43,8 +43,6 @@ import package::constellations::io::Uniforms;
 import package::constellations::io::PerVertex;
 import package::constellations::io::VSOut;
 import package::lib::segmentQuad::expandSegmentQuad;
-import package::lib::segmentQuad::segmentScreenTangent;
-import package::lib::camera::worldToClip;
 import package::lib::starPhotometry::STAR_GLOW_MIN_PX;
 import package::lib::starPhotometry::STAR_GLOW_MAX_PX;
 
@@ -73,11 +71,11 @@ fn vs(in : PerVertex) -> VSOut {
   //    half-width, so it passes straight through. 'base.w' is the SELECTED
   //    endpoint's w (the off-screen point's for a corner behind the eye), which
   //    the gap step below re-uses to convert its NDC offset back to clip space.
-  let base = expandSegmentQuad(u.cam, in.aWorld, in.bWorld, in.uv, u.halfWidthPx).clip;
+  let q = expandSegmentQuad(u.cam, in.aWorld, in.bWorld, in.uv, u.halfWidthPx);
+  let base = q.clip;
 
-  // 2. Screen-space tangent, from the helper's own homogeneous form, so it
-  //    holds with an endpoint behind the eye (a divided tangent flips there).
-  let tangent = segmentScreenTangent(worldToClip(u.cam, in.aWorld), worldToClip(u.cam, in.bWorld));
+  // 2. The helper's screen tangent, valid with an endpoint behind the eye.
+  let tangent = q.tangent;
 
   // This corner's endpoint, by the SAME public convention the helper documents
   // (corner.x >0.5 -> b). Pull it toward the OTHER end: endpoint a moves +tangent

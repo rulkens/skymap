@@ -16,25 +16,14 @@
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
 
-// segmentHomogeneousTangent — the unnormalised screen tangent H from a toward
-// b, for any signs of the two clip w: d(x/w)/dt at an endpoint is
-// (xb*wa - xa*wb) over a positive square, so it needs no divide.
-fn segmentHomogeneousTangent(aClip: vec4<f32>, bClip: vec4<f32>) -> vec2<f32> {
-  return bClip.xy * aClip.w - aClip.xy * bClip.w;
-}
-
-// segmentScreenTangent — H as a unit NDC direction; with both endpoints in
-// front it equals normalize(bNdc - aNdc).
-fn segmentScreenTangent(aClip: vec4<f32>, bClip: vec4<f32>) -> vec2<f32> {
-  return normalize(segmentHomogeneousTangent(aClip, bClip));
-}
-
-// SegmentCorner — a corner's clip-space vertex and its parameter t along the
-// segment (0 at a, 1 at b). A caller carrying a world attribute per corner
-// writes mix(a, b, t): t is a world parameter, never a screen one.
+// SegmentCorner — a corner's clip-space vertex, its parameter t along the
+// segment (0 at a, 1 at b) and the segment's unit screen tangent. A caller
+// carrying a world attribute per corner writes mix(a, b, t): t is a world
+// parameter, never a screen one.
 struct SegmentCorner {
   clip: vec4<f32>,
   t: f32,
+  tangent: vec2<f32>,
 }
 
 // expandSegmentQuad — expand one instanced-quad corner into a clip-space
@@ -48,9 +37,10 @@ struct SegmentCorner {
 // halfWidthPx : half the line width in CSS pixels. Callers holding a FULL
 //               pixel width pass 'width * 0.5'.
 //
-// Returns the offset clip-space vertex and its t. A corner in front is its
-// endpoint's, z and w untouched. A segment wholly behind the eye returns a zero
-// clip: a degenerate, culled quad.
+// Returns the offset clip-space vertex, its t and the tangent. A corner in
+// front is its endpoint's, z and w untouched. A segment wholly behind the eye,
+// or one with no screen direction (zero length, or end-on), returns all zeros:
+// a degenerate, culled quad.
 fn expandSegmentQuad(
   cam: CameraUniforms,
   aWorld: vec3<f32>,
@@ -63,7 +53,7 @@ fn expandSegmentQuad(
   let aFront = aRaw.w > 0.0;
   let bFront = bRaw.w > 0.0;
   if (!aFront && !bFront) {
-    return SegmentCorner(vec4<f32>(0.0), 0.0);
+    return SegmentCorner(vec4<f32>(0.0), 0.0, vec2<f32>(0.0));
   }
   // Work at unit scale: H multiplies two clip coordinates, which underflows f32
   // on a slab whose clip is in Mpc, metres from the eye. Clip is homogeneous
@@ -73,8 +63,14 @@ fn expandSegmentQuad(
   let aClip = aRaw / k;
   let bClip = bRaw / k;
 
-  let h = segmentHomogeneousTangent(aClip, bClip);
+  // H, the screen tangent from a toward b for any signs of the two w:
+  // d(x/w)/dt at an endpoint is (xb*wa - xa*wb) over a positive square, so it
+  // needs no divide; with both in front it is parallel to bNdc - aNdc.
+  let h = bClip.xy * aClip.w - aClip.xy * bClip.w;
   let hLen = length(h);
+  if (!(hLen > 0.0)) {
+    return SegmentCorner(vec4<f32>(0.0), 0.0, vec2<f32>(0.0));
+  }
   let tangent = h / hLen;
   let perp = vec2<f32>(-tangent.y, tangent.x);
 
@@ -104,5 +100,5 @@ fn expandSegmentQuad(
   // Half-width in pixels -> NDC: one NDC unit is half the viewport in pixels.
   // corner.y in [0,1] maps to the +/- side; re-multiplying by w returns to clip.
   let offsetNdc = perp * (halfWidthPx / (cam.viewportPx * 0.5)) * (corner.y * 2.0 - 1.0);
-  return SegmentCorner(vec4<f32>(clip.xy + offsetNdc * clip.w, clip.z, clip.w) * k, t);
+  return SegmentCorner(vec4<f32>(clip.xy + offsetNdc * clip.w, clip.z, clip.w) * k, t, tangent);
 }
