@@ -1,12 +1,11 @@
 .root {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-4);
 }
 
 /* The glyph above its label; 52 px, taller than the 44 px floor because a thumb finds these in the dark. */
 .tile {
-  composes: button from '../remoteControls.module.css';
   display: flex;
   flex-direction: column;
   align-items: center;

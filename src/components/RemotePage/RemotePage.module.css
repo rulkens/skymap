@@ -4,6 +4,8 @@
   margin: 0 auto;
   padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
   padding-bottom: max(var(--space-8), env(safe-area-inset-bottom, 0px));
+  /* The show's transport is glanced at in the dark, so it is taller than --touch-target. */
+  --show-target: 56px;
   color-scheme: dark;
 }
 

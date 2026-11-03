@@ -23,6 +23,7 @@ import SetupSection from './SetupSection/SetupSection';
 import RemoteIcon from './RemoteIcon/RemoteIcon';
 import RemoteSheet from './RemoteSheet/RemoteSheet';
 import LibraryTiles from './LibraryTiles/LibraryTiles';
+import NowCard from './NowCard/NowCard';
 import SchemeSwitch from './SchemeSwitch/SchemeSwitch';
 import type { RemoteNavAxis } from '../../@types/remote/RemoteNavAxis';
 import type { RemoteSheetId } from '../../@types/remote/RemoteSheetId';
@@ -118,6 +119,7 @@ function RemotePage() {
       {status && (
         <div className={styles.deck} inert={link !== 'connected'}>
           <div className={styles.library} inert={openSheet !== null}>
+            <NowCard takeover={takeover} menu={menu} time={status.time} onCommand={sendCommand} />
             <LibraryTiles
               onOpen={(id, tile) => {
                 openerRef.current = tile;

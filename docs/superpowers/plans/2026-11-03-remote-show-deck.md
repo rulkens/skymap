@@ -387,13 +387,13 @@ States (spec, "Now card states"):
 - Glare: text at rest `--color-fg-base`; only the title, the primary and a running row reach `--color-fg`.
 
 Tests first:
-- [ ] Rewrite "a status renders the running tour and its controls" as
+- [x] Rewrite "a status renders the running tour and its controls" as
       `it('a running tour shows its label and beat, and Pause sends tourTogglePause')`.
-- [ ] `it('Stop on a running exhibit sends exitTakeover')`.
-- [ ] `it('Pause time sends timePause, and Play time timeResume when paused')`.
-- [ ] Implement; `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage`.
-- [ ] Shoot 390×844 with a tour running and look at it beside `index.png`.
-- [ ] Commit: "Remote deck: the now card names what runs and carries its controls, with the clock's row."
+- [x] `it('Stop on a running exhibit sends exitTakeover')`.
+- [x] `it('Pause time sends timePause, and Play time timeResume when paused')`.
+- [x] Implement; `npm run typecheck:fast`; `npx vitest run tests/components/RemotePage`.
+- [x] Shoot 390×844 with a tour running and look at it beside `index.png`.
+- [x] Commit: "Remote deck: the now card names what runs and carries its controls, with the clock's row."
 
 ### Task 8: The sheet bodies
 

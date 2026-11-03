@@ -1,0 +1,113 @@
+/* Glare: text at rest is --color-fg-base; only the title and the primary reach --color-fg. */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl);
+  color: var(--color-fg-base);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-fg-tertiary);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.stop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+  padding: 0 var(--space-5);
+  color: var(--color-fg-base);
+  font-size: var(--font-size-lg);
+}
+
+/* Two lines at most, then cut: a long tour name must not push the controls off the screen. */
+.title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-family-display);
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--color-fg);
+}
+
+.idle {
+  margin: 0;
+  color: var(--color-fg-tertiary);
+}
+
+.ticks {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: var(--space-4);
+}
+
+.ticks span {
+  flex: 1;
+  height: 3px;
+  border-radius: 1px;
+  background: var(--border-control);
+}
+
+.ticks .done {
+  background: color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+
+.ticks .current {
+  height: var(--space-4);
+  background: var(--color-accent);
+}
+
+.transport {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 1fr;
+  gap: var(--space-4);
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--show-target);
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-fg-base);
+  text-align: center;
+}
+
+.step svg {
+  width: 24px;
+  height: 24px;
+}
+
+.primary {
+  background: var(--surface-control-active);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  color: var(--color-fg);
+}
+
+.time {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-divider);
+}

@@ -84,6 +84,8 @@ const sendStatus = (
       }),
     ),
   );
+const sendWith = (patch: Partial<DomeStatus>): void =>
+  act(() => deliver(JSON.stringify({ v, kind: 'status', status: { ...status, ...patch } })));
 const openSheet = (name: string, scope: Pick<typeof screen, 'getByRole'> = screen): void =>
   void fireEvent.click(scope.getByRole('button', { name }));
 const closeSheet = (): void => {
@@ -95,13 +97,46 @@ const messages = (kind: string): Record<string, unknown>[] =>
 const commands = (): unknown[] => messages('command').map((m) => m.command);
 
 describe('RemotePage', () => {
-  it('a status renders the running tour and its controls', () => {
+  it('a running tour shows its label and beat, and Pause sends tourTogglePause', () => {
     render(<RemotePage />);
-    sendStatus();
-    openSheet('Tours');
-    expect(screen.getByText(/beat 3 of 9, paused/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+    sendMenu();
+    sendWith({
+      takeover: { kind: 'tour', id: 'grandTour', beatIndex: 5, beatCount: 14, paused: false },
+    });
+    expect(screen.getByRole('heading', { name: 'The Long Way Out' })).toBeTruthy();
+    expect(screen.getByText('Tour, beat 6 of 14')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
     expect(commands()).toContainEqual({ name: 'tourTogglePause', payload: null });
+    sendStatus();
+    expect(screen.getByText('Tour, beat 3 of 9, paused')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeTruthy();
+  });
+
+  it('Stop on a running exhibit sends exitTakeover', () => {
+    render(<RemotePage />);
+    sendMenu();
+    sendWith({ takeover: { kind: 'exhibit', id: 'cosmicWeb' } });
+    expect(screen.getByRole('heading', { name: 'Cosmic Web' })).toBeTruthy();
+    expect(screen.getByText('Exhibit')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Stop exhibit' }));
+    expect(commands()).toContainEqual({ name: 'exitTakeover', payload: null });
+  });
+
+  it('a running item the menu lacks is titled by its kind', () => {
+    render(<RemotePage />);
+    sendWith({ takeover: { kind: 'clip', id: 'flyout' } });
+    expect(screen.getByRole('heading', { name: 'Clip' })).toBeTruthy();
+  });
+
+  it('Pause time sends timePause, and Play time timeResume when paused', () => {
+    render(<RemotePage />);
+    sendWith({ takeover: null });
+    expect(screen.getByText('Nothing running')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Pause time' }));
+    expect(commands()).toContainEqual({ name: 'timePause', payload: null });
+    sendWith({ takeover: null, time: { ...status.time, paused: true } });
+    fireEvent.click(screen.getByRole('button', { name: 'Play time' }));
+    expect(commands()).toContainEqual({ name: 'timeResume', payload: null });
   });
 
   it('the header names the focus the dome reports', () => {

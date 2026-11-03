@@ -1,15 +1,13 @@
-/** TimeSection — pause, speed, direction, a date to jump to, and back to live. */
+/** TimeSection — the clock's row, then speed, direction, a date to jump to, and back to live. */
 
 import { RATE_LADDER } from '../../../data/time/rateLadder';
-import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
+import { simDaysToIsoDate } from '../../../utils/time/simDaysToIsoDate';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
+import TimeRow from '../TimeRow/TimeRow';
 import type { DomeStatus } from '../../../@types/remote/DomeStatus';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import controls from '../remoteControls.module.css';
 import styles from './TimeSection.module.css';
-
-const dateOf = (simDays: number): string =>
-  new Date(julianDaysToUnixMs(simDays)).toISOString().slice(0, 10);
 
 export type TimeSectionProps = {
   time: DomeStatus['time'];
@@ -27,22 +25,8 @@ function TimeSection({ time, onCommand }: TimeSectionProps) {
   return (
     <section className={controls.section}>
       <h2 className={controls.heading}>Time</h2>
-      <p role="status" className={controls.status}>
-        {time.mode === 'live' ? 'Live' : dateOf(time.simDays)}
-        {time.paused
-          ? ', paused'
-          : `, ${time.direction === 1 ? '' : 'back '}${RATE_LADDER[time.rateIndex]?.label ?? ''}`}
-      </p>
+      <TimeRow time={time} onCommand={onCommand} />
       <div className={controls.row}>
-        <button
-          type="button"
-          className={controls.button}
-          onClick={() =>
-            onCommand({ name: time.paused ? 'timeResume' : 'timePause', payload: null })
-          }
-        >
-          {time.paused ? 'Play' : 'Pause'}
-        </button>
         <button
           type="button"
           className={controls.button}
@@ -86,7 +70,7 @@ function TimeSection({ time, onCommand }: TimeSectionProps) {
         <input
           type="date"
           className={styles.input}
-          value={dateOf(time.simDays)}
+          value={simDaysToIsoDate(time.simDays)}
           onChange={(e) => pickDate(e.target.value)}
         />
       </label>

@@ -11,6 +11,7 @@ import RemoteIcon from '../RemoteIcon/RemoteIcon';
 import { REMOTE_SHEETS } from '../../../data/remote/remoteSheets';
 import { SHEET_LEAVE_MS } from '../../../data/remote/sheetLeaveMs';
 import type { RemoteSheetId } from '../../../@types/remote/RemoteSheetId';
+import controls from '../remoteControls.module.css';
 import styles from './RemoteSheet.module.css';
 
 export type RemoteSheetProps = {
@@ -60,7 +61,11 @@ function RemoteSheet({ id, onClose, initialFocus = 'heading', children }: Remote
         <h2 id={headingId} ref={headingRef} tabIndex={-1} className={styles.title}>
           {sheet.label}
         </h2>
-        <button type="button" className={styles.close} onClick={() => setLeaving(true)}>
+        <button
+          type="button"
+          className={cx(controls.button, styles.close)}
+          onClick={() => setLeaving(true)}
+        >
           <RemoteIcon glyph="close" />
           Close
         </button>
