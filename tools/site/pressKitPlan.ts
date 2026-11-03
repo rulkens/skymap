@@ -7,6 +7,8 @@ import { PRESS_CREDIT } from '../../packages/website/src/data/pressPictures';
  * markers and the first of the cosmic web's glow. Every pixel of its star field changes, which is what costs:
  * 1920 wide at 30 fps was 70 MB at CRF 22 and 16 MB at CRF 32; 24 fps at CRF 34 is about 10 MB and keeps the
  * stars (compared on crops). The pictures are JPEG 92 with full colour (no chroma subsampling).
+ * The film's markers come from MCXC and MSCC (buildStructures.ts) and the hand-placed anchors of
+ * data/seeds/structure_anchors.seed.json, whose Milky Way rows (star clusters, nebulae) are off screen in this cut.
  */
 export const PRESS_KIT: PressKitPlan = {
   file: 'skymap-press-kit.zip',
@@ -25,7 +27,7 @@ export const PRESS_KIT: PressKitPlan = {
   portraitCredit: 'Photo: Alexander Rulkens',
   filmFile: 'film/skymap-flight-milky-way-to-cosmic-web.mp4',
   film: { inSec: 38, outSec: 54, width: 1920, fps: 24, crf: 34 },
-  filmCredit: `${PRESS_CREDIT}. Stars: ESA/Gaia/DPAC, Hipparcos. Galaxies: SDSS, 2MRS, GLADE, DESI, Milliquas, Cosmicflows-4, HyperLEDA. Density map: Wilde et al. 2023, from SDSS. Structure markers: MCXC, MSCC and the other catalogues on the credits page`,
+  filmCredit: `${PRESS_CREDIT}. Stars: ESA/Gaia/DPAC, Hipparcos. Galaxies: SDSS, 2MRS, GLADE, DESI, Milliquas, Cosmicflows-4, HyperLEDA. Density map: Wilde et al. 2023, from SDSS. Galaxy clusters: MCXC, Piffaretti et al. 2011. Superclusters: MSCC, Chow-Martínez et al. 2014. Named clusters, groups, superclusters and voids: placed by Skymap`,
   short: [{ fact: 'about-what-is', sentences: [0, 1, 3] }, { fact: 'about-maker' }],
   long: [
     { fact: 'about-what-is' },
