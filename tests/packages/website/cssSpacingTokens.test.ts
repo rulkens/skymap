@@ -38,7 +38,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'components/pages/home/Sharing/Sharing.module.css': 5,
   'components/pages/home/Stories/Stories.module.css': 4,
   'components/pages/science/MarginSpine/MarginSpine.module.css': 1,
-  'components/shared/media/PictureBand/PictureBand.module.css': 3,
+  'components/shared/media/PictureBand/PictureBand.module.css': 1,
   'components/shared/media/ShotCaption/ShotCaption.module.css': 1,
   'components/site/Footer/Footer.module.css': 3,
   'dev/review/ModeSwitch/ModeSwitch.module.css': 1,

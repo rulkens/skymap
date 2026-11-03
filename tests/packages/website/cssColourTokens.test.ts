@@ -39,7 +39,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'components/shared/media/DiscFilm/DiscFilm.module.css': 1,
   'components/shared/media/FeatureFilm/FeatureFilm.module.css': 1,
   'components/shared/media/Phone3D/Phone3D.module.css': 7,
-  'components/shared/media/PictureBand/PictureBand.module.css': 20,
+  'components/shared/media/PictureBand/PictureBand.module.css': 13,
   'components/shared/media/RemoteDemo/RemoteDemo.module.css': 4,
   'components/shared/text/Credits/Credits.module.css': 1,
   'components/site/Nav/Nav.module.css': 3,

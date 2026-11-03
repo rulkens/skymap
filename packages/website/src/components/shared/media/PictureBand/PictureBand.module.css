@@ -6,7 +6,8 @@
   position: relative;
   display: grid;
   align-items: center;
-  min-height: min(56.25vw, 92svh);
+  /* Never taller than the picture's own shape, so a tall window does not crop it to a strip. */
+  min-height: min(56.25vw, var(--first-screen));
   overflow-x: clip;
   background: #000;
 }
@@ -24,25 +25,19 @@
     object-position: 70% 50%;
   }
 
-  /* No frame edge: the picture fades into the page above and below, and into the words beside it. */
+  /*
+   * No frame edge: the picture fades into the page below and into the words beside it; a header has no section
+   * above it to fade out of. Its words include small dim text, so the dark side holds 0.8 as far as the words
+   * reach (40% of the width): the least that keeps 4.5:1 over a white star.
+   */
   &::after {
     content: '';
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 16%, rgb(0 0 0 / 0) 84%, #000 100%),
-      linear-gradient(90deg, rgb(0 0 0 / 0.88) 0%, rgb(0 0 0 / 0.6) 34%, rgb(0 0 0 / 0) 58%);
+      linear-gradient(180deg, rgb(0 0 0 / 0) 84%, #000 100%),
+      linear-gradient(90deg, rgb(0 0 0 / 0.8) 0%, rgb(0 0 0 / 0.8) 40%, rgb(0 0 0 / 0) 64%);
   }
-}
-
-/*
- * A header has no section above it to fade out of. Its words include small dim text, so the dark side holds 0.8
- * as far as the words reach (40% of the width): the least that keeps 4.5:1 over a white star.
- */
-.none .back::after {
-  background:
-    linear-gradient(180deg, rgb(0 0 0 / 0) 84%, #000 100%),
-    linear-gradient(90deg, rgb(0 0 0 / 0.8) 0%, rgb(0 0 0 / 0.8) 40%, rgb(0 0 0 / 0) 64%);
 }
 
 /* A gallery's pictures lie on one another. A later one does not exist until it is warmed, so it is not fetched. */
@@ -77,7 +72,7 @@
   flex-direction: column;
   align-self: stretch;
   width: 100%;
-  padding-block: var(--site-space-3xl) var(--site-space-l);
+  padding-block: var(--open-top) var(--site-space-l);
 
   & > :first-child {
     margin-top: auto;
@@ -94,18 +89,8 @@
 }
 
 @media (--wide) {
-  /* Never taller than the picture's own shape, so a tall window does not crop it to a strip. */
-  .none {
-    min-height: min(56.25vw, var(--first-screen));
-  }
-
-  .none .copy {
-    padding-top: var(--open-top);
-
-    & > :last-child {
-      --caption-rise: var(--open-rise);
-    }
-
+  /* Through `.root`, so the words' measure outranks a child's own (a ring's 100%) wherever its sheet loads. */
+  .root .copy {
     & > * {
       max-width: min(27rem, 38vw);
     }
@@ -120,7 +105,7 @@
    * A gallery's title runs over pictures nobody framed for it, so the dark side also reaches along the title's
    * first line, as far as a title goes: 0.6 is the least that keeps 4.5:1 over a white star.
    */
-  .none .stack::before {
+  .stack::before {
     content: '';
     position: absolute;
     z-index: 1;
@@ -135,14 +120,15 @@
 .copy > :last-child {
   --caption-foot: '';
   --caption-lift: 2.75rem;
+  --caption-rise: var(--open-rise);
   max-width: none;
   margin: auto 0 0;
-  padding-top: var(--caption-rise, 4rem);
+  padding-top: var(--caption-rise);
 }
 
 /* On a short window an opening section's paragraphs under the lead are set small: at 16px Jost is 400. */
 @media (--wide) and (max-height: 720px) {
-  .none .copy > p + p {
+  .copy > p + p {
     font-size: var(--text-small);
     font-weight: var(--weight-small);
     line-height: 1.5;
@@ -150,10 +136,13 @@
   }
 }
 
-/* Narrow: the picture first, fading into the words below it. */
+/*
+ * Narrow: the picture first, fading into the words below it. The words' children become the band's own rows, so
+ * the title and the lead can stand above the picture, where a phone's first screen shows what page this is.
+ */
 @media (--narrow) {
   .root {
-    display: block;
+    grid-template-columns: minmax(0, 1fr);
     min-height: 0;
   }
 
@@ -166,8 +155,7 @@
       object-position: center;
     }
 
-    &::after,
-    .none &::after {
+    &::after {
       background: linear-gradient(
         180deg,
         #000 0%,
@@ -189,62 +177,42 @@
   }
 
   .copy {
-    margin-top: -1.5rem;
-    padding-block: 0;
-
-    /* The title has the whole column: a page's own narrower measure would push it to a third line. */
-    & > h1 {
-      max-width: none;
-    }
+    display: contents;
 
     & > :first-child {
       margin-top: 0;
+    }
+  }
+
+  .root .copy {
+    & > * {
+      order: 2;
+      margin-inline: var(--gutter);
+    }
+
+    & > a {
+      justify-self: start;
+    }
+
+    /* The title has the whole column: a page's own narrower measure would push it to a third line. */
+    & > h1 {
+      order: -2;
+      max-width: none;
+      margin-top: var(--site-space-l);
+    }
+
+    & > p:first-of-type {
+      order: -1;
+      margin-bottom: var(--site-space-2xs);
     }
 
     & > :last-child {
       --caption-foot: none;
       --caption-lift: 0rem;
-      order: -1;
-      margin-bottom: var(--site-space-xl);
+      order: 1;
+      width: auto;
+      margin: -1.5rem var(--gutter) var(--site-space-xl);
       padding-top: 0;
-    }
-  }
-
-  /*
-   * An opening section: the words' children become the band's own rows, so the title and the lead can stand
-   * above the picture, where a phone's first screen shows what page this is; the label and the rest follow it.
-   */
-  .none {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-
-    & .copy {
-      display: contents;
-
-      & > * {
-        order: 2;
-        margin-inline: var(--gutter);
-      }
-
-      & > a {
-        justify-self: start;
-      }
-
-      & > h1 {
-        order: -2;
-        margin-top: var(--site-space-l);
-      }
-
-      & > p:first-of-type {
-        order: -1;
-        margin-bottom: var(--site-space-2xs);
-      }
-
-      & > :last-child {
-        order: 1;
-        width: auto;
-        margin: -1.5rem var(--gutter) var(--site-space-xl);
-      }
     }
   }
 
