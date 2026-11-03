@@ -10,6 +10,7 @@
 
 import { memo } from 'react';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
+import { COSMIC_WEB_FILAMENTS_SECTION_TITLE } from '../data/cosmicWebFilamentsSectionTitle';
 import Slider from '../../../../components/common/Slider/Slider';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 
@@ -28,7 +29,7 @@ function CosmicWebFilamentsSection({
 }: CosmicWebFilamentsSectionProps) {
   return (
     <CollapsibleSection
-      title="Cosmic web filaments"
+      title={COSMIC_WEB_FILAMENTS_SECTION_TITLE}
       headerToggle={enabled}
       onHeaderToggleChange={onEnabledChange}
     >

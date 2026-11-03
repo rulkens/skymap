@@ -24,6 +24,7 @@ import { memo } from 'react';
 import type { FlowSettings } from '../../../../@types/settings/FlowSettings';
 import type { FlowFieldDefaults } from '../../../../@types/data/flow/FlowFieldDefaults';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
+import { FLOW_SECTION_TITLE } from '../data/flowSectionTitle';
 import FlowRow from './FlowRow';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -46,7 +47,7 @@ export type FlowSectionProps = {
 function FlowSection({ flow, onEnabledChange, onFlowChange }: FlowSectionProps) {
   return (
     <CollapsibleSection
-      title="Flow"
+      title={FLOW_SECTION_TITLE}
       headerToggle={flow.enabled}
       onHeaderToggleChange={onEnabledChange}
     >

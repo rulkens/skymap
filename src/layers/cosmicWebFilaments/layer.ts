@@ -14,6 +14,7 @@ import { destroy } from './destroy';
 import { filamentsAssetRows } from './filaments/load/filamentsAssetRows';
 import { filamentsPass } from './filaments/passes/filamentsPass';
 import CosmicWebFilamentsSectionContainer from './filaments/ui/CosmicWebFilamentsSectionContainer';
+import { COSMIC_WEB_FILAMENTS_SECTION_TITLE } from './filaments/data/cosmicWebFilamentsSectionTitle';
 
 export const cosmicWebFilamentsLayer = defineLayer({
   name: 'cosmicWebFilaments',
@@ -24,5 +25,11 @@ export const cosmicWebFilamentsLayer = defineLayer({
   destroy,
   passes: (runtime) => [filamentsPass(runtime)],
   assets: filamentsAssetRows,
-  ui: [{ slot: 'main', content: CosmicWebFilamentsSectionContainer }],
+  ui: [
+    {
+      slot: 'main',
+      content: CosmicWebFilamentsSectionContainer,
+      title: COSMIC_WEB_FILAMENTS_SECTION_TITLE,
+    },
+  ],
 });

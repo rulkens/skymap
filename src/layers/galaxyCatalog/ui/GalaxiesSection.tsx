@@ -14,6 +14,7 @@ import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
+import { GALAXIES_SECTION_TITLE } from '../data/galaxiesSectionTitle';
 import Slider from '../../../components/common/Slider/Slider';
 import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
 
@@ -129,7 +130,7 @@ function GalaxiesSection({
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <CollapsibleSection
-      title="Galaxies"
+      title={GALAXIES_SECTION_TITLE}
       headerToggle={galaxiesMaster.allOn}
       headerToggleIndeterminate={galaxiesMaster.indeterminate}
       onHeaderToggleChange={galaxiesMaster.onToggle}

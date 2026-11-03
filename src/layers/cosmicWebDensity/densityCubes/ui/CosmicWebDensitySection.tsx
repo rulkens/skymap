@@ -10,6 +10,7 @@ import type { CosmicWebDensitySettings } from '../../@types/CosmicWebDensitySett
 import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
+import { COSMIC_WEB_DENSITY_SECTION_TITLE } from '../data/cosmicWebDensitySectionTitle';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 
 export type CosmicWebDensitySectionProps = {
@@ -27,7 +28,7 @@ function CosmicWebDensitySection({
 }: CosmicWebDensitySectionProps) {
   return (
     <CollapsibleSection
-      title="Cosmic web density"
+      title={COSMIC_WEB_DENSITY_SECTION_TITLE}
       headerToggle={enabled}
       onHeaderToggleChange={onEnabledChange}
     >

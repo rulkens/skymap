@@ -43,6 +43,7 @@ import { memo } from 'react';
 import { STAR_CATALOG_IDS } from '../../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
+import { STARS_SECTION_TITLE } from '../data/starsSectionTitle';
 import Slider from '../../../components/common/Slider/Slider';
 import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
 import type { StarCatalogId } from '../@types/StarCatalogId';
@@ -100,7 +101,7 @@ function StarsSection({
 
   return (
     <CollapsibleSection
-      title="Stars"
+      title={STARS_SECTION_TITLE}
       headerToggle={enabled}
       headerToggleIndeterminate={indeterminate}
       onHeaderToggleChange={onToggleMaster}

@@ -15,6 +15,7 @@ import { flowAssetRows } from './streamlines/load/flowAssetRows';
 import { flowFieldPass } from './streamlines/passes/flowFieldPass';
 import { flowCompute } from './streamlines/computes/flowCompute';
 import FlowSectionContainer from './streamlines/ui/FlowSectionContainer';
+import { FLOW_SECTION_TITLE } from './streamlines/data/flowSectionTitle';
 import FlowTuningSectionContainer from './streamlines/ui/FlowTuningSectionContainer';
 
 export const flowLayer = defineLayer({
@@ -29,7 +30,7 @@ export const flowLayer = defineLayer({
   assets: flowAssetRows,
   planners: (runtime) => [flowPlanner(runtime)],
   ui: [
-    { slot: 'main', content: FlowSectionContainer },
+    { slot: 'main', content: FlowSectionContainer, title: FLOW_SECTION_TITLE },
     { slot: 'debug', content: FlowTuningSectionContainer },
   ],
 });
