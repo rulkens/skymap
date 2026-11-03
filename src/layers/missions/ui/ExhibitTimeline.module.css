@@ -240,10 +240,6 @@
     background 0.15s,
     color 0.15s;
 }
-.iconBtn svg {
-  width: 14px;
-  height: 14px;
-}
 .iconBtn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.07);
   color: var(--color-fg);
@@ -296,10 +292,6 @@
 .rateBtn {
   width: 24px;
   height: 24px;
-}
-.rateBtn svg {
-  width: 10px;
-  height: 10px;
 }
 .rateLabel {
   min-width: 54px;
