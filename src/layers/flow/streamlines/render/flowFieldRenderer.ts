@@ -59,15 +59,10 @@ import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatri
 import { clampFlowParams } from '../utils/clampFlowParams';
 import { createReseedLatch } from '../utils/createReseedLatch';
 import { flowFrameDeltaSec } from '../utils/flowFrameDeltaSec';
-import {
-  TRAIL,
-  MAX_PARTICLES,
-  HEAD_SPEED_SCALE,
-  RIBBON_WIDTH,
-} from '../data/flowFieldConstants';
-import flowComputeWgsl from '../../../services/gpu/shaders/flow/compute.wesl?static';
-import flowVertexWgsl from '../../../services/gpu/shaders/flow/vertex.wesl?static';
-import flowFragmentWgsl from '../../../services/gpu/shaders/flow/fragment.wesl?static';
+import { TRAIL, MAX_PARTICLES, HEAD_SPEED_SCALE, RIBBON_WIDTH } from '../data/flowFieldConstants';
+import flowComputeWgsl from '../../../../services/gpu/shaders/flow/compute.wesl?static';
+import flowVertexWgsl from '../../../../services/gpu/shaders/flow/vertex.wesl?static';
+import flowFragmentWgsl from '../../../../services/gpu/shaders/flow/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 

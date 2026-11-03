@@ -370,7 +370,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'flow',
     title: 'Flow',
-    file: 'src/layers/flow/ui/FlowSection.tsx',
+    file: 'src/layers/flow/streamlines/ui/FlowSection.tsx',
     rows: [
       {
         name: 'Flow',

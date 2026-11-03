@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { clampFlowParams } from '../../../../../src/layers/flow/streamlines/utils/clampFlowParams';
-import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../../../../../src/layers/flow/streamlines/data/flowFieldConstants';
+import {
+  MAX_PARTICLES,
+  MIN_TRAIL_STEP,
+} from '../../../../../src/layers/flow/streamlines/data/flowFieldConstants';
 import { DEFAULT_FLOW } from '../../../../../src/layers/flow/state/defaults';
 import type { FlowSettings } from '../../../../../src/@types/settings/FlowSettings';
 
