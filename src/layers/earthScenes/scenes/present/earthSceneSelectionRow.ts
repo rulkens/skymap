@@ -5,14 +5,14 @@
  * Earth scene ids only, so the `body` kind's claim stays disjoint.
  */
 
-import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
-import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
-import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
-import { isSceneBodyId } from '../../../utils/scene/isSceneBodyId';
-import { EARTH_SCENE_BODY_IDS } from '../../../data/bodies/earthSceneBodyIds';
-import type { SelectionRef } from '../../../@types/engine/SelectionRef';
-import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
-import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
+import { BODY_FOCUS_PREFIX } from '../../../../services/url/bodyFocusId';
+import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
+import { bodyRowAt } from '../../../../utils/scene/bodyRowAt';
+import { isSceneBodyId } from '../../../../utils/scene/isSceneBodyId';
+import { EARTH_SCENE_BODY_IDS } from '../data/earthSceneBodyIds';
+import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
+import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
+import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 
 const isEarthSceneId = (id: string): id is SceneBodyId =>
   isSceneBodyId(id) && EARTH_SCENE_BODY_IDS.has(id);
