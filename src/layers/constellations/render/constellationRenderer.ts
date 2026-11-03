@@ -46,8 +46,8 @@
 import vsCode from '../../../services/gpu/shaders/constellations/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/constellations/fragment.wesl?static';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { ConstellationRenderer } from '../../../@types/rendering/ConstellationRenderer';
-import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
+import type { ConstellationRenderer } from '../@types/ConstellationRenderer';
+import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';

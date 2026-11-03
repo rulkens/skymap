@@ -9,7 +9,7 @@ import {
 } from '../../../../src/layers/constellations/render/constellationRenderer';
 import { CAMERA_UNIFORM_BYTES } from '../../../../src/services/gpu/lib/cameraUniforms';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { ConstellationsArtifact } from '../../../../src/@types/loading/ConstellationsArtifact';
+import type { ConstellationsArtifact } from '../../../../src/layers/constellations/@types/ConstellationsArtifact';
 import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 

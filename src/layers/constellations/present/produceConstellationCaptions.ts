@@ -12,7 +12,7 @@
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
+import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
 import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';
 import { constellationCaptions } from './constellationCaptions';

@@ -4,7 +4,7 @@ import {
   FLOATS_PER_SEGMENT,
 } from '../../../../src/layers/constellations/render/buildConstellationInstances';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { ConstellationsArtifact } from '../../../../src/@types/loading/ConstellationsArtifact';
+import type { ConstellationsArtifact } from '../../../../src/layers/constellations/@types/ConstellationsArtifact';
 
 /**
  * The instance builder is the TS half of the byte-layout parity with

@@ -19,7 +19,7 @@
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
+import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
 import { makeJsonFetcher } from '../../../services/loading/fetchers/jsonFetcher';
 import { dataUrl } from '../../../services/loading/fetchWithProgress';
 

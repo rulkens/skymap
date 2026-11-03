@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseConstellations } from '../../../../src/layers/constellations/load/constellationsFetcher';
-import type { ConstellationsArtifact } from '../../../../src/@types/loading/ConstellationsArtifact';
+import type { ConstellationsArtifact } from '../../../../src/layers/constellations/@types/ConstellationsArtifact';
 
 const VALID: ConstellationsArtifact = {
   version: 1,

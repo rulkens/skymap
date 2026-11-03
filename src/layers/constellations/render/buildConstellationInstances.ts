@@ -15,7 +15,7 @@
  * renderer.
  */
 
-import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
+import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
 import type { ConstellationInstances } from '../@types/ConstellationInstances';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 

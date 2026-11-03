@@ -5,7 +5,7 @@
  * `ForegroundCaption`s on the NEAR0 slab instead.
  */
 
-import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
+import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ForegroundCaption } from '../../../services/engine/presentation/foregroundCaption';
 import { CONSTELLATION_LABEL_STYLE } from './constellationLabelStyle';

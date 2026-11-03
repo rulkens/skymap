@@ -1,4 +1,4 @@
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 /**
  * ConstellationsArtifact — the decoded `constellations.json` payload, mirroring
