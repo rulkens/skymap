@@ -38,7 +38,7 @@ import {
   engineStatusChanged,
 } from '../../../src/state/engine/engineSlice';
 import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
-import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
+import { structureSelectionRow } from '../../../src/layers/structure/picking/present/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { satellitesSelectionRow } from '../../../src/layers/satellites/present/satellitesSelectionRow';

@@ -13,7 +13,7 @@ import { APP_EXHIBIT_REGISTRY } from '../../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../../src/data/palette/earthPlaces';
 import { FEATURED_TABS } from '../../../../src/data/palette/featuredTabs';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
-import { buildStaticAnchorStructures } from '../../../../src/layers/structure/load/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../../../src/layers/structure/catalog/load/buildStaticAnchorStructures';
 import { encodeBlackHoleFocusId } from '../../../../src/layers/blackHoles/markers/present/encodeBlackHoleFocusId';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../../src/layers/blackHoles/sources/blackHoleSourceRows';
 import { CRAFT_SEARCH_NAMES } from '../../../../src/layers/missions/present/craftSearch';

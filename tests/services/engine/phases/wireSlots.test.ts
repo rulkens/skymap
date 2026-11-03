@@ -104,9 +104,9 @@ import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetR
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { structureCatalogFetcher } from '../../../../src/layers/structure/load/structureCatalogFetcher';
-import { createStructureCatalogSlot } from '../../../../src/layers/structure/load/structureCatalogSlot';
-import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
+import { structureCatalogFetcher } from '../../../../src/layers/structure/catalog/load/structureCatalogFetcher';
+import { createStructureCatalogSlot } from '../../../../src/layers/structure/catalog/load/structureCatalogSlot';
+import { structureAssetRows } from '../../../../src/layers/structure/catalog/load/structureAssetRows';
 import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/load/createCosmicWebDensitySlot';
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
