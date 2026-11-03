@@ -6,11 +6,14 @@
  */
 
 import { useEffect } from 'react';
-import type { KeyboardEvent, ReactNode } from 'react';
+import type { ComponentType, KeyboardEvent, ReactNode } from 'react';
 import cx from 'classnames';
 import type { RemoteNavAxis } from '../../../@types/remote/RemoteNavAxis';
-import type { RemoteGlyph } from '../../../@types/remote/RemoteGlyph';
-import RemoteIcon from '../RemoteIcon/RemoteIcon';
+import type { IconProps } from '../../Icon/Icon';
+import EyeIcon from '../../icons/EyeIcon/EyeIcon';
+import OrbitIcon from '../../icons/OrbitIcon/OrbitIcon';
+import RollIcon from '../../icons/RollIcon/RollIcon';
+import ZoomInIcon from '../../icons/ZoomInIcon/ZoomInIcon';
 import styles from './AxisHoldButtons.module.css';
 
 export type AxisHoldButtonsProps = {
@@ -19,11 +22,15 @@ export type AxisHoldButtonsProps = {
   readonly onChange: (axis: RemoteNavAxis) => void;
 };
 
-const BUTTONS: readonly { id: RemoteNavAxis; label: string; glyph: RemoteGlyph }[] = [
-  { id: 'orbit', label: 'Orbit (default)', glyph: 'orbit' },
-  { id: 'look', label: 'Hold to look around', glyph: 'look' },
-  { id: 'roll', label: 'Hold to roll', glyph: 'roll' },
-  { id: 'zoom', label: 'Hold to zoom', glyph: 'zoom' },
+const BUTTONS: readonly {
+  id: RemoteNavAxis;
+  label: string;
+  icon: ComponentType<Pick<IconProps, 'size'>>;
+}[] = [
+  { id: 'orbit', label: 'Orbit (default)', icon: OrbitIcon },
+  { id: 'look', label: 'Hold to look around', icon: EyeIcon },
+  { id: 'roll', label: 'Hold to roll', icon: RollIcon },
+  { id: 'zoom', label: 'Hold to zoom', icon: ZoomInIcon },
 ];
 
 const isHoldKey = (event: KeyboardEvent): boolean => event.key === ' ' || event.key === 'Enter';
@@ -46,7 +53,7 @@ function AxisHoldButtons({ axis, onChange }: AxisHoldButtonsProps): ReactNode {
 
   return (
     <div className={styles.root}>
-      {BUTTONS.map(({ id, label, glyph }) => (
+      {BUTTONS.map(({ id, label, icon: AxisIcon }) => (
         <button
           key={id}
           type="button"
@@ -68,7 +75,7 @@ function AxisHoldButtons({ axis, onChange }: AxisHoldButtonsProps): ReactNode {
             if (isHoldKey(event)) release();
           }}
         >
-          <RemoteIcon glyph={glyph} />
+          <AxisIcon size={20} />
         </button>
       ))}
     </div>

@@ -7,7 +7,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import RemoteIcon from '../RemoteIcon/RemoteIcon';
+import CloseIcon from '../../icons/CloseIcon/CloseIcon';
 import { REMOTE_SHEETS } from '../../../data/remote/remoteSheets';
 import { SHEET_LEAVE_MS } from '../../../data/remote/sheetLeaveMs';
 import type { RemoteSheetId } from '../../../@types/remote/RemoteSheetId';
@@ -61,7 +61,7 @@ function RemoteSheet({ id, onClose, initialFocus = 'heading', note, children }: 
       className={cx(styles.root, leaving && styles.leaving)}
     >
       <div className={styles.head}>
-        <RemoteIcon glyph={sheet.glyph} />
+        <sheet.icon size={20} />
         <h2 id={headingId} ref={headingRef} tabIndex={-1} className={styles.title}>
           {sheet.label}
         </h2>
@@ -71,7 +71,7 @@ function RemoteSheet({ id, onClose, initialFocus = 'heading', note, children }: 
           className={cx(controls.button, styles.close)}
           onClick={() => setLeaving(true)}
         >
-          <RemoteIcon glyph="close" />
+          <CloseIcon size={20} />
           Close
         </button>
       </div>

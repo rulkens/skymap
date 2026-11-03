@@ -41,21 +41,15 @@ remote had nothing to list. By the owner's contract ruling, the `main` ui entry 
 place the name is written; `SettingsSections` passes it to the section as its `title` prop. The title change rides
 its own commit, so it can land as its own PR off main.
 
-**Prep 1 — the remote's icons become one component and a glyph table.** Seven icon files repeat the same
-24-unit, 1.75-stroke wrapper (`RemotePage/HomeIcon.tsx:7-15`, `AxisHoldButtons/{Orbit,Look,Roll,Zoom}Icon.tsx`,
-`SchemeSwitch/{Skymap,OpenSpace}Icon.tsx`). The deck adds about eighteen glyphs, which would be eighteen more copies.
-After the prep, a glyph is a row:
+**Prep 1 — the remote draws the app's shared icons.** Seven icon files repeated the same 24-unit, 1.75-stroke
+wrapper, and the deck adds about eighteen glyphs. By the owner's ruling (2026-11-03: one component per icon, one
+shared frame, no glyph table, the app and the remote working the same way), every remote icon is a
+`src/components/icons/<Name>Icon/<Name>Icon.tsx` drawn in `src/components/Icon/Icon.tsx`, at `size={20}`. A table
+that names an icon holds the component, typed as the Dock types it:
 
 ```ts
-export type RemoteGlyph = 'home' | 'skymap' | 'openspace' | 'orbit' | 'look' | 'roll' | 'zoom'; // the deck adds rows
-// RemoteIcon/RemoteIcon.tsx — the one 24-unit, 1.75-stroke, round-cap wrapper; size comes from the parent's CSS
-function RemoteIcon({ glyph }: { glyph: RemoteGlyph }): ReactNode;
-// RemoteIcon/remoteGlyphs.tsx
-export const REMOTE_GLYPHS: Record<RemoteGlyph, ReactNode>; // the paths inside the wrapper
+readonly icon: ComponentType<Pick<IconProps, 'size'>>; // e.g. { id: 'orbit', label: …, icon: OrbitIcon }
 ```
-
-`AxisHoldButtons` and `SchemeSwitch` already hold their buttons in tables; their `icon: <OrbitIcon />` cells
-become `glyph: 'orbit'`. Behaviour and pixels are unchanged. The seven files are deleted.
 
 **Prep 2 — the hook owns the link's state.** The page derives its link state from two inputs, `domeThere` and the
 presence of a status (`RemotePage.tsx:58`, again at `:59`, `:61` and `:86`), and `LinkStatus` holds the resulting
@@ -249,14 +243,14 @@ const REMOTE_TAKEOVER: {
 export type RemoteSheetId = 'search' | 'tours' | 'exhibits' | 'clips' | 'time' | 'layers' | 'labels' | 'setup';
 
 // src/data/remote/remoteSheets.ts — the tiles, in order
-export const REMOTE_SHEETS: readonly { id: RemoteSheetId; label: string; glyph: RemoteGlyph }[];
+export const REMOTE_SHEETS: readonly { id: RemoteSheetId; label: string; icon: ComponentType<Pick<IconProps, 'size'>> }[];
 
 // src/data/remote/remoteShowKinds.ts — one row per takeover kind, typed per kind
 export const REMOTE_SHOW_KINDS: {
   [K in RemoteTakeover['kind']]: {
     list: keyof RemoteMenu;  // 'tours' | 'exhibits' | 'clips'
     noun: string;            // 'Tour', 'Exhibit', 'Clip'
-    glyph: RemoteGlyph;
+    icon: ComponentType<Pick<IconProps, 'size'>>;
     start: (id: Extract<RemoteTakeover, { kind: K }>['id']) => RemoteCommand;
   };
 };
@@ -401,11 +395,11 @@ Per `testing.md`: only what can fail on a bug nothing else catches.
 
 One PR (owner, 2026-11-03).
 
-1. **Prep 1:** the icon component and glyph table, its own commit.
+1. **Prep 1:** the remote's icons on the shared `Icon` components, its own commit.
 2. **Prep 2:** `DomeLinkState` and `RemoteSession.link`, its own commit.
 3. **Contract:** `REMOTE_PROTOCOL_VERSION`, `v` on `DomeMessage` and `RemoteMessage`, the two parsers' version
    rules, `RemoteTakeover`, `DomeStatus`, `TARGET_NAME`, `selectFocusedFocusable`, `selectDomeStatus`.
-4. **Phone:** the version states and notice, the glyph rows, `REMOTE_SHOW_KINDS`, `REMOTE_SHEETS`, `NowCard`,
+4. **Phone:** the version states and notice, the new icon components, `REMOTE_SHOW_KINDS`, `REMOTE_SHEETS`, `NowCard`,
    the Time sheet, `ShowList`, `RemoteSheet`, the restyled sheet bodies, `RemotePage`; delete `TourSection`,
    `ExhibitSection`, `focusNameFrom`.
 5. **Red light**, its own commit.

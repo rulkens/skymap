@@ -7,7 +7,7 @@
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import RemoteIcon from '../RemoteIcon/RemoteIcon';
+import CalendarIcon from '../../icons/CalendarIcon/CalendarIcon';
 import { parseDatetimeLocalUtc } from '../../../utils/time/parseDatetimeLocalUtc';
 import { toDatetimeLocalUtc } from '../../../utils/time/toDatetimeLocalUtc';
 import controls from '../remoteControls.module.css';
@@ -31,7 +31,7 @@ function DateTimeField({ instant, onSet }: DateTimeFieldProps): ReactNode {
   return (
     <div className={styles.root}>
       <label htmlFor={id} className={styles.label}>
-        <RemoteIcon glyph="calendar" />
+        <CalendarIcon size={20} />
         Set date and time (UTC)
       </label>
       <div className={styles.row}>

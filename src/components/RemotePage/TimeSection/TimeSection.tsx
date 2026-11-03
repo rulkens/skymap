@@ -8,7 +8,12 @@
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import cx from 'classnames';
-import RemoteIcon from '../RemoteIcon/RemoteIcon';
+import ChevronLeftIcon from '../../icons/ChevronLeftIcon/ChevronLeftIcon';
+import ChevronRightIcon from '../../icons/ChevronRightIcon/ChevronRightIcon';
+import LiveIcon from '../../icons/LiveIcon/LiveIcon';
+import PauseIcon from '../../icons/PauseIcon/PauseIcon';
+import PlayIcon from '../../icons/PlayIcon/PlayIcon';
+import ReverseIcon from '../../icons/ReverseIcon/ReverseIcon';
 import SpeedList from '../SpeedList/SpeedList';
 import DateTimeField from '../DateTimeField/DateTimeField';
 import { useSimInstant } from '../../../hooks/useSimInstant';
@@ -75,7 +80,7 @@ function TimeSection({ clock, onCommand }: TimeSectionProps): ReactNode {
           disabled={rateIndex <= 0}
           onClick={() => setRate(rateIndex - 1)}
         >
-          <RemoteIcon glyph="slower" />
+          <ChevronLeftIcon size={20} />
           Slower
         </button>
         <button
@@ -84,7 +89,7 @@ function TimeSection({ clock, onCommand }: TimeSectionProps): ReactNode {
           aria-label={paused ? 'Play time' : 'Pause time'}
           onClick={() => onCommand({ name: paused ? 'timeResume' : 'timePause', payload: null })}
         >
-          <RemoteIcon glyph={paused ? 'play' : 'pause'} />
+          {paused ? <PlayIcon size={20} /> : <PauseIcon size={20} />}
           {paused ? 'Play' : 'Pause'}
         </button>
         <button
@@ -94,7 +99,7 @@ function TimeSection({ clock, onCommand }: TimeSectionProps): ReactNode {
           onClick={() => setRate(rateIndex + 1)}
         >
           Faster
-          <RemoteIcon glyph="faster" />
+          <ChevronRightIcon size={20} />
         </button>
       </div>
       <div className={styles.pair}>
@@ -118,7 +123,7 @@ function TimeSection({ clock, onCommand }: TimeSectionProps): ReactNode {
             onCommand({ name: 'timeSetDirection', payload: { direction: backward ? 1 : -1 } })
           }
         >
-          <RemoteIcon glyph="reverse" />
+          <ReverseIcon size={20} />
           Reverse
         </button>
       </div>
@@ -144,7 +149,7 @@ function TimeSection({ clock, onCommand }: TimeSectionProps): ReactNode {
           className={cx(controls.button, styles.choice)}
           onClick={() => onCommand({ name: 'timeGoLive', payload: null })}
         >
-          <RemoteIcon glyph="live" />
+          <LiveIcon size={20} />
           Back to now
         </button>
       )}

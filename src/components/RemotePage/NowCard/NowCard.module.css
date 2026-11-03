@@ -93,11 +93,6 @@
   text-align: center;
 }
 
-.step svg {
-  width: 24px;
-  height: 24px;
-}
-
 /* The hover selector matches controls' hover rule in weight and comes after it, so the fill
    stays. */
 .primary,

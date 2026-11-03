@@ -3,6 +3,9 @@
  * starts one.
  */
 
+import ClipIcon from '../../components/icons/ClipIcon/ClipIcon';
+import ExhibitIcon from '../../components/icons/ExhibitIcon/ExhibitIcon';
+import TourIcon from '../../components/icons/TourIcon/TourIcon';
 import type { RemoteShowKind } from '../../@types/remote/RemoteShowKind';
 import type { RemoteTakeover } from '../../@types/remote/RemoteTakeover';
 
@@ -12,19 +15,19 @@ export const REMOTE_SHOW_KINDS: {
   tour: {
     list: 'tours',
     noun: 'Tour',
-    glyph: 'tour',
+    icon: TourIcon,
     start: (tourId) => ({ name: 'goTo', payload: { kind: 'tour', tourId } }),
   },
   exhibit: {
     list: 'exhibits',
     noun: 'Exhibit',
-    glyph: 'exhibit',
+    icon: ExhibitIcon,
     start: (exhibitId) => ({ name: 'goTo', payload: { kind: 'exhibit', exhibitId } }),
   },
   clip: {
     list: 'clips',
     noun: 'Clip',
-    glyph: 'clip',
+    icon: ClipIcon,
     start: (clipId) => ({ name: 'clipStart', payload: { clipId } }),
   },
 };

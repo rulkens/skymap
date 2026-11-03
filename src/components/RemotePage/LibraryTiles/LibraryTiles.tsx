@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import RemoteIcon from '../RemoteIcon/RemoteIcon';
 import { REMOTE_SHEETS } from '../../../data/remote/remoteSheets';
 import type { RemoteSheetId } from '../../../@types/remote/RemoteSheetId';
 import controls from '../remoteControls.module.css';
@@ -15,7 +14,7 @@ export type LibraryTilesProps = {
 function LibraryTiles({ onOpen }: LibraryTilesProps): ReactNode {
   return (
     <nav className={styles.root} aria-label="Library">
-      {REMOTE_SHEETS.map(({ id, label, glyph }) => (
+      {REMOTE_SHEETS.map(({ id, label, icon: TileIcon }) => (
         <button
           key={id}
           type="button"
@@ -23,7 +22,7 @@ function LibraryTiles({ onOpen }: LibraryTilesProps): ReactNode {
           className={cx(controls.button, styles.tile, id === 'search' && styles.wide)}
           onClick={(e) => onOpen(id, e.currentTarget)}
         >
-          <RemoteIcon glyph={glyph} />
+          <TileIcon size={20} />
           {label}
         </button>
       ))}

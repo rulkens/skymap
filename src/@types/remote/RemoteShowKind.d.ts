@@ -1,5 +1,6 @@
+import type { ComponentType } from 'react';
+import type { IconProps } from '../../components/Icon/Icon';
 import type { RemoteCommand } from './RemoteCommand';
-import type { RemoteGlyph } from './RemoteGlyph';
 import type { RemoteMenu } from './RemoteMenu';
 import type { RemoteTakeover } from './RemoteTakeover';
 
@@ -7,6 +8,6 @@ import type { RemoteTakeover } from './RemoteTakeover';
 export type RemoteShowKind<K extends RemoteTakeover['kind']> = {
   readonly list: keyof RemoteMenu;
   readonly noun: string;
-  readonly glyph: RemoteGlyph;
+  readonly icon: ComponentType<Pick<IconProps, 'size'>>;
   readonly start: (id: Extract<RemoteTakeover, { kind: K }>['id']) => RemoteCommand;
 };

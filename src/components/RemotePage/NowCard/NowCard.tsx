@@ -6,7 +6,11 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import RemoteIcon from '../RemoteIcon/RemoteIcon';
+import NextIcon from '../../icons/NextIcon/NextIcon';
+import PauseIcon from '../../icons/PauseIcon/PauseIcon';
+import PlayIcon from '../../icons/PlayIcon/PlayIcon';
+import PrevIcon from '../../icons/PrevIcon/PrevIcon';
+import StopIcon from '../../icons/StopIcon/StopIcon';
 import { REMOTE_SHOW_KINDS } from '../../../data/remote/remoteShowKinds';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import type { RemoteMenu } from '../../../@types/remote/RemoteMenu';
@@ -33,7 +37,7 @@ function NowCard({ takeover, menu, onCommand }: NowCardProps): ReactNode {
   return (
     <section className={styles.root} aria-label="Now running">
       <div className={styles.head}>
-        <RemoteIcon glyph={kind.glyph} />
+        <kind.icon size={20} />
         <p role="status" className={styles.eyebrow}>
           {eyebrow}
         </p>
@@ -43,7 +47,7 @@ function NowCard({ takeover, menu, onCommand }: NowCardProps): ReactNode {
           aria-label={`Stop ${kind.noun.toLowerCase()}`}
           onClick={() => onCommand({ name: 'exitTakeover', payload: null })}
         >
-          <RemoteIcon glyph="stop" />
+          <StopIcon size={20} />
           Stop
         </button>
       </div>
@@ -67,7 +71,7 @@ function NowCard({ takeover, menu, onCommand }: NowCardProps): ReactNode {
               className={cx(controls.button, styles.step)}
               onClick={() => onCommand({ name: 'tourPrev', payload: null })}
             >
-              <RemoteIcon glyph="prev" />
+              <PrevIcon size={24} />
               Previous
             </button>
             <button
@@ -75,7 +79,7 @@ function NowCard({ takeover, menu, onCommand }: NowCardProps): ReactNode {
               className={cx(controls.button, styles.step, styles.primary)}
               onClick={() => onCommand({ name: 'tourTogglePause', payload: null })}
             >
-              <RemoteIcon glyph={tour.paused ? 'play' : 'pause'} />
+              {tour.paused ? <PlayIcon size={24} /> : <PauseIcon size={24} />}
               {tour.paused ? 'Resume' : 'Pause'}
             </button>
             <button
@@ -83,7 +87,7 @@ function NowCard({ takeover, menu, onCommand }: NowCardProps): ReactNode {
               className={cx(controls.button, styles.step)}
               onClick={() => onCommand({ name: 'tourAdvance', payload: null })}
             >
-              <RemoteIcon glyph="next" />
+              <NextIcon size={24} />
               Next
             </button>
           </div>

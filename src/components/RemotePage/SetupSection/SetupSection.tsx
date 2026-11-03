@@ -2,7 +2,8 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import RemoteIcon from '../RemoteIcon/RemoteIcon';
+import MoonIcon from '../../icons/MoonIcon/MoonIcon';
+import PhonePlusIcon from '../../icons/PhonePlusIcon/PhonePlusIcon';
 import controls from '../remoteControls.module.css';
 
 export type SetupSectionProps = {
@@ -15,11 +16,11 @@ function SetupSection({ onAddPhone, redLight, onRedLight }: SetupSectionProps): 
   return (
     <div className={controls.stack}>
       <button type="button" className={cx(controls.button, controls.row)} onClick={onAddPhone}>
-        <RemoteIcon glyph="phone" />
+        <PhonePlusIcon size={20} />
         Add a phone
       </button>
       <label className={cx(controls.button, controls.row)}>
-        <RemoteIcon glyph="redLight" />
+        <MoonIcon size={20} />
         <span className={controls.grow}>Red light</span>
         <input
           type="checkbox"

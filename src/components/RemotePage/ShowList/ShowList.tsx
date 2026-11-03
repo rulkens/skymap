@@ -5,7 +5,7 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import RemoteIcon from '../RemoteIcon/RemoteIcon';
+import PlayIcon from '../../icons/PlayIcon/PlayIcon';
 import { REMOTE_SHOW_KINDS } from '../../../data/remote/remoteShowKinds';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import type { RemoteMenu } from '../../../@types/remote/RemoteMenu';
@@ -23,7 +23,7 @@ export type ShowListProps = {
 
 function ShowList({ kind, menu, takeover, onCommand }: ShowListProps): ReactNode {
   if (!menu) return <p className={styles.waiting}>Waiting for the dome's lists</p>;
-  const { list, glyph, start } = REMOTE_SHOW_KINDS[kind];
+  const { list, icon: KindIcon, start } = REMOTE_SHOW_KINDS[kind];
   // Each row's id comes from this kind's own list, so it is the id `start` takes; the union of the
   // three kinds hides that from the compiler.
   const items: readonly RemoteMenuItem<string>[] = menu[list];
@@ -40,9 +40,9 @@ function ShowList({ kind, menu, takeover, onCommand }: ShowListProps): ReactNode
               className={cx(controls.button, controls.row, styles.row, running && controls.on)}
               onClick={() => onCommand(startItem(id))}
             >
-              <RemoteIcon glyph={glyph} />
+              <KindIcon size={20} />
               <span className={controls.grow}>{label}</span>
-              <RemoteIcon glyph="play" />
+              <PlayIcon size={20} />
             </button>
           </li>
         );

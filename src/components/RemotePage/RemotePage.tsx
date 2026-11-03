@@ -20,7 +20,7 @@ import ShowList from './ShowList/ShowList';
 import TimeSection from './TimeSection/TimeSection';
 import ToggleSection from './ToggleSection/ToggleSection';
 import SetupSection from './SetupSection/SetupSection';
-import RemoteIcon from './RemoteIcon/RemoteIcon';
+import HomeIcon from '../icons/HomeIcon/HomeIcon';
 import RemoteSheet from './RemoteSheet/RemoteSheet';
 import LibraryTiles from './LibraryTiles/LibraryTiles';
 import NowCard from './NowCard/NowCard';
@@ -142,7 +142,7 @@ function RemotePage() {
             className={cx(controls.button, styles.home)}
             onClick={() => sendCommand({ name: 'home', payload: null })}
           >
-            <RemoteIcon glyph="home" />
+            <HomeIcon size={20} />
             Home
           </button>
           {scheme && (
