@@ -1,6 +1,6 @@
 /**
  * PaletteSelect — a small `<select>` wrapper for picking one of the
- * scalar-field palette ids defined in `layers/cosmicWebDensity/data/scalarFieldPalettes.ts`.
+ * scalar-field palette ids defined in `layers/cosmicWebDensity/densityCubes/data/scalarFieldPalettes.ts`.
  *
  * Lives in `components/common/` because more than one surface needs to
  * pick a palette: today the per-field row in the SettingsPanel's
@@ -19,7 +19,7 @@
  */
 import type { ReactNode } from 'react';
 import type { ScalarFieldPaletteId } from '../../../@types/data/volume/ScalarFieldPaletteId';
-import { PALETTE_IDS } from '../../../layers/cosmicWebDensity/data/scalarFieldPalettes';
+import { PALETTE_IDS } from '../../../layers/cosmicWebDensity/densityCubes/data/scalarFieldPalettes';
 import styles from './PaletteSelect.module.css';
 
 export type PaletteSelectProps = {

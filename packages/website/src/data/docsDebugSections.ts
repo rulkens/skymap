@@ -50,7 +50,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     heading: 'Cosmic web density (tuning)',
     shows:
       'For each density field: intensity, contrast, trim, density, exposure and one of 21 colour palettes.',
-    file: 'src/layers/cosmicWebDensity/ui/CosmicWebDensityTuningSection.tsx',
+    file: 'src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensityTuningSection.tsx',
   },
   {
     heading: 'Flow tuning',

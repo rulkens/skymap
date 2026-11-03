@@ -302,7 +302,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'cosmic-web-density',
     title: 'Cosmic web density',
-    file: 'src/layers/cosmicWebDensity/ui/CosmicWebDensitySection.tsx',
+    file: 'src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensitySection.tsx',
     rows: [
       {
         name: 'Cosmic web density',

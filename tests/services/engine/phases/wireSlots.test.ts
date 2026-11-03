@@ -68,7 +68,7 @@ vi.mock('../../../../src/layers/structure/load/structureCatalogFetcher', () => (
 
 // MCPM is default-on, so the demand loop fires its load at boot.  Mock the
 // fetcher so the slot resolves without networking.
-vi.mock('../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityFetcher', () => ({
+vi.mock('../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityFetcher', () => ({
   cosmicWebDensityFetcher: vi.fn(async () => ({
     dims: [4, 4, 4],
     voxels: new Float32Array(64),
@@ -107,8 +107,8 @@ import { expandCompanionRows } from '../../../../src/utils/loading/expandCompani
 import { structureCatalogFetcher } from '../../../../src/layers/structure/load/structureCatalogFetcher';
 import { createStructureCatalogSlot } from '../../../../src/layers/structure/load/structureCatalogSlot';
 import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
-import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/load/createCosmicWebDensitySlot';
-import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
+import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/densityCubes/load/createCosmicWebDensitySlot';
+import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/filaments/load/filamentFetcher';
