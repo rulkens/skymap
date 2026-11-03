@@ -64,6 +64,7 @@ function bodyAt(id: string, radiusM: number): SeededPlanet {
   return {
     id: asSceneBodyId(id),
     label: id,
+    captionKind: 'planet',
     resolvePx: 3,
     surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     albedo: [0.5, 0.3, 0.2],

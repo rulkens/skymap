@@ -39,6 +39,7 @@ export type CaptionKind =
   | 'sun'
   | 'earth'
   | 'planet'
+  | 'smallBody'
   | 'star'
   | 'sgrAStar'
   | 'meshBody'
@@ -56,6 +57,8 @@ export const CAPTION_PRIORITY = {
   sun: 40,
   earth: 30,
   planet: 20,
+  // Below the planets they orbit among, above Sgr A* and the craft.
+  smallBody: 18,
   // Above the star map, below the solar system: Sgr A* is the Galactic Centre's
   // aim point, and it draws NOTHING — losing its caption to a dot's name loses
   // the object entirely, where a decluttered star still shows as a point. Its
