@@ -22,7 +22,7 @@ import { patchOriginRelEyeM } from '../subsystems/patchOriginRelEyeM';
 import { surfacePatchIndices } from '../subsystems/surfacePatchIndices';
 import { surfaceEffectsKey } from '../../plan/subsystems/surfaceEffectsKey';
 import { createShaderModuleWithDevLog } from '../../../../../services/gpu/shaderCompileLogger';
-import vsCode from '../../../services/gpu/shaders/bodies/surfaceTile/vertex.wesl?static';
+import vsCode from '../../../../../services/gpu/shaders/bodies/surfaceTile/vertex.wesl?static';
 import {
   PATCH_INSTANCE_BYTES,
   SURFACE_TILE_UNIFORM_BYTES,

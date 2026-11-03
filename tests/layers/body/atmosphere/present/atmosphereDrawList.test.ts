@@ -29,7 +29,7 @@ import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // Stub with the real states plus the Earth fixture below, REUSING its positionMpc/orientation
 // refs so the list resolves identity-equal values.
-vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(() => seededBodyStates(0, [SEEDED_EARTH])),
 }));
 

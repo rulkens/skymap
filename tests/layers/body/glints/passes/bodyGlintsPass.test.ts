@@ -42,7 +42,7 @@ const CAPTION_GONE_MPC = SOLAR_SYSTEM_CAPTION_RECEDE.out[1];
 
 // `makeCtx` pins the body-state snapshot to the fixture bodies, reusing each record's own
 // refs so the `toBe(...)` assertions hold.
-vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(),
 }));
 

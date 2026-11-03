@@ -14,8 +14,8 @@ import type { RingRenderer } from '../@types/RingRenderer';
 import { annulusMesh } from '../../../../utils/math/annulusMesh';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
-import vsCode from '../../../services/gpu/shaders/bodies/ring/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/bodies/ring/fragment.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/bodies/ring/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/bodies/ring/fragment.wesl?static';
 
 /** Radial tessellation of the ring disc. */
 const SEGMENTS = 128;

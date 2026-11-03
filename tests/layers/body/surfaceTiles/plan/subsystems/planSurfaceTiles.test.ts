@@ -20,7 +20,7 @@ const walk = vi.hoisted(() => {
   return state;
 });
 const CUT: readonly SurfaceCutTile[] = [];
-vi.mock('../../../../../src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles', () => ({
+vi.mock('../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles', () => ({
   cutSurfaceTiles: () => {
     walk.calls++;
     return { cut: CUT, requests: walk.demand };

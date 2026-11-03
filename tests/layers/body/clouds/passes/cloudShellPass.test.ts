@@ -28,13 +28,13 @@ import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../../src/@types/engine/camera/BodyRelativePose';
 
 // composeBodySlabMvp is mocked; the layer narrows its own f32 copy at the GPU-upload boundary.
-vi.mock('../../../../src/utils/camera/composeBodySlabMvp', () => ({
+vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
-vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(() => seededBodyStates(0, [EARTH])),
 }));
 

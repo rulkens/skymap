@@ -1,7 +1,7 @@
-// src/data/bodies/bodyAtlas.generated.ts
+// src/layers/body/textures/data/bodyAtlas.generated.ts
 // !!! GENERATED FILE — DO NOT EDIT BY HAND !!!
 // Regenerate with:  npm run build-textures
-// Source of truth:  src/data/bodies/bodyTextureRegistry.ts
+// Source of truth:  src/layers/body/textures/data/bodyTextureRegistry.ts
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 
 /** The atlas file this build wrote, under the textures directory. */

@@ -35,10 +35,10 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
-vi.mock('../../../../src/utils/camera/composeBodySlabMvp', () => ({
+vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
-vi.mock('../../../../src/utils/camera/bodySlabCamLocal', () => ({
+vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
   bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
 }));
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
@@ -47,7 +47,7 @@ import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 // Production reads the static scene tables, so `makeCtx` pins the snapshot to the fixture bodies.
-vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(),
 }));
 

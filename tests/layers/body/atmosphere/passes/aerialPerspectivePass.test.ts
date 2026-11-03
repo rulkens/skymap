@@ -28,7 +28,7 @@ const EYE_OUTSIDE_M: Vec3 = [0, 0, 2e7];
 
 // Earth a hair off the render origin: far enough from the sub-pixel cull that
 // only `inside` decides the row, close enough that no pose magnitude is large.
-vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: () =>
     seededBodyStates(0, [
       {

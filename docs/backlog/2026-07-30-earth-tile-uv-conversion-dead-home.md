@@ -3,10 +3,10 @@
 `needs-design`
 
 **Renamed since filing (2026-10-30):** `earthTileXyForUv` is now
-`surfaceTileXyForUv` (`src/utils/surfaceTiles/surfaceTileXyForUv.ts`) and has
+`surfaceTileXyForUv` (`src/layers/body/surfaceTiles/format/utils/surfaceTileXyForUv.ts`) and has
 production callers (`terrainHeightM.ts`, `tools/utils/textures/siteTerrain/tilePostAtLatLon.ts`);
 `earthTileCentreUv` is now `surfaceTileCentreUv`
-(`src/layers/body/subsystems/surfaceTiles/surfaceTileCentreUv.ts`) and is still
+(`src/layers/body/surfaceTiles/patch/subsystems/surfaceTileCentreUv.ts`) and is still
 test-only; `planEarthTiles` became `cutSurfaceTiles`. The site list below
 predates the rename; re-trace it before designing.
 

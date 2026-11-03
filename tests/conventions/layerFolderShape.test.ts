@@ -27,17 +27,11 @@ const ROLE_FOLDERS = [
 
 /** Folder → current direct file count. */
 const OVERSIZED_FOLDERS: Record<string, number> = {
-  'src/layers/body/@types': 37,
-  'src/layers/body/bodies': 37,
-  'src/layers/body/present': 35,
-  'src/layers/body/render': 20,
-  'src/layers/body/subsystems/surfaceTiles': 28,
   'src/layers/starCatalog/@types': 21,
 };
 
 /** Layers still organised by role at their root; regrouping a Layer deletes its name. */
 const NOT_YET_REGROUPED: ReadonlySet<string> = new Set([
-  'body',
   'galaxyCatalog',
   'missions',
   'starCatalog',

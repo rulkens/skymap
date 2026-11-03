@@ -13,8 +13,8 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { TerrainPickMarkerRenderer } from '../@types/TerrainPickMarkerRenderer';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
-import vsCode from '../../../services/gpu/shaders/devTools/terrainPickMarker/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/devTools/terrainPickMarker/fragment.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/devTools/terrainPickMarker/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/devTools/terrainPickMarker/fragment.wesl?static';
 
 /** The one matching statement of `terrainPickMarker/io.wesl`'s byte layout. */
 const UNIFORM_BYTES = 112;

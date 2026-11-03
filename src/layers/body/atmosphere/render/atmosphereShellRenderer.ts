@@ -19,11 +19,11 @@ import { ATMOSPHERE_UNIFORM_FLOATS } from './packAtmosphereUniforms';
 import { packScatteringParams, SCATTERING_PARAMS_BYTES } from './packScatteringParams';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { createAerialPerspectiveRenderer } from './aerialPerspectiveRenderer';
-import transmittanceCode from '../../../services/gpu/shaders/atmosphere/transmittanceLut.wesl?static';
-import multiScatterCode from '../../../services/gpu/shaders/atmosphere/multiScatterLut.wesl?static';
-import skyViewCode from '../../../services/gpu/shaders/atmosphere/skyViewLut.wesl?static';
-import shellVsCode from '../../../services/gpu/shaders/atmosphere/shell/vertex.wesl?static';
-import shellFsCode from '../../../services/gpu/shaders/atmosphere/shell/fragment.wesl?static';
+import transmittanceCode from '../../../../services/gpu/shaders/atmosphere/transmittanceLut.wesl?static';
+import multiScatterCode from '../../../../services/gpu/shaders/atmosphere/multiScatterLut.wesl?static';
+import skyViewCode from '../../../../services/gpu/shaders/atmosphere/skyViewLut.wesl?static';
+import shellVsCode from '../../../../services/gpu/shaders/atmosphere/shell/vertex.wesl?static';
+import shellFsCode from '../../../../services/gpu/shaders/atmosphere/shell/fragment.wesl?static';
 
 /** 128x64. Only the proxy's far wall rasterises, so its silhouette IS the limb, and a
  *  coarse UV sphere polygonises it inward by ~cos(pi/SEGMENTS). Sized off the THINNEST

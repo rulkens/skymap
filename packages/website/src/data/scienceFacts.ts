@@ -171,7 +171,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-atmospheres',
     text: 'The atmospheres of 9 bodies are computed from a light-scattering model after Bruneton and Neyret and Hillaire, with a table of gases and hazes for each body.',
-    source: `${REPO_BLOB}/src/layers/body/present/atmosphereParams.ts`,
+    source: `${REPO_BLOB}/src/layers/body/atmosphere/data/atmosphereParams.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
   },

@@ -10,8 +10,8 @@ import type { AerialBundleResources } from '../@types/AerialBundleResources';
 import type { AerialPerspectiveRenderer } from '../@types/AerialPerspectiveRenderer';
 import { FROXEL_DIMS } from '../data/froxelVolume';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
-import bakeCode from '../../../services/gpu/shaders/atmosphere/aerialPerspective/bake.wesl?static';
-import applyCode from '../../../services/gpu/shaders/atmosphere/aerialPerspective/fragment.wesl?static';
+import bakeCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/bake.wesl?static';
+import applyCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/fragment.wesl?static';
 
 /** Matches `bake.wesl`'s `@workgroup_size(8, 8, 1)` over (x, y); z is its loop. */
 const BAKE_WORKGROUP_SIZE = 8;

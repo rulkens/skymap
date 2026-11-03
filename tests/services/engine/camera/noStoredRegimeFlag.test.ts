@@ -45,7 +45,7 @@ const FILES: readonly string[] = SWEPT_DIRS.flatMap((dir) => walkFiles(dir, ['.t
 // loosening NAME_PATTERN or BOOLEAN_TYPE_TEXTS.
 const ALLOW_LIST: ReadonlySet<string> = new Set([
   // `engaged` is the tile stream's own per-body readout, not a camera regime.
-  'src/layers/body/@types/SurfaceTileDebugSnapshot.d.ts',
+  'src/layers/body/surfaceTiles/debug/@types/SurfaceTileDebugSnapshot.d.ts',
 ]);
 
 type NamedDeclaration = VariableDeclaration | PropertySignature | PropertyDeclaration;

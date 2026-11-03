@@ -34,7 +34,7 @@ import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // `atmosphereDrawList` resolves positions/orientations (for `sunDirLocal`) from this snapshot; stub
 // it from the SeededBody fixtures, reusing their refs so the sun-direction recompute is bit-for-bit.
-vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(() => seededBodyStates(0, [SEEDED_EARTH])),
 }));
 

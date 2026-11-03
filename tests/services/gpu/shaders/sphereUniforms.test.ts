@@ -5,7 +5,7 @@
  * `SpherePickUniforms` (`shaders/bodies/spherePick.wesl`) ↔ the scratch `bodyPickRenderer.drawSphere`
  * uploads per draw. Distinct, non-round values go into every slot and are read back at the struct's
  * offsets, so a reordered field or lost write fails. `TexturedBodyUniforms` has its own guard in
- * `tests/layers/body/render/packTexturedBodyUniforms.test.ts`.
+ * `tests/layers/body/spheres/render/packTexturedBodyUniforms.test.ts`.
  */
 
 import { describe, it, expect, vi } from 'vitest';

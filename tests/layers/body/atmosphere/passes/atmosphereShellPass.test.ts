@@ -34,10 +34,10 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // ATMOSPHERE_PARAMS row fed it.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [1.0, 2.0, 3.0];
-vi.mock('../../../../src/utils/camera/composeBodySlabMvp', () => ({
+vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
-vi.mock('../../../../src/utils/camera/bodySlabCamLocal', () => ({
+vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
   bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
 }));
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
@@ -45,7 +45,7 @@ import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLoc
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // atmosphereDrawList reads live body positions off this snapshot; stub it to the fixtures' refs.
-vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(() => seededBodyStates(0, SEEDED_BODIES)),
 }));
 

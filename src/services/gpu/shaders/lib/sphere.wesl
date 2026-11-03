@@ -37,7 +37,7 @@ struct TintedSphereUniforms {
 //   offset  0..63: mvp         (mat4x4<f32>, column-major)
 //   offset 64..75: sunDirLocal (vec3<f32>)
 //   offset 76..79: _pad        (f32, zeroed)
-//   total: 80 bytes (20 f32s). Packer: `layers/body/render/packLitBodyUniforms.ts`.
+//   total: 80 bytes (20 f32s). Packer: `layers/body/spheres/render/packLitBodyUniforms.ts`.
 
 struct LitBodyUniforms {
   mvp: mat4x4<f32>,
@@ -63,7 +63,7 @@ struct LitBodyUniforms {
 //   offset 96..107:  camPosLocal    (vec3<f32>)
 //   offset 108..111: camAltitudeSq  (f32)
 //   offset 112..175: vpCamRelLocal  (mat4x4<f32>)
-//   total: 176 bytes (44 f32s). Packer: `layers/body/render/packTexturedBodyUniforms.ts`.
+//   total: 176 bytes (44 f32s). Packer: `layers/body/spheres/render/packTexturedBodyUniforms.ts`.
 
 struct TexturedBodyUniforms {
   mvp: mat4x4<f32>,
@@ -92,7 +92,7 @@ struct TexturedBodyUniforms {
 //   offset 76..79: planetRadiusRatio (f32, planet radius / ring OUTER radius)
 //   offset 80..91: camPosLocal       (vec3<f32>, planet-radius units)
 //   offset 92..95: innerRatio        (f32, ring inner / ring OUTER radius)
-//   total: 96 bytes (24 f32s). Packer: `layers/body/render/packRingUniforms.ts`.
+//   total: 96 bytes (24 f32s). Packer: `layers/body/rings/render/packRingUniforms.ts`.
 
 struct RingUniforms {
   mvp: mat4x4<f32>,
@@ -122,7 +122,7 @@ struct RingUniforms {
 //   offset 108..111: ambientLight        (f32, night-side floor)
 //   offset 112..115: oceanRoughness      (f32, open-water GGX roughness)
 //   offset 116..123: _pad0, _pad1        (f32, zeroed, round to 16-byte)
-//   total: 128 bytes (32 f32s). Packer: `layers/body/render/packEarthSurfaceUniforms.ts`.
+//   total: 128 bytes (32 f32s). Packer: `layers/body/earth/render/packEarthSurfaceUniforms.ts`.
 
 struct EarthSurfaceUniforms {
   mvp: mat4x4<f32>,
@@ -155,7 +155,7 @@ struct EarthSurfaceUniforms {
 //   offset 80..83: sunIrradiance (f32)
 //   offset 84..87: ambientLight  (f32)
 //   offset 88..95: _pad1, _pad2  (f32 x2)
-//   total: 96 bytes (24 f32s). Packer: `layers/body/render/packCloudShellUniforms.ts`.
+//   total: 96 bytes (24 f32s). Packer: `layers/body/clouds/render/packCloudShellUniforms.ts`.
 
 struct CloudShellUniforms {
   mvp: mat4x4<f32>,
@@ -189,7 +189,7 @@ struct CloudShellUniforms {
 //   offset 104..107: ringOuterRatio (f32)
 //   offset 108..111: froxelSliceKm  (f32, aerial froxel slice depth)
 //   offset 112..175: invMvp         (mat4x4<f32>)
-//   total: 176 bytes (44 f32s). Packer: `layers/body/render/packAtmosphereUniforms.ts`.
+//   total: 176 bytes (44 f32s). Packer: `layers/body/atmosphere/render/packAtmosphereUniforms.ts`.
 
 struct AtmosphereUniforms {
   mvp: mat4x4<f32>,

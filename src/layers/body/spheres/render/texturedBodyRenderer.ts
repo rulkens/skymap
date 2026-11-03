@@ -20,8 +20,8 @@ import { generateMipChain, mipLevelCount } from '../../../../services/gpu/lib/ge
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { TEXTURED_BODY_UNIFORM_FLOATS } from './packTexturedBodyUniforms';
-import vsCode from '../../../services/gpu/shaders/bodies/texturedBody/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/bodies/texturedBody/fragment.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/bodies/texturedBody/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/bodies/texturedBody/fragment.wesl?static';
 
 /** 176 bytes (44 f32), derived from the packer's count so it cannot drift. */
 const UNIFORM_BUFFER_SIZE = TEXTURED_BODY_UNIFORM_FLOATS * 4;

@@ -17,8 +17,8 @@ import { CLOUD_SHELL_UNIFORM_FLOATS } from './packCloudShellUniforms';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { generateMipChain, mipLevelCount } from '../../../../services/gpu/lib/generateMipChain';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
-import vsCode from '../../../services/gpu/shaders/bodies/cloudShell/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/bodies/cloudShell/fragment.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/bodies/cloudShell/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/bodies/cloudShell/fragment.wesl?static';
 
 /** 128x64. A UV-sphere facet centre sags to 1 - cos^2(pi/SEGMENTS) of the radius, which
  *  MUST stay below the shell margin (`CLOUD_SHELL_PARAMS.radiusRatio - 1 = 0.002`) or
