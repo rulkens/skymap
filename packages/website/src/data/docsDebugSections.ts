@@ -60,7 +60,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   {
     heading: 'Zone of Avoidance tuning',
     shows: 'The strength, falloff, edge and two colours of the band.',
-    file: 'src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSection.tsx',
+    file: 'src/layers/zoneOfAvoidance/shell/ui/ZoneOfAvoidanceTuningSection.tsx',
   },
   {
     heading: 'Local Bubble tuning',
