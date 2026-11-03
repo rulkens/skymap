@@ -1,6 +1,6 @@
 # Small bodies phase 2 (Vesta, Ceres, Bennu) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Vesta, Ceres and Bennu as places you can fly to: each body is a row in the `body` Layer with a heliocentric orbit, joins the Horizons correction fit, is drawn from its mission shape model, and has an always-on label behind a new **Small bodies** checkbox.
 
@@ -8,7 +8,7 @@
 
 **Tech stack:** TS, Vitest, Blender (bake, on the Mac), SPICE via `spiceypy` (one-off DSK→OBJ conversion, scratch venv), JPL Horizons API.
 
-**Spec:** `docs/superpowers/specs/2026-10-21-small-bodies-phase2-design.md`. Source facts: `.superpowers/sdd/small-bodies/data-recon.md` (gitignored, in the worktree).
+**Spec:** `docs/superpowers/specs/completed/2026-10-21-small-bodies-phase2-design.md`. Source facts: `.superpowers/sdd/small-bodies/data-recon.md` (gitignored, in the worktree).
 
 ## Global constraints
 
@@ -53,10 +53,10 @@
 readonly captionKind: 'planet';
 ```
 
-- [ ] Add the field; both makers set `captionKind: 'planet'`; `sceneBodyLabels` passes `planet.captionKind` where it passes the literal `'planet'` today.
-- [ ] No new test: this is behaviour-neutral plumbing, and `sceneBodyLabels.test.ts` and `produceSceneBodyCaptions.test.ts` already pin the output.
-- [ ] `npm run typecheck:fast` and `npm test -- sceneBodyLabels produceSceneBodyCaptions` pass.
-- [ ] Commit: `prep: a celestial row declares its caption kind`.
+- [x] Add the field; both makers set `captionKind: 'planet'`; `sceneBodyLabels` passes `planet.captionKind` where it passes the literal `'planet'` today.
+- [x] No new test: this is behaviour-neutral plumbing, and `sceneBodyLabels.test.ts` and `produceSceneBodyCaptions.test.ts` already pin the output.
+- [x] `npm run typecheck:fast` and `npm test -- sceneBodyLabels produceSceneBodyCaptions` pass.
+- [x] Commit: `prep: a celestial row declares its caption kind`.
 
 ### Task 2: The Small bodies caption kind and label source
 
@@ -106,11 +106,11 @@ smallBody: SMALL_BODY_ENTRY.id,
 export function smallBody(spec: BodySpec): PlanetBody;
 ```
 
-- [ ] Make the edits above. `BodySourceId`, `bodies.items['small-body']` (default `{ enabled: true, labelEnabled: true }`) and the Labels & Guides checkbox all derive from the registry row; check the checkbox lands after the Milky Way structure rows.
-- [ ] `docsSettings.ts`: add `label('Small bodies', 'bodies.items.small-body.labelEnabled', 'the asteroids Vesta and Bennu and the dwarf planet Ceres')` at the position matching the panel. "twenty-one" becomes "twenty-two" in both master-switch strings.
-- [ ] No new test here: this task is constant plumbing the compiler checks (`satisfies` on the priority and fade tables, `Record<BodySourceId, …>` on the pick rows). Task 3's caption test is where the kind meets a body.
-- [ ] `npm run typecheck` (both projects plus the website) and `npm test` pass.
-- [ ] Commit.
+- [x] Make the edits above. `BodySourceId`, `bodies.items['small-body']` (default `{ enabled: true, labelEnabled: true }`) and the Labels & Guides checkbox all derive from the registry row; check the checkbox lands after the Milky Way structure rows.
+- [x] `docsSettings.ts`: add `label('Small bodies', 'bodies.items.small-body.labelEnabled', 'the asteroids Vesta and Bennu and the dwarf planet Ceres')` at the position matching the panel. "twenty-one" becomes "twenty-two" in both master-switch strings.
+- [x] No new test here: this task is constant plumbing the compiler checks (`satisfies` on the priority and fade tables, `Record<BodySourceId, …>` on the pick rows). Task 3's caption test is where the kind meets a body.
+- [x] `npm run typecheck` (both projects plus the website) and `npm test` pass.
+- [x] Commit.
 
 ### Task 3: Rows, orbits, rotation and the correction fit — `review: yes`
 
@@ -169,16 +169,16 @@ fitMeanAnomaly: boolean;
 
 Steps:
 
-- [ ] **Test first (fit):** add `ceres`, `vesta` and `bennu` to `horizonsPlanets.json` at the fixture's six JDs. Use the query in the test header with `COMMAND='1;'` / `'4;'` / `'101955;'`. Rename the case to `every heliocentric body is within 1,000 km of Horizons at the fixture dates` and update the header comment. Run it and see it fail: the ids don't exist yet.
-- [ ] Add `fitMeanAnomaly` to every existing `FITTED_BODIES` row (planets `false`, moons `true`) and switch the condition. Run `npm run build-ephemeris-corrections` and check `git diff --stat` on the generated file shows **no change**. That proves the refactor is neutral.
-- [ ] Write the three rows, the palette tint and the `BODY_BODY_ROWS` appends. Add the Horizons and fitted rows. `npm run fetch-horizons` fetches the new rows (three daily 1900–2100 series; announce the fetch first). Then run `npm run build-ephemeris-corrections`.
-- [ ] If a row hits the 1,000 km throw: for Bennu, shorten its span to the decades it fits (keeping `outside: 'hold'`, and moving its fixture dates inside the span with a header note). For Ceres or Vesta, lower `fitStep`. Record what was done in the spec's Correction fit bullet.
-- [ ] The ephemeris test passes.
-- [ ] **Test (captions):** in `produceSceneBodyCaptions.test.ts`, add `a small body captions under the Small bodies item, not Planets`. Assert that `sceneBodyLabels` emits `sceneBody-vesta`, `-ceres` and `-bennu` with `kind: 'smallBody'`. Add `unticking Small bodies hides only the small bodies`: with `fade['small-body'] = 0` and `fade.planet = 1`, the three candidates' `fadeAlpha` is 0 and Mars's is > 0. With `fade.planet = 0` and `fade['small-body'] = 1`, the reverse holds. Follow the file's existing fade-fixture pattern.
-- [ ] `tests/fixtures/bodyStatesJ2000.json`: add the three ids from `deriveBodyStates(CONST_J2000)` with a scratch script. Every existing row stays byte-identical (check `git diff`).
-- [ ] Facts: add the three entries to `planet_facts.seed.json` (recon §5, field shapes as `pluto`). Vesta's description names Rheasilvia (~500 km across, its central peak 20–25 km high); Ceres's names Ahuna Mons (a ~4 km ice volcano); Bennu's names the OSIRIS-REx sample (121.6 g, returned 2023-09-24). The figures must come from the recon's cited sources only. Then `npm run build-planet-facts`.
-- [ ] `npm run typecheck` and `npm test` pass.
-- [ ] Commit.
+- [x] **Test first (fit):** add `ceres`, `vesta` and `bennu` to `horizonsPlanets.json` at the fixture's six JDs. Use the query in the test header with `COMMAND='1;'` / `'4;'` / `'101955;'`. Rename the case to `every heliocentric body is within 1,000 km of Horizons at the fixture dates` and update the header comment. Run it and see it fail: the ids don't exist yet.
+- [x] Add `fitMeanAnomaly` to every existing `FITTED_BODIES` row (planets `false`, moons `true`) and switch the condition. Run `npm run build-ephemeris-corrections` and check `git diff --stat` on the generated file shows **no change**. That proves the refactor is neutral.
+- [x] Write the three rows, the palette tint and the `BODY_BODY_ROWS` appends. Add the Horizons and fitted rows. `npm run fetch-horizons` fetches the new rows (three daily 1900–2100 series; announce the fetch first). Then run `npm run build-ephemeris-corrections`.
+- [x] If a row hits the 1,000 km throw: for Bennu, shorten its span to the decades it fits (keeping `outside: 'hold'`, and moving its fixture dates inside the span with a header note). For Ceres or Vesta, lower `fitStep`. Record what was done in the spec's Correction fit bullet.
+- [x] The ephemeris test passes.
+- [x] **Test (captions):** in `produceSceneBodyCaptions.test.ts`, add `a small body captions under the Small bodies item, not Planets`. Assert that `sceneBodyLabels` emits `sceneBody-vesta`, `-ceres` and `-bennu` with `kind: 'smallBody'`. Add `unticking Small bodies hides only the small bodies`: with `fade['small-body'] = 0` and `fade.planet = 1`, the three candidates' `fadeAlpha` is 0 and Mars's is > 0. With `fade.planet = 0` and `fade['small-body'] = 1`, the reverse holds. Follow the file's existing fade-fixture pattern.
+- [x] `tests/fixtures/bodyStatesJ2000.json`: add the three ids from `deriveBodyStates(CONST_J2000)` with a scratch script. Every existing row stays byte-identical (check `git diff`).
+- [x] Facts: add the three entries to `planet_facts.seed.json` (recon §5, field shapes as `pluto`). Vesta's description names Rheasilvia (~500 km across, its central peak 20–25 km high); Ceres's names Ahuna Mons (a ~4 km ice volcano); Bennu's names the OSIRIS-REx sample (121.6 g, returned 2023-09-24). The figures must come from the recon's cited sources only. Then `npm run build-planet-facts`.
+- [x] `npm run typecheck` and `npm test` pass.
+- [x] Commit.
 
 ### Task 4: Shape models, bake and orientation checks — `review: yes`
 
@@ -211,42 +211,42 @@ Steps:
 
 Steps:
 
-- [ ] Download the three `.bds` files and three maps into `data/raw/meshes/<id>/`, and add their SHA-256 sums to `meshes.sha256`.
-- [ ] Convert DSK→OBJ with `spiceypy` in a scratch venv (`dasopr` → `dlabfs` → `dskz02`/`dskv02`/`dskp02` → `v`/`f` lines; plate indices are 1-based already). Document it as a one-off in each README beside the curl lines. No converter enters the repo.
-- [ ] Downsample Vesta's and Bennu's maps to 8192 px wide before import (`sips --resampleWidth 8192`, or `gdal_translate -outsize 8192 0`). Ceres's 7383 px map is used as is. Record the step in the README.
-- [ ] Add the `RAW_DATA` rows (source, map, `.blend`, `.prebaked.glb`, readme per body, modelled on `meshes.phobos*` at `rawDataRegistry.ts:1580-1660`).
-- [ ] Run `npm run import-mesh -- <id>`, then `npm run prebake-mesh -- <id>`, for each body.
-- [ ] Add the `MESH_SOURCES` rows and `SHAPE_MODEL_BODY_IDS = ['phobos', 'deimos', 'vesta', 'ceres', 'bennu']`, then `npm run build-meshes`.
-- [ ] **Tests:** extend `meshPresentations.test.ts`, `meshSources.shapeModels.test.ts` and `bodyGroundRadiusAtM.test.ts` to the three ids by their existing pattern. The ground-radius case asserts the floor is the bounding radius from `MESH_ASSETS`, ≥ datum + reliefM[1].
-- [ ] **Orientation checks** (one-off, recorded in the spec as the Stickney check was), on the baked mesh and atlas:
+- [x] Download the three `.bds` files and three maps into `data/raw/meshes/<id>/`, and add their SHA-256 sums to `meshes.sha256`.
+- [x] Convert DSK→OBJ with `spiceypy` in a scratch venv (`dasopr` → `dlabfs` → `dskz02`/`dskv02`/`dskp02` → `v`/`f` lines; plate indices are 1-based already). Document it as a one-off in each README beside the curl lines. No converter enters the repo.
+- [x] Downsample Vesta's and Bennu's maps to 8192 px wide before import (`sips --resampleWidth 8192`, or `gdal_translate -outsize 8192 0`). Ceres's 7383 px map is used as is. Record the step in the README.
+- [x] Add the `RAW_DATA` rows (source, map, `.blend`, `.prebaked.glb`, readme per body, modelled on `meshes.phobos*` at `rawDataRegistry.ts:1580-1660`).
+- [x] Run `npm run import-mesh -- <id>`, then `npm run prebake-mesh -- <id>`, for each body.
+- [x] Add the `MESH_SOURCES` rows and `SHAPE_MODEL_BODY_IDS = ['phobos', 'deimos', 'vesta', 'ceres', 'bennu']`, then `npm run build-meshes`.
+- [x] **Tests:** extend `meshPresentations.test.ts`, `meshSources.shapeModels.test.ts` and `bodyGroundRadiusAtM.test.ts` to the three ids by their existing pattern. The ground-radius case asserts the floor is the bounding radius from `MESH_ASSETS`, ≥ datum + reliefM[1].
+- [x] **Orientation checks** (one-off, recorded in the spec as the Stickney check was), on the baked mesh and atlas:
   - Vesta: the lowest-radius region sits near Rheasilvia's centre (≈ 75°S, 301°E).
   - Ceres: Occator's bright spot sits at 20°N, 239°E in the albedo atlas.
   - Bennu: the maximum-radius band sits on the equator.
-- [ ] **Eye-checks** (main vs branch pairs, one `#focus=body-<id>&t=2026-10-20T00:00:00Z` link each, shot with `npm run shot`, sent as dash checks):
+- [x] **Eye-checks** (main vs branch pairs, one `#focus=body-<id>&t=2026-10-20T00:00:00Z` link each, shot with `npm run shot`, sent as dash checks):
   - Vesta, Ceres and Bennu up close.
   - Bennu's polar caps read as rock.
   - Tune the albedo seeds and the `lonlat_albedo` mean values together.
   - **If Bennu draws wrong, apply ruling 1aBU:** drop Bennu's rows here and carry them to a new branch for its own PR.
-- [ ] Add the `ATTRIBUTIONS.md` sections (id `mesh-<id>`, keys `meshes.<id>*`, hosts `naif.jpl.nasa.gov`, `planetarymaps.usgs.gov`) and the `dataSourceNotes` entries.
-- [ ] `npm run typecheck` and `npm test` pass.
-- [ ] Commit, then ask the user's go for `npm run sync-r2-secure`.
+- [x] Add the `ATTRIBUTIONS.md` sections (id `mesh-<id>`, keys `meshes.<id>*`, hosts `naif.jpl.nasa.gov`, `planetarymaps.usgs.gov`) and the `dataSourceNotes` entries.
+- [x] `npm run typecheck` and `npm test` pass.
+- [x] Commit, then ask the user's go for `npm run sync-r2-secure`.
 
 ## Definition of Done
 
 **Deliverables**
-- [ ] `PlanetBody.captionKind`, set by all three makers (`heliocentricPlanet`, `satelliteBody`, `smallBody`).
-- [ ] `Source.SmallBody = 38`, `SMALL_BODY_ENTRY`, `BODY_PICK_ROWS['small-body'] = []`, `CaptionKind 'smallBody'`.
-- [ ] `vesta.ts`, `ceres.ts` and `bennu.ts` appended to `BODY_BODY_ROWS`, fitted in `ephemerisCorrections.generated.ts`, with facts entries.
-- [ ] Three `MESH_SOURCES` rows, prebaked GLBs and atlases, `MESH_ASSETS` entries, READMEs, attributions and site notes.
-- [ ] Baked assets published to R2 (with the user's go).
+- [x] `PlanetBody.captionKind`, set by all three makers (`heliocentricPlanet`, `satelliteBody`, `smallBody`).
+- [x] `Source.SmallBody = 38`, `SMALL_BODY_ENTRY`, `BODY_PICK_ROWS['small-body'] = []`, `CaptionKind 'smallBody'`.
+- [x] `vesta.ts`, `ceres.ts` and `bennu.ts` appended to `BODY_BODY_ROWS`, fitted in `ephemerisCorrections.generated.ts`, with facts entries.
+- [x] Three `MESH_SOURCES` rows, prebaked GLBs and atlases, `MESH_ASSETS` entries, READMEs, attributions and site notes.
+- [x] Baked assets published to R2 (with the user's go).
 
 **Smoke (deep links to the worktree server)**
-- [ ] From the solar-system view, Vesta, Ceres and Bennu are named, with Mars and Jupiter for reference.
-- [ ] The Small bodies checkbox hides exactly those three names; the Planets checkbox leaves them on.
-- [ ] Orbit trails toggle draws their orbits, and each body sits on its trail.
-- [ ] Focus and fly-to land outside the mesh at a whole-body view; Vesta's south-pole hover is accepted.
-- [ ] Hover, select ring and detail card show the right body and its facts; search finds each by name.
-- [ ] The time slider at 1900 and 2100 keeps all three on their trails.
+- [x] From the solar-system view, Vesta, Ceres and Bennu are named, with Mars and Jupiter for reference.
+- [x] The Small bodies checkbox hides exactly those three names; the Planets checkbox leaves them on.
+- [x] Orbit trails toggle draws their orbits, and each body sits on its trail.
+- [x] Focus and fly-to land outside the mesh at a whole-body view; Vesta's south-pole hover is accepted.
+- [x] Hover, select ring and detail card show the right body and its facts; search finds each by name.
+- [x] The time slider at 1900 and 2100 keeps all three on their trails.
 
 **Deferred (out of scope)**
 Phases 3–4 (backlog), a body show-toggle, featured cards for the new bodies, a DSK reader, a spin-acceleration rotation term, and the website object catalogue's grouping.
