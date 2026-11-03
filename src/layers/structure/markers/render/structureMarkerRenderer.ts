@@ -65,7 +65,10 @@ import ringPickVsCode from '../../../../services/gpu/shaders/structureMarker/rin
 import ringPickFsCode from '../../../../services/gpu/shaders/structureMarker/ringPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
+import {
+  CAMERA_UNIFORM_BYTES,
+  writeCameraPrefix,
+} from '../../../../services/gpu/lib/cameraUniforms';
 import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { createDummyFadeBindGroup } from '../../../../services/gpu/lib/dummyFade';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';

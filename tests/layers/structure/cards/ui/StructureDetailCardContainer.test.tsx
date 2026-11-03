@@ -25,18 +25,21 @@ import type { StructureInfo } from '../../../../../src/@types/data/structure/Str
 // mechanism rather than by output stability alone. The `mock` prefix lets
 // vitest's hoisted factory reference the counter.
 const mockCardRenderProbe = { count: 0 };
-vi.mock('../../../../../src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard', async () => {
-  const actual = await vi.importActual<
-    typeof import('../../../../../src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard')
-  >('../../../../../src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard');
-  return {
-    ...actual,
-    default: (props: Parameters<typeof actual.default>[0]) => {
-      mockCardRenderProbe.count += 1;
-      return createElement(actual.default, props);
-    },
-  };
-});
+vi.mock(
+  '../../../../../src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard',
+  async () => {
+    const actual = await vi.importActual<
+      typeof import('../../../../../src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard')
+    >('../../../../../src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard');
+    return {
+      ...actual,
+      default: (props: Parameters<typeof actual.default>[0]) => {
+        mockCardRenderProbe.count += 1;
+        return createElement(actual.default, props);
+      },
+    };
+  },
+);
 
 const virgo: StructureInfo = {
   type: 'structure',

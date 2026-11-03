@@ -74,4 +74,3 @@ describe('buildStaticAnchorStructures', () => {
     expect('wikipediaTitle' in ophiuchus!).toBe(false);
   });
 });
-
