@@ -7,7 +7,7 @@
   }
 
   & li {
-    padding-block: 1rem;
+    padding-block: var(--site-space-s);
     border-top: 1px solid var(--border-divider);
   }
 
@@ -17,8 +17,8 @@
   }
 
   & blockquote {
-    margin: 0.5rem 0;
-    padding-left: 1rem;
+    margin: var(--site-space-2xs) 0;
+    padding-left: var(--site-space-s);
     border-left: 1px solid var(--site-text-dim);
     color: var(--site-text-muted);
     overflow-wrap: anywhere;

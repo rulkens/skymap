@@ -1,8 +1,9 @@
 .root {
   composes: wrap grid from '../../../../styles/layout.module.css';
+  --front-line: 2.25rem;
   grid-template-rows: 1fr auto;
   min-height: var(--first-screen);
-  padding-block: var(--open-top) 2rem;
+  padding-block: var(--open-top) var(--site-space-l);
 
   /* The figure's two parts are the band's own cells: the disc beside the words, the label under both. */
   & figure {
@@ -21,9 +22,13 @@
   place-items: center;
 }
 
-/* The largest disc the room holds, less the ring that stands outside it. */
+/* The largest disc the room holds, less the ring that stands outside it and the line under it that names the front. */
 .fit {
-  width: calc(min(100cqw, 100cqh, 46.375rem) - 2 * var(--disc-ring));
+  composes: turn from './domeTurn.module.css';
+  position: relative;
+  width: calc(min(100cqw, 100cqh - var(--front-line), 46.375rem) - 2 * var(--disc-ring));
+  margin-bottom: var(--front-line);
+  border-radius: 50%;
 }
 
 .caption {
@@ -33,14 +38,14 @@
   /* The line under the label is a figure about the frame: dim, and as long as it likes. */
   & > p {
     max-width: none;
-    margin: 0.5rem 0 0;
+    margin: var(--site-space-2xs) 0 0;
     color: var(--site-text-dim);
     font-variant-numeric: tabular-nums;
   }
 }
 
 /* Halves of the page grid: the words, and the disc. */
-@media (min-width: 901px) {
+@media (--wide) {
   .words {
     grid-column: span 6;
   }
@@ -51,7 +56,7 @@
 }
 
 /* On a short window the disc is small whatever its column, so the words take the width it cannot use. */
-@media (min-width: 901px) and (max-height: 800px) {
+@media (--wide) and (max-height: 800px) {
   .words {
     grid-column: span 7;
 
@@ -66,7 +71,7 @@
 }
 
 /* Shorter still, the paragraphs under the lead are set small: at 16px Jost is 400. */
-@media (min-width: 901px) and (max-height: 720px) {
+@media (--wide) and (max-height: 720px) {
   .words > p {
     max-width: 34rem;
     font-size: var(--text-small);
@@ -75,11 +80,11 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     grid-template-rows: none;
     min-height: 0;
-    padding-block: 2rem 0;
+    padding-block: var(--site-space-l) 0;
   }
 
   .words {
@@ -107,7 +112,7 @@
   .room {
     order: 1;
     container-type: normal;
-    margin-block: 1.5rem 2.5rem;
+    margin-block: var(--site-space-m) var(--site-space-xl);
   }
 
   /* Never taller than the screen it is on, which matters on a phone held sideways. */
@@ -117,7 +122,7 @@
 
   .caption {
     order: 2;
-    margin-bottom: 2.5rem;
+    margin-bottom: var(--site-space-xl);
     padding-top: 0;
   }
 }

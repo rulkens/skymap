@@ -12,13 +12,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
 import { composeRenderTargetRows } from '../../../src/services/engine/layer/composeRenderTargetRows';
 import { STAR_AGGREGATES_TARGET } from '../../../src/layers/starCatalog/render/starAggregatesTarget';
-import { MILKY_WAY_AGGREGATE_TARGET } from '../../../src/layers/milkyWay/render/milkyWayAggregateTarget';
+import { MILKY_WAY_AGGREGATE_TARGET } from '../../../src/layers/milkyWay/cloud/render/milkyWayAggregateTarget';
 import { cosmicWebDensityLayer } from '../../../src/layers/cosmicWebDensity/layer';
 import { blackHolesLayer } from '../../../src/layers/blackHoles/layer';
 import { SCALE_FADE_BANDS } from '../../../src/data/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
 import { makeCubemapCaptureRuntimes } from '../../helpers/engine/makeCubemapCaptureRuntimes';
+import { clearValueOf } from '../../../src/utils/gpu/clearValueOf';
+
+const DEFAULT_DEBUG_STATE = {
+  settings: { debug: { matteWhite: false } },
+} as unknown as EngineState;
 
 function mockDevice(): GPUDevice {
   return {
@@ -569,9 +574,17 @@ describe('createRenderTargets', () => {
         spec.id === 'hdr' || spec.id === 'swap' || spec.id === 'dome-cube' ? 1 : 0;
       // Every row in this table is written as a `{r,g,b,a}` dict (never the
       // 4-tuple alternative `GPUColor` also allows), so this cast is safe.
-      const clearValue = spec.clearValue as GPUColorDict;
+      const clearValue = clearValueOf(spec, DEFAULT_DEBUG_STATE) as GPUColorDict;
       expect(clearValue.a).toBe(expectedAlpha);
     }
+  });
+
+  // The matte is a shot-tool setting: a visitor's frame must clear exactly as before.
+  it('hdr clears opaque black unless the debug matte asks for white', () => {
+    const hdr = renderTargetRows(SWAP_FORMAT).find((spec) => spec.id === 'hdr')!;
+    expect(clearValueOf(hdr, DEFAULT_DEBUG_STATE)).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+    const matte = { settings: { debug: { matteWhite: true } } } as unknown as EngineState;
+    expect(clearValueOf(hdr, matte)).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
   it('creates and clears the far-depth placeholder once, and farDepthView is stable across reconcile', () => {

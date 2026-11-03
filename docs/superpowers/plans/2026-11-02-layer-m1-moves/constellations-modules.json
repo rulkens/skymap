@@ -1,0 +1,17 @@
+[
+  { "from": "src/layers/constellations/@types/ConstellationInstances.d.ts", "to": "src/layers/constellations/figures/@types/ConstellationInstances.d.ts" },
+  { "from": "src/layers/constellations/@types/ConstellationLabelStyle.d.ts", "to": "src/layers/constellations/figures/@types/ConstellationLabelStyle.d.ts" },
+  { "from": "src/layers/constellations/@types/ConstellationsArtifact.d.ts", "to": "src/layers/constellations/figures/@types/ConstellationsArtifact.d.ts" },
+  { "from": "src/layers/constellations/@types/ConstellationRenderer.d.ts", "to": "src/layers/constellations/figures/@types/ConstellationRenderer.d.ts" },
+  { "from": "src/layers/constellations/data/constellationLineColor.ts", "to": "src/layers/constellations/figures/data/constellationLineColor.ts" },
+  { "from": "src/layers/constellations/data/constellationLineHalfwidthPx.ts", "to": "src/layers/constellations/figures/data/constellationLineHalfwidthPx.ts" },
+  { "from": "src/layers/constellations/load/constellationsAssetRows.ts", "to": "src/layers/constellations/figures/load/constellationsAssetRows.ts" },
+  { "from": "src/layers/constellations/load/constellationsFetcher.ts", "to": "src/layers/constellations/figures/load/constellationsFetcher.ts" },
+  { "from": "src/layers/constellations/load/constellationsSlot.ts", "to": "src/layers/constellations/figures/load/constellationsSlot.ts" },
+  { "from": "src/layers/constellations/passes/constellationsPass.ts", "to": "src/layers/constellations/figures/passes/constellationsPass.ts" },
+  { "from": "src/layers/constellations/present/constellationCaptions.ts", "to": "src/layers/constellations/figures/present/constellationCaptions.ts" },
+  { "from": "src/layers/constellations/present/constellationLabelStyle.ts", "to": "src/layers/constellations/figures/present/constellationLabelStyle.ts" },
+  { "from": "src/layers/constellations/present/produceConstellationCaptions.ts", "to": "src/layers/constellations/figures/present/produceConstellationCaptions.ts" },
+  { "from": "src/layers/constellations/render/buildConstellationInstances.ts", "to": "src/layers/constellations/figures/render/buildConstellationInstances.ts" },
+  { "from": "src/layers/constellations/render/constellationRenderer.ts", "to": "src/layers/constellations/figures/render/constellationRenderer.ts" }
+]

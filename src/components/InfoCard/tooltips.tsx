@@ -8,12 +8,7 @@
  * Bodies are JSX so they can carry line breaks, italics, and `<code>`.
  */
 
-import type { ReactNode } from 'react';
-
-type TipContent = {
-  title: string;
-  body: ReactNode;
-};
+import type { TipContent } from '../../@types/components/infoCard/TipContent';
 
 export const TIPS: Record<string, TipContent> = {
   distance: {
@@ -161,53 +156,6 @@ export const TIPS: Record<string, TipContent> = {
         <strong>PA</strong> (position angle) is the compass direction of its long axis, in degrees
         measured east of north. Together they let us tilt the on-screen billboard to match the real
         galaxy.
-      </>
-    ),
-  },
-
-  // ── Structure rows (cluster / supercluster / void / group) ──────────────
-  structureDistance: {
-    title: 'Distance',
-    body: (
-      <>
-        How far the centre of this structure lies from us, in parsecs and light-years. It's the
-        distance to the catalogued middle; the individual member galaxies are strewn through a huge
-        volume, some nearer and some farther than this single figure. Think of it as the address of
-        the group's heart, not a wall at a fixed range.
-      </>
-    ),
-  },
-  structureRadius: {
-    title: 'Radius',
-    body: (
-      <>
-        The structure's physical reach: the radius of the sphere we treat as its territory, and the
-        size of the ring drawn around it on the sky. It's a radius (centre to edge), not a diameter,
-        so the full span across is twice this. Clusters of galaxies run to millions of light-years,
-        the largest structures gravity has managed to bind together.
-      </>
-    ),
-  },
-  memberCount: {
-    title: 'Member galaxies',
-    body: (
-      <>
-        How many catalogued galaxies currently fall inside this structure's sphere, given the tiers
-        and catalogs you have switched on right now. Load a deeper tier or enable more surveys and
-        this climbs, because you're revealing more of the same real population, not creating new
-        galaxies. Read it as "how many we can show you here," not the true head-count, which is far
-        larger.
-      </>
-    ),
-  },
-  abell: {
-    title: 'Abell designation',
-    body: (
-      <>
-        The cluster's ID in the Abell catalogue, the classic 1958 census of rich galaxy clusters
-        compiled by George Abell (extended to the southern sky in 1989). Abell hunted them by eye on
-        photographic plates, a monumental effort long before computers could help. For example,{' '}
-        <code>A1656</code> is the famous Coma Cluster.
       </>
     ),
   },
@@ -372,7 +320,7 @@ export const TIPS: Record<string, TipContent> = {
     ),
   },
 
-  // ── Body rows (planets / moons) + galaxy morphology / AGN ───────────────
+  // ── Body rows (planets / moons) + galaxy AGN ───────────────
   bodyRadius: {
     title: 'Radius',
     body: (
@@ -488,17 +436,6 @@ export const TIPS: Record<string, TipContent> = {
       </>
     ),
   },
-  morphology: {
-    title: 'Morphological type',
-    body: (
-      <>
-        A galaxy's morphological type is its shape, sorted by Edwin Hubble's classic scheme:
-        ellipticals (smooth balls of old stars), spirals (flat disks with winding arms), and barred
-        spirals (with a straight bar of stars across the centre). The Milky Way is a barred spiral.
-        The shape traces how a galaxy formed and whether it's still building new stars in its arms.
-      </>
-    ),
-  },
   agnClass: {
     title: 'Active nucleus (AGN)',
     body: (
@@ -508,74 +445,6 @@ export const TIPS: Record<string, TipContent> = {
         name (Seyfert, quasar, blazar, and so on) mostly reflects our viewing angle and how
         furiously the black hole is feeding. They rank among the most luminous and most distant
         objects we can see.
-      </>
-    ),
-  },
-
-  // ── Milky Way card ───────────────────────────────────────────────────────
-  sunToCentre: {
-    title: 'Sun to galactic centre',
-    body: (
-      <>
-        How far the Sun sits from the Milky Way's own centre, out in one of the disc's spiral arms
-        rather than anywhere near the middle. Astronomers call this figure R₀. It's measured by
-        tracking the orbits of stars right at the centre, tugged by the black hole sitting there,
-        and working out our own distance from that orbit's geometry.
-      </>
-    ),
-  },
-  milkyWayStars: {
-    title: 'Star count',
-    body: (
-      <>
-        Roughly how many stars make up the Milky Way. Nobody has ever counted them one by one; the
-        range comes from totalling the galaxy's light and mass and dividing by a typical star's
-        share of each. Most are small, dim red dwarfs invisible to the naked eye, so the number
-        dwarfs anything you can actually see in the night sky.
-      </>
-    ),
-  },
-  milkyWayMass: {
-    title: 'Mass',
-    body: (
-      <>
-        The stellar figure is just the stars added up, weighed by how their light and motions
-        behave. The much larger figure includes dark matter: an invisible, undetected-directly
-        substance that outweighs the visible galaxy several times over. We know it's there because
-        stars far out in the disc orbit too fast for the visible mass alone to hold onto them.
-      </>
-    ),
-  },
-  oldestStars: {
-    title: 'Oldest stars',
-    body: (
-      <>
-        The age of the Milky Way's most ancient stars, found in its halo and globular clusters
-        rather than the busy star-forming disc. This figure sits close to the age of the universe
-        itself (13.8 billion years), meaning the Milky Way started forming almost as soon as stars
-        became possible at all.
-      </>
-    ),
-  },
-  galacticYear: {
-    title: 'Galactic year',
-    body: (
-      <>
-        How long the Sun takes to complete one full orbit of the galactic centre: one "galactic
-        year". At roughly 220 million of our years per lap, the Sun has circled the Milky Way only
-        about 20 times since it formed, even though it orbits at 229 km/s, far faster than any
-        spacecraft humanity has built.
-      </>
-    ),
-  },
-  centralBlackHole: {
-    title: 'Central black hole',
-    body: (
-      <>
-        Sagittarius A* (Sgr A*) is the supermassive black hole anchoring the Milky Way's centre,
-        weighing in at about 4.3 million Suns. Astronomers tracked individual stars whipping around
-        it for decades to pin down that mass, work that won the 2020 Nobel Prize in Physics. It's
-        quiet compared to actively-feeding black holes elsewhere, so it doesn't light up the sky.
       </>
     ),
   },

@@ -10,8 +10,8 @@ import { composeSelectionRows } from '../../src/services/engine/selection/compos
 import { bodyLayer } from '../../src/layers/body/layer';
 import { missionsLayer } from '../../src/layers/missions/layer';
 import { earthScenesLayer } from '../../src/layers/earthScenes/layer';
-import { MISSION_CRAFT_IDS } from '../../src/layers/missions/present/missionCraftIds';
-import { EARTH_SCENE_BODY_IDS } from '../../src/data/bodies/earthSceneBodyIds';
+import { MISSION_CRAFT_IDS } from '../../src/layers/missions/craft/present/missionCraftIds';
+import { EARTH_SCENE_BODY_IDS } from '../../src/layers/earthScenes/scenes/data/earthSceneBodyIds';
 import { SCENE_BODIES } from '../../src/data/bodies/sceneBodies';
 import { SCENE_SUN } from '../../src/data/bodies/sceneSun';
 import { SCENE_STARS } from '../../src/data/bodies/sceneStars';

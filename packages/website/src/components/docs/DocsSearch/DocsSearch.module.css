@@ -13,7 +13,7 @@ button.open {
 
 /* The key is of use to a keyboard only. */
 .open kbd {
-  margin-left: 0.25rem;
+  margin-left: var(--site-space-3xs);
 }
 
 @media not ((hover: hover) and (pointer: fine)) {
@@ -27,7 +27,7 @@ button.open {
   composes: sheet from '../../../styles/sheet.module.css';
   inset: 0 0 auto;
   max-height: 100dvh;
-  padding: 2.5rem 0 3.5rem;
+  padding: var(--site-space-xl) 0 var(--site-space-2xl);
   border-bottom: 1px solid var(--border-divider);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -40,7 +40,7 @@ button.open {
 .inside {
   composes: wrap grid from '../../../styles/layout.module.css';
   align-items: end;
-  row-gap: 0.75rem;
+  row-gap: var(--site-space-xs);
 }
 
 .label {
@@ -52,9 +52,9 @@ button.open {
 /* The query is the sheet's heading; the rule under it is the field, and takes the accent while it is typed in. */
 .ask input {
   width: 100%;
-  padding: 0.25rem 0 0.5rem;
+  padding: var(--site-space-3xs) 0 var(--site-space-2xs);
   border: 0;
-  border-bottom: 1px solid rgb(232 238 255 / 0.2);
+  border-bottom: 1px solid var(--site-line);
   border-radius: 0;
   background: none;
   color: var(--color-fg);
@@ -89,8 +89,8 @@ button.open {
   --mark: 0.6875rem;
   position: relative;
   display: grid;
-  gap: 0.25rem;
-  padding-block: 1rem;
+  gap: var(--site-space-3xs);
+  padding-block: var(--site-space-s);
   border-top: 1px solid var(--border-divider);
   color: var(--site-text-muted);
   text-decoration: none;
@@ -149,7 +149,7 @@ button.open {
   text-underline-offset: 0.25em;
 }
 
-@media (min-width: 901px) {
+@media (--wide) {
   .ask,
   .status,
   .results {
@@ -162,10 +162,10 @@ button.open {
 }
 
 /* Narrow: the whole screen, Close above the field at the thumb's corner, results indented by their marker. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .sheet {
     min-height: 100dvh;
-    padding-top: 0.5rem;
+    padding-top: var(--site-space-2xs);
   }
 
   .shut {

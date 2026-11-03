@@ -7,6 +7,7 @@ export type Gesture =
   | { readonly kind: 'heldStart'; readonly press: Press; readonly at: UnitPoint }
   | { readonly kind: 'drag'; readonly dx: number; readonly dy: number; readonly at: UnitPoint }
   | { readonly kind: 'pinch'; readonly ratio: number }
+  | { readonly kind: 'tiltStart'; readonly at: UnitPoint }
   | { readonly kind: 'heldEnd' }
   | {
       readonly kind: 'wheel';

@@ -18,6 +18,8 @@ import {
 import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/slice';
 import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
 import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
+import { setExposure } from '../../../src/state/settings/core/tonemapSlice';
+import { setMeshAmbient, setPassDisabled } from '../../../src/state/settings/core/debugSlice';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { setOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/slice';
 import { setBodyLabelEnabled } from '../../../src/layers/body/state/bodies/slice';
@@ -71,6 +73,8 @@ export function siteShotActions({
   if (settings.flow) actions.push(setFlowEnabled(true));
   if (settings.desiWedge) actions.push(setGalaxyCatalogVisible({ id: 'desiWedge', enabled: true }));
   if (settings.fovDeg !== undefined) actions.push(setFovDeg(settings.fovDeg));
+  if (settings.exposure !== undefined) actions.push(setExposure(settings.exposure));
+  if (settings.ambient !== undefined) actions.push(setMeshAmbient(settings.ambient));
   if (settings.rawDensity) actions.push(setBiasMode(BiasMode.None));
   // The new size's files load after this; the row's `settleMs` is the wait for them.
   if (settings.dataSize !== undefined) actions.push(requestTier(settings.dataSize));
@@ -93,6 +97,10 @@ export function siteShotActions({
         }),
       );
     }
+  }
+  // A matte row's passes are left out by shootMatte, after the shadow pair that needs the ground they hide.
+  if (settings.hidePasses && !settings.matte) {
+    actions.push(...settings.hidePasses.map((pass) => setPassDisabled({ pass, disabled: true })));
   }
   if (settings.debugPanel) actions.push(setDebugPanelOpen(true));
   if (settings.tourStep !== undefined) {

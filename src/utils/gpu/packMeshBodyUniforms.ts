@@ -1,5 +1,5 @@
 /**
- * packMeshBodyUniforms — pure packer for the 144-byte `MeshBodyUniforms` struct.
+ * packMeshBodyUniforms — pure packer for the 160-byte `MeshBodyUniforms` struct.
  * The layout lives ONCE, beside the struct, in `shaders/bodies/meshBody/io.wesl`'s
  * header — read it there; the writes below are in that order. It MATCHES
  * `packLitBodyUniforms`'s first 80 bytes byte-for-byte (keep the two in step by
@@ -18,6 +18,7 @@ export function packMeshBodyUniforms(args: {
   readonly model: Readonly<Mat3>;
   readonly camPosLocal: Readonly<Vec3>;
   readonly sinSunAngularRadius: number;
+  readonly ambient: number;
 }): Float32Array {
   const out = new Float32Array(MESH_BODY_UNIFORM_FLOATS);
   out.set(args.mvp.subarray(0, 16), 0);
@@ -41,5 +42,6 @@ export function packMeshBodyUniforms(args: {
   out[33] = args.camPosLocal[1];
   out[34] = args.camPosLocal[2];
   out[35] = args.sinSunAngularRadius;
+  out[36] = args.ambient; // byte 144; 148..159 are the struct's padding
   return out;
 }

@@ -3,57 +3,33 @@
  * ShotCaption per view in one cell, under a row of ring markers, one per view,
  * that choose the view. A host treats it as a single label (it draws the same
  * foot). The markers sit close and centred: a quiet row, not a control bar.
- * Before the page's script runs the markers stay hidden and the first label stands.
+ * Before the page's script runs the markers stay hidden and the first label stands. `open={false}` leaves
+ * out each label's address, where the words beside the pictures already link the views.
  */
-import type { KeyboardEvent } from 'react';
-import { useRef } from 'react';
-
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
-import { galleryKeyTarget } from '../../../../utils/galleryKeyTarget.ts';
-import { wrapIndex } from '../../../../utils/wrapIndex.ts';
-import { useGalleryState } from '../PictureBand/GalleryContext.ts';
-import changing from '../PictureBand/viewChange.module.css';
+import { useGalleryState } from '../gallery/GalleryContext.ts';
+import { useGalleryMarks } from '../gallery/useGalleryMarks.ts';
+import changing from '../gallery/viewChange.module.css';
 import ShotCaption from '../ShotCaption/ShotCaption.tsx';
 import styles from './CaptionGallery.module.css';
 
-type CaptionGalleryProps = { showDrawn?: boolean };
+type CaptionGalleryProps = { showDrawn?: boolean; open?: boolean };
 
-function CaptionGallery({ showDrawn = true }: CaptionGalleryProps) {
-  const { views, at, live, byReader, choose, marksRef } = useGalleryState();
-  const marks = useRef<(HTMLButtonElement | null)[]>([]);
-  const last = views.length - 1;
-
-  const onKeyDown = (event: KeyboardEvent) => {
-    const to = galleryKeyTarget(event.key, at, last);
-    if (to === at) return;
-    event.preventDefault();
-    choose(to);
-    marks.current[wrapIndex(to, views.length)]?.focus();
-  };
+function CaptionGallery({ showDrawn = true, open = true }: CaptionGalleryProps) {
+  const gallery = useGalleryState();
+  const { views, at, live, byReader } = gallery;
+  const marks = useGalleryMarks(gallery);
 
   return (
     <div className={styles.root}>
-      <div
-        ref={marksRef}
-        className={cx(styles.marks, !live && styles.idle)}
-        role="group"
-        aria-label="Views"
-      >
+      <div className={cx(styles.marks, !live && styles.idle)} {...marks.group}>
         {views.map((view, i) => (
           <button
             key={view.id}
-            ref={(el) => {
-              marks.current[i] = el;
-            }}
             className={styles.mark}
-            type="button"
             aria-label={siteShot(view.id).title}
-            title={siteShot(view.id).title}
-            aria-pressed={i === at}
-            tabIndex={i === at ? 0 : -1}
-            onClick={() => choose(i)}
-            onKeyDown={onKeyDown}
+            {...marks.mark(i)}
           />
         ))}
       </div>
@@ -64,7 +40,7 @@ function CaptionGallery({ showDrawn = true }: CaptionGalleryProps) {
             key={view.id}
             className={cx(changing.view, (live ? i !== at : i !== 0) && changing.away)}
           >
-            <ShotCaption id={view.id} showDrawn={showDrawn} />
+            <ShotCaption id={view.id} showDrawn={showDrawn} open={open} />
           </div>
         ))}
       </div>

@@ -4,9 +4,9 @@
   border-radius: 50%;
   overflow: hidden;
   box-shadow:
-    0 0 0 1px rgb(232 238 255 / 0.5),
+    0 0 0 1px var(--site-line-strong),
     0 0 0 1.125rem #000,
-    0 0 0 var(--disc-ring) rgb(232 238 255 / 0.18);
+    0 0 0 var(--disc-ring) color-mix(in srgb, var(--color-fg) 18%, transparent);
 
   & img {
     display: block;

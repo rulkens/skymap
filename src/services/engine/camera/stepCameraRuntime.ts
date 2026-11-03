@@ -45,6 +45,7 @@ import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import { focusMoveDurationMs } from './focusMoveDurationMs';
+import { selectGestureHeld } from '../../../state/input/selectors';
 import cameraReducer, {
   cancelCameraTween,
   clearFrameTween,
@@ -173,9 +174,9 @@ export function stepCameraRuntime(
       navOwns: isNavigatorDriverId(winnerLastFrame),
     },
   );
-  // The drivers must see this frame's commits (`endDrag` above all, or
-  // `orbitDrag` wins one frame too long). Identity on a steady frame, so a
-  // memoised selector keyed on the root object keeps its cache.
+  // The drivers must see this frame's commits: a release's `base` is the pose
+  // the resting row holds. Identity on a steady frame, so a memoised selector
+  // keyed on the root object keeps its cache.
   const rootState =
     drained.actions.length === 0
       ? stored
@@ -184,7 +185,8 @@ export function stepCameraRuntime(
   // nudge a skymap drag. `canvasPx` is CSS pixels, so the rate is the drag's own.
   const navigates = drivers.some((d) => isNavigatorDriverId(d.id));
   // The hold follows the gesture, not its motion: a still press eases a coast to rest.
-  const navHeld = navigates && rootState.camera.dragging;
+  const gestureHeld = selectGestureHeld(rootState);
+  const navHeld = navigates && gestureHeld;
   const nav = stepNavigator(
     prev.navigator,
     navigates ? drained.navSteps : [],
@@ -266,6 +268,7 @@ export function stepCameraRuntime(
       simDays,
       projection,
       bodies,
+      terrainHeightAt,
       followDistanceTarget: drained.followDistanceTarget,
     },
     // Same status a tween or clip has: an outside commit delivers the framing
@@ -313,13 +316,14 @@ export function stepCameraRuntime(
     follow: memory,
     tilt,
     intent: rootState.camera,
+    gestureHeld,
     ctx: foldCtx,
   });
   actions.push(...projected.actions);
 
   // The gesture memory belongs to the arm it was taken on, so a crossing voids
   // it — inert today, because only the fold re-keys the register and it is
-  // skipped whole while `intent.dragging`, never between a latch and its
+  // skipped whole while `gestureHeld`, never between a latch and its
   // release. The identity keep needs BOTH halves: an already-empty value under
   // a changed key must still re-key, or the wipe re-fires every frame.
   const gestureKey = frameKey(projected.register.frame);

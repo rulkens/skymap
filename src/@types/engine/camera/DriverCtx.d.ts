@@ -11,6 +11,7 @@ import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { Mat3 } from '../../math/Mat3';
 import type { RootState } from '../../../store/types';
 import type { PositionedId } from '../../scene/PositionedId';
+import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
 
 export type DriverCtx = {
   readonly state: RootState;
@@ -39,6 +40,8 @@ export type DriverCtx = {
   readonly projection: CameraProjection;
   /** This instant's body states — a frame-tagged keyframe converts through them. */
   readonly bodies: ReadonlyMap<PositionedId, BodyState>;
+  /** The live ground, for a clip leg's frame fold. */
+  readonly terrainHeightAt: TerrainHeightAtLookup;
   /** Mpc; null on a frame with no swallowed wheel notch. */
   readonly followDistanceTarget: number | null;
 };

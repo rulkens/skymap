@@ -5,12 +5,15 @@
   perspective: 1400px;
 }
 
-/* `--turn-x` and `--turn-y`: the pointer's offset from the phone's middle in its widths and heights, held to ±1. */
+/*
+ * `--turn-x` and `--turn-y`: the pointer's offset from the phone's middle in its widths and heights, held to ±1,
+ * or from a host's that turns several things together (`follow={false}`); the host may also set the rest pose.
+ */
 .case {
   position: relative;
   transform-style: preserve-3d;
-  transform: rotateY(calc(-18deg + var(--turn-x, 0) * 22deg))
-    rotateX(calc(6deg - var(--turn-y, 0) * 12deg));
+  transform: rotateY(calc(var(--phone-yaw, -18deg) + var(--turn-x, 0) * 22deg))
+    rotateX(calc(var(--phone-pitch, 6deg) - var(--turn-y, 0) * 12deg));
   transition: transform 0.25s ease-out;
 }
 

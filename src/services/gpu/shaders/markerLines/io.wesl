@@ -93,7 +93,8 @@ struct VsIn {
 
 struct VsOut {
   @builtin(position) pos: vec4<f32>,
-  @location(0) uv: vec2<f32>,
+  // linear: an across-width coordinate (lib/segmentQuad.wesl's header).
+  @location(0) @interpolate(linear) uv: vec2<f32>,
   @location(1) color: vec4<f32>,
   @location(2) occludeWeight: f32,
 };

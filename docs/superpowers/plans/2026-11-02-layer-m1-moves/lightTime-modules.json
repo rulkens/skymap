@@ -1,0 +1,11 @@
+[
+  { "from": "src/layers/lightTime/@types/LightTimeLiveness.d.ts", "to": "src/layers/lightTime/spheres/@types/LightTimeLiveness.d.ts" },
+  { "from": "src/layers/lightTime/@types/LightTimeSphere.d.ts", "to": "src/layers/lightTime/spheres/@types/LightTimeSphere.d.ts" },
+  { "from": "src/layers/lightTime/@types/LightTimeSpheresRenderer.d.ts", "to": "src/layers/lightTime/spheres/@types/LightTimeSpheresRenderer.d.ts" },
+  { "from": "src/layers/lightTime/data/lightTimeFadeBands.ts", "to": "src/layers/lightTime/spheres/data/lightTimeFadeBands.ts" },
+  { "from": "src/layers/lightTime/data/lightTimeSpheres.ts", "to": "src/layers/lightTime/spheres/data/lightTimeSpheres.ts" },
+  { "from": "src/layers/lightTime/passes/lightTimeSpheresPass.ts", "to": "src/layers/lightTime/spheres/passes/lightTimeSpheresPass.ts" },
+  { "from": "src/layers/lightTime/present/deriveLightTimeLiveness.ts", "to": "src/layers/lightTime/spheres/present/deriveLightTimeLiveness.ts" },
+  { "from": "src/layers/lightTime/present/produceLightTimeCaptions.ts", "to": "src/layers/lightTime/spheres/present/produceLightTimeCaptions.ts" },
+  { "from": "src/layers/lightTime/render/lightTimeSpheresRenderer.ts", "to": "src/layers/lightTime/spheres/render/lightTimeSpheresRenderer.ts" }
+]

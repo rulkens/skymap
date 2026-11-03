@@ -1,7 +1,8 @@
 import type { Press } from './Press';
+import type { RecognizerPair } from './RecognizerPair';
 import type { UnitPoint } from './UnitPoint';
 
-/** Everything `recognize` carries between events; the pixel size is kept so a pinch span gets its aspect. */
+/** Everything `recognize` carries between events; the pixel size is kept so a pair's spans and travels get their aspect. */
 export type RecognizerState = {
   readonly widthPx: number;
   readonly heightPx: number;
@@ -13,9 +14,8 @@ export type RecognizerState = {
     readonly driver: number;
     readonly from: UnitPoint;
   } | null;
-  readonly pinching: boolean;
-  /** Last pinch span in px; a lifted finger breaks the pair and the survivor drives nothing. */
-  readonly pinchSpanPx: number;
-  readonly pinchBroken: boolean;
+  readonly pair: RecognizerPair | null;
+  /** A lifted finger breaks the pair and the survivor drives nothing. */
+  readonly pairBroken: boolean;
   readonly lastTap: { readonly t: number; readonly at: UnitPoint; readonly press: Press } | null;
 };

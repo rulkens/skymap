@@ -68,10 +68,11 @@ function makeCosmoVp(): Mat4 {
 
 const NO_POSE: BodyPoseProvider = () => null;
 
-function makePlanet(overrides: Partial<PlanetBody> = {}): PlanetBody {
+function makePlanet(overrides: Partial<Omit<PlanetBody, 'captionKind'>> = {}): PlanetBody {
   return {
     id: asSceneBodyId('test-planet'),
     label: 'Test Planet',
+    captionKind: 'planet',
     resolvePx: 3,
     surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
     albedo: [1, 1, 1],
@@ -183,7 +184,7 @@ describe('deriveSlabs', () => {
 
   it('keys the near-field bracket off `altitudeMpc`, never the camera distance', () => {
     // A low orbit, where the pivot's radius dominates raw `cam.distance` and
-    // the ratio still clears `MIN_NEAR_MPC` (~6 m) so the bracket, not the
+    // the ratio still clears `MIN_NEAR_MPC` so the bracket, not the
     // floor, is what the assertion reads.
     const altitudeMpc = 500 * SCALE_UNITS.KM_TO_MPC;
     const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;

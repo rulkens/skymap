@@ -13,8 +13,8 @@ import { bodySceneBodyPartition } from '../../../../src/layers/body/present/body
 import { drawableMeshBodies } from '../../../../src/services/engine/frame/drawableMeshBodies';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { EARTH_SCENE_BODY_IDS } from '../../../../src/data/bodies/earthSceneBodyIds';
-import { MISSION_CRAFT_IDS } from '../../../../src/layers/missions/present/missionCraftIds';
+import { EARTH_SCENE_BODY_IDS } from '../../../../src/layers/earthScenes/scenes/data/earthSceneBodyIds';
+import { MISSION_CRAFT_IDS } from '../../../../src/layers/missions/craft/present/missionCraftIds';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';

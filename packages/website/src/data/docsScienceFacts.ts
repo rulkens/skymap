@@ -124,7 +124,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-black-hole',
     text: 'For a non-rotating black hole, how far a ray of light is bent depends only on how close it passes. We compute that angle once for passes from 1 to 50 Schwarzschild radii and keep it as a table; a ray aimed closer than 3√3/2, about 2.6 radii, is captured and the pixel is black. The radius follows from the mass, r = 2GM/c²: with the 4.297 million solar masses in the code it is 12.7 million kilometres.',
-    source: `${REPO_BLOB}/src/utils/lensing/buildSchwarzschildDeflectionLut.ts`,
+    source: `${REPO_BLOB}/src/layers/blackHoles/lensing/utils/buildSchwarzschildDeflectionLut.ts`,
     sourceLabel: `the light-bending table, ${IN_REPO}`,
     checked: CHECKED,
   },

@@ -14,16 +14,16 @@ import { MILKY_WAY_SOURCE_ROWS } from './sources/milkyWaySourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { milkyWayPlanner } from './frame';
-import { MILKY_WAY_AGGREGATE_TARGET } from './render/milkyWayAggregateTarget';
-import { milkyWayAggregatePass } from './passes/milkyWayAggregatePass';
-import { milkyWayUpsamplePass } from './passes/milkyWayUpsamplePass';
-import { milkyWayPass } from './passes/milkyWayPass';
-import { produceMilkyWayLabel } from './present/produceMilkyWayLabel';
-import { milkyWaySelectionRow } from './present/milkyWaySelectionRow';
-import { reseedMilkyWayStarCountSaga } from './sagas/reseedMilkyWayStarCountSaga';
-import MilkyWayTuningSectionContainer from './ui/MilkyWayTuningSectionContainer';
-import MilkyWayDetailCard from './ui/MilkyWayDetailCard/MilkyWayDetailCard';
-import CompactMilkyWayCard from './ui/CompactMilkyWayCard/CompactMilkyWayCard';
+import { MILKY_WAY_AGGREGATE_TARGET } from './cloud/render/milkyWayAggregateTarget';
+import { milkyWayAggregatePass } from './cloud/passes/milkyWayAggregatePass';
+import { milkyWayUpsamplePass } from './cloud/passes/milkyWayUpsamplePass';
+import { milkyWayPass } from './cloud/passes/milkyWayPass';
+import { produceMilkyWayLabel } from './card/present/produceMilkyWayLabel';
+import { milkyWaySelectionRow } from './card/present/milkyWaySelectionRow';
+import { reseedMilkyWayStarCountSaga } from './tuning/sagas/reseedMilkyWayStarCountSaga';
+import MilkyWayTuningSectionContainer from './tuning/ui/MilkyWayTuningSectionContainer';
+import MilkyWayDetailCard from './card/ui/MilkyWayDetailCard/MilkyWayDetailCard';
+import CompactMilkyWayCard from './card/ui/CompactMilkyWayCard/CompactMilkyWayCard';
 
 export const milkyWayLayer = defineLayer({
   name: 'milkyWay',

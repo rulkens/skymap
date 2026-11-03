@@ -288,6 +288,11 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
         where: STEERING,
       },
       {
+        input: ['Slide two fingers the same way'],
+        does: 'Near a surface, tilts the view towards the horizon and turns it. Elsewhere it does nothing.',
+        where: STEERING,
+      },
+      {
         input: ['Tap'],
         does: 'Selects the object or the name under the finger and pins its card. On empty space it unpins the card.',
         where: STEERING,

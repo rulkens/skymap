@@ -4,7 +4,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 2.5rem 3rem;
+  gap: var(--site-space-xl) var(--site-space-2xl);
   --film-width: min(100%, 21rem);
   --phone-width: 12.5rem;
 
@@ -19,7 +19,7 @@
 }
 
 /* In the page's two-column layout the disc fills its column and the phone lies over its bottom right. */
-@media (min-width: 901px) {
+@media (--wide) {
   .root {
     display: block;
     --film-width: 100%;
@@ -31,6 +31,21 @@
   }
 
   .phone {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+  }
+}
+
+/* Compact, the phone lies over the disc's bottom right at every width, and the disc stops at 26rem in the middle. */
+.compact {
+  display: block;
+  max-width: 26rem;
+  margin-inline: auto;
+  --film-width: 100%;
+  --phone-width: min(9rem, 30vw);
+
+  & .phone {
     position: absolute;
     right: 0;
     bottom: 0;

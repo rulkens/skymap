@@ -10,11 +10,11 @@ import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structure
 import { describe, it, expect } from 'vitest';
 
 import { produceSceneBodyCaptions } from '../../../../src/layers/body/present/produceSceneBodyCaptions';
-import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/present/produceBlackHoleCaptions';
-import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
+import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/markers/present/produceBlackHoleCaptions';
+import { produceConstellationCaptions } from '../../../../src/layers/constellations/figures/present/produceConstellationCaptions';
 import { sceneBodyLabels } from '../../../../src/layers/body/present/sceneBodyLabels';
-import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
-import { meshBodyCaption } from '../../../../src/utils/labels/meshBodyCaption';
+import { produceMissionCaptions } from '../../../../src/layers/missions/craft/present/produceMissionCaptions';
+import { meshBodyCaption } from '../../../../src/layers/missions/craft/utils/meshBodyCaption';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -40,8 +40,10 @@ const BASE = [
 
 const EARTH_LABEL_ID = 'sceneBody-earth';
 const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
-  SCENE_PLANETS.map((p) => `sceneBody-${p.id}`),
+  SCENE_PLANETS.filter((p) => p.captionKind === 'planet').map((p) => `sceneBody-${p.id}`),
 );
+const SMALL_BODY_LABEL_IDS = ['sceneBody-vesta', 'sceneBody-ceres', 'sceneBody-bennu'];
+const MARS_LABEL_ID = 'sceneBody-mars';
 const SGR_A_STAR_LABEL_ID = `sceneBody-${SGR_A_STAR_ENTRY.id}`;
 const PETUNIAS_LABEL_ID = 'sceneBody-petunias';
 
@@ -82,7 +84,10 @@ function fadeOf(
   const named: Record<string, boolean> = typeof bodyLabels === 'boolean' ? {} : bodyLabels;
   const unnamed = typeof bodyLabels === 'boolean' ? bodyLabels : true;
   return Object.fromEntries(
-    ['earth', 'planet'].map((item) => [item, over[item] ?? ((named[item] ?? unnamed) ? 1 : 0)]),
+    ['earth', 'planet', 'small-body'].map((item) => [
+      item,
+      over[item] ?? ((named[item] ?? unnamed) ? 1 : 0),
+    ]),
   );
 }
 
@@ -144,6 +149,29 @@ describe('produceSceneBodyCaptions', () => {
     expect(fadeAlphaOf(out.labels, EARTH_LABEL_ID)).toBe(0);
     const anyPlanetOn = [...PLANET_LABEL_IDS].some((id) => (fadeAlphaOf(out.labels, id) ?? 0) > 0);
     expect(anyPlanetOn).toBe(true);
+  });
+
+  it('unticking Small bodies hides only the small bodies', () => {
+    const ctx = makeCtx(worldPosOf(EARTH_LABEL_ID));
+    const alphasWith = (planet: boolean, smallBody: boolean) => {
+      const out = produceSceneBodyCaptions(
+        makeState(),
+        ctx,
+        fadeOf({ planet, 'small-body': smallBody }),
+      ).labels;
+      return {
+        mars: fadeAlphaOf(out, MARS_LABEL_ID)!,
+        small: SMALL_BODY_LABEL_IDS.map((id) => fadeAlphaOf(out, id)!),
+      };
+    };
+
+    const smallOff = alphasWith(true, false);
+    expect(smallOff.small).toEqual([0, 0, 0]);
+    expect(smallOff.mars).toBeGreaterThan(0);
+
+    const planetsOff = alphasWith(false, true);
+    for (const alpha of planetsOff.small) expect(alpha).toBeGreaterThan(0);
+    expect(planetsOff.mars).toBe(0);
   });
 
   it('suppresses Earth + planet captions when both body rows’ labels are off', () => {

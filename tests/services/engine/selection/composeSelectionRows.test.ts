@@ -16,11 +16,11 @@ import type {
   StructureRowFixture,
 } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
-import { craftSelectionRow } from '../../../../src/layers/missions/present/craftSelectionRow';
-import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/present/earthSceneSelectionRow';
-import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceSelectionRow';
-import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
-import { satellitesSelectionRow } from '../../../../src/layers/satellites/present/satellitesSelectionRow';
+import { craftSelectionRow } from '../../../../src/layers/missions/craft/present/craftSelectionRow';
+import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/scenes/present/earthSceneSelectionRow';
+import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
+import { satellitesSelectionRow } from '../../../../src/layers/satellites/focus/present/satellitesSelectionRow';
 import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';

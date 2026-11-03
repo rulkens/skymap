@@ -6,7 +6,7 @@ const SWITCH = 'On or off';
 const PANEL = 'src/components/SettingsPanel';
 const GALAXIES = 'src/layers/galaxyCatalog/ui/GalaxiesSection.tsx';
 const STARS = 'src/layers/starCatalog/ui/StarsSection.tsx';
-const STRUCTURES = 'src/layers/structure/ui/StructuresSection/StructuresSection.tsx';
+const STRUCTURES = 'src/layers/structure/controls/ui/StructuresSection/StructuresSection.tsx';
 const LABELS = `${PANEL}/LabelsAndGuidesSection.tsx`;
 const DISPLAY = `${PANEL}/DisplaySection.tsx`;
 
@@ -302,7 +302,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'cosmic-web-density',
     title: 'Cosmic web density',
-    file: 'src/layers/cosmicWebDensity/ui/CosmicWebDensitySection.tsx',
+    file: 'src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensitySection.tsx',
     rows: [
       {
         name: 'Cosmic web density',
@@ -345,7 +345,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'cosmic-web-filaments',
     title: 'Cosmic web filaments',
-    file: 'src/layers/cosmicWebFilaments/ui/CosmicWebFilamentsSection.tsx',
+    file: 'src/layers/cosmicWebFilaments/filaments/ui/CosmicWebFilamentsSection.tsx',
     rows: [
       {
         name: 'Cosmic web filaments',
@@ -370,7 +370,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'flow',
     title: 'Flow',
-    file: 'src/layers/flow/ui/FlowSection.tsx',
+    file: 'src/layers/flow/streamlines/ui/FlowSection.tsx',
     rows: [
       {
         name: 'Flow',
@@ -395,7 +395,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'satellites',
     title: 'Satellites',
-    file: 'src/layers/satellites/ui/SatellitesSection.tsx',
+    file: 'src/layers/satellites/controls/ui/SatellitesSection.tsx',
     rows: [
       {
         name: 'Satellites',
@@ -565,6 +565,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: false,
       },
       label('Galactic Centre', 'structures.items.gc-cluster.labelEnabled', 'the star clusters near the centre of the Milky Way'),
+      label('Small bodies', 'bodies.items.small-body.labelEnabled', 'the asteroids Vesta and Bennu and the dwarf planet Ceres'),
       {
         name: 'S-star trails',
         control: 'switch',

@@ -49,8 +49,8 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
-import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
-import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
+import { MISSION_EVENTS } from '../../../../src/layers/missions/events/data/missionEvents.generated';
+import { missionEventMs } from '../../../../src/layers/missions/events/utils/missionEventMs';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
@@ -67,7 +67,7 @@ import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { NavVelocity } from '../../../../src/@types/camera/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
-import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
+import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import {
   setControlScheme,
   setFrictionOn,
@@ -195,6 +195,7 @@ describe('stepCameraRuntime', () => {
         follow: null,
         tilt: { ...EMPTY_TILT_MEMORY, rememberedTiltRad, hostId: asSceneBodyId('earth') },
         intent,
+        gestureHeld: false,
         ctx: {
           bodies: BODIES,
           poseBasis: B,
@@ -451,6 +452,10 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     steps: readonly InputStep[],
     schemes?: StepInputs['schemes'],
   ) {
+    // `wireInput` dispatches the release outside the loop, as it does the press.
+    if (steps.some((s) => s.kind === 'gestureEnd')) {
+      h.store.dispatch(inputGestureEnded({ source: 'canvas' }));
+    }
     const nowMs = nextNow(h);
     clocks.set(h, nowMs);
     const out = stepCameraRuntime(
@@ -706,6 +711,40 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     const free = turn();
     expect(Math.abs(free)).toBeGreaterThan(1e-3);
     expect(turn(claimed)).toBeCloseTo(free, 9);
+  });
+});
+
+describe('a two-finger tilt drag', () => {
+  // The recognizer's own shape: a one-finger press, then the second finger's
+  // lock ends it and opens the drag in ONE frame. `null` only lifts.
+  const dragged = (intent: 'tilt' | 'pan' | null, engage: boolean) => {
+    const h = makeCameraSimHarness({ focusBody: 'earth', bootHR: 2 });
+    h.frame(40);
+    if (engage) diveUntilEngaged(h, { body: 'earth' });
+    h.press('orbit', [50, 50]);
+    h.frame(1);
+    h.release();
+    if (intent !== null) h.press(intent, [50, 50]);
+    for (let i = 1; i <= 5; i += 1) {
+      h.moveTo([50 + i, 50 - 2 * i]);
+      h.frame(1);
+    }
+    h.release();
+    h.frame(1);
+    return h.store.getState().camera.base;
+  };
+
+  it('tilts and turns a body arm exactly as a right-drag does', () => {
+    const tilted = dragged('tilt', true);
+    expect(tilted.frame).toEqual({ body: 'earth' });
+    expect(tilted).not.toEqual(dragged(null, true));
+    expect(tilted).toEqual(dragged('pan', true));
+  });
+
+  it('moves nothing off a planet, where a right-drag would slide', () => {
+    expect(dragged('tilt', false).frame).toBe('absolute');
+    expect(dragged('pan', false)).not.toEqual(dragged(null, false));
+    expect(dragged('tilt', false)).toEqual(dragged(null, false));
   });
 });
 

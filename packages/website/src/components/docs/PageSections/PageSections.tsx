@@ -15,8 +15,6 @@ import styles from './PageSections.module.css';
 
 type PageSectionsProps = { sections: readonly MarkdownHeading[] };
 
-const short = (section: MarkdownHeading) => section.text.length <= 2;
-
 function PageSections({ sections }: PageSectionsProps) {
   const [here, setHere] = useState<string>();
 
@@ -36,7 +34,7 @@ function PageSections({ sections }: PageSectionsProps) {
   return (
     <ol className={styles.root} data-sections>
       {sections.map((section) => (
-        <li key={section.slug} className={cx(short(section) && styles.letter)}>
+        <li key={section.slug} className={cx(section.text.length <= 2 && styles.letter)}>
           <a
             href={`#${section.slug}`}
             aria-current={section.slug === here ? 'location' : undefined}

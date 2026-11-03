@@ -7,7 +7,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { ZoneOfAvoidanceTuning } from '../../../../@types/settings/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';
 
 export const zoneOfAvoidanceSlice = createSlice({
   name: 'settings/zoneOfAvoidance',

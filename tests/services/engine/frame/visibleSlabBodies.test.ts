@@ -8,8 +8,8 @@ import { describe, it, expect } from 'vitest';
 
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/present/blackHoleSlabRow';
-import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
+import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSlabRow';
+import { BLACK_HOLES } from '../../../../src/layers/blackHoles/markers/data/blackHoles';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
@@ -45,6 +45,7 @@ describe('visibleSlabBodies', () => {
     const belowFloor: PlanetBody = {
       id: asSceneBodyId('below'),
       label: 'Below floor',
+      captionKind: 'planet',
       resolvePx: 3,
       surface: { datumRadiusM: 3e22 / PROXY_SCALE, reliefM: [0, 0] },
       albedo: [1, 1, 1],
@@ -52,6 +53,7 @@ describe('visibleSlabBodies', () => {
     const aboveFloor: PlanetBody = {
       id: asSceneBodyId('above'),
       label: 'Above floor',
+      captionKind: 'planet',
       resolvePx: 3,
       surface: { datumRadiusM: 3.2e22 / PROXY_SCALE, reliefM: [0, 0] },
       albedo: [1, 1, 1],
@@ -83,6 +85,7 @@ describe('visibleSlabBodies', () => {
     const orphan: PlanetBody = {
       id: asSceneBodyId('orphan'),
       label: 'Orphan',
+      captionKind: 'planet',
       resolvePx: 3,
       surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
       albedo: [1, 1, 1],
@@ -133,6 +136,7 @@ describe('visibleSlabBodies', () => {
     const wideBody: PlanetBody = {
       id: asSceneBodyId('wide'),
       label: 'Wide body',
+      captionKind: 'planet',
       resolvePx: 3,
       surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
       albedo: [1, 1, 1],
@@ -176,6 +180,7 @@ describe('visibleSlabBodies', () => {
       const straddling: PlanetBody = {
         id: asSceneBodyId('straddling'),
         label: 'Straddling',
+        captionKind: 'planet',
         resolvePx: 3,
         surface: { datumRadiusM, reliefM: [0, 0] },
         albedo: [1, 1, 1],
