@@ -230,6 +230,15 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     setting: 'structures',
     figure: 'void-bootes',
   },
+  'seed-milky-way-structures': {
+    description:
+      '71 star clusters and nebulae of the Milky Way placed by hand, each with the paper or catalogue its distance and size come from.',
+    title: 'Milky Way structures, placed by hand',
+    shows:
+      '“Open clusters”, “Globular clusters”, “Nebulae” and “Galactic Centre” switches under Structures.',
+    scene: 'the-milky-way',
+    setting: 'structures',
+  },
   'mcpm-vac': {
     description:
       'A density field computed from the positions of SDSS galaxies: the glow of the cosmic web.',
