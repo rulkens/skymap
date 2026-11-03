@@ -1,8 +1,8 @@
 /*
  * FrameCompare — two shots of one camera laid exactly over each other: `start` shows left of a divider, `end`
- * right of it, each named at its outer edge. The divider moves under a drag or the arrow keys
- * (frameCompare.client.ts); without script it stays in the middle. The labels follow the frame, beside it when
- * wide and under it when narrow.
+ * right of it, each with a faint trace of the other and named at its outer edge. The divider moves under a drag
+ * or the arrow keys (frameCompare.client.ts); without script it stays in the middle. The labels sit under the
+ * frame, each under its own half when wide.
  */
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
