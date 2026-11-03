@@ -12,7 +12,7 @@
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { SchwarzschildDeflectionLut } from '../../../@types/lensing/SchwarzschildDeflectionLut';
+import type { SchwarzschildDeflectionLut } from './SchwarzschildDeflectionLut';
 
 export type BlackHoleLensingRenderer = Renderer & {
   /** The CPU-side LUT this renderer's texture was built from — see the module header. */

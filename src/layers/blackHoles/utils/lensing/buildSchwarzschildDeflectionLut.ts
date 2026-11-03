@@ -9,11 +9,11 @@
  * independent cross-check of the resulting values.
  */
 
-import type { SchwarzschildDeflectionLut } from '../../@types/lensing/SchwarzschildDeflectionLut';
+import type { SchwarzschildDeflectionLut } from '../../@types/SchwarzschildDeflectionLut';
 import {
   MIN_IMPACT_PARAM_RS,
   MAX_IMPACT_PARAM_RS,
-} from '../../data/lensing/schwarzschildLutDomain';
+} from '../../data/schwarzschildLutDomain';
 
 const CRITICAL_IMPACT_PARAM_RS = (3 * Math.sqrt(3)) / 2; // b_c = 3root3/2 r_s, photon-sphere impact parameter
 const PHOTON_SPHERE_U = 2 / 3; // u = 1/r at r = 1.5 r_s, the upper bound for the turning-point search

@@ -13,13 +13,13 @@
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { BlackHoleLensingRenderer } from '../@types/BlackHoleLensingRenderer';
-import type { SchwarzschildDeflectionLut } from '../../../@types/lensing/SchwarzschildDeflectionLut';
+import type { SchwarzschildDeflectionLut } from '../@types/SchwarzschildDeflectionLut';
 import vsCode from '../../../services/gpu/shaders/bodies/blackHoleLensing/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/bodies/blackHoleLensing/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { PREMULTIPLIED_OVER_BLEND } from '../../../services/gpu/lib/blendStates';
-import { buildSchwarzschildDeflectionLut } from '../../../utils/lensing/buildSchwarzschildDeflectionLut';
-import { BLACK_HOLE_LENSING_UNIFORM_FLOATS } from '../../../utils/gpu/packBlackHoleLensingUniforms';
+import { buildSchwarzschildDeflectionLut } from '../utils/lensing/buildSchwarzschildDeflectionLut';
+import { BLACK_HOLE_LENSING_UNIFORM_FLOATS } from '../utils/gpu/packBlackHoleLensingUniforms';
 
 // Dense enough for the fragment's 2-tap lerp to look smooth near the critical
 // impact parameter; quadrature is cheap CPU-side, so no reason to skimp.

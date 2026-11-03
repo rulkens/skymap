@@ -14,7 +14,7 @@ import { formatDistance } from '../../../../utils/format/formatDistance';
 import { formatRadiusM } from '../../../../utils/format/formatRadiusM';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
 import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
-import { focusShotUrl } from '../../../../utils/palette/focusShotUrl';
+import { focusShotUrl } from '../../utils/palette/focusShotUrl';
 import { encodeBlackHoleFocusId } from '../../present/encodeBlackHoleFocusId';
 import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';

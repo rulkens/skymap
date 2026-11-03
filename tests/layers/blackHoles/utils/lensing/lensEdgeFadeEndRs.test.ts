@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { lensEdgeFadeEndRs } from '../../../src/utils/lensing/lensEdgeFadeEndRs';
+import { lensEdgeFadeEndRs } from '../../../../../src/layers/blackHoles/utils/lensing/lensEdgeFadeEndRs';
 
 describe('lensEdgeFadeEndRs', () => {
   it('floors at the LUT max close-in, where both pixel and distance terms undercut it', () => {

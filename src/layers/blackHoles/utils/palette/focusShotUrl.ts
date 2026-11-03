@@ -4,8 +4,8 @@
  * `galaxy-cluster-virgo-m87`), so the lookup goes through the featured cards.
  * Cards with their own `image` are skipped: that image is not a shot.
  */
-import { FEATURED_TABS } from '../../data/palette/featuredTabs';
-import { cardShotUrl } from './cardShotUrl';
+import { FEATURED_TABS } from '../../../../data/palette/featuredTabs';
+import { cardShotUrl } from '../../../../utils/palette/cardShotUrl';
 
 const urls = new Map<string, string>();
 for (const tab of FEATURED_TABS) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { focusShotUrl } from '../../../src/utils/palette/focusShotUrl';
+import { focusShotUrl } from '../../../../../src/layers/blackHoles/utils/palette/focusShotUrl';
 
 describe('focusShotUrl', () => {
   // The bug this guards: a shot is filed under its card id, so a path built

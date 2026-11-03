@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildSchwarzschildDeflectionLut } from '../../../src/utils/lensing/buildSchwarzschildDeflectionLut';
-import type { SchwarzschildDeflectionLut } from '../../../src/@types/lensing/SchwarzschildDeflectionLut';
+import { buildSchwarzschildDeflectionLut } from '../../../../../src/layers/blackHoles/utils/lensing/buildSchwarzschildDeflectionLut';
+import type { SchwarzschildDeflectionLut } from '../../../../../src/layers/blackHoles/@types/SchwarzschildDeflectionLut';
 
 // Linear interpolation over the LUT's own reported [min, max] range — used
 // only far from the photon sphere, where neighbouring grid samples can't

@@ -13,8 +13,8 @@ import type { BlackHoleRow } from '../@types/BlackHoleRow';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
-import { lensEdgeFadeEndRs } from '../../../utils/lensing/lensEdgeFadeEndRs';
-import { MAX_IMPACT_PARAM_RS } from '../../../data/lensing/schwarzschildLutDomain';
+import { lensEdgeFadeEndRs } from '../utils/lensing/lensEdgeFadeEndRs';
+import { MAX_IMPACT_PARAM_RS } from '../data/schwarzschildLutDomain';
 
 export function blackHoleLensEnvelopeM(row: BlackHoleRow): SlabRow['drawRadiusM'] {
   const schwarzschildM = schwarzschildRadiusM(row.massSolar);
