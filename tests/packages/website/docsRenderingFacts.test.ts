@@ -82,7 +82,10 @@ describe('rendering rows and the constants behind them', () => {
 
   it('a ground patch, its heights and the two atlases', () => {
     const cells = one(TILES, 'SURFACE_TILE_MESH_RESOLUTION');
-    const posts = one('src/layers/body/surfaceTiles/format/data/heightTileFormat.ts', 'HEIGHT_POSTS_PER_TILE');
+    const posts = one(
+      'src/layers/body/surfaceTiles/format/data/heightTileFormat.ts',
+      'HEIGHT_POSTS_PER_TILE',
+    );
     const terrain = text('render-terrain');
     expect(terrain).toContain(`${cells} by ${cells} cells`);
     expect(terrain).toContain(`${posts} by ${posts} posts`);

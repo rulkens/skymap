@@ -17,7 +17,10 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PlanetRenderer } from '../@types/PlanetRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
-import { BODY_SPHERE_RINGS, BODY_SPHERE_SEGMENTS } from '../../../../data/bodies/sphereTessellation';
+import {
+  BODY_SPHERE_RINGS,
+  BODY_SPHERE_SEGMENTS,
+} from '../../../../data/bodies/sphereTessellation';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../../../services/gpu/shaders/bodies/planet/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/planet/fragment.wesl?static';

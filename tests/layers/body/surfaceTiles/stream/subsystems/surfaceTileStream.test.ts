@@ -7,12 +7,18 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileManifest', () => ({
-  fetchSurfaceTileManifest: vi.fn(),
-}));
-vi.mock('../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileBitmap', () => ({
-  fetchSurfaceTileBitmap: vi.fn(),
-}));
+vi.mock(
+  '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileManifest',
+  () => ({
+    fetchSurfaceTileManifest: vi.fn(),
+  }),
+);
+vi.mock(
+  '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileBitmap',
+  () => ({
+    fetchSurfaceTileBitmap: vi.fn(),
+  }),
+);
 vi.mock('../../../../../../src/layers/body/surfaceTiles/stream/load/fetchHeightTile', () => ({
   fetchHeightTile: vi.fn(),
 }));

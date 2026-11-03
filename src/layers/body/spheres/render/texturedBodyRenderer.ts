@@ -15,7 +15,10 @@ import type { AtlasTileRect } from '../../../../@types/data/AtlasTileRect';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
-import { BODY_SPHERE_RINGS, BODY_SPHERE_SEGMENTS } from '../../../../data/bodies/sphereTessellation';
+import {
+  BODY_SPHERE_RINGS,
+  BODY_SPHERE_SEGMENTS,
+} from '../../../../data/bodies/sphereTessellation';
 import { generateMipChain, mipLevelCount } from '../../../../services/gpu/lib/generateMipChain';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';

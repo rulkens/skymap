@@ -21,7 +21,10 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../../../..');
 const ioWeslPath = resolve(repoRoot, 'src/services/gpu/shaders/bodies/surfaceTile/io.wesl');
-const layoutPath = resolve(repoRoot, 'src/layers/body/surfaceTiles/patch/render/surfaceTileLayout.ts');
+const layoutPath = resolve(
+  repoRoot,
+  'src/layers/body/surfaceTiles/patch/render/surfaceTileLayout.ts',
+);
 
 /** WGSL scalar kind a field's bytes carry -- the only distinction the writer makes. */
 type Kind = 'float' | 'uint';
