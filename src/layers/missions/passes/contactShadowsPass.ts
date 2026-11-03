@@ -8,9 +8,9 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
-import { composeContactDecalMatrices } from '../../../utils/camera/composeContactDecalMatrices';
+import { composeContactDecalMatrices } from '../utils/camera/composeContactDecalMatrices';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { packContactShadowUniforms } from '../../../utils/gpu/packContactShadowUniforms';
+import { packContactShadowUniforms } from '../utils/gpu/packContactShadowUniforms';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { drawableMeshBodies } from '../../../services/engine/frame/drawableMeshBodies';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';

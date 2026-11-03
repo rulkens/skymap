@@ -5,7 +5,7 @@ import { MISSION_CRAFT_IDS } from '../../../../src/layers/missions/present/missi
 import { produceSceneBodyCaptions } from '../../../../src/layers/body/present/produceSceneBodyCaptions';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { SAMPLED_BODY_IDS } from '../../../../src/data/bodies/sampledBodyIds';
-import { MISSION_EMPHASIS_DIM } from '../../../../src/data/missions/missionTrailStyle';
+import { MISSION_EMPHASIS_DIM } from '../../../../src/layers/missions/data/missionTrailStyle';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';

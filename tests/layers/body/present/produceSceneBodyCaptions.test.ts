@@ -14,7 +14,7 @@ import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/mark
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/figures/present/produceConstellationCaptions';
 import { sceneBodyLabels } from '../../../../src/layers/body/present/sceneBodyLabels';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
-import { meshBodyCaption } from '../../../../src/utils/labels/meshBodyCaption';
+import { meshBodyCaption } from '../../../../src/layers/missions/utils/labels/meshBodyCaption';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';

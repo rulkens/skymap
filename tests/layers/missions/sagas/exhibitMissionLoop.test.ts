@@ -8,8 +8,8 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { voyagerMissions } from '../../../../src/layers/missions/exhibits/voyagerMissions';
-import { MISSION_SPEEDS } from '../../../../src/data/exhibits/mission/missionSpeeds';
-import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
+import { MISSION_SPEEDS } from '../../../../src/layers/missions/data/missionSpeeds';
+import { MISSION_EVENTS } from '../../../../src/layers/missions/data/missionEvents.generated';
 import { exhibitBodySaga } from '../../../../src/state/exhibits/exhibitBodySaga';
 import { playMission } from '../../../../src/layers/missions/exhibits/timeline/playMission';
 import {
@@ -26,8 +26,8 @@ import {
 } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
-import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
-import { missionEventStepMs } from '../../../../src/utils/exhibits/timeline/missionEventStepMs';
+import { missionEventMs } from '../../../../src/layers/missions/utils/exhibits/timeline/missionEventMs';
+import { missionEventStepMs } from '../../../../src/layers/missions/utils/exhibits/timeline/missionEventStepMs';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';

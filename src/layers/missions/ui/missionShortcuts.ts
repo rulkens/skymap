@@ -1,7 +1,7 @@
 import { stepMissionSpeed } from '../state/missions/slice';
 import { stepTimelineEvent } from './stepTimelineEvent';
 import type { KeyboardShortcut } from '../../../@types/state/input/KeyboardShortcut';
-import type { MissionTimeline } from '../../../@types/exhibits/MissionTimeline';
+import type { MissionTimeline } from '../@types/MissionTimeline';
 
 /**
  * A timeline exhibit's keys, ahead of the global table: `[` / `]` step the mission speed factor

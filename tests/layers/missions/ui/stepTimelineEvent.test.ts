@@ -4,9 +4,9 @@ import { stepTimelineEvent } from '../../../../src/layers/missions/ui/stepTimeli
 import { missionTimelineKind } from '../../../../src/layers/missions/exhibits/timeline/missionTimelineKind';
 import { voyagerTimeline } from '../../../helpers/missions/voyagerTimeline';
 import { stepToEvent } from '../../../../src/state/time/timeSlice';
-import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
-import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
-import { missionEventStepMs } from '../../../../src/utils/exhibits/timeline/missionEventStepMs';
+import { MISSION_EVENTS } from '../../../../src/layers/missions/data/missionEvents.generated';
+import { missionEventMs } from '../../../../src/layers/missions/utils/exhibits/timeline/missionEventMs';
+import { missionEventStepMs } from '../../../../src/layers/missions/utils/exhibits/timeline/missionEventStepMs';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import type { RootState } from '../../../../src/store/types';
 

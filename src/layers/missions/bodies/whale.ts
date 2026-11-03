@@ -10,7 +10,7 @@ import { WHALE_GREY } from '../../../data/bodies/palette';
 import {
   HITCHHIKER_ORBIT_PERIOD_DAYS,
   HITCHHIKER_ORBIT_SEMI_MAJOR_KM,
-} from '../../../data/missions/hitchhikerOrbit';
+} from '../data/hitchhikerOrbit';
 
 export const WHALE: LayerBody = {
   body: meshBody({

@@ -10,8 +10,8 @@
 
 import type { CameraAim } from '../../../@types/camera/CameraAim';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { MissionOffsets } from '../../../@types/camera/MissionOffsets';
-import type { MissionStop } from '../../../@types/missions/MissionStop';
+import type { MissionOffsets } from './MissionOffsets';
+import type { MissionStop } from './MissionStop';
 
 export type MissionCameraMemory = {
   readonly aim: CameraAim | null;

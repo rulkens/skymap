@@ -2,8 +2,8 @@
 
 import type { ReactNode } from 'react';
 
-import { formatClockDate } from '../../../utils/exhibits/timeline/formatClockDate';
-import { missionEventMs } from '../../../utils/exhibits/timeline/missionEventMs';
+import { formatClockDate } from '../utils/exhibits/timeline/formatClockDate';
+import { missionEventMs } from '../utils/exhibits/timeline/missionEventMs';
 import type { MissionEvent } from '../../../@types/missions/MissionEvent';
 import styles from './ExhibitTimeline.module.css';
 

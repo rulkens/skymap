@@ -6,7 +6,7 @@
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import cx from 'classnames';
 
-import type { TimelineLane } from '../../../@types/exhibits/TimelineLane';
+import type { TimelineLane } from '../@types/TimelineLane';
 import styles from './ExhibitTimeline.module.css';
 
 export type TimelineCraftTabsProps = {

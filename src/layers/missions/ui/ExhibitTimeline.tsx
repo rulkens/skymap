@@ -14,16 +14,16 @@ import TimelineCraftTabs from './TimelineCraftTabs';
 import TimelineEventCard from './TimelineEventCard';
 import TimelineTrack from './TimelineTrack';
 import TimelineTransport from './TimelineTransport';
-import { adjacentEventId } from '../../../utils/exhibits/timeline/adjacentEventId';
-import { currentMissionEvent } from '../../../utils/exhibits/timeline/currentMissionEvent';
-import { formatEventDate } from '../../../utils/exhibits/timeline/formatEventDate';
-import { missionStops } from '../../../utils/exhibits/mission/missionStops';
-import { timelineAxis } from '../../../utils/exhibits/timeline/timelineAxis';
+import { adjacentEventId } from '../utils/exhibits/timeline/adjacentEventId';
+import { currentMissionEvent } from '../utils/exhibits/timeline/currentMissionEvent';
+import { formatEventDate } from '../utils/exhibits/timeline/formatEventDate';
+import { missionStops } from '../utils/exhibits/mission/missionStops';
+import { timelineAxis } from '../utils/exhibits/timeline/timelineAxis';
 import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
-import type { ExhibitTimelineClock } from '../../../@types/exhibits/ExhibitTimelineClock';
-import type { MissionTimeline } from '../../../@types/exhibits/MissionTimeline';
-import type { TimelineLane } from '../../../@types/exhibits/TimelineLane';
+import type { ExhibitTimelineClock } from '../@types/ExhibitTimelineClock';
+import type { MissionTimeline } from '../@types/MissionTimeline';
+import type { TimelineLane } from '../@types/TimelineLane';
 import styles from './ExhibitTimeline.module.css';
 
 export type ExhibitTimelineProps = {

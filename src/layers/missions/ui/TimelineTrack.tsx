@@ -10,17 +10,17 @@ import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'reac
 import cx from 'classnames';
 
 import CompactInfoTip from '../../../components/common/CompactInfoTip/CompactInfoTip';
-import { adjacentEventId } from '../../../utils/exhibits/timeline/adjacentEventId';
-import { formatEventDate } from '../../../utils/exhibits/timeline/formatEventDate';
-import { describeTimelineInstant } from '../../../utils/exhibits/timeline/describeTimelineInstant';
-import { missionEventMs } from '../../../utils/exhibits/timeline/missionEventMs';
-import { timelineAxisLabels } from '../../../utils/exhibits/timeline/timelineAxisLabels';
-import { timelineFraction } from '../../../utils/exhibits/timeline/timelineFraction';
-import { timelineInstant } from '../../../utils/exhibits/timeline/timelineInstant';
+import { adjacentEventId } from '../utils/exhibits/timeline/adjacentEventId';
+import { formatEventDate } from '../utils/exhibits/timeline/formatEventDate';
+import { describeTimelineInstant } from '../utils/exhibits/timeline/describeTimelineInstant';
+import { missionEventMs } from '../utils/exhibits/timeline/missionEventMs';
+import { timelineAxisLabels } from '../utils/exhibits/timeline/timelineAxisLabels';
+import { timelineFraction } from '../utils/exhibits/timeline/timelineFraction';
+import { timelineInstant } from '../utils/exhibits/timeline/timelineInstant';
 import type { MissionEvent } from '../../../@types/missions/MissionEvent';
-import type { TimelineAxis } from '../../../@types/exhibits/TimelineAxis';
-import type { MissionStop } from '../../../@types/missions/MissionStop';
-import type { TimelineLane } from '../../../@types/exhibits/TimelineLane';
+import type { TimelineAxis } from '../@types/TimelineAxis';
+import type { MissionStop } from '../@types/MissionStop';
+import type { TimelineLane } from '../@types/TimelineLane';
 import { DAY_MS } from '../../../data/time/dayMs';
 import { YEAR_MS } from '../../../data/time/yearMs';
 import styles from './ExhibitTimeline.module.css';

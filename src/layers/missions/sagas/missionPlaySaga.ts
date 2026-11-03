@@ -7,12 +7,12 @@
  */
 import { delay, put, select } from 'typed-redux-saga';
 
-import { buildMissionProfile } from '../../../utils/exhibits/mission/buildMissionProfile';
+import { buildMissionProfile } from '../utils/exhibits/mission/buildMissionProfile';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { pause, startClockProfile } from '../../../state/time/timeSlice';
 import { selectTimeState } from '../../../state/time/selectors';
-import type { MissionCourse } from '../../../@types/missions/MissionCourse';
+import type { MissionCourse } from '../@types/MissionCourse';
 import type { RootState } from '../../../store/types';
 
 /** Run pressed within this of the end plays the mission again from launch (run only, never − / +). */

@@ -7,9 +7,9 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 
-import { formatClockDate } from '../../../utils/exhibits/timeline/formatClockDate';
-import { formatClockTime } from '../../../utils/exhibits/timeline/formatClockTime';
-import type { ExhibitTimelineClock } from '../../../@types/exhibits/ExhibitTimelineClock';
+import { formatClockDate } from '../utils/exhibits/timeline/formatClockDate';
+import { formatClockTime } from '../utils/exhibits/timeline/formatClockTime';
+import type { ExhibitTimelineClock } from '../@types/ExhibitTimelineClock';
 import styles from './ExhibitTimeline.module.css';
 
 export type TimelineTransportProps = {

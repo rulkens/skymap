@@ -4,7 +4,7 @@
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
 import { meshBody } from '../../../data/bodies/makers/meshBody';
-import { orbiter } from '../../../data/bodies/makers/orbiter';
+import { orbiter } from '../data/orbiter';
 import { HUBBLE_SILVER } from '../../../data/bodies/palette';
 
 export const HUBBLE: LayerBody = {

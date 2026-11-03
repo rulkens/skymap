@@ -12,12 +12,12 @@ import type { Task } from 'redux-saga';
 import { flyToPoseClip } from '../../../data/animation/clips/makers/flyToPoseClip';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { missionCameraFrame } from '../../../utils/camera/missionCameraFrame';
+import { missionCameraFrame } from '../utils/camera/missionCameraFrame';
 import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
-import { missionStops } from '../../../utils/exhibits/mission/missionStops';
+import { missionStops } from '../utils/exhibits/mission/missionStops';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
-import { timelineEndMs } from '../../../utils/exhibits/timeline/timelineEndMs';
+import { timelineEndMs } from '../utils/exhibits/timeline/timelineEndMs';
 import { aimCamera } from '../../../state/camera/cameraSlice';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { selectMissionCraft, selectMissionSpeed } from '../state/missions/selectors';
@@ -28,8 +28,8 @@ import { pause, resume, setSimDays, stepToEvent } from '../../../state/time/time
 import { missionPlaySaga } from './missionPlaySaga';
 import { playMission } from '../exhibits/timeline/playMission';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { MissionCourse } from '../../../@types/missions/MissionCourse';
-import type { MissionTimeline } from '../../../@types/exhibits/MissionTimeline';
+import type { MissionCourse } from '../@types/MissionCourse';
+import type { MissionTimeline } from '../@types/MissionTimeline';
 import type { Transition } from '../../../@types/navigation/Transition';
 import type { SagaContext } from '../../../store/types';
 

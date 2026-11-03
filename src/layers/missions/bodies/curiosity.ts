@@ -4,7 +4,7 @@
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
 import { meshBody } from '../../../data/bodies/makers/meshBody';
-import { meshGroundOffsetM } from '../../../utils/meshBodies/meshGroundOffsetM';
+import { meshGroundOffsetM } from '../utils/meshBodies/meshGroundOffsetM';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../utils/scene/asSurfaceSiteId';
 

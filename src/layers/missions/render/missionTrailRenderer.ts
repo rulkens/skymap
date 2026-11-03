@@ -18,7 +18,7 @@ import fsCode from '../../../services/gpu/shaders/bodies/missionTrail/fragment.w
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { buildMissionTrails } from './buildMissionTrails';
-import { MISSION_TRAIL_WIDTH_PX } from '../../../data/missions/missionTrailStyle';
+import { MISSION_TRAIL_WIDTH_PX } from '../data/missionTrailStyle';
 import { writeHiLoVertex } from '../../../utils/math/writeHiLoVertex';
 import {
   OCCLUDER_UNIFORM_BYTES,

@@ -1,12 +1,12 @@
 import { selectMissionCraft } from '../state/missions/selectors';
 import { selectTimeState } from '../../../state/time/selectors';
 import { stepToEvent } from '../../../state/time/timeSlice';
-import { adjacentEventId } from '../../../utils/exhibits/timeline/adjacentEventId';
+import { adjacentEventId } from '../utils/exhibits/timeline/adjacentEventId';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
-import { missionEventStepMs } from '../../../utils/exhibits/timeline/missionEventStepMs';
+import { missionEventStepMs } from '../utils/exhibits/timeline/missionEventStepMs';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
-import type { MissionTimeline } from '../../../@types/exhibits/MissionTimeline';
+import type { MissionTimeline } from '../@types/MissionTimeline';
 import type { RootState } from '../../../store/types';
 
 /**
