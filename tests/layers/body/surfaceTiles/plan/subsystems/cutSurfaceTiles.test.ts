@@ -232,6 +232,14 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
 }
 
 describe('cutSurfaceTiles', () => {
+  it('puts pyramid level 4 at the 8192-wide base texture resolution (about 4892 m per texel)', () => {
+    // The ladder's anchor: if the base-width constant were nudged, level 5 would either
+    // duplicate the base or skip a doubling, and nothing else in the suite would fail.
+    const texelM = EARTH_EQUATORIAL_CIRCUMFERENCE_M / (SURFACE_EQUIRECT_BASE_WIDTH_PX << 4);
+    expect(texelM).toBeCloseTo(EARTH_EQUATORIAL_CIRCUMFERENCE_M / 8192, 6);
+    expect(texelM).toBeCloseTo(4892, 0);
+  });
+
   describe('horizon cull measures the patch radius from all four corners', () => {
     // Meridians converge toward the poles, so a plate-carrée patch is NOT
     // angularly symmetric about its own centre: a northern patch's north
