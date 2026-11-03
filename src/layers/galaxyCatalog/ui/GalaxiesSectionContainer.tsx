@@ -31,8 +31,9 @@ import { setBiasMode, setAbsMagLimit } from '../state/bias/slice';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import type { GalaxyCatalogSourceType } from '../@types/GalaxyCatalogSourceType';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
+import type { LayerMainSectionProps } from '../../../@types/engine/layer/LayerMainSectionProps';
 
-function GalaxiesSectionContainer(): React.ReactElement {
+function GalaxiesSectionContainer({ title }: LayerMainSectionProps): React.ReactElement {
   const dispatch = useAppDispatch();
 
   // Per-source loaded point counts from the engine slice.  The engine
@@ -86,6 +87,7 @@ function GalaxiesSectionContainer(): React.ReactElement {
 
   return (
     <GalaxiesSection
+      title={title}
       sourceMask={sourceMask}
       onToggleSource={onToggleSource}
       sourceCounts={sourceCounts}

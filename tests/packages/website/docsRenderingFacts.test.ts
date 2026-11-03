@@ -42,7 +42,7 @@ describe('rendering rows and the constants behind them', () => {
     expect(one('src/layers/zoneOfAvoidance/layer.ts', 'scale')).toBe(5);
     expect(row).toContain('the Zone of Avoidance band at a fifth');
     expect(
-      one('src/layers/starCatalog/render/starAggregatesTarget.ts', 'STAR_AGGREGATE_DIVISOR'),
+      one('src/layers/starCatalog/survey/render/starAggregatesTarget.ts', 'STAR_AGGREGATE_DIVISOR'),
     ).toBe(4);
     expect(row).toContain('distant stars at a quarter');
   });

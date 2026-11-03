@@ -1,0 +1,46 @@
+[
+  {
+    "from": "src/components/InfoCard/StarDetailCard/StarDetailCard.tsx",
+    "to": "src/layers/starCatalog/card/ui/StarDetailCard/StarDetailCard.tsx"
+  },
+  {
+    "from": "src/components/InfoCard/CompactStarCard/CompactStarCard.tsx",
+    "to": "src/layers/starCatalog/card/ui/CompactStarCard/CompactStarCard.tsx"
+  },
+  {
+    "from": "src/utils/astro/deriveStarProperties.ts",
+    "to": "src/layers/starCatalog/card/utils/deriveStarProperties.ts"
+  },
+  {
+    "from": "src/utils/astro/starTeffK.ts",
+    "to": "src/layers/starCatalog/card/utils/starTeffK.ts"
+  },
+  {
+    "from": "src/utils/astro/starTeffCoefficients.ts",
+    "to": "src/layers/starCatalog/card/utils/starTeffCoefficients.ts"
+  },
+  {
+    "from": "src/utils/astro/starLuminositySolar.ts",
+    "to": "src/layers/starCatalog/card/utils/starLuminositySolar.ts"
+  },
+  {
+    "from": "src/utils/astro/starRadiusSolar.ts",
+    "to": "src/layers/starCatalog/card/utils/starRadiusSolar.ts"
+  },
+  {
+    "from": "src/utils/astro/isGiantStar.ts",
+    "to": "src/layers/starCatalog/card/utils/isGiantStar.ts"
+  },
+  {
+    "from": "src/utils/astro/bolometricCorrectionG.ts",
+    "to": "src/layers/starCatalog/card/utils/bolometricCorrectionG.ts"
+  },
+  {
+    "from": "src/utils/format/starWikipediaTitle.ts",
+    "to": "src/layers/starCatalog/card/utils/starWikipediaTitle.ts"
+  },
+  {
+    "from": "tests/components/InfoCard/StarDetailCard.test.tsx",
+    "to": "tests/layers/starCatalog/card/ui/StarDetailCard/StarDetailCard.test.tsx"
+  }
+]

@@ -14,6 +14,7 @@ import Slider from '../../../../components/common/Slider/Slider';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 
 export type CosmicWebFilamentsSectionProps = {
+  title: string;
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
   intensity: number;
@@ -21,17 +22,14 @@ export type CosmicWebFilamentsSectionProps = {
 };
 
 function CosmicWebFilamentsSection({
+  title,
   enabled,
   onEnabledChange,
   intensity,
   onIntensityChange,
 }: CosmicWebFilamentsSectionProps) {
   return (
-    <CollapsibleSection
-      title="Cosmic web filaments"
-      headerToggle={enabled}
-      onHeaderToggleChange={onEnabledChange}
-    >
+    <CollapsibleSection title={title} headerToggle={enabled} onHeaderToggleChange={onEnabledChange}>
       {/* Shown only while the layer is on — the slider would have no
           visible effect otherwise. */}
       {enabled && (

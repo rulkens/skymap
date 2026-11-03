@@ -1,5 +1,5 @@
 /**
- * detailCardTable — folds core's two FocusableTarget arms with every Layer's `detailCard`
+ * detailCardTable — folds core's FocusableTarget arm with every Layer's `detailCard`
  * ui-slot contribution into the `DetailCardTable` InfoCard dispatches on. Called once at module
  * load (`InfoCard.tsx`), so a missing arm throws at boot naming the unclaimed union member.
  * Every card's props type must already match `DetailCardProps<K>`/`CompactCardProps<K>`.
@@ -12,19 +12,13 @@ import type { DetailCardEntry } from '../../@types/components/infoCard/DetailCar
 import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
-import StarDetailCard from './StarDetailCard/StarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
-import CompactStarCard from './CompactStarCard/CompactStarCard';
 
-/** The two kinds no Layer claims; every other arm arrives via `layerUiContents`. */
+/** The one kind no Layer claims; every other arm arrives via `layerUiContents`. */
 const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
   galaxyCatalog: {
     Detail: GalaxyDetailCard,
     Compact: CompactCard,
-  },
-  starCatalog: {
-    Detail: StarDetailCard,
-    Compact: CompactStarCard,
   },
 };
 

@@ -88,7 +88,7 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'cull precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull, same shape as earthPass/cloudShellPass',
   ],
   [
-    'src/layers/starCatalog/passes/starSpheresPass.ts',
+    'src/layers/starCatalog/resolvedStars/passes/starSpheresPass.ts',
     "NEAR0 star-sphere precedent — scales a star's radiusM into the RENDER_ORIGIN_MPC-relative NEAR0 model matrix via composeBodyMvp, not the body-slab's composeBodySlabMvp",
   ],
   [
@@ -114,6 +114,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
     'src/layers/blackHoles/lensing/present/blackHoleLensEnvelopeM.ts',
     'fade precedent — bridges a metre distance to Mpc only to test it against the capture band Mpc goneAt, no slab MVP involved',
+  ],
+  [
+    'src/layers/missions/craft/utils/meshBodyCaption.ts',
+    "fade precedent — bridges a seed's metre reveal distance to the Mpc revealBand the label fade reads, no slab MVP involved",
   ],
 ]);
 

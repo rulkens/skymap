@@ -174,13 +174,23 @@ describe('Settings page', () => {
     );
   });
 
-  // Sliders and headings are written inline in each section's component.
+  // Sliders and headings are written inline in each section's component, but a Layer's own
+  // heading, `title={title}`, comes from its `main` ui entry.
+  const mainTitleOf = (file: string): string => {
+    const name = file.match(/^src\/layers\/(\w+)\//)?.[1];
+    const layer = APP_COMPOSITION.layers.find((candidate) => candidate.name === name);
+    const entry = layer?.ui?.find((candidate) => candidate.slot === 'main');
+    if (entry?.slot !== 'main') throw new Error(`${file}: no main ui entry`);
+    return entry.title;
+  };
   it('names every slider and heading its component draws, and no other', () => {
     for (const file of new Set(DOCS_SETTINGS.map((group) => group.file))) {
       const groups = DOCS_SETTINGS.filter((group) => group.file === file);
       const text = read(file).replace(/\/\*[\s\S]*?\*\/|^\s*\/\/.*$/gm, '');
       const sliders = [...text.matchAll(/<Slider\s+label="([^"]+)"/g)].map((match) => match[1]!);
-      const titles = [...text.matchAll(/<CollapsibleSection\s+title="([^"]+)"/g)].map((m) => m[1]!);
+      const titles = [...text.matchAll(/<CollapsibleSection\s+title=(?:"([^"]+)"|\{title\})/g)].map(
+        (m) => m[1] ?? mainTitleOf(file),
+      );
       // The two patterns want the name as the tag's first prop: a tag written another way must fail here, not go unread.
       expect(text.match(/<(Slider|CollapsibleSection)\b/g) ?? [], file).toHaveLength(
         sliders.length + titles.length,

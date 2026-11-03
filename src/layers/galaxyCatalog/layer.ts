@@ -57,5 +57,5 @@ export const galaxyCatalogLayer = defineLayer({
   }),
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
   planners: (runtime) => [galaxyCatalogPlanner(runtime)],
-  ui: [{ slot: 'main', content: GalaxiesSectionContainer }],
+  ui: [{ slot: 'main', content: GalaxiesSectionContainer, title: 'Galaxies' }],
 });

@@ -1,4 +1,4 @@
-import type { MissionTrailRenderer } from './MissionTrailRenderer';
+import type { MissionTrailRenderer } from '../trails/@types/MissionTrailRenderer';
 import type { BodyGlintRenderer } from '../../../@types/rendering/BodyGlintRenderer';
 
 /** The Layer's whole runtime. Non-null: `create` builds it before returning. */

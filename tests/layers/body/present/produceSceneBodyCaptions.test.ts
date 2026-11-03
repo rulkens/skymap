@@ -13,8 +13,8 @@ import { produceSceneBodyCaptions } from '../../../../src/layers/body/present/pr
 import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/markers/present/produceBlackHoleCaptions';
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/figures/present/produceConstellationCaptions';
 import { sceneBodyLabels } from '../../../../src/layers/body/present/sceneBodyLabels';
-import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
-import { meshBodyCaption } from '../../../../src/utils/labels/meshBodyCaption';
+import { produceMissionCaptions } from '../../../../src/layers/missions/craft/present/produceMissionCaptions';
+import { meshBodyCaption } from '../../../../src/layers/missions/craft/utils/meshBodyCaption';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
