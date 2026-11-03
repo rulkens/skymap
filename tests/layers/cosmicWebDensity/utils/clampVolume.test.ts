@@ -5,9 +5,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { clampVolumeDensityScale } from '../../src/utils/clampVolumeDensityScale';
-import { clampVolumeExposure } from '../../src/utils/clampVolumeExposure';
-import { clampVolumeTrim } from '../../src/utils/clampVolumeTrim';
+import { clampVolumeDensityScale } from '../../../../src/layers/cosmicWebDensity/utils/clampVolumeDensityScale';
+import { clampVolumeExposure } from '../../../../src/layers/cosmicWebDensity/utils/clampVolumeExposure';
+import { clampVolumeTrim } from '../../../../src/layers/cosmicWebDensity/utils/clampVolumeTrim';
 
 describe('clampVolumeDensityScale collapses non-positive / non-finite to 0', () => {
   it('collapses NaN to 0', () => {

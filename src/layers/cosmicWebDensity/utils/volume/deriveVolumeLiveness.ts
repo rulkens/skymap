@@ -7,9 +7,9 @@
  * this stays a projection of its three arguments only.
  */
 
-import type { VolumeFieldRenderer } from '../../@types/rendering/VolumeFieldRenderer';
-import type { VolumeFieldLiveness } from '../../@types/rendering/VolumeFieldLiveness';
-import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
+import type { VolumeFieldRenderer } from '../../@types/VolumeFieldRenderer';
+import type { VolumeFieldLiveness } from '../../@types/VolumeFieldLiveness';
+import type { VolumeFieldSettings } from '../../@types/VolumeFieldSettings';
 import { clampVolumeFieldSettings } from '../clampVolumeFieldSettings';
 
 export function deriveVolumeLiveness<Id extends string>(

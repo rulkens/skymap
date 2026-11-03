@@ -8,8 +8,8 @@ import CosmicWebDensityTuningSection from './CosmicWebDensityTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectCosmicWebDensityFieldItems } from '../state/cosmicWebDensity/selectors';
 import { writeCosmicWebDensityField } from '../state/cosmicWebDensity/slice';
-import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
+import type { CosmicWebDensityFieldId } from '../@types/CosmicWebDensityFieldId';
+import type { VolumeFieldSettings } from '../@types/VolumeFieldSettings';
 
 function CosmicWebDensityTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

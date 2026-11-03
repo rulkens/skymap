@@ -5,8 +5,8 @@
  * toggle before its cube lazy-loads.
  */
 
-import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
+import type { CosmicWebDensityFieldId } from './CosmicWebDensityFieldId';
+import type { VolumeFieldSettings } from './VolumeFieldSettings';
 
 export type CosmicWebDensitySettings = {
   /** False short-circuits both volume passes before any GPU cost, after its fade-out. */

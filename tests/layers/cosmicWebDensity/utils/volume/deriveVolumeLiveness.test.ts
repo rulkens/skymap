@@ -7,10 +7,10 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { deriveVolumeLiveness } from '../../../src/utils/volume/deriveVolumeLiveness';
-import { clampVolumeIntensity } from '../../../src/utils/clampVolumeIntensity';
-import type { VolumeFieldRenderer } from '../../../src/@types/rendering/VolumeFieldRenderer';
-import type { VolumeFieldSettings } from '../../../src/@types/settings/VolumeFieldSettings';
+import { deriveVolumeLiveness } from '../../../../../src/layers/cosmicWebDensity/utils/volume/deriveVolumeLiveness';
+import { clampVolumeIntensity } from '../../../../../src/layers/cosmicWebDensity/utils/clampVolumeIntensity';
+import type { VolumeFieldRenderer } from '../../../../../src/layers/cosmicWebDensity/@types/VolumeFieldRenderer';
+import type { VolumeFieldSettings } from '../../../../../src/layers/cosmicWebDensity/@types/VolumeFieldSettings';
 
 type FieldId = 'mcpm';
 const FIELD_ID: FieldId = 'mcpm';

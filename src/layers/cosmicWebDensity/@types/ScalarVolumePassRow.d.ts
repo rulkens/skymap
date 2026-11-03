@@ -5,12 +5,12 @@
  * `UpsamplePassRow`, one stage earlier in the producer/consumer pair.
  */
 
-import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
-import type { VolumeFieldLiveness } from '../../rendering/VolumeFieldLiveness';
-import type { FadeParam } from '../../animation/FadeParam';
-import type { ShowKey } from '../../animation/ShowKey';
-import type { PassState } from './PassState';
-import type { FrameView } from './FrameView';
+import type { VolumeFieldRenderer } from './VolumeFieldRenderer';
+import type { VolumeFieldLiveness } from './VolumeFieldLiveness';
+import type { FadeParam } from '../../../@types/animation/FadeParam';
+import type { ShowKey } from '../../../@types/animation/ShowKey';
+import type { PassState } from '../../../@types/engine/frame/PassState';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 
 // `K` and `fade` forward to the produced `ContentPass<K>`: `liveness` gets its handed value.
 export type ScalarVolumePassRow<Id extends string, K extends ShowKey = ShowKey> = {

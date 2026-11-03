@@ -6,7 +6,7 @@
  */
 
 import type { CosmicWebDensitySourceEntry } from '../../../@types/data/volume/CosmicWebDensitySourceEntry';
-import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
+import type { VolumeFieldSettings } from '../@types/VolumeFieldSettings';
 
 export function buildVolumeFieldSettings(
   entry: CosmicWebDensitySourceEntry,

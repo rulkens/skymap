@@ -8,10 +8,10 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
 import { createScalarVolumePass } from '../../../../../src/services/engine/frame/passes/createScalarVolumePass';
-import type { ScalarVolumePassRow } from '../../../../../src/@types/engine/frame/ScalarVolumePassRow';
-import type { VolumeFieldRenderer } from '../../../../../src/@types/rendering/VolumeFieldRenderer';
-import type { VolumeFieldLiveness } from '../../../../../src/@types/rendering/VolumeFieldLiveness';
-import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
+import type { ScalarVolumePassRow } from '../../../../../src/layers/cosmicWebDensity/@types/ScalarVolumePassRow';
+import type { VolumeFieldRenderer } from '../../../../../src/layers/cosmicWebDensity/@types/VolumeFieldRenderer';
+import type { VolumeFieldLiveness } from '../../../../../src/layers/cosmicWebDensity/@types/VolumeFieldLiveness';
+import type { VolumeFieldSettings } from '../../../../../src/layers/cosmicWebDensity/@types/VolumeFieldSettings';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';

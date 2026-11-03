@@ -54,5 +54,9 @@
   {
     "from": "src/utils/volume/deriveVolumeLiveness.ts",
     "to": "src/layers/cosmicWebDensity/utils/volume/deriveVolumeLiveness.ts"
+  },
+  {
+    "from": "tests/utils/clampVolume.test.ts",
+    "to": "tests/layers/cosmicWebDensity/utils/clampVolume.test.ts"
   }
 ]

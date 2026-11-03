@@ -10,10 +10,10 @@
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldLiveness } from '../../../@types/rendering/VolumeFieldLiveness';
+import type { CosmicWebDensityFieldId } from '../@types/CosmicWebDensityFieldId';
+import type { VolumeFieldLiveness } from '../@types/VolumeFieldLiveness';
 import type { CosmicWebDensityRuntime } from '../@types/CosmicWebDensityRuntime';
-import { deriveVolumeLiveness } from '../../../utils/volume/deriveVolumeLiveness';
+import { deriveVolumeLiveness } from '../utils/volume/deriveVolumeLiveness';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
 import { cosmicWebDensityVisibility } from '../visibility';

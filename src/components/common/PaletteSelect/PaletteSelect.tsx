@@ -19,7 +19,7 @@
  */
 import type { ReactNode } from 'react';
 import type { ScalarFieldPaletteId } from '../../../@types/data/volume/ScalarFieldPaletteId';
-import { PALETTE_IDS } from '../../../data/volume/scalarFieldPalettes';
+import { PALETTE_IDS } from '../../../layers/cosmicWebDensity/data/scalarFieldPalettes';
 import styles from './PaletteSelect.module.css';
 
 export type PaletteSelectProps = {

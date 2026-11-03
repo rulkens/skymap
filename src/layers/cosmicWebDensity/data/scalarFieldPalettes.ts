@@ -39,9 +39,9 @@
  * points.
  */
 
-import type { RampAnchor } from '../../@types/color/RampAnchor';
-import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
-import { rampLut } from '../../utils/color/rampLut';
+import type { RampAnchor } from '../../../@types/color/RampAnchor';
+import type { ScalarFieldPaletteId } from '../../../@types/data/volume/ScalarFieldPaletteId';
+import { rampLut } from '../../../utils/color/rampLut';
 
 export const PALETTE_LUT_SIZE = 256;
 

@@ -6,7 +6,7 @@
  * live.
  */
 
-import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
+import type { VolumeFieldSettings } from './VolumeFieldSettings';
 
 export type VolumeFieldLiveness<Id extends string> = {
   readonly settingsOf: (id: Id) => VolumeFieldSettings;

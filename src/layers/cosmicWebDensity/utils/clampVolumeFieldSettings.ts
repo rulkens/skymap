@@ -17,7 +17,7 @@
  * mutated.
  */
 
-import type { VolumeFieldSettings } from '../@types/settings/VolumeFieldSettings';
+import type { VolumeFieldSettings } from '../@types/VolumeFieldSettings';
 import { clampVolumeContrast } from './clampVolumeContrast';
 import { clampVolumeDensityScale } from './clampVolumeDensityScale';
 import { clampVolumeExposure } from './clampVolumeExposure';

@@ -3,7 +3,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { createVolumeFieldRenderer } from '../../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer';
 import { MCPM_ENTRY } from '../../../../../src/layers/cosmicWebDensity/sources/mcpm';
 import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
-import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
+import type { VolumeFieldSettings } from '../../../../../src/layers/cosmicWebDensity/@types/VolumeFieldSettings';
 
 function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
   return {

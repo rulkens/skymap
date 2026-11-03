@@ -5,7 +5,7 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
+import type { CosmicWebDensityFieldId } from '../@types/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from '../@types/CosmicWebDensityRuntime';
 
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../sources/cosmicWebDensitySourceRows';
