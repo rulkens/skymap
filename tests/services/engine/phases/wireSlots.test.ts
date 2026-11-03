@@ -35,7 +35,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 // (famousGalaxiesMeta, filaments, the density cubes) just need to reach `ready`. The per-source point
 // slots, the only ones with a commit step, are injected as fakes.
 
-vi.mock('../../../../src/layers/cosmicWebFilaments/load/filamentFetcher', () => ({
+vi.mock('../../../../src/layers/cosmicWebFilaments/filaments/load/filamentFetcher', () => ({
   filamentFetcher: vi.fn(async () => ({
     stripCount: 0,
     vertexCount: 0,
