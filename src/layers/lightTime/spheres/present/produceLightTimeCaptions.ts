@@ -5,19 +5,19 @@
  * whose `of` keeps a caption from outliving or preceding its sphere.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
-import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
+import type { Label2D } from '../../../../@types/rendering/Label2D';
+import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
-import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../utils/camera/frameUp';
-import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
-import { sphereSilhouetteTop } from '../../../utils/math/sphereSilhouetteTop';
+import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
+import { sphereSilhouetteTop } from '../../../../utils/math/sphereSilhouetteTop';
 import {
   CAPTION_PRIORITY,
   CAPTION_TIER_SCALE,
-} from '../../../services/engine/presentation/captionPriority';
+} from '../../../../services/engine/presentation/captionPriority';
 import { deriveLightTimeLiveness } from './deriveLightTimeLiveness';
 
 /** Both clamps, so every sphere's caption is the same size on screen. */

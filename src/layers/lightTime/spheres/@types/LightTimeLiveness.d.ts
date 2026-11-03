@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /** What the sphere pass and the captions both draw from this frame. */
 export type LightTimeLiveness = {

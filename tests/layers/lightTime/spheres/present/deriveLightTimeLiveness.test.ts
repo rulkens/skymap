@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
-import { deriveLightTimeLiveness } from '../../../../src/layers/lightTime/present/deriveLightTimeLiveness';
-import { LIGHT_TIME_SPHERES } from '../../../../src/layers/lightTime/data/lightTimeSpheres';
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { deriveLightTimeLiveness } from '../../../../../src/layers/lightTime/spheres/present/deriveLightTimeLiveness';
+import { LIGHT_TIME_SPHERES } from '../../../../../src/layers/lightTime/spheres/data/lightTimeSpheres';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const radiusOf = (id: string) => LIGHT_TIME_SPHERES.find((s) => s.id === id)!.radiusMpc;
 const indexOf = (id: string) => LIGHT_TIME_SPHERES.findIndex((s) => s.id === id);

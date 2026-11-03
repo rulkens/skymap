@@ -3,8 +3,8 @@
  * NEAR0. `enabled` and `draw` read the same `deriveLightTimeLiveness`.
  */
 
-import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { LightTimeRuntime } from '../@types/LightTimeRuntime';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { LightTimeRuntime } from '../../@types/LightTimeRuntime';
 import { deriveLightTimeLiveness } from '../present/deriveLightTimeLiveness';
 
 export function lightTimeSpheresPass(runtime: LightTimeRuntime): ContentPass<'lightTime'> {
