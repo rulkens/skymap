@@ -3,9 +3,9 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean
 > protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax.
 
-> **Runs on a new branch stacked after the prep PR.** The prep PR is
-> [`2026-11-03-relay-issues-room-codes.md`](2026-11-03-relay-issues-room-codes.md), on
-> `worktree-electron-kiosk-dome-app`. This plan consumes the prep PR's interfaces as existing:
+> **Runs on `feat/desktop-kiosk-dome-app`, after the prep PR (#1030, merged).** The prep plan is
+> [`2026-11-03-relay-issues-room-codes.md`](completed/2026-11-03-relay-issues-room-codes.md).
+> This plan consumes the prep PR's interfaces as existing:
 > `attachRemoteRelay(server, RelayOptions): RelayHandle`, `RelayRoom`, `RelayFrame`,
 > `ROOM_ROTATED_CLOSE_CODE`, `HOST_REPLACED_CLOSE_CODE`, `RemoteTransport.host()`, and
 > `pairingUrl(origin, code)`. It never redefines them.
