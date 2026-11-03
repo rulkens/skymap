@@ -33,6 +33,7 @@ import { STRUCTURE_SCALE_TITLES } from '../../data/structureScaleTitles';
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 type StructuresSectionProps = {
+  title: string;
   /** Per-category marker visibility (ring on/off for each structure category). */
   markerCategoryVisibility: Readonly<Record<StructureId, boolean>>;
   /** Called when the user toggles a single marker category on or off. */
@@ -57,6 +58,7 @@ type StructuresSectionProps = {
  * thumbnail).
  */
 function StructuresSection({
+  title,
   markerCategoryVisibility,
   onSetMarkerCategoryVisibility,
   structureCounts,
@@ -85,7 +87,7 @@ function StructuresSection({
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <CollapsibleSection
-      title="Structures"
+      title={title}
       headerToggle={structuresMaster.allOn}
       headerToggleIndeterminate={structuresMaster.indeterminate}
       onHeaderToggleChange={structuresMaster.onToggle}

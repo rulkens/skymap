@@ -29,7 +29,7 @@ export const flowLayer = defineLayer({
   assets: flowAssetRows,
   planners: (runtime) => [flowPlanner(runtime)],
   ui: [
-    { slot: 'main', content: FlowSectionContainer },
+    { slot: 'main', content: FlowSectionContainer, title: 'Flow' },
     { slot: 'debug', content: FlowTuningSectionContainer },
   ],
 });

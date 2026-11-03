@@ -65,7 +65,7 @@ export const starCatalogLayer = defineLayer({
   selection: (runtime) => [starCatalogSelectionRow(runtime)],
   planners: (runtime) => [starCatalogPlanner(runtime)],
   ui: [
-    { slot: 'main', content: StarsSectionContainer },
+    { slot: 'main', content: StarsSectionContainer, title: 'Stars' },
     { slot: 'debug', content: StarCatalogTuningSectionContainer },
     { slot: 'labelsAndGuides', content: { toggle: 'sStarTrails', label: 'S-star trails' } },
   ],

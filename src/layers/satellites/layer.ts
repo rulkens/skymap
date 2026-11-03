@@ -35,7 +35,7 @@ export const satellitesLayer = defineLayer({
   selection: (runtime) => [satellitesSelectionRow(runtime)],
   search: (runtime) => satellitesSearch(runtime),
   ui: [
-    { slot: 'main', content: SatellitesSectionContainer },
+    { slot: 'main', content: SatellitesSectionContainer, title: 'Satellites' },
     {
       slot: 'detailCard',
       content: { type: 'satellite', Detail: SatelliteDetailCard, Compact: CompactSatelliteCard },

@@ -67,6 +67,7 @@ function partialVisibility(): Record<StructureId, boolean> {
 
 function baseProps() {
   return {
+    title: 'Structures',
     markerCategoryVisibility: allOnVisibility(),
     onSetMarkerCategoryVisibility: vi.fn<(category: StructureId, visible: boolean) => void>(),
   };
