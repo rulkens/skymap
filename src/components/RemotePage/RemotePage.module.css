@@ -6,6 +6,8 @@
   padding-bottom: max(var(--space-8), env(safe-area-inset-bottom, 0px));
   /* The show's transport is glanced at in the dark, so it is taller than --touch-target. */
   --show-target: 56px;
+  /* The pad's height, read by the pad and by the sheet that must leave its upper half uncovered. */
+  --pad-height: max(40vh, 14rem);
   color-scheme: dark;
 }
 
@@ -74,7 +76,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: start;
     max-width: 72rem;
-    --pad-height: 60vh;
+    --pad-height: max(60vh, 14rem);
   }
 
   .root > :not(.steer, .deck) {

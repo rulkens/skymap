@@ -35,6 +35,7 @@ beforeEach(() => {
   sent.length = 0;
   delivers.length = 0;
   linkOpen = true;
+  window.scrollTo = vi.fn();
   globalThis.ResizeObserver = class {
     constructor(callback: () => void) {
       resizePad = callback;
@@ -216,6 +217,13 @@ describe('RemotePage', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(tile.closest('[inert]')).toBeNull();
     expect(document.activeElement).toBe(tile);
+  });
+
+  it('a tile scrolls the page back to the top, so the sheet sits under the pad it must leave live', () => {
+    render(<RemotePage />);
+    sendStatus();
+    openSheet('Exhibits');
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0 });
   });
 
   it('the search tile opens with the search field focused', () => {

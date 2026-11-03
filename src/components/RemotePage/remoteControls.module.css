@@ -92,7 +92,7 @@
   margin: 0;
   background: var(--surface-panel);
   border: 1px solid var(--border-control);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   cursor: inherit;
 }
 

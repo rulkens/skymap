@@ -8,17 +8,18 @@
   flex-direction: column;
   gap: var(--space-6);
   width: min(100%, 40rem);
-  max-height: calc(100dvh - var(--touch-target) - var(--space-12) - var(--pad-height, 40vh) / 2);
+  max-height: calc(100dvh - var(--touch-target) - var(--space-12) - var(--pad-height) / 2);
   margin-inline: auto;
   padding: var(--space-8) var(--space-8) max(var(--space-8), env(safe-area-inset-bottom, 0px));
   background: var(--color-bg);
   border-top: 1px solid var(--border-control);
   border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
-  animation: rise 200ms ease-out;
+  animation: rise var(--duration-base) ease-out;
 }
 
 .leaving {
-  animation: sink 150ms ease-in forwards;
+  /* Matches SHEET_LEAVE_MS, which unmounts the sheet once this has played. */
+  animation: sink var(--duration-color) ease-in forwards;
 }
 
 @keyframes rise {

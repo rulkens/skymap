@@ -60,14 +60,14 @@
 .ticks {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--space-2);
   height: var(--space-4);
 }
 
 .ticks span {
   flex: 1;
   height: 3px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: var(--border-control);
 }
 
@@ -103,7 +103,9 @@
   height: 24px;
 }
 
-.primary {
+/* The hover selector matches controls' hover rule in weight and comes after it, so the fill stays. */
+.primary,
+.primary:not(:disabled):hover {
   background: var(--surface-control-active);
   border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
   color: var(--color-fg);
