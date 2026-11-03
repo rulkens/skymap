@@ -4,8 +4,8 @@
  * gate — nothing turns a "hide all structures" knob. All categories default on.
  */
 
-import type { StructureId } from '../data/structure/StructureId';
-import type { StructureItemSettings } from './StructureItemSettings';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
+import type { StructureItemSettings } from '../../../@types/settings/StructureItemSettings';
 
 export type StructureSettings = {
   items: Record<StructureId, StructureItemSettings>;

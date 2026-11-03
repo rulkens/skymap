@@ -7,9 +7,9 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { projectMarkerCategoryVisibility } from '../../../src/state/settings/projectMarkerCategoryVisibility';
-import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
-import { makeSettingsFixture } from './makeSettingsFixture';
+import { projectMarkerCategoryVisibility } from '../../../../src/layers/structure/ui/projectMarkerCategoryVisibility';
+import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
+import { makeSettingsFixture } from '../../../state/settings/makeSettingsFixture';
 
 describe('projectMarkerCategoryVisibility', () => {
   it('packs each category ring flag into a flat record keyed by StructureId', () => {

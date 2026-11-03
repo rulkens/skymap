@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { wrapLabelName } from '../../../src/utils/format/wrapLabelName';
+import { wrapLabelName } from '../../../../../src/layers/structure/utils/format/wrapLabelName';
 
 describe('wrapLabelName', () => {
   it('leaves short names on one line', () => {

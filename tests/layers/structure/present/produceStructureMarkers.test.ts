@@ -16,7 +16,7 @@ import {
   RING_PICK_MIN_ALPHA,
 } from '../../../../src/layers/structure/present/structureMarkerStyles';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
-import { structurePickId } from '../../../../src/utils/picking/structurePickId';
+import { structurePickId } from '../../../../src/layers/structure/utils/picking/structurePickId';
 import { makeStructureFade } from '../../../fixtures/makeStructureFade';
 
 // Builds a real structure store (so `state.store` is the production store) and

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { aboveRingAnchor } from '../../../src/utils/labels/aboveRingAnchor';
-import { dot3 } from '../../../src/utils/math/dot3';
-import { normalize3 } from '../../../src/utils/math/normalize3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { aboveRingAnchor } from '../../../../../src/layers/structure/utils/labels/aboveRingAnchor';
+import { dot3 } from '../../../../../src/utils/math/dot3';
+import { normalize3 } from '../../../../../src/utils/math/normalize3';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const RADIUS = 3;
 const GAP = 0.5;

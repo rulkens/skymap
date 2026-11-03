@@ -10,9 +10,9 @@
  * from `centre` because `centre` may be in absolute coordinates.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
-import { dot3 } from '../math/dot3';
-import { normalize3 } from '../math/normalize3';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import { dot3 } from '../../../../utils/math/dot3';
+import { normalize3 } from '../../../../utils/math/normalize3';
 
 export function aboveRingAnchor(
   centre: Readonly<Vec3>,
