@@ -55,6 +55,7 @@
 .idle {
   margin: 0;
   color: var(--color-fg-tertiary);
+  text-wrap: pretty;
 }
 
 .ticks {
