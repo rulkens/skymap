@@ -11,3 +11,6 @@ export const SUBTITLE_MIN_CHARS = 12;
 
 /** The least time any one subtitle line may be on screen. */
 export const SUBTITLE_MIN_READ_SEC = 2.5;
+
+/** Fade-in and fade-out length of a subtitle line; the CSS keyframes use the same 300 ms. */
+export const SUBTITLE_FADE_SEC = 0.3;

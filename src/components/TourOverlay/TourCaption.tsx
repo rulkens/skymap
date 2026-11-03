@@ -11,6 +11,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import cx from 'classnames';
 import type { BeatCaption } from '../../@types/animation/tour/BeatCaption';
 import { lineSchedule } from '../../utils/animation/lineSchedule';
+import { SUBTITLE_FADE_SEC } from '../../data/animation/subtitleTiming';
 import styles from './TourOverlay.module.css';
 
 export type TourCaptionProps = {
@@ -47,11 +48,13 @@ function TourCaption({
       <div className={styles.lines} key={dwellNonce}>
         {caption.lines.map((line, i) => {
           const { startSec, endSec } = schedule[i]!;
-          const style: CSSProperties = {
-            animationDelay: `${startSec}s`,
-            animationDuration: `${endSec - startSec}s`,
+          // Fades are fixed-length in CSS; only their start times vary per line.
+          const style = {
+            '--in-delay': `${startSec}s`,
+            '--out-delay': `${Math.max(startSec, endSec - SUBTITLE_FADE_SEC)}s`,
+            '--dur': `${endSec - startSec}s`,
             animationPlayState: paused ? 'paused' : 'running',
-          };
+          } as CSSProperties;
           return (
             <p key={line} className={styles.line} style={style}>
               {line}

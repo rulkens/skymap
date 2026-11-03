@@ -60,7 +60,9 @@ describe('TourCaption', () => {
     render(<TourCaption {...props} />);
     const slices = lineSchedule(props.caption.lines, props.dwellSec);
     props.caption.lines.forEach((line, i) => {
-      expect(screen.getByText(line).style.animationDelay).toBe(`${slices[i]!.startSec}s`);
+      expect(screen.getByText(line).style.getPropertyValue('--in-delay')).toBe(
+        `${slices[i]!.startSec}s`,
+      );
     });
   });
 });

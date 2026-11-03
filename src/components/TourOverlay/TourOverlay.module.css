@@ -66,12 +66,17 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-fg-label);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 /* Every line shares one grid cell: only the visible one is non-transparent,
  * and the block never changes height when lines swap. */
 .lines {
   display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
 }
 .line {
@@ -85,24 +90,20 @@
   line-height: 1.3;
   text-wrap: balance;
   color: #ffffff;
-  animation-name: subtitleLine;
-  animation-timing-function: linear;
-  /* forwards only: during the delay the base opacity 0 must win. */
-  animation-fill-mode: forwards;
+  /* Two fixed 300 ms fades; `both` on the in-fade keeps opacity 1 through the hold,
+   * and the out-fade only runs from its own delay. */
+  animation:
+    subtitleIn 300ms ease-out var(--in-delay) both,
+    subtitleOut 300ms ease-in var(--out-delay) forwards;
 }
 
-/* Fades are a percentage of the slice, ≈300 ms at the typical 4 s. */
-@keyframes subtitleLine {
-  0% {
-    opacity: 0;
-  }
-  8% {
+@keyframes subtitleIn {
+  to {
     opacity: 1;
   }
-  92% {
-    opacity: 1;
-  }
-  100% {
+}
+@keyframes subtitleOut {
+  to {
     opacity: 0;
   }
 }
@@ -115,7 +116,7 @@
   }
   /* Swap with no fade: opacity steps straight to 1 and back to 0. */
   .line {
-    animation-name: subtitleLineStep;
+    animation: subtitleLineStep var(--dur) linear var(--in-delay) forwards;
   }
 }
 @keyframes subtitleLineStep {
