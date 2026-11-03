@@ -7,7 +7,7 @@
  * size (1024).
  */
 
-import type { BlackHoleLensingTuning } from '../../lensing/@types/BlackHoleLensingTuning';
+import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
 
 export const initialState: BlackHoleLensingTuning = {
   // ISCO out to the EHT photon ring; Schwarzschild, no spin.

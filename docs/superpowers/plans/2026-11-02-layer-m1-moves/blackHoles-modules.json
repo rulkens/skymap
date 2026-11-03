@@ -130,5 +130,17 @@
   {
     "from": "tests/layers/blackHoles/utils/gpu/blackHoleLensingUniformsLayout.parity.test.ts",
     "to": "tests/layers/blackHoles/lensing/utils/gpu/blackHoleLensingUniformsLayout.parity.test.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/markers/@types/BlackHolesSettings.d.ts",
+    "to": "src/layers/blackHoles/@types/BlackHolesSettings.d.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/markers/@types/BlackHoleItemSettings.d.ts",
+    "to": "src/layers/blackHoles/@types/BlackHoleItemSettings.d.ts"
+  },
+  {
+    "from": "src/layers/blackHoles/lensing/@types/BlackHoleLensingTuning.d.ts",
+    "to": "src/layers/blackHoles/@types/BlackHoleLensingTuning.d.ts"
   }
 ]

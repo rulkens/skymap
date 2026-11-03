@@ -5,7 +5,7 @@
  * range, granularity and formatting live in ONE row per knob.
  * `cubemapResolutionPx` isn't here — see `BlackHoleLensingSliderKey`.
  */
-import type { BlackHoleLensingTuning } from '../@types/BlackHoleLensingTuning';
+import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
 import type { BlackHoleLensingSliderKey } from '../@types/BlackHoleLensingSliderKey';
 import type { BlackHoleLensingSliderField } from '../@types/BlackHoleLensingSliderField';
 

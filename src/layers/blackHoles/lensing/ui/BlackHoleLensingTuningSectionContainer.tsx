@@ -11,7 +11,7 @@ import { BlackHoleLensingTuningSection } from './BlackHoleLensingTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { selectBlackHoleLensingTuning } from '../../state/lensingTuning/selectors';
 import { setBlackHoleLensingTuning } from '../../state/lensingTuning/slice';
-import type { BlackHoleLensingTuning } from '../@types/BlackHoleLensingTuning';
+import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
 
 function BlackHoleLensingTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

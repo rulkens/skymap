@@ -1,5 +1,5 @@
 import { BLACK_HOLE_SOURCE_ROWS } from '../../sources/blackHoleSourceRows';
-import type { BlackHolesSettings } from '../../markers/@types/BlackHolesSettings';
+import type { BlackHolesSettings } from '../../@types/BlackHolesSettings';
 
 // Derived from the registry rows so the record is complete for every hole:
 // the reducer writes a field into an existing item and never creates one.

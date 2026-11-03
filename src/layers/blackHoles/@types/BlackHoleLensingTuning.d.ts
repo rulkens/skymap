@@ -5,7 +5,7 @@
  * non-uniform CPU-side knobs on the same settings seam.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 export type BlackHoleLensingTuning = {
   // ── Tier 1 — BLACK_HOLES override, rides the existing uniform fields ────

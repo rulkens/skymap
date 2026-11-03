@@ -1,4 +1,4 @@
-import type { BlackHoleLensingTuning } from './BlackHoleLensingTuning';
+import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
 
 /**
  * Keys of `BlackHoleLensingTuning` that surface as numeric DebugPanel

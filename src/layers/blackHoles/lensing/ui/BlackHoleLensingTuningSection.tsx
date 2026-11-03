@@ -12,7 +12,7 @@
  */
 
 import type { ReactElement } from 'react';
-import type { BlackHoleLensingTuning } from '../@types/BlackHoleLensingTuning';
+import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
 import type { HexString } from '../../../../@types/math/HexString';
 import { hexToLinearRgb } from '../../../../utils/color/hexToLinearRgb';
 import { linearRgbToHex } from '../../../../utils/color/linearRgbToHex';
