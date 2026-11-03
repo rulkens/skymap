@@ -13,19 +13,9 @@ import type { RemoteTransport } from '../../@types/remote/RemoteTransport';
 import type { RoomCode } from '../../@types/remote/RoomCode';
 import { HOST_REPLACED_CLOSE_CODE } from '../../data/remote/hostReplacedCloseCode';
 import { ROOM_ROTATED_CLOSE_CODE } from '../../data/remote/roomRotatedCloseCode';
+import { parseRelayFrame } from '../../utils/remote/parseRelayFrame';
 
 const RECONNECT_DELAY_MS = 1000;
-
-function relayFrameOf(text: string): RelayFrame | null {
-  try {
-    const parsed: unknown = JSON.parse(text);
-    return typeof parsed === 'object' && parsed !== null && 'relay' in parsed
-      ? (parsed as RelayFrame)
-      : null;
-  } catch {
-    return null;
-  }
-}
 
 function openLink(
   path: () => string,
@@ -48,7 +38,7 @@ function openLink(
     ws.onopen = () => setStatus('open');
     ws.onmessage = (event) => {
       if (typeof event.data !== 'string') return;
-      const frame = relayFrameOf(event.data);
+      const frame = parseRelayFrame(event.data);
       if (frame !== null) return onFrame(frame);
       for (const listener of textListeners) listener(event.data);
     };

@@ -13,6 +13,7 @@ import type { RelayRoom } from '../../../src/@types/remote/RelayRoom';
 import type { RoomCode } from '../../../src/@types/remote/RoomCode';
 import { HOST_REPLACED_CLOSE_CODE } from '../../../src/data/remote/hostReplacedCloseCode';
 import { ROOM_ROTATED_CLOSE_CODE } from '../../../src/data/remote/roomRotatedCloseCode';
+import { parseRelayFrame } from '../../../src/utils/remote/parseRelayFrame';
 import type { RelayHandle } from '../../@types/remote/RelayHandle';
 import type { RelayOptions } from '../../@types/remote/RelayOptions';
 
@@ -47,16 +48,6 @@ export function attachRemoteRelay(server: Server, options: RelayOptions): RelayH
     const frame: RelayFrame = { relay: 'room', ...room };
     host.send(JSON.stringify(frame));
     for (const listener of listeners) listener(room);
-  };
-
-  // A remote must not pass itself off as the relay to the host.
-  const forgesRelayFrame = (text: string): boolean => {
-    try {
-      const parsed: unknown = JSON.parse(text);
-      return typeof parsed === 'object' && parsed !== null && 'relay' in parsed;
-    } catch {
-      return false;
-    }
   };
 
   const track = (ws: WebSocket, onText: (text: string) => void): void => {
@@ -104,7 +95,8 @@ export function attachRemoteRelay(server: Server, options: RelayOptions): RelayH
     }
     remotes.add(ws);
     track(ws, (text) => {
-      if (!forgesRelayFrame(text)) hostOf.get(code)?.send(text);
+      // A remote must not pass itself off as the relay to the host.
+      if (parseRelayFrame(text) === null) hostOf.get(code)?.send(text);
     });
     ws.on('close', () => remotes.delete(ws));
   };

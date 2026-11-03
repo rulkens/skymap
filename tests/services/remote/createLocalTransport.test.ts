@@ -114,4 +114,15 @@ describe('createLocalTransport', () => {
     await pause(PAST_RETRY_MS);
     expect(targets()).toEqual(['/__remote/host', `/__remote/${ROOM.code}`]);
   });
+
+  it('open keeps retrying a refused room until a host holds it', async () => {
+    const { port } = await startRelay();
+    const { statuses, texts } = track(createLocalTransport().open(ROOM.code));
+    await vi.waitFor(() => expect(statuses).toEqual(['open', 'closed']), WAIT);
+    const host = await peer(port, 'host');
+    await vi.waitFor(() => expect(statuses).toEqual(['open', 'closed', 'open']), WAIT);
+    // Only an admitted remote hears its host.
+    host.send('{"kind":"menu"}');
+    await vi.waitFor(() => expect(texts).toEqual(['{"kind":"menu"}']), WAIT);
+  });
 });
