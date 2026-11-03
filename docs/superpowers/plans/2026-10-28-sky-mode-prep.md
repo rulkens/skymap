@@ -1,7 +1,7 @@
-# Sky mode prep: line near-plane fix, near floor at standing height, 1.7 m surface check — plan
+# Sky mode prep: line near-plane fix, near floor at standing height — plan
 
-> **Spec.** `specs/2026-10-28-sky-mode-design.md` §3.3, P1, P3 and P4. The spec rides #949 and lands
-> with it. P2 (the lens) shipped separately as #949.
+> **Spec.** `specs/2026-10-28-sky-mode-design.md` §3.3, P1 and P3, on branch `sky-mode` (not on main;
+> it lands with the sky-rung PR). P2 (the lens) is #949; P4 moved to the sky-rung PR.
 > **Gate.** `npm run typecheck`, `npm test`, CI's build, and the eye checks named per task. P1 and P4
 > are shader/render work, so **no task lands without its shots**.
 
@@ -40,16 +40,19 @@ When both endpoints are in front this equals `normalize(bNdc - aNdc)` (the scale
 so the in-front path is unchanged.
 
 - **One endpoint behind.** The visible part (the in-front end out to the eye plane) projects to a
-  ray from the in-front end's NDC along that tangent. The behind corner becomes
-  `frontNdc ± tangent * (length(frontNdc) + 4)`, which is past the screen edge from any start. It
-  takes the front endpoint's z and w.
+  ray from the in-front end's NDC along that tangent. The behind corner is the real segment point
+  that projects to `frontNdc ± tangent * d`, `d = length(frontNdc) + 4` (past the screen edge from
+  any start): `s = d·wF² / (|H| + d·wF·(wF − wB))`, `w = wF·|H| / (same)`, all terms positive so
+  neither cancels. Its w is real, so every attribute interpolates perspective-correct; the helper
+  returns `{ clip, t }` and callers interpolate world attributes by `t`, never by `uv.x`. Depth
+  keeps the front end's z/w: the real point's z cancels in f32 on a standard-Z slab.
 - **Both endpoints behind:** return `vec4(0)`, a degenerate quad.
-- **Contract change.** The returned z/w are the selected endpoint's, or the front endpoint's for a
-  behind corner. This is safe because all four users draw depthless:
+- **Contract change.** `expandSegmentQuad` returns `SegmentCorner { clip, t }`; a behind corner's
+  z/w ratio is the front endpoint's. This is safe because all four users draw depthless:
   - constellations: additive, no depth;
   - markerLines: OVER with a z clamp;
   - missionTrail: z pinned to 0.5·w;
-  - filaments: to verify in its pass before landing.
+  - filaments: no depth attachment (`filamentRenderer.ts`, its HDR-pass note).
 
 ### Tasks
 
@@ -61,9 +64,7 @@ so the in-front path is unchanged.
   currently divides by w and folds the same way. A both-behind segment returns early.
 - `bodies/missionTrail/vertex.wesl`:
   - Delete the local `W_EPS` slide.
-  - Its `relKm` varying needs the eye-plane crossing for a behind corner. Pin what the fragment
-    reads it for before choosing between the world-space crossing (computed in metres, where its
-    0.01 m threshold is sound) and dropping it.
+  - Its `relKm` varying (read by `trailClearance` for occlusion) becomes `mix(a, b, t)`.
 - **Shots, before and after.** Keep the before shots as the repro:
   - a constellation straddling the view edge from Earth (`focus=body-earth`, a figure behind the
     camera's shoulder);
@@ -117,3 +118,11 @@ the host's vernal equinox for every host. The fix rode #949, the PR that carries
     `SURFACE_STANDOFF_RADII`. Only the sky rung reaches standing height.
   - **So:** it becomes the feature plan's first eye check, before the grids. The rule stands: fix
     only what the shots show.
+
+## Landing pass (2026-11-03)
+
+- **Refactor-ground found one bolt-on.** The behind corner was an invented NDC point carrying the
+  front end's w, so the quad interpolated affinely and `missionTrail` re-derived its own eye-plane
+  crossing for `relKm`, which `trailClearance` then read at the wrong depth. The corner is now the
+  real point above; the trail's crossing block is gone and filaments take density by `t`.
+- **Gate (ruled):** the harness pair plus the four shots; no committed shader test.
