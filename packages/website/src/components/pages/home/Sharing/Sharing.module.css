@@ -97,10 +97,6 @@
   overflow-wrap: anywhere;
 }
 
-.host {
-  color: var(--site-text-faint);
-}
-
 /* A parameter and the part about it share a colour: its words in the bar, the part's name and rule. */
 .focus {
   --ink: var(--focus-ink);
@@ -126,7 +122,7 @@
   mask-composite: intersect;
 }
 
-/* As Stories' views: the next arrives from a touch larger, the last leaves faster. */
+/* The next view arrives from a touch larger; the last leaves faster. */
 .layer {
   position: absolute;
   inset: 0;

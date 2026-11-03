@@ -59,11 +59,7 @@ function Sharing({ title, focus, clock, children }: SharingProps) {
           </div>
           <div className={styles.bar}>
             <AppLink className={styles.address} view={link}>
-              <AddressText
-                hash={typed}
-                head={styles.host}
-                param={(key) => ({ className: INKS[key] })}
-              />
+              <AddressText hash={typed} param={(key) => ({ className: INKS[key] })} />
             </AppLink>
             <CopyButton text={appAddress(link)} label="Copy the address" />
           </div>
