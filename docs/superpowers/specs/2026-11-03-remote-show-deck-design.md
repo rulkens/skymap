@@ -262,8 +262,7 @@ export const REMOTE_SHOW_KINDS: {
 };
 ```
 
-- **Components.** `NowCard` (the running item and its controls), `TimeRow` (the clock's state and Pause time /
-  Play time, at the top of the Time sheet), `ShowList` (the Tours, Exhibits and
+- **Components.** `NowCard` (the running item and its controls), `ShowList` (the Tours, Exhibits and
   Clips sheets: one component, a kind prop, rows from `REMOTE_SHOW_KINDS`), `RemoteSheet` (the bottom sheet), and
   the tiles. The Search, Time, Labels and Setup sheets are today's `SearchSection`, `TimeSection`, `ToggleSection`
   and `SetupSection`, restyled; the Layers sheet is a second `ToggleSection` over `status.layers`, with the same
@@ -271,8 +270,8 @@ export const REMOTE_SHOW_KINDS: {
   `Record<RemoteSheetId, …>`, never a chain.
 - **Deleted.** `TourSection` and `ExhibitSection` (`NowCard` and `ShowList` replace them), the "Exit exhibit or
   clip" button (Stop on the card replaces it), `focusNameFrom.ts` and its test.
-- **One control per job on screen.** The clock lives in the Time sheet only: `TimeRow` atop it, then direction,
-  rate, date and Go live. Stop lives on the card only.
+- **One control per job on screen.** The clock lives in the Time sheet only (see "The Time sheet"). Stop lives on
+  the card only.
 
 ### Red light
 
@@ -340,8 +339,25 @@ is `--color-bg`. No new light surface, no glow.
 there (the notice, the deck `inert` and dimmed), no menu yet (list sheets say "Waiting for the dome's lists"). The
 two version states are new (see "The protocol version"); their notices sit where "Dome not there"'s does.
 
-**Copy.** Buttons verb first: "Stop tour", "Pause time", "Play time", "Close". Tiles name their sheet. Time
-direction is a two-way switch labelled "Backward" / "Forward" showing the current state.
+**The Time sheet** (layout A, owner, 2026-11-03), mirroring the app's time bar, top to bottom:
+
+- **Readout:** `YYYY-MM-DD HH:MM` and a dimmer `UTC` (`formatSimClock`). It runs on the phone between statuses,
+  because the dome sends one only when its store changes and a running clock is not a change: `useRemoteLink`
+  turns each status's time into a `TimeState` anchored at its arrival (`domeClockFromStatus`), and
+  `useSimInstant` derives it with `deriveSimDays`, re-rendering once per shown minute.
+- **State line** (`role="status"`, a dot filled in the accent only at real time): "Real time" (live and running),
+  "Paused", or the rate, with ", backward" when running backward.
+- Slower | Pause or Play (the primary, named "Pause time" / "Play time") | Faster; Slower and Faster disable at the
+  ladder ends.
+- The speed button (the rate and a caret) opens a list of every speed, fastest first, the current one
+  `aria-current`; a pick sets the rate and closes the list, and Escape closes the list before the sheet. Beside
+  it, Reverse (`aria-pressed` while running backward) sends `timeSetDirection`.
+- "Set date and time (UTC)": one native `datetime-local` field read as UTC that follows the clock until edited,
+  and a Set button (or Enter) that sends `timeSetDate` with the whole instant, time of day included. A Set button,
+  because a desktop browser reports each typed part of the field as a change.
+- "Back to now" (`timeGoLive`), shown only off real time: in manual mode or paused.
+
+**Copy.** Buttons verb first: "Stop tour", "Pause time", "Play time", "Close". Tiles name their sheet.
 
 ## Testing
 
@@ -390,7 +406,7 @@ One PR (owner, 2026-11-03).
 3. **Contract:** `REMOTE_PROTOCOL_VERSION`, `v` on `DomeMessage` and `RemoteMessage`, the two parsers' version
    rules, `RemoteTakeover`, `DomeStatus`, `TARGET_NAME`, `selectFocusedFocusable`, `selectDomeStatus`.
 4. **Phone:** the version states and notice, the glyph rows, `REMOTE_SHOW_KINDS`, `REMOTE_SHEETS`, `NowCard`,
-   `TimeRow`, `ShowList`, `RemoteSheet`, the restyled sheet bodies, `RemotePage`; delete `TourSection`,
+   the Time sheet, `ShowList`, `RemoteSheet`, the restyled sheet bodies, `RemotePage`; delete `TourSection`,
    `ExhibitSection`, `focusNameFrom`.
 5. **Red light**, its own commit.
 5. **Backlog:** the UI & UX line "The remote's header reads 'Focused'" exists only on `site/16-pass-3` today;

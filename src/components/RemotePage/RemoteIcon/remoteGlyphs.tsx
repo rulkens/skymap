@@ -119,10 +119,9 @@ export const REMOTE_GLYPHS: Record<RemoteGlyph, ReactNode> = {
       </g>
     </>
   ),
-  backward: <path d="M19 12H5M11 6l-6 6 6 6" />,
-  forward: <path d="M5 12h14M13 6l6 6-6 6" />,
-  slower: <path d="M6 12h12" />,
-  faster: <path d="M12 6v12M6 12h12" />,
+  reverse: <path d="M4 8.5h14M14.5 5 18 8.5 14.5 12M20 15.5H6M9.5 12 6 15.5 9.5 19" />,
+  slower: <path d="M14.5 6l-6 6 6 6" />,
+  faster: <path d="M9.5 6l6 6-6 6" />,
   live: (
     <>
       <g fill="currentColor">

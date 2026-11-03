@@ -1,94 +1,153 @@
-/** TimeSection — the clock's row, then direction, speed, a date to jump to, and back to live. */
+/**
+ * TimeSection — the Time sheet, mirroring the app's time bar: the clock ticking on the phone, its
+ * state in words, Slower / Pause / Faster, the speed list and Reverse, a date to jump to, and back
+ * to now while off real time. Middle button reads "Pause" but is named "Pause time", apart from
+ * the tour's Pause.
+ */
 
+import { useId, useRef, useState } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import cx from 'classnames';
 import RemoteIcon from '../RemoteIcon/RemoteIcon';
-import TimeRow from '../TimeRow/TimeRow';
+import SpeedList from '../SpeedList/SpeedList';
+import DateTimeField from '../DateTimeField/DateTimeField';
+import { useSimInstant } from '../../../hooks/useSimInstant';
 import { RATE_LADDER } from '../../../data/time/rateLadder';
-import { simDaysToIsoDate } from '../../../utils/time/simDaysToIsoDate';
+import { formatSimClock } from '../../../utils/time/formatSimClock';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
-import type { DomeStatus } from '../../../@types/remote/DomeStatus';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
-import type { RemoteGlyph } from '../../../@types/remote/RemoteGlyph';
+import type { TimeState } from '../../../@types/time/TimeState';
 import controls from '../remoteControls.module.css';
 import styles from './TimeSection.module.css';
 
 export type TimeSectionProps = {
-  time: DomeStatus['time'];
-  onCommand: (command: RemoteCommand) => void;
+  readonly clock: TimeState;
+  readonly onCommand: (command: RemoteCommand) => void;
 };
 
-const DIRECTIONS: readonly { value: 1 | -1; label: string; glyph: RemoteGlyph }[] = [
-  { value: -1, label: 'Backward', glyph: 'backward' },
-  { value: 1, label: 'Forward', glyph: 'forward' },
-];
+function TimeSection({ clock, onCommand }: TimeSectionProps): ReactNode {
+  const instant = useSimInstant(clock);
+  const [speedsOpen, setSpeedsOpen] = useState(false);
+  const speedButton = useRef<HTMLButtonElement>(null);
+  const speedsId = useId();
 
-function TimeSection({ time, onCommand }: TimeSectionProps) {
-  const setRate = (rateIndex: number): void =>
-    onCommand({ name: 'timeSetRate', payload: { rateIndex } });
-  const pickDate = (value: string): void => {
-    const ms = Date.parse(`${value}T00:00:00Z`);
-    if (Number.isFinite(ms))
-      onCommand({ name: 'timeSetDate', payload: { simDays: unixMsToJulianDays(ms) } });
+  const { rateIndex, direction, paused } = clock;
+  const rate = RATE_LADDER[rateIndex]?.label ?? '';
+  const realTime = clock.mode === 'live' && !paused;
+  const backward = direction === -1;
+  const state = paused
+    ? 'Paused'
+    : realTime
+      ? 'Real time'
+      : `${rate}${backward ? ', backward' : ''}`;
+  const readout = formatSimClock(instant);
+  const zoneAt = readout.lastIndexOf(' ');
+
+  const setRate = (index: number): void =>
+    onCommand({ name: 'timeSetRate', payload: { rateIndex: index } });
+  const closeSpeeds = (): void => {
+    setSpeedsOpen(false);
+    speedButton.current?.focus();
   };
+  // Escape shuts the open list first; the sheet's own Escape handler sees it only after.
+  const onKeyDown = (e: KeyboardEvent): void => {
+    if (e.key !== 'Escape' || !speedsOpen) return;
+    e.stopPropagation();
+    closeSpeeds();
+  };
+
   return (
-    <div className={controls.stack}>
-      <TimeRow time={time} onCommand={onCommand} />
-      <div className={styles.pair} role="radiogroup" aria-label="Direction">
-        {DIRECTIONS.map(({ value, label, glyph }) => (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={time.direction === value}
-            className={cx(controls.button, styles.choice, time.direction === value && controls.on)}
-            onClick={() => onCommand({ name: 'timeSetDirection', payload: { direction: value } })}
-          >
-            <RemoteIcon glyph={glyph} />
-            {label}
-          </button>
-        ))}
+    <div className={cx(controls.stack, styles.root)} onKeyDown={onKeyDown}>
+      <div>
+        <p className={styles.readout}>
+          {readout.slice(0, zoneAt)}
+          <span className={styles.zone}>{readout.slice(zoneAt + 1)}</span>
+        </p>
+        <p role="status" className={styles.state}>
+          <span className={cx(styles.dot, realTime && styles.live)} aria-hidden="true" />
+          {state}
+        </p>
       </div>
-      <div className={styles.rate}>
+      <div className={styles.transport}>
         <button
           type="button"
           className={cx(controls.button, styles.choice)}
-          disabled={time.rateIndex <= 0}
-          onClick={() => setRate(time.rateIndex - 1)}
+          disabled={rateIndex <= 0}
+          onClick={() => setRate(rateIndex - 1)}
         >
           <RemoteIcon glyph="slower" />
           Slower
         </button>
-        <span className={styles.rateLabel}>{RATE_LADDER[time.rateIndex]?.label}</span>
+        <button
+          type="button"
+          className={cx(controls.button, styles.choice, styles.primary)}
+          aria-label={paused ? 'Play time' : 'Pause time'}
+          onClick={() => onCommand({ name: paused ? 'timeResume' : 'timePause', payload: null })}
+        >
+          <RemoteIcon glyph={paused ? 'play' : 'pause'} />
+          {paused ? 'Play' : 'Pause'}
+        </button>
         <button
           type="button"
           className={cx(controls.button, styles.choice)}
-          disabled={time.rateIndex >= RATE_LADDER.length - 1}
-          onClick={() => setRate(time.rateIndex + 1)}
+          disabled={rateIndex >= RATE_LADDER.length - 1}
+          onClick={() => setRate(rateIndex + 1)}
         >
-          <RemoteIcon glyph="faster" />
           Faster
+          <RemoteIcon glyph="faster" />
         </button>
       </div>
-      <label className={styles.date}>
-        <span className={styles.dateLabel}>
-          <RemoteIcon glyph="calendar" />
-          Jump to date
-        </span>
-        <input
-          type="date"
-          className={cx(controls.input, styles.input)}
-          value={simDaysToIsoDate(time.simDays)}
-          onChange={(e) => pickDate(e.target.value)}
+      <div className={styles.pair}>
+        <button
+          ref={speedButton}
+          type="button"
+          className={cx(controls.button, styles.choice)}
+          aria-label={`Speed ${rate}`}
+          aria-expanded={speedsOpen}
+          aria-controls={speedsOpen ? speedsId : undefined}
+          onClick={() => setSpeedsOpen((open) => !open)}
+        >
+          {rate}
+          <span aria-hidden="true">{speedsOpen ? '▴' : '▾'}</span>
+        </button>
+        <button
+          type="button"
+          className={cx(controls.button, styles.choice, backward && controls.on)}
+          aria-pressed={backward}
+          onClick={() =>
+            onCommand({ name: 'timeSetDirection', payload: { direction: backward ? 1 : -1 } })
+          }
+        >
+          <RemoteIcon glyph="reverse" />
+          Reverse
+        </button>
+      </div>
+      {speedsOpen && (
+        <SpeedList
+          id={speedsId}
+          currentIndex={rateIndex}
+          onPick={(index) => {
+            setRate(index);
+            closeSpeeds();
+          }}
         />
-      </label>
-      <button
-        type="button"
-        className={cx(controls.button, styles.choice)}
-        onClick={() => onCommand({ name: 'timeGoLive', payload: null })}
-      >
-        <RemoteIcon glyph="live" />
-        Go live
-      </button>
+      )}
+      <DateTimeField
+        instant={instant}
+        onSet={(at) =>
+          onCommand({ name: 'timeSetDate', payload: { simDays: unixMsToJulianDays(at.getTime()) } })
+        }
+      />
+      {!realTime && (
+        <button
+          type="button"
+          className={cx(controls.button, styles.choice)}
+          onClick={() => onCommand({ name: 'timeGoLive', payload: null })}
+        >
+          <RemoteIcon glyph="live" />
+          Back to now
+        </button>
+      )}
     </div>
   );
 }

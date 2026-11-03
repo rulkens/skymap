@@ -35,7 +35,8 @@ const roomFromHash = (): string | null => location.hash.slice(1) || null;
 
 function RemotePage() {
   const [room, setRoom] = useState(roomFromHash);
-  const { status, link, menu, matches, sendCommand, sendDevice, search } = useRemoteLink(room);
+  const { status, clock, link, menu, matches, sendCommand, sendDevice, search } =
+    useRemoteLink(room);
   const [redLight, setRedLight] = useRedLight();
   const [axis, setAxis] = useState<RemoteNavAxis>('orbit');
   const scheme = status?.controls.scheme;
@@ -77,7 +78,7 @@ function RemotePage() {
     clips: (close) => (
       <ShowList kind="clip" menu={menu} takeover={takeover} onCommand={startAndClose(close)} />
     ),
-    time: () => status && <TimeSection time={status.time} onCommand={sendCommand} />,
+    time: () => clock && <TimeSection clock={clock} onCommand={sendCommand} />,
     layers: () =>
       status && (
         <ToggleSection

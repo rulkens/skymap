@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createLocalTransport } from '../../services/remote/createLocalTransport';
 import { parseDomeMessage } from '../../utils/remote/parseDomeMessage';
+import { domeClockFromStatus } from '../../utils/remote/domeClockFromStatus';
 import { newLocalRoomCode } from '../../utils/remote/newLocalRoomCode';
 import { HELLO_INTERVAL_MS } from '../../data/remote/helloIntervalMs';
 import { REMOTE_SILENCE_MS } from '../../data/remote/remoteSilenceMs';
@@ -26,9 +27,11 @@ import type { RemoteMessage } from '../../@types/remote/RemoteMessage';
 import type { RemoteSearchMatch } from '../../@types/remote/RemoteSearchMatch';
 import type { RemoteSession } from '../../@types/remote/RemoteSession';
 import type { RoomCode } from '../../@types/remote/RoomCode';
+import type { TimeState } from '../../@types/time/TimeState';
 
 export function useRemoteLink(room: RoomCode | null): RemoteSession {
   const [status, setStatus] = useState<DomeStatus | null>(null);
+  const [clock, setClock] = useState<TimeState | null>(null);
   const [menu, setMenu] = useState<RemoteMenu | null>(null);
   const [domeLink, setDomeLink] = useState<DomeLinkState>('looking');
   const [matches, setMatches] = useState<readonly RemoteSearchMatch[]>([]);
@@ -74,6 +77,7 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
       setDomeLink('connected');
       if (message.kind === 'status') {
         setStatus(message.status);
+        setClock(domeClockFromStatus(message.status.time, performance.now()));
       } else if (message.kind === 'menu') {
         setMenu(message.menu);
       } else if (message.requestId === `${from}:${requestRef.current}`) {
@@ -112,5 +116,5 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
     [send, from],
   );
 
-  return { status, link: domeLink, menu, matches, sendCommand, sendDevice, search };
+  return { status, clock, link: domeLink, menu, matches, sendCommand, sendDevice, search };
 }

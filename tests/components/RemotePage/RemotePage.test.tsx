@@ -67,6 +67,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.useRealTimers();
   localStorage.clear();
 });
@@ -147,6 +148,28 @@ describe('RemotePage', () => {
     sendWith({ takeover: null, time: { ...status.time, paused: true } });
     fireEvent.click(screen.getByRole('button', { name: 'Play time' }));
     expect(commands()).toContainEqual({ name: 'timeResume', payload: null });
+  });
+
+  it('the Time readout runs on from when the status arrived, not from when the sheet opened', () => {
+    let nowMs = 1_000;
+    vi.spyOn(performance, 'now').mockImplementation(() => nowMs);
+    render(<RemotePage />);
+    // J2000 noon at 10 min/s: 6.3 s later the dome's clock reads 13:03.
+    sendWith({ takeover: null });
+    nowMs += 6_300;
+    openSheet('Time');
+    expect(screen.getByText('2000-01-01 13:03')).toBeTruthy();
+  });
+
+  it('Escape shuts an open speed list first, and leaves the Time sheet open', () => {
+    render(<RemotePage />);
+    sendWith({ takeover: null });
+    openSheet('Time');
+    fireEvent.click(screen.getByRole('button', { name: 'Speed 10 min/s' }));
+    fireEvent.keyDown(screen.getByRole('button', { name: '1 yr/s' }), { key: 'Escape' });
+    act(() => void vi.advanceTimersByTime(SHEET_LEAVE_MS));
+    expect(screen.queryByRole('list', { name: 'Speeds' })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Time' })).toBeTruthy();
   });
 
   it('the header names the focus the dome reports', () => {

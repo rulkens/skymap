@@ -1,46 +1,69 @@
+.root {
+  gap: var(--space-6);
+}
+
+.readout {
+  margin: 0;
+  color: var(--color-fg);
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: var(--line-height-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.zone {
+  margin-left: var(--space-3);
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-input);
+  font-weight: 400;
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-input);
+}
+
+/* Hollow while the clock is off real time, filled in the accent on it: shape as well as colour. */
+.dot {
+  box-sizing: border-box;
+  width: var(--space-4);
+  height: var(--space-4);
+  border: 1.5px solid var(--color-fg-dim);
+  border-radius: 50%;
+}
+
+.live {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* The middle third is wider, so Pause / Play is the largest target. */
+.transport {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: var(--space-4);
+}
+
 .pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
 }
 
-/* Slower and Faster flank the rate they change, so the number reads between the two presses. */
-.rate {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.rateLabel {
-  min-width: 4.5rem;
-  color: var(--color-fg-base);
-  font-size: var(--font-size-input);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
 .choice {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-4);
-}
-
-.date {
-  display: flex;
-  flex-direction: column;
   gap: var(--space-3);
-  color: var(--color-fg-muted);
-  font-size: var(--font-size-input);
+  padding-inline: var(--space-4);
+  white-space: nowrap;
 }
 
-.dateLabel {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.input {
-  min-width: 0;
+.primary {
+  background: var(--surface-control);
+  border-color: var(--border-hover);
 }
