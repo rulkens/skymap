@@ -28,22 +28,9 @@ Verify with `shasum -a 256 -c meshes.sha256` from `data/raw/meshes/`.
 
 ## One-off preparation
 
-The shape is converted from its type-2 plate DSK to an OBJ once, with
-`spiceypy` in a scratch venv (SPICE's
-`dskexp -dsk <in>.bds -text <out>.obj -format 3` does the same). No converter
-is kept in the repo:
-
-```python
-import numpy as np, spiceypy as sp
-sp.found_check_off()  # dlafns returns found=False at the end instead of raising
-h = sp.dasopr("bennu_g_00880mm_alt_obj_0000n00000_v020.bds"); dla, found = sp.dlabfs(h); v, p = [], []
-while found:
-    nv, nplates = sp.dskz02(h, dla)
-    p.append(np.array(sp.dskp02(h, dla, 1, nplates)) + sum(map(len, v)))  # 1-based already
-    v.append(np.array(sp.dskv02(h, dla, 1, nv))); dla, found = sp.dlafns(h, dla)
-with open("bennu_g_00880mm_alt_obj_0000n00000_v020.obj", "w") as f:
-    np.savetxt(f, np.concatenate(v), fmt="v %.6f %.6f %.6f"); np.savetxt(f, np.concatenate(p), fmt="f %d %d %d")
-```
+NAIF ships the shape only as a type-2 plate DSK; it is converted to an OBJ once
+with the snippet in [the meshes README](../README.md#dsk-to-obj), as
+`dsk2obj.py bennu_g_00880mm_alt_obj_0000n00000_v020.bds bennu_g_00880mm_alt_obj_0000n00000_v020.obj`.
 
 That gives 1,579,014 vertices and 3,145,728 plates, radius 0.213678–0.291466 km.
 

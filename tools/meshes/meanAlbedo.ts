@@ -10,6 +10,7 @@
 
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { Geometry } from './@types/Geometry';
+import { triangleArea } from '../utils/meshes/triangleArea';
 
 /** Undo the sRGB gamma transfer for one [0,1] channel → linear light. */
 function srgbToLinear(c: number): number {
@@ -22,19 +23,13 @@ export function meanAlbedo(
   height: number,
   geometry: Pick<Geometry, 'positions' | 'uvs' | 'indices'>,
 ): Vec3 {
-  const { positions: p, uvs, indices } = geometry;
+  const { positions, uvs, indices } = geometry;
   const channels = pixels.length / (width * height);
   const sum: Vec3 = [0, 0, 0];
   let totalArea = 0;
   for (let t = 0; t < indices.length; t += 3) {
     const [a, b, c] = [indices[t]!, indices[t + 1]!, indices[t + 2]!];
-    const ux = p[3 * b]! - p[3 * a]!;
-    const uy = p[3 * b + 1]! - p[3 * a + 1]!;
-    const uz = p[3 * b + 2]! - p[3 * a + 2]!;
-    const vx = p[3 * c]! - p[3 * a]!;
-    const vy = p[3 * c + 1]! - p[3 * a + 1]!;
-    const vz = p[3 * c + 2]! - p[3 * a + 2]!;
-    const area = 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+    const area = triangleArea(positions, a, b, c);
     // glTF UVs put (0, 0) at the image's top-left, as the decoded rows run; they
     // stay in [0, 1] (`writeMeshBinary` refuses others), so 1.0 is the only clamp.
     const u = (uvs[2 * a]! + uvs[2 * b]! + uvs[2 * c]!) / 3;

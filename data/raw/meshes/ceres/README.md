@@ -29,22 +29,9 @@ Verify with `shasum -a 256 -c meshes.sha256` from `data/raw/meshes/`.
 
 ## One-off preparation
 
-NAIF ships the shape only as a type-2 plate DSK, so it is converted to an OBJ
-once, with `spiceypy` in a scratch venv (SPICE's
-`dskexp -dsk <in>.bds -text <out>.obj -format 3` does the same). No converter
-is kept in the repo:
-
-```python
-import numpy as np, spiceypy as sp
-sp.found_check_off()  # dlafns returns found=False at the end instead of raising
-h = sp.dasopr("dawn_ceres_grv_icq0256_v2.bds"); dla, found = sp.dlabfs(h); v, p = [], []
-while found:
-    nv, nplates = sp.dskz02(h, dla)
-    p.append(np.array(sp.dskp02(h, dla, 1, nplates)) + sum(map(len, v)))  # 1-based already
-    v.append(np.array(sp.dskv02(h, dla, 1, nv))); dla, found = sp.dlafns(h, dla)
-with open("dawn_ceres_grv_icq0256_v2.obj", "w") as f:
-    np.savetxt(f, np.concatenate(v), fmt="v %.6f %.6f %.6f"); np.savetxt(f, np.concatenate(p), fmt="f %d %d %d")
-```
+NAIF ships the shape only as a type-2 plate DSK; it is converted to an OBJ once
+with the snippet in [the meshes README](../README.md#dsk-to-obj), as
+`dsk2obj.py dawn_ceres_grv_icq0256_v2.bds dawn_ceres_grv_icq0256_v2.obj`.
 
 That gives 396,294 vertices and 786,432 plates, radius 442.418010–487.012688 km.
 The mosaic is used as downloaded.

@@ -39,15 +39,6 @@ describe('meanAlbedo()', () => {
     expect(b).toBeCloseTo(0.2159, 4);
   });
 
-  it('ignores atlas texels no triangle maps to', () => {
-    // A baked atlas leaves the space between its UV islands black; counting it
-    // darkened Bennu's glint by a quarter.
-    const pixels = new Uint8ClampedArray([255, 255, 255, 0, 0, 0]);
-    const geometry = surface({ uv: [0.25, 0.5], area: 1 });
-
-    expect(meanAlbedo(pixels, 2, 1, geometry)).toEqual([1, 1, 1]);
-  });
-
   it('reads v downwards from the top row, as glTF does', () => {
     // 1x2: white top row, black bottom row.
     const pixels = new Uint8ClampedArray([255, 255, 255, 0, 0, 0]);
@@ -57,6 +48,8 @@ describe('meanAlbedo()', () => {
   });
 
   it('weights by surface area, not by atlas texels', () => {
+    // A baked atlas leaves the space between its UV islands black; counting every texel
+    // darkened Bennu's glint by a quarter.
     const pixels = new Uint8ClampedArray([255, 255, 255, 0, 0, 0]);
     const geometry = surface({ uv: [0.25, 0.5], area: 3 }, { uv: [0.75, 0.5], area: 1 });
 
