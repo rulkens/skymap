@@ -14,14 +14,14 @@ import { STRUCTURE_SOURCE_ROWS } from './sources/structureSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { structureMarkersPlanner } from './frame';
-import { structureAssetRows } from './load/structureAssetRows';
-import { structureMarkersCosmoPass } from './passes/structureMarkersCosmoPass';
-import { structureMarkersNearPass } from './passes/structureMarkersNearPass';
-import { produceStructureLabels } from './present/produceStructureLabels';
-import { structureSelectionRow } from './present/structureSelectionRow';
-import StructuresSectionContainer from './ui/StructuresSectionContainer';
-import StructureDetailCardContainer from './ui/StructureDetailCardContainer';
-import CompactStructureCard from './ui/CompactStructureCard/CompactStructureCard';
+import { structureAssetRows } from './catalog/load/structureAssetRows';
+import { structureMarkersCosmoPass } from './markers/passes/structureMarkersCosmoPass';
+import { structureMarkersNearPass } from './markers/passes/structureMarkersNearPass';
+import { produceStructureLabels } from './markers/present/produceStructureLabels';
+import { structureSelectionRow } from './picking/present/structureSelectionRow';
+import StructuresSectionContainer from './controls/ui/StructuresSectionContainer';
+import StructureDetailCardContainer from './cards/ui/StructureDetailCardContainer';
+import CompactStructureCard from './cards/ui/CompactStructureCard/CompactStructureCard';
 import type { StructureFacts } from './@types/StructureFacts';
 
 export const structureLayer = defineLayer({

@@ -13,10 +13,10 @@ import type { StructureRuntime } from './@types/StructureRuntime';
 import { COSMO, NEAR0 } from '../../services/engine/frame/slabs';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
-import { createStructureStore } from './load/createStructureStore';
-import { createStructureMarkerRenderer } from './render/structureMarkerRenderer';
-import { createStructureCatalogSlot } from './load/structureCatalogSlot';
-import { wireStructureProjection } from './load/wireStructureProjection';
+import { createStructureStore } from './catalog/load/createStructureStore';
+import { createStructureMarkerRenderer } from './markers/render/structureMarkerRenderer';
+import { createStructureCatalogSlot } from './catalog/load/structureCatalogSlot';
+import { wireStructureProjection } from './catalog/load/wireStructureProjection';
 
 export function create(deps: LayerCoreDeps<StructureFacts>): StructureRuntime {
   const store = createStructureStore();

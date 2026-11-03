@@ -213,7 +213,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-zoa-band',
     text: 'The blue Zone of Avoidance band is a guide we draw along the plane of the Milky Way, set to 10 degrees towards the galactic centre and 3 degrees away from it. The shortage of galaxies behind it is in the catalogues.',
-    source: `${REPO_BLOB}/src/data/zoneOfAvoidance/zoneOfAvoidanceShell.ts`,
+    source: `${REPO_BLOB}/src/layers/zoneOfAvoidance/shell/data/zoneOfAvoidanceShell.ts`,
     sourceLabel: `the band’s shape, ${IN_REPO}`,
     checked: CHECKED,
   },

@@ -18,7 +18,7 @@ import type {
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
 import { craftSelectionRow } from '../../../../src/layers/missions/present/craftSelectionRow';
 import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/present/earthSceneSelectionRow';
-import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceSelectionRow';
+import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow';
 import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
 import { satellitesSelectionRow } from '../../../../src/layers/satellites/present/satellitesSelectionRow';
 import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';

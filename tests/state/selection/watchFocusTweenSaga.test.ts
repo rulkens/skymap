@@ -26,7 +26,7 @@ import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute, selectionRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
-import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
+import { structureSelectionRow } from '../../../src/layers/structure/picking/present/structureSelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/present/starCatalogSelectionRow';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';

@@ -12,13 +12,13 @@ import { zoneOfAvoidanceVisibility } from './visibility';
 import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from './sources/zoneOfAvoidanceSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
-import { zoneOfAvoidancePass } from './passes/zoneOfAvoidancePass';
-import { zoneOfAvoidanceUpsamplePass } from './passes/zoneOfAvoidanceUpsamplePass';
-import { produceZoneOfAvoidanceLettering } from './present/produceZoneOfAvoidanceLettering';
-import { zoneOfAvoidanceSelectionRow } from './present/zoneOfAvoidanceSelectionRow';
-import ZoneOfAvoidanceTuningSectionContainer from './ui/ZoneOfAvoidanceTuningSectionContainer';
-import ZoneOfAvoidanceDetailCard from './ui/ZoneOfAvoidanceDetailCard/ZoneOfAvoidanceDetailCard';
-import CompactZoneOfAvoidanceCard from './ui/CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard';
+import { zoneOfAvoidancePass } from './shell/passes/zoneOfAvoidancePass';
+import { zoneOfAvoidanceUpsamplePass } from './shell/passes/zoneOfAvoidanceUpsamplePass';
+import { produceZoneOfAvoidanceLettering } from './lettering/present/produceZoneOfAvoidanceLettering';
+import { zoneOfAvoidanceSelectionRow } from './selection/present/zoneOfAvoidanceSelectionRow';
+import ZoneOfAvoidanceTuningSectionContainer from './shell/ui/ZoneOfAvoidanceTuningSectionContainer';
+import ZoneOfAvoidanceDetailCard from './selection/ui/ZoneOfAvoidanceDetailCard/ZoneOfAvoidanceDetailCard';
+import CompactZoneOfAvoidanceCard from './selection/ui/CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard';
 
 export const zoneOfAvoidanceLayer = defineLayer({
   name: 'zoneOfAvoidance',

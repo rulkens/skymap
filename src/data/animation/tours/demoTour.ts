@@ -36,8 +36,9 @@ export const demoTour: Tour = {
       enterClip: flyAndFocusOnClip(focusId('milkyWay')),
       caption: {
         title: 'The Milky Way',
-        body: 'Home — one barred spiral among the millions mapped here.',
-        position: 'bottom-left',
+        lines: [
+          'Home — one barred spiral among the millions mapped here.',
+        ],
       },
       dwellClip: dwellDrift(8),
     },
@@ -45,8 +46,9 @@ export const demoTour: Tour = {
       enterClip: flyAndFocusOnClip(focusId('galaxy-cluster-virgo-m87')),
       caption: {
         title: 'The Virgo Cluster',
-        body: 'Two thousand galaxies, bound by gravity 54 million light-years away.',
-        position: 'bottom-left',
+        lines: [
+          'Two thousand galaxies, bound by gravity 54 million light-years away.',
+        ],
       },
       dwellClip: dwellDrift(8),
     },
@@ -54,8 +56,9 @@ export const demoTour: Tour = {
       enterClip: flyAndFocusOnClip(focusId('supercluster-laniakea-sc')),
       caption: {
         title: 'Laniakea',
-        body: 'Our home supercluster — a hundred thousand galaxies streaming toward the Great Attractor.',
-        position: 'bottom-right',
+        lines: [
+          'Our home supercluster — a hundred thousand galaxies streaming toward the Great Attractor.',
+        ],
       },
       dwellClip: dwellDrift(9),
     },

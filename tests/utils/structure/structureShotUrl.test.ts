@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readdirSync } from 'node:fs';
 import { structureShotUrl } from '../../../src/utils/structure/structureShotUrl';
-import { buildStaticAnchorStructures } from '../../../src/layers/structure/load/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../../src/layers/structure/catalog/load/buildStaticAnchorStructures';
 
 const DIR = 'public/images/structures';
 const anchorIds = buildStaticAnchorStructures().map((s) => s.id);
