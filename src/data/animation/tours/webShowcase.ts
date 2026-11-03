@@ -78,8 +78,8 @@ export const webShowcase: Tour = {
       caption: {
         title: 'The Virgo Cluster',
         lines: [
-          'Two thousand galaxies bound by gravity —',
-          'the dense heart of the supercluster we call home, 54 million light-years away.',
+          'Two thousand galaxies bound by gravity',
+          '— the dense heart of the supercluster we call home, 54 million light-years away.',
         ],
       },
       dwellClip: dwellDrift(10),

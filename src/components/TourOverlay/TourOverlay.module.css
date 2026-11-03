@@ -2,8 +2,8 @@
 /*
  * TourOverlay — the guided-tour HUD, in the Splash's typographic register.
  *
- * Same idiom as Splash: no card, no glass — only text over a localized
- * vignette, with the live 3D field as the hero behind it. The overlay
+ * Same idiom as Splash: no card, no glass — only text over a bottom
+ * band, with the live 3D field as the hero behind it. The overlay
  * differs from the splash in that the caption is bottom-centre subtitles
  * above a centred navigation cluster.
  *
@@ -47,7 +47,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-5);
   text-align: center;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
   pointer-events: none;
@@ -62,10 +62,10 @@
   animation: tourReveal 0.42s ease-out forwards;
 
   font-family: var(--font-family-mono);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--color-fg-label);
+  color: var(--color-fg-muted);
   max-width: 100%;
   overflow-wrap: anywhere;
   text-wrap: balance;
@@ -89,7 +89,7 @@
   font-size: clamp(19px, 1.1vw + 8px, 27px);
   line-height: 1.3;
   text-wrap: balance;
-  color: #ffffff;
+  color: var(--color-fg);
 }
 
 /* The dwell ring keeps its sweep: it is live progress, not decoration. */
@@ -109,8 +109,8 @@
 }
 
 /* ── Navigation cluster ─────────────────────────────────────────────
- * Centered at bottom-center — the slot the caption anchors deliberately
- * avoid. Buttons opt back into pointer events (the root is click-through
+ * Centered at bottom-center, with the subtitle block sitting above it.
+ * Buttons opt back into pointer events (the root is click-through
  * so the canvas stays draggable around the controls). */
 .nav {
   position: absolute;

@@ -4,7 +4,7 @@
  * surface per slice).
  *
  * The slice stores only `beatIndex / paused / dwellNonce / dwellSec`;
- * everything else the overlay renders — the kicker label, the beat count, the
+ * everything else the overlay renders — the beat count, the
  * active caption — is DERIVED here by resolving the takeover's tour id against
  * `tourRegistry` and indexing its beats. This is the whole reason the runtime
  * state can stay so small: the registry is already the single source of truth

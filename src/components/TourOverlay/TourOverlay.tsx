@@ -1,6 +1,6 @@
 /**
  * TourOverlay — composes the guided-tour HUD over the live 3D scene: a
- * localized vignette + the per-beat caption + the always-on navigation
+ * bottom vignette band + the per-beat subtitle caption + the always-on navigation
  * cluster.
  *
  * Purely presentational. A container resolves the active beat's caption +
@@ -92,8 +92,8 @@ function TourOverlay({
           <div className={styles.vignette} aria-hidden="true" />
           {/*
            * Keyed on the beat index so each beat re-mounts the caption and
-           * replays the staggered fade-up reveal rather than cross-fading
-           * text in place.
+           * replays the label's fade-up and restarts the line clock rather
+           * than cross-fading text in place.
            */}
           <TourCaption
             key={index}

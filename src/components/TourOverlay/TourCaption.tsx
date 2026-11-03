@@ -51,7 +51,7 @@ function TourCaption({
       <div className={styles.lines}>
         {caption.lines.map((line, i) => (
           <p
-            key={line}
+            key={i}
             className={styles.line}
             style={{ opacity: subtitleOpacity(schedule[i]!, elapsed, reduced) }}
           >

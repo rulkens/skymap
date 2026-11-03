@@ -27,7 +27,11 @@ export function useDwellElapsed(dwellNonce: number, paused: boolean): number {
       lastMs = nowMs;
       setElapsed(accSec.current);
     }, SUBTITLE_TICK_MS);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      // Bank the partial tick so a pause loses nothing.
+      accSec.current += (performance.now() - lastMs) / 1000;
+    };
   }, [dwellNonce, paused]);
 
   return elapsed;
