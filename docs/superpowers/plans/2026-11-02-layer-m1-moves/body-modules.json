@@ -886,5 +886,9 @@
   {
     "from": "src/layers/body/utils/surfaceTiles/surfaceTileXyForUv.ts",
     "to": "src/layers/body/surfaceTiles/format/utils/surfaceTileXyForUv.ts"
+  },
+  {
+    "from": "tests/layers/body/render/atmosphereUniformsLayout.parity.test.ts",
+    "to": "tests/layers/body/atmosphere/render/atmosphereUniformsLayout.parity.test.ts"
   }
 ]
