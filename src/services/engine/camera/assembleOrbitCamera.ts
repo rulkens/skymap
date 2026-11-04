@@ -16,7 +16,7 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { AssembledOrbitCamera } from '../../../@types/camera/AssembledOrbitCamera';
-import { updatePosition } from '../../../utils/camera/updatePosition';
+import { updatePosition } from '../../../utils/camera/orbitCamera/updatePosition';
 
 /**
  * Lift a store CameraPose into a full live OrbitCamera by merging the engine

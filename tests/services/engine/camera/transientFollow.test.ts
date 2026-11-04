@@ -19,7 +19,7 @@ import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { frameBodyStates } from '../../../../src/services/engine/frame/frameBodyStates';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';

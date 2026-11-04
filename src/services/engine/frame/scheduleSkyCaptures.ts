@@ -18,7 +18,7 @@ import {
   CUBEMAP_CAPTURES,
   SKY_CAPTURE_KEYS,
 } from '../../../data/rendering/cubemapCaptures';
-import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
+import { faceViewSpec } from '../../../utils/camera/viewRig/faceViewSpec';
 import { cubemapCaptureFrame } from './cubemapCaptureFrame';
 import { deriveView } from './deriveView';
 import { fadeBand } from '../../../utils/math/fadeBand';

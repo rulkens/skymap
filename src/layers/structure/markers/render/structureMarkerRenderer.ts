@@ -72,7 +72,7 @@ import {
 import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { createDummyFadeBindGroup } from '../../../../services/gpu/lib/dummyFade';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { COSMO, NEAR0, SLAB_REVERSED_Z } from '../../../../services/engine/frame/slabs';
 import { pickDepthFormat } from '../../../../services/engine/frame/pickProgram';
 

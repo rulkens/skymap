@@ -13,7 +13,7 @@ import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
 import type { CameraArmCtx } from '../../../../@types/camera/CameraArmCtx';
 import { CAMERA_ARMS } from './cameraArms';
 import { climbRowFor } from './climbRowFor';
-import { isWorldArm } from './isWorldArm';
+import { isWorldArm } from './world/isWorldArm';
 import { cameraArmKindOf } from './cameraArmKindOf';
 
 export function stepCameraArm(current: FramedCameraPose, ctx: CameraArmCtx): PoseFrame {

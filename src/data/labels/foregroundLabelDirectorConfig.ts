@@ -1,7 +1,7 @@
 import type { Label2DDirectorConfig } from '../../@types/engine/subsystems/Label2DDirectorConfig';
 import { near0LabelProjection } from '../../services/engine/frame/near0LabelProjection';
 import { NEAR0 } from '../../services/engine/frame/slabs';
-import { NEAR0_FAR_CLAMP_FRACTION } from '../../utils/camera/foregroundFrustum';
+import { NEAR0_FAR_CLAMP_FRACTION } from '../../utils/camera/frustum/foregroundFrustum';
 
 // Screen px: sized a little above the clamped caption height
 // (`FAMOUS_LABEL_STYLE.maxPixelSize`) so names de-collide rather than stack.

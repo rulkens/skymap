@@ -17,9 +17,9 @@ import { SCENE_CELESTIAL_BODIES } from '../../../../../src/data/bodies/sceneCele
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SURFACE_FIXED_SITES } from '../../../../../src/data/bodies/surfaceFixedSites';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
-import { siteGroundRadiusM } from '../../../../../src/utils/camera/siteGroundRadiusM';
-import { sitePointBodyFixed } from '../../../../../src/utils/camera/sitePointBodyFixed';
-import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { siteGroundRadiusM } from '../../../../../src/utils/camera/arms/siteGroundRadiusM';
+import { sitePointBodyFixed } from '../../../../../src/utils/camera/arms/sitePointBodyFixed';
+import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
@@ -28,7 +28,7 @@ import type { FramedPose } from '../../../../../src/@types/camera/FramedPose';
 import type { CameraArmCtx } from '../../../../../src/@types/camera/CameraArmCtx';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import type { PositionedId } from '../../../../../src/@types/scene/PositionedId';
-import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 
 const EARTH_RADIUS_M = 6371000;
 const DEIMOS_RADIUS_M = 6000;

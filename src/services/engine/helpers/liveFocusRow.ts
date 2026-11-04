@@ -8,7 +8,7 @@
 
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
-import { liveBodyPosition } from '../camera/liveBodyPosition';
+import { liveBodyPosition } from '../camera/bodyFrame/liveBodyPosition';
 
 export function liveFocusRow(focusRow: SelectionRow | null, simDays: number): SelectionRow | null {
   if (

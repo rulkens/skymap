@@ -10,9 +10,9 @@ import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis'
 import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
+import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitPose/orbitForwardOf';
 import { sphereSilhouetteTop } from '../../../../utils/math/sphereSilhouetteTop';
 import {
   CAPTION_PRIORITY,

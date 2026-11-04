@@ -66,8 +66,8 @@ import type { BodyPickRenderer } from '../../../../@types/rendering/bodyPickRend
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { camPosLocal } from '../../../../utils/camera/camPosLocal';
-import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { camPosLocal } from '../../../../utils/camera/bodyCompose/camPosLocal';
+import { composeBodyMvp } from '../../../../utils/camera/bodyCompose/composeBodyMvp';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { minPickRadiusMpc } from '../../../../services/engine/helpers/minPickRadiusMpc';
 

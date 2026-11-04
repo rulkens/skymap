@@ -29,19 +29,22 @@ vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
-vi.mock('../../../../src/services/engine/camera/applyFocusedBodyPivot', async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import('../../../../src/services/engine/camera/applyFocusedBodyPivot')
-    >();
-  return {
-    ...actual,
-    applyFocusedBodyPivot: (...args: Parameters<typeof actual.applyFocusedBodyPivot>) => {
-      probe.order.push('pin');
-      return actual.applyFocusedBodyPivot(...args);
-    },
-  };
-});
+vi.mock(
+  '../../../../src/services/engine/camera/bodyFrame/applyFocusedBodyPivot',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('../../../../src/services/engine/camera/bodyFrame/applyFocusedBodyPivot')
+      >();
+    return {
+      ...actual,
+      applyFocusedBodyPivot: (...args: Parameters<typeof actual.applyFocusedBodyPivot>) => {
+        probe.order.push('pin');
+        return actual.applyFocusedBodyPivot(...args);
+      },
+    };
+  },
+);
 vi.mock('../../../../src/services/engine/camera/arms/stepCameraArm', async (importOriginal) => {
   const actual =
     await importOriginal<
@@ -72,17 +75,17 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
 });
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
-import { isBodyArm } from '../../../../src/services/engine/camera/arms/isBodyArm';
-import { isSiteArm } from '../../../../src/services/engine/camera/arms/isSiteArm';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/body/isBodyArm';
+import { isSiteArm } from '../../../../src/services/engine/camera/arms/site/isSiteArm';
 import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
 import { frameKey } from '../../../../src/services/engine/camera/arms/frameKey';
 import { DEFAULT_FOCUS_MOVES } from '../../../../src/data/camera/focusMoveDefaults';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
-import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
-import { tiltFromNadirRad } from '../../../../src/utils/camera/tiltFromNadirRad';
+import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
+import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
+import { tiltFromNadirRad } from '../../../../src/utils/camera/surfaceFrame/tiltFromNadirRad';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
+import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
@@ -94,17 +97,17 @@ import { commitCameraPose, startCameraTween } from '../../../../src/state/camera
 import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { all, tween } from '../../../../src/services/engine/animation/effectHelpers';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
+import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';

@@ -22,7 +22,7 @@ import {
 } from '../../../../support/selectionResolverOver';
 import { localGroupDwell } from '../../../../../src/data/animation/tours/grandTour/localGroup';
 import { neighbourhoodReveal } from '../../../../../src/data/animation/tours/grandTour/neighbourhoodReveal';
-import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitPose/orbitAnglesLookingAlong';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Effect } from '../../../../../src/@types/animation/Effect';

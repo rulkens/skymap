@@ -16,7 +16,7 @@ import { Source } from '../../../../src/data/source';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
@@ -35,7 +35,7 @@ import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/rec
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { structureAssetRows } from '../../../../src/layers/structure/catalog/load/structureAssetRows';
 import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 
 type StubSlot = AssetSlot<unknown, unknown> & { load: ReturnType<typeof vi.fn> };
 

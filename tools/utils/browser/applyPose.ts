@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import {
   cancelCameraTween,
   commitCameraPose,

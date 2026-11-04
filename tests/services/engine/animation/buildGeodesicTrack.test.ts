@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildGeodesicTrack } from '../../../../src/services/engine/animation/buildGeodesicTrack';
-import { geodesicPath } from '../../../../src/utils/camera/geodesicPath';
+import { geodesicPath } from '../../../../src/utils/camera/focusMotion/geodesicPath';
 import { DEFAULT_GEODESIC_TUNING } from '../../../../src/data/camera/focusMoveDefaults';
 import { relErr } from '../../../support/relErr';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';

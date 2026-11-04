@@ -14,7 +14,7 @@ import { mat4d, vec4 } from 'wgpu-matrix';
 
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { composeBodySlabCamRelVp } from '../../../../../src/layers/body/slabs/present/composeBodySlabCamRelVp';
-import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 
 const MARS_RADIUS_M = 3_389_500;

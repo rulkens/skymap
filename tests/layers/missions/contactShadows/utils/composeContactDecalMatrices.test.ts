@@ -11,7 +11,7 @@ import type { ContactDecal } from '../../../../../src/@types/data/mesh/ContactDe
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { composeContactDecalMatrices } from '../../../../../src/layers/missions/contactShadows/utils/composeContactDecalMatrices';
-import { composeMeshMvp } from '../../../../../src/utils/camera/composeMeshMvp';
+import { composeMeshMvp } from '../../../../../src/utils/camera/bodyCompose/composeMeshMvp';
 
 // Reversed-Z infinite-far, as the body rows draw; the eye sits at the slab origin.
 const PROJ = mat4d.perspectiveReverseZ(Math.PI / 3, 1.5, 0.1) as Float64Array;

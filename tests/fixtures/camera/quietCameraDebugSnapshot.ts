@@ -5,7 +5,7 @@
  */
 
 import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 
 const ABSENT_DOF = { currentRad: null, targetRad: null, residualRad: null };
 const QUIET_DELTA = { deltaRad: 0, peakAbsRad: 0 };

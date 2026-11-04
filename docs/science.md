@@ -52,7 +52,7 @@ Three kinds of content share the scene; this section says which is which.
 - **Accumulate then tone-map**: every layer draws into one `rgba16float` HDR target; a single composite pass applies a selectable curve, Linear, Reinhard, Asinh, Gamma 2.0, or ACES ([toneMapCurve.ts](../src/data/toneMapCurve.ts)).
 - **Bloom**: a five-level mip pyramid: soft-threshold prefilter, downsample chain, additive tent-filter upsample ([bloomPyramid.ts](../src/services/gpu/passes/bloomPyramid.ts)).
 - **Depth precision**: reversed-Z for the near-Earth pass, whose extreme near/far ratio would exhaust a classic depth buffer ([slabs.ts](../src/services/engine/frame/slabs.ts)).
-- **Floating origin**: camera matrices compose in float64 relative to a render origin and narrow to float32 only at upload ([computeForegroundViewProj.ts](../src/utils/camera/computeForegroundViewProj.ts)).
+- **Floating origin**: camera matrices compose in float64 relative to a render origin and narrow to float32 only at upload ([computeForegroundViewProj.ts](../src/utils/camera/projection/computeForegroundViewProj.ts)).
 - **HDR displays**: the swap chain switches to extended dynamic range when the display supports it ([applySwapFormat.ts](../src/services/engine/phases/applySwapFormat.ts)).
 
 ### Galaxies

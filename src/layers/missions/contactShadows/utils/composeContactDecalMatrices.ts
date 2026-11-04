@@ -11,7 +11,7 @@ import type { ContactDecalMatrices } from '../@types/ContactDecalMatrices';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { CONTACT_SHADOW_HALF_HEIGHT_M } from '../data/contactShadowHalfHeightM';
-import { composeMeshMvp } from '../../../../utils/camera/composeMeshMvp';
+import { composeMeshMvp } from '../../../../utils/camera/bodyCompose/composeMeshMvp';
 
 export function composeContactDecalMatrices(
   slabVp: Float64Array,

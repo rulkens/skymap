@@ -13,7 +13,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { isWorldArm } from '../../../../src/services/engine/camera/arms/isWorldArm';
+import { isWorldArm } from '../../../../src/services/engine/camera/arms/world/isWorldArm';
 import { aimCamera } from '../../../../src/state/camera/cameraSlice';
 import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
 import { takeoverEnded, takeoverStarted } from '../../../../src/state/takeover/takeoverActions';

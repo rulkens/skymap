@@ -16,7 +16,7 @@ import { bodyFootprintRadiusM } from '../../../src/utils/scene/bodyFootprintRadi
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { cross3 } from '../../../src/utils/math/cross3';
-import { orbitAnglesLookingAlong } from '../../../src/utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../src/utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { SUBJECT_FILL } from './shotDefaults';
 

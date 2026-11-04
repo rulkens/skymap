@@ -28,15 +28,15 @@ import {
   SURFACE_TILE_PX,
 } from '../../../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
-import { composeBodyMvp } from '../../../../../../src/utils/camera/composeBodyMvp';
-import { composeBodySlabMvp } from '../../../../../../src/utils/camera/composeBodySlabMvp';
-import { computeForegroundViewProj } from '../../../../../../src/utils/camera/computeForegroundViewProj';
-import { foregroundFrustum } from '../../../../../../src/utils/camera/foregroundFrustum';
+import { composeBodyMvp } from '../../../../../../src/utils/camera/bodyCompose/composeBodyMvp';
+import { composeBodySlabMvp } from '../../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
+import { computeForegroundViewProj } from '../../../../../../src/utils/camera/projection/computeForegroundViewProj';
+import { foregroundFrustum } from '../../../../../../src/utils/camera/frustum/foregroundFrustum';
 import { MARS_DATUM_RADIUS_M } from '../../../../../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
 import type { SurfaceTileId } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileId';
 import type { SurfaceTileBand } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBand';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
-import { symmetricFrustum } from '../../../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../../../src/utils/camera/frustum/symmetricFrustum';
 import { angleBetween } from '../../../../../helpers/math/angleBetween';
 
 const BASE_LEVEL = baseLevelForTier('earth', 'large');

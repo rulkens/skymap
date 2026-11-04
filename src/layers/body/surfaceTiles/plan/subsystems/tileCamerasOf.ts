@@ -10,9 +10,9 @@ import { mat4d } from 'wgpu-matrix';
 import type { FrameView } from '../../../../../@types/engine/frame/FrameView';
 import type { TileCamera } from '../@types/TileCamera';
 import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
-import { composeBodySlabMvp } from '../../../../../utils/camera/composeBodySlabMvp';
-import { frustumPerspectiveF64 } from '../../../../../utils/camera/frustumPerspectiveF64';
-import { MIN_NEAR_M } from '../../../../../utils/camera/foregroundFrustum';
+import { composeBodySlabMvp } from '../../../../../utils/camera/bodyCompose/composeBodySlabMvp';
+import { frustumPerspectiveF64 } from '../../../../../utils/camera/frustum/frustumPerspectiveF64';
+import { MIN_NEAR_M } from '../../../../../utils/camera/frustum/foregroundFrustum';
 
 export function tileCamerasOf(
   views: readonly FrameView[],

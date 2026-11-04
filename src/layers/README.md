@@ -10,7 +10,7 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 
 ## Where things go
 
-**A Layer is a set of concern modules plus the few files the composition root reads by path** ([ADR 0014](../../docs/adrs/0014-layers-organised-by-concern-modules.md)). Code is grouped by what it is for (`disks/`, `pointSprites/`, `aliases/`), never by kind of file, and no folder under `src/layers/` holds more than 15 files (`tests/conventions/layerFolderShape.test.ts`).
+**A Layer is a set of concern modules plus the few files the composition root reads by path** ([ADR 0014](../../docs/adrs/0014-layers-organised-by-concern-modules.md)). Code is grouped by what it is for (`disks/`, `pointSprites/`, `aliases/`), never by kind of file, and no folder under `src/layers/` holds more than 15 files (`tests/conventions/concernFolderShape.test.ts`).
 
 **At the Layer root** stay only:
 

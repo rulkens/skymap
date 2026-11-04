@@ -8,10 +8,10 @@
 import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
 import type { ClimbableKind } from '../../../../@types/camera/ClimbableKind';
 import type { CameraArmRow } from '../../../../@types/camera/CameraArmRow';
-import { absoluteCameraArm } from './absoluteCameraArm';
-import { bodyCameraArm } from './bodyCameraArm';
-import { siteCameraArm } from './siteCameraArm';
-import { skyCameraArm } from './skyCameraArm';
+import { absoluteCameraArm } from './world/absoluteCameraArm';
+import { bodyCameraArm } from './body/bodyCameraArm';
+import { siteCameraArm } from './site/siteCameraArm';
+import { skyCameraArm } from './sky/skyCameraArm';
 
 export const CAMERA_ARMS: { readonly absolute: CameraArmRow<'absolute'> } & {
   readonly [K in ClimbableKind]: ClimbRow<K>;

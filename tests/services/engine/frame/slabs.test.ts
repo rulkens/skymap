@@ -23,16 +23,16 @@ import {
   COSMO,
   SLAB_REVERSED_Z,
 } from '../../../../src/services/engine/frame/slabs';
-import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
-import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
-import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
-import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
+import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/createOrbitCamera';
+import { computeForegroundViewProj } from '../../../../src/utils/camera/projection/computeForegroundViewProj';
+import { computeViewProj } from '../../../../src/utils/camera/projection/computeViewProj';
+import { orbitForwardOf } from '../../../../src/utils/camera/orbitPose/orbitForwardOf';
 import {
   foregroundFrustum,
   MIN_NEAR_M,
   MIN_NEAR_MPC,
   NEAR_RATIO,
-} from '../../../../src/utils/camera/foregroundFrustum';
+} from '../../../../src/utils/camera/frustum/foregroundFrustum';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { bodyLayerSlabRow } from '../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
@@ -45,8 +45,8 @@ import type { BodyRelativePose } from '../../../../src/@types/engine/camera/Body
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import { frustumPerspectiveF64 } from '../../../../src/utils/camera/frustumPerspectiveF64';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import { frustumPerspectiveF64 } from '../../../../src/utils/camera/frustum/frustumPerspectiveF64';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 function makeCam(distance: number): OrbitCamera {

@@ -7,9 +7,9 @@
  */
 
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
-import { isBodyArm } from '../../services/engine/camera/arms/isBodyArm';
-import { isSiteArm } from '../../services/engine/camera/arms/isSiteArm';
-import { isSkyArm } from '../../services/engine/camera/arms/isSkyArm';
+import { isBodyArm } from '../../services/engine/camera/arms/body/isBodyArm';
+import { isSiteArm } from '../../services/engine/camera/arms/site/isSiteArm';
+import { isSkyArm } from '../../services/engine/camera/arms/sky/isSkyArm';
 
 export function encodeFramedPose(framed: FramedCameraPose): string {
   if (isBodyArm(framed)) {

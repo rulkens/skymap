@@ -33,7 +33,7 @@ import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/clampDistance';
+import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/orbitCamera/clampDistance';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { resolveStarRecord } from '../../../../src/layers/starCatalog/selection/utils/resolveStarRecord';

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { clipPathDebugPass } from '../../../../../src/services/engine/frame/passes/clipPathDebugPass';
 import { NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
-import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFrustum';
-import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
+import { foregroundFrustum } from '../../../../../src/utils/camera/frustum/foregroundFrustum';
+import { computeForegroundViewProj } from '../../../../../src/utils/camera/projection/computeForegroundViewProj';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -10,7 +10,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ClipPathSnapshot } from '../../../../../src/@types/engine/debug/ClipPathSnapshot';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Mat4 } from 'wgpu-matrix';
-import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 
 /**
  * The clip-path overlay projects through NEAR0 (see the layer header): a

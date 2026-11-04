@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { tileCamerasOf } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/tileCamerasOf';
 import { deriveBodyStates } from '../../../../../../src/services/engine/frame/deriveBodyStates';
-import { composeBodySlabMvp } from '../../../../../../src/utils/camera/composeBodySlabMvp';
+import { composeBodySlabMvp } from '../../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
 import { cutSurfaceTiles } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { normalize3 } from '../../../../../../src/utils/math/normalize3';

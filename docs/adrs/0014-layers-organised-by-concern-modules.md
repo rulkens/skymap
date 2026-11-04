@@ -50,7 +50,7 @@ store-boundary sweep keys on. A module whose role folder outgrows the cap splits
 (`disks/procedural/`, `disks/textured/`), each with its own role folders.
 
 **The cap:** no folder under `src/layers/` holds more than 15 files directly. A ratchet test
-(`tests/conventions/layerFolderShape.test.ts`) enforces it with today's offenders allow-listed at their
+(`tests/conventions/concernFolderShape.test.ts`) enforces it with today's offenders allow-listed at their
 current counts, which only shrink. It also refuses the bag names `helpers`, `misc`, `common`, `shared` and `other`
 at any depth, and refuses a role folder (`render`, `load`, `present`, `passes`, `subsystems`, `ui`, `sagas`,
 `utils`, `data`, `computes`) directly under a Layer once that Layer is regrouped. A shrink-only set of Layer
@@ -69,7 +69,7 @@ proposes it); shaders (they stay in `src/services/gpu/shaders/<family>/`); core'
 ### Negative
 - Every existing Layer is restructured once. The M1 plan absorbs it: batch A's open PRs (#999–#1001) add the
   regroup commit before merging, and structure is the only merged Layer, so it regroups in its own task. Until
-  a Layer regroups, its name sits in the not-yet-regrouped set of `layerFolderShape.test.ts`.
+  a Layer regroups, its name sits in the not-yet-regrouped set of `concernFolderShape.test.ts`.
 - A module map is a judgment call per Layer, so each restructure PR carries one for review.
 - `src/layers/README.md`'s "folder layout is the contract" table changes: contract members map to root files
   and the composition-read folders; the rest of the table becomes "lives in its concern module".

@@ -31,7 +31,7 @@ import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiu
 import { bodyGlintBrightnessOf } from '../../../../utils/scene/bodyGlintBrightnessOf';
 import { bodyGlintBackdropFade } from '../../../../utils/scene/bodyGlintBackdropFade';
 import { packBodyGlints } from '../../../../utils/scene/packBodyGlints';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { bandValueOf } from '../../../../services/engine/presentation/bandValueOf';
 import { bodyVisibility } from '../../visibility';

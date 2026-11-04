@@ -10,9 +10,9 @@ import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 import { engageDistanceM } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/engageDistanceM';
 import { cutSurfaceTiles } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
 import { surfaceTileBandFromBounds } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileBandFromBounds';
-import { composeBodySlabMvp } from '../../../../../../src/utils/camera/composeBodySlabMvp';
-import { frustumPerspectiveF64 } from '../../../../../../src/utils/camera/frustumPerspectiveF64';
-import { frustumCornerMagnification } from '../../../../../../src/utils/camera/frustumCornerMagnification';
+import { composeBodySlabMvp } from '../../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
+import { frustumPerspectiveF64 } from '../../../../../../src/utils/camera/frustum/frustumPerspectiveF64';
+import { frustumCornerMagnification } from '../../../../../../src/utils/camera/frustum/frustumCornerMagnification';
 import {
   SURFACE_TILE_LOD_BIAS,
   SURFACE_TILE_PX,

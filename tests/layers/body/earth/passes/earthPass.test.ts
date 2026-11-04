@@ -19,12 +19,12 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { seededBodyStates } from '../../../../helpers/frame/seededBodyStates';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
-import { imagePlaneBasis } from '../../../../../src/utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../../src/utils/camera/frameUp';
+import { sunDirLocal } from '../../../../../src/utils/camera/bodyCompose/sunDirLocal';
+import { imagePlaneBasis } from '../../../../../src/utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../../src/utils/camera/orbitPose/frameUp';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
-import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
+import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyFrame/bodyRelativePose';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/layers/body/surfaceTiles/format/data/earthSurfaceParams';
@@ -48,14 +48,14 @@ import type { SurfaceTileDrawArgs } from '../../../../../src/layers/body/surface
 // layer recognisable return values.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
-vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
-vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal', () => ({
   bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
 }));
-import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
-import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal';
 import { prepareBodySurfaceFrame } from '../../../../../src/layers/body/slabs/present/prepareBodySurfaceFrame';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';

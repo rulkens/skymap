@@ -14,7 +14,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchLogCameraStateSaga } from '../../../src/state/camera/watchLogCameraStateSaga';
 import { logCameraState } from '../../../src/state/camera/logCameraState';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { parseHashParams } from '../../../src/utils/url/parseHashParams';
 import { julianDaysToUnixMs } from '../../../src/utils/time/julianDaysToUnixMs';

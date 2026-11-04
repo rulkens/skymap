@@ -19,7 +19,7 @@ import { resolveStarRecord } from '../utils/resolveStarRecord';
 import { octreeResidency } from '../../../../services/octree/octreeResidency';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
 import { STAR_CATALOG_SOURCE_ROWS } from '../../sources/starCatalogSourceRows';
-import { SURFACE_STANDOFF_RADII } from '../../../../utils/camera/clampDistance';
+import { SURFACE_STANDOFF_RADII } from '../../../../utils/camera/orbitCamera/clampDistance';
 import type { DriverGeometry } from '../../../../@types/engine/camera/DriverGeometry';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';

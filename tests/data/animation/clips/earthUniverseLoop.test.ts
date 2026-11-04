@@ -10,9 +10,9 @@
 import { describe, it, expect } from 'vitest';
 import { earthUniverseLoop } from '../../../../src/data/animation/clips/earthUniverseLoop';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';

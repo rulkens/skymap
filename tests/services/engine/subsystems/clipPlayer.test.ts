@@ -34,7 +34,10 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { clipStarted, clipEnded, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
-import { UNSTARTED_EPOCHS, elapsedMs } from '../../../../src/services/engine/camera/cameraEpochs';
+import {
+  UNSTARTED_EPOCHS,
+  elapsedMs,
+} from '../../../../src/services/engine/camera/drivers/cameraEpochs';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { applySceneEffect } from '../../../../src/services/animation/applySceneEffect';
 import { fade, hide, seq, hold } from '../../../../src/services/engine/animation/effectHelpers';

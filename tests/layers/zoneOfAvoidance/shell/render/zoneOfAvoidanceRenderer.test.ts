@@ -3,7 +3,7 @@ import { createZoneOfAvoidanceRenderer } from '../../../../../src/layers/zoneOfA
 import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../../src/layers/zoneOfAvoidance/shell/data/zoneOfAvoidanceShell';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { ZoneOfAvoidanceTuning } from '../../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceTuning';
-import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 
 // Minimal mock GPUDevice — Vitest runs in Node without a WebGPU surface.
 // Mirrors labelRenderer.test.ts's pattern:
