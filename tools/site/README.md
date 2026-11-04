@@ -5,7 +5,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 | Script                 | Run                                                        | Writes                                                                             |
 | ---------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `makeOgImage.ts`       | `npx tsx tools/site/makeOgImage.ts`                        | `public/og-image.jpg` from `docs/screenshots/cosmic-web.jpg`                       |
-| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`                        | `public/apple-touch-icon.png` from `public/favicon.svg`                            |
+| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`                        | `public/apple-touch-icon.png` and the remote's `icon-192.png`, `icon-512.png`      |
 | `buildHeroMedia.ts`    | `npm run site:media -- [recording]`                        | the flight's stills (one pair per stop) and its scrub video, from the recording    |
 | `shootSiteShots.ts`    | `npm run site:shots -- --url <app server>`                 | every picture in the shot manifest, AVIF and WebP, and the link-preview card       |
 | `shootSiteLoops.ts`    | `npm run site:loops -- --url <app server>`                 | every film in the loop manifest, H.264 in MP4                                      |

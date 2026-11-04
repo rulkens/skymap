@@ -168,7 +168,7 @@ describe('Settings page', () => {
     );
     expect(values('Density correction')).toBe(
       options(
-        'src/layers/galaxyCatalog/ui/GalaxiesSection.tsx',
+        'src/layers/galaxyCatalog/controls/ui/GalaxiesSection.tsx',
         /<option value=\{BiasMode\.\w+\}>([^<]+)</g,
       ),
     );

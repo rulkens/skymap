@@ -14,7 +14,7 @@ nothing.
   19.4 MB, `milliquas-medium.bin` 12.8 MB, `sdss-medium.bin` 10.1 MB,
   `2mrs.bin` 2.5 MB, plus small sidecars. At tier `large` the same set is
   roughly 420 MB.
-- The Layers' asset rows (`src/layers/galaxyCatalog/load/galaxyCatalogAssetRows.ts` and siblings), whose demand predicates for the
+- The Layers' asset rows (`src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows.ts` and siblings), whose demand predicates for the
   galaxy/star catalog rows key only on the settings toggle (e.g.
   `ctx.settings.galaxyCatalogs.items[id]?.enabled === true`) — no scale
   term anywhere in the demand function for glade, sdss, milliquas, stars,
@@ -29,7 +29,7 @@ nothing.
 ## Fix
 
 Add a scale-gate term to the demand predicate in
-the asset rows (`src/layers/galaxyCatalog/load/galaxyCatalogAssetRows.ts`) so an asset whose
+the asset rows (`src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows.ts`) so an asset whose
 `SCALE_FADE_BANDS` row says it is invisible at the current camera distance
 does not demand yet; it loads once the camera approaches its band. This
 would cut boot from ~101.7 MB to roughly ~33 MB.
