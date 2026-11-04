@@ -1,6 +1,6 @@
 /**
  * The app's life, as wiring: one instance, the server and relay up, the control window, then the
- * sky once the data allows. Decisions live in the pieces it wires (bootPlan, syncOutcomeAction,
+ * sky once the data allows. Decisions live in the pieces it wires (bootPlan, createSyncThenLoad,
  * createDailySchedule, createSetupStore, createSkyWindows); main owns one ControlState and pushes
  * it whole to the control page on every change.
  */
@@ -13,7 +13,6 @@ import type { AboutInfo } from '../../@types/AboutInfo';
 import type { ControlIpcHandlers } from './@types/ControlIpcHandlers';
 import type { ControlState } from '../../@types/ControlState';
 import type { LanInterface } from '../../@types/LanInterface';
-import type { SyncOutcome } from '../sync/@types/SyncOutcome';
 import { APP_SERVER_PORT } from '../../data/appServerPort';
 import { CONTROL_CHANNELS } from '../../data/controlChannels';
 import { CONTROL_SHORTCUT } from '../../data/controlShortcut';
@@ -25,6 +24,7 @@ import { createDailySchedule } from './createDailySchedule';
 import { createSetupStore } from '../setup/createSetupStore';
 import { createSkyLoader } from '../sky/createSkyLoader';
 import { createSkyWindows } from '../windows/createSkyWindows';
+import { createSyncThenLoad } from './createSyncThenLoad';
 import { hasCompleteLocalSet } from '../sync/hasCompleteLocalSet';
 import { installAppMenu } from '../menu/installAppMenu';
 import { lanOriginFor } from '../lan/utils/lanOriginFor';
@@ -44,11 +44,13 @@ import { runSync } from '../sync/runSync';
 import { serially } from './utils/serially';
 import { skyUrlFor } from '../sky/utils/skyUrlFor';
 import { startSecureServer } from '../server/startSecureServer';
-import { syncOutcomeAction } from './utils/syncOutcomeAction';
 import { watchLan } from '../lan/watchLan';
 import { watchQuitting } from '../windows/watchQuitting';
 
-/** Rejects when the app cannot start; main.ts shows why and exits. */
+/**
+ * Rejects only when the app cannot start, before the control window opens; main.ts shows why and
+ * exits. Once it is open, a failure is logged and the person at the control window sees the status.
+ */
 export async function runLifecycle(windowed: boolean): Promise<void> {
   if (!app.requestSingleInstanceLock()) return app.quit();
   await app.whenReady();
@@ -68,7 +70,6 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   const work = serially();
   const rotations = serially();
   let about: BrowserWindow | null = null;
-  let syncing = false;
 
   const setup = createSetupStore(userData, await readSetup(userData), {
     placeWindows: () => placeAll(),
@@ -151,37 +152,22 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   });
   const loadSky = (): Promise<void> => work(loadOnce);
 
-  // `restart`: a launch or daily sync, which ends in a sky load; Update now waits for Restart sky.
-  const syncThenLoad = async (restart: boolean): Promise<void> => {
-    if (syncing) return;
-    syncing = true;
-    const skyStale = state.status.kind === 'ready';
-    update({ status: { kind: 'syncing' }, progress: null });
-    const outcome = await work(() =>
-      runSync({
-        baseUrl: DESKTOP_DATA_ORIGIN,
-        dataRoot,
-        onProgress: (progress) => update({ progress }),
-      }),
-    )
-      .catch((error: unknown): SyncOutcome => {
-        console.error('sync:', error);
-        return { kind: 'failed' };
-      })
-      .finally(() => (syncing = false));
-    const done = outcome.kind === 'synced' || outcome.kind === 'unchanged';
-    const hasData = done || (await hasCompleteLocalSet(dataRoot));
-    const action = syncOutcomeAction({
-      outcome,
-      hasData,
-      skyRunning: state.skyRunning,
-      skyStale,
-      restart,
-    });
-    update({ status: action.status, hasData, about: await readAbout() });
-    if (action.then === 'showControl') showControl();
-    if (action.then === 'loadSky') await loadSky();
-  };
+  const syncThenLoad = createSyncThenLoad({
+    sync: () =>
+      work(() =>
+        runSync({
+          baseUrl: DESKTOP_DATA_ORIGIN,
+          dataRoot,
+          onProgress: (progress) => update({ progress }),
+        }),
+      ),
+    hasCompleteSet: () => hasCompleteLocalSet(dataRoot),
+    state: () => state,
+    update,
+    readAbout,
+    showControl,
+    loadSky,
+  });
   const rearm = createDailySchedule({
     run: () => syncThenLoad(true),
     policy: () => setup.current().dataUpdates,
@@ -256,7 +242,9 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     dataUpdates: setup.current().dataUpdates,
   });
   // A first run ends here: its setup is stored at once, and the next launch skips the steps.
-  if (firstRun) await setup.save(setup.current());
+  if (firstRun) {
+    await setup.save(setup.current()).catch((error: unknown) => console.error('setup:', error));
+  }
   if (plan.showControl) showControl();
   if (plan.start === 'load') await loadSky();
   else await syncThenLoad(true);

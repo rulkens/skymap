@@ -36,7 +36,8 @@ modal dialog over the sky), calls `runLifecycle` and, if it rejects, shows why i
 (`startErrorText`: a taken port, a full disk) and exits. `runLifecycle` (`main/lifecycle/`) is
 wiring: it takes the single-instance lock first, so a second launch only raises the control window,
 and the decisions sit in pieces with their own tests: `bootPlan` (what a launch does first),
-`syncOutcomeAction` (spec §5's outcome table), `createDailySchedule` (the one daily timer),
+`createSyncThenLoad` (a sync and what follows it, through `syncOutcomeAction`, spec §5's outcome
+table; it never rejects and always ends the syncing status), `createDailySchedule` (the one daily timer),
 `registerControlIpc` (the page's requests), `createSetupStore` (`setup.json`) and
 `createSkyWindows` (`main/windows/`: the sky window, its placement and the test grid).
 
