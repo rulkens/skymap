@@ -60,6 +60,7 @@ playwright-report/
 .env
 .env.*
 !.env.production
+!.env.desktop
 
 # `wrangler dev` reads local secrets from `.dev.vars` (docs/DEPLOY.md, "Opening
 # the contact form") and keeps its simulated state, including outgoing test mail, in `.wrangler/`.
