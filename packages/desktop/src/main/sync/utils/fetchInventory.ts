@@ -1,13 +1,13 @@
+import type { FetchedInventory } from '../@types/FetchedInventory';
 import type { OfflineInventory } from '../../../../../../tools/deploy/@types/OfflineInventory';
+import { OFFLINE_INVENTORY_KEY } from '../../../../../../tools/deploy/data/offlineInventoryKey';
+import { INVENTORY_TIMEOUT_MS } from '../data/inventoryTimeoutMs';
 
-/** The published inventory, as text (kept verbatim on disk) and parsed; null when offline or not OK. */
-export async function fetchInventory(
-  baseUrl: string,
-  timeoutMs: number,
-): Promise<{ text: string; inventory: OfflineInventory } | null> {
+/** The published inventory; null when offline or not OK. */
+export async function fetchInventory(baseUrl: string): Promise<FetchedInventory | null> {
   try {
-    const res = await fetch(`${baseUrl}/data/offline-inventory.json`, {
-      signal: AbortSignal.timeout(timeoutMs),
+    const res = await fetch(`${baseUrl}/${OFFLINE_INVENTORY_KEY}`, {
+      signal: AbortSignal.timeout(INVENTORY_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     const text = await res.text();

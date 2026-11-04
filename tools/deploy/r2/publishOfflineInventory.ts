@@ -2,10 +2,9 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { R2SyncGroup } from '../@types/R2SyncGroup';
+import { OFFLINE_INVENTORY_KEY } from '../data/offlineInventoryKey';
 import { buildOfflineInventory } from './buildOfflineInventory';
 import { uploadViaWrangler } from './uploadViaWrangler';
-
-const OFFLINE_INVENTORY_KEY = 'data/offline-inventory.json';
 
 /** Uploads after the data manifest (the last group); returns the refusal message, or null on success. */
 export function publishOfflineInventory(

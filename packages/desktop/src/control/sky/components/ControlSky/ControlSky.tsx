@@ -47,7 +47,7 @@ function ControlSky(): ReactNode {
           if (frame === 0) frame = requestAnimationFrame(draw);
         };
         const observer = new MutationObserver(queue);
-        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+        observer.observe(document.body, { childList: true, subtree: true });
         const resized = new ResizeObserver(queue);
         resized.observe(document.body);
         addEventListener('scroll', queue, { capture: true, passive: true, signal: stop.signal });

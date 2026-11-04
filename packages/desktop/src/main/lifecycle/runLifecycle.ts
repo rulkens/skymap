@@ -20,7 +20,6 @@ import { DEFAULT_INSTALL_SETUP } from '../setup/data/defaultInstallSetup';
 import { INVENTORY_FILE } from '../sync/data/inventoryFile';
 import { SETUP_FILE } from '../setup/data/setupFile';
 import { hasCompleteLocalSet } from '../sync/hasCompleteLocalSet';
-import { InsufficientDiskError } from '../sync/InsufficientDiskError';
 import { pruneOrphans } from '../sync/pruneOrphans';
 import { runSync } from '../sync/runSync';
 import { resolveDataRoot } from '../sync/utils/resolveDataRoot';
@@ -194,7 +193,7 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   });
   const loadSkyLogged = (): void => void loadSky();
 
-  const sync = async (): Promise<SyncOutcome | 'disk'> => {
+  const sync = async (): Promise<SyncOutcome> => {
     syncing = true;
     setStatus({ kind: 'syncing' });
     try {
@@ -204,12 +203,8 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
         onProgress: (progress) => send('control:sync', progress),
       });
     } catch (error) {
-      if (error instanceof InsufficientDiskError) {
-        setStatus({ kind: 'diskFull', neededBytes: error.neededBytes, freeBytes: error.freeBytes });
-        return 'disk';
-      }
       console.error('sync:', error);
-      return 'failed';
+      return { kind: 'failed' };
     } finally {
       syncing = false;
     }
@@ -219,18 +214,22 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   // Update now leaves a running sky alone until "Restart sky".
   const syncThenLoad = async (restart: boolean): Promise<void> => {
     if (syncing) return;
+    // A sky still waiting for Restart sky is stale even when this sync finds nothing new.
+    const stale = status.kind === 'ready';
     const outcome = await sync();
-    if (outcome === 'disk') {
+    if (outcome.kind === 'diskFull') {
+      setStatus(outcome);
       if (!(await hasCompleteLocalSet(dataRoot))) return showControl();
       return runningSky() ? undefined : await loadSky();
     }
-    if (outcome === 'synced') {
+    if (outcome.kind === 'synced' || outcome.kind === 'unchanged') {
+      const changed = outcome.kind === 'synced' || stale;
       setStatus({ kind: 'idle' });
-      if (restart || !runningSky()) return await loadSky();
-      return setStatus({ kind: 'ready' });
+      if (!runningSky() || (restart && changed)) return await loadSky();
+      return changed ? setStatus({ kind: 'ready' }) : undefined;
     }
     const hasData = await hasCompleteLocalSet(dataRoot);
-    setStatus({ kind: outcome, hasData });
+    setStatus({ kind: outcome.kind, hasData });
     if (!hasData) return showControl();
     if (!runningSky()) await loadSky();
   };
