@@ -78,9 +78,9 @@ export function expandCompanions(
 
 No new test: this is a deletion and the compiler covers it.
 
-- [ ] Remove `'move'` from `SUBCOMMANDS` and the `else` branch at `refactor.ts:168-191`, plus the `move` case of `entryToPositionals`, usage lines and imports. `ADDRESS_SUBCOMMANDS` and `SUBCOMMANDS` then collapse into one list, and `isAddressSubcommand` goes.
-- [ ] `SKILL.md:19` and `:62-66`: remove `refactor move`; say `npm run move-files` is the only move command.
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/tools/utils/refactor`. Commit.
+- [x] Remove `'move'` from `SUBCOMMANDS` and the `else` branch at `refactor.ts:168-191`, plus the `move` case of `entryToPositionals`, usage lines and imports. `ADDRESS_SUBCOMMANDS` and `SUBCOMMANDS` then collapse into one list, and `isAddressSubcommand` goes.
+- [x] `SKILL.md:19` and `:62-66`: remove `refactor move`; say `npm run move-files` is the only move command.
+- [x] `npm run typecheck:fast`; `npx vitest run tests/tools/utils/refactor`. Commit.
 
 ### Task 3: Resolve and spell a reference
 

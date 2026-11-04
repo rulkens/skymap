@@ -16,14 +16,14 @@ npm run refactor -- extract <file>#<symbol> <dest.ts>
 npm run refactor -- inline  <file>#<symbol>
 npm run refactor -- delete  <file>#<symbol>
 npm run refactor -- refs    <file>#<symbol>
-npm run refactor -- move    <from> <to>
+npm run move-files -- <from> <to>   # the only move command
 ```
 
 Global flags on every subcommand: `--dry` (report the blast radius, save nothing) and
 `--manifest <ops.json>` (batch: validate every entry against the one Project, then a
 single save; a throw on any entry aborts the whole batch before disk is touched).
 `--json` (machine-readable) applies to the symbol subcommands
-(`rename`/`extract`/`inline`/`delete`/`refs`); `move`'s report stays text-only.
+(`rename`/`extract`/`inline`/`delete`/`refs`).
 
 ## When to reach for each subcommand
 
@@ -59,12 +59,9 @@ single save; a throw on any entry aborts the whole batch before disk is touched)
   not automate (change-signature, non-passthrough inlining). `--json` emits
   `{ target, summary: { refs, files, tests }, refs: [...] }`.
 
-- **`move`**: relocate or reorganize files. Same machinery as `npm run move-files`
-  (which stays a byte-identical alias); rewrites both the moved file's own imports and
-  every importer's relative path, and drags the `tests/` mirror. `move` manifests keep
-  the `[{from,to}, ...]` object shape; the five symbol subcommands take a bare array of
-  that subcommand's positional args per entry (a `rename` entry is
-  `["src/utils/math/foo.ts#foo", "bar"]`).
+- **Moving files** is `npm run move-files -- <from> <to>` (or `--manifest <moves.json>` with
+  `[{from,to}, ...]`), not a `refactor` subcommand. It rewrites both the moved file's own
+  imports and every importer's relative path, and drags the `tests/` mirror.
 
 ## Refusals are the workflow, not errors to fight
 
@@ -118,7 +115,7 @@ catch those by hand.
 
 ### Per-subcommand gaps
 
-- **`move`** rewrites string literals that merely contain a moved basename, and
+- **`move-files`** rewrites string literals that merely contain a moved basename, and
   strips their extension: review every non-import string hunk in the diff. It does
   not mirror faceted tests (`foo.facet.test.ts`; add manifest entries for them) and
   leaves the emptied source directory behind.
@@ -129,7 +126,7 @@ catch those by hand.
 ## Always
 
 - **`--dry` first.** It prints the expanded operation set and the blast radius (the
-  classified references for symbol ops, the rewritten-file set for `move`) and saves
+  classified references for symbol ops, the rewritten-file set for `move-files`) and saves
   nothing. Read it before committing to the real run.
 - **`npm run build` after import-graph surgery.** ts-morph keeps the tree compiling
   for the cases it tracks; the string-literal blind spots above surface only at build
