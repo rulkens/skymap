@@ -24,6 +24,7 @@ import type { RemoteCommand } from '../../@types/remote/RemoteCommand';
 import type { RemoteLink } from '../../@types/remote/RemoteLink';
 import type { RemoteMenu } from '../../@types/remote/RemoteMenu';
 import type { RemoteMessage } from '../../@types/remote/RemoteMessage';
+import type { RemoteMessageBody } from '../../@types/remote/RemoteMessageBody';
 import type { RemoteSearchMatch } from '../../@types/remote/RemoteSearchMatch';
 import type { RemoteSession } from '../../@types/remote/RemoteSession';
 import type { RoomCode } from '../../@types/remote/RoomCode';
@@ -41,8 +42,11 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
   const lastResize = useRef<DeviceEvent | null>(null);
 
   const send = useCallback(
-    (message: RemoteMessage): void => linkRef.current?.send(JSON.stringify(message)),
-    [],
+    (body: RemoteMessageBody): void => {
+      const message: RemoteMessage = { v: REMOTE_PROTOCOL_VERSION, from, ...body };
+      linkRef.current?.send(JSON.stringify(message));
+    },
+    [from],
   );
 
   useEffect(() => {
@@ -54,14 +58,14 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
       clearTimeout(silence);
       silence = setTimeout(() => setDomeLink('lost'), REMOTE_SILENCE_MS);
     };
-    const hello = (): void => send({ v: REMOTE_PROTOCOL_VERSION, from, kind: 'hello' });
+    const hello = (): void => send({ kind: 'hello' });
     armSilence();
     const beat = setInterval(hello, HELLO_INTERVAL_MS);
     const offStatus = link.onStatus((linkStatus) => {
       if (linkStatus !== 'open') return;
       hello();
       const event = lastResize.current;
-      if (event) send({ v: REMOTE_PROTOCOL_VERSION, from, kind: 'device', event });
+      if (event) send({ kind: 'device', event });
     });
     const offText = link.onText((text) => {
       const parsed = parseDomeMessage(text);
@@ -95,23 +99,22 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
   }, [room, from, send]);
 
   const sendCommand = useCallback(
-    (command: RemoteCommand): void =>
-      send({ v: REMOTE_PROTOCOL_VERSION, from, kind: 'command', command }),
-    [send, from],
+    (command: RemoteCommand): void => send({ kind: 'command', command }),
+    [send],
   );
   const sendDevice = useCallback(
     (event: DeviceEvent): void => {
       if (event.kind === 'resize') lastResize.current = event;
-      send({ v: REMOTE_PROTOCOL_VERSION, from, kind: 'device', event });
+      send({ kind: 'device', event });
     },
-    [send, from],
+    [send],
   );
   const search = useCallback(
     (query: string): void => {
       // The relay hands results to every socket in the room, so the id must be this remote's own.
       const requestId = `${from}:${++requestRef.current}`;
       if (query === '') setMatches([]);
-      else send({ v: REMOTE_PROTOCOL_VERSION, from, kind: 'search', requestId, query });
+      else send({ kind: 'search', requestId, query });
     },
     [send, from],
   );

@@ -1,11 +1,5 @@
-import type { DomeStatus } from './DomeStatus';
-import type { RemoteMenu } from './RemoteMenu';
-import type { RemoteSearchMatch } from './RemoteSearchMatch';
+import type { DomeMessageBody } from './DomeMessageBody';
 
 /** Dome → remote; disjoint from `RemoteMessage`, so each side drops its own echoes. `v` is the sender's
- *  `REMOTE_PROTOCOL_VERSION`. */
-export type DomeMessage = { v: number } & (
-  | { kind: 'status'; status: DomeStatus }
-  | { kind: 'menu'; menu: RemoteMenu }
-  | { kind: 'searchResults'; requestId: string; matches: readonly RemoteSearchMatch[] }
-);
+ *  `REMOTE_PROTOCOL_VERSION`, stamped by the dome's one `send`. */
+export type DomeMessage = { v: number } & DomeMessageBody;

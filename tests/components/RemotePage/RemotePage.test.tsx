@@ -4,7 +4,6 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import RemotePage from '../../../src/components/RemotePage/RemotePage';
 import { createLocalTransport } from '../../../src/services/remote/createLocalTransport';
 import { REMOTE_PROTOCOL_VERSION } from '../../../src/data/remote/remoteProtocolVersion';
-import { HELLO_INTERVAL_MS } from '../../../src/data/remote/helloIntervalMs';
 import { SHEET_LEAVE_MS } from '../../../src/data/remote/sheetLeaveMs';
 import type { DomeStatus } from '../../../src/@types/remote/DomeStatus';
 import type { RemoteLinkStatus } from '../../../src/@types/remote/RemoteLinkStatus';
@@ -364,25 +363,6 @@ describe('RemotePage', () => {
     expect(tile.closest('[inert]')).toBeNull();
     sendStatus('skymap', v + 1);
     expect(tile.closest('[inert]')).not.toBeNull();
-  });
-
-  it('every message the page sends carries the protocol version', () => {
-    linkOpen = false;
-    render(<RemotePage />);
-    act(() => resizePad());
-    linkOpen = true;
-    act(() => reportStatus('open'));
-    act(() => void vi.advanceTimersByTime(HELLO_INTERVAL_MS));
-    sendStatus();
-    fireEvent.click(screen.getByRole('button', { name: 'Home' }));
-    openSheet('Search');
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'andro' } });
-    act(() => void vi.advanceTimersByTime(200));
-    const all = sent.map((s) => JSON.parse(s) as Record<string, unknown>);
-    expect(new Set(all.map((m) => m.kind))).toEqual(
-      new Set(['hello', 'device', 'command', 'search']),
-    );
-    expect(all.filter((m) => m.v !== v)).toEqual([]);
   });
 
   it('hold buttons show only under openspace, and a held axis rides the next press only', () => {

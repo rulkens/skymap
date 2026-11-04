@@ -43,6 +43,7 @@ import { REMOTE_SILENCE_MS } from '../../data/remote/remoteSilenceMs';
 import { REMOTE_PROTOCOL_VERSION } from '../../data/remote/remoteProtocolVersion';
 import type { DeviceEvent } from '../../@types/input/DeviceEvent';
 import type { DomeMessage } from '../../@types/remote/DomeMessage';
+import type { DomeMessageBody } from '../../@types/remote/DomeMessageBody';
 import type { RelayRoom } from '../../@types/remote/RelayRoom';
 import type { RemoteId } from '../../@types/remote/RemoteId';
 import type { RemoteLinkStatus } from '../../@types/remote/RemoteLinkStatus';
@@ -70,7 +71,10 @@ export function* remoteReceiverSaga(
   const lastResize = new Map<RemoteId, DeviceEvent>();
   const watchdogs = new Map<RemoteId, Task>();
 
-  const send = (message: DomeMessage): void => link.send(JSON.stringify(message));
+  const send = (body: DomeMessageBody): void => {
+    const message: DomeMessage = { v: REMOTE_PROTOCOL_VERSION, ...body };
+    link.send(JSON.stringify(message));
+  };
   const rowsOf = (state: RootState) => ({
     toggleRows: selectToggleRows(state, guideRows),
     layerRows: selectLayerSwitchRows(state, switchRows),
@@ -78,7 +82,7 @@ export function* remoteReceiverSaga(
   const sendStatus = (state: RootState): void => {
     const { toggleRows, layerRows } = rowsOf(state);
     const status = selectDomeStatus(state, toggleRows, layerRows, performance.now());
-    send({ v: REMOTE_PROTOCOL_VERSION, kind: 'status', status });
+    send({ kind: 'status', status });
   };
   // END reaches the pump, whose `finally` ends an open gesture and detaches.
   const closeSource = (from: RemoteId): void => {
@@ -145,7 +149,7 @@ export function* remoteReceiverSaga(
             yield* put(setUiHidden(true));
           }
           sendStatus(yield* select());
-          send({ v: REMOTE_PROTOCOL_VERSION, kind: 'menu', menu: REMOTE_MENU });
+          send({ kind: 'menu', menu: REMOTE_MENU });
           break;
         }
         case 'command': {
@@ -185,7 +189,7 @@ export function* remoteReceiverSaga(
           );
           const matches = remoteSearchMatches(ranked);
           const { requestId } = message;
-          send({ v: REMOTE_PROTOCOL_VERSION, kind: 'searchResults', requestId, matches });
+          send({ kind: 'searchResults', requestId, matches });
           break;
         }
       }
