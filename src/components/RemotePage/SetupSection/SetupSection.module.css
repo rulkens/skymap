@@ -1,0 +1,8 @@
+.root {
+  composes: stack from '../remoteControls.module.css';
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-fg-muted);
+}
