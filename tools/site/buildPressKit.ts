@@ -25,16 +25,17 @@ import sharp from 'sharp';
 import { PRESS_PICTURES } from '../../packages/website/src/data/pressPictures';
 import { siteShot } from '../../packages/website/src/data/siteShot';
 import { PRESS_KIT } from './pressKitPlan';
+import { SITE_SHOTS_DIR } from './SITE_SHOTS_DIR';
 import { pressCredits } from './utils/pressCredits';
 import { pressFactSheet } from './utils/pressFactSheet';
 import { pressPicturePath } from './utils/pressPicturePath';
+import { shotFileIndex } from './utils/shotFileIndex';
 import { scrubVideoArgs } from './utils/scrubVideoArgs';
 import { wordmarkSvg } from './utils/wordmarkSvg';
 
 const OUT_DIR = 'public/data/site';
 const SIZE_FILE = 'packages/website/src/data/pressKit.json';
 const MASTERS = 'data/shots/site';
-const SHOTS = 'packages/website/src/assets/shots';
 const FONT = 'tools/site/fonts/CormorantGaramond-SemiBold.ttf';
 const ICON = 'public/favicon.svg';
 const GROUNDS = { light: '#000000', dark: '#ffffff' } as const;
@@ -104,12 +105,13 @@ try {
     );
   }
 
+  const shots = shotFileIndex(readdirSync(SITE_SHOTS_DIR));
   for (const row of PRESS_PICTURES) {
     // The master is the shot at twice its size; without it, the widest file the site holds.
     const master = join(MASTERS, `${row.shot}.png`);
     const source = existsSync(master)
       ? master
-      : join(SHOTS, `${row.shot}-${siteShot(row.shot).widths[0]}.webp`);
+      : join(SITE_SHOTS_DIR, shots[`${row.shot}-${siteShot(row.shot).widths[0]}.webp`]!);
     put(
       pressPicturePath(row),
       await sharp(source).flatten({ background: '#000000' }).jpeg(jpeg).toBuffer(),
