@@ -36,8 +36,8 @@ export function surfaceTilePlanner(
           surfaceTileDebug: surfaceTileDebugSnapshotOf(tiles),
           // The pick marches the terrain: a cost only the overlay's reader pays.
           terrainPickMarker:
-            state.settings.debug.overlays['terrain-pick-marker'] && eyeView !== undefined
-              ? terrainPickMarkerReadoutOf(tiles, eyeView, snapshot.cursorTexPx)
+            state.settings.terrainPickMarker.enabled && eyeView !== undefined
+              ? terrainPickMarkerReadoutOf(tiles, eyeView, runtime.terrainPickCursor.texPx)
               : NO_TERRAIN_PICK_MARKER_READOUT,
         });
       }

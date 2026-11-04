@@ -8,23 +8,19 @@
  */
 
 import type { ReactElement } from 'react';
-import type { DebugOverlayKey } from '../../../../@types/data/debug/DebugOverlayKey';
 import type { TerrainPickMarkerReadout } from '../@types/TerrainPickMarkerReadout';
-import { DEBUG_OVERLAY_ROWS } from '../../../../data/debug/debugOverlayRows';
-import { TERRAIN_PICK_MARKER_SLIDER_FIELDS } from '../../../../data/debug/terrainPickMarkerSliderFields';
+import { TERRAIN_PICK_MARKER_SLIDER_FIELDS } from '../data/terrainPickMarkerSliderFields';
 import DebugOverlayToggles from '../../../../components/DebugPanel/DebugOverlayToggles';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
 import styles from './TerrainPickMarkerTuningSection.module.css';
 
-const MARKER_ROWS = DEBUG_OVERLAY_ROWS.filter(
-  (row) => 'section' in row && row.section === 'terrain-pick-marker',
-);
+const MARKER_ROWS = [{ key: 'enabled', label: 'Terrain pick marker' }] as const;
 
 export type TerrainPickMarkerTuningSectionProps = {
   readonly radiusM: number;
   readonly onRadiusChange: (radiusM: number) => void;
-  readonly overlays: Record<DebugOverlayKey, boolean>;
-  readonly onToggle: (key: DebugOverlayKey, enabled: boolean) => void;
+  readonly enabled: boolean;
+  readonly onEnabledChange: (enabled: boolean) => void;
   /** The body Layer's published fact: both null with the overlay off. */
   readonly readout: TerrainPickMarkerReadout;
 };
@@ -36,8 +32,8 @@ function metres(n: number | null): string {
 export function TerrainPickMarkerTuningSection({
   radiusM,
   onRadiusChange,
-  overlays,
-  onToggle,
+  enabled,
+  onEnabledChange,
   readout,
 }: TerrainPickMarkerTuningSectionProps): ReactElement {
   return (
@@ -47,7 +43,11 @@ export function TerrainPickMarkerTuningSection({
       values={{ radiusLog10M: Math.log10(radiusM) }}
       onSliderChange={(_key, log10M) => onRadiusChange(10 ** log10M)}
     >
-      <DebugOverlayToggles rows={MARKER_ROWS} overlays={overlays} onToggle={onToggle} />
+      <DebugOverlayToggles
+        rows={MARKER_ROWS}
+        overlays={{ enabled }}
+        onToggle={(_key, on) => onEnabledChange(on)}
+      />
       <div className={styles.readout}>terrain under pick: {metres(readout.heightM)}</div>
       <div className={styles.readout}>
         height level at eye: {readout.levelAtEye === null ? '—' : `z${readout.levelAtEye}`}

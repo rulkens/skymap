@@ -185,7 +185,7 @@ function makeState(): EngineState {
         ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
         oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
       },
-      debug: { overlays: { 'surface-lod-overlay': false } },
+      surfaceTileDebug: { overlays: { 'surface-lod-overlay': false } },
     },
   } as unknown as EngineState;
 }
@@ -442,7 +442,7 @@ describe('surfaceTilesPass', () => {
     expect(mvpMock.mock.calls[0]![1]).toBe(args.eyeRelBodyM);
   });
 
-  it("packs the live debug.overlays['surface-lod-overlay'] toggle into the tile draw args", () => {
+  it("packs the live surfaceTileDebug.overlays['surface-lod-overlay'] toggle into the tile draw args", () => {
     // The debug toggle must reach the tile renderer every draw, not just on change.
     const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs) => void>();
     const view = makeEarthBodyView('earth');
@@ -455,9 +455,9 @@ describe('surfaceTilesPass', () => {
     surfaceTilesPass(runtime).draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[0]![1].debugLodOverlay).toBe(false);
 
-    (state.settings as unknown as { debug: { overlays: Record<string, boolean> } }).debug.overlays[
-      'surface-lod-overlay'
-    ] = true;
+    (
+      state.settings as unknown as { surfaceTileDebug: { overlays: Record<string, boolean> } }
+    ).surfaceTileDebug.overlays['surface-lod-overlay'] = true;
     surfaceTilesPass(runtime).draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[1]![1].debugLodOverlay).toBe(true);
   });

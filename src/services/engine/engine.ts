@@ -134,7 +134,6 @@ export function createEngine(
     picking: {
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
       pickInFlight: false,
-      cursorTexPx: null,
     },
     gpu: {
       // Null until the async bootstrap constructs each; released in `destroy()`. See
@@ -254,7 +253,8 @@ export function createEngine(
   };
 
   // React doesn't own this attribute, so it survives re-renders; `global.css`'s
-  // `#c[data-view-rig='dome']` rule reads it to square the canvas.
+  // `#c[data-view-rig='dome']` rule reads it to square the canvas, and the body
+  // Layer's `terrainPickCursor` reads it to skip a rig with no single cursor ray.
   canvas.dataset.viewRig = state.viewRig;
 
   // One instance feeds both the dev panel and the load-progress emitter, so the

@@ -60,7 +60,6 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
         blend: 0,
       },
       renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
-      cursorTexPx: null,
       renderedTargets: new Set<string>(),
     },
     viewSlot: 0,

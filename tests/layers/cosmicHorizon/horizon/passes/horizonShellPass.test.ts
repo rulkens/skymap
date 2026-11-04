@@ -63,7 +63,6 @@ function makeCtx(): FrameView {
         blend: 0,
       },
       renderTargets,
-      cursorTexPx: null,
       renderedTargets: new Set<string>(),
       plans: createFramePlannerResultStore(),
     },

@@ -90,7 +90,7 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.equatorial,
       },
     },
-    picking: { pickInFlight: false, cursorTexPx: null },
+    picking: { pickInFlight: false },
   } as unknown as EngineState;
 }
 

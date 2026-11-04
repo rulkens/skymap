@@ -644,7 +644,6 @@ describe('slabViewOf', () => {
         focusBlend: 0,
         focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
         renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
-        cursorTexPx: null,
         renderedTargets: new Set<string>(),
       },
       viewSlot: 0,

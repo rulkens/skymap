@@ -9,14 +9,14 @@ import { memo, useCallback, type ReactElement } from 'react';
 import SurfaceTileAtlasSection from './SurfaceTileAtlasSection';
 import { useAppDispatch, useAppSelector } from '../../../../../store/hooks';
 import { flyToLonLat } from '../../../../../state/camera/flyToLonLatActions';
-import { selectDebugOverlays } from '../../../../../state/settings/selectors';
-import { setDebugOverlay } from '../../../../../state/settings/core/debugSlice';
+import { selectSurfaceTileOverlays } from '../../../state/surfaceTileDebug/selectors';
+import { setSurfaceTileOverlay } from '../../../state/surfaceTileDebug/slice';
 import { selectSurfaceTileDebug } from './selectSurfaceTileDebug';
-import type { DebugOverlayKey } from '../../../../../@types/data/debug/DebugOverlayKey';
+import type { SurfaceTileOverlayKey } from '../@types/SurfaceTileOverlayKey';
 
 function SurfaceTileAtlasSectionContainer(): ReactElement {
   const dispatch = useAppDispatch();
-  const overlays = useAppSelector(selectDebugOverlays);
+  const overlays = useAppSelector(selectSurfaceTileOverlays);
   const surfaceTileDebug = useAppSelector(selectSurfaceTileDebug);
   const onFlyToLonLat = useCallback(
     // `altKm` omitted keeps the camera's current altitude — what the text box
@@ -26,7 +26,8 @@ function SurfaceTileAtlasSectionContainer(): ReactElement {
     [dispatch],
   );
   const onToggle = useCallback(
-    (key: DebugOverlayKey, enabled: boolean) => dispatch(setDebugOverlay({ key, enabled })),
+    (key: SurfaceTileOverlayKey, enabled: boolean) =>
+      dispatch(setSurfaceTileOverlay({ key, enabled })),
     [dispatch],
   );
 
