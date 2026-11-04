@@ -24,6 +24,7 @@ import { starAggregateUpsamplePass } from './survey/passes/starAggregateUpsample
 import { starSpheresPass } from './resolvedStars/passes/starSpheresPass';
 import { fieldStarSpherePass } from './resolvedStars/passes/fieldStarSpherePass';
 import { starCatalogSelectionRow } from './selection/present/starCatalogSelectionRow';
+import { starSearch } from './selection/present/starSearch';
 import { produceStarCaptions } from './captions/present/produceStarCaptions';
 import { STAR_AGGREGATES_TARGET } from './survey/render/starAggregatesTarget';
 import { S_STAR_ORBITAL_ELEMENTS } from '../../data/bodies/sStarOrbitalElements';
@@ -65,6 +66,7 @@ export const starCatalogLayer = defineLayer({
     orbitTrails: { show: 'sStarTrails', rows: S_STAR_ORBITAL_ELEMENTS },
   }),
   selection: (runtime) => [starCatalogSelectionRow(runtime)],
+  search: () => starSearch(),
   planners: (runtime) => [starCatalogPlanner(runtime)],
   ui: [
     { slot: 'main', content: StarsSectionContainer, title: 'Stars' },
