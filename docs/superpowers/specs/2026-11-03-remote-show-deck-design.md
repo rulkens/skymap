@@ -285,6 +285,18 @@ The app's colour tokens are independent literals, not derived from a base hue, s
 remote reads. A parity test keeps the two lists equal (see "Testing"); a remote component that reads a colour the
 block lacks fails CI instead of showing blue in red light.
 
+### Full screen
+
+Two routes, because iPhone Safari has no Fullscreen API (owner, 2026-11-03):
+
+- **A header button** (`FullscreenButton`, over `useFullscreen`) where the API exists; it renders nothing where it
+  does not. Icon only, 44 px square, overlapping the header's padding so the header does not grow.
+- **Add to Home Screen.** `remote.html` links `public/remote.webmanifest` (`display: standalone`, `scope: /remote`,
+  no `start_url`, so the icon opens the address it was added from, room code included) and the Apple tags, with a
+  `black-translucent` status bar the safe-area padding already clears. In an iPhone tab
+  (`navigator.standalone === false`, which only iOS defines) the Setup sheet says how. A Home Screen app keeps its
+  own storage, so the red-light choice does not carry over from the tab.
+
 ## Interaction
 
 **The deck, top to bottom:** header, pad, Home row (unchanged), the now card, the tiles in three columns (Search
