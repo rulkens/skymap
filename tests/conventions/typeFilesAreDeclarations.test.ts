@@ -1,40 +1,19 @@
 /**
  * CLAUDE.md's `@types/` file shape: `.d.ts`, exporting at most one `type` alias named for the
  * file (zero exports = an ambient shim, always fine). The multi-export debt ledger is a ratchet,
- * same idiom as frameFilePurity.test.ts: an entry must still exist and still violate, or be removed.
+ * same idiom as serviceFilePurity.test.ts: an entry must still exist and still violate, or be removed.
  */
-import { readdirSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename } from 'node:path';
 import { SyntaxKind } from 'ts-morph';
 import { describe, expect, it } from 'vitest';
+import { dirsNamed } from '../helpers/conventions/dirsNamed';
 import { exportedDeclarations } from '../helpers/conventions/exportedDeclarations';
 import { TYPE_FILES_MULTI_EXPORT } from '../helpers/conventions/typeFilesMultiExport';
 import { walkFiles } from '../helpers/conventions/walkFiles';
 
-const SKIP_NAMES = new Set(['node_modules']);
-const SKIP_PATHS = new Set(['tools/stars-rs/target', 'tools/vendor-types']);
-
-// `@types/` folders live at different depths (`src/@types`, each Layer's own
-// `src/layers/<name>/@types`, `tools/@types`, `tools/mcpm-workbench/@types`,
-// …), so this walks looking for the folder name rather than trusting a fixed
-// depth — a new Layer's or tool's `@types/` is swept the day it appears.
-function typesDirsUnder(root: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(root, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const path = join(root, entry.name);
-    if (SKIP_NAMES.has(entry.name) || SKIP_PATHS.has(path)) continue;
-    if (entry.name === '@types') out.push(path);
-    else out.push(...typesDirsUnder(path));
-  }
-  return out;
-}
-
-const TYPES_DIRS = [
-  ...typesDirsUnder('src'),
-  ...typesDirsUnder('tools'),
-  ...typesDirsUnder('packages/website/src'),
-];
+const TYPES_DIRS = ['src', 'tools', 'packages/website/src', 'packages/desktop/src'].flatMap(
+  (root) => dirsNamed(root, '@types'),
+);
 const files = TYPES_DIRS.flatMap((dir) => walkFiles(dir, ['.ts']));
 expect(files.length).toBeGreaterThan(0);
 

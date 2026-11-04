@@ -1,7 +1,7 @@
 /**
- * A file under `src/services/engine/frame/` — and its subfolders, and every
- * Layer's own `passes/` — declares ONE thing: the symbol
- * it is named for (for a pass file, its `ContentPass`). Helpers and constants
+ * A file under `src/services/engine/frame/` — and its subfolders, every
+ * Layer's own `passes/`, and every desktop main-process module — declares ONE
+ * thing: the symbol it is named for (for a pass file, its `ContentPass`). Helpers and constants
  * inlined beside it are invisible to the rest of the codebase and untestable
  * alone, and agents keep re-adding them — hence a ratchet rather than a review
  * note. `ALLOWED` carries today's debt, keyed `<swept dir>/<file>` so the
@@ -36,6 +36,17 @@ const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = passDirsUnder(LA
   (dir) => [dir.slice(SRC_DIR.length, -1), dir] as const,
 );
 
+// The desktop's main process is services by another name: each concern module's root holds its
+// service files, beside @types/, data/ and utils/. `main/` itself holds only the `main.ts` entry
+// script, and a module of utils alone (`files/`, `lan/`) has no root file to sweep.
+const DESKTOP_MAIN_DIR = fileURLToPath(
+  new URL('../../packages/desktop/src/main/', import.meta.url),
+);
+const DESKTOP_MODULE_DIRS = readdirSync(DESKTOP_MAIN_DIR, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && entry.name !== '@types')
+  .map((entry) => [`desktop/main/${entry.name}`, `${DESKTOP_MAIN_DIR}${entry.name}/`] as const)
+  .filter(([, dir]) => readdirSync(dir).some((f) => f.endsWith('.ts')));
+
 // Files that still inline helpers, with their current count. `slabs.ts` is the
 // slab vocabulary itself — a genuine multi-symbol module whose split is its own
 // piece of work, not a stray-helper row to trim in passing. `orbitTrailsPass`'s
@@ -64,6 +75,8 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'layers/milkyWay/cloud/passes/milkyWayPass': 1,
   'layers/starCatalog/resolvedStars/passes/fieldStarSpherePass': 6,
   'layers/starCatalog/seededStars/passes/starPointsPass': 1,
+  // Split in FIX-2 (audit B I15).
+  'desktop/main/lifecycle/runLifecycle': 1,
 };
 
 type Declared = { readonly name: string; readonly exported: boolean };
@@ -119,6 +132,7 @@ const SWEPT_DIRS = [
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
   ...LAYER_PASS_DIRS,
+  ...DESKTOP_MODULE_DIRS,
 ];
 
 const sweptFiles = (label: string, dir: string): string[] =>
@@ -154,8 +168,9 @@ describe.each(SWEPT_DIRS)('%s files declare only their own symbol', (label, dir)
       stray.length,
       `${fileName} declares ${stray.length} symbol(s) beside its own ` +
         `(${stray.join(', ') || 'none'}); its ALLOWED row '${key}' says ${budget}. ` +
-        'Over the row: move each to its own file — a helper under src/utils/ or ' +
-        'src/services/engine/frame/, a constant under src/data/ — one symbol per ' +
+        'Over the row: move each to its own file — a helper under src/utils/, ' +
+        "src/services/engine/frame/ or the desktop module's utils/, a constant under " +
+        "src/data/ or the module's data/ — one symbol per " +
         'file, filename = symbol. Under it: you just extracted one, so lower the ' +
         `row to ${stray.length} in the same commit (delete it at 0). Exact, not a ` +
         'ceiling — a stale-high row silently re-permits the slot you freed.',

@@ -7,37 +7,54 @@ planetarium projector). Phones and tablets drive the sky over the local network.
 (§10 lists what the owner added later); the venue install guide is
 [`packages/desktop/README.md`](../packages/desktop/README.md). This file is the map for changing it.
 
-Layout under `packages/desktop/src/`: `main/` (Electron main process), `sync/` (the data mirror),
-`control/` (the React control page and its preload), `brand/` (the art page behind the icons),
-`utils/`, `data/`, `@types/` (one symbol per file, as in the app). Windows load pages from
-`assets/` (`test-grid.html`, `sky-curtain.html`).
+## Layout
+
+`packages/desktop/src/` is grouped by process first, then by concern module, then by role. The
+process is the line the bundler and the sandbox enforce, so it sits on the first level, where
+`tests/conventions/desktopImportBoundary.test.ts` guards it by prefix. Inside a process each concern
+module holds only the role folders it needs (`@types/`, `data/`, `utils/`, `components/`), as a
+Layer does in the app (ADR 0014). `tests/conventions/desktopFolderShape.test.ts` keeps the shape.
+
+| Folder                         | Holds                                                                                                                                        | May import                                                                         |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `@types/`, `data/`, `utils/`   | only what crosses a process boundary: the bridge contract and what it carries, constants read by two processes, runtime-neutral helpers     | no `electron`, Node or React; nothing under `main/`, `preload/`, `control/`, `brand/` |
+| `main/`                        | the Electron main process (Vite mode `main`). Root: `main.ts` and `@types/`. Modules: `lifecycle`, `windows`, `sky`, `menu`, `server`, `certificates`, `lan`, `relay`, `setup`, `sync`, `files` | Electron, Node, the root homes, `tools/` (the relay); no React, CSS or page code    |
+| `preload/`                     | `preload.cts`, the sandboxed bridge (Vite mode `preload`)                                                                                    | `electron` and the root homes only                                                 |
+| `control/`                     | the control page (Vite root). Root: `index.html`, `main.tsx`, `control.css`, `controlChrome.module.css`. Modules: `shell`, `setup`, `pairing`, `sync`, `sky` | no `electron`, Node, `main/`, `preload/`, `brand/` or `tools/`                     |
+| `brand/`                       | the art page behind the icons and installer bitmaps (Vite mode `brand`): `components/`, `@types/`                                            | as `control/`, and may reuse `control/` (the sky, `control.css`)                   |
+
+Every folder keeps the app's rules: `@types/` files are `.d.ts` with one alias, `data/` one
+constant per file, `utils/` one function per file named for it, a main-process module file declares
+only its own symbol (`tests/conventions/serviceFilePurity.test.ts`), a component folder holds only
+its component, styles, constants and hooks, and no folder holds more than 15 files. Windows load
+pages from `assets/` (`test-grid.html`, `sky-curtain.html`).
 
 ## Processes and windows
 
-`main/main.ts` calls `runLifecycle` (`main/runLifecycle.ts`), which owns everything below. It
+`main/main.ts` calls `runLifecycle` (`main/lifecycle/runLifecycle.ts`), which owns everything below. It
 takes the single-instance lock first, so a second launch only raises the control window.
 
 | Window            | File                                        | What it is                                                                                                                                                                                       |
 | ----------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Sky               | `main/openSkyWindow.ts`, `loadSkyPage.ts`   | Frameless, black, fills one display. Loads `https://localhost:47823/?remote` (kiosk) or `/?dome&remote` (dome) from the app's own server. Hosts the relay room.                                  |
-| Control           | `main/openControlWindow.ts`, `src/control/` | 960 x 760 React page from `file://`, sandboxed, talks to main only through the preload bridge. Close hides it.                                                                                   |
-| Test grid         | `main/showTestGrid.ts`, `assets/test-grid.html` | Not a window: a child view laid over the sky window (dome grid with FRONT at the bottom, or the display number). Main owns its on/off state and pushes it, so the menu tick and the page agree. |
-| About             | `main/openAboutWindow.ts`                   | 560 x 500 child of the control window, loading `?view=about` from the same page and preload. One branded window on both platforms.                                                               |
-| Sky curtain       | `main/addOverlay.ts`, `assets/sky-curtain.html` | A black child view that fades in over every sky load and out once `window.__skymap.ready` resolves, or after 10 s.                                                                           |
+| Sky               | `main/windows/openSkyWindow.ts`, `main/sky/loadSkyPage.ts` | Frameless, black, fills one display. Loads `https://localhost:47823/?remote` (kiosk) or `/?dome&remote` (dome) from the app's own server. Hosts the relay room.                                  |
+| Control           | `main/windows/openControlWindow.ts`, `src/control/` | 960 x 760 React page from `file://`, sandboxed, talks to main only through the preload bridge. Close hides it.                                                                                   |
+| Test grid         | `main/sky/showTestGrid.ts`, `assets/test-grid.html` | Not a window: a child view laid over the sky window (dome grid with FRONT at the bottom, or the display number). Main owns its on/off state and pushes it, so the menu tick and the page agree. |
+| About             | `main/windows/openAboutWindow.ts`           | 560 x 500 child of the control window, loading `?view=about` from the same page and preload. One branded window on both platforms.                                                               |
+| Sky curtain       | `main/sky/addOverlay.ts`, `assets/sky-curtain.html` | A black child view that fades in over every sky load and out once `window.__skymap.ready` resolves, or after 10 s.                                                                           |
 
 - The control page is shown only when a person is needed: first run, no complete data, a stored
   display that is missing, or the shortcut. It is never shown before its first paint.
-- Bridge contract: `src/@types/ControlBridge.ts`, implemented in `control/preload.cts` and the
+- Bridge contract: `src/@types/ControlBridge.d.ts`, implemented in `preload/preload.cts` and the
   `ipcMain` handlers in `runLifecycle.ts`. Every handler checks the sender is the control window
   (the About window may only call `getAbout`). Growing the bridge is a contract change.
-- `main/superviseWindow.ts` reloads a crashed renderer or GPU process, kills a renderer hung for
+- `main/windows/superviseWindow.ts` reloads a crashed renderer or GPU process, kills a renderer hung for
   30 s, and refuses navigation off the app's origin. An InfoCard link is a dead click on purpose.
 - With one screen the control window floats above the sky (`screen-saver` level) and
   `CommandOrControl+Alt+K` (`data/controlShortcut.ts`) shows or hides it.
 
 ## Data mirror
 
-Code: `src/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the publishing side.
+Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the publishing side.
 
 - **Inventory.** `syncR2.ts` uploads `data/offline-inventory.json` last (see
   [DEPLOY.md](DEPLOY.md)): every offline group's files with sha256 and size. The app fetches it
@@ -61,7 +78,7 @@ Code: `src/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the publis
   a manual Update now, waits for Restart sky); offline or failed with data on disk shows status
   only and loads the sky; with no data it raises the control window.
 - **Update policy.** `setup.dataUpdates` is `atLaunch`, `daily` at an `HH:MM`, or `manual`.
-  `rearm` sets the next daily timer (`utils/nextDailyRun.ts`). A complete set with a policy other
+  `rearm` sets the next daily timer (`main/sync/utils/nextDailyRun.ts`). A complete set with a policy other
   than `atLaunch` loads the sky without syncing first.
 - **Dev.** `resolveDataRoot` returns the repo's `public/data` for an unpackaged run, or
   `SKYMAP_DATA_DIR` if set. Both are `dev`: no sync, no prune, no daily timer, Update now ignored.
@@ -70,17 +87,17 @@ Code: `src/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the publis
 
 ## Server, CA and certificates
 
-- `main/startAppServer.ts`: one HTTPS server on `0.0.0.0:47823` (`data/appServerPort.ts`), GET and
-  HEAD only. It serves the web build (`main/distDir.ts`: `resources/dist` packaged, the repo's
+- `main/server/startAppServer.ts`: one HTTPS server on `0.0.0.0:47823` (`data/appServerPort.ts`), GET and
+  HEAD only. It serves the web build (`main/server/distDir.ts`: `resources/dist` packaged, the repo's
   `dist/` otherwise), `/data/` from the mirror, and `/ca.crt`. Paths are resolved lexically
-  (`main/resolveAppPath.ts`) and then by realpath, so a symlink cannot leave a root. Responses are
+  (`main/server/resolveAppPath.ts`) and then by realpath, so a symlink cannot leave a root. Responses are
   `no-cache` so Restart sky sees a replaced manifest.
-- `main/ensureLanCertificate.ts`: a per-install EC CA (20 years, name `Skymap local CA <hex>`,
+- `main/certificates/ensureLanCertificate.ts`: a per-install EC CA (20 years, name `Skymap local CA <hex>`,
   `pathLenConstraint 0`) and a leaf (397 days, the Apple limit) whose subject alternative names
   are the machine's host names and LAN addresses. Both live in `<userData>/certs/`. A corrupt CA
   or key is replaced rather than blocking launch; tablets then trust the new CA once more.
 - **Reissue.** `startSecureServer.ts` re-reads the LAN names every 30 s
-  (`data/lanCheckIntervalMs.ts`) and `renewServerCertificate.ts` swaps the leaf into the live
+  (`main/certificates/data/lanCheckIntervalMs.ts`) and `renewServerCertificate.ts` swaps the leaf into the live
   server with `setSecureContext`. The CA never changes, so trust on tablets survives. The leaf is
   also reissued within 30 days of expiry.
 - The app's own windows accept the leaf through `setCertificateVerifyProc` only if the CA signed
@@ -89,19 +106,19 @@ Code: `src/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the publis
 
 ## Relay wiring
 
-`main/attachDesktopRelay.ts` attaches `tools/utils/remote/attachRemoteRelay` to the same server.
+`main/relay/attachDesktopRelay.ts` attaches `tools/utils/remote/attachRemoteRelay` to the same server.
 
-- **Stored room code.** `<userData>/remote-room.json` (`main/readRoomCode.ts`). It lasts across
+- **Stored room code.** `<userData>/remote-room.json` (`main/relay/readRoomCode.ts`). It lasts across
   launches so a tablet bookmark keeps working. `codeFor` returns it for every host.
-- **Who may host.** `mayHost` needs a loopback socket (`utils/isLoopbackRequest.ts`, the peer
-  address, never a header) and `Origin` equal to `https://localhost:47823` (`data/appOrigin.ts`).
+- **Who may host.** `mayHost` needs a loopback socket (`main/relay/utils/isLoopbackRequest.ts`, the peer
+  address, never a header) and `Origin` equal to `https://localhost:47823` (`main/server/data/appOrigin.ts`).
   Loopback alone would admit any local browser tab.
 - **`onSky: false`.** `pairingOnSky: false` keeps the pairing QR off the sky; the control page
   draws it from `RelayHandle.onRoom`.
-- **Rotation.** `main/rotateRoomCode.ts` stores the new code, then calls `relay.rotate`, which
-  closes the old room's remotes with 4001. Clicks are queued (`utils/serially.ts`).
-- **Network picker.** `setup.network` names an interface; `utils/lanOriginFor.ts` builds the QR
-  origin from it, else the first interface. `utils/listLanInterfaces.ts` lists them. Before the
+- **Rotation.** `main/relay/rotateRoomCode.ts` stores the new code, then calls `relay.rotate`, which
+  closes the old room's remotes with 4001. Clicks are queued (`main/lifecycle/utils/serially.ts`).
+- **Network picker.** `setup.network` names an interface; `main/lan/utils/lanOriginFor.ts` builds the QR
+  origin from it, else the first interface. `main/lan/utils/listLanInterfaces.ts` lists them. Before the
   sky hosts, main sends the stored code and origin itself, so the QR works during the first
   download.
 - `server.on('upgrade')` destroys any upgrade outside `REMOTE_PATH_PREFIX`; once a listener exists
@@ -110,21 +127,21 @@ Code: `src/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the publis
 
 ## Windows, hot-plug and the quit gate
 
-- `main/placeWindows.ts` is pure: the sky goes to the stored display by id, else the one
+- `utils/placeWindows.ts` is pure (both processes read it): the sky goes to the stored display by id, else the one
   display of the same size (ids change on re-plug), else the primary; the control window gets
   another display or none. Zero displays returns `null` and waits for `display-added`.
 - `runLifecycle.ts` listens to `display-added` and `display-removed`: it re-places the windows,
   refills the sky window, and pushes the display list to the page. A projector switched on after
   boot takes the sky back. If the stored display is missing, the control window opens.
-- `main/createQuitGate.ts`: the sky window and the control window ignore close (Alt+F4, Cmd+W)
+- `main/windows/createQuitGate.ts`: the sky window and the control window ignore close (Alt+F4, Cmd+W)
   until `allowQuit`. Quit is the control page's Quit panel or the menu's Quit item; both call the
   gate, never the `quit` role.
-- `main/installAppMenu.ts` with `buildMenuTemplate`: macOS has one menu bar, and it carries the
+- `main/menu/installAppMenu.ts` with `buildMenuTemplate`: macOS has one menu bar, and it carries the
   menu only while the control window or About has focus, so a visitor's keyboard on the sky has no
   Cmd+Q, Cmd+H or Cmd+W. Windows hangs it on the control window, hidden until Alt. In `--windowed`
   the menu is always there with Reload and Toggle DevTools.
 - The sky window hides scrollbars, text selection and, after 3 s still, the cursor
-  (`hideSkyChrome.ts`, `utils/createIdleTimer.ts`). Fades respect `prefers-reduced-motion` in
+  (`main/sky/hideSkyChrome.ts`, `main/sky/utils/createIdleTimer.ts`). Fades respect `prefers-reduced-motion` in
   their own pages.
 
 ## Build and packaging
@@ -174,12 +191,15 @@ Code: `src/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the publis
   (`.github/workflows/ci.yml`). The desktop package has its own `vitest.config.ts` (node
   environment, `tests/**/*.test.{ts,tsx}`) and `tsconfig.json`; `tests/` mirrors `src/`.
 - The control page is tested in jsdom: a file opts in with `// @vitest-environment jsdom` (see
-  `tests/control/components/SetupFlow/SetupFlow.test.tsx`). The bridge is passed as a prop, so a
+  `tests/control/setup/components/SetupFlow/SetupFlow.test.tsx`). The bridge is passed as a prop, so a
   test drives the page with a fake one.
 - Server, sync (against a local HTTP fixture), placement, menu template, relay and rotation
-  logic have tests under `tests/main`, `tests/sync` and `tests/utils`.
+  logic have tests under `tests/main/<module>/`, beside the module they test.
 - The desktop package is not in the root `vitest` run (`tests/**` at the repo root only); its tests run
   with its own config. The inventory builder's test is `tests/tools/deploy/r2/buildOfflineInventory.test.ts`.
+- The convention ratchets that hold the desktop to the layout above live in the root
+  `tests/conventions/` and read its files from disk, so they run in the root `npm test`: folder
+  shape, the process import boundary, file purity, `@types` and `utils` shape, no `.js` specifiers.
 
 ## Landmines
 

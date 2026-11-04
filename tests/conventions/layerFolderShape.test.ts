@@ -1,6 +1,6 @@
 /**
- * Ratchet for ADR 0014: no folder under `src/layers/` holds more than 15 files
- * directly, no folder is named for a bag, and a regrouped Layer has no role
+ * Ratchet for ADR 0014: no folder under `src/layers/` or `packages/desktop/src/`
+ * holds more than 15 files directly, no folder is named for a bag, and a regrouped Layer has no role
  * folder (`render/`, `ui/`, ...) at its root. The three allow-lists are
  * shrink-only: an entry must go when its folder or Layer is fixed, so none can
  * go stale. A Layer's regroup PR deletes its rows from them.
@@ -40,7 +40,11 @@ function directories(dir: string): string[] {
     });
 }
 
-const allDirs = ['src/layers', ...directories('src/layers')];
+// The desktop app follows the same concern-module shape (docs/DESKTOP.md), so its folders share the cap.
+const allDirs = ['src/layers', 'packages/desktop/src'].flatMap((root) => [
+  root,
+  ...directories(root),
+]);
 const layerNames = readdirSync('src/layers', { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name);
