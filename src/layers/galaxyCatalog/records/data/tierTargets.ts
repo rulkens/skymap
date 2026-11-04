@@ -24,11 +24,19 @@
  * an absolute number of points, not a percentage.
  */
 
-import { APP_SOURCE_REGISTRY } from '../../../../compositions/appSources';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
+import type { GalaxyCatalogRegistryEntry } from '../../@types/GalaxyCatalogRegistryEntry';
 import { GALAXY_CATALOG_DATA_PREFIX } from './galaxyCatalogFormat';
 import { shipsTierVariants } from '../../../../utils/loading/shipsTierVariants';
 import type { Tier } from '../../../../@types/data/Tier';
 import type { SourceType } from '../../../../@types/data/SourceType';
+
+/** The Layer's row for `source`, or `undefined` for a source another Layer owns. */
+function galaxyEntryOf(source: SourceType): GalaxyCatalogRegistryEntry | undefined {
+  return (GALAXY_CATALOG_SOURCE_RECORD as Partial<Record<SourceType, GalaxyCatalogRegistryEntry>>)[
+    source
+  ];
+}
 
 /**
  * Returns the per-tier point-count cap for a source, or `undefined` for
@@ -40,9 +48,9 @@ import type { SourceType } from '../../../../@types/data/SourceType';
  *   positive N → keep the brightest N.
  */
 export function tierTarget(source: SourceType, tier?: Tier): number | undefined {
-  const entry = APP_SOURCE_REGISTRY[source];
-  if (entry.type !== 'galaxyCatalog' || tier === undefined) return undefined;
-  // The `as const` on APP_SOURCE_REGISTRY narrows each entry's `tierTargets`
+  const entry = galaxyEntryOf(source);
+  if (entry === undefined || tier === undefined) return undefined;
+  // The `as const` on the Layer's rows narrows each entry's `tierTargets`
   // to its own literal shape (e.g. `{ small: 0, medium: 156_000 }`),
   // so the union here can't be indexed by a generic `Tier` without
   // widening back to the declared shape.
@@ -59,8 +67,8 @@ export function tierTarget(source: SourceType, tier?: Tier): number | undefined 
  * per-source value the build applies to whichever tier is being capped.
  */
 export function fluxSupplementMagLimitFor(source: SourceType): number | undefined {
-  const entry = APP_SOURCE_REGISTRY[source];
-  if (entry.type !== 'galaxyCatalog') return undefined;
+  const entry = galaxyEntryOf(source);
+  if (entry === undefined) return undefined;
   // `as const` narrows each entry to its own literal shape, so entries that
   // omit the optional field don't declare it — `in` narrows to the ones that do.
   return 'fluxSupplementMagLimit' in entry ? entry.fluxSupplementMagLimit : undefined;
@@ -81,8 +89,8 @@ export function fluxSupplementMagLimitFor(source: SourceType): number | undefine
  * so a buggy caller stays loud instead of silently 404-ing.
  */
 export function tierFilenameForSource(source: SourceType, tier?: Tier): string {
-  const entry = APP_SOURCE_REGISTRY[source];
-  if (entry.type !== 'galaxyCatalog') {
+  const entry = galaxyEntryOf(source);
+  if (entry === undefined) {
     throw new Error(`tierFilenameForSource: no base filename for source ${source}`);
   }
   if (!shipsTierVariants(entry.tierTargets)) {

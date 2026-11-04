@@ -1,6 +1,7 @@
 /**
  * The galaxy-catalog Layer: nine point sources, their renderers, the thumbnail
- * LOD chain, the Galaxies settings section, `watchPaletteWakeSaga` (its own
+ * LOD chain, the Galaxies settings section, the galaxy InfoCard, the
+ * provenance debug section, `watchPaletteWakeSaga` (its own
  * demand trigger's wake) and every contribution they make to a frame. No
  * `targets`.
  */
@@ -22,6 +23,9 @@ import { galaxyCatalogSelectionRow } from './selection/present/galaxyCatalogSele
 import { produceFamousGalaxyLabels } from './famousGalaxies/present/produceFamousGalaxyLabels';
 import { watchPaletteWakeSaga } from './aliases/sagas/watchPaletteWakeSaga';
 import GalaxiesSectionContainer from './controls/ui/GalaxiesSectionContainer';
+import GalaxyDetailCard from './card/ui/GalaxyDetailCard/GalaxyDetailCard';
+import CompactCard from './card/ui/CompactCard/CompactCard';
+import GalaxyProvenanceSectionContainer from './provenance/ui/GalaxyProvenanceSectionContainer';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 
 export const galaxyCatalogLayer = defineLayer({
@@ -57,5 +61,12 @@ export const galaxyCatalogLayer = defineLayer({
   }),
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
   planners: (runtime) => [galaxyCatalogPlanner(runtime)],
-  ui: [{ slot: 'main', content: GalaxiesSectionContainer, title: 'Galaxies' }],
+  ui: [
+    { slot: 'main', content: GalaxiesSectionContainer, title: 'Galaxies' },
+    { slot: 'debug', content: GalaxyProvenanceSectionContainer },
+    {
+      slot: 'detailCard',
+      content: { type: 'galaxyCatalog', Detail: GalaxyDetailCard, Compact: CompactCard },
+    },
+  ],
 });

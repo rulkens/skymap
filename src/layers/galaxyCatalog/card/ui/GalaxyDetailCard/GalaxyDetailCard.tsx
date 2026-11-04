@@ -20,6 +20,7 @@ import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
 import DescriptionBlock from '../../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../../../../components/InfoTip/InfoTip';
 import { TIPS } from '../../../../../components/InfoCard/tooltips';
+import { GALAXY_TIPS } from '../galaxyTips';
 import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
 import styles from '../../../../../components/InfoCard/cardChrome.module.css';
 import local from './GalaxyDetailCard.module.css';
@@ -88,15 +89,16 @@ function GalaxyDetailCard({
         {layout === 'panel' && thumbnail}
         <div className={styles.cardSummary}>
           <div className={styles.cardLookbackLine}>
-            <InfoTip {...TIPS.lookback!}>Light left</InfoTip> {formatLookback(target.lookbackGyr)}{' '}
-            ago
+            <InfoTip {...GALAXY_TIPS.lookback}>Light left</InfoTip>{' '}
+            {formatLookback(target.lookbackGyr)} ago
           </div>
           <div className={styles.cardLookbackEra}>
-            — <InfoTip {...TIPS.earthEra!}>{target.earthEra}</InfoTip>
+            — <InfoTip {...GALAXY_TIPS.earthEra}>{target.earthEra}</InfoTip>
           </div>
           <div className={styles.cardDistLine}>
-            <InfoTip {...TIPS.distance!}>{formatDistance(target.distanceMpc)}</InfoTip> &middot;{' '}
-            <InfoTip {...TIPS.hubbleVelocity!}>
+            <InfoTip {...GALAXY_TIPS.distance}>{formatDistance(target.distanceMpc)}</InfoTip>{' '}
+            &middot;{' '}
+            <InfoTip {...GALAXY_TIPS.hubbleVelocity}>
               {Math.round(target.hubbleVelocityKmS).toLocaleString()} km/s away
             </InfoTip>
           </div>
@@ -140,14 +142,17 @@ function GalaxyDetailCard({
       */}
       <div className={styles.cardSection}>
         {target.agnClass && (
-          <CardRow label={<InfoTip {...TIPS.agnClass!}>Class</InfoTip>} value={target.agnClass} />
+          <CardRow
+            label={<InfoTip {...GALAXY_TIPS.agnClass}>Class</InfoTip>}
+            value={target.agnClass}
+          />
         )}
         <CardRow
-          label={<InfoTip {...TIPS.redshift!}>Redshift z</InfoTip>}
+          label={<InfoTip {...GALAXY_TIPS.redshift}>Redshift z</InfoTip>}
           value={target.redshift.toFixed(4)}
         />
         <CardRow
-          label={<InfoTip {...TIPS.diameter!}>Diameter</InfoTip>}
+          label={<InfoTip {...TIPS.diameter}>Diameter</InfoTip>}
           value={
             <>
               {formatDiameterKpc(target.diameterKpc)}
@@ -163,7 +168,7 @@ function GalaxyDetailCard({
 
         <div className={styles.cardSection}>
           <CardRow
-            label={<InfoTip {...TIPS.ra!}>RA</InfoTip>}
+            label={<InfoTip {...GALAXY_TIPS.ra}>RA</InfoTip>}
             value={
               <>
                 {target.raSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{target.ra.toFixed(4)}&deg;
@@ -171,7 +176,7 @@ function GalaxyDetailCard({
             }
           />
           <CardRow
-            label={<InfoTip {...TIPS.dec!}>Dec</InfoTip>}
+            label={<InfoTip {...GALAXY_TIPS.dec}>Dec</InfoTip>}
             value={
               <>
                 {target.decSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{target.dec.toFixed(4)}&deg;
@@ -188,13 +193,17 @@ function GalaxyDetailCard({
               {/* Source-aware band label: 2MRS puts J in the g-slot, GLADE puts B. */}
               <CardRow
                 label={
-                  <InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${target.bands.g})`}</InfoTip>
+                  <InfoTip
+                    {...GALAXY_TIPS.apparentMag}
+                  >{`Apparent mag (${target.bands.g})`}</InfoTip>
                 }
                 value={Number.isFinite(target.magG) ? target.magG.toFixed(2) : 'N/A'}
               />
               <CardRow
                 label={
-                  <InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${target.bands.g})`}</InfoTip>
+                  <InfoTip
+                    {...GALAXY_TIPS.absoluteMag}
+                  >{`Absolute mag (${target.bands.g})`}</InfoTip>
                 }
                 value={
                   Number.isFinite(target.absoluteMagG) ? target.absoluteMagG.toFixed(2) : 'N/A'
@@ -202,7 +211,7 @@ function GalaxyDetailCard({
               />
               {target.colours.length > 0 && (
                 <CardRow
-                  label={<InfoTip {...TIPS.colour!}>Colour</InfoTip>}
+                  label={<InfoTip {...GALAXY_TIPS.colour}>Colour</InfoTip>}
                   value={target.colours.map((c, idx) => (
                     <span key={c.label}>
                       {idx > 0 && <>&nbsp;&nbsp;</>}
@@ -214,7 +223,7 @@ function GalaxyDetailCard({
             </>
           )}
           <CardRow
-            label={<InfoTip {...TIPS.orientation!}>Orientation</InfoTip>}
+            label={<InfoTip {...GALAXY_TIPS.orientation}>Orientation</InfoTip>}
             value={
               <>
                 b/a&nbsp;{target.orientation.axisRatio.toFixed(2)}
