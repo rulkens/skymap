@@ -10,13 +10,16 @@
 
 import type { Project } from 'ts-morph';
 import type { MovePair } from '../../../packages/move-files/src/@types/MovePair';
+import { assertDestinationsFree } from './assertDestinationsFree';
 import { rewriteReferences } from '../../../packages/move-files/src/rewriteReferences';
 
+// `overwrite: true` below is needed for a case-only rename on a case-folding disk.
 export function applyMoves(project: Project, moves: ReadonlyArray<MovePair>): void {
   const texts = new Map(
     project.getSourceFiles().map((f) => [f.getFilePath() as string, f.getFullText()]),
   );
   const fs = project.getFileSystem();
+  assertDestinationsFree(project, moves);
   const edits = rewriteReferences(
     { texts, fileExists: (path) => fs.fileExistsSync(path) },
     new Map(moves.map((m) => [m.from, m.to])),
