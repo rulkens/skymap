@@ -91,6 +91,7 @@ npm run format      # prettier, only files this branch touches (format:all = who
 npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/skills/refactor)
 npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/refs/move) → .claude/skills/refactor/SKILL.md
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
+npm run desktop     # Electron kiosk + dome app (windowed, dev data) → packages/desktop/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 npm run perf:cpu    # main-thread ms per frame row at the perf poses → tools/perf/README.md
 npm run shot        # screenshot of any deep link → tools/shot/README.md

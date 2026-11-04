@@ -41,6 +41,10 @@ jobs:
       - name: Tests
         run: npm test
 
+      # The desktop app is its own workspace with its own tsconfig and vitest config.
+      - name: Desktop typecheck and tests
+        run: npm run typecheck --workspace packages/desktop && npm test --workspace packages/desktop
+
       # A broken website page fails the build here, not on deploy.
       - name: Build website
         run: npm run site:build

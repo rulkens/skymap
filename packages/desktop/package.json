@@ -9,7 +9,7 @@
     "dev": "npm run build && electron . --windowed",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "dist": "vite build --mode desktop --root ../.. && npm run build && electron-builder --mac --win"
+    "dist": "cd ../.. && vite build --mode desktop && cd packages/desktop && npm run build && electron-builder --mac --win"
   },
   "devDependencies": {
     "@types/node": "25.6.0",

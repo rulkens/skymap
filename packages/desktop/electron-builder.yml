@@ -6,10 +6,22 @@ files:
   - build/**
   - assets/**
   - package.json
+# The web build sits outside the asar so the app server can stream it; see distDir.ts.
+# dist/data is public/data copied by vite; the app serves /data/ from the synced mirror instead.
+extraResources:
+  - from: ../../dist
+    to: dist
+    filter:
+      - '**/*'
+      - '!data/**'
 mac:
   target: dmg
 win:
   target:
     - target: nsis
       arch: x64
+nsis:
+  # Adding a firewall rule needs admin, so the installer elevates.
+  perMachine: true
+  include: installer/installer.nsh
 publish: null
