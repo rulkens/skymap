@@ -25,7 +25,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
-- [ ] **Rename "rung" to "arm" across the camera** `ready` — one name for the camera's regimes (owner ruling); `CAMERA_RUNGS`/`RungKind`/`rungs/` vs `isBodyArm`/"the world arm" today, ~480 lines. → [details](backlog/2026-11-04-rename-rung-to-arm.md)
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
 - [ ] **A selection kind's facts live in its Layer** `needs-design` — a new kind edits 14 core tables (focusable, halo, framing, label, URL hash, exhibit picking); ruled: they move onto the Layer's `SelectionKindRow`. Also carries J2 (per-kind presentation). → [details](backlog/2026-10-28-selection-kind-facts-in-the-layer.md)
@@ -92,7 +91,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Frame-tagged clip keyframes have no per-endpoint authoring validation** `needs-design` — a straddling channel tween silently freezes. → [details](backlog/2026-09-11-clip-per-endpoint-tag-authoring-validation.md)
 - [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
-- [ ] **turnCameraArm reads the site tag by hand** `ready` — `tools/site/utils/turnCameraArm.ts` tests `'site' in arm.frame` outside `rungs/`; route it through `isSiteArm`. → [details](backlog/2026-11-03-turn-camera-arm-site-tag.md)
+- [ ] **turnCameraArm reads the site tag by hand** `ready` — `tools/site/utils/turnCameraArm.ts` tests `'site' in arm.frame` outside `arms/`; route it through `isSiteArm`. → [details](backlog/2026-11-03-turn-camera-arm-site-tag.md)
 - [ ] **framedClipArm decodes with the current basis** `deferred` — `cameraDrivers.ts` passes the current basis where the clip pinned another; harmless until a `decode` cell reads a basis. → [details](backlog/2026-11-03-framed-clip-arm-decode-basis.md)
 - [ ] **Earth point in the URL hash** `needs-design` — `#site=lon,lat[,alt]` snapping over a coordinate via the existing `flyToLonLat` saga; the typable subset of the pose codec. → [details](backlog/2026-09-15-earth-point-url-hash.md)
 - [ ] **Sub-pixel craft and scene glints can't be picked** `ready` — `glintsPassOver` (missions, earthScenes, blackHoles) has no `drawPick`, so an unresolved craft drawn as a glint takes no click.

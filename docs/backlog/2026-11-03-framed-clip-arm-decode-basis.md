@@ -1,6 +1,6 @@
 # framedClipArm decodes with the current basis
 
-**Why.** `framedClipArm` (`src/services/engine/camera/cameraDrivers.ts`) runs the rung's
+**Why.** `framedClipArm` (`src/services/engine/camera/cameraDrivers.ts`) runs the arm's
 `decode` with `poseBasis: to, upBasis: to`, the CURRENT basis, where the clip's channels were
 authored through the pinned basis `from`. It re-encodes the absolute result from `from` to `to`
 afterwards, which is right for the absolute row but not for a `decode` cell that reads a basis.
