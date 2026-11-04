@@ -6,18 +6,21 @@
  * each mode into a scratch directory and reads what came out.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { DISPLAY_FONT_UNICODES } from '../../../packages/website/src/data/displayFontUnicodes';
 
 const siteDir = resolve(import.meta.dirname, '../../../packages/website');
+// Not os.tmpdir(): astro renames prerendered assets into outDir, and on CI /tmp
+// is another filesystem, so the rename fails with EXDEV.
+const scratchDir = resolve(import.meta.dirname, '../../../node_modules/.cache/skymap-site-mode');
 const ORIGIN = 'https://skymap.rulkens.com';
 
 function build(mode: 'preview' | 'live') {
-  const out = mkdtempSync(join(tmpdir(), `skymap-site-${mode}-`));
+  mkdirSync(scratchDir, { recursive: true });
+  const out = mkdtempSync(join(scratchDir, `${mode}-`));
   const env = { ...process.env, SKYMAP_SITE_MODE: mode === 'live' ? 'live' : '' };
   execFileSync('npx', ['astro', 'build', '--outDir', out], { cwd: siteDir, env, stdio: 'pipe' });
   const html = readFileSync(join(out, 'index.html'), 'utf8');
@@ -36,6 +39,8 @@ beforeAll(() => {
   preview = build('preview');
   live = build('live');
 }, 120_000);
+
+afterAll(() => rmSync(scratchDir, { recursive: true, force: true }));
 
 describe('preview mode (the default)', () => {
   it('is noindex, canonical under /home/, with no sitemap or robots.txt', () => {
