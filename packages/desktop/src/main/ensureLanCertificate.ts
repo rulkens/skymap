@@ -4,7 +4,7 @@
  * reissued when the machine's names change or it nears expiry, and a reissue never breaks that trust.
  */
 import { randomBytes, X509Certificate } from 'node:crypto';
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { generate } from 'selfsigned';
 import type { LanCertificate } from '../@types/LanCertificate.js';
@@ -12,12 +12,14 @@ import type { LanNames } from '../@types/LanNames.js';
 import type { PemPair } from '../@types/PemPair.js';
 import { isSignedByCa } from '../utils/isSignedByCa.js';
 import { readJsonFile } from '../utils/readJsonFile.js';
+import { writeFileAtomically } from '../utils/writeFileAtomically.js';
 
 const DAY_MS = 86_400_000;
 const CA_DAYS = 20 * 365;
 // Apple refuses TLS leaves valid for more than 398 days.
 const LEAF_DAYS = 397;
 const LEAF_RENEW_DAYS = 30;
+const PRIVATE_FILE = 0o600;
 
 export async function ensureLanCertificate(
   certDir: string,
@@ -29,12 +31,13 @@ export async function ensureLanCertificate(
   let ca = await readJsonFile<PemPair>(caPath);
   if (ca === null || !isSignedByCa(ca.cert, ca.cert)) {
     ca = await issueCa();
-    await writeAtomically(caPath, ca);
+    // Atomic: a torn write would read as no CA and mint a new one, untrusting every tablet.
+    await writeFileAtomically(caPath, JSON.stringify(ca), PRIVATE_FILE);
   }
   let leaf = await readJsonFile<PemPair>(leafPath);
   if (leaf === null || !isCurrentLeaf(leaf.cert, ca.cert, names)) {
     leaf = await issueLeaf(ca, names);
-    await writeAtomically(leafPath, leaf);
+    await writeFileAtomically(leafPath, JSON.stringify(leaf), PRIVATE_FILE);
   }
   return { key: leaf.key, cert: leaf.cert, ca: ca.cert };
 }
@@ -94,10 +97,4 @@ async function issueLeaf(ca: PemPair, names: LanNames): Promise<PemPair> {
 function validFor(days: number) {
   const now = Date.now();
   return { notBeforeDate: new Date(now - DAY_MS), notAfterDate: new Date(now + days * DAY_MS) };
-}
-
-// A torn write would read as no CA and mint a new one, silently untrusting every tablet.
-async function writeAtomically(path: string, pem: PemPair): Promise<void> {
-  await writeFile(`${path}.tmp`, JSON.stringify(pem), { mode: 0o600 });
-  await rename(`${path}.tmp`, path);
 }

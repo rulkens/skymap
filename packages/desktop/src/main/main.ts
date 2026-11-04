@@ -8,10 +8,12 @@ import { isSignedByCa } from '../utils/isSignedByCa.js';
 import { listLanInterfaces } from '../utils/listLanInterfaces.js';
 import { readJsonFile } from '../utils/readJsonFile.js';
 import { toDisplayInfo } from '../utils/toDisplayInfo.js';
+import { attachDesktopRelay } from './attachDesktopRelay.js';
 import { ensureLanCertificate } from './ensureLanCertificate.js';
 import { fillDisplay } from './fillDisplay.js';
 import { openSkyWindow } from './openSkyWindow.js';
 import { placeWindows } from './placeWindows.js';
+import { readRoomCode } from './readRoomCode.js';
 import { startAppServer } from './startAppServer.js';
 
 const windowed = process.argv.includes('--windowed');
@@ -30,7 +32,7 @@ async function start(): Promise<void> {
   session.defaultSession.setCertificateVerifyProc((request, callback) =>
     callback(isSignedByCa(request.certificate.data, tls.ca) ? 0 : -3),
   );
-  await startAppServer(
+  const { server } = await startAppServer(
     {
       dist: resolve(app.getAppPath(), '../../dist'),
       data: process.env.SKYMAP_DATA_DIR ?? join(userData, 'data'),
@@ -40,6 +42,9 @@ async function start(): Promise<void> {
   );
   // Read raw until the control window's task brings readSetup with its defaults.
   const setup = await readJsonFile<InstallSetup>(join(userData, 'setup.json'));
+  // Main owns the code; rotation (control window) replaces it and the relay reads it through here.
+  const code = await readRoomCode(userData);
+  attachDesktopRelay(server, { code: () => code, network: () => setup?.network ?? null });
   const sky = openSkyWindow(skyDisplay(setup?.display ?? null), setup?.mode ?? 'kiosk', windowed);
   const replace = () => {
     if (!windowed && !sky.isDestroyed())
