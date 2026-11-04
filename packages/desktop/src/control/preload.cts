@@ -14,15 +14,21 @@ function subscribe<T>(channel: string): (listener: (value: T) => void) => () => 
 const bridge: ControlBridge = {
   onSync: subscribe('control:sync'),
   onStatus: subscribe('control:status'),
+  onSky: subscribe('control:sky'),
+  onDisplays: subscribe('control:displays'),
+  onView: subscribe('control:view'),
   onPairing: subscribe('control:pairing'),
   updateNow: () => ipcRenderer.send('control:updateNow'),
   restartSky: () => ipcRenderer.send('control:restartSky'),
+  isFirstRun: () => ipcRenderer.invoke('control:isFirstRun'),
   getSetup: () => ipcRenderer.invoke('control:getSetup'),
   saveSetup: (setup) => ipcRenderer.invoke('control:saveSetup', setup),
   listDisplays: () => ipcRenderer.invoke('control:listDisplays'),
   listNetworks: () => ipcRenderer.invoke('control:listNetworks'),
+  getAbout: () => ipcRenderer.invoke('control:getAbout'),
   showTestGrid: (on) => ipcRenderer.send('control:showTestGrid', on),
   rotateCode: () => ipcRenderer.send('control:rotateCode'),
+  hide: () => ipcRenderer.send('control:hide'),
   quit: () => ipcRenderer.send('control:quit'),
 };
 

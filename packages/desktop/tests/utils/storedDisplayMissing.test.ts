@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { storedDisplayMissing } from '../../src/utils/storedDisplayMissing';
 
-const primary = { id: 1, width: 1920, height: 1080, primary: true };
+const primary = { id: 1, label: '', width: 1920, height: 1080, primary: true };
 
 describe('storedDisplayMissing', () => {
   it('is false with nothing stored or when the stored display is the sky', () => {

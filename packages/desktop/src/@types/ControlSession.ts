@@ -6,14 +6,17 @@ import type { LanInterface } from './LanInterface';
 import type { SetupSaveState } from './SetupSaveState';
 import type { SyncProgress } from './SyncProgress';
 
-/** The control page's view of the main process; `setup` is null until the first read returns. */
+/** The control page's view of the main process; `setup` and `firstRun` are null until the first read returns. */
 export type ControlSession = {
   status: ControlStatus;
   progress: SyncProgress | null;
+  skyRunning: boolean;
   room: RelayRoom | null;
   setup: InstallSetup | null;
+  firstRun: boolean | null;
   displays: readonly DisplayInfo[];
   networks: readonly LanInterface[];
   saveState: SetupSaveState;
-  save: (next: InstallSetup) => void;
+  /** Resolves once main has applied the change (a moved sky included). */
+  save: (next: InstallSetup) => Promise<void>;
 };

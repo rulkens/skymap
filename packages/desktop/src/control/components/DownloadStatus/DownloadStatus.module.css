@@ -1,0 +1,48 @@
+.root {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.track {
+  height: 3px;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--border-divider);
+}
+
+/* Scaled, not resized: the bar moves on every chunk, and a transform repaints nothing else. */
+.fill {
+  height: 100%;
+  background: var(--color-accent);
+  transform-origin: left;
+  transition: transform var(--duration-base) var(--ease-standard);
+}
+
+.fillStopped {
+  composes: fill;
+  background: var(--color-fg-tertiary);
+}
+
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
+  color: var(--color-accent);
+}
+
+.text {
+  margin: 0;
+  color: var(--color-fg);
+}
+
+.figures {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}

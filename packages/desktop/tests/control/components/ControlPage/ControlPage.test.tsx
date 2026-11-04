@@ -1,52 +1,34 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import ControlPage from '../../../../src/control/components/ControlPage/ControlPage';
-import type { ControlBridge } from '../../../../src/@types/ControlBridge';
-import type { ControlStatus } from '../../../../src/@types/ControlStatus';
 import type { InstallSetup } from '../../../../src/@types/InstallSetup';
 import { DEFAULT_INSTALL_SETUP } from '../../../../src/data/defaultInstallSetup';
+import { fakeBridge } from './fakeBridge';
 
+beforeEach(() => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+});
 afterEach(cleanup);
 
-function fakeBridge(setup: InstallSetup = DEFAULT_INSTALL_SETUP) {
-  let pushStatus: (status: ControlStatus) => void = () => {};
-  const bridge = {
-    onSync: vi.fn(() => () => {}),
-    onStatus: vi.fn((listener: (status: ControlStatus) => void) => {
-      pushStatus = listener;
-      return () => {};
-    }),
-    onPairing: vi.fn(() => () => {}),
-    updateNow: vi.fn(),
-    restartSky: vi.fn(),
-    getSetup: vi.fn(async () => setup),
-    saveSetup: vi.fn(async () => {}),
-    listDisplays: vi.fn(async () => []),
-    listNetworks: vi.fn(async () => []),
-    showTestGrid: vi.fn(),
-    rotateCode: vi.fn(),
-    quit: vi.fn(),
-  } satisfies ControlBridge;
-  return { bridge, pushStatus: (status: ControlStatus) => act(() => pushStatus(status)) };
-}
-
-async function renderLoaded(setup?: InstallSetup) {
-  const fake = fakeBridge(setup);
+async function renderControls(setup?: InstallSetup) {
+  const fake = fakeBridge({ setup });
   render(<ControlPage bridge={fake.bridge} />);
-  await screen.findByRole('radio', { name: 'Kiosk' });
+  await screen.findByRole('heading', { name: 'Data' });
   return fake;
 }
 
+const press = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
+
 describe('ControlPage', () => {
   it('a mode change saves the setup and turns the test grid off', async () => {
-    const { bridge } = await renderLoaded();
+    const { bridge } = await renderControls();
     const grid = screen.getByRole('checkbox', { name: 'Show test grid on the sky' });
     fireEvent.click(grid);
     expect(bridge.showTestGrid).toHaveBeenLastCalledWith(true);
 
-    await act(async () => fireEvent.click(screen.getByRole('radio', { name: 'Dome' })));
+    await act(async () => fireEvent.click(screen.getByRole('radio', { name: /Dome/ })));
 
     expect(bridge.saveSetup).toHaveBeenLastCalledWith({ ...DEFAULT_INSTALL_SETUP, mode: 'dome' });
     expect(bridge.showTestGrid).toHaveBeenLastCalledWith(false);
@@ -55,7 +37,7 @@ describe('ControlPage', () => {
   });
 
   it('the daily time is editable only while daily updates are picked', async () => {
-    const { bridge } = await renderLoaded();
+    const { bridge } = await renderControls();
     const time = screen.getByLabelText('Daily update time');
     expect(time).toBeDisabled();
 
@@ -69,33 +51,72 @@ describe('ControlPage', () => {
   });
 
   it('Update now reads Retry when the sky lacks data it needs', async () => {
-    const { pushStatus } = await renderLoaded();
+    const { push } = await renderControls();
     expect(screen.getByRole('button', { name: 'Update now' })).toBeInTheDocument();
-    pushStatus({ kind: 'offline', hasData: false });
+    push('onStatus', { kind: 'offline', hasData: false });
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    pushStatus({ kind: 'offline', hasData: true });
+    push('onStatus', { kind: 'offline', hasData: true });
     expect(screen.getByRole('button', { name: 'Update now' })).toBeInTheDocument();
   });
 
   it('the sync buttons are disabled while syncing', async () => {
-    const { pushStatus } = await renderLoaded();
-    pushStatus({ kind: 'syncing' });
+    const { push } = await renderControls();
+    push('onStatus', { kind: 'syncing' });
     expect(screen.getByRole('button', { name: 'Update now' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Restart sky' })).toBeDisabled();
-    pushStatus({ kind: 'ready' });
+    push('onStatus', { kind: 'ready' });
     expect(screen.getByRole('button', { name: 'Restart sky' })).toBeEnabled();
   });
 
-  it('the pairing panel shows the firewall Allow note before any code exists', async () => {
-    await renderLoaded();
-    const pairing = screen.getByRole('region', { name: 'Remote pairing' });
-    expect(within(pairing).getByText(/Choose Allow/)).toBeVisible();
-    expect(within(pairing).getByText('The code appears once the sky has started.')).toBeVisible();
+  it('a stored screen that is not connected is named, with where the sky went', async () => {
+    await renderControls({
+      ...DEFAULT_INSTALL_SETUP,
+      display: { id: 9, width: 1920, height: 1200 },
+    });
+    expect(screen.getByText(/saved screen \(1920×1200\) is not connected/)).toBeVisible();
+  });
+
+  it('the pairing steps name Allow before the sky runs, and the tablet waits for it', async () => {
+    const { push } = await renderControls();
+    push('onPairing', { code: 'K7QM3XRT', origin: 'https://10.0.0.2:47823', onSky: false });
+    const tablets = screen.getByRole('region', { name: 'Tablets' });
+    expect(within(tablets).getByText(/choose Allow/)).toBeVisible();
+    expect(within(tablets).getByText('K7QM 3XRT')).toBeVisible();
+    expect(within(tablets).getByText('The tablet connects once the sky is running.')).toBeVisible();
+    push('onSky', true);
+    expect(within(tablets).queryByText(/once the sky is running/)).not.toBeInTheDocument();
   });
 
   it('Rotate code asks the main process for a new code', async () => {
-    const { bridge } = await renderLoaded();
-    fireEvent.click(screen.getByRole('button', { name: 'Rotate code' }));
+    const { bridge } = await renderControls();
+    press('Rotate code');
     expect(bridge.rotateCode).toHaveBeenCalledOnce();
+  });
+
+  it('Run setup again brings the steps back', async () => {
+    await renderControls();
+    press('Run setup again');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Where will it show?');
+  });
+
+  it('Help opens from its link and from main, and Escape or Back closes it', async () => {
+    const { push } = await renderControls();
+    press('Help');
+    expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toBeVisible();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByRole('heading', { name: 'Data' })).toBeVisible();
+
+    push('onView', 'help');
+    expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toBeVisible();
+    press('Back to the controls');
+    expect(screen.getByRole('heading', { name: 'Data' })).toBeVisible();
+  });
+
+  it('About shows the version main reports', async () => {
+    const { bridge } = await renderControls();
+    await act(async () => press('About'));
+    expect(bridge.getAbout).toHaveBeenCalled();
+    expect(screen.getByText('1.2.3')).toBeVisible();
+    expect(screen.getByText('Not downloaded yet')).toBeVisible();
   });
 });

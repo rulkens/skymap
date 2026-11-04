@@ -1,0 +1,16 @@
+.root {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+  align-items: start;
+  gap: var(--space-12);
+  width: 100%;
+  max-width: 82rem;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-12) var(--space-12);
+}
+
+.column {
+  display: grid;
+  gap: var(--space-12);
+  min-width: 0;
+}

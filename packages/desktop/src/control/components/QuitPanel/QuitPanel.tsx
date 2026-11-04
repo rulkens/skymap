@@ -1,7 +1,6 @@
 import { useId } from 'react';
 import type { ReactNode } from 'react';
-import { CONTROL_SHORTCUT } from '../../../data/controlShortcut';
-import { shortcutLabel } from '../../../utils/shortcutLabel';
+import { controlShortcutText } from '../../../utils/controlShortcutText';
 import chrome from '../controlChrome.module.css';
 import styles from './QuitPanel.module.css';
 
@@ -13,7 +12,7 @@ function QuitPanel({ onQuit }: QuitPanelProps): ReactNode {
   const titleId = useId();
   return (
     <section className={styles.root} aria-labelledby={titleId}>
-      <h2 id={titleId} className={chrome.title}>
+      <h2 id={titleId} className={chrome.heading}>
         Quit
       </h2>
       <div className={chrome.row}>
@@ -22,10 +21,7 @@ function QuitPanel({ onQuit }: QuitPanelProps): ReactNode {
         </button>
       </div>
       <p className={chrome.dim}>
-        Show or hide this window:{' '}
-        <kbd className={styles.key}>
-          {shortcutLabel(CONTROL_SHORTCUT, navigator.userAgent.includes('Mac'))}
-        </kbd>
+        Show or hide this window: <kbd className={chrome.mono}>{controlShortcutText()}</kbd>
       </p>
     </section>
   );

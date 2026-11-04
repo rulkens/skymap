@@ -1,0 +1,16 @@
+.root {
+  composes: cards from '../controlChrome.module.css';
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+
+.drawing {
+  display: block;
+  max-width: 13rem;
+  margin: 0 auto var(--space-4);
+  color: var(--color-fg-subtle);
+}
+
+.drawingSmall {
+  composes: drawing;
+  max-width: 8rem;
+}

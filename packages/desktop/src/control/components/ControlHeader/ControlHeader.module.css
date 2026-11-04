@@ -1,0 +1,33 @@
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: var(--space-8) max(var(--space-12), (100% - 76rem) / 2);
+  -webkit-app-region: drag;
+}
+
+/* The wordmark sets in em: this is its size. */
+.mark {
+  display: block;
+  transition: opacity var(--duration-base) var(--ease-standard);
+  color: var(--color-fg);
+  font-size: 1.75rem;
+}
+
+.nav {
+  display: flex;
+  gap: var(--space-10);
+  -webkit-app-region: no-drag;
+}
+
+.nav > [aria-current='page'] {
+  color: var(--color-fg);
+  text-decoration-color: currentColor;
+}
+
+/* On Welcome the step's own wordmark stands in for this one; the bar keeps its height. */
+.markHidden {
+  composes: mark;
+  opacity: 0;
+}

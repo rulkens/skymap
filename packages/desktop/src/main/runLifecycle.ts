@@ -4,8 +4,9 @@
  * that window only.
  */
 import { app, dialog, globalShortcut, ipcMain, Menu, screen } from 'electron';
-import type { BrowserWindow, IpcMainEvent, IpcMainInvokeEvent } from 'electron';
+import type { BrowserWindow, Display, IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 import { existsSync } from 'node:fs';
+import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { QuitGate } from '../@types/QuitGate';
 import type { RelayRoom } from '../../../../src/@types/remote/RelayRoom';
@@ -14,6 +15,7 @@ import type { SyncOutcome } from '../@types/SyncOutcome';
 import { APP_SERVER_PORT } from '../data/appServerPort';
 import { CONTROL_SHORTCUT } from '../data/controlShortcut';
 import { DEFAULT_INSTALL_SETUP } from '../data/defaultInstallSetup';
+import { INVENTORY_FILE } from '../data/inventoryFile';
 import { SETUP_FILE } from '../data/setupFile';
 import { hasCompleteLocalSet } from '../sync/hasCompleteLocalSet';
 import { InsufficientDiskError } from '../sync/InsufficientDiskError';
@@ -78,8 +80,15 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   const control = openControlWindow(gate);
   const rotations = serially();
   let sky: BrowserWindow | null = null;
+  // The window can stand black before the sky loads into it: the test grid needs it during the first download.
+  let skyRunning = false;
   let status: ControlStatus = { kind: 'idle' };
-  let room: RelayRoom | null = null;
+  // Known before the sky hosts, so a tablet can scan and trust the certificate during the first download.
+  let room: RelayRoom = {
+    code,
+    origin: lanOriginFor(setup.network, listLanInterfaces(), APP_SERVER_PORT),
+    onSky: false,
+  };
   let syncing = false;
   let timer: NodeJS.Timeout | undefined;
 
@@ -94,10 +103,25 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
     room = next;
     send('control:pairing', room);
   };
+  const setSkyRunning = (running: boolean): void => {
+    skyRunning = running;
+    send('control:sky', skyRunning);
+  };
   const openSky = (): BrowserWindow | null => (sky !== null && !sky.isDestroyed() ? sky : null);
+  const runningSky = (): BrowserWindow | null => (skyRunning ? openSky() : null);
+  const newSky = (display: Display): BrowserWindow => {
+    const win = openSkyWindow(display, windowed, gate);
+    win.on('closed', () => setSkyRunning(false));
+    return (sky = win);
+  };
+  const listDisplays = () => {
+    const primary = screen.getPrimaryDisplay().id;
+    return screen.getAllDisplays().map((d) => toDisplayInfo(d, primary));
+  };
   control.webContents.on('did-finish-load', () => {
     send('control:status', status);
-    if (room !== null) send('control:pairing', room);
+    send('control:sky', skyRunning);
+    send('control:pairing', room);
   });
   relay.onRoom(sendRoom);
 
@@ -145,8 +169,9 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
     },
     show: async () => {
       const display = placement()?.skyDisplay ?? screen.getPrimaryDisplay();
-      const win = openSky() ?? (sky = openSkyWindow(display, windowed, gate));
+      const win = openSky() ?? newSky(display);
       await win.loadURL(skyUrlFor(setup.mode));
+      setSkyRunning(true);
       if (status.kind === 'ready') setStatus({ kind: 'idle' });
     },
     logError: (message, error) => console.error(message, error),
@@ -181,16 +206,17 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
     const outcome = await sync();
     if (outcome === 'disk') {
       if (!(await hasCompleteLocalSet(dataRoot))) return showControl();
-      return openSky() ? undefined : await loadSky();
+      return runningSky() ? undefined : await loadSky();
     }
     if (outcome === 'synced') {
-      if (restart || !openSky()) return await loadSky();
+      setStatus({ kind: 'idle' });
+      if (restart || !runningSky()) return await loadSky();
       return setStatus({ kind: 'ready' });
     }
     const hasData = await hasCompleteLocalSet(dataRoot);
     setStatus({ kind: outcome, hasData });
     if (!hasData) return showControl();
-    if (!openSky()) await loadSky();
+    if (!runningSky()) await loadSky();
   };
 
   const rearm = (): void => {
@@ -206,10 +232,17 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   const on = (channel: string, handle: (...args: unknown[]) => void): void => {
     ipcMain.on(channel, (event, ...args) => fromControl(event) && handle(...args));
   };
+  ipcMain.handle('control:isFirstRun', (event) => fromControl(event) && firstRun);
   ipcMain.handle('control:getSetup', (event) => (fromControl(event) ? setup : null));
-  ipcMain.handle('control:listDisplays', (event) => {
-    const primary = screen.getPrimaryDisplay().id;
-    return fromControl(event) ? screen.getAllDisplays().map((d) => toDisplayInfo(d, primary)) : [];
+  ipcMain.handle('control:listDisplays', (event) => (fromControl(event) ? listDisplays() : []));
+  // The data's date is the last complete sync's: its inventory is written last.
+  ipcMain.handle('control:getAbout', async (event) => {
+    if (!fromControl(event)) return null;
+    const dataDate = await stat(join(dataRoot, INVENTORY_FILE)).then(
+      (s) => s.mtime.toISOString(),
+      () => null,
+    );
+    return { version: app.getVersion(), dataDate };
   });
   ipcMain.handle('control:listNetworks', (event) =>
     fromControl(event) ? listLanInterfaces() : [],
@@ -221,36 +254,42 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
     await saveSetup(userData, previous, setup, {
       placeWindows: placeAll,
       rearmUpdates: rearm,
-      reloadSky: () => openSky() && loadSkyLogged(),
+      reloadSky: () => runningSky() && loadSkyLogged(),
       // The code and host are unchanged; only the address the QR names moves.
-      resendRoom: () => {
-        if (room === null) return;
+      resendRoom: () =>
         sendRoom({
           ...room,
           origin: lanOriginFor(setup.network, listLanInterfaces(), APP_SERVER_PORT),
-        });
-      },
+        }),
     });
   });
   on('control:updateNow', () => dev || void syncThenLoad(false));
   on('control:restartSky', loadSkyLogged);
   on('control:showTestGrid', (shown) => {
-    const open = openSky();
+    const display = placement()?.skyDisplay;
+    const open = openSky() ?? (shown === true && display ? newSky(display) : null);
     if (open) showTestGrid(open, setup.mode, shown === true);
   });
   on('control:rotateCode', () => {
     // Queued: a second click must rotate from the first one's new code, not the old one.
     rotations(async () => {
       code = await rotateRoomCode(userData, relay, code);
+      // With no sky hosting, the relay announces nothing.
+      sendRoom({ ...room, code });
     }).catch((e: unknown) => console.error('rotate code:', e));
   });
+  on('control:hide', () => control.hide());
   on('control:quit', () => {
     gate.allowQuit();
     app.quit();
   });
 
-  screen.on('display-added', placeAll);
-  screen.on('display-removed', placeAll);
+  const displaysChanged = (): void => {
+    placeAll();
+    send('control:displays', listDisplays());
+  };
+  screen.on('display-added', displaysChanged);
+  screen.on('display-removed', displaysChanged);
   const toggleControl = (): void => (control.isVisible() ? control.hide() : showControl());
   if (!globalShortcut.register(CONTROL_SHORTCUT, toggleControl)) {
     console.error(`${CONTROL_SHORTCUT} is taken by another app`);

@@ -1,15 +1,21 @@
 /**
- * ControlPage — the control window: data sync, setup, remote pairing and quit. The main process
- * owns every value here; the page shows its latest word and sends the person's changes back.
+ * ControlPage — the control window: the setup steps on first run (or on "Run setup again"), the
+ * controls after, and Help and About over either. Main owns every value; the page shows its latest
+ * word and sends the person's changes back. Escape closes Help or About and nothing else.
  */
 
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import type { AboutInfo } from '../../../@types/AboutInfo';
 import type { ControlBridge } from '../../../@types/ControlBridge';
+import type { ControlView } from '../../../@types/ControlView';
+import type { SetupStep } from '../../../@types/SetupStep';
+import AboutView from '../AboutView/AboutView';
+import ControlHeader from '../ControlHeader/ControlHeader';
+import ControlsView from '../ControlsView/ControlsView';
+import HelpView from '../HelpView/HelpView';
+import SetupFlow from '../SetupFlow/SetupFlow';
 import { useControlBridge } from './useControlBridge';
-import SyncPanel from '../SyncPanel/SyncPanel';
-import SetupPanel from '../SetupPanel/SetupPanel';
-import PairingPanel from '../PairingPanel/PairingPanel';
-import QuitPanel from '../QuitPanel/QuitPanel';
 import styles from './ControlPage.module.css';
 
 export type ControlPageProps = {
@@ -17,36 +23,95 @@ export type ControlPageProps = {
 };
 
 function ControlPage({ bridge }: ControlPageProps): ReactNode {
-  const { status, progress, room, setup, displays, networks, saveState, save } =
-    useControlBridge(bridge);
+  const session = useControlBridge(bridge);
+  const { setup, firstRun } = session;
+  const [home, setHome] = useState<'setup' | 'controls' | null>(null);
+  const [over, setOver] = useState<'help' | 'about' | null>(null);
+  const [step, setStep] = useState<SetupStep>('welcome');
+  const [about, setAbout] = useState<AboutInfo | null>(null);
+  const base = home ?? (firstRun === null ? null : firstRun ? 'setup' : 'controls');
+  const view: ControlView | null = over ?? base;
+
+  useEffect(
+    () =>
+      bridge.onView((next) => {
+        if (next === 'help' || next === 'about') setOver(next);
+        else {
+          setOver(null);
+          setHome(next);
+        }
+      }),
+    [bridge],
+  );
+  useEffect(() => {
+    if (over === null) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setOver(null);
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [over]);
+  useEffect(() => {
+    if (over === 'about') void bridge.getAbout().then(setAbout);
+  }, [bridge, over]);
+
+  const backLabel = base === 'setup' ? 'Back to setup' : 'Back to the controls';
+  const openHelp = (): void => setOver('help');
+  const runSetup = (): void => {
+    setStep('mode');
+    setHome('setup');
+  };
+  const closeSetup = (hide: boolean): void => {
+    setHome('controls');
+    if (hide) bridge.hide();
+  };
+
   return (
-    <main className={styles.root}>
-      <SyncPanel
-        status={status}
-        progress={progress}
-        onUpdateNow={bridge.updateNow}
-        onRestartSky={bridge.restartSky}
+    <div className={styles.root}>
+      <ControlHeader
+        view={view}
+        showMark={!(view === 'setup' && step === 'welcome')}
+        onToggle={(next) => setOver(over === next ? null : next)}
       />
-      {setup && (
-        <>
-          <SetupPanel
+      <div className={styles.content}>
+        {over === 'help' && (
+          <HelpView
+            origin={session.room?.origin ?? null}
+            backLabel={backLabel}
+            onBack={() => setOver(null)}
+          />
+        )}
+        {over === 'about' && (
+          <AboutView about={about} back={{ label: backLabel, onBack: () => setOver(null) }} />
+        )}
+        {over === null && setup && base === 'setup' && (
+          <SetupFlow
+            step={step}
             setup={setup}
-            displays={displays}
-            saveState={saveState}
-            onSave={save}
+            status={session.status}
+            progress={session.progress}
+            skyRunning={session.skyRunning}
+            room={session.room}
+            displays={session.displays}
+            networks={session.networks}
+            onStep={setStep}
+            onSave={session.save}
             onShowTestGrid={bridge.showTestGrid}
+            onRetry={bridge.updateNow}
+            onHelp={openHelp}
+            onClose={closeSetup}
           />
-          <PairingPanel
-            room={room}
-            networks={networks}
-            network={setup.network}
-            onPickNetwork={(network) => save({ ...setup, network })}
-            onRotate={bridge.rotateCode}
+        )}
+        {over === null && setup && base === 'controls' && (
+          <ControlsView
+            session={{ ...session, setup }}
+            bridge={bridge}
+            onRunSetup={runSetup}
+            onHelp={openHelp}
           />
-        </>
-      )}
-      <QuitPanel onQuit={bridge.quit} />
-    </main>
+        )}
+      </div>
+    </div>
   );
 }
 

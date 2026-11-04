@@ -1,0 +1,96 @@
+.root {
+  --frame: min(100%, 76rem);
+  display: grid;
+  grid-template-columns: 1fr minmax(12rem, 15rem) minmax(0, calc(var(--frame) - 15rem)) 1fr;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.root > nav {
+  grid-column: 2;
+  padding-left: var(--space-10);
+  border-right: 1px solid var(--border-section);
+}
+
+.step {
+  grid-column: 3;
+  display: grid;
+  align-content: start;
+  gap: calc(var(--space-12) * 1.5);
+  min-height: 0;
+  overflow-y: auto;
+  padding: clamp(var(--space-6), 5vh, 4rem) var(--space-12) var(--space-12)
+    calc(var(--space-12) * 2);
+}
+
+.body {
+  composes: stack from '../controlChrome.module.css';
+  gap: var(--space-12);
+  max-width: 46rem;
+  animation: step-in var(--duration-base) var(--ease-standard);
+}
+
+.title {
+  composes: title from '../controlChrome.module.css';
+}
+
+.title:focus {
+  outline: none;
+}
+
+.wordmark {
+  display: block;
+  font-size: calc(var(--text-title) * 1.6);
+}
+
+.lead {
+  composes: text from '../controlChrome.module.css';
+  margin-top: calc(var(--space-6) * -1);
+  color: var(--color-fg);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-12);
+  max-width: 46rem;
+}
+
+.root > footer {
+  grid-column: 1 / -1;
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body {
+    animation: none;
+  }
+}
+
+/* A narrow window puts the rail above the step, its names in one row. */
+@media (max-width: 48rem) {
+  .root {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .root > nav,
+  .step {
+    grid-column: 1;
+  }
+
+  .root > nav {
+    padding: 0 var(--space-8);
+    border-right: 0;
+    border-bottom: 1px solid var(--border-section);
+  }
+
+  .step {
+    padding: var(--space-10) var(--space-8);
+  }
+}

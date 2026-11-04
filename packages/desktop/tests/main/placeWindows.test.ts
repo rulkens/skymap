@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { DisplayInfo } from '../../src/@types/DisplayInfo';
 import { placeWindows } from '../../src/main/placeWindows';
 
-const laptop: DisplayInfo = { id: 1, width: 2880, height: 1800, primary: true };
-const projector: DisplayInfo = { id: 7, width: 4096, height: 2160, primary: false };
-const twin: DisplayInfo = { id: 8, width: 4096, height: 2160, primary: false };
+const laptop: DisplayInfo = { id: 1, label: '', width: 2880, height: 1800, primary: true };
+const projector: DisplayInfo = { id: 7, label: '', width: 4096, height: 2160, primary: false };
+const twin: DisplayInfo = { id: 8, label: '', width: 4096, height: 2160, primary: false };
 const storedProjector = { id: 7, width: 4096, height: 2160 };
 
 describe('placeWindows', () => {

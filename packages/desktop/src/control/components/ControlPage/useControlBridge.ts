@@ -1,7 +1,7 @@
 /**
- * useControlBridge — the main process as React state. Main pushes the status and the pairing room
- * once, as the page finishes loading, so the listeners must be attached by then: main.tsx renders
- * synchronously for that reason. Setup, displays and networks are read once.
+ * useControlBridge — the main process as React state. Main pushes the status, the sky and the pairing
+ * room once, as the page finishes loading, so the listeners must be attached by then: main.tsx renders
+ * synchronously for that reason. The rest is read once; displays are pushed again as they come and go.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -18,8 +18,10 @@ import type { SyncProgress } from '../../../@types/SyncProgress';
 export function useControlBridge(bridge: ControlBridge): ControlSession {
   const [status, setStatus] = useState<ControlStatus>({ kind: 'idle' });
   const [progress, setProgress] = useState<SyncProgress | null>(null);
+  const [skyRunning, setSkyRunning] = useState(false);
   const [room, setRoom] = useState<RelayRoom | null>(null);
   const [setup, setSetup] = useState<InstallSetup | null>(null);
+  const [firstRun, setFirstRun] = useState<boolean | null>(null);
   const [displays, setDisplays] = useState<readonly DisplayInfo[]>([]);
   const [networks, setNetworks] = useState<readonly LanInterface[]>([]);
   const [saveState, setSaveState] = useState<SetupSaveState>('idle');
@@ -28,34 +30,52 @@ export function useControlBridge(bridge: ControlBridge): ControlSession {
     const offs = [
       bridge.onStatus(setStatus),
       bridge.onSync(setProgress),
+      bridge.onSky(setSkyRunning),
       bridge.onPairing(setRoom),
+      bridge.onDisplays(setDisplays),
     ];
     return () => offs.forEach((off) => off());
   }, [bridge]);
 
   useEffect(() => {
     let live = true;
-    void Promise.all([bridge.getSetup(), bridge.listDisplays(), bridge.listNetworks()]).then(
-      ([storedSetup, displayList, networkList]) => {
-        if (!live) return;
-        setSetup(storedSetup);
-        setDisplays(displayList);
-        setNetworks(networkList);
-      },
-    );
+    void Promise.all([
+      bridge.getSetup(),
+      bridge.isFirstRun(),
+      bridge.listDisplays(),
+      bridge.listNetworks(),
+    ]).then(([storedSetup, isFirst, displayList, networkList]) => {
+      if (!live) return;
+      setSetup(storedSetup);
+      setFirstRun(isFirst);
+      setDisplays(displayList);
+      setNetworks(networkList);
+    });
     return () => {
       live = false;
     };
   }, [bridge]);
 
   const save = useCallback(
-    (next: InstallSetup): void => {
+    async (next: InstallSetup): Promise<void> => {
       setSetup(next);
       setSaveState('saving');
-      void bridge.saveSetup(next).then(() => setSaveState('saved'));
+      await bridge.saveSetup(next);
+      setSaveState('saved');
     },
     [bridge],
   );
 
-  return { status, progress, room, setup, displays, networks, saveState, save };
+  return {
+    status,
+    progress,
+    skyRunning,
+    room,
+    setup,
+    firstRun,
+    displays,
+    networks,
+    saveState,
+    save,
+  };
 }

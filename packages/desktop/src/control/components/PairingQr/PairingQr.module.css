@@ -1,5 +1,8 @@
+/* Large enough for a phone held at arm's length; it grows on a booth monitor. */
 .root {
-  width: 12rem;
+  display: block;
+  width: clamp(12rem, 22vw, 20rem);
   max-width: 100%;
+  border-radius: var(--radius-md);
   image-rendering: pixelated;
 }

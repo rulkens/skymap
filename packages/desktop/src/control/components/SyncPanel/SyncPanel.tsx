@@ -2,41 +2,34 @@ import { useId } from 'react';
 import type { ReactNode } from 'react';
 import type { ControlStatus } from '../../../@types/ControlStatus';
 import type { SyncProgress } from '../../../@types/SyncProgress';
-import { controlStatusText } from '../../../utils/controlStatusText';
 import { needsRetry } from '../../../utils/needsRetry';
-import { syncProgressDetail } from '../../../utils/syncProgressDetail';
+import DownloadStatus from '../DownloadStatus/DownloadStatus';
 import chrome from '../controlChrome.module.css';
 import styles from './SyncPanel.module.css';
 
 export type SyncPanelProps = {
   readonly status: ControlStatus;
   readonly progress: SyncProgress | null;
+  readonly skyRunning: boolean;
   readonly onUpdateNow: () => void;
   readonly onRestartSky: () => void;
 };
 
-function SyncPanel({ status, progress, onUpdateNow, onRestartSky }: SyncPanelProps): ReactNode {
+function SyncPanel({
+  status,
+  progress,
+  skyRunning,
+  onUpdateNow,
+  onRestartSky,
+}: SyncPanelProps): ReactNode {
   const titleId = useId();
   const syncing = status.kind === 'syncing';
   return (
     <section className={styles.root} aria-labelledby={titleId}>
-      <h2 id={titleId} className={chrome.title}>
+      <h2 id={titleId} className={chrome.heading}>
         Data
       </h2>
-      <p className={chrome.text} role="status">
-        {controlStatusText(status)}
-      </p>
-      {syncing && (
-        <>
-          <progress
-            className={styles.progress}
-            max={Math.max(progress?.totalBytes ?? 0, 1)}
-            value={progress?.doneBytes ?? 0}
-            aria-label="Download progress"
-          />
-          <p className={chrome.dim}>{progress && syncProgressDetail(progress)}</p>
-        </>
-      )}
+      <DownloadStatus status={status} progress={progress} skyRunning={skyRunning} />
       <div className={chrome.row}>
         <button type="button" className={chrome.button} disabled={syncing} onClick={onUpdateNow}>
           {needsRetry(status) ? 'Retry' : 'Update now'}

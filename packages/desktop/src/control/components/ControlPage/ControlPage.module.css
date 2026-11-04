@@ -1,7 +1,12 @@
+/* Header above, the view below; a long view scrolls under a still header. */
 .root {
   display: grid;
-  gap: var(--space-8);
-  max-width: 44rem;
-  margin: 0 auto;
-  padding: var(--space-10) var(--space-8);
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+}
+
+.content {
+  display: grid;
+  min-height: 0;
+  overflow-y: auto;
 }
