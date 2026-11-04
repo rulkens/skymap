@@ -28,7 +28,7 @@ import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed';
 import {
   encodeGalaxyCatalog,
   GALAXY_CATALOG_DATA_PREFIX,
-} from '../../src/layers/galaxyCatalog/data/galaxyCatalogFormat';
+} from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 import { Source } from '../../src/data/source';
 import { resolveFamousOrientation } from './resolveFamousOrientation';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';

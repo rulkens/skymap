@@ -5,14 +5,14 @@
  * knows how to drive one; the "solo run" idiom lives here once.
  */
 
-import type { DiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/@types/DiskPlannerWalk';
-import type { DiskRowVisitor } from '../../../../src/layers/galaxyCatalog/@types/DiskRowVisitor';
-import type { ProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/@types/ProceduralDiskSubsystem';
-import type { TexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/@types/TexturedDiskSubsystem';
-import type { TexturedDiskFrameInput } from '../../../../src/layers/galaxyCatalog/@types/TexturedDiskFrameInput';
-import type { TexturedDiskFrameOutput } from '../../../../src/layers/galaxyCatalog/@types/TexturedDiskFrameOutput';
-import type { ProceduralDiskFrameInput } from '../../../../src/layers/galaxyCatalog/@types/ProceduralDiskFrameInput';
-import type { ProceduralDiskFrameOutput } from '../../../../src/layers/galaxyCatalog/@types/ProceduralDiskFrameOutput';
+import type { DiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/lod/@types/DiskPlannerWalk';
+import type { DiskRowVisitor } from '../../../../src/layers/galaxyCatalog/lod/@types/DiskRowVisitor';
+import type { ProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/disks/procedural/@types/ProceduralDiskSubsystem';
+import type { TexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskSubsystem';
+import type { TexturedDiskFrameInput } from '../../../../src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskFrameInput';
+import type { TexturedDiskFrameOutput } from '../../../../src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskFrameOutput';
+import type { ProceduralDiskFrameInput } from '../../../../src/layers/galaxyCatalog/disks/procedural/@types/ProceduralDiskFrameInput';
+import type { ProceduralDiskFrameOutput } from '../../../../src/layers/galaxyCatalog/disks/procedural/@types/ProceduralDiskFrameOutput';
 
 /** A visitor that ignores every walk callback — the "other slot" in solo runs. */
 export function noopDiskRowVisitor(): DiskRowVisitor {

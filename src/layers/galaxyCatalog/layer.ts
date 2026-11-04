@@ -13,15 +13,15 @@ import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { galaxyCatalogPlanner } from './frame';
-import { galaxyCatalogAssetRows } from './load/galaxyCatalogAssetRows';
-import { galaxyCatalogSourceCounts } from './load/galaxyCatalogSourceCounts';
-import { galaxyPointSpritesPass } from './passes/galaxyPointSpritesPass';
-import { proceduralDisksPass } from './passes/proceduralDisksPass';
-import { texturedDisksPass } from './passes/texturedDisksPass';
-import { galaxyCatalogSelectionRow } from './present/galaxyCatalogSelectionRow';
-import { produceFamousGalaxyLabels } from './present/produceFamousGalaxyLabels';
-import { watchPaletteWakeSaga } from './sagas/watchPaletteWakeSaga';
-import GalaxiesSectionContainer from './ui/GalaxiesSectionContainer';
+import { galaxyCatalogAssetRows } from './records/load/galaxyCatalogAssetRows';
+import { galaxyCatalogSourceCounts } from './records/load/galaxyCatalogSourceCounts';
+import { galaxyPointSpritesPass } from './pointSprites/passes/galaxyPointSpritesPass';
+import { proceduralDisksPass } from './disks/procedural/passes/proceduralDisksPass';
+import { texturedDisksPass } from './disks/textured/passes/texturedDisksPass';
+import { galaxyCatalogSelectionRow } from './selection/present/galaxyCatalogSelectionRow';
+import { produceFamousGalaxyLabels } from './famousGalaxies/present/produceFamousGalaxyLabels';
+import { watchPaletteWakeSaga } from './aliases/sagas/watchPaletteWakeSaga';
+import GalaxiesSectionContainer from './controls/ui/GalaxiesSectionContainer';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 
 export const galaxyCatalogLayer = defineLayer({

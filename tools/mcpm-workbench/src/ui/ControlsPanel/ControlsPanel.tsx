@@ -16,7 +16,7 @@ import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamS
 import SliderGroup from '../../../../../src/components/common/SliderGroup/SliderGroup';
 import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
 import { TIER_LADDER } from '../../../../../src/data/tierLadder';
-import { tierTarget } from '../../../../../src/layers/galaxyCatalog/data/tierTargets';
+import { tierTarget } from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
 import {
   clearTraceRequested,
   exportNpyRequested,

@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { recordsToCloud } from '../../tools/catalog/buildAllBins';
 import type { ParsedRecord } from '../../tools/parsers/common';
 import { Source } from '../../src/data/source';
-import { encodeGalaxyCatalog } from '../../src/layers/galaxyCatalog/data/galaxyCatalogFormat';
+import { encodeGalaxyCatalog } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 
 function record(source: ParsedRecord['source'], objID: bigint): ParsedRecord {
   return {

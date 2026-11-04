@@ -29,7 +29,7 @@ import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
-import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
+import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
 import { galaxyRowRuntime } from '../../support/selectionResolverOver';
 import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';

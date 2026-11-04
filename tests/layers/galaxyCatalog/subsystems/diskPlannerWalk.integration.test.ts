@@ -19,20 +19,20 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../../../src/data/source';
-import { createProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem';
-import { createTexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem';
-import { createGalaxyAtlasSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem';
-import { createDiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/subsystems/diskPlannerWalk';
+import { createProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
+import { createTexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem';
+import { createGalaxyAtlasSubsystem } from '../../../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
+import { createDiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk';
 import {
   runProceduralSolo,
   runTexturedSolo,
 } from '../../../services/engine/subsystems/diskWalkHarness';
 import { cartesianToRaDec } from '../../../../src/utils/math/index';
-import { galaxyCacheKey } from '../../../../src/layers/galaxyCatalog/utils/render/disk/galaxyCacheKey';
+import { galaxyCacheKey } from '../../../../src/layers/galaxyCatalog/lod/utils/galaxyCacheKey';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   APPARENT_SIZE_THRESHOLD_PX,
-} from '../../../../src/layers/galaxyCatalog/data/galaxyLodBands';
+} from '../../../../src/layers/galaxyCatalog/lod/data/galaxyLodBands';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';

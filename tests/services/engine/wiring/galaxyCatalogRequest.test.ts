@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { galaxyCatalogRequest } from '../../../../src/services/engine/wiring/galaxyCatalogRequest';
 import { sameRequest } from '../../../../src/utils/loading/sameRequest';
-import { tierFilenameForSource } from '../../../../src/layers/galaxyCatalog/data/tierTargets';
+import { tierFilenameForSource } from '../../../../src/layers/galaxyCatalog/records/data/tierTargets';
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
 import { TIER_LADDER } from '../../../../src/data/tierLadder';
 import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';

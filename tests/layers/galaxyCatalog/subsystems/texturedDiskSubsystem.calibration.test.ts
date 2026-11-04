@@ -17,15 +17,15 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/source';
-import { createGalaxyAtlasSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem';
-import { createTexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem';
-import { createProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem';
-import { createDiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/subsystems/diskPlannerWalk';
+import { createGalaxyAtlasSubsystem } from '../../../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
+import { createTexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem';
+import { createProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
+import { createDiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk';
 import {
   runProceduralSolo,
   runTexturedSolo,
 } from '../../../services/engine/subsystems/diskWalkHarness';
-import { paddedRadiusMpc } from '../../../../src/layers/galaxyCatalog/utils/paddedRadiusMpc';
+import { paddedRadiusMpc } from '../../../../src/layers/galaxyCatalog/appearance/utils/paddedRadiusMpc';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
