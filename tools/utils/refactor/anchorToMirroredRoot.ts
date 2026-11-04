@@ -11,7 +11,10 @@
  * paths for `applyMoves` after deriving mirrors relatively — the same
  * absolute-vs-relative split `moveFiles.ts` makes. `src/` and `tools/` are the
  * only roots with `tests/` mirrors, so a path under neither returns null (the
- * caller treats that as convention-not-covered and leaves the file alone).
+ * caller treats that as convention-not-covered and leaves the file alone). A
+ * workspace package's file anchors on the package's own `src/`, so its prefix
+ * ends in `packages/<p>/` and the mirror lands in that package's `tests/`, the
+ * same mapping `expandTestMirrors` makes for repo-relative package paths.
  *
  * The split anchors on the LAST `/src/` or `/tools/` occurrence, since the repo's
  * own source root is the deepest such segment: a checkout path above the repo

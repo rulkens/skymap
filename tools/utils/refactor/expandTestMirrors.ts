@@ -10,6 +10,8 @@
  *
  *   - `src/utils/math/foo.ts`     ↔ `tests/utils/math/foo.test.ts`
  *   - `tools/utils/io/bar.ts`     ↔ `tests/tools/utils/io/bar.test.ts`
+ *   - `packages/desktop/src/x.ts` ↔ `packages/desktop/tests/x.test.ts` (a package
+ *     with its own `tests/`; the website's tests sit in root `tests/`, unmapped)
  *
  * So `src/` maps to `tests/` (the `src` segment is dropped) while `tools/`
  * maps to `tests/tools/` (the `tools` segment is kept under `tests/`). Move a
@@ -29,7 +31,7 @@
  *
  * A move whose `from` already lives under `tests/` gets no expansion — it *is*
  * a test file, moving on its own, and there's no second tree to keep in sync.
- * Same for any `from` outside the `src/` and `tools/` trees. The original
+ * Same for any `from` outside the `src/`, `tools/` and `packages/<p>/src/` trees. The original
  * moves are always returned unchanged and first, with mirror moves appended.
  */
 
@@ -46,6 +48,8 @@ function mirrorBase(path: string): string | null {
   if (path.startsWith('tests/')) return null; // already a test file
   if (withoutExt.startsWith('src/')) return `tests/${withoutExt.slice('src/'.length)}`;
   if (withoutExt.startsWith('tools/')) return `tests/${withoutExt}`;
+  const pkg = /^(packages\/[^/]+\/)src\/(.*)$/.exec(withoutExt);
+  if (pkg) return `${pkg[1]}tests/${pkg[2]}`;
   return null;
 }
 

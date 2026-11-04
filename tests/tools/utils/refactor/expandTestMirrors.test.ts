@@ -30,6 +30,17 @@ describe('expandTestMirrors', () => {
     });
   });
 
+  it("maps a workspace package's src/ move to that package's own tests/ mirror", () => {
+    const moves = [
+      { from: 'packages/desktop/src/utils/x.ts', to: 'packages/desktop/src/main/utils/x.ts' },
+    ];
+    const result = expandTestMirrors(moves, existsFrom(['packages/desktop/tests/utils/x.test.ts']));
+    expect(result).toContainEqual({
+      from: 'packages/desktop/tests/utils/x.test.ts',
+      to: 'packages/desktop/tests/main/utils/x.test.ts',
+    });
+  });
+
   it('picks the .test.tsx suffix when that is the file that exists', () => {
     const moves = [{ from: 'src/components/detailCardTable.ts', to: 'src/ui/detailCardTable.ts' }];
     const result = expandTestMirrors(
