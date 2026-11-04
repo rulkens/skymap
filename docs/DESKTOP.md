@@ -140,7 +140,9 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   mirror's bookkeeping files and `.part` downloads are 404. Responses are `no-cache` so Restart sky
   sees a replaced manifest.
 - `main/certificates/ensureCa.ts`: a per-install EC CA (20 years, name `Skymap local CA <hex>`,
-  `pathLenConstraint 0`), read once per launch so `/ca.crt` and the leaf always agree.
+  `pathLenConstraint 0`), read once per launch so `/ca.crt` and the leaf always agree. It has no
+  name constraints (`selfsigned` drops the extension), so a tablet that trusts it trusts it for
+  every site: the CA key in `<userData>/certs/` is as sensitive as a password.
   `ensureLeaf.ts`: a leaf (397 days, the Apple limit) whose subject alternative names are the
   machine's host names and LAN addresses. Both live in `<userData>/certs/`. A corrupt CA or key is
   replaced rather than blocking launch; tablets then trust the new CA once more.
