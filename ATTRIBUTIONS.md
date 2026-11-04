@@ -2728,7 +2728,7 @@ and where they come from".
 
 - **What:** Every render of the app that is published: the website's stills
   (76 rows in `packages/website/src/data/siteShots.ts`, files under
-  `packages/website/src/assets/shots/`), its nine film loops
+  `packages/website/public/shots/`), its nine film loops
   (`assets/loops/place-*.mp4`), the stills of the home page's flight
   (`assets/flight/`), the two social cards (`assets/og-card.jpg`,
   `public/og-image.jpg`), the 47 card thumbnails the app ships

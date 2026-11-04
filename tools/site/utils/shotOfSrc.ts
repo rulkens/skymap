@@ -1,4 +1,4 @@
-// `<id>-<width>.avif`, as shootSiteShots.ts names it; a build adds an 8-character hash before the extension.
+// `<id>-<width>.<hash>.avif`, as shootSiteShots.ts names it (utils/shotFileName.ts).
 const SHOT_FILE = /^(.+)-(\d+)(?:\.[\w-]{8})?\.(?:avif|webp)$/;
 
 /**
