@@ -86,7 +86,8 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   const setAutostart = (on: boolean) =>
     app.isPackaged && app.setLoginItemSettings({ openAtLogin: on });
   // Every launch too: a reinstall to another folder leaves the OS entry on the old executable.
-  setAutostart(setup.current().autostart);
+  // Only when on: removing an entry that is not there logs an error on macOS at every launch.
+  if (setup.current().autostart) setAutostart(true);
   const originFor = (networks: LanInterface[]): string =>
     lanOriginFor(setup.current().network, networks, APP_SERVER_PORT);
   const relay = attachDesktopRelay(secure.server, {
