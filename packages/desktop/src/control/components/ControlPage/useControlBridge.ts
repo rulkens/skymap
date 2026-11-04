@@ -19,6 +19,7 @@ export function useControlBridge(bridge: ControlBridge): ControlSession {
   const [status, setStatus] = useState<ControlStatus>({ kind: 'idle' });
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   const [skyRunning, setSkyRunning] = useState(false);
+  const [testGrid, setTestGrid] = useState(false);
   const [room, setRoom] = useState<RelayRoom | null>(null);
   const [setup, setSetup] = useState<InstallSetup | null>(null);
   const [firstRun, setFirstRun] = useState<boolean | null>(null);
@@ -31,6 +32,7 @@ export function useControlBridge(bridge: ControlBridge): ControlSession {
       bridge.onStatus(setStatus),
       bridge.onSync(setProgress),
       bridge.onSky(setSkyRunning),
+      bridge.onTestGrid(setTestGrid),
       bridge.onPairing(setRoom),
       bridge.onDisplays(setDisplays),
     ];
@@ -70,6 +72,7 @@ export function useControlBridge(bridge: ControlBridge): ControlSession {
     status,
     progress,
     skyRunning,
+    testGrid,
     room,
     setup,
     firstRun,

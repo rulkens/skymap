@@ -3,7 +3,7 @@
  * data allows (spec §5 outcome table). Everything the control window can ask arrives as IPC from
  * that window only.
  */
-import { app, dialog, globalShortcut, ipcMain, Menu, nativeTheme, screen } from 'electron';
+import { app, dialog, globalShortcut, ipcMain, nativeTheme, screen } from 'electron';
 import type { BrowserWindow, Display, IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 import { once } from 'node:events';
 import { existsSync } from 'node:fs';
@@ -35,7 +35,9 @@ import { attachDesktopRelay } from './attachDesktopRelay';
 import { createQuitGate } from './createQuitGate';
 import { createSkyLoader } from './createSkyLoader';
 import { fillDisplay } from './fillDisplay';
+import { installAppMenu } from './installAppMenu';
 import { loadSkyPage } from './loadSkyPage';
+import { openAboutWindow } from './openAboutWindow';
 import { openControlWindow } from './openControlWindow';
 import { openSkyWindow } from './openSkyWindow';
 import { placeWindows } from './placeWindows';
@@ -64,8 +66,6 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
 }
 
 async function start(windowed: boolean, gate: QuitGate): Promise<void> {
-  // No menu, so no Cmd+Q or Cmd+W; the windows refuse every other close (spec §6: Quit is in the control window).
-  if (!windowed) Menu.setApplicationMenu(null);
   nativeTheme.themeSource = 'dark';
   const userData = app.getPath('userData');
   const { dataRoot, dev } = resolveDataRoot(
@@ -83,6 +83,8 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   const control = openControlWindow(gate);
   const rotations = serially();
   let sky: BrowserWindow | null = null;
+  let about: BrowserWindow | null = null;
+  let testGrid = false;
   // The window can stand black before the sky loads into it: the test grid needs it during the first download.
   let skyRunning = false;
   let status: ControlStatus = { kind: 'idle' };
@@ -95,8 +97,8 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   let syncing = false;
   let timer: NodeJS.Timeout | undefined;
 
-  const send = (channel: string, payload: unknown): void => {
-    if (!control.isDestroyed()) control.webContents.send(channel, payload);
+  const send = (channel: string, ...payload: unknown[]): void => {
+    if (!control.isDestroyed()) control.webContents.send(channel, ...payload);
   };
   const setStatus = (next: ControlStatus): void => {
     status = next;
@@ -125,6 +127,7 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
     send('control:status', status);
     send('control:sky', skyRunning);
     send('control:pairing', room);
+    send('control:testGrid', testGrid);
   });
   relay.onRoom(sendRoom);
 
@@ -135,6 +138,10 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
       control.show();
       control.focus();
     });
+  const showAbout = (): void => {
+    if (about === null || about.isDestroyed()) about = openAboutWindow(control);
+    else about.focus();
+  };
 
   const placement = () => {
     const displays = screen.getAllDisplays();
@@ -243,7 +250,7 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   ipcMain.handle('control:listDisplays', (event) => (fromControl(event) ? listDisplays() : []));
   // The data's date is the last complete sync's: its inventory is written last.
   ipcMain.handle('control:getAbout', async (event) => {
-    if (!fromControl(event)) return null;
+    if (!fromControl(event) && event.sender !== about?.webContents) return null;
     const dataDate = await stat(join(dataRoot, INVENTORY_FILE)).then(
       (s) => s.mtime.toISOString(),
       () => null,
@@ -271,11 +278,31 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   });
   on('control:updateNow', () => dev || void syncThenLoad(false));
   on('control:restartSky', loadSkyLogged);
-  on('control:showTestGrid', (shown) => {
+  // Main holds the grid's state, so the page's checkbox and the View menu's tick agree.
+  const setTestGrid = (on: boolean): void => {
     const display = placement()?.skyDisplay;
-    const open = openSky() ?? (shown === true && display ? newSky(display) : null);
-    if (open) showTestGrid(open, setup.mode, shown === true);
+    const open = openSky() ?? (on && display ? newSky(display) : null);
+    if (open) showTestGrid(open, setup.mode, on);
+    testGrid = on && open !== null;
+    send('control:testGrid', testGrid);
+    tickTestGrid(testGrid);
+  };
+  const tickTestGrid = installAppMenu(control, windowed, {
+    about: showAbout,
+    showControl,
+    showSky: () => openSky()?.focus(),
+    quit: () => {
+      gate.allowQuit();
+      app.quit();
+    },
+    restartSky: loadSkyLogged,
+    testGrid: setTestGrid,
+    help: (section) => {
+      showControl();
+      send('control:view', 'help', section);
+    },
   });
+  on('control:showTestGrid', (shown) => setTestGrid(shown === true));
   on('control:rotateCode', () => {
     // Queued: a second click must rotate from the first one's new code, not the old one.
     rotations(async () => {

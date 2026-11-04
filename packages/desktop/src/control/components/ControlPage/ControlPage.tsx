@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import type { AboutInfo } from '../../../@types/AboutInfo';
 import type { ControlBridge } from '../../../@types/ControlBridge';
 import type { ControlView } from '../../../@types/ControlView';
+import type { HelpSection } from '../../../@types/HelpSection';
 import type { SetupStep } from '../../../@types/SetupStep';
 import AboutView from '../AboutView/AboutView';
 import ControlHeader from '../ControlHeader/ControlHeader';
@@ -27,6 +28,7 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
   const { setup, firstRun } = session;
   const [home, setHome] = useState<'setup' | 'controls' | null>(null);
   const [over, setOver] = useState<'help' | 'about' | null>(null);
+  const [helpSection, setHelpSection] = useState<HelpSection>();
   const [step, setStep] = useState<SetupStep>('welcome');
   const [about, setAbout] = useState<AboutInfo | null>(null);
   const base = home ?? (firstRun === null ? null : firstRun ? 'setup' : 'controls');
@@ -34,7 +36,8 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
 
   useEffect(
     () =>
-      bridge.onView((next) => {
+      bridge.onView((next, section) => {
+        setHelpSection(section);
         if (next === 'help' || next === 'about') setOver(next);
         else {
           setOver(null);
@@ -56,7 +59,10 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
   }, [bridge, over]);
 
   const backLabel = base === 'setup' ? 'Back to setup' : 'Back to the controls';
-  const openHelp = (): void => setOver('help');
+  const openHelp = (): void => {
+    setHelpSection(undefined);
+    setOver('help');
+  };
   const runSetup = (): void => {
     setStep('mode');
     setHome('setup');
@@ -71,12 +77,15 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
       <ControlHeader
         view={view}
         showMark={!(view === 'setup' && step === 'welcome')}
-        onToggle={(next) => setOver(over === next ? null : next)}
+        onToggle={(next) =>
+          over === next ? setOver(null) : next === 'help' ? openHelp() : setOver(next)
+        }
       />
       <div className={styles.content}>
         {over === 'help' && (
           <HelpView
             origin={session.room?.origin ?? null}
+            section={helpSection}
             backLabel={backLabel}
             onBack={() => setOver(null)}
           />

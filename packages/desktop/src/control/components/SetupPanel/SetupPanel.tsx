@@ -3,7 +3,7 @@
  * steps. The test grid is not part of the setup: it is a view toggle the sky drops on a mode change.
  */
 
-import { useId, useState } from 'react';
+import { useId } from 'react';
 import type { ReactNode } from 'react';
 import type { DisplayInfo } from '../../../@types/DisplayInfo';
 import type { InstallSetup } from '../../../@types/InstallSetup';
@@ -19,6 +19,7 @@ export type SetupPanelProps = {
   readonly setup: InstallSetup;
   readonly displays: readonly DisplayInfo[];
   readonly saveState: SetupSaveState;
+  readonly testGrid: boolean;
   readonly onSave: (next: InstallSetup) => void;
   readonly onShowTestGrid: (on: boolean) => void;
   readonly onRunSetup: () => void;
@@ -28,18 +29,14 @@ function SetupPanel({
   setup,
   displays,
   saveState,
+  testGrid,
   onSave,
   onShowTestGrid,
   onRunSetup,
 }: SetupPanelProps): ReactNode {
   const titleId = useId();
-  const [testGrid, setTestGrid] = useState(false);
-  const showTestGrid = (on: boolean): void => {
-    setTestGrid(on);
-    onShowTestGrid(on);
-  };
   const pickMode = (mode: InstallSetup['mode']): void => {
-    showTestGrid(false);
+    onShowTestGrid(false);
     onSave({ ...setup, mode });
   };
 
@@ -66,7 +63,7 @@ function SetupPanel({
             type="checkbox"
             className={chrome.check}
             checked={testGrid}
-            onChange={(e) => showTestGrid(e.target.checked)}
+            onChange={(e) => onShowTestGrid(e.target.checked)}
           />
           Show test grid on the sky
         </label>

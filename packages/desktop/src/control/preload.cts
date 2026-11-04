@@ -2,6 +2,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { IpcRendererEvent } from 'electron';
 import type { ControlBridge } from '../@types/ControlBridge';
+import type { ControlView } from '../@types/ControlView';
+import type { HelpSection } from '../@types/HelpSection';
 
 function subscribe<T>(channel: string): (listener: (value: T) => void) => () => void {
   return (listener) => {
@@ -16,7 +18,13 @@ const bridge: ControlBridge = {
   onStatus: subscribe('control:status'),
   onSky: subscribe('control:sky'),
   onDisplays: subscribe('control:displays'),
-  onView: subscribe('control:view'),
+  onView: (listener) => {
+    const handler = (_event: IpcRendererEvent, view: ControlView, section?: HelpSection) =>
+      listener(view, section);
+    ipcRenderer.on('control:view', handler);
+    return () => void ipcRenderer.off('control:view', handler);
+  },
+  onTestGrid: subscribe('control:testGrid'),
   onPairing: subscribe('control:pairing'),
   updateNow: () => ipcRenderer.send('control:updateNow'),
   restartSky: () => ipcRenderer.send('control:restartSky'),

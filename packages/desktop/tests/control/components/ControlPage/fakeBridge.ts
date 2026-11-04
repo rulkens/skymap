@@ -11,8 +11,15 @@ export const TWO_DISPLAYS: DisplayInfo[] = [
   { id: 7, label: 'Projector', width: 4096, height: 4096, primary: false },
 ];
 
-type Pushed = 'onSync' | 'onStatus' | 'onSky' | 'onDisplays' | 'onView' | 'onPairing';
-type Value<K extends Pushed> = Parameters<Parameters<ControlBridge[K]>[0]>[0];
+type Pushed =
+  | 'onSync'
+  | 'onStatus'
+  | 'onSky'
+  | 'onTestGrid'
+  | 'onDisplays'
+  | 'onView'
+  | 'onPairing';
+type Values<K extends Pushed> = Parameters<Parameters<ControlBridge[K]>[0]>;
 
 /** A main process stand-in: the page's calls are spies, and `push` plays main's events. */
 export function fakeBridge(
@@ -23,17 +30,18 @@ export function fakeBridge(
     networks?: LanInterface[];
   } = {},
 ) {
-  const listeners: Partial<Record<Pushed, (value: unknown) => void>> = {};
+  const listeners: Partial<Record<Pushed, (...values: unknown[]) => void>> = {};
   const on =
     <K extends Pushed>(name: K) =>
-    (listener: (value: Value<K>) => void) => {
-      listeners[name] = listener as (value: unknown) => void;
+    (listener: (...values: Values<K>) => void) => {
+      listeners[name] = listener as (...values: unknown[]) => void;
       return () => {};
     };
   const bridge = {
     onSync: vi.fn(on('onSync')),
     onStatus: vi.fn(on('onStatus')),
     onSky: vi.fn(on('onSky')),
+    onTestGrid: vi.fn(on('onTestGrid')),
     onDisplays: vi.fn(on('onDisplays')),
     onView: vi.fn(on('onView')),
     onPairing: vi.fn(on('onPairing')),
@@ -50,7 +58,7 @@ export function fakeBridge(
     hide: vi.fn(),
     quit: vi.fn(),
   } satisfies ControlBridge;
-  const push = <K extends Pushed>(name: K, value: Value<K>): void =>
-    act(() => listeners[name]?.(value));
+  const push = <K extends Pushed>(name: K, ...values: Values<K>): void =>
+    act(() => listeners[name]?.(...values));
   return { bridge, push };
 }

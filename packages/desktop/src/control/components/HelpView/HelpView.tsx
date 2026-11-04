@@ -3,8 +3,9 @@
  * build; the certificate steps match the README's, which were tried on each tablet.
  */
 
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
+import type { HelpSection } from '../../../@types/HelpSection';
 import { APP_SERVER_PORT } from '../../../data/appServerPort';
 import { controlShortcutText } from '../../../utils/controlShortcutText';
 import chrome from '../controlChrome.module.css';
@@ -13,12 +14,21 @@ import styles from './HelpView.module.css';
 export type HelpViewProps = {
   /** The pairing origin, when known, so the steps name the real address. */
   readonly origin: string | null;
+  /** The section a menu item named; Help opens scrolled to it. */
+  readonly section?: HelpSection;
   readonly backLabel: string;
   readonly onBack: () => void;
 };
 
-function HelpView({ origin, backLabel, onBack }: HelpViewProps): ReactNode {
+function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactNode {
   const titleId = useId();
+  const tablet = useRef<HTMLElement>(null);
+  const troubleshooting = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const target =
+      section === 'tablet' ? tablet : section === 'troubleshooting' ? troubleshooting : null;
+    target?.current?.scrollIntoView({ block: 'start' });
+  }, [section]);
   const cert = (
     <span className={chrome.mono}>{origin ?? `https://<address>:${APP_SERVER_PORT}`}/ca.crt</span>
   );
@@ -32,7 +42,7 @@ function HelpView({ origin, backLabel, onBack }: HelpViewProps): ReactNode {
         Help
       </h1>
 
-      <section className={styles.section}>
+      <section ref={tablet} className={styles.section}>
         <h2 className={chrome.heading}>Connecting a tablet</h2>
         <p className={chrome.text}>
           The tablet must be on the same network as this computer. It trusts this computer once,
@@ -81,7 +91,7 @@ function HelpView({ origin, backLabel, onBack }: HelpViewProps): ReactNode {
         </p>
       </section>
 
-      <section className={styles.section}>
+      <section ref={troubleshooting} className={styles.section}>
         <h2 className={chrome.heading}>Troubleshooting</h2>
         <dl className={styles.problems}>
           <dt>No sky</dt>

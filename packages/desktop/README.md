@@ -14,7 +14,8 @@ npm run desktop     # build the main process and control page, then electron . -
   sync and the prune.
 - It serves the web build from the repo's root `dist/`, so run `vite build --mode desktop`
   at the root first (a plain `npm run build` bakes the R2 data URL into the pages).
-- `--windowed` gives the sky a normal window with DevTools.
+- `--windowed` gives the sky a normal window with DevTools, and the View menu Reload and Toggle
+  DevTools. In a show the menu only exists while the control window or About has focus.
 
 ## Package
 

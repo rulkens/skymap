@@ -23,15 +23,18 @@ const press = (name: string) => fireEvent.click(screen.getByRole('button', { nam
 
 describe('ControlPage', () => {
   it('a mode change saves the setup and turns the test grid off', async () => {
-    const { bridge } = await renderControls();
+    const { bridge, push } = await renderControls();
     const grid = screen.getByRole('checkbox', { name: 'Show test grid on the sky' });
     fireEvent.click(grid);
     expect(bridge.showTestGrid).toHaveBeenLastCalledWith(true);
+    push('onTestGrid', true);
+    expect(grid).toBeChecked();
 
     await act(async () => fireEvent.click(screen.getByRole('radio', { name: /Dome/ })));
 
     expect(bridge.saveSetup).toHaveBeenLastCalledWith({ ...DEFAULT_INSTALL_SETUP, mode: 'dome' });
     expect(bridge.showTestGrid).toHaveBeenLastCalledWith(false);
+    push('onTestGrid', false);
     expect(grid).not.toBeChecked();
     expect(screen.getByText('Saved')).toBeInTheDocument();
   });
@@ -110,6 +113,19 @@ describe('ControlPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toBeVisible();
     press('Back to the controls');
     expect(screen.getByRole('heading', { name: 'Data' })).toBeVisible();
+  });
+
+  it('a menu item opens Help at the section it names', async () => {
+    // jsdom has no scrollIntoView; this one records which section was asked for.
+    const scrolled: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this.querySelector('h2')?.textContent ?? '');
+    };
+    const { push } = await renderControls();
+    push('onView', 'help', 'troubleshooting');
+    Element.prototype.scrollIntoView = original;
+    expect(scrolled).toEqual(['Troubleshooting']);
   });
 
   it('About shows the version main reports', async () => {

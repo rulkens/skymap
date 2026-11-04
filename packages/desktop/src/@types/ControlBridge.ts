@@ -4,6 +4,7 @@ import type { AboutInfo } from './AboutInfo';
 import type { ControlStatus } from './ControlStatus';
 import type { ControlView } from './ControlView';
 import type { DisplayInfo } from './DisplayInfo';
+import type { HelpSection } from './HelpSection';
 import type { InstallSetup } from './InstallSetup';
 import type { LanInterface } from './LanInterface';
 import type { SyncProgress } from './SyncProgress';
@@ -15,8 +16,10 @@ export type ControlBridge = {
   /** True once the sky window has loaded the app; Finish waits on it. */
   onSky: (listener: (running: boolean) => void) => Unsubscribe;
   onDisplays: (listener: (displays: DisplayInfo[]) => void) => Unsubscribe;
-  /** A view main asks for, as a menu's Help item does. */
-  onView: (listener: (view: ControlView) => void) => Unsubscribe;
+  /** A view main asks for, as a menu's Help item does, with the Help section it names. */
+  onView: (listener: (view: ControlView, section?: HelpSection) => void) => Unsubscribe;
+  /** Whether the test grid is on the sky; main holds it, so the View menu's tick agrees. */
+  onTestGrid: (listener: (on: boolean) => void) => Unsubscribe;
   updateNow: () => void;
   restartSky: () => void;
   /** True on the launch that found no setup.json. */

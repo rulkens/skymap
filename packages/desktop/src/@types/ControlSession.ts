@@ -11,6 +11,7 @@ export type ControlSession = {
   status: ControlStatus;
   progress: SyncProgress | null;
   skyRunning: boolean;
+  testGrid: boolean;
   room: RelayRoom | null;
   setup: InstallSetup | null;
   firstRun: boolean | null;

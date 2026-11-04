@@ -36,6 +36,7 @@ function ControlsView({ session, bridge, onRunSetup, onHelp }: ControlsViewProps
           setup={setup}
           displays={session.displays}
           saveState={session.saveState}
+          testGrid={session.testGrid}
           onSave={(next) => void save(next)}
           onShowTestGrid={bridge.showTestGrid}
           onRunSetup={onRunSetup}

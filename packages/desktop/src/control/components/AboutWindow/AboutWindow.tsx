@@ -1,5 +1,5 @@
 /**
- * AboutWindow — About on its own, for the shell's About window on Windows: it loads the control page
+ * AboutWindow — About on its own, for the shell's About window (openAboutWindow): it loads the control page
  * with `?view=about` and the same preload, and main must answer `control:getAbout` from that window too.
  */
 
