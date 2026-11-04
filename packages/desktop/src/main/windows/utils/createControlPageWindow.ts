@@ -19,6 +19,10 @@ export function createControlPageWindow(
     },
   });
   win.webContents.on('will-navigate', (event) => event.preventDefault());
+  // The operator's only window must not stay blank until a relaunch; the page reads main's state anew.
+  win.webContents.on('render-process-gone', (_event, details) => {
+    if (details.reason !== 'clean-exit' && !win.isDestroyed()) win.webContents.reload();
+  });
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   void win.loadFile(join(app.getAppPath(), 'build/control/index.html'), search ? { search } : {});
   return win;

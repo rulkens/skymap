@@ -58,6 +58,14 @@ describe('SetupFlow', () => {
     expect(screen.getByText('Saved')).toBeInTheDocument();
   });
 
+  // Main ends the first run at the first save, so a page reloaded after a crash opens on the controls.
+  it('stays in setup when main ends the first run mid-way', async () => {
+    const { set } = await firstRun();
+    press('Start setup');
+    set({ firstRun: false });
+    expect(title()).toHaveTextContent('Where will it show?');
+  });
+
   it('the screen step shows the test grid while open and moves the sky on a pick', async () => {
     const { bridge } = await firstRun();
     fireEvent.click(railStep('Which screen'));

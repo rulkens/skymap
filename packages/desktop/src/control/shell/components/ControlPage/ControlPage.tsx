@@ -30,6 +30,10 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
   const [step, setStep] = useState<SetupStep>('welcome');
   const base = home ?? (session === null ? null : session.firstRun ? 'setup' : 'controls');
   const view: ControlView | null = over ?? base;
+  // Decided once: main ends the first run at the first save, which is mid-setup.
+  useEffect(() => {
+    if (base !== null) setHome((shown) => shown ?? base);
+  }, [base]);
   // Closing Help or About hands focus back to the header link for it, so the next key works.
   const links = useRef<Partial<Record<'help' | 'about', HTMLButtonElement | null>>>({});
   const close = (): void => {

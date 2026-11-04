@@ -207,7 +207,8 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     getState: () => state,
     saveSetup: async (raw) => {
       await setup.save(parseInstallSetup(raw));
-      update({ setup: setup.current() });
+      // A page reloaded after a crash then opens on the controls, not the welcome step.
+      update({ setup: setup.current(), firstRun: false });
     },
     updateNow: () => dev || void syncThenLoad(false),
     restartSky,

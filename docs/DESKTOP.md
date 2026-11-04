@@ -74,7 +74,8 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
   to a minute while it keeps crashing, reset after a minute up), kills a renderer hung for 30 s,
   and refuses navigation off the app's origin. An InfoCard link is a dead click on purpose. A sky
   load that fails with nothing crashed is tried once more after `SKY_RETRY_MS` (`createSkyLoader`),
-  then waits for Restart sky; a curtain that fails to load only loses its fade.
+  then waits for Restart sky; a curtain that fails to load only loses its fade. The control and
+  About windows reload at once after a renderer crash (`createControlPageWindow`).
 - Once the sky first shows, `powerSaveBlocker` (`prevent-display-sleep`) keeps the display and the
   machine awake until the app quits: tablets steering over the relay are no local input, so the
   OS's idle timer would otherwise blank a dome and, at sleep, take the server and the tablets down.
