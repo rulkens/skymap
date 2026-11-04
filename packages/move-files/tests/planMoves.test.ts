@@ -11,7 +11,6 @@ const context: MoveContext = {
       { from: 'src/', to: 'tests/', sources: ['.ts', '.tsx'], suffixes: ['.test.ts'] },
       { from: '', to: '', sources: ['.tsx'], suffixes: ['.module.css'] },
     ],
-    extraMockCallees: [],
   },
   aliasScopes: [],
 };

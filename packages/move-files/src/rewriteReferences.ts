@@ -29,7 +29,6 @@ export function rewriteReferences(
   snapshot: Pick<ProjectSnapshot, 'texts' | 'fileExists'>,
   moves: ReadonlyMap<string, string>,
   scopes: readonly AliasScope[],
-  extraMockCallees: readonly string[],
 ): FileEdit[] {
   const hasBefore = layoutExists(snapshot, new Map());
   const hasAfter = layoutExists(snapshot, moves);
@@ -47,7 +46,7 @@ export function rewriteReferences(
     const replacements: PathReference[] = []; // each with `value` as the new spelling
 
     if (isTs) {
-      for (const reference of findTsReferences(path, text, extraMockCallees)) {
+      for (const reference of findTsReferences(path, text)) {
         const hit = resolveReference(reference.value, path, hasBefore, scopes);
         let value: string | null = null;
         if (hit) {

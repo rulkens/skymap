@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { findTsReferences } from '../src/findTsReferences';
 
-const values = (path: string, text: string, extra: string[] = []) =>
-  findTsReferences(path, text, extra).map((r) => r.value);
+const values = (path: string, text: string) => findTsReferences(path, text).map((r) => r.value);
 
 describe('findTsReferences', () => {
   it('finds every TS reference form', () => {
@@ -32,7 +31,7 @@ describe('findTsReferences', () => {
 
   it('reports spans that exclude the quotes', () => {
     const text = `import a from "./x";`;
-    const [ref] = findTsReferences('/r/a.ts', text, []);
+    const [ref] = findTsReferences('/r/a.ts', text);
     expect(text.slice(ref!.start, ref!.end)).toBe('./x');
   });
 
@@ -47,7 +46,7 @@ describe('findTsReferences', () => {
 
   it('reports a literal with an escape by its value and its raw span', () => {
     const text = `import './\\x61';`;
-    const [ref] = findTsReferences('/r/a.ts', text, []);
+    const [ref] = findTsReferences('/r/a.ts', text);
     expect(ref!.value).toBe('./a');
     expect(text.slice(ref!.start, ref!.end)).toBe('./\\x61');
   });
@@ -58,10 +57,5 @@ describe('findTsReferences', () => {
 
   it('ignores strings that are not references', () => {
     expect(values('/r/a.ts', `const s = './x'; foo('./y');`)).toEqual([]);
-  });
-
-  it('reads an extra mock callee', () => {
-    expect(values('/r/a.ts', `td.mock('./x');`, ['td.mock'])).toEqual(['./x']);
-    expect(values('/r/a.ts', `td.mock('./x');`)).toEqual([]);
   });
 });

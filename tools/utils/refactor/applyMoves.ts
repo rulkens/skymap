@@ -24,7 +24,6 @@ export function applyMoves(project: Project, moves: ReadonlyArray<MovePair>): vo
     { texts, fileExists: (path) => fs.fileExistsSync(path) },
     new Map(moves.map((m) => [m.from, m.to])),
     [],
-    [],
   );
 
   for (const { from, to, text } of edits) {

@@ -119,7 +119,7 @@ hand-grep the refactor skill asks for today.
 ### Not configurable
 
 There are no plugins, custom resolvers, per-run companion switches or guard ignore lists. Project config holds
-only `companions` and `extraMockCallees`. Aliases come from every `tsconfig*.json` and `jsconfig*.json`, following
+only `companions`. Aliases come from every `tsconfig*.json` and `jsconfig*.json`, following
 `extends`: the nearest folder holding one governs an importer.
 
 ## Ground preparation

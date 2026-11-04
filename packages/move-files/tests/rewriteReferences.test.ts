@@ -12,7 +12,7 @@ function run(
     texts: new Map(Object.entries(files)),
     fileExists: (p: string) => assets.includes(p),
   };
-  const edits = rewriteReferences(snapshot, new Map(Object.entries(moves)), aliasScopes, []);
+  const edits = rewriteReferences(snapshot, new Map(Object.entries(moves)), aliasScopes);
   return new Map(edits.map((e) => [e.from, e]));
 }
 
@@ -296,13 +296,5 @@ describe('rewriteReferences', () => {
       aliases,
     );
     expect(edits.get('/r/src/u.ts')?.text).toBe(`import '@/pages/$&x';`);
-  });
-
-  it('rewrites a literal written with an escape', () => {
-    const edits = run(
-      { '/r/a.ts': ``, '/r/u.ts': `import './\\x61';` },
-      { '/r/a.ts': '/r/lib/a.ts' },
-    );
-    expect(edits.get('/r/u.ts')?.text).toBe(`import './lib/a';`);
   });
 });

@@ -38,7 +38,7 @@ function afterRewrite(
     fileExists: (p: string) => assets.includes(p),
   };
   const moveMap = new Map(Object.entries(moves));
-  const edits = rewriteReferences(snapshot, moveMap, scopes, []);
+  const edits = rewriteReferences(snapshot, moveMap, scopes);
   return findBrokenReferences(snapshot, edits, moveMap, '/r', scopes).map(
     (f) => `${f.file}:${f.line} ${f.reason}`,
   );

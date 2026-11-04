@@ -79,9 +79,8 @@ function scopesOf(configs: readonly string[], root: string): AliasScope[] {
 
 function readConfig(root: string): MoveConfig {
   const file = posix.join(root, 'move-files.config.json');
-  if (!existsSync(file)) return { companions: [], extraMockCallees: [] };
-  const json = JSON.parse(readFileSync(file, 'utf8'));
-  return { companions: json.companions ?? [], extraMockCallees: json.extraMockCallees ?? [] };
+  if (!existsSync(file)) return { companions: [] };
+  return { companions: JSON.parse(readFileSync(file, 'utf8')).companions ?? [] };
 }
 
 export function loadMoveContext(root: string, paths: readonly string[]): MoveContext {

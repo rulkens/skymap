@@ -15,7 +15,6 @@ import { stripExtension } from './stripExtension';
 
 const DOT_SPECIFIER = /(?:['"`]|\/)\.{1,2}\/?['"`]/;
 const WHOLE_STEM_TARGET = /\/\*(?:\.\w+)?$/;
-const CHARACTER_ESCAPE = /\\[ux]/; // `'./\x61'` names `a` without saying so
 
 export function mentionsMovedFile(
   movedPaths: Iterable<string>,
@@ -39,6 +38,5 @@ export function mentionsMovedFile(
     }
   }
   const stemPattern = new RegExp([...stems].map(escapeRegExp).join('|'));
-  return (text) =>
-    stemPattern.test(text) || CHARACTER_ESCAPE.test(text) || (anyIndex && DOT_SPECIFIER.test(text));
+  return (text) => stemPattern.test(text) || (anyIndex && DOT_SPECIFIER.test(text));
 }

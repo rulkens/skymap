@@ -41,15 +41,13 @@ folder from another folder, is a folder, sits under a file, or holds a quote or 
       "suffixes": [".test.ts", ".test.tsx"]
     },
     { "from": "", "to": "", "sources": [".tsx"], "suffixes": [".module.css"] }
-  ],
-  "extraMockCallees": []
+  ]
 }
 ```
 
 A rule maps a root to a mirror root (`src/Foo.ts` to `tests/Foo.test.ts`); an empty root
 means a sibling beside the primary. If a companion exists but no rule fits the primary's
-destination, the batch is refused until you add a pair for it. `extraMockCallees` names
-test-mock functions, beyond `vi.mock`, whose first argument is a path.
+destination, the batch is refused until you add a pair for it.
 
 Aliases come from every `tsconfig*.json` and `jsconfig*.json`, following `extends`: the
 nearest folder holding one governs an importer, and configs sharing a folder pool their
@@ -81,6 +79,7 @@ Reported by the guard when they break, not rewritten:
 - Sass and Less. `@use`, `@forward` and partials resolve their own way, so only a `./` string
   written with its extension is checked, in a moved file or pointing at one. Plain CSS is rewritten.
 - `declare module './mod'` and other relative strings that aren't imports (asset URLs, say).
+- Mock helpers beyond `vi` and `jest` (`esmock('./x')`). An alias there is not reported.
 
 Not seen at all, so check these by hand after a move:
 
@@ -90,6 +89,7 @@ Not seen at all, so check these by hand after a move:
   rewritten, so references inside it stay stale.
 - A folder whose `package.json` `main` names its entry (`./dir` for `dir/lib.ts`).
 - `./x` for `x.mjs` or `x.mts`, which Vite accepts and TypeScript does not.
+- A specifier spelling the file name only through escapes (`'./\x61'` for `a.ts`).
 
 Directories cannot be moved, only files. Windows paths are not supported. A moved symlink
 stays a symlink with the same target text, so a relative one may need fixing.

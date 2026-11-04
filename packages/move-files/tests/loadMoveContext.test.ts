@@ -170,25 +170,16 @@ describe('loadMoveContext', () => {
     ).toBe('src/a/b.ts');
   });
 
-  it('reads the companion rules and extra mock callees from the config file', () => {
+  it('reads the companion rules from the config file', () => {
     const rule = { from: '', to: '', sources: ['.tsx'], suffixes: ['.module.css'] };
-    const root = makeRepo({
-      'move-files.config.json': json({
-        companions: [rule],
-        extraMockCallees: ['mockIt'],
-      }),
-    });
+    const root = makeRepo({ 'move-files.config.json': json({ companions: [rule] }) });
     const { config } = loadMoveContext(root, []);
-    expect(config).toEqual({ companions: [rule], extraMockCallees: ['mockIt'] });
+    expect(config).toEqual({ companions: [rule] });
   });
 
   it('works with no config file', () => {
     const root = makeRepo({});
     const context = loadMoveContext(root, []);
-    expect(context).toEqual({
-      root,
-      config: { companions: [], extraMockCallees: [] },
-      aliasScopes: [],
-    });
+    expect(context).toEqual({ root, config: { companions: [] }, aliasScopes: [] });
   });
 });

@@ -2,10 +2,10 @@
  * findTsReferences: every module-specifier string in a JS or TS file, by parse.
  *
  * Covers import/export-from, `import()`, `import('x').T`, `import x = require()`,
- * `require()` and the vitest/jest mock family plus `extraMockCallees` (dotted,
- * e.g. `td.mock`). Spans exclude the quotes and cover the raw source, so a literal
- * written with an escape is replaced whole while `value` holds what it means.
- * An unterminated literal has no closing quote to exclude, so it is skipped.
+ * `require()` and the vitest/jest mock family. Spans exclude the quotes and cover
+ * the raw source, so a literal written with an escape is replaced whole while
+ * `value` holds what it means. An unterminated literal has no closing quote to
+ * exclude, so it is skipped.
  */
 
 import ts from 'typescript';
@@ -22,6 +22,9 @@ const MOCK_METHODS = [
   'requireActual',
   'requireMock',
 ];
+const MOCK_CALLEES = new Set(
+  ['vi', 'jest'].flatMap((owner) => MOCK_METHODS.map((method) => `${owner}.${method}`)),
+);
 
 function dottedName(node: ts.Expression): string | null {
   if (ts.isIdentifier(node)) return node.text;
@@ -30,13 +33,7 @@ function dottedName(node: ts.Expression): string | null {
   return head === null ? null : `${head}.${node.name.text}`;
 }
 
-export function findTsReferences(
-  path: string,
-  text: string,
-  extraMockCallees: readonly string[],
-): PathReference[] {
-  const callees = new Set(extraMockCallees);
-  for (const owner of ['vi', 'jest']) for (const m of MOCK_METHODS) callees.add(`${owner}.${m}`);
+export function findTsReferences(path: string, text: string): PathReference[] {
   const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, false, scriptKindOf(path));
   const found: PathReference[] = [];
   const add = (node: ts.Node | undefined) => {
@@ -58,7 +55,7 @@ export function findTsReferences(
       if (node.expression.kind === ts.SyntaxKind.ImportKeyword) add(node.arguments[0]);
       else {
         const callee = dottedName(node.expression);
-        if (callee === 'require' || (callee !== null && callees.has(callee)))
+        if (callee === 'require' || (callee !== null && MOCK_CALLEES.has(callee)))
           add(node.arguments[0]);
       }
     }
