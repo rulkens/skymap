@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { DisplayInfo } from '../../src/@types/DisplayInfo.js';
-import { placeWindows } from '../../src/main/placeWindows.js';
+import type { DisplayInfo } from '../../src/@types/DisplayInfo';
+import { placeWindows } from '../../src/main/placeWindows';
 
 const laptop: DisplayInfo = { id: 1, width: 2880, height: 1800, primary: true };
 const projector: DisplayInfo = { id: 7, width: 4096, height: 2160, primary: false };

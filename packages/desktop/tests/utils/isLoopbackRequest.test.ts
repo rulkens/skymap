@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { isLoopbackRequest } from '../../src/utils/isLoopbackRequest.js';
-import { listLanInterfaces } from '../../src/utils/listLanInterfaces.js';
+import { isLoopbackRequest } from '../../src/utils/isLoopbackRequest';
+import { listLanInterfaces } from '../../src/utils/listLanInterfaces';
 
 const from = (remoteAddress: string | undefined) =>
   ({ socket: { remoteAddress }, headers: { host: 'localhost' } }) as unknown as IncomingMessage;

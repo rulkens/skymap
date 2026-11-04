@@ -1,6 +1,6 @@
 import { hostname } from 'node:os';
-import type { LanNames } from '../@types/LanNames.js';
-import { listLanInterfaces } from './listLanInterfaces.js';
+import type { LanNames } from '../@types/LanNames';
+import { listLanInterfaces } from './listLanInterfaces';
 
 /** The names the server certificate must cover right now; macOS hostnames may already end in .local. */
 export function currentLanNames(): LanNames {

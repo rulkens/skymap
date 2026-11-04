@@ -5,13 +5,13 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { connect } from 'node:tls';
 import { WebSocket } from 'ws';
-import type { RelayHandle } from '../../../../tools/@types/remote/RelayHandle.js';
-import { attachDesktopRelay } from '../../src/main/attachDesktopRelay.js';
-import { ensureLanCertificate } from '../../src/main/ensureLanCertificate.js';
-import { readRoomCode } from '../../src/main/readRoomCode.js';
-import { rotateRoomCode } from '../../src/main/rotateRoomCode.js';
-import { startAppServer } from '../../src/main/startAppServer.js';
-import { listLanInterfaces } from '../../src/utils/listLanInterfaces.js';
+import type { RelayHandle } from '../../../../tools/@types/remote/RelayHandle';
+import { attachDesktopRelay } from '../../src/main/attachDesktopRelay';
+import { ensureLanCertificate } from '../../src/main/ensureLanCertificate';
+import { readRoomCode } from '../../src/main/readRoomCode';
+import { rotateRoomCode } from '../../src/main/rotateRoomCode';
+import { startAppServer } from '../../src/main/startAppServer';
+import { listLanInterfaces } from '../../src/utils/listLanInterfaces';
 
 // The real app server (HTTPS on every interface) with the relay on it, as main.ts wires them.
 let userData: string;

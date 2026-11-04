@@ -1,5 +1,5 @@
-import type { InstallSetup } from '../@types/InstallSetup.js';
-import { APP_ORIGIN } from '../data/appOrigin.js';
+import type { InstallSetup } from '../@types/InstallSetup';
+import { APP_ORIGIN } from '../data/appOrigin';
 
 /** The sky window's page: the dome projection or the flat kiosk view, both hosting the remote. */
 export function skyUrlFor(mode: InstallSetup['mode']): string {

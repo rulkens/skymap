@@ -1,6 +1,6 @@
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { resolveAppPath } from '../../src/main/resolveAppPath.js';
+import { resolveAppPath } from '../../src/main/resolveAppPath';
 
 const roots = { dist: resolve('/app/dist'), data: resolve('/app/data'), caPem: 'PEM' };
 

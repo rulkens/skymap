@@ -1,6 +1,6 @@
-import type { OfflineInventory } from '../../../../tools/deploy/@types/OfflineInventory.js';
-import type { SyncedRecord } from '../@types/SyncedRecord.js';
-import type { SyncPlan } from '../@types/SyncPlan.js';
+import type { OfflineInventory } from '../../../../tools/deploy/@types/OfflineInventory';
+import type { SyncedRecord } from '../@types/SyncedRecord';
+import type { SyncPlan } from '../@types/SyncPlan';
 
 /** Per group in inventory order, the files that are unsynced, changed, or gone from disk. */
 export function planSync(

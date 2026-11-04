@@ -1,6 +1,6 @@
-import type { DisplayInfo } from '../@types/DisplayInfo.js';
-import type { InstallSetup } from '../@types/InstallSetup.js';
-import type { WindowPlacement } from '../@types/WindowPlacement.js';
+import type { DisplayInfo } from '../@types/DisplayInfo';
+import type { InstallSetup } from '../@types/InstallSetup';
+import type { WindowPlacement } from '../@types/WindowPlacement';
 
 /**
  * Sky: the stored display, else the one display of its size (ids change on re-plug), else the

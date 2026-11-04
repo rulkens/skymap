@@ -1,5 +1,5 @@
 import { createPrivateKey, X509Certificate } from 'node:crypto';
-import type { PemPair } from '../@types/PemPair.js';
+import type { PemPair } from '../@types/PemPair';
 
 /** True when both parse and the key is the certificate's own; false for anything corrupt. */
 export function keyMatchesCert(pair: PemPair): boolean {

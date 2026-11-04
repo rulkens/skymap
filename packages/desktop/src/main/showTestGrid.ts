@@ -1,7 +1,7 @@
 import { app, screen, WebContentsView } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { join } from 'node:path';
-import type { InstallSetup } from '../@types/InstallSetup.js';
+import type { InstallSetup } from '../@types/InstallSetup';
 
 // A child view of the sky window, so it moves with it; only its size needs following.
 const shown = new WeakMap<BrowserWindow, { view: WebContentsView; fit: () => void }>();

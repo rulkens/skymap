@@ -1,3 +1,3 @@
-import { runLifecycle } from './runLifecycle.js';
+import { runLifecycle } from './runLifecycle';
 
 void runLifecycle(process.argv.includes('--windowed'));

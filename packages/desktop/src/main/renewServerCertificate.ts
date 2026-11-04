@@ -1,7 +1,7 @@
 import type { Server } from 'node:https';
-import type { LanCertificate } from '../@types/LanCertificate.js';
-import type { LanNames } from '../@types/LanNames.js';
-import { ensureLanCertificate } from './ensureLanCertificate.js';
+import type { LanCertificate } from '../@types/LanCertificate';
+import type { LanNames } from '../@types/LanNames';
+import { ensureLanCertificate } from './ensureLanCertificate';
 
 /** Swaps the live server onto a reissued leaf when `names` changed; open connections keep theirs. */
 export async function renewServerCertificate(

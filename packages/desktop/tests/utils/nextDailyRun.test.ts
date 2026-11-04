@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextDailyRun } from '../../src/utils/nextDailyRun.js';
+import { nextDailyRun } from '../../src/utils/nextDailyRun';
 
 describe('nextDailyRun', () => {
   it('today when the time is still ahead', () => {

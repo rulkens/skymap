@@ -1,16 +1,16 @@
 import { existsSync } from 'node:fs';
 import { mkdir, rename, statfs, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { OfflineInventory } from '../../../../tools/deploy/@types/OfflineInventory.js';
-import type { SyncedRecord } from '../@types/SyncedRecord.js';
-import type { SyncOutcome } from '../@types/SyncOutcome.js';
-import type { SyncProgress } from '../@types/SyncProgress.js';
-import { downloadVerified } from '../utils/downloadVerified.js';
-import { keyToLocalPath } from '../utils/keyToLocalPath.js';
-import { readJsonFile } from '../utils/readJsonFile.js';
-import { runPool } from '../utils/runPool.js';
-import { InsufficientDiskError } from './InsufficientDiskError.js';
-import { planSync } from './planSync.js';
+import type { OfflineInventory } from '../../../../tools/deploy/@types/OfflineInventory';
+import type { SyncedRecord } from '../@types/SyncedRecord';
+import type { SyncOutcome } from '../@types/SyncOutcome';
+import type { SyncProgress } from '../@types/SyncProgress';
+import { downloadVerified } from '../utils/downloadVerified';
+import { keyToLocalPath } from '../utils/keyToLocalPath';
+import { readJsonFile } from '../utils/readJsonFile';
+import { runPool } from '../utils/runPool';
+import { InsufficientDiskError } from './InsufficientDiskError';
+import { planSync } from './planSync';
 
 const CONCURRENT_DOWNLOADS = 8;
 

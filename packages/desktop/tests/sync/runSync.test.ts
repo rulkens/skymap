@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { runSync } from '../../src/sync/runSync.js';
+import { runSync } from '../../src/sync/runSync';
 
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 const A = Buffer.from('alpha');

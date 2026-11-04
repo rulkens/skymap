@@ -5,7 +5,7 @@
  */
 import { app } from 'electron';
 import type { BrowserWindow, Details } from 'electron';
-import { isAppUrl } from '../utils/isAppUrl.js';
+import { isAppUrl } from '../utils/isAppUrl';
 
 const RELOAD_DELAY_MS = 2000;
 const UNRESPONSIVE_MS = 30_000;

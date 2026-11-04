@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_INSTALL_SETUP } from '../../src/data/defaultInstallSetup.js';
-import { parseInstallSetup } from '../../src/utils/parseInstallSetup.js';
+import { DEFAULT_INSTALL_SETUP } from '../../src/data/defaultInstallSetup';
+import { parseInstallSetup } from '../../src/utils/parseInstallSetup';
 
 describe('parseInstallSetup', () => {
   it('returns defaults for garbage', () => {

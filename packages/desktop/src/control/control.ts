@@ -1,12 +1,12 @@
 /** The control window's page: one render function per panel, all state held by the main process. */
-import type { RelayRoom } from '../../../../src/@types/remote/RelayRoom.js';
-import { pairingUrl } from '../../../../src/utils/remote/pairingUrl.js';
-import { qrModules } from '../../../../src/utils/remote/qrModules.js';
-import type { ControlBridge } from '../@types/ControlBridge.js';
-import type { ControlStatus } from '../@types/ControlStatus.js';
-import type { InstallSetup } from '../@types/InstallSetup.js';
-import type { SyncProgress } from '../@types/SyncProgress.js';
-import { CONTROL_SHORTCUT } from '../data/controlShortcut.js';
+import type { RelayRoom } from '../../../../src/@types/remote/RelayRoom';
+import { pairingUrl } from '../../../../src/utils/remote/pairingUrl';
+import { qrModules } from '../../../../src/utils/remote/qrModules';
+import type { ControlBridge } from '../@types/ControlBridge';
+import type { ControlStatus } from '../@types/ControlStatus';
+import type { InstallSetup } from '../@types/InstallSetup';
+import type { SyncProgress } from '../@types/SyncProgress';
+import { CONTROL_SHORTCUT } from '../data/controlShortcut';
 
 const bridge = (window as unknown as { skymapControl: ControlBridge }).skymapControl;
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;

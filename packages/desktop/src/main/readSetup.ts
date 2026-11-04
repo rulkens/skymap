@@ -1,8 +1,8 @@
 import { join } from 'node:path';
-import type { InstallSetup } from '../@types/InstallSetup.js';
-import { SETUP_FILE } from '../data/setupFile.js';
-import { parseInstallSetup } from '../utils/parseInstallSetup.js';
-import { readJsonFile } from '../utils/readJsonFile.js';
+import type { InstallSetup } from '../@types/InstallSetup';
+import { SETUP_FILE } from '../data/setupFile';
+import { parseInstallSetup } from '../utils/parseInstallSetup';
+import { readJsonFile } from '../utils/readJsonFile';
 
 /** <userData>/setup.json with every missing or invalid field defaulted. */
 export async function readSetup(userData: string): Promise<InstallSetup> {

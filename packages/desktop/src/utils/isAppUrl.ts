@@ -1,4 +1,4 @@
-import { APP_ORIGIN } from '../data/appOrigin.js';
+import { APP_ORIGIN } from '../data/appOrigin';
 
 /** True only for the app's own server, the one origin its windows may navigate to. */
 export function isAppUrl(url: string): boolean {

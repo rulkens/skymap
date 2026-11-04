@@ -1,13 +1,13 @@
 import { session } from 'electron';
 import type { Server } from 'node:https';
 import { join } from 'node:path';
-import { LAN_CHECK_INTERVAL_MS } from '../data/lanCheckIntervalMs.js';
-import { currentLanNames } from '../utils/currentLanNames.js';
-import { isSignedByCa } from '../utils/isSignedByCa.js';
-import { distDir } from './distDir.js';
-import { ensureLanCertificate } from './ensureLanCertificate.js';
-import { renewServerCertificate } from './renewServerCertificate.js';
-import { startAppServer } from './startAppServer.js';
+import { LAN_CHECK_INTERVAL_MS } from '../data/lanCheckIntervalMs';
+import { currentLanNames } from '../utils/currentLanNames';
+import { isSignedByCa } from '../utils/isSignedByCa';
+import { distDir } from './distDir';
+import { ensureLanCertificate } from './ensureLanCertificate';
+import { renewServerCertificate } from './renewServerCertificate';
+import { startAppServer } from './startAppServer';
 
 /** The app's HTTPS server on the install's CA, with its certificate kept current as the LAN changes. */
 export async function startSecureServer(userData: string, dataRoot: string): Promise<Server> {

@@ -1,10 +1,10 @@
-import type { RelayRoom } from '../../../../src/@types/remote/RelayRoom.js';
-import type { Unsubscribe } from '../../../../src/@types/remote/Unsubscribe.js';
-import type { ControlStatus } from './ControlStatus.js';
-import type { DisplayInfo } from './DisplayInfo.js';
-import type { InstallSetup } from './InstallSetup.js';
-import type { LanInterface } from './LanInterface.js';
-import type { SyncProgress } from './SyncProgress.js';
+import type { RelayRoom } from '../../../../src/@types/remote/RelayRoom';
+import type { Unsubscribe } from '../../../../src/@types/remote/Unsubscribe';
+import type { ControlStatus } from './ControlStatus';
+import type { DisplayInfo } from './DisplayInfo';
+import type { InstallSetup } from './InstallSetup';
+import type { LanInterface } from './LanInterface';
+import type { SyncProgress } from './SyncProgress';
 
 /** Everything the control page may ask of the main process; exposed through contextBridge only. */
 export type ControlBridge = {

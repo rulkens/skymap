@@ -1,12 +1,12 @@
 import type { Server } from 'node:https';
-import type { RelayHandle } from '../../../../tools/@types/remote/RelayHandle.js';
-import { attachRemoteRelay } from '../../../../tools/utils/remote/attachRemoteRelay.js';
-import type { DesktopRelayOptions } from '../@types/DesktopRelayOptions.js';
-import { APP_ORIGIN } from '../data/appOrigin.js';
-import { APP_SERVER_PORT } from '../data/appServerPort.js';
-import { isLoopbackRequest } from '../utils/isLoopbackRequest.js';
-import { lanOriginFor } from '../utils/lanOriginFor.js';
-import { listLanInterfaces } from '../utils/listLanInterfaces.js';
+import type { RelayHandle } from '../../../../tools/@types/remote/RelayHandle';
+import { attachRemoteRelay } from '../../../../tools/utils/remote/attachRemoteRelay';
+import type { DesktopRelayOptions } from '../@types/DesktopRelayOptions';
+import { APP_ORIGIN } from '../data/appOrigin';
+import { APP_SERVER_PORT } from '../data/appServerPort';
+import { isLoopbackRequest } from '../utils/isLoopbackRequest';
+import { lanOriginFor } from '../utils/lanOriginFor';
+import { listLanInterfaces } from '../utils/listLanInterfaces';
 
 // The relay's own prefix (tools/utils/remote/attachRemoteRelay.ts); it ignores every other upgrade.
 const RELAY_PATH_PREFIX = '/__remote/';

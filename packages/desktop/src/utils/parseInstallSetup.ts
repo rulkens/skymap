@@ -1,5 +1,5 @@
-import type { InstallSetup } from '../@types/InstallSetup.js';
-import { DEFAULT_INSTALL_SETUP } from '../data/defaultInstallSetup.js';
+import type { InstallSetup } from '../@types/InstallSetup';
+import { DEFAULT_INSTALL_SETUP } from '../data/defaultInstallSetup';
 
 const CLOCK_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 

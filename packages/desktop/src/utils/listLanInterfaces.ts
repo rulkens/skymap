@@ -1,5 +1,5 @@
 import { networkInterfaces } from 'node:os';
-import type { LanInterface } from '../@types/LanInterface.js';
+import type { LanInterface } from '../@types/LanInterface';
 
 /** Every non-internal IPv4 address with its interface name, in the OS's order. */
 export function listLanInterfaces(): LanInterface[] {

@@ -1,10 +1,10 @@
 import { join } from 'node:path';
-import type { RoomCode } from '../../../../src/@types/remote/RoomCode.js';
-import { ROOM_CODE_LENGTH } from '../../../../src/data/remote/roomCodeLength.js';
-import { newLocalRoomCode } from '../../../../src/utils/remote/newLocalRoomCode.js';
-import { ROOM_CODE_FILE } from '../data/roomCodeFile.js';
-import { readJsonFile } from '../utils/readJsonFile.js';
-import { writeFileAtomically } from '../utils/writeFileAtomically.js';
+import type { RoomCode } from '../../../../src/@types/remote/RoomCode';
+import { ROOM_CODE_LENGTH } from '../../../../src/data/remote/roomCodeLength';
+import { newLocalRoomCode } from '../../../../src/utils/remote/newLocalRoomCode';
+import { ROOM_CODE_FILE } from '../data/roomCodeFile';
+import { readJsonFile } from '../utils/readJsonFile';
+import { writeFileAtomically } from '../utils/writeFileAtomically';
 
 /** <userData>/remote-room.json; created with newLocalRoomCode() on first read. */
 export async function readRoomCode(userData: string): Promise<RoomCode> {

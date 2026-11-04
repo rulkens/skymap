@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { writeFileAtomically } from '../../src/utils/writeFileAtomically.js';
+import { writeFileAtomically } from '../../src/utils/writeFileAtomically';
 
 let dir: string;
 beforeEach(() => {

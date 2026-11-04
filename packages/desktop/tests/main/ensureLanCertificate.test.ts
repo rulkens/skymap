@@ -3,8 +3,8 @@ import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ensureLanCertificate } from '../../src/main/ensureLanCertificate.js';
-import { isSignedByCa } from '../../src/utils/isSignedByCa.js';
+import { ensureLanCertificate } from '../../src/main/ensureLanCertificate';
+import { isSignedByCa } from '../../src/utils/isSignedByCa';
 
 const names = { hostnames: ['localhost', 'dome.local'], ips: ['192.168.1.20', '10.0.0.5'] };
 

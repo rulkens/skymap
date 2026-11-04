@@ -4,8 +4,8 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { ensureLanCertificate } from '../../src/main/ensureLanCertificate.js';
-import { startAppServer } from '../../src/main/startAppServer.js';
+import { ensureLanCertificate } from '../../src/main/ensureLanCertificate';
+import { startAppServer } from '../../src/main/startAppServer';
 
 // Over the wire, so a server that normalises the URL before resolveAppPath sees it fails here.
 let root: string;

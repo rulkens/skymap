@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { connect } from 'node:tls';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ensureLanCertificate } from '../../src/main/ensureLanCertificate.js';
-import { renewServerCertificate } from '../../src/main/renewServerCertificate.js';
-import { startAppServer } from '../../src/main/startAppServer.js';
+import { ensureLanCertificate } from '../../src/main/ensureLanCertificate';
+import { renewServerCertificate } from '../../src/main/renewServerCertificate';
+import { startAppServer } from '../../src/main/startAppServer';
 
 // 127.0.0.1 stands in for a LAN address the machine gained after launch (a DHCP change).
 let root: string;

@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generate } from 'selfsigned';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { LanCertificate } from '../../src/@types/LanCertificate.js';
-import { ensureLanCertificate } from '../../src/main/ensureLanCertificate.js';
-import { isSignedByCa } from '../../src/utils/isSignedByCa.js';
+import type { LanCertificate } from '../../src/@types/LanCertificate';
+import { ensureLanCertificate } from '../../src/main/ensureLanCertificate';
+import { isSignedByCa } from '../../src/utils/isSignedByCa';
 
 const names = { hostnames: ['localhost'], ips: [] };
 const dirs = [mkdtempSync(join(tmpdir(), 'ca-a-')), mkdtempSync(join(tmpdir(), 'ca-b-'))];

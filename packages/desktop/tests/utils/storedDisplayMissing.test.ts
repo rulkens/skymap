@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { storedDisplayMissing } from '../../src/utils/storedDisplayMissing.js';
+import { storedDisplayMissing } from '../../src/utils/storedDisplayMissing';
 
 const primary = { id: 1, width: 1920, height: 1080, primary: true };
 

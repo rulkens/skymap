@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lanOriginFor } from '../../src/utils/lanOriginFor.js';
+import { lanOriginFor } from '../../src/utils/lanOriginFor';
 
 const wifi = { name: 'en0', address: '192.168.1.20' };
 const ethernet = { name: 'en7', address: '10.0.0.5' };

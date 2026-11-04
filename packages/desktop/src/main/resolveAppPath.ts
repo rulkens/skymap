@@ -1,5 +1,5 @@
 import { resolve, sep } from 'node:path';
-import type { AppRoots } from '../@types/AppRoots.js';
+import type { AppRoots } from '../@types/AppRoots';
 
 const DATA_PREFIX = '/data/';
 

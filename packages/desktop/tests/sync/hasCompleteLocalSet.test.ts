@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { hasCompleteLocalSet } from '../../src/sync/hasCompleteLocalSet.js';
+import { hasCompleteLocalSet } from '../../src/sync/hasCompleteLocalSet';
 
 const inventory = {
   groups: [{ label: 'g', files: [{ key: 'data/images/a.webp', size: 1, sha256: 'A' }] }],

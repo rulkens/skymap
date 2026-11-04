@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { OfflineInventory } from '../../../../tools/deploy/@types/OfflineInventory.js';
-import type { SyncedRecord } from '../@types/SyncedRecord.js';
-import { keyToLocalPath } from '../utils/keyToLocalPath.js';
-import { readJsonFile } from '../utils/readJsonFile.js';
+import type { OfflineInventory } from '../../../../tools/deploy/@types/OfflineInventory';
+import type { SyncedRecord } from '../@types/SyncedRecord';
+import { keyToLocalPath } from '../utils/keyToLocalPath';
+import { readJsonFile } from '../utils/readJsonFile';
 
 /** inventory.json present, and every key in it verified in synced.json and on disk. */
 export async function hasCompleteLocalSet(dataRoot: string): Promise<boolean> {

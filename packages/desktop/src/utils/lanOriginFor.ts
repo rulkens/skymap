@@ -1,4 +1,4 @@
-import type { LanInterface } from '../@types/LanInterface.js';
+import type { LanInterface } from '../@types/LanInterface';
 
 /** https://<picked or first interface address>:port; https://localhost:port when there is none. */
 export function lanOriginFor(

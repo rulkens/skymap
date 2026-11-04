@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { pruneOrphans } from '../../src/sync/pruneOrphans.js';
+import { pruneOrphans } from '../../src/sync/pruneOrphans';
 
 let root: string;
 beforeEach(() => {

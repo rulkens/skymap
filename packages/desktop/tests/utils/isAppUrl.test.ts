@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isAppUrl } from '../../src/utils/isAppUrl.js';
+import { isAppUrl } from '../../src/utils/isAppUrl';
 
 describe('isAppUrl', () => {
   it('accepts https://localhost:47823 paths', () => {

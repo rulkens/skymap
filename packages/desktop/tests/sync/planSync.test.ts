@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { OfflineInventory } from '../../../../tools/deploy/@types/OfflineInventory.js';
-import { planSync } from '../../src/sync/planSync.js';
+import type { OfflineInventory } from '../../../../tools/deploy/@types/OfflineInventory';
+import { planSync } from '../../src/sync/planSync';
 
 const inventory: OfflineInventory = {
   groups: [

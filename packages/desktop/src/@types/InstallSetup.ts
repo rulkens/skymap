@@ -1,4 +1,4 @@
-import type { DataUpdates } from './DataUpdates.js';
+import type { DataUpdates } from './DataUpdates';
 
 /** `<userData>/setup.json`. */
 export type InstallSetup = {

@@ -10,11 +10,11 @@ import { createServer } from 'node:https';
 import type { Server } from 'node:https';
 import { extname, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import type { AppRoots } from '../@types/AppRoots.js';
-import type { LanCertificate } from '../@types/LanCertificate.js';
-import { APP_SERVER_PORT } from '../data/appServerPort.js';
-import { CONTENT_TYPE_BY_EXTENSION } from '../data/contentTypeByExtension.js';
-import { resolveAppPath } from './resolveAppPath.js';
+import type { AppRoots } from '../@types/AppRoots';
+import type { LanCertificate } from '../@types/LanCertificate';
+import { APP_SERVER_PORT } from '../data/appServerPort';
+import { CONTENT_TYPE_BY_EXTENSION } from '../data/contentTypeByExtension';
+import { resolveAppPath } from './resolveAppPath';
 
 export async function startAppServer(
   roots: AppRoots,

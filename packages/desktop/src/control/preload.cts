@@ -1,7 +1,7 @@
 /** Sandboxed preload (CommonJS, hence .cts): the control page's only door into the main process. */
 import { contextBridge, ipcRenderer } from 'electron';
 import type { IpcRendererEvent } from 'electron';
-import type { ControlBridge } from '../@types/ControlBridge.js';
+import type { ControlBridge } from '../@types/ControlBridge';
 
 function subscribe<T>(channel: string): (listener: (value: T) => void) => () => void {
   return (listener) => {

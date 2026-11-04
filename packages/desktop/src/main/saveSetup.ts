@@ -1,9 +1,9 @@
 import { app } from 'electron';
 import { join } from 'node:path';
-import type { InstallSetup } from '../@types/InstallSetup.js';
-import type { SetupEffects } from '../@types/SetupEffects.js';
-import { SETUP_FILE } from '../data/setupFile.js';
-import { writeFileAtomically } from '../utils/writeFileAtomically.js';
+import type { InstallSetup } from '../@types/InstallSetup';
+import type { SetupEffects } from '../@types/SetupEffects';
+import { SETUP_FILE } from '../data/setupFile';
+import { writeFileAtomically } from '../utils/writeFileAtomically';
 
 const differs = (a: unknown, b: unknown): boolean => JSON.stringify(a) !== JSON.stringify(b);
 
