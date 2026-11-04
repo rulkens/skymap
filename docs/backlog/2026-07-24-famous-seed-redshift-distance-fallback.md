@@ -59,7 +59,7 @@ small. Both then feed the galaxy surface-brightness model
 `src/utils/galaxy/galaxySbAmp.ts:36-41` divides by `(diameterKpc /
 SB_REF_DIAMETER_KPC)^2`, and the absolute magnitude driving it is
 `absoluteFromApparent(magB, distanceMpc)`
-(`src/services/engine/bake/buildPointInterleavedBuffer.ts:308`, using
+(`src/layers/galaxyCatalog/pointSprites/render/buildPointInterleavedBuffer.ts:308`, using
 `magB` off the seed entry). Distance also sets the raw Cartesian position:
 `tools/famous/buildFamous.ts:45-51` (`entryToXyz`) converts `(ra, dec,
 distanceMpc)` directly to `(x, y, z)`. M90 currently renders in the wrong

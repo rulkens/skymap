@@ -78,7 +78,7 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 import {
   decodeGalaxyCatalog,
   GALAXY_CATALOG_DATA_PREFIX,
-} from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+} from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 import { resolveDataFile } from '../utils/data/resolveDataFile';
 import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl';
 import {

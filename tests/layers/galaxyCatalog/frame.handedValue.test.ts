@@ -10,7 +10,7 @@ import { Source } from '../../../src/data/source';
 import { maskHas } from '../../../src/utils/maskHas';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
-import type { DiskWalkInput } from '../../../src/@types/engine/subsystems/DiskWalkInput';
+import type { DiskWalkInput } from '../../../src/layers/galaxyCatalog/lod/@types/DiskWalkInput';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';

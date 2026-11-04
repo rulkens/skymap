@@ -81,7 +81,7 @@ import { DEFAULT_FOCUS_MOVES } from '../../../src/data/camera/focusMoveDefaults'
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
 import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
+import type { GalaxyCatalogItemSettings } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogItemSettings';
 import type { StarCatalogId } from '../../../src/layers/starCatalog/@types/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../src/layers/starCatalog/@types/StarCatalogItemSettings';
 import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';

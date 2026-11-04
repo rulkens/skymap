@@ -31,7 +31,7 @@ import type { EngineSettingsState } from '../../../../src/@types/settings/Engine
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetRows';
-import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
+import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { structureAssetRows } from '../../../../src/layers/structure/catalog/load/structureAssetRows';
 import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';

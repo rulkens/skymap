@@ -4,6 +4,7 @@
  * body since), so every failure — a wrong tag, a wrong field count, a
  * non-finite number, or an id no body source seeds / outside
  * `SURFACE_FIXED_SITES` — returns null rather than throwing or guessing.
+ * Sky: k,<body>,<lonRad>,<latRad>,<azimuthRad>,<altitudeRad>, altitude in [−π/2, π/2].
  */
 
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
@@ -44,6 +45,18 @@ export function decodeFramedPose(value: string): FramedCameraPose | null {
     return {
       frame: { site: siteId },
       pose: { siteId, headingRad: n[0]!, elevationRad: n[1]!, rangeM: n[2]! },
+    };
+  }
+
+  if (tag === 'k') {
+    if (fields.length !== 6) return null;
+    const body = fields[1]!;
+    if (!isRegistryBodyId(body)) return null;
+    const n = parseFiniteNumbers(fields.slice(2));
+    if (n === null || Math.abs(n[3]!) > Math.PI / 2) return null;
+    return {
+      frame: { sky: { body, lonRad: n[0]!, latRad: n[1]! } },
+      pose: { azimuthRad: n[2]!, altitudeRad: n[3]! },
     };
   }
 

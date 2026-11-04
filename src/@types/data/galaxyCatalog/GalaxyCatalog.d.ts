@@ -204,7 +204,7 @@ export type GalaxyCatalog = {
   /**
    * Per-catalog MEDIAN absolute magnitude — the surface-brightness
    * zero-point `galaxySbAmp` normalises against (see
-   * `utils/galaxy/galaxySbAmp.ts` and `utils/galaxy/galaxyMedianAbsMag.ts`).
+   * `layers/galaxyCatalog/appearance/utils/galaxySbAmp.ts` and `utils/galaxy/galaxyMedianAbsMag.ts`).
    *
    * Populated by every runtime construction path: `decodeGalaxyCatalog`,
    * `emptyGalaxyCatalog`, and `cloneGalaxyCatalogForTransfer`. Optional ONLY so lightweight test

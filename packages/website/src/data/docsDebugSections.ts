@@ -118,7 +118,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     heading: 'Galaxy Provenance',
     shows:
       'How many loaded galaxies have no measured orientation and no measured size, with switches to colour them or to draw only the measured or only the unmeasured ones.',
-    file: `${PANEL}/GalaxyProvenanceSection.tsx`,
+    file: 'src/layers/galaxyCatalog/provenance/ui/GalaxyProvenanceSection.tsx',
   },
   {
     heading: 'Clips & Tours',

@@ -83,7 +83,7 @@ export const PRIVACY_FACTS: readonly Fact[] = [
     id: 'privacy-thumbnails',
     about: 'app',
     text: 'For a galaxy with no photograph in Skymap, the app fetches a small picture from the Sloan Digital Sky Survey (skyserver.sdss.org) or the CDS in Strasbourg (alasky.cds.unistra.fr). It does so when the galaxy is drawn about 24 pixels across or larger, which can happen as the app opens, and when you pin its card. The request holds the galaxy’s sky coordinates and reaches the archive with your IP address.',
-    source: `${REPO_BLOB}/src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem.ts`,
     sourceLabel: `when the app fetches a galaxy’s picture, ${IN_REPO}`,
     checked: CHECKED,
   },

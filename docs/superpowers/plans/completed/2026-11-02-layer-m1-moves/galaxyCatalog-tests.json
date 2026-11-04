@@ -1,0 +1,10 @@
+[
+  {
+    "from": "tests/layers/galaxyCatalog/subsystems/diskPlannerWalk.integration.test.ts",
+    "to": "tests/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk.integration.test.ts"
+  },
+  {
+    "from": "tests/layers/galaxyCatalog/subsystems/texturedDiskSubsystem.calibration.test.ts",
+    "to": "tests/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem.calibration.test.ts"
+  }
+]
