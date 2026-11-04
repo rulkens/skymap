@@ -93,7 +93,6 @@ const CORE_ALLOWED: Readonly<Record<string, number>> = {
   '@types/engine/SelectionRef.d': 2,
   '@types/engine/SelectionRow.d': 1,
   '@types/engine/StarInfo.d': 1,
-  '@types/palette/ScoredRow.d': 1,
   'data/bodies/seededStarCatalogsBySource': 1,
   'services/engine/helpers/refOf': 1,
   'services/engine/wiring/galaxyCatalogRequest': 2,

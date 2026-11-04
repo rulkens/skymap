@@ -52,7 +52,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Faster `npm run shot`** `deferred` — one shot is ~5 s, 1 s of it a fixed idle wait; measured breakdown and four options. → [details](backlog/2026-10-05-shot-speed.md)
 - [ ] **`capture-featured cosmicWeb` no longer reproduces its committed thumbnail** `ready` — on main (seen 2026-10-05, same before and after #842) the exhibit card comes out as a different view (wider, off-centre); `body-earth`, `body-hubble` and `body-voyager1` still match.
-- [ ] **Layer leftovers sweep** `ready` — M8 (M1–M7 shipped): the palette arms for the Milky Way and seeded stars move with no contract change. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Seeded stars become starCatalog body rows** `needs-design` — J1 / body-layers spec §7 step 5; needs an `anchor` kind on `BodyPosition`. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Remaining Layer seams** `needs-design` — J3–J12, J14 (ephemeris corrections, clips, body facts, …); J13 is the per-body slab item. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Layer dependency DAG** `needs-design` — an explicit `Layer.dependsOn` with typed access to another Layer's facts; trigger = the second cross-Layer read. → [details](backlog/2026-10-11-layer-dependency-dag.md)
