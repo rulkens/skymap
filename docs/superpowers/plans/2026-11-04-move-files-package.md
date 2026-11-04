@@ -180,7 +180,7 @@ export function findBrokenReferences(
 ): GuardFinding[];
 ```
 
-- [ ] Write the tests, watch them fail, implement, watch them pass:
+- [x] Write the tests, watch them fail, implement, watch them pass:
   - `reports a path string that no longer resolves` : `new URL('./x.wesl', import.meta.url)` in a moved file, with `x.wesl` staying
   - `does not report a string that never resolved` : a fixture `'./y'` → nothing
   - `reports a string now pointing at a different file` : `'./a.ts'` with `a→b`, and `c→a`
@@ -189,7 +189,7 @@ export function findBrokenReferences(
   - `ignores an old path in a comment` : `// src/a/b.ts` → nothing
   - `scans .astro and .mdx` : `import x from './moved'` in `.astro` → reported
   - `checks a template's fixed prefix` : `` `${BLOB}/src/a/b.ts` `` → reported
-- [ ] `npx vitest run tests/packages/move-files`. Commit.
+- [x] `npx vitest run tests/packages/move-files`. Commit.
 
 ### Task 6: `planMoves`
 
