@@ -161,6 +161,36 @@ describe('planMoves', () => {
       expect(codes(r)).toEqual(['case-collision:x/Foo.ts']);
     });
 
+    it('refuses a destination in a folder differing only by case from an existing one', () => {
+      const r = plan(
+        [{ from: 'a.ts', to: 'Lib/deep/a.ts' }],
+        { 'a.ts': '', 'lib/deep/b.ts': '' },
+        { foldCase },
+      );
+      expect(codes(r)).toEqual(['case-collision:Lib/deep/a.ts']);
+    });
+
+    it('refuses two destination folders in a batch differing only by case', () => {
+      const r = plan(
+        [
+          { from: 'a.ts', to: 'lib/a.ts' },
+          { from: 'b.ts', to: 'Lib/b.ts' },
+        ],
+        { 'a.ts': '', 'b.ts': '' },
+        { foldCase },
+      );
+      expect(codes(r)).toEqual(['case-collision:Lib/b.ts']);
+    });
+
+    it('allows a destination in a folder of exactly that case', () => {
+      const r = plan(
+        [{ from: 'a.ts', to: 'lib/deep/a.ts' }],
+        { 'a.ts': '', 'lib/deep/b.ts': '' },
+        { foldCase },
+      );
+      expect(codes(r)).toEqual([]);
+    });
+
     it('refuses a source named in the wrong case', () => {
       const r = plan(
         [{ from: 'foo.ts', to: 'lib/x.ts' }],

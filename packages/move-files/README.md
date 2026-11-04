@@ -24,8 +24,8 @@ Specifiers resolve as TypeScript's bundler mode does, plus an asset as written a
 `./data` for `data.json`.
 
 A batch is refused whole, with every reason listed, if a source is not a file git lists in
-that exact case, or a destination is taken, differs only by case from another file, is a
-folder, sits under a file, or holds a quote or backslash.
+that exact case, or a destination is taken, differs only by case from another file or its
+folder from another folder, is a folder, sits under a file, or holds a quote or backslash.
 
 ## Config
 
@@ -98,6 +98,7 @@ stays a symlink with the same target text, so a relative one may need fixing.
 
 The disk says yes to any case, so references that only work there stay stale without a finding:
 `'./foo'` for `Foo.ts`, a specifier in NFD against an NFC folder, and `./linkdir/a` through a
-directory symlink. A case-only rename of a file works; a case-only rename of a folder does not
-change the folder on disk, and a destination in a folder differing by case from an existing one
-lands in the existing folder.
+directory symlink. A case-only rename of a file works. A destination in a folder differing by
+case from one git lists is refused on every platform, since on macOS the file would land in the
+existing folder; to change a folder's case, move its files to another name, commit, then move
+them to the new case.

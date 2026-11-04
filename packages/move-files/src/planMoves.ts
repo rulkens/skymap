@@ -75,21 +75,39 @@ export function planMoves(
   for (const path of snapshot.listed) {
     if (!absSources.has(path)) taken.set(path.toLowerCase(), path);
   }
+  // On macOS a folder in another case is the same folder: the file would land in it, the
+  // specifiers would keep the new case, and only a case-sensitive machine would notice.
+  const folders = new Set<string>();
+  const foldedFolders = new Map<string, string>();
+  const addFolders = (path: string) => {
+    for (const dir of ancestorsOf(path)) {
+      folders.add(dir);
+      if (!foldedFolders.has(dir.toLowerCase())) foldedFolders.set(dir.toLowerCase(), dir);
+    }
+  };
+  for (const path of snapshot.listed) addFolders(rel(path));
   for (const { from, to } of moves) {
     if (!isSource(abs(from))) refuse('missing-source', from, 'is not a file git lists; check case');
     const dest = abs(to);
     const lower = dest.toLowerCase();
     const clash = taken.get(lower);
     const fileAbove = ancestorsOf(to).find((dir) => destinations.has(dir) || exists(abs(dir)));
+    const miscased = ancestorsOf(to).find(
+      (dir) => !folders.has(dir) && foldedFolders.has(dir.toLowerCase()),
+    );
     // On macOS a path differing by case from a vacated source "exists" only as that source.
     const free = absSources.has(dest) || (vacated.has(lower) && !snapshot.listed.has(dest));
     if (UNSPELLABLE.test(to)) refuse('invalid-destination', to, 'has a quote or backslash');
     else if (snapshot.directoryExists(dest)) refuse('invalid-destination', to, 'is a directory');
     else if (fileAbove) refuse('invalid-destination', to, `sits under the file ${fileAbove}`);
-    else if (!free && exists(dest)) refuse('occupied-destination', to, 'already exists');
+    else if (miscased) {
+      const existing = foldedFolders.get(miscased.toLowerCase())!;
+      refuse('case-collision', to, `folder ${miscased} differs only by case from ${existing}`);
+    } else if (!free && exists(dest)) refuse('occupied-destination', to, 'already exists');
     else if (clash !== undefined && clash !== dest)
       refuse('case-collision', to, `differs only by case from ${rel(clash)}`);
     taken.set(lower, dest);
+    addFolders(to);
   }
   if (refusals.length > 0) return { ok: false, refusals };
 
