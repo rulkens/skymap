@@ -12,8 +12,7 @@
  * the band choices and the K-correction-coefficient rationale.
  */
 
-import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
-import type { GalaxyCatalogRegistryEntry } from '../../@types/GalaxyCatalogRegistryEntry';
+import { galaxyEntryOf } from '../../records/utils/galaxyEntryOf';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import { distanceMpcToRedshift } from '../../../../utils/math/distanceMpcToRedshift';
 
@@ -47,9 +46,7 @@ export function pickColourIndex(
   magZ: number,
   dMpcFromOrigin: number,
 ): number {
-  const entry = (
-    GALAXY_CATALOG_SOURCE_RECORD as Partial<Record<SourceType, GalaxyCatalogRegistryEntry>>
-  )[source];
+  const entry = galaxyEntryOf(source);
   // The points pipeline only routes galaxy catalog sources here; any other
   // kind (structure, filament, volume) hitting this path means a
   // picker/dispatch bug upstream.

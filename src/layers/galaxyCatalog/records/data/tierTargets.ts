@@ -24,19 +24,11 @@
  * an absolute number of points, not a percentage.
  */
 
-import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
-import type { GalaxyCatalogRegistryEntry } from '../../@types/GalaxyCatalogRegistryEntry';
+import { galaxyEntryOf } from '../utils/galaxyEntryOf';
 import { GALAXY_CATALOG_DATA_PREFIX } from './galaxyCatalogFormat';
 import { shipsTierVariants } from '../../../../utils/loading/shipsTierVariants';
 import type { Tier } from '../../../../@types/data/Tier';
 import type { SourceType } from '../../../../@types/data/SourceType';
-
-/** The Layer's row for `source`, or `undefined` for a source another Layer owns. */
-function galaxyEntryOf(source: SourceType): GalaxyCatalogRegistryEntry | undefined {
-  return (GALAXY_CATALOG_SOURCE_RECORD as Partial<Record<SourceType, GalaxyCatalogRegistryEntry>>)[
-    source
-  ];
-}
 
 /**
  * Returns the per-tier point-count cap for a source, or `undefined` for
