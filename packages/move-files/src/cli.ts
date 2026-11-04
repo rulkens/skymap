@@ -52,7 +52,7 @@ function main(root: string): number {
   }
 
   const { plan } = result;
-  process.stdout.write(renderMoveReport(plan));
+  process.stdout.write(renderMoveReport(plan, root));
   if (dry) {
     process.stdout.write('\nmove-files: --dry, nothing saved.\n');
   } else {

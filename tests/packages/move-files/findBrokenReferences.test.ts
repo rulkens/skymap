@@ -1,6 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { findBrokenReferences } from '../../../packages/move-files/src/findBrokenReferences';
+import { findLiteralRanges } from '../../../packages/move-files/src/findLiteralRanges';
 import type { FileEdit } from '../../../packages/move-files/src/@types/FileEdit';
+
+vi.mock('../../../packages/move-files/src/findLiteralRanges', async (actual) => {
+  const module =
+    await actual<typeof import('../../../packages/move-files/src/findLiteralRanges')>();
+  return { findLiteralRanges: vi.fn(module.findLiteralRanges) };
+});
 
 function guard(
   files: Record<string, string>,
@@ -69,6 +76,37 @@ describe('findBrokenReferences', () => {
       { '/r/src/a/b.ts': '/r/src/c/b.ts' },
     );
     expect(findings).toEqual([]);
+  });
+
+  it('ignores a relative path in a comment', () => {
+    const findings = guard(
+      { '/r/old/m.ts': `// see './x.wesl'\nexport {};` },
+      { '/r/old/m.ts': '/r/new/m.ts' },
+      ['/r/old/x.wesl'],
+    );
+    expect(findings).toEqual([]);
+  });
+
+  it('ignores an old path in a CSS comment', () => {
+    const findings = guard(
+      { '/r/src/a/b.ts': ``, '/r/s.css': `/* src/a/b.ts */\n.a {}` },
+      { '/r/src/a/b.ts': '/r/src/c/b.ts' },
+    );
+    expect(findings).toEqual([]);
+  });
+
+  it('parses only a file with a suspected break', () => {
+    vi.mocked(findLiteralRanges).mockClear();
+    guard(
+      {
+        '/r/src/a/b.ts': ``,
+        '/r/clean.ts': `import './other'; const s = './y';`,
+        '/r/other.ts': ``,
+        '/r/stale.ts': `const p = 'src/a/b.ts';`,
+      },
+      { '/r/src/a/b.ts': '/r/src/c/b.ts' },
+    );
+    expect(vi.mocked(findLiteralRanges).mock.calls.map(([path]) => path)).toEqual(['/r/stale.ts']);
   });
 
   it('scans .astro and .mdx', () => {
