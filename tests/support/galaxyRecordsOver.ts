@@ -1,8 +1,8 @@
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
-import { flatGalaxyRecordSource } from '../../src/layers/galaxyCatalog/load/flatGalaxyRecordSource';
+import { flatGalaxyRecordSource } from '../../src/layers/galaxyCatalog/records/load/flatGalaxyRecordSource';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
-import type { GalaxyRecordSource } from '../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
+import type { GalaxyRecordSource } from '../../src/layers/galaxyCatalog/records/@types/GalaxyRecordSource';
 import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalaxyMetaEntry';
 
 /**

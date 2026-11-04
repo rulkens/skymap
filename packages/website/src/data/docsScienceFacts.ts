@@ -41,14 +41,14 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-galaxy-light',
     text: 'A galaxy’s light on screen starts from its absolute magnitude M, taken from one band of its catalogue: g for SDSS, J for 2MRS, B for GLADE. It is counted from the median of that galaxy’s own catalogue and divided by the square of its diameter D over 30 kiloparsecs, as below. A compact luminous galaxy is bright and a large faint one is dim.',
-    source: `${REPO_BLOB}/src/utils/galaxy/galaxySbAmp.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/appearance/utils/galaxySbAmp.ts`,
     sourceLabel: `the galaxy brightness function, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'method-galaxy-colour',
     text: 'A galaxy’s colour on screen is the difference of two catalogued magnitudes, placed on a scale from blue through white to red. Each catalogue has its own pair and range: u − g from 0.5 to 2.0 for SDSS, B − J from 0.5 to 3.5 for GLADE, J − K from 0.7 to 1.1 for 2MRS, g − r from 0.35 to 1.05 for DESI and B − R from 0 to 2 for the quasars. For SDSS and GLADE the colour is first moved towards the blue in proportion to the redshift, a rough correction for the reddening that redshift itself causes. A galaxy without both magnitudes is drawn a pale neutral.',
-    source: `${REPO_BLOB}/src/data/galaxyCatalog/colourIndex.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/appearance/data/colourIndex.ts`,
     sourceLabel: `the colour-index function, ${IN_REPO}`,
     checked: CHECKED,
   },

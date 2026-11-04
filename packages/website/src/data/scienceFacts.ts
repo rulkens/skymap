@@ -192,7 +192,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-galaxy-discs',
     text: 'A galaxy smaller than about 8 pixels on screen is a point. Larger than that, it is drawn as a generated disc. From about 24 pixels it carries a picture: a photograph of our choosing for 81 named galaxies, and for the others a survey image the app fetches from the Sloan Digital Sky Survey or, failing that, from the Digitized Sky Survey through the CDS in Strasbourg.',
-    source: `${REPO_BLOB}/src/data/galaxyLodBands.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/lod/data/galaxyLodBands.ts`,
     sourceLabel: `the galaxy level-of-detail bands, ${IN_REPO}`,
     checked: CHECKED,
   },

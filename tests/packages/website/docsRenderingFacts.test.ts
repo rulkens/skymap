@@ -13,7 +13,7 @@ const one = (file: string, name: string): number => sourceNumbers(file, name)[0]
 const text = (id: string): string => fact(id).text;
 const grouped = (n: number): string => n.toLocaleString('en');
 
-const LOD = 'src/data/galaxyLodBands.ts';
+const LOD = 'src/layers/galaxyCatalog/lod/data/galaxyLodBands.ts';
 const TILES = 'src/layers/body/surfaceTiles/format/data/surfaceTileParams.ts';
 const SHELL = 'src/layers/body/atmosphere/render/atmosphereShellRenderer.ts';
 const SLABS = 'src/services/engine/frame/slabs.ts';
@@ -124,7 +124,7 @@ describe('rendering rows and the constants behind them', () => {
 
   it('rows of galaxies taken in one frame', () => {
     const budget = one(
-      'src/layers/galaxyCatalog/subsystems/diskPlannerWalk.ts',
+      'src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk.ts',
       'DISK_ROW_ACCEPT_BUDGET',
     );
     expect(text('render-cpu-galaxies')).toContain(`at most ${grouped(budget)} rows`);
