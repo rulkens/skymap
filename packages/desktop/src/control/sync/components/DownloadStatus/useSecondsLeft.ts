@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SyncProgress } from '../../../../@types/SyncProgress';
-
-// Under this the rate swings with each file's start, and an estimate would jump about.
-const MIN_SAMPLE_MS = 5000;
+import { MIN_SAMPLE_MS } from './useSecondsLeft.constants';
 
 /** Seconds left at the average rate since this download started; null until a fair sample exists. */
 export function useSecondsLeft(progress: SyncProgress | null): number | null {

@@ -3,9 +3,8 @@ import { join } from 'node:path';
 import type { InstallSetup } from '../../@types/InstallSetup';
 import type { SetupEffects } from './@types/SetupEffects';
 import { SETUP_FILE } from './data/setupFile';
+import { differs } from './utils/differs';
 import { writeFileAtomically } from '../files/utils/writeFileAtomically';
-
-const differs = (a: unknown, b: unknown): boolean => JSON.stringify(a) !== JSON.stringify(b);
 
 /** Stores `setup` and applies what changed against `previous` live. */
 export async function saveSetup(

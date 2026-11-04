@@ -1,7 +1,6 @@
 import { resolve, sep } from 'node:path';
 import type { AppRoots } from './@types/AppRoots';
-
-const DATA_PREFIX = '/data/';
+import { DATA_PREFIX } from './data/dataPrefix';
 
 /**
  * URL path → file path, or 'ca' for /ca.crt, or null (→ 404). The path is decoded but never

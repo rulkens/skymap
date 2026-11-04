@@ -1,9 +1,8 @@
 import type { BrowserWindow } from 'electron';
+import { CURSOR_IDLE_MS } from './data/cursorIdleMs';
+import { NO_CURSOR_CSS } from './data/noCursorCss';
 import { SKY_PAGE_CSS } from './data/skyPageCss';
 import { createIdleTimer } from './utils/createIdleTimer';
-
-const CURSOR_IDLE_MS = 3000;
-const NO_CURSOR = '* { cursor: none !important; }';
 
 /**
  * Keeps a show's sky window a picture: SKY_PAGE_CSS on every page it loads, and the cursor hidden after
@@ -15,7 +14,7 @@ export function hideSkyChrome(win: BrowserWindow): void {
   let hidden: Promise<string> | null = null;
   const cursor = createIdleTimer(
     CURSOR_IDLE_MS,
-    () => void (hidden = contents.insertCSS(NO_CURSOR)),
+    () => void (hidden = contents.insertCSS(NO_CURSOR_CSS)),
     () => {
       void hidden?.then((key) => contents.removeInsertedCSS(key)).catch(() => {});
       hidden = null;

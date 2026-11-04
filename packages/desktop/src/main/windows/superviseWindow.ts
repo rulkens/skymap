@@ -6,9 +6,8 @@
 import { app } from 'electron';
 import type { BrowserWindow, Details } from 'electron';
 import { isAppUrl } from './utils/isAppUrl';
-
-const RELOAD_DELAY_MS = 2000;
-const UNRESPONSIVE_MS = 30_000;
+import { RELOAD_DELAY_MS } from './data/reloadDelayMs';
+import { UNRESPONSIVE_MS } from './data/unresponsiveMs';
 
 export function superviseWindow(win: BrowserWindow): void {
   const contents = win.webContents;

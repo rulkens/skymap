@@ -10,6 +10,7 @@ import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { QuitGate } from '../windows/@types/QuitGate';
+import type { Overlay } from '../sky/@types/Overlay';
 import type { RelayRoom } from '../../../../../src/@types/remote/RelayRoom';
 import type { ControlStatus } from '../../@types/ControlStatus';
 import type { SyncOutcome } from '../sync/@types/SyncOutcome';
@@ -85,6 +86,7 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   let sky: BrowserWindow | null = null;
   let about: BrowserWindow | null = null;
   let testGrid = false;
+  let testGridOverlay: Overlay | null = null;
   // The window can stand black before the sky loads into it: the test grid needs it during the first download.
   let skyRunning = false;
   let status: ControlStatus = { kind: 'idle' };
@@ -282,7 +284,8 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   const setTestGrid = (on: boolean): void => {
     const display = placement()?.skyDisplay;
     const open = openSky() ?? (on && display ? newSky(display) : null);
-    if (open) showTestGrid(open, setup.mode, on);
+    void testGridOverlay?.close().catch(() => {});
+    testGridOverlay = on && open && !open.isDestroyed() ? showTestGrid(open, setup.mode) : null;
     testGrid = on && open !== null;
     send('control:testGrid', testGrid);
     tickTestGrid(testGrid);

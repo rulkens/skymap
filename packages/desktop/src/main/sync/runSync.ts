@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
 import { mkdir, statfs } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { OfflineInventory } from '../../../../../tools/deploy/@types/OfflineInventory';
 import type { SyncedRecord } from './@types/SyncedRecord';
 import type { SyncOutcome } from './@types/SyncOutcome';
 import type { SyncProgress } from '../../@types/SyncProgress';
@@ -14,24 +13,8 @@ import { runPool } from './utils/runPool';
 import { writeFileAtomically } from '../files/utils/writeFileAtomically';
 import { InsufficientDiskError } from './InsufficientDiskError';
 import { planSync } from './planSync';
-
-const CONCURRENT_DOWNLOADS = 8;
-
-async function fetchInventory(
-  baseUrl: string,
-  timeoutMs: number,
-): Promise<{ text: string; inventory: OfflineInventory } | null> {
-  try {
-    const res = await fetch(`${baseUrl}/data/offline-inventory.json`, {
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!res.ok) return null;
-    const text = await res.text();
-    return { text, inventory: JSON.parse(text) as OfflineInventory };
-  } catch {
-    return null;
-  }
-}
+import { CONCURRENT_DOWNLOADS } from './data/concurrentDownloads';
+import { fetchInventory } from './utils/fetchInventory';
 
 /**
  * Downloads what the inventory lists and the mirror lacks, group by group. Never deletes:
