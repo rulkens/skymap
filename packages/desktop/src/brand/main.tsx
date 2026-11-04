@@ -9,7 +9,7 @@ import '@fontsource-variable/jost/wght.css';
 import '../../../../src/styles/tokens.css';
 import '../control/control.css';
 import './brand.css';
-import type { BrandAsset } from '../@types/BrandAsset';
+import type { BrandAsset } from './@types/BrandAsset';
 import AppIcon from './components/AppIcon/AppIcon';
 import DmgBackground from './components/DmgBackground/DmgBackground';
 import InstallerHeader from './components/InstallerHeader/InstallerHeader';

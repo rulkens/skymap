@@ -5,7 +5,7 @@
 
 import type { ReactNode } from 'react';
 import Wordmark from '../../../../../website/src/components/shared/text/Wordmark/Wordmark';
-import ControlSky from '../../../control/components/ControlSky/ControlSky';
+import ControlSky from '../../../control/sky/components/ControlSky/ControlSky';
 import styles from './InstallerHeader.module.css';
 
 function InstallerHeader(): ReactNode {

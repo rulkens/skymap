@@ -11,7 +11,7 @@ exposes only `rotate` and `onRoom`, and `attachDesktopRelay` returns it unchange
 
 - A signal on `RelayHandle` for remotes joining and leaving (a count or an event), emitted by
   `tools/utils/remote/attachRemoteRelay.ts` and tested there.
-- A `ControlBridge` member to carry it to the page (`packages/desktop/src/@types/ControlBridge.ts`,
+- A `ControlBridge` member to carry it to the page (`packages/desktop/src/@types/ControlBridge.d.ts`,
   `control/preload.cts`, the handler in `runLifecycle.ts`), and a state in `TabletStep`.
 
 **Consent.** `RelayHandle` is a shared contract and does not grow without a yes from the owner. Ask

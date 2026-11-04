@@ -56,7 +56,7 @@ export default defineConfig(({ mode }) => {
         ...common,
         outDir: resolve(import.meta.dirname, 'build/control'),
         lib: {
-          entry: resolve(import.meta.dirname, 'src/control/preload.cts'),
+          entry: resolve(import.meta.dirname, 'src/preload/preload.cts'),
           formats: ['cjs'],
           fileName: () => 'preload.cjs',
         },

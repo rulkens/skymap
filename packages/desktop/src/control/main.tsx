@@ -9,9 +9,9 @@ import { flushSync } from 'react-dom';
 import '@fontsource-variable/jost/wght.css';
 import '../../../../src/styles/tokens.css';
 import './control.css';
-import AboutWindow from './components/AboutWindow/AboutWindow';
-import ControlPage from './components/ControlPage/ControlPage';
-import ControlSky from './components/ControlSky/ControlSky';
+import AboutWindow from './shell/components/AboutWindow/AboutWindow';
+import ControlPage from './shell/components/ControlPage/ControlPage';
+import ControlSky from './sky/components/ControlSky/ControlSky';
 
 const rootEl = document.getElementById('root');
 if (rootEl) {

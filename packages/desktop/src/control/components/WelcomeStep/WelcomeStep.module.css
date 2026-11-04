@@ -1,3 +1,0 @@
-.root {
-  composes: stack from '../controlChrome.module.css';
-}

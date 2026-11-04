@@ -1,0 +1,10 @@
+.root {
+  composes: panel from '../../../controlChrome.module.css';
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+}

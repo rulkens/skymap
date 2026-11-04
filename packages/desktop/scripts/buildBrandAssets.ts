@@ -12,7 +12,7 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import sharp from 'sharp';
 import { build } from 'vite';
-import type { BrandAsset } from '../src/@types/BrandAsset';
+import type { BrandAsset } from '../src/brand/@types/BrandAsset';
 import { ICNS_SLOTS } from './data/icnsSlots';
 import { encodeBmp } from './utils/encodeBmp';
 import { encodeIcns } from './utils/encodeIcns';
