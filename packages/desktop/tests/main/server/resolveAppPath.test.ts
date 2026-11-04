@@ -28,6 +28,15 @@ describe('resolveAppPath', () => {
     );
   });
 
+  // Node hands request.url over unnormalised, and macOS and Windows disks ignore case.
+  it('keeps them off behind dot segments and other casing', () => {
+    expect(resolveAppPath('/data/./synced.json', roots)).toBeNull();
+    expect(resolveAppPath('/data/x/../inventory.json', roots)).toBeNull();
+    expect(resolveAppPath('/data/galaxy/a.bin.part/.', roots)).toBeNull();
+    expect(resolveAppPath('/data/SYNCED.json', roots)).toBeNull();
+    expect(resolveAppPath('/data/galaxy/a.bin.PART', roots)).toBeNull();
+  });
+
   it('serves /ca.crt', () => {
     expect(resolveAppPath('/ca.crt', roots)).toBe('ca');
   });

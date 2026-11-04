@@ -1,3 +1,4 @@
+import { relative } from 'node:path';
 import type { AppRoots } from './@types/AppRoots';
 import { DATA_PREFIX } from './data/dataPrefix';
 import { MIRROR_BOOKKEEPING_FILES } from '../sync/data/mirrorBookkeepingFiles';
@@ -6,7 +7,8 @@ import { resolveInside } from '../files/utils/resolveInside';
 /**
  * URL path → file path, or 'ca' for /ca.crt, or null (→ 404). The path is decoded but never
  * normalised first: `/data/../index.html` must stay a data-root path, which then escapes and fails.
- * The mirror's bookkeeping and half-downloaded `.part` files are not the LAN's to read.
+ * The mirror's bookkeeping and half-downloaded `.part` files are not the LAN's to read; they are
+ * matched after resolving, without case, as the disk will find them.
  */
 export function resolveAppPath(urlPath: string, roots: AppRoots): string | 'ca' | null {
   let path: string;
@@ -20,7 +22,9 @@ export function resolveAppPath(urlPath: string, roots: AppRoots): string | 'ca' 
   if (path === '/ca.crt') return 'ca';
   if (!path.startsWith(DATA_PREFIX))
     return resolveInside(roots.dist, path.slice(1) || 'index.html');
-  const rest = path.slice(DATA_PREFIX.length);
-  const bookkeeping = (MIRROR_BOOKKEEPING_FILES as readonly string[]).includes(rest);
-  return bookkeeping || rest.endsWith('.part') ? null : resolveInside(roots.data, rest);
+  const file = resolveInside(roots.data, path.slice(DATA_PREFIX.length));
+  if (file === null) return null;
+  const key = relative(roots.data, file).toLowerCase();
+  const bookkeeping = (MIRROR_BOOKKEEPING_FILES as readonly string[]).includes(key);
+  return bookkeeping || key.endsWith('.part') ? null : file;
 }
