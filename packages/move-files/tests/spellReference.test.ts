@@ -122,6 +122,14 @@ describe('spellReference', () => {
     expect(respell(spec, [oldT], [newT], '/r/x.ts', newT, scopes)).toBe(expected);
   });
 
+  it.each([
+    [['/r/other/*', '/r/b/*'], '/r/b/x.ts', '/r/b/c/x.ts', '@/c/x'],
+    [['/r/src/*.gen.ts', '/r/src/*.ts'], '/r/src/x.ts', '/r/src/c/x.ts', '@/c/x'],
+  ])('tries each target of an alias: %j', (targets, oldT, newT, expected) => {
+    const many = [{ dir: '/r', rules: [{ pattern: '@/*', targets }] }];
+    expect(respell('@/x', [oldT], [newT], '/r/m.ts', newT, many)).toBe(expected);
+  });
+
   it('an alias falls back to the explicit index when a sibling file would shadow it', () => {
     const out = respell(
       '@/dir',
@@ -141,6 +149,10 @@ describe('spellReference', () => {
       '#core',
     );
     expect(respell('#core', files, ['/r/k/e.ts'], '/r/a.ts', '/r/k/e.ts', core)).toBe('./k/e');
+    const asJs = [{ dir: '/r', rules: [{ pattern: '#core', targets: ['/r/lib/engine.js'] }] }];
+    expect(respell('#core', files, files, '/r/a.ts', '/r/lib/engine.ts', asJs, '/r/z/a.ts')).toBe(
+      '#core',
+    );
     const stem = [{ dir: '/r', rules: [{ pattern: '#core', targets: ['/r/lib/engine'] }] }];
     expect(respell('#core', files, files, '/r/a.ts', '/r/lib/engine.ts', stem, '/r/z/a.ts')).toBe(
       '#core',

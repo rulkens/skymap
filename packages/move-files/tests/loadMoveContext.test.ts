@@ -95,6 +95,30 @@ describe('loadMoveContext', () => {
     ).toBe('src/a/b.ts');
   });
 
+  it('a later parent reached by a diamond still overrides an earlier one', () => {
+    expect(
+      resolvedThrough({
+        'tsconfig.json': json({ extends: ['./x.json', './y.json'] }),
+        'x.json': json({
+          extends: './base.json',
+          compilerOptions: { paths: { '@/*': ['./nothing/*'] } },
+        }),
+        'y.json': json({ extends: './base.json' }),
+        'base.json': json({ extends: './root.json', ...srcAlias }),
+        'root.json': json({}),
+      }),
+    ).toBe('src/a/b.ts');
+  });
+
+  it('configs in one folder pool the targets of a pattern', () => {
+    expect(
+      resolvedThrough({
+        'tsconfig.app.json': json(srcAlias),
+        'tsconfig.node.json': json({ compilerOptions: { paths: { '@/*': ['./tools/*'] } } }),
+      }),
+    ).toBe('src/a/b.ts');
+  });
+
   it('survives an extends cycle', () => {
     expect(
       resolvedThrough({

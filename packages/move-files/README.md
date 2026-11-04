@@ -89,6 +89,7 @@ Not seen at all, so check these by hand after a move:
 - A text file that isn't valid UTF-8. It moves as an asset with its bytes intact and is never
   rewritten, so references inside it stay stale.
 - A folder whose `package.json` `main` names its entry (`./dir` for `dir/lib.ts`).
+- `./x` for `x.mjs` or `x.mts`, which Vite accepts and TypeScript does not.
 
 Directories cannot be moved, only files. Windows paths are not supported. A moved symlink
 stays a symlink with the same target text, so a relative one may need fixing.
@@ -98,4 +99,5 @@ stays a symlink with the same target text, so a relative one may need fixing.
 The disk says yes to any case, so references that only work there stay stale without a finding:
 `'./foo'` for `Foo.ts`, a specifier in NFD against an NFC folder, and `./linkdir/a` through a
 directory symlink. A case-only rename of a file works; a case-only rename of a folder does not
-change the folder on disk.
+change the folder on disk, and a destination in a folder differing by case from an existing one
+lands in the existing folder.

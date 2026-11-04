@@ -24,7 +24,7 @@ function spellAlias(rule: AliasRule, path: string): string | null {
     }
     const pre = target.slice(0, star);
     const post = target.slice(star + 1);
-    if (path.length >= pre.length + post.length && path.startsWith(pre) && path.endsWith(post)) {
+    if (path.startsWith(pre) && path.endsWith(post)) {
       return rule.pattern.replace('*', () => path.slice(pre.length, path.length - post.length));
     }
   }

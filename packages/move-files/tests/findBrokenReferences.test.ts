@@ -81,6 +81,14 @@ describe('findBrokenReferences', () => {
     ]);
   });
 
+  it('a relative string that merely ends in the old path is not a mention', () => {
+    const findings = guard(
+      { '/r/src/a/b.ts': ``, '/r/x/src/a/b.ts': ``, '/r/x/t.ts': `const p = './src/a/b.ts';` },
+      { '/r/src/a/b.ts': '/r/src/c/b.ts' },
+    );
+    expect(findings).toEqual([]);
+  });
+
   it('reports an old repo-relative path in a string', () => {
     const findings = guard(
       { '/r/src/a/b.ts': ``, '/r/t.ts': `\n\nconst p = 'src/a/b.ts';` },
@@ -267,7 +275,11 @@ describe('findBrokenReferences', () => {
   it('ignores a non-relative string in a file the rewrite covers', () => {
     expect(
       guard(
-        { '/r/src/a/b.ts': ``, '/r/src/p.ts': `const s = '@/a/b';` },
+        {
+          '/r/src/a/b.ts': ``,
+          '/r/src/k.ts': ``,
+          '/r/src/p.ts': `import './k';\nconst s = '@/a/b';`,
+        },
         { '/r/src/a/b.ts': '/r/src/c/b.ts' },
         [],
         undefined,
@@ -356,7 +368,7 @@ describe('findBrokenReferences', () => {
     it('where a string is left as a dot-specifier beside an index', () => {
       expect(
         afterRewrite(
-          { '/r/a/index.ts': ``, '/r/a/m.ts': `const parts = s.split('.');` },
+          { '/r/a/index.ts': ``, '/r/a/k.ts': ``, '/r/a/m.ts': `import './k';\ns.split('.');` },
           { '/r/a/m.ts': '/r/b/m.ts' },
         ),
       ).toEqual([]);
