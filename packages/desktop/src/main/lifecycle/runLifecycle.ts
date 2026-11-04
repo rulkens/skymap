@@ -6,7 +6,6 @@
  */
 import { app, globalShortcut, ipcMain, nativeTheme, screen } from 'electron';
 import type { BrowserWindow, WebContents } from 'electron';
-import { once } from 'node:events';
 import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -65,7 +64,6 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   const firstRun = !existsSync(join(userData, SETUP_FILE));
   let code = await readRoomCode(userData);
   const secure = await startSecureServer(userData, dataRoot);
-  const control = openControlWindow(gate);
   // Syncs, prunes and sky loads one at a time: a prune never meets a download, two loads never overlap.
   const work = serially();
   const rotations = serially();
@@ -87,13 +85,6 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   const relay = attachDesktopRelay(secure.server, {
     code: () => code,
     network: () => setup.current().network,
-  });
-  const sky = createSkyWindows({
-    control,
-    windowed,
-    gate,
-    setup: () => setup.current(),
-    onClosed: () => update({ skyRunning: false }),
   });
   // The data's date is the last complete sync's: its inventory is written last.
   const readAbout = async (): Promise<AboutInfo> => ({
@@ -120,19 +111,21 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     firstRun,
     about: await readAbout(),
   };
+  // Nothing awaits from here to registerControlIpc, so the page's first getState finds its handler.
+  const { window: control, show: showControl } = openControlWindow(gate);
+  const sky = createSkyWindows({
+    control,
+    windowed,
+    gate,
+    setup: () => setup.current(),
+    onClosed: () => update({ skyRunning: false }),
+  });
   const update = (patch: Partial<ControlState>): void => {
     state = { ...state, ...patch };
     if (!control.isDestroyed()) control.webContents.send(CONTROL_CHANNELS.state, state);
   };
   relay.onRoom((room) => update({ room }));
 
-  // Never shown before its first paint: a first launch opens on the welcome step, not a blank window.
-  const controlPainted = once(control, 'ready-to-show');
-  const showControl = (): void =>
-    void controlPainted.then(() => {
-      control.show();
-      control.focus();
-    });
   const showAbout = (): void => {
     if (about === null || about.isDestroyed()) about = openAboutWindow(control);
     else about.focus();
