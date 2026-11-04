@@ -4,9 +4,9 @@
  *
  * Nothing is half-valid: all refusals are collected so one run shows every
  * problem. A destination another move in the batch vacates is free, so chains
- * and swaps pass. Requests are root-relative and stay so in `plan.moves`;
- * the core works in absolute paths. A source counts as present if it has text
- * or merely exists (an asset), because assets are renamed on disk without an edit.
+ * and swaps pass. Requests are root-relative and stay so in `plan.moves`; the
+ * core works in absolute paths. Sources must be listed in their exact case, since
+ * on macOS the disk also answers for `foo.ts` when `Foo.ts` is what git holds.
  */
 
 import { posix } from 'node:path';
@@ -20,6 +20,15 @@ import { findBrokenReferences } from './findBrokenReferences';
 import { findUnplaceableCompanions } from './findUnplaceableCompanions';
 import { rewriteReferences } from './rewriteReferences';
 
+// No specifier can hold these as written: they end or change the string around them.
+const UNSPELLABLE = /['"`\\\n]/;
+
+function ancestorsOf(rel: string): string[] {
+  const ancestors: string[] = [];
+  for (let dir = posix.dirname(rel); dir !== '.'; dir = posix.dirname(dir)) ancestors.push(dir);
+  return ancestors;
+}
+
 export function planMoves(
   request: readonly MovePair[],
   snapshot: ProjectSnapshot,
@@ -32,16 +41,21 @@ export function planMoves(
   const abs = (rel: string) => posix.resolve(root, rel);
   const rel = (path: string) => posix.relative(root, path);
   const exists = (path: string) => snapshot.texts.has(path) || snapshot.fileExists(path);
+  const isSource = (path: string) => snapshot.listed.has(path) && exists(path);
 
   const inside: MovePair[] = [];
   for (const pair of request) {
-    const outside = [pair.from, pair.to].filter((p) => rel(abs(p)).startsWith('..'));
+    const outside = [pair.from, pair.to].filter((p) => {
+      const path = rel(abs(p));
+      return path === '..' || path.startsWith('../');
+    });
     for (const path of outside) refuse('outside-repo', path, 'is outside the repository');
-    if (outside.length === 0 && abs(pair.from) !== abs(pair.to))
+    if (pair.to.endsWith('/')) refuse('invalid-destination', pair.to, 'names a folder, not a file');
+    else if (outside.length === 0 && abs(pair.from) !== abs(pair.to))
       inside.push({ from: rel(abs(pair.from)), to: rel(abs(pair.to)) });
   }
 
-  const existsRel = (path: string) => exists(abs(path));
+  const existsRel = (path: string) => isSource(abs(path));
   for (const path of findUnplaceableCompanions(inside, context.config.companions, existsRel))
     refuse('companion-unplaceable', path, 'has no rule for the destination; add a pair for it');
   const moves = expandCompanions(inside, context.config.companions, existsRel);
@@ -56,16 +70,26 @@ export function planMoves(
   }
 
   const absSources = new Set([...sources].map(abs));
-  const taken = new Map<string, string>(); // lower-cased path -> path, for what stays on disk
-  for (const path of snapshot.texts.keys())
+  const vacated = new Set([...absSources].map((path) => path.toLowerCase()));
+  const taken = new Map<string, string>(); // lower-cased path -> path, for what ends up on disk
+  for (const path of snapshot.listed) {
     if (!absSources.has(path)) taken.set(path.toLowerCase(), path);
+  }
   for (const { from, to } of moves) {
-    if (!exists(abs(from))) refuse('missing-source', from, 'does not exist');
+    if (!isSource(abs(from))) refuse('missing-source', from, 'is not a file git lists; check case');
     const dest = abs(to);
-    const clash = taken.get(dest.toLowerCase());
-    if (!absSources.has(dest) && exists(dest)) refuse('occupied-destination', to, 'already exists');
+    const lower = dest.toLowerCase();
+    const clash = taken.get(lower);
+    const fileAbove = ancestorsOf(to).find((dir) => destinations.has(dir) || exists(abs(dir)));
+    // On macOS a path differing by case from a vacated source "exists" only as that source.
+    const free = absSources.has(dest) || (vacated.has(lower) && !snapshot.listed.has(dest));
+    if (UNSPELLABLE.test(to)) refuse('invalid-destination', to, 'has a quote or backslash');
+    else if (snapshot.directoryExists(dest)) refuse('invalid-destination', to, 'is a directory');
+    else if (fileAbove) refuse('invalid-destination', to, `sits under the file ${fileAbove}`);
+    else if (!free && exists(dest)) refuse('occupied-destination', to, 'already exists');
     else if (clash !== undefined && clash !== dest)
       refuse('case-collision', to, `differs only by case from ${rel(clash)}`);
+    taken.set(lower, dest);
   }
   if (refusals.length > 0) return { ok: false, refusals };
 

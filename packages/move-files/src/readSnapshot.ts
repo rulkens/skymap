@@ -1,11 +1,12 @@
 /**
- * readSnapshot: the text of every file that can hold a reference, plus an
- * existence check for everything else (assets, ignored files).
+ * readSnapshot: the text of every file that can hold a reference, plus existence
+ * checks for everything else (assets, ignored files).
  *
  * Only extensions the core parses are read, so a repo of large binaries costs
- * nothing. Existence answers are cached because the resolver probes the same
- * candidate paths thousands of times. A tracked file missing from disk is
- * simply absent. BOMs stay in the text so a write-back is byte-identical.
+ * nothing. A tracked file missing from disk, or not valid UTF-8, has no text: it
+ * travels as an asset, because writing a decoded copy back would corrupt its bytes.
+ * Existence answers are cached because the resolver probes the same candidates
+ * thousands of times. BOMs stay in the text so a write-back is byte-identical.
  */
 
 import { readFileSync, statSync } from 'node:fs';
@@ -14,27 +15,26 @@ import type { ProjectSnapshot } from './@types/ProjectSnapshot';
 const TEXT_FILE = /\.(?:[cm]?[jt]sx?|css|scss|less|pcss|astro|mdx)$/;
 
 export function readSnapshot(paths: readonly string[]): ProjectSnapshot {
+  const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
   const texts = new Map<string, string>();
   for (const path of paths) {
     if (!TEXT_FILE.test(path)) continue;
     try {
-      texts.set(path, readFileSync(path, 'utf8'));
+      texts.set(path, decoder.decode(readFileSync(path)));
     } catch {
-      // listed by git but gone from disk
+      // gone from disk, unreadable, or not UTF-8
     }
   }
   const known = new Map<string, boolean>();
   const fileExists = (path: string) => {
     let found = known.get(path);
     if (found === undefined) {
-      try {
-        found = statSync(path).isFile();
-      } catch {
-        found = false;
-      }
+      found = statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
       known.set(path, found);
     }
     return found;
   };
-  return { texts, fileExists };
+  const directoryExists = (path: string) =>
+    statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
+  return { texts, listed: new Set(paths), fileExists, directoryExists };
 }

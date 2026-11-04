@@ -18,6 +18,11 @@ describe('listProjectFiles', () => {
     expect(listProjectFiles(root)).toContain(`${root}/a b/c.ts`);
   });
 
+  it('refuses a subdirectory, where git would list only part of the project', () => {
+    const root = makeRepo({ 'pkg/a.ts': '', 'other/c.ts': '' });
+    expect(() => listProjectFiles(`${root}/pkg`)).toThrow(/repository root/);
+  });
+
   it('refuses outside a git repo', () => {
     const root = makeRepo({ 'a.ts': '' }, false);
     expect(() => listProjectFiles(root)).toThrow(/git repository/);

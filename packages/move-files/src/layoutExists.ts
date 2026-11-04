@@ -6,7 +6,7 @@ import type { ProjectSnapshot } from './@types/ProjectSnapshot';
  * cannot disagree about what a path means.
  */
 export function layoutExists(
-  snapshot: ProjectSnapshot,
+  snapshot: Pick<ProjectSnapshot, 'texts' | 'fileExists'>,
   moves: ReadonlyMap<string, string>,
 ): (path: string) => boolean {
   const destinations = new Set(moves.values());

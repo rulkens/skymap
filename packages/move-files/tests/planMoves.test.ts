@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { posix } from 'node:path';
 import { planMoves } from '../src/planMoves';
 import type { MoveContext } from '../src/@types/MoveContext';
 import type { MovePair } from '../src/@types/MovePair';
@@ -15,10 +16,24 @@ const context: MoveContext = {
   aliasScopes: [],
 };
 
-function plan(request: MovePair[], files: Record<string, string>, assets: string[] = []) {
+// A fake project. With `foldCase` the disk answers as macOS's does, whatever the case
+// asked for, while `listed` keeps the exact names git holds.
+function plan(
+  request: MovePair[],
+  files: Record<string, string>,
+  { assets = [] as string[], foldCase = false } = {},
+) {
+  const present = [...Object.keys(files), ...assets].map((p) => `/r/${p}`);
+  const name = (p: string) => (foldCase ? p.toLowerCase() : p);
+  const directories = new Set<string>();
+  for (const path of present) {
+    for (let d = posix.dirname(path); d !== '/'; d = posix.dirname(d)) directories.add(name(d));
+  }
   const snapshot = {
     texts: new Map(Object.entries(files).map(([p, t]) => [`/r/${p}`, t])),
-    fileExists: (p: string) => assets.map((a) => `/r/${a}`).includes(p),
+    listed: new Set(present),
+    fileExists: (p: string) => present.map(name).includes(name(p)),
+    directoryExists: (p: string) => directories.has(name(p)),
   };
   return planMoves(request, snapshot, context);
 }
@@ -55,6 +70,11 @@ describe('planMoves', () => {
     expect(codes(r)).toEqual(['outside-repo:../x.ts']);
   });
 
+  it('a name that only starts with dots is inside the repo', () => {
+    const r = plan([{ from: 'src/a.ts', to: '..foo.ts' }], { 'src/a.ts': '' });
+    expect(r.ok).toBe(true);
+  });
+
   it('allows a destination this batch vacates', () => {
     const r = plan(
       [
@@ -84,18 +104,141 @@ describe('planMoves', () => {
     expect(r.ok).toBe(true);
   });
 
-  it('refuses destinations differing only by case', () => {
-    const r = plan([{ from: 'src/x.ts', to: 'src/foo.ts' }], { 'src/x.ts': '', 'src/Foo.ts': '' });
-    expect(codes(r)).toEqual(['case-collision:src/foo.ts']);
+  describe.each([[false], [true]])('case, with foldCase %s', (foldCase) => {
+    it('allows a case-only rename', () => {
+      const r = plan(
+        [{ from: 'src/Foo.ts', to: 'src/foo.ts' }],
+        { 'src/Foo.ts': '' },
+        { foldCase },
+      );
+      expect(r.ok).toBe(true);
+    });
+
+    it('allows a destination that only differs by case from a file this batch vacates', () => {
+      const r = plan(
+        [
+          { from: 'src/x.ts', to: 'src/foo.ts' },
+          { from: 'src/Foo.ts', to: 'src/y.ts' },
+        ],
+        { 'src/x.ts': '', 'src/Foo.ts': '' },
+        { foldCase },
+      );
+      expect(r.ok).toBe(true);
+    });
+
+    it('refuses a destination differing only by case from a file that stays', () => {
+      const r = plan(
+        [{ from: 'src/x.ts', to: 'src/foo.ts' }],
+        { 'src/x.ts': '', 'src/Foo.ts': '' },
+        { foldCase },
+      );
+      expect(codes(r)).toEqual([
+        foldCase ? 'occupied-destination:src/foo.ts' : 'case-collision:src/foo.ts',
+      ]);
+    });
+
+    it('refuses a case-differing asset that stays', () => {
+      const r = plan(
+        [{ from: 'a.png', to: 'B.png' }],
+        {},
+        {
+          assets: ['a.png', 'b.png'],
+          foldCase,
+        },
+      );
+      expect(codes(r)).toEqual([foldCase ? 'occupied-destination:B.png' : 'case-collision:B.png']);
+    });
+
+    it('refuses two destinations in a batch differing only by case', () => {
+      const r = plan(
+        [
+          { from: 'a.ts', to: 'x/foo.ts' },
+          { from: 'b.ts', to: 'x/Foo.ts' },
+        ],
+        { 'a.ts': '', 'b.ts': '' },
+        { foldCase },
+      );
+      expect(codes(r)).toEqual(['case-collision:x/Foo.ts']);
+    });
+
+    it('refuses a source named in the wrong case', () => {
+      const r = plan(
+        [{ from: 'foo.ts', to: 'lib/x.ts' }],
+        { 'Foo.ts': '', 'main.ts': `import './Foo';` },
+        { foldCase },
+      );
+      expect(codes(r)).toEqual(['missing-source:foo.ts']);
+    });
   });
 
-  it('allows a case-only rename', () => {
-    const r = plan([{ from: 'src/Foo.ts', to: 'src/foo.ts' }], { 'src/Foo.ts': '' });
-    expect(r.ok).toBe(true);
+  it('a real file beside a case-only rename stays occupied', () => {
+    const r = plan([{ from: 'src/Foo.ts', to: 'src/foo.ts' }], {
+      'src/Foo.ts': '',
+      'src/foo.ts': '',
+    });
+    expect(codes(r)).toEqual(['occupied-destination:src/foo.ts']);
+  });
+
+  it('refuses a source git does not list, even when the disk has it', () => {
+    const r = planMoves(
+      [{ from: 'secret.ts', to: 'lib/secret.ts' }],
+      {
+        texts: new Map(),
+        listed: new Set(),
+        fileExists: (p) => p === '/r/secret.ts',
+        directoryExists: () => false,
+      },
+      context,
+    );
+    expect(r.ok ? [] : r.refusals.map((x) => x.code)).toEqual(['missing-source']);
+  });
+
+  it('refuses a listed source that is gone from disk', () => {
+    const r = planMoves(
+      [{ from: 'gone.ts', to: 'lib/gone.ts' }],
+      {
+        texts: new Map(),
+        listed: new Set(['/r/gone.ts']),
+        fileExists: () => false,
+        directoryExists: () => false,
+      },
+      context,
+    );
+    expect(r.ok ? [] : r.refusals.map((x) => x.code)).toEqual(['missing-source']);
+  });
+
+  it.each([
+    ['an existing directory', 'dir'],
+    ['a trailing slash', 'newdir/'],
+    ['a path under a file', 'file.txt/a.ts'],
+    ['a path deep under a file', 'file.txt/x/y/a.ts'],
+    ['an apostrophe', `it's/a.ts`],
+    ['a double quote', `a"b/a.ts`],
+    ['a backtick', 'a`b/a.ts'],
+    ['a backslash', 'a\\b/a.ts'],
+  ])('refuses a destination with %s', (_, to) => {
+    const files = { 'a.ts': '', 'file.txt': '', 'dir/k.ts': '', 'u.ts': `import './a';` };
+    const r = plan([{ from: 'a.ts', to }], files);
+    expect(r.ok ? [] : r.refusals.map((x) => x.code)).toEqual(['invalid-destination']);
+  });
+
+  it('refuses a destination another destination in the batch sits under', () => {
+    const r = plan(
+      [
+        { from: 'a.ts', to: 'x' },
+        { from: 'b.ts', to: 'x/y.ts' },
+      ],
+      { 'a.ts': '', 'b.ts': '' },
+    );
+    expect(codes(r)).toEqual(['invalid-destination:x/y.ts']);
   });
 
   it('moves a file that has no text, such as an asset', () => {
-    const r = plan([{ from: 'public/a.png', to: 'public/b.png' }], {}, ['public/a.png']);
+    const r = plan(
+      [{ from: 'public/a.png', to: 'public/b.png' }],
+      {},
+      { assets: ['public/a.png'] },
+    );
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.plan.edits).toEqual([]);
   });

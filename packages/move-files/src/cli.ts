@@ -8,6 +8,7 @@
  * arguments with nothing written, 3 a write failed partway.
  */
 
+import { posix } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { MovePair } from './@types/MovePair';
 import { applyPlan } from './applyPlan';
@@ -56,9 +57,12 @@ function main(root: string): number {
   if (dry) {
     process.stdout.write('\nmove-files: --dry, nothing saved.\n');
   } else {
-    const { failed } = applyPlan(plan, root);
+    const { failed, completed } = applyPlan(plan, root);
     if (failed !== null) {
-      err(`writing ${failed} failed; files before it were already written.`);
+      err(`writing ${posix.relative(root, failed)} failed.`);
+      err(`${completed.length} file(s) were finished:`);
+      for (const path of completed) err(`  ${posix.relative(root, path)}`);
+      err('A moved file not finished sits beside its destination as <name>.move-files-tmp.');
       return 3;
     }
     process.stdout.write('\nmove-files: saved.\n');

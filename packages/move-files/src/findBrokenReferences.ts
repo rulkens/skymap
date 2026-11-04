@@ -70,7 +70,7 @@ const lineOf = (text: string, index: number) => text.slice(0, index).split('\n')
 const lineText = (text: string, line: number) => text.split('\n')[line - 1]!.trim();
 
 export function findBrokenReferences(
-  before: ProjectSnapshot,
+  before: Pick<ProjectSnapshot, 'texts' | 'fileExists'>,
   edits: readonly FileEdit[],
   moves: ReadonlyMap<string, string>,
   root: string,

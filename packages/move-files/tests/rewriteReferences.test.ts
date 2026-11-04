@@ -147,6 +147,17 @@ describe('rewriteReferences', () => {
     );
   });
 
+  it('quotes an unquoted CSS url that gains a space or a bracket', () => {
+    const edits = run(
+      { '/r/s.css': `.a { background: url(a.png); }` },
+      {
+        '/r/a.png': '/r/my dir/a (1).png',
+      },
+      ['/r/a.png'],
+    );
+    expect(edits.get('/r/s.css')?.text).toBe(`.a { background: url("./my dir/a (1).png"); }`);
+  });
+
   it('the filter never skips an index importer', () => {
     const edits = run(
       { '/r/math/index.ts': ``, '/r/u/c.ts': `import { m } from '../math';` },

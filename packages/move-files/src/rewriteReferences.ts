@@ -28,7 +28,7 @@ const TS_FILE = /\.[cm]?[jt]sx?$/;
 const CSS_FILE = /\.(?:css|scss|less|pcss)$/;
 
 export function rewriteReferences(
-  snapshot: ProjectSnapshot,
+  snapshot: Pick<ProjectSnapshot, 'texts' | 'fileExists'>,
   moves: ReadonlyMap<string, string>,
   context: MoveContext,
 ): FileEdit[] {
@@ -74,7 +74,11 @@ export function rewriteReferences(
           value = pathMath(oldDir, newDir, reference.value);
         }
         if (value === `./${reference.value}`) value = null;
-        if (value !== null && value !== reference.value) replacements.push({ reference, value });
+        if (value !== null && value !== reference.value) {
+          // An unquoted url() cannot hold a space or a bracket.
+          const quoted = /['"]/.test(text[reference.start - 1]!) || !/[\s()]/.test(value);
+          replacements.push({ reference, value: quoted ? value : `"${value}"` });
+        }
       }
     }
 

@@ -1,16 +1,25 @@
 /**
- * applyPlan: put a plan on disk, writing every destination before deleting any source.
+ * applyPlan: put a plan on disk so that a failure loses nothing and says where things are.
  *
- * Contents are held in memory first, so a swap needs no temp names and a failed
- * write leaves every source intact. The one exception is a case-only rename:
- * on a case-insensitive disk (macOS) the destination IS the source, so writing
- * first and deleting after would delete the file just written. Those sources go
- * first; their text is already in memory. Files without an edit (assets) travel
- * as bytes. Emptied directories are left behind; git does not track them.
+ * Stage writes each rewritten moved file beside its destination, under a temp name; if
+ * that fails the temps go and the project is as it was. Commit then vacates every
+ * source and renames the temps home, so chains, swaps and case-only renames (where
+ * on macOS destination and source are one file) need no ordering. A moved file with
+ * unchanged text is only renamed, which keeps its mode, bytes and symlink. Edits to
+ * files that stay are written in place last. Emptied directories are left behind.
  */
 
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { posix } from 'node:path';
+import type { ApplyResult } from './@types/ApplyResult';
 import type { MoveFs } from './@types/MoveFs';
 import type { MovePlan } from './@types/MovePlan';
 
@@ -19,44 +28,55 @@ const diskFs: MoveFs = {
   writeFile: (path, data) => writeFileSync(path, data),
   mkdirp: (dir) => void mkdirSync(dir, { recursive: true }),
   remove: (path) => rmSync(path, { force: true }),
+  rename: (from, to) => renameSync(from, to),
+  copyMode: (from, to) => chmodSync(to, statSync(from).mode),
 };
 
-export function applyPlan(
-  plan: MovePlan,
-  root: string,
-  fs: MoveFs = diskFs,
-): { readonly failed: string | null } {
-  const sources = new Map(
+const stagedName = (destination: string) => `${destination}.move-files-tmp`;
+
+export function applyPlan(plan: MovePlan, root: string, fs: MoveFs = diskFs): ApplyResult {
+  const moves = new Map(
     plan.moves.map((m) => [posix.resolve(root, m.from), posix.resolve(root, m.to)]),
   );
-  const edited = new Set(plan.edits.map((e) => e.from));
-  const writes = new Map<string, string | Buffer>();
-  for (const edit of plan.edits) writes.set(edit.to, edit.text);
-  for (const from of sources.keys()) {
-    if (!edited.has(from)) writes.set(sources.get(from)!, fs.readFile(from));
-  }
+  const texts = new Map(plan.edits.map((e) => [e.from, e.text]));
+  const staged = new Map<string, string>(); // moved source -> its rewritten temp
+  const completed: string[] = [];
+  let current = '';
 
-  const isCaseOnly = (from: string, to: string) =>
-    from !== to && from.toLowerCase() === to.toLowerCase();
-  let failed: string | null = null;
-  const attempt = (path: string, op: () => void) => {
-    if (failed !== null) return;
-    try {
-      op();
-    } catch {
-      failed = path;
+  try {
+    for (const [from, to] of moves) {
+      current = to;
+      fs.mkdirp(posix.dirname(to));
+      const text = texts.get(from);
+      if (text === undefined || fs.readFile(from).equals(Buffer.from(text))) continue;
+      staged.set(from, stagedName(to));
+      fs.writeFile(stagedName(to), text);
+      fs.copyMode(from, stagedName(to));
     }
-  };
+  } catch {
+    for (const temp of staged.values()) fs.remove(temp);
+    return { failed: current, completed };
+  }
 
-  for (const [from, to] of sources) if (isCaseOnly(from, to)) attempt(from, () => fs.remove(from));
-  for (const [path, data] of writes) {
-    attempt(path, () => {
-      fs.mkdirp(posix.dirname(path));
-      fs.writeFile(path, data);
-    });
+  try {
+    for (const [from, to] of moves) {
+      current = from;
+      if (staged.has(from)) fs.remove(from);
+      else fs.rename(from, stagedName(to));
+    }
+    for (const to of moves.values()) {
+      current = to;
+      fs.rename(stagedName(to), to);
+      completed.push(to);
+    }
+    for (const { from, to, text } of plan.edits) {
+      if (from !== to) continue;
+      current = to;
+      fs.writeFile(to, text);
+      completed.push(to);
+    }
+  } catch {
+    return { failed: current, completed };
   }
-  for (const [from, to] of sources) {
-    if (!writes.has(from) && !isCaseOnly(from, to)) attempt(from, () => fs.remove(from));
-  }
-  return { failed };
+  return { failed: null, completed };
 }

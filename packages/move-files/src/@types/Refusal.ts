@@ -2,6 +2,7 @@ export type Refusal = {
   readonly code:
     | 'missing-source'
     | 'occupied-destination'
+    | 'invalid-destination'
     | 'duplicate-source'
     | 'duplicate-destination'
     | 'outside-repo'
