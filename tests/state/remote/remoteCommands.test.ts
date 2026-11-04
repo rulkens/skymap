@@ -29,7 +29,7 @@ const ENV: RemoteCommandEnv = {
       set: (enabled) => [{ type: 'test/setTrails', payload: enabled }],
     },
   ],
-  layerRows: [
+  switchRows: [
     {
       id: 'flow',
       label: 'Flow',

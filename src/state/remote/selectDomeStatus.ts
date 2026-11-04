@@ -35,7 +35,7 @@ function remoteTakeover(source: TakeoverSource, state: RootState): RemoteTakeove
 export function selectDomeStatus(
   state: RootState,
   toggleRows: readonly ToggleRow[],
-  layerRows: readonly ToggleRow[],
+  switchRows: readonly ToggleRow[],
   nowMs: number,
 ): DomeStatus {
   const focused = selectFocusedFocusable(state);
@@ -53,6 +53,6 @@ export function selectDomeStatus(
     },
     controls: { scheme: selectCameraControls(state).scheme },
     toggles: toggleRows.map(({ id, label, enabled }) => ({ id, label, enabled })),
-    layers: layerRows.map(({ id, label, enabled }) => ({ id, label, enabled })),
+    layers: switchRows.map(({ id, label, enabled }) => ({ id, label, enabled })),
   };
 }

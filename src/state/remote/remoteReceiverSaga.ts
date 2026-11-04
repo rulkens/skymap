@@ -77,11 +77,11 @@ export function* remoteReceiverSaga(
   };
   const rowsOf = (state: RootState) => ({
     toggleRows: selectToggleRows(state, guideRows),
-    layerRows: selectLayerSwitchRows(state, switchRows),
+    switchRows: selectLayerSwitchRows(state, switchRows),
   });
   const sendStatus = (state: RootState): void => {
-    const { toggleRows, layerRows } = rowsOf(state);
-    const status = selectDomeStatus(state, toggleRows, layerRows, performance.now());
+    const rows = rowsOf(state);
+    const status = selectDomeStatus(state, rows.toggleRows, rows.switchRows, performance.now());
     send({ kind: 'status', status });
   };
   // END reaches the pump, whose `finally` ends an open gesture and detaches.

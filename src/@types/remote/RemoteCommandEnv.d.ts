@@ -5,5 +5,5 @@ import type { ToggleRow } from '../settings/ToggleRow';
 export type RemoteCommandEnv = {
   nowMs: number;
   toggleRows: readonly ToggleRow[];
-  layerRows: readonly ToggleRow[];
+  switchRows: readonly ToggleRow[];
 };

@@ -138,5 +138,5 @@ export const REMOTE_COMMANDS: {
     toActions: ({ scheme }) => [setControlScheme(scheme)],
   },
   toggleSet: rowSetRow((env) => env.toggleRows),
-  layerSet: rowSetRow((env) => env.layerRows),
+  layerSet: rowSetRow((env) => env.switchRows),
 };
