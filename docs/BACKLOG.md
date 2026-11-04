@@ -25,7 +25,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
-- [ ] **Rename "rung" to "arm" across the camera** `ready` — one name for the camera's regimes (owner ruling); `CAMERA_RUNGS`/`RungKind`/`rungs/` vs `isBodyArm`/"the world arm" today, ~480 lines. → [details](backlog/2026-11-04-rename-rung-to-arm.md)
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
 - [ ] **A selection kind's facts live in its Layer** `needs-design` — a new kind edits 14 core tables (focusable, halo, framing, label, URL hash, exhibit picking); ruled: they move onto the Layer's `SelectionKindRow`. Also carries J2 (per-kind presentation). → [details](backlog/2026-10-28-selection-kind-facts-in-the-layer.md)
@@ -53,7 +52,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Faster `npm run shot`** `deferred` — one shot is ~5 s, 1 s of it a fixed idle wait; measured breakdown and four options. → [details](backlog/2026-10-05-shot-speed.md)
 - [ ] **`capture-featured cosmicWeb` no longer reproduces its committed thumbnail** `ready` — on main (seen 2026-10-05, same before and after #842) the exhibit card comes out as a different view (wider, off-centre); `body-earth`, `body-hubble` and `body-voyager1` still match.
-- [ ] **Layer leftovers sweep** `ready` — M8 (M1–M7 shipped): the palette arms for the Milky Way and seeded stars move with no contract change. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Seeded stars become starCatalog body rows** `needs-design` — J1 / body-layers spec §7 step 5; needs an `anchor` kind on `BodyPosition`. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Remaining Layer seams** `needs-design` — J3–J12, J14 (ephemeris corrections, clips, body facts, …); J13 is the per-body slab item. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Layer dependency DAG** `needs-design` — an explicit `Layer.dependsOn` with typed access to another Layer's facts; trigger = the second cross-Layer read. → [details](backlog/2026-10-11-layer-dependency-dag.md)
@@ -92,7 +90,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Frame-tagged clip keyframes have no per-endpoint authoring validation** `needs-design` — a straddling channel tween silently freezes. → [details](backlog/2026-09-11-clip-per-endpoint-tag-authoring-validation.md)
 - [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
-- [ ] **turnCameraArm reads the site tag by hand** `ready` — `tools/site/utils/turnCameraArm.ts` tests `'site' in arm.frame` outside `rungs/`; route it through `isSiteArm`. → [details](backlog/2026-11-03-turn-camera-arm-site-tag.md)
+- [ ] **turnCameraArm reads the site tag by hand** `ready` — `tools/site/utils/turnCameraArm.ts` tests `'site' in arm.frame` outside `arms/`; route it through `isSiteArm`. → [details](backlog/2026-11-03-turn-camera-arm-site-tag.md)
 - [ ] **framedClipArm decodes with the current basis** `deferred` — `cameraDrivers.ts` passes the current basis where the clip pinned another; harmless until a `decode` cell reads a basis. → [details](backlog/2026-11-03-framed-clip-arm-decode-basis.md)
 - [ ] **Earth point in the URL hash** `needs-design` — `#site=lon,lat[,alt]` snapping over a coordinate via the existing `flyToLonLat` saga; the typable subset of the pose codec. → [details](backlog/2026-09-15-earth-point-url-hash.md)
 - [ ] **Sub-pixel craft and scene glints can't be picked** `ready` — `glintsPassOver` (missions, earthScenes, blackHoles) has no `drawPick`, so an unresolved craft drawn as a glint takes no click.
@@ -255,7 +253,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Constants files: `<thing>.constants.ts`, one thing per file** `ready` — the suffix keeps "constant" visible outside `data/`; plus a ratchet refusing functions in `data/` (49 today). Own PRs after Layer M1. → [details](backlog/2026-11-03-constants-file-convention.md)
 - [ ] **move-files: untracked references** `ready` — ts-morph skips `?worker`/`?static` specifiers, `vi.mock` literals and CSS files (`.module.css` left behind, `composes … from` unrewritten); a stale `?worker` is silent on BOTH tsc and vite build. Rewrite them, then fail loudly on anything still dangling. → [details](backlog/2026-07-14-move-files-untracked-references.md)
 - [ ] **refactor `extract` drops type imports** `ready` — a confirmed bug: the extracted file loses its type-only imports and does not compile. → [details](backlog/2026-07-21-refactor-cli-followups.md)
-- [ ] **refactor `extract` crashes on a type alias into a `.d.ts`** `ready` — "node that was removed or forgotten" instead of a move or a refusal; repro at `393be6506^`. → [details](backlog/2026-11-02-refactor-extract-crash.md)
+- [ ] **refactor `extract` crashes with "node that was removed or forgotten"** `ready` — two repros: a type alias into a `.d.ts` (`393be6506^`), and a function whose move empties a type import (`45f84b1df`). → [details](backlog/2026-11-02-refactor-extract-crash.md)
 - [ ] **refactor CLI follow-ups** `deferred` — runOp dispatch table + extract closure gaps (dropped `//` comments, `export {}` form, import carry) + refusal/error-context polish. → [details](backlog/2026-07-21-refactor-cli-followups.md)
 - [ ] **Default filament build silently drops GLADE** `awaiting-decision` — `ALL_SOURCE_FILES` names un-tiered `sdss.bin`/`glade.bin` the tiered pipeline no longer emits; missing-file skip ⇒ shipped `filaments.bin` is 2MRS-only. → [details](backlog/2026-08-10-buildfilaments-glade-skip.md)
 - [ ] **"Task N" comment references — decide the convention** `needs-design` — ~175 plan-task refs in src/tools/tests read as changelog noise once plans archive; bless the idiom or ban it in comments.md and sweep.

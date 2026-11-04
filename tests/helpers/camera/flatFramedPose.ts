@@ -4,9 +4,9 @@
  * point: a trace step that changed arm cannot compare clean against one that did not.
  */
 
-import { isBodyArm } from '../../../src/services/engine/camera/rungs/isBodyArm';
-import { isSiteArm } from '../../../src/services/engine/camera/rungs/isSiteArm';
-import { isSkyArm } from '../../../src/services/engine/camera/rungs/isSkyArm';
+import { isBodyArm } from '../../../src/services/engine/camera/arms/isBodyArm';
+import { isSiteArm } from '../../../src/services/engine/camera/arms/isSiteArm';
+import { isSkyArm } from '../../../src/services/engine/camera/arms/isSkyArm';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 
 export function flatFramedPose(framed: FramedCameraPose): readonly number[] {

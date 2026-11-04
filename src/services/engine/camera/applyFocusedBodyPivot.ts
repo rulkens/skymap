@@ -13,7 +13,7 @@ import { liveBodyPosition } from './liveBodyPosition';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import { isWorldArm } from './rungs/isWorldArm';
+import { isWorldArm } from './arms/isWorldArm';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';

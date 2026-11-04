@@ -25,7 +25,7 @@
 - `src/utils/camera/steppedSitePose.ts` — `InputStep`'s `drag` variant carries
   a `mode: DragMode` field (`src/@types/camera/InputStep.d.ts`), but this file
   never reads `.mode` at all: every `kind === 'drag'` step drives the
-  turntable orbit math, so a `'pan'` (or future) mode on the site rung has no
+  turntable orbit math, so a `'pan'` (or future) mode on the site arm has no
   distinct effect here — it is not tested and not routed, just absorbed.
 
 None of these five sites use a switch or `satisfies never`; each hand-picks

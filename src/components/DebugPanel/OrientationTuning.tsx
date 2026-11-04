@@ -90,7 +90,7 @@ function OrientationTuning({
         max={limits.siteEngageMax}
         step={1}
         readout={tuning.siteEngageR.toFixed(0)}
-        title="range, in the SITE body's bounding radii, at which the site rung takes over (disengage kept > this × 1.1)"
+        title="range, in the SITE body's bounding radii, at which the site arm takes over (disengage kept > this × 1.1)"
         onChange={(v) => dispatch(setCameraTuning({ siteEngageR: v }))}
       />
       <DebugSlider

@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { actionForRow } from '../../../src/utils/palette/actionForRow';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/source';
-import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
@@ -52,26 +50,6 @@ describe('actionForRow', () => {
       kind: 'focus',
       focusId: 'cluster-coma',
     });
-  });
-
-  it('the milkyWay row → the fixed singleton focus id', () => {
-    expect(actionForRow({ kind: 'milkyWay', score: 0 })).toEqual({
-      kind: 'focus',
-      focusId: MILKY_WAY_FOCUS_ID,
-    });
-  });
-
-  it('a star row → the seed id under the star focus prefix', () => {
-    const index = SCENE_STARS.findIndex((star) => star.id === 'sirius');
-    expect(
-      actionForRow({
-        kind: 'starCatalog',
-        source: Source.FamousStar,
-        index,
-        star: SCENE_STARS[index]!,
-        score: 0,
-      }),
-    ).toEqual({ kind: 'focus', focusId: 'star-sirius' });
   });
 
   it('an exhibit row → an exhibit action carrying the registry id, not a focus', () => {

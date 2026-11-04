@@ -11,7 +11,7 @@ import { yawPitchToDir } from './yawPitchToDir';
 
 /**
  * The world arm's pixel-free motion, axes in the order orbit → look → roll;
- * zoom is `absoluteRung.step`'s, run by the rung first. Orbit goes back through the drag's own pixel law (altitude damping and
+ * zoom is `absoluteCameraArm.step`'s, run by the arm first. Orbit goes back through the drag's own pixel law (altitude damping and
  * pitch clamp included) so a nudge and its equivalent drag cannot drift apart.
  * `cssHeight` is the CSS height, as for the drag.
  */

@@ -750,7 +750,7 @@ describe('runFrame — engineScaleChanged dispatch', () => {
     const ALTITUDE_KM = 100;
     const arm = earthArm(1 + ALTITUDE_KM / EARTH_RADIUS_KM);
     store.dispatch(commitCameraPose(arm));
-    // No focus row: nothing constrains a rung, so the arm holds at rest and
+    // No focus row: nothing constrains an arm, so the arm holds at rest and
     // the legend — this fixture's whole subject — is read off it. A focus here
     // would owe an approach that flies the range straight out of the km band.
     state.cameraRuntime = {

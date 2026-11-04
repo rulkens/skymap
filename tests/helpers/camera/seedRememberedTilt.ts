@@ -11,7 +11,7 @@ import {
   EMPTY_SURFACE_GESTURE_MEMORY,
   surfaceStep,
 } from '../../../src/services/camera/surfaceStep';
-import { frameKey } from '../../../src/services/engine/camera/rungs/frameKey';
+import { frameKey } from '../../../src/services/engine/camera/arms/frameKey';
 import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
 import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';

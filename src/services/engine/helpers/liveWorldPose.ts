@@ -6,7 +6,7 @@
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
-import { foldToWorld } from '../camera/rungs/foldToWorld';
+import { foldToWorld } from '../camera/arms/foldToWorld';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 export function liveWorldPose(state: EngineState): CameraPose {

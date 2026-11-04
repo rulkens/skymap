@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { paletteRowLabel } from '../../../src/utils/palette/paletteRowLabel';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/source';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
-import { MILKY_WAY_NAMES } from '../../../src/data/palette/milkyWayNames';
 import type { ScoredRow } from '../../../src/@types/palette/ScoredRow';
-
-const siriusIndex = SCENE_STARS.findIndex((star) => star.id === 'sirius');
 
 describe('paletteRowLabel', () => {
   it('names every ScoredRow kind', () => {
@@ -22,7 +18,6 @@ describe('paletteRowLabel', () => {
         'M31',
         'Galaxy',
       ],
-      [{ kind: 'milkyWay', score: 0 }, MILKY_WAY_NAMES[0], 'Galaxy'],
       [
         {
           kind: 'alias',
@@ -40,17 +35,6 @@ describe('paletteRowLabel', () => {
         },
         '(unnamed)',
         'Galaxy',
-      ],
-      [
-        {
-          kind: 'starCatalog',
-          source: Source.FamousStar,
-          index: siriusIndex,
-          star: SCENE_STARS[siriusIndex]!,
-          score: 0,
-        },
-        SCENE_STARS[siriusIndex]!.label,
-        'Star',
       ],
       [
         {

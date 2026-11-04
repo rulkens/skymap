@@ -108,9 +108,9 @@ import { lerpInSpace } from '../animation/channelSpace';
 import { EASE } from '../animation/ease';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 import { lerp } from '../../../utils/math/lerp';
-import { foldToWorld } from './rungs/foldToWorld';
-import { rowFor } from './rungs/rowFor';
-import { sameFrame } from './rungs/sameFrame';
+import { foldToWorld } from './arms/foldToWorld';
+import { rowFor } from './arms/rowFor';
+import { sameFrame } from './arms/sameFrame';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
@@ -584,7 +584,7 @@ function convertChannels(
   deps: FrameDeps,
 ): CameraPose {
   if (sameFrame(from, to)) return channels;
-  // The clip's one steady basis serves as BOTH rung bases: its absolute angles
+  // The clip's one steady basis serves as BOTH arm bases: its absolute angles
   // were authored through it, and a leg start has no separate up to read.
   const ctx = {
     bodies: deps.bodies,

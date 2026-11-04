@@ -17,8 +17,8 @@ import {
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
-import { rowFor } from '../../../../src/services/engine/camera/rungs/rowFor';
+import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
+import { rowFor } from '../../../../src/services/engine/camera/arms/rowFor';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
 import { skySpotRadial } from '../../../../src/utils/geo/skySpotRadial';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
@@ -75,7 +75,7 @@ const SPOT = {
 const R_EARTH_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'earth', 'clipKeyframeFrames.test')
   .surface.datumRadiusM;
 
-/** The body rung's `decode` folded back out; production ships no such inverse. */
+/** The body arm's `decode` folded back out; production ships no such inverse. */
 function fromBodyFixedChannels(channels: CameraPose, frame: typeof EARTH): CameraPose {
   return foldToWorld(rowFor(frame).channels.decode(channels, frame, CTX), CTX);
 }
@@ -218,7 +218,7 @@ describe('frame-tagged keyframes', () => {
     expect(a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).toBeCloseTo(1, 12);
   });
 
-  it('a clip leg tagged { site } evaluates in the site rung, tweening from its converted start', () => {
+  it('a clip leg tagged { site } evaluates in the site arm, tweening from its converted start', () => {
     const CURIOSITY = { site: asSurfaceSiteId('curiosity') };
     const HEADING_RAD = 0.7;
     const ELEVATION_RAD = 0.2;
@@ -231,7 +231,7 @@ describe('frame-tagged keyframes', () => {
     const data: ClipData = { start: START, timeline: [siteLeg] };
 
     // MID-tween, not at the end: at `t = 4` the value is the authored `to`
-    // whatever the leg-open conversion produced, so the site rung's `decode`
+    // whatever the leg-open conversion produced, so the site arm's `decode`
     // would not be on the measured path at all.
     const open = evaluateFramedClip(data, 0, opts());
     const mid = evaluateFramedClip(data, 2, opts());

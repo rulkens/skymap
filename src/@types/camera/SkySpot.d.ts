@@ -1,6 +1,6 @@
 import type { SceneBodyId } from '../scene/SceneBodyId';
 
-/** Where the sky rung stands: a place on a host, named by the frame tag and never by the pose. */
+/** Where the sky arm stands: a place on a host, named by the frame tag and never by the pose. */
 export type SkySpot = {
   readonly body: SceneBodyId;
   /** East-positive, IAU body-fixed (`surfacePointBodyFixed`'s convention). */

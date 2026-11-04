@@ -1,5 +1,5 @@
 /**
- * siteEyeFrame — the ENU the whole site rung is expressed in. Hand-checked at
+ * siteEyeFrame — the ENU the whole site arm is expressed in. Hand-checked at
  * the equator (where east is +y under the east-positive IAU convention) and at
  * the pole (the degenerate branch, where the flattened pole vanishes).
  */

@@ -18,7 +18,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/isBodyArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { expectSigRows } from '../../../helpers/camera/expectSigRows';
 import { flatFramedPose } from '../../../helpers/camera/flatFramedPose';
