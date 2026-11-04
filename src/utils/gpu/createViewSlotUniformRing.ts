@@ -12,7 +12,7 @@
 import type { ViewSlotUniformRing } from '../../@types/rendering/ViewSlotUniformRing';
 
 /**
- * Slot 0 is the main view; slots 1…18 are claimed by a `CUBEMAP_CAPTURES`
+ * Slot 0 is the main view; slots 1…18 are claimed by an `APP_CUBEMAP_CAPTURE_REGISTRY`
  * row's six faces (`viewSlotBase … +5`, that table's test pins the ranges);
  * slots 19…23 (`DOME_PARAMS.viewSlotBase … +4`) are the dome's five faces.
  */

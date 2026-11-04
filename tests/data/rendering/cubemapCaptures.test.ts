@@ -6,16 +6,17 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../src/data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../src/compositions/appCubemapCaptures';
 import { DOME_FACE_COUNT } from '../../../src/data/rendering/domeFaces';
 import { DOME_PARAMS } from '../../../src/data/rendering/domeParams';
 import { composeRenderTargetRows } from '../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../src/compositions/app';
 import { VIEW_SLOT_COUNT } from '../../../src/utils/gpu/createViewSlotUniformRing';
+import { ALL_CUBE_FACES } from '../../../src/data/rendering/cubemapCaptures';
 
-const ROWS = Object.values(CUBEMAP_CAPTURES);
+const ROWS = Object.values(APP_CUBEMAP_CAPTURE_REGISTRY);
 
-describe('CUBEMAP_CAPTURES', () => {
+describe('APP_CUBEMAP_CAPTURE_REGISTRY', () => {
   it('claims six disjoint view slots per row, all inside VIEW_SLOT_COUNT', () => {
     const claimed = new Set<number>();
     for (const row of ROWS) {

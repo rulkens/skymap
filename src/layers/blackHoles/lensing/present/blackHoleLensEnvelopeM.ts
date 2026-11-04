@@ -11,14 +11,14 @@
 import type { SlabRow } from '../../../../@types/engine/frame/SlabRow';
 import type { BlackHoleRow } from '../../@types/BlackHoleRow';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { lensEdgeFadeEndRs } from '../utils/lensEdgeFadeEndRs';
+import { BLACK_HOLE_SKY_CAPTURES } from '../data/blackHoleSkyCaptures';
 import { MAX_IMPACT_PARAM_RS } from '../data/schwarzschildLutDomain';
 
 export function blackHoleLensEnvelopeM(row: BlackHoleRow): SlabRow['drawRadiusM'] {
   const schwarzschildM = schwarzschildRadiusM(row.massSolar);
-  const band = CUBEMAP_CAPTURES[row.capture].band;
+  const band = BLACK_HOLE_SKY_CAPTURES[row.capture].band;
 
   return (distM: number, pxPerRad: number): number => {
     const distMpc = distM * SCALE_UNITS.M_TO_MPC;
