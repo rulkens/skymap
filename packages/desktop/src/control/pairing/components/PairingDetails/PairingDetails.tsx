@@ -14,7 +14,7 @@ import chrome from '../../../controlChrome.module.css';
 import styles from './PairingDetails.module.css';
 
 export type PairingDetailsProps = {
-  readonly room: RelayRoom | null;
+  readonly room: RelayRoom;
   readonly online: boolean;
   readonly skyRunning: boolean;
   readonly onHelp: () => void;
@@ -30,7 +30,6 @@ function PairingDetails({ room, online, skyRunning, onHelp }: PairingDetailsProp
       </p>
     );
   }
-  if (room === null) return null;
   const url = pairingUrl(room.origin, room.code);
   return (
     <div className={styles.root}>

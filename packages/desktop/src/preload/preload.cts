@@ -2,42 +2,32 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { IpcRendererEvent } from 'electron';
 import type { ControlBridge } from '../@types/ControlBridge';
-import type { ControlView } from '../@types/ControlView';
-import type { HelpSection } from '../@types/HelpSection';
+import { CONTROL_CHANNELS as C } from '../data/controlChannels';
 
-function subscribe<T>(channel: string): (listener: (value: T) => void) => () => void {
-  return (listener) => {
-    const handler = (_event: IpcRendererEvent, value: T) => listener(value);
+function subscribe<A extends unknown[]>(channel: string) {
+  return (listener: (...args: A) => void) => {
+    const handler = (_event: IpcRendererEvent, ...args: A) => listener(...args);
     ipcRenderer.on(channel, handler);
     return () => void ipcRenderer.off(channel, handler);
   };
 }
+// Main answers every request; a command's answer carries nothing the page waits for.
+const command =
+  (channel: string) =>
+  (...args: unknown[]): void =>
+    void ipcRenderer.invoke(channel, ...args);
 
 const bridge: ControlBridge = {
-  onSync: subscribe('control:sync'),
-  onStatus: subscribe('control:status'),
-  onSky: subscribe('control:sky'),
-  onDisplays: subscribe('control:displays'),
-  onView: (listener) => {
-    const handler = (_event: IpcRendererEvent, view: ControlView, section?: HelpSection) =>
-      listener(view, section);
-    ipcRenderer.on('control:view', handler);
-    return () => void ipcRenderer.off('control:view', handler);
-  },
-  onTestGrid: subscribe('control:testGrid'),
-  onPairing: subscribe('control:pairing'),
-  updateNow: () => ipcRenderer.send('control:updateNow'),
-  restartSky: () => ipcRenderer.send('control:restartSky'),
-  isFirstRun: () => ipcRenderer.invoke('control:isFirstRun'),
-  getSetup: () => ipcRenderer.invoke('control:getSetup'),
-  saveSetup: (setup) => ipcRenderer.invoke('control:saveSetup', setup),
-  listDisplays: () => ipcRenderer.invoke('control:listDisplays'),
-  listNetworks: () => ipcRenderer.invoke('control:listNetworks'),
-  getAbout: () => ipcRenderer.invoke('control:getAbout'),
-  showTestGrid: (on) => ipcRenderer.send('control:showTestGrid', on),
-  rotateCode: () => ipcRenderer.send('control:rotateCode'),
-  hide: () => ipcRenderer.send('control:hide'),
-  quit: () => ipcRenderer.send('control:quit'),
+  getState: () => ipcRenderer.invoke(C.getState),
+  onState: subscribe(C.state),
+  onView: subscribe(C.view),
+  saveSetup: (setup) => ipcRenderer.invoke(C.saveSetup, setup),
+  updateNow: command(C.updateNow),
+  restartSky: command(C.restartSky),
+  showTestGrid: command(C.showTestGrid),
+  rotateCode: command(C.rotateCode),
+  hide: command(C.hide),
+  quit: command(C.quit),
 };
 
 contextBridge.exposeInMainWorld('skymapControl', bridge);

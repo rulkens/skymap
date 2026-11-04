@@ -1,6 +1,6 @@
 /**
  * AboutWindow — About on its own, for the shell's About window (openAboutWindow): it loads the
- * control page with `?view=about` and the same preload; main answers `control:getAbout` from it too.
+ * control page with `?view=about` and the same preload, and reads About's facts from main's state.
  */
 
 import { useEffect, useState } from 'react';
@@ -16,7 +16,7 @@ export type AboutWindowProps = {
 
 function AboutWindow({ bridge }: AboutWindowProps): ReactNode {
   const [about, setAbout] = useState<AboutInfo | null>(null);
-  useEffect(() => void bridge.getAbout().then(setAbout), [bridge]);
+  useEffect(() => void bridge.getState().then((state) => setAbout(state.about)), [bridge]);
   return (
     <div className={styles.root}>
       <AboutView about={about} />

@@ -1,38 +1,29 @@
 import { useId } from 'react';
 import type { ReactNode } from 'react';
-import type { ControlStatus } from '../../../../@types/ControlStatus';
-import type { SyncProgress } from '../../../../@types/SyncProgress';
-import { needsRetry } from '../../utils/needsRetry';
+import type { SyncState } from '../../@types/SyncState';
+import { describeStatus } from '../../utils/describeStatus';
 import DownloadStatus from '../DownloadStatus/DownloadStatus';
 import chrome from '../../../controlChrome.module.css';
 import styles from './SyncPanel.module.css';
 
 export type SyncPanelProps = {
-  readonly status: ControlStatus;
-  readonly progress: SyncProgress | null;
-  readonly skyRunning: boolean;
+  readonly sync: SyncState;
   readonly onUpdateNow: () => void;
   readonly onRestartSky: () => void;
 };
 
-function SyncPanel({
-  status,
-  progress,
-  skyRunning,
-  onUpdateNow,
-  onRestartSky,
-}: SyncPanelProps): ReactNode {
+function SyncPanel({ sync, onUpdateNow, onRestartSky }: SyncPanelProps): ReactNode {
   const titleId = useId();
-  const syncing = status.kind === 'syncing';
+  const syncing = sync.status.kind === 'syncing';
   return (
     <section className={styles.root} aria-labelledby={titleId}>
       <h2 id={titleId} className={chrome.heading}>
         Data
       </h2>
-      <DownloadStatus status={status} progress={progress} skyRunning={skyRunning} />
+      <DownloadStatus sync={sync} />
       <div className={chrome.row}>
         <button type="button" className={chrome.button} disabled={syncing} onClick={onUpdateNow}>
-          {needsRetry(status) ? 'Retry' : 'Update now'}
+          {describeStatus(sync).tone === 'problem' ? 'Retry' : 'Update now'}
         </button>
         <button type="button" className={chrome.button} disabled={syncing} onClick={onRestartSky}>
           Restart sky

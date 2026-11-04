@@ -6,7 +6,6 @@
 import type { ReactNode } from 'react';
 import type { ControlBridge } from '../../../../@types/ControlBridge';
 import type { ControlSession } from '../../@types/ControlSession';
-import type { InstallSetup } from '../../../../@types/InstallSetup';
 import PairingPanel from '../../../pairing/components/PairingPanel/PairingPanel';
 import QuitPanel from '../QuitPanel/QuitPanel';
 import SetupPanel from '../../../setup/components/SetupPanel/SetupPanel';
@@ -14,7 +13,7 @@ import SyncPanel from '../../../sync/components/SyncPanel/SyncPanel';
 import styles from './ControlsView.module.css';
 
 export type ControlsViewProps = {
-  readonly session: ControlSession & { setup: InstallSetup };
+  readonly session: ControlSession;
   readonly bridge: ControlBridge;
   readonly onRunSetup: () => void;
   readonly onHelp: () => void;
@@ -25,13 +24,7 @@ function ControlsView({ session, bridge, onRunSetup, onHelp }: ControlsViewProps
   return (
     <main className={styles.root}>
       <div className={styles.column}>
-        <SyncPanel
-          status={session.status}
-          progress={session.progress}
-          skyRunning={session.skyRunning}
-          onUpdateNow={bridge.updateNow}
-          onRestartSky={bridge.restartSky}
-        />
+        <SyncPanel sync={session} onUpdateNow={bridge.updateNow} onRestartSky={bridge.restartSky} />
         <SetupPanel
           setup={setup}
           displays={session.displays}

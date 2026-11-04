@@ -4,25 +4,22 @@
  */
 
 import type { ReactNode } from 'react';
-import type { ControlStatus } from '../../../../@types/ControlStatus';
-import type { SyncProgress } from '../../../../@types/SyncProgress';
-import { needsRetry } from '../../utils/needsRetry';
+import type { SyncState } from '../../@types/SyncState';
+import { describeStatus } from '../../utils/describeStatus';
 import DownloadStatus from '../DownloadStatus/DownloadStatus';
 import chrome from '../../../controlChrome.module.css';
 import styles from './DownloadStrip.module.css';
 
 export type DownloadStripProps = {
-  readonly status: ControlStatus;
-  readonly progress: SyncProgress | null;
-  readonly skyRunning: boolean;
+  readonly sync: SyncState;
   readonly onRetry: () => void;
 };
 
-function DownloadStrip({ status, progress, skyRunning, onRetry }: DownloadStripProps): ReactNode {
+function DownloadStrip({ sync, onRetry }: DownloadStripProps): ReactNode {
   return (
     <footer className={styles.root} aria-label="Download">
-      <DownloadStatus status={status} progress={progress} skyRunning={skyRunning} />
-      {needsRetry(status) && (
+      <DownloadStatus sync={sync} />
+      {describeStatus(sync).tone === 'problem' && (
         <button type="button" className={chrome.button} onClick={onRetry}>
           Retry
         </button>

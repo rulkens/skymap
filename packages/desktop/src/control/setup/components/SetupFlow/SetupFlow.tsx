@@ -8,12 +8,11 @@ import { useEffect, useId, useRef } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { RelayRoom } from '../../../../../../../src/@types/remote/RelayRoom';
 import Wordmark from '../../../../../../website/src/components/shared/text/Wordmark/Wordmark';
-import type { ControlStatus } from '../../../../@types/ControlStatus';
 import type { DisplayInfo } from '../../../../@types/DisplayInfo';
 import type { InstallSetup } from '../../../../@types/InstallSetup';
 import type { LanInterface } from '../../../../@types/LanInterface';
 import type { SetupStep } from '../../@types/SetupStep';
-import type { SyncProgress } from '../../../../@types/SyncProgress';
+import type { SyncState } from '../../../sync/@types/SyncState';
 import { placeWindows } from '../../../../utils/placeWindows';
 import { stepAfter } from '../../utils/stepAfter';
 import { hasOneScreen } from '../../utils/hasOneScreen';
@@ -34,10 +33,8 @@ import styles from './SetupFlow.module.css';
 export type SetupFlowProps = {
   readonly step: SetupStep;
   readonly setup: InstallSetup;
-  readonly status: ControlStatus;
-  readonly progress: SyncProgress | null;
-  readonly skyRunning: boolean;
-  readonly room: RelayRoom | null;
+  readonly sync: SyncState;
+  readonly room: RelayRoom;
   readonly displays: readonly DisplayInfo[];
   readonly networks: readonly LanInterface[];
   readonly onStep: (step: SetupStep) => void;
@@ -50,7 +47,8 @@ export type SetupFlowProps = {
 };
 
 function SetupFlow(props: SetupFlowProps): ReactNode {
-  const { step, setup, status, progress, skyRunning, room, displays, networks } = props;
+  const { step, setup, sync, room, displays, networks } = props;
+  const { skyRunning } = sync;
   const { onStep, onSave, onShowTestGrid, onRetry, onHelp, onClose } = props;
   const titleId = useId();
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -93,9 +91,7 @@ function SetupFlow(props: SetupFlowProps): ReactNode {
             {title}
           </h1>
           {STEP_LEADS[step] && <p className={styles.lead}>{STEP_LEADS[step]}</p>}
-          {step === 'welcome' && (
-            <WelcomeStep status={status} progress={progress} skyRunning={skyRunning} />
-          )}
+          {step === 'welcome' && <WelcomeStep sync={sync} />}
           {step === 'mode' && (
             <ModeChoice mode={setup.mode} onPick={(mode) => save({ ...setup, mode })} />
           )}
@@ -135,12 +131,7 @@ function SetupFlow(props: SetupFlowProps): ReactNode {
           </button>
         </div>
       </section>
-      <DownloadStrip
-        status={status}
-        progress={progress}
-        skyRunning={skyRunning}
-        onRetry={onRetry}
-      />
+      <DownloadStrip sync={sync} onRetry={onRetry} />
     </div>
   );
 }

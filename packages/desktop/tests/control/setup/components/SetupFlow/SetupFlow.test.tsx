@@ -12,8 +12,8 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-async function firstRun(opts: Parameters<typeof fakeBridge>[0] = {}) {
-  const fake = fakeBridge({ firstRun: true, ...opts });
+async function firstRun(over: Parameters<typeof fakeBridge>[0] = {}) {
+  const fake = fakeBridge({ firstRun: true, hasData: false, ...over });
   render(<ControlPage bridge={fake.bridge} />);
   await screen.findByRole('button', { name: 'Start setup' });
   return fake;
@@ -83,18 +83,20 @@ describe('SetupFlow', () => {
   });
 
   it('Finish waits on the download in words, then says the sky is ready', async () => {
-    const { bridge, push } = await firstRun();
-    push('onStatus', { kind: 'syncing' });
-    push('onSync', { doneBytes: 2e9, totalBytes: 6e9 });
+    const { bridge, set } = await firstRun();
+    set({ status: { kind: 'syncing' }, progress: { doneBytes: 2e9, totalBytes: 6e9 } });
     fireEvent.click(railStep('Every day'));
     press('Finish');
     expect(title()).toHaveTextContent('Waiting for the download');
     expect(screen.getByText(/when the download finishes/)).toBeVisible();
     expect(screen.getByText('2.0 GB of 6.0 GB · 4.0 GB left')).toBeVisible();
 
-    push('onStatus', { kind: 'idle' });
-    push('onSync', { doneBytes: 6e9, totalBytes: 6e9 });
-    push('onSky', true);
+    set({
+      status: { kind: 'complete' },
+      progress: { doneBytes: 6e9, totalBytes: 6e9 },
+      hasData: true,
+      skyRunning: true,
+    });
     expect(title()).toHaveTextContent('The sky is ready');
     press('Close setup');
     expect(screen.getByRole('heading', { name: 'Data' })).toBeVisible();
@@ -102,8 +104,8 @@ describe('SetupFlow', () => {
   });
 
   it('on one screen the last button hides this window to show the sky', async () => {
-    const { bridge, push } = await firstRun({ displays: [TWO_DISPLAYS[0]!] });
-    push('onSky', true);
+    const { bridge, set } = await firstRun({ displays: [TWO_DISPLAYS[0]!] });
+    set({ skyRunning: true });
     fireEvent.click(railStep('Every day'));
     press('Finish');
     press('Show the sky');
@@ -111,12 +113,12 @@ describe('SetupFlow', () => {
   });
 
   it('offline, the strip says why and Retry asks main to download again', async () => {
-    const { bridge, push } = await firstRun();
-    push('onStatus', { kind: 'offline', hasData: false });
+    const { bridge, set } = await firstRun();
+    set({ status: { kind: 'offline' } });
     expect(screen.getByRole('alert')).toHaveTextContent('needs the internet once');
     press('Retry');
     expect(bridge.updateNow).toHaveBeenCalledOnce();
-    push('onStatus', { kind: 'syncing' });
+    set({ status: { kind: 'syncing' } });
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 });

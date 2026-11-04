@@ -1,9 +1,10 @@
 import { act } from '@testing-library/react';
 import { vi } from 'vitest';
 import type { ControlBridge } from '../../../../../src/@types/ControlBridge';
+import type { ControlState } from '../../../../../src/@types/ControlState';
+import type { ControlView } from '../../../../../src/@types/ControlView';
 import type { DisplayInfo } from '../../../../../src/@types/DisplayInfo';
-import type { InstallSetup } from '../../../../../src/@types/InstallSetup';
-import type { LanInterface } from '../../../../../src/@types/LanInterface';
+import type { HelpSection } from '../../../../../src/@types/HelpSection';
 import { DEFAULT_INSTALL_SETUP } from '../../../../../src/main/setup/data/defaultInstallSetup';
 
 export const TWO_DISPLAYS: DisplayInfo[] = [
@@ -11,54 +12,50 @@ export const TWO_DISPLAYS: DisplayInfo[] = [
   { id: 7, label: 'Projector', width: 4096, height: 4096, primary: false },
 ];
 
-type Pushed =
-  | 'onSync'
-  | 'onStatus'
-  | 'onSky'
-  | 'onTestGrid'
-  | 'onDisplays'
-  | 'onView'
-  | 'onPairing';
-type Values<K extends Pushed> = Parameters<Parameters<ControlBridge[K]>[0]>;
+const BASE_STATE: ControlState = {
+  status: { kind: 'idle' },
+  progress: null,
+  hasData: true,
+  skyRunning: false,
+  testGrid: false,
+  room: { code: 'K7QM3XRT', origin: 'https://10.0.0.2:47823', onSky: false },
+  displays: TWO_DISPLAYS,
+  networks: [{ name: 'en0', address: '10.0.0.2' }],
+  setup: DEFAULT_INSTALL_SETUP,
+  firstRun: false,
+  about: { version: '1.2.3', dataDate: null },
+};
 
-/** A main process stand-in: the page's calls are spies, and `push` plays main's events. */
-export function fakeBridge(
-  opts: {
-    firstRun?: boolean;
-    setup?: InstallSetup;
-    displays?: DisplayInfo[];
-    networks?: LanInterface[];
-  } = {},
-) {
-  const listeners: Partial<Record<Pushed, (...values: unknown[]) => void>> = {};
-  const on =
-    <K extends Pushed>(name: K) =>
-    (listener: (...values: Values<K>) => void) => {
-      listeners[name] = listener as (...values: unknown[]) => void;
-      return () => {};
-    };
+/** A main process stand-in: the page's calls are spies, `set` pushes a changed state, `view` asks for a view. */
+export function fakeBridge(over: Partial<ControlState> = {}) {
+  let state: ControlState = { ...BASE_STATE, ...over };
+  let onState: ((state: ControlState) => void) | null = null;
+  let onView: ((view: ControlView, section?: HelpSection) => void) | null = null;
+  const push = (patch: Partial<ControlState>): void => {
+    state = { ...state, ...patch };
+    onState?.(state);
+  };
   const bridge = {
-    onSync: vi.fn(on('onSync')),
-    onStatus: vi.fn(on('onStatus')),
-    onSky: vi.fn(on('onSky')),
-    onTestGrid: vi.fn(on('onTestGrid')),
-    onDisplays: vi.fn(on('onDisplays')),
-    onView: vi.fn(on('onView')),
-    onPairing: vi.fn(on('onPairing')),
+    getState: vi.fn(async () => state),
+    onState: vi.fn((listener: (state: ControlState) => void) => {
+      onState = listener;
+      return () => {};
+    }),
+    onView: vi.fn((listener: (view: ControlView, section?: HelpSection) => void) => {
+      onView = listener;
+      return () => {};
+    }),
+    // Main stores the setup, then pushes the state that carries it.
+    saveSetup: vi.fn(async (setup: ControlState['setup']) => push({ setup })),
     updateNow: vi.fn(),
     restartSky: vi.fn(),
-    isFirstRun: vi.fn(async () => opts.firstRun ?? false),
-    getSetup: vi.fn(async () => opts.setup ?? DEFAULT_INSTALL_SETUP),
-    saveSetup: vi.fn(async () => {}),
-    listDisplays: vi.fn(async () => opts.displays ?? TWO_DISPLAYS),
-    listNetworks: vi.fn(async () => opts.networks ?? [{ name: 'en0', address: '10.0.0.2' }]),
-    getAbout: vi.fn(async () => ({ version: '1.2.3', dataDate: null })),
     showTestGrid: vi.fn(),
     rotateCode: vi.fn(),
     hide: vi.fn(),
     quit: vi.fn(),
   } satisfies ControlBridge;
-  const push = <K extends Pushed>(name: K, ...values: Values<K>): void =>
-    act(() => listeners[name]?.(...values));
-  return { bridge, push };
+  const set = (patch: Partial<ControlState>): void => act(() => push(patch));
+  const view = (next: ControlView, section?: HelpSection): void =>
+    act(() => onView?.(next, section));
+  return { bridge, set, view };
 }

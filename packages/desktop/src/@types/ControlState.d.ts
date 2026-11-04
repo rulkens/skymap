@@ -1,0 +1,26 @@
+import type { RelayRoom } from '../../../../src/@types/remote/RelayRoom';
+import type { AboutInfo } from './AboutInfo';
+import type { ControlStatus } from './ControlStatus';
+import type { DisplayInfo } from './DisplayInfo';
+import type { InstallSetup } from './InstallSetup';
+import type { LanInterface } from './LanInterface';
+import type { SyncProgress } from './SyncProgress';
+
+/** Everything the control page shows. Main owns it and pushes it whole on every change. */
+export type ControlState = {
+  status: ControlStatus;
+  /** The running or last download's bytes; null from a sync's start until it has planned. */
+  progress: SyncProgress | null;
+  /** A complete data set is on disk, so the sky can start without a download. */
+  hasData: boolean;
+  skyRunning: boolean;
+  /** Whether the test grid is on the sky; the View menu's tick reads the same value. */
+  testGrid: boolean;
+  room: RelayRoom;
+  displays: DisplayInfo[];
+  networks: LanInterface[];
+  setup: InstallSetup;
+  /** True on the launch that found no setup.json. */
+  firstRun: boolean;
+  about: AboutInfo;
+};

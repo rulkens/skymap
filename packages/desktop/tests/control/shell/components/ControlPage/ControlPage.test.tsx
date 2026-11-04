@@ -12,7 +12,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-async function renderControls(setup?: InstallSetup) {
+async function renderControls(setup: InstallSetup = DEFAULT_INSTALL_SETUP) {
   const fake = fakeBridge({ setup });
   render(<ControlPage bridge={fake.bridge} />);
   await screen.findByRole('heading', { name: 'Data' });
@@ -22,19 +22,31 @@ async function renderControls(setup?: InstallSetup) {
 const press = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
 
 describe('ControlPage', () => {
+  // The page used to depend on main replaying its state on did-finish-load, after the listeners attached.
+  it('keeps a state main pushed before its first read answered', async () => {
+    const fake = fakeBridge();
+    const stale = await fake.bridge.getState();
+    let answer: (state: typeof stale) => void = () => {};
+    fake.bridge.getState.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+    render(<ControlPage bridge={fake.bridge} />);
+    fake.set({ status: { kind: 'syncing' } });
+    await act(async () => answer(stale));
+    expect(screen.getByRole('button', { name: 'Update now' })).toBeDisabled();
+  });
+
   it('a mode change saves the setup and turns the test grid off', async () => {
-    const { bridge, push } = await renderControls();
+    const { bridge, set } = await renderControls();
     const grid = screen.getByRole('checkbox', { name: 'Show test grid on the sky' });
     fireEvent.click(grid);
     expect(bridge.showTestGrid).toHaveBeenLastCalledWith(true);
-    push('onTestGrid', true);
+    set({ testGrid: true });
     expect(grid).toBeChecked();
 
     await act(async () => fireEvent.click(screen.getByRole('radio', { name: /Dome/ })));
 
     expect(bridge.saveSetup).toHaveBeenLastCalledWith({ ...DEFAULT_INSTALL_SETUP, mode: 'dome' });
     expect(bridge.showTestGrid).toHaveBeenLastCalledWith(false);
-    push('onTestGrid', false);
+    set({ testGrid: false });
     expect(grid).not.toBeChecked();
     expect(screen.getByText('Saved')).toBeInTheDocument();
   });
@@ -54,20 +66,20 @@ describe('ControlPage', () => {
   });
 
   it('Update now reads Retry when the sky lacks data it needs', async () => {
-    const { push } = await renderControls();
+    const { set } = await renderControls();
     expect(screen.getByRole('button', { name: 'Update now' })).toBeInTheDocument();
-    push('onStatus', { kind: 'offline', hasData: false });
+    set({ status: { kind: 'offline' }, hasData: false });
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    push('onStatus', { kind: 'offline', hasData: true });
+    set({ hasData: true });
     expect(screen.getByRole('button', { name: 'Update now' })).toBeInTheDocument();
   });
 
   it('the sync buttons are disabled while syncing', async () => {
-    const { push } = await renderControls();
-    push('onStatus', { kind: 'syncing' });
+    const { set } = await renderControls();
+    set({ status: { kind: 'syncing' } });
     expect(screen.getByRole('button', { name: 'Update now' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Restart sky' })).toBeDisabled();
-    push('onStatus', { kind: 'ready' });
+    set({ status: { kind: 'ready' } });
     expect(screen.getByRole('button', { name: 'Restart sky' })).toBeEnabled();
   });
 
@@ -80,13 +92,12 @@ describe('ControlPage', () => {
   });
 
   it('the pairing steps name Allow before the sky runs, and the tablet waits for it', async () => {
-    const { push } = await renderControls();
-    push('onPairing', { code: 'K7QM3XRT', origin: 'https://10.0.0.2:47823', onSky: false });
+    const { set } = await renderControls();
     const tablets = screen.getByRole('region', { name: 'Tablets' });
     expect(within(tablets).getByText(/choose Allow/)).toBeVisible();
     expect(within(tablets).getByText('K7QM 3XRT')).toBeVisible();
     expect(within(tablets).getByText('The tablet connects once the sky is running.')).toBeVisible();
-    push('onSky', true);
+    set({ skyRunning: true });
     expect(within(tablets).queryByText(/once the sky is running/)).not.toBeInTheDocument();
   });
 
@@ -97,13 +108,13 @@ describe('ControlPage', () => {
   });
 
   it('Help opens from its link and from main, and Escape or Back closes it', async () => {
-    const { push } = await renderControls();
+    const { view } = await renderControls();
     press('Help');
     expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toBeVisible();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.getByRole('heading', { name: 'Data' })).toBeVisible();
 
-    push('onView', 'help');
+    view('help');
     expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toBeVisible();
     press('Back to the controls');
     expect(screen.getByRole('heading', { name: 'Data' })).toBeVisible();
@@ -116,16 +127,15 @@ describe('ControlPage', () => {
     Element.prototype.scrollIntoView = function (this: Element) {
       scrolled.push(this.querySelector('h2')?.textContent ?? '');
     };
-    const { push } = await renderControls();
-    push('onView', 'help', 'troubleshooting');
+    const { view } = await renderControls();
+    view('help', 'troubleshooting');
     Element.prototype.scrollIntoView = original;
     expect(scrolled).toEqual(['Troubleshooting']);
   });
 
   it('About shows the version main reports', async () => {
-    const { bridge } = await renderControls();
-    await act(async () => press('About'));
-    expect(bridge.getAbout).toHaveBeenCalled();
+    await renderControls();
+    press('About');
     expect(screen.getByText('1.2.3')).toBeVisible();
     expect(screen.getByText('Not downloaded yet')).toBeVisible();
   });

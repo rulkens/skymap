@@ -11,7 +11,7 @@ import styles from './TabletStep.module.css';
 
 export type TabletStepProps = {
   readonly setup: InstallSetup;
-  readonly room: RelayRoom | null;
+  readonly room: RelayRoom;
   readonly networks: readonly LanInterface[];
   readonly skyRunning: boolean;
   readonly onSave: (next: InstallSetup) => Promise<void>;

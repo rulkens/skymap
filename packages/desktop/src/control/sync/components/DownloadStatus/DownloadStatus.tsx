@@ -6,28 +6,24 @@
 import type { ReactNode } from 'react';
 import AlertIcon from '../../../../../../../src/components/icons/AlertIcon/AlertIcon';
 import CheckIcon from '../../../../../../../src/components/icons/CheckIcon/CheckIcon';
-import type { ControlStatus } from '../../../../@types/ControlStatus';
-import type { SyncProgress } from '../../../../@types/SyncProgress';
-import { controlStatusText } from '../../utils/controlStatusText';
-import { needsRetry } from '../../utils/needsRetry';
+import type { SyncState } from '../../@types/SyncState';
+import { describeStatus } from '../../utils/describeStatus';
 import { syncProgressDetail } from '../../utils/syncProgressDetail';
 import { useSecondsLeft } from './useSecondsLeft';
 import chrome from '../../../controlChrome.module.css';
 import styles from './DownloadStatus.module.css';
 
 export type DownloadStatusProps = {
-  readonly status: ControlStatus;
-  readonly progress: SyncProgress | null;
-  readonly skyRunning: boolean;
+  readonly sync: SyncState;
 };
 
-function DownloadStatus({ status, progress, skyRunning }: DownloadStatusProps): ReactNode {
+function DownloadStatus({ sync }: DownloadStatusProps): ReactNode {
+  const { progress } = sync;
   const secondsLeft = useSecondsLeft(progress);
-  const problem = needsRetry(status);
+  const view = describeStatus(sync);
   const fraction = progress
     ? Math.min(1, progress.doneBytes / Math.max(progress.totalBytes, 1))
     : 0;
-  const complete = status.kind === 'idle' && fraction === 1;
   return (
     <div className={styles.root}>
       {progress && (
@@ -40,18 +36,18 @@ function DownloadStatus({ status, progress, skyRunning }: DownloadStatusProps): 
           aria-valuenow={Math.round(fraction * 100)}
         >
           <div
-            className={problem ? styles.fillStopped : styles.fill}
+            className={view.tone === 'problem' ? styles.fillStopped : styles.fill}
             style={{ transform: `scaleX(${fraction})` }}
           />
         </div>
       )}
       <div className={styles.line}>
-        {problem && <AlertIcon size={18} />}
-        {complete && <CheckIcon size={18} />}
-        <p className={styles.text} role={problem ? 'alert' : 'status'}>
-          {controlStatusText(status, progress, skyRunning)}
+        {view.tone === 'problem' && <AlertIcon size={18} />}
+        {view.tone === 'done' && <CheckIcon size={18} />}
+        <p className={styles.text} role={view.tone === 'problem' ? 'alert' : 'status'}>
+          {view.text}
         </p>
-        {status.kind === 'syncing' && progress && (
+        {sync.status.kind === 'syncing' && progress && (
           <p className={chrome.dim}>
             <span className={styles.figures}>{syncProgressDetail(progress, secondsLeft)}</span>
           </p>

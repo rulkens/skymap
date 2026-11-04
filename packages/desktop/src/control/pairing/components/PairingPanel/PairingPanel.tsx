@@ -8,7 +8,7 @@ import chrome from '../../../controlChrome.module.css';
 import styles from './PairingPanel.module.css';
 
 export type PairingPanelProps = {
-  readonly room: RelayRoom | null;
+  readonly room: RelayRoom;
   readonly networks: readonly LanInterface[];
   /** The interface the pairing address uses; null → the first available. */
   readonly network: string | null;

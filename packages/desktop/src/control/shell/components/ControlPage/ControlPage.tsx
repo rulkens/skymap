@@ -6,7 +6,6 @@
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { AboutInfo } from '../../../../@types/AboutInfo';
 import type { ControlBridge } from '../../../../@types/ControlBridge';
 import type { ControlView } from '../../../../@types/ControlView';
 import type { HelpSection } from '../../../../@types/HelpSection';
@@ -25,13 +24,11 @@ export type ControlPageProps = {
 
 function ControlPage({ bridge }: ControlPageProps): ReactNode {
   const session = useControlBridge(bridge);
-  const { setup, firstRun } = session;
   const [home, setHome] = useState<'setup' | 'controls' | null>(null);
   const [over, setOver] = useState<'help' | 'about' | null>(null);
   const [helpSection, setHelpSection] = useState<HelpSection>();
   const [step, setStep] = useState<SetupStep>('welcome');
-  const [about, setAbout] = useState<AboutInfo | null>(null);
-  const base = home ?? (firstRun === null ? null : firstRun ? 'setup' : 'controls');
+  const base = home ?? (session === null ? null : session.firstRun ? 'setup' : 'controls');
   const view: ControlView | null = over ?? base;
 
   useEffect(
@@ -54,9 +51,6 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
     addEventListener('keydown', onKey);
     return () => removeEventListener('keydown', onKey);
   }, [over]);
-  useEffect(() => {
-    if (over === 'about') void bridge.getAbout().then(setAbout);
-  }, [bridge, over]);
 
   const backLabel = base === 'setup' ? 'Back to setup' : 'Back to the controls';
   const openHelp = (): void => {
@@ -84,22 +78,23 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
       <div className={styles.content}>
         {over === 'help' && (
           <HelpView
-            origin={session.room?.origin ?? null}
+            origin={session?.room.origin ?? null}
             section={helpSection}
             backLabel={backLabel}
             onBack={() => setOver(null)}
           />
         )}
         {over === 'about' && (
-          <AboutView about={about} back={{ label: backLabel, onBack: () => setOver(null) }} />
+          <AboutView
+            about={session?.about ?? null}
+            back={{ label: backLabel, onBack: () => setOver(null) }}
+          />
         )}
-        {over === null && setup && base === 'setup' && (
+        {over === null && session && base === 'setup' && (
           <SetupFlow
             step={step}
-            setup={setup}
-            status={session.status}
-            progress={session.progress}
-            skyRunning={session.skyRunning}
+            setup={session.setup}
+            sync={session}
             room={session.room}
             displays={session.displays}
             networks={session.networks}
@@ -111,13 +106,8 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
             onClose={closeSetup}
           />
         )}
-        {over === null && setup && base === 'controls' && (
-          <ControlsView
-            session={{ ...session, setup }}
-            bridge={bridge}
-            onRunSetup={runSetup}
-            onHelp={openHelp}
-          />
+        {over === null && session && base === 'controls' && (
+          <ControlsView session={session} bridge={bridge} onRunSetup={runSetup} onHelp={openHelp} />
         )}
       </div>
     </div>
