@@ -72,7 +72,9 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
   (Escape or leaving the button cancels). It stays busy until main has stored the new code.
 - `main/windows/superviseWindow.ts` reloads a crashed renderer or GPU process (after 2 s, doubling
   to a minute while it keeps crashing, reset after a minute up), kills a renderer hung for 30 s,
-  and refuses navigation off the app's origin. An InfoCard link is a dead click on purpose.
+  and refuses navigation off the app's origin. An InfoCard link is a dead click on purpose. A sky
+  load that fails with nothing crashed is tried once more after `SKY_RETRY_MS` (`createSkyLoader`),
+  then waits for Restart sky; a curtain that fails to load only loses its fade.
 - Once the sky first shows, `powerSaveBlocker` (`prevent-display-sleep`) keeps the display and the
   machine awake until the app quits: tablets steering over the relay are no local input, so the
   OS's idle timer would otherwise blank a dome and, at sleep, take the server and the tablets down.

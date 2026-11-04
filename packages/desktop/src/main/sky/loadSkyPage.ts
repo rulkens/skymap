@@ -18,7 +18,8 @@ export async function loadSkyPage(win: BrowserWindow, url: string): Promise<void
     CURTAIN_OUT_MS,
   );
   try {
-    await curtain.loaded;
+    // A broken curtain costs the fade, never the sky.
+    await curtain.loaded.catch((error: unknown) => console.error('sky curtain:', error));
     await delay(CURTAIN_IN_MS);
     await win.loadURL(url);
     await Promise.race([win.webContents.executeJavaScript(WHEN_READY), delay(READY_TIMEOUT_MS)]);
