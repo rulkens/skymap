@@ -1,11 +1,17 @@
-import { app, BrowserWindow, dialog, session } from 'electron';
+import { app, dialog, screen, session } from 'electron';
+import type { Display } from 'electron';
 import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
+import type { InstallSetup } from '../@types/InstallSetup.js';
 import type { LanNames } from '../@types/LanNames.js';
-import { APP_SERVER_PORT } from '../data/appServerPort.js';
 import { isSignedByCa } from '../utils/isSignedByCa.js';
 import { listLanInterfaces } from '../utils/listLanInterfaces.js';
+import { readJsonFile } from '../utils/readJsonFile.js';
+import { toDisplayInfo } from '../utils/toDisplayInfo.js';
 import { ensureLanCertificate } from './ensureLanCertificate.js';
+import { fillDisplay } from './fillDisplay.js';
+import { openSkyWindow } from './openSkyWindow.js';
+import { placeWindows } from './placeWindows.js';
 import { startAppServer } from './startAppServer.js';
 
 const windowed = process.argv.includes('--windowed');
@@ -32,8 +38,25 @@ async function start(): Promise<void> {
     },
     tls,
   );
-  const win = new BrowserWindow({ width: 1280, height: 720, fullscreen: !windowed });
-  void win.loadURL(`https://localhost:${APP_SERVER_PORT}/`);
+  // Read raw until the control window's task brings readSetup with its defaults.
+  const setup = await readJsonFile<InstallSetup>(join(userData, 'setup.json'));
+  const sky = openSkyWindow(skyDisplay(setup?.display ?? null), setup?.mode ?? 'kiosk', windowed);
+  const replace = () => {
+    if (!windowed && !sky.isDestroyed())
+      fillDisplay(sky, skyDisplay(setup?.display ?? null).bounds);
+  };
+  screen.on('display-added', replace);
+  screen.on('display-removed', replace);
+}
+
+function skyDisplay(stored: InstallSetup['display']): Display {
+  const displays = screen.getAllDisplays();
+  const primaryId = screen.getPrimaryDisplay().id;
+  const { sky } = placeWindows(
+    stored,
+    displays.map((d) => toDisplayInfo(d, primaryId)),
+  );
+  return displays.find((d) => d.id === sky.id) ?? screen.getPrimaryDisplay();
 }
 
 void app.whenReady().then(() =>

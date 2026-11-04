@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src file:; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
+    />
+    <title>Skymap test grid</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+      /* Contain on the square image gives the renderer's own disc: centred, as wide as the short side. */
+      img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      p {
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        height: fit-content;
+        text-align: center;
+        font:
+          600 8vmin/1.2 system-ui,
+          sans-serif;
+        color: #fff;
+        text-shadow: 0 0 0.4em #000;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const params = new URLSearchParams(location.search);
+      if (params.get('mode') === 'dome') {
+        const grid = document.createElement('img');
+        grid.src = 'dome-grid.png';
+        grid.alt = 'Dome alignment grid, front at the bottom';
+        document.body.append(grid);
+      } else {
+        const label = document.createElement('p');
+        label.textContent = `Skymap · display ${params.get('display') ?? '?'}`;
+        document.body.append(label);
+      }
+    </script>
+  </body>
+</html>
