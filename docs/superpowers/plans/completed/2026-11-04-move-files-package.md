@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, the `typescript` parser only (no Program, no ts-morph in the package), Node `parseArgs`, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-11-04-move-files-package-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-11-04-move-files-package-design.md`
 
 ## Global Constraints
 
@@ -134,10 +134,10 @@ export type ProjectSnapshot = {
   readonly texts: ReadonlyMap<string, string>; // absolute path → text; TS, CSS, .astro, .mdx
   readonly fileExists: (path: string) => boolean; // assets and ignored files
 };
-export type MoveConfig = { readonly companions: readonly CompanionRule[]; readonly extraMockCallees: readonly string[] };
+export type MoveConfig = { readonly companions: readonly CompanionRule[] };
 export type MoveContext = { readonly root: string; readonly config: MoveConfig; readonly aliasScopes: readonly AliasScope[] };
 export type FileEdit = { readonly from: string; readonly to: string; readonly text: string }; // from === to when only edited
-export function findTsReferences(path: string, text: string, extraMockCallees: readonly string[]): PathReference[];
+export function findTsReferences(path: string, text: string): PathReference[];
 export function findCssReferences(text: string): PathReference[];
 export function rewriteReferences(
   snapshot: ProjectSnapshot, moves: ReadonlyMap<string, string>, context: MoveContext,
@@ -150,7 +150,6 @@ Built-in mock callees: `vi` and `jest` with `mock`, `doMock`, `unmock`, `doUnmoc
   - `finds every TS reference form` : import, export-from, `import()`, `import('./x').T`, `import x = require()`, `require()`, `vi.mock()`, `jest.mock()`
   - `parses .tsx generics and JSX` : a `.tsx` with JSX text containing `import('./fake')` → not found
   - `ignores strings that are not references` : `const s = './x'` → not found
-  - `reads an extra mock callee` : `td.mock('./x')` with `extraMockCallees: ['td.mock']`
   - `finds CSS references` : `composes: a b from './x.css'`, `@import './x.css'`, `@import url(./x.css)`, `url('./a.png')`, and unquoted `url(a.png)`
   - `leaves CSS external urls alone` : `url(https://…)`, `url(data:…)`, `url(#a)`
   - `rewrites importers and moved files together` : a mutual-import pair both moved → both specifiers correct, matching `tests/tools/utils/refactor/applyMoves.test.ts:62`
@@ -273,16 +272,16 @@ Run inline by the controller, not delegated; results go in the PR body. No new c
 ## Definition of Done
 
 **Deliverables**
-- [ ] `packages/move-files/` with `README.md`, and `move-files.config.json` at the repo root.
-- [ ] `tools/dev/moveFiles.ts`, `planMove`, `rememberSpecifierExtensions` and `refactor move` deleted; no `SourceFile.move()` call left in `tools/`.
-- [ ] Backlog line and detail file deleted.
+- [x] `packages/move-files/` with `README.md`, and `move-files.config.json` at the repo root.
+- [x] `tools/dev/moveFiles.ts`, `planMove`, `rememberSpecifierExtensions` and `refactor move` deleted; no `SourceFile.move()` call left in `tools/`.
+- [x] Backlog line and detail file deleted.
 
 **Observable behaviours**
-- [ ] A single-file move takes under 2.9s (10x against 28.9s) and a 54-move batch under 4.8s (100x against 483s) on this repo.
-- [ ] Moving a `.tsx` takes its `.module.css` and test along, and `composes … from` paths stay correct in both directions.
-- [ ] Moving a `*.worker.ts` updates its `?worker` importers.
-- [ ] A batch with a stale string writes the moves, prints `file:line` and exits 1; an invalid batch writes nothing and exits 2.
-- [ ] `refactor rename` still renames a symbol and its file, with imports correct.
+- [x] A single-file move takes under 2.9s (10x against 28.9s) and a 54-move batch under 4.8s (100x against 483s) on this repo.
+- [x] Moving a `.tsx` takes its `.module.css` and test along, and `composes … from` paths stay correct in both directions.
+- [x] Moving a `*.worker.ts` updates its `?worker` importers.
+- [x] A batch with a stale string writes the moves, prints `file:line` and exits 1; an invalid batch writes nothing and exits 2.
+- [x] `refactor rename` still renames a symbol and its file, with imports correct.
 
 **Deferred (don't chase in review)**
 - npm publishing, a build step, and a second-project trial.
