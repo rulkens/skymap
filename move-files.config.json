@@ -1,5 +1,5 @@
 {
-  "rules": [
+  "companions": [
     {
       "from": "src/",
       "to": "tests/",
@@ -17,6 +17,12 @@
       "to": "tests/packages/move-files/",
       "sources": [".ts", ".tsx"],
       "suffixes": [".test.ts", ".test.tsx"]
+    },
+    {
+      "from": "",
+      "to": "",
+      "sources": [".tsx"],
+      "suffixes": [".module.css"]
     }
   ]
 }

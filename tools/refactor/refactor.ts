@@ -11,9 +11,8 @@
  * resolve the bool flags, load the shared Project, run the requested op(s)
  * against it, and save once at the tail. All the real behaviour lives in
  * one-function planners under `tools/utils/refactor/`, each unit-tested against
- * an in-memory Project. Keeping the entry logic-free is the same choice
- * `moveFiles.ts` made: argv plumbing is not worth a test, and a fat entry would
- * hide the testable seams inside an untestable one.
+ * an in-memory Project. Keeping the entry logic-free means argv plumbing needs
+ * no test, and a fat entry would hide the testable seams inside an untestable one.
  *
  * ## Why the driver owns the single save (all-or-nothing)
  *
@@ -22,8 +21,7 @@
  * driver runs each requested op (a single invocation, or one per `--manifest`
  * batch entry) against that project, then calls `project.save()` exactly once at
  * the tail. All-or-nothing falls out structurally: a throw mid-batch aborts
- * before the save, so disk is never partially written. This mirrors
- * `applyMoves` + `moveFiles.main` today. `--dry` skips the save and (once the
+ * before the save, so disk is never partially written. `--dry` skips the save and (once the
  * planners land) prints the structured blast-radius report instead.
  *
  * ## Usage

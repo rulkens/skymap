@@ -1,39 +1,39 @@
 /**
- * applyMoves — move a batch of TypeScript source files inside a ts-morph
- * `Project`, letting ts-morph rewrite every relative import that points at
- * (or lives inside) a moved file.
+ * applyMoves: move a batch of files inside a ts-morph `Project`, with every
+ * reference to them rewritten by the move-files package.
  *
- * ## Why ts-morph owns the rename, not us
- *
- * Skymap's imports are all deep + relative with no barrels (see CLAUDE.md),
- * so moving one file by hand means grepping the whole repo for every
- * `../../utils/foo` that resolves to it and re-deriving each `../` depth by
- * eye — exactly the error-prone busywork an AST tool exists to kill.
- * `SourceFile.move()` re-parses the module graph and rewrites both directions:
- * importers of the moved file *and* the moved file's own imports of files that
- * stayed put. We keep this wrapper deliberately thin — a `for` loop over
- * `move()` — so the interesting behaviour lives in ts-morph and the wrapper
- * stays trivially testable against an in-memory `Project`.
- *
- * ## Why a plain loop rather than one clever call
- *
- * A batch where two moved files import each other still resolves correctly:
- * `move()` updates live references immediately, so by the time the second
- * file moves, the first move's rewrite already accounts for it. Ordering
- * within the batch therefore doesn't matter, which is why the caller can pass
- * an unordered `ReadonlyArray` and why we don't try to topologically sort.
- *
+ * `refactor rename` keeps its in-memory Project (the identifier rename already
+ * lives there), so this adapter hands the package a snapshot of the Project's
+ * current text and applies the returned edits back. Companions were expanded by
+ * the caller, so the context carries none. `aliasScopes` is empty because no
+ * tsconfig in this repo maps a bare specifier to a file a rename could move.
+ * Only TS and TSX are in the Project, so a rename leaves stylesheets alone.
  */
 
 import type { Project } from 'ts-morph';
-
-import { rememberSpecifierExtensions } from './rememberSpecifierExtensions';
 import type { MovePair } from '../../../packages/move-files/src/@types/MovePair';
+import { rewriteReferences } from '../../../packages/move-files/src/rewriteReferences';
 
 export function applyMoves(project: Project, moves: ReadonlyArray<MovePair>): void {
-  const restoreExtensions = rememberSpecifierExtensions(project);
-  for (const { from, to } of moves) {
-    project.getSourceFileOrThrow(from).move(to);
+  const texts = new Map(
+    project.getSourceFiles().map((f) => [f.getFilePath() as string, f.getFullText()]),
+  );
+  const fs = project.getFileSystem();
+  const edits = rewriteReferences(
+    { texts, fileExists: (path) => fs.fileExistsSync(path) },
+    new Map(moves.map((m) => [m.from, m.to])),
+    { root: '/', config: { companions: [], extraMockCallees: [] }, aliasScopes: [] },
+  );
+
+  const created: { path: string; text: string }[] = [];
+  for (const { from, to, text } of edits) {
+    if (from === to) {
+      const file = project.getSourceFileOrThrow(from);
+      if (file.getFullText() !== text) file.replaceWithText(text);
+    } else {
+      project.getSourceFileOrThrow(from).delete();
+      created.push({ path: to, text });
+    }
   }
-  restoreExtensions();
+  for (const { path, text } of created) project.createSourceFile(path, text, { overwrite: true });
 }

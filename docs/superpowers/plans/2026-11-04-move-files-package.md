@@ -243,7 +243,7 @@ Script: `"move-files": "tsx packages/move-files/src/cli.ts"`. Arguments stay `<f
 
 `applyMoves(project, moves)` keeps its signature: build a snapshot from `project.getSourceFiles()` and `project.getFileSystem().fileExistsSync`, call `rewriteReferences`, then `replaceWithText` for edits and `createSourceFile` + `delete()` for moves. It passes `aliasScopes: []`; say in a comment that skymap has no aliases to preserve here.
 
-- [ ] Tests in `tests/packages/move-files/`, using a temp git repo for edges, watched failing first:
+- [x] Tests in `tests/packages/move-files/`, using a temp git repo for edges, watched failing first:
   - `listProjectFiles lists tracked and untracked files, skips ignored ones` : a `.gitignore`d file isn't returned
   - `listProjectFiles handles spaces in paths` : `a b/c.ts` comes back whole
   - `listProjectFiles refuses outside a git repo` : clear message
@@ -254,11 +254,11 @@ Script: `"move-files": "tsx packages/move-files/src/cli.ts"`. Arguments stay `<f
   - `applyPlan handles a swap` : contents end up exchanged
   - `applyPlan removes a case-only source before writing` : order asserted through an injected fs spy, since CI's Linux disk is case-sensitive
   - `cli exits 2 and writes nothing on a refusal`, `cli exits 1 with findings and writes`, `cli --dry writes nothing` : run in a temp repo
-- [ ] `tests/tools/utils/refactor/applyMoves.test.ts`: all four existing cases pass unchanged against the adapter. `planRename.test.ts` and the rest of the folder stay green.
-- [ ] `README.md`: what it does, usage, config with the two rule examples, exit codes, what it doesn't rewrite.
-- [ ] Update: `CLAUDE.md:63` and `:91` (CSS now handled; name the remaining `.astro`/`.mdx`/`.wesl` gaps; findings exit 1), `.claude/skills/refactor/SKILL.md:110`, `.claude/skills/wesl-shaders/SKILL.md:80`. `docsCommands.ts:257` keeps its script name; check `tests/packages/website` still passes.
-- [ ] Delete `docs/backlog/2026-07-14-move-files-untracked-references.md` and `docs/BACKLOG.md:254`.
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/packages/move-files tests/tools/utils/refactor tests/packages/website`. Commit.
+- [x] `tests/tools/utils/refactor/applyMoves.test.ts`: all four existing cases pass unchanged against the adapter. `planRename.test.ts` and the rest of the folder stay green.
+- [x] `README.md`: what it does, usage, config with the two rule examples, exit codes, what it doesn't rewrite.
+- [x] Update: `CLAUDE.md:63` and `:91` (CSS now handled; name the remaining `.astro`/`.mdx`/`.wesl` gaps; findings exit 1), `.claude/skills/refactor/SKILL.md:110`, `.claude/skills/wesl-shaders/SKILL.md:80`. `docsCommands.ts:257` keeps its script name; check `tests/packages/website` still passes.
+- [x] Delete `docs/backlog/2026-07-14-move-files-untracked-references.md` and `docs/BACKLOG.md:254`.
+- [x] `npm run typecheck:fast`; `npx vitest run tests/packages/move-files tests/tools/utils/refactor tests/packages/website`. Commit.
 
 ### Task 8: Controller check before the PR
 

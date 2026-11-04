@@ -6,7 +6,7 @@ import config from '../../../move-files.config.json';
 // case controls exactly which mirrors are present.
 const existsFrom = (present: readonly string[]) => (p: string) => present.includes(p);
 
-const { rules } = config;
+const rules = config.companions;
 
 describe('expandCompanions', () => {
   it('appends the src mirror move when the test file exists', () => {

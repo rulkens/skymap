@@ -1,7 +1,6 @@
 /**
  * readManifest — read a `--manifest <path>` value flag into a JSON array, the
- * one place the refactor CLI (and, once Task 10 rewires it, moveFiles) parses a
- * batch file.
+ * one place the refactor CLI parses a batch file.
  *
  * ## Why a shared helper rather than a per-command `indexOf` idiom
  *
