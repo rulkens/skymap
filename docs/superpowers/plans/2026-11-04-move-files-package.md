@@ -109,7 +109,7 @@ export function spellReference(
 
 Resolution order follows TS bundler mode: exact, then `.ts`, `.tsx`, `.d.ts`, then `.js`/`.jsx` standing for TS, then `/index.{ts,tsx,d.ts}`. Non-relative specifiers resolve only through the nearest scope's aliases; a bare package name returns `null`.
 
-- [ ] Write the tests, watch them fail, implement, watch them pass:
+- [x] Write the tests, watch them fail, implement, watch them pass:
   - `resolves in TS order` : `./x` with both `x.ts` and `x.tsx` → `x.ts`
   - `treats .js as standing for .ts` : `./x.js` + `x.ts` → shape `js`
   - `splits a query` : `./x.worker?worker` → target `x.worker.ts`, query `?worker`
@@ -120,7 +120,7 @@ Resolution order follows TS bundler mode: exact, then `.ts`, `.tsx`, `.d.ts`, th
   - `falls back to relative when the target leaves the alias` : to `lib/b.ts` → relative path
   - `uses the nearest tsconfig scope` : two scopes, the deeper one wins
   - `a bare package name resolves to nothing` : `react` → `null`
-- [ ] `npx vitest run tests/packages/move-files`. Commit.
+- [x] `npx vitest run tests/packages/move-files`. Commit.
 
 ### Task 4: Find references and rewrite a batch
 
