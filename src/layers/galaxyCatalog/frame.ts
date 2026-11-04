@@ -19,10 +19,10 @@ import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContent
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
-import { buildAliasIndex } from './load/buildAliasIndex';
+import { buildAliasIndex } from './aliases/load/buildAliasIndex';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
-import { structureMemberCount } from './present/structureMemberCount';
-import { sourceMaskOf } from './present/sourceMaskOf';
+import { structureMemberCount } from './structureMembership/utils/structureMemberCount';
+import { sourceMaskOf } from './records/utils/sourceMaskOf';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,

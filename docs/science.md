@@ -57,9 +57,9 @@ Three kinds of content share the scene; this section says which is which.
 
 ### Galaxies
 
-- **Brightness**: catalogue magnitude and diameter bake into a physical surface-brightness amplitude, spreading light over the actual apparent disk ([galaxySbAmp.ts](../src/utils/galaxy/galaxySbAmp.ts)); Settings knobs add a gain, a bloom ceiling, and a `pow(resolvedFraction, k)` falloff against the additive glow near the origin.
-- **Colour**: each survey's most informative photometric pair on a blue→white→red ramp with a first-order K-correction: SDSS u−g, GLADE B−J, 2MRS J−K ([colourIndex.ts](../src/data/galaxyCatalog/colourIndex.ts)).
-- **Four LOD tiers** ([galaxyLodBands.ts](../src/data/galaxyLodBands.ts)): point sprite below 8 px; procedural disk impostor from 8–14 px, oriented by axis ratio and position angle; real SDSS/DSS thumbnail from a 256-slot LRU atlas at 24–40 px; high-resolution texture from 120 px, famous galaxies only.
+- **Brightness**: catalogue magnitude and diameter bake into a physical surface-brightness amplitude, spreading light over the actual apparent disk ([galaxySbAmp.ts](../src/layers/galaxyCatalog/appearance/utils/galaxySbAmp.ts)); Settings knobs add a gain, a bloom ceiling, and a `pow(resolvedFraction, k)` falloff against the additive glow near the origin.
+- **Colour**: each survey's most informative photometric pair on a blue→white→red ramp with a first-order K-correction: SDSS u−g, GLADE B−J, 2MRS J−K ([colourIndex.ts](../src/layers/galaxyCatalog/appearance/data/colourIndex.ts)).
+- **Four LOD tiers** ([galaxyLodBands.ts](../src/layers/galaxyCatalog/lod/data/galaxyLodBands.ts)): point sprite below 8 px; procedural disk impostor from 8–14 px, oriented by axis ratio and position angle; real SDSS/DSS thumbnail from a 256-slot LRU atlas at 24–40 px; high-resolution texture from 120 px, famous galaxies only.
 - **Crossfades**: every handoff is a smoothstep whose sides sum to one, so brightness holds steady.
 
 ### Stars and the Sun

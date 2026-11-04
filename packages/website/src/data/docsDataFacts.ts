@@ -46,7 +46,7 @@ export const DOCS_DATA_FACTS: readonly Fact[] = [
     id: 'pipe-galaxy-format',
     about: 'app',
     text: 'A galaxy file is a 16-byte header and then 64 bytes for each galaxy: its position, brightness, shape, stellar mass and the redshift its catalogue published. The header carries a version number, and the app refuses a file of another version with a message that says to build it again.',
-    source: `${REPO_BLOB}/src/data/galaxyCatalog/galaxyCatalogFormat.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/records/data/galaxyCatalogFormat.ts`,
     sourceLabel: `the galaxy file format, ${IN_REPO}`,
     checked: CHECKED,
   },

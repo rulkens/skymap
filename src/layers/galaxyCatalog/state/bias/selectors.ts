@@ -1,8 +1,8 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import type { BiasSettings } from '../../../../@types/settings/BiasSettings';
-import type { BiasMode } from '../../../../@types/data/galaxyCatalog/BiasMode';
+import type { BiasSettings } from '../../@types/BiasSettings';
+import type { BiasMode } from '../../@types/BiasMode';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
 export const selectRoute = createSelector(

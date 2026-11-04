@@ -4,10 +4,10 @@ import type { ReactNode } from 'react';
 import Icon, { type IconProps } from '../../Icon/Icon';
 
 export type EyeIconProps = Pick<IconProps, 'size'> & {
-  readonly struck: boolean;
+  readonly struck?: boolean;
 };
 
-function EyeIcon({ size, struck }: EyeIconProps): ReactNode {
+function EyeIcon({ size, struck = false }: EyeIconProps): ReactNode {
   return (
     <Icon size={size}>
       <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />

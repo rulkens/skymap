@@ -47,7 +47,7 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
   'src/services/engine/camera/cameraDrivers.ts',
   'src/services/camera/applyInputToCamera.ts',
   'src/utils/camera/computeViewProj.ts',
-  'src/layers/galaxyCatalog/passes/galaxyPointSpritesPass.ts',
+  'src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass.ts',
 ];
 
 const WESL_FILES: readonly string[] = walkFiles('src/services/gpu/shaders/bodies', ['.wesl']);

@@ -29,7 +29,7 @@ const ROLE_FOLDERS = [
 const OVERSIZED_FOLDERS: Record<string, number> = {};
 
 /** Layers still organised by role at their root; regrouping a Layer deletes its name. */
-const NOT_YET_REGROUPED: ReadonlySet<string> = new Set(['galaxyCatalog']);
+const NOT_YET_REGROUPED: ReadonlySet<string> = new Set();
 
 function directories(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true })
