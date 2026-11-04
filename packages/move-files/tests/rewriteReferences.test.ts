@@ -147,6 +147,19 @@ describe('rewriteReferences', () => {
     );
   });
 
+  it.each([['.scss'], ['.less']])('leaves %s files alone', (ext) => {
+    const edits = run(
+      { [`/r/x/m${ext}`]: `@import './v${ext}';`, [`/r/x/v${ext}`]: ``, '/r/k.ts': `` },
+      { [`/r/x/m${ext}`]: `/r/y/m${ext}` },
+    );
+    expect(edits.get(`/r/x/m${ext}`)?.text).toBe(`@import './v${ext}';`);
+    const importer = run(
+      { [`/r/x/m${ext}`]: `@import './v${ext}';`, [`/r/x/v${ext}`]: `` },
+      { [`/r/x/v${ext}`]: `/r/y/v${ext}` },
+    );
+    expect(importer.has(`/r/x/m${ext}`)).toBe(false);
+  });
+
   it('quotes an unquoted CSS url that gains a space or a bracket', () => {
     const edits = run(
       { '/r/s.css': `.a { background: url(a.png); }` },

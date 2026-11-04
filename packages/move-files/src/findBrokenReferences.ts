@@ -1,57 +1,55 @@
 /**
  * findBrokenReferences: what a batch newly broke, beyond the imports it rewrote.
  *
- * Reports only changes: a `./` string that resolved before and no longer does, or
- * now lands on a different file than the moved target (compared by identity, so a
- * reoccupied path counts); and an old repo-relative path still in code. Strings
- * that never resolved are ignored (this repo has 123 already). Text scans find
- * suspects cheaply; only a file with a suspect gets parsed, to rule out comments,
- * because parsing every file is what would cost seconds. Relative literals are
- * paired by position between old and new text, as a rewrite only changes values.
+ * Reports only changes: a string that resolved before and no longer does, or now lands
+ * on a different file than the moved target (compared by identity, so a reoccupied
+ * path counts); and an old repo-relative path still in code. Strings that never
+ * resolved are ignored; projects hold plenty. Text scans find suspects cheaply; only
+ * a file with a suspect gets parsed, to rule out comments, because parsing every file
+ * would cost seconds. Every string is paired by position between old and new text,
+ * since a rewrite changes values but never how many strings a file has.
  */
 
 import { posix } from 'node:path';
 import type { FileEdit } from './@types/FileEdit';
 import type { GuardFinding } from './@types/GuardFinding';
 import type { GuardSuspect } from './@types/GuardSuspect';
+import type { MoveContext } from './@types/MoveContext';
 import type { ProjectSnapshot } from './@types/ProjectSnapshot';
 import type { ReferenceHit } from './@types/ReferenceHit';
-import { findCssReferences } from './findCssReferences';
 import { findLiteralRanges } from './findLiteralRanges';
+import { isScriptFile } from './isScriptFile';
+import { isStylesheet } from './isStylesheet';
 import { layoutExists } from './layoutExists';
 import { resolveReference } from './resolveReference';
 import { stripExtension } from './stripExtension';
 
-const RELATIVE_LITERAL = /(['"`])(\.\.?\/[^'"`\n$]*)\1/dg;
-const TS_FILE = /\.[cm]?[jt]sx?$/;
-const CSS_FILE = /\.(?:css|scss|less|pcss)$/;
+// Every string on a line, and an unquoted url(), which is one too.
+const STRING = /'([^'\n]*)'|"([^"\n]*)"|`([^`\n]*)`|\burl\(\s*([^'")\s]+)\s*\)/g;
+const SPELLS_RELATIVE = /^\.\.?\//; // `'.'` and `'..'` are more often text than a path
+const CSS_SYNTAX = /\.(?:css|scss|less|pcss)$/;
 const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const withoutFragment = (value: string) => value.split('#')[0]!;
 
 function confirmed(path: string, text: string, suspects: GuardSuspect[]): GuardSuspect[] {
   if (suspects.length === 0) return suspects;
-  if (CSS_FILE.test(path)) {
+  if (CSS_SYNTAX.test(path)) {
     const comments = [...text.matchAll(CSS_COMMENT)];
     return suspects.filter(
       (s) => !comments.some((c) => s.index >= c.index && s.index < c.index + c[0].length),
     );
   }
-  if (!TS_FILE.test(path)) return suspects;
+  if (!isScriptFile(path)) return suspects;
   const ranges = findLiteralRanges(path, text);
   return suspects.filter((s) => ranges.some(([start, end]) => s.index >= start && s.index < end));
 }
 
-function relativeHits(path: string, text: string): ReferenceHit[] {
-  if (CSS_FILE.test(path)) {
-    return findCssReferences(text).map((r) => ({
-      index: r.start,
-      value: r.value.startsWith('.') ? r.value : `./${r.value}`,
-    }));
-  }
-  return [...text.matchAll(RELATIVE_LITERAL)].map((m) => ({
-    index: m.indices![2]![0],
-    value: m[2]!,
-  }));
+function findStrings(text: string): ReferenceHit[] {
+  return [...text.matchAll(STRING)].map((m) => {
+    const value = m[1] ?? m[2] ?? m[3] ?? m[4]!;
+    return { index: m.index + (m[4] === undefined ? 1 : m[0].indexOf(value)), value };
+  });
 }
 
 function oldPathPattern(moves: ReadonlyMap<string, string>, root: string): RegExp | null {
@@ -60,10 +58,14 @@ function oldPathPattern(moves: ReadonlyMap<string, string>, root: string): RegEx
     const stem = stripExtension(rel);
     const ext = rel.slice(stem.length);
     const alsoWritten = ext === '.ts' ? '|\\.js' : ext === '.tsx' ? '|\\.jsx|\\.js' : '';
-    return `${escape(stem)}(?:${escape(ext)}${alsoWritten})?`;
+    const extensions = `(?:${escape(ext)}${alsoWritten})`;
+    // A root-level name is a path only with its extension and no folder; else it's just a word.
+    return rel.includes('/')
+      ? `${escape(stem)}${extensions}?`
+      : `(?<!/)${escape(stem)}${extensions}`;
   });
   if (alternatives.length === 0) return null;
-  return new RegExp(`(?<![\\w.-])(?<!\\.\\/)(?:${alternatives.join('|')})(?![\\w-]|\\.\\w)`, 'dg');
+  return new RegExp(`(?<![\\w.-])(?<!\\.\\/)(?:${alternatives.join('|')})(?![\\w-]|\\.\\w)`, 'g');
 }
 
 const lineOf = (text: string, index: number) => text.slice(0, index).split('\n').length;
@@ -73,15 +75,17 @@ export function findBrokenReferences(
   before: Pick<ProjectSnapshot, 'texts' | 'fileExists'>,
   edits: readonly FileEdit[],
   moves: ReadonlyMap<string, string>,
-  root: string,
+  context: MoveContext,
 ): GuardFinding[] {
+  const scopes = context.aliasScopes;
   const after = new Map(before.texts);
   for (const from of moves.keys()) after.delete(from);
   for (const edit of edits) after.set(edit.to, edit.text);
   const inverse = new Map([...moves].map(([from, to]) => [to, from]));
+  const destinations = new Set(moves.values());
   const hasBefore = layoutExists(before, new Map());
   const hasAfter = layoutExists(before, moves);
-  const oldPaths = oldPathPattern(moves, root);
+  const oldPaths = oldPathPattern(moves, context.root);
   const findings: GuardFinding[] = [];
   const report = (file: string, text: string, index: number, reason: GuardFinding['reason']) => {
     const line = lineOf(text, index);
@@ -93,23 +97,33 @@ export function findBrokenReferences(
     const suspects: GuardSuspect[] = [];
     const oldPath = inverse.get(path) ?? path;
     const oldText = before.texts.get(oldPath);
-    if (oldText !== undefined) {
-      const oldHits = relativeHits(oldPath, oldText);
-      const newHits = relativeHits(path, text);
-      for (let i = 0; i < Math.min(oldHits.length, newHits.length); i++) {
-        const was = resolveReference(oldHits[i]!.value.split('#')[0]!, oldPath, hasBefore, []);
-        if (!was) continue;
-        const expected = moves.get(was.target) ?? was.target;
-        const now = resolveReference(newHits[i]!.value.split('#')[0]!, path, hasAfter, []);
-        const { index } = newHits[i]!;
-        if (!now) suspects.push({ index, reason: 'no-longer-resolves' });
-        else if (now.target !== expected)
-          suspects.push({ index, reason: 'now-resolves-elsewhere' });
-      }
+    // Nothing rewrites `.astro`, `.mdx` or Sass, so their aliases are judged here too.
+    const rewritten = isScriptFile(path) || isStylesheet(path);
+    if (oldText !== undefined && (!rewritten || oldText.includes('./'))) {
+      const oldStrings = findStrings(oldText);
+      const newStrings = oldText === text ? oldStrings : findStrings(text);
+      oldStrings.forEach((old, i) => {
+        if (!SPELLS_RELATIVE.test(old.value) && (rewritten || old.value.startsWith('.'))) return;
+        const was = resolveReference(withoutFragment(old.value), oldPath, hasBefore, scopes);
+        if (!was) return;
+        const current = newStrings[i]!;
+        const now = resolveReference(withoutFragment(current.value), path, hasAfter, scopes);
+        if (!now) suspects.push({ index: current.index, reason: 'no-longer-resolves' });
+        else if (now.target !== (moves.get(was.target) ?? was.target))
+          suspects.push({ index: current.index, reason: 'now-resolves-elsewhere' });
+      });
     }
     if (oldPaths) {
-      for (const m of text.matchAll(oldPaths))
-        suspects.push({ index: m.index, reason: 'mentions-old-path' });
+      for (const m of text.matchAll(oldPaths)) {
+        const enclosing = findStrings(text).find(
+          (s) => m.index >= s.index && m.index < s.index + s.value.length,
+        );
+        const means =
+          enclosing && resolveReference(withoutFragment(enclosing.value), path, hasAfter, scopes);
+        // A new path can end in the old one; a string that reaches a moved file is correct.
+        if (!means || !destinations.has(means.target))
+          suspects.push({ index: m.index, reason: 'mentions-old-path' });
+      }
     }
     for (const { index, reason } of confirmed(path, text, suspects))
       report(path, text, index, reason);

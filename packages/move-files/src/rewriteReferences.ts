@@ -18,14 +18,13 @@ import type { ProjectSnapshot } from './@types/ProjectSnapshot';
 import { findCssReferences } from './findCssReferences';
 import { findTsReferences } from './findTsReferences';
 import { isRelativeSpecifier } from './isRelativeSpecifier';
+import { isScriptFile } from './isScriptFile';
+import { isStylesheet } from './isStylesheet';
 import { layoutExists } from './layoutExists';
 import { mentionsMovedFile } from './mentionsMovedFile';
 import { relativeSpecifier } from './relativeSpecifier';
 import { resolveReference } from './resolveReference';
 import { spellReference } from './spellReference';
-
-const TS_FILE = /\.[cm]?[jt]sx?$/;
-const CSS_FILE = /\.(?:css|scss|less|pcss)$/;
 
 export function rewriteReferences(
   snapshot: Pick<ProjectSnapshot, 'texts' | 'fileExists'>,
@@ -41,8 +40,8 @@ export function rewriteReferences(
   for (const [path, text] of snapshot.texts) {
     const newPath = moves.get(path);
     const moved = newPath !== undefined;
-    const isTs = TS_FILE.test(path);
-    const isCss = CSS_FILE.test(path);
+    const isTs = isScriptFile(path);
+    const isCss = isStylesheet(path);
     if (!moved && !((isTs || isCss) && mayReference(text))) continue;
     const oldDir = posix.dirname(path);
     const newDir = posix.dirname(newPath ?? path);

@@ -95,6 +95,6 @@ export function planMoves(
 
   const absMoves = new Map(moves.map(({ from, to }) => [abs(from), abs(to)]));
   const edits = rewriteReferences(snapshot, absMoves, context);
-  const findings = findBrokenReferences(snapshot, edits, absMoves, root);
+  const findings = findBrokenReferences(snapshot, edits, absMoves, context);
   return { ok: true, plan: { moves, edits, findings } };
 }
