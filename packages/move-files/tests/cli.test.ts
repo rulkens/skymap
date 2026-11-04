@@ -30,7 +30,8 @@ const repo = () =>
 const probe = makeRepo({ 'Probe.txt': '' });
 const diskFoldsCase = existsSync(join(probe, 'probe.txt'));
 
-describe('cli', () => {
+// Every test spawns a tsx process (~0.5s alone); a loaded full run can pass Vitest's 5s default.
+describe('cli', { timeout: 30_000 }, () => {
   it('exits 2 and writes nothing on a refusal', () => {
     const root = repo();
     const r = run(root, 'src/lib/gone.ts', 'src/x.ts');

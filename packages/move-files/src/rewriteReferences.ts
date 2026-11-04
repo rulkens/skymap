@@ -5,7 +5,7 @@
  * never against a half-moved state, so chains and swaps need no ordering. Moved
  * files always come back (even unedited, since they change path); others only when a
  * spelling changed. A moved file's relative specifier that resolves to nothing on disk
- * keeps its meaning by path math. `.astro`, `.mdx` and Sass are left to the guard.
+ * keeps its meaning by path math. `.astro`, `.mdx`, `.vue`, `.svelte` and Sass are left to the guard.
  * Offsets are UTF-16, so BOM and non-ASCII text survive.
  */
 

@@ -12,7 +12,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import type { ProjectSnapshot } from './@types/ProjectSnapshot';
 
-const TEXT_FILE = /\.(?:[cm]?[jt]sx?|css|scss|less|pcss|astro|mdx)$/;
+const TEXT_FILE = /\.(?:[cm]?[jt]sx?|css|scss|less|pcss|astro|mdx|vue|svelte)$/;
 
 export function readSnapshot(paths: readonly string[]): ProjectSnapshot {
   const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });

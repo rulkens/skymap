@@ -96,7 +96,7 @@ export function findBrokenReferences(
     const suspects: GuardSuspect[] = [];
     const oldPath = inverse.get(path) ?? path;
     const oldText = before.texts.get(oldPath);
-    // Nothing rewrites `.astro`, `.mdx` or Sass, so their aliases are judged here too.
+    // Nothing rewrites `.astro`, `.mdx`, `.vue`, `.svelte` or Sass, so their aliases are judged here too.
     const rewritten = isScriptFile(path) || isStylesheet(path);
     if (oldText !== undefined && (!rewritten || oldText.includes('./'))) {
       const oldStrings = findStrings(oldText);

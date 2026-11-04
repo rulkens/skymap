@@ -77,7 +77,7 @@ repo-relative path still in code.
 
 Reported by the guard when they break, not rewritten:
 
-- `.astro` and `.mdx` files.
+- `.astro`, `.mdx`, `.vue` and `.svelte` files.
 - Sass and Less. `@use`, `@forward` and partials resolve their own way, so only a `./` string
   written with its extension is checked, in a moved file or pointing at one. Plain CSS is rewritten.
 - `declare module './mod'` and other relative strings that aren't imports (asset URLs, say).

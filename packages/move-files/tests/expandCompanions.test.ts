@@ -1,12 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { expandCompanions } from '../src/expandCompanions';
-import config from '../../../move-files.config.json';
 
 // fileExists is injected; back it with a Set of "existing" test files so each
 // case controls exactly which mirrors are present.
 const existsFrom = (present: readonly string[]) => (p: string) => present.includes(p);
 
-const rules = config.companions;
+const SUFFIXES = ['.test.ts', '.test.tsx'];
+const rules = [
+  { from: 'src/', to: 'tests/', sources: ['.ts', '.tsx'], suffixes: SUFFIXES },
+  { from: 'tools/', to: 'tests/tools/', sources: ['.ts', '.tsx'], suffixes: SUFFIXES },
+  { from: '', to: '', sources: ['.tsx'], suffixes: ['.module.css'] },
+];
 
 describe('expandCompanions', () => {
   it('appends the src mirror move when the test file exists', () => {

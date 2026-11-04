@@ -15,6 +15,12 @@ describe('readSnapshot', () => {
     expect([...snapshot.listed]).toEqual(listed);
   });
 
+  it('reads the template files the guard scans', () => {
+    const root = makeRepo({ 'a.vue': 'v', 'b.svelte': 's', 'c.astro': 'a', 'd.mdx': 'm' });
+    const paths = ['a.vue', 'b.svelte', 'c.astro', 'd.mdx'].map((f) => `${root}/${f}`);
+    expect([...readSnapshot(paths).texts.keys()]).toEqual(paths);
+  });
+
   it('does not treat a directory as a file, and knows it is one', () => {
     const root = makeRepo({ 'd/a.ts': '' });
     const snapshot = readSnapshot([]);
