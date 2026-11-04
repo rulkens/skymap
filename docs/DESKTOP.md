@@ -219,8 +219,10 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   (`netsh advfirewall`, TCP 47823, private and domain profiles, added on install and removed on
   uninstall), and the uninstaller's unticked "Downloaded sky data" box, which deletes
   `%APPDATA%\Skymap\data` only when ticked and never on an update. The exe and rule names come
-  from electron-builder (`${PRODUCT_FILENAME}`, `${PRODUCT_NAME}`); the port is hard-coded there and
-  `packages/desktop/tests/electronBuilderConfig.test.ts` pins it against `APP_SERVER_PORT`. The
+  from electron-builder (`${PRODUCT_FILENAME}`, `${PRODUCT_NAME}`); the port is hard-coded there.
+  Electron names `userData` from `package.json`'s `productName` alone (electron-builder does not
+  copy the yml's in), so the two are kept equal. `packages/desktop/tests/electronBuilderConfig.test.ts`
+  pins both contracts: the names, and the port against `APP_SERVER_PORT`. The
   welcome text repeats `APP_SUMMARY`; keep the two in step. The installer is per machine, which is
   what lets it add the rule.
 - Release: `npm run dist -w packages/desktop` (web build in desktop mode, brand, build,
@@ -234,6 +236,9 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   `vite build --mode desktop` at the root first.
 - `--windowed` gives the sky a normal 1280 x 720 window with DevTools and the full menu.
 - In a worktree without `public/data`, point `SKYMAP_DATA_DIR` at a checkout that has it.
+- A dev run uses the installed app's `userData` (`Skymap`): on a machine with both, they share
+  `setup.json`, the CA and the room code, though a dev run never touches the mirror. For a clean
+  slate, pass `--user-data-dir=<scratch dir>` after `electron .`.
 - Manual checks that no test covers: install on Windows (firewall rule, uninstaller box, "Launch
   Skymap"), boot with networking off, WebGPU on D3D12, a tablet pairing after trusting `/ca.crt`,
   a projector switched on after boot, the dome grid landing front-down, the dmg's Finder labels in
