@@ -11,17 +11,21 @@
  *
  * No GPU work: reads catalog buffers and emits a sorted array;
  * 'proceduralDisksPass' consumes it next frame. Shares the per-row
- * helpers in 'utils/render/disk/' with the LOD-2 textured body.
+ * helpers in 'lod/utils/' with the LOD-2 textured body.
  *
- * The LOD-aligned fade constants live in 'data/galaxyLodBands.ts' and the
- * pure emission helper 'maybeEmitProceduralDisk' in 'utils/render/disk/';
+ * The LOD-aligned fade constants live in 'lod/data/galaxyLodBands.ts' and the
+ * pure emission helper 'maybeEmitProceduralDisk' in 'utils/';
  * this planner imports both.
  */
 
 import { Source } from '../../../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../sources/galaxyCatalogSourceRecord';
 import { pickColourIndex } from '../../../appearance/data/colourIndex';
-import { absoluteFromApparent, cartesianToRaDec, smoothstep } from '../../../../../utils/math/index';
+import {
+  absoluteFromApparent,
+  cartesianToRaDec,
+  smoothstep,
+} from '../../../../../utils/math/index';
 import { galaxySbAmp } from '../../../appearance/utils/galaxySbAmp';
 import { diskQuadExtentMpc } from '../../../lod/utils/diskQuadExtentMpc';
 import { purgeStrideWindow } from '../../../lod/utils/purgeStrideWindow';

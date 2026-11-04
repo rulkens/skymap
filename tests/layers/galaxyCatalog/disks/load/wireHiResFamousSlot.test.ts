@@ -31,17 +31,20 @@ vi.mock('../../../../../src/layers/galaxyCatalog/hiResFamous/load/hiResFamousTex
   }),
 }));
 
-vi.mock('../../../../../src/layers/galaxyCatalog/hiResFamous/subsystems/hiResFamousSubsystem', () => ({
-  createHiResFamousSubsystem: vi.fn(() => {
-    const id = `subsystem#${shared.subsystemSeq++}`;
-    return {
-      runFrame: vi.fn(),
-      lastOutput: { byFamousIdx: new Map() },
-      destroy: vi.fn(() => shared.calls.push(`destroy ${id}`)),
-      __id: id,
-    };
+vi.mock(
+  '../../../../../src/layers/galaxyCatalog/hiResFamous/subsystems/hiResFamousSubsystem',
+  () => ({
+    createHiResFamousSubsystem: vi.fn(() => {
+      const id = `subsystem#${shared.subsystemSeq++}`;
+      return {
+        runFrame: vi.fn(),
+        lastOutput: { byFamousIdx: new Map() },
+        destroy: vi.fn(() => shared.calls.push(`destroy ${id}`)),
+        __id: id,
+      };
+    }),
   }),
-}));
+);
 
 // Imported AFTER the mocks so the module under test resolves the stubs.
 import { wireHiResFamousSlot } from '../../../../../src/layers/galaxyCatalog/disks/load/wireHiResFamousSlot';

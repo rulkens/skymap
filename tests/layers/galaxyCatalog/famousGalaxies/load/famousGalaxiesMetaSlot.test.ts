@@ -9,9 +9,12 @@ import type { FamousGalaxyMetaEntry } from '../../../../../src/@types/loading/Fa
 
 const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
 
-vi.mock('../../../../../src/layers/galaxyCatalog/famousGalaxies/load/famousGalaxiesMetaFetcher', () => ({
-  famousGalaxiesMetaFetcher: mockFetch,
-}));
+vi.mock(
+  '../../../../../src/layers/galaxyCatalog/famousGalaxies/load/famousGalaxiesMetaFetcher',
+  () => ({
+    famousGalaxiesMetaFetcher: mockFetch,
+  }),
+);
 
 import { createFamousGalaxiesMetaSlot } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/load/famousGalaxiesMetaSlot';
 import { HttpError } from '../../../../../src/services/loading/fetchWithProgress';

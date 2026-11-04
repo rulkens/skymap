@@ -67,7 +67,7 @@ The user never sees our source; they run the system, change it, and rely on it.
 about what this does and change it safely" is a fact about the artifact. When a
 construct is terser but yields an artifact you can't evolve, it lost.
 
-- **Skymap:** the `.bin` catalog format (`src/data/galaxyCatalogFormat.ts`) is the
+- **Skymap:** the `.bin` catalog format (`src/layers/galaxyCatalog/records/data/galaxyCatalogFormat.ts`) is the
   artifact. It stores `magic + version + count` so an old file _fails loudly_ with
   a regenerate message instead of silently mis-decoding. That property is worth far
   more than a cleverer encoder.
