@@ -1,6 +1,6 @@
 # Camera lens: the field of view becomes camera state with a clip channel — plan
 
-> **Spec.** [`specs/2026-10-28-sky-mode-design.md`](../specs/2026-10-28-sky-mode-design.md), R12 + D1,
+> **Spec.** [`2026-10-28-sky-mode-design.md`](https://github.com/rulkens/skymap/blob/sky-mode/docs/superpowers/specs/2026-10-28-sky-mode-design.md) (branch `sky-mode`), R12 + D1,
 > prep P2. Shipped as **its own PR**, ahead of the rest of sky-mode prep (user, 2026-10-28).
 > **Gate.** `npm run typecheck`, `npm test`, `npm run build`. No authored clip, beat or exhibit sets a
 > lens, so camera golden traces stay byte-identical.

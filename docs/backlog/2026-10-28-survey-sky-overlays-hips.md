@@ -2,7 +2,7 @@
 
 **Readiness:** `needs-design`.
 
-The follow-up the user named for sky mode (spec `specs/2026-10-28-sky-mode-design.md` §10):
+The follow-up the user named for sky mode ([sky-mode spec](https://github.com/rulkens/skymap/blob/sky-mode/docs/superpowers/specs/2026-10-28-sky-mode-design.md) §10, branch `sky-mode`):
 ultra-high-res all-sky imagery from many surveys and wavelengths, from the Planck CMB through
 Fermi, ROSAT, GALEX, DSS2 colour, 2MASS and WISE. The standard is IVOA **HiPS**
 (Hierarchical Progressive Surveys): HEALPix-tiled image pyramids, streamed by Aladin and Stellarium
