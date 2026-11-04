@@ -55,6 +55,7 @@ describe('SetupFlow', () => {
     await act(async () => fireEvent.click(screen.getByRole('radio', { name: /Dome/ })));
     expect(bridge.saveSetup).toHaveBeenLastCalledWith({ ...DEFAULT_INSTALL_SETUP, mode: 'dome' });
     expect(title()).toHaveTextContent('Where will it show?');
+    expect(screen.getByText('Saved')).toBeInTheDocument();
   });
 
   it('the screen step shows the test grid while open and moves the sky on a pick', async () => {

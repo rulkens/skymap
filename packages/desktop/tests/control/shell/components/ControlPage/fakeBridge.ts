@@ -17,6 +17,7 @@ const BASE_STATE: ControlState = {
   progress: null,
   hasData: true,
   skyRunning: false,
+  skyLoading: false,
   testGrid: false,
   room: { code: 'K7QM3XRT', origin: 'https://10.0.0.2:47823', onSky: false },
   displays: TWO_DISPLAYS,
@@ -51,7 +52,7 @@ export function fakeBridge(over: Partial<ControlState> = {}) {
     updateNow: vi.fn(),
     restartSky: vi.fn(),
     showTestGrid: vi.fn(),
-    rotateCode: vi.fn(),
+    rotateCode: vi.fn(async () => {}),
     hide: vi.fn(),
     quit: vi.fn(),
   } satisfies ControlBridge;

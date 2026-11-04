@@ -15,6 +15,11 @@ export type SyncPanelProps = {
 function SyncPanel({ sync, onUpdateNow, onRestartSky }: SyncPanelProps): ReactNode {
   const titleId = useId();
   const syncing = sync.status.kind === 'syncing';
+  const restartNote = sync.skyLoading
+    ? 'Loading the sky'
+    : sync.hasData
+      ? 'Restart sky loads new data and removes the files it no longer uses.'
+      : 'Restart sky needs the data: the sky starts by itself once it is downloaded.';
   return (
     <section className={styles.root} aria-labelledby={titleId}>
       <h2 id={titleId} className={chrome.heading}>
@@ -28,16 +33,14 @@ function SyncPanel({ sync, onUpdateNow, onRestartSky }: SyncPanelProps): ReactNo
         <button
           type="button"
           className={chrome.button}
-          disabled={syncing || !sync.hasData}
+          disabled={syncing || sync.skyLoading || !sync.hasData}
           onClick={onRestartSky}
         >
           Restart sky
         </button>
       </div>
-      <p className={chrome.dim}>
-        {sync.hasData
-          ? 'Restart sky loads new data and removes the files it no longer uses.'
-          : 'Restart sky needs the data: the sky starts by itself once it is downloaded.'}
+      <p className={chrome.dim} role="status">
+        {restartNote}
       </p>
     </section>
   );

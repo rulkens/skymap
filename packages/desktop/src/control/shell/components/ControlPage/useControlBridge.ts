@@ -27,9 +27,15 @@ export function useControlBridge(bridge: ControlBridge): ControlSession | null {
     async (next: InstallSetup): Promise<void> => {
       setPending(next);
       setSaveState('saving');
-      await bridge.saveSetup(next);
-      setPending((shown) => (shown === next ? null : shown));
-      setSaveState('saved');
+      try {
+        await bridge.saveSetup(next);
+        setSaveState('saved');
+      } catch {
+        // Main kept the stored setup; dropping the draft shows it again.
+        setSaveState('failed');
+      } finally {
+        setPending((shown) => (shown === next ? null : shown));
+      }
     },
     [bridge],
   );

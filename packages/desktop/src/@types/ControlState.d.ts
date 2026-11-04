@@ -15,6 +15,8 @@ export type ControlState = {
   /** A complete data set is on disk, so the sky can start without a download. */
   hasData: boolean;
   skyRunning: boolean;
+  /** A sky load is under way (a restart, a mode change, a sync's reload): up to 10 s of black. */
+  skyLoading: boolean;
   /** Whether the test grid is on the sky; the View menu's tick reads the same value. */
   testGrid: boolean;
   room: RelayRoom;

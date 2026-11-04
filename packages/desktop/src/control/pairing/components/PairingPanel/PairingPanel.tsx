@@ -1,9 +1,16 @@
-import { useId } from 'react';
+/**
+ * PairingPanel — the tablets: the network, how to pair, and Rotate code. Rotating disconnects every
+ * tablet and breaks every bookmark, so it takes a second press on a button that says so; Escape or
+ * leaving the button cancels, and the button stays busy until the new code arrives.
+ */
+
+import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { RelayRoom } from '../../../../../../../src/@types/remote/RelayRoom';
 import type { LanInterface } from '../../../../@types/LanInterface';
 import NetworkChoice from '../NetworkChoice/NetworkChoice';
 import PairingDetails from '../PairingDetails/PairingDetails';
+import { ROTATE_HINT, ROTATE_LABEL } from './PairingPanel.constants';
 import chrome from '../../../controlChrome.module.css';
 import styles from './PairingPanel.module.css';
 
@@ -14,7 +21,8 @@ export type PairingPanelProps = {
   readonly network: string | null;
   readonly skyRunning: boolean;
   readonly onPickNetwork: (network: string) => void;
-  readonly onRotate: () => void;
+  /** Settles once main has stored and handed out the new code. */
+  readonly onRotate: () => Promise<void>;
   readonly onHelp: () => void;
 };
 
@@ -28,6 +36,17 @@ function PairingPanel({
   onHelp,
 }: PairingPanelProps): ReactNode {
   const titleId = useId();
+  const [rotate, setRotate] = useState<keyof typeof ROTATE_HINT>('idle');
+  const press = (): void => {
+    if (rotate === 'rotating') return;
+    if (rotate !== 'confirm') return setRotate('confirm');
+    setRotate('rotating');
+    onRotate().then(
+      () => setRotate('idle'),
+      () => setRotate('failed'),
+    );
+  };
+  const cancel = (): void => setRotate((now) => (now === 'confirm' ? 'idle' : now));
   return (
     <section className={styles.root} aria-labelledby={titleId}>
       <h2 id={titleId} className={chrome.heading}>
@@ -45,10 +64,21 @@ function PairingPanel({
         bookmark keeps working.
       </p>
       <div className={chrome.row}>
-        <button type="button" className={chrome.button} onClick={onRotate}>
-          Rotate code
+        {/* One button throughout, so focus stays on it from the first press to the new code. */}
+        <button
+          type="button"
+          className={chrome.button}
+          aria-disabled={rotate === 'rotating'}
+          aria-busy={rotate === 'rotating'}
+          onClick={press}
+          onBlur={cancel}
+          onKeyDown={(e) => e.key === 'Escape' && cancel()}
+        >
+          {ROTATE_LABEL[rotate]}
         </button>
-        <p className={chrome.dim}>Disconnects paired tablets and changes the address.</p>
+        <p className={rotate === 'failed' ? chrome.text : chrome.dim} role="status">
+          {ROTATE_HINT[rotate]}
+        </p>
       </div>
     </section>
   );

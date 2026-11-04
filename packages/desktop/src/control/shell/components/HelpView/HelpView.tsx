@@ -24,6 +24,8 @@ function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactN
   const titleId = useId();
   const tablet = useRef<HTMLElement>(null);
   const troubleshooting = useRef<HTMLElement>(null);
+  const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => title.current?.focus({ preventScroll: true }), []);
   useEffect(() => {
     const target =
       section === 'tablet' ? tablet : section === 'troubleshooting' ? troubleshooting : null;
@@ -38,7 +40,7 @@ function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactN
       <button type="button" className={chrome.link} onClick={onBack}>
         {backLabel}
       </button>
-      <h1 id={titleId} className={chrome.title}>
+      <h1 id={titleId} ref={title} tabIndex={-1} className={styles.title}>
         Help
       </h1>
 

@@ -4,7 +4,7 @@
  * word and sends the person's changes back. Escape closes Help or About and nothing else.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ControlBridge } from '../../../../@types/ControlBridge';
 import type { ControlView } from '../../../../@types/ControlView';
@@ -30,6 +30,12 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
   const [step, setStep] = useState<SetupStep>('welcome');
   const base = home ?? (session === null ? null : session.firstRun ? 'setup' : 'controls');
   const view: ControlView | null = over ?? base;
+  // Closing Help or About hands focus back to the header link for it, so the next key works.
+  const links = useRef<Partial<Record<'help' | 'about', HTMLButtonElement | null>>>({});
+  const close = (): void => {
+    if (over !== null) links.current[over]?.focus();
+    setOver(null);
+  };
 
   useEffect(
     () =>
@@ -46,11 +52,11 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
   useEffect(() => {
     if (over === null) return;
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOver(null);
+      if (event.key === 'Escape') close();
     };
     addEventListener('keydown', onKey);
     return () => removeEventListener('keydown', onKey);
-  }, [over]);
+  });
 
   const backLabel = base === 'setup' ? 'Back to setup' : 'Back to the controls';
   const openHelp = (): void => {
@@ -71,8 +77,9 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
       <ControlHeader
         view={view}
         showMark={!(view === 'setup' && step === 'welcome')}
+        linkRef={(target, el) => void (links.current[target] = el)}
         onToggle={(next) =>
-          over === next ? setOver(null) : next === 'help' ? openHelp() : setOver(next)
+          over === next ? close() : next === 'help' ? openHelp() : setOver(next)
         }
       />
       <div className={styles.content}>
@@ -81,14 +88,11 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
             origin={session?.room.origin ?? null}
             section={helpSection}
             backLabel={backLabel}
-            onBack={() => setOver(null)}
+            onBack={close}
           />
         )}
         {over === 'about' && (
-          <AboutView
-            about={session?.about ?? null}
-            back={{ label: backLabel, onBack: () => setOver(null) }}
-          />
+          <AboutView about={session?.about ?? null} back={{ label: backLabel, onBack: close }} />
         )}
         {over === null && session && base === 'setup' && (
           <SetupFlow
@@ -99,6 +103,7 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
             displays={session.displays}
             placement={session.placement}
             networks={session.networks}
+            saveState={session.saveState}
             onStep={setStep}
             onSave={session.save}
             onShowTestGrid={bridge.showTestGrid}

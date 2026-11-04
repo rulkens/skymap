@@ -12,7 +12,7 @@ import type { SetupSaveState } from '../../@types/SetupSaveState';
 import DisplayChoice from '../DisplayChoice/DisplayChoice';
 import ModeChoice from '../ModeChoice/ModeChoice';
 import UpdatesChoice from '../UpdatesChoice/UpdatesChoice';
-import { SAVE_STATE_TEXT } from './SetupPanel.constants';
+import SaveStatus from '../SaveStatus/SaveStatus';
 import chrome from '../../../controlChrome.module.css';
 import styles from './SetupPanel.module.css';
 
@@ -45,9 +45,7 @@ function SetupPanel({
         <h2 id={titleId} className={chrome.heading}>
           Setup
         </h2>
-        <p className={chrome.dim} role="status">
-          {SAVE_STATE_TEXT[saveState]}
-        </p>
+        <SaveStatus state={saveState} />
       </div>
       <ModeChoice mode={setup.mode} onPick={(mode) => onSave({ ...setup, mode })} compact />
       <div className={chrome.stack}>

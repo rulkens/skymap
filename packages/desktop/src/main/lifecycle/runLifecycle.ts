@@ -109,6 +109,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     progress: null,
     hasData: dev || (await hasCompleteLocalSet(dataRoot)),
     skyRunning: false,
+    skyLoading: false,
     testGrid: false,
     // Known before the sky hosts, so a tablet can scan and trust the certificate during the first download.
     room: { code, origin: originFor(networks), onSky: false },
@@ -144,9 +145,14 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   const loadOnce = createSkyLoader({
     prune: () => (dev ? Promise.resolve() : pruneOrphans(dataRoot)),
     show: async () => {
-      await loadSkyPage(sky.open(), skyUrlFor(setup.current().mode));
-      update({ skyRunning: true });
-      if (state.status.kind === 'ready') update({ status: { kind: 'complete' } });
+      update({ skyLoading: true });
+      try {
+        await loadSkyPage(sky.open(), skyUrlFor(setup.current().mode));
+        update({ skyRunning: true });
+        if (state.status.kind === 'ready') update({ status: { kind: 'complete' } });
+      } finally {
+        update({ skyLoading: false });
+      }
     },
     logError: (message, error) => console.error(message, error),
   });

@@ -25,7 +25,7 @@ const bridge: ControlBridge = {
   updateNow: command(C.updateNow),
   restartSky: command(C.restartSky),
   showTestGrid: command(C.showTestGrid),
-  rotateCode: command(C.rotateCode),
+  rotateCode: () => ipcRenderer.invoke(C.rotateCode),
   hide: command(C.hide),
   quit: command(C.quit),
 };

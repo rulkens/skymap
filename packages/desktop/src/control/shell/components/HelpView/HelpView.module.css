@@ -7,6 +7,14 @@
   padding: var(--space-4) var(--space-12) calc(var(--space-12) * 2);
 }
 
+.title {
+  composes: title from '../../../controlChrome.module.css';
+}
+
+.title:focus {
+  outline: none;
+}
+
 .section {
   composes: stack from '../../../controlChrome.module.css';
   padding-top: var(--space-12);

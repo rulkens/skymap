@@ -14,9 +14,11 @@ export type ControlHeaderProps = {
   readonly view: ControlView | null;
   readonly showMark: boolean;
   readonly onToggle: (view: 'help' | 'about') => void;
+  /** Hands each link to the page, which returns focus to it when its view closes. */
+  readonly linkRef: (view: 'help' | 'about', el: HTMLButtonElement | null) => void;
 };
 
-function ControlHeader({ view, showMark, onToggle }: ControlHeaderProps): ReactNode {
+function ControlHeader({ view, showMark, onToggle, linkRef }: ControlHeaderProps): ReactNode {
   return (
     <header className={styles.root}>
       <span className={showMark ? styles.mark : styles.markHidden} aria-hidden={!showMark}>
@@ -26,6 +28,7 @@ function ControlHeader({ view, showMark, onToggle }: ControlHeaderProps): ReactN
         {(['help', 'about'] as const).map((target) => (
           <button
             key={target}
+            ref={(el) => linkRef(target, el)}
             type="button"
             className={chrome.link}
             aria-current={view === target ? 'page' : undefined}

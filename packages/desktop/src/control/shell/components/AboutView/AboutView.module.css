@@ -14,6 +14,10 @@
   font-weight: inherit;
 }
 
+.mark:focus {
+  outline: none;
+}
+
 .summary {
   composes: text from '../../../controlChrome.module.css';
   color: var(--color-fg);

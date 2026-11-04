@@ -151,4 +151,65 @@ describe('ControlPage', () => {
     expect(screen.getByText('1.2.3')).toBeVisible();
     expect(screen.getByText('Not downloaded yet')).toBeVisible();
   });
+  // Audit B I8: a refused save left "Saving" up for good and the page out of step with main.
+  it('a save main refuses says so and shows the stored choice again', async () => {
+    const { bridge } = await renderControls();
+    bridge.saveSetup.mockRejectedValueOnce(new Error('ENOSPC'));
+    await act(async () => fireEvent.click(screen.getByRole('radio', { name: /Dome/ })));
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not save');
+    expect(screen.getByRole('radio', { name: /Kiosk/ })).toBeChecked();
+  });
+
+  // Audit B I9: clearing the time saved "every launch" and disabled the field under the cursor.
+  it('clearing the daily time is a draft: nothing saves and the field stays open', async () => {
+    const { bridge } = await renderControls({
+      ...DEFAULT_INSTALL_SETUP,
+      dataUpdates: { kind: 'daily', at: '05:30' },
+    });
+    const time = screen.getByLabelText('Daily update time');
+    await act(async () => fireEvent.change(time, { target: { value: '' } }));
+    expect(bridge.saveSetup).not.toHaveBeenCalled();
+    expect(time).toBeEnabled();
+    expect(screen.getByRole('radio', { name: 'Every day at' })).toBeChecked();
+    await act(async () => fireEvent.change(time, { target: { value: '06:15' } }));
+    expect(bridge.saveSetup).toHaveBeenLastCalledWith({
+      ...DEFAULT_INSTALL_SETUP,
+      dataUpdates: { kind: 'daily', at: '06:15' },
+    });
+  });
+
+  it('Rotate code takes a second press that names the cost, and Escape cancels it', async () => {
+    const { bridge } = await renderControls();
+    press('Rotate code');
+    expect(bridge.rotateCode).not.toHaveBeenCalled();
+    const confirm = screen.getByRole('button', { name: 'Disconnect tablets and rotate' });
+    fireEvent.keyDown(confirm, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Rotate code' })).toBeVisible();
+
+    let done = (): void => {};
+    bridge.rotateCode.mockImplementationOnce(() => new Promise<void>((r) => (done = r)));
+    press('Rotate code');
+    press('Disconnect tablets and rotate');
+    expect(bridge.rotateCode).toHaveBeenCalledOnce();
+    expect(screen.getByText('Rotating the code')).toBeVisible();
+    press('Disconnect tablets and rotate');
+    expect(bridge.rotateCode).toHaveBeenCalledOnce();
+    await act(async () => done());
+    expect(screen.getByRole('button', { name: 'Rotate code' })).toBeVisible();
+  });
+
+  it('Help takes focus on open and gives it back to its link on close', async () => {
+    await renderControls();
+    press('Help');
+    expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toHaveFocus();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Help' })).toHaveFocus();
+  });
+
+  it('Restart sky waits while a sky loads, and says so', async () => {
+    const { set } = await renderControls();
+    set({ skyLoading: true });
+    expect(screen.getByRole('button', { name: 'Restart sky' })).toBeDisabled();
+    expect(screen.getByText('Loading the sky')).toBeVisible();
+  });
 });

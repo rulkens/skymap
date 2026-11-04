@@ -15,7 +15,8 @@ export type ControlBridge = {
   updateNow: () => void;
   restartSky: () => void;
   showTestGrid: (on: boolean) => void;
-  rotateCode: () => void;
+  /** Resolves once the new code is stored and in the state. */
+  rotateCode: () => Promise<void>;
   /** Hides this window, as the shortcut does, so a single screen shows the sky. */
   hide: () => void;
   quit: () => void;

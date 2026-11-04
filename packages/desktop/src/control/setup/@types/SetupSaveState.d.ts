@@ -1,1 +1,1 @@
-export type SetupSaveState = 'idle' | 'saving' | 'saved';
+export type SetupSaveState = 'idle' | 'saving' | 'saved' | 'failed';

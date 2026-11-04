@@ -3,6 +3,7 @@
  * text. The control window shows it as a view; the shell can show it alone (AboutWindow), without Back.
  */
 
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import Wordmark from '../../../../../../website/src/components/shared/text/Wordmark/Wordmark';
 import type { AboutInfo } from '../../../../@types/AboutInfo';
@@ -18,6 +19,8 @@ export type AboutViewProps = {
 };
 
 function AboutView({ about, back }: AboutViewProps): ReactNode {
+  const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => title.current?.focus({ preventScroll: true }), []);
   const dataDate = about?.dataDate
     ? new Date(about.dataDate).toLocaleDateString('en-GB', { dateStyle: 'long' })
     : 'Not downloaded yet';
@@ -28,7 +31,7 @@ function AboutView({ about, back }: AboutViewProps): ReactNode {
           {back.label}
         </button>
       )}
-      <h1 className={styles.mark}>
+      <h1 ref={title} tabIndex={-1} className={styles.mark} aria-label="About Skymap">
         <Wordmark />
       </h1>
       <p className={styles.summary}>{APP_SUMMARY}</p>

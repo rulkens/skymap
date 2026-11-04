@@ -12,6 +12,7 @@ import type { DisplayInfo } from '../../../../@types/DisplayInfo';
 import type { InstallSetup } from '../../../../@types/InstallSetup';
 import type { LanInterface } from '../../../../@types/LanInterface';
 import type { WindowPlacement } from '../../../../@types/WindowPlacement';
+import type { SetupSaveState } from '../../@types/SetupSaveState';
 import type { SetupStep } from '../../@types/SetupStep';
 import type { SyncState } from '../../../sync/@types/SyncState';
 import { stepAfter } from '../../utils/stepAfter';
@@ -22,6 +23,7 @@ import DisplayStep from '../DisplayStep/DisplayStep';
 import DoneStep from '../DoneStep/DoneStep';
 import DownloadStrip from '../../../sync/components/DownloadStrip/DownloadStrip';
 import ModeChoice from '../ModeChoice/ModeChoice';
+import SaveStatus from '../SaveStatus/SaveStatus';
 import SetupRail from '../SetupRail/SetupRail';
 import TabletStep from '../TabletStep/TabletStep';
 import UpdatesChoice from '../UpdatesChoice/UpdatesChoice';
@@ -38,6 +40,7 @@ export type SetupFlowProps = {
   readonly displays: readonly DisplayInfo[];
   readonly placement: WindowPlacement | null;
   readonly networks: readonly LanInterface[];
+  readonly saveState: SetupSaveState;
   readonly onStep: (step: SetupStep) => void;
   readonly onSave: (next: InstallSetup) => Promise<void>;
   readonly onShowTestGrid: (on: boolean) => void;
@@ -48,7 +51,7 @@ export type SetupFlowProps = {
 };
 
 function SetupFlow(props: SetupFlowProps): ReactNode {
-  const { step, setup, sync, room, displays, placement, networks } = props;
+  const { step, setup, sync, room, displays, placement, networks, saveState } = props;
   const { skyRunning } = sync;
   const { onStep, onSave, onShowTestGrid, onRetry, onHelp, onClose } = props;
   const titleId = useId();
@@ -130,6 +133,7 @@ function SetupFlow(props: SetupFlowProps): ReactNode {
           <button type="button" className={chrome.primary} onClick={advance}>
             {setupPrimaryLabel(step, oneScreen, skyRunning)}
           </button>
+          <SaveStatus state={saveState} />
         </div>
       </section>
       <DownloadStrip sync={sync} onRetry={onRetry} />

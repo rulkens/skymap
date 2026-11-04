@@ -7,6 +7,7 @@ const at = (over: Partial<SyncState>): SyncState => ({
   progress: null,
   hasData: false,
   skyRunning: false,
+  skyLoading: false,
   ...over,
 });
 
