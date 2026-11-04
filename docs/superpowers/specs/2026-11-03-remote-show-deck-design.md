@@ -308,8 +308,8 @@ two columns wide, then Tours; Exhibits, Clips, Time; Layers, Labels, Setup).
 | --- | --- | --- | --- |
 | Tour running | "Tour 6/14" | tour label | ticks; Previous, Pause, Next; Stop |
 | Tour paused | "Tour 6/14, paused" | tour label | ticks; Previous, Resume, Next; Stop |
-| Exhibit | "Exhibit" | exhibit label | Stop exhibit |
-| Clip | "Clip" | clip label | Stop clip |
+| Exhibit | "Exhibit" | exhibit label | Stop |
+| Clip | "Clip" | clip label | Stop |
 | Nothing | no card (owner, 2026-11-03): the tiles sit under the Home row | | |
 
 The eyebrow and the time text are `role="status"`. Ticks are `aria-hidden`; the eyebrow carries the beat. The
