@@ -12,5 +12,10 @@
     "isolatedModules": true,
     "types": ["node"]
   },
-  "include": ["src", "tests", "vitest.config.ts"]
+  "include": [
+    "src",
+    "tests",
+    "vitest.config.ts",
+    "../../tools/deploy/@types/OfflineInventory*.d.ts"
+  ]
 }
