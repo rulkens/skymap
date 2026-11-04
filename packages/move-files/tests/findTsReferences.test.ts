@@ -41,6 +41,21 @@ describe('findTsReferences', () => {
     expect(values('/r/a.tsx', text)).toEqual(['./real']);
   });
 
+  it.each(['/r/a.js', '/r/a.mjs', '/r/a.cjs', '/r/a.jsx'])('parses JSX in %s', (path) => {
+    expect(values(path, `const e = <div>it's {import('./x')}</div>;`)).toEqual(['./x']);
+  });
+
+  it('reports a literal with an escape by its value and its raw span', () => {
+    const text = `import './\\x61';`;
+    const [ref] = findTsReferences('/r/a.ts', text, []);
+    expect(ref!.value).toBe('./a');
+    expect(text.slice(ref!.start, ref!.end)).toBe('./\\x61');
+  });
+
+  it('skips an unterminated literal, whose span has no closing quote', () => {
+    expect(values('/r/a.ts', `import './x\nexport {};`)).toEqual([]);
+  });
+
   it('ignores strings that are not references', () => {
     expect(values('/r/a.ts', `const s = './x'; foo('./y');`)).toEqual([]);
   });

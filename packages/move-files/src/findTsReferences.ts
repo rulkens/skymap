@@ -1,14 +1,16 @@
 /**
- * findTsReferences: every module-specifier string in a TS/TSX file, by parse.
+ * findTsReferences: every module-specifier string in a JS or TS file, by parse.
  *
  * Covers import/export-from, `import()`, `import('x').T`, `import x = require()`,
  * `require()` and the vitest/jest mock family plus `extraMockCallees` (dotted,
- * e.g. `td.mock`). Spans exclude the quotes. A literal with an escape is skipped,
- * since its source text is not its value and a splice would corrupt it.
+ * e.g. `td.mock`). Spans exclude the quotes and cover the raw source, so a literal
+ * written with an escape is replaced whole while `value` holds what it means.
+ * An unterminated literal has no closing quote to exclude, so it is skipped.
  */
 
 import ts from 'typescript';
 import type { PathReference } from './@types/PathReference';
+import { scriptKindOf } from './scriptKindOf';
 
 const MOCK_METHODS = [
   'mock',
@@ -35,14 +37,13 @@ export function findTsReferences(
 ): PathReference[] {
   const callees = new Set(extraMockCallees);
   for (const owner of ['vi', 'jest']) for (const m of MOCK_METHODS) callees.add(`${owner}.${m}`);
-  const kind = path.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, false, kind);
+  const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, false, scriptKindOf(path));
   const found: PathReference[] = [];
   const add = (node: ts.Node | undefined) => {
     if (!node || !(ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))) return;
     const start = node.getStart(sf) + 1;
     const end = node.getEnd() - 1;
-    if (text.slice(start, end) === node.text) found.push({ start, end, value: node.text });
+    if (text[end] === text[start - 1]) found.push({ start, end, value: node.text });
   };
   const visit = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) add(node.moduleSpecifier);

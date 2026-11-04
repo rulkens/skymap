@@ -1,3 +1,3 @@
 export function stripExtension(path: string): string {
-  return path.replace(/(\.d\.ts|\.[^/.]+)$/, '');
+  return path.replace(/(\.d\.[cm]?ts|\.[^/.]+)$/, '');
 }

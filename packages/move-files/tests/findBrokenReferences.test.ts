@@ -4,8 +4,7 @@ import { findLiteralRanges } from '../src/findLiteralRanges';
 import type { FileEdit } from '../src/@types/FileEdit';
 
 vi.mock('../src/findLiteralRanges', async (actual) => {
-  const module =
-    await actual<typeof import('../src/findLiteralRanges')>();
+  const module = await actual<typeof import('../src/findLiteralRanges')>();
   return { findLiteralRanges: vi.fn(module.findLiteralRanges) };
 });
 
@@ -68,6 +67,19 @@ describe('findBrokenReferences', () => {
       { '/r/src/a/b.ts': '/r/src/c/b.ts' },
     );
     expect(findings).toEqual([]);
+  });
+
+  it('parses a .js file with JSX, so a string after JSX text is still seen', () => {
+    const findings = guard(
+      {
+        '/r/src/a/b.ts': ``,
+        '/r/t.js': `const e = <div>/* text</div>;\nconst p = 'src/a/b.ts';`,
+      },
+      { '/r/src/a/b.ts': '/r/src/c/b.ts' },
+    );
+    expect(findings).toEqual([
+      expect.objectContaining({ file: '/r/t.js', line: 2, reason: 'mentions-old-path' }),
+    ]);
   });
 
   it('ignores an old path in a comment', () => {

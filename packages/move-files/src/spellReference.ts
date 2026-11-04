@@ -25,7 +25,7 @@ function spellAlias(rule: AliasRule, path: string): string | null {
     const pre = target.slice(0, star);
     const post = target.slice(star + 1);
     if (path.length >= pre.length + post.length && path.startsWith(pre) && path.endsWith(post)) {
-      return rule.pattern.replace('*', path.slice(pre.length, path.length - post.length));
+      return rule.pattern.replace('*', () => path.slice(pre.length, path.length - post.length));
     }
   }
   return null;
@@ -41,13 +41,11 @@ export function spellReference(
 ): string {
   const bare = specifier.split('?')[0]!;
   const base = stripExtension(newTarget);
-  const isIndex = /\/index\.(d\.ts|tsx?)$/.test(newTarget);
-  const written = /\.jsx?$/.exec(bare)?.[0] ?? '.js';
   const author = {
-    exact: newTarget,
+    exact: posix.extname(bare) ? newTarget : base, // `#core` names `engine.ts` but spells no extension
     bare: base,
-    js: base + written,
-    dir: isIndex ? posix.dirname(newTarget) : base,
+    js: base + posix.extname(bare),
+    dir: posix.dirname(newTarget),
   }[reference.shape];
   const dir = posix.dirname(newImporter);
   const trailing = reference.shape === 'dir' && bare.endsWith('/') ? '/' : '';
@@ -56,6 +54,7 @@ export function spellReference(
   const candidates = [
     aliased(author),
     aliased(base),
+    aliased(newTarget),
     relativeSpecifier(dir, author) + trailing,
     relativeSpecifier(dir, base),
     explicit,

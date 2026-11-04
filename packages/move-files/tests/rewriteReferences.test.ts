@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { rewriteReferences } from '../src/rewriteReferences';
+import type { AliasScope } from '../src/@types/AliasScope';
 import type { MoveContext } from '../src/@types/MoveContext';
 
 const context: MoveContext = {
@@ -8,12 +9,20 @@ const context: MoveContext = {
   aliasScopes: [],
 };
 
-function run(files: Record<string, string>, moves: Record<string, string>, assets: string[] = []) {
+function run(
+  files: Record<string, string>,
+  moves: Record<string, string>,
+  assets: string[] = [],
+  aliasScopes: AliasScope[] = [],
+) {
   const snapshot = {
     texts: new Map(Object.entries(files)),
     fileExists: (p: string) => assets.includes(p),
   };
-  const edits = rewriteReferences(snapshot, new Map(Object.entries(moves)), context);
+  const edits = rewriteReferences(snapshot, new Map(Object.entries(moves)), {
+    ...context,
+    aliasScopes,
+  });
   return new Map(edits.map((e) => [e.from, e]));
 }
 
@@ -170,5 +179,133 @@ describe('rewriteReferences', () => {
     const strip = (t: string) => t.replace('\n// index c\n', '');
     expect(new Set(noisy.keys())).toEqual(new Set(plain.keys()));
     for (const [from, edit] of plain) expect(strip(noisy.get(from)!.text)).toBe(edit.text);
+  });
+
+  it.each([
+    ['/r/util.js', '/r/lib/util.js', `import './util'; require('./util');`, './lib/util'],
+    ['/r/C.jsx', '/r/lib/C.jsx', `import './C';`, './lib/C'],
+    ['/r/dir/index.js', '/r/dir2/index.js', `import './dir';`, './dir2'],
+    ['/r/x.mts', '/r/lib/x.mts', `import './x.mjs';`, './lib/x.mjs'],
+    ['/r/x.cts', '/r/lib/x.cts', `require('./x.cjs');`, './lib/x.cjs'],
+    ['/r/x.d.mts', '/r/lib/x.d.mts', `import './x.mjs';`, './lib/x.mjs'],
+    ['/r/x.ts', '/r/lib/x.ts', `import './x.jsx';`, './lib/x.jsx'],
+  ])('keeps an importer of %s correct', (from, to, importer, expected) => {
+    const edits = run({ [from]: ``, '/r/u.ts': importer }, { [from]: to });
+    const specifiers = [...edits.get('/r/u.ts')!.text.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    expect(new Set(specifiers)).toEqual(new Set([expected]));
+  });
+
+  it('keeps an importer of a bare .json correct', () => {
+    const edits = run({ '/r/u.ts': `require('./data');` }, { '/r/data.json': '/r/lib/data.json' }, [
+      '/r/data.json',
+    ]);
+    expect(edits.get('/r/u.ts')?.text).toBe(`require('./lib/data');`);
+  });
+
+  it('a TS file beats a JS file for a .js spelling, so moving the TS file repoints it', () => {
+    const edits = run(
+      { '/r/x.js': ``, '/r/x.ts': ``, '/r/u.ts': `import './x.js';` },
+      { '/r/x.ts': '/r/lib/x.ts' },
+    );
+    expect(edits.get('/r/u.ts')?.text).toBe(`import './lib/x.js';`);
+  });
+
+  const fooLayout = {
+    '/r/src/foo.ts': ``,
+    '/r/src/foo/index.ts': ``,
+    '/r/src/foo/c.ts': `import { foo } from '.';`,
+    '/r/src/g.ts': `import { foo } from './foo/';`,
+  };
+
+  it('moving a file leaves directory-only importers of its namesake folder alone', () => {
+    const edits = run(fooLayout, { '/r/src/foo.ts': '/r/src/lib/foo.ts' });
+    expect(edits.has('/r/src/foo/c.ts')).toBe(false);
+    expect(edits.has('/r/src/g.ts')).toBe(false);
+  });
+
+  it('moving a folder index repoints directory-only importers, keeping the slash', () => {
+    const edits = run(fooLayout, { '/r/src/foo/index.ts': '/r/src/bar/index.ts' });
+    expect(edits.get('/r/src/foo/c.ts')?.text).toBe(`import { foo } from '../bar';`);
+    expect(edits.get('/r/src/g.ts')?.text).toBe(`import { foo } from './bar/';`);
+  });
+
+  it.each([
+    [`import '../..';`, `import '../../../other';`],
+    [`import '../../';`, `import '../../../other/';`],
+    [`import './../..';`, `import '../../../other';`],
+    [`import '../../q/..';`, `import '../../../other';`],
+  ])('the filter keeps a deep dot-specifier: %s', (before, after) => {
+    const edits = run(
+      { '/r/utils/index.ts': ``, '/r/utils/x/y/z.ts': before },
+      { '/r/utils/index.ts': '/r/other/index.ts' },
+    );
+    expect(edits.get('/r/utils/x/y/z.ts')?.text).toBe(after);
+  });
+
+  it.each([
+    [`import './';`, '/r/m/c.ts', `import '../n/';`],
+    [`import '../';`, '/r/m/s/c.ts', `import '../../n/';`],
+  ])('the filter keeps a slashed dot-specifier: %s', (before, importer, after) => {
+    const edits = run(
+      { '/r/m/index.ts': ``, [importer]: before },
+      { '/r/m/index.ts': '/r/n/index.ts' },
+    );
+    expect(edits.get(importer)?.text).toBe(after);
+  });
+
+  it('the filter keeps a star-less alias that names neither stem nor folder', () => {
+    const aliases = [
+      {
+        dir: '/r',
+        rules: [
+          { pattern: '#core', targets: ['/r/src/lib/engine.ts'] },
+          { pattern: '#idx', targets: ['/r/kit/index.ts'] },
+        ],
+      },
+    ];
+    const edits = run(
+      { '/r/src/lib/engine.ts': ``, '/r/kit/index.ts': ``, '/r/u.ts': `import '#core';` },
+      { '/r/src/lib/engine.ts': '/r/src/core/engine.ts' },
+      [],
+      aliases,
+    );
+    expect(edits.get('/r/u.ts')?.text).toBe(`import './src/core/engine';`);
+    const indexEdits = run(
+      { '/r/kit/index.ts': ``, '/r/u.ts': `import '#idx';` },
+      { '/r/kit/index.ts': '/r/tools/index.ts' },
+      [],
+      aliases,
+    );
+    expect(indexEdits.get('/r/u.ts')?.text).toBe(`import './tools/index';`);
+  });
+
+  it('the filter keeps a wildcard alias whose target adds to the file name', () => {
+    const aliases = [{ dir: '/r', rules: [{ pattern: '@g/*', targets: ['/r/src/*.gen.ts'] }] }];
+    const edits = run(
+      { '/r/src/foo.gen.ts': ``, '/r/u.ts': `import '@g/foo';` },
+      { '/r/src/foo.gen.ts': '/r/src/lib/foo.gen.ts' },
+      [],
+      aliases,
+    );
+    expect(edits.get('/r/u.ts')?.text).toBe(`import '@g/lib/foo';`);
+  });
+
+  it('a path holding a replacement pattern survives an alias rewrite', () => {
+    const aliases = [{ dir: '/r', rules: [{ pattern: '@/*', targets: ['/r/src/*'] }] }];
+    const edits = run(
+      { '/r/src/routes/$&x.ts': ``, '/r/src/u.ts': `import '@/routes/$&x';` },
+      { '/r/src/routes/$&x.ts': '/r/src/pages/$&x.ts' },
+      [],
+      aliases,
+    );
+    expect(edits.get('/r/src/u.ts')?.text).toBe(`import '@/pages/$&x';`);
+  });
+
+  it('rewrites a literal written with an escape', () => {
+    const edits = run(
+      { '/r/a.ts': ``, '/r/u.ts': `import './\\x61';` },
+      { '/r/a.ts': '/r/lib/a.ts' },
+    );
+    expect(edits.get('/r/u.ts')?.text).toBe(`import './lib/a';`);
   });
 });

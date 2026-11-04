@@ -17,6 +17,7 @@ import type { PathReference } from './@types/PathReference';
 import type { ProjectSnapshot } from './@types/ProjectSnapshot';
 import { findCssReferences } from './findCssReferences';
 import { findTsReferences } from './findTsReferences';
+import { isRelativeSpecifier } from './isRelativeSpecifier';
 import { layoutExists } from './layoutExists';
 import { mentionsMovedFile } from './mentionsMovedFile';
 import { relativeSpecifier } from './relativeSpecifier';
@@ -33,8 +34,8 @@ export function rewriteReferences(
 ): FileEdit[] {
   const hasBefore = layoutExists(snapshot, new Map());
   const hasAfter = layoutExists(snapshot, moves);
-  const mayReference = mentionsMovedFile(moves.keys());
   const scopes = context.aliasScopes;
+  const mayReference = mentionsMovedFile(moves.keys(), scopes);
   const edits: FileEdit[] = [];
 
   for (const [path, text] of snapshot.texts) {
@@ -56,7 +57,7 @@ export function rewriteReferences(
           if (moved || target !== hit.target) {
             value = spellReference(hit, reference.value, newPath ?? path, target, hasAfter, scopes);
           }
-        } else if (moved && reference.value.startsWith('.')) {
+        } else if (moved && isRelativeSpecifier(reference.value)) {
           value = pathMath(oldDir, newDir, reference.value);
         }
         if (value !== null && value !== reference.value) replacements.push({ reference, value });
