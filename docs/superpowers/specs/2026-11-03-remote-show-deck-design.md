@@ -363,7 +363,7 @@ two version states are new (see "The protocol version"); their notices sit where
   because a desktop browser reports each typed part of the field as a change.
 - "Back to now" (`timeGoLive`), shown only off real time: in manual mode or paused.
 
-**Copy.** Buttons verb first: "Stop tour", "Pause time", "Play time", "Close". Tiles name their sheet.
+**Copy.** Buttons verb first: "Stop", "Pause", "Play", "Back to now", "Close". Tiles name their sheet.
 
 ## Testing
 
