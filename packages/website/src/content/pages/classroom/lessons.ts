@@ -1,8 +1,8 @@
 import type { LessonTopic } from '../../../@types/LessonTopic';
-import { siteShot } from '../../../data/siteShot';
+import { requireShotLink } from '../../../utils/requireShotLink';
 
 // A lesson opens exactly where its picture was taken, so the link is read from the picture's manifest row.
-const at = (shot: string) => ({ shot, hash: siteShot(shot).link });
+const at = (shot: string) => ({ shot, hash: requireShotLink(shot) });
 
 /**
  * The ready-made lesson links on the classroom page, by topic. Each link is

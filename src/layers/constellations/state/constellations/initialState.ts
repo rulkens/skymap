@@ -4,7 +4,7 @@
  * SettingsPanel. 1.0 is the unit intensity baseline.
  */
 
-import type { ConstellationsSettings } from '../../../../@types/settings/ConstellationsSettings';
+import type { ConstellationsSettings } from '../../@types/ConstellationsSettings';
 
 export const initialState: ConstellationsSettings = {
   enabled: false,

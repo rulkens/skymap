@@ -17,8 +17,11 @@ import {
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
-import { rowFor } from '../../../../src/services/engine/camera/rungs/rowFor';
+import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
+import { rowFor } from '../../../../src/services/engine/camera/arms/rowFor';
+import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
+import { skySpotRadial } from '../../../../src/utils/geo/skySpotRadial';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { decodeBodyFixedChannels } from '../../../../src/utils/camera/decodeBodyFixedChannels';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
@@ -30,10 +33,15 @@ import { clipStarted } from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelestialBodies';
+import { SKY_EYE_HEIGHT_M } from '../../../../src/data/camera/skyEyeHeightM';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { RootState } from '../../../../src/store/types';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { BodyState } from '../../../../src/@types/scene/BodyState';
+import type { PositionedId } from '../../../../src/@types/scene/PositionedId';
 
 vi.mock('../../../../src/services/engine/camera/toBodyFixedChannels', async (importOriginal) => {
   const actual =
@@ -56,8 +64,18 @@ const CTX = {
   upBasis: BASIS,
   terrainHeightAt: datumOnlyTerrainHeight,
 };
+/** Søndermarken, the spot under `SONDERMARKEN_POSE`'s eye. */
+const SPOT = {
+  sky: {
+    body: asSceneBodyId('earth'),
+    lonRad: 0.21859354349348772,
+    latRad: 0.9716130157244841,
+  },
+};
+const R_EARTH_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'earth', 'clipKeyframeFrames.test')
+  .surface.datumRadiusM;
 
-/** The body rung's `decode` folded back out; production ships no such inverse. */
+/** The body arm's `decode` folded back out; production ships no such inverse. */
 function fromBodyFixedChannels(channels: CameraPose, frame: typeof EARTH): CameraPose {
   return foldToWorld(rowFor(frame).channels.decode(channels, frame, CTX), CTX);
 }
@@ -89,6 +107,25 @@ function earthFramedClip(): ClipData {
 function between(from: number, mid: number, to: number): boolean {
   return (mid - from) * (mid - to) < 0;
 }
+
+/** The spot's standing eye in world Mpc, on datum ground, at these body states. */
+function spotEyeMpc(bodies: ReadonlyMap<PositionedId, BodyState>): Vec3 {
+  const earth = bodies.get(asSceneBodyId('earth'))!;
+  const radial = skySpotRadial(SPOT.sky);
+  const eyeM = (R_EARTH_M + SKY_EYE_HEIGHT_M) * SCALE_UNITS.M_TO_MPC;
+  const eye = rotateVec3ByTightMat3(
+    [radial[0] * eyeM, radial[1] * eyeM, radial[2] * eyeM],
+    earth.orientation,
+  );
+  return [
+    earth.positionMpc[0] + eye[0],
+    earth.positionMpc[1] + eye[1],
+    earth.positionMpc[2] + eye[2],
+  ];
+}
+
+const distM = (a: Vec3, b: Vec3): number =>
+  Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) / SCALE_UNITS.M_TO_MPC;
 
 /** The world aim (target → eye is its negation) an absolute pose encodes. */
 function aimOf(pose: CameraPose): Vec3 {
@@ -181,7 +218,7 @@ describe('frame-tagged keyframes', () => {
     expect(a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).toBeCloseTo(1, 12);
   });
 
-  it('a clip leg tagged { site } evaluates in the site rung, tweening from its converted start', () => {
+  it('a clip leg tagged { site } evaluates in the site arm, tweening from its converted start', () => {
     const CURIOSITY = { site: asSurfaceSiteId('curiosity') };
     const HEADING_RAD = 0.7;
     const ELEVATION_RAD = 0.2;
@@ -194,7 +231,7 @@ describe('frame-tagged keyframes', () => {
     const data: ClipData = { start: START, timeline: [siteLeg] };
 
     // MID-tween, not at the end: at `t = 4` the value is the authored `to`
-    // whatever the leg-open conversion produced, so the site rung's `decode`
+    // whatever the leg-open conversion produced, so the site arm's `decode`
     // would not be on the measured path at all.
     const open = evaluateFramedClip(data, 0, opts());
     const mid = evaluateFramedClip(data, 2, opts());
@@ -203,6 +240,85 @@ describe('frame-tagged keyframes', () => {
     expect(between(open.channels.yaw, mid.channels.yaw, HEADING_RAD)).toBe(true);
     expect(between(open.channels.pitch, mid.channels.pitch, ELEVATION_RAD)).toBe(true);
     expect(between(open.channels.distance, mid.channels.distance, RANGE_M)).toBe(true);
+  });
+
+  it('a pitch tween in a sky leg holds the eye on the spot while the body turns', () => {
+    const skyLeg: ClipData['timeline'][number] = all([
+      tween('yaw', { to: 0.4, over: 0, frame: SPOT }),
+      tween('pitch', { to: 1.0, over: 4, frame: SPOT }),
+    ]);
+    const data: ClipData = { start: START, timeline: [skyLeg] };
+    const playback = {};
+    const later = deriveBodyStates(CONST_J2000 + 0.25);
+
+    const eyes = (
+      [
+        [0, BODIES],
+        [2, later],
+      ] as const
+    ).map(([t, bodies]) => {
+      const framed = evaluateFramedClip(data, t, { bodies, frameBasis: BASIS, playback });
+      expect(framed.frame).toEqual(SPOT);
+      const ctx = { ...CTX, bodies };
+      const world = foldToWorld(rowFor(SPOT).channels.decode(framed.channels, SPOT, ctx), ctx);
+      const eye = eyeMpcOf(world, BASIS);
+      expect(distM(eye, spotEyeMpc(bodies))).toBeLessThan(1);
+      return { eye, pitch: framed.channels.pitch };
+    });
+
+    // A quarter day of orbit and spin: the eye rode the ground, not the sky.
+    expect(distM(eyes[0]!.eye, eyes[1]!.eye)).toBeGreaterThan(1e6);
+    expect(between(eyes[0]!.pitch, eyes[1]!.pitch, 1.0)).toBe(true);
+  });
+
+  it('an absolute → sky leg opens looking where the start looked', () => {
+    // Aimed from 1 km out at the spot's own eye, so the leg-open fold is a
+    // turn in place rather than a leap to somewhere else on Earth.
+    const start: CameraPose = {
+      target: spotEyeMpc(BODIES),
+      yaw: 0.9,
+      pitch: -0.3,
+      distance: 1e3 * SCALE_UNITS.M_TO_MPC,
+    };
+    const data: ClipData = {
+      start,
+      timeline: [tween('pitch', { to: 1.0, over: 4, frame: SPOT })],
+    };
+
+    const open = evaluateFramedClip(data, 0, opts());
+    const world = foldToWorld(rowFor(SPOT).channels.decode(open.channels, SPOT, CTX), CTX);
+
+    const a = aimOf(start);
+    const b = aimOf(world);
+    expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])).toBeLessThan(1e-6);
+  });
+
+  it('a sky → body leg starts at the standing eye', () => {
+    const terrainM = 120;
+    const data: ClipData = {
+      start: START,
+      timeline: [
+        // A zero-length snap, then the rise from the same instant: the leg that
+        // runs on from a shared instant owns it.
+        all([
+          tween('yaw', { to: 0.4, over: 0, frame: SPOT }),
+          tween('pitch', { to: 0.3, over: 0, frame: SPOT }),
+        ]),
+        tween('distance', { to: 5e3, over: 4, frame: EARTH }),
+      ],
+    };
+
+    const framed = evaluateFramedClip(data, 0, {
+      ...opts(),
+      terrainHeightAt: () => terrainM,
+    });
+
+    expect(framed.frame).toEqual(EARTH);
+    const arm = decodeBodyFixedChannels(framed.channels, asSceneBodyId('earth'));
+    // On datum this reads R + 1.7: the rise would open inside the hill (#1019's P2).
+    expect(
+      Math.hypot(...bodyFixedEyeM(arm)) - (R_EARTH_M + terrainM + SKY_EYE_HEIGHT_M),
+    ).toBeCloseTo(0, 3);
   });
 
   it('the clip driver hands out a decoded body arm, never a re-encoded absolute one', () => {

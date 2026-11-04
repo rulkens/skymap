@@ -65,7 +65,6 @@ function makeCameraState(overrides?: Partial<CameraState>): CameraState {
     base: { frame: 'absolute', pose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },
     tween: null,
     autoRotate: { active: false, rate: 0 },
-    dragging: false,
     clip: null,
     frameTween: null,
     aim: null,

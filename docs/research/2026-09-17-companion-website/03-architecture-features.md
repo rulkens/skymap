@@ -10,7 +10,7 @@ Subagent sweep, 2026-09-17, `main` @ `845720549`. Unverified; open the cited fil
 - **Layer concept** — a Layer owns its sources, settings, renderers, asset slots, passes, sagas, UI section, fades / labels / selection rows. Contract `src/@types/engine/layer/Layer.d.ts`; built by `engine/layer/defineLayer.ts`. Folder-is-the-contract doc: `src/layers/README.md`.
 - **Layers (10 folders)** — formed: `galaxyCatalog` (reference implementation), `filaments`. Settings-only stubs still core-implemented: `body`, `constellations`, `flow`, `milkyWay`, `starCatalog`, `structure`, `volume`, `zoneOfAvoidance`.
 - **Compositions** — `src/compositions/app.ts` (`APP_COMPOSITION`), `appSettingsFragments.ts`.
-- **Camera** — floating-origin, reversed-Z, 10⁷–10²⁶ m. Driver table with strict precedence, one author per frame (`engine/camera/cameraDrivers.ts`). Rung / fold machinery in `engine/camera/rungs/`. Orbit input in `src/services/camera/`. The one Mpc↔metre seam: `engine/camera/bodyRelativePose.ts`.
+- **Camera** — floating-origin, reversed-Z, 10⁷–10²⁶ m. Driver table with strict precedence, one author per frame (`engine/camera/cameraDrivers.ts`). Arm / fold machinery in `engine/camera/arms/`. Orbit input in `src/services/camera/`. The one Mpc↔metre seam: `engine/camera/bodyRelativePose.ts`.
 - **Animation / clips** — clips are serializable data; pose is a pure `evaluateClip(data, t)`; cues fire edge-triggered from `engine/subsystems/clipPlayer.ts`. Fades: `src/services/animation/fadeRegistry.ts` (ADR 0001).
 - **State** — Redux Toolkit, 9 slices in `src/store/rootReducer.ts`: `settings, ui, tier, camera, selection, selectionRows, tour, engine, time`. Intent-vs-observable split: `docs/superpowers/conventions/intent.md` + ADR 0007.
 - **Effects layer** — typed-redux-saga (ADR 0008), 19 watchers in `src/store/rootSaga.ts`. Engine↔saga bridge: `src/store/SagaContextProvider.tsx`, `sagaContextRegistered.ts`, `RunSagaProvider.tsx`; engine-side reconciliation `src/store/effects/ReconcileEffects.ts` + `engine/wiring/makeReconcileEffects.ts`.
@@ -30,7 +30,7 @@ Subagent sweep, 2026-09-17, `main` @ `845720549`. Unverified; open the cited fil
 - Auto-rotate — `src/components/AutoRotateToggle/`.
 - Home (Earth) — `src/components/HomeButton/`, `state/selection/goHome.ts`.
 - Click to select, hover to preview, `F` to focus; per-kind framing distances — `engine/interaction/clickHandler.ts`, `state/selection/watchFocusTweenSaga.ts`.
-- Body follow / approach, surface-relative stepping — `engine/camera/applyFocusedBodyPivot.ts`, `services/camera/surfaceStep.ts`, `engine/camera/rungs/siteRung.ts`.
+- Body follow / approach, surface-relative stepping — `engine/camera/applyFocusedBodyPivot.ts`, `services/camera/surfaceStep.ts`, `engine/camera/arms/siteCameraArm.ts`.
 - Fly-to a lon/lat on a body — `state/camera/flyToLonLatActions.ts`, `watchFlyToLonLatSaga.ts`.
 - Orientation frames (equatorial / galactic / supergalactic) — `state/camera/orientationActions.ts`.
 - Scale bar — `src/components/ScaleBar/`. Navigation cheatsheet — `src/components/NavigationPanel/`.
@@ -92,7 +92,7 @@ Conventions (`docs/superpowers/conventions/`): comments, intent, leanness, plan 
 
 1. No engine-lifecycle document.
 2. **No state-architecture doc** — nothing describes the 9 slices, the 19 sagas, or the engine↔saga bridge. The biggest missing page.
-3. The camera system as a whole (driver table, rung / fold machinery, the Mpc↔metre seam).
+3. The camera system as a whole (driver table, arm / fold machinery, the Mpc↔metre seam).
 4. Loading and tiering (AssetSlot state machine, demand reevaluation, manifest + content hashing, retry, tier selection).
 5. The frame program / pass model.
 6. Picking end-to-end.

@@ -102,14 +102,15 @@ import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
 import { compileClip } from '../animation/compileClip';
 import { lerpInSpace } from '../animation/channelSpace';
 import { EASE } from '../animation/ease';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 import { lerp } from '../../../utils/math/lerp';
-import { foldToWorld } from './rungs/foldToWorld';
-import { rowFor } from './rungs/rowFor';
-import { sameFrame } from './rungs/sameFrame';
+import { foldToWorld } from './arms/foldToWorld';
+import { rowFor } from './arms/rowFor';
+import { sameFrame } from './arms/sameFrame';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 import { DEFAULT_FOV_Y_RAD } from './cameraFraming';
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
@@ -321,11 +322,28 @@ function oscOffset(compiled: CompiledClip, ch: Channel, t: number): number {
  * starting exactly where that leg opens states its `to` in the NEW leg's units,
  * so folding it in leaks metres into an Mpc pose (or the reverse).
  */
-type LegWindow = { readonly fromSec: number; readonly beforeSec: number };
+type LegWindow = {
+  readonly fromSec: number;
+  readonly beforeSec: number;
+  readonly fromLeg: number;
+  readonly beforeLeg: number;
+};
 
-const WHOLE_CLIP: LegWindow = { fromSec: -Infinity, beforeSec: Infinity };
+const WHOLE_CLIP: LegWindow = {
+  fromSec: -Infinity,
+  beforeSec: Infinity,
+  fromLeg: -Infinity,
+  beforeLeg: Infinity,
+};
+
+/** A zero-length tween's leg, from `frameLegsOf`'s order: at an instant where a
+ *  leg opens, a snap sorted before the opening endpoint still belongs to the
+ *  leg it snaps, not to the one that runs on. */
+const snapLeg = new WeakMap<BaseSegment, number>();
 
 function outsideLeg(seg: BaseSegment, window: LegWindow): boolean {
+  const leg = snapLeg.get(seg);
+  if (leg !== undefined) return leg < window.fromLeg || leg >= window.beforeLeg;
   return seg.startSec < window.fromSec || seg.startSec >= window.beforeSec;
 }
 
@@ -484,7 +502,7 @@ function governingCompositeAt(
 }
 
 /** The pose a frame leg starts from, and the second it starts at. */
-type LegOrigin = { readonly atSec: number; readonly pose: CameraPose };
+type LegOrigin = { readonly atSec: number; readonly leg: number; readonly pose: CameraPose };
 
 type FrameLeg = {
   readonly frame: PoseFrame;
@@ -499,6 +517,10 @@ const legsCache = new WeakMap<CompiledClip, readonly FrameLeg[]>();
 // must re-convert against the bodies where they are now.
 const legStartCache = new WeakMap<object, Map<BaseSegment, CameraPose>>();
 
+function runsOn(seg: BaseSegment): number {
+  return seg.endSec > seg.startSec ? 1 : 0;
+}
+
 function frameLegsOf(compiled: CompiledClip): readonly FrameLeg[] {
   const cached = legsCache.get(compiled);
   if (cached !== undefined) return cached;
@@ -508,13 +530,16 @@ function frameLegsOf(compiled: CompiledClip): readonly FrameLeg[] {
   const segments = Object.values(compiled.baseTracks)
     .flat()
     .filter((seg) => seg.segKind === 'tween')
-    .sort((a, b) => a.startSec - b.startSec);
+    // At a shared instant a zero-length snap sorts first, so the leg that runs
+    // on from it owns the instant; track order would hide one leg forever.
+    .sort((a, b) => a.startSec - b.startSec || runsOn(a) - runsOn(b));
   const legs: FrameLeg[] = [{ frame: 'absolute', startSec: -Infinity, anchor: null }];
   for (const seg of segments) {
     const frame = seg.frame ?? 'absolute';
     if (!sameFrame(frame, legs[legs.length - 1]!.frame)) {
       legs.push({ frame, startSec: seg.startSec, anchor: seg });
     }
+    if (runsOn(seg) === 0) snapLeg.set(seg, legs.length - 1);
   }
   legsCache.set(compiled, legs);
   return legs;
@@ -534,6 +559,8 @@ type FrameDeps = {
   readonly basis: Mat3;
   /** Memo owner: the leg-start conversion is captured once per playback. */
   readonly owner: object;
+  /** The live ground; a call that passes none (tests, golden traces) folds at datum. */
+  readonly terrainHeightAt: TerrainHeightAtLookup;
 };
 
 function frameDepsOf(opts: ClipFrameOptions): FrameDeps {
@@ -543,7 +570,12 @@ function frameDepsOf(opts: ClipFrameOptions): FrameDeps {
       'evaluateFramedClip: a frame-tagged keyframe needs `bodies`, `frameBasis` and `playback`',
     );
   }
-  return { bodies, basis: frameBasis, owner: playback };
+  return {
+    bodies,
+    basis: frameBasis,
+    owner: playback,
+    terrainHeightAt: opts.terrainHeightAt ?? datumOnlyTerrainHeight,
+  };
 }
 
 function convertChannels(
@@ -553,15 +585,13 @@ function convertChannels(
   deps: FrameDeps,
 ): CameraPose {
   if (sameFrame(from, to)) return channels;
-  // The clip's one steady basis serves as BOTH rung bases: its absolute angles
+  // The clip's one steady basis serves as BOTH arm bases: its absolute angles
   // were authored through it, and a leg start has no separate up to read.
-  // No terrain lookup reaches this pure evaluator (`ClipFrameOptions` carries
-  // none), so a clip authored to bank along a slope crosses it at datum height.
   const ctx = {
     bodies: deps.bodies,
     poseBasis: deps.basis,
     upBasis: deps.basis,
-    terrainHeightAt: datumOnlyTerrainHeight,
+    terrainHeightAt: deps.terrainHeightAt,
   };
   const world = foldToWorld(rowFor(from).channels.decode(channels, from, ctx), ctx);
   return rowFor(to).channels.encode(world, to, ctx);
@@ -574,7 +604,7 @@ function originOfLeg(
   opts: ClipFrameOptions,
 ): LegOrigin {
   const leg = legs[index]!;
-  if (leg.anchor === null) return { atSec: -Infinity, pose: compiled.start };
+  if (leg.anchor === null) return { atSec: -Infinity, leg: index, pose: compiled.start };
 
   const deps = frameDepsOf(opts);
   let byAnchor = legStartCache.get(deps.owner);
@@ -583,17 +613,17 @@ function originOfLeg(
     legStartCache.set(deps.owner, byAnchor);
   }
   const hit = byAnchor.get(leg.anchor);
-  if (hit !== undefined) return { atSec: leg.startSec, pose: hit };
+  if (hit !== undefined) return { atSec: leg.startSec, leg: index, pose: hit };
 
   const previous = originOfLeg(compiled, legs, index - 1, opts);
   const converted = convertChannels(
-    evaluateBaseAt(compiled, leg.startSec, previous, leg.startSec),
+    evaluateBaseAt(compiled, leg.startSec, previous, leg.startSec, index),
     legs[index - 1]!.frame,
     leg.frame,
     deps,
   );
   byAnchor.set(leg.anchor, converted);
-  return { atSec: leg.startSec, pose: converted };
+  return { atSec: leg.startSec, leg: index, pose: converted };
 }
 
 // ---------------------------------------------------------------------------
@@ -613,11 +643,14 @@ function evaluateBaseAt(
   t: number,
   origin: LegOrigin,
   beforeSec = Infinity,
+  beforeLeg = Infinity,
 ): Required<Omit<CameraPose, 'lookOffset' | 'fov'>> {
   const { baseTracks } = compiled;
-  const { atSec, pose: start } = origin;
+  const { atSec, leg, pose: start } = origin;
   const window: LegWindow =
-    atSec === -Infinity && beforeSec === Infinity ? WHOLE_CLIP : { fromSec: atSec, beforeSec };
+    atSec === -Infinity && beforeSec === Infinity
+      ? WHOLE_CLIP
+      : { fromSec: atSec, beforeSec, fromLeg: leg, beforeLeg };
   // Channels governed by the same composite share one sample (one spline eval per frame).
   let sampledTrack: CompositeTrack | null = null;
   let sampled: CompositeSample = {};

@@ -6,8 +6,8 @@
  */
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
-import type { ConstellationRenderer } from '../../../@types/rendering/ConstellationRenderer';
+import type { ConstellationsArtifact } from '../figures/@types/ConstellationsArtifact';
+import type { ConstellationRenderer } from '../figures/@types/ConstellationRenderer';
 
 export type ConstellationsRuntime = {
   readonly renderer: ConstellationRenderer;

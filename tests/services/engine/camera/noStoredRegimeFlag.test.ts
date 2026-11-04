@@ -2,7 +2,7 @@
  * noStoredRegimeFlag — spec §4/§11's grep criterion: `camera.base.frame` (a
  * `PoseFrame`) IS the regime, so a boolean shadowing it — `isSurfaceMode`,
  * `regimeEngaged`, whatever the name — would make an inconsistent pair
- * representable, exactly the mirror-state failure the rung table exists to
+ * representable, exactly the mirror-state failure the arm table exists to
  * avoid. This is an import-graph / declaration scan (ts-morph, real AST
  * nodes), not a source-text grep, in the shape of `oneMpcSeam.test.ts`: a
  * substring search bans nothing a comment or a string literal couldn't dodge,
@@ -45,7 +45,7 @@ const FILES: readonly string[] = SWEPT_DIRS.flatMap((dir) => walkFiles(dir, ['.t
 // loosening NAME_PATTERN or BOOLEAN_TYPE_TEXTS.
 const ALLOW_LIST: ReadonlySet<string> = new Set([
   // `engaged` is the tile stream's own per-body readout, not a camera regime.
-  'src/layers/body/@types/SurfaceTileDebugSnapshot.d.ts',
+  'src/layers/body/surfaceTiles/debug/@types/SurfaceTileDebugSnapshot.d.ts',
 ]);
 
 type NamedDeclaration = VariableDeclaration | PropertySignature | PropertyDeclaration;

@@ -7,13 +7,14 @@
  */
 
 import type { BlackHoleId } from '../../../@types/data/blackHole/BlackHoleId';
-import type { SkyCaptureKey } from '../../../@types/rendering/SkyCaptureKey';
+import type { BLACK_HOLE_SKY_CAPTURES } from '../lensing/data/blackHoleSkyCaptures';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 export type BlackHoleRow = {
   readonly id: BlackHoleId;
   readonly massSolar: number; // solar masses; r_s = schwarzschildRadiusM(massSolar)
-  readonly capture: SkyCaptureKey; // which sky bake the lens samples and bands against
+  // Which sky bake the lens samples and bands against.
+  readonly capture: keyof typeof BLACK_HOLE_SKY_CAPTURES;
   // The descent floor, in r_s: the camera may approach to 2 r_s, well inside
   // the Earth-tuned global SURFACE_STANDOFF_RADII (~1.0000024).
   readonly standoffRadii: number;

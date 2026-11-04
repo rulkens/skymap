@@ -11,7 +11,7 @@
 import type { ReactNode } from 'react';
 
 import { HOME_LINKS } from '../../../../data/homeLinks.ts';
-import { siteShot } from '../../../../data/siteShot.ts';
+import { requireShotLink } from '../../../../utils/requireShotLink.ts';
 import { cx } from '../../../../utils/cx.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
@@ -68,7 +68,7 @@ function Stories({ title, tour, exhibit, children }: StoriesProps) {
             <h3>{exhibit.title}</h3>
             <p>{exhibit.text}</p>
             <div className={styles.links}>
-              <ViewLink hang view={siteShot('stories-orbits').link}>
+              <ViewLink hang view={requireShotLink('stories-orbits')}>
                 {exhibit.action}
               </ViewLink>
               <ObjLink size="small" hang href={exhibit.guide.href}>

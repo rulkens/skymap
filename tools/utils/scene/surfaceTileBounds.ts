@@ -1,5 +1,5 @@
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-import { surfaceTileColumns } from '../../../src/utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileColumns } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
 
 /** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
  *  raster's own north-first row order. */

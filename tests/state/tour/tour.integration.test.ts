@@ -19,8 +19,8 @@ import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry
 import { cosmicFlows } from '../../../src/compositions/clips/cosmicFlows';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
-import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/present/milkyWayCloudLiveness';
+import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
+import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/cloud/present/milkyWayCloudLiveness';
 import { Source } from '../../../src/data/source';
 import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import { gatePassByFade } from '../../../src/services/engine/layer/gatePassByFade';

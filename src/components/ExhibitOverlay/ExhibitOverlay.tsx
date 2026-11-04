@@ -8,8 +8,8 @@
 
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
-import StopIcon from '../TourOverlay/StopIcon';
-import EyeIcon from './EyeIcon';
+import StopIcon from '../icons/StopIcon/StopIcon';
+import EyeIcon from '../icons/EyeIcon/EyeIcon';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useViewCover } from '../../hooks/useViewCover';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
@@ -81,7 +81,7 @@ function ExhibitOverlay({
 
         <button type="button" className={styles.exitPill} onClick={onExit}>
           <span className={styles.exitIcon}>
-            <StopIcon />
+            <StopIcon size={13} />
           </span>
           <span className={styles.exitLabel}>Exit view</span>
           <span className={styles.exitKey}>Esc</span>
@@ -95,7 +95,7 @@ function ExhibitOverlay({
         aria-pressed={hidden}
         onClick={() => setHidden((h) => !h)}
       >
-        <EyeIcon struck={hidden} />
+        <EyeIcon size={18} struck={hidden} />
       </button>
     </div>
   );

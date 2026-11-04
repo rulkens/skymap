@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { blackHoleSearch } from '../../../src/layers/blackHoles/present/blackHoleSearch';
-import { bodySearch } from '../../../src/layers/body/present/bodySearch';
-import { craftSearch } from '../../../src/layers/missions/present/craftSearch';
-import { earthSceneSearch } from '../../../src/layers/earthScenes/present/earthSceneSearch';
+import { blackHoleSearch } from '../../../src/layers/blackHoles/markers/present/blackHoleSearch';
+import { bodySearch } from '../../../src/layers/body/selection/present/bodySearch';
+import { craftSearch } from '../../../src/layers/missions/craft/present/craftSearch';
+import { earthSceneSearch } from '../../../src/layers/earthScenes/scenes/present/earthSceneSearch';
+import { milkyWaySearch } from '../../../src/layers/milkyWay/card/present/milkyWaySearch';
+import { starSearch } from '../../../src/layers/starCatalog/selection/present/starSearch';
+import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
 import { Source } from '../../../src/data/source';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
@@ -70,14 +73,14 @@ describe('rankPaletteMatches', () => {
     expect(rows.some((r) => r.kind === 'famous')).toBe(true);
   });
 
-  it('surfaces a Milky Way row for the query "milky way"', () => {
-    const rows = rankPaletteMatches([M31], [], [], [], 'milky way');
-    expect(rows.some((r) => r.kind === 'milkyWay')).toBe(true);
+  it('surfaces a Milky Way row for the query "milky way", sorted among the primaries', async () => {
+    const rows = rankPaletteMatches([M31], [], [], await collect(milkyWaySearch()), 'milky way');
+    expect(rows.some((r) => r.kind === 'layer' && r.entry.id === MILKY_WAY_FOCUS_ID)).toBe(true);
   });
 
-  it('yields no Milky Way row for a query that matches nothing', () => {
-    const rows = rankPaletteMatches([M31], [], [], [], 'zzznotathing');
-    expect(rows.some((r) => r.kind === 'milkyWay')).toBe(false);
+  it('yields no Milky Way row for a query that matches nothing', async () => {
+    const rows = rankPaletteMatches([M31], [], [], await collect(milkyWaySearch()), 'zzznotathing');
+    expect(rows).toEqual([]);
   });
 });
 
@@ -136,22 +139,28 @@ describe('rankPaletteMatches — scene-body rows', () => {
     expect(bodyIdx).toBeLessThan(famousIdx);
   });
 
-  it('a star is findable by its Bayer alias, on a star row', () => {
+  it('a star is findable by its Bayer alias, on a star row', async () => {
     // A query for Sirius's Bayer designation (not its common name) surfaces the
     // Sirius STAR row — pins the alias scoring over the star's full names[] and
     // that a star ranks as a star, not as a body (spec §7).
-    const rows = rankPaletteMatches([M31], [], [], [], 'Alpha Canis Majoris');
-    const hit = rows.find((r) => r.kind === 'starCatalog');
-    expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sirius');
+    const rows = rankPaletteMatches(
+      [M31],
+      [],
+      [],
+      await collect(starSearch()),
+      'Alpha Canis Majoris',
+    );
+    const hit = rows.find((r) => r.kind === 'layer');
+    expect(hit?.kind === 'layer' && hit.entry.id).toBe('star-sirius');
   });
 
-  it('finds the Sun by its authored alias, and never as a body row', () => {
+  it('finds the Sun by its authored alias, and never as a body row', async () => {
     // The Sun is its own seeded catalog with no famous-star seed row, so its
     // aliases live in the authored half of BODY_SEARCH_NAMES; scoring stars off
     // that same map is what keeps 'Sol' finding it.
-    const rows = rankPaletteMatches([M31], [], [], [], 'Sol');
-    const hit = rows.find((r) => r.kind === 'starCatalog');
-    expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sun');
+    const rows = rankPaletteMatches([M31], [], [], await collect(starSearch()), 'Sol');
+    const hit = rows.find((r) => r.kind === 'layer');
+    expect(hit?.kind === 'layer' && hit.entry.id).toBe('star-sun');
   });
 
   it('finds Sgr A* by its Sagittarius alias, through its Layer row', async () => {

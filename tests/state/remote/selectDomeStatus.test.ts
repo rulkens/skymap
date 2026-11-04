@@ -11,29 +11,41 @@ import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { ToggleRow } from '../../../src/@types/settings/ToggleRow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 
 const NO_ROWS: readonly ToggleRow[] = [];
 
 describe('selectDomeStatus', () => {
   it('reports the camera scheme', () => {
-    expect(selectDomeStatus(stateAfter(), NO_ROWS, 0).controls.scheme).toBe('skymap');
+    expect(selectDomeStatus(stateAfter(), NO_ROWS, NO_ROWS, 0).controls.scheme).toBe('skymap');
     const state = stateAfter(setControlScheme('openspace'));
-    expect(selectDomeStatus(state, NO_ROWS, 0).controls.scheme).toBe('openspace');
+    expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).controls.scheme).toBe('openspace');
   });
 
-  it('reports no tour when none runs', () => {
-    expect(selectDomeStatus(stateAfter(), NO_ROWS, 0).tour).toBeNull();
-    const clip = stateAfter(takeoverStarted({ kind: 'clip', id: 'flyout' }));
-    expect(selectDomeStatus(clip, NO_ROWS, 0).tour).toBeNull();
+  it('reports a running exhibit by kind and id, without its entry', () => {
+    const state = stateAfter(takeoverStarted({ kind: 'exhibit', id: 'cosmicFlows', entry: 'fly' }));
+    expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).takeover).toStrictEqual({
+      kind: 'exhibit',
+      id: 'cosmicFlows',
+    });
   });
 
-  it("reports the running tour's beat and count", () => {
+  it('reports a running clip by kind and id', () => {
+    const state = stateAfter(takeoverStarted({ kind: 'clip', id: 'flyout' }));
+    expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).takeover).toStrictEqual({
+      kind: 'clip',
+      id: 'flyout',
+    });
+  });
+
+  it("reports a running tour's beat, count and paused state", () => {
     const state = stateAfter(
       takeoverStarted({ kind: 'tour', id: 'grandTour' }),
       beatChanged(3),
       setPaused(true),
     );
-    expect(selectDomeStatus(state, NO_ROWS, 0).tour).toEqual({
+    expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).takeover).toEqual({
+      kind: 'tour',
       id: 'grandTour',
       beatIndex: 3,
       beatCount: tourRegistry.grandTour.beats.length,
@@ -41,7 +53,7 @@ describe('selectDomeStatus', () => {
     });
   });
 
-  it("reports a focused body's id, Earth included", () => {
+  it('names a focused body, Earth included', () => {
     const state = stateAfter(
       setSelectionRow({
         slot: 'focus',
@@ -55,12 +67,27 @@ describe('selectDomeStatus', () => {
         focusId: 'body-earth',
       }),
     );
-    expect(selectDomeStatus(state, NO_ROWS, 0).focus).toEqual({ id: 'body-earth' });
+    expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).focus).toEqual({ name: 'Earth' });
+  });
+
+  it('names a focused galaxy as its card does', () => {
+    const famous = {
+      id: 'm31',
+      commonName: 'Andromeda Galaxy',
+      names: ['M31', 'NGC 224'],
+      description: '',
+      type: 'Sb',
+    };
+    const row = makeGalaxyRow({ x: 0.5, y: 0.2, z: 0.6, famous });
+    const state = stateAfter(setSelectionRow({ slot: 'focus', row, focusId: 'famous-m31' }));
+    expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).focus).toEqual({
+      name: 'Andromeda Galaxy',
+    });
   });
 
   it('derives simDays at the nowMs it is handed', () => {
     const state = stateAfter(setSimDays({ simDays: 2451545, nowMs: 1000 }));
-    expect(selectDomeStatus(state, NO_ROWS, 1000).time.simDays).toBe(2451545);
-    expect(selectDomeStatus(state, NO_ROWS, 61_000).time.simDays).toBeGreaterThan(2451545);
+    expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 1000).time.simDays).toBe(2451545);
+    expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 61_000).time.simDays).toBeGreaterThan(2451545);
   });
 });

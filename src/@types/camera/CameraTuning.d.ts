@@ -7,7 +7,7 @@ export type CameraTuning = {
   readonly engageHR: number;
   /** h/R at which it hands back (hysteresis). */
   readonly disengageHR: number;
-  /** eye→site range, in the site body's bounding radii, at which the site rung takes over. */
+  /** eye→site range, in the site body's bounding radii, at which the site arm takes over. */
   readonly siteEngageR: number;
   /** …and at which it hands back (hysteresis). */
   readonly siteDisengageR: number;

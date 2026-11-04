@@ -10,7 +10,7 @@
  */
 
 import { pivotRadiusMpc } from './pivotRadiusMpc';
-import { isWorldArm } from './rungs/isWorldArm';
+import { isWorldArm } from './arms/isWorldArm';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 

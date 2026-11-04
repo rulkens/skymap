@@ -12,7 +12,7 @@ import type { DriverId } from '../camera/DriverId';
 import type { FollowMemory } from '../camera/FollowMemory';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { OrientationFrameId } from '../../camera/OrientationFrameId';
-import type { RungMemory } from '../../camera/RungMemory';
+import type { CameraArmMemory } from '../../camera/CameraArmMemory';
 import type { TiltMemory } from '../../camera/TiltMemory';
 import type { FrameOutputs } from './FrameOutputs';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
@@ -32,8 +32,8 @@ export type CameraRuntime = {
   readonly orientation: OrientationFrameId;
   readonly epochs: CameraEpochs;
   readonly follow: FollowMemory | null;
-  /** Keyed by the register's `frameKey`: a rung change wipes it to that rung's `emptyMemory`. */
-  readonly gesture: RungMemory;
+  /** Keyed by the register's `frameKey`: an arm change wipes it to that arm's `emptyMemory`. */
+  readonly gesture: CameraArmMemory;
   readonly tilt: TiltMemory;
   /** Stepped before the pick, so it lives here and not in a row's `own`. */
   readonly navigator: NavigatorState;

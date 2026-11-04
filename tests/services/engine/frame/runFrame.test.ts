@@ -750,7 +750,7 @@ describe('runFrame — engineScaleChanged dispatch', () => {
     const ALTITUDE_KM = 100;
     const arm = earthArm(1 + ALTITUDE_KM / EARTH_RADIUS_KM);
     store.dispatch(commitCameraPose(arm));
-    // No focus row: nothing constrains a rung, so the arm holds at rest and
+    // No focus row: nothing constrains an arm, so the arm holds at rest and
     // the legend — this fixture's whole subject — is read off it. A focus here
     // would owe an approach that flies the range straight out of the km band.
     state.cameraRuntime = {
@@ -1039,7 +1039,7 @@ describe('runFrame — effective intent', () => {
 
   it('the frame’s actions reach the store in the same order as before', () => {
     // The `drag end` frame of the driver golden trace, reproduced: the
-    // replay's commit and `endDrag` dispatch first and in order, the scale
+    // replay's commit dispatches first, the scale
     // dispatch after them. Recorded the way the fixture records.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: 5 });
     h.frame(4);
@@ -1057,14 +1057,13 @@ describe('runFrame — effective intent', () => {
     h.frame();
 
     const want = GOLDEN.find((step) => step.label === 'drag end')!.actions;
-    expect(want).toContain('camera/endDrag');
     expect(recorded).toEqual(want);
   });
 
   it('commits the tail of a gesture that ended mid-frame', () => {
     // The commit fires on the frame after pointerup, so the moves that
     // preceded the release must land BEFORE it or the store bakes a pose one
-    // frame stale — and the drag flag clears in the same frame.
+    // frame stale.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, canvasSize: 1000 });
     h.seedPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }));
     h.press('orbit', [100, 100]);
@@ -1074,6 +1073,5 @@ describe('runFrame — effective intent', () => {
     h.frame();
 
     expect(worldArmOf(h.store.getState().camera.base).yaw).toBeCloseTo(-50 * 0.005, 6);
-    expect(h.store.getState().camera.dragging).toBe(false);
   });
 });

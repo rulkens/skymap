@@ -75,13 +75,6 @@ export const FACTS: readonly Fact[] = [
     figure: { value: '550', measure: 'light-years away, by the best estimate' },
   },
   {
-    id: 'betelgeuse-estimates',
-    text: 'Other estimates of the distance to Betelgeuse run from about 500 light-years (152 parsecs, from Hipparcos) to about 720 (222 parsecs, from radio observations).',
-    source: 'https://arxiv.org/abs/1706.06020',
-    sourceLabel: 'Harper et al. 2017, Betelgeuse',
-    checked: CHECKED,
-  },
-  {
     id: 'sgr-a-distance',
     text: 'Sagittarius A* is about 26,700 light-years away (8,178 parsecs).',
     source: 'https://arxiv.org/abs/1904.05721',
@@ -116,14 +109,6 @@ export const FACTS: readonly Fact[] = [
     short: 'the supercluster we are in',
   },
   {
-    id: 'neptune-voyager2',
-    text: 'Voyager 2 is the only spacecraft to have visited Neptune: it launched on 20 August 1977 and flew past on 25 August 1989.',
-    source: 'https://science.nasa.gov/mission/voyager/voyager-2/',
-    sourceLabel: 'NASA, Voyager 2',
-    checked: CHECKED,
-    short: 'Only Voyager 2 has flown past Neptune: in 1989, twelve years after its launch.',
-  },
-  {
     id: 'proxima-distance',
     text: 'Proxima Centauri, the nearest star after the Sun, is 4.25 light-years away (Gaia parallax 768.07 milliarcseconds, plus or minus 0.05).',
     source: 'https://simbad.cds.unistra.fr/simbad/sim-id?Ident=Proxima+Cen',
@@ -146,14 +131,6 @@ export const FACTS: readonly Fact[] = [
     sourceLabel: 'Clark et al. 2009, last glacial maximum',
     checked: CHECKED,
     short: 'Light from the centre of our galaxy left about 27,000 years ago, at the time of the ice ages.',
-  },
-  {
-    id: 'andromeda-light',
-    text: 'Fossils from Jebel Irhoud, Morocco, are among the oldest assigned to Homo sapiens: the heated flint tools found with them date to 315,000 years ago, plus or minus 34,000.',
-    source: 'https://doi.org/10.1038/nature22335',
-    sourceLabel: 'Richter et al. 2017, dating Jebel Irhoud',
-    checked: CHECKED,
-    short: 'Light from Andromeda left it 2.5 million years ago. The oldest fossils assigned to our species are about 300,000 years old.',
   },
   {
     id: 'cosmic-web-map',

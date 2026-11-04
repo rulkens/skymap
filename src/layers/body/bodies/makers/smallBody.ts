@@ -3,7 +3,7 @@
  * captioned under the Small bodies checkbox instead of Planets.
  */
 
-import type { BodySpec } from '../../../../@types/scene/BodySpec';
+import type { BodySpec } from '../../@types/BodySpec';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import { heliocentricPlanet } from './heliocentricPlanet';
 

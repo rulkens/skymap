@@ -22,8 +22,8 @@ import { hOverR } from './hOverR';
 import { nearestBodyHR } from './nearestBodyHR';
 import { bandRollTarget } from './frameAlignedRoll';
 import { bodyRelativePose } from './bodyRelativePose';
-import { hostOf } from './rungs/hostOf';
-import { rungKindOf } from './rungs/rungKindOf';
+import { hostOf } from './arms/hostOf';
+import { cameraArmKindOf } from './arms/cameraArmKindOf';
 import { blendedEnuAt } from '../../../utils/camera/blendedEnuAt';
 import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
@@ -70,7 +70,7 @@ export function cameraDofAnglesOf(input: {
   });
   let bodyId: SceneBodyId | null = engaged?.id ?? null;
   let hr: number | null = engaged === null ? null : hOverR(eyeMpc, engaged.state, engaged.radiusM);
-  if (rungKindOf(storedFrame) === 'absolute') {
+  if (cameraArmKindOf(storedFrame) === 'absolute') {
     const nearest = nearestBodyHR(eyeMpc, bodyStates);
     if (nearest !== null) {
       bodyId = nearest.bodyId;

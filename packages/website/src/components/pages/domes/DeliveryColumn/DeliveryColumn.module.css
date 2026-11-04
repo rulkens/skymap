@@ -48,8 +48,6 @@
   filter: brightness(calc(1 - 0.15 * var(--depth)));
 
   & img {
-    display: block;
-    width: 100%;
     height: 100%;
     rotate: -90deg;
   }
@@ -106,6 +104,7 @@
 
 /* A specification: each line a label and a phrase on one hairline, the label dim. */
 .spec {
+  composes: small from '../../../../styles/type.module.css';
   --spec-label: clamp(6rem, 22vw, 8.5rem);
   margin: 0 0 var(--stack);
 
@@ -126,17 +125,11 @@
   }
 
   & dt {
-    font-size: var(--text-small);
-    font-weight: var(--weight-small);
-    line-height: 1.5;
     color: var(--site-text-dim);
   }
 
   & dd {
     margin: 0;
-    font-size: var(--text-small);
-    font-weight: var(--weight-small);
-    line-height: 1.5;
     color: var(--site-text);
     font-variant-numeric: tabular-nums;
   }

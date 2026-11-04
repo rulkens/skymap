@@ -14,16 +14,17 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 import { applyWheelZoom } from './applyWheelZoom';
 import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
-import { foldToWorld } from './rungs/foldToWorld';
-import { hostOf } from './rungs/hostOf';
-import { isWorldArm } from './rungs/isWorldArm';
-import { rowFor } from './rungs/rowFor';
-import { sameFrame } from './rungs/sameFrame';
+import { foldToWorld } from './arms/foldToWorld';
+import { hostOf } from './arms/hostOf';
+import { isWorldArm } from './arms/isWorldArm';
+import { rowFor } from './arms/rowFor';
+import { cameraArmKindOf } from './arms/cameraArmKindOf';
+import { sameFrame } from './arms/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../state/selection/selectors';
-import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
+import cameraReducer, { commitCameraPose } from '../../../state/camera/cameraSlice';
 
 import type { ClimbableKind } from '../../../@types/camera/ClimbableKind';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
@@ -34,21 +35,21 @@ import type { FramedPose } from '../../../@types/camera/FramedPose';
 import type { InputStep } from '../../../@types/camera/InputStep';
 import type { MemOf } from '../../../@types/camera/MemOf';
 import type { NavStep } from '../../../@types/camera/NavStep';
-import type { RungCtx } from '../../../@types/camera/RungCtx';
-import type { RungKind } from '../../../@types/camera/RungKind';
+import type { CameraArmCtx } from '../../../@types/camera/CameraArmCtx';
+import type { CameraArmKind } from '../../../@types/camera/CameraArmKind';
 import type { TiltMemory } from '../../../@types/camera/TiltMemory';
 import type { RootState } from '../../../store/types';
 
 export function replayInput(
   prev: {
     readonly register: FramedCameraPose;
-    readonly gesture: MemOf[RungKind];
+    readonly gesture: MemOf[CameraArmKind];
     readonly tilt: TiltMemory;
     readonly follow: FollowMemory | null;
   },
   steps: readonly InputStep[],
   args: {
-    readonly ctx: RungCtx;
+    readonly ctx: CameraArmCtx;
     readonly rootState: RootState;
     readonly nowMs: number;
     readonly winnerLastFrame: DriverId;
@@ -60,7 +61,7 @@ export function replayInput(
   },
 ): {
   readonly register: FramedCameraPose;
-  readonly gesture: MemOf[RungKind];
+  readonly gesture: MemOf[CameraArmKind];
   readonly tilt: TiltMemory;
   readonly follow: FollowMemory | null;
   readonly followDistanceTarget: number | null;
@@ -95,11 +96,11 @@ export function replayInput(
   };
 
   /**
-   * The table read, generic over the rung: a frame tag and its pose shape stay
-   * correlated only under one `K`. The rung's own memory and the host-keyed
+   * The table read, generic over the arm: a frame tag and its pose shape stay
+   * correlated only under one `K`. The arm's own memory and the host-keyed
    * tilt ride out through the accumulator, which spans both arms.
    */
-  const stepRow = <K extends RungKind>(
+  const stepRow = <K extends CameraArmKind>(
     framed: FramedPose<K>,
     memory: MemOf[K],
     input: InputStep,
@@ -111,7 +112,7 @@ export function replayInput(
   };
 
   /**
-   * Which rung owns this step, and the arbitration around it. The GATE is the
+   * Which arm owns this step, and the arbitration around it. The GATE is the
    * stored regime (`base.frame`); the POSE is the live register, because the
    * fold commits on a regime EDGE only — mid-tween `base` holds the last
    * crossing pose while the register tracks the animation (FW-G). `false` hands
@@ -125,13 +126,18 @@ export function replayInput(
     if (worldArm && step.kind === 'zoom' && !step.duringGesture) return false;
     // A pose-moving step is swallowed while a clip owns the camera (the driver
     // table's rule, both arms) or while a body arm's host is unresolved — the
-    // cell's `hostOrThrow` would throw. The pointer edges still reach the rung:
+    // cell's `hostOrThrow` would throw. The pointer edges still reach the arm:
     // the latch tracks the POINTER, and they re-tag nothing.
     const moves = step.kind === 'drag' || step.kind === 'zoom';
     if (moves && (camera.clip !== null || (!worldArm && hostOf(base.frame, ctx) === null))) {
       return true;
     }
-    // Which pose to step is arbitration, not rung arithmetic: an edge moves none
+    // The two-finger drag is a surface handle (owner ruling 2026-11-03): only
+    // the body arm reads it, so space and a site's turntable stay put.
+    if (step.kind === 'drag' && step.mode === 'tilt' && cameraArmKindOf(base.frame) !== 'body') {
+      return true;
+    }
+    // Which pose to step is arbitration, not arm arithmetic: an edge moves none
     // (and so never pays the fold), the world arm steps the live register folded
     // down — AUTHORED, not displayed (R12b-1), so a drag composes below the tilt
     // — and the body arm steps it only while it speaks the arm's own frame.
@@ -148,7 +154,7 @@ export function replayInput(
       if (step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)) {
         // Followed-body strafe: the pivot-pin owns the target (`bodyPosition +
         // panOffset`), so the pan's own delta goes to the offset the pin reads.
-        // A driver memory, outliving the rung that produced the delta.
+        // A driver memory, outliving the arm that produced the delta.
         const off = follow?.panOffset ?? [0, 0, 0];
         follow = {
           from: follow?.from ?? null,
@@ -164,7 +170,7 @@ export function replayInput(
       }
       stepped = next;
     } else {
-      // A memory taken on another rung is not this one's: it enters as its empty.
+      // A memory taken on another arm is not this one's: it enters as its empty.
       stepped = stepRow<ClimbableKind>(
         from,
         gestureMemory ?? rowFor<ClimbableKind>(from.frame).emptyMemory,
@@ -185,14 +191,14 @@ export function replayInput(
   for (const step of steps) {
     switch (step.kind) {
       case 'gestureStart':
-        // The latch itself is the rung's; the first drag step takes it, carrying
+        // The latch itself is the arm's; the first drag step takes it, carrying
         // the press pixel. The world arm keeps no gesture register at all.
         stepRegister(step);
         break;
 
       case 'gestureEnd': {
-        // ONE commit site for both arms: bake the register into `base` before
-        // `endDrag`. Skipped while a clip owns the camera and across an arm
+        // ONE commit site for both arms: bake the register into `base`. Skipped
+        // while a clip owns the camera and across an arm
         // mismatch — the fold owns regime edges; a commit here must never flip one.
         // Skipped while a navigator row authors the release: its edge commit bakes
         // the nudged register, once.
@@ -202,7 +208,6 @@ export function replayInput(
         navAuthors = false;
         navSteps.push(step);
         stepRegister(step);
-        emit(endDrag());
         break;
       }
 
@@ -222,7 +227,7 @@ export function replayInput(
         // A follow row re-asserts its own target every frame and would swallow
         // a committed base, so its notch is resolved to a distance the driver
         // adopts; a second notch in the same drain resolves off the first.
-        // Read ABOVE the rung in EITHER arm: a notch handed to a rung the owed
+        // Read ABOVE the arm's step, whichever arm: a notch handed to an arm the owed
         // approach overwrites is simply lost (the world arm reached this lane
         // through `stepRegister`'s own at-rest decline, so its order stands).
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;

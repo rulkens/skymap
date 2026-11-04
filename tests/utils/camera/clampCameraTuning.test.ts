@@ -43,7 +43,7 @@ describe('clampCameraTuning', () => {
   });
 
   it('keeps the site band hysteretic from either side', () => {
-    // A band with no hysteresis thrashes the rung every frame — the real bug.
+    // A band with no hysteresis thrashes the arm every frame — the real bug.
     const pulled = clampCameraTuning({ siteDisengageR: 22 }, DEFAULT_CAMERA_TUNING);
     expect(pulled.siteDisengageR).toBe(22);
     expect(pulled.siteEngageR).toBeCloseTo(20, 12);

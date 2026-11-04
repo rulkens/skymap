@@ -8,7 +8,7 @@ import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
-import { foldToWorld } from '../../../src/services/engine/camera/rungs/foldToWorld';
+import { foldToWorld } from '../../../src/services/engine/camera/arms/foldToWorld';
 import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { DriverCtx } from '../../../src/@types/engine/camera/DriverCtx';
@@ -51,6 +51,7 @@ export function makeDriverCtx(
     simDays,
     bodies: args.bodies ?? deriveBodyStates(simDays),
     projection: args.projection ?? { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
+    terrainHeightAt: args.terrainHeightAt ?? datumOnlyTerrainHeight,
     followDistanceTarget: args.followDistanceTarget ?? null,
   };
 }

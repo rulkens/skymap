@@ -29,7 +29,7 @@ describe('selectToggleRows', () => {
   it("a row's set builds the action that flips its own value", () => {
     for (const { id } of selectToggleRows(INIT, LAYER_ROWS)) {
       const row = rowById(INIT, id);
-      const next = rootReducer(INIT, row.set(!row.enabled));
+      const next = row.set(!row.enabled).reduce(rootReducer, INIT);
       expect(rowById(next, id).enabled).toBe(!row.enabled);
     }
   });

@@ -186,15 +186,13 @@
   opacity: 1;
 }
 
+/* Narrow, one after another, each window a little smaller than the column. */
 @media (--narrow) {
   .window,
   .big {
     max-width: 16rem;
   }
-}
 
-@media (--narrow) {
-  /* One after another, each window a little smaller than the column. */
   .kinds {
     --cols: 1;
     row-gap: var(--site-space-2xl);

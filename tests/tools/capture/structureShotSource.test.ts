@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { structureShotSource } from '../../../tools/capture/structureShotSource';
-import { buildStaticAnchorStructures } from '../../../src/layers/structure/load/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../../src/layers/structure/catalog/load/buildStaticAnchorStructures';
 
 const byId = (id: string) => buildStaticAnchorStructures().find((s) => s.id === id)!;
 

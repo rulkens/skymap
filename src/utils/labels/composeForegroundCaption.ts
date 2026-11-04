@@ -19,6 +19,7 @@ import { apparentSizePx } from '../math/apparentSizePx';
 import { fadeBand } from '../math/fadeBand';
 import { overflowFade } from '../scene/overflowFade';
 import { subjectOccludedByBodies } from '../occlusion/subjectOccludedByBodies';
+import { subjectWithinRelief } from '../occlusion/subjectWithinRelief';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { LEADER_LINE_BOTTOM_GAP_PX } from '../../services/engine/presentation/leaderLineStyle';
 
@@ -64,12 +65,15 @@ export function composeForegroundCaption(
       ? 1
       : 0,
     // The sampled-depth channel asks whether the scene at the subject's pixel
-    // stands nearer than the subject. Under a pixel, that pixel is one terrain
-    // texel spanning kilometres and the baked site height sits inside its LOD
-    // error, so the answer is noise (rover captions flickered over Mars); a
-    // negative cutoff is the shader's "never", leaving the sphere test to decide.
+    // stands nearer than the subject. For a sub-pixel subject ON a body's ground,
+    // that pixel is one terrain texel spanning kilometres and the baked site height
+    // sits inside its LOD error, so the answer is noise (rover captions flickered
+    // over Mars); a negative cutoff is the shader's "never", leaving the sphere
+    // test to decide. Off the ground the answer is sound and must stay: the
+    // inner-bound sphere misses the last degrees above it, where only terrain
+    // depth hides a star below a rover's horizon.
     occludeNearKm:
-      subjectSizePx < 1
+      subjectSizePx < 1 && subjectWithinRelief(label.worldPos, ctx.occluders)
         ? -1
         : (distanceMpc - label.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
     prominencePx,

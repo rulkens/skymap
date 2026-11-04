@@ -25,14 +25,14 @@ import { foregroundChainOrder } from '../../../../src/services/engine/frame/slab
 import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
-import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
-import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
-import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
-import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
-import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
-import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/milkyWayAggregatePass';
-import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
-import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
+import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
+import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/disks/procedural/passes/proceduralDisksPass';
+import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/disks/textured/passes/texturedDisksPass';
+import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityPass';
+import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityUpsamplePass';
+import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/cloud/passes/milkyWayAggregatePass';
+import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/cloud/passes/milkyWayUpsamplePass';
+import { milkyWayPass } from '../../../../src/layers/milkyWay/cloud/passes/milkyWayPass';
 import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
@@ -411,7 +411,6 @@ function makeInput(
     meshBodies: [] as never[],
     sceneBodies: [] as never[],
     plans: createFramePlannerResultStore(),
-    cursorTexPx: null,
     nowMs: 0,
     simDays: 0,
     altitudeMpc: 0,

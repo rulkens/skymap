@@ -17,6 +17,7 @@ import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
 import type { RootState } from '../../../store/types';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
@@ -40,9 +41,9 @@ import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { EASED_FOCUS_EASE } from '../../../data/camera/focusMoveDefaults';
 import { lerp } from '../../../utils/math/lerp';
-import { isWorldArm } from './rungs/isWorldArm';
-import { rowFor } from './rungs/rowFor';
-import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import { isWorldArm } from './arms/isWorldArm';
+import { rowFor } from './arms/rowFor';
+import { selectGestureHeld } from '../../../state/input/selectors';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 
@@ -202,10 +203,10 @@ function easedLookOffset(from: CameraPose, to: CameraPose, t: number): Vec2 | un
 }
 
 /**
- * The exit both keyframe rows share: the rung's own `decode` reads the channels
+ * The exit both keyframe rows share: the arm's own `decode` reads the channels
  * (spec §8), then an absolute reading is re-encoded from the clip's pinned basis
  * into the CURRENT one (by reference when they match). The re-encode stays
- * OUTSIDE the cell: neither basis is a rung fact, and a body arm's angles are
+ * OUTSIDE the cell: neither basis is an arm fact, and a body arm's angles are
  * about the body's own axes, which no orientation frame touches.
  */
 function framedClipArm(
@@ -213,6 +214,7 @@ function framedClipArm(
   from: Readonly<Mat3>,
   to: Readonly<Mat3>,
   bodies: ReadonlyMap<PositionedId, BodyState>,
+  terrainHeightAt: TerrainHeightAtLookup,
 ): FramedCameraPose {
   const { frame, channels } = evaluated;
   // No decode cell reads a basis TODAY. The day one does — a site row reading
@@ -221,7 +223,7 @@ function framedClipArm(
     bodies,
     poseBasis: to,
     upBasis: to,
-    terrainHeightAt: datumOnlyTerrainHeight,
+    terrainHeightAt,
   });
   return isWorldArm(decoded) ? absoluteArm(reencodePose(decoded.pose, from, to)) : decoded;
 }
@@ -252,10 +254,11 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         frameBasis: pinned,
         bodies: ctx.bodies,
         playback: clip,
+        terrainHeightAt: ctx.terrainHeightAt,
       });
       const { fov } = evaluated.channels;
       return {
-        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
+        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies, ctx.terrainHeightAt),
         memory: settledMemory(mem),
         ...(fov === undefined ? {} : { lens: fov }),
       };
@@ -268,7 +271,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // orbits AROUND a moving body; a no-op on a body arm, so one row serves
     // both arms.
     pivotsOnFocusedBody: true,
-    isActive: (s, activity) => s.camera.dragging && !activity.dragClaimed,
+    isActive: (s, activity) => selectGestureHeld(s) && !activity.dragClaimed,
     // The AUTHORED register, pre-projection (R12b-1): producing the displayed
     // pose here re-pins its tilted angles and walks the eye every held frame.
     pose: (ctx, mem) => ({ pose: ctx.register, memory: mem }),
@@ -332,8 +335,15 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         frameBasis: pinned,
         bodies: ctx.bodies,
         playback: tween,
+        terrainHeightAt: ctx.terrainHeightAt,
       });
-      const framed = framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies);
+      const framed = framedClipArm(
+        evaluated,
+        pinned,
+        ctx.poseBasis,
+        ctx.bodies,
+        ctx.terrainHeightAt,
+      );
       const offset = tween.from.lookOffset;
       if (offset === undefined || !isWorldArm(framed))
         return { pose: framed, memory: settledMemory(mem) };
@@ -409,14 +419,14 @@ export const OPENSPACE_DRIVERS: readonly CameraDriver[] = CAMERA_DRIVERS.flatMap
           priority: 80,
           // Any open gesture, as `orbitDrag`: a pinch, or a drag latched under skymap
           // before a toggle, moves the register with no navigator input at all.
-          isActive: (s: RootState, a: DriverActivity) => s.camera.dragging && !a.dragClaimed,
+          isActive: (s: RootState, a: DriverActivity) => selectGestureHeld(s) && !a.dragClaimed,
         },
         {
           ...NAVIGATOR_ROW,
           id: 'openSpaceCoast',
           priority: 50,
           isActive: (s: RootState, a: DriverActivity) =>
-            !s.camera.dragging && a.navMoving && !a.dragClaimed,
+            !selectGestureHeld(s) && a.navMoving && !a.dragClaimed,
         },
       ],
 );

@@ -34,7 +34,7 @@ import {
   NEAR_RATIO,
 } from '../../../../src/utils/camera/foregroundFrustum';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
-import { bodyLayerSlabRow } from '../../../../src/layers/body/present/bodyLayerSlabRow';
+import { bodyLayerSlabRow } from '../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -184,7 +184,7 @@ describe('deriveSlabs', () => {
 
   it('keys the near-field bracket off `altitudeMpc`, never the camera distance', () => {
     // A low orbit, where the pivot's radius dominates raw `cam.distance` and
-    // the ratio still clears `MIN_NEAR_MPC` (~6 m) so the bracket, not the
+    // the ratio still clears `MIN_NEAR_MPC` so the bracket, not the
     // floor, is what the assertion reads.
     const altitudeMpc = 500 * SCALE_UNITS.KM_TO_MPC;
     const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
@@ -644,7 +644,6 @@ describe('slabViewOf', () => {
         focusBlend: 0,
         focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
         renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
-        cursorTexPx: null,
         renderedTargets: new Set<string>(),
       },
       viewSlot: 0,

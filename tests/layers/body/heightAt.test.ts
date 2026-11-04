@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { heightAt } from '../../../src/layers/body/heightAt';
-import { IDLE_SURFACE_TILE_PLAN } from '../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../src/layers/body/surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
 import type { BodyRuntime } from '../../../src/layers/body/@types/BodyRuntime';
-import type { SurfaceTilePlan } from '../../../src/layers/body/@types/SurfaceTilePlan';
+import type { SurfaceTilePlan } from '../../../src/layers/body/surfaceTiles/plan/@types/SurfaceTilePlan';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 describe('heightAt', () => {

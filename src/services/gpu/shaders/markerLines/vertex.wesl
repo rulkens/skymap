@@ -46,7 +46,7 @@ fn expandMarkerLineQuad(input: VsIn, occludeWeight: f32) -> VsOut {
   // Expand this corner into a clip-space vertex via the shared
   // segment-quad helper. 'pixelWidth' is a FULL width (the helper takes a
   // half-width), so we pass 'pixelWidth * 0.5'.
-  let p = expandSegmentQuad(u.cam, fromWorld, toWorld, input.uv, pixelWidth * 0.5);
+  let p = expandSegmentQuad(u.cam, fromWorld, toWorld, input.uv, pixelWidth * 0.5).clip;
 
   // Clamp z to survive any far plane. The NEAR0 foreground connectors keep
   // endpoints far beyond the adaptive far plane ('foregroundFrustum'

@@ -12,12 +12,15 @@ import {
   commitCameraPose,
   startCameraTween,
   cancelCameraTween,
-  endDrag,
   setAutoRotate,
   clipStarted,
   clipEnded,
 } from '../../../../src/state/camera/cameraSlice';
-import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
+import {
+  inputConsumed,
+  inputGestureEnded,
+  inputGestureStarted,
+} from '../../../../src/state/input/inputSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import { pickWinner } from '../../../../src/services/engine/camera/cameraDrivers';
@@ -315,7 +318,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     expect(committed).toBe(true);
 
     // Cleanup.
-    store.dispatch(endDrag());
+    store.dispatch(inputGestureEnded({ source: 'canvas' }));
   });
 });
 
@@ -354,7 +357,7 @@ describe('commitOnEdge — clip deactivation', () => {
   });
 
   it('commit does NOT fire on an orbitDrag deactivation edge', () => {
-    // orbitDrag has no commitsOnEdge; endDrag() commits via onGestureEnd instead.
+    // orbitDrag has no commitsOnEdge; the release commits through the replay instead.
     const harness = makeHarness();
     const { store, state } = harness;
 
@@ -369,8 +372,10 @@ describe('commitOnEdge — clip deactivation', () => {
     expect(frame1.activeId).toBe('orbitDrag');
     expect(frame1.committed).toBe(false);
 
-    // End the drag gesture.
-    store.dispatch(endDrag());
+    // End the gesture, minus its drained end: the replay's release commit
+    // would hide whether the edge itself commits.
+    store.dispatch(inputGestureEnded({ source: 'canvas' }));
+    store.dispatch(inputConsumed());
 
     // Next frame: driver changes from 'orbitDrag' to 'resting' — no commit
     // because orbitDrag does not declare commitsOnEdge.

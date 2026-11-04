@@ -17,11 +17,11 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
-import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
-import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
-import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/milkyWayAggregatePass';
-import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
-import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
+import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityPass';
+import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityUpsamplePass';
+import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/cloud/passes/milkyWayAggregatePass';
+import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/cloud/passes/milkyWayUpsamplePass';
+import { milkyWayPass } from '../../../../src/layers/milkyWay/cloud/passes/milkyWayPass';
 import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
@@ -29,7 +29,7 @@ import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/Mil
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
-import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
+import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';

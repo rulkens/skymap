@@ -6,8 +6,6 @@
 import type { FamousGalaxyMetaEntry } from '../loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../engine/StructureSearchEntry';
-import type { StarBody } from '../scene/StarBody';
-import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
 import type { Exhibit } from '../exhibits/Exhibit';
 import type { Tour } from '../animation/tour/Tour';
 import type { EarthPlace } from './EarthPlace';
@@ -23,14 +21,6 @@ export type ScoredRow =
   | { kind: 'famous'; entry: FamousGalaxyMetaEntry; score: number }
   | { kind: 'alias'; entry: AliasIndexEntry; score: number }
   | { kind: 'structure'; entry: StructureSearchEntry; score: number }
-  | { kind: 'milkyWay'; score: number }
-  | {
-      kind: 'starCatalog';
-      source: StarCatalogSourceType;
-      index: number;
-      star: StarBody;
-      score: number;
-    }
   | { kind: 'exhibit'; exhibit: Exhibit; score: number }
   | { kind: 'tour'; tour: Tour; score: number }
   | { kind: 'place'; entry: EarthPlace; score: number }

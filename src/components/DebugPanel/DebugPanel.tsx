@@ -20,7 +20,6 @@ import FocusMovesTuningSectionContainer from '../containers/FocusMovesTuningSect
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
-import GalaxyProvenanceSectionContainer from '../containers/GalaxyProvenanceSectionContainer';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
 import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
 import styles from './DebugPanel.module.css';
@@ -60,7 +59,6 @@ function DebugPanel({
       ))}
       <DebugOverlaysSectionContainer />
       <FocusMovesTuningSectionContainer />
-      <GalaxyProvenanceSectionContainer />
       <ClipTriggersSectionContainer />
       <ClipPathInspectorSectionContainer />
     </div>

@@ -56,9 +56,11 @@ const DOCS_WIDTHS = [2400, ...FEATURE_WIDTHS];
 const PHONE = { width: 400, height: 560 };
 const PHONE_WIDTHS = [800];
 const DOME = { width: 1024, height: 1024 };
-// The Science page's two-up comparison: one camera, two layers, so the frames must share a size.
+// Two layers seen by one camera, so the frames must share a size: the Science page's compare frame, the Settings page's pairs.
 const PAIR = { width: 800, height: 800 };
 const PAIR_WIDTHS = [1120, 640];
+// The compare frame spans the column (72rem), which a 2x screen fills from 2240: its rows are shot at 3x for it.
+const COMPARE_WIDTHS = [2240, 1120, 640];
 // Aimed 250 Mpc out towards Coma, inside the volume the density map covers, so both layers fill the frame.
 const WEB_POSE = 'pose=a,-211,-56,116,2.1,0.35,420,0';
 const POINTS_ONLY: SiteShotSettings = { hideLabels: true, hideStructures: true, hideCosmicWeb: true, hideZoneOfAvoidance: true };
@@ -400,12 +402,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     id: 'features-remote',
     link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,4.6e-16,0`,
     query: 'dome',
-    settings: { ...SUBJECT, remote: true, searchFor: 'Earth', settleMs: 4000 },
+    settings: { ...SUBJECT, remote: true, settleMs: 4000 },
     size: { width: 390, height: 844 },
     dpr: 3,
     widths: [780],
     title: 'The remote on a phone',
-    alt: 'The remote page on a phone: it reads Connected with Earth as the focused object, above a drag pad, buttons, search and tour lists.',
+    alt: 'The remote page on a phone: it reads Connected with Earth as the focused object, above a drag pad, a Home button with two buttons for the camera controls, and tiles for Search, Tours, Exhibits, Clips, Time, Layers, Labels and Setup.',
   },
   {
     id: 'features-time-jupiter',
@@ -750,7 +752,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: WEB_POSE,
     settings: { ...POINTS_ONLY, settleMs: 4000 },
     size: PAIR,
-    widths: PAIR_WIDTHS,
+    dpr: 3,
+    widths: COMPARE_WIDTHS,
     title: 'Catalogued galaxies, one point each',
     caption: 'Around a spot 250 megaparsecs away.',
     drawn: 'Direction is observed; distance is computed from redshift.',
@@ -761,7 +764,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: WEB_POSE,
     settings: { hideLabels: true, hideStructures: true, hideZoneOfAvoidance: true, hideGalaxyField: true, settleMs: 6000 },
     size: PAIR,
-    widths: PAIR_WIDTHS,
+    dpr: 3,
+    widths: COMPARE_WIDTHS,
     title: 'The same view as the glow of the cosmic web',
     caption: 'Its gold knots sit where the points crowd.',
     drawn: 'The map exists only inside the volume its SDSS galaxies fill, which is why it stops at the lower left.',
@@ -1416,14 +1420,37 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     id: 'guide-dome-window',
     link: 'focus=body-saturn&t=2017-10-15T12:00:00Z',
     query: 'dome',
-    settings: { ui: true, settleMs: 4000 },
+    settings: { ui: true, keys: ['Tab'], settleMs: 4000 },
     size: FEATURE,
     widths: DOCS_WIDTHS,
     title: 'Dome mode in an ordinary window',
-    caption: 'The disc is as wide as the window is high. The panels and the card lie flat over it until Tab hides them.',
+    caption: 'The disc is as wide as the window is high. Tab has shown the panels and the card, flat over the disc.',
     drawn: 'Saturn’s position and ring tilt are computed for 15 October 2017.',
     alt: 'A round all-sky picture in the middle of a black window, Saturn low in it, with the app’s panels at the left and Saturn’s card at the right.',
     credit: 'Saturn: Solar System Scope',
+  },
+  {
+    id: 'guide-dome-pairing',
+    link: 'focus=body-saturn&t=2017-10-15T12:00:00Z',
+    query: 'dome',
+    settings: { ...SUBJECT, ui: true, pairing: true, settleMs: 4000 },
+    size: FEATURE,
+    widths: DOCS_WIDTHS,
+    title: 'Dome mode waiting for a phone',
+    caption: 'The card at the front of the dome is bent to the fisheye; the QR code in the corner of the window is flat.',
+    alt: 'A round all-sky picture in a black window. Low in the disc, over Saturn, a light card reads Pair a remote above a QR code and an eight-character room code; a flat copy of the QR code sits in the top left corner of the window.',
+    credit: 'Saturn: Solar System Scope',
+  },
+  {
+    id: 'guide-remote',
+    link: 'tour=grandTour',
+    query: 'dome',
+    settings: { ...SUBJECT, remote: true, settleMs: 4000 },
+    size: { width: 390, height: 844 },
+    dpr: 3,
+    widths: [780, 520],
+    title: 'The remote on a phone during a tour',
+    alt: 'The remote page on a phone: a line reading Connected with the Milky Way as the focused object, a drag pad, a Home button beside two buttons for the camera controls, a card for the running tour The Long Way Out at beat 1 of 14 with Stop, Previous, Pause and Next, then tiles for Search, Tours, Exhibits, Clips, Time, Layers, Labels and Setup.',
   },
   // The docs' Reference pages.
   {

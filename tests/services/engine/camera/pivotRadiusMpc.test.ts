@@ -25,7 +25,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { Source } from '../../../../src/data/source';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../fixtures/starRowDriver';
-import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
 import { schwarzschildRadiusM } from '../../../../src/utils/physics/schwarzschildRadiusM';
 import { SGR_A_STAR_MASS_SOLAR } from '../../../../src/data/bodies/sgrAStarMassSolar';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';

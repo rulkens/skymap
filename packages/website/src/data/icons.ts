@@ -61,4 +61,6 @@ export const ICONS: Record<IconName, string | readonly string[]> = {
   // Stop and start a film.
   pause: 'M9 6v12M15 6v12',
   play: 'M8.5 5.5v13l10-6.5z',
+  // A file coming down into the tray it lands in.
+  download: 'M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5M4 15.5v3A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5v-3',
 };

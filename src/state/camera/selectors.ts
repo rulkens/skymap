@@ -5,7 +5,8 @@
  */
 
 import { cameraRoute } from '../../store/constants';
-import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
+import { isWorldArm } from '../../services/engine/camera/arms/isWorldArm';
+import { selectGestureHeld } from '../input/selectors';
 import type { RootState } from '../../store/types';
 import type { CameraState } from '../../@types/camera/CameraState';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
@@ -34,12 +35,12 @@ export const selectAutoRotateRate = (state: RootState): number =>
 // Camera term of the loop-continuation predicate (spec §4). The auto-rotate term
 // carries the same arm gate as the driver it stands for: in a body arm the flag is
 // stored intent with nothing acting on it, and an ungated term would pin the loop
-// at 60 fps. `dragging` is NOT gated — the surface controller is a gesture driver.
+// at 60 fps. A held gesture is NOT gated — the surface controller is a gesture driver.
 export const selectCameraActive = (state: RootState): boolean => {
   const c = selectCameraIntent(state);
   return (
     c.clip !== null ||
-    c.dragging ||
+    selectGestureHeld(state) ||
     c.tween !== null ||
     (c.autoRotate.active && isWorldArm(c.base)) ||
     c.frameTween !== null

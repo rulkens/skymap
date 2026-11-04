@@ -26,7 +26,7 @@ import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategor
 import { APP_COMPOSITION } from '../../../src/compositions/app';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
-import { FLOW_SLIDER_FIELDS } from '../../../src/data/flow/flowFields';
+import { FLOW_SLIDER_FIELDS } from '../../../src/layers/flow/streamlines/data/flowFields';
 import { orientationFrameLabel } from '../../../src/data/orientation/orientationFrameLabel';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
@@ -34,7 +34,7 @@ import { CATEGORY_DISPLAY_INFO } from '../../../src/data/structure/categoryDispl
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../../src/data/toneMapCurve';
-import { BLACK_HOLE_FOCUS_PREFIX } from '../../../src/layers/blackHoles/present/blackHoleFocusPrefix';
+import { BLACK_HOLE_FOCUS_PREFIX } from '../../../src/layers/blackHoles/markers/present/blackHoleFocusPrefix';
 import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
@@ -87,6 +87,7 @@ describe('Settings page', () => {
   // changes: the debug panel's, a tour's or an exhibit's, or nobody's.
   const NOT_IN_PANEL = [
     /^debug\./,
+    /^(surfaceTileDebug|terrainPickMarker)\./,
     /^missions\.(craft|speed)$/,
     /^(constellations|lightTime|zoneOfAvoidance)\.labelEnabled$/,
     /^missions\.items\.[\w-]+\.labelEnabled$/,
@@ -168,19 +169,29 @@ describe('Settings page', () => {
     );
     expect(values('Density correction')).toBe(
       options(
-        'src/layers/galaxyCatalog/ui/GalaxiesSection.tsx',
+        'src/layers/galaxyCatalog/controls/ui/GalaxiesSection.tsx',
         /<option value=\{BiasMode\.\w+\}>([^<]+)</g,
       ),
     );
   });
 
-  // Sliders and headings are written inline in each section's component.
+  // Sliders and headings are written inline in each section's component, but a Layer's own
+  // heading, `title={title}`, comes from its `main` ui entry.
+  const mainTitleOf = (file: string): string => {
+    const name = file.match(/^src\/layers\/(\w+)\//)?.[1];
+    const layer = APP_COMPOSITION.layers.find((candidate) => candidate.name === name);
+    const entry = layer?.ui?.find((candidate) => candidate.slot === 'main');
+    if (entry?.slot !== 'main') throw new Error(`${file}: no main ui entry`);
+    return entry.title;
+  };
   it('names every slider and heading its component draws, and no other', () => {
     for (const file of new Set(DOCS_SETTINGS.map((group) => group.file))) {
       const groups = DOCS_SETTINGS.filter((group) => group.file === file);
       const text = read(file).replace(/\/\*[\s\S]*?\*\/|^\s*\/\/.*$/gm, '');
       const sliders = [...text.matchAll(/<Slider\s+label="([^"]+)"/g)].map((match) => match[1]!);
-      const titles = [...text.matchAll(/<CollapsibleSection\s+title="([^"]+)"/g)].map((m) => m[1]!);
+      const titles = [...text.matchAll(/<CollapsibleSection\s+title=(?:"([^"]+)"|\{title\})/g)].map(
+        (m) => m[1] ?? mainTitleOf(file),
+      );
       // The two patterns want the name as the tag's first prop: a tag written another way must fail here, not go unread.
       expect(text.match(/<(Slider|CollapsibleSection)\b/g) ?? [], file).toHaveLength(
         sliders.length + titles.length,

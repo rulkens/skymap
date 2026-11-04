@@ -4,6 +4,7 @@ import type { SiteShot } from '../../../packages/website/src/@types/SiteShot';
 import { readCanvas } from '../../utils/shot/readCanvas';
 import { openSiteShot } from './openSiteShot';
 import { shootElement } from './shootElement';
+import { shootMatte } from './shootMatte';
 import { shootPairedRemote } from './shootPairedRemote';
 
 // Typed as a person types, then long enough for the palette's results to land.
@@ -25,15 +26,16 @@ const MINIMAL_UI_CSS = [
 /**
  * The full-size PNG of one shot row, taken from the app at `base` in a page sized to the row:
  * its link and settings applied, then the canvas alone, or with `ui` the page, one element of it,
- * or a paired phone remote.
+ * or a paired phone remote. A `matte` row is drawn twice by shootMatte instead, and may bring its shadow.
  */
 export async function captureSiteShot(
   page: Page,
   base: string,
   shot: Pick<SiteShot, 'link' | 'query' | 'settings' | 'size'>,
-): Promise<Buffer> {
+): Promise<{ master: Buffer; shadow?: Buffer }> {
   await openSiteShot(page, base, shot);
-  if (shot.settings?.searchFor !== undefined && !shot.settings.remote) {
+  if (shot.settings?.matte) return shootMatte(page, shot);
+  if (shot.settings?.searchFor !== undefined) {
     await page.keyboard.press('/');
     await page.keyboard.type(shot.settings.searchFor, { delay: KEY_DELAY_MS });
     await page.waitForTimeout(RESULTS_SETTLE_MS);
@@ -46,7 +48,11 @@ export async function captureSiteShot(
   for (const key of shot.settings?.keys ?? []) await page.keyboard.press(key);
   if (shot.settings?.minimalUi) await page.addStyleTag({ content: MINIMAL_UI_CSS });
   // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
-  if (shot.settings?.remote) return shootPairedRemote(page, base, shot);
-  if (shot.settings?.element) return shootElement(page, shot.settings.element);
-  return shot.settings?.ui ? page.screenshot({ type: 'png' }) : readCanvas(page, 'png');
+  if (shot.settings?.remote) return { master: await shootPairedRemote(page, base, shot) };
+  if (shot.settings?.element) return { master: await shootElement(page, shot.settings.element) };
+  return {
+    master: shot.settings?.ui
+      ? await page.screenshot({ type: 'png' })
+      : await readCanvas(page, 'png'),
+  };
 }

@@ -1,7 +1,7 @@
 /**
  * PickDriverDeps — what `createPickDriver` needs. The store is structural so a
  * test hands in a real store without the engine; `state` is the engine's own
- * bag, read for the shared in-flight gate and the terrain-marker debug toggle.
+ * bag, read for the shared in-flight gate.
  */
 
 import type { RootState } from '../../../store/types';
@@ -18,6 +18,5 @@ export type PickDriverDeps = {
   readonly pickProgram: PickProgram;
   readonly resolvePick: SelectionResolver['resolvePick'];
   readonly canvas: { readonly clientWidth: number; readonly clientHeight: number };
-  readonly state: Pick<EngineState, 'picking' | 'settings' | 'viewRig'>;
-  readonly scheduler: { requestRender(): void };
+  readonly state: Pick<EngineState, 'picking'>;
 };

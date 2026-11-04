@@ -73,7 +73,7 @@
 }
 
 /* A phone has no room for three columns: each source stacks over its two cells, each cell named. */
-@media (max-width: 600px) {
+@media (--phone) {
   .root {
     & table,
     & tbody,

@@ -91,7 +91,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-picture-reuse',
     about: 'app',
-    text: 'No picture made with Skymap can be offered for unrestricted reuse today. Every frame with stars carries Gaia data, which is licensed for non-commercial use, and every picture below holds at least one source that states no licence at all. So ask us before you reuse one, and we will tell you whose terms apply and whom to ask.',
+    text: 'No picture made with Skymap is offered for unrestricted reuse today. Every frame with stars carries Gaia data, which is licensed for non-commercial use, and most pictures hold a source that states no licence at all. So ask us before you reuse one, and we will tell you whose terms apply and whom to ask.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: `the attributions file, ${IN_REPO}`,
     checked: '2026-10-07',

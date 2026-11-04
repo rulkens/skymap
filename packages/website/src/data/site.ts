@@ -11,3 +11,5 @@ import { toolPages } from '../../../../tools/utils/io/toolPages';
 export const SITE_MODE: 'preview' | 'live' = process.env.SKYMAP_SITE_MODE === 'live' ? 'live' : 'preview';
 export const INDEXABLE = SITE_MODE === 'live';
 export const BASE = INDEXABLE ? '/' : `/${toolPages.website}/`;
+/** The site's host, for an address printed outside a page (the press kit's fact sheet). */
+export const SITE_ORIGIN = 'https://skymap.rulkens.com';

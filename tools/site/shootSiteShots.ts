@@ -1,8 +1,9 @@
 /**
  * Take every picture in the website's shot manifest from a running app and
  * write it at the widths the pages use, AVIF and WebP, into the site's
- * committed assets. `npm run shot` cannot do this alone: a deep link carries no
- * settings, and most rows hide labels or switch a layer.
+ * committed public shots, each named with a hash of its bytes
+ * (utils/shotFileName.ts). `npm run shot` cannot do this alone: a deep link
+ * carries no settings, and most rows hide labels or switch a layer.
  *
  *   npm run site:shots -- --url http://localhost:5178 [--only id,id] [--from-masters]
  *   npm run site:shots -- --url <app> --try '<hash body>' [--settings '<json>'] [--size 1600x1000] [--query dome] [--name n] [--out dir]
@@ -11,7 +12,7 @@
  * `--try` takes one framing that is in no row and writes `<out>/<name>.png` (the temp folder by
  * default), as a row with those fields would come out, touching neither manifest nor assets.
  */
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -20,15 +21,15 @@ import { SITE_SHOTS } from '../../packages/website/src/data/siteShots';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { warnIfWrongCheckout } from '../utils/browser/warnIfWrongCheckout';
 import { SHOT_ENCODING } from './shotEncoding';
+import { SITE_SHOTS_DIR as OUT_DIR } from './SITE_SHOTS_DIR';
 import { captureSiteShot } from './utils/captureSiteShot';
 import { makeSiteOgCard } from './utils/makeSiteOgCard';
-import { openSiteShot } from './utils/openSiteShot';
 import { parseSize } from './utils/parseSize';
-import { shootMatte } from './utils/shootMatte';
+import { shotFileIndex } from './utils/shotFileIndex';
+import { shotFileName } from './utils/shotFileName';
 import { shotFrame } from './utils/shotFrame';
 
 const MASTERS_DIR = 'data/shots/site';
-const OUT_DIR = 'packages/website/src/assets/shots';
 const { dpr: DPR, avif: AVIF, webp: WEBP, denseWebp: DENSE_WEBP } = SHOT_ENCODING;
 
 const args = process.argv.slice(2);
@@ -54,18 +55,11 @@ if (tryLink !== undefined) {
   try {
     const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: DPR });
     const page = await context.newPage();
-    let master: Buffer;
-    if (settings.matte) {
-      await openSiteShot(page, base, shot);
-      const matte = await shootMatte(page, shot);
-      master = matte.master;
-      if (matte.shadow) {
-        await shotFrame(matte.shadow, settings.crop, DPR)
-          .png()
-          .toFile(file.replace(/\.png$/, '-shadow.png'));
-      }
-    } else {
-      master = await captureSiteShot(page, base, shot);
+    const { master, shadow } = await captureSiteShot(page, base, shot);
+    if (shadow) {
+      await shotFrame(shadow, settings.crop, DPR)
+        .png()
+        .toFile(file.replace(/\.png$/, '-shadow.png'));
     }
     await warnIfWrongCheckout(page);
     await shotFrame(master, settings.crop, DPR).png().toFile(file);
@@ -107,15 +101,9 @@ try {
       const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: dpr });
       try {
         const page = await context.newPage();
-        // A matte row is drawn twice (black, then white) by shootMatte; every other row is one capture.
-        if (shot.settings?.matte) {
-          await openSiteShot(page, base!, shot);
-          const { master: cutout, shadow } = await shootMatte(page, shot);
-          writeFileSync(master, cutout);
-          if (shadow) writeFileSync(shadowMaster, shadow);
-        } else {
-          writeFileSync(master, await captureSiteShot(page, base!, shot));
-        }
+        const { master: png, shadow } = await captureSiteShot(page, base!, shot);
+        writeFileSync(master, png);
+        if (shadow) writeFileSync(shadowMaster, shadow);
         if (warnCheckout) await warnIfWrongCheckout(page);
         warnCheckout = false;
       } catch (err) {
@@ -135,26 +123,27 @@ try {
     const outputs: [string, string][] = [[shot.id, master]];
     if (shot.settings?.shadow) outputs.push([`${shot.id}-shadow`, shadowMaster]);
     for (const [name, file] of outputs) {
-      // A row whose widths changed must not leave its old files behind.
-      for (const old of readdirSync(OUT_DIR)) {
-        if (/^(.+)-\d+\.(avif|webp)$/.exec(old)?.[1] === name) rmSync(join(OUT_DIR, old));
+      // A retake has new names, and a row whose widths changed must not leave its old files behind.
+      for (const [key, old] of Object.entries(shotFileIndex(readdirSync(OUT_DIR)))) {
+        if (/^(.+)-\d+\.\w+$/.exec(key)?.[1] === name) rmSync(join(OUT_DIR, old));
       }
       const sizes: string[] = [];
       const frame = shotFrame(file, shot.settings?.crop, dpr);
       const narrowest = Math.min(...shot.widths);
       for (const width of shot.widths) {
         const resized = frame.clone().resize({ width, kernel: 'lanczos3' });
-        const avif = join(OUT_DIR, `${name}-${width}.avif`);
         const denseQuality = width > narrowest ? shot.denseQuality : undefined;
-        await resized
+        const avif = await resized
           .clone()
           .avif({ ...AVIF, quality: denseQuality ?? AVIF.quality })
-          .toFile(avif);
-        await resized
+          .toBuffer();
+        const webp = await resized
           .clone()
           .webp(denseQuality === undefined ? WEBP : DENSE_WEBP)
-          .toFile(join(OUT_DIR, `${name}-${width}.webp`));
-        sizes.push(`${width}: ${Math.round(statSync(avif).size / 1024)} KB`);
+          .toBuffer();
+        writeFileSync(join(OUT_DIR, shotFileName(name, width, 'avif', avif)), avif);
+        writeFileSync(join(OUT_DIR, shotFileName(name, width, 'webp', webp)), webp);
+        sizes.push(`${width}: ${Math.round(avif.length / 1024)} KB`);
       }
       console.log(`${name}  ${sizes.join(' · ')} (AVIF)`);
     }

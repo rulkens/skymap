@@ -38,7 +38,6 @@ const initialState: CameraState = {
     // unit `spinAutoRotate` expects.
     rate: 0.000873,
   },
-  dragging: false,
   clip: null,
   frameTween: null,
   aim: null,
@@ -50,10 +49,6 @@ const cameraSlice = createSlice({
   name: 'camera',
   initialState,
   reducers: {
-    endDrag: (camera) => {
-      camera.dragging = false;
-    },
-
     // INVARIANT (R12b-3): every committed ABSOLUTE pose's orbit terms are
     // centre-looking; `lookOffset` turns only the view. The
     // pivot pin re-reads an absolute `target` as the pivot and re-derives the eye
@@ -122,17 +117,15 @@ const cameraSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // One atomic action, so a double-tap's focus fly (dispatched after its second
-    // press starts) is never cancelled by that press.
+    // A press cancels a focus fly. One atomic action, so a double-tap's fly
+    // (dispatched after its second press starts) is never cancelled by that press.
     builder.addCase(inputGestureStarted, (camera) => {
-      camera.dragging = true;
       camera.tween = null;
     });
   },
 });
 
 export const {
-  endDrag,
   commitCameraPose,
   startCameraTween,
   cancelCameraTween,

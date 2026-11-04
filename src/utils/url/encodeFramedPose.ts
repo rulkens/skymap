@@ -3,11 +3,13 @@
  * hash-param value, one leading arm-kind tag (`decodeFramedPose` is the
  * inverse). `String(n)` throughout — never `toFixed` — so a metre-scale
  * altitude round-trips exactly.
+ * Sky: k,<body>,<lonRad>,<latRad>,<azimuthRad>,<altitudeRad>
  */
 
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
-import { isBodyArm } from '../../services/engine/camera/rungs/isBodyArm';
-import { isSiteArm } from '../../services/engine/camera/rungs/isSiteArm';
+import { isBodyArm } from '../../services/engine/camera/arms/isBodyArm';
+import { isSiteArm } from '../../services/engine/camera/arms/isSiteArm';
+import { isSkyArm } from '../../services/engine/camera/arms/isSkyArm';
 
 export function encodeFramedPose(framed: FramedCameraPose): string {
   if (isBodyArm(framed)) {
@@ -19,6 +21,11 @@ export function encodeFramedPose(framed: FramedCameraPose): string {
     const { siteId, headingRad, elevationRad, rangeM } = framed.pose;
     // s,<siteId>,<headingRad>,<elevationRad>,<rangeM>
     return ['s', siteId, headingRad, elevationRad, rangeM].map(String).join(',');
+  }
+  if (isSkyArm(framed)) {
+    const { body, lonRad, latRad } = framed.frame.sky;
+    const { azimuthRad, altitudeRad } = framed.pose;
+    return ['k', body, lonRad, latRad, azimuthRad, altitudeRad].map(String).join(',');
   }
   const { target, yaw, pitch, distance, roll, lookOffset } = framed.pose;
   // a,<target×3>,<yaw>,<pitch>,<distance>,<roll>[,<lookYaw>,<lookPitch>]

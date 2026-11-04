@@ -17,7 +17,7 @@ import { latchSurfaceGesture } from '../../utils/camera/latchSurfaceGesture';
 import { settledDragPose } from '../../utils/camera/settledDragPose';
 import { surfaceZoomStep } from '../../utils/camera/surfaceZoomStep';
 
-/** The body rung's empty memory. */
+/** The body arm's empty memory. */
 export const EMPTY_SURFACE_GESTURE_MEMORY: SurfaceGestureMemory = { gesture: null };
 
 export function surfaceStep(

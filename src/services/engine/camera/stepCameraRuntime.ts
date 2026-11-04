@@ -15,7 +15,7 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
-import type { RungCtx } from '../../../@types/camera/RungCtx';
+import type { CameraArmCtx } from '../../../@types/camera/CameraArmCtx';
 import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
 
@@ -29,10 +29,10 @@ import { easedShiftNdc } from '../../../utils/camera/easedShiftNdc';
 import { shiftedFrustum } from '../../../utils/camera/shiftedFrustum';
 import { ridesWheelTarget } from './ridesWheelTarget';
 import { releasedWorldArm } from './releasedWorldArm';
-import { frameKey } from './rungs/frameKey';
-import { nudgeRung } from './rungs/nudgeRung';
-import { rowFor } from './rungs/rowFor';
-import { isWorldArm } from './rungs/isWorldArm';
+import { frameKey } from './arms/frameKey';
+import { nudgeCameraArm } from './arms/nudgeCameraArm';
+import { rowFor } from './arms/rowFor';
+import { isWorldArm } from './arms/isWorldArm';
 import { resolveFrameBasis } from './resolveFrameBasis';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './cameraFraming';
 import { projectFramePose } from '../frame/projectFramePose';
@@ -45,6 +45,7 @@ import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import { focusMoveDurationMs } from './focusMoveDurationMs';
+import { selectGestureHeld } from '../../../state/input/selectors';
 import cameraReducer, {
   cancelCameraTween,
   clearFrameTween,
@@ -140,10 +141,10 @@ export function stepCameraRuntime(
   // `stored`, not the post-replay snapshot: the replay runs before that exists,
   // and no action it emits writes `tuning`, so the two readings are identical.
   const tuning = stored.camera.tuning;
-  // Every rung field but the up-basis. The replay and the produce run BEFORE
+  // Every arm field but the up-basis. The replay and the produce run BEFORE
   // this frame's basis resolves, so they read the previous frame's; the fold
   // reads this frame's. One shared value would move the settle trace.
-  const rungFields = {
+  const armFields = {
     bodies,
     poseBasis,
     focusBodyId: selectionDriver(focus)?.poseId ?? null,
@@ -154,7 +155,7 @@ export function stepCameraRuntime(
     tuning,
     terrainHeightAt,
   };
-  const replayCtx: RungCtx = { ...rungFields, upBasis: prev.outputs.upBasis };
+  const replayCtx: CameraArmCtx = { ...armFields, upBasis: prev.outputs.upBasis };
 
   const drained = replayInput(
     {
@@ -174,9 +175,9 @@ export function stepCameraRuntime(
       navOwns: isNavigatorDriverId(winnerLastFrame),
     },
   );
-  // The drivers must see this frame's commits (`endDrag` above all, or
-  // `orbitDrag` wins one frame too long). Identity on a steady frame, so a
-  // memoised selector keyed on the root object keeps its cache.
+  // The drivers must see this frame's commits: a release's `base` is the pose
+  // the resting row holds. Identity on a steady frame, so a memoised selector
+  // keyed on the root object keeps its cache.
   const rootState =
     drained.actions.length === 0
       ? stored
@@ -185,7 +186,8 @@ export function stepCameraRuntime(
   // nudge a skymap drag. `canvasPx` is CSS pixels, so the rate is the drag's own.
   const navigates = drivers.some((d) => isNavigatorDriverId(d.id));
   // The hold follows the gesture, not its motion: a still press eases a coast to rest.
-  const navHeld = navigates && rootState.camera.dragging;
+  const gestureHeld = selectGestureHeld(rootState);
+  const navHeld = navigates && gestureHeld;
   const nav = stepNavigator(
     prev.navigator,
     navigates ? drained.navSteps : [],
@@ -198,7 +200,7 @@ export function stepCameraRuntime(
   const { pose: register, tilt } =
     Object.keys(nav.delta).length === 0
       ? { pose: drained.register, tilt: drained.tilt }
-      : nudgeRung(drained.register, drained.tilt, nav.delta, replayCtx);
+      : nudgeCameraArm(drained.register, drained.tilt, nav.delta, replayCtx);
   const actions: UnknownAction[] = [...orientationActions, ...drained.actions];
   // Where `next.base`'s fold picks up below — everything before this index is
   // already folded into `rootState.camera`.
@@ -267,6 +269,7 @@ export function stepCameraRuntime(
       simDays,
       projection,
       bodies,
+      terrainHeightAt,
       followDistanceTarget: drained.followDistanceTarget,
     },
     // Same status a tween or clip has: an outside commit delivers the framing
@@ -307,7 +310,7 @@ export function stepCameraRuntime(
   // still draws it while the commit lands, so a dolly zoom never snaps back.
   const drawnLens = lens ?? prev.drivenLens ?? projection.fovYRad;
   if (lens === undefined && prev.drivenLens !== null) actions.push(setLens(prev.drivenLens));
-  const foldCtx: RungCtx = { ...rungFields, upBasis };
+  const foldCtx: CameraArmCtx = { ...armFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.
   const projected = projectFramePose({
@@ -318,13 +321,14 @@ export function stepCameraRuntime(
     follow: memory,
     tilt,
     intent: rootState.camera,
+    gestureHeld,
     ctx: foldCtx,
   });
   actions.push(...projected.actions);
 
   // The gesture memory belongs to the arm it was taken on, so a crossing voids
   // it — inert today, because only the fold re-keys the register and it is
-  // skipped whole while `intent.dragging`, never between a latch and its
+  // skipped whole while `gestureHeld`, never between a latch and its
   // release. The identity keep needs BOTH halves: an already-empty value under
   // a changed key must still re-key, or the wipe re-fires every frame.
   const gestureKey = frameKey(projected.register.frame);

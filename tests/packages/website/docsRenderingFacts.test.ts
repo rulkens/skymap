@@ -13,9 +13,9 @@ const one = (file: string, name: string): number => sourceNumbers(file, name)[0]
 const text = (id: string): string => fact(id).text;
 const grouped = (n: number): string => n.toLocaleString('en');
 
-const LOD = 'src/data/galaxyLodBands.ts';
-const TILES = 'src/data/bodies/surfaceTileParams.ts';
-const SHELL = 'src/layers/body/render/atmosphereShellRenderer.ts';
+const LOD = 'src/layers/galaxyCatalog/lod/data/galaxyLodBands.ts';
+const TILES = 'src/layers/body/surfaceTiles/format/data/surfaceTileParams.ts';
+const SHELL = 'src/layers/body/atmosphere/render/atmosphereShellRenderer.ts';
 const SLABS = 'src/services/engine/frame/slabs.ts';
 const STARS = 'src/data/octree/octreeFormat.ts';
 // One megaparsec in metres, to the figures a rounded sentence needs.
@@ -42,7 +42,7 @@ describe('rendering rows and the constants behind them', () => {
     expect(one('src/layers/zoneOfAvoidance/layer.ts', 'scale')).toBe(5);
     expect(row).toContain('the Zone of Avoidance band at a fifth');
     expect(
-      one('src/layers/starCatalog/render/starAggregatesTarget.ts', 'STAR_AGGREGATE_DIVISOR'),
+      one('src/layers/starCatalog/survey/render/starAggregatesTarget.ts', 'STAR_AGGREGATE_DIVISOR'),
     ).toBe(4);
     expect(row).toContain('distant stars at a quarter');
   });
@@ -72,9 +72,9 @@ describe('rendering rows and the constants behind them', () => {
     expect(tables).toContain(`(${by(sourceNumbers(SHELL, 'MULTI_SCATTER_LUT_SIZE'))})`);
     expect(tables).toContain(`at ${by(sourceNumbers(SHELL, 'SKY_VIEW_LUT_SIZE'))},`);
     expect(tables).toContain(
-      `or ${by(sourceNumbers('src/layers/body/present/skyViewLutSizeByTier.ts', 'small'))} at the small data size`,
+      `or ${by(sourceNumbers('src/layers/body/atmosphere/data/skyViewLutSizeByTier.ts', 'small'))} at the small data size`,
     );
-    const haze = 'src/layers/body/present/froxelVolume.ts';
+    const haze = 'src/layers/body/atmosphere/data/froxelVolume.ts';
     const aerial = text('render-aerial');
     expect(aerial).toContain(`${by(sourceNumbers(haze, 'FROXEL_DIMS'))} cells`);
     expect(aerial).toContain(`one layer every ${one(haze, 'FROXEL_SLICE_KM')} kilometres`);
@@ -82,7 +82,10 @@ describe('rendering rows and the constants behind them', () => {
 
   it('a ground patch, its heights and the two atlases', () => {
     const cells = one(TILES, 'SURFACE_TILE_MESH_RESOLUTION');
-    const posts = one('src/data/scene/heightTileFormat.ts', 'HEIGHT_POSTS_PER_TILE');
+    const posts = one(
+      'src/layers/body/surfaceTiles/format/data/heightTileFormat.ts',
+      'HEIGHT_POSTS_PER_TILE',
+    );
     const terrain = text('render-terrain');
     expect(terrain).toContain(`${cells} by ${cells} cells`);
     expect(terrain).toContain(`${posts} by ${posts} posts`);
@@ -99,7 +102,7 @@ describe('rendering rows and the constants behind them', () => {
     );
     const lens = text('render-lens');
     expect(lens).toContain(
-      `For ${one('src/layers/blackHoles/render/blackHoleLensingRenderer.ts', 'LUT_SAMPLE_COUNT')} rays`,
+      `For ${one('src/layers/blackHoles/lensing/render/blackHoleLensingRenderer.ts', 'LUT_SAMPLE_COUNT')} rays`,
     );
     expect(lens).toContain(
       `in ${one('src/services/gpu/shaders/bodies/blackHoleLensing/fragment.wesl', 'MARCH_STEPS')} steps`,
@@ -121,7 +124,7 @@ describe('rendering rows and the constants behind them', () => {
 
   it('rows of galaxies taken in one frame', () => {
     const budget = one(
-      'src/layers/galaxyCatalog/subsystems/diskPlannerWalk.ts',
+      'src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk.ts',
       'DISK_ROW_ACCEPT_BUDGET',
     );
     expect(text('render-cpu-galaxies')).toContain(`at most ${grouped(budget)} rows`);

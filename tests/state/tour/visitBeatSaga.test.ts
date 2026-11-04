@@ -108,7 +108,7 @@ const STRUCTURES: StructureRowFixture = {
 const milkyWayClip: ClipData = flyAndFocusOnClip(focusId('milkyWay'));
 const milkyWayBeat: BeatData = {
   enterClip: milkyWayClip,
-  caption: { title: 'Our galaxy' },
+  caption: { title: 'Our galaxy', lines: ['x'] },
   dwellClip: dwellDrift(5),
 };
 
@@ -120,7 +120,7 @@ const narrationClip: ClipData = { start: 'live', timeline: [] };
 const structureClip: ClipData = flyAndFocusOnClip(focusId('galaxy-cluster-virgo'));
 const structureBeat: BeatData = {
   enterClip: structureClip,
-  caption: { title: 'Virgo Cluster' },
+  caption: { title: 'Virgo Cluster', lines: ['x'] },
   dwellClip: dwellDrift(3),
 };
 
@@ -208,7 +208,7 @@ describe('visitBeatSaga', () => {
 
     const famousBeat: BeatData = {
       enterClip: flyAndFocusOnClip(focusId(FAMOUS_ID)),
-      caption: { title: 'M87' },
+      caption: { title: 'M87', lines: ['x'] },
       dwellClip: dwellDrift(3),
     };
 
@@ -426,7 +426,10 @@ describe('visitBeatSaga', () => {
     const playClipMock = flyThenBlockingDrift(true);
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
 
-    const clipLessBeat: BeatData = { caption: { title: 'Still here' }, dwellClip: dwellDrift(5) };
+    const clipLessBeat: BeatData = {
+      caption: { title: 'Still here', lines: ['x'] },
+      dwellClip: dwellDrift(5),
+    };
     sagaMiddleware.run(visitBeatSaga, clipLessBeat, 1);
 
     await flush();
