@@ -11,19 +11,19 @@ import type { CameraArmCtx } from './CameraArmCtx';
 import type { HostBody } from './HostBody';
 import type { TiltMemory } from './TiltMemory';
 
-/** One rung's table row: its kind, how to resolve its current host body, its empty memory, its channel pair, its input step and its nudge. */
+/** One arm's table row: its kind, how to resolve its current host body, its empty memory, its channel pair, its input step and its nudge. */
 export type CameraArmRow<K extends CameraArmKind> = {
   readonly kind: K;
   /** What the frame tag's value names, for `frameKey`: '' for the world arm, else the body or site id. */
   identity(frame: FrameOf[K]): string;
   host(frame: FrameOf[K], ctx: CameraArmBasisCtx): HostBody | null;
-  /** How a clip's four animation channels read in this rung's frame. */
+  /** How a clip's four animation channels read in this arm's frame. */
   readonly channels: CameraArmChannels<K>;
-  /** Rung-local gesture memory; the runtime wipes it when `frameKey` changes. */
+  /** Arm-local gesture memory; the runtime wipes it when `frameKey` changes. */
   readonly emptyMemory: MemOf[K];
   /**
-   * One input step in this rung's own frame, gesture edges included. A step the
-   * rung declines — an unhandled kind, or a notch its floors eat whole —
+   * One input step in this arm's own frame, gesture edges included. A step the
+   * arm declines — an unhandled kind, or a notch its floors eat whole —
    * returns `framed.pose` BY REFERENCE; the drain's at-rest notch commit reads
    * that identity as "nothing moved". `tilt` rides beside `memory`
    * rather than inside it: it is keyed by HOST, not by frame (spec §3-P4), so a
@@ -37,8 +37,8 @@ export type CameraArmRow<K extends CameraArmKind> = {
     ctx: CameraArmCtx,
   ): { readonly pose: PoseOf[K]; readonly memory: MemOf[K]; readonly tilt: TiltMemory };
   /**
-   * One frame's pixel-free motion in this rung's own frame, at the equivalent
-   * drag's rate. A delta the rung ignores entirely returns `framed.pose` BY
+   * One frame's pixel-free motion in this arm's own frame, at the equivalent
+   * drag's rate. A delta the arm ignores entirely returns `framed.pose` BY
    * REFERENCE, the same identity rule as `step`.
    */
   nudge(

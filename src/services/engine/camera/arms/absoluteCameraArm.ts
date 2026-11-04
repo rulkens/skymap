@@ -1,4 +1,4 @@
-/** The world arm's row — the ladder's floor: nothing to climb to, and no host body its numbers hang off. */
+/** The world arm's row — the arm tree's floor: nothing to climb to, and no host body its numbers hang off. */
 import type { CameraArmRow } from '../../../../@types/camera/CameraArmRow';
 import { absoluteArm } from '../../../../utils/camera/absoluteArm';
 import { nudgedWorldPose } from '../../../../utils/camera/nudgedWorldPose';

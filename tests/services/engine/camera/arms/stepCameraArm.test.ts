@@ -1,5 +1,5 @@
 /**
- * stepRung — the ladder's band tests (spec §2.5, §12-R2). Every fixture places
+ * stepCameraArm — the arm tree's band tests (spec §2.5, §12-R2). Every fixture places
  * a body at the Mpc origin with the identity orientation, so the eye's
  * distance from the body is just its own magnitude and `h/R` follows from
  * `SCENE_CELESTIAL_BODIES`' `surface.datumRadiusM` directly — no Earth-typed
@@ -98,7 +98,7 @@ function ctxFor(
   };
 }
 
-describe('stepRung', () => {
+describe('stepCameraArm', () => {
   it('engages the nearest body below the engage threshold', () => {
     const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('earth'), bodyStateAtOrigin()],
@@ -229,7 +229,7 @@ describe('stepRung', () => {
     });
   });
 
-  it("a focus in the rung's host subtree keeps the rung while the arm can serve it", () => {
+  it("a focus in the arm's host subtree keeps the arm while it can serve it", () => {
     // Spec §0's premise correction: releasing on any differing focus made the
     // Mars arm unreachable with a rover focused. The eye is a fraction of a
     // planet radius up OVER Curiosity's site — far outside the site band, so
@@ -267,14 +267,14 @@ describe('stepRung', () => {
     ).toBe('absolute');
   });
 
-  it('stepRung moves at most one rung per call', () => {
+  it('stepCameraArm moves at most one arm per call', () => {
     const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('earth'), bodyStateAtOrigin()],
     ]);
     const world = worldArm(eyeAt(EARTH_RADIUS_M, TUNING.engageHR * 0.1));
     const next = stepCameraArm(world, ctxFor(bodyStates, null));
-    // Deep inside the band, and still only the rung hanging off the one we
-    // started on: a third rung must not be reachable in a single call, or the
+    // Deep inside the band, and still only the arm hanging off the one we
+    // started on: a third arm must not be reachable in a single call, or the
     // descent skips the frame the crossing commit is drawn on.
     if (next === 'absolute') throw new Error('expected an engage deep inside the band');
     expect(climbRowFor(next).parent).toBe(cameraArmKindOf(world.frame));

@@ -1,5 +1,5 @@
 /**
- * The ladder's single thrower. A rung is only ever entered for a body the
+ * The arm tree's single thrower. An arm is only ever entered for a body the
  * roster resolved, so an unresolved host is unreachable by construction and a
  * silent fallback would teleport the camera.
  */

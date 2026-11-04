@@ -1,5 +1,5 @@
 /**
- * The regime step (spec §2.5): a frame at most ONE rung away (§2.6.4). The tag
+ * The regime step (spec §2.5): a frame at most ONE arm away (§2.6.4). The tag
  * IS the regime, so hysteresis needs no memory — which cell gets asked already
  * encodes which side of the band the camera is on.
  */

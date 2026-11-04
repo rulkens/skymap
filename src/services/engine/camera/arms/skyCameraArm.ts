@@ -1,5 +1,5 @@
 /**
- * The sky rung's row (spec §4): a person standing SKY_EYE_HEIGHT_M above the
+ * The sky arm's row (spec §4): a person standing SKY_EYE_HEIGHT_M above the
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
  * enters it (`engage` is null), and this slice authors no input: `step` and
  * `nudge` decline by reference until sky mode fills them.
@@ -24,7 +24,7 @@ export const skyCameraArm: ClimbRow<'sky'> = {
     // The tag names the spot, so `target` and `distance` carry nothing, as at a site.
     encode: (world, frame, ctx) => {
       const framed = refoldTo({ frame: 'absolute', pose: world }, frame, ctx);
-      if (!isSkyArm(framed)) throw new Error('skyRung: refoldTo did not land the sky frame');
+      if (!isSkyArm(framed)) throw new Error('skyCameraArm: refoldTo did not land the sky frame');
       return {
         target: [0, 0, 0],
         yaw: framed.pose.azimuthRad,

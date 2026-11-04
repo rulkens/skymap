@@ -1,5 +1,5 @@
 /**
- * The site rung's row (spec §4): THE one place the site registries are read,
+ * The site arm's row (spec §4): THE one place the site registries are read,
  * everything below taking them as arguments. `host` answers the site's PLANET,
  * which keeps the remembered tilt alive across a world → body → site descent.
  */
@@ -33,13 +33,13 @@ function siteRowOf(id: PositionedId): SurfaceFixedSite | null {
 /** A frame is only ever entered for a site `engage` resolved, so a miss is unreachable. */
 function siteRowOrThrow(id: SceneBodyId): SurfaceFixedSite {
   const site = siteRowOf(id);
-  if (site === null) throw new Error(`siteRung: body '${id}' has no surfaceFixed driver`);
+  if (site === null) throw new Error(`siteCameraArm: body '${id}' has no surfaceFixed driver`);
   return site;
 }
 
 /** The bounding sphere the band and the floors are rated in — the SCENE seed's, never the bake's. */
 function meshBodyOf(id: SceneBodyId): MeshBody {
-  return findByIdOrThrow(SCENE_MESH_BODIES, id, 'siteRung');
+  return findByIdOrThrow(SCENE_MESH_BODIES, id, 'siteCameraArm');
 }
 
 export const siteCameraArm: ClimbRow<'site'> = {
@@ -48,11 +48,11 @@ export const siteCameraArm: ClimbRow<'site'> = {
   emptyMemory: null,
 
   channels: {
-    // World channels in, per prep's signature; the descent is the ladder's own,
-    // so a rung inserted between body and site is picked up here for free.
+    // World channels in, per prep's signature; the descent is the arm tree's own,
+    // so an arm inserted between body and site is picked up here for free.
     encode: (world, frame, ctx) => {
       const framed = refoldTo({ frame: 'absolute', pose: world }, frame, ctx);
-      if (!isSiteArm(framed)) throw new Error('siteRung: refoldTo did not land the site frame');
+      if (!isSiteArm(framed)) throw new Error('siteCameraArm: refoldTo did not land the site frame');
       const pose = framed.pose;
       return {
         target: [0, 0, 0],
@@ -92,7 +92,7 @@ export const siteCameraArm: ClimbRow<'site'> = {
         ctx.fovYRad,
       ),
       memory,
-      // Keyed by HOST, and this rung authors no tilt: the slot rides through.
+      // Keyed by HOST, and this arm authors no tilt: the slot rides through.
       tilt,
     };
   },

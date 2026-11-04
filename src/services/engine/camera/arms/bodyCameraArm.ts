@@ -2,7 +2,7 @@
  * The body arm's row. Its climb pair IS `toWorldArm` / `toBodyArm`, called
  * where they live so the graze rule and the Mpc↔metre seam stay one derivation
  * (`poseFrameConversion.ts`, spec §5.1). `host` answers null rather than
- * throwing — `hostOrThrow` is the ladder's single thrower. The band cells read
+ * throwing — `hostOrThrow` is the arm tree's single thrower. The band cells read
  * geometry AND focus, never a stored flag: hysteresis falls out of which cell
  * is asked, `engage` from the parent and `release` from this arm, so a body a
  * differing focus would release next frame is never entered either.

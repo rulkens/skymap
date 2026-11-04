@@ -1,5 +1,5 @@
 /**
- * siteRung — the third rung as the ladder sees it (spec §4.3-§4.7). The
+ * siteCameraArm — the third arm as the arm tree sees it (spec §4.3-§4.7). The
  * conversions are pinned one level down (`sitePoseToBodyArm` / `…FromBodyArm`);
  * what can fail HERE is a cell reading the wrong registry, radius or band edge.
  */
@@ -38,11 +38,11 @@ const BODIES = deriveBodyStates(CONST_J2000);
 const SITE_ID = asSurfaceSiteId('curiosity');
 const SITE_FRAME: FrameOf['site'] = { site: SITE_ID };
 const MARS_FRAME: FrameOf['body'] = { body: asSceneBodyId('mars') };
-const SITE = findByIdOrThrow(SURFACE_FIXED_SITES, SITE_ID, 'siteRung.test');
-const ROVER = findByIdOrThrow(SCENE_MESH_BODIES, SITE_ID, 'siteRung.test');
-const MARS_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'siteRung.test').surface
+const SITE = findByIdOrThrow(SURFACE_FIXED_SITES, SITE_ID, 'siteCameraArm.test');
+const ROVER = findByIdOrThrow(SCENE_MESH_BODIES, SITE_ID, 'siteCameraArm.test');
+const MARS_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'siteCameraArm.test').surface
   .datumRadiusM;
-/** The baked ground radius under Curiosity (F4) — what the rung anchors on now. */
+/** The baked ground radius under Curiosity (F4) — what the arm anchors on now. */
 const SITE_GROUND_R_M = siteGroundRadiusM(SITE, MARS_R_M);
 const ROW = CAMERA_ARMS.site;
 
@@ -83,7 +83,7 @@ const INSIDE = bandRange(siteEngageR * 0.5);
 const BETWEEN = bandRange((siteEngageR + siteDisengageR) / 2);
 const OUTSIDE = bandRange(siteDisengageR * 1.5);
 
-describe('the site rung in the ladder', () => {
+describe('the site arm in the arm tree', () => {
   it('anchors the host arm on the baked ground, where the rover is drawn', () => {
     const ctx = ctxFor(SITE_ID);
     const arm = ROW.toParent({ frame: SITE_FRAME, pose: FIXTURES[0]! }, ctx).pose;
@@ -123,7 +123,7 @@ describe('the site rung in the ladder', () => {
     const channels = ROW.channels.encode(world.pose as CameraPose, SITE_FRAME, ctx);
 
     // The tag names the site, so the point is redundant — an authored target
-    // would be a second, silently disagreeing statement of where the rung is.
+    // would be a second, silently disagreeing statement of where the arm is.
     expect(channels.target).toEqual([0, 0, 0]);
     expect(channels.yaw).toBeCloseTo(start.headingRad, 5);
     expect(channels.pitch).toBeCloseTo(start.elevationRad, 5);
@@ -139,15 +139,15 @@ describe('the site rung in the ladder', () => {
 
   it('the site band is hysteretic', () => {
     const ctx = ctxFor(SITE_ID);
-    // A pose parked BETWEEN the two edges keeps whichever rung it arrived in;
-    // without that gap the rung thrashes every frame.
+    // A pose parked BETWEEN the two edges keeps whichever arm it arrived in;
+    // without that gap the arm thrashes every frame.
     expect(ROW.engage(armAt(INSIDE), ctx)).toEqual(SITE_FRAME);
     expect(ROW.engage(armAt(BETWEEN), ctx)).toBeNull();
     expect(ROW.release({ frame: SITE_FRAME, pose: pose(0.4, 0.3, BETWEEN) }, ctx)).toBe(false);
     expect(ROW.release({ frame: SITE_FRAME, pose: pose(0.4, 0.3, OUTSIDE) }, ctx)).toBe(true);
   });
 
-  it('an orbit-driven mesh body never engages the site rung', () => {
+  it('an orbit-driven mesh body never engages the site arm', () => {
     // The non-goal (§1), enforced by the driver kind rather than by a list:
     // Voyager 1 is metres across and would be well inside the band.
     expect(ROW.engage(armAt(INSIDE), ctxFor(asSceneBodyId('voyager1')))).toBeNull();

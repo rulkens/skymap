@@ -19,7 +19,7 @@ import { isWorldArm } from './isWorldArm';
 import { cameraArmKindOf } from './cameraArmKindOf';
 import { sameFrame } from './sameFrame';
 
-/** Rungs to the world arm, off the rows' own `parent` so a new rung needs no line. */
+/** Arms to the world arm, off the rows' own `parent` so a new arm needs no line. */
 function rungDepth(kind: CameraArmKind): number {
   return kind === 'absolute' ? 0 : rungDepth(CAMERA_ARMS[kind].parent) + 1;
 }
@@ -44,8 +44,8 @@ export function refoldTo(
   }
   // Only a target strictly deeper than the source reaches here, so it has a
   // parent to descend from — and the recursion lands that parent in exactly the
-  // frame the row's `fromParent` declares. Both are the ladder's own narrowing
-  // (§2.6.3), one rung up, and neither is a fact the values' types can carry.
+  // frame the row's `fromParent` declares. Both are the arm tree's own narrowing
+  // (§2.6.3), one arm up, and neither is a fact the values' types can carry.
   const child = target as FrameOf[ClimbableKind];
   const parent = refoldTo(framed, parentFrameOf(child, ctx), ctx);
   return climbRowFor(child).fromParent(parent as FramedPose<ParentOf[ClimbableKind]>, child, ctx);

@@ -1,5 +1,5 @@
 /**
- * hostOf / hostOrThrow — the ladder's one host failure policy (spec §2.5):
+ * hostOf / hostOrThrow — the arm tree's one host failure policy (spec §2.5):
  * null or throw, never a fallback body, because a fallback teleports the camera.
  */
 

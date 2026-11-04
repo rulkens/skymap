@@ -1,7 +1,7 @@
 /**
  * rowFor / climbRowFor — the table's only narrowing (spec §2.6.3). The two `as`
  * expressions are the one thing the compiler cannot check, so a mis-keyed table
- * would dispatch a frame to the wrong rung in silence; keying each answered
+ * would dispatch a frame to the wrong arm in silence; keying each answered
  * row's own `kind` against `rungKindOf` is what catches that.
  */
 

@@ -1,5 +1,5 @@
 /**
- * skyRung — a standing eye tagged by its spot. What can fail: the eye leaving
+ * skyCameraArm — a standing eye tagged by its spot. What can fail: the eye leaving
  * the live ground, the horizon tipping, the azimuth lost at the zenith/nadir or
  * at a polar spot, and a decline that hands back a fresh object.
  */
@@ -30,7 +30,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const EARTH = asSceneBodyId('earth');
-const R_EARTH_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'earth', 'skyRung.test').surface
+const R_EARTH_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'earth', 'skyCameraArm.test').surface
   .datumRadiusM;
 const TERRAIN_M = 120;
 const ROW = CAMERA_ARMS.sky;
@@ -76,7 +76,7 @@ const roundTrip = (start: FramedPose<'sky'>) => {
   return ROW.fromParent(ROW.toParent(start, ctx), start.frame, ctx).pose;
 };
 
-describe('the sky rung', () => {
+describe('the sky arm', () => {
   it('toParent then fromParent returns the pose', () => {
     for (const altitudeRad of [-Math.PI / 2, -0.5, 0, 0.7, Math.PI / 2]) {
       const back = roundTrip(framed(AZ, altitudeRad));

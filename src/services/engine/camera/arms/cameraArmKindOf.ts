@@ -1,5 +1,5 @@
 /** The one reader of `PoseFrame`'s spelling: the bare string names the world arm;
- *  every other tag is `{ [kind]: value }`, and the value is that rung's identity. */
+ *  every other tag is `{ [kind]: value }`, and the value is that arm's identity. */
 import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
 import type { CameraArmKind } from '../../../../@types/camera/CameraArmKind';
 

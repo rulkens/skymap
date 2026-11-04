@@ -1,5 +1,5 @@
 /**
- * bodyRung.host's `groundRadiusAtM` closure — the ground-collision row's
+ * bodyCameraArm.host's `groundRadiusAtM` closure — the ground-collision row's
  * source (F3a, spec §8.3). What can fail here is silent: a swapped operand or
  * a hardcoded body id reads a plausible but wrong number, never an error.
  */
@@ -20,9 +20,9 @@ import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);
-const EARTH_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'earth', 'bodyRung.test').surface
+const EARTH_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'earth', 'bodyCameraArm.test').surface
   .datumRadiusM;
-const MARS_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'bodyRung.test').surface
+const MARS_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'bodyCameraArm.test').surface
   .datumRadiusM;
 const MARS_ID = asSceneBodyId('mars');
 const EARTH_ID = asSceneBodyId('earth');
@@ -31,7 +31,7 @@ function ctxWith(terrainHeightAt: TerrainHeightAtLookup): CameraArmBasisCtx {
   return { bodies: BODIES, poseBasis: B, upBasis: B, terrainHeightAt };
 }
 
-describe("bodyRung.host's groundRadiusAtM", () => {
+describe("bodyCameraArm.host's groundRadiusAtM", () => {
   it('queries the lookup with the host it was built for, not a fixed body id', () => {
     const seen: SceneBodyId[] = [];
     const terrainHeightAt: TerrainHeightAtLookup = (bodyId) => {
@@ -46,12 +46,12 @@ describe("bodyRung.host's groundRadiusAtM", () => {
   });
 });
 
-describe("bodyRung.host's relief shells", () => {
+describe("bodyCameraArm.host's relief shells", () => {
   // Asserted against the DECLARED relief, not against the two helpers that
   // compute them — a swapped pair type-checks clean and would make a ray pick
   // march between the wrong two spheres, silently.
   it('brackets the datum with the body’s own declared relief', () => {
-    const earth = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'earth', 'bodyRung.test').surface;
+    const earth = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'earth', 'bodyCameraArm.test').surface;
     const host = bodyCameraArm.host(
       { body: EARTH_ID },
       ctxWith(() => 0),

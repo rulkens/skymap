@@ -1,5 +1,5 @@
 /**
- * The rung table (spec §2.4): a new rung is a new `RungKind` key plus its row.
+ * The arm table (spec §2.4): a new arm is a new `CameraArmKind` key plus its row.
  * Getters, not fields: a row reaches back up through `hostOrThrow` → `rowFor`
  * → here, so a field read would freeze `undefined` into the table whenever a
  * row module is the import cycle's entry.

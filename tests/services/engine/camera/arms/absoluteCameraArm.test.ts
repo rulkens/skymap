@@ -43,7 +43,7 @@ const FRAMED: FramedPose<'absolute'> = {
   },
 };
 
-describe('absoluteRung', () => {
+describe('absoluteCameraArm', () => {
   it('a zoom nudge is the wheel step of the same factor, roll ride included', () => {
     const z = 0.3;
     const stepped = absoluteCameraArm.step(

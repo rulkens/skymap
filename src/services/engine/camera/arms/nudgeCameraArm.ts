@@ -1,4 +1,4 @@
-/** One frame's pixel-free motion through the rung that owns `framed`'s frame — `nudge` as the drain's `stepRow` reads `step`. */
+/** One frame's pixel-free motion through the arm that owns `framed`'s frame — `nudge` as the drain's `stepRow` reads `step`. */
 
 import type { ArmDelta } from '../../../../@types/camera/ArmDelta';
 import type { FramedPose } from '../../../../@types/camera/FramedPose';

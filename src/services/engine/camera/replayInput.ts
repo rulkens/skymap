@@ -227,7 +227,7 @@ export function replayInput(
         // A follow row re-asserts its own target every frame and would swallow
         // a committed base, so its notch is resolved to a distance the driver
         // adopts; a second notch in the same drain resolves off the first.
-        // Read ABOVE the arm in EITHER arm: a notch handed to an arm the owed
+        // Read ABOVE the arm's step, whichever arm: a notch handed to an arm the owed
         // approach overwrites is simply lost (the world arm reached this lane
         // through `stepRegister`'s own at-rest decline, so its order stands).
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;

@@ -5,7 +5,7 @@ import type { CameraTuning } from './CameraTuning';
 import type { PositionedId } from '../scene/PositionedId';
 import type { ViewFrustum } from './ViewFrustum';
 
-/** `RungBasisCtx` plus the gesture-time fields only `engage`/`release`/`step`/`stepRung` need. */
+/** `CameraArmBasisCtx` plus the gesture-time fields only `engage`/`release`/`step`/`stepCameraArm` need. */
 export type CameraArmCtx = CameraArmBasisCtx & {
   readonly focusBodyId: PositionedId | null;
   readonly pivot: PivotFraming;

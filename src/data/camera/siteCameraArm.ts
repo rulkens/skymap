@@ -1,4 +1,4 @@
-/** The site rung's fixed floors (spec §4.5); deliberately sliderless. */
+/** The site arm's fixed floors (spec §4.5); deliberately sliderless. */
 
 export const SITE_CAMERA_ARM: {
   readonly eyeFloorBoundingRadii: number;
