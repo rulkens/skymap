@@ -49,17 +49,20 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 
 A module's `utils/` is flat: one function per file, no `<area>` subfolders unless it passes the cap. A non-contract type lives in the `@types/` of the module that produces its values; sibling modules import it from there, and it never sits in the root `@types/`. A module whose role folder outgrows 15 files splits into sub-modules, each with its own role folders. A root folder over the cap (`bodies/`, `sources/`, `exhibits/`) groups its leaves in subfolders (`bodies/planets/`, `bodies/moons/`), still imported by the composition root leaf by leaf. Module names say what the thing is for; `helpers`, `misc`, `common`, `shared`, `other` and `utils` are refused as module names.
 
-An **illustrative** tree, not today's: a galaxyCatalog regrouped into modules.
+galaxyCatalog's shipped modules, as an example of the layout:
 
 ```
 galaxyCatalog/
   layer.ts  create.ts  destroy.ts  frame.ts  visibility.ts
   sources/  state/
   @types/                      GalaxyCatalogRuntime.d.ts …
-  pointSprites/{render,passes,load,data}/
-  disks/{render,subsystems,passes,@types,utils}/
-  hiResFamous/{load,render,subsystems,ui,sagas}/
-  aliases/{load,present,utils}/
+  records/{load,data,present,utils,@types}/
+  pointSprites/{render,passes,data,utils,@types}/
+  lod/{data,subsystems,utils,@types}/
+  disks/{load, quad/, procedural/, textured/}   (sub-modules, each with its own role folders)
+  hiResFamous/{subsystems,load,data,utils,@types}/
+  aliases/{load,sagas,utils,@types}/
+  card/ui/  provenance/{ui,utils,data}/  controls/ui/
 ```
 
 An exhibit's notes are sections, each `section(kind, data)`. A **section kind**

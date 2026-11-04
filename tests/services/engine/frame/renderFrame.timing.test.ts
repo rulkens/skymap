@@ -29,7 +29,7 @@ import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/Mil
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
-import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
+import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';

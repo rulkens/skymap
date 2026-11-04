@@ -1,8 +1,8 @@
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
 import { bodySelectionRow } from '../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../src/layers/structure/picking/present/structureSelectionRow';
-import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
-import { galaxyRecordBridge } from '../../src/layers/galaxyCatalog/present/galaxyRecordBridge';
+import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
+import { galaxyRecordBridge } from '../../src/layers/galaxyCatalog/selection/present/galaxyRecordBridge';
 import { starCatalogSelectionRow } from '../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { milkyWaySelectionRow } from '../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';

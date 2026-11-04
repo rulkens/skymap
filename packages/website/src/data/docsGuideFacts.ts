@@ -777,7 +777,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'card-galaxy-rows',
     about: 'app',
     text: 'A galaxy’s card opens with its name and a tag for the catalogue it comes from. Beside the picture are four lines: how long ago the light we see left it, what was happening on Earth then, its distance with the speed at which the gap to it widens, and its type. Below come links to outside catalogues, the redshift and the diameter, and under “More details” the sky coordinates, the apparent and absolute magnitude, colours, the orientation and the catalogue’s number for it.',
-    source: `${REPO_BLOB}/src/components/InfoCard/GalaxyDetailCard/GalaxyDetailCard.tsx`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/card/ui/GalaxyDetailCard/GalaxyDetailCard.tsx`,
     sourceLabel: `the card of a galaxy, ${IN_REPO}`,
     checked: CHECKED,
   },

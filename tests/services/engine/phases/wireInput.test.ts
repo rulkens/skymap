@@ -35,7 +35,7 @@ vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
   buildGalaxyInfo: vi.fn(),
 }));
 
-vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyPickRenderer', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/pointSprites/render/galaxyPickRenderer', () => ({
   createGalaxyPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
 }));
 

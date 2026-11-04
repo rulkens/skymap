@@ -1,5 +1,5 @@
 import { DEFAULT_GALAXY_PROVENANCE } from '../defaults';
-import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
+import type { GalaxyCatalogSettings } from '../../@types/GalaxyCatalogSettings';
 
 export const initialState: GalaxyCatalogSettings = {
   // 2.5 px: a visible Gaussian disc on mid-DPI displays without ~3 M overlapping
