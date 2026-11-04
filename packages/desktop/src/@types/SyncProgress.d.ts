@@ -1,1 +1,1 @@
-export type SyncProgress = { doneBytes: number; totalBytes: number; group: string };
+export type SyncProgress = { doneBytes: number; totalBytes: number };

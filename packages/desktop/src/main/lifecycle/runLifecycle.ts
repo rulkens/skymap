@@ -154,7 +154,8 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
     );
     if (placed === null) return null;
     const { sky: skyInfo, control: controlInfo } = placed;
-    const find = (id: number) => displays.find((d) => d.id === id) ?? primary;
+    // The ids came from `displays` itself.
+    const find = (id: number) => displays.find((d) => d.id === id) as Display;
     return {
       skyInfo,
       skyDisplay: find(skyInfo.id),

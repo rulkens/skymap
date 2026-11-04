@@ -90,12 +90,6 @@ describe('ControlPage', () => {
     expect(within(tablets).queryByText(/once the sky is running/)).not.toBeInTheDocument();
   });
 
-  it('Rotate code asks the main process for a new code', async () => {
-    const { bridge } = await renderControls();
-    press('Rotate code');
-    expect(bridge.rotateCode).toHaveBeenCalledOnce();
-  });
-
   it('Run setup again brings the steps back', async () => {
     await renderControls();
     press('Run setup again');

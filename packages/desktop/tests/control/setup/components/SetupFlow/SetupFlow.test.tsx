@@ -85,7 +85,7 @@ describe('SetupFlow', () => {
   it('Finish waits on the download in words, then says the sky is ready', async () => {
     const { bridge, push } = await firstRun();
     push('onStatus', { kind: 'syncing' });
-    push('onSync', { doneBytes: 2e9, totalBytes: 6e9, group: 'Galaxies' });
+    push('onSync', { doneBytes: 2e9, totalBytes: 6e9 });
     fireEvent.click(railStep('Every day'));
     press('Finish');
     expect(title()).toHaveTextContent('Waiting for the download');
@@ -93,7 +93,7 @@ describe('SetupFlow', () => {
     expect(screen.getByText('2.0 GB of 6.0 GB · 4.0 GB left')).toBeVisible();
 
     push('onStatus', { kind: 'idle' });
-    push('onSync', { doneBytes: 6e9, totalBytes: 6e9, group: 'Galaxies' });
+    push('onSync', { doneBytes: 6e9, totalBytes: 6e9 });
     push('onSky', true);
     expect(title()).toHaveTextContent('The sky is ready');
     press('Close setup');

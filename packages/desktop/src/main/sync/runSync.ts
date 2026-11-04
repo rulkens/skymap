@@ -48,13 +48,13 @@ export async function runSync(opts: {
 
   let doneBytes = 0;
   try {
-    for (const { label, download } of plan.groups) {
+    for (const { download } of plan.groups) {
       try {
         await runPool(download, CONCURRENT_DOWNLOADS, async (file) => {
           const url = `${baseUrl}/${file.key.split('/').map(encodeURIComponent).join('/')}`;
           await downloadVerified(url, keyToLocalPath(dataRoot, file.key), file.sha256, (n) => {
             doneBytes += n;
-            onProgress({ doneBytes, totalBytes: plan.downloadBytes, group: label });
+            onProgress({ doneBytes, totalBytes: plan.downloadBytes });
           });
           synced[file.key] = file.sha256;
         });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { controlStatusText } from '../../../../src/control/sync/utils/controlStatusText';
 
-const done = { doneBytes: 5e9, totalBytes: 5e9, group: 'Galaxies' };
+const done = { doneBytes: 5e9, totalBytes: 5e9 };
 
 describe('controlStatusText', () => {
   it('says the sky keeps running only when it has saved data', () => {

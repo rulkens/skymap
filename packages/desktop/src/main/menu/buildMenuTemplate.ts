@@ -31,8 +31,6 @@ export function buildMenuTemplate(
       submenu: [
         { label: 'About Skymap', click: actions.about },
         { type: 'separator' },
-        { label: 'Settings…', accelerator: 'CommandOrControl+,', click: actions.showControl },
-        { type: 'separator' },
         ...hide,
         { label: 'Quit Skymap', accelerator: 'CommandOrControl+Q', click: actions.quit },
       ],
