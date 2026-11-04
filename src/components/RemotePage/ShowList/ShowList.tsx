@@ -22,7 +22,7 @@ export type ShowListProps = {
 };
 
 function ShowList({ kind, menu, takeover, onCommand }: ShowListProps): ReactNode {
-  if (!menu) return <p className={styles.waiting}>Waiting for the dome's lists</p>;
+  if (!menu) return <p className={controls.quiet}>Waiting for the dome's lists</p>;
   const { list, icon: KindIcon, start } = REMOTE_SHOW_KINDS[kind];
   // Each row's id comes from this kind's own list, so it is the id `start` takes; the union of the
   // three kinds hides that from the compiler.

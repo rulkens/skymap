@@ -13,7 +13,7 @@ export type ToggleSectionProps = {
 };
 
 function ToggleSection({ toggles, empty, onSet }: ToggleSectionProps) {
-  if (toggles.length === 0) return <p className={styles.empty}>{empty}</p>;
+  if (toggles.length === 0) return <p className={controls.quiet}>{empty}</p>;
   return (
     <div className={styles.list}>
       {toggles.map((toggle) => (

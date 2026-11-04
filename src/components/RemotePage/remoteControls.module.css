@@ -61,6 +61,11 @@
   min-width: 0;
 }
 
+.quiet {
+  margin: 0;
+  color: var(--color-fg-muted);
+}
+
 .row > svg:first-child {
   flex: none;
   color: var(--color-fg-tertiary);

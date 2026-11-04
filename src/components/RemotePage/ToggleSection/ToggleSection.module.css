@@ -17,8 +17,3 @@
 .row + .row {
   border-top: 1px solid var(--border-divider);
 }
-
-.empty {
-  margin: 0;
-  color: var(--color-fg-tertiary);
-}

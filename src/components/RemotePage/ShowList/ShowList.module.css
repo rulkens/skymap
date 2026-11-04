@@ -10,8 +10,3 @@
 .row:not([aria-current]) > svg:last-child {
   color: var(--color-fg-dim);
 }
-
-.waiting {
-  margin: 0;
-  color: var(--color-fg-tertiary);
-}

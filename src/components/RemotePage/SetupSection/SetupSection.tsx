@@ -9,7 +9,6 @@ import MoonIcon from '../../icons/MoonIcon/MoonIcon';
 import PhonePlusIcon from '../../icons/PhonePlusIcon/PhonePlusIcon';
 import { isIosBrowserTab } from '../../../utils/browser/isIosBrowserTab';
 import controls from '../remoteControls.module.css';
-import styles from './SetupSection.module.css';
 
 export type SetupSectionProps = {
   readonly onAddPhone: () => void;
@@ -36,7 +35,7 @@ function SetupSection({ onAddPhone, redLight, onRedLight }: SetupSectionProps): 
         />
       </label>
       {isIosBrowserTab() && (
-        <p className={styles.hint}>
+        <p className={controls.quiet}>
           Full screen: tap Share, then Add to Home Screen, and open the remote from its icon.
         </p>
       )}

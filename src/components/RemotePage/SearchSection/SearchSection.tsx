@@ -49,7 +49,7 @@ function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
         }}
       />
       {query.trim() !== '' && matches.length === 0 && (
-        <p className={styles.empty}>No match for “{query.trim()}”</p>
+        <p className={controls.quiet}>No match for “{query.trim()}”</p>
       )}
       <ul className={controls.rows}>
         {matches.map((match, i) => (
