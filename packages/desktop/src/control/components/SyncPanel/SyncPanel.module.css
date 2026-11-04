@@ -1,0 +1,8 @@
+.root {
+  composes: panel from '../controlChrome.module.css';
+}
+
+.progress {
+  width: 100%;
+  accent-color: var(--color-accent);
+}

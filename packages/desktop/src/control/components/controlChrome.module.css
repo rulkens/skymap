@@ -1,0 +1,106 @@
+/* The control panels' shared vocabulary: panel surface, text tones and form controls. */
+
+.panel {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-8);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-fg-label);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+}
+
+.text {
+  margin: 0;
+}
+
+.dim {
+  composes: text;
+  color: var(--color-fg-dim);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5) var(--space-8);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-3);
+  color: var(--color-fg-label);
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 24px;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-3);
+  color: var(--color-fg-label);
+}
+
+.control {
+  min-height: 44px;
+  padding: 0 var(--space-8);
+  color: var(--color-fg);
+  background: var(--surface-control);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--font-size-input);
+}
+
+.button {
+  composes: control;
+}
+
+.button:disabled {
+  opacity: 0.5;
+}
+
+.button:active:not(:disabled) {
+  background: var(--surface-control-active);
+}
+
+@media (hover: hover) {
+  .button:hover:not(:disabled) {
+    background: var(--surface-control-hover);
+    border-color: var(--border-hover);
+  }
+}
+
+.check {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.control:focus-visible,
+.check:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}

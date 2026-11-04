@@ -4,85 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Skymap control</title>
-    <link rel="stylesheet" href="./control.css" />
   </head>
   <body>
-    <main>
-      <section aria-labelledby="sync-title">
-        <h2 id="sync-title">Data</h2>
-        <p id="sync-text" role="status">No update running</p>
-        <progress
-          id="sync-progress"
-          max="1"
-          value="0"
-          hidden
-          aria-label="Download progress"
-        ></progress>
-        <p id="sync-detail" class="dim" hidden></p>
-        <div class="row">
-          <button id="update-now" type="button">Update now</button>
-          <button id="restart-sky" type="button">Restart sky</button>
-        </div>
-        <p class="dim">Restart sky loads new data and removes the files it no longer uses.</p>
-      </section>
-
-      <section aria-labelledby="setup-title">
-        <h2 id="setup-title">Setup</h2>
-        <fieldset>
-          <legend>Mode</legend>
-          <label><input type="radio" name="mode" value="kiosk" /> Kiosk</label>
-          <label><input type="radio" name="mode" value="dome" /> Dome</label>
-        </fieldset>
-        <label class="field">
-          Sky display
-          <select id="display"></select>
-        </label>
-        <label><input id="test-grid" type="checkbox" /> Show test grid on the sky</label>
-        <label
-          ><input id="autostart" type="checkbox" /> Start Skymap when the computer starts</label
-        >
-        <fieldset>
-          <legend>Data updates</legend>
-          <label><input type="radio" name="updates" value="atLaunch" /> At every launch</label>
-          <label><input type="radio" name="updates" value="daily" /> Every day at</label>
-          <input id="daily-at" type="time" aria-label="Daily update time" />
-          <label><input type="radio" name="updates" value="manual" /> Only with Update now</label>
-        </fieldset>
-        <p id="setup-saved" class="dim" role="status">&nbsp;</p>
-      </section>
-
-      <section aria-labelledby="pairing-title">
-        <h2 id="pairing-title">Remote pairing</h2>
-        <p class="note">
-          On first launch the computer asks to accept incoming network connections. Choose Allow, or
-          phones and tablets cannot connect.
-        </p>
-        <p id="pairing-empty" class="dim">The code appears once the sky has started.</p>
-        <div id="pairing" hidden>
-          <canvas id="qr" width="1" height="1" role="img" aria-label="Pairing QR code"></canvas>
-          <p>Code <strong id="code"></strong></p>
-          <p id="pairing-url" class="dim"></p>
-          <p id="ca-hint" class="dim"></p>
-        </div>
-        <label class="field">
-          Network
-          <select id="network"></select>
-        </label>
-        <p class="dim">Give this network a DHCP reservation so tablet bookmarks keep working.</p>
-        <div class="row">
-          <button id="rotate" type="button">Rotate code</button>
-        </div>
-        <p class="dim">Rotating disconnects paired remotes and changes the bookmark address.</p>
-      </section>
-
-      <section aria-labelledby="quit-title">
-        <h2 id="quit-title">Quit</h2>
-        <div class="row">
-          <button id="quit" type="button">Quit Skymap</button>
-        </div>
-        <p class="dim">Show or hide this window: <kbd id="shortcut"></kbd></p>
-      </section>
-    </main>
-    <script type="module" src="./control.ts"></script>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
   </body>
 </html>

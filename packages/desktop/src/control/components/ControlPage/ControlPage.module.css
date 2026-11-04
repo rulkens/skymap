@@ -1,0 +1,7 @@
+.root {
+  display: grid;
+  gap: var(--space-8);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--space-10) var(--space-8);
+}

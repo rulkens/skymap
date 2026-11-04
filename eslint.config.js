@@ -78,9 +78,9 @@ export default tseslint.config(
     rules: { ...CORRECTNESS_RULES, ...CONVENTION_RULES, ...COMMENT_RULES },
   },
 
-  // Desktop app (Electron main process, Node) → its own tsconfig.
+  // Desktop app (Electron main process and the React control page) → its own tsconfig.
   {
-    files: ['packages/desktop/**/*.ts'],
+    files: ['packages/desktop/**/*.{ts,tsx}'],
     plugins,
     languageOptions: {
       parser: tseslint.parser,

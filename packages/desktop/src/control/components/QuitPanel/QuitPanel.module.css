@@ -1,0 +1,8 @@
+.root {
+  composes: panel from '../controlChrome.module.css';
+}
+
+.key {
+  font: inherit;
+  color: var(--color-fg);
+}
