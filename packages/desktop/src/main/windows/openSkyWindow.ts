@@ -1,6 +1,5 @@
 import { BrowserWindow } from 'electron';
 import type { Display } from 'electron';
-import type { QuitGate } from './@types/QuitGate';
 import { fillDisplay } from './fillDisplay';
 import { hideSkyChrome } from '../sky/hideSkyChrome';
 import { superviseWindow } from './superviseWindow';
@@ -9,7 +8,11 @@ import { superviseWindow } from './superviseWindow';
  * Frameless, black and full screen on `display`, not yet holding the sky; `windowed` gives a normal
  * window with DevTools. It shows on its first paint of a blank black page, so no frame is ever white.
  */
-export function openSkyWindow(display: Display, windowed: boolean, gate: QuitGate): BrowserWindow {
+export function openSkyWindow(
+  display: Display,
+  windowed: boolean,
+  mayClose: () => boolean,
+): BrowserWindow {
   const { x, y } = display.bounds;
   const win = new BrowserWindow({
     show: false,
@@ -26,7 +29,7 @@ export function openSkyWindow(display: Display, windowed: boolean, gate: QuitGat
   });
   if (windowed) win.webContents.openDevTools({ mode: 'detach' });
   else {
-    win.on('close', (event) => gate.mayClose() || event.preventDefault());
+    win.on('close', (event) => mayClose() || event.preventDefault());
     hideSkyChrome(win);
   }
   superviseWindow(win);

@@ -51,7 +51,7 @@ function skyWindows(setup: InstallSetup) {
   return createSkyWindows({
     control: control as never,
     windowed: false,
-    gate: { allowQuit: () => {}, mayClose: () => false },
+    mayClose: () => false,
     setup: () => setup,
     onClosed: () => {},
   });

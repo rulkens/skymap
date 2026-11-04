@@ -15,7 +15,7 @@ import { showTestGrid } from '../sky/showTestGrid';
  * (or floating above the sky on a single screen), and holds the test grid laid over it.
  */
 export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
-  const { control, windowed, gate, setup, onClosed } = deps;
+  const { control, windowed, mayClose, setup, onClosed } = deps;
   let sky: BrowserWindow | null = null;
   let grid: Overlay | null = null;
   const current = (): BrowserWindow | null => (sky !== null && !sky.isDestroyed() ? sky : null);
@@ -43,7 +43,7 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     const existing = current();
     if (existing) return existing;
     const at = placeWindows(setup().display, listDisplays())?.sky;
-    const win = openSkyWindow(at ? displayOf(at) : screen.getPrimaryDisplay(), windowed, gate);
+    const win = openSkyWindow(at ? displayOf(at) : screen.getPrimaryDisplay(), windowed, mayClose);
     win.on('closed', onClosed);
     return (sky = win);
   };

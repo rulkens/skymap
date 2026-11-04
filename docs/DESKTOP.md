@@ -180,9 +180,11 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   A projector switched on after boot takes the sky back. If the stored display is missing, the
   control window opens. The control window is moved only when it is not on its display, so one the
   operator placed stays put.
-- `main/windows/createQuitGate.ts`: the sky window and the control window ignore close (Alt+F4, Cmd+W)
-  until `allowQuit`. Quit is the control page's Quit panel or the menu's Quit item; both call the
-  gate, never the `quit` role.
+- `main/windows/watchQuitting.ts`: the sky window and the control window ignore close (Alt+F4,
+  Cmd+W) until `before-quit`. That event comes from the control page's Quit panel, the menu's Quit,
+  the Dock, a macOS logout or shutdown, and SIGTERM, so none of them is refused; a window's own
+  close never emits it. A Windows shutdown or logoff ends the app without it, which costs nothing:
+  every file write is atomic.
 - `main/menu/installAppMenu.ts` with `buildMenuTemplate`: macOS has one menu bar, and it carries the
   menu only while the control window or About has focus, so a visitor's keyboard on the sky has no
   Cmd+Q, Cmd+H or Cmd+W. Windows hangs it on the control window, hidden until Alt. In `--windowed`

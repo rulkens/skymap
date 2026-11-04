@@ -5,7 +5,7 @@ import { CONTROL_SHORTCUT } from '../../data/controlShortcut';
 /**
  * The application menu, the same on both platforms bar macOS's Hide items. Reload and DevTools are
  * for `--windowed` dev runs only. The control-window item shows the global shortcut without
- * registering it again; Quit goes through `actions.quit`, never the `quit` role, so the gate decides.
+ * registering it again.
  */
 export function buildMenuTemplate(
   platform: NodeJS.Platform,
@@ -31,7 +31,7 @@ export function buildMenuTemplate(
         { label: 'About Skymap', click: actions.about },
         { type: 'separator' },
         ...hide,
-        { label: 'Quit Skymap', accelerator: 'CommandOrControl+Q', click: actions.quit },
+        { label: 'Quit Skymap', accelerator: 'CommandOrControl+Q', role: 'quit' },
       ],
     },
     { role: 'editMenu' },

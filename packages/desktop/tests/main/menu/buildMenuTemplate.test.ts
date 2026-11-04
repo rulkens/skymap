@@ -7,7 +7,6 @@ const actions = (): MenuActions => ({
   about: vi.fn(),
   showControl: vi.fn(),
   showSky: vi.fn(),
-  quit: vi.fn(),
   restartSky: vi.fn(),
   testGrid: vi.fn(),
   help: vi.fn(),
@@ -29,14 +28,6 @@ describe('buildMenuTemplate', () => {
     expect(skymap('darwin')).toEqual(expect.arrayContaining(['Hide Skymap', 'hideOthers']));
     expect(skymap('win32')).not.toContain('Hide Skymap');
     expect(skymap('win32')).not.toContain('hideOthers');
-  });
-
-  it('routes Quit through the gate, never the quit role', () => {
-    const a = actions();
-    const quit = find(items(buildMenuTemplate('darwin', false, a), 'Skymap'), 'Quit Skymap');
-    expect(quit.role).toBeUndefined();
-    click(quit);
-    expect(a.quit).toHaveBeenCalledOnce();
   });
 
   it('offers Reload and DevTools in --windowed dev runs only', () => {

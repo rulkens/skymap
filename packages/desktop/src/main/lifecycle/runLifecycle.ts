@@ -22,7 +22,6 @@ import { SETUP_FILE } from '../setup/data/setupFile';
 import { attachDesktopRelay } from '../relay/attachDesktopRelay';
 import { bootPlan } from './utils/bootPlan';
 import { createDailySchedule } from './createDailySchedule';
-import { createQuitGate } from '../windows/createQuitGate';
 import { createSetupStore } from '../setup/createSetupStore';
 import { createSkyLoader } from '../sky/createSkyLoader';
 import { createSkyWindows } from '../windows/createSkyWindows';
@@ -47,13 +46,14 @@ import { skyUrlFor } from '../sky/utils/skyUrlFor';
 import { startSecureServer } from '../server/startSecureServer';
 import { syncOutcomeAction } from './utils/syncOutcomeAction';
 import { watchLan } from '../lan/watchLan';
+import { watchQuitting } from '../windows/watchQuitting';
 
 /** Rejects when the app cannot start; main.ts shows why and exits. */
 export async function runLifecycle(windowed: boolean): Promise<void> {
   if (!app.requestSingleInstanceLock()) return app.quit();
   await app.whenReady();
   nativeTheme.themeSource = 'dark';
-  const gate = createQuitGate();
+  const mayClose = watchQuitting(app);
   const userData = app.getPath('userData');
   const { dataRoot, dev } = resolveDataRoot(
     process.env.SKYMAP_DATA_DIR,
@@ -112,11 +112,11 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     about: await readAbout(),
   };
   // Nothing awaits from here to registerControlIpc, so the page's first getState finds its handler.
-  const { window: control, show: showControl } = openControlWindow(gate);
+  const { window: control, show: showControl } = openControlWindow(mayClose);
   const sky = createSkyWindows({
     control,
     windowed,
-    gate,
+    mayClose,
     setup: () => setup.current(),
     onClosed: () => update({ skyRunning: false }),
   });
@@ -193,17 +193,12 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     update({ testGrid: sky.setTestGrid(on) });
     tickTestGrid(state.testGrid);
   };
-  const quit = (): void => {
-    gate.allowQuit();
-    app.quit();
-  };
   // Without a complete set the sky has nothing to show; the page disables the button for the same reason.
   const restartSky = (): void => void (state.hasData && loadSky());
   const tickTestGrid = installAppMenu(control, windowed, {
     about: showAbout,
     showControl,
     showSky: () => sky.current()?.focus(),
-    quit,
     restartSky,
     testGrid: setTestGrid,
     help: (section) => {
@@ -229,7 +224,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
         update({ room: { ...state.room, code } });
       }),
     hide: () => control.hide(),
-    quit,
+    quit: () => app.quit(),
   };
   // The About window reads the state for its facts and may ask nothing else.
   const isAllowed = (sender: WebContents, request: keyof ControlIpcHandlers): boolean =>

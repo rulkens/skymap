@@ -304,7 +304,8 @@ dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string /* 'HH:MM' local
   and `setWindowOpenHandler` denies everything. InfoCard outbound links become dead clicks.
 - **Autostart:** a toggle in the control window (`app.setLoginItemSettings`). _(My call.)_
 - **Quit:** from the control window's Quit, or the menu's Quit (Cmd+Q), which exists only while
-  the control window has focus. The sky window has no other way out.
+  the control window has focus. A system quit (the Dock, a logout, shutdown) also goes through; a
+  window's own close (Alt+F4, Cmd+W) never does.
 - **Dev:** `npm run desktop` launches with `SKYMAP_DATA_DIR` pointing at the main checkout's
   `public/data` and skips the sync. `--windowed` gives a normal sky window with DevTools.
 - **Package:** electron-builder, mac dmg and win nsis, unsigned. Whether the win target
