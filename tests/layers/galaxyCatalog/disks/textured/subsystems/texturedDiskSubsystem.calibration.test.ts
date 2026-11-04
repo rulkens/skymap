@@ -16,24 +16,24 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../../src/data/source';
-import { createGalaxyAtlasSubsystem } from '../../../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
-import { createTexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem';
-import { createProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
-import { createDiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk';
+import { Source } from '../../../../../../src/data/source';
+import { createGalaxyAtlasSubsystem } from '../../../../../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
+import { createTexturedDiskSubsystem } from '../../../../../../src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem';
+import { createProceduralDiskSubsystem } from '../../../../../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
+import { createDiskPlannerWalk } from '../../../../../../src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk';
 import {
   runProceduralSolo,
   runTexturedSolo,
-} from '../../../services/engine/subsystems/diskWalkHarness';
-import { paddedRadiusMpc } from '../../../../src/layers/galaxyCatalog/appearance/utils/paddedRadiusMpc';
-import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
-import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
-import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
-import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';
+} from '../../../../../services/engine/subsystems/diskWalkHarness';
+import { paddedRadiusMpc } from '../../../../../../src/layers/galaxyCatalog/appearance/utils/paddedRadiusMpc';
+import { fallbackOrientation } from '../../../../../../src/utils/random/fallbackOrientation';
+import type { GalaxyCatalog } from '../../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { OrbitCamera } from '../../../../../../src/@types/camera/OrbitCamera';
+import type { SourceType } from '../../../../../../src/@types/data/SourceType';
+import type { FamousGalaxyMetaEntry } from '../../../../../../src/@types/loading/FamousGalaxyMetaEntry';
+import type { FamousCalibration } from '../../../../../../src/@types/loading/FamousCalibration';
+import { makeGalaxyCatalog } from '../../../../../fixtures/makeGalaxyCatalog';
+import { galaxyRecordsOver } from '../../../../../support/galaxyRecordsOver';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
