@@ -9,7 +9,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { replayInput } from '../../../../src/services/engine/camera/replayInput';
-import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/isBodyArm';
 import * as surfaceStepModule from '../../../../src/services/camera/surfaceStep';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';

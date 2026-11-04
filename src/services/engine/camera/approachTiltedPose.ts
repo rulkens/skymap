@@ -19,7 +19,7 @@ import { mappedTiltRad } from '../../../utils/camera/mappedTiltRad';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { tiltFromNadirRad } from '../../../utils/camera/tiltFromNadirRad';
-import { isWorldArm } from './rungs/isWorldArm';
+import { isWorldArm } from './arms/isWorldArm';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraTuning } from '../../../@types/camera/CameraTuning';

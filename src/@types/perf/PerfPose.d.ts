@@ -2,7 +2,7 @@
  * PerfPose — the exact camera vantage the perf harness hard-cuts to before it
  * starts sampling GPU timings.
  *
- * `framed` is the committed camera arm itself, whichever rung it names, so a
+ * `framed` is the committed camera arm itself, whichever arm it names, so a
  * body- or site-parented vantage measures its own frame rather than a world
  * re-spelling of its coordinates.
  */
@@ -20,7 +20,7 @@ export type PerfPose = {
    * Clear the body focus before committing the pose. The boot flow focuses
    * Earth, and the focus outranks the pose on both arms: a world pose has its
    * `target` pivot-pinned to the live focused body each frame, and a body arm
-   * whose focus sits outside its own subtree is released by its rung. Either
+   * whose focus sits outside its own subtree is released by its arm. Either
    * way a non-Earth vantage only holds if the focus is cleared first. Opt-in
    * per scenario: clearing unconditionally would change what the historical
    * Earth-target scenarios measure (selection ring, follow framing).

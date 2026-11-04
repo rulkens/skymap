@@ -86,7 +86,7 @@ export function missionPose(
   const dragged = ctx.state.input.owner !== null;
   const touched = dragged || ctx.followDistanceTarget !== null;
   if (dragged) {
-    // The drag rung stepped last frame's pose; its view and distance ARE the new offsets, re-posed
+    // The drag arm stepped last frame's pose; its view and distance ARE the new offsets, re-posed
     // below about this frame's aim, so the craft stays put on screen while the clock plays.
     const w = ctx.authoredWorld;
     const eye = eyeMpcOf(w, ctx.poseBasis);

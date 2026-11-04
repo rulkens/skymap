@@ -9,17 +9,17 @@
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraTuning } from '../../../@types/camera/CameraTuning';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
-import type { RungBasisCtx } from '../../../@types/camera/RungBasisCtx';
+import type { CameraArmBasisCtx } from '../../../@types/camera/CameraArmBasisCtx';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { releasedWorldRoll } from '../../../utils/camera/releasedWorldRoll';
 import { hOverR } from './hOverR';
-import { foldToWorld } from './rungs/foldToWorld';
-import { hostOf } from './rungs/hostOf';
-import { isWorldArm } from './rungs/isWorldArm';
+import { foldToWorld } from './arms/foldToWorld';
+import { hostOf } from './arms/hostOf';
+import { isWorldArm } from './arms/isWorldArm';
 
 export function releasedWorldArm(
   framed: FramedCameraPose,
-  ctx: RungBasisCtx,
+  ctx: CameraArmBasisCtx,
   tuning: CameraTuning,
 ): CameraPose {
   if (isWorldArm(framed)) return framed.pose;

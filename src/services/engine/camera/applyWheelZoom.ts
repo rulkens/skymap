@@ -7,7 +7,7 @@
 
 import { spinAutoRotate } from './spinAutoRotate';
 import { zoomedPose } from '../../../utils/camera/zoomedPose';
-import { isWorldArm } from './rungs/isWorldArm';
+import { isWorldArm } from './arms/isWorldArm';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { PivotFraming } from '../../../@types/camera/PivotFraming';

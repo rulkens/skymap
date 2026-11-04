@@ -22,8 +22,8 @@ import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../../src/services/engine/cam
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
-import { isWorldArm } from '../../../../src/services/engine/camera/rungs/isWorldArm';
+import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
+import { isWorldArm } from '../../../../src/services/engine/camera/arms/isWorldArm';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../../src/state/time/selectors';
 import { selectPendingInput } from '../../../../src/state/input/selectors';
@@ -156,7 +156,7 @@ describe('stepCameraRuntime', () => {
     expect(next.follow).toBe(prev.follow);
   });
 
-  it('the rung memory is wiped when the frame key changes and kept when it does not', () => {
+  it('the arm memory is wiped when the frame key changes and kept when it does not', () => {
     // The same-key half asserts IDENTITY: an envelope that re-wrapped the
     // memory every frame would hand the drain a fresh object each time and
     // silently break every `!==` the surface step decides a decline by.

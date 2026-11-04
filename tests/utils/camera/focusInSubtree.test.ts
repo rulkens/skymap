@@ -29,7 +29,7 @@ describe('focusInSubtree', () => {
     expect(focusInSubtree(asSceneBodyId('curiosity'), asSceneBodyId('sun'))).toBe(false);
   });
 
-  it('no focus constrains no rung', () => {
+  it('no focus constrains no arm', () => {
     expect(focusInSubtree(null, asSceneBodyId('mars'))).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import type { RungKind } from './RungKind';
+import type { CameraArmKind } from './CameraArmKind';
 
-/** Rungs with a parent to climb to — every rung but the world arm itself. */
-export type ClimbableKind = Exclude<RungKind, 'absolute'>;
+/** Arms with a parent to climb to — every arm but the world arm itself. */
+export type ClimbableKind = Exclude<CameraArmKind, 'absolute'>;

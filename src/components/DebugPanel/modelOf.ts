@@ -3,7 +3,7 @@
 import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { PanelModel } from '../../@types/components/PanelModel';
-import { frameKey } from '../../services/engine/camera/rungs/frameKey';
+import { frameKey } from '../../services/engine/camera/arms/frameKey';
 import { deg } from '../../utils/format/deg';
 import { num } from '../../utils/format/num';
 

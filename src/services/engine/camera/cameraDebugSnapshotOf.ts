@@ -25,10 +25,10 @@ import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { bodyRelativePose } from './bodyRelativePose';
-import { hostOf } from './rungs/hostOf';
-import { isBodyArm } from './rungs/isBodyArm';
-import { isSiteArm } from './rungs/isSiteArm';
-import { sameFrame } from './rungs/sameFrame';
+import { hostOf } from './arms/hostOf';
+import { isBodyArm } from './arms/isBodyArm';
+import { isSiteArm } from './arms/isSiteArm';
+import { sameFrame } from './arms/sameFrame';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 
