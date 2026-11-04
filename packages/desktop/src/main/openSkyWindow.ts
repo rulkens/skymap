@@ -1,16 +1,10 @@
 import { BrowserWindow } from 'electron';
 import type { Display } from 'electron';
-import type { InstallSetup } from '../@types/InstallSetup.js';
-import { skyUrlFor } from '../utils/skyUrlFor.js';
 import { fillDisplay } from './fillDisplay.js';
 import { superviseWindow } from './superviseWindow.js';
 
-/** Frameless, black and full screen on `display`; `windowed` gives a normal window with DevTools. */
-export function openSkyWindow(
-  display: Display,
-  mode: InstallSetup['mode'],
-  windowed: boolean,
-): BrowserWindow {
+/** Frameless, black and full screen on `display`, not yet loaded; `windowed` gives a normal window with DevTools. */
+export function openSkyWindow(display: Display, windowed: boolean): BrowserWindow {
   const { x, y } = display.bounds;
   const win = new BrowserWindow(
     windowed
@@ -20,6 +14,5 @@ export function openSkyWindow(
   if (windowed) win.webContents.openDevTools({ mode: 'detach' });
   else fillDisplay(win, display.bounds);
   superviseWindow(win);
-  void win.loadURL(skyUrlFor(mode));
   return win;
 }
