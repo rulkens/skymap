@@ -146,7 +146,7 @@ export function rewriteReferences(
 
 Built-in mock callees: `vi` and `jest` with `mock`, `doMock`, `unmock`, `doUnmock`, `importActual`, `importMock`, `requireActual`, `requireMock`. `.astro` and `.mdx` have no scanner here; they're in the snapshot for the guard only. A moved file's unresolved relative specifier stays correct by path math (`../old/x.png`), which is how assets survive.
 
-- [ ] Write the tests, watch them fail, implement, watch them pass:
+- [x] Write the tests, watch them fail, implement, watch them pass:
   - `finds every TS reference form` : import, export-from, `import()`, `import('./x').T`, `import x = require()`, `require()`, `vi.mock()`, `jest.mock()`
   - `parses .tsx generics and JSX` : a `.tsx` with JSX text containing `import('./fake')` → not found
   - `ignores strings that are not references` : `const s = './x'` → not found
@@ -161,8 +161,8 @@ Built-in mock callees: `vi` and `jest` with `mock`, `doMock`, `unmock`, `doUnmoc
   - `moves CSS with its references` : a moved `.module.css` with `composes … from` updated in both directions
   - `the filter never skips an index importer` : `from '../math'` with `math/index.ts` moved → rewritten
   - `the filter matches a dot-specifier when an index moved` : `from '..'` → rewritten
-- [ ] Add `the filter changes no output` : the same fixture rewritten twice, the second time with a moved file's stem added in a comment to every file so all are parsed → identical edits, ignoring those comments.
-- [ ] `npx vitest run tests/packages/move-files`. Commit.
+- [x] Add `the filter changes no output` : the same fixture rewritten twice, the second time with a moved file's stem added in a comment to every file so all are parsed → identical edits, ignoring those comments.
+- [x] `npx vitest run tests/packages/move-files`. Commit.
 
 ### Task 5: The guard
 
