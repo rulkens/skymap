@@ -11,6 +11,7 @@ import type { RungRow } from '../../../../@types/camera/RungRow';
 import { absoluteRung } from './absoluteRung';
 import { bodyRung } from './bodyRung';
 import { siteRung } from './siteRung';
+import { skyRung } from './skyRung';
 
 export const CAMERA_RUNGS: { readonly absolute: RungRow<'absolute'> } & {
   readonly [K in ClimbableKind]: ClimbRow<K>;
@@ -23,5 +24,8 @@ export const CAMERA_RUNGS: { readonly absolute: RungRow<'absolute'> } & {
   },
   get site() {
     return siteRung;
+  },
+  get sky() {
+    return skyRung;
   },
 };

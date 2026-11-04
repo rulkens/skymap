@@ -44,12 +44,13 @@ describe('website facts', () => {
         .filter((name) => /\.(tsx?|astro|mdx)$/.test(name) && !name.startsWith('dev/'))
         .filter((name) => pattern.test(readFileSync(join(SITE, name), 'utf8')))
         .sort();
-    // heroVideoUrl takes one function with no imports of its own: the address of the data host.
+    // heroVideoUrl and pressKitUrl take one function with no imports of its own: the address of the data host.
     expect(importers(/from '(\.\.\/)+src\//)).toEqual([
       // Two tables of ids, for the lists of body and site names.
       'content/docs/reference/url-parameters.mdx',
       'data/objectCatalogue.ts',
       'utils/heroVideoUrl.ts',
+      'utils/pressKitUrl.ts',
     ]);
     expect(importers(/from '[./]+\/(data\/objectCatalogue|utils\/objectCount)(\.ts)?'/)).toEqual([
       'components/docs/ObjectList/ObjectList.tsx',
@@ -89,10 +90,16 @@ describe('website facts', () => {
     expect(Math.round(1_205.5e6 / C_KM_S / 60)).toBe(near);
     expect(Math.round(1_658.6e6 / C_KM_S / 60)).toBe(far);
     // NASA Jupiter and Pluto fact sheets, nearest and farthest in km.
-    const [jupiterNear, jupiterFar] = statedFigures('jupiter-distance', /between (\d+) and (\d+) light-minutes/);
+    const [jupiterNear, jupiterFar] = statedFigures(
+      'jupiter-distance',
+      /between (\d+) and (\d+) light-minutes/,
+    );
     expect(Math.round(588.5e6 / C_KM_S / 60)).toBe(jupiterNear);
     expect(Math.round(968.5e6 / C_KM_S / 60)).toBe(jupiterFar);
-    const [plutoNear, plutoFar] = statedFigures('pluto-distance', /between (\d+) and (\d+) light-hours/);
+    const [plutoNear, plutoFar] = statedFigures(
+      'pluto-distance',
+      /between (\d+) and (\d+) light-hours/,
+    );
     expect(Math.round(4_284.7e6 / C_KM_S / 3600)).toBe(plutoNear);
     expect(Math.round(7_528.0e6 / C_KM_S / 3600)).toBe(plutoFar);
     const [kmS, years, ly] = statedFigures(

@@ -25,6 +25,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **Rename "rung" to "arm" across the camera** `ready` — one name for the camera's regimes (owner ruling); `CAMERA_RUNGS`/`RungKind`/`rungs/` vs `isBodyArm`/"the world arm" today, ~480 lines. → [details](backlog/2026-11-04-rename-rung-to-arm.md)
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
 - [ ] **A selection kind's facts live in its Layer** `needs-design` — a new kind edits 14 core tables (focusable, halo, framing, label, URL hash, exhibit picking); ruled: they move onto the Layer's `SelectionKindRow`. Also carries J2 (per-kind presentation). → [details](backlog/2026-10-28-selection-kind-facts-in-the-layer.md)
@@ -98,6 +99,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Earth's noon sky renders dark at ground level** `needs-design` — Sun ~19° up over Copenhagen, the sky reads navy with stars at 1.7 m and 46 m; the tour's noon-to-night opening needs daylight. → [details](backlog/2026-11-04-earth-noon-sky-dark-at-ground.md)
 - [ ] **Satellite orbit rings for fast time** `ready` — step 4 of the satellites spec: past about a minute of sim time per sweep, points fade and each object draws its J2-turned mean-element ellipse. → [spec §5.4](superpowers/specs/completed/2026-10-28-earth-satellites-design.md)
 - [ ] **Real relief displacement for near-spherical bodies** `needs-design` — `texturedBody` ray-traces an analytic sphere, so nothing displaces; a sibling rasterised path opted into by a `height` texture kind. → [details](backlog/2026-10-03-body-relief-displacement.md)
 - [ ] **Switching a layer off never frees its VRAM** `needs-design` — no `release` predicate reads a setting; a deselected volume strands up to 217 MB, catalogs/flow/filaments the same. Blocker: `DemandCtx` has no fade surface to gate `release` on. → [details](backlog/2026-09-13-volume-field-vram-release.md)
@@ -222,6 +224,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Windows touchscreen pinch-zoom dead** `needs-repro` — works on mobile; gesture code is platform-uniform PointerEvents, so event delivery on Windows is the suspect; needs an on-device event log. → [details](backlog/2026-08-16-windows-touchscreen-pinch-zoom.md)
 - [ ] **Camera smooth wheel zoom + flick coast** `awaiting-decision` — Google Maps / Cesium feel via synthetic `InputStep`s in the aggregator; revises grill Q8 (no inertia), shape pre-ruled. Follow-up to #647. → [details](backlog/2026-09-09-camera-smooth-zoom-and-flick-coast.md)
 - [ ] **Wheel notch routed by last frame's winner** `needs-design` — the replay routes a notch before the frame has picked its winner; four defects follow. → [details](backlog/2026-09-10-wheel-notch-route-by-last-winner.md)
+- [ ] **One search placeholder** `ready` — the top bar reads "Search the universe…" but the open palette's box reads "Search galaxies, stars, planets & clusters…"; use the bar's wording in both (seen in the website's palette survey, 2026-11-02).
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The phone dock, InfoCard sheet and Layers sheet already shipped.
 - [ ] **SettingsPanel polish** `needs-design` — visual cleanup + section re-ordering + per-section icons; sections now come from Layer `ui` slots in composition order, rows are hand-coded text-only. → [details](backlog/2026-07-22-settings-panel-polish.md)
 - [ ] **Schema-driven slider rows** `needs-design` — `SliderField` + `DebugTuningSection` already drive the DebugPanel; extend them to the Settings rows (Display, Stars, Flow, density field) and derive the slice reducer/selector from the same table. → [details](backlog/2026-07-29-schema-driven-slider-rows.md)
@@ -235,6 +238,13 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
 - [ ] **Path-based object links with share previews** `needs-design` — `/<kind>/<slug>` paths for identity, hash for view state, so shared links unfurl; needs Worker tag injection and permanent hash aliases. → [details](backlog/2026-10-05-path-based-object-links.md)
 - [ ] **Unify thumbnail lookups** `ready` — structure rows already resolve via `structureShotUrl`; move the palette's milkyWay/star/layer rows and Body/Star cards onto one resolver and delete `SHOT_CARD_IDS`. → [details](backlog/2026-10-11-thumbnail-lookup-unify.md)
+- [ ] **A public relay for the phone remote** `ready` — the relay lives only in Vite's dev server, so a dome needs a clone, Node and a terminal (Windows unverified); the Durable Object relay is spec'd. → [details](backlog/2026-11-03-remote-public-relay.md)
+- [ ] **A dome without internet, and data that fails silently** `needs-design` — `fetch-data` skips textures and Earth tiles, and off port 5173 every data fetch fails CORS with nothing on screen. → [details](backlog/2026-11-03-offline-dome-data.md)
+- [ ] **The dome doesn't know which phones steer it** `needs-design` — nothing shows a phone joining or dropping, any phone with the code steers, and a fourth is refused without being told. → [details](backlog/2026-11-03-remote-who-is-connected.md)
+- [ ] **A dome reload gives a new room code** `needs-design` — the room is made fresh on every load (`remoteReceiverSaga.ts:56`, spec "Pairing"), so every phone pairs again.
+- [ ] **The remote's header reads "Focused"** `needs-design` — `DomeStatus.focus` carries only the id, so the phone names the object only if its own last search listed it (`focusNameFrom.ts`); the status names no running exhibit either.
+- [ ] **More controls on the phone remote** `needs-design` — no command for data size, exposure, other layers, captions, full screen or showing the dome's interface (Tab on its keyboard). → [details](backlog/2026-11-03-remote-more-controls.md)
+- [ ] **Duplicate names in the remote's menus** `ready` — "Cosmic Flows" is both an exhibit and a clip (`src/data/exhibits/cosmicFlows.ts`, `src/data/animation/clips/cosmicFlows.ts`) and "Galactic Centre" shows twice in the label switches; rename or merge so each entry reads once.
 
 ## Docs & process
 

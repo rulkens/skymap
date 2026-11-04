@@ -243,7 +243,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     term: 'Dome mode',
     text: 'The app drawing a round fisheye picture for a dome projector. A link turns it on with ?dome.',
     facts: ['dome-flag'],
-    more: { label: 'Screens, quality and domes', path: '/docs/guide/screens-and-domes/' },
+    more: { label: 'Setting up a dome', path: '/docs/guide/dome-setup/' },
   },
   {
     id: 'draw-call',

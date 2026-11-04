@@ -1,7 +1,8 @@
 /*
  * ShotCaption — a picture's label, the quietest words on the page: the title, then in one fainter line what
  * is data and what is drawn and the credit for third-party imagery in frame, then the address the picture was
- * taken at (every picture being an address is the site's honesty device). Use it where it adds something;
+ * taken at (every picture being an address is the site's honesty device), where a link can open it as shown
+ * (shotLink). Use it where it adds something;
  * a picture whose words beside it already name it takes `showTitle={false}`, which keeps a credit and
  * renders nothing when there is none. `label` gives the words for a picture not in the manifest, with no
  * address to open; `showDrawn={false}` leaves out the data-and-drawing note; `foot` fills the height it is
@@ -10,6 +11,7 @@
 import type { SiteShot } from '../../../../@types/SiteShot';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
+import { shotLink } from '../../../../utils/shotLink.ts';
 import ViewLink from '../../links/ViewLink/ViewLink.tsx';
 import styles from './ShotCaption.module.css';
 
@@ -33,10 +35,9 @@ function ShotCaption({
   const row = id === undefined ? undefined : siteShot(id);
   const shot: Pick<SiteShot, 'title' | 'drawn' | 'credit'> | undefined = row ?? label;
   if (!shot) throw new Error('ShotCaption needs the id of a shot or a label');
-  // The view a manifest picture was taken at, where the label is to open it.
-  const view = row && open ? row : undefined;
+  const link = id !== undefined && open ? shotLink(id) : undefined;
   const drawn = showDrawn ? shot.drawn : undefined;
-  if (!showTitle && !drawn && !shot.credit && !view) return null;
+  if (!showTitle && !drawn && !shot.credit && !link) return null;
   return (
     <div className={cx(styles.root, foot && styles.foot)}>
       {showTitle && <p className={styles.title}>{shot.title}</p>}
@@ -47,15 +48,15 @@ function ShotCaption({
           {shot.credit && `Credit: ${shot.credit}.`}
         </p>
       )}
-      {view &&
-        (view.link.startsWith('tour=') ? (
-          <ViewLink className={styles.view} view={view.link} query={view.query}>
+      {link &&
+        (link.startsWith('tour=') ? (
+          <ViewLink className={styles.view} view={link} query={row?.query}>
             Start the tour
           </ViewLink>
         ) : (
-          <ViewLink className={styles.view} view={view.link} query={view.query} />
+          <ViewLink className={styles.view} view={link} query={row?.query} />
         ))}
-      {!row && <div className={styles.room} />}
+      {open && !link && <div className={styles.room} />}
     </div>
   );
 }

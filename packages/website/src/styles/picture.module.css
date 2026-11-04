@@ -1,7 +1,7 @@
 /*
  * picture.module.css — the shared parts of a picture's words: the label along the foot of a
- * full-width picture and the cell a gallery's words share. A vocabulary, not a component: no
- * `.root`; take a class with `composes: caption from '../../../../styles/picture.module.css'`.
+ * full-width picture, the cell a gallery's words share and a figure set as a picture. A vocabulary,
+ * not a component: no `.root`; take a class with `composes: caption from '../../../../styles/picture.module.css'`.
  */
 
 /*
@@ -15,6 +15,19 @@
   z-index: -1;
   inset: 0 calc(50% - 50vw) -2rem;
   background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 var(--caption-rise, 4rem));
+}
+
+/*
+ * A figure set as a picture: thin figures at the title's size, over the dark of space or sky. The body face,
+ * because the display face's figures are old-style and its 1 reads as an I.
+ */
+.figure-value {
+  font-size: var(--text-h2);
+  font-weight: 300;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 2rem rgb(0 0 0 / 0.8);
+  white-space: nowrap;
 }
 
 /* A gallery's words (a label, an address): one cell, so the tallest reserves the room, and a quicker change than the pictures'. */

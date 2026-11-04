@@ -1,0 +1,158 @@
+---
+title: Setting up a dome
+description: Open dome mode on the computer that feeds your dome system, run Skymap there so a phone can pair with it, and fly the dome from the phone.
+job: "How do I set up Skymap in a dome and fly it from a phone?"
+facts: [share-dome, film-recorder, film-silent]
+---
+
+Skymap draws one fisheye disc for your dome system to project. Dome mode runs from the published site. To fly the dome from a phone, the dome’s computer runs Skymap itself: see [Run Skymap for a phone remote](#run-skymap-for-a-phone-remote).
+
+## Open dome mode
+
+1. On the computer that feeds your dome system, open Skymap with `?dome` before the `#`, in small letters and with no value: `skymap.rulkens.com/?dome#focus=body-saturn`. For a phone remote, open the address under [Pair a phone](#pair-a-phone) instead.
+2. Make the window full screen: <Keys of="F11" />, or on a Mac <Keys of="Ctrl+Cmd+F" />.
+3. Show the window on the output your dome system takes its fisheye from.
+4. Dome mode opens with the interface hidden. <Keys of="Tab" /> shows it, flat over the disc where the audience sees it, and hides it again.
+
+<View to="focus=body-saturn&t=2017-10-15T12:00:00Z" query="dome">Open Saturn in dome mode</View>
+
+What the disc holds, and where things sit on it, is under [Dome mode](/docs/guide/screens-and-domes/#dome-mode).
+
+### At the dome’s computer
+
+<Figure id="guide-dome-window" />
+
+<Fact id="screens-dome-pointer" />
+
+<Fact id="screens-dome-interface" />
+
+A link copied in dome mode opens in dome mode, and a tour or an exhibit opened by such a link plays with its captions or notes flat over the disc.
+
+<View to="exhibit=cosmicWeb" query="dome">Open the Cosmic Web exhibit in dome mode</View>
+
+If the picture stutters, the steps under [When it stutters](/docs/guide/screens-and-domes/#when-it-stutters) apply, the data size first.
+
+## Run Skymap for a phone remote
+
+<Fact id="remote-relay" />
+
+1. On the dome’s computer, install Node 24 or later and git.
+2. Copy the repository and install its packages:
+   ```
+   git clone https://github.com/rulkens/skymap.git
+   cd skymap
+   npm install
+   ```
+3. Start the server. In a terminal on macOS or Linux:
+   ```
+   export VITE_DATA_BASE_URL=https://skymap-data.rulkens.com
+   npm run dev -- --host
+   ```
+   On Windows, in PowerShell:
+   ```
+   $env:VITE_DATA_BASE_URL = "https://skymap-data.rulkens.com"
+   npm run dev '--' --host
+   ```
+   PowerShell drops a bare `--`, so it is in quotes there. The first line makes the app load its catalogues and pictures from our data server, as the published site does. `--host` lets other devices reach the server. It prints a Network address for each network the computer is on, and a Remote line with the address a phone opens. The Local line must read port 5173, the one address our data server answers: if it reads another, close what holds 5173 and start again.
+4. Leave the terminal open. Closing it stops the server, and the phone loses the dome.
+
+### What the network needs
+
+- **The phone reaches the dome’s computer** on port 5173, where it loads the remote page and sends its messages. Put both on the same Wi-Fi, or on networks routed to each other.
+- **The dome’s computer lets the phone in.** Its firewall must accept connections to port 5173; if it asks about Node, allow it.
+- **Only the dome’s computer needs the internet**, for our data server. The messages between phone and dome go through the dome’s computer and nowhere else.
+- **The phone draws nothing itself.** The remote page is buttons and a drag pad, so the phone needs no WebGPU.
+
+## Pair a phone
+
+1. On the dome’s computer, open `http://localhost:5173/?dome&remote`, with the view you want after a `#`. Open it at `localhost`, on that computer itself: at a Network address the browser does not draw with WebGPU, and our data server does not answer it.
+2. Make the window full screen and show it on the dome, as under [Open dome mode](#open-dome-mode).
+
+<Fact id="remote-pairing" />
+
+<Figure id="guide-dome-pairing" />
+
+3. On the phone, scan the flat QR code in the corner of the dome computer’s screen, or the card on the dome. A phone without a camera opens the Remote address the server printed and types the room code; Join works once all eight characters are in.
+4. The phone reads Connected. The card leaves the dome, and the dome’s interface is hidden.
+
+## Fly from the phone
+
+The phone shows what the dome reports, so a tap shows on the phone once the dome has done it. The sections below the Home button appear once the dome answers.
+
+<AnnotatedShot
+  id="guide-remote"
+  parts={[
+    {
+      name: 'Top line',
+      does: 'Connected, Looking for the dome or Dome not there; the focused object’s name where the phone’s last search listed it, else Focused or Nothing focused',
+      box: [0, 0, 390, 44],
+    },
+    {
+      name: 'Drag pad',
+      does: 'One finger turns the view about the focus, two fingers pinch to zoom',
+      box: [16, 44, 358, 340],
+    },
+    { name: 'Home', does: 'Flies to the home view, as H does', box: [16, 392, 254, 44] },
+    {
+      name: 'Camera controls',
+      does: 'The Skymap and OpenSpace schemes; under OpenSpace, hold a button on the pad and drag to look around, roll or zoom',
+      box: [278, 392, 96, 44],
+    },
+    { name: 'Search', does: 'Type a name, tap a match to fly there', box: [0, 452, 390, 107] },
+    {
+      name: 'Tours',
+      does: 'Starts a tour; while one runs, its beat, Previous, Pause or Resume, and Next',
+      box: [0, 559, 390, 114],
+    },
+    {
+      name: 'Exhibits and clips',
+      does: 'Opens an exhibit or plays a prepared camera move; Exit exhibit or clip ends either',
+      box: [0, 673, 390, 609],
+    },
+    {
+      name: 'Time',
+      does: 'Play or Pause, Reverse or Forward, Go live, Slower, Faster, and a date to jump to',
+      box: [0, 1282, 390, 273],
+    },
+    { name: 'Labels', does: 'The switches of Labels & Guides, folded until tapped', box: [0, 1555, 390, 69] },
+    {
+      name: 'Setup',
+      does: 'Add a phone, which shows the pairing card on the dome again',
+      box: [0, 1624, 390, 99],
+    },
+  ]}
+/>
+
+## Add another phone
+
+On a phone that is connected, tap Add a phone under Setup. The dome shows the card again, with the same room code, until the new phone connects; a second tap hides it. Every connected phone can steer.
+
+<Fact id="remote-room-size" />
+
+## When the connection drops
+
+<Fact id="remote-lost" />
+
+- **The phone sleeps or leaves the Wi-Fi.** It reads Dome not there, names its room code and offers Change code, and nothing it sends reaches the dome. It connects again by itself when it is back. The dome keeps its view.
+- **The phone’s page is reloaded.** It joins the same room again: the code is in its address.
+- **The dome’s page is reloaded.** It gets a new room code and shows the card again. On the phone, scan the new QR code, or tap Change code and type the new code.
+- **The server stops.** When it is started again, the dome’s page reloads itself with a new room code. Pair the phones again.
+
+## If the phone does not connect
+
+- **The QR code opens a `localhost` address on the phone.** The server was started without `--host`. Stop it with <Keys of="Ctrl+C" /> and start it with the command under [Run Skymap for a phone remote](#run-skymap-for-a-phone-remote).
+- **The phone’s browser cannot open the page.** The phone does not reach the dome’s computer: check that both are on the same network and that the firewall allows port 5173. A guest Wi-Fi often keeps its devices apart.
+- **The phone reads Looking for the dome, then Dome not there.** The room code is not the one the dome shows, or the dome’s page came from skymap.rulkens.com, which has no relay, or the room already holds three phones.
+- **The dome shows no card.** Its address has no `?remote`, or a phone has paired already: tap Add a phone on that phone.
+- **The phone cannot read the card off the monitor.** The card is bent to the fisheye. Scan the flat QR code in the top left corner.
+- **The QR code holds an address on another network.** On a computer with more than one network the QR code holds the first Network address. On the phone, open `http://` followed by the address on the phone’s network, `:5173/remote.html`, and type the room code.
+- **The dome reads Skymap needs WebGPU.** Its page was opened at a Network address. Open it at `localhost`.
+
+## Live or as a film
+
+<Fact id="screens-no-capture" />
+
+- **Live.** Show the browser window, full screen and with the interface hidden, on the output your system takes a fisheye from. Someone flies the app, from the dome’s computer or a phone, while the audience watches.
+- **As a film.** The recorder writes a fisheye disc of 4,096 by 4,096 pixels at 30 or 60 frames a second, without sound.
+
+What we would build for a dome, and what is still missing for one, is on [Domes and museums](/domes/#deliver).

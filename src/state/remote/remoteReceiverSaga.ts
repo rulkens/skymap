@@ -17,7 +17,7 @@ import {
   type SagaIterator,
   type Task,
 } from 'redux-saga';
-import { actionChannel, call, cancel, delay, fork, put, select, take } from 'typed-redux-saga';
+import { actionChannel, cancel, delay, fork, put, select, take } from 'typed-redux-saga';
 
 import { remotePaired, remotePairingStarted } from './remoteSlice';
 import { selectRemote } from './selectors';
@@ -37,9 +37,11 @@ import { selectToggleRows } from '../settings/selectToggleRows';
 import { parseRemoteMessage } from '../../utils/remote/parseRemoteMessage';
 import { rankPaletteMatches } from '../../utils/palette/rankPaletteMatches';
 import { remoteSearchMatches } from '../../utils/remote/remoteSearchMatches';
+import { pairingUrl } from '../../utils/remote/pairingUrl';
 import { REMOTE_SILENCE_MS } from '../../data/remote/remoteSilenceMs';
 import type { DeviceEvent } from '../../@types/input/DeviceEvent';
 import type { DomeMessage } from '../../@types/remote/DomeMessage';
+import type { RelayRoom } from '../../@types/remote/RelayRoom';
 import type { RemoteId } from '../../@types/remote/RemoteId';
 import type { RemoteLinkStatus } from '../../@types/remote/RemoteLinkStatus';
 import type { RemoteTransport } from '../../@types/remote/RemoteTransport';
@@ -53,11 +55,8 @@ export function* remoteReceiverSaga(
   transport: RemoteTransport,
   layerRows: readonly LayerToggleRow[],
 ): SagaIterator {
-  const code = transport.newRoom();
-  const origins = yield* call(transport.pairingOrigins);
-  const pairingUrl = origins.length > 0 ? `${origins[0]}/remote.html#${code}` : null;
-  yield* put(remotePairingStarted({ code, pairingUrl }));
-  const link = transport.open(code);
+  const link = transport.host();
+  const rooms = eventChannel<RelayRoom>((emit) => link.onRoom(emit), buffers.expanding());
   const texts = eventChannel<string>((emit) => link.onText(emit), buffers.expanding());
   const linkStatuses = eventChannel<RemoteLinkStatus>(
     (emit) => link.onStatus(emit),
@@ -92,6 +91,18 @@ export function* remoteReceiverSaga(
     }
   }
 
+  // Cancelling the watchdogs too: a remote that rejoins inside its silence window must pair again.
+  function* pairOnEveryRoom() {
+    while (true) {
+      const room = yield* take(rooms);
+      for (const watchdog of watchdogs.values()) yield* cancel(watchdog);
+      watchdogs.clear();
+      [...sources.keys()].forEach(closeSource);
+      const url = room.onSky ? pairingUrl(room.origin, room.code) : null;
+      yield* put(remotePairingStarted({ code: room.code, pairingUrl: url }));
+    }
+  }
+
   // Leading and trailing: the sliding buffer keeps one change from the cool-down, so the last one still goes out.
   function* publishStatusOnChange() {
     const changes = yield* actionChannel('*', buffers.sliding<Action>(1));
@@ -107,6 +118,7 @@ export function* remoteReceiverSaga(
   }
 
   try {
+    yield* fork(pairOnEveryRoom);
     yield* fork(closeAllOnLinkClosed);
     yield* fork(publishStatusOnChange);
     while (true) {
@@ -172,6 +184,7 @@ export function* remoteReceiverSaga(
     }
   } finally {
     [...sources.keys()].forEach(closeSource);
+    rooms.close();
     texts.close();
     linkStatuses.close();
     link.close();

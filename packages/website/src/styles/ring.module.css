@@ -5,7 +5,8 @@
  * `composes: ring from '../../../../styles/ring.module.css'`. The variants (`ring-big`, `ring-small`,
  * `ring-hang`) are composed together with `ring`. They are prefixed because every module in this
  * folder compiles to `styles-{class}`, and type.module.css already owns `small`.
- * `glyph` goes on the drawing (Icon) inside a ring, `glyph-ring` on a link that is not a ring.
+ * `glyph` goes on the drawing (Icon) inside a ring, `glyph-ring` on a link that is not a ring;
+ * `numbered` on a heading led by its number (`data-n`) in a ring.
  */
 
 .ring {
@@ -167,6 +168,26 @@
   .ring.ring-big.ring-hang + .ring.ring-hang {
     padding-left: calc(2.875rem - var(--mark) - var(--gap));
   }
+}
+
+/* A part or a step, numbered as the app's clock marks an instant: in the host's `--accent`, else the page's. */
+.numbered {
+  display: flex;
+  align-items: center;
+  gap: var(--site-space-xs);
+}
+
+.numbered::before {
+  content: attr(data-n);
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--accent, var(--color-accent));
+  border-radius: 50%;
+  font: var(--weight-small) var(--text-small) / 1 var(--font-body);
+  color: var(--accent, var(--color-accent));
 }
 
 /* As specific as the rules that set the transitions, or it would lose to them. */

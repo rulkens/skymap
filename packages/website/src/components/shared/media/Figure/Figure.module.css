@@ -6,22 +6,6 @@
   margin-top: var(--site-space-2xs);
 }
 
-/* The frames meet in the middle of a gap of the page grid; their labels keep to its columns either side. */
-@media (--wide) {
-  .start,
-  .end {
-    --cols: 6;
-  }
-
-  .start {
-    padding-right: calc(var(--col-gap) / 2 - 0.125rem);
-  }
-
-  .end {
-    padding-left: calc(var(--col-gap) / 2 - 0.125rem);
-  }
-}
-
 /* The margin is the room the disc's ring stands in. */
 .ringed {
   max-width: min(26rem, 78svh);

@@ -42,7 +42,9 @@ function LessonPlan() {
             <p className={styles.prep}>
               {part.minutes} minutes. {part.prep}
             </p>
-            <h3 data-n={at + 1}>{part.title}</h3>
+            <h3 className={styles.title} data-n={at + 1}>
+              {part.title}
+            </h3>
             <p>
               {part.lesson} {part.factIds.map(says).join(' ')}
             </p>

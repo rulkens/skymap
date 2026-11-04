@@ -4,7 +4,7 @@
  * view's foot, printed without the camera's numbers as Home's bar prints it (shownLink); the link and the copy keep
  * them. The pieces drift against the view as the page scrolls and lean from the pointer, the card the most.
  */
-import { siteShot } from '../../../../data/siteShot.ts';
+import { requireShotLink } from '../../../../utils/requireShotLink.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { shownLink } from '../../../../utils/shownLink.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
@@ -23,7 +23,7 @@ type LinkSpreadProps = {
 };
 
 function LinkSpread({ title, line, href, label }: LinkSpreadProps) {
-  const link = siteShot(RENDER).link;
+  const link = requireShotLink(RENDER);
 
   return (
     <section className={styles.root}>
