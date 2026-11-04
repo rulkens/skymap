@@ -78,7 +78,7 @@ function makeState(): EngineState {
     settings: {
       bodies: { items: {} },
     },
-    picking: { pickInFlight: false, cursorTexPx: null },
+    picking: { pickInFlight: false },
   } as unknown as EngineState;
 }
 
@@ -371,7 +371,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         register: { pose: CAPTURE_LAST_POSE },
         outputs: { projection: CAPTURE_PROJECTION, simDays: CAPTURE_LAST_SIM_DAYS },
       },
-      picking: { pickInFlight: false, cursorTexPx: null },
+      picking: { pickInFlight: false },
     } as unknown as EngineState;
   }
 

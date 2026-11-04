@@ -15,6 +15,7 @@ import { createBodyGlintRenderer } from '../../services/gpu/renderers/bodies/bod
 import { createEarthRenderer } from './earth/render/earthRenderer';
 import { createSurfaceTileRenderer } from './surfaceTiles/patch/render/surfaceTileRenderer';
 import { createTerrainPickMarkerRenderer } from './terrainPick/render/terrainPickMarkerRenderer';
+import { createTerrainPickCursor } from './terrainPick/subsystems/terrainPickCursor';
 import { createTexturedBodyRenderer } from './spheres/render/texturedBodyRenderer';
 import { createPlanetRenderer } from './spheres/render/planetRenderer';
 import { createRingRenderer } from './rings/render/ringRenderer';
@@ -93,5 +94,10 @@ export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
     // last state before the loop sleeps still reaches the panel.
     readoutGate: throttleWithTrailingCall(READOUT_INTERVAL_MS, deps.requestRender),
     debugPanelOpen: deps.debugPanelOpen,
+    terrainPickCursor: createTerrainPickCursor(
+      deps.ctx.canvas,
+      () => deps.settings().terrainPickMarker.enabled,
+      deps.requestRender,
+    ),
   };
 }

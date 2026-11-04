@@ -29,7 +29,6 @@ function makeCtx(camPos: readonly [number, number, number], focusBlend = 0): Fra
       simDays: 0,
       focusBlend,
       focusPickId: null,
-      cursorTexPx: null,
       renderedTargets: new Set<string>(),
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,

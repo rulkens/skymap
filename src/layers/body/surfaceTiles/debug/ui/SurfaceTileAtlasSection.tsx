@@ -10,8 +10,8 @@
 
 import { Fragment, useState, type FormEvent, type ReactElement } from 'react';
 import type { SurfaceTileDebugSnapshot } from '../@types/SurfaceTileDebugSnapshot';
-import type { DebugOverlayKey } from '../../../../../@types/data/debug/DebugOverlayKey';
-import { DEBUG_OVERLAY_ROWS } from '../../../../../data/debug/debugOverlayRows';
+import type { SurfaceTileOverlayKey } from '../@types/SurfaceTileOverlayKey';
+import { SURFACE_TILE_OVERLAY_ROWS } from '../data/surfaceTileOverlayRows';
 import { FLY_TO_PRESETS } from './flyToPresets';
 import { parseLonLatInput } from '../../../../../utils/geo/parseLonLatInput';
 import DebugOverlayToggles from '../../../../../components/DebugPanel/DebugOverlayToggles';
@@ -24,15 +24,9 @@ export type SurfaceTileAtlasSectionProps = {
    *  `body` omitted keeps `flyToLonLatActions`'s own
    *  Earth default — this section passes the snapshot's `bodyId` verbatim. */
   flyToLonLat: (lonDeg: number, latDeg: number, body?: string, altKm?: number) => void;
-  readonly overlays: Record<DebugOverlayKey, boolean>;
-  readonly onToggle: (key: DebugOverlayKey, enabled: boolean) => void;
+  readonly overlays: Record<SurfaceTileOverlayKey, boolean>;
+  readonly onToggle: (key: SurfaceTileOverlayKey, enabled: boolean) => void;
 };
-
-/** The `section: 'surface-tiles'` rows — terrain bisect toggles, which belong
- *  beside the residency numbers that explain what they change. */
-const TERRAIN_ROWS = DEBUG_OVERLAY_ROWS.filter(
-  (row) => 'section' in row && row.section === 'surface-tiles',
-);
 
 function SurfaceTileAtlasSection({
   surfaceTileDebug: snap,
@@ -75,7 +69,11 @@ function SurfaceTileAtlasSection({
 
   const terrainToggles = (
     <div className={styles.toggles}>
-      <DebugOverlayToggles rows={TERRAIN_ROWS} overlays={overlays} onToggle={onToggle} />
+      <DebugOverlayToggles
+        rows={SURFACE_TILE_OVERLAY_ROWS}
+        overlays={overlays}
+        onToggle={onToggle}
+      />
     </div>
   );
 

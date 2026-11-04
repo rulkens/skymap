@@ -138,9 +138,6 @@ export function deriveFrameContext(
     focusBlend: 0,
     focusPickId: null,
     plans: createFramePlannerResultStore(),
-    // Forwarded by reference, not copied: the listener allocates a fresh pair
-    // per pointermove and only while the debug overlay that reads it is on.
-    cursorTexPx: state.picking.cursorTexPx,
     // Empty: `renderFrame` unions into it as every view's program opens a pass.
     renderedTargets,
   };

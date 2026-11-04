@@ -26,7 +26,6 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | J6 | Structure focus mode (`structureFocusSubsystem`) | structure | NEEDS-JOINT | ~290 | core focus uniform read by other Layers' shaders; private fade controller vs "a Layer never drives a fade" |
 | J7 | Palette famous/alias/structure arms | galaxyCatalog, structure | NEEDS-JOINT | ~250 | `LayerSearchEntry` lacks thumbnail/description/scoring class |
 | J8 | Tier-swap galaxy re-anchor (`captureGalaxyFocusIds`, half of `watchTierSaga`) | galaxyCatalog | NEEDS-JOINT | ~120 | capture must run before core's tier write: an ordering hook |
-| J9 | Body debug overlays + terrain-pick radius in core `debugSlice` | body | NEEDS-JOINT | ~80 | core `createPickDriver` reads the `terrain-pick-marker` toggle; no Layer debug-overlay rows |
 | J10 | Earth places palette (`earthPlaces`, flyTo action) | body | NEEDS-JOINT | ~60 | `LayerSearchEntry` is focus-only |
 | J12 | `starSphereRangeM` in core `deriveView` | starCatalog | NEEDS-JOINT | 38 | NEAR0 range is core-sized; no Layer range contribution |
 | J13 | `bodySlabRosterIds` (`SCENE_PLANETS` roster) | body | NEEDS-JOINT | ~35 | known #3; per-body slab on `LayerBody` (backlog) |
@@ -91,9 +90,6 @@ One table of card facts for 41 ids: planets, moons, craft and `sgr-a-star`. It i
 
 ### J8. Tier-swap galaxy re-anchor: ~120
 `state/selection/captureGalaxyFocusIds` 63, `wiring/galaxyCatalogRequest` 14, and the re-anchor half of `state/tier/watchTierSaga`. Galaxy refs are positional, so they must be captured *before* core writes the tier. **Joint:** a pre-write hook (e.g. a `tierChanging` action the Layer's saga answers). Tier itself is global and stays.
-
-### J9. Body debug overlays in core `debugSlice`: ~80
-Four of six `DEBUG_OVERLAY_ROWS` (`surface-lod-overlay`, `terrain-no-displacement`, `terrain-no-skirts`, `terrain-pick-marker`) plus `terrainPickMarkerRadiusM` / `terrainPickMarkerSliderFields` are body content. Core `interaction/createPickDriver` reads the `terrain-pick-marker` toggle, and the inbound boundary test forbids it from importing body state. **Joint:** Layer-declared debug-overlay rows.
 
 ### J10. Earth places palette: ~60
 `data/palette/earthPlaces` 49 + the `flyTo` palette action. `LayerSearchEntry.id` is a focus id only. **Joint:** a search-entry action.

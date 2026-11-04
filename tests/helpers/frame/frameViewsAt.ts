@@ -68,7 +68,7 @@ export function frameViewsAt(input: {
     slabRows: BODY_SLAB_ROWS,
     visibilityEntries: [],
     settings: { bodies: { items: {} } },
-    picking: { pickInFlight: false, cursorTexPx: null },
+    picking: { pickInFlight: false },
   } as unknown as EngineState;
   const snapshot = deriveFrameContext(state, {
     cam,
