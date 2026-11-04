@@ -49,10 +49,8 @@ export type SiteShotSettings = {
   debugPanel?: true;
   /** With `ui`: headings of the app's panels to click before the shot, in order (`Settings` itself where the panel starts folded). */
   open?: readonly string[];
-  /** With `query: 'dome'`: the dome opens with `?remote`, and the picture is a phone's remote page paired to it, not the dome; `searchFor` is then typed into the remote's search, which is how its header gets the focused object's name. */
+  /** With `query: 'dome'`: the dome opens with `?remote`, and the picture is a phone's remote page paired to it, not the dome. */
   remote?: true;
-  /** With `remote`: the phone's screen height in CSS px; the picture is then the remote down its whole length, which the row's `size.height` must equal. */
-  screenHeight?: number;
   /** With `query: 'dome'` and `ui`: the dome opens with `?remote`, and the picture is its window before a phone pairs, the pairing card on the disc and the flat code in the corner. */
   pairing?: true;
   /** Keep this part of the frame only, in the viewport's CSS pixels: a phone's cut of a wide interface shot. */
