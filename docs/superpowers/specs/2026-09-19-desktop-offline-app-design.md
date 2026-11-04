@@ -446,3 +446,32 @@ It has four panels:
   - rotation kicks the tablet and redraws the QR;
   - a projector switched on after boot takes the sky;
   - the dome grid lands front-down.
+
+## 10. Experience
+
+Added at the owner's request after §1–§9 were built. The design brief is
+`.superpowers/sdd/2026-09-19-desktop-offline-app/first-run-brief.md` (a local workspace file, not
+tracked); its headings are named below. The shipped state is described in
+[`docs/DESKTOP.md`](../../DESKTOP.md).
+
+- **First-run flow** (brief: the opening sections and "Steps"). The control window opens on first
+  launch, when `setup.json` does not exist, with a five-step stepper (Welcome, Where it shows,
+  Which screen, Connect a tablet, Every day) over a download strip, so the first download is setup
+  time. It can be reopened with "Run setup again". There is no "Paired" confirmation: the relay
+  cannot report remotes.
+- **Help and About** ("Adjacent: menu structure, About, Help"). An in-app Help view (connecting a
+  tablet, moving the sky, the shortcut, updates, troubleshooting) and an About window with the
+  version, the data's date, the licence and the site address as text.
+- **Menus** (same section). Skymap, Edit, View, Window and Help menus, present only while the
+  control window has focus on macOS and on the control window alone on Windows; the sky never
+  shows one.
+- **Immersive chrome** ("Chrome, menus, windows"). A borderless black sky with no white flash, a
+  curtain that fades over every load, a cursor hidden after 3 s, a dark control window with the
+  traffic lights in the page's own band on macOS, and `prefers-reduced-motion` honoured.
+- **Branding** ("Branding"). The website's wordmark, star field and the app's tokens; the
+  control page, About, icons and installers read as one family with the site.
+- **Icons and installers** ("Icons and installer"). One script (`npm run brand`) renders the icon
+  set, the dmg background and the installer bitmaps from the brand page. The dmg has a designed
+  window. The Windows installer is assisted and per machine, with Start-menu and desktop
+  shortcuts, a firewall rule for private and domain networks, and an uninstaller that removes the
+  rule and offers, unticked, to delete the downloaded data. The mac build is arm64 only.

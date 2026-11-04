@@ -100,6 +100,9 @@ npm run phone       # Android phone over USB: serve, open, shot, net, trace → 
 npm run capture-featured # palette-card + cosmic-structure thumbnails → tools/capture/README.md
 npm run capture-structures # structure thumbnails from DSS2 sky cutouts → tools/capture/README.md
 npm run structure-audit  # import matrix + structure/quality audits page → tools/structure-audit/README.md
+npm run desktop     # desktop app in dev: builds main + control page, electron . --windowed → docs/DESKTOP.md
+npm run brand -w packages/desktop  # icon set + dmg/installer bitmaps from the brand page (needs Playwright Chromium)
+npm run dist -w packages/desktop   # unsigned dmg + Windows installer into packages/desktop/release/
 ```
 
 `typecheck:fast` is the tsgo inner loop; `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug.
@@ -115,6 +118,7 @@ These are **mandatory pre-reading** for the task areas below, not optional backg
 - Touching `tools/` parsers, catalog builders, fetchers, or anything under `data/` → read [docs/DATA.md](docs/DATA.md) FIRST (pipeline model, binary format, local-volume override, data-refresh orders, MCPM, catalog gotchas, new-source checklist).
 - Any deploy, R2 sync, cache/CORS, or `.env` question → read [docs/DEPLOY.md](docs/DEPLOY.md) FIRST (Workers Assets vs R2, full deploy steps, cloudLoader/dataUrl).
 - Touching `src/services/gpu/`, `engine`, shaders, or debugging rendering → read [docs/RENDERER.md](docs/RENDERER.md) FIRST (renderer map + hard-won WebGPU landmines). Attribute indices: `galaxyPointRenderer.ts` `SLOTS_PER_GALAXY_POINT` and the shader's attribute layout must agree byte-for-byte.
+- Touching `packages/desktop/` (the Electron kiosk and dome app) or the R2 offline inventory → read [docs/DESKTOP.md](docs/DESKTOP.md) FIRST (process map, data mirror, local HTTPS server and CA, relay wiring, build and installers, landmines).
 - Touching anything a person sees or operates (app UI, website, dev overlays) → read [docs/superpowers/conventions/ui-ux.md](docs/superpowers/conventions/ui-ux.md) FIRST (interaction tests, layout and type tokens, copy rules, the before-you-commit self-check).
 
 ## Compact Instructions

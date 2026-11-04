@@ -244,6 +244,13 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **More controls on the phone remote** `needs-design` — no command for data size, exposure, other layers, captions, full screen or showing the dome's interface (Tab on its keyboard). → [details](backlog/2026-11-03-remote-more-controls.md)
 - [ ] **Duplicate names in the remote's menus** `ready` — "Cosmic Flows" is both an exhibit and a clip (`src/data/exhibits/cosmicFlows.ts`, `src/data/animation/clips/cosmicFlows.ts`) and "Galactic Centre" shows twice in the label switches; rename or merge so each entry reads once.
 
+## Desktop app
+
+- [ ] **Website docs page for the desktop app** `blocked` — wait for a downloadable release; the install guide is `packages/desktop/README.md`. → [details](backlog/2026-11-04-desktop-website-docs-page.md)
+- [ ] **Intel or universal macOS build** `deferred` — the dmg is arm64 only; an Intel show machine cannot install it. → [details](backlog/2026-11-04-desktop-intel-mac-build.md)
+- [ ] **"Paired" confirmation in first-run setup** `awaiting-decision` — needs a remote-joined signal on `RelayHandle`, a contract that grows only with a yes. → [details](backlog/2026-11-04-desktop-paired-confirmation.md)
+- [ ] **Signing and notarization** `deferred` — both installers are unsigned and warn on open; out of scope in the spec. → [details](backlog/2026-11-04-desktop-signing-notarization.md)
+
 ## Docs & process
 
 - [ ] **Commercial build that cannot ship non-commercial data** `needs-design` — Gaia, Hipparcos, DSS2, EOX 2025 and others forbid commercial use or need permission; a build flag leaves them out, and a guard keyed on `ATTRIBUTIONS.md` markers fails any build that would ship them. → [details](backlog/2026-10-12-commercial-build.md)

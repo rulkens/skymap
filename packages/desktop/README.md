@@ -1,85 +1,126 @@
-# Skymap desktop
+# Skymap for kiosks and domes
 
-An Electron app that runs Skymap offline on one computer: a kiosk (flat) or a dome (fisheye) sky
-window, a control window, and phones or tablets as remotes over the local network. Specs and plan:
-`docs/superpowers/specs/2026-09-19-desktop-offline-app-design.md`.
+Skymap runs on one computer without internet. It downloads the sky's data once, then shows the
+sky full screen. A phone or tablet on the same network drives it. Use it as a kiosk (a flat
+screen) or in a dome (the fisheye disc for a planetarium projector).
 
-## Develop
+Developers: see [docs/DESKTOP.md](../../docs/DESKTOP.md).
 
-```bash
-npm run desktop     # build the main process and control page, then electron . --windowed
-```
+## What you need
 
-- It reads the catalogs from the repo's `public/data` (or `SKYMAP_DATA_DIR`) and skips the
-  sync and the prune.
-- It serves the web build from the repo's root `dist/`, so run `vite build --mode desktop`
-  at the root first (a plain `npm run build` bakes the R2 data URL into the pages).
-- `--windowed` gives the sky a normal window with DevTools, and the View menu Reload and Toggle
-  DevTools. In a show the menu only exists while the control window or About has focus.
+- A Mac with Apple silicon, or a Windows 64-bit computer. Intel Macs have no installer yet.
+- Internet for the first start only. The download is large; the setup window shows its size and
+  the time left, and says so if the disk has too little free space.
+- A graphics driver that supports WebGPU. A blank sky usually means an old driver.
 
-## Package
+## Install
 
-```bash
-npm run dist --workspace packages/desktop   # dmg and a Windows nsis installer in release/
-```
+Both installers are unsigned, so the system warns before it lets you open them. That is expected.
 
-- It builds the web app in desktop mode (an empty data base URL, no analytics), bundles the main
-  process, the preload and the control page with Vite, then runs electron-builder for both
-  targets. Both are unsigned.
-- First it runs `npm run brand`: `scripts/buildBrandAssets.ts` shoots the brand page (`src/brand/`,
-  the website's wordmark and star field) in headless Chromium into `resources/`: `icon.icns`,
-  `icon.ico` (16–256), the dmg background at 1x and 2x and the installer's header and sidebar
-  bitmaps. They are not committed; a new mark is a change to `public/favicon.svg` or `src/brand/`.
-  It needs Playwright's Chromium (`npx playwright install chromium`).
-- Out come `Skymap-<version>-mac.dmg` (arm64, the host's arch) and `Skymap-<version>-win-setup.exe`,
-  about 340 MB each; the version is `package.json`'s, which About shows too.
-- The Windows installer is assisted and per machine: a welcome page, the install folder, a finish
-  page with "Launch Skymap", and Start-menu and desktop shortcuts. Its uninstaller removes the
-  firewall rule and offers, unticked, to delete the downloaded sky data, naming its size.
-- The Windows installer cross-builds on macOS arm64 without Wine (Verification B), about a minute.
-- The web build ships as an `extraResources` copy at `resources/dist`, outside the asar so the
-  server can stream it.
-- Manual checks on Windows before a release: install, first sync, boot offline with WebGPU on D3D12,
-  a tablet pairing after trusting `/ca.crt`, a projector switched on after boot taking the sky, the
-  dome grid landing front-down.
+**Mac** (`Skymap-<version>-mac.dmg`)
 
-## Where things live
+1. Open the dmg and drag Skymap onto Applications.
+2. Open Skymap from Applications. macOS says it cannot check the app for malware. Close that
+   message, open System Settings, Privacy & Security, scroll to the note about Skymap and choose
+   Open Anyway. The wording differs between macOS versions.
 
-- **Data root:** `<userData>/data/` mirrors the bucket's `data/` tree key for key, plus
-  `synced.json` (key to sha256 of each verified file) and `inventory.json` (the last complete sync).
-- **Settings:** `<userData>/setup.json`; the room code `remote-room.json`; the certificates `certs/`.
-- **Pointer-last invariant (spec section 4):** a pointer file (the data manifest, a tile manifest) is
-  uploaded after every file it names, and what a pointer names never changes at its key. That is
-  why a sync that stops half way is safe: `inventory.json` is written last, and orphans are removed
-  only when the sky loads after a complete sync.
-- **Port:** the app serves HTTPS on `0.0.0.0:47823` (`APP_SERVER_PORT`). The sky window loads
-  `https://localhost:47823/`.
-- **Shortcut:** `CommandOrControl+Alt+K` shows or hides the control window. On one screen it floats
-  over the sky.
+**Windows** (`Skymap-<version>-win-setup.exe`)
 
-## First launch and the firewall
+1. Run the installer. Windows shows "Windows protected your PC": choose More info, then Run anyway.
+2. The installer asks for administrator rights, because it installs for everyone on the computer
+   and adds a firewall rule. Pick the folder, install, and leave "Launch Skymap" ticked.
+   Shortcuts named Skymap go on the Start menu and the desktop.
 
-macOS and Windows may ask to accept incoming network connections the first time Skymap starts.
+## First run
 
-- **Allow** lets phones and tablets pair with the app.
-- **Deny** keeps the sky working with no remote.
+The first start opens the setup window and starts the download at once. The steps, in order:
 
-The Windows installer adds an inbound rule named "Skymap" for TCP 47823 on private and domain
-networks (`installer/installer.nsh`), so Windows does not ask. The public profile stays closed, and
-uninstalling removes the rule. The rule names the port, so change it there when `APP_SERVER_PORT`
-changes. macOS gets no rule because the app is unsigned; choose Allow in its prompt.
+1. **Welcome.** What Skymap is and what happens now.
+2. **Where it shows.** Kiosk (a flat screen) or Dome (a fisheye disc).
+3. **Which screen.** Pick the screen for the sky. The sky moves there and shows a test grid. In a
+   dome the grid shows FRONT at the bottom. With one screen this step is skipped.
+4. **Connect a tablet.** Pick the network the tablet is on if the computer has several, then scan
+   the QR. You can skip this and pair later from the controls.
+5. **Every day.** Start Skymap with the computer, and when to fetch new data: at every launch,
+   daily at a time you pick, or only when you ask.
 
-## Pair a phone or tablet
+The download runs underneath all of this. When it ends, the last step reads "The sky is ready" and
+the sky opens. Each choice saves as you make it, and "Run setup again" in the controls brings the
+steps back.
 
-Scan the QR in the control window. The page is served over HTTPS with a certificate from this
-install's own CA, so a tablet warns until it trusts that CA once:
+## The firewall prompt
 
-- **iOS:** open `https://<address>:47823/ca.crt` in Safari and allow the profile download. Install it
-  in Settings, General, VPN & Device Management, then turn it on under Settings, General, About,
-  Certificate Trust Settings.
-- **Android:** open `https://<address>:47823/ca.crt`, then install it from Settings, Security,
-  Encryption & credentials, Install a certificate, CA certificate. Tapping through the warning
-  works too; trusting the CA stops it coming back.
+The first time Skymap starts, macOS asks whether Skymap may accept incoming network connections.
+Choose **Allow**, or phones and tablets cannot connect. Choosing Deny keeps the sky working but
+leaves no remote. To fix it later, allow Skymap in the system's firewall settings.
 
-The control window shows the exact address. Give the computer's network a DHCP reservation, so the
-address in a tablet's bookmark keeps working after a restart.
+The Windows installer already adds a firewall rule for private and domain networks, so Windows
+usually does not ask. Networks Windows marks as public stay closed.
+
+## Connect a tablet
+
+The tablet must be on the same network as the computer.
+
+1. The tablet trusts the computer once. Open `https://<address>:47823/ca.crt` in the tablet's
+   browser; the setup window and the Help view show the exact address.
+   - **iPad or iPhone:** use Safari and allow the profile download. Install it in Settings, General,
+     VPN & Device Management, then turn it on in Settings, General, About, Certificate Trust Settings.
+   - **Android:** install it from Settings, Security, Encryption & credentials, Install a
+     certificate, CA certificate. Tapping through the browser's warning also works; trusting the
+     certificate stops the warning coming back.
+2. Scan the QR in the controls with the tablet's camera.
+
+The QR holds a code that stays the same between launches, so a bookmark keeps working. Rotate code
+in the controls makes a new one and disconnects every tablet.
+
+Give the computer a DHCP reservation on the venue's router, so its address does not change after a
+restart. A tablet's bookmark holds the address, so it breaks if the address changes.
+
+## Move the sky to another screen
+
+Open the controls, go to Setup, and pick the screen under Sky screen. The sky moves at once. Show
+the test grid to see which screen it is on. If the chosen screen is off when Skymap starts, the sky
+uses another screen and moves back when the chosen one is connected. A projector switched on after
+the computer boots takes the sky.
+
+## Open the control window
+
+Press **Ctrl+Alt+K** (Cmd+Option+K on a Mac). It shows or hides the control window, also when the
+sky fills the only screen. Closing the window only hides it. Quit is in the controls.
+
+On a Mac, the menu bar appears only while the control window has focus, so a visitor at the sky's
+keyboard cannot quit the show.
+
+## Updates
+
+New data arrives as set in Setup: at every launch, daily at a time, or only with Update now. An
+update started with Update now waits until you choose Restart sky; the others load by themselves.
+The app itself has no update channel yet: install a newer installer over the old one. Downloaded
+data is kept.
+
+## Uninstall
+
+- **Mac:** drag Skymap from Applications to the Bin. The data and settings stay in
+  `~/Library/Application Support/Skymap`; delete that folder to remove them.
+- **Windows:** uninstall Skymap from Settings, Apps. The uninstaller removes the app, its shortcuts
+  and its firewall rule. It lists "Downloaded sky data" with its size, unticked: leave it to keep
+  the data and skip the download on a reinstall, or tick it to delete the data. Settings and
+  certificates stay in `%APPDATA%\Skymap`.
+
+## Troubleshooting
+
+- **No sky.** The sky opens once its data is downloaded. The status under Data says what it waits
+  for.
+- **Blank sky.** Update the graphics driver, then choose Restart sky in the controls.
+- **The download needs internet.** The first start needs it once. Connect, then choose Retry.
+- **The disk is full.** The status names the space needed and the space free. Free the difference
+  and choose Retry.
+- **A tablet cannot connect.** Check that the sky is running, that the tablet is on the same
+  network and trusts the certificate, and, if the computer has more than one network, that the
+  controls name the one the tablet uses. Check the firewall prompt was answered with Allow.
+- **The tablet warns about the certificate.** It does not trust the computer yet; see Connect a
+  tablet.
+- **Skymap will not start, or says the port is in use.** Another copy is running, or one was left
+  behind after a crash. Quit it (Task Manager or Activity Monitor) and start again. Skymap uses
+  port 47823.
+- **The sky is on the wrong screen.** See Move the sky to another screen.

@@ -89,10 +89,10 @@ with rulings Q0–Q13 in [`docs/grill-sessions/desktop-dome-remote-2026-11-03.md
 
 **Package scripts (contract):**
 
-- `dev`: tsc → `build/`, then `electron build/main/main.js --windowed`;
+- `dev`: the Vite builds (`control`, `preload`, `main`) → `build/`, then `electron . --windowed`;
 - `test`: vitest run;
 - `typecheck`;
-- `dist`: root `vite build --mode desktop`, then tsc, then `electron-builder --mac --win`.
+- `dist`: root `vite build --mode desktop`, then `brand`, the Vite builds, then `electron-builder --mac --win`.
 
 - [ ] Scaffold, then check that `npm run desktop` opens an empty window.
 - [ ] **Verification A (install footprint):**
@@ -449,7 +449,7 @@ export function attachDesktopRelay(server: https.Server, opts: { code: RoomCode;
 **Files:**
 
 - Create:
-  - `packages/desktop/src/control/index.html`, `packages/desktop/src/control/control.ts`,
+  - `packages/desktop/src/control/index.html`, `packages/desktop/src/control/main.tsx` (the React page),
     `packages/desktop/src/control/preload.cts`;
   - `packages/desktop/src/main/readSetup.ts`, `packages/desktop/src/main/saveSetup.ts`,
     `packages/desktop/src/main/runLifecycle.ts`;
