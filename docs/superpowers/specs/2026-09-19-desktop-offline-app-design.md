@@ -40,7 +40,7 @@ update the local copy incrementally.
 
 - the attract loop, idle reset and galaxy thumbnail pack (kiosk mode, its own backlog item);
 - the remote's own UI (the show-deck redesign, `feat/remote-show-deck`, owns it);
-- dome tilt and orientation settings. Dome mode keeps its fixed front and zenith. *(My call.)*
+- dome tilt and orientation settings. Dome mode keeps its fixed front and zenith. _(My call.)_
 - WebGPU `device.lost` recovery;
 - signing, notarization and auto-update of the app binary;
 - a CI release job;
@@ -132,7 +132,7 @@ on the first pairing and on every rotation. **Taken:** one path for pairing and 
   `inventory.json` written last as the completeness marker).
 - **Window placement:** it is one pure function, the test grid lives inside the sky window, and
   windows trust the per-install CA, not a pinned leaf certificate that changes on every reissue.
-  *(My calls.)*
+  _(My calls.)_
 
 ### 3.3 Joint verdicts
 
@@ -166,7 +166,7 @@ There is no behaviour change in the web app: dev codes stay random per dome. Thi
 
 - **`true`:** `public/data`, hi-res famous images, planet textures, every surface-tiles group,
   every surface-tile-manifest group, every octree-chunk group, and the data manifest. The desktop
-  must render what the web app renders. *(Octree chunks: my call.)*
+  must render what the web app renders. _(Octree chunks: my call.)_
 - **`false`:** `Extra files` (contributor caches and `robots.txt`) and `Mesh sources` (`.blend`
   backups).
 
@@ -183,9 +183,9 @@ polices. It is uploaded as `data/offline-inventory.json`, `NO_CACHE`, purged, **
 
 **Guard:** the inventory is built from local files, and a collector whose bake never ran on this
 machine contributes `[]`. Every desktop would then prune files that still sit on R2. So `sync-r2`
-refuses to publish the inventory when any offline group is empty, and names the group. *(My
+refuses to publish the inventory when any offline group is empty, and names the group. _(My
 call. The owner deploys from the main checkout, which has every bake, so the guard only catches
-mistakes.)*
+mistakes.)_
 
 **Invariant the desktop app inherits:** a pointer file (data manifest, tile manifest) is uploaded
 after every file it names, and anything a pointer names is immutable at its key (content hash or
@@ -285,7 +285,9 @@ dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string /* 'HH:MM' local
 - **Sky window:** frameless, black, full screen on `sky`. It loads `/?dome&remote` in dome mode
   and `/?remote` in kiosk mode.
 - **Control window (Q5, Q6):** an ordinary window. It comes up by itself when it needs a person:
-  first run, sync error, no complete local set, or the stored display missing.
+  first run, no complete local set, or the stored display missing. A sync error raises it only when
+  there is no complete local set; with data on disk the error shows in the Sync panel and the sky
+  keeps running (a raised window would cover the sky on one screen mid-show).
 - **Test grid (Q8):** `showTestGrid` adds a `WebContentsView` inside the sky window, so its bounds
   move with the window.
   - **Dome mode:** it shows `assets/dome-grid.png` at `object-fit: contain`. The image is an
@@ -297,7 +299,7 @@ dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string /* 'HH:MM' local
   reload after 2 s. `unresponsive` for 30 s also reloads.
 - **Navigation lock:** `will-navigate` blocks every target outside `https://localhost:<port>`,
   and `setWindowOpenHandler` denies everything. InfoCard outbound links become dead clicks.
-- **Autostart:** a toggle in the control window (`app.setLoginItemSettings`). *(My call.)*
+- **Autostart:** a toggle in the control window (`app.setLoginItemSettings`). _(My call.)_
 - **Quit:** only from the control window. The sky window has no other way out.
 - **Dev:** `npm run desktop` launches with `SKYMAP_DATA_DIR` pointing at the main checkout's
   `public/data` and skips the sync. `--windowed` gives a normal sky window with DevTools.
@@ -379,11 +381,13 @@ runs sandboxed) that exposes the bridge through `contextBridge` only:
 ```ts
 type ControlBridge = {
   onSync: (listener: (progress: SyncProgress) => void) => Unsubscribe;
+  onStatus: (listener: (status: ControlStatus) => void) => Unsubscribe; // errors and "New data ready", which progress cannot carry
   updateNow: () => void;
   restartSky: () => void;
   getSetup: () => Promise<InstallSetup>;
   saveSetup: (setup: InstallSetup) => Promise<void>;
   listDisplays: () => Promise<DisplayInfo[]>;
+  listNetworks: () => Promise<LanInterface[]>; // fills the network picker
   showTestGrid: (on: boolean) => void;
   onPairing: (listener: (room: RelayRoom) => void) => Unsubscribe; // fed by RelayHandle.onRoom
   rotateCode: () => void;

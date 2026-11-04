@@ -1,11 +1,12 @@
 import { app, BrowserWindow } from 'electron';
 import { join } from 'node:path';
+import type { QuitGate } from '../@types/QuitGate';
 
 /**
  * The control window, hidden. Closing only hides it: the sky runs unattended, and the shortcut
  * (or a second launch) brings the window back; Quit in the page is the one way out.
  */
-export function openControlWindow(): BrowserWindow {
+export function openControlWindow(gate: QuitGate): BrowserWindow {
   const win = new BrowserWindow({
     show: false,
     width: 960,
@@ -18,10 +19,8 @@ export function openControlWindow(): BrowserWindow {
       contextIsolation: true,
     },
   });
-  let quitting = false;
-  app.on('before-quit', () => (quitting = true));
   win.on('close', (event) => {
-    if (quitting) return;
+    if (gate.mayClose()) return;
     event.preventDefault();
     win.hide();
   });

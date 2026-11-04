@@ -1,23 +1,21 @@
 import { existsSync } from 'node:fs';
-import { mkdir, rename, statfs, writeFile } from 'node:fs/promises';
+import { mkdir, statfs } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { OfflineInventory } from '../../../../tools/deploy/@types/OfflineInventory';
 import type { SyncedRecord } from '../@types/SyncedRecord';
 import type { SyncOutcome } from '../@types/SyncOutcome';
 import type { SyncProgress } from '../@types/SyncProgress';
+import { INVENTORY_FILE } from '../data/inventoryFile';
+import { SYNCED_FILE } from '../data/syncedFile';
 import { downloadVerified } from '../utils/downloadVerified';
 import { keyToLocalPath } from '../utils/keyToLocalPath';
 import { readJsonFile } from '../utils/readJsonFile';
 import { runPool } from '../utils/runPool';
+import { writeFileAtomically } from '../utils/writeFileAtomically';
 import { InsufficientDiskError } from './InsufficientDiskError';
 import { planSync } from './planSync';
 
 const CONCURRENT_DOWNLOADS = 8;
-
-async function writeJsonAtomically(path: string, text: string): Promise<void> {
-  await writeFile(`${path}.tmp`, text);
-  await rename(`${path}.tmp`, path);
-}
 
 async function fetchInventory(
   baseUrl: string,
@@ -51,7 +49,7 @@ export async function runSync(opts: {
   if (fetched === null) return 'offline';
 
   await mkdir(dataRoot, { recursive: true });
-  const syncedPath = join(dataRoot, 'synced.json');
+  const syncedPath = join(dataRoot, SYNCED_FILE);
   const synced = (await readJsonFile<SyncedRecord>(syncedPath)) ?? {};
   const onDisk = new Set(
     fetched.inventory.groups.flatMap((g) =>
@@ -78,12 +76,12 @@ export async function runSync(opts: {
           synced[file.key] = file.sha256;
         });
       } finally {
-        await writeJsonAtomically(syncedPath, JSON.stringify(synced));
+        await writeFileAtomically(syncedPath, JSON.stringify(synced));
       }
     }
   } catch {
     return 'failed';
   }
-  await writeJsonAtomically(join(dataRoot, 'inventory.json'), fetched.text);
+  await writeFileAtomically(join(dataRoot, INVENTORY_FILE), fetched.text);
   return 'synced';
 }

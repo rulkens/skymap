@@ -10,10 +10,10 @@ window, a control window, and phones or tablets as remotes over the local networ
 npm run desktop     # build the main process and control page, then electron . --windowed
 ```
 
-- It reads the catalogs from the main checkout's `public/data` (set `SKYMAP_DATA_DIR`) and skips the
+- It reads the catalogs from the repo's `public/data` (or `SKYMAP_DATA_DIR`) and skips the
   sync and the prune.
-- It serves the web build from the repo's root `dist/`, so run `npm run build` (or
-  `vite build --mode desktop`) at the root first.
+- It serves the web build from the repo's root `dist/`, so run `vite build --mode desktop`
+  at the root first (a plain `npm run build` bakes the R2 data URL into the pages).
 - `--windowed` gives the sky a normal window with DevTools.
 
 ## Package
@@ -23,7 +23,7 @@ npm run dist --workspace packages/desktop   # dmg and a Windows nsis installer i
 ```
 
 - It builds the web app in desktop mode (an empty data base URL, no analytics), bundles the main
-  process, the preload and the control page with esbuild, then runs electron-builder for both
+  process, the preload and the control page with Vite, then runs electron-builder for both
   targets. Both are unsigned.
 - The Windows installer cross-builds on macOS arm64 without Wine (Verification B), about a minute.
 - The web build ships as an `extraResources` copy at `resources/dist`, outside the asar so the

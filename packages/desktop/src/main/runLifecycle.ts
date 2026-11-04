@@ -3,22 +3,24 @@
  * data allows (spec §5 outcome table). Everything the control window can ask arrives as IPC from
  * that window only.
  */
-import { app, dialog, globalShortcut, ipcMain, screen } from 'electron';
+import { app, dialog, globalShortcut, ipcMain, Menu, screen } from 'electron';
 import type { BrowserWindow, IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import type { QuitGate } from '../@types/QuitGate';
 import type { RelayRoom } from '../../../../src/@types/remote/RelayRoom';
 import type { ControlStatus } from '../@types/ControlStatus';
 import type { SyncOutcome } from '../@types/SyncOutcome';
 import { APP_SERVER_PORT } from '../data/appServerPort';
 import { CONTROL_SHORTCUT } from '../data/controlShortcut';
-import { DATA_ORIGIN } from '../data/dataOrigin';
 import { DEFAULT_INSTALL_SETUP } from '../data/defaultInstallSetup';
 import { SETUP_FILE } from '../data/setupFile';
 import { hasCompleteLocalSet } from '../sync/hasCompleteLocalSet';
 import { InsufficientDiskError } from '../sync/InsufficientDiskError';
 import { pruneOrphans } from '../sync/pruneOrphans';
 import { runSync } from '../sync/runSync';
+import { resolveDataRoot } from '../utils/resolveDataRoot';
+import { serially } from '../utils/serially';
 import { lanOriginFor } from '../utils/lanOriginFor';
 import { listLanInterfaces } from '../utils/listLanInterfaces';
 import { nextDailyRun } from '../utils/nextDailyRun';
@@ -27,6 +29,8 @@ import { skyUrlFor } from '../utils/skyUrlFor';
 import { storedDisplayMissing } from '../utils/storedDisplayMissing';
 import { toDisplayInfo } from '../utils/toDisplayInfo';
 import { attachDesktopRelay } from './attachDesktopRelay';
+import { createQuitGate } from './createQuitGate';
+import { createSkyLoader } from './createSkyLoader';
 import { fillDisplay } from './fillDisplay';
 import { openControlWindow } from './openControlWindow';
 import { openSkyWindow } from './openSkyWindow';
@@ -45,25 +49,34 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     return;
   }
   await app.whenReady();
+  const gate = createQuitGate();
   try {
-    await start(windowed);
+    await start(windowed, gate);
   } catch (error) {
     dialog.showErrorBox('Skymap could not start', String(error));
+    gate.allowQuit();
     app.quit();
   }
 }
 
-async function start(windowed: boolean): Promise<void> {
+async function start(windowed: boolean, gate: QuitGate): Promise<void> {
+  // No menu, so no Cmd+Q or Cmd+W; the windows refuse every other close (spec §6: Quit is in the control window).
+  if (!windowed) Menu.setApplicationMenu(null);
   const userData = app.getPath('userData');
-  const dev = process.env.SKYMAP_DATA_DIR !== undefined;
-  const dataRoot = process.env.SKYMAP_DATA_DIR ?? join(userData, 'data');
+  const { dataRoot, dev } = resolveDataRoot(
+    process.env.SKYMAP_DATA_DIR,
+    app.isPackaged,
+    app.getAppPath(),
+    userData,
+  );
   const firstRun = !existsSync(join(userData, SETUP_FILE));
   let setup = await readSetup(userData);
   let code = await readRoomCode(userData);
 
   const server = await startSecureServer(userData, dataRoot);
   const relay = attachDesktopRelay(server, { code: () => code, network: () => setup.network });
-  const control = openControlWindow();
+  const control = openControlWindow(gate);
+  const rotations = serially();
   let sky: BrowserWindow | null = null;
   let status: ControlStatus = { kind: 'idle' };
   let room: RelayRoom | null = null;
@@ -96,10 +109,12 @@ async function start(windowed: boolean): Promise<void> {
   const placement = () => {
     const displays = screen.getAllDisplays();
     const primary = screen.getPrimaryDisplay();
-    const { sky: skyInfo, control: controlInfo } = placeWindows(
+    const placed = placeWindows(
       setup.display,
       displays.map((d) => toDisplayInfo(d, primary.id)),
     );
+    if (placed === null) return null;
+    const { sky: skyInfo, control: controlInfo } = placed;
     const find = (id: number) => displays.find((d) => d.id === id) ?? primary;
     return {
       skyInfo,
@@ -110,7 +125,10 @@ async function start(windowed: boolean): Promise<void> {
 
   // On one screen the control window floats over the sky and the shortcut hides it again.
   const placeAll = (): void => {
-    const { skyInfo, skyDisplay, controlDisplay } = placement();
+    const placed = placement();
+    // display-removed can report none for a moment; the next display-added places everything.
+    if (placed === null) return;
+    const { skyInfo, skyDisplay, controlDisplay } = placed;
     const open = openSky();
     if (open && !windowed) fillDisplay(open, skyDisplay.bounds);
     control.setAlwaysOnTop(controlDisplay === null && !windowed, 'screen-saver');
@@ -120,20 +138,27 @@ async function start(windowed: boolean): Promise<void> {
     if (storedDisplayMissing(setup.display, skyInfo)) showControl();
   };
 
-  const loadSky = async (): Promise<void> => {
-    if (!dev) await pruneOrphans(dataRoot);
-    const win = openSky() ?? (sky = openSkyWindow(placement().skyDisplay, windowed));
-    await win.loadURL(skyUrlFor(setup.mode));
-    if (status.kind === 'ready') setStatus({ kind: 'idle' });
-  };
-  const loadSkyLogged = (): void => void loadSky().catch((e) => console.error('sky load:', e));
+  const loadSky = createSkyLoader({
+    isSyncing: () => syncing,
+    prune: async () => {
+      if (!dev) await pruneOrphans(dataRoot);
+    },
+    show: async () => {
+      const display = placement()?.skyDisplay ?? screen.getPrimaryDisplay();
+      const win = openSky() ?? (sky = openSkyWindow(display, windowed, gate));
+      await win.loadURL(skyUrlFor(setup.mode));
+      if (status.kind === 'ready') setStatus({ kind: 'idle' });
+    },
+    logError: (message, error) => console.error(message, error),
+  });
+  const loadSkyLogged = (): void => void loadSky();
 
   const sync = async (): Promise<SyncOutcome | 'disk'> => {
     syncing = true;
     setStatus({ kind: 'syncing' });
     try {
       return await runSync({
-        baseUrl: DATA_ORIGIN,
+        baseUrl: DESKTOP_DATA_ORIGIN,
         dataRoot,
         onProgress: (progress) => send('control:sync', progress),
       });
@@ -154,7 +179,10 @@ async function start(windowed: boolean): Promise<void> {
   const syncThenLoad = async (restart: boolean): Promise<void> => {
     if (syncing) return;
     const outcome = await sync();
-    if (outcome === 'disk') return showControl();
+    if (outcome === 'disk') {
+      if (!(await hasCompleteLocalSet(dataRoot))) return showControl();
+      return openSky() ? undefined : await loadSky();
+    }
     if (outcome === 'synced') {
       if (restart || !openSky()) return await loadSky();
       return setStatus({ kind: 'ready' });
@@ -211,11 +239,15 @@ async function start(windowed: boolean): Promise<void> {
     if (open) showTestGrid(open, setup.mode, shown === true);
   });
   on('control:rotateCode', () => {
-    rotateRoomCode(userData, relay, code)
-      .then((next) => (code = next))
-      .catch((e: unknown) => console.error('rotate code:', e));
+    // Queued: a second click must rotate from the first one's new code, not the old one.
+    rotations(async () => {
+      code = await rotateRoomCode(userData, relay, code);
+    }).catch((e: unknown) => console.error('rotate code:', e));
   });
-  on('control:quit', () => app.quit());
+  on('control:quit', () => {
+    gate.allowQuit();
+    app.quit();
+  });
 
   screen.on('display-added', placeAll);
   screen.on('display-removed', placeAll);

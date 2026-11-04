@@ -1,10 +1,11 @@
 import { BrowserWindow } from 'electron';
 import type { Display } from 'electron';
+import type { QuitGate } from '../@types/QuitGate';
 import { fillDisplay } from './fillDisplay';
 import { superviseWindow } from './superviseWindow';
 
 /** Frameless, black and full screen on `display`, not yet loaded; `windowed` gives a normal window with DevTools. */
-export function openSkyWindow(display: Display, windowed: boolean): BrowserWindow {
+export function openSkyWindow(display: Display, windowed: boolean, gate: QuitGate): BrowserWindow {
   const { x, y } = display.bounds;
   const win = new BrowserWindow(
     windowed
@@ -13,6 +14,7 @@ export function openSkyWindow(display: Display, windowed: boolean): BrowserWindo
   );
   if (windowed) win.webContents.openDevTools({ mode: 'detach' });
   else fillDisplay(win, display.bounds);
+  if (!windowed) win.on('close', (event) => gate.mayClose() || event.preventDefault());
   superviseWindow(win);
   return win;
 }

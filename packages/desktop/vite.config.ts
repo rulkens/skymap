@@ -1,7 +1,7 @@
 /** One config, three builds picked by --mode: main, preload and control (the page). */
 import { builtinModules } from 'node:module';
 import { resolve } from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import type { Plugin } from 'vite';
 
 // The control page loads from file://, where Chromium refuses module scripts, so the bundle is an
@@ -52,7 +52,19 @@ export default defineConfig(({ mode }) => {
     };
   }
   // main: everything but electron and Node's own modules (ws included) is bundled in.
+  // The sync origin is the web app's own data host, read from .env.production like its build does.
+  const dataOrigin = loadEnv(
+    'production',
+    resolve(import.meta.dirname, '../..'),
+    'VITE_',
+  ).VITE_DATA_BASE_URL;
+  if (!dataOrigin) {
+    throw new Error(
+      'VITE_DATA_BASE_URL is missing from .env.production; the desktop app cannot sync.',
+    );
+  }
   return {
+    define: { DESKTOP_DATA_ORIGIN: JSON.stringify(dataOrigin.replace(/\/$/, '')) },
     ssr: { noExternal: true },
     build: {
       ...common,

@@ -13,11 +13,11 @@ import type { RelayRoom } from '../../../src/@types/remote/RelayRoom';
 import type { RoomCode } from '../../../src/@types/remote/RoomCode';
 import { HOST_REPLACED_CLOSE_CODE } from '../../../src/data/remote/hostReplacedCloseCode';
 import { ROOM_ROTATED_CLOSE_CODE } from '../../../src/data/remote/roomRotatedCloseCode';
+import { REMOTE_PATH_PREFIX } from '../../../src/data/remote/remotePathPrefix';
 import { parseRelayFrame } from '../../../src/utils/remote/parseRelayFrame';
 import type { RelayHandle } from '../../@types/remote/RelayHandle';
 import type { RelayOptions } from '../../@types/remote/RelayOptions';
 
-const REMOTE_PATH_PREFIX = '/__remote/';
 const HOST_PATH = `${REMOTE_PATH_PREFIX}host`;
 const MAX_MESSAGE_BYTES = 16384;
 const MAX_SOCKETS_PER_ROOM = 4;

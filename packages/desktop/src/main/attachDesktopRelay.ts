@@ -2,14 +2,12 @@ import type { Server } from 'node:https';
 import type { RelayHandle } from '../../../../tools/@types/remote/RelayHandle';
 import { attachRemoteRelay } from '../../../../tools/utils/remote/attachRemoteRelay';
 import type { DesktopRelayOptions } from '../@types/DesktopRelayOptions';
+import { REMOTE_PATH_PREFIX } from '../../../../src/data/remote/remotePathPrefix';
 import { APP_ORIGIN } from '../data/appOrigin';
 import { APP_SERVER_PORT } from '../data/appServerPort';
 import { isLoopbackRequest } from '../utils/isLoopbackRequest';
 import { lanOriginFor } from '../utils/lanOriginFor';
 import { listLanInterfaces } from '../utils/listLanInterfaces';
-
-// The relay's own prefix (tools/utils/remote/attachRemoteRelay.ts); it ignores every other upgrade.
-const RELAY_PATH_PREFIX = '/__remote/';
 
 /**
  * The relay's desktop rules: every host gets the stored code, and it lasts for weeks, so only the
@@ -25,7 +23,7 @@ export function attachDesktopRelay(server: Server, opts: DesktopRelayOptions): R
   });
   // Once anyone listens for upgrades Node stops closing them, so an unclaimed one would leak.
   server.on('upgrade', (request, socket) => {
-    if (!(request.url ?? '').startsWith(RELAY_PATH_PREFIX)) socket.destroy();
+    if (!(request.url ?? '').startsWith(REMOTE_PATH_PREFIX)) socket.destroy();
   });
   return relay;
 }
