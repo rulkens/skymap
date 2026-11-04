@@ -2,6 +2,8 @@ appId: com.rulkens.skymap
 productName: Skymap
 directories:
   output: release
+  # icon.icns, icon.ico, the dmg background and the installer bitmaps, from `npm run brand`.
+  buildResources: resources
 files:
   - build/**
   - assets/**
@@ -16,12 +18,31 @@ extraResources:
       - '!data/**'
 mac:
   target: dmg
+dmg:
+  title: Skymap
+  artifactName: ${productName}-${version}-mac.${ext}
+  iconSize: 112
+  # Centres match the empty slots in src/brand/components/DmgBackground (the 660 × 400 window).
+  contents:
+    - x: 170
+      y: 214
+    - x: 490
+      y: 214
+      type: link
+      path: /Applications
 win:
   target:
     - target: nsis
       arch: x64
 nsis:
-  # Adding a firewall rule needs admin, so the installer elevates.
+  artifactName: ${productName}-${version}-win-setup.${ext}
+  # Assisted, not one-click: adding the firewall rule needs admin, so it installs per machine.
+  oneClick: false
   perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Skymap
+  uninstallDisplayName: Skymap
   include: installer/installer.nsh
 publish: null

@@ -31,6 +31,11 @@ npm run dist --workspace packages/desktop   # dmg and a Windows nsis installer i
   `icon.ico` (16–256), the dmg background at 1x and 2x and the installer's header and sidebar
   bitmaps. They are not committed; a new mark is a change to `public/favicon.svg` or `src/brand/`.
   It needs Playwright's Chromium (`npx playwright install chromium`).
+- Out come `Skymap-<version>-mac.dmg` (arm64, the host's arch) and `Skymap-<version>-win-setup.exe`,
+  about 340 MB each; the version is `package.json`'s, which About shows too.
+- The Windows installer is assisted and per machine: a welcome page, the install folder, a finish
+  page with "Launch Skymap", and Start-menu and desktop shortcuts. Its uninstaller removes the
+  firewall rule and offers, unticked, to delete the downloaded sky data, naming its size.
 - The Windows installer cross-builds on macOS arm64 without Wine (Verification B), about a minute.
 - The web build ships as an `extraResources` copy at `resources/dist`, outside the asar so the
   server can stream it.
