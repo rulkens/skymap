@@ -1,5 +1,5 @@
 /**
- * The site rung's gesture register (spec §4.6): one turntable drag at the body
+ * The site arm's gesture register (spec §4.6): one turntable drag at the body
  * arm's 1:1 GROUND rate — a pixel spans `rangeM · fovY / heightPx` metres of the
  * site's bounding sphere, which is that over the sphere's radius in radians —
  * capped by the flat `ORBIT_MAX_RAD_PER_PX`, as `orbitRadPerPixel` caps the same

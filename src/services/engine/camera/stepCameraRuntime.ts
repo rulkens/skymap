@@ -15,7 +15,7 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
-import type { RungCtx } from '../../../@types/camera/RungCtx';
+import type { CameraArmCtx } from '../../../@types/camera/CameraArmCtx';
 import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
 
@@ -29,10 +29,10 @@ import { easedShiftNdc } from '../../../utils/camera/easedShiftNdc';
 import { shiftedFrustum } from '../../../utils/camera/shiftedFrustum';
 import { ridesWheelTarget } from './ridesWheelTarget';
 import { releasedWorldArm } from './releasedWorldArm';
-import { frameKey } from './rungs/frameKey';
-import { nudgeRung } from './rungs/nudgeRung';
-import { rowFor } from './rungs/rowFor';
-import { isWorldArm } from './rungs/isWorldArm';
+import { frameKey } from './arms/frameKey';
+import { nudgeCameraArm } from './arms/nudgeCameraArm';
+import { rowFor } from './arms/rowFor';
+import { isWorldArm } from './arms/isWorldArm';
 import { resolveFrameBasis } from './resolveFrameBasis';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './cameraFraming';
 import { projectFramePose } from '../frame/projectFramePose';
@@ -140,10 +140,10 @@ export function stepCameraRuntime(
   // `stored`, not the post-replay snapshot: the replay runs before that exists,
   // and no action it emits writes `tuning`, so the two readings are identical.
   const tuning = stored.camera.tuning;
-  // Every rung field but the up-basis. The replay and the produce run BEFORE
+  // Every arm field but the up-basis. The replay and the produce run BEFORE
   // this frame's basis resolves, so they read the previous frame's; the fold
   // reads this frame's. One shared value would move the settle trace.
-  const rungFields = {
+  const armFields = {
     bodies,
     poseBasis,
     focusBodyId: selectionDriver(focus)?.poseId ?? null,
@@ -154,7 +154,7 @@ export function stepCameraRuntime(
     tuning,
     terrainHeightAt,
   };
-  const replayCtx: RungCtx = { ...rungFields, upBasis: prev.outputs.upBasis };
+  const replayCtx: CameraArmCtx = { ...armFields, upBasis: prev.outputs.upBasis };
 
   const drained = replayInput(
     {
@@ -199,7 +199,7 @@ export function stepCameraRuntime(
   const { pose: register, tilt } =
     Object.keys(nav.delta).length === 0
       ? { pose: drained.register, tilt: drained.tilt }
-      : nudgeRung(drained.register, drained.tilt, nav.delta, replayCtx);
+      : nudgeCameraArm(drained.register, drained.tilt, nav.delta, replayCtx);
   const actions: UnknownAction[] = [...orientationActions, ...drained.actions];
   // Where `next.base`'s fold picks up below — everything before this index is
   // already folded into `rootState.camera`.
@@ -305,7 +305,7 @@ export function stepCameraRuntime(
   }
 
   actions.push(...edge.actions);
-  const foldCtx: RungCtx = { ...rungFields, upBasis };
+  const foldCtx: CameraArmCtx = { ...armFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.
   const projected = projectFramePose({

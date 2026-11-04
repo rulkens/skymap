@@ -1,5 +1,5 @@
 /**
- * clampedSitePose — the rung's ground. The floor ORDER is the thing under test:
+ * clampedSitePose — the arm's ground. The floor ORDER is the thing under test:
  * the eye floor is range-dependent, so a range clamp applied afterwards would
  * leave the eye under the ground.
  */

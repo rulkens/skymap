@@ -2,15 +2,15 @@
  * linkedPoseToWorld — a `#pose=` link value as the world `CameraPose` it shows
  * at `simDays`, so a clip can open (or land) on a pose someone shared. The
  * body and site arms co-rotate with their host, hence the instant; the
- * ladder's own `refoldTo` does the descent, so a clip reads a link exactly as
+ * arm tree's own `refoldTo` does the descent, so a clip reads a link exactly as
  * the app does on load.
  */
 
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { Mat3 } from '../../@types/math/Mat3';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
-import { refoldTo } from '../../services/engine/camera/rungs/refoldTo';
-import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
+import { refoldTo } from '../../services/engine/camera/arms/refoldTo';
+import { isWorldArm } from '../../services/engine/camera/arms/isWorldArm';
 import { decodeFramedPose } from '../url/decodeFramedPose';
 import { datumOnlyTerrainHeight } from './datumOnlyTerrainHeight';
 

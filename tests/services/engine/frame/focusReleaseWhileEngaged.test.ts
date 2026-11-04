@@ -6,7 +6,7 @@
  * Also pins the low-altitude conversion (finite, eye-preserving, targeted at
  * the RELEASED body's centre), the no-flap property (the engage test may not
  * re-capture the eye while the differing focus holds), and the same rule one
- * rung down: a switch between two ROVERS on the same planet.
+ * arm down: a switch between two ROVERS on the same planet.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -18,9 +18,9 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
-import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
-import { frameKey } from '../../../../src/services/engine/camera/rungs/frameKey';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/isBodyArm';
+import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
+import { frameKey } from '../../../../src/services/engine/camera/arms/frameKey';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
@@ -203,7 +203,7 @@ const MARS_R = MARS_ROW.surface.datumRadiusM;
 // Framing reads the outer bound, like R_MPC above: Mars's relief moves it 27 km off the datum.
 const MARS_R_MPC = bodyFootprintRadiusM(MARS_ROW) * SCALE_UNITS.M_TO_MPC;
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const RUNG_CTX = {
+const ARM_CTX = {
   bodies: BODIES,
   poseBasis: B,
   upBasis: B,
@@ -257,7 +257,7 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
               rangeM: 60,
             },
           },
-          RUNG_CTX,
+          ARM_CTX,
         ),
       ),
     );
@@ -268,7 +268,7 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
     h.focus('curiosity');
     const trace = regimeTrace(h, 900);
 
-    // Out to the world arm — the only rung the follow approach is live in —
+    // Out to the world arm — the only arm the follow approach is live in —
     // then back down Mars's band into the new rover's site arm. Asserted whole
     // because the LENGTH is half the property: the same release rule without
     // its mirror in `engage` re-enters Mars's band every frame of the crossing
@@ -283,7 +283,7 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
   });
 
   it('from the Mars arm with Mars focused, focusing a rover flies there (main parity)', () => {
-    // The same knot without a site rung in it, and the regression this branch
+    // The same knot without a site arm in it, and the regression this branch
     // introduced: on main `release` fired on `focus !== host` and the approach
     // flew to the rover, so selecting a rover from Mars orbit did something.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
@@ -320,7 +320,7 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
               rangeM: 60,
             },
           },
-          RUNG_CTX,
+          ARM_CTX,
         ),
       ),
     );
@@ -352,7 +352,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
               rangeM,
             },
           },
-          RUNG_CTX,
+          ARM_CTX,
         ),
       ),
     );
@@ -369,7 +369,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
 
   it('flies out to the host framing, and back in to the rover on the next focus', () => {
     // The user's report: standing at Curiosity, double-clicking Mars did
-    // nothing — `bodyRung.release` holds an arm whose host IS the focus, and
+    // nothing — `bodyCameraArm.release` holds an arm whose host IS the focus, and
     // the approach that owes the framing was gated out of every arm below the
     // world's, so no driver could fly it.
     const h = standOnCuriosity();
@@ -392,7 +392,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
   it('a wheel notch during the owed approach moves where the approach arrives', () => {
     // The regression the arm split left behind: in the world arm a notch is
     // absorbed into `followDistanceTarget`, so the wheel and the approach never
-    // fight over the distance; below it the notch went to the rung's own
+    // fight over the distance; below it the notch went to the arm's own
     // channels and the approach overwrote them, so for the ~600 ms a debt is
     // owed the wheel did nothing at all (it arrived at the bare framing).
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });

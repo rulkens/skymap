@@ -41,8 +41,8 @@ import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { EASED_FOCUS_EASE } from '../../../data/camera/focusMoveDefaults';
 import { lerp } from '../../../utils/math/lerp';
-import { isWorldArm } from './rungs/isWorldArm';
-import { rowFor } from './rungs/rowFor';
+import { isWorldArm } from './arms/isWorldArm';
+import { rowFor } from './arms/rowFor';
 import { selectGestureHeld } from '../../../state/input/selectors';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
@@ -203,10 +203,10 @@ function easedLookOffset(from: CameraPose, to: CameraPose, t: number): Vec2 | un
 }
 
 /**
- * The exit both keyframe rows share: the rung's own `decode` reads the channels
+ * The exit both keyframe rows share: the arm's own `decode` reads the channels
  * (spec §8), then an absolute reading is re-encoded from the clip's pinned basis
  * into the CURRENT one (by reference when they match). The re-encode stays
- * OUTSIDE the cell: neither basis is a rung fact, and a body arm's angles are
+ * OUTSIDE the cell: neither basis is an arm fact, and a body arm's angles are
  * about the body's own axes, which no orientation frame touches.
  */
 function framedClipArm(
