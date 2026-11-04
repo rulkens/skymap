@@ -17,15 +17,13 @@ import styles from './RemoteSheet.module.css';
 export type RemoteSheetProps = {
   readonly id: RemoteSheetId;
   readonly onClose: () => void;
-  /** 'field' focuses the first input (Search); the default is the heading. */
-  readonly initialFocus?: 'heading' | 'field';
   /** A short state beside the heading, such as "2 of 9 on". */
   readonly note?: string;
   /** Given the sheet's own close, so a body can slide it out the way Close does. */
   readonly children: (close: () => void) => ReactNode;
 };
 
-function RemoteSheet({ id, onClose, initialFocus = 'heading', note, children }: RemoteSheetProps) {
+function RemoteSheet({ id, onClose, note, children }: RemoteSheetProps) {
   const headingId = useId();
   const rootRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -33,9 +31,9 @@ function RemoteSheet({ id, onClose, initialFocus = 'heading', note, children }: 
   const sheet = REMOTE_SHEETS.find((s) => s.id === id)!;
 
   useEffect(() => {
-    if (initialFocus === 'field') rootRef.current?.querySelector('input')?.focus();
-    else headingRef.current?.focus();
-  }, [initialFocus]);
+    const field = rootRef.current?.querySelector<HTMLInputElement>('input[type="search"]');
+    (field ?? headingRef.current)?.focus();
+  }, []);
 
   useEffect(() => {
     if (!leaving) return;

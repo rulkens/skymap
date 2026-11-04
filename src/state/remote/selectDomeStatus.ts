@@ -18,22 +18,19 @@ import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 import type { ToggleRow } from '../../@types/settings/ToggleRow';
 import type { RootState } from '../../store/types';
 
-const REMOTE_TAKEOVER: {
-  [K in TakeoverSource['kind']]: (
-    source: Extract<TakeoverSource, { kind: K }>,
-    state: RootState,
-  ) => RemoteTakeover;
-} = {
-  tour: ({ kind, id }, state) => ({
-    kind,
-    id,
-    beatIndex: selectTourBeatIndex(state),
-    beatCount: selectTourTotal(state),
-    paused: selectTourPaused(state),
-  }),
-  exhibit: ({ kind, id }) => ({ kind, id }),
-  clip: ({ kind, id }) => ({ kind, id }),
-};
+/** The exhibit's `entry` stays home; the clip source already has the remote's shape, so a new kind fails to compile here. */
+function remoteTakeover(source: TakeoverSource, state: RootState): RemoteTakeover {
+  if (source.kind === 'tour') {
+    return {
+      kind: 'tour',
+      id: source.id,
+      beatIndex: selectTourBeatIndex(state),
+      beatCount: selectTourTotal(state),
+      paused: selectTourPaused(state),
+    };
+  }
+  return source.kind === 'exhibit' ? { kind: 'exhibit', id: source.id } : source;
+}
 
 export function selectDomeStatus(
   state: RootState,
@@ -46,12 +43,7 @@ export function selectDomeStatus(
   const time = selectTimeState(state);
   return {
     focus: focused ? { name: TARGET_NAME[focused.type](focused) } : null,
-    takeover: takeover
-      ? (REMOTE_TAKEOVER[takeover.kind] as (s: TakeoverSource, r: RootState) => RemoteTakeover)(
-          takeover,
-          state,
-        )
-      : null,
+    takeover: takeover ? remoteTakeover(takeover, state) : null,
     time: {
       simDays: deriveSimDays(time, nowMs),
       rateIndex: time.rateIndex,

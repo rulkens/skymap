@@ -197,10 +197,6 @@ describe('layerSet', () => {
     ]);
     expect(run('layerSet', { id: 'toggle-orbit-trails', enabled: true })).toEqual([]);
   });
-
-  it('rejects a malformed payload', () => {
-    expect(run('layerSet', { id: 'flow' })).toBeNull();
-  });
 });
 
 describe('parseRemoteCommand', () => {

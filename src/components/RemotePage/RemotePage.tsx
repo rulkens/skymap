@@ -171,12 +171,7 @@ function RemotePage() {
             />
           </div>
           {openSheet && (
-            <RemoteSheet
-              id={openSheet}
-              initialFocus={openSheet === 'search' ? 'field' : 'heading'}
-              note={sheetNote[openSheet]?.()}
-              onClose={closeSheet}
-            >
+            <RemoteSheet id={openSheet} note={sheetNote[openSheet]?.()} onClose={closeSheet}>
               {sheetBody[openSheet]}
             </RemoteSheet>
           )}

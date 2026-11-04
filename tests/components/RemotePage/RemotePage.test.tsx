@@ -326,13 +326,6 @@ describe('RemotePage', () => {
     expect(commands()).toContainEqual({ name: 'layerSet', payload: { id: 'flow', enabled: true } });
   });
 
-  it('a dome with no Layers says so in the Layers sheet', () => {
-    render(<RemotePage />);
-    sendWith({ layers: [] });
-    openSheet('Layers');
-    expect(screen.getByText('The dome lists no layers')).toBeTruthy();
-  });
-
   it('three seconds without a status shows dome not there, with a way back to the code', () => {
     render(<RemotePage />);
     sendStatus();

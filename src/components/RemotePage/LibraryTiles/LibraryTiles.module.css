@@ -5,7 +5,7 @@
   gap: var(--space-4);
 }
 
-/* The glyph above its label; --tile-target (52 px, set by the page) is taller than the 44 px floor
+/* The glyph above its label; --tile-target (set by the page) is taller than the 44 px floor
    because a thumb finds these in the dark. */
 .tile {
   display: flex;

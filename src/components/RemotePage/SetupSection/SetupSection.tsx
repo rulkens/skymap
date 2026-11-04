@@ -19,7 +19,7 @@ export type SetupSectionProps = {
 
 function SetupSection({ onAddPhone, redLight, onRedLight }: SetupSectionProps): ReactNode {
   return (
-    <div className={styles.root}>
+    <div className={controls.stack}>
       <button type="button" className={cx(controls.button, controls.row)} onClick={onAddPhone}>
         <PhonePlusIcon size={20} />
         Add a phone
