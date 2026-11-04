@@ -8,9 +8,14 @@
  * This file is the entry point and nothing else: it assembles the GROUPS
  * table and runs it. Selection, transport, diffing and purging live in `r2/`.
  */
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import type { R2SyncGroup } from './@types/R2SyncGroup';
+import { buildOfflineInventory } from './r2/buildOfflineInventory';
+import { uploadViaWrangler } from './r2/uploadViaWrangler';
 import { collectDataFiles } from './r2/collectDataFiles';
 import { collectDataManifest } from './r2/collectDataManifest';
 import { collectSurfaceTileManifest } from './r2/collectSurfaceTileManifest';
@@ -37,6 +42,7 @@ const TEXTURES_DIR = 'public/data/images/textures';
 const IMAGES_DIR = 'public/data/images';
 
 const BUCKET = 'skymap-data';
+const OFFLINE_INVENTORY_KEY = 'data/offline-inventory.json';
 /**
  * One day. These artefacts are content-stable but not hash-fingerprinted (the
  * URL is hard-coded in the runtime), so this caps how long a stale catalog can
@@ -67,6 +73,7 @@ function buildGroups(): R2SyncGroup[] {
           cacheControl: IMMUTABLE,
           purge: false,
           gzipOnWire: family.gzipOnWire,
+          offline: true,
         },
       ];
     }),
@@ -77,6 +84,7 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: DAY,
       purge: true,
       gzipOnWire: false,
+      offline: true,
     },
     {
       label: 'Planet-surface textures',
@@ -85,6 +93,7 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: DAY,
       purge: true,
       gzipOnWire: false,
+      offline: true,
     },
     {
       label: 'Extra files',
@@ -93,6 +102,7 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: DAY,
       purge: true,
       gzipOnWire: false,
+      offline: false,
     },
     // `no-cache`, not immutable: an edited `.blend` is re-saved under the same
     // key, so an immutable header would hand a restore the pre-edit bytes. `bulk`
@@ -108,6 +118,7 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: NO_CACHE,
       purge: false,
       gzipOnWire: false,
+      offline: false,
     },
     // One tiles group per `SURFACE_TILE_REGISTRY` row, all before every manifest
     // group below; a row whose bake never ran contributes `[]` from both collectors.
@@ -119,6 +130,7 @@ function buildGroups(): R2SyncGroup[] {
         cacheControl: IMMUTABLE,
         purge: false,
         gzipOnWire: false,
+        offline: true,
       }),
     ),
     // Content-hashed by the bake and named only by their index, which the data manifest
@@ -135,6 +147,7 @@ function buildGroups(): R2SyncGroup[] {
         cacheControl: IMMUTABLE,
         purge: false,
         gzipOnWire: true,
+        offline: true,
       }),
     ),
     // Each row's manifest is the pointer the runtime reads to discover that
@@ -149,6 +162,7 @@ function buildGroups(): R2SyncGroup[] {
         cacheControl: DAY,
         purge: true,
         gzipOnWire: true,
+        offline: true,
       }),
     ),
     // Must stay last of all: it's the pointer the runtime reads to resolve
@@ -163,8 +177,32 @@ function buildGroups(): R2SyncGroup[] {
       purge: true,
       // Manifests are JSON, which gzip shrinks.
       gzipOnWire: true,
+      offline: true,
     },
   ];
+}
+
+/** Uploads after the data manifest (the last group); returns the refusal message, or null on success. */
+function publishOfflineInventory(
+  groups: readonly R2SyncGroup[],
+  touchedKeys: string[],
+): string | null {
+  let inventory;
+  try {
+    inventory = buildOfflineInventory(groups);
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'skymap-offline-inventory-'));
+  try {
+    const localPath = join(dir, 'offline-inventory.json');
+    writeFileSync(localPath, JSON.stringify(inventory));
+    uploadViaWrangler({ localPath, r2Key: OFFLINE_INVENTORY_KEY }, BUCKET, NO_CACHE, false);
+    touchedKeys.push(OFFLINE_INVENTORY_KEY);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  return null;
 }
 
 async function main(): Promise<void> {
@@ -206,6 +244,7 @@ async function main(): Promise<void> {
     uploaded += result.uploaded;
     delegated += result.delegated;
   }
+  const inventoryError = publishOfflineInventory(groups, touchedKeys);
 
   const missing = missingExtraFiles();
   if (missing.length > 0) {
@@ -228,6 +267,11 @@ async function main(): Promise<void> {
     console.log('  nothing changed — edge cache already current.');
   } else {
     await purgeCloudflareCache(touchedKeys, R2_PUBLIC_URL);
+  }
+
+  if (inventoryError !== null) {
+    console.error(`\n✗ Offline inventory not published: ${inventoryError}`);
+    process.exit(1);
   }
 }
 
