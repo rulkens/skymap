@@ -73,6 +73,18 @@ describe('applyMoves', () => {
     expect(project.getSourceFileOrThrow('/src/use.ts').getText()).toContain("'./foo'");
   });
 
+  it('refuses a case-only rename onto a real file of that exact name', () => {
+    const project = projectWith({
+      '/src/Foo.ts': 'export const Foo = 1;',
+      '/src/foo.ts': 'export const foo = 2;',
+    });
+
+    expect(() => applyMoves(project, [{ from: '/src/Foo.ts', to: '/src/foo.ts' }])).toThrow(
+      '/src/foo.ts',
+    );
+    expect(project.getSourceFileOrThrow('/src/foo.ts').getText()).toBe('export const foo = 2;');
+  });
+
   it('refuses a destination that exists on disk but is not in the Project', () => {
     const project = projectWith({ '/src/foo.ts': 'export const foo = 1;' });
     project.getFileSystem().writeFileSync('/src/bar.ts', 'on disk');
