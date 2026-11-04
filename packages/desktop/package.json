@@ -5,7 +5,7 @@
   "type": "module",
   "main": "build/main/main.cjs",
   "scripts": {
-    "build": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --external:electron --outfile=build/main/main.cjs && esbuild src/control/preload.cts --bundle --platform=node --format=cjs --external:electron --outfile=build/control/preload.cjs && esbuild src/control/control.ts src/control/control.css --bundle --outdir=build/control --external:/fonts/* && cp src/control/index.html build/control/index.html",
+    "build": "vite build --mode control && vite build --mode preload && vite build --mode main",
     "dev": "npm run build && electron . --windowed",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -15,7 +15,6 @@
     "@types/node": "25.6.0",
     "electron": "44.9.2",
     "electron-builder": "26.18.0",
-    "esbuild": "0.28.2",
     "selfsigned": "5.5.0",
     "typescript": "6.0.3",
     "vitest": "4.1.12"
