@@ -5,7 +5,7 @@
   "type": "module",
   "main": "build/main/main.js",
   "scripts": {
-    "dev": "tsc -p tsconfig.build.json && electron build/main/main.js --windowed",
+    "dev": "tsc -p tsconfig.build.json && electron . --windowed",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "dist": "vite build --mode desktop --root ../.. && tsc -p tsconfig.build.json && electron-builder --mac --win"
@@ -16,5 +16,8 @@
     "electron-builder": "26.18.0",
     "typescript": "6.0.3",
     "vitest": "4.1.12"
+  },
+  "dependencies": {
+    "selfsigned": "5.5.0"
   }
 }
