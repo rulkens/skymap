@@ -1,9 +1,9 @@
 # Remote show deck — implementation plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: `superpowers:subagent-driven-development`, under the lean protocol in
-> [`sdd-execution.md`](../conventions/sdd-execution.md). Steps use checkbox (`- [ ]`) syntax for tracking.
+> [`sdd-execution.md`](../../conventions/sdd-execution.md). Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Spec:** [`specs/2026-11-03-remote-show-deck-design.md`](../specs/2026-11-03-remote-show-deck-design.md) (approved
+**Spec:** [`specs/completed/2026-11-03-remote-show-deck-design.md`](../../specs/completed/2026-11-03-remote-show-deck-design.md) (approved
 2026-11-03).
 
 **Goal:** the phone remote's lower half becomes a show deck. A now card shows the running tour, exhibit or clip with
@@ -503,19 +503,19 @@ Tests first:
 - **Laptop width:** repeat the tour state and one open sheet at 1728×1000.
 
 **Look and measure.**
-- [ ] Compare each shot with the mockup for that state (`index.png`, `library.png`, `red.png`). For states with no
+- [x] Compare each shot with the mockup for that state (`index.png`, `library.png`, `red.png`). For states with no
       mockup, check against the spec's tables.
-- [ ] At 390×844: the pad, the card and the tiles fit with no scroll, and an open sheet leaves the pad's upper half
+- [x] At 390×844: the pad, the card and the tiles fit with no scroll, and an open sheet leaves the pad's upper half
       visible.
-- [ ] Measure the touch targets in the browser (`getBoundingClientRect`): transport ≥ 56 px, tiles ≥ 52, rows ≥ 48,
+- [x] Measure the touch targets in the browser (`getBoundingClientRect`): transport ≥ 56 px, tiles ≥ 52, rows ≥ 48,
       everything else ≥ 44.
-- [ ] Check with reduced motion on (`page.emulateMedia({ reducedMotion: 'reduce' })`): the sheet appears without
+- [x] Check with reduced motion on (`page.emulateMedia({ reducedMotion: 'reduce' })`): the sheet appears without
       sliding.
-- [ ] Do the `ui-ux.md` "Before you commit" pass: keyboard only at 1728 (Tab, Escape, focus back on the tile, the
+- [x] Do the `ui-ux.md` "Before you commit" pass: keyboard only at 1728 (Tab, Escape, focus back on the tile, the
       ring visible), and the copy read once.
 
 **Owner review.**
-- [ ] Before/after pairs for the owner, one dash check per section, never a whole page. Today's remote is
+- [x] Before/after pairs for the owner, one dash check per section, never a whole page. Today's remote is
       `current.png` in the mockup folder, or a shot of `main`.
   - the top part (icons only);
   - the now card with a tour;
@@ -524,23 +524,23 @@ Tests first:
   - each sheet, by itself;
   - red light;
   - each version notice.
-- [ ] Record the verdicts in the ledger. Fix what the owner rules, one commit per fix.
+- [x] Record the verdicts in the ledger. Fix what the owner rules, one commit per fix.
 
 ### Task 12: Follow-up for the branch that lands second (controller, no edits here)
 
 The site's remote docs and shots live on `site/16-pass-3` and are not on main. Add this note to the PR description,
 so whichever branch lands second does it:
-- [ ] **"Fly from the phone"** (dome-setup page, `site/16-pass-3`): its `AnnotatedShot` marks each part of the old
+- [x] **"Fly from the phone"** (dome-setup page, `site/16-pass-3`): its `AnnotatedShot` marks each part of the old
       remote. Retake the `guide-remote` shot, move the numbered marks onto the deck's parts, and rewrite the
       descriptions (now card, tiles, sheets, red light, the version notices).
-- [ ] **`shootPairedRemote`** (`tools/site/utils/shootPairedRemote.ts`, on main and reworked on `site/16-pass-3`):
+- [x] **`shootPairedRemote`** (`tools/site/utils/shootPairedRemote.ts`, on main and reworked on `site/16-pass-3`):
       its `searchFor` step types into a search field that now sits in a closed sheet, so it times out. The header
       now names the focus without a search, so the step and the `features-remote` row's `searchFor: 'Earth'`
       (`packages/website/src/data/siteShots.ts:403`) go, along with the `SiteShotSettings.searchFor` doc line
       about the remote (`packages/website/src/@types/SiteShotSettings.d.ts:52`).
-- [ ] **Backlog:** delete the UI & UX line "The remote's header reads 'Focused'", which exists only on
+- [x] **Backlog:** delete the UI & UX line "The remote's header reads 'Focused'", which exists only on
       `site/16-pass-3`.
-- [ ] `docsUrlParams.ts:127` (`remote` row) still holds, so it needs no change.
+- [x] `docsUrlParams.ts:127` (`remote` row) still holds, so it needs no change.
 
 ## Definition of Done
 
@@ -567,6 +567,13 @@ so whichever branch lands second does it:
 - A phone left open across a protocol bump shows "Remote needs a reload", or "Dome needs a reload" when the dome is
   the older side.
 - At 1728 wide, the deck and its sheets stay in the right column.
+
+**Completion note (2026-11-04).** Owner rulings during the build changed some deliverables above; the spec records
+each. The remote draws the app's shared icons (#1028) instead of `RemoteIcon`/`REMOTE_GLYPHS`. The clock left the
+now card for the Time sheet (layout A), so there is no `TimeRow`, and with nothing running there is no card. A
+Layers sheet and its `layerSet` command were added (the Layer `title` field shipped as #1025), along with a sideways
+layout, full screen and Add to Home Screen. Task 12's site edits landed on this branch. The ledger is archived beside
+this plan.
 
 **Deferral boundary** (spec, "Out of scope"): no fix for the duplicate entries, no new commands, no jump to beat,
 no build hash, no Wake Lock, no change to the app's own HUD icons. Task 12's site edits belong to the branch that
