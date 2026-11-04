@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { rewriteReferences } from '../../../packages/move-files/src/rewriteReferences';
-import type { MoveContext } from '../../../packages/move-files/src/@types/MoveContext';
+import { rewriteReferences } from '../src/rewriteReferences';
+import type { MoveContext } from '../src/@types/MoveContext';
 
 const context: MoveContext = {
   root: '/r',

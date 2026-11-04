@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { planMoves } from '../../../packages/move-files/src/planMoves';
-import type { MoveContext } from '../../../packages/move-files/src/@types/MoveContext';
-import type { MovePair } from '../../../packages/move-files/src/@types/MovePair';
+import { planMoves } from '../src/planMoves';
+import type { MoveContext } from '../src/@types/MoveContext';
+import type { MovePair } from '../src/@types/MovePair';
 
 const context: MoveContext = {
   root: '/r',

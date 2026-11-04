@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { findBrokenReferences } from '../../../packages/move-files/src/findBrokenReferences';
-import { findLiteralRanges } from '../../../packages/move-files/src/findLiteralRanges';
-import type { FileEdit } from '../../../packages/move-files/src/@types/FileEdit';
+import { findBrokenReferences } from '../src/findBrokenReferences';
+import { findLiteralRanges } from '../src/findLiteralRanges';
+import type { FileEdit } from '../src/@types/FileEdit';
 
-vi.mock('../../../packages/move-files/src/findLiteralRanges', async (actual) => {
+vi.mock('../src/findLiteralRanges', async (actual) => {
   const module =
-    await actual<typeof import('../../../packages/move-files/src/findLiteralRanges')>();
+    await actual<typeof import('../src/findLiteralRanges')>();
   return { findLiteralRanges: vi.fn(module.findLiteralRanges) };
 });
 

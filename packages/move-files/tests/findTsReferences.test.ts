@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findTsReferences } from '../../../packages/move-files/src/findTsReferences';
+import { findTsReferences } from '../src/findTsReferences';
 
 const values = (path: string, text: string, extra: string[] = []) =>
   findTsReferences(path, text, extra).map((r) => r.value);

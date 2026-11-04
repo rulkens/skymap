@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { applyPlan } from '../../../packages/move-files/src/applyPlan';
-import type { MoveFs } from '../../../packages/move-files/src/@types/MoveFs';
-import type { MovePlan } from '../../../packages/move-files/src/@types/MovePlan';
+import { applyPlan } from '../src/applyPlan';
+import type { MoveFs } from '../src/@types/MoveFs';
+import type { MovePlan } from '../src/@types/MovePlan';
 
 // An in-memory disk that logs every operation, so ordering is assertable even
 // where the real disk (case-sensitive on CI) would hide it.

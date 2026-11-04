@@ -16,7 +16,7 @@
 - `typescript` is a peer dependency; the package does not depend on ts-morph.
 - One symbol per file, filename = symbol; types in `packages/move-files/src/@types/`, one per file. No barrels.
 - `tools/` imports the package by relative path, never by package name: a worktree without its own install resolves a package name to the main checkout's copy.
-- Tests live in `tests/packages/move-files/`, mirroring `src/`. `tests/**` is what Vitest includes.
+- Tests live in `packages/move-files/tests/`, mirroring `src/`. Vitest's `include` and `tsconfig.tools.json` both list that folder (owner ruling 2026-11-04: the package keeps its own tests).
 - All core paths are absolute and POSIX; edges convert.
 - Comments per `docs/superpowers/conventions/comments.md`: module header ≤ 10 lines.
 

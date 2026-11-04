@@ -39,6 +39,7 @@ tools/utils/io/rawDataRegistry.ts  every path into data/raw/ goes through here;
 docs/BACKLOG.md  ground-truth list of what's next
 docs/superpowers/plans/ + specs/  active plans and specs; shipped → */completed/
 tests/  Vitest suite — mirrors src/ tree
+        (packages/move-files keeps its own tests, in packages/move-files/tests/)
 ```
 
 ## Project conventions (these override defaults)

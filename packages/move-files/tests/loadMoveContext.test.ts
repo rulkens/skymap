@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { loadMoveContext } from '../../../packages/move-files/src/loadMoveContext';
+import { loadMoveContext } from '../src/loadMoveContext';
 import { makeRepo } from './helpers/makeRepo';
 
 describe('loadMoveContext', () => {

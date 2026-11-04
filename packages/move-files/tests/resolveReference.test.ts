@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveReference } from '../../../packages/move-files/src/resolveReference';
+import { resolveReference } from '../src/resolveReference';
 
 const has = (files: string[]) => (p: string) => files.includes(p);
 

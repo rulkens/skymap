@@ -11,7 +11,7 @@
  * includes `["tools", "src"]` (no `tests`). A refactor can ripple across all
  * three — a `tools/` helper imported by a `src/` file with a `tests/` mirror —
  * so we build ONE `Project` over `src/ + tests/ + tools/` (plus each workspace
- * package's `src/`, e.g. the website, whose tests live in `tests/`). We borrow
+ * package's `src/` and, where it keeps them there, its `tests/`). We borrow
  * `tsconfig.json` only for its `compilerOptions` (`skipAddingFilesFromTsConfig`
  * stops it also pulling in that tsconfig's file set), then add every file
  * explicitly. Using either tsconfig's own include set would silently miss a
@@ -36,6 +36,7 @@ export function loadRefactorProject(): Project {
     'tests/**/*.{ts,tsx}',
     'tools/**/*.{ts,tsx}',
     'packages/*/src/**/*.{ts,tsx}',
+    'packages/*/tests/**/*.{ts,tsx}',
   ]);
   return project;
 }

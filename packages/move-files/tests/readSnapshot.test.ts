@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readSnapshot } from '../../../packages/move-files/src/readSnapshot';
+import { readSnapshot } from '../src/readSnapshot';
 import { makeRepo } from './helpers/makeRepo';
 
 describe('readSnapshot', () => {

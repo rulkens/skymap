@@ -14,7 +14,7 @@
     },
     {
       "from": "packages/move-files/src/",
-      "to": "tests/packages/move-files/",
+      "to": "packages/move-files/tests/",
       "sources": [".ts", ".tsx"],
       "suffixes": [".test.ts", ".test.tsx"]
     },

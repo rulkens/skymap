@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findCssReferences } from '../../../packages/move-files/src/findCssReferences';
+import { findCssReferences } from '../src/findCssReferences';
 
 const values = (text: string) => findCssReferences(text).map((r) => r.value);
 

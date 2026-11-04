@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { resolveReference } from '../../../packages/move-files/src/resolveReference';
-import { spellReference } from '../../../packages/move-files/src/spellReference';
-import type { AliasScope } from '../../../packages/move-files/src/@types/AliasScope';
+import { resolveReference } from '../src/resolveReference';
+import { spellReference } from '../src/spellReference';
+import type { AliasScope } from '../src/@types/AliasScope';
 
 const has = (files: string[]) => (p: string) => files.includes(p);
 

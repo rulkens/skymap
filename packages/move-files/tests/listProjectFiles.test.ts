@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { listProjectFiles } from '../../../packages/move-files/src/listProjectFiles';
+import { listProjectFiles } from '../src/listProjectFiles';
 import { makeRepo } from './helpers/makeRepo';
 
 describe('listProjectFiles', () => {

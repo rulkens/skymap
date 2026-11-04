@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { expandCompanions } from '../../../packages/move-files/src/expandCompanions';
+import { expandCompanions } from '../src/expandCompanions';
 import config from '../../../move-files.config.json';
 
 // fileExists is injected; back it with a Set of "existing" test files so each
