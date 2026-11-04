@@ -5,7 +5,7 @@
 - **Decision-makers:** project owner, Claude
 - **Supersedes:** —
 - **Superseded by:** —
-- **Related:** ADR 0013, `src/layers/README.md`, `docs/superpowers/plans/2026-11-02-layer-m1-moves.md`
+- **Related:** ADR 0013, `src/layers/README.md`, `docs/superpowers/plans/completed/2026-11-02-layer-m1-moves.md`
 
 ## Context
 

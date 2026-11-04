@@ -25,7 +25,7 @@ work: it lands no feature, and its only design choices are the rulings below.
 | 2026-11-02 | Files that became single-Layer after the original list are sorted by the STAYS rules: generic helpers (S5) stay. Of the tools-shared files, only the S2 formats and registries move. |
 | 2026-11-02 | A moved helper lands in a new Layer `utils/<area>/` folder that mirrors `src/utils/<area>/`. |
 | 2026-11-02 | Cadence: the structure Layer goes first as the pilot, then the rest run three PRs at a time. |
-| 2026-11-03 | Layers are organised by concern modules ([ADR 0014](../../adrs/0014-layers-organised-by-concern-modules.md)). Every Layer PR from batch A on regroups its whole Layer, existing files and just-moved ones alike. Batch A's open PRs add the regroup commit before merging; structure is the only merged Layer, so it regroups in its own task (1b). |
+| 2026-11-03 | Layers are organised by concern modules ([ADR 0014](../../../adrs/0014-layers-organised-by-concern-modules.md)). Every Layer PR from batch A on regroups its whole Layer, existing files and just-moved ones alike. Batch A's open PRs add the regroup commit before merging; structure is the only merged Layer, so it regroups in its own task (1b). |
 
 The Layer contract does not change. Every M-item uses an existing member, such as `ui: { slot: 'detailCard' }`
 or `ui: { slot: 'debug' }`. If a task seems to need a new or wider member, stop and report it.

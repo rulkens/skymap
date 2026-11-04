@@ -14,7 +14,10 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { CatalogPoints } from '../../@types/CatalogPoints';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { dataUrl, fetchWithProgress } from '../../../../src/services/loading/fetchWithProgress';
-import { tierTarget, tierFilenameForSource } from '../../../../src/layers/galaxyCatalog/records/data/tierTargets';
+import {
+  tierTarget,
+  tierFilenameForSource,
+} from '../../../../src/layers/galaxyCatalog/records/data/tierTargets';
 import {
   decodeGalaxyCatalog,
   emptyGalaxyCatalog,

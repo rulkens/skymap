@@ -24,7 +24,7 @@ tests alone.
 folder leaves its `.module.css` behind, and nothing rewrites CSS-side paths:
 `composes: x from '../cardChrome.module.css'` and `@import`. An ambient
 `*.module.css` declaration means a stale `import styles from …` passes `tsc` too.
-The Layer M1 moves (`docs/superpowers/plans/2026-11-02-layer-m1-moves.md`, Tasks 6
+The Layer M1 moves (`docs/superpowers/plans/completed/2026-11-02-layer-m1-moves.md`, Tasks 6
 and 7: four InfoCard cards and the provenance debug section) work around it by hand.
 The fix: a `.css`/`.module.css` `from` moves like any file (its mirror rule: a
 sibling `.module.css` travels with a moved `.tsx` of the same basename), and the
