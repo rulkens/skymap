@@ -71,7 +71,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     resolvePick: deps.selection.resolvePick,
     canvas,
     state,
-    scheduler: state.subsystems.scheduler,
   });
 
   // The neutral base the runtime starts from: the composition's home pose at

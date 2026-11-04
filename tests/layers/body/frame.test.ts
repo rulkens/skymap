@@ -18,11 +18,11 @@ import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFr
 
 const STATE = {
   tier: 'medium',
-  settings: { debug: { overlays: { 'terrain-pick-marker': false } } },
+  settings: { terrainPickMarker: { enabled: false } },
 } as unknown as PassState;
 
 function snapshotAt(nowMs: number): ReadyFrameContext {
-  return { nowMs, cursorTexPx: null } as unknown as ReadyFrameContext;
+  return { nowMs } as unknown as ReadyFrameContext;
 }
 
 describe('surfaceTilePlanner', () => {

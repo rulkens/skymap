@@ -9,7 +9,6 @@
  */
 
 import type { Mat3 } from '../../math/Mat3';
-import type { Vec2 } from '../../math/Vec2';
 import type { BodyState } from '../../scene/BodyState';
 import type { MeshBody } from '../../scene/MeshBody';
 import type { PositionedSceneBody } from './PositionedSceneBody';
@@ -105,13 +104,6 @@ export type ReadyFrameContext = {
    * writes it before any GPU step of its target reads it; a miss throws.
    */
   plans: FramePlannerResultStore;
-  /**
-   * Live pointer position in texture pixels — `state.picking.cursorTexPx`
-   * forwarded, so a pass never reaches back into the picking bag `PassState`
-   * deliberately refuses. `null` unless the `terrain-pick-marker` debug overlay
-   * is on (its sole reader): the listener only writes it then.
-   */
-  cursorTexPx: Readonly<Vec2> | null;
   /**
    * Which render-target ids hold THIS FRAME's content — a target first-touched
    * in any view of this frame holds it, regardless of which view's program did

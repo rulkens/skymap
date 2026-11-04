@@ -56,6 +56,8 @@ import { initialState as missionsInitialState } from '../../../src/layers/missio
 import { initialState as sStarTrailsInitialState } from '../../../src/layers/starCatalog/state/sStarTrails/initialState';
 import { initialState as missionTrailsInitialState } from '../../../src/layers/missions/state/missionTrails/initialState';
 import { initialState as orbitTrailsInitialState } from '../../../src/layers/body/state/orbitTrails/initialState';
+import { initialState as surfaceTileDebugInitialState } from '../../../src/layers/body/state/surfaceTileDebug/initialState';
+import { initialState as terrainPickMarkerInitialState } from '../../../src/layers/body/state/terrainPickMarker/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import { initialState as volumesInitialState } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
@@ -72,7 +74,6 @@ import { initialState as filamentsInitialState } from '../../../src/layers/cosmi
 import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
 import { initialState as satellitesInitialState } from '../../../src/layers/satellites/state/satellites/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
-import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 import { DEFAULT_CAMERA_CONTROLS } from '../../../src/data/camera/openSpaceNavigation';
 import { DEFAULT_FOCUS_MOVES } from '../../../src/data/camera/focusMoveDefaults';
@@ -131,6 +132,8 @@ export function makeSettingsFixture(
     satellites: { ...satellitesInitialState },
     constellations: { ...constellationsInitialState },
     orbitTrails: { ...orbitTrailsInitialState },
+    surfaceTileDebug: { overlays: { ...surfaceTileDebugInitialState.overlays } },
+    terrainPickMarker: { ...terrainPickMarkerInitialState },
     missions: { ...missionsInitialState },
     missionTrails: { ...missionTrailsInitialState },
     sStarTrails: { ...sStarTrailsInitialState },
@@ -155,7 +158,6 @@ export function makeSettingsFixture(
         DebugOverlayKey,
         boolean
       >,
-      terrainPickMarkerRadiusM: TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M,
       disabledPasses: {},
       matteWhite: false,
       meshAmbient: 0,

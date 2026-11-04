@@ -22,6 +22,11 @@
 /home/_astro/*
   Cache-Control: public, max-age=31536000, immutable
 
+# The website's pictures (npm run site:shots): each name carries a hash of the
+# file's bytes, so a retake is a new URL. Moves to /shots/* at the root swap.
+/home/shots/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # The website's search (Pagefind): its worker and module keep their names from
 # one version to the next, so they are checked on every load. A request takes
 # the headers of every rule it matches, joined with commas, in the order of

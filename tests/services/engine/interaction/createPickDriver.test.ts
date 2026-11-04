@@ -5,7 +5,7 @@
  * a promise the test settles, so the in-flight gate's ordering is observable.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import { createPickDriver } from '../../../../src/services/engine/interaction/createPickDriver';
 import { inputHovered, inputTapped } from '../../../../src/state/input/inputSlice';
@@ -18,7 +18,6 @@ import { createTestStore } from '../../../support/createTestStore';
 import type { PickDriverDeps } from '../../../../src/@types/engine/interaction/PickDriverDeps';
 import type { PickResult } from '../../../../src/@types/data/PickResult';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
-import type { ViewRigKey } from '../../../../src/@types/engine/frame/ViewRigKey';
 
 type Pending = {
   x: number;
@@ -33,10 +32,7 @@ const refOf = (localIdx: number): SelectionRef => ({ type: 'structure', id: Stri
 
 let store: ReturnType<typeof createTestStore>['store'];
 let picks: Pending[];
-let picking: { pickInFlight: boolean; cursorTexPx: [number, number] | null };
-let overlayOn: boolean;
-let viewRig: ViewRigKey;
-let requestRender: ReturnType<typeof vi.fn<() => void>>;
+let picking: { pickInFlight: boolean };
 
 function makeDriver() {
   const deps: PickDriverDeps = {
@@ -52,14 +48,7 @@ function makeDriver() {
     },
     resolvePick: (hit) => (hit ? refOf(hit.localIdx) : null),
     canvas: { clientWidth: 200, clientHeight: 100 },
-    state: {
-      picking,
-      settings: { debug: { overlays: { 'terrain-pick-marker': overlayOn } } } as never,
-      get viewRig() {
-        return viewRig;
-      },
-    },
-    scheduler: { requestRender },
+    state: { picking },
   };
   return createPickDriver(deps);
 }
@@ -70,10 +59,7 @@ const selection = () => store.getState().selection;
 beforeEach(() => {
   store = createTestStore().store;
   picks = [];
-  picking = { pickInFlight: false, cursorTexPx: null };
-  overlayOn = false;
-  viewRig = 'mono';
-  requestRender = vi.fn<() => void>();
+  picking = { pickInFlight: false };
 });
 
 describe('createPickDriver', () => {
@@ -145,22 +131,6 @@ describe('createPickDriver', () => {
     expect(selection().select).toEqual(refOf(9));
     expect(selectPickRequests(store.getState()).select).toBeNull();
   });
-
-  it.each([
-    [false, 'mono', null],
-    [true, 'dome', null],
-    [true, 'mono', [50, 50]],
-  ] as const)(
-    'the terrain marker cursor is written only with the overlay on and a pickable rig (overlay %s, %s)',
-    (overlay, rig, expected) => {
-      overlayOn = overlay;
-      viewRig = rig;
-      makeDriver();
-      store.dispatch(inputHovered({ source: 'canvas', at: { x: 0.25, y: 0.5 } }));
-      expect(picking.cursorTexPx).toEqual(expected);
-      expect(requestRender).toHaveBeenCalledTimes(expected ? 1 : 0);
-    },
-  );
 
   it('a pick settling after destroy dispatches nothing', async () => {
     const driver = makeDriver();

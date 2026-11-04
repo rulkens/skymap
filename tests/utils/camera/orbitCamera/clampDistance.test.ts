@@ -21,7 +21,7 @@ import { bodyFocusDistance } from '../../../../src/services/engine/camera/framin
 /**
  * The galaxy-focus tween's minimum end distance (0.15 Mpc) is the lowest
  * distance `galaxyFocusDistance()` can return — see
- * `src/services/engine/camera/galaxyFocusDistance.ts: MIN_FOCUS_DISTANCE_MPC`.
+ * `src/services/engine/camera/framing/galaxyFocusDistance.ts: MIN_FOCUS_DISTANCE_MPC`.
  * A sub-floor wheel-zoom input must not ratchet that distance outward;
  * `clampDistance(GALAXY_FOCUS_MIN_MPC, MIN_DISTANCE_MPC)` must return the
  * value unchanged.

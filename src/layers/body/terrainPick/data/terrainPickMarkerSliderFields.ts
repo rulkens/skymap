@@ -6,7 +6,7 @@
  * field's key, range and `format` all speak decades rather than metres.
  */
 
-import type { SliderField } from '../../@types/data/SliderField';
+import type { SliderField } from '../../../../@types/data/SliderField';
 
 /** Metres. Two-ish metres reads as a human-scale ball at walking altitude and
  *  is still a visible dot from a few km up. */

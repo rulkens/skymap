@@ -52,7 +52,7 @@ const STATE = {
   settings: {
     bodies: { items: {} },
   },
-  picking: { pickInFlight: false, cursorTexPx: null },
+  picking: { pickInFlight: false },
 } as unknown as EngineState;
 
 describe('deriveFrameContext — a host carrying an on-screen mesh body', () => {

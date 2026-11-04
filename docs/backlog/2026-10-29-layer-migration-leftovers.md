@@ -1,6 +1,6 @@
 # What core still holds that Layers could own
 
-**Readiness:** M-items `ready`; J-items `needs-design` (each needs a consented contract member). Surveyed at
+**Readiness:** J-items `needs-design` (each needs a consented contract member). Surveyed at
 `742f6e21b` (main + body PR 2).
 
 **Answer.** The body PR finishes the body family, but core still holds about **10.4k LOC that could move with no
@@ -18,8 +18,6 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 
 | # | Item | Layer | Class | LOC | Blocker / joint |
 |---|------|-------|-------|-----|-----------------|
-| M7 | Earth settings subgroup | body | MOVE-NOW* | 162 | a placement ruling: it nests inside core's Display section |
-| M8 | Milky Way + seeded-star palette arms | milkyWay, starCatalog | MOVE-NOW | ~100 | none: `search` fits |
 | J1 | Seeded stars: Sun, famous stars, S-stars, makers, anchors (§7 step 5) | starCatalog | NEEDS-JOINT | ~2,700 | `BodyPosition` has no `anchor` kind; `SCENE_ANCHORS` / `ORBIT_REACH_BY_REGION` read core tables |
 | J2 | Selection presentation: `buildGalaxyInfo` + galaxy math (via barrel), star arm of `buildFocusable`, galaxy/structure/MW framing | galaxyCatalog, starCatalog, structure, milkyWay | NEEDS-JOINT | ~1,480 | per-kind core tables (`BUILD_FOCUSABLE`, `REF_OF`, `focusFraming`, `mayHaveLabel`, `targetIdentityKey`, `selectionHaloTable`); needs `SelectionKindRow` members |
 | J3 | `ephemerisCorrections.generated` + `barycentricPairs` | body | NEEDS-JOINT | 1,113 | core solver (`orbitRowPlacement`) keys them by id; `LayerBody`/`OrbitalElements` would carry them |
@@ -28,7 +26,6 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | J6 | Structure focus mode (`structureFocusSubsystem`) | structure | NEEDS-JOINT | ~290 | core focus uniform read by other Layers' shaders; private fade controller vs "a Layer never drives a fade" |
 | J7 | Palette famous/alias/structure arms | galaxyCatalog, structure | NEEDS-JOINT | ~250 | `LayerSearchEntry` lacks thumbnail/description/scoring class |
 | J8 | Tier-swap galaxy re-anchor (`captureGalaxyFocusIds`, half of `watchTierSaga`) | galaxyCatalog | NEEDS-JOINT | ~120 | capture must run before core's tier write: an ordering hook |
-| J9 | Body debug overlays + terrain-pick radius in core `debugSlice` | body | NEEDS-JOINT | ~80 | core `createPickDriver` reads the `terrain-pick-marker` toggle; no Layer debug-overlay rows |
 | J10 | Earth places palette (`earthPlaces`, flyTo action) | body | NEEDS-JOINT | ~60 | `LayerSearchEntry` is focus-only |
 | J12 | `starSphereRangeM` in core `deriveView` | starCatalog | NEEDS-JOINT | 38 | NEAR0 range is core-sized; no Layer range contribution |
 | J13 | `bodySlabRosterIds` (`SCENE_PLANETS` roster) | body | NEEDS-JOINT | ~35 | known #3; per-body slab on `LayerBody` (backlog) |
@@ -41,7 +38,7 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | S6 | Shaders for Layer content | all | STAYS | ~6,000 WESL | README rule |
 | S7 | Body infrastructure per spec §4, shared places, labels/markers/selection ring, tours, featured tabs, tier | shared | STAYS | n/a | shared by ≥2 Layers or engine infrastructure |
 
-Totals: MOVE-NOW ~100 (M8; the Layer M1 plan shipped M1, M2, M4 and M6). NEEDS-JOINT ~7,200. STAYS ~27,000 including ~11,000 WESL.
+Totals: MOVE-NOW 0 (every M-item has shipped). NEEDS-JOINT ~7,200. STAYS ~27,000 including ~11,000 WESL.
 
 Known items, refined:
 
@@ -54,16 +51,6 @@ Known items, refined:
 
 **May `tools/` import a Layer's format/registry files?** (S2, ~3.5k LOC.) Eight `tools/` files already import
 Layer files, so precedent exists; the 2026-10-29 ruling says yes, and the Layer M1 plan moved the S2 formats.
-
-## MOVE-NOW: existing contract members are enough
-
-### M7. Earth settings subgroup: 162 (MOVE-NOW*)
-`SettingsPanel/EarthSection` 99 + `containers/EarthSectionContainer` 63. The container imports body's slice and selectors from core. Blocker: placement only. `SettingsSections.tsx` renders it *inside* `DisplaySectionContainer`, while Layer `main` sections render at the top. Either rule it a top-level body section (pure move) or add a nested-slot joint. This is a UX ruling, not a contract member.
-
-### M8. Milky Way + seeded-star palette arms: ~100
-`rankPaletteMatches`, `paletteRows` and `paletteRowLabel` carry bespoke `milkyWay` and `starCatalog` arms (`data/palette/milkyWayNames`, `BODY_SEARCH_NAMES`, `SEEDED_STAR_CATALOGS_BY_SOURCE`). `LayerSearchEntry {id, names, class, chip}` already fits both; body, missions, earthScenes and blackHoles use it.
-
----
 
 ## NEEDS-JOINT: a contract member or seam is missing. Each one needs the user's yes.
 
@@ -103,9 +90,6 @@ One table of card facts for 41 ids: planets, moons, craft and `sgr-a-star`. It i
 
 ### J8. Tier-swap galaxy re-anchor: ~120
 `state/selection/captureGalaxyFocusIds` 63, `wiring/galaxyCatalogRequest` 14, and the re-anchor half of `state/tier/watchTierSaga`. Galaxy refs are positional, so they must be captured *before* core writes the tier. **Joint:** a pre-write hook (e.g. a `tierChanging` action the Layer's saga answers). Tier itself is global and stays.
-
-### J9. Body debug overlays in core `debugSlice`: ~80
-Four of six `DEBUG_OVERLAY_ROWS` (`surface-lod-overlay`, `terrain-no-displacement`, `terrain-no-skirts`, `terrain-pick-marker`) plus `terrainPickMarkerRadiusM` / `terrainPickMarkerSliderFields` are body content. Core `interaction/createPickDriver` reads the `terrain-pick-marker` toggle, and the inbound boundary test forbids it from importing body state. **Joint:** Layer-declared debug-overlay rows.
 
 ### J10. Earth places palette: ~60
 `data/palette/earthPlaces` 49 + the `flyTo` palette action. `LayerSearchEntry.id` is a focus id only. **Joint:** a search-entry action.

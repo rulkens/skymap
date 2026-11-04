@@ -105,7 +105,7 @@ function makeState(): EngineState {
       },
     },
     bias: {} as never,
-    picking: { pickInFlight: false, cursorTexPx: null },
+    picking: { pickInFlight: false },
     data: {
       structures: { byCategory: () => [] },
       galaxies: { get: () => undefined, famousMeta: [] },

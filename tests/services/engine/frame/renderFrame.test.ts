@@ -411,7 +411,6 @@ function makeInput(
     meshBodies: [] as never[],
     sceneBodies: [] as never[],
     plans: createFramePlannerResultStore(),
-    cursorTexPx: null,
     nowMs: 0,
     simDays: 0,
     altitudeMpc: 0,

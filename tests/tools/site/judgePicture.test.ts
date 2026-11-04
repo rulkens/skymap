@@ -6,7 +6,7 @@ import { judgePicture } from '../../../tools/site/utils/judgePicture';
 const square: PictureMeasure = {
   index: 3,
   kind: 'img',
-  src: '/@fs/repo/packages/website/src/assets/shots/render-stars-640.avif?no-inline',
+  src: '/home/shots/render-stars-640.3f9c01ab.avif',
   box: { x: 0, y: 0, width: 252, height: 252 },
   naturalWidth: 252,
   naturalHeight: 141.75,

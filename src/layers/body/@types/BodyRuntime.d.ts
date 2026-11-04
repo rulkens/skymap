@@ -1,5 +1,6 @@
 import type { EarthRenderer } from '../earth/@types/EarthRenderer';
 import type { SurfaceTileRenderer } from '../surfaceTiles/patch/@types/SurfaceTileRenderer';
+import type { TerrainPickCursor } from '../terrainPick/@types/TerrainPickCursor';
 import type { TerrainPickMarkerRenderer } from '../terrainPick/@types/TerrainPickMarkerRenderer';
 import type { TexturedBodyRenderer } from '../spheres/@types/TexturedBodyRenderer';
 import type { PlanetRenderer } from '../spheres/@types/PlanetRenderer';
@@ -20,6 +21,7 @@ export type BodyRuntime = {
   readonly earthRenderer: EarthRenderer;
   readonly surfaceTileRenderer: SurfaceTileRenderer;
   readonly terrainPickMarkerRenderer: TerrainPickMarkerRenderer;
+  readonly terrainPickCursor: TerrainPickCursor;
   readonly texturedBodyRenderer: TexturedBodyRenderer;
   readonly planetRenderer: PlanetRenderer;
   readonly ringRenderer: RingRenderer;
