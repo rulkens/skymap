@@ -4,7 +4,7 @@
  * createDailySchedule, createSetupStore, createSkyWindows); main owns one ControlState and pushes
  * it whole to the control page on every change.
  */
-import { app, globalShortcut, ipcMain, nativeTheme, screen } from 'electron';
+import { app, globalShortcut, ipcMain, nativeTheme, powerSaveBlocker, screen } from 'electron';
 import type { BrowserWindow, WebContents } from 'electron';
 import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -70,6 +70,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   const work = serially();
   const rotations = serially();
   let about: BrowserWindow | null = null;
+  let awake: number | null = null;
 
   const setup = createSetupStore(userData, await readSetup(userData), {
     placeWindows: () => placeAll(),
@@ -143,6 +144,8 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
       try {
         await loadSkyPage(sky.open(), skyUrlFor(setup.current().mode));
         update({ skyRunning: true });
+        // Tablets steering over the relay are no local input, so the OS would blank the screen and sleep.
+        awake ??= powerSaveBlocker.start('prevent-display-sleep');
         if (state.status.kind === 'ready') update({ status: { kind: 'complete' } });
       } finally {
         update({ skyLoading: false });

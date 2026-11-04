@@ -73,6 +73,9 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
 - `main/windows/superviseWindow.ts` reloads a crashed renderer or GPU process (after 2 s, doubling
   to a minute while it keeps crashing, reset after a minute up), kills a renderer hung for 30 s,
   and refuses navigation off the app's origin. An InfoCard link is a dead click on purpose.
+- Once the sky first shows, `powerSaveBlocker` (`prevent-display-sleep`) keeps the display and the
+  machine awake until the app quits: tablets steering over the relay are no local input, so the
+  OS's idle timer would otherwise blank a dome and, at sleep, take the server and the tablets down.
 - With one screen the control window floats above the sky (`screen-saver` level) and
   `CommandOrControl+Alt+K` (`data/controlShortcut.ts`; the page prints Cmd+Option+K on a Mac) shows
   or hides it.
