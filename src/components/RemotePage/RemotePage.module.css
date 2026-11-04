@@ -29,11 +29,20 @@
   font-size: var(--font-size-input);
 }
 
+/* Right-aligned beside the full-screen button, or alone when there is none. */
 .focus {
+  margin-left: auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Overlaps the header's padding, so the header stays one line of text tall around a full target,
+   and the icon lines up with the pad's edge. */
+.fullscreen {
+  margin-block: calc(-1 * var(--space-6));
+  margin-right: calc(-1 * var(--space-6));
 }
 
 .steer {
@@ -143,6 +152,11 @@
   .root > .header {
     grid-column: 1;
     padding: 0 0 var(--space-4);
+  }
+
+  /* No padding to overlap here: the header shares its row with Home, which is as tall. */
+  .fullscreen {
+    margin-block: 0;
   }
 
   .steer {

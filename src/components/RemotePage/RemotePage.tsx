@@ -20,6 +20,7 @@ import ShowList from './ShowList/ShowList';
 import TimeSection from './TimeSection/TimeSection';
 import ToggleSection from './ToggleSection/ToggleSection';
 import SetupSection from './SetupSection/SetupSection';
+import FullscreenButton from './FullscreenButton/FullscreenButton';
 import HomeIcon from '../icons/HomeIcon/HomeIcon';
 import RemoteSheet from './RemoteSheet/RemoteSheet';
 import LibraryTiles from './LibraryTiles/LibraryTiles';
@@ -127,6 +128,7 @@ function RemotePage() {
         {link === 'connected' && (
           <span className={styles.focus}>{status?.focus?.name ?? 'Nothing focused'}</span>
         )}
+        <FullscreenButton className={styles.fullscreen} />
       </header>
       {link === 'lost' && <LostNotice room={room} onChangeCode={() => join(null)} />}
       {(link === 'domeOlder' || link === 'domeNewer') && <VersionNotice state={link} />}
