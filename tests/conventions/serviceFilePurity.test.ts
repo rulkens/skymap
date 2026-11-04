@@ -12,10 +12,10 @@ import { describe, expect, it } from 'vitest';
 import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Node, SyntaxKind, type Statement } from 'ts-morph';
-import { parseOnlyProject } from '../../../helpers/conventions/parseOnlyProject';
+import { parseOnlyProject } from '../helpers/conventions/parseOnlyProject';
 
-const FRAME_DIR = fileURLToPath(new URL('../../../../src/services/engine/frame/', import.meta.url));
-const LAYERS_DIR = fileURLToPath(new URL('../../../../src/layers/', import.meta.url));
+const FRAME_DIR = fileURLToPath(new URL('../../src/services/engine/frame/', import.meta.url));
+const LAYERS_DIR = fileURLToPath(new URL('../../src/layers/', import.meta.url));
 
 // A Layer's passes are frame passes that happen to live in the Layer, so they
 // are swept on the same terms. Every folder named `passes` at any depth is
@@ -31,7 +31,7 @@ function passDirsUnder(dir: string): string[] {
       return entry.name === 'passes' ? [path, ...passDirsUnder(path)] : passDirsUnder(path);
     });
 }
-const SRC_DIR = fileURLToPath(new URL('../../../../src/', import.meta.url));
+const SRC_DIR = fileURLToPath(new URL('../../src/', import.meta.url));
 const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = passDirsUnder(LAYERS_DIR).map(
   (dir) => [dir.slice(SRC_DIR.length, -1), dir] as const,
 );

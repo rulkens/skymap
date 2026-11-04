@@ -29,7 +29,7 @@ with deep `../../` imports and nothing gained.
 - `npm run move-files` rewrites TS imports but misses `.wesl` `package::`
   imports and string-literal paths (CLAUDE.md).
 - The `tests/` mirror convention, the ratchet tests keyed on paths
-  (`frameFilePurity.test.ts` and siblings), `.github/workflows/ci.yml`, the
+  (`serviceFilePurity.test.ts` and siblings), `.github/workflows/ci.yml`, the
   Cloudflare Workers Assets build (`npm run build` at the root), skills and
   docs citing `src/…` paths.
 - Every open worktree conflicts with a tree-wide move — land it at a quiet

@@ -7,8 +7,8 @@
 import { basename } from 'node:path';
 import { Node, type Statement } from 'ts-morph';
 import { describe, expect, it } from 'vitest';
-import { parseOnlyProject } from '../../helpers/conventions/parseOnlyProject';
-import { walkFiles } from '../../helpers/conventions/walkFiles';
+import { parseOnlyProject } from '../helpers/conventions/parseOnlyProject';
+import { walkFiles } from '../helpers/conventions/walkFiles';
 
 const SITE = 'packages/website/src';
 

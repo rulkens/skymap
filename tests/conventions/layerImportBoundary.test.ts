@@ -8,7 +8,7 @@
  * `combinedSettingsReducer` → a Layer that reads its own slice module at
  * module scope → that slice again, the second entry reading an uninitialised
  * `const`. `oneMpcSeam.test.ts` is the ts-morph import walk this copies;
- * `frameFilePurity.test.ts` is the exact-count ALLOWED idiom.
+ * `serviceFilePurity.test.ts` is the exact-count ALLOWED idiom.
  */
 import { describe, it, expect } from 'vitest';
 import { Project } from 'ts-morph';
