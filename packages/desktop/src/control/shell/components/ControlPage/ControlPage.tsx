@@ -113,7 +113,16 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
           />
         )}
         {over === null && session && base === 'controls' && (
-          <ControlsView session={session} bridge={bridge} onRunSetup={runSetup} onHelp={openHelp} />
+          <ControlsView
+            session={session}
+            onUpdateNow={bridge.updateNow}
+            onRestartSky={bridge.restartSky}
+            onShowTestGrid={bridge.showTestGrid}
+            onRotate={bridge.rotateCode}
+            onQuit={bridge.quit}
+            onRunSetup={runSetup}
+            onHelp={openHelp}
+          />
         )}
       </div>
     </div>

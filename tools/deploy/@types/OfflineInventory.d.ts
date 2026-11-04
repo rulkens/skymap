@@ -1,3 +1,3 @@
-import type { OfflineInventoryFile } from './OfflineInventoryFile';
+import type { OfflineInventoryGroup } from './OfflineInventoryGroup';
 
-export type OfflineInventory = { groups: { label: string; files: OfflineInventoryFile[] }[] };
+export type OfflineInventory = { groups: OfflineInventoryGroup[] };

@@ -245,6 +245,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
 
   screen.on('display-added', placeAll);
   screen.on('display-removed', placeAll);
+  screen.on('display-metrics-changed', placeAll);
   watchLan(listLanInterfaces, (interfaces) => {
     update({ networks: interfaces, room: { ...state.room, origin: originFor(interfaces) } });
     secure

@@ -3,7 +3,9 @@ import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ensureLanCertificate } from '../../../src/main/certificates/ensureLanCertificate';
+import type { LanNames } from '../../../src/main/certificates/@types/LanNames';
+import { ensureCa } from '../../../src/main/certificates/ensureCa';
+import { ensureLeaf } from '../../../src/main/certificates/ensureLeaf';
 import { isSignedByCa } from '../../../src/main/certificates/utils/isSignedByCa';
 
 const names = { hostnames: ['localhost', 'dome.local'], ips: ['192.168.1.20', '10.0.0.5'] };
@@ -14,7 +16,11 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(certDir, { recursive: true, force: true }));
 
-describe('ensureLanCertificate', () => {
+/** One launch's certificates, as startSecureServer reads them. */
+const ensureLanCertificate = async (dir: string, lan: LanNames) =>
+  ensureLeaf(dir, await ensureCa(dir), lan);
+
+describe('ensureCa and ensureLeaf', () => {
   it('creates a CA once and reuses it', async () => {
     const first = await ensureLanCertificate(certDir, names);
     const second = await ensureLanCertificate(certDir, names);

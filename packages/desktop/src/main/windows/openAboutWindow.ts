@@ -1,5 +1,5 @@
-import { app, BrowserWindow } from 'electron';
-import { join } from 'node:path';
+import type { BrowserWindow } from 'electron';
+import { createControlPageWindow } from './utils/createControlPageWindow';
 
 /**
  * About as a small window of its own on both platforms: the control page alone with `?view=about`,
@@ -7,29 +7,24 @@ import { join } from 'node:path';
  * neither. A child of the control window, so it stays above it when that floats over the sky.
  */
 export function openAboutWindow(parent: BrowserWindow): BrowserWindow {
-  const win = new BrowserWindow({
-    parent,
-    show: false,
-    width: 560,
-    height: 500,
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    title: 'About Skymap',
-    backgroundColor: '#000000',
-    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' } : {}),
-    webPreferences: {
-      preload: join(app.getAppPath(), 'build/control/preload.cjs'),
-      sandbox: true,
-      contextIsolation: true,
+  const win = createControlPageWindow(
+    {
+      parent,
+      show: false,
+      width: 560,
+      height: 500,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      title: 'About Skymap',
+      backgroundColor: '#000000',
+      ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' } : {}),
     },
-  });
+    'view=about',
+  );
   win.removeMenu();
   win.on('page-title-updated', (event) => event.preventDefault());
   win.once('ready-to-show', () => win.show());
-  win.webContents.on('will-navigate', (event) => event.preventDefault());
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  void win.loadFile(join(app.getAppPath(), 'build/control/index.html'), { search: 'view=about' });
   return win;
 }

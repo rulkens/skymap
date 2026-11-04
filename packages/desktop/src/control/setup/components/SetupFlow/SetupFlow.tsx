@@ -130,7 +130,7 @@ function SetupFlow(props: SetupFlowProps): ReactNode {
               Back
             </button>
           )}
-          <button type="button" className={chrome.primary} onClick={advance}>
+          <button type="button" className={styles.primary} onClick={advance}>
             {setupPrimaryLabel(step, oneScreen, skyRunning)}
           </button>
           <SaveStatus state={saveState} />

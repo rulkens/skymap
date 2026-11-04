@@ -19,6 +19,15 @@ describe('resolveAppPath', () => {
     expect(resolveAppPath('/remote.html', roots)).toBe(join(roots.dist, 'remote.html'));
   });
 
+  it('keeps the mirror bookkeeping and half-downloaded files off the LAN', () => {
+    expect(resolveAppPath('/data/synced.json', roots)).toBeNull();
+    expect(resolveAppPath('/data/inventory.json', roots)).toBeNull();
+    expect(resolveAppPath('/data/galaxy/a.bin.part', roots)).toBeNull();
+    expect(resolveAppPath('/data/galaxy/inventory.json', roots)).toBe(
+      join(roots.data, 'galaxy/inventory.json'),
+    );
+  });
+
   it('serves /ca.crt', () => {
     expect(resolveAppPath('/ca.crt', roots)).toBe('ca');
   });

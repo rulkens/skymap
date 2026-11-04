@@ -11,7 +11,12 @@ import { WHEN_READY } from './data/whenReady';
  * fades out once the app is ready, so a first start, a restart and a mode switch never pop.
  */
 export async function loadSkyPage(win: BrowserWindow, url: string): Promise<void> {
-  const curtain = addOverlay(win, 'sky-curtain.html', {}, CURTAIN_OUT_MS);
+  const curtain = addOverlay(
+    win,
+    'sky-curtain.html',
+    { fadeIn: String(CURTAIN_IN_MS) },
+    CURTAIN_OUT_MS,
+  );
   try {
     await curtain.loaded;
     await delay(CURTAIN_IN_MS);

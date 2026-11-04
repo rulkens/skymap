@@ -31,8 +31,9 @@ export function parseInstallSetup(raw: unknown): InstallSetup {
   return {
     mode: file.mode === 'dome' || file.mode === 'kiosk' ? file.mode : DEFAULT_INSTALL_SETUP.mode,
     display: parseDisplay(file.display),
-    network: typeof file.network === 'string' ? file.network : null,
-    autostart: typeof file.autostart === 'boolean' ? file.autostart : false,
+    network: typeof file.network === 'string' ? file.network : DEFAULT_INSTALL_SETUP.network,
+    autostart:
+      typeof file.autostart === 'boolean' ? file.autostart : DEFAULT_INSTALL_SETUP.autostart,
     dataUpdates: parseDataUpdates(file.dataUpdates),
   };
 }

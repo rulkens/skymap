@@ -29,9 +29,13 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     const open = current();
     if (open && !windowed) fillDisplay(open, displayOf(placement.sky).bounds);
     control.setAlwaysOnTop(placement.control === null && !windowed, 'screen-saver');
-    const { x, y, width, height } = displayOf(placement.control ?? placement.sky).workArea;
-    const [w = 0, h = 0] = control.getSize();
-    control.setPosition(Math.round(x + (width - w) / 2), Math.round(y + (height - h) / 2));
+    // Moved only when it is not on its display: a window the operator placed stays where it is.
+    const home = displayOf(placement.control ?? placement.sky);
+    if (screen.getDisplayMatching(control.getBounds()).id !== home.id) {
+      const { x, y, width, height } = home.workArea;
+      const [w = 0, h = 0] = control.getSize();
+      control.setPosition(Math.round(x + (width - w) / 2), Math.round(y + (height - h) / 2));
+    }
     return placement;
   };
 

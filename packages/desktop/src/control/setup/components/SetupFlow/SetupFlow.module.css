@@ -95,3 +95,37 @@
     padding: var(--space-10) var(--space-8);
   }
 }
+
+/* The website's primary button (OpenApp): an opaque pane lit at its top edge inside a faint standoff ring. */
+.primary {
+  composes: button from '../../../controlChrome.module.css';
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-bg));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-accent) 17%, var(--color-bg)),
+    color-mix(in srgb, var(--color-accent) 7%, var(--color-bg))
+  );
+  box-shadow:
+    0 0 0 5px var(--color-bg),
+    0 0 0 6px color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+@media (hover: hover) {
+  .primary:hover:not(:disabled) {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-accent) 24%, var(--color-bg)),
+      color-mix(in srgb, var(--color-accent) 10%, var(--color-bg))
+    );
+    box-shadow:
+      0 0 0 5px var(--color-bg),
+      0 0 0 6px var(--color-accent);
+  }
+}
+
+.primary:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 5px var(--color-bg),
+    0 0 0 7px var(--color-accent);
+}

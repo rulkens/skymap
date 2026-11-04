@@ -13,7 +13,7 @@ export function installAppMenu(
   windowed: boolean,
   actions: MenuActions,
 ): (testGrid: boolean) => void {
-  let menu = Menu.buildFromTemplate(buildMenuTemplate(process.platform, windowed, false, actions));
+  const menu = Menu.buildFromTemplate(buildMenuTemplate(process.platform, windowed, actions));
   const operatorHas = (win: BrowserWindow | null): boolean =>
     windowed || win === control || win?.getParentWindow() === control;
   const apply = (): void => {
@@ -24,7 +24,7 @@ export function installAppMenu(
   apply();
   app.on('browser-window-focus', apply);
   return (testGrid) => {
-    menu = Menu.buildFromTemplate(buildMenuTemplate(process.platform, windowed, testGrid, actions));
-    apply();
+    const item = menu.getMenuItemById('testGrid');
+    if (item) item.checked = testGrid;
   };
 }

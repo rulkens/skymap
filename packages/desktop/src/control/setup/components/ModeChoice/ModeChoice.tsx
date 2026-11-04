@@ -1,7 +1,7 @@
 /** ModeChoice — kiosk or dome as two drawn cards; picking one is the whole action, it saves at once. */
 
 import type { ReactNode } from 'react';
-import type { InstallSetup } from '../../../../@types/InstallSetup';
+import type { InstallMode } from '../../../../@types/InstallMode';
 import DomeDrawing from '../DomeDrawing/DomeDrawing';
 import KioskDrawing from '../KioskDrawing/KioskDrawing';
 import { MODES } from './ModeChoice.constants';
@@ -9,8 +9,8 @@ import chrome from '../../../controlChrome.module.css';
 import styles from './ModeChoice.module.css';
 
 export type ModeChoiceProps = {
-  readonly mode: InstallSetup['mode'];
-  readonly onPick: (mode: InstallSetup['mode']) => void;
+  readonly mode: InstallMode;
+  readonly onPick: (mode: InstallMode) => void;
   /** Smaller drawings, for the controls' panel. */
   readonly compact?: boolean;
 };

@@ -15,10 +15,10 @@
         overflow: hidden;
         background: transparent;
       }
-      /* In on load; out when showTestGrid sets opacity 0 and waits 150 ms. */
+      /* In on load; out over the `fadeOut` addOverlay passes, once it sets opacity 0. */
       html {
         animation: appear 200ms ease-out;
-        transition: opacity 150ms ease-in;
+        transition: opacity var(--fadeOut) ease-in;
       }
       @keyframes appear {
         from {
@@ -55,6 +55,7 @@
   <body>
     <script>
       const params = new URLSearchParams(location.search);
+      document.documentElement.style.setProperty('--fadeOut', `${params.get('fadeOut') ?? 0}ms`);
       if (params.get('mode') === 'dome') {
         const grid = document.createElement('img');
         grid.src = 'dome-grid.png';

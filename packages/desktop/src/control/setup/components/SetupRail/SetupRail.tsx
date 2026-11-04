@@ -40,7 +40,7 @@ function SetupRail({ step, displayCount, onStep }: SetupRailProps): ReactNode {
                   {done ? (
                     <CheckIcon size={18} />
                   ) : (
-                    <span className={current ? chrome.markerCurrent : chrome.marker} />
+                    <span className={current ? styles.markerCurrent : chrome.marker} />
                   )}
                 </span>
                 <span className={styles.name}>{name}</span>

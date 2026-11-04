@@ -40,7 +40,12 @@ const { showTestGrid } = await import('../../../src/main/sky/showTestGrid');
 
 const laptop = fake.display(1, 1440, 0);
 const projector = fake.display(7, 4096, 2000);
-const control = { setAlwaysOnTop: vi.fn(), getSize: () => [960, 760], setPosition: vi.fn() };
+const control = {
+  setAlwaysOnTop: vi.fn(),
+  getSize: () => [960, 760],
+  getBounds: () => ({ x: 100, y: 100, width: 960, height: 760 }),
+  setPosition: vi.fn(),
+};
 
 function skyWindows(setup: InstallSetup) {
   return createSkyWindows({
@@ -71,6 +76,16 @@ describe('createSkyWindows', () => {
     expect(windows.place()).toMatchObject({ sky: { id: 7, number: 2 }, storedMissing: false });
     expect(fillDisplay).toHaveBeenLastCalledWith(fake.windows[0], projector.bounds);
     expect(control.setAlwaysOnTop).toHaveBeenLastCalledWith(false, 'screen-saver');
+  });
+
+  it('moves the control window only when it is not on its own display', () => {
+    fake.displays = [laptop];
+    const windows = skyWindows(DEFAULT_INSTALL_SETUP);
+    windows.place();
+    expect(control.setPosition).not.toHaveBeenCalled();
+    fake.displays = [projector, laptop];
+    windows.place();
+    expect(control.setPosition).toHaveBeenCalledOnce();
   });
 
   it('the test grid opens a sky window when there is none, labelled with its display number', () => {

@@ -7,7 +7,8 @@ import type { Overlay } from './@types/Overlay';
 /**
  * Lays `assets/<page>` over all of `win` as a child view, so it moves with the window and only its size
  * needs following. `close` sets the page's opacity to 0 and waits `fadeMs` for the page's own
- * transition (which carries its reduced-motion branch) before removing the view.
+ * transition (which carries its reduced-motion branch) before removing the view; the page reads
+ * that duration from its `fadeOut` query, so the time has one home.
  */
 export function addOverlay(
   win: BrowserWindow,
@@ -25,7 +26,9 @@ export function addOverlay(
   fit();
   win.on('resize', fit);
   win.contentView.addChildView(view);
-  const loaded = view.webContents.loadFile(join(app.getAppPath(), 'assets', page), { query });
+  const loaded = view.webContents.loadFile(join(app.getAppPath(), 'assets', page), {
+    query: { ...query, fadeOut: String(fadeMs) },
+  });
   const close = async (): Promise<void> => {
     win.off('resize', fit);
     if (!win.isDestroyed()) {

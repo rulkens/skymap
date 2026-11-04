@@ -4,7 +4,6 @@
  */
 
 import type { ReactNode } from 'react';
-import type { ControlBridge } from '../../../../@types/ControlBridge';
 import type { ControlSession } from '../../@types/ControlSession';
 import PairingPanel from '../../../pairing/components/PairingPanel/PairingPanel';
 import QuitPanel from '../QuitPanel/QuitPanel';
@@ -14,17 +13,22 @@ import styles from './ControlsView.module.css';
 
 export type ControlsViewProps = {
   readonly session: ControlSession;
-  readonly bridge: ControlBridge;
+  readonly onUpdateNow: () => void;
+  readonly onRestartSky: () => void;
+  readonly onShowTestGrid: (on: boolean) => void;
+  readonly onRotate: () => Promise<void>;
+  readonly onQuit: () => void;
   readonly onRunSetup: () => void;
   readonly onHelp: () => void;
 };
 
-function ControlsView({ session, bridge, onRunSetup, onHelp }: ControlsViewProps): ReactNode {
+function ControlsView(props: ControlsViewProps): ReactNode {
+  const { session, onUpdateNow, onRestartSky, onShowTestGrid, onRotate, onQuit } = props;
   const { setup, save } = session;
   return (
     <main className={styles.root}>
       <div className={styles.column}>
-        <SyncPanel sync={session} onUpdateNow={bridge.updateNow} onRestartSky={bridge.restartSky} />
+        <SyncPanel sync={session} onUpdateNow={onUpdateNow} onRestartSky={onRestartSky} />
         <SetupPanel
           setup={setup}
           displays={session.displays}
@@ -32,8 +36,8 @@ function ControlsView({ session, bridge, onRunSetup, onHelp }: ControlsViewProps
           saveState={session.saveState}
           testGrid={session.testGrid}
           onSave={(next) => void save(next)}
-          onShowTestGrid={bridge.showTestGrid}
-          onRunSetup={onRunSetup}
+          onShowTestGrid={onShowTestGrid}
+          onRunSetup={props.onRunSetup}
         />
       </div>
       <div className={styles.column}>
@@ -43,10 +47,10 @@ function ControlsView({ session, bridge, onRunSetup, onHelp }: ControlsViewProps
           network={setup.network}
           skyRunning={session.skyRunning}
           onPickNetwork={(network) => void save({ ...setup, network })}
-          onRotate={bridge.rotateCode}
-          onHelp={onHelp}
+          onRotate={onRotate}
+          onHelp={props.onHelp}
         />
-        <QuitPanel onQuit={bridge.quit} />
+        <QuitPanel onQuit={onQuit} />
       </div>
     </main>
   );

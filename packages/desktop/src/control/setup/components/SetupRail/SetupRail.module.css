@@ -66,3 +66,11 @@
   color: var(--color-fg-tertiary);
   font-size: var(--text-small);
 }
+
+/* The current step's marker: filled and ringed. */
+.markerCurrent {
+  composes: markerOn from '../../../controlChrome.module.css';
+  box-shadow:
+    0 0 0 4px var(--color-bg),
+    0 0 0 5px var(--color-accent);
+}

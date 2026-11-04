@@ -1,7 +1,7 @@
 /*
  * The control window's shared vocabulary: titles, text tones, buttons, fields and the ring marker.
- * The primary button is the website's (OpenApp): an opaque pane lit at its top edge inside a faint
- * standoff ring that lights when selected. The marker is the site's ring, the app's selection mark.
+ * The marker is the site's ring, the app's selection mark. A class one component uses lives in
+ * that component's module and composes from here.
  */
 
 .title {
@@ -108,32 +108,6 @@
   }
 }
 
-.primary {
-  composes: button;
-  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-bg));
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--color-accent) 17%, var(--color-bg)),
-    color-mix(in srgb, var(--color-accent) 7%, var(--color-bg))
-  );
-  box-shadow:
-    0 0 0 5px var(--color-bg),
-    0 0 0 6px color-mix(in srgb, var(--color-accent) 22%, transparent);
-}
-
-@media (hover: hover) {
-  .primary:hover:not(:disabled) {
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-accent) 24%, var(--color-bg)),
-      color-mix(in srgb, var(--color-accent) 10%, var(--color-bg))
-    );
-    box-shadow:
-      0 0 0 5px var(--color-bg),
-      0 0 0 6px var(--color-accent);
-  }
-}
-
 .link {
   display: inline-flex;
   align-items: center;
@@ -198,15 +172,6 @@
   margin: 0;
   accent-color: var(--color-accent);
   cursor: pointer;
-}
-
-.fieldset {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
 }
 
 .legend {
@@ -276,7 +241,7 @@
   opacity: 0;
 }
 
-/* ── The ring marker: hollow at rest, filled when chosen, ringed when current ── */
+/* ── The ring marker: hollow at rest, filled when chosen ── */
 
 .marker {
   flex: none;
@@ -294,13 +259,6 @@
   background: var(--color-accent);
 }
 
-.markerCurrent {
-  composes: markerOn;
-  box-shadow:
-    0 0 0 4px var(--color-bg),
-    0 0 0 5px var(--color-accent);
-}
-
 /* ── Focus: one ring everywhere ──────────────────────────────────────── */
 
 .button:focus-visible,
@@ -309,13 +267,6 @@
 .check:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
-}
-
-.primary:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 5px var(--color-bg),
-    0 0 0 7px var(--color-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {

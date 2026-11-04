@@ -10,6 +10,7 @@
 !define MUI_FORCECLASSICCONTROLS
 
 !ifndef BUILD_UNINSTALLER
+  ; The first sentence is APP_SUMMARY (src/control/shell/data/appSummary.ts); keep the two in step.
   !define MUI_WELCOMEPAGE_TITLE "Install Skymap"
   !define MUI_WELCOMEPAGE_TEXT "Skymap shows the universe as one 3D scene, built from star and galaxy catalogues.$\r$\n$\r$\nIt installs for everyone on this computer and lets tablets on a private network reach it. On its first start it downloads the sky's data once; after that it runs with no internet."
   !define MUI_FINISHPAGE_TITLE "Skymap is installed"
@@ -34,11 +35,11 @@
 ; Inbound rule so phones and tablets on a private or domain network can reach the app server.
 ; Public networks stay closed. The installer runs elevated (perMachine in electron-builder.yml).
 !macro customInstall
-  nsExec::ExecToLog 'netsh advfirewall firewall add rule name="Skymap" dir=in action=allow program="$INSTDIR\Skymap.exe" protocol=TCP localport=47823 profile=private,domain'
+  nsExec::ExecToLog 'netsh advfirewall firewall add rule name="${PRODUCT_NAME}" dir=in action=allow program="$INSTDIR\${PRODUCT_FILENAME}.exe" protocol=TCP localport=47823 profile=private,domain'
 !macroend
 
 !macro customUnInstall
-  nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="Skymap"'
+  nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="${PRODUCT_NAME}"'
 !macroend
 
 ; The data is per user (Electron's userData), while this uninstaller runs per machine: the current

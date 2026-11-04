@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { generate } from 'selfsigned';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { LanCertificate } from '../../../../src/main/certificates/@types/LanCertificate';
-import { ensureLanCertificate } from '../../../../src/main/certificates/ensureLanCertificate';
+import { ensureCa } from '../../../../src/main/certificates/ensureCa';
+import { ensureLeaf } from '../../../../src/main/certificates/ensureLeaf';
 import { isSignedByCa } from '../../../../src/main/certificates/utils/isSignedByCa';
 
 const names = { hostnames: ['localhost'], ips: [] };
@@ -14,8 +15,8 @@ let ours: LanCertificate;
 let theirs: LanCertificate;
 
 beforeAll(async () => {
-  ours = await ensureLanCertificate(dirs[0]!, names);
-  theirs = await ensureLanCertificate(dirs[1]!, names);
+  ours = await ensureLeaf(dirs[0]!, await ensureCa(dirs[0]!), names);
+  theirs = await ensureLeaf(dirs[1]!, await ensureCa(dirs[1]!), names);
 });
 afterAll(() => dirs.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
 

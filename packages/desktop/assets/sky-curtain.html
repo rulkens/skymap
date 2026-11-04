@@ -4,17 +4,23 @@
     <meta charset="utf-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline'"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
     />
     <title>Skymap</title>
-    <!-- Black over the sky while it (re)loads: in over 300 ms, out over 500 ms when loadSkyPage sets opacity 0. -->
+    <!-- Black over the sky while it (re)loads; loadSkyPage passes both fade times and sets opacity 0 to leave. -->
+    <script>
+      const params = new URLSearchParams(location.search);
+      for (const fade of ['fadeIn', 'fadeOut']) {
+        document.documentElement.style.setProperty(`--${fade}`, `${params.get(fade) ?? 0}ms`);
+      }
+    </script>
     <style>
       html {
         height: 100%;
         background: #000;
         cursor: none;
-        animation: appear 300ms ease-in;
-        transition: opacity 500ms ease-out;
+        animation: appear var(--fadeIn) ease-in;
+        transition: opacity var(--fadeOut) ease-out;
       }
       @keyframes appear {
         from {

@@ -1,20 +1,27 @@
 /**
- * Keeps an unattended window alive and on the app: a crashed renderer or GPU process reloads it,
- * a renderer hung for 30 s is killed (which then reloads it), and it can only ever show the app's
- * own server, so an InfoCard's outbound link is a dead click rather than a way out of the kiosk.
+ * Keeps an unattended window alive and on the app: a crashed renderer or GPU process reloads it
+ * (backing off while it keeps crashing), a renderer hung for 30 s is killed (which then reloads
+ * it), and it can only ever show the app's own server, so an InfoCard's outbound link is a dead
+ * click rather than a way out of the kiosk.
  */
 import { app } from 'electron';
 import type { BrowserWindow, Details } from 'electron';
 import { isAppUrl } from './utils/isAppUrl';
-import { RELOAD_DELAY_MS } from './data/reloadDelayMs';
+import { reloadDelayAfter } from './utils/reloadDelayAfter';
 import { UNRESPONSIVE_MS } from './data/unresponsiveMs';
 
 export function superviseWindow(win: BrowserWindow): void {
   const contents = win.webContents;
-  const reloadSoon = () =>
+  let lastDelay: number | null = null;
+  let upSince = Date.now();
+  const reloadSoon = () => {
+    lastDelay = reloadDelayAfter(lastDelay, Date.now() - upSince);
     setTimeout(() => {
-      if (!win.isDestroyed()) contents.reload();
-    }, RELOAD_DELAY_MS);
+      if (win.isDestroyed()) return;
+      upSince = Date.now();
+      contents.reload();
+    }, lastDelay);
+  };
 
   contents.on('render-process-gone', (_event, details) => {
     if (details.reason !== 'clean-exit') reloadSoon();

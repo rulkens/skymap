@@ -10,7 +10,6 @@ import { CONTROL_SHORTCUT } from '../../data/controlShortcut';
 export function buildMenuTemplate(
   platform: NodeJS.Platform,
   windowed: boolean,
-  testGrid: boolean,
   actions: MenuActions,
 ): MenuItemConstructorOptions[] {
   const hide: MenuItemConstructorOptions[] =
@@ -41,9 +40,9 @@ export function buildMenuTemplate(
       submenu: [
         { label: 'Restart sky', click: actions.restartSky },
         {
+          id: 'testGrid',
           label: 'Show test grid',
           type: 'checkbox',
-          checked: testGrid,
           click: (item) => actions.testGrid(item.checked),
         },
         ...dev,

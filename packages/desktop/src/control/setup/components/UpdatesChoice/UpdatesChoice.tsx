@@ -47,7 +47,7 @@ function UpdatesChoice({ setup, onSave }: UpdatesChoiceProps): ReactNode {
         />
         Start Skymap when the computer starts
       </label>
-      <fieldset className={chrome.fieldset}>
+      <fieldset className={styles.fieldset}>
         <legend className={chrome.legend}>Data updates</legend>
         {radio('atLaunch', 'At every launch')}
         <div className={chrome.row}>

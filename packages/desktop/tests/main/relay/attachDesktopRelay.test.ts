@@ -7,7 +7,9 @@ import { connect } from 'node:tls';
 import { WebSocket } from 'ws';
 import type { RelayHandle } from '../../../../../tools/@types/remote/RelayHandle';
 import { attachDesktopRelay } from '../../../src/main/relay/attachDesktopRelay';
-import { ensureLanCertificate } from '../../../src/main/certificates/ensureLanCertificate';
+import { APP_ORIGIN } from '../../../src/main/server/data/appOrigin';
+import { ensureCa } from '../../../src/main/certificates/ensureCa';
+import { ensureLeaf } from '../../../src/main/certificates/ensureLeaf';
 import { readRoomCode } from '../../../src/main/relay/readRoomCode';
 import { rotateRoomCode } from '../../../src/main/relay/rotateRoomCode';
 import { startAppServer } from '../../../src/main/server/startAppServer';
@@ -23,7 +25,8 @@ const sockets: WebSocket[] = [];
 
 beforeAll(async () => {
   userData = mkdtempSync(join(tmpdir(), 'desktop-relay-'));
-  const tls = await ensureLanCertificate(join(userData, 'certs'), {
+  const certDir = join(userData, 'certs');
+  const tls = await ensureLeaf(certDir, await ensureCa(certDir), {
     hostnames: ['localhost'],
     ips: ['127.0.0.1', ...listLanInterfaces().map((lan) => lan.address)],
   });
@@ -38,10 +41,9 @@ afterAll(async () => {
   rmSync(userData, { recursive: true, force: true });
 });
 
-const APP = 'https://localhost:47823';
 const port = () => (app.server.address() as AddressInfo).port;
 
-function open(path: string, host = '127.0.0.1', origin: string | null = APP) {
+function open(path: string, host = '127.0.0.1', origin: string | null = APP_ORIGIN) {
   const socket = new WebSocket(`wss://${host}:${port()}/__remote/${path}`, {
     ca,
     origin: origin ?? undefined,

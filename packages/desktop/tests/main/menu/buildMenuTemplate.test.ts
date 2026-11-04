@@ -25,7 +25,7 @@ const find = (list: MenuItemConstructorOptions[], label: string) =>
 describe('buildMenuTemplate', () => {
   it('has the Hide items on macOS only', () => {
     const skymap = (platform: NodeJS.Platform) =>
-      names(items(buildMenuTemplate(platform, false, false, actions()), 'Skymap'));
+      names(items(buildMenuTemplate(platform, false, actions()), 'Skymap'));
     expect(skymap('darwin')).toEqual(expect.arrayContaining(['Hide Skymap', 'hideOthers']));
     expect(skymap('win32')).not.toContain('Hide Skymap');
     expect(skymap('win32')).not.toContain('hideOthers');
@@ -33,7 +33,7 @@ describe('buildMenuTemplate', () => {
 
   it('routes Quit through the gate, never the quit role', () => {
     const a = actions();
-    const quit = find(items(buildMenuTemplate('darwin', false, false, a), 'Skymap'), 'Quit Skymap');
+    const quit = find(items(buildMenuTemplate('darwin', false, a), 'Skymap'), 'Quit Skymap');
     expect(quit.role).toBeUndefined();
     click(quit);
     expect(a.quit).toHaveBeenCalledOnce();
@@ -41,22 +41,21 @@ describe('buildMenuTemplate', () => {
 
   it('offers Reload and DevTools in --windowed dev runs only', () => {
     const view = (windowed: boolean) =>
-      names(items(buildMenuTemplate('darwin', windowed, false, actions()), 'View'));
+      names(items(buildMenuTemplate('darwin', windowed, actions()), 'View'));
     expect(view(false)).not.toContain('toggleDevTools');
     expect(view(true)).toEqual(expect.arrayContaining(['reload', 'toggleDevTools']));
   });
 
-  it('shows the test grid state and sends the toggled one', () => {
+  it('sends the test grid tick it was toggled to', () => {
     const a = actions();
-    const grid = find(items(buildMenuTemplate('win32', false, true, a), 'View'), 'Show test grid');
-    expect(grid.checked).toBe(true);
+    const grid = find(items(buildMenuTemplate('win32', false, a), 'View'), 'Show test grid');
     click(grid, false);
     expect(a.testGrid).toHaveBeenCalledWith(false);
   });
 
   it('shows the global shortcut on the control-window item without taking it twice', () => {
     const item = find(
-      items(buildMenuTemplate('darwin', false, false, actions()), 'Window'),
+      items(buildMenuTemplate('darwin', false, actions()), 'Window'),
       'Control window',
     );
     expect(item.accelerator).toBe('CommandOrControl+Alt+K');
@@ -65,7 +64,7 @@ describe('buildMenuTemplate', () => {
 
   it('opens Help at the section each item names', () => {
     const a = actions();
-    const help = items(buildMenuTemplate('win32', false, false, a), 'Help');
+    const help = items(buildMenuTemplate('win32', false, a), 'Help');
     help.forEach((item) => click(item));
     expect(vi.mocked(a.help).mock.calls).toEqual([[], ['tablet'], ['troubleshooting']]);
   });

@@ -4,7 +4,8 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { ensureLanCertificate } from '../../../src/main/certificates/ensureLanCertificate';
+import { ensureCa } from '../../../src/main/certificates/ensureCa';
+import { ensureLeaf } from '../../../src/main/certificates/ensureLeaf';
 import { startAppServer } from '../../../src/main/server/startAppServer';
 
 // Over the wire, so a server that normalises the URL before resolveAppPath sees it fails here.
@@ -20,7 +21,8 @@ beforeAll(async () => {
   writeFileSync(join(root, 'secret.txt'), 'secret');
   symlinkSync(join(root, 'secret.txt'), join(root, 'data/link.txt'));
   symlinkSync(join(root, 'data/manifest.json'), join(root, 'data/alias.json'));
-  const tls = await ensureLanCertificate(join(root, 'certs'), {
+  const certDir = join(root, 'certs');
+  const tls = await ensureLeaf(certDir, await ensureCa(certDir), {
     hostnames: ['localhost'],
     ips: [],
   });
