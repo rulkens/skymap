@@ -17,7 +17,7 @@ Layer does in the app (ADR 0014). `tests/conventions/desktopFolderShape.test.ts`
 
 | Folder                         | Holds                                                                                                                                        | May import                                                                         |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `@types/`, `data/`, `utils/`   | only what crosses a process boundary: the bridge contract and what it carries, constants read by two processes, runtime-neutral helpers     | no `electron`, Node or React; nothing under `main/`, `preload/`, `control/`, `brand/` |
+| `@types/`, `data/`, `utils/`   | only what crosses a process boundary: the bridge contract and what it carries (`ControlState`), the IPC channel table and constants read by two processes, runtime-neutral helpers. A root home exists only while something lives in it (`utils/` is empty today) | no `electron`, Node or React; nothing under `main/`, `preload/`, `control/`, `brand/` |
 | `main/`                        | the Electron main process (Vite mode `main`). Root: `main.ts` and `@types/`. Modules: `lifecycle`, `windows`, `sky`, `menu`, `server`, `certificates`, `lan`, `relay`, `setup`, `sync`, `files` | Electron, Node, the root homes, `tools/` (the relay); no React, CSS or page code    |
 | `preload/`                     | `preload.cts`, the sandboxed bridge (Vite mode `preload`)                                                                                    | `electron` and the root homes only                                                 |
 | `control/`                     | the control page (Vite root). Root: `index.html`, `main.tsx`, `control.css`, `controlChrome.module.css`. Modules: `shell`, `setup`, `pairing`, `sync`, `sky` | no `electron`, Node, `main/`, `preload/`, `brand/` or `tools/`                     |
@@ -31,55 +31,94 @@ pages from `assets/` (`test-grid.html`, `sky-curtain.html`).
 
 ## Processes and windows
 
-`main/main.ts` calls `runLifecycle` (`main/lifecycle/runLifecycle.ts`), which owns everything below. It
-takes the single-instance lock first, so a second launch only raises the control window.
+`main/main.ts` installs process-wide error logging (a stray error would otherwise be Electron's
+modal dialog over the sky), calls `runLifecycle` and, if it rejects, shows why in the README's words
+(`startErrorText`: a taken port, a full disk) and exits. `runLifecycle` (`main/lifecycle/`) is
+wiring: it takes the single-instance lock first, so a second launch only raises the control window,
+and the decisions sit in pieces with their own tests: `bootPlan` (what a launch does first),
+`syncOutcomeAction` (spec §5's outcome table), `createDailySchedule` (the one daily timer),
+`registerControlIpc` (the page's requests), `createSetupStore` (`setup.json`) and
+`createSkyWindows` (`main/windows/`: the sky window, its placement and the test grid).
 
 | Window            | File                                        | What it is                                                                                                                                                                                       |
 | ----------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Sky               | `main/windows/openSkyWindow.ts`, `main/sky/loadSkyPage.ts` | Frameless, black, fills one display. Loads `https://localhost:47823/?remote` (kiosk) or `/?dome&remote` (dome) from the app's own server. Hosts the relay room.                                  |
 | Control           | `main/windows/openControlWindow.ts`, `src/control/` | 960 x 760 React page from `file://`, sandboxed, talks to main only through the preload bridge. Close hides it.                                                                                   |
-| Test grid         | `main/sky/showTestGrid.ts`, `assets/test-grid.html` | Not a window: a child view laid over the sky window (dome grid with FRONT at the bottom, or the display number). Main owns its on/off state and pushes it, so the menu tick and the page agree. |
+| Test grid         | `main/sky/showTestGrid.ts`, `assets/test-grid.html` | Not a window: a child view laid over the sky window (dome grid with FRONT at the bottom, or the display number). `createSkyWindows` holds it; its on/off state is in `ControlState`, so the menu tick and the page agree, and a mode change drops it in main. |
 | About             | `main/windows/openAboutWindow.ts`           | 560 x 500 child of the control window, loading `?view=about` from the same page and preload. One branded window on both platforms.                                                               |
 | Sky curtain       | `main/sky/addOverlay.ts`, `assets/sky-curtain.html` | A black child view that fades in over every sky load and out once `window.__skymap.ready` resolves, or after 10 s.                                                                           |
 
 - The control page is shown only when a person is needed: first run, no complete data, a stored
   display that is missing, or the shortcut. It is never shown before its first paint.
-- Bridge contract: `src/@types/ControlBridge.d.ts`, implemented in `preload/preload.cts` and the
-  `ipcMain` handlers in `runLifecycle.ts`. Every handler checks the sender is the control window
-  (the About window may only call `getAbout`). Growing the bridge is a contract change.
-- `main/windows/superviseWindow.ts` reloads a crashed renderer or GPU process, kills a renderer hung for
-  30 s, and refuses navigation off the app's origin. An InfoCard link is a dead click on purpose.
+- **One state.** Main owns one `ControlState` (`src/@types/ControlState.d.ts`: status, progress,
+  whether a complete set is on disk, the sky running or loading, the test grid, the room, displays
+  with the sky's placement, networks, setup, first run, About's facts). It pushes it whole on
+  `control:state` after every change; the page reads it once with `getState()` and takes every push.
+  There is no load-time replay, so the page has no timing contract with main.
+- **Bridge contract:** `src/@types/ControlBridge.d.ts`, implemented in `preload/preload.cts`.
+  Channel names live in one table, `src/data/controlChannels.ts`, that preload and main both read.
+  Main answers every request through `registerControlIpc`, the one sender check: a request from
+  any window but the control window is refused with a rejection (the About window may only call
+  `getState`). Growing the bridge is a contract change.
+- **Status kinds** (`ControlStatus`): `idle`, `syncing`, `complete` (the last sync's data is
+  loaded or loading), `ready` (new data waits for Restart sky), `offline`, `failed`, `diskFull`.
+  Whether data is on disk is `ControlState.hasData`, not part of the status. The page reads each
+  kind's words from one table, `control/sync/data/statusView.ts`.
+- **Setup saves** go through `createSetupStore`, `setup.json`'s one writer (the first-run write
+  too): saves run one at a time, the app follows a change only once it is stored, and a refused
+  save leaves the stored setup. The page shows Saving, Saved, or an alert, and drops its draft.
+- **Rotate code** is a two-step button: "Rotate code", then "Disconnect tablets and rotate"
+  (Escape or leaving the button cancels). It stays busy until main has stored the new code.
+- `main/windows/superviseWindow.ts` reloads a crashed renderer or GPU process (after 2 s, doubling
+  to a minute while it keeps crashing, reset after a minute up), kills a renderer hung for 30 s,
+  and refuses navigation off the app's origin. An InfoCard link is a dead click on purpose.
 - With one screen the control window floats above the sky (`screen-saver` level) and
-  `CommandOrControl+Alt+K` (`data/controlShortcut.ts`) shows or hides it.
+  `CommandOrControl+Alt+K` (`data/controlShortcut.ts`; the page prints Cmd+Option+K on a Mac) shows
+  or hides it.
 
 ## Data mirror
 
 Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the publishing side.
 
 - **Inventory.** `syncR2.ts` uploads `data/offline-inventory.json` last (see
-  [DEPLOY.md](DEPLOY.md)): every offline group's files with sha256 and size. The app fetches it
-  from `DESKTOP_DATA_ORIGIN` (the app's R2 data host, read from `.env.production` at build time by
-  `vite.config.ts` and baked in as a define) with a 5 s timeout. No answer, or a non-OK status,
-  means `offline`.
+  [DEPLOY.md](DEPLOY.md)): every offline group's files with sha256 and size. Its key has one home,
+  `tools/deploy/data/offlineInventoryKey.ts`, read by both sides. The app fetches it from
+  `DESKTOP_DATA_ORIGIN` (the app's R2 data host, read from `.env.production` at build time by
+  `vite.config.ts` and baked in as a define) within `INVENTORY_TIMEOUT_MS`. No answer, or a non-OK
+  status, means `offline`.
 - **Mirror.** `<userData>/data/` holds the bucket's `data/` tree key for key. `synced.json` maps
-  each key to the sha256 of the file verified there. `planSync` downloads what is unsynced,
+  each key to the sha256 of the file verified there. `listMirrorKeys` lists what is on disk in one
+  async walk (never `existsSync` per key: 70k of them blocked main for seconds), and runSync,
+  `hasCompleteLocalSet` and `pruneOrphans` all read it. `planSync` downloads what is unsynced,
   changed, or gone from disk, group by group, 8 files at a time (`downloadVerified` checks the
   hash and writes a `.part` file first). `synced.json` is written after every group, also on
-  failure, so the next run resumes.
+  failure, so the next run resumes. A key that would leave the mirror is refused.
+- **Retries.** `downloadWithRetries` tries a file `DOWNLOAD_RETRIES` more times after a network or
+  server error or a refused rename (Windows antivirus), and a download that receives nothing for
+  `DOWNLOAD_IDLE_MS` is aborted. A 404 or a sha mismatch (`UpstreamChangedError`) fails at once:
+  a deploy landed mid-run. Progress goes out at most every `PROGRESS_INTERVAL_MS`, plus once at
+  the end, and is reset when a sync starts.
+- **Outcomes.** `runSync` returns `synced`, `unchanged` (nothing to download against the same
+  inventory: a current sky is not reloaded), `offline`, `failed`, or `diskFull` with needed and
+  free bytes.
 - **Inventory last.** `<userData>/data/inventory.json` is the fetched text, written only after
   every group succeeded. Its presence plus every key verified (`hasCompleteLocalSet`) is what
   "complete" means everywhere else. A failed run leaves the previous set intact.
 - **Prune only at sky load.** `pruneOrphans` deletes files outside the local `inventory.json`
   (bookkeeping files and `.part` files are kept). `createSkyLoader` runs it just before showing the
-  sky and never while a sync runs, because the old inventory would delete files being downloaded.
-- **Disk check.** Before downloading, the plan's bytes are compared with free space;
-  `InsufficientDiskError` carries needed and free bytes to the control page.
-- **Outcome table.** `syncThenLoad` in `runLifecycle.ts` is spec §5: synced loads the sky (or, for
-  a manual Update now, waits for Restart sky); offline or failed with data on disk shows status
-  only and loads the sky; with no data it raises the control window.
+  sky. Syncs, prunes and sky loads share one queue in `runLifecycle`, so a prune never meets a
+  download (the old inventory would delete files being downloaded) and two loads never overlap; a
+  sky load asked for during a sync waits for it.
+- **Disk check.** Before downloading, the plan's bytes are compared with free space; the
+  `diskFull` outcome carries needed and free bytes to the control page.
+- **Outcome table.** `syncOutcomeAction` is spec §5: synced loads the sky (or, for a manual
+  Update now, waits for Restart sky); offline, failed or a full disk with data on disk shows the
+  status and loads the sky if none runs; with no data it raises the control window. Restart sky
+  without a complete set is refused in main and disabled, with the reason, in the page.
 - **Update policy.** `setup.dataUpdates` is `atLaunch`, `daily` at an `HH:MM`, or `manual`.
-  `rearm` sets the next daily timer (`main/sync/utils/nextDailyRun.ts`). A complete set with a policy other
-  than `atLaunch` loads the sky without syncing first.
+  `createDailySchedule` holds the one daily timer (`main/sync/utils/nextDailyRun.ts`) and re-arms
+  after every run, a failed one too. A complete set with a policy other than `atLaunch` loads the
+  sky without syncing first (`bootPlan`).
 - **Dev.** `resolveDataRoot` returns the repo's `public/data` for an unpackaged run, or
   `SKYMAP_DATA_DIR` if set. Both are `dev`: no sync, no prune, no daily timer, Update now ignored.
 - **Pointer-last.** The mirror is only safe because R2 uploads a pointer after every file it names
@@ -90,18 +129,23 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 - `main/server/startAppServer.ts`: one HTTPS server on `0.0.0.0:47823` (`data/appServerPort.ts`), GET and
   HEAD only. It serves the web build (`main/server/distDir.ts`: `resources/dist` packaged, the repo's
   `dist/` otherwise), `/data/` from the mirror, and `/ca.crt`. Paths are resolved lexically
-  (`main/server/resolveAppPath.ts`) and then by realpath, so a symlink cannot leave a root. Responses are
-  `no-cache` so Restart sky sees a replaced manifest.
-- `main/certificates/ensureLanCertificate.ts`: a per-install EC CA (20 years, name `Skymap local CA <hex>`,
-  `pathLenConstraint 0`) and a leaf (397 days, the Apple limit) whose subject alternative names
-  are the machine's host names and LAN addresses. Both live in `<userData>/certs/`. A corrupt CA
-  or key is replaced rather than blocking launch; tablets then trust the new CA once more.
-- **Reissue.** `startSecureServer.ts` re-reads the LAN names every 30 s
-  (`main/certificates/data/lanCheckIntervalMs.ts`) and `renewServerCertificate.ts` swaps the leaf into the live
-  server with `setSecureContext`. The CA never changes, so trust on tablets survives. The leaf is
-  also reissued within 30 days of expiry.
+  (`main/server/resolveAppPath.ts`) and then by realpath, so a symlink cannot leave a root. The
+  mirror's bookkeeping files and `.part` downloads are 404. Responses are `no-cache` so Restart sky
+  sees a replaced manifest.
+- `main/certificates/ensureCa.ts`: a per-install EC CA (20 years, name `Skymap local CA <hex>`,
+  `pathLenConstraint 0`), read once per launch so `/ca.crt` and the leaf always agree.
+  `ensureLeaf.ts`: a leaf (397 days, the Apple limit) whose subject alternative names are the
+  machine's host names and LAN addresses. Both live in `<userData>/certs/`. A corrupt CA or key is
+  replaced rather than blocking launch; tablets then trust the new CA once more.
+- **Reissue.** `main/lan/watchLan.ts` re-reads the LAN every 30 s
+  (`main/lan/data/lanCheckIntervalMs.ts`). On a change it drives three things: the certificate
+  (`renewServerCertificate.ts` swaps the leaf into the live server with `setSecureContext`), the
+  page's network list, and the QR's origin, so a kiosk that booted before the network recovers
+  without a restart. The CA never changes, so trust on tablets survives. A leaf within 30 days of
+  expiry is reissued at launch.
 - The app's own windows accept the leaf through `setCertificateVerifyProc` only if the CA signed
-  it; everything else goes back to Chromium's verdict.
+  it; everything else goes back to Chromium's verdict. `setPermissionRequestHandler` refuses every
+  browser permission.
 - Tablets fetch `/ca.crt` and install it once (steps in the README and the Help view).
 
 ## Relay wiring
@@ -118,31 +162,36 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 - **Rotation.** `main/relay/rotateRoomCode.ts` stores the new code, then calls `relay.rotate`, which
   closes the old room's remotes with 4001. Clicks are queued (`main/lifecycle/utils/serially.ts`).
 - **Network picker.** `setup.network` names an interface; `main/lan/utils/lanOriginFor.ts` builds the QR
-  origin from it, else the first interface. `main/lan/utils/listLanInterfaces.ts` lists them. Before the
-  sky hosts, main sends the stored code and origin itself, so the QR works during the first
-  download.
+  origin from it, else the first interface. `main/lan/utils/listLanInterfaces.ts` lists them. The
+  room is in `ControlState` from launch, so the QR works during the first download.
 - `server.on('upgrade')` destroys any upgrade outside `REMOTE_PATH_PREFIX`; once a listener exists
   Node stops closing them.
 - The relay cannot report connected remotes, which is why setup shows no "Paired" confirmation.
 
 ## Windows, hot-plug and the quit gate
 
-- `utils/placeWindows.ts` is pure (both processes read it): the sky goes to the stored display by id, else the one
-  display of the same size (ids change on re-plug), else the primary; the control window gets
-  another display or none. Zero displays returns `null` and waits for `display-added`.
-- `runLifecycle.ts` listens to `display-added` and `display-removed`: it re-places the windows,
-  refills the sky window, and pushes the display list to the page. A projector switched on after
-  boot takes the sky back. If the stored display is missing, the control window opens.
+- `main/windows/utils/placeWindows.ts` is pure: the sky goes to the stored display by id, else the
+  one display of the same size (ids change on re-plug), else the primary; the control window gets
+  another display or none. `storedMissing` says a stored display fell back. Zero displays returns
+  `null` and waits for `display-added`. Displays are numbered once, in `listDisplays`
+  (`DisplayInfo.number`); the page reads the numbers and the placement from the state.
+- `runLifecycle.ts` listens to `display-added`, `display-removed` and `display-metrics-changed`:
+  it re-places the windows, refills the sky window, and pushes displays and placement to the page.
+  A projector switched on after boot takes the sky back. If the stored display is missing, the
+  control window opens. The control window is moved only when it is not on its display, so one the
+  operator placed stays put.
 - `main/windows/createQuitGate.ts`: the sky window and the control window ignore close (Alt+F4, Cmd+W)
   until `allowQuit`. Quit is the control page's Quit panel or the menu's Quit item; both call the
   gate, never the `quit` role.
 - `main/menu/installAppMenu.ts` with `buildMenuTemplate`: macOS has one menu bar, and it carries the
   menu only while the control window or About has focus, so a visitor's keyboard on the sky has no
   Cmd+Q, Cmd+H or Cmd+W. Windows hangs it on the control window, hidden until Alt. In `--windowed`
-  the menu is always there with Reload and Toggle DevTools.
+  the menu is always there with Reload and Toggle DevTools. The test grid item is ticked by its id,
+  not by rebuilding the menu.
 - The sky window hides scrollbars, text selection and, after 3 s still, the cursor
   (`main/sky/hideSkyChrome.ts`, `main/sky/utils/createIdleTimer.ts`). Fades respect `prefers-reduced-motion` in
-  their own pages.
+  their own pages, which read their durations from the overlay's query (`fadeIn`, `fadeOut`), so
+  each time lives once, in `main/sky/data/`.
 
 ## Build and packaging
 
@@ -166,9 +215,11 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 - `installer/installer.nsh` is the nsis include: branding colours, the firewall rule
   (`netsh advfirewall`, TCP 47823, private and domain profiles, added on install and removed on
   uninstall), and the uninstaller's unticked "Downloaded sky data" box, which deletes
-  `%APPDATA%\Skymap\data` only when ticked and never on an update. The exe name and the port are
-  hard-coded there; `packages/desktop/tests/electronBuilderConfig.test.ts` pins the port against
-  `APP_SERVER_PORT`. The installer is per machine, which is what lets it add the rule.
+  `%APPDATA%\Skymap\data` only when ticked and never on an update. The exe and rule names come
+  from electron-builder (`${PRODUCT_FILENAME}`, `${PRODUCT_NAME}`); the port is hard-coded there and
+  `packages/desktop/tests/electronBuilderConfig.test.ts` pins it against `APP_SERVER_PORT`. The
+  welcome text repeats `APP_SUMMARY`; keep the two in step. The installer is per machine, which is
+  what lets it add the rule.
 - Release: `npm run dist -w packages/desktop` (web build in desktop mode, brand, build,
   electron-builder for both targets, into `packages/desktop/release/`). Both installers are
   unsigned, about 340 MB each.
@@ -202,6 +253,10 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   shape, the process import boundary, file purity, `@types` and `utils` shape, no `.js` specifiers.
 
 ## Landmines
+
+- **First run ends at the first launch.** `setup.json` is written (through the setup store) as
+  soon as the app starts, so quitting mid-setup skips the steps next time; "Run setup again" brings
+  them back. That is the spec's rule (§10).
 
 - **Module resolution.** The desktop `tsconfig.json` uses Bundler resolution and imports are
   extensionless, like the app. An earlier NodeNext setup forced `.js` extensions and could not

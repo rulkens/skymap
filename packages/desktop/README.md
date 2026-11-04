@@ -4,7 +4,8 @@ Skymap runs on one computer without internet. It downloads the sky's data once, 
 sky full screen. A phone or tablet on the same network drives it. Use it as a kiosk (a flat
 screen) or in a dome (the fisheye disc for a planetarium projector).
 
-Developers: see [docs/DESKTOP.md](../../docs/DESKTOP.md).
+Developers: see [docs/DESKTOP.md](../../docs/DESKTOP.md). This guide is the source for the app's
+Help view (`HelpView.tsx`): change Connect a tablet and Troubleshooting in both.
 
 ## What you need
 
@@ -71,7 +72,8 @@ The tablet must be on the same network as the computer.
 2. Scan the QR in the controls with the tablet's camera.
 
 The QR holds a code that stays the same between launches, so a bookmark keeps working. Rotate code
-in the controls makes a new one and disconnects every tablet.
+in the controls makes a new one and disconnects every tablet: the button asks once more as
+"Disconnect tablets and rotate", and Escape cancels.
 
 Give the computer a DHCP reservation on the venue's router, so its address does not change after a
 restart. A tablet's bookmark holds the address, so it breaks if the address changes.
@@ -110,7 +112,7 @@ data is kept.
 ## Troubleshooting
 
 - **No sky.** The sky opens once its data is downloaded. The status under Data says what it waits
-  for.
+  for; Restart sky stays off until then.
 - **Blank sky.** Update the graphics driver, then choose Restart sky in the controls.
 - **The download needs internet.** The first start needs it once. Connect, then choose Retry.
 - **The disk is full.** The status names the space needed and the space free. Free the difference

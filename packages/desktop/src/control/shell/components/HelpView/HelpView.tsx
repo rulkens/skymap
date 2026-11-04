@@ -1,6 +1,6 @@
 /**
- * HelpView — short answers for the jobs a technician meets after setup. Every claim is true of this
- * build; the certificate steps match the README's, which were tried on each tablet.
+ * HelpView — short answers for the jobs a technician meets after setup, offline. packages/desktop/
+ * README.md is the source: its certificate steps were tried on each tablet; change both together.
  */
 
 import { useEffect, useId, useRef } from 'react';
@@ -58,7 +58,8 @@ function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactN
           </li>
           <li>
             <strong>Android:</strong> open {cert}, then install it from Settings, Security,
-            Encryption &amp; credentials, Install a certificate, CA certificate.
+            Encryption &amp; credentials, Install a certificate, CA certificate. Tapping through the
+            browser&apos;s warning also works; trusting the certificate stops it coming back.
           </li>
           <li>Scan the code in the controls, under Tablets, with the tablet&apos;s camera.</li>
           <li>

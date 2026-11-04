@@ -55,6 +55,9 @@ update the local copy incrementally.
 
 ### 3.1 Ideal shape
 
+> The pre-build sketch, kept as history. The shipped layout is in
+> [`docs/DESKTOP.md`](../../DESKTOP.md) (Layout), and the types live in the files it names.
+
 ```ts
 // tools/deploy/@types/R2SyncGroup.ts — one field, set on every row of buildGroups()
 readonly offline: boolean; // true: runtime asset the desktop app mirrors
@@ -222,7 +225,7 @@ on disk.
 **Prune (`pruneOrphans`, idempotent):**
 
 - Every sky load first deletes the keys on disk that are not in the local `inventory.json`
-  (excluding `synced.json` and `inventory.json`), then loads the sky.
+  (excluding `synced.json`, `inventory.json` and `.part` downloads), then loads the sky.
 - A sync that runs while the sky is up therefore can't delete a file the running sky still fetches
   lazily (tiles, hi-res images) from the old manifest.
 - With no flag and no deferral rule, a partial sync never prunes, because its inventory was never
@@ -252,7 +255,7 @@ dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string /* 'HH:MM' local
 | No network, no complete local set          | Control window: needs internet once; retry               |
 | Sync fails mid-run (network, 5xx, sha)     | Boot the previous set; retry at the next scheduled point |
 | Sync fails, no complete local set          | Control window error with retry                          |
-| Insufficient disk (inventory size − local) | Control window error with needed vs free                 |
+| Insufficient disk (inventory size − local) | Needed vs free in the status; window raised only without a complete set |
 
 ## 6. Shell
 
@@ -266,7 +269,7 @@ dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string /* 'HH:MM' local
     the LAN.
   - **Why one server:** the sky window loads `https://localhost:<port>/`. The relay keeps rooms per
     server, so the sky window and the phones must reach the same one.
-- **Certificate (Q2):** `ensureLanCertificate`.
+- **Certificate (Q2):** `ensureCa` (once per launch) and `ensureLeaf`.
   - **CA:** made on first run in `<userData>/certs/`.
   - **Server certificate:** covers `localhost`, the machine's `.local` name and every current LAN
     IPv4 address, and is reissued when that list changes.
@@ -280,8 +283,8 @@ dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string /* 'HH:MM' local
   it re-runs on `screen` `display-added` and `display-removed`.
   - **Sky:** the stored display id, else a unique display with the stored size, else the primary
     display. A projector switched on later takes the sky back.
-  - **Control:** a display the sky does not use when there is one. Otherwise `null`: hidden behind
-    the sky and toggled with a fixed global shortcut.
+  - **Control:** a display the sky does not use when there is one. Otherwise `null`: the control
+    window floats above the sky (`screen-saver` level) and a fixed global shortcut shows or hides it.
 - **Sky window:** frameless, black, full screen on `sky`. It loads `/?dome&remote` in dome mode
   and `/?remote` in kiosk mode.
 - **Control window (Q5, Q6):** an ordinary window. It comes up by itself when it needs a person:
@@ -300,7 +303,8 @@ dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string /* 'HH:MM' local
 - **Navigation lock:** `will-navigate` blocks every target outside `https://localhost:<port>`,
   and `setWindowOpenHandler` denies everything. InfoCard outbound links become dead clicks.
 - **Autostart:** a toggle in the control window (`app.setLoginItemSettings`). _(My call.)_
-- **Quit:** only from the control window. The sky window has no other way out.
+- **Quit:** from the control window's Quit, or the menu's Quit (Cmd+Q), which exists only while
+  the control window has focus. The sky window has no other way out.
 - **Dev:** `npm run desktop` launches with `SKYMAP_DATA_DIR` pointing at the main checkout's
   `public/data` and skips the sync. `--windowed` gives a normal sky window with DevTools.
 - **Package:** electron-builder, mac dmg and win nsis, unsigned. Whether the win target
@@ -340,7 +344,8 @@ Only these differ between the hosts:
   - **Desktop:** the code in `<userData>/remote-room.json`, created on first run.
 - **`mayHost`:**
   - **Vite:** always.
-  - **Desktop:** loopback only, because anyone who can host reads the code.
+  - **Desktop:** loopback, and `Origin` equal to `APP_ORIGIN`, because anyone who can host reads
+    the code and loopback alone would admit any local browser tab.
 
 **Rotation (Q4).** **Rotate code** in the control window does three things:
 
@@ -376,33 +381,13 @@ code that stays the same for weeks must not sit on a public screen.
 ## 8. Control window
 
 `packages/desktop/src/control/` is one page with a CommonJS preload (`.cts` → `.cjs`, because it
-runs sandboxed) that exposes the bridge through `contextBridge` only:
+runs sandboxed) that exposes the bridge through `contextBridge` only. The contract is not copied
+here; its one home is the code:
 
-```ts
-type ControlBridge = {
-  onSync: (listener: (progress: SyncProgress) => void) => Unsubscribe;
-  onStatus: (listener: (status: ControlStatus) => void) => Unsubscribe; // errors and "New data ready", which progress cannot carry
-  updateNow: () => void;
-  restartSky: () => void;
-  getSetup: () => Promise<InstallSetup>;
-  saveSetup: (setup: InstallSetup) => Promise<void>;
-  listDisplays: () => Promise<DisplayInfo[]>;
-  listNetworks: () => Promise<LanInterface[]>; // fills the network picker
-  showTestGrid: (on: boolean) => void;
-  onPairing: (listener: (room: RelayRoom) => void) => Unsubscribe; // fed by RelayHandle.onRoom
-  rotateCode: () => void;
-  quit: () => void;
-};
-
-type InstallSetup = {
-  // <userData>/setup.json
-  mode: 'dome' | 'kiosk';
-  display: { id: number; width: number; height: number } | null; // null → primary
-  network: string | null; // interface name for the pairing address; null → first LAN IPv4
-  autostart: boolean;
-  dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string } | { kind: 'manual' };
-};
-```
+- the bridge: `packages/desktop/src/@types/ControlBridge.d.ts` (main pushes one `ControlState`,
+  `ControlState.d.ts`, and the page reads it once);
+- the setup it stores: `packages/desktop/src/@types/InstallSetup.d.ts` (`<userData>/setup.json`);
+- the channel names: `packages/desktop/src/data/controlChannels.ts`.
 
 It has four panels:
 

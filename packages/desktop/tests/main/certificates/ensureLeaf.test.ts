@@ -17,13 +17,13 @@ beforeEach(() => {
 afterEach(() => rmSync(certDir, { recursive: true, force: true }));
 
 /** One launch's certificates, as startSecureServer reads them. */
-const ensureLanCertificate = async (dir: string, lan: LanNames) =>
+const launchCertificates = async (dir: string, lan: LanNames) =>
   ensureLeaf(dir, await ensureCa(dir), lan);
 
 describe('ensureCa and ensureLeaf', () => {
   it('creates a CA once and reuses it', async () => {
-    const first = await ensureLanCertificate(certDir, names);
-    const second = await ensureLanCertificate(certDir, names);
+    const first = await launchCertificates(certDir, names);
+    const second = await launchCertificates(certDir, names);
     expect(new X509Certificate(first.ca).ca).toBe(true);
     expect(second.ca).toBe(first.ca);
     expect(second.cert).toBe(first.cert);
@@ -31,7 +31,7 @@ describe('ensureCa and ensureLeaf', () => {
   });
 
   it('the leaf names localhost, the .local name and every ip', async () => {
-    const { cert } = await ensureLanCertificate(certDir, names);
+    const { cert } = await launchCertificates(certDir, names);
     const leaf = new X509Certificate(cert);
     expect(leaf.ca).toBe(false);
     expect(leaf.checkHost('localhost')).toBe('localhost');
@@ -42,10 +42,10 @@ describe('ensureCa and ensureLeaf', () => {
   });
 
   it('reissues the leaf, not the CA, when the ips change', async () => {
-    const first = await ensureLanCertificate(certDir, names);
+    const first = await launchCertificates(certDir, names);
     const reordered = { ...names, ips: [...names.ips].reverse() };
-    expect((await ensureLanCertificate(certDir, reordered)).cert).toBe(first.cert);
-    const moved = await ensureLanCertificate(certDir, { ...names, ips: ['192.168.1.21'] });
+    expect((await launchCertificates(certDir, reordered)).cert).toBe(first.cert);
+    const moved = await launchCertificates(certDir, { ...names, ips: ['192.168.1.21'] });
     expect(moved.ca).toBe(first.ca);
     expect(moved.cert).not.toBe(first.cert);
     expect(new X509Certificate(moved.cert).checkIP('192.168.1.21')).toBe('192.168.1.21');
@@ -53,23 +53,23 @@ describe('ensureCa and ensureLeaf', () => {
   });
 
   it('reissues the leaf when its stored key is garbage, keeping the CA', async () => {
-    const first = await ensureLanCertificate(certDir, names);
+    const first = await launchCertificates(certDir, names);
     corruptKey('leaf.json');
-    const second = await ensureLanCertificate(certDir, names);
+    const second = await launchCertificates(certDir, names);
     expect(second.ca).toBe(first.ca);
     expect(second.cert).not.toBe(first.cert);
   });
 
   it('makes a new CA when its stored key is garbage', async () => {
-    const first = await ensureLanCertificate(certDir, names);
+    const first = await launchCertificates(certDir, names);
     corruptKey('ca.json');
-    const second = await ensureLanCertificate(certDir, names);
+    const second = await launchCertificates(certDir, names);
     expect(second.ca).not.toBe(first.ca);
     expect(isSignedByCa(second.cert, second.ca)).toBe(true);
   });
 
   it('stores keys owner-only', async () => {
-    await ensureLanCertificate(certDir, names);
+    await launchCertificates(certDir, names);
     expect(statSync(join(certDir, 'ca.json')).mode & 0o777).toBe(0o600);
     expect(statSync(join(certDir, 'leaf.json')).mode & 0o777).toBe(0o600);
   });
