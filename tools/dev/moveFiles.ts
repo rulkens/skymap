@@ -37,7 +37,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseFlags } from '../utils/cli/args';
-import type { MovePair } from '../utils/refactor/applyMoves';
+import type { MovePair } from '../../packages/move-files/src/@types/MovePair';
 import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
 import { parseMovePairEntry } from '../utils/refactor/parseMovePairEntry';
 import { planMove } from '../utils/refactor/planMove';

@@ -14,7 +14,7 @@
  * copies.
  */
 
-import type { MovePair } from './applyMoves';
+import type { MovePair } from '../../../packages/move-files/src/@types/MovePair';
 
 export function parseMovePairEntry(entry: unknown): MovePair {
   if (

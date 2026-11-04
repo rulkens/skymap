@@ -23,12 +23,12 @@
  * name) and leave the file alone even when `renameFile` is true, so a rename
  * never renames a file that was never named after the symbol in the first place.
  *
- * ## Why the test mirror is dragged, and why we reuse expandTestMirrors
+ * ## Why the test mirror is dragged, and why we reuse expandCompanions
  *
  * Tests live in a parallel `tests/` tree that mirrors the source path with a
  * `.test` suffix. Rename the source file without its mirror and the mirror rots
  * (its name no longer matches the file under test). The src→tests derivation and
- * the `.test.ts` / `.test.tsx` suffix probing already live in `expandTestMirrors`
+ * the `.test.ts` / `.test.tsx` suffix probing already live in `expandCompanions`
  * (and the import rewriting in `applyMoves`), so this planner reuses both rather
  * than re-deriving mirror paths — one definition of the mirror convention, not
  * two that can drift. The existence oracle is the Project itself: it spans
@@ -50,10 +50,11 @@
 import { dirname, extname } from 'node:path';
 import { Node } from 'ts-morph';
 import type { Project } from 'ts-morph';
-import type { MovePair } from './applyMoves';
+import type { MovePair } from '../../../packages/move-files/src/@types/MovePair';
 import { applyMoves } from './applyMoves';
 import { anchorToMirroredRoot } from './anchorToMirroredRoot';
-import { expandTestMirrors } from './expandTestMirrors';
+import { expandCompanions } from '../../../packages/move-files/src/expandCompanions';
+import { companionRules } from './companionRules';
 import type { ResolvedSymbol } from './resolveSymbol';
 
 export function planRename(
@@ -99,10 +100,11 @@ function planFileRename(project: Project, resolved: ResolvedSymbol, newName: str
   if (basename !== resolved.name) return [];
 
   const relDest = `${dirname(rel)}/${newName}${ext}`;
-  // expandTestMirrors appends the `.test.ts`/`.test.tsx` mirror move (if the
+  // expandCompanions appends the `.test.ts`/`.test.tsx` mirror move (if the
   // Project knows that file), keeping mirror derivation in one place.
-  const relMoves = expandTestMirrors(
+  const relMoves = expandCompanions(
     [{ from: rel, to: relDest }],
+    companionRules,
     (relPath) => project.getSourceFile(prefix + relPath) !== undefined,
   );
   return relMoves.map(({ from, to }) => ({ from: prefix + from, to: prefix + to }));

@@ -7,7 +7,7 @@
  * decides a source file has become a husk and drops it, its mirror must go too.
  *
  * Mirror derivation reuses `anchorToMirroredRoot` (to speak the repo-relative
- * language the mirror convention is expressed in) and `expandTestMirrors` (the one
+ * language the mirror convention is expressed in) and `expandCompanions` (the one
  * definition of the `src/`↔`tests/` mapping and the `.test.ts`/`.test.tsx` suffix
  * probing), with the Project itself as the existence oracle. That keeps the
  * convention in a single place and works identically on the real repo and on an
@@ -20,18 +20,19 @@
 
 import type { Project, SourceFile } from 'ts-morph';
 import { anchorToMirroredRoot } from './anchorToMirroredRoot';
-import { expandTestMirrors } from './expandTestMirrors';
+import { expandCompanions } from '../../../packages/move-files/src/expandCompanions';
+import { companionRules } from './companionRules';
 
 export function removeFileWithMirror(project: Project, sourceFile: SourceFile): void {
   const anchor = anchorToMirroredRoot(sourceFile.getFilePath());
   if (anchor !== null) {
     const { rel, prefix } = anchor;
-    const moves = expandTestMirrors(
+    const moves = expandCompanions(
       [{ from: rel, to: rel }],
+      companionRules,
       (relPath) => project.getSourceFile(prefix + relPath) !== undefined,
     );
-    for (const { from } of moves) {
-      if (!from.startsWith('tests/')) continue; // the source file itself, deleted below
+    for (const { from } of moves.slice(1)) {
       project.getSourceFile(prefix + from)?.delete();
     }
   }

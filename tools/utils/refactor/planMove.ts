@@ -16,18 +16,18 @@
  *
  * The mirror expansion needs an existence oracle — a source file may or may not
  * have a `tests/` twin, and the twin's suffix (`.test.ts` vs `.test.tsx`) is not
- * mechanically derivable (see `expandTestMirrors`). Both real callers probe the
+ * mechanically derivable (see `expandCompanions`). Both real callers probe the
  * actual filesystem (`existsSync`), so this could have statted disk internally.
  * We take the predicate as a parameter instead so the unit test can drive it
  * from an in-memory stub without a real tree on disk. That is the same reason
- * `expandTestMirrors` injects it — and it is a deliberate contrast with
+ * `expandCompanions` injects it — and it is a deliberate contrast with
  * `planRename`/`planDelete`, which use the `Project`'s own file set as their
  * mirror oracle; `move` predates the CLI and its contract is the real disk.
  *
  * ## Why paths are resolved to absolute before applying
  *
  * The mirror expansion has to run on the RELATIVE pairs the user typed —
- * `expandTestMirrors` keys off the `src/`/`tools/` prefix to find the `tests/`
+ * `expandCompanions` keys off the `src/`/`tools/` prefix to find the `tests/`
  * twin — but `SourceFile.move(relativePath)` resolves a relative destination
  * against the moved file's OWN directory, not the filesystem root, so applying
  * the raw pairs would drop each file into a doubled path
@@ -41,16 +41,17 @@
 
 import { resolve } from 'node:path';
 import type { Project } from 'ts-morph';
-import type { MovePair } from './applyMoves';
+import type { MovePair } from '../../../packages/move-files/src/@types/MovePair';
 import { applyMoves } from './applyMoves';
-import { expandTestMirrors } from './expandTestMirrors';
+import { expandCompanions } from '../../../packages/move-files/src/expandCompanions';
+import { companionRules } from './companionRules';
 
 export function planMove(
   project: Project,
   moves: ReadonlyArray<MovePair>,
   fileExists: (path: string) => boolean,
 ): MovePair[] {
-  const expanded = expandTestMirrors(moves, fileExists);
+  const expanded = expandCompanions(moves, companionRules, fileExists);
   const cwd = project.getFileSystem().getCurrentDirectory();
   applyMoves(
     project,

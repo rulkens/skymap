@@ -18,7 +18,7 @@
  * ts-morph dependency of its own.
  */
 
-import type { MovePair } from './applyMoves';
+import type { MovePair } from '../../../packages/move-files/src/@types/MovePair';
 
 export function renderMoveReport(
   prefix: string,

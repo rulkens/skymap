@@ -58,19 +58,19 @@ export function expandCompanions(
 
 `move-files.config.json`: rules `src/`→`tests/` and `tools/`→`tests/tools/` with sources `.ts`, `.tsx` and suffixes `.test.ts`, `.test.tsx`, plus `packages/move-files/src/`→`tests/packages/move-files/`. No sibling rule yet.
 
-- [ ] Run the move, with both pairs explicit because `packages/` has no mirror rule yet: write a manifest and `npm run move-files -- --manifest <file>`.
-- [ ] `npm run refactor -- rename 'packages/move-files/src/expandCompanions.ts#expandTestMirrors' expandCompanions --no-file-rename`
-- [ ] Create `package.json`: name `@skymap/move-files`, `private: true`, `type: module`, peer dependency `typescript`. Run `npm install` so the lockfile records the workspace.
-- [ ] `npm run refactor -- extract 'tools/utils/refactor/applyMoves.ts#MovePair' packages/move-files/src/@types/MovePair.ts`, then delete `tools/utils/refactor/applyMoves.ts` from the allow-list.
-- [ ] Add a `rules` argument to `expandCompanions`, replacing `mirrorBase` (`expandTestMirrors.ts:43-50`). `tools/` reads rules from `move-files.config.json` by JSON import.
-- [ ] `anchorToMirroredRoot.ts:29`: derive roots from the rules, longest first, so `packages/move-files/src/` isn't anchored at `/src/`.
-- [ ] `removeFileWithMirror.ts:34`: replace the `tests/` prefix check with skipping the first entry, since originals come first.
-- [ ] Extend `expandCompanions.test.ts`; existing assertions pass with the skymap rules passed in:
+- [x] Run the move, with both pairs explicit because `packages/` has no mirror rule yet: write a manifest and `npm run move-files -- --manifest <file>`.
+- [x] `npm run refactor -- rename 'packages/move-files/src/expandCompanions.ts#expandTestMirrors' expandCompanions --no-file-rename`
+- [x] Create `package.json`: name `@skymap/move-files`, `private: true`, `type: module`, peer dependency `typescript`. Run `npm install` so the lockfile records the workspace.
+- [x] `npm run refactor -- extract 'tools/utils/refactor/applyMoves.ts#MovePair' packages/move-files/src/@types/MovePair.ts`, then delete `tools/utils/refactor/applyMoves.ts` from the allow-list.
+- [x] Add a `rules` argument to `expandCompanions`, replacing `mirrorBase` (`expandTestMirrors.ts:43-50`). `tools/` reads rules from `move-files.config.json` by JSON import.
+- [x] `anchorToMirroredRoot.ts:29`: derive roots from the rules, longest first, so `packages/move-files/src/` isn't anchored at `/src/`.
+- [x] `removeFileWithMirror.ts:34`: replace the `tests/` prefix check with skipping the first entry, since originals come first.
+- [x] Extend `expandCompanions.test.ts`; existing assertions pass with the skymap rules passed in:
   - `a rule with an empty root derives a sibling` : `Foo.tsx` + `{from:'',to:'',sources:['.tsx'],suffixes:['.module.css']}` → adds `{from:'a/Foo.module.css',to:'b/Foo.module.css'}`
   - `an explicit pair overrides a derived one` : a moved source and an explicit pair for its test → the test appears once, with the explicit `to`
   - `a move across rules uses the destination's rule` : `tools/x.ts`→`src/x.ts` with test `tests/tools/x.test.ts` → `tests/x.test.ts`
   - `a stem rename carries to the companion` : `a/Foo.tsx`→`b/Bar.tsx` → `b/Bar.module.css`
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/packages/move-files tests/tools/utils/refactor`. Commit.
+- [x] `npm run typecheck:fast`; `npx vitest run tests/packages/move-files tests/tools/utils/refactor`. Commit.
 
 ### Task 2: Prep: delete `refactor move`
 

@@ -23,20 +23,12 @@
  * within the batch therefore doesn't matter, which is why the caller can pass
  * an unordered `ReadonlyArray` and why we don't try to topologically sort.
  *
- * The `MovePair` type is co-located here (the `rawDataRegistry.ts` pattern:
- * a small type exported next to the one function that consumes it) rather
- * than spun into its own `@types`-style file — this is `tools/`, and the type
- * only means anything paired with the mover.
  */
 
 import type { Project } from 'ts-morph';
 
 import { rememberSpecifierExtensions } from './rememberSpecifierExtensions';
-
-export type MovePair = {
-  readonly from: string;
-  readonly to: string;
-};
+import type { MovePair } from '../../../packages/move-files/src/@types/MovePair';
 
 export function applyMoves(project: Project, moves: ReadonlyArray<MovePair>): void {
   const restoreExtensions = rememberSpecifierExtensions(project);

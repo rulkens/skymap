@@ -1,0 +1,22 @@
+{
+  "rules": [
+    {
+      "from": "src/",
+      "to": "tests/",
+      "sources": [".ts", ".tsx"],
+      "suffixes": [".test.ts", ".test.tsx"]
+    },
+    {
+      "from": "tools/",
+      "to": "tests/tools/",
+      "sources": [".ts", ".tsx"],
+      "suffixes": [".test.ts", ".test.tsx"]
+    },
+    {
+      "from": "packages/move-files/src/",
+      "to": "tests/packages/move-files/",
+      "sources": [".ts", ".tsx"],
+      "suffixes": [".test.ts", ".test.tsx"]
+    }
+  ]
+}
