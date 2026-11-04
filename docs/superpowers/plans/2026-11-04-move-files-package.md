@@ -210,7 +210,7 @@ export function planMoves(request: readonly MovePair[], snapshot: ProjectSnapsho
 
 `request` paths are relative to `context.root`; `plan.moves` keeps them relative, for the report. A pair with `from === to` is dropped. All refusals are collected, not just the first.
 
-- [ ] Write the tests, watch them fail, implement, watch them pass:
+- [x] Write the tests, watch them fail, implement, watch them pass:
   - `refuses every invalid pair at once` : a missing source and an occupied destination → both listed
   - `refuses duplicates` : same `from` twice, same `to` twice
   - `refuses a path outside the repo` : `../x.ts`
@@ -220,7 +220,7 @@ export function planMoves(request: readonly MovePair[], snapshot: ProjectSnapsho
   - `refuses destinations differing only by case` : `x→foo.ts` with an existing `Foo.ts` → `case-collision`
   - `allows a case-only rename` : `Foo.ts→foo.ts`
   - `drags companions and reports findings` : one source + test + sibling + a stale string → all in the plan
-- [ ] `npx vitest run tests/packages/move-files`. Commit.
+- [x] `npx vitest run tests/packages/move-files`. Commit.
 
 ### Task 7: Edges, CLI and the switch-over
 
