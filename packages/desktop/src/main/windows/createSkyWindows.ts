@@ -1,5 +1,5 @@
 import { screen } from 'electron';
-import type { BrowserWindow, Display } from 'electron';
+import type { BrowserWindow, Display, Rectangle } from 'electron';
 import type { DisplayInfo } from '../../@types/DisplayInfo';
 import type { Overlay } from '../sky/@types/Overlay';
 import type { SkyWindows } from './@types/SkyWindows';
@@ -22,12 +22,18 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
   // The list can change between two reads, so the primary stands in for a display just removed.
   const displayOf = (info: DisplayInfo): Display =>
     screen.getAllDisplays().find((d) => d.id === info.id) ?? screen.getPrimaryDisplay();
+  const fills = (win: BrowserWindow, b: Rectangle): boolean => {
+    const a = win.getBounds();
+    return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+  };
 
   const place = (): ReturnType<SkyWindows['place']> => {
     const placement = placeWindows(setup().display, listDisplays());
     if (placement === null) return null;
     const open = current();
-    if (open && !windowed) fillDisplay(open, displayOf(placement.sky).bounds);
+    const bounds = displayOf(placement.sky).bounds;
+    // A work-area change also lands here; refilling a sky already in place makes it jump.
+    if (open && !windowed && !fills(open, bounds)) fillDisplay(open, bounds);
     control.setAlwaysOnTop(placement.control === null && !windowed, 'screen-saver');
     // Moved only when it is not on its display: a window the operator placed stays where it is.
     const home = displayOf(placement.control ?? placement.sky);

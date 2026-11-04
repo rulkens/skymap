@@ -137,9 +137,11 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     if (about === null || about.isDestroyed()) about = openAboutWindow(control);
     else about.focus();
   };
+  // Raised when the stored display goes missing, not on every metrics event while it stays missing.
   const placeAll = (): void => {
+    const wasMissing = state.placement?.storedMissing === true;
     update({ displays: listDisplays(), placement: sky.place() });
-    if (state.placement?.storedMissing) showControl();
+    if (state.placement?.storedMissing && !wasMissing) showControl();
   };
 
   const loadOnce = createSkyLoader({

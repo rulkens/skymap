@@ -78,6 +78,15 @@ describe('createSkyWindows', () => {
     expect(control.setAlwaysOnTop).toHaveBeenLastCalledWith(false, 'screen-saver');
   });
 
+  // Work-area changes (a taskbar auto-hiding, the Dock) also fire display-metrics-changed.
+  it('leaves a sky that already fills its display alone', () => {
+    fake.displays = [laptop];
+    const windows = skyWindows(DEFAULT_INSTALL_SETUP);
+    windows.open();
+    windows.place();
+    expect(fillDisplay).not.toHaveBeenCalled();
+  });
+
   it('moves the control window only when it is not on its own display', () => {
     fake.displays = [laptop];
     const windows = skyWindows(DEFAULT_INSTALL_SETUP);
