@@ -28,6 +28,7 @@ function ControlsView({ session, bridge, onRunSetup, onHelp }: ControlsViewProps
         <SetupPanel
           setup={setup}
           displays={session.displays}
+          placement={session.placement}
           saveState={session.saveState}
           testGrid={session.testGrid}
           onSave={(next) => void save(next)}

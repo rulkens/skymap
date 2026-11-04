@@ -11,9 +11,9 @@ import Wordmark from '../../../../../../website/src/components/shared/text/Wordm
 import type { DisplayInfo } from '../../../../@types/DisplayInfo';
 import type { InstallSetup } from '../../../../@types/InstallSetup';
 import type { LanInterface } from '../../../../@types/LanInterface';
+import type { WindowPlacement } from '../../../../@types/WindowPlacement';
 import type { SetupStep } from '../../@types/SetupStep';
 import type { SyncState } from '../../../sync/@types/SyncState';
-import { placeWindows } from '../../../../utils/placeWindows';
 import { stepAfter } from '../../utils/stepAfter';
 import { hasOneScreen } from '../../utils/hasOneScreen';
 import { setupPrimaryLabel } from '../../utils/setupPrimaryLabel';
@@ -36,6 +36,7 @@ export type SetupFlowProps = {
   readonly sync: SyncState;
   readonly room: RelayRoom;
   readonly displays: readonly DisplayInfo[];
+  readonly placement: WindowPlacement | null;
   readonly networks: readonly LanInterface[];
   readonly onStep: (step: SetupStep) => void;
   readonly onSave: (next: InstallSetup) => Promise<void>;
@@ -47,7 +48,7 @@ export type SetupFlowProps = {
 };
 
 function SetupFlow(props: SetupFlowProps): ReactNode {
-  const { step, setup, sync, room, displays, networks } = props;
+  const { step, setup, sync, room, displays, placement, networks } = props;
   const { skyRunning } = sync;
   const { onStep, onSave, onShowTestGrid, onRetry, onHelp, onClose } = props;
   const titleId = useId();
@@ -55,8 +56,7 @@ function SetupFlow(props: SetupFlowProps): ReactNode {
   useEffect(() => titleRef.current?.focus(), [step]);
 
   const oneScreen = hasOneScreen(displays.length);
-  const skyAt = placeWindows(setup.display, displays)?.sky;
-  const skyDisplay = oneScreen || !skyAt ? null : displays.indexOf(skyAt) + 1;
+  const skyDisplay = oneScreen || !placement ? null : placement.sky.number;
   const save = (next: InstallSetup): void => void onSave(next);
 
   const advance = (): void =>
@@ -99,6 +99,7 @@ function SetupFlow(props: SetupFlowProps): ReactNode {
             <DisplayStep
               setup={setup}
               displays={displays}
+              placement={placement}
               onSave={onSave}
               onShowTestGrid={onShowTestGrid}
             />

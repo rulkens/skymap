@@ -97,6 +97,7 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
             sync={session}
             room={session.room}
             displays={session.displays}
+            placement={session.placement}
             networks={session.networks}
             onStep={setStep}
             onSave={session.save}

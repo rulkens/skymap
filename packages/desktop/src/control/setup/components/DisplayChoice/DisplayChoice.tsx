@@ -1,12 +1,9 @@
-/**
- * DisplayChoice — the connected screens as cards, the sky's one marked. Displays are numbered from 1
- * in the OS's order, as the kiosk test grid labels them; their ids mean nothing to a person.
- */
+/** DisplayChoice — the connected screens as cards by number, as the kiosk test grid labels them; the sky's one marked. */
 
 import type { ReactNode } from 'react';
 import type { DisplayInfo } from '../../../../@types/DisplayInfo';
 import type { InstallSetup } from '../../../../@types/InstallSetup';
-import { placeWindows } from '../../../../utils/placeWindows';
+import type { WindowPlacement } from '../../../../@types/WindowPlacement';
 import { displayDetail } from '../../utils/displayDetail';
 import { missingDisplayText } from '../../utils/missingDisplayText';
 import chrome from '../../../controlChrome.module.css';
@@ -15,12 +12,13 @@ import styles from './DisplayChoice.module.css';
 export type DisplayChoiceProps = {
   readonly stored: InstallSetup['display'];
   readonly displays: readonly DisplayInfo[];
+  readonly placement: WindowPlacement | null;
   readonly onPick: (display: NonNullable<InstallSetup['display']>) => void;
 };
 
-function DisplayChoice({ stored, displays, onPick }: DisplayChoiceProps): ReactNode {
-  const skyId = placeWindows(stored, displays)?.sky.id;
-  const missing = missingDisplayText(stored, displays);
+function DisplayChoice({ stored, displays, placement, onPick }: DisplayChoiceProps): ReactNode {
+  const skyId = placement?.sky.id;
+  const missing = missingDisplayText(stored, placement);
   return (
     <fieldset className={styles.root}>
       <legend className={chrome.unseen}>Sky screen</legend>
@@ -29,7 +27,7 @@ function DisplayChoice({ stored, displays, onPick }: DisplayChoiceProps): ReactN
           {missing}
         </p>
       )}
-      {displays.map((display, index) => (
+      {displays.map((display) => (
         <label key={display.id} className={chrome.card}>
           <input
             type="radio"
@@ -42,7 +40,7 @@ function DisplayChoice({ stored, displays, onPick }: DisplayChoiceProps): ReactN
           />
           <span className={chrome.cardHead}>
             <span className={display.id === skyId ? chrome.markerOn : chrome.marker} />
-            Display {index + 1}
+            Display {display.number}
           </span>
           <span className={styles.detail}>{displayDetail(display)}</span>
         </label>

@@ -1,0 +1,89 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_INSTALL_SETUP } from '../../../src/main/setup/data/defaultInstallSetup';
+import type { InstallSetup } from '../../../src/@types/InstallSetup';
+
+const fake = vi.hoisted(() => {
+  const display = (id: number, width: number, x: number) => ({
+    id,
+    label: '',
+    size: { width, height: 1000 },
+    scaleFactor: 1,
+    bounds: { x, y: 0, width, height: 1000 },
+    workArea: { x, y: 0, width, height: 1000 },
+  });
+  return { display, displays: [] as ReturnType<typeof display>[], windows: [] as object[] };
+});
+
+vi.mock('electron', () => ({
+  screen: {
+    getAllDisplays: () => fake.displays,
+    getPrimaryDisplay: () => fake.displays[0],
+    getDisplayMatching: (bounds: { x: number }) =>
+      fake.displays.find((d) => d.bounds.x === bounds.x) ?? fake.displays[0],
+  },
+}));
+vi.mock('../../../src/main/windows/openSkyWindow', () => ({
+  openSkyWindow: vi.fn((display: { bounds: { x: number } }) => {
+    const win = { isDestroyed: () => false, on: vi.fn(), getBounds: () => display.bounds };
+    fake.windows.push(win);
+    return win;
+  }),
+}));
+vi.mock('../../../src/main/windows/fillDisplay', () => ({ fillDisplay: vi.fn() }));
+vi.mock('../../../src/main/sky/showTestGrid', () => ({
+  showTestGrid: vi.fn(() => ({ loaded: Promise.resolve(), close: () => Promise.resolve() })),
+}));
+
+const { createSkyWindows } = await import('../../../src/main/windows/createSkyWindows');
+const { fillDisplay } = await import('../../../src/main/windows/fillDisplay');
+const { showTestGrid } = await import('../../../src/main/sky/showTestGrid');
+
+const laptop = fake.display(1, 1440, 0);
+const projector = fake.display(7, 4096, 2000);
+const control = { setAlwaysOnTop: vi.fn(), getSize: () => [960, 760], setPosition: vi.fn() };
+
+function skyWindows(setup: InstallSetup) {
+  return createSkyWindows({
+    control: control as never,
+    windowed: false,
+    gate: { allowQuit: () => {}, mayClose: () => false },
+    setup: () => setup,
+    onClosed: () => {},
+  });
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  fake.windows.length = 0;
+});
+
+describe('createSkyWindows', () => {
+  it('a projector switched on after boot takes the sky back', () => {
+    fake.displays = [laptop];
+    const windows = skyWindows({
+      ...DEFAULT_INSTALL_SETUP,
+      display: { id: 7, width: 4096, height: 1000 },
+    });
+    windows.open();
+    expect(windows.place()?.storedMissing).toBe(true);
+
+    fake.displays = [laptop, projector];
+    expect(windows.place()).toMatchObject({ sky: { id: 7, number: 2 }, storedMissing: false });
+    expect(fillDisplay).toHaveBeenLastCalledWith(fake.windows[0], projector.bounds);
+    expect(control.setAlwaysOnTop).toHaveBeenLastCalledWith(false, 'screen-saver');
+  });
+
+  it('the test grid opens a sky window when there is none, labelled with its display number', () => {
+    fake.displays = [laptop, projector];
+    const windows = skyWindows({
+      ...DEFAULT_INSTALL_SETUP,
+      display: { id: 7, width: 4096, height: 1000 },
+    });
+    expect(windows.current()).toBeNull();
+    expect(windows.setTestGrid(true)).toBe(true);
+    expect(fake.windows).toHaveLength(1);
+    expect(showTestGrid).toHaveBeenCalledWith(fake.windows[0], 'kiosk', 2);
+    expect(windows.setTestGrid(false)).toBe(false);
+    expect(fake.windows).toHaveLength(1);
+  });
+});

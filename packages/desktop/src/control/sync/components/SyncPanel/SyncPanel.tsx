@@ -25,12 +25,19 @@ function SyncPanel({ sync, onUpdateNow, onRestartSky }: SyncPanelProps): ReactNo
         <button type="button" className={chrome.button} disabled={syncing} onClick={onUpdateNow}>
           {describeStatus(sync).tone === 'problem' ? 'Retry' : 'Update now'}
         </button>
-        <button type="button" className={chrome.button} disabled={syncing} onClick={onRestartSky}>
+        <button
+          type="button"
+          className={chrome.button}
+          disabled={syncing || !sync.hasData}
+          onClick={onRestartSky}
+        >
           Restart sky
         </button>
       </div>
       <p className={chrome.dim}>
-        Restart sky loads new data and removes the files it no longer uses.
+        {sync.hasData
+          ? 'Restart sky loads new data and removes the files it no longer uses.'
+          : 'Restart sky needs the data: the sky starts by itself once it is downloaded.'}
       </p>
     </section>
   );

@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import ControlPage from '../../../../../src/control/shell/components/ControlPage/ControlPage';
 import type { InstallSetup } from '../../../../../src/@types/InstallSetup';
 import { DEFAULT_INSTALL_SETUP } from '../../../../../src/main/setup/data/defaultInstallSetup';
-import { fakeBridge } from './fakeBridge';
+import { TWO_DISPLAYS, fakeBridge } from './fakeBridge';
 
 beforeEach(() => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
@@ -34,7 +34,7 @@ describe('ControlPage', () => {
     expect(screen.getByRole('button', { name: 'Update now' })).toBeDisabled();
   });
 
-  it('a mode change saves the setup and turns the test grid off', async () => {
+  it('a mode change saves the setup; the grid follows main', async () => {
     const { bridge, set } = await renderControls();
     const grid = screen.getByRole('checkbox', { name: 'Show test grid on the sky' });
     fireEvent.click(grid);
@@ -45,10 +45,9 @@ describe('ControlPage', () => {
     await act(async () => fireEvent.click(screen.getByRole('radio', { name: /Dome/ })));
 
     expect(bridge.saveSetup).toHaveBeenLastCalledWith({ ...DEFAULT_INSTALL_SETUP, mode: 'dome' });
-    expect(bridge.showTestGrid).toHaveBeenLastCalledWith(false);
+    expect(screen.getByText('Saved')).toBeInTheDocument();
     set({ testGrid: false });
     expect(grid).not.toBeChecked();
-    expect(screen.getByText('Saved')).toBeInTheDocument();
   });
 
   it('the daily time is editable only while daily updates are picked', async () => {
@@ -84,11 +83,24 @@ describe('ControlPage', () => {
   });
 
   it('a stored screen that is not connected is named, with where the sky went', async () => {
-    await renderControls({
+    const { set } = await renderControls({
       ...DEFAULT_INSTALL_SETUP,
       display: { id: 9, width: 1920, height: 1200 },
     });
-    expect(screen.getByText(/saved screen \(1920×1200\) is not connected/)).toBeVisible();
+    expect(screen.queryByText(/is not connected/)).not.toBeInTheDocument();
+    set({ placement: { sky: TWO_DISPLAYS[0]!, control: TWO_DISPLAYS[1]!, storedMissing: true } });
+    expect(
+      screen.getByText(/saved screen \(1920×1200\) is not connected.*display 1/),
+    ).toBeVisible();
+  });
+
+  it('Restart sky is off, with the reason, until the data is on this computer', async () => {
+    const { set } = await renderControls();
+    set({ hasData: false });
+    expect(screen.getByRole('button', { name: 'Restart sky' })).toBeDisabled();
+    expect(screen.getByText(/needs the data/)).toBeVisible();
+    set({ hasData: true });
+    expect(screen.getByRole('button', { name: 'Restart sky' })).toBeEnabled();
   });
 
   it('the pairing steps name Allow before the sky runs, and the tablet waits for it', async () => {

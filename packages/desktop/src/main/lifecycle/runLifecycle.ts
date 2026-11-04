@@ -1,75 +1,60 @@
 /**
- * The app's life: one instance, the server and relay up, the control window, then the sky once the
- * data allows (spec §5 outcome table). Everything the control window can ask arrives as IPC from
- * that window only.
+ * The app's life, as wiring: one instance, the server and relay up, the control window, then the
+ * sky once the data allows. Decisions live in the pieces it wires (bootPlan, syncOutcomeAction,
+ * createDailySchedule, createSetupStore, createSkyWindows); main owns one ControlState and pushes
+ * it whole to the control page on every change.
  */
-import { app, dialog, globalShortcut, ipcMain, nativeTheme, screen } from 'electron';
-import type { BrowserWindow, Display, WebContents } from 'electron';
+import { app, globalShortcut, ipcMain, nativeTheme, screen } from 'electron';
+import type { BrowserWindow, WebContents } from 'electron';
 import { once } from 'node:events';
 import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { QuitGate } from '../windows/@types/QuitGate';
-import type { Overlay } from '../sky/@types/Overlay';
 import type { AboutInfo } from '../../@types/AboutInfo';
 import type { ControlIpcHandlers } from './@types/ControlIpcHandlers';
 import type { ControlState } from '../../@types/ControlState';
+import type { LanInterface } from '../../@types/LanInterface';
 import type { SyncOutcome } from '../sync/@types/SyncOutcome';
 import { APP_SERVER_PORT } from '../../data/appServerPort';
 import { CONTROL_CHANNELS } from '../../data/controlChannels';
 import { CONTROL_SHORTCUT } from '../../data/controlShortcut';
-import { DEFAULT_INSTALL_SETUP } from '../setup/data/defaultInstallSetup';
 import { INVENTORY_FILE } from '../sync/data/inventoryFile';
 import { SETUP_FILE } from '../setup/data/setupFile';
-import { hasCompleteLocalSet } from '../sync/hasCompleteLocalSet';
-import { pruneOrphans } from '../sync/pruneOrphans';
-import { runSync } from '../sync/runSync';
-import { resolveDataRoot } from '../sync/utils/resolveDataRoot';
-import { serially } from './utils/serially';
-import { lanOriginFor } from '../lan/utils/lanOriginFor';
-import { listLanInterfaces } from '../lan/utils/listLanInterfaces';
-import { nextDailyRun } from '../sync/utils/nextDailyRun';
-import { parseInstallSetup } from '../setup/utils/parseInstallSetup';
-import { skyUrlFor } from '../sky/utils/skyUrlFor';
-import { storedDisplayMissing } from '../../utils/storedDisplayMissing';
-import { toDisplayInfo } from '../windows/utils/toDisplayInfo';
 import { attachDesktopRelay } from '../relay/attachDesktopRelay';
+import { bootPlan } from './utils/bootPlan';
+import { createDailySchedule } from './createDailySchedule';
 import { createQuitGate } from '../windows/createQuitGate';
+import { createSetupStore } from '../setup/createSetupStore';
 import { createSkyLoader } from '../sky/createSkyLoader';
-import { fillDisplay } from '../windows/fillDisplay';
+import { createSkyWindows } from '../windows/createSkyWindows';
+import { hasCompleteLocalSet } from '../sync/hasCompleteLocalSet';
 import { installAppMenu } from '../menu/installAppMenu';
+import { lanOriginFor } from '../lan/utils/lanOriginFor';
+import { listDisplays } from '../windows/utils/listDisplays';
+import { listLanInterfaces } from '../lan/utils/listLanInterfaces';
 import { loadSkyPage } from '../sky/loadSkyPage';
 import { openAboutWindow } from '../windows/openAboutWindow';
 import { openControlWindow } from '../windows/openControlWindow';
-import { openSkyWindow } from '../windows/openSkyWindow';
-import { placeWindows } from '../../utils/placeWindows';
+import { parseInstallSetup } from '../setup/utils/parseInstallSetup';
+import { pruneOrphans } from '../sync/pruneOrphans';
 import { readRoomCode } from '../relay/readRoomCode';
 import { readSetup } from '../setup/readSetup';
 import { registerControlIpc } from './registerControlIpc';
+import { resolveDataRoot } from '../sync/utils/resolveDataRoot';
 import { rotateRoomCode } from '../relay/rotateRoomCode';
-import { saveSetup } from '../setup/saveSetup';
-import { showTestGrid } from '../sky/showTestGrid';
+import { runSync } from '../sync/runSync';
+import { serially } from './utils/serially';
+import { skyUrlFor } from '../sky/utils/skyUrlFor';
 import { startSecureServer } from '../server/startSecureServer';
-import { writeFileAtomically } from '../files/utils/writeFileAtomically';
+import { syncOutcomeAction } from './utils/syncOutcomeAction';
+import { watchLan } from '../lan/watchLan';
 
+/** Rejects when the app cannot start; main.ts shows why and exits. */
 export async function runLifecycle(windowed: boolean): Promise<void> {
-  if (!app.requestSingleInstanceLock()) {
-    app.quit();
-    return;
-  }
+  if (!app.requestSingleInstanceLock()) return app.quit();
   await app.whenReady();
-  const gate = createQuitGate();
-  try {
-    await start(windowed, gate);
-  } catch (error) {
-    dialog.showErrorBox('Skymap could not start', String(error));
-    gate.allowQuit();
-    app.quit();
-  }
-}
-
-async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   nativeTheme.themeSource = 'dark';
+  const gate = createQuitGate();
   const userData = app.getPath('userData');
   const { dataRoot, dev } = resolveDataRoot(
     process.env.SKYMAP_DATA_DIR,
@@ -78,23 +63,38 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
     userData,
   );
   const firstRun = !existsSync(join(userData, SETUP_FILE));
-  let setup = await readSetup(userData);
   let code = await readRoomCode(userData);
-
-  const server = await startSecureServer(userData, dataRoot);
-  const relay = attachDesktopRelay(server, { code: () => code, network: () => setup.network });
+  const secure = await startSecureServer(userData, dataRoot);
   const control = openControlWindow(gate);
+  // Syncs, prunes and sky loads one at a time: a prune never meets a download, two loads never overlap.
+  const work = serially();
   const rotations = serially();
-  let sky: BrowserWindow | null = null;
   let about: BrowserWindow | null = null;
-  let testGridOverlay: Overlay | null = null;
   let syncing = false;
-  let timer: NodeJS.Timeout | undefined;
 
-  const listDisplays = () => {
-    const primary = screen.getPrimaryDisplay().id;
-    return screen.getAllDisplays().map((d) => toDisplayInfo(d, primary));
-  };
+  const setup = createSetupStore(userData, await readSetup(userData), {
+    placeWindows: () => placeAll(),
+    rearmUpdates: () => rearm(),
+    modeChanged: () => {
+      setTestGrid(false);
+      if (state.skyRunning) void loadSky();
+    },
+    networkChanged: () => update({ room: { ...state.room, origin: originFor(state.networks) } }),
+    autostartChanged: (on) => app.isPackaged && app.setLoginItemSettings({ openAtLogin: on }),
+  });
+  const originFor = (networks: LanInterface[]): string =>
+    lanOriginFor(setup.current().network, networks, APP_SERVER_PORT);
+  const relay = attachDesktopRelay(secure.server, {
+    code: () => code,
+    network: () => setup.current().network,
+  });
+  const sky = createSkyWindows({
+    control,
+    windowed,
+    gate,
+    setup: () => setup.current(),
+    onClosed: () => update({ skyRunning: false }),
+  });
   // The data's date is the last complete sync's: its inventory is written last.
   const readAbout = async (): Promise<AboutInfo> => ({
     version: app.getVersion(),
@@ -103,35 +103,25 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
       () => null,
     ),
   });
+  const networks = listLanInterfaces();
   let state: ControlState = {
     status: { kind: 'idle' },
     progress: null,
     hasData: dev || (await hasCompleteLocalSet(dataRoot)),
-    // The window can stand black before the sky loads into it: the test grid needs it during the first download.
     skyRunning: false,
     testGrid: false,
     // Known before the sky hosts, so a tablet can scan and trust the certificate during the first download.
-    room: {
-      code,
-      origin: lanOriginFor(setup.network, listLanInterfaces(), APP_SERVER_PORT),
-      onSky: false,
-    },
+    room: { code, origin: originFor(networks), onSky: false },
     displays: listDisplays(),
-    networks: listLanInterfaces(),
-    setup,
+    placement: null,
+    networks,
+    setup: setup.current(),
     firstRun,
     about: await readAbout(),
   };
   const update = (patch: Partial<ControlState>): void => {
     state = { ...state, ...patch };
     if (!control.isDestroyed()) control.webContents.send(CONTROL_CHANNELS.state, state);
-  };
-  const openSky = (): BrowserWindow | null => (sky !== null && !sky.isDestroyed() ? sky : null);
-  const runningSky = (): BrowserWindow | null => (state.skyRunning ? openSky() : null);
-  const newSky = (display: Display): BrowserWindow => {
-    const win = openSkyWindow(display, windowed, gate);
-    win.on('closed', () => update({ skyRunning: false }));
-    return (sky = win);
   };
   relay.onRoom((room) => update({ room }));
 
@@ -146,121 +136,76 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
     if (about === null || about.isDestroyed()) about = openAboutWindow(control);
     else about.focus();
   };
-
-  const placement = () => {
-    const displays = screen.getAllDisplays();
-    const primary = screen.getPrimaryDisplay();
-    const placed = placeWindows(
-      setup.display,
-      displays.map((d) => toDisplayInfo(d, primary.id)),
-    );
-    if (placed === null) return null;
-    const { sky: skyInfo, control: controlInfo } = placed;
-    // The ids came from `displays` itself.
-    const find = (id: number) => displays.find((d) => d.id === id) as Display;
-    return {
-      skyInfo,
-      skyDisplay: find(skyInfo.id),
-      controlDisplay: controlInfo === null ? null : find(controlInfo.id),
-    };
-  };
-
-  // On one screen the control window floats over the sky and the shortcut hides it again.
   const placeAll = (): void => {
-    const placed = placement();
-    // display-removed can report none for a moment; the next display-added places everything.
-    if (placed === null) return;
-    const { skyInfo, skyDisplay, controlDisplay } = placed;
-    const open = openSky();
-    if (open && !windowed) fillDisplay(open, skyDisplay.bounds);
-    control.setAlwaysOnTop(controlDisplay === null && !windowed, 'screen-saver');
-    const { x, y, width, height } = (controlDisplay ?? skyDisplay).workArea;
-    const [w = 0, h = 0] = control.getSize();
-    control.setPosition(Math.round(x + (width - w) / 2), Math.round(y + (height - h) / 2));
-    if (storedDisplayMissing(setup.display, skyInfo)) showControl();
+    update({ displays: listDisplays(), placement: sky.place() });
+    if (state.placement?.storedMissing) showControl();
   };
 
-  const loadSky = createSkyLoader({
-    isSyncing: () => syncing,
-    prune: async () => {
-      if (!dev) await pruneOrphans(dataRoot);
-    },
+  const loadOnce = createSkyLoader({
+    prune: () => (dev ? Promise.resolve() : pruneOrphans(dataRoot)),
     show: async () => {
-      const display = placement()?.skyDisplay ?? screen.getPrimaryDisplay();
-      const win = openSky() ?? newSky(display);
-      await loadSkyPage(win, skyUrlFor(setup.mode));
+      await loadSkyPage(sky.open(), skyUrlFor(setup.current().mode));
       update({ skyRunning: true });
       if (state.status.kind === 'ready') update({ status: { kind: 'complete' } });
     },
     logError: (message, error) => console.error(message, error),
   });
-  const loadSkyLogged = (): void => void loadSky();
+  const loadSky = (): Promise<void> => work(loadOnce);
 
-  const sync = async (): Promise<SyncOutcome> => {
+  // `restart`: a launch or daily sync, which ends in a sky load; Update now waits for Restart sky.
+  const syncThenLoad = async (restart: boolean): Promise<void> => {
+    if (syncing) return;
     syncing = true;
+    const skyStale = state.status.kind === 'ready';
     update({ status: { kind: 'syncing' }, progress: null });
-    try {
-      return await runSync({
+    const outcome = await work(() =>
+      runSync({
         baseUrl: DESKTOP_DATA_ORIGIN,
         dataRoot,
         onProgress: (progress) => update({ progress }),
-      });
-    } catch (error) {
-      console.error('sync:', error);
-      return { kind: 'failed' };
-    } finally {
-      syncing = false;
-    }
+      }),
+    )
+      .catch((error: unknown): SyncOutcome => {
+        console.error('sync:', error);
+        return { kind: 'failed' };
+      })
+      .finally(() => (syncing = false));
+    const done = outcome.kind === 'synced' || outcome.kind === 'unchanged';
+    const hasData = done || (await hasCompleteLocalSet(dataRoot));
+    const action = syncOutcomeAction({
+      outcome,
+      hasData,
+      skyRunning: state.skyRunning,
+      skyStale,
+      restart,
+    });
+    update({ status: action.status, hasData, about: await readAbout() });
+    if (action.then === 'showControl') showControl();
+    if (action.then === 'loadSky') await loadSky();
   };
-
-  // Spec §5's outcome table. `restart` is a scheduled or launch sync, which ends in a sky load;
-  // Update now leaves a running sky alone until "Restart sky".
-  const syncThenLoad = async (restart: boolean): Promise<void> => {
-    if (syncing) return;
-    // A sky still waiting for Restart sky is stale even when this sync finds nothing new.
-    const stale = state.status.kind === 'ready';
-    const outcome = await sync();
-    if (outcome.kind === 'synced' || outcome.kind === 'unchanged') {
-      update({ hasData: true, about: await readAbout() });
-      const changed = outcome.kind === 'synced' || stale;
-      if (!runningSky() || (restart && changed)) {
-        update({ status: { kind: 'complete' } });
-        return await loadSky();
-      }
-      return update({ status: { kind: changed ? 'ready' : 'complete' } });
-    }
-    update({ status: outcome, hasData: await hasCompleteLocalSet(dataRoot) });
-    if (!state.hasData) return showControl();
-    if (!runningSky()) await loadSky();
-  };
-
-  const rearm = (): void => {
-    clearTimeout(timer);
-    const { dataUpdates } = setup;
-    if (dev || dataUpdates.kind !== 'daily') return;
-    const wait = nextDailyRun(dataUpdates.at, new Date()).getTime() - Date.now();
-    timer = setTimeout(() => void syncThenLoad(true).finally(rearm), wait);
-  };
+  const rearm = createDailySchedule({
+    run: () => syncThenLoad(true),
+    policy: () => setup.current().dataUpdates,
+    dev,
+  });
 
   // Main holds the grid's state, so the page's checkbox and the View menu's tick agree.
   const setTestGrid = (on: boolean): void => {
-    const display = placement()?.skyDisplay;
-    const open = openSky() ?? (on && display ? newSky(display) : null);
-    void testGridOverlay?.close().catch(() => {});
-    testGridOverlay = on && open && !open.isDestroyed() ? showTestGrid(open, setup.mode) : null;
-    update({ testGrid: on && open !== null });
+    update({ testGrid: sky.setTestGrid(on) });
     tickTestGrid(state.testGrid);
   };
   const quit = (): void => {
     gate.allowQuit();
     app.quit();
   };
+  // Without a complete set the sky has nothing to show; the page disables the button for the same reason.
+  const restartSky = (): void => void (state.hasData && loadSky());
   const tickTestGrid = installAppMenu(control, windowed, {
     about: showAbout,
     showControl,
-    showSky: () => openSky()?.focus(),
+    showSky: () => sky.current()?.focus(),
     quit,
-    restartSky: loadSkyLogged,
+    restartSky,
     testGrid: setTestGrid,
     help: (section) => {
       showControl();
@@ -271,33 +216,19 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   const handlers: ControlIpcHandlers = {
     getState: () => state,
     saveSetup: async (raw) => {
-      const previous = setup;
-      setup = parseInstallSetup(raw);
-      update({ setup });
-      await saveSetup(userData, previous, setup, {
-        placeWindows: placeAll,
-        rearmUpdates: rearm,
-        reloadSky: () => runningSky() && loadSkyLogged(),
-        // The code and host are unchanged; only the address the QR names moves.
-        resendRoom: () =>
-          update({
-            room: {
-              ...state.room,
-              origin: lanOriginFor(setup.network, listLanInterfaces(), APP_SERVER_PORT),
-            },
-          }),
-      });
+      await setup.save(parseInstallSetup(raw));
+      update({ setup: setup.current() });
     },
     updateNow: () => dev || void syncThenLoad(false),
-    restartSky: loadSkyLogged,
+    restartSky,
     showTestGrid: (shown) => setTestGrid(shown === true),
+    // Queued: a second click must rotate from the first one's new code, not the old one.
     rotateCode: () =>
-      // Queued: a second click must rotate from the first one's new code, not the old one.
       rotations(async () => {
         code = await rotateRoomCode(userData, relay, code);
         // With no sky hosting, the relay announces nothing.
         update({ room: { ...state.room, code } });
-      }).catch((e: unknown) => console.error('rotate code:', e)),
+      }),
     hide: () => control.hide(),
     quit,
   };
@@ -306,12 +237,14 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
     sender === control.webContents || (sender === about?.webContents && request === 'getState');
   registerControlIpc(ipcMain, isAllowed, handlers);
 
-  const displaysChanged = (): void => {
-    placeAll();
-    update({ displays: listDisplays() });
-  };
-  screen.on('display-added', displaysChanged);
-  screen.on('display-removed', displaysChanged);
+  screen.on('display-added', placeAll);
+  screen.on('display-removed', placeAll);
+  watchLan(listLanInterfaces, (interfaces) => {
+    update({ networks: interfaces, room: { ...state.room, origin: originFor(interfaces) } });
+    secure
+      .renewCertificate()
+      .catch((error: unknown) => console.error('certificate renewal:', error));
+  });
   const toggleControl = (): void => (control.isVisible() ? control.hide() : showControl());
   if (!globalShortcut.register(CONTROL_SHORTCUT, toggleControl)) {
     console.error(`${CONTROL_SHORTCUT} is taken by another app`);
@@ -321,14 +254,16 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   app.on('window-all-closed', () => app.quit());
 
   placeAll();
-  const complete = state.hasData;
-  if (firstRun)
-    await writeFileAtomically(
-      join(userData, SETUP_FILE),
-      JSON.stringify(DEFAULT_INSTALL_SETUP, null, 2),
-    );
-  if (firstRun || !complete) showControl();
-  if (dev || (complete && setup.dataUpdates.kind !== 'atLaunch')) await loadSky();
+  const plan = bootPlan({
+    firstRun,
+    dev,
+    hasData: state.hasData,
+    dataUpdates: setup.current().dataUpdates,
+  });
+  // A first run ends here: its setup is stored at once, and the next launch skips the steps.
+  if (firstRun) await setup.save(setup.current());
+  if (plan.showControl) showControl();
+  if (plan.start === 'load') await loadSky();
   else await syncThenLoad(true);
   rearm();
 }

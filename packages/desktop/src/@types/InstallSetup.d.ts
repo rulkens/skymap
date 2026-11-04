@@ -1,10 +1,12 @@
 import type { DataUpdates } from './DataUpdates';
+import type { DisplayInfo } from './DisplayInfo';
+import type { InstallMode } from './InstallMode';
 
 /** `<userData>/setup.json`. */
 export type InstallSetup = {
-  mode: 'dome' | 'kiosk';
+  mode: InstallMode;
   /** null → the primary display. */
-  display: { id: number; width: number; height: number } | null;
+  display: Pick<DisplayInfo, 'id' | 'width' | 'height'> | null;
   /** Interface name for the pairing address; null → the first LAN IPv4. */
   network: string | null;
   autostart: boolean;

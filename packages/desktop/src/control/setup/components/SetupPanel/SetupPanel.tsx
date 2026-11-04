@@ -1,12 +1,13 @@
 /**
  * SetupPanel — the setup steps' choices in one place, each saving at once, and the way back into the
- * steps. The test grid is not part of the setup: it is a view toggle the sky drops on a mode change.
+ * steps. The test grid is not part of the setup: it is a view toggle main drops on a mode change.
  */
 
 import { useId } from 'react';
 import type { ReactNode } from 'react';
 import type { DisplayInfo } from '../../../../@types/DisplayInfo';
 import type { InstallSetup } from '../../../../@types/InstallSetup';
+import type { WindowPlacement } from '../../../../@types/WindowPlacement';
 import type { SetupSaveState } from '../../@types/SetupSaveState';
 import DisplayChoice from '../DisplayChoice/DisplayChoice';
 import ModeChoice from '../ModeChoice/ModeChoice';
@@ -18,6 +19,7 @@ import styles from './SetupPanel.module.css';
 export type SetupPanelProps = {
   readonly setup: InstallSetup;
   readonly displays: readonly DisplayInfo[];
+  readonly placement: WindowPlacement | null;
   readonly saveState: SetupSaveState;
   readonly testGrid: boolean;
   readonly onSave: (next: InstallSetup) => void;
@@ -28,6 +30,7 @@ export type SetupPanelProps = {
 function SetupPanel({
   setup,
   displays,
+  placement,
   saveState,
   testGrid,
   onSave,
@@ -35,10 +38,6 @@ function SetupPanel({
   onRunSetup,
 }: SetupPanelProps): ReactNode {
   const titleId = useId();
-  const pickMode = (mode: InstallSetup['mode']): void => {
-    onShowTestGrid(false);
-    onSave({ ...setup, mode });
-  };
 
   return (
     <section className={styles.root} aria-labelledby={titleId}>
@@ -50,12 +49,13 @@ function SetupPanel({
           {SAVE_STATE_TEXT[saveState]}
         </p>
       </div>
-      <ModeChoice mode={setup.mode} onPick={pickMode} compact />
+      <ModeChoice mode={setup.mode} onPick={(mode) => onSave({ ...setup, mode })} compact />
       <div className={chrome.stack}>
         <h3 className={chrome.legend}>Sky screen</h3>
         <DisplayChoice
           stored={setup.display}
           displays={displays}
+          placement={placement}
           onPick={(display) => onSave({ ...setup, display })}
         />
         <label className={chrome.choice}>

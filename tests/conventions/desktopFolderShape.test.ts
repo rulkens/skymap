@@ -46,9 +46,11 @@ function moduleViolations(dir: string, roles: readonly string[]): string[] {
 }
 
 describe('desktop folder shape', () => {
-  it('src/ holds exactly the process folders and no files', () => {
+  // A root home exists only while something crosses a process boundary through it.
+  it('src/ holds only the process folders and no files', () => {
     expect(filesIn(SRC)).toEqual([]);
-    expect(foldersIn(SRC).sort()).toEqual([...PROCESS_FOLDERS].sort());
+    expect(foldersIn(SRC).filter((f) => !PROCESS_FOLDERS.includes(f))).toEqual([]);
+    expect(foldersIn(SRC)).toEqual(expect.arrayContaining(['main', 'preload', 'control', 'brand']));
   });
 
   it('.tsx lives only in the pages and .cts only in preload/', () => {

@@ -75,8 +75,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'layers/milkyWay/cloud/passes/milkyWayPass': 1,
   'layers/starCatalog/resolvedStars/passes/fieldStarSpherePass': 6,
   'layers/starCatalog/seededStars/passes/starPointsPass': 1,
-  // Split in FIX-2 (audit B I15).
-  'desktop/main/lifecycle/runLifecycle': 1,
 };
 
 type Declared = { readonly name: string; readonly exported: boolean };

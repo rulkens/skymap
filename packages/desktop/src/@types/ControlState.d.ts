@@ -5,6 +5,7 @@ import type { DisplayInfo } from './DisplayInfo';
 import type { InstallSetup } from './InstallSetup';
 import type { LanInterface } from './LanInterface';
 import type { SyncProgress } from './SyncProgress';
+import type { WindowPlacement } from './WindowPlacement';
 
 /** Everything the control page shows. Main owns it and pushes it whole on every change. */
 export type ControlState = {
@@ -18,6 +19,8 @@ export type ControlState = {
   testGrid: boolean;
   room: RelayRoom;
   displays: DisplayInfo[];
+  /** Where the sky is placed on `displays`; null while none are reported. */
+  placement: WindowPlacement | null;
   networks: LanInterface[];
   setup: InstallSetup;
   /** True on the launch that found no setup.json. */

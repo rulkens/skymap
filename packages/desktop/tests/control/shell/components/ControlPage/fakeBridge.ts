@@ -8,8 +8,8 @@ import type { HelpSection } from '../../../../../src/@types/HelpSection';
 import { DEFAULT_INSTALL_SETUP } from '../../../../../src/main/setup/data/defaultInstallSetup';
 
 export const TWO_DISPLAYS: DisplayInfo[] = [
-  { id: 1, label: 'Built-in', width: 2880, height: 1800, primary: true },
-  { id: 7, label: 'Projector', width: 4096, height: 4096, primary: false },
+  { id: 1, number: 1, label: 'Built-in', width: 2880, height: 1800, primary: true },
+  { id: 7, number: 2, label: 'Projector', width: 4096, height: 4096, primary: false },
 ];
 
 const BASE_STATE: ControlState = {
@@ -20,6 +20,7 @@ const BASE_STATE: ControlState = {
   testGrid: false,
   room: { code: 'K7QM3XRT', origin: 'https://10.0.0.2:47823', onSky: false },
   displays: TWO_DISPLAYS,
+  placement: { sky: TWO_DISPLAYS[0]!, control: TWO_DISPLAYS[1]!, storedMissing: false },
   networks: [{ name: 'en0', address: '10.0.0.2' }],
   setup: DEFAULT_INSTALL_SETUP,
   firstRun: false,
