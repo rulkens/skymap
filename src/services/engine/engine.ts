@@ -19,7 +19,7 @@ import { seedCameraRuntime } from './camera/seedCameraRuntime';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/cameraFraming';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
 import type { CubemapCaptureRuntimes } from '../../@types/engine/state/CubemapCaptureRuntimes';
-import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../compositions/appCubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -97,7 +97,7 @@ export function createEngine(
   // 0: far outside every band pre-boot, so a row's hysteresis margin can't
   // mistake "never measured" for "just closed".
   const cubemapCaptures = Object.fromEntries(
-    Object.entries(CUBEMAP_CAPTURES).map(([key, row]) => [
+    Object.entries(APP_CUBEMAP_CAPTURE_REGISTRY).map(([key, row]) => [
       key,
       row.kind === 'sky'
         ? {

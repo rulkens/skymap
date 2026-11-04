@@ -24,7 +24,7 @@ vi.mock('../../../../src/services/engine/frame/deriveView', () => ({
 import { scheduleProbeCapture } from '../../../../src/services/engine/frame/scheduleProbeCapture';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { PROBE_REFRESH_INTERVAL_MS } from '../../../../src/data/rendering/probeRefreshIntervalMs';
-import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../src/compositions/appCubemapCaptures';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import { makeSlab } from '../../../fixtures/makeSlab';
@@ -33,6 +33,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { ALL_CUBE_FACES } from '../../../../src/data/rendering/cubemapCaptures';
 
 const SIM_DAYS = 0;
 const NOW_MS = 100_000;
@@ -79,7 +80,7 @@ function marsSlab(index: number) {
 /** `faceViewSpec` is real here — a mocked `deriveView` recovers the face it
  *  turned from the spec's slot, the probe row's only per-face distinguisher. */
 function faceOf(spec: ViewSpec): CubeFace {
-  return (spec.slot - CUBEMAP_CAPTURES.probe.viewSlotBase) as CubeFace;
+  return (spec.slot - APP_CUBEMAP_CAPTURE_REGISTRY.probe.viewSlotBase) as CubeFace;
 }
 
 describe('scheduleProbeCapture', () => {
@@ -146,7 +147,7 @@ describe('scheduleProbeCapture', () => {
 
     expect(faces).not.toBeNull();
     expect([...faces!.keys()].sort()).toEqual([...ALL_CUBE_FACES]);
-    const row = CUBEMAP_CAPTURES.probe;
+    const row = APP_CUBEMAP_CAPTURE_REGISTRY.probe;
     const curiosityMpc = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('curiosity'))!.positionMpc;
 
     expect(cubemapCaptureFrameMock).toHaveBeenCalledTimes(1);

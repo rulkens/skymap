@@ -5,10 +5,10 @@
  * but every capture's anchor in this table is in fact a `PlaceId`.
  */
 
-import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
+import { BLACK_HOLE_SKY_CAPTURES } from '../../lensing/data/blackHoleSkyCaptures';
 import type { BlackHoleRow } from '../../@types/BlackHoleRow';
 import type { PlaceId } from '../../../../@types/scene/PlaceId';
 
 export function blackHoleAnchorId(row: BlackHoleRow): PlaceId {
-  return CUBEMAP_CAPTURES[row.capture].anchor.anchorId as PlaceId;
+  return BLACK_HOLE_SKY_CAPTURES[row.capture].anchor.anchorId as PlaceId;
 }

@@ -13,7 +13,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BlackHolesRuntime } from '../../@types/BlackHolesRuntime';
 import { BLACK_HOLES } from '../../markers/data/blackHoles';
-import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
+import { BLACK_HOLE_SKY_CAPTURES } from '../data/blackHoleSkyCaptures';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { packBlackHoleLensingUniforms } from '../render/packBlackHoleLensingUniforms';
 import { lensEdgeFadeEndRs } from '../utils/lensEdgeFadeEndRs';
@@ -48,7 +48,7 @@ export function blackHoleLensingPass(runtime: BlackHolesRuntime): ContentPass {
 
       // `> 0` by construction: the `lens` line expands to a step only while
       // the hole's `SlabRow` exists, and that row's `activeBand` is the SAME
-      // band object this alpha reads off `CUBEMAP_CAPTURES` — the single gate;
+      // band object this alpha reads off the capture row — the single gate;
       // the uniform still needs the value (spec §2.5).
       const bandAlpha = skyCaptureBandAlpha(row.capture, state, ctx);
 
@@ -109,7 +109,7 @@ export function blackHoleLensingPass(runtime: BlackHolesRuntime): ContentPass {
       // Named by the CAPTURE the lens samples, not by the texture that
       // capture happens to own.
       const capturedSky = ctx.snapshot.renderTargets.cubeViewOf(
-        CUBEMAP_CAPTURES[row.capture].target,
+        BLACK_HOLE_SKY_CAPTURES[row.capture].target,
       );
       renderer.draw(pass, uniforms, capturedSky);
     },

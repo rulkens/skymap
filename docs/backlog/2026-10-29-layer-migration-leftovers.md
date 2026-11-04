@@ -29,7 +29,6 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | J10 | Earth places palette (`earthPlaces`, flyTo action) | body | NEEDS-JOINT | ~60 | `LayerSearchEntry` is focus-only |
 | J12 | `starSphereRangeM` in core `deriveView` | starCatalog | NEEDS-JOINT | 38 | NEAR0 range is core-sized; no Layer range contribution |
 | J13 | `bodySlabRosterIds` (`SCENE_PLANETS` roster) | body | NEEDS-JOINT | ~35 | known #3; per-body slab on `LayerBody` (backlog) |
-| J14 | `sgrAStar` sky-capture row + `sgrAStarLensing` band | blackHoles | NEEDS-JOINT | ~25 | `CUBEMAP_CAPTURES`/`SKY_CAPTURE_KEYS` are core-only |
 | S1 | v2 analytic Milky Way field + `galaxyField` renderer | milkyWay (future) | STAYS (for now) | ~13,200 (+~5,000 WESL) | only `tools/galaxy-renderer` reads it; backlog "Draw the v2 analytic Milky Way in the milkyWay Layer" |
 | S2 | Tool-shared formats/registries (catalog, star, structure, filament, shell-mesh formats; body texture + surface-tile registries) | 9 Layers | STAYS* | ~3,500 | writer (tools/) ↔ reader (Layer) contract; needs a one-line ruling |
 | S3 | Octree stack (`gpu/octree`, `services/octree`, `utils/octree`, `data/octree`, `@types/octree`) | starCatalog today | STAYS | ~2,600 | GLADE octree #932 adds galaxyCatalog as second user |
@@ -45,7 +44,7 @@ Known items, refined:
 1. **Seeded stars** are sized at ~2.7k (J1). Stars are _anchors_, and `BodyPosition` only knows `site | orbit | sampled`. S-stars already fit `orbit`.
 2. **Four core exhibits**: three moved to `compositions/exhibits/` (cross-Layer content); Observable Universe went with the horizon shell into the `cosmicHorizon` Layer.
 3. **`near0SphereBodies`** filters through `bodySlabRosterIds`, the hand roster (`SCENE_PLANETS` + mesh bodies) (J13).
-4. **blackHoles' "anchor" read** is a core _place_ (`galactic-centre`, shared with the S-stars, regions and Milky Way framing) and legitimately stays. The real content leaks are the `sgr-a-star` row in `bodyFacts.generated` (J5), and the `sgrAStar` sky-capture row and lensing band (J14). `sgrAStarMassSolar` has 3 readers, so it stays.
+4. **blackHoles' "anchor" read** is a core _place_ (`galactic-centre`, shared with the S-stars, regions and Milky Way framing) and legitimately stays. The real content leak is the `sgr-a-star` row in `bodyFacts.generated` (J5). `sgrAStarMassSolar` has 3 readers, so it stays.
 
 ## Open ruling
 
@@ -99,9 +98,6 @@ The NEAR0 view brackets the star-sphere range itself. **Joint:** a Layer range c
 
 ### J13. `bodySlabRosterIds`: ~35 (known item 3)
 See the refinement above. Backlogged as `2026-10-28-per-body-slab-declaration.md` (`LayerBody` slab declaration).
-
-### J14. Sgr A* sky capture: ~25
-`data/rendering/cubemapCaptures.ts` hard-codes the `sgrAStar` row, `SKY_CAPTURE_KEYS = ['sgrAStar','solarSystem']`, and `SCALE_FADE_BANDS.sgrAStarLensing`. blackHoles imports `cubemapCaptures` 5 times. **Joint:** Layer-declared sky captures. The `solarSystem` capture is mesh-probe infrastructure and stays.
 
 ---
 
