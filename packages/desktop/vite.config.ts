@@ -15,6 +15,17 @@ const plainScript: Plugin = {
   },
 };
 
+// tokens.css names its faces at the web app's /fonts/; from file:// that is the disk's root. Rebased
+// onto public/fonts, Vite bundles the files into build/control beside the page.
+const bundledFonts: Plugin = {
+  name: 'bundled-fonts',
+  enforce: 'pre',
+  transform: (code, id) =>
+    id.endsWith('/src/styles/tokens.css')
+      ? code.replaceAll("url('/fonts/", "url('../../public/fonts/")
+      : undefined,
+};
+
 const nodeExternal = ['electron', /^node:/, ...builtinModules];
 
 export default defineConfig(({ mode }) => {
@@ -23,7 +34,7 @@ export default defineConfig(({ mode }) => {
     return {
       root: resolve(import.meta.dirname, 'src/control'),
       base: './',
-      plugins: [react(), plainScript],
+      plugins: [react(), plainScript, bundledFonts],
       build: {
         ...common,
         minify: true,
