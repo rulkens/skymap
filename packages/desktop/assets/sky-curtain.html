@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'"
+    />
+    <title>Skymap</title>
+    <!-- Black over the sky while it (re)loads: in over 300 ms, out over 500 ms when loadSkyPage sets opacity 0. -->
+    <style>
+      html {
+        height: 100%;
+        background: #000;
+        cursor: none;
+        animation: appear 300ms ease-in;
+        transition: opacity 500ms ease-out;
+      }
+      @keyframes appear {
+        from {
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          animation: none;
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+</html>

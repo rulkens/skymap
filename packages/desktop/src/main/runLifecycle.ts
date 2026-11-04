@@ -3,8 +3,9 @@
  * data allows (spec §5 outcome table). Everything the control window can ask arrives as IPC from
  * that window only.
  */
-import { app, dialog, globalShortcut, ipcMain, Menu, screen } from 'electron';
+import { app, dialog, globalShortcut, ipcMain, Menu, nativeTheme, screen } from 'electron';
 import type { BrowserWindow, Display, IpcMainEvent, IpcMainInvokeEvent } from 'electron';
+import { once } from 'node:events';
 import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -34,6 +35,7 @@ import { attachDesktopRelay } from './attachDesktopRelay';
 import { createQuitGate } from './createQuitGate';
 import { createSkyLoader } from './createSkyLoader';
 import { fillDisplay } from './fillDisplay';
+import { loadSkyPage } from './loadSkyPage';
 import { openControlWindow } from './openControlWindow';
 import { openSkyWindow } from './openSkyWindow';
 import { placeWindows } from './placeWindows';
@@ -64,6 +66,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
 async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   // No menu, so no Cmd+Q or Cmd+W; the windows refuse every other close (spec §6: Quit is in the control window).
   if (!windowed) Menu.setApplicationMenu(null);
+  nativeTheme.themeSource = 'dark';
   const userData = app.getPath('userData');
   const { dataRoot, dev } = resolveDataRoot(
     process.env.SKYMAP_DATA_DIR,
@@ -125,10 +128,13 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
   });
   relay.onRoom(sendRoom);
 
-  const showControl = (): void => {
-    control.show();
-    control.focus();
-  };
+  // Never shown before its first paint: a first launch opens on the welcome step, not a blank window.
+  const controlPainted = once(control, 'ready-to-show');
+  const showControl = (): void =>
+    void controlPainted.then(() => {
+      control.show();
+      control.focus();
+    });
 
   const placement = () => {
     const displays = screen.getAllDisplays();
@@ -170,7 +176,7 @@ async function start(windowed: boolean, gate: QuitGate): Promise<void> {
     show: async () => {
       const display = placement()?.skyDisplay ?? screen.getPrimaryDisplay();
       const win = openSky() ?? newSky(display);
-      await win.loadURL(skyUrlFor(setup.mode));
+      await loadSkyPage(win, skyUrlFor(setup.mode));
       setSkyRunning(true);
       if (status.kind === 'ready') setStatus({ kind: 'idle' });
     },

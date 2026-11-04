@@ -1,34 +1,21 @@
-import { app, screen, WebContentsView } from 'electron';
+import { screen } from 'electron';
 import type { BrowserWindow } from 'electron';
-import { join } from 'node:path';
 import type { InstallSetup } from '../@types/InstallSetup';
+import type { Overlay } from '../@types/Overlay';
+import { addOverlay } from './addOverlay';
 
-// A child view of the sky window, so it moves with it; only its size needs following.
-const shown = new WeakMap<BrowserWindow, { view: WebContentsView; fit: () => void }>();
+// Matches test-grid.html's fade out.
+const FADE_MS = 150;
+const shown = new WeakMap<BrowserWindow, Overlay>();
 
-/** Lays the dome grid (dome) or the display's number (kiosk) over the sky window, or removes it. */
+/** Lays the dome grid (dome) or the display's number (kiosk) over the sky window, or fades it away. */
 export function showTestGrid(sky: BrowserWindow, mode: InstallSetup['mode'], on: boolean): void {
-  const current = shown.get(sky);
-  if (current !== undefined) {
-    sky.off('resize', current.fit);
-    sky.contentView.removeChildView(current.view);
-    current.view.webContents.close();
-    shown.delete(sky);
-  }
+  void shown.get(sky)?.close();
+  shown.delete(sky);
   if (!on || sky.isDestroyed()) return;
-  const view = new WebContentsView();
-  view.setBackgroundColor('#00000000');
-  const fit = () => {
-    const { width, height } = sky.getContentBounds();
-    view.setBounds({ x: 0, y: 0, width, height });
-  };
-  fit();
-  sky.on('resize', fit);
-  sky.contentView.addChildView(view);
-  shown.set(sky, { view, fit });
   const displayId = screen.getDisplayMatching(sky.getBounds()).id;
   const display = screen.getAllDisplays().findIndex((d) => d.id === displayId) + 1;
-  void view.webContents.loadFile(join(app.getAppPath(), 'assets', 'test-grid.html'), {
-    query: { mode, display: String(display) },
-  });
+  const grid = addOverlay(sky, 'test-grid.html', { mode, display: String(display) }, FADE_MS);
+  shown.set(sky, grid);
+  grid.loaded.catch(() => {});
 }

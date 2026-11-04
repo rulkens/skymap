@@ -15,6 +15,22 @@
         overflow: hidden;
         background: transparent;
       }
+      /* In on load; out when showTestGrid sets opacity 0 and waits 150 ms. */
+      html {
+        animation: appear 200ms ease-out;
+        transition: opacity 150ms ease-in;
+      }
+      @keyframes appear {
+        from {
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          animation: none;
+          transition: none;
+        }
+      }
       /* Contain on the square image gives the renderer's own disc: centred, as wide as the short side. */
       img {
         display: block;

@@ -4,6 +4,9 @@
   justify-content: space-between;
   gap: var(--space-8);
   padding: var(--space-8) max(var(--space-12), (100% - 76rem) / 2);
+  /* macOS: the traffic lights float in a band above the bar (the shell's overlay height), so the
+     wordmark keeps the page's left edge. Elsewhere the variable is unset and this is the plain gutter. */
+  padding-top: max(var(--space-8), env(titlebar-area-height, 0px));
   -webkit-app-region: drag;
 }
 
