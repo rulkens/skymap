@@ -1,7 +1,7 @@
 /**
  * The install's CA and the server's leaf certificate, kept in `certDir`. Tablets trust the CA once
- * (via /ca.crt), so it is made once per install and never replaced while it parses; the leaf is
- * reissued when the machine's names change or it nears expiry, and a reissue never breaks that trust.
+ * (via /ca.crt), so it is made once per install and kept while it and its key are sound; the leaf
+ * is reissued when the machine's names change or it nears expiry, which never breaks that trust.
  */
 import { randomBytes, X509Certificate } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
@@ -11,6 +11,7 @@ import type { LanCertificate } from '../@types/LanCertificate.js';
 import type { LanNames } from '../@types/LanNames.js';
 import type { PemPair } from '../@types/PemPair.js';
 import { isSignedByCa } from '../utils/isSignedByCa.js';
+import { keyMatchesCert } from '../utils/keyMatchesCert.js';
 import { readJsonFile } from '../utils/readJsonFile.js';
 import { writeFileAtomically } from '../utils/writeFileAtomically.js';
 
@@ -19,7 +20,6 @@ const CA_DAYS = 20 * 365;
 // Apple refuses TLS leaves valid for more than 398 days.
 const LEAF_DAYS = 397;
 const LEAF_RENEW_DAYS = 30;
-const PRIVATE_FILE = 0o600;
 
 export async function ensureLanCertificate(
   certDir: string,
@@ -29,15 +29,15 @@ export async function ensureLanCertificate(
   const caPath = join(certDir, 'ca.json');
   const leafPath = join(certDir, 'leaf.json');
   let ca = await readJsonFile<PemPair>(caPath);
-  if (ca === null || !isSignedByCa(ca.cert, ca.cert)) {
+  // A corrupt CA means a new one: tablets trust it again once, rather than the app never starting.
+  if (ca === null || !keyMatchesCert(ca) || !isSignedByCa(ca.cert, ca.cert)) {
     ca = await issueCa();
-    // Atomic: a torn write would read as no CA and mint a new one, untrusting every tablet.
-    await writeFileAtomically(caPath, JSON.stringify(ca), PRIVATE_FILE);
+    await writeFileAtomically(caPath, JSON.stringify(ca));
   }
   let leaf = await readJsonFile<PemPair>(leafPath);
-  if (leaf === null || !isCurrentLeaf(leaf.cert, ca.cert, names)) {
+  if (leaf === null || !keyMatchesCert(leaf) || !isCurrentLeaf(leaf.cert, ca.cert, names)) {
     leaf = await issueLeaf(ca, names);
-    await writeFileAtomically(leafPath, JSON.stringify(leaf), PRIVATE_FILE);
+    await writeFileAtomically(leafPath, JSON.stringify(leaf));
   }
   return { key: leaf.key, cert: leaf.cert, ca: ca.cert };
 }

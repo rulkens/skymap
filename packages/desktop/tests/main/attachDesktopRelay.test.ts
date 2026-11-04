@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { connect } from 'node:tls';
 import { WebSocket } from 'ws';
 import type { RelayHandle } from '../../../../tools/@types/remote/RelayHandle.js';
 import { attachDesktopRelay } from '../../src/main/attachDesktopRelay.js';
@@ -37,9 +38,14 @@ afterAll(async () => {
   rmSync(userData, { recursive: true, force: true });
 });
 
-function open(path: string, host = '127.0.0.1') {
-  const { port } = app.server.address() as AddressInfo;
-  const socket = new WebSocket(`wss://${host}:${port}/__remote/${path}`, { ca });
+const APP = 'https://localhost:47823';
+const port = () => (app.server.address() as AddressInfo).port;
+
+function open(path: string, host = '127.0.0.1', origin: string | null = APP) {
+  const socket = new WebSocket(`wss://${host}:${port()}/__remote/${path}`, {
+    ca,
+    origin: origin ?? undefined,
+  });
   sockets.push(socket);
   const frames: unknown[] = [];
   let onFrame = () => {};
@@ -74,6 +80,27 @@ describe('attachDesktopRelay', () => {
       expect(await host.closed).toBe(1008);
     },
   );
+
+  it('a loopback host from any other page is refused', async () => {
+    expect(await open('host', '127.0.0.1', 'https://evil.example').closed).toBe(1008);
+    expect(await open('host', '127.0.0.1', null).closed).toBe(1008);
+  });
+
+  it('an upgrade outside /__remote/ is closed and the server keeps serving', async () => {
+    const socket = connect({ host: '127.0.0.1', port: port(), ca }, () =>
+      socket.write(
+        'GET /foo HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n' +
+          'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n',
+      ),
+    );
+    const closedWithin = await Promise.race([
+      new Promise((resolve) => socket.once('close', () => resolve('closed'))),
+      new Promise((resolve) => setTimeout(() => resolve('still open'), 1000)),
+    ]);
+    socket.destroy();
+    expect(closedWithin).toBe('closed');
+    expect(await open('host').nextFrame(1)).toMatchObject({ code });
+  });
 
   it('a join to another code is refused with 1008', async () => {
     const host = open('host');

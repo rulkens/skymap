@@ -1,11 +1,10 @@
 import { app, dialog, screen, session } from 'electron';
 import type { Display } from 'electron';
-import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { InstallSetup } from '../@types/InstallSetup.js';
-import type { LanNames } from '../@types/LanNames.js';
+import { LAN_CHECK_INTERVAL_MS } from '../data/lanCheckIntervalMs.js';
+import { currentLanNames } from '../utils/currentLanNames.js';
 import { isSignedByCa } from '../utils/isSignedByCa.js';
-import { listLanInterfaces } from '../utils/listLanInterfaces.js';
 import { readJsonFile } from '../utils/readJsonFile.js';
 import { toDisplayInfo } from '../utils/toDisplayInfo.js';
 import { attachDesktopRelay } from './attachDesktopRelay.js';
@@ -14,20 +13,15 @@ import { fillDisplay } from './fillDisplay.js';
 import { openSkyWindow } from './openSkyWindow.js';
 import { placeWindows } from './placeWindows.js';
 import { readRoomCode } from './readRoomCode.js';
+import { renewServerCertificate } from './renewServerCertificate.js';
 import { startAppServer } from './startAppServer.js';
 
 const windowed = process.argv.includes('--windowed');
 
 async function start(): Promise<void> {
   const userData = app.getPath('userData');
-  const host = hostname()
-    .replace(/\.local$/i, '')
-    .toLowerCase();
-  const names: LanNames = {
-    hostnames: ['localhost', `${host}.local`],
-    ips: listLanInterfaces().map((lan) => lan.address),
-  };
-  const tls = await ensureLanCertificate(join(userData, 'certs'), names);
+  const certDir = join(userData, 'certs');
+  let tls = await ensureLanCertificate(certDir, currentLanNames());
   // -3 hands every other chain back to Chromium's own verdict.
   session.defaultSession.setCertificateVerifyProc((request, callback) =>
     callback(isSignedByCa(request.certificate.data, tls.ca) ? 0 : -3),
@@ -40,6 +34,16 @@ async function start(): Promise<void> {
     },
     tls,
   );
+  // The pairing QR names a live LAN address, so a DHCP change must reach the certificate too.
+  const keepCertificateCurrent = (): void => {
+    setTimeout(() => {
+      renewServerCertificate(server, certDir, currentLanNames(), tls)
+        .then((next) => (tls = next))
+        .catch((error: unknown) => console.error('certificate renewal:', error))
+        .finally(keepCertificateCurrent);
+    }, LAN_CHECK_INTERVAL_MS);
+  };
+  keepCertificateCurrent();
   // Read raw until the control window's task brings readSetup with its defaults.
   const setup = await readJsonFile<InstallSetup>(join(userData, 'setup.json'));
   // Main owns the code; rotation (control window) replaces it and the relay reads it through here.

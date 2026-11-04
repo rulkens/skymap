@@ -4,11 +4,11 @@
  * the phones share its rooms.
  */
 import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { realpath, stat } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createServer } from 'node:https';
 import type { Server } from 'node:https';
-import { extname } from 'node:path';
+import { extname, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { AppRoots } from '../@types/AppRoots.js';
 import type { LanCertificate } from '../@types/LanCertificate.js';
@@ -35,6 +35,8 @@ export async function startAppServer(
       resolve();
     });
   });
+  // Without a listener a later error (EMFILE on accept) is uncaught and ends the main process.
+  server.on('error', (error) => console.error('app server:', error));
   const close = () =>
     new Promise<void>((resolve) => {
       server.close(() => resolve());
@@ -59,7 +61,7 @@ async function serve(request: IncomingMessage, response: ServerResponse, roots: 
     return;
   }
   const info = target === null ? null : await stat(target).catch(() => null);
-  if (target === null || !info?.isFile()) {
+  if (target === null || !info?.isFile() || !(await isUnderARoot(target, roots))) {
     response.writeHead(404).end();
     return;
   }
@@ -71,4 +73,13 @@ async function serve(request: IncomingMessage, response: ServerResponse, roots: 
   });
   if (request.method === 'HEAD') response.end();
   else await pipeline(createReadStream(target), response);
+}
+
+// resolveAppPath contains the path lexically; a symlink inside a root could still lead outside.
+async function isUnderARoot(file: string, roots: AppRoots): Promise<boolean> {
+  const real = await realpath(file);
+  const realRoots = await Promise.all(
+    [roots.dist, roots.data].map((root) => realpath(root).catch(() => null)),
+  );
+  return realRoots.some((root) => root !== null && real.startsWith(root + sep));
 }

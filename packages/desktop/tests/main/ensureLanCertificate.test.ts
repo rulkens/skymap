@@ -1,5 +1,5 @@
 import { X509Certificate } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -45,4 +45,31 @@ describe('ensureLanCertificate', () => {
     expect(new X509Certificate(moved.cert).checkIP('192.168.1.21')).toBe('192.168.1.21');
     expect(isSignedByCa(moved.cert, first.ca)).toBe(true);
   });
+
+  it('reissues the leaf when its stored key is garbage, keeping the CA', async () => {
+    const first = await ensureLanCertificate(certDir, names);
+    corruptKey('leaf.json');
+    const second = await ensureLanCertificate(certDir, names);
+    expect(second.ca).toBe(first.ca);
+    expect(second.cert).not.toBe(first.cert);
+  });
+
+  it('makes a new CA when its stored key is garbage', async () => {
+    const first = await ensureLanCertificate(certDir, names);
+    corruptKey('ca.json');
+    const second = await ensureLanCertificate(certDir, names);
+    expect(second.ca).not.toBe(first.ca);
+    expect(isSignedByCa(second.cert, second.ca)).toBe(true);
+  });
+
+  it('stores keys owner-only', async () => {
+    await ensureLanCertificate(certDir, names);
+    expect(statSync(join(certDir, 'ca.json')).mode & 0o777).toBe(0o600);
+    expect(statSync(join(certDir, 'leaf.json')).mode & 0o777).toBe(0o600);
+  });
 });
+
+function corruptKey(file: string) {
+  const pair = JSON.parse(readFileSync(join(certDir, file), 'utf8'));
+  writeFileSync(join(certDir, file), JSON.stringify({ ...pair, key: 'KEY' }));
+}
