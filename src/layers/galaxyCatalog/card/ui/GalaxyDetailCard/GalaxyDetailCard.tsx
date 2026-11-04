@@ -21,7 +21,7 @@ import DescriptionBlock from '../../../../../components/InfoCard/DescriptionBloc
 import { InfoTip } from '../../../../../components/InfoTip/InfoTip';
 import { TIPS } from '../../../../../components/InfoCard/tooltips';
 import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
-import styles from '../cardChrome.module.css';
+import styles from '../../../../../components/InfoCard/cardChrome.module.css';
 import local from './GalaxyDetailCard.module.css';
 
 export type GalaxyDetailCardProps = {

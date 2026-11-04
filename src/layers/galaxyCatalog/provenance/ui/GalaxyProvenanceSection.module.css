@@ -67,7 +67,7 @@
 }
 
 .footer {
-  composes: muted from './debugSection.module.css';
+  composes: muted from '../../../../components/DebugPanel/debugSection.module.css';
   grid-column: 1 / -1;
   margin-top: 2px;
   cursor: help;

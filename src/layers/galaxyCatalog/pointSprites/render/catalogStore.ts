@@ -33,7 +33,7 @@ import { createViewSlotUniformRing } from '../../../../utils/gpu/createViewSlotU
 
 // The bake runs off-thread to dodge a 10 s main-thread freeze on .bin arrival.
 // Node-only tests can't resolve `?worker`; they inject `buildRunner` instead.
-import BuildPointBufferWorker from '../../../services/engine/bake/buildPointInterleavedBuffer.worker?worker';
+import BuildPointBufferWorker from './buildPointInterleavedBuffer.worker?worker';
 
 /**
  * Off-thread bake runner: one worker per call, because parallel catalog fetches

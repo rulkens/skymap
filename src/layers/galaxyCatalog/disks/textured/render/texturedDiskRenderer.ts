@@ -42,8 +42,8 @@ import type { TexturedDiskRenderer } from '../@types/TexturedDiskRenderer';
 import type { Vec2 } from '../../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import type { FocusUniformsBgl } from '../../../../../@types/rendering/FocusUniformsBgl';
-import vsCode from '../../../services/gpu/shaders/galaxyCatalog/texturedDisks/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/galaxyCatalog/texturedDisks/fragment.wesl?static';
+import vsCode from '../../../../../services/gpu/shaders/galaxyCatalog/texturedDisks/vertex.wesl?static';
+import fsCode from '../../../../../services/gpu/shaders/galaxyCatalog/texturedDisks/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from '../../quad/render/instancedQuadRenderer';
 import { VIEW_SLOT_COUNT } from '../../../../../utils/gpu/createViewSlotUniformRing';
 

@@ -9,7 +9,7 @@ import type { FamousGalaxyMetaEntry } from '../../../../../src/@types/loading/Fa
 
 const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
 
-vi.mock('../../../../src/layers/galaxyCatalog/load/famousGalaxiesMetaFetcher', () => ({
+vi.mock('../../../../../src/layers/galaxyCatalog/famousGalaxies/load/famousGalaxiesMetaFetcher', () => ({
   famousGalaxiesMetaFetcher: mockFetch,
 }));
 

@@ -14,7 +14,7 @@ import type { SourceType } from '../../../../../src/@types/data/SourceType';
 
 // The mint helper hands every entry this fetcher; stub it so each test
 // controls the resolved catalog instead of hitting the network.
-vi.mock('../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher', () => ({
+vi.mock('../../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogFetcher', () => ({
   galaxyCatalogFetcher: vi.fn(),
 }));
 

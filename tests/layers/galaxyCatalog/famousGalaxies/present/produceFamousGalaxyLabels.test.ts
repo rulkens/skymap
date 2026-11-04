@@ -26,7 +26,7 @@ import type { LabelBBox } from '../../../../../src/@types/rendering/LabelBBox';
 // The producers only read the ink bbox; real glyph metrics would pin the
 // fixtures to a font file, so the layout is mocked to report a chosen box.
 const layout = vi.hoisted(() => ({ bbox: null as LabelBBox | null }));
-vi.mock('../../../../src/services/gpu/labelLayout/textLayoutOf', () => ({
+vi.mock('../../../../../src/services/gpu/labelLayout/textLayoutOf', () => ({
   textLayoutOf: () => ({ quads: [], bbox: layout.bbox }),
 }));
 

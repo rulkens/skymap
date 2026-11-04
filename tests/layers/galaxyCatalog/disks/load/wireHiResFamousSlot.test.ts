@@ -19,7 +19,7 @@ const reqFor = (tier: Tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] });
 /** Hoisted so the `vi.mock` factories (evaluated before this module's body) can reach it. */
 const shared = vi.hoisted(() => ({ calls: [] as string[], textureSeq: 0, subsystemSeq: 0 }));
 
-vi.mock('../../../../src/services/gpu/resources/hiResFamousTexture', () => ({
+vi.mock('../../../../../src/layers/galaxyCatalog/hiResFamous/load/hiResFamousTexture', () => ({
   createHiResFamousTexture: vi.fn(() => {
     const id = `texture#${shared.textureSeq++}`;
     return {
@@ -31,7 +31,7 @@ vi.mock('../../../../src/services/gpu/resources/hiResFamousTexture', () => ({
   }),
 }));
 
-vi.mock('../../../../src/layers/galaxyCatalog/subsystems/hiResFamousSubsystem', () => ({
+vi.mock('../../../../../src/layers/galaxyCatalog/hiResFamous/subsystems/hiResFamousSubsystem', () => ({
   createHiResFamousSubsystem: vi.fn(() => {
     const id = `subsystem#${shared.subsystemSeq++}`;
     return {

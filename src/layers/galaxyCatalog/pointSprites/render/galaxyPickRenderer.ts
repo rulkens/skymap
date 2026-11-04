@@ -27,8 +27,8 @@
 // Vertex source is textually shared with GalaxyPointRenderer but compiled
 // into our own GPUShaderModule — never share modules across pipelines
 // (see the `auto` bind-group-layout trap in galaxyPointRenderer.ts).
-import vsCode from '../../../services/gpu/shaders/galaxyCatalog/points/vertex.wesl?static';
-import pickFsCode from '../../../services/gpu/shaders/galaxyCatalog/points/pickFragment.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/galaxyCatalog/points/vertex.wesl?static';
+import pickFsCode from '../../../../services/gpu/shaders/galaxyCatalog/points/pickFragment.wesl?static';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../@types/PickSourceDraw';
 import type { GalaxyPickRenderer } from '../@types/GalaxyPickRenderer';

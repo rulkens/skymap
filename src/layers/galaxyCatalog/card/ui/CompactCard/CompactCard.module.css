@@ -4,5 +4,5 @@
  * component reads its inner classes straight from compactChrome.
  */
 .root {
-  composes: infoCardCompact from '../compactChrome.module.css';
+  composes: infoCardCompact from '../../../../../components/InfoCard/compactChrome.module.css';
 }

@@ -4,5 +4,5 @@
  * cardChrome; everything inside is pulled from cardChrome directly.
  */
 .root {
-  composes: infoCardFull from '../cardChrome.module.css';
+  composes: infoCardFull from '../../../../../components/InfoCard/cardChrome.module.css';
 }

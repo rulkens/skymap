@@ -15,7 +15,7 @@ import type { BiasMode as BiasModeT } from '../../@types/BiasMode';
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
 import Slider from '../../../../components/common/Slider/Slider';
-import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
+import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
 
