@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * move-files: move files and rewrite every reference to them in one pass.
  *

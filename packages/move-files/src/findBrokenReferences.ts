@@ -13,9 +13,9 @@ import { posix } from 'node:path';
 import type { FileEdit } from './@types/FileEdit';
 import type { GuardFinding } from './@types/GuardFinding';
 import type { GuardSuspect } from './@types/GuardSuspect';
-import type { MoveContext } from './@types/MoveContext';
+import type { AliasScope } from './@types/AliasScope';
+import type { PathReference } from './@types/PathReference';
 import type { ProjectSnapshot } from './@types/ProjectSnapshot';
-import type { ReferenceHit } from './@types/ReferenceHit';
 import { escapeRegExp } from './escapeRegExp';
 import { findLiteralRanges } from './findLiteralRanges';
 import { isScriptFile } from './isScriptFile';
@@ -44,10 +44,11 @@ function confirmed(path: string, text: string, suspects: GuardSuspect[]): GuardS
   return suspects.filter((s) => ranges.some(([start, end]) => s.index >= start && s.index < end));
 }
 
-function findStrings(text: string): ReferenceHit[] {
+function findStrings(text: string): PathReference[] {
   return [...text.matchAll(STRING)].map((m) => {
     const value = m[1] ?? m[2] ?? m[3] ?? m[4]!;
-    return { index: m.index + (m[4] === undefined ? 1 : m[0].indexOf(value)), value };
+    const start = m.index + (m[4] === undefined ? 1 : m[0].indexOf(value));
+    return { start, end: start + value.length, value };
   });
 }
 
@@ -74,9 +75,9 @@ export function findBrokenReferences(
   before: Pick<ProjectSnapshot, 'texts' | 'fileExists'>,
   edits: readonly FileEdit[],
   moves: ReadonlyMap<string, string>,
-  context: MoveContext,
+  root: string,
+  scopes: readonly AliasScope[],
 ): GuardFinding[] {
-  const scopes = context.aliasScopes;
   const after = new Map(before.texts);
   for (const from of moves.keys()) after.delete(from);
   for (const edit of edits) after.set(edit.to, edit.text);
@@ -84,7 +85,7 @@ export function findBrokenReferences(
   const destinations = new Set(moves.values());
   const hasBefore = layoutExists(before, new Map());
   const hasAfter = layoutExists(before, moves);
-  const oldPaths = oldPathPattern(moves, context.root);
+  const oldPaths = oldPathPattern(moves, root);
   const findings: GuardFinding[] = [];
   const report = (file: string, text: string, index: number, reason: GuardFinding['reason']) => {
     const line = lineOf(text, index);
@@ -107,16 +108,14 @@ export function findBrokenReferences(
         if (!was) return;
         const current = newStrings[i]!;
         const now = resolveReference(withoutFragment(current.value), path, hasAfter, scopes);
-        if (!now) suspects.push({ index: current.index, reason: 'no-longer-resolves' });
+        if (!now) suspects.push({ index: current.start, reason: 'no-longer-resolves' });
         else if (now.target !== (moves.get(was.target) ?? was.target))
-          suspects.push({ index: current.index, reason: 'now-resolves-elsewhere' });
+          suspects.push({ index: current.start, reason: 'now-resolves-elsewhere' });
       });
     }
     if (oldPaths) {
       for (const m of text.matchAll(oldPaths)) {
-        const enclosing = findStrings(text).find(
-          (s) => m.index >= s.index && m.index < s.index + s.value.length,
-        );
+        const enclosing = findStrings(text).find((s) => m.index >= s.start && m.index < s.end);
         const means =
           enclosing && resolveReference(withoutFragment(enclosing.value), path, hasAfter, scopes);
         // A new path can end in the old one; a string that reaches a moved file is correct.

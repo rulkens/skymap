@@ -112,7 +112,12 @@ export function planMoves(
   if (refusals.length > 0) return { ok: false, refusals };
 
   const absMoves = new Map(moves.map(({ from, to }) => [abs(from), abs(to)]));
-  const edits = rewriteReferences(snapshot, absMoves, context);
-  const findings = findBrokenReferences(snapshot, edits, absMoves, context);
+  const edits = rewriteReferences(
+    snapshot,
+    absMoves,
+    context.aliasScopes,
+    context.config.extraMockCallees,
+  );
+  const findings = findBrokenReferences(snapshot, edits, absMoves, root, context.aliasScopes);
   return { ok: true, plan: { moves, edits, findings } };
 }

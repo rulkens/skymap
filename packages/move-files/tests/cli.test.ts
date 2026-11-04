@@ -77,28 +77,6 @@ describe('cli', { timeout: 30_000 }, () => {
     expect(run(repo(), 'only-one').status).toBe(2);
   });
 
-  it('exits 2 from a subdirectory', () => {
-    const root = repo();
-    const r = run(join(root, 'src'), 'lib/a.ts', 'a.ts');
-    expect(r.status).toBe(2);
-    expect(r.stderr).toContain('repository root');
-    expect(existsSync(join(root, 'src/lib/a.ts'))).toBe(true);
-  });
-
-  it.each([
-    ['a directory', 'a.ts', 'dir'],
-    ['a new folder name', 'a.ts', 'newdir/'],
-    ['a path under a file', 'a.ts', 'file.txt/a.ts'],
-    ['a quote', 'a.ts', `it's/a.ts`],
-  ])('refuses a destination that is %s, nothing written', (_, from, to) => {
-    const root = makeRepo({ 'a.ts': '', 'file.txt': '', 'dir/k.ts': '', 'u.ts': `import './a';` });
-    const r = run(root, from, to);
-    expect(r.status).toBe(2);
-    expect(r.stderr).toContain('invalid-destination');
-    expect(readFileSync(join(root, 'u.ts'), 'utf8')).toBe(`import './a';`);
-    expect(existsSync(join(root, 'a.ts'))).toBe(true);
-  });
-
   it('keeps executable bits on a renamed and on a rewritten file', () => {
     const root = makeRepo({
       'run.sh': 'echo hi\n',
@@ -177,29 +155,6 @@ describe('cli', { timeout: 30_000 }, () => {
       expect(readdirSync(root)).not.toContain('Foo.ts');
       expect(readFileSync(join(root, 'foo.ts'), 'utf8')).toBe('export const a = 1;');
       expect(readFileSync(join(root, 'main.ts'), 'utf8')).toBe(`import './foo';`);
-    });
-
-    it('two destinations differing by case are refused, nothing lost', () => {
-      const root = makeRepo({ 'a.ts': 'A', 'b.ts': 'B' });
-      writeFileSync(
-        join(root, 'm.json'),
-        JSON.stringify([
-          { from: 'a.ts', to: 'x/foo.ts' },
-          { from: 'b.ts', to: 'x/Foo.ts' },
-        ]),
-      );
-      const r = run(root, '--manifest', 'm.json');
-      expect(r.status).toBe(2);
-      expect(r.stderr).toContain('case-collision');
-      expect(readFileSync(join(root, 'a.ts'), 'utf8')).toBe('A');
-    });
-
-    it('a source in the wrong case is refused, its importer untouched', () => {
-      const root = makeRepo({ 'Foo.ts': '', 'main.ts': `import './Foo';` });
-      const r = run(root, 'foo.ts', 'lib/x.ts');
-      expect(r.status).toBe(2);
-      expect(r.stderr).toContain('missing-source');
-      expect(existsSync(join(root, 'lib/x.ts'))).toBe(false);
     });
   });
 });

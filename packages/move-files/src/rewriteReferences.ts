@@ -11,7 +11,7 @@
 
 import { posix } from 'node:path';
 import type { FileEdit } from './@types/FileEdit';
-import type { MoveContext } from './@types/MoveContext';
+import type { AliasScope } from './@types/AliasScope';
 import type { PathReference } from './@types/PathReference';
 import type { ProjectSnapshot } from './@types/ProjectSnapshot';
 import { findCssReferences } from './findCssReferences';
@@ -28,11 +28,11 @@ import { spellReference } from './spellReference';
 export function rewriteReferences(
   snapshot: Pick<ProjectSnapshot, 'texts' | 'fileExists'>,
   moves: ReadonlyMap<string, string>,
-  context: MoveContext,
+  scopes: readonly AliasScope[],
+  extraMockCallees: readonly string[],
 ): FileEdit[] {
   const hasBefore = layoutExists(snapshot, new Map());
   const hasAfter = layoutExists(snapshot, moves);
-  const scopes = context.aliasScopes;
   const mayReference = mentionsMovedFile(moves.keys(), scopes);
   const edits: FileEdit[] = [];
 
@@ -47,7 +47,7 @@ export function rewriteReferences(
     const replacements: PathReference[] = []; // each with `value` as the new spelling
 
     if (isTs) {
-      for (const reference of findTsReferences(path, text, context.config.extraMockCallees)) {
+      for (const reference of findTsReferences(path, text, extraMockCallees)) {
         const hit = resolveReference(reference.value, path, hasBefore, scopes);
         let value: string | null = null;
         if (hit) {

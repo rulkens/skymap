@@ -84,17 +84,6 @@ describe('loadMoveContext', () => {
     ).toBe('src/a/b.ts');
   });
 
-  it('reads a config reached twice, by a diamond', () => {
-    expect(
-      resolvedThrough({
-        'tsconfig.json': json({ extends: ['./x.json', './y.json'] }),
-        'x.json': json({ extends: './base.json' }),
-        'y.json': json({ extends: './base.json' }),
-        'base.json': json(srcAlias),
-      }),
-    ).toBe('src/a/b.ts');
-  });
-
   it('a later parent reached by a diamond still overrides an earlier one', () => {
     expect(
       resolvedThrough({

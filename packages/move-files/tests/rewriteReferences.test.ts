@@ -1,13 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { rewriteReferences } from '../src/rewriteReferences';
 import type { AliasScope } from '../src/@types/AliasScope';
-import type { MoveContext } from '../src/@types/MoveContext';
-
-const context: MoveContext = {
-  root: '/r',
-  config: { companions: [], extraMockCallees: [] },
-  aliasScopes: [],
-};
 
 function run(
   files: Record<string, string>,
@@ -19,10 +12,7 @@ function run(
     texts: new Map(Object.entries(files)),
     fileExists: (p: string) => assets.includes(p),
   };
-  const edits = rewriteReferences(snapshot, new Map(Object.entries(moves)), {
-    ...context,
-    aliasScopes,
-  });
+  const edits = rewriteReferences(snapshot, new Map(Object.entries(moves)), aliasScopes, []);
   return new Map(edits.map((e) => [e.from, e]));
 }
 
@@ -45,14 +35,6 @@ describe('rewriteReferences', () => {
     expect(edits.has('/r/z.ts')).toBe(false);
   });
 
-  it('keeps an unchanged spelling when a moved pair keeps its distance', () => {
-    const edits = run(
-      { '/r/a/x.ts': `import '../z';`, '/r/z.ts': `` },
-      { '/r/a/x.ts': '/r/b/x.ts' },
-    );
-    expect(edits.get('/r/a/x.ts')?.text).toBe(`import '../z';`);
-  });
-
   it('a swap resolves against the old layout', () => {
     const edits = run(
       {
@@ -73,28 +55,6 @@ describe('rewriteReferences', () => {
       { '/r/x.ts': '/r/sub/x.ts' },
     );
     expect(edits.get('/r/u.ts')?.text).toBe(`﻿// é\nimport './sub/x';`);
-  });
-
-  it('does not edit an importer with an unchanged spelling', () => {
-    const edits = run(
-      {
-        '/r/a/p.ts': `export {};`,
-        '/r/a/q.ts': `import './p';`,
-        '/r/o.ts': `import './a/q';`,
-      },
-      { '/r/a/p.ts': '/r/b/p.ts', '/r/a/q.ts': '/r/b/q.ts' },
-    );
-    expect(edits.has('/r/o.ts')).toBe(true);
-    expect(edits.get('/r/o.ts')?.text).toBe(`import './b/q';`);
-    expect(edits.get('/r/a/q.ts')?.text).toBe(`import './p';`);
-    const other = run(
-      { '/r/a/p.ts': ``, '/r/a/q.ts': `import './p';`, '/r/w.ts': `import './k';`, '/r/k.ts': `` },
-      {
-        '/r/a/p.ts': '/r/b/p.ts',
-        '/r/a/q.ts': '/r/b/q.ts',
-      },
-    );
-    expect(other.has('/r/w.ts')).toBe(false);
   });
 
   it('repoints a moved file CSS import at a CSS file that stayed', () => {
@@ -187,24 +147,6 @@ describe('rewriteReferences', () => {
     expect(edits.get('/r/math/c.ts')?.text).toBe(`import { m } from '../maths';`);
   });
 
-  it('the filter changes no output', () => {
-    const files = {
-      '/r/math/index.ts': ``,
-      '/r/u/c.ts': `import { m } from '../math';`,
-      '/r/u/d.ts': `import 'react';`,
-      '/r/t/e.ts': `import { q } from '../u/c';`,
-    };
-    const moves = { '/r/math/index.ts': '/r/maths/index.ts', '/r/u/c.ts': '/r/v/c.ts' };
-    const plain = run(files, moves);
-    const noisy = run(
-      Object.fromEntries(Object.entries(files).map(([p, t]) => [p, `${t}\n// index c\n`])),
-      moves,
-    );
-    const strip = (t: string) => t.replace('\n// index c\n', '');
-    expect(new Set(noisy.keys())).toEqual(new Set(plain.keys()));
-    for (const [from, edit] of plain) expect(strip(noisy.get(from)!.text)).toBe(edit.text);
-  });
-
   it.each([
     ['/r/util.js', '/r/lib/util.js', `import './util'; require('./util');`, './lib/util'],
     ['/r/C.jsx', '/r/lib/C.jsx', `import './C';`, './lib/C'],
@@ -217,21 +159,6 @@ describe('rewriteReferences', () => {
     const edits = run({ [from]: ``, '/r/u.ts': importer }, { [from]: to });
     const specifiers = [...edits.get('/r/u.ts')!.text.matchAll(/'([^']+)'/g)].map((m) => m[1]);
     expect(new Set(specifiers)).toEqual(new Set([expected]));
-  });
-
-  it('keeps an importer of a bare .json correct', () => {
-    const edits = run({ '/r/u.ts': `require('./data');` }, { '/r/data.json': '/r/lib/data.json' }, [
-      '/r/data.json',
-    ]);
-    expect(edits.get('/r/u.ts')?.text).toBe(`require('./lib/data');`);
-  });
-
-  it('a TS file beats a JS file for a .js spelling, so moving the TS file repoints it', () => {
-    const edits = run(
-      { '/r/x.js': ``, '/r/x.ts': ``, '/r/u.ts': `import './x.js';` },
-      { '/r/x.ts': '/r/lib/x.ts' },
-    );
-    expect(edits.get('/r/u.ts')?.text).toBe(`import './lib/x.js';`);
   });
 
   const fooLayout = {

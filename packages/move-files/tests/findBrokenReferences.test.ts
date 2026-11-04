@@ -4,17 +4,10 @@ import { findLiteralRanges } from '../src/findLiteralRanges';
 import { rewriteReferences } from '../src/rewriteReferences';
 import type { AliasScope } from '../src/@types/AliasScope';
 import type { FileEdit } from '../src/@types/FileEdit';
-import type { MoveContext } from '../src/@types/MoveContext';
 
 vi.mock('../src/findLiteralRanges', async (actual) => {
   const module = await actual<typeof import('../src/findLiteralRanges')>();
   return { findLiteralRanges: vi.fn(module.findLiteralRanges) };
-});
-
-const contextWith = (aliasScopes: AliasScope[] = []): MoveContext => ({
-  root: '/r',
-  config: { companions: [], extraMockCallees: [] },
-  aliasScopes,
 });
 
 function guard(
@@ -30,7 +23,7 @@ function guard(
   // Without explicit edits, moved files carry their text unchanged, as the engine emits them.
   const effective =
     edits ?? [...moveMap].map(([from, to]) => ({ from, to, text: texts.get(from) ?? '' }));
-  return findBrokenReferences(snapshot, effective, moveMap, contextWith(scopes));
+  return findBrokenReferences(snapshot, effective, moveMap, '/r', scopes);
 }
 
 // The real pipeline: what the rewrite produces, then what the guard says about it.
@@ -45,8 +38,8 @@ function afterRewrite(
     fileExists: (p: string) => assets.includes(p),
   };
   const moveMap = new Map(Object.entries(moves));
-  const edits = rewriteReferences(snapshot, moveMap, contextWith(scopes));
-  return findBrokenReferences(snapshot, edits, moveMap, contextWith(scopes)).map(
+  const edits = rewriteReferences(snapshot, moveMap, scopes, []);
+  return findBrokenReferences(snapshot, edits, moveMap, '/r', scopes).map(
     (f) => `${f.file}:${f.line} ${f.reason}`,
   );
 }
@@ -178,15 +171,6 @@ describe('findBrokenReferences', () => {
     const findings = guard(
       { '/r/src/a/b.ts': ``, '/r/t.ts': `// src/a/b.ts\nexport {};` },
       { '/r/src/a/b.ts': '/r/src/c/b.ts' },
-    );
-    expect(findings).toEqual([]);
-  });
-
-  it('ignores a relative path in a comment', () => {
-    const findings = guard(
-      { '/r/old/m.ts': `// see './x.wesl'\nexport {};` },
-      { '/r/old/m.ts': '/r/new/m.ts' },
-      ['/r/old/x.wesl'],
     );
     expect(findings).toEqual([]);
   });

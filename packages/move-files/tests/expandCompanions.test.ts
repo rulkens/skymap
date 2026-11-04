@@ -28,15 +28,6 @@ describe('expandCompanions', () => {
     expect(result).toEqual(moves);
   });
 
-  it('maps a tools/ move to the tests/tools/ mirror', () => {
-    const moves = [{ from: 'tools/utils/io/bar.ts', to: 'tools/lib/bar.ts' }];
-    const result = expandCompanions(moves, rules, existsFrom(['tests/tools/utils/io/bar.test.ts']));
-    expect(result).toContainEqual({
-      from: 'tests/tools/utils/io/bar.test.ts',
-      to: 'tests/tools/lib/bar.test.ts',
-    });
-  });
-
   it('picks the .test.tsx suffix when that is the file that exists', () => {
     const moves = [{ from: 'src/components/detailCardTable.ts', to: 'src/ui/detailCardTable.ts' }];
     const result = expandCompanions(

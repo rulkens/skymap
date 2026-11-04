@@ -21,8 +21,8 @@
  * driver runs each requested op (a single invocation, or one per `--manifest`
  * batch entry) against that project, then calls `project.save()` exactly once at
  * the tail. All-or-nothing falls out structurally: a throw mid-batch aborts
- * before the save, so disk is never partially written. `--dry` skips the save and (once the
- * planners land) prints the structured blast-radius report instead.
+ * before the save, so disk is never partially written. `--dry` skips the save and prints the
+ * structured blast-radius report instead.
  *
  * ## Usage
  *

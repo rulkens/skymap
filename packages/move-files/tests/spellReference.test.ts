@@ -26,6 +26,7 @@ describe('spellReference', () => {
     ['./x.js', '/r/x.ts', '/r/sub/x.ts', './sub/x.js'],
     ['./dir', '/r/dir/index.ts', '/r/sub/dir/index.ts', './sub/dir'],
     ['./x?worker', '/r/x.ts', '/r/sub/x.ts', './sub/x?worker'],
+    ['./x.tsx', '/r/x.tsx', '/r/sub/x.tsx', './sub/x.tsx'],
     ['./x.jsx', '/r/x.tsx', '/r/sub/x.tsx', './sub/x.jsx'],
     ['./x.mjs', '/r/x.mts', '/r/sub/x.mts', './sub/x.mjs'],
     ['./x.cjs', '/r/x.d.cts', '/r/sub/x.d.cts', './sub/x.cjs'],
@@ -52,27 +53,6 @@ describe('spellReference', () => {
       '/r/dir/sub/a.ts',
     );
     expect(out).toBe('..');
-  });
-
-  it('keeps .tsx extension spelling', () => {
-    const out = respell(
-      './Card.tsx',
-      ['/r/Card.tsx'],
-      ['/r/Card/Card.tsx'],
-      '/r/a.tsx',
-      '/r/Card/Card.tsx',
-    );
-    expect(out).toBe('./Card/Card.tsx');
-    const moved = respell(
-      './Card.tsx',
-      ['/r/m/Card.tsx'],
-      ['/r/m/Card.tsx'],
-      '/r/m/a.tsx',
-      '/r/m/Card.tsx',
-      [],
-      '/r/Card/a.tsx',
-    );
-    expect(moved).toBe('../m/Card.tsx');
   });
 
   it('falls back when the spelling would hit another file', () => {

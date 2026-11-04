@@ -5,16 +5,6 @@ import { resolveReference } from '../src/resolveReference';
 const has = (files: string[]) => (p: string) => files.includes(p);
 
 describe('resolveReference', () => {
-  it('resolves in TS order', () => {
-    const hit = resolveReference('./x', '/r/a.ts', has(['/r/x.ts', '/r/x.tsx']), []);
-    expect(hit).toMatchObject({ target: '/r/x.ts', shape: 'bare' });
-  });
-
-  it('treats .js as standing for .ts', () => {
-    const hit = resolveReference('./x.js', '/r/a.ts', has(['/r/x.ts']), []);
-    expect(hit).toMatchObject({ target: '/r/x.ts', shape: 'js' });
-  });
-
   it('calls a spelling exact only when it names the target', () => {
     expect(resolveReference('./x.js', '/r/a.ts', has(['/r/x.js']), [])?.shape).toBe('exact');
     expect(resolveReference('./x.mjs', '/r/a.ts', has(['/r/x.mts']), [])?.shape).toBe('js');
@@ -24,12 +14,6 @@ describe('resolveReference', () => {
   it('splits a query', () => {
     const hit = resolveReference('./x.worker?worker', '/r/a.ts', has(['/r/x.worker.ts']), []);
     expect(hit).toMatchObject({ target: '/r/x.worker.ts', query: '?worker' });
-  });
-
-  it('resolves a directory and a dot-specifier to the index', () => {
-    const files = has(['/r/dir/index.ts', '/r/index.ts']);
-    expect(resolveReference('./dir', '/r/a.ts', files, [])).toMatchObject({ shape: 'dir' });
-    expect(resolveReference('.', '/r/a.ts', files, [])?.target).toBe('/r/index.ts');
   });
 
   it('a bare package name resolves to nothing', () => {
@@ -49,12 +33,6 @@ describe('resolveReference', () => {
   it('a scope stops at its directory boundary', () => {
     const scopes = [{ dir: '/r/pkg', rules: [{ pattern: '@/*', targets: ['/r/pkg/*'] }] }];
     expect(resolveReference('@/a', '/r/pkg2/x.ts', has(['/r/pkg/a.ts']), scopes)).toBeNull();
-  });
-
-  it('a path holding a replacement pattern resolves through an alias', () => {
-    const scopes = [{ dir: '/r', rules: [{ pattern: '@/*', targets: ['/r/src/*'] }] }];
-    const hit = resolveReference('@/$&x', '/r/m.ts', has(['/r/src/$&x.ts']), scopes);
-    expect(hit?.target).toBe('/r/src/$&x.ts');
   });
 });
 

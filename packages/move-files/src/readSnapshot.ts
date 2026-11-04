@@ -5,8 +5,7 @@
  * Only extensions the core parses are read, so a repo of large binaries costs
  * nothing. A tracked file missing from disk, or not valid UTF-8, has no text: it
  * travels as an asset, because writing a decoded copy back would corrupt its bytes.
- * Existence answers are cached because the resolver probes the same candidates
- * thousands of times. BOMs stay in the text so a write-back is byte-identical.
+ * BOMs stay in the text so a write-back is byte-identical.
  */
 
 import { readFileSync, statSync } from 'node:fs';
@@ -25,15 +24,7 @@ export function readSnapshot(paths: readonly string[]): ProjectSnapshot {
       // gone from disk, unreadable, or not UTF-8
     }
   }
-  const known = new Map<string, boolean>();
-  const fileExists = (path: string) => {
-    let found = known.get(path);
-    if (found === undefined) {
-      found = statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
-      known.set(path, found);
-    }
-    return found;
-  };
+  const fileExists = (path: string) => statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
   const directoryExists = (path: string) =>
     statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
   return { texts, listed: new Set(paths), fileExists, directoryExists };

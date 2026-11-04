@@ -31,7 +31,6 @@ export function mentionsMovedFile(
       anyIndex = true;
     }
   }
-  if (stems.size === 0) return () => false;
   for (const { rules } of scopes) {
     for (const { pattern, targets } of rules) {
       const star = pattern.indexOf('*');

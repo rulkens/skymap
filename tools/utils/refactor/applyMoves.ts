@@ -23,16 +23,15 @@ export function applyMoves(project: Project, moves: ReadonlyArray<MovePair>): vo
   const edits = rewriteReferences(
     { texts, fileExists: (path) => fs.fileExistsSync(path) },
     new Map(moves.map((m) => [m.from, m.to])),
-    { root: '/', config: { companions: [], extraMockCallees: [] }, aliasScopes: [] },
+    [],
+    [],
   );
 
   for (const { from, to, text } of edits) {
-    if (from !== to) project.getSourceFileOrThrow(from).delete();
-    else if (project.getSourceFileOrThrow(from).getFullText() !== text)
-      project.getSourceFileOrThrow(from).replaceWithText(text);
-  }
-  // After every delete, so a swap's destination is free when its new file is created.
-  for (const { from, to, text } of edits) {
-    if (from !== to) project.createSourceFile(to, text, { overwrite: true });
+    if (from === to) project.getSourceFileOrThrow(from).replaceWithText(text);
+    else {
+      project.getSourceFileOrThrow(from).delete();
+      project.createSourceFile(to, text, { overwrite: true });
+    }
   }
 }
