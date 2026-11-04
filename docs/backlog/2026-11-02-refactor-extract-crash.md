@@ -1,4 +1,4 @@
-# refactor `extract` crashes on a type alias into a `.d.ts`
+# refactor `extract` crashes with "node that was removed or forgotten"
 
 `npm run refactor -- extract` threw instead of moving the symbol or refusing with a worklist, on 2026-11-02:
 
@@ -36,3 +36,20 @@ The case has three things the CLI's own tests may not cover; check each:
 The repro either extracts `Gallery` (with `useGallery.ts` importing it back as a type) or refuses with a message
 that names the cause, and a `planExtract` fixture test in `tests/tools/utils/refactor/` pins it. Related: the
 type-import carry bug in [2026-07-21-refactor-cli-followups.md](2026-07-21-refactor-cli-followups.md).
+
+## Second case: a function whose cohort leaves a type import unused (2026-11-04)
+
+The same error came up on a plain function. In #1034 an agent exported `galaxyEntryOf` from
+`src/layers/galaxyCatalog/records/data/tierTargets.ts` (as of `45f84b1df`), then ran:
+
+```bash
+npm run refactor -- extract \
+  src/layers/galaxyCatalog/records/data/tierTargets.ts#galaxyEntryOf \
+  src/layers/galaxyCatalog/records/utils/galaxyEntryOf.ts
+```
+
+It printed the three call sites and then threw on `import type { GalaxyCatalogRegistryEntry }`. Only
+`galaxyEntryOf` used that import, so moving the function left it unused in the source file. Nothing was written,
+and the extraction was done by hand in #1034. The two cases have the type-import handling in common, so
+fixing it should cover both. The fix needs a second fixture: a function whose move empties a type-only import in
+the source file.
