@@ -88,7 +88,7 @@ function MilkyWayDetailCard({
       </div>
 
       <div className={styles.cardSection}>
-        <CardRow label={<InfoTip {...TIPS.diameter!}>Diameter</InfoTip>} value={DIAMETER_TEXT} />
+        <CardRow label={<InfoTip {...TIPS.diameter}>Diameter</InfoTip>} value={DIAMETER_TEXT} />
         <CardRow
           label={<InfoTip {...MILKY_WAY_TIPS.milkyWayStars}>Stars</InfoTip>}
           value={MILKY_WAY_FACTS.starCountRange}

@@ -1,6 +1,6 @@
 /**
  * Move a keyframe leg's START into a body's frame, through the §5.1 pair in
- * `poseFrameConversion`; the body rung's `channels` cell owns the once-per-leg
+ * `poseFrameConversion`; the body arm's `channels` cell owns the once-per-leg
  * landmine. Nothing here converts Mpc↔metres — that stays the seam's alone
  * (spec §10, `oneMpcSeam`).
  */
@@ -16,7 +16,7 @@ import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHe
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { bodyRelativePose } from './bodyRelativePose';
 import { toBodyArm } from './poseFrameConversion';
-import { hostOrThrow } from './rungs/hostOrThrow';
+import { hostOrThrow } from './arms/hostOrThrow';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 /** Absolute Mpc channels → the same camera in `bodyId`'s fixed axes, metres. */

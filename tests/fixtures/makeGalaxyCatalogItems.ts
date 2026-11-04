@@ -9,7 +9,7 @@ import { GALAXY_CATALOG_SOURCES } from '../../src/layers/galaxyCatalog/sources/g
 import { galaxyCatalogIdOf } from '../../src/utils/galaxyCatalogIdOf';
 
 import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../src/@types/settings/GalaxyCatalogItemSettings';
+import type { GalaxyCatalogItemSettings } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogItemSettings';
 
 export function makeGalaxyCatalogItems(
   of: (id: GalaxyCatalogId) => Partial<GalaxyCatalogItemSettings> = () => ({}),

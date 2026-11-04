@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 
 import { steppedSitePose } from '../../../src/utils/camera/steppedSitePose';
 import { ORBIT_MAX_RAD_PER_PX } from '../../../src/utils/camera/orbitRadPerPixel';
-import { SITE_RUNG } from '../../../src/data/camera/siteRung';
+import { SITE_CAMERA_ARM } from '../../../src/data/camera/siteCameraArm';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { MeshBody } from '../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../src/@types/camera/SitePose';
@@ -60,20 +60,20 @@ describe('steppedSitePose', () => {
   });
 
   it('a lowering drag at the range floor reaches the ground, not the ceiling', () => {
-    // The rung EXISTS to get under its host's standoff, so only the site's own
+    // The arm EXISTS to get under its host's standoff, so only the site's own
     // floor may bind here: fold the host's in and `eyeFloorM / rangeM > 1` at
     // close range, `asin` saturates, and every pose pins at the ceiling —
     // top-down, tilt dead, which is what the eye check reported.
     const rangeFloorM = ROVER.standoffRadii * ROVER.boundingRadiusM;
     const out = step({ ...POSE, rangeM: rangeFloorM, elevationRad: 1.2 }, drag(0, -600));
     expect(out.elevationRad).toBeCloseTo(
-      Math.asin((SITE_RUNG.eyeFloorBoundingRadii * ROVER.boundingRadiusM) / rangeFloorM),
+      Math.asin((SITE_CAMERA_ARM.eyeFloorBoundingRadii * ROVER.boundingRadiusM) / rangeFloorM),
       12,
     );
   });
 
   it('keeps the eye above the ground through a mixed sequence', () => {
-    const eyeFloorM = SITE_RUNG.eyeFloorBoundingRadii * ROVER.boundingRadiusM;
+    const eyeFloorM = SITE_CAMERA_ARM.eyeFloorBoundingRadii * ROVER.boundingRadiusM;
     const sequence: readonly InputStep[] = [
       drag(220, -140),
       drag(-90, -600),

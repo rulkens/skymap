@@ -1,6 +1,6 @@
 /**
- * detailCardTable — folds core's FocusableTarget arm with every Layer's `detailCard`
- * ui-slot contribution into the `DetailCardTable` InfoCard dispatches on. Called once at module
+ * detailCardTable — folds every Layer's `detailCard` ui-slot contribution into the
+ * `DetailCardTable` InfoCard dispatches on. Called once at module
  * load (`InfoCard.tsx`), so a missing arm throws at boot naming the unclaimed union member.
  * Every card's props type must already match `DetailCardProps<K>`/`CompactCardProps<K>`.
  */
@@ -11,20 +11,10 @@ import type { DetailCardTable } from '../../@types/components/infoCard/DetailCar
 import type { DetailCardEntry } from '../../@types/components/infoCard/DetailCardEntry';
 import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
-import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
-import CompactCard from './CompactCard/CompactCard';
-
-/** The one kind no Layer claims; every other arm arrives via `layerUiContents`. */
-const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
-  galaxyCatalog: {
-    Detail: GalaxyDetailCard,
-    Compact: CompactCard,
-  },
-};
 
 /** Throws if the composition leaves any `SelectionKind` arm unclaimed. */
 export function detailCardTable(layers: readonly Layer<string, unknown>[]): DetailCardTable {
-  const table: Partial<DetailCardTable> = { ...CORE_DETAIL_CARDS };
+  const table: Partial<DetailCardTable> = {};
   for (const { type, ...entry } of layerUiContents(layers, 'detailCard')) {
     // TypeScript can't correlate a union-typed `type` with `entry`'s matching
     // arm across the fold, so the write goes through the widened record once.

@@ -7,20 +7,19 @@ import { memo, useCallback, type ReactElement } from 'react';
 import { TerrainPickMarkerTuningSection } from './TerrainPickMarkerTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import {
-  selectDebugOverlays,
+  selectTerrainPickMarkerEnabled,
   selectTerrainPickMarkerRadiusM,
-} from '../../../../state/settings/selectors';
+} from '../../state/terrainPickMarker/selectors';
 import {
-  setDebugOverlay,
+  setTerrainPickMarkerEnabled,
   setTerrainPickMarkerRadiusM,
-} from '../../../../state/settings/core/debugSlice';
+} from '../../state/terrainPickMarker/slice';
 import { selectTerrainPickMarkerReadout } from './selectTerrainPickMarkerReadout';
-import type { DebugOverlayKey } from '../../../../@types/data/debug/DebugOverlayKey';
 
 function TerrainPickMarkerTuningSectionContainer(): ReactElement {
   const dispatch = useAppDispatch();
   const radiusM = useAppSelector(selectTerrainPickMarkerRadiusM);
-  const overlays = useAppSelector(selectDebugOverlays);
+  const enabled = useAppSelector(selectTerrainPickMarkerEnabled);
   const readout = useAppSelector(selectTerrainPickMarkerReadout);
 
   const onRadiusChange = useCallback(
@@ -28,8 +27,8 @@ function TerrainPickMarkerTuningSectionContainer(): ReactElement {
     [dispatch],
   );
 
-  const onToggle = useCallback(
-    (key: DebugOverlayKey, enabled: boolean) => dispatch(setDebugOverlay({ key, enabled })),
+  const onEnabledChange = useCallback(
+    (on: boolean) => dispatch(setTerrainPickMarkerEnabled(on)),
     [dispatch],
   );
 
@@ -37,8 +36,8 @@ function TerrainPickMarkerTuningSectionContainer(): ReactElement {
     <TerrainPickMarkerTuningSection
       radiusM={radiusM}
       onRadiusChange={onRadiusChange}
-      overlays={overlays}
-      onToggle={onToggle}
+      enabled={enabled}
+      onEnabledChange={onEnabledChange}
       readout={readout}
     />
   );

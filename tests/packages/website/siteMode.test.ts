@@ -17,11 +17,15 @@ const siteDir = resolve(import.meta.dirname, '../../../packages/website');
 // is another filesystem, so the rename fails with EXDEV.
 const scratchDir = resolve(import.meta.dirname, '../../../node_modules/.cache/skymap-site-mode');
 const ORIGIN = 'https://skymap.rulkens.com';
+// Vitest's own import.meta.env, which it puts in process.env. Astro reads every variable there into the server's
+// import.meta.env, so a build that inherits them renders its pages with BASE_URL '/' and DEV set.
+const VITEST_ENV = ['BASE_URL', 'MODE', 'DEV', 'PROD', 'SSR'];
 
 function build(mode: 'preview' | 'live') {
   mkdirSync(scratchDir, { recursive: true });
   const out = mkdtempSync(join(scratchDir, `${mode}-`));
-  const env = { ...process.env, SKYMAP_SITE_MODE: mode === 'live' ? 'live' : '' };
+  const inherited = Object.entries(process.env).filter(([key]) => !VITEST_ENV.includes(key));
+  const env = { ...Object.fromEntries(inherited), SKYMAP_SITE_MODE: mode === 'live' ? 'live' : '' };
   execFileSync('npx', ['astro', 'build', '--outDir', out], { cwd: siteDir, env, stdio: 'pipe' });
   const html = readFileSync(join(out, 'index.html'), 'utf8');
   const tag = (re: RegExp) => html.match(re)?.[1];
@@ -58,6 +62,15 @@ describe('preview mode (the default)', () => {
     // Below `/*.js`, or the search worker keeps that rule's year (public/_headers says why).
     expect(headers).toMatch(/^\/\*\.js\n[\s\S]*^\/home\/pagefind\/\*\n\s+! Cache-Control\n/m);
     expect(existsSync(join(preview.out, 'pagefind/pagefind-worker.js'))).toBe(true);
+  });
+
+  // The shots skip the bundler: a page names them by hand, so a wrong base or a file the build left out is a broken picture.
+  it('serves its shots from /home/shots/, cached for a year, and the build holds every one it names', () => {
+    const shots = [...preview.html.matchAll(/\/home\/shots\/([^\s",]+)/g)].map((m) => m[1]!);
+    expect(shots.length).toBeGreaterThan(0);
+    expect(shots.filter((file) => !existsSync(join(preview.out, 'shots', file)))).toEqual([]);
+    const headers = readFileSync(resolve(siteDir, '../../public/_headers'), 'utf8');
+    expect(headers).toMatch(/^\/home\/shots\/\*\n\s+Cache-Control: .*immutable/m);
   });
 
   it('structured data names the preview URL', () => {

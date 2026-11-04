@@ -26,7 +26,6 @@ function makeCtx(): FrameView {
         blend: 0,
       },
       renderTargets: {} as never,
-      cursorTexPx: null,
       renderedTargets: new Set<string>(),
     },
     viewSlot: 0,

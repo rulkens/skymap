@@ -52,7 +52,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Faster `npm run shot`** `deferred` — one shot is ~5 s, 1 s of it a fixed idle wait; measured breakdown and four options. → [details](backlog/2026-10-05-shot-speed.md)
 - [ ] **`capture-featured cosmicWeb` no longer reproduces its committed thumbnail** `ready` — on main (seen 2026-10-05, same before and after #842) the exhibit card comes out as a different view (wider, off-centre); `body-earth`, `body-hubble` and `body-voyager1` still match.
-- [ ] **Layer leftovers sweep** `ready` — M1, M2, M4–M6, M8 (M3, M7 shipped): single-Layer code still in core moves with no contract change. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Seeded stars become starCatalog body rows** `needs-design` — J1 / body-layers spec §7 step 5; needs an `anchor` kind on `BodyPosition`. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Remaining Layer seams** `needs-design` — J3–J12, J14 (ephemeris corrections, clips, body facts, …); J13 is the per-body slab item. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Layer dependency DAG** `needs-design` — an explicit `Layer.dependsOn` with typed access to another Layer's facts; trigger = the second cross-Layer read. → [details](backlog/2026-10-11-layer-dependency-dag.md)
@@ -91,13 +90,14 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Frame-tagged clip keyframes have no per-endpoint authoring validation** `needs-design` — a straddling channel tween silently freezes. → [details](backlog/2026-09-11-clip-per-endpoint-tag-authoring-validation.md)
 - [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
-- [ ] **turnCameraArm reads the site tag by hand** `ready` — `tools/site/utils/turnCameraArm.ts` tests `'site' in arm.frame` outside `rungs/`; route it through `isSiteArm`. → [details](backlog/2026-11-03-turn-camera-arm-site-tag.md)
+- [ ] **turnCameraArm reads the site tag by hand** `ready` — `tools/site/utils/turnCameraArm.ts` tests `'site' in arm.frame` outside `arms/`; route it through `isSiteArm`. → [details](backlog/2026-11-03-turn-camera-arm-site-tag.md)
 - [ ] **framedClipArm decodes with the current basis** `deferred` — `cameraDrivers.ts` passes the current basis where the clip pinned another; harmless until a `decode` cell reads a basis. → [details](backlog/2026-11-03-framed-clip-arm-decode-basis.md)
 - [ ] **Earth point in the URL hash** `needs-design` — `#site=lon,lat[,alt]` snapping over a coordinate via the existing `flyToLonLat` saga; the typable subset of the pose codec. → [details](backlog/2026-09-15-earth-point-url-hash.md)
 - [ ] **Sub-pixel craft and scene glints can't be picked** `ready` — `glintsPassOver` (missions, earthScenes, blackHoles) has no `drawPick`, so an unresolved craft drawn as a glint takes no click.
 
 ## Rendering
 
+- [ ] **Earth's noon sky renders dark at ground level** `needs-design` — Sun ~19° up over Copenhagen, the sky reads navy with stars at 1.7 m and 46 m; the tour's noon-to-night opening needs daylight. → [details](backlog/2026-11-04-earth-noon-sky-dark-at-ground.md)
 - [ ] **Satellite orbit rings for fast time** `ready` — step 4 of the satellites spec: past about a minute of sim time per sweep, points fade and each object draws its J2-turned mean-element ellipse. → [spec §5.4](superpowers/specs/completed/2026-10-28-earth-satellites-design.md)
 - [ ] **Real relief displacement for near-spherical bodies** `needs-design` — `texturedBody` ray-traces an analytic sphere, so nothing displaces; a sibling rasterised path opted into by a `height` texture kind. → [details](backlog/2026-10-03-body-relief-displacement.md)
 - [ ] **Switching a layer off never frees its VRAM** `needs-design` — no `release` predicate reads a setting; a deselected volume strands up to 217 MB, catalogs/flow/filaments the same. Blocker: `DemandCtx` has no fade surface to gate `release` on. → [details](backlog/2026-09-13-volume-field-vram-release.md)
@@ -239,9 +239,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **A public relay for the phone remote** `ready` — the relay lives only in Vite's dev server, so a dome needs a clone, Node and a terminal (Windows unverified); the Durable Object relay is spec'd. → [details](backlog/2026-11-03-remote-public-relay.md)
 - [ ] **A dome without internet, and data that fails silently** `needs-design` — `fetch-data` skips textures and Earth tiles, and off port 5173 every data fetch fails CORS with nothing on screen. → [details](backlog/2026-11-03-offline-dome-data.md)
 - [ ] **The dome doesn't know which phones steer it** `needs-design` — nothing shows a phone joining or dropping, any phone with the code steers, and a fourth is refused without being told. → [details](backlog/2026-11-03-remote-who-is-connected.md)
-- [ ] **A dome reload gives a new room code** `needs-design` — the room is made fresh on every load (`remoteReceiverSaga.ts:56`, spec "Pairing"), so every phone pairs again.
-- [ ] **The remote's header reads "Focused"** `needs-design` — `DomeStatus.focus` carries only the id, so the phone names the object only if its own last search listed it (`focusNameFrom.ts`); the status names no running exhibit either.
-- [ ] **More controls on the phone remote** `needs-design` — no command for data size, exposure, other layers, captions, full screen or showing the dome's interface (Tab on its keyboard). → [details](backlog/2026-11-03-remote-more-controls.md)
+- [ ] **A dome reload gives a new room code** `needs-design` — the dome keeps its code in memory only (`createLocalTransport.ts:75`), so a reloaded page hosts without `?last=` and the relay issues a fresh code; every phone pairs again.
+- [ ] **More controls on the phone remote** `needs-design` — no command for data size, exposure, captions, full screen or showing the dome's interface (Tab on its keyboard). → [details](backlog/2026-11-03-remote-more-controls.md)
 - [ ] **Duplicate names in the remote's menus** `ready` — "Cosmic Flows" is both an exhibit and a clip (`src/data/exhibits/cosmicFlows.ts`, `src/data/animation/clips/cosmicFlows.ts`) and "Galactic Centre" shows twice in the label switches; rename or merge so each entry reads once.
 
 ## Docs & process
@@ -249,10 +248,11 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Commercial build that cannot ship non-commercial data** `needs-design` — Gaia, Hipparcos, DSS2, EOX 2025 and others forbid commercial use or need permission; a build flag leaves them out, and a guard keyed on `ATTRIBUTIONS.md` markers fails any build that would ship them. → [details](backlog/2026-10-12-commercial-build.md)
 
 - [ ] **Website docs pages into folders with structure files** `ready` — the 27 docs pages get a folder and a `.structure.yaml` each like the landing pages (job moves out of front matter), and `components/docs/` is sub-grouped by kind.
+- [ ] **Two tests time out under full-suite load** `ready` — `tests/services/engine/camera/noStoredRegimeFlag.test.ts` and `tests/tools/scene-recon/repackAtlas.test.ts` pass alone but hit the 5 s timeout in a full `npm test` (seen 2026-11-03); find what each waits on.
 - [ ] **Famous-curator suite runtime cost** `deferred` — real sharp encodes + tmpdir I/O dominate suite wall-clock; cache fixtures, shrink images, or tag a slow-suite split. → [details](backlog/2026-07-10-famous-curator-suite-runtime-cost.md)
 - [ ] **Constants files: `<thing>.constants.ts`, one thing per file** `ready` — the suffix keeps "constant" visible outside `data/`; plus a ratchet refusing functions in `data/` (49 today). Own PRs after Layer M1. → [details](backlog/2026-11-03-constants-file-convention.md)
 - [ ] **refactor `extract` drops type imports** `ready` — a confirmed bug: the extracted file loses its type-only imports and does not compile. → [details](backlog/2026-07-21-refactor-cli-followups.md)
-- [ ] **refactor `extract` crashes on a type alias into a `.d.ts`** `ready` — "node that was removed or forgotten" instead of a move or a refusal; repro at `393be6506^`. → [details](backlog/2026-11-02-refactor-extract-crash.md)
+- [ ] **refactor `extract` crashes with "node that was removed or forgotten"** `ready` — two repros: a type alias into a `.d.ts` (`393be6506^`), and a function whose move empties a type import (`45f84b1df`). → [details](backlog/2026-11-02-refactor-extract-crash.md)
 - [ ] **refactor CLI follow-ups** `deferred` — runOp dispatch table + extract closure gaps (dropped `//` comments, `export {}` form, import carry) + refusal/error-context polish. → [details](backlog/2026-07-21-refactor-cli-followups.md)
 - [ ] **Default filament build silently drops GLADE** `awaiting-decision` — `ALL_SOURCE_FILES` names un-tiered `sdss.bin`/`glade.bin` the tiered pipeline no longer emits; missing-file skip ⇒ shipped `filaments.bin` is 2MRS-only. → [details](backlog/2026-08-10-buildfilaments-glade-skip.md)
 - [ ] **"Task N" comment references — decide the convention** `needs-design` — ~175 plan-task refs in src/tools/tests read as changelog noise once plans archive; bless the idiom or ban it in comments.md and sweep.

@@ -34,7 +34,7 @@ import { selectTimeState } from '../time/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { framingPose } from '../../services/engine/camera/framingPose';
 import { homePose } from '../../services/engine/camera/homePose';
-import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
+import { isWorldArm } from '../../services/engine/camera/arms/isWorldArm';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';

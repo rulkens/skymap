@@ -10,7 +10,7 @@ import { siteEyeFrame } from '../../../src/utils/camera/siteEyeFrame';
 import { sitePointBodyFixed } from '../../../src/utils/camera/sitePointBodyFixed';
 import { sitePoseFromBodyArm } from '../../../src/utils/camera/sitePoseFromBodyArm';
 import { sitePoseToBodyArm } from '../../../src/utils/camera/sitePoseToBodyArm';
-import { SITE_RUNG } from '../../../src/data/camera/siteRung';
+import { SITE_CAMERA_ARM } from '../../../src/data/camera/siteCameraArm';
 import type { MeshBody } from '../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../src/@types/camera/SitePose';
 import type { SurfaceFixedSite } from '../../../src/@types/scene/SurfaceFixedSite';
@@ -51,7 +51,7 @@ const POSES: readonly SitePose[] = [
     siteId: asSurfaceSiteId('fixture-rover'),
     headingRad: 0.7,
     elevationRad: Math.asin(
-      (SITE_RUNG.eyeFloorBoundingRadii * ROVER.boundingRadiusM) / RANGE_FLOOR_M,
+      (SITE_CAMERA_ARM.eyeFloorBoundingRadii * ROVER.boundingRadiusM) / RANGE_FLOOR_M,
     ),
     rangeM: RANGE_FLOOR_M,
   },
@@ -59,7 +59,7 @@ const POSES: readonly SitePose[] = [
   {
     siteId: asSurfaceSiteId('fixture-rover'),
     headingRad: -2.5,
-    elevationRad: SITE_RUNG.elevationCeilRad,
+    elevationRad: SITE_CAMERA_ARM.elevationCeilRad,
     rangeM: RELEASE_EDGE_M,
   },
   { siteId: asSurfaceSiteId('fixture-rover'), headingRad: 3.0, elevationRad: 0.5, rangeM: 50 },
@@ -91,7 +91,7 @@ describe('sitePoseFromBodyArm', () => {
     for (const pose of POSES) expectRoundTrip(tiny, 1000, pose);
   });
 
-  it('entering the site rung keeps the screen orientation and moves the eye', () => {
+  it('entering the site arm keeps the screen orientation and moves the eye', () => {
     const s = SITES[2]!;
     const pose = POSES[2]!;
     const arm = sitePoseToBodyArm(pose, s, HOST_RADIUS_M);

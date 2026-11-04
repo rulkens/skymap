@@ -46,7 +46,7 @@ import { buildSatelliteCatalog } from '../../../tools/satellites/buildSatelliteC
 import { ISS } from '../../layers/satellites/fixtures/celestrakRecords';
 import { Source } from '../../../src/data/source';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
-import { foldToWorld } from '../../../src/services/engine/camera/rungs/foldToWorld';
+import { foldToWorld } from '../../../src/services/engine/camera/arms/foldToWorld';
 import { ARRIVAL_TIMEOUT_MS } from '../../../src/data/arrival/arrivalTimeoutMs';
 import { EARTH_HOME } from '../../../src/data/selection/earthHome';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';

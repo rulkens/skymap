@@ -346,7 +346,7 @@ describe('missionPose', () => {
     let out = 0;
     const frame = (f: number) => {
       const simDays = interpolateClockProfile(profile, w0 + f * FRAME_MS);
-      // The drag rung steps last frame's pose; here a steady yaw per frame.
+      // The drag arm steps last frame's pose; here a steady yaw per frame.
       const register = shown && { ...shown, yaw: shown.yaw + 0.003 };
       const r = missionPose(
         makeDriverCtx({

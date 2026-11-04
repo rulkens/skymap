@@ -20,6 +20,7 @@ import { milkyWayUpsamplePass } from './cloud/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from './cloud/passes/milkyWayPass';
 import { produceMilkyWayLabel } from './card/present/produceMilkyWayLabel';
 import { milkyWaySelectionRow } from './card/present/milkyWaySelectionRow';
+import { milkyWaySearch } from './card/present/milkyWaySearch';
 import { reseedMilkyWayStarCountSaga } from './tuning/sagas/reseedMilkyWayStarCountSaga';
 import MilkyWayTuningSectionContainer from './tuning/ui/MilkyWayTuningSectionContainer';
 import MilkyWayDetailCard from './card/ui/MilkyWayDetailCard/MilkyWayDetailCard';
@@ -45,6 +46,7 @@ export const milkyWayLayer = defineLayer({
     ],
   }),
   selection: () => [milkyWaySelectionRow()],
+  search: () => milkyWaySearch(),
   sagas: [reseedMilkyWayStarCountSaga],
   ui: [
     { slot: 'debug', content: MilkyWayTuningSectionContainer },

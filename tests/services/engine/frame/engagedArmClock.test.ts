@@ -40,7 +40,7 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
   };
 });
 
-import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/isBodyArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';

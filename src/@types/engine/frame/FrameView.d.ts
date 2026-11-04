@@ -21,7 +21,7 @@ export type FrameView = {
   /** This view's name, copied from `ViewSpec.id` — see that field's doc. */
   readonly id: string;
   /** The frame context, BY REFERENCE — every view shares it. NOT `frame`:
-   *  that word already means a rung tag and a coordinate frame elsewhere. */
+   *  that word already means an arm tag and a coordinate frame elsewhere. */
   snapshot: ReadyFrameContext;
   /** THIS view's camera — the frame camera `deriveView` was handed, turned by
    *  this view's spec; the pose-true camera never rides the snapshot. */
