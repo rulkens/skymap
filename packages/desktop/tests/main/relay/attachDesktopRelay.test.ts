@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync } from 'node:fs';
+import type { Server } from 'node:https';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -17,7 +18,7 @@ import { listLanInterfaces } from '../../../src/main/lan/utils/listLanInterfaces
 
 // The real app server (HTTPS on every interface) with the relay on it, as main.ts wires them.
 let userData: string;
-let app: Awaited<ReturnType<typeof startAppServer>>;
+let server: Server;
 let relay: RelayHandle;
 let code: string;
 let ca: string;
@@ -31,17 +32,17 @@ beforeAll(async () => {
     ips: ['127.0.0.1', ...listLanInterfaces().map((lan) => lan.address)],
   });
   ca = tls.ca;
-  app = await startAppServer({ dist: userData, data: userData, caPem: ca }, tls, 0);
+  server = await startAppServer({ dist: userData, data: userData, caPem: ca }, tls, 0);
   code = await readRoomCode(userData);
-  relay = attachDesktopRelay(app.server, { code: () => code, network: () => null });
+  relay = attachDesktopRelay(server, { code: () => code, network: () => null });
 });
 afterEach(() => sockets.splice(0).forEach((socket) => socket.terminate()));
 afterAll(async () => {
-  await app.close();
+  await new Promise((resolve) => server.close(resolve).closeAllConnections());
   rmSync(userData, { recursive: true, force: true });
 });
 
-const port = () => (app.server.address() as AddressInfo).port;
+const port = () => (server.address() as AddressInfo).port;
 
 function open(path: string, host = '127.0.0.1', origin: string | null = APP_ORIGIN) {
   const socket = new WebSocket(`wss://${host}:${port()}/__remote/${path}`, {

@@ -24,7 +24,7 @@ export async function startSecureServer(userData: string, dataRoot: string): Pro
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, grant) =>
     grant(false),
   );
-  const { server } = await startAppServer({ dist: distDir(), data: dataRoot, caPem: ca.cert }, tls);
+  const server = await startAppServer({ dist: distDir(), data: dataRoot, caPem: ca.cert }, tls);
   const renewCertificate = async (): Promise<void> => {
     tls = await renewServerCertificate(server, certDir, ca, currentLanNames(), tls);
   };

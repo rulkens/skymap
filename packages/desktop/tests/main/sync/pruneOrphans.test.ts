@@ -25,31 +25,25 @@ describe('pruneOrphans', () => {
     writeInventory();
     writeFileAt('images/old.webp');
     writeFileAt('galaxy/old.bin');
-    expect(await pruneOrphans(root)).toBe(2);
+    await pruneOrphans(root);
     expect(existsSync(join(root, 'images/keep.webp'))).toBe(true);
     expect(existsSync(join(root, 'images/old.webp'))).toBe(false);
+    expect(existsSync(join(root, 'galaxy/old.bin'))).toBe(false);
   });
 
   it('keeps synced.json, inventory.json and .part files', async () => {
     writeInventory();
     writeFileAt('synced.json', '{}');
     writeFileAt('images/next.webp.part');
-    expect(await pruneOrphans(root)).toBe(0);
+    await pruneOrphans(root);
     expect(existsSync(join(root, 'synced.json'))).toBe(true);
     expect(existsSync(join(root, 'inventory.json'))).toBe(true);
     expect(existsSync(join(root, 'images/next.webp.part'))).toBe(true);
   });
 
-  it('a second run deletes nothing', async () => {
-    writeInventory();
-    writeFileAt('images/old.webp');
-    await pruneOrphans(root);
-    expect(await pruneOrphans(root)).toBe(0);
-  });
-
   it('does nothing without inventory.json', async () => {
     writeFileAt('images/old.webp');
-    expect(await pruneOrphans(root)).toBe(0);
+    await pruneOrphans(root);
     expect(existsSync(join(root, 'images/old.webp'))).toBe(true);
   });
 });

@@ -1,5 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { request } from 'node:https';
+import type { Server } from 'node:https';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,7 +11,7 @@ import { startAppServer } from '../../../src/main/server/startAppServer';
 
 // Over the wire, so a server that normalises the URL before resolveAppPath sees it fails here.
 let root: string;
-let app: Awaited<ReturnType<typeof startAppServer>>;
+let server: Server;
 let ca: string;
 
 beforeAll(async () => {
@@ -28,15 +29,15 @@ beforeAll(async () => {
   });
   ca = tls.ca;
   const roots = { dist: join(root, 'dist'), data: join(root, 'data'), caPem: tls.ca };
-  app = await startAppServer(roots, tls, 0);
+  server = await startAppServer(roots, tls, 0);
 });
 afterAll(async () => {
-  await app.close();
+  await new Promise((resolve) => server.close(resolve).closeAllConnections());
   rmSync(root, { recursive: true, force: true });
 });
 
 function get(path: string): Promise<{ status: number; type: string; body: string }> {
-  const { port } = app.server.address() as AddressInfo;
+  const { port } = server.address() as AddressInfo;
   return new Promise((resolve, reject) => {
     const req = request({ host: '127.0.0.1', servername: 'localhost', port, path, ca }, (res) => {
       let body = '';
@@ -77,7 +78,7 @@ describe('startAppServer', () => {
 
   it('outlives a server error after listening', async () => {
     const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() => app.server.emit('error', new Error('EMFILE'))).not.toThrow();
+    expect(() => server.emit('error', new Error('EMFILE'))).not.toThrow();
     expect(logged).toHaveBeenCalledOnce();
     logged.mockRestore();
     expect((await get('/')).status).toBe(200);

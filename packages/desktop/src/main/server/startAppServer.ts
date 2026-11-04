@@ -4,8 +4,8 @@
  * the phones share its rooms.
  */
 import { createServer } from 'node:https';
+import type { Server } from 'node:https';
 import type { AppRoots } from './@types/AppRoots';
-import type { AppServer } from './@types/AppServer';
 import type { LanCertificate } from '../certificates/@types/LanCertificate';
 import { APP_SERVER_PORT } from '../../data/appServerPort';
 import { serveAppRequest } from './utils/serveAppRequest';
@@ -14,7 +14,7 @@ export async function startAppServer(
   roots: AppRoots,
   tls: LanCertificate,
   port = APP_SERVER_PORT,
-): Promise<AppServer> {
+): Promise<Server> {
   const server = createServer({ key: tls.key, cert: tls.cert }, (request, response) => {
     // A failed request must never take the main process (and the sky) down with it.
     serveAppRequest(request, response, roots).catch(() => {
@@ -31,10 +31,5 @@ export async function startAppServer(
   });
   // Without a listener a later error (EMFILE on accept) is uncaught and ends the main process.
   server.on('error', (error) => console.error('app server:', error));
-  const close = () =>
-    new Promise<void>((resolve) => {
-      server.close(() => resolve());
-      server.closeAllConnections();
-    });
-  return { server, close };
+  return server;
 }
