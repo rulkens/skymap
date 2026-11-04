@@ -10,7 +10,7 @@
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
-import type { GalaxyProvenanceSettings } from '../../../../@types/settings/GalaxyProvenanceSettings';
+import type { GalaxyProvenanceSettings } from '../../@types/GalaxyProvenanceSettings';
 
 export type GalaxyPointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */

@@ -1,5 +1,5 @@
-import type { ProvenanceAxisId } from './ProvenanceAxisId';
-import type { ProvenanceAxisSettings } from './ProvenanceAxisSettings';
+import type { ProvenanceAxisId } from '../../../@types/settings/ProvenanceAxisId';
+import type { ProvenanceAxisSettings } from '../../../@types/settings/ProvenanceAxisSettings';
 
 /**
  * GalaxyProvenanceSettings — highlight + filter state for every provenance

@@ -41,7 +41,7 @@
 
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import cx from 'classnames';
-import type { GalaxyProvenanceSettings } from '../../../../@types/settings/GalaxyProvenanceSettings';
+import type { GalaxyProvenanceSettings } from '../../@types/GalaxyProvenanceSettings';
 import type { ProvenanceAxisId } from '../../../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../../../@types/settings/ProvenanceFilter';
 import type { ProvenanceCounts } from '../../../../@types/engine/ProvenanceCounts';

@@ -6,7 +6,7 @@
 
 import type { GalaxyCatalogId } from './GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
-import type { GalaxyProvenanceSettings } from '../../../@types/settings/GalaxyProvenanceSettings';
+import type { GalaxyProvenanceSettings } from './GalaxyProvenanceSettings';
 
 export type GalaxyCatalogSettings = {
   sizePx: number;
