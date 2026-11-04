@@ -77,11 +77,16 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     rearmUpdates: () => rearm(),
     modeChanged: () => {
       setTestGrid(false);
-      if (state.skyRunning) void loadSky();
+      // A first load may have read the old mode already; the reload queues behind it.
+      if (state.skyRunning || state.skyLoading) void loadSky();
     },
     networkChanged: () => update({ room: { ...state.room, origin: originFor(state.networks) } }),
-    autostartChanged: (on) => app.isPackaged && app.setLoginItemSettings({ openAtLogin: on }),
+    autostartChanged: (on) => setAutostart(on),
   });
+  const setAutostart = (on: boolean) =>
+    app.isPackaged && app.setLoginItemSettings({ openAtLogin: on });
+  // Every launch too: a reinstall to another folder leaves the OS entry on the old executable.
+  setAutostart(setup.current().autostart);
   const originFor = (networks: LanInterface[]): string =>
     lanOriginFor(setup.current().network, networks, APP_SERVER_PORT);
   const relay = attachDesktopRelay(secure.server, {
