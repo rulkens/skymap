@@ -1,0 +1,57 @@
+/* Drawn at 660 × 400, the window's size in points; the 2x shot doubles the pixels, not the layout. */
+.root {
+  position: fixed;
+  inset: 0;
+}
+
+.mark {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  margin: 0;
+  translate: -50%;
+  color: var(--color-fg);
+  font-size: 46px;
+  font-weight: inherit;
+}
+
+/* Finder's icon and its label, centred on dmg.contents (170, 214) and (490, 214). */
+.slot {
+  position: absolute;
+  top: 144px;
+  width: 140px;
+  height: 150px;
+}
+
+.app {
+  composes: slot;
+  left: 100px;
+}
+
+.applications {
+  composes: slot;
+  left: 420px;
+}
+
+.arrow {
+  position: absolute;
+  top: 196px;
+  left: 250px;
+  width: 160px;
+  height: 24px;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hint {
+  position: absolute;
+  bottom: 34px;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  color: var(--color-fg-tertiary);
+  font-size: var(--text-small);
+}

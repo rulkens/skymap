@@ -25,6 +25,11 @@ npm run dist --workspace packages/desktop   # dmg and a Windows nsis installer i
 - It builds the web app in desktop mode (an empty data base URL, no analytics), bundles the main
   process, the preload and the control page with Vite, then runs electron-builder for both
   targets. Both are unsigned.
+- First it runs `npm run brand`: `scripts/buildBrandAssets.ts` shoots the brand page (`src/brand/`,
+  the website's wordmark and star field) in headless Chromium into `resources/`: `icon.icns`,
+  `icon.ico` (16–256), the dmg background at 1x and 2x and the installer's header and sidebar
+  bitmaps. They are not committed; a new mark is a change to `public/favicon.svg` or `src/brand/`.
+  It needs Playwright's Chromium (`npx playwright install chromium`).
 - The Windows installer cross-builds on macOS arm64 without Wine (Verification B), about a minute.
 - The web build ships as an `extraResources` copy at `resources/dist`, outside the asar so the
   server can stream it.

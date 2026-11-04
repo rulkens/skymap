@@ -224,3 +224,5 @@ packages/website/.astro/
 # Desktop app build output
 packages/desktop/build/
 packages/desktop/release/
+# Brand bitmaps from `npm run brand -w packages/desktop` (dist runs it first); the source is src/brand.
+packages/desktop/resources/

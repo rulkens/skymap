@@ -1,0 +1,4 @@
+/* An icon is shot with a transparent page round its tile; everything else sits on the sky's black. */
+html[data-asset^='icon'] body {
+  background: none;
+}

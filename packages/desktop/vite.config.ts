@@ -1,4 +1,4 @@
-/** One config, three builds picked by --mode: main, preload and control (the page). */
+/** One config, four builds picked by --mode: main, preload, control (the page) and brand (the art page). */
 import { builtinModules } from 'node:module';
 import { resolve } from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
@@ -30,19 +30,20 @@ const nodeExternal = ['electron', /^node:/, ...builtinModules];
 
 export default defineConfig(({ mode }) => {
   const common = { emptyOutDir: false, minify: false } as const;
-  if (mode === 'control') {
+  // brand: the page scripts/buildBrandAssets.ts shoots, which passes its own outDir outside build/.
+  if (mode === 'control' || mode === 'brand') {
     return {
-      root: resolve(import.meta.dirname, 'src/control'),
+      root: resolve(import.meta.dirname, `src/${mode}`),
       base: './',
       plugins: [react(), plainScript, bundledFonts],
       build: {
         ...common,
         minify: true,
-        outDir: resolve(import.meta.dirname, 'build/control'),
+        outDir: resolve(import.meta.dirname, `build/${mode}`),
         rollupOptions: {
           output: {
             format: 'iife',
-            entryFileNames: 'control.js',
+            entryFileNames: `${mode}.js`,
             assetFileNames: '[name][extname]',
           },
         },
