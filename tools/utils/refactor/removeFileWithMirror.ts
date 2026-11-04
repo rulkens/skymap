@@ -1,40 +1,23 @@
 /**
- * removeFileWithMirror — delete a source file from the ts-morph `Project` and, if
- * the Project knows it, the file's `tests/` mirror alongside it.
- *
- * A mirror test exists because its source exists; orphaning it rots the parallel
- * tree the repo maintains (`src/x.ts` ↔ `tests/x.test.ts`). So whenever a planner
- * decides a source file has become a husk and drops it, its mirror must go too.
- *
- * Mirror derivation reuses `anchorToMirroredRoot` (to speak the repo-relative
- * language the mirror convention is expressed in) and `expandCompanions` (the one
- * definition of the `src/`↔`tests/` mapping and the `.test.ts`/`.test.tsx` suffix
- * probing), with the Project itself as the existence oracle. That keeps the
- * convention in a single place and works identically on the real repo and on an
- * in-memory fixture — no filesystem probe a synthetic Project could not satisfy.
- *
- * This is the shared file-removal step for `planDelete` (sole-export delete) and
- * `planInline` (one-symbol wrapper elimination): the second caller is why it lives
- * here rather than inline in either planner.
+ * removeFileWithMirror: delete a source file from the ts-morph `Project` and its
+ * companion tests, for `planDelete` and `planInline`. A mirror exists because its
+ * source does. `expandCompanions` is asked in paths relative to the Project's cwd, so
+ * this works the same on the real repo and on an in-memory fixture.
  */
 
+import { posix } from 'node:path';
 import type { Project, SourceFile } from 'ts-morph';
-import { anchorToMirroredRoot } from './anchorToMirroredRoot';
 import { expandCompanions } from '../../../packages/move-files/src/expandCompanions';
 import { companionRules } from './companionRules';
 
 export function removeFileWithMirror(project: Project, sourceFile: SourceFile): void {
-  const anchor = anchorToMirroredRoot(sourceFile.getFilePath());
-  if (anchor !== null) {
-    const { rel, prefix } = anchor;
-    const moves = expandCompanions(
-      [{ from: rel, to: rel }],
-      companionRules,
-      (relPath) => project.getSourceFile(prefix + relPath) !== undefined,
-    );
-    for (const { from } of moves.slice(1)) {
-      project.getSourceFile(prefix + from)?.delete();
-    }
-  }
+  const root = project.getFileSystem().getCurrentDirectory();
+  const rel = posix.relative(root, sourceFile.getFilePath());
+  const moves = expandCompanions(
+    [{ from: rel, to: rel }],
+    companionRules,
+    (path) => project.getSourceFile(posix.resolve(root, path)) !== undefined,
+  );
+  for (const { from } of moves.slice(1)) project.getSourceFile(posix.resolve(root, from))?.delete();
   sourceFile.delete();
 }

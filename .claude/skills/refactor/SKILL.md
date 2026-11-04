@@ -118,8 +118,8 @@ catch those by hand.
 - **`move-files`** (`packages/move-files/README.md`) rewrites TS and CSS references, drags
   the test mirror and a `.tsx`'s `.module.css`, and exits 1 listing `file:line` for every
   string that still names an old path or no longer resolves. It does not rewrite
-  `.astro`/`.mdx`/`.wesl` or non-import path strings (the exit-1 list is how you find
-  them), does not mirror faceted tests (`foo.facet.test.ts`; add manifest entries), and
+  `.astro`/`.mdx` or non-import path strings (the exit-1 list is how you find them), does
+  not read `.wesl` at all (grep for `package::` by hand), does not mirror faceted tests (`foo.facet.test.ts`; add manifest entries), and
   leaves the emptied source directory behind. `refactor rename`'s file move skips CSS.
 - **`extract`** needs an exported symbol, can write `../../node_modules/<pkg>/index`
   specifiers (rewrite them to the bare package name), and re-quotes to double

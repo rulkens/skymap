@@ -3,11 +3,10 @@
  *
  * Reports only changes: a string that resolved before and no longer does, or now lands
  * on a different file than the moved target (compared by identity, so a reoccupied
- * path counts); and an old repo-relative path still in code. Strings that never
- * resolved are ignored; projects hold plenty. Text scans find suspects cheaply; only
- * a file with a suspect gets parsed, to rule out comments, because parsing every file
- * would cost seconds. Every string is paired by position between old and new text,
- * since a rewrite changes values but never how many strings a file has.
+ * path counts); and an old repo-relative path still in code. Text scans find suspects
+ * cheaply; only a file with a suspect gets parsed, to rule out comments, because
+ * parsing every file would cost seconds. Strings pair by position between old and new
+ * text, since a rewrite changes values but never how many strings a file has.
  */
 
 import { posix } from 'node:path';
@@ -17,6 +16,7 @@ import type { GuardSuspect } from './@types/GuardSuspect';
 import type { MoveContext } from './@types/MoveContext';
 import type { ProjectSnapshot } from './@types/ProjectSnapshot';
 import type { ReferenceHit } from './@types/ReferenceHit';
+import { escapeRegExp } from './escapeRegExp';
 import { findLiteralRanges } from './findLiteralRanges';
 import { isScriptFile } from './isScriptFile';
 import { isStylesheet } from './isStylesheet';
@@ -29,7 +29,6 @@ const STRING = /'([^'\n]*)'|"([^"\n]*)"|`([^`\n]*)`|\burl\(\s*([^'")\s]+)\s*\)/g
 const SPELLS_RELATIVE = /^\.\.?\//; // `'.'` and `'..'` are more often text than a path
 const CSS_SYNTAX = /\.(?:css|scss|less|pcss)$/;
 const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const withoutFragment = (value: string) => value.split('#')[0]!;
 
 function confirmed(path: string, text: string, suspects: GuardSuspect[]): GuardSuspect[] {
@@ -58,11 +57,11 @@ function oldPathPattern(moves: ReadonlyMap<string, string>, root: string): RegEx
     const stem = stripExtension(rel);
     const ext = rel.slice(stem.length);
     const alsoWritten = ext === '.ts' ? '|\\.js' : ext === '.tsx' ? '|\\.jsx|\\.js' : '';
-    const extensions = `(?:${escape(ext)}${alsoWritten})`;
+    const extensions = `(?:${escapeRegExp(ext)}${alsoWritten})`;
     // A root-level name is a path only with its extension and no folder; else it's just a word.
     return rel.includes('/')
-      ? `${escape(stem)}${extensions}?`
-      : `(?<!/)${escape(stem)}${extensions}`;
+      ? `${escapeRegExp(stem)}${extensions}?`
+      : `(?<!/)${escapeRegExp(stem)}${extensions}`;
   });
   if (alternatives.length === 0) return null;
   return new RegExp(`(?<![\\w.-])(?<!\\.\\/)(?:${alternatives.join('|')})(?![\\w-]|\\.\\w)`, 'g');

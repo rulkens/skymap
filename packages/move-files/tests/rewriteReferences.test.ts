@@ -267,14 +267,60 @@ describe('rewriteReferences', () => {
   });
 
   it.each([
-    [`import './';`, '/r/m/c.ts', `import '../n/';`],
-    [`import '../';`, '/r/m/s/c.ts', `import '../../n/';`],
+    [`import './';`, '/r/q/c.ts', `import '../n/';`],
+    [`import '../';`, '/r/q/s/c.ts', `import '../../n/';`],
   ])('the filter keeps a slashed dot-specifier: %s', (before, importer, after) => {
     const edits = run(
-      { '/r/m/index.ts': ``, [importer]: before },
-      { '/r/m/index.ts': '/r/n/index.ts' },
+      { '/r/q/index.ts': ``, [importer]: before },
+      { '/r/q/index.ts': '/r/n/index.ts' },
     );
     expect(edits.get(importer)?.text).toBe(after);
+  });
+
+  it('the filter reads a moved name with regex characters literally', () => {
+    const edits = run(
+      { '/r/routes/$slug.ts': ``, '/r/u.ts': `import './routes/$slug';` },
+      { '/r/routes/$slug.ts': '/r/pages/$slug.ts' },
+    );
+    expect(edits.get('/r/u.ts')?.text).toBe(`import './pages/$slug';`);
+  });
+
+  it('a moved file keeps a specifier that resolves to nothing, by path math', () => {
+    const edits = run(
+      { '/r/old/m.ts': `import './gen.js';\nimport './data.bin?raw';\nimport '.hidden/x';` },
+      { '/r/old/m.ts': '/r/new/m.ts' },
+    );
+    expect(edits.get('/r/old/m.ts')?.text).toBe(
+      `import '../old/gen.js';\nimport '../old/data.bin?raw';\nimport '.hidden/x';`,
+    );
+  });
+
+  it('a moved stylesheet keeps a url that resolves to nothing, by path math', () => {
+    const edits = run(
+      { '/r/old/s.css': `.a { src: url(./gone.woff?#iefix); background: url(/abs.png); }` },
+      { '/r/old/s.css': '/r/new/s.css' },
+    );
+    expect(edits.get('/r/old/s.css')?.text).toBe(
+      `.a { src: url(../old/gone.woff?#iefix); background: url(/abs.png); }`,
+    );
+  });
+
+  it('keeps a CSS url suffix when its file moves', () => {
+    const edits = run(
+      { '/r/s.css': `.a { src: url(./a.woff?#iefix); }` },
+      { '/r/a.woff': '/r/f/a.woff' },
+      ['/r/a.woff'],
+    );
+    expect(edits.get('/r/s.css')?.text).toBe(`.a { src: url(./f/a.woff?#iefix); }`);
+  });
+
+  it('keeps a dot-less CSS url whose relative place did not change', () => {
+    const edits = run(
+      { '/r/a/s.css': `.a { background: url(i.png); }` },
+      { '/r/a/s.css': '/r/b/s.css', '/r/a/i.png': '/r/b/i.png' },
+      ['/r/a/i.png'],
+    );
+    expect(edits.get('/r/a/s.css')?.text).toBe(`.a { background: url(i.png); }`);
   });
 
   it('the filter keeps a star-less alias that names neither stem nor folder', () => {

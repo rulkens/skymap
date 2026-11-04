@@ -264,11 +264,11 @@ Script: `"move-files": "tsx packages/move-files/src/cli.ts"`. Arguments stay `<f
 
 Run inline by the controller, not delegated; results go in the PR body. No new code.
 
-- [ ] In a throwaway worktree at this branch's merge base, run the new CLI on the 54-move corpus and diff against the ts-morph dump. Every difference must fall under the spec's listed classes; anything else stops the landing.
-- [ ] In that tree, with the corpus and then the 196-move folder rename applied: `npm run typecheck:fast`, `npm test`, `npm run build`. Failures are compared with the same run on an unmodified tree.
-- [ ] Time the 1-file and 54-move runs with the real CLI, writes included, and record them against the spec's table. A result under 10x or 100x stops the landing and goes to the owner.
-- [ ] Self-move check: rename a helper inside `packages/move-files/src/` with the CLI; the tool still runs afterwards.
-- [ ] Remove the throwaway worktree.
+- [x] In a throwaway worktree at this branch's merge base, run the new CLI on the 54-move corpus and diff against the ts-morph dump. Every difference must fall under the spec's listed classes; anything else stops the landing.
+- [x] In that tree, with the corpus and then the 196-move folder rename applied: `npm run typecheck:fast`, `npm test`, `npm run build`. Failures are compared with the same run on an unmodified tree.
+- [x] Time the 1-file and 54-move runs with the real CLI, writes included, and record them against the spec's table. A result under 10x or 100x stops the landing and goes to the owner.
+- [x] Self-move check: rename a helper inside `packages/move-files/src/` with the CLI; the tool still runs afterwards.
+- [x] Remove the throwaway worktree.
 
 ## Definition of Done
 

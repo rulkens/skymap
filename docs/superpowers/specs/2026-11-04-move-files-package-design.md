@@ -64,8 +64,8 @@ checked with a cached `existsSync` rather than listed, because listing ignored f
 
 ### Parsing only what can match
 
-A file is parsed only if its text contains a moved file's stem, or its folder name when that file is an `index`.
-Moved files are always parsed. This took rewrite time on the 54-move set from 2.9s to 0.9s with identical output.
+A file is parsed only if its text contains a moved file's stem, or its folder name or a dot-specifier when that
+file is an `index`, or a star-less alias. Moved files are always parsed. This took rewrite time on the 54-move set from 2.9s to 0.9s with identical output.
 The guard uses a text scan and parses only files with a hit, to rule out comments.
 
 ### Keeping the author's spelling
@@ -99,11 +99,11 @@ mostly test fixtures. It compares resolved targets, not existence, so a string p
 
 | Reason | Meaning |
 | --- | --- |
-| `no-longer-resolves` | A `./` or `../` string resolved before the move and doesn't now |
+| `no-longer-resolves` | A `./` or `../` string, or an alias in a file nothing rewrites, resolved before the move and doesn't now |
 | `now-resolves-elsewhere` | It still resolves, but to a different file than the moved target |
 | `mentions-old-path` | A string in code still holds a moved file's old repo-relative path |
 
-It scans TS, CSS, `.astro` and `.mdx`. The moves are written first, because fixing a finding needs the new layout
+It scans TS, CSS, Sass, `.astro` and `.mdx`. The moves are written first, because fixing a finding needs the new layout
 on disk. On the 54-move set it reported 13 old-path strings, in website facts and test allow-lists, which is the
 hand-grep the refactor skill asks for today.
 
@@ -119,8 +119,8 @@ hand-grep the refactor skill asks for today.
 ### Not configurable
 
 There are no plugins, custom resolvers, per-run companion switches or guard ignore lists. Project config holds
-only `companions` and `extraMockCallees`. Aliases come from `tsconfig.json`: the nearest one governs an importer,
-following `extends`.
+only `companions` and `extraMockCallees`. Aliases come from every `tsconfig*.json` and `jsconfig*.json`, following
+`extends`: the nearest folder holding one governs an importer.
 
 ## Ground preparation
 
@@ -145,7 +145,9 @@ Packaging, owner ruling on 2026-11-04: everything on one PR, spec and plan inclu
 
 - Publishing to npm, a build step and `bin` use outside this repo. The package stays `private` until a second
   project needs it.
-- Rewriting `.astro` and `.mdx` imports. The guard reports any that break.
-- Rewriting `.wesl` `package::` imports and non-import path strings. The guard reports relative ones.
+- Rewriting `.astro`, `.mdx`, Sass and Less. The guard reports relative strings and aliases that break.
+- Rewriting non-import path strings. The guard reports relative ones.
+- `.wesl` `package::` imports. `.wesl` files are not read.
+- Text that isn't valid UTF-8: it moves as an asset, so its bytes survive and its references stay stale.
 - Windows paths: the core assumes POSIX paths, and nothing here has run on Windows.
 - Moving a sibling CSS file during `refactor rename`.

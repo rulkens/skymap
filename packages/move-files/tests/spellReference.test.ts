@@ -26,8 +26,32 @@ describe('spellReference', () => {
     ['./x.js', '/r/x.ts', '/r/sub/x.ts', './sub/x.js'],
     ['./dir', '/r/dir/index.ts', '/r/sub/dir/index.ts', './sub/dir'],
     ['./x?worker', '/r/x.ts', '/r/sub/x.ts', './sub/x?worker'],
+    ['./x.jsx', '/r/x.tsx', '/r/sub/x.tsx', './sub/x.jsx'],
+    ['./x.mjs', '/r/x.mts', '/r/sub/x.mts', './sub/x.mjs'],
+    ['./x.cjs', '/r/x.d.cts', '/r/sub/x.d.cts', './sub/x.cjs'],
+    ['./x.js', '/r/x.d.ts', '/r/sub/x.d.ts', './sub/x.js'],
+    ['./data', '/r/data.json', '/r/sub/data.json', './sub/data'],
+    ['./data.json', '/r/data.json', '/r/sub/data.json', './sub/data.json'],
+    ['./dir/', '/r/dir/index.ts', '/r/sub/dir/index.ts', './sub/dir/'],
+    ['./dir', '/r/dir/index.d.ts', '/r/sub/dir/index.d.ts', './sub/dir'],
+    ['./dir', '/r/dir/index.js', '/r/sub/dir/index.js', './sub/dir'],
+    ['./dir', '/r/dir/index.ts', '/r/lib/foo.ts', './lib/foo'],
+    ['./x.js', '/r/x.ts', '/r/x.mts', './x.mts'],
   ])('keeps the written shape: %s', (spec, oldT, newT, expected) => {
     expect(respell(spec, [oldT], [newT], '/r/a.ts', newT)).toBe(expected);
+  });
+
+  it('spells the parent folder as ..', () => {
+    const out = respell(
+      './dir',
+      ['/r/dir/index.ts'],
+      ['/r/dir/index.ts'],
+      '/r/a.ts',
+      '/r/dir/index.ts',
+      [],
+      '/r/dir/sub/a.ts',
+    );
+    expect(out).toBe('..');
   });
 
   it('keeps .tsx extension spelling', () => {
@@ -86,5 +110,40 @@ describe('spellReference', () => {
       scopes,
     );
     expect(out).toBe('./lib/b');
+  });
+
+  it.each([
+    ['@/a/b.js', '/r/src/a/b.ts', '/r/src/c/b.ts', '@/c/b.js'],
+    ['@/a/b.ts', '/r/src/a/b.ts', '/r/src/c/b.ts', '@/c/b.ts'],
+    ['@/a?worker', '/r/src/a.ts', '/r/src/c/a.ts', '@/c/a?worker'],
+    ['@/dir', '/r/src/dir/index.ts', '/r/src/lib/index.ts', '@/lib'],
+    ['@/dir', '/r/src/dir/index.ts', '/r/src/dir2/foo.ts', '@/dir2/foo'],
+  ])('keeps the written shape through an alias: %s', (spec, oldT, newT, expected) => {
+    expect(respell(spec, [oldT], [newT], '/r/x.ts', newT, scopes)).toBe(expected);
+  });
+
+  it('an alias falls back to the explicit index when a sibling file would shadow it', () => {
+    const out = respell(
+      '@/dir',
+      ['/r/src/dir/index.ts'],
+      ['/r/src/foo/index.ts', '/r/src/foo.ts'],
+      '/r/x.ts',
+      '/r/src/foo/index.ts',
+      scopes,
+    );
+    expect(out).toBe('@/foo/index');
+  });
+
+  it('a star-less alias stays while its target does, and spells no extension when it goes', () => {
+    const core = [{ dir: '/r', rules: [{ pattern: '#core', targets: ['/r/lib/engine.ts'] }] }];
+    const files = ['/r/lib/engine.ts'];
+    expect(respell('#core', files, files, '/r/a.ts', '/r/lib/engine.ts', core, '/r/z/a.ts')).toBe(
+      '#core',
+    );
+    expect(respell('#core', files, ['/r/k/e.ts'], '/r/a.ts', '/r/k/e.ts', core)).toBe('./k/e');
+    const stem = [{ dir: '/r', rules: [{ pattern: '#core', targets: ['/r/lib/engine'] }] }];
+    expect(respell('#core', files, files, '/r/a.ts', '/r/lib/engine.ts', stem, '/r/z/a.ts')).toBe(
+      '#core',
+    );
   });
 });

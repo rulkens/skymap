@@ -3,11 +3,10 @@
  *
  * Every reference is resolved against the OLD layout and spelled for the NEW one,
  * never against a half-moved state, so chains and swaps need no ordering. Moved
- * files always come back (even unedited, since they change path); other files only
- * when a spelling changed. A moved file's specifier that resolves to no module
- * (an asset, a `.wesl`) is kept valid by path math. `.astro`/`.mdx` are not
- * rewritten; the guard reports what they now miss. Offsets are UTF-16, so BOM and
- * non-ASCII text survive.
+ * files always come back (even unedited, since they change path); others only when a
+ * spelling changed. A moved file's relative specifier that resolves to nothing on disk
+ * keeps its meaning by path math. `.astro`, `.mdx` and Sass are left to the guard.
+ * Offsets are UTF-16, so BOM and non-ASCII text survive.
  */
 
 import { posix } from 'node:path';
@@ -45,7 +44,7 @@ export function rewriteReferences(
     if (!moved && !((isTs || isCss) && mayReference(text))) continue;
     const oldDir = posix.dirname(path);
     const newDir = posix.dirname(newPath ?? path);
-    const replacements: { reference: PathReference; value: string }[] = [];
+    const replacements: PathReference[] = []; // each with `value` as the new spelling
 
     if (isTs) {
       for (const reference of findTsReferences(path, text, context.config.extraMockCallees)) {
@@ -59,7 +58,7 @@ export function rewriteReferences(
         } else if (moved && isRelativeSpecifier(reference.value)) {
           value = pathMath(oldDir, newDir, reference.value);
         }
-        if (value !== null && value !== reference.value) replacements.push({ reference, value });
+        if (value !== null && value !== reference.value) replacements.push({ ...reference, value });
       }
     } else if (isCss) {
       for (const reference of findCssReferences(text)) {
@@ -76,17 +75,15 @@ export function rewriteReferences(
         if (value !== null && value !== reference.value) {
           // An unquoted url() cannot hold a space or a bracket.
           const quoted = /['"]/.test(text[reference.start - 1]!) || !/[\s()]/.test(value);
-          replacements.push({ reference, value: quoted ? value : `"${value}"` });
+          replacements.push({ ...reference, value: quoted ? value : `"${value}"` });
         }
       }
     }
 
     if (replacements.length === 0 && !moved) continue;
     let out = text;
-    for (const { reference, value } of replacements.sort(
-      (a, b) => b.reference.start - a.reference.start,
-    )) {
-      out = out.slice(0, reference.start) + value + out.slice(reference.end);
+    for (const { start, end, value } of replacements.sort((a, b) => b.start - a.start)) {
+      out = out.slice(0, start) + value + out.slice(end);
     }
     edits.push({ from: path, to: newPath ?? path, text: out });
   }

@@ -233,6 +233,11 @@ describe('planMoves', () => {
     expect(codes(r)).toEqual(['invalid-destination:x/y.ts']);
   });
 
+  it('drops a move to where the file already is', () => {
+    const r = plan([{ from: 'a.ts', to: './a.ts' }], { 'a.ts': '' });
+    expect(r.ok && r.plan.moves).toEqual([]);
+  });
+
   it('moves a file that has no text, such as an asset', () => {
     const r = plan(
       [{ from: 'public/a.png', to: 'public/b.png' }],

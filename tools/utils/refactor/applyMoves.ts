@@ -2,12 +2,10 @@
  * applyMoves: move a batch of files inside a ts-morph `Project`, with every
  * reference to them rewritten by the move-files package.
  *
- * `refactor rename` keeps its in-memory Project (the identifier rename already
- * lives there), so this adapter hands the package a snapshot of the Project's
- * current text and applies the returned edits back. Companions were expanded by
- * the caller, so the context carries none. `aliasScopes` is empty because no
- * tsconfig in this repo maps a bare specifier to a file a rename could move.
- * Only TS and TSX are in the Project, so a rename leaves stylesheets alone.
+ * `refactor rename` keeps its in-memory Project, so this hands the package a snapshot
+ * of the Project's text and applies the edits back. The caller expanded companions.
+ * `aliasScopes` is empty because no tsconfig here maps a bare specifier to a file a
+ * rename could move. Only TS and TSX are in the Project, so stylesheets stay put.
  */
 
 import type { Project } from 'ts-morph';
@@ -25,15 +23,13 @@ export function applyMoves(project: Project, moves: ReadonlyArray<MovePair>): vo
     { root: '/', config: { companions: [], extraMockCallees: [] }, aliasScopes: [] },
   );
 
-  const created: { path: string; text: string }[] = [];
   for (const { from, to, text } of edits) {
-    if (from === to) {
-      const file = project.getSourceFileOrThrow(from);
-      if (file.getFullText() !== text) file.replaceWithText(text);
-    } else {
-      project.getSourceFileOrThrow(from).delete();
-      created.push({ path: to, text });
-    }
+    if (from !== to) project.getSourceFileOrThrow(from).delete();
+    else if (project.getSourceFileOrThrow(from).getFullText() !== text)
+      project.getSourceFileOrThrow(from).replaceWithText(text);
   }
-  for (const { path, text } of created) project.createSourceFile(path, text, { overwrite: true });
+  // After every delete, so a swap's destination is free when its new file is created.
+  for (const { from, to, text } of edits) {
+    if (from !== to) project.createSourceFile(to, text, { overwrite: true });
+  }
 }

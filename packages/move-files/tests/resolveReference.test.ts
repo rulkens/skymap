@@ -147,6 +147,7 @@ describe('resolveReference agrees with TypeScript', () => {
     '@/x/*': ['other/*'],
     '#core': ['src/lib/engine.ts'],
     '#dir': ['kit'],
+    'a*a': ['src/*'],
   };
   const scopes = [
     {
@@ -165,6 +166,8 @@ describe('resolveReference agrees with TypeScript', () => {
     ['#core', ['/r/src/lib/engine.ts']],
     ['#dir', ['/r/kit/index.ts']],
     ['@/a.js', ['/r/src/a.ts']],
+    ['a', ['/r/src/index.ts']],
+    ['aba', ['/r/src/b.ts']],
   ];
 
   it.each(aliasRows)('alias %s with %j', (specifier, files) => {

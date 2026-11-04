@@ -1,6 +1,6 @@
 /**
  * mentionsMovedFile: a cheap text test for "could this file reference a moved one?",
- * so rewrite parses only those (a third of the time on a 54-move batch, same output).
+ * so rewrite parses only those: most of its time on a big repo, with the same output.
  *
  * A reference names a file by its stem, except: a moved `index` is named by its
  * folder or a dot-specifier (`from '../math'`, `'..'`, `'../..'`); a star-less alias
@@ -10,9 +10,9 @@
 
 import { posix } from 'node:path';
 import type { AliasScope } from './@types/AliasScope';
+import { escapeRegExp } from './escapeRegExp';
 import { stripExtension } from './stripExtension';
 
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const DOT_SPECIFIER = /(?:['"`]|\/)\.{1,2}\/?['"`]/;
 const WHOLE_STEM_TARGET = /\/\*(?:\.\w+)?$/;
 const CHARACTER_ESCAPE = /\\[ux]/; // `'./\x61'` names `a` without saying so
@@ -39,7 +39,7 @@ export function mentionsMovedFile(
       else if (!targets.every((t) => WHOLE_STEM_TARGET.test(t))) stems.add(pattern.slice(0, star));
     }
   }
-  const stemPattern = new RegExp([...stems].map(escape).join('|'));
+  const stemPattern = new RegExp([...stems].map(escapeRegExp).join('|'));
   return (text) =>
     stemPattern.test(text) || CHARACTER_ESCAPE.test(text) || (anyIndex && DOT_SPECIFIER.test(text));
 }

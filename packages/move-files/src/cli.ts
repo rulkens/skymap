@@ -21,7 +21,7 @@ import { renderMoveReport } from './renderMoveReport';
 
 const USAGE = 'Usage: move-files <from> <to>  |  move-files --manifest <file.json>  [--dry]';
 
-function requestedMoves(): { moves: MovePair[]; dry: boolean } {
+function requestedMoves() {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: { manifest: { type: 'string' }, dry: { type: 'boolean', default: false } },
@@ -30,7 +30,7 @@ function requestedMoves(): { moves: MovePair[]; dry: boolean } {
   if (values.manifest !== undefined && positionals.length === 0)
     return { moves: readMoveManifest(values.manifest), dry };
   if (values.manifest === undefined && positionals.length === 2)
-    return { moves: [{ from: positionals[0]!, to: positionals[1]! }], dry };
+    return { moves: [{ from: positionals[0]!, to: positionals[1]! } satisfies MovePair], dry };
   throw new Error(USAGE);
 }
 
