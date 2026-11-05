@@ -22,4 +22,10 @@ describe('electron-builder.yml', () => {
     expect(config.nsis).toMatchObject({ oneClick: false, perMachine: true });
     expect(nsis).toContain(`localport=${APP_SERVER_PORT} profile=private,domain`);
   });
+
+  // The installer name and About read this package's version; /release bumps the root's.
+  it('ships under the version Skymap is released as', () => {
+    const released = JSON.parse(readFileSync(join(root, '../../package.json'), 'utf8')).version;
+    expect(pkg.version).toBe(released);
+  });
 });
