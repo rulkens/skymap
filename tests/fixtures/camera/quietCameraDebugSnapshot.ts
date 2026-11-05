@@ -4,8 +4,8 @@
  * values they actually assert on.
  */
 
-import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import type { CameraDebugSnapshot } from '../../../src/@types/camera/debug/CameraDebugSnapshot';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 
 const ABSENT_DOF = { currentRad: null, targetRad: null, residualRad: null };
 const QUIET_DELTA = { deltaRad: 0, peakAbsRad: 0 };
@@ -38,6 +38,4 @@ export const QUIET_CAMERA_DEBUG_SNAPSHOT: CameraDebugSnapshot = {
   activeDriverId: 'resting',
   gestureMode: null,
   gestureCursorHit: null,
-  terrainPickHeightM: null,
-  residentHeightLevelAtEye: null,
 };

@@ -22,17 +22,19 @@ import {
 } from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
-import { frameUp } from '../../../utils/camera/frameUp';
+import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
-import { MISSION_EVENTS } from '../../missions/missionEvents.generated';
 import { SCALE_UNITS } from '../../scaleUnits';
 import { trackBody } from './makers/trackBody';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
-const FLYBY_JD = unixMsToJulianDays(
-  Date.parse(MISSION_EVENTS.find((e) => e.id === 'voyager2-jupiter')!.iso),
-);
+const JUPITER_ID = asSceneBodyId('jupiter');
+
+// Voyager 2's Jupiter closest approach, as the missions Layer's event table states it
+// (`missionEvents.generated`); a core clip may not import that Layer.
+const FLYBY_JD = unixMsToJulianDays(Date.parse('1979-07-09T22:29:01Z'));
 // Eight days either side; a quarter day per second through the closest two.
 const KEYS: ClockKey[] = [
   { sec: 0, simDays: FLYBY_JD - 8 },
@@ -46,7 +48,7 @@ const ELEVATION_RAD = 0.6;
 
 // The flyby instant is fixed, and the clock cue jumps to it, so the start instant is unused.
 export function voyagerJupiter(): Clip {
-  const jupiter = deriveBodyStates(KEYS[0]!.simDays).get('jupiter')!.positionMpc;
+  const jupiter = deriveBodyStates(KEYS[0]!.simDays).get(JUPITER_ID)!.positionMpc;
   const target: Vec3 = [jupiter[0], jupiter[1], jupiter[2]];
   const north = frameUp(ORIENTATION_FRAMES.ecliptic);
   // Looking sunward so the dayside faces the camera, from above the plane.
@@ -72,7 +74,7 @@ export function voyagerJupiter(): Clip {
         show(['missionTrails', 'orbitTrails', 'label:missions', 'label:body'], 0),
         clock(KEYS),
         all([
-          trackBody('jupiter', KEYS, 0.25),
+          trackBody(JUPITER_ID, KEYS, 0.25),
           seq([dollyTo(3.8e6 * KM, 15, 'easeInOutSine'), dollyTo(7e6 * KM, 8.5, 'easeInOutSine')]),
           spin('yaw', { by: 0.5, over: 23.5, ease: 'linear' }),
         ]),

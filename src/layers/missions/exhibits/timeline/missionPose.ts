@@ -8,34 +8,34 @@
  * `orbitAnglesLookingAlong` in the committed basis; an inverse here would drift off-equatorial.
  */
 
-import type { BodyId } from '../../../../@types/data/body/BodyId';
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { DriverCtx } from '../../../../@types/engine/camera/DriverCtx';
 import type { FollowMemory } from '../../../../@types/engine/camera/FollowMemory';
 import type { DriverOutput } from '../../../../@types/engine/camera/DriverOutput';
-import type { MissionCameraMemory } from '../../@types/MissionCameraMemory';
-import type { MissionCourse } from '../../../../@types/missions/MissionCourse';
-import type { MissionOffsets } from '../../../../@types/camera/MissionOffsets';
-import type { MissionTimeline } from '../../../../@types/exhibits/MissionTimeline';
-import { MISSION_EASE_MS } from '../../../../data/exhibits/mission/missionEaseMs';
-import { MISSION_SURFACE_STANDOFF } from '../../../../data/exhibits/mission/missionSurfaceStandoff';
-import { MISSION_FRAME_MARGIN } from '../../../../data/exhibits/mission/missionFrameMargin';
-import { NO_MISSION_OFFSETS } from '../../../../data/exhibits/mission/noMissionOffsets';
-import { absoluteArm } from '../../../../utils/camera/absoluteArm';
-import { blendCameraPose } from '../../../../utils/camera/blendCameraPose';
-import { bodyRadiusMpc } from '../../../../utils/camera/bodyRadiusMpc';
-import { distanceOutsideSphere } from '../../../../utils/camera/distanceOutsideSphere';
-import { eyeMpcOf } from '../../../../utils/camera/eyeMpcOf';
-import { missionCameraFrame } from '../../../../utils/camera/missionCameraFrame';
-import { missionOffsetsOfView } from '../../../../utils/camera/missionOffsetsOfView';
-import { missionViewDirection } from '../../../../utils/camera/missionViewDirection';
-import { missionStops } from '../../../../utils/exhibits/mission/missionStops';
-import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitAnglesLookingAlong';
-import { sphereFitDistance } from '../../../../utils/camera/sphereFitDistance';
+import type { MissionCameraMemory } from '../../missionCamera/@types/MissionCameraMemory';
+import type { MissionCourse } from '../../missionCamera/@types/MissionCourse';
+import type { MissionOffsets } from '../../missionCamera/@types/MissionOffsets';
+import type { MissionTimeline } from '../../timeline/@types/MissionTimeline';
+import { MISSION_EASE_MS } from '../../missionCamera/data/missionEaseMs';
+import { MISSION_SURFACE_STANDOFF } from '../../missionCamera/data/missionSurfaceStandoff';
+import { MISSION_FRAME_MARGIN } from '../../missionCamera/data/missionFrameMargin';
+import { NO_MISSION_OFFSETS } from '../../missionCamera/data/noMissionOffsets';
+import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
+import { blendCameraPose } from '../../../../utils/camera/orbitPose/blendCameraPose';
+import { bodyRadiusMpc } from '../../../../utils/camera/surfaceFrame/bodyRadiusMpc';
+import { distanceOutsideSphere } from '../../../../utils/camera/orbitCamera/distanceOutsideSphere';
+import { eyeMpcOf } from '../../../../utils/camera/orbitPose/eyeMpcOf';
+import { missionCameraFrame } from '../../missionCamera/utils/missionCameraFrame';
+import { missionOffsetsOfView } from '../../missionCamera/utils/missionOffsetsOfView';
+import { missionViewDirection } from '../../missionCamera/utils/missionViewDirection';
+import { missionStops } from '../../missionCamera/utils/missionStops';
+import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { sphereFitDistance } from '../../../../utils/camera/orbitCamera/sphereFitDistance';
 import { lerpVec3 } from '../../../../utils/math/lerpVec3';
 import { normalize3 } from '../../../../utils/math/normalize3';
 import { smoothstep } from '../../../../utils/math/smoothstep';
+import { isSceneBodyId } from '../../../../utils/scene/isSceneBodyId';
 
 /** One craft's stops per timeline, by identity: rebuilt only when the data or the craft changes. */
 const STOPS = new WeakMap<MissionTimeline, Map<string, MissionCourse['stops']>>();
@@ -62,7 +62,8 @@ export function missionPose(
   const token = ctx.state.camera.aim;
   const now = ctx.elapsedMs;
   const { fovYRad, aspect } = ctx.projection;
-  const positionOf = (id: string) => ctx.bodies.get(id as BodyId)?.positionMpc;
+  const positionOf = (id: string) =>
+    isSceneBodyId(id) ? ctx.bodies.get(id)?.positionMpc : undefined;
   // A new aim token also restarts the epoch these times are on; an easing one keeps the offsets.
   const sameAim = own !== null && own.aim === token;
   const prev = sameAim ? own.view : null;
@@ -82,10 +83,10 @@ export function missionPose(
   // ease into it below departs from what the visitor saw, so the reset does not snap.
   const viewChanged = prev !== null && (frame.stop !== prev.stop || frame.cruise !== prev.cruise);
   let offsets: MissionOffsets = viewChanged ? NO_MISSION_OFFSETS : kept;
-  const dragged = ctx.state.camera.dragging;
+  const dragged = ctx.state.input.owner !== null;
   const touched = dragged || ctx.followDistanceTarget !== null;
   if (dragged) {
-    // The drag rung stepped last frame's pose; its view and distance ARE the new offsets, re-posed
+    // The drag arm stepped last frame's pose; its view and distance ARE the new offsets, re-posed
     // below about this frame's aim, so the craft stays put on screen while the clock plays.
     const w = ctx.authoredWorld;
     const eye = eyeMpcOf(w, ctx.poseBasis);
@@ -173,6 +174,7 @@ export function missionPose(
     memory: {
       from: null,
       distanceTarget: shown.distance,
+      durationMs: null,
       panOffset: mem?.panOffset ?? [0, 0, 0],
       saturated: from === null,
     },
@@ -188,6 +190,6 @@ export function missionPose(
         distance: frame.distance * offsets.zoom,
       },
     },
-    pivotBody: craftId,
+    pivotBody: isSceneBodyId(craftId) ? craftId : undefined,
   };
 }

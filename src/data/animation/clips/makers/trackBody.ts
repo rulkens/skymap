@@ -14,15 +14,16 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import { aimAt, all, moveTarget, seq } from '../../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
 import { interpolateClockProfile } from '../../../../utils/time/interpolateClockProfile';
-import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../../utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../orientation/orientationFrames';
+import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 
 export function trackBody(
-  bodyId: string,
+  bodyId: SceneBodyId,
   keys: readonly ClockKey[],
   stepSec: number,
-  faceToward?: { bodyId: string; elevationRad: number },
+  faceToward?: { bodyId: SceneBodyId; elevationRad: number },
 ): Effect {
   const profile = {
     startWallMs: 0,

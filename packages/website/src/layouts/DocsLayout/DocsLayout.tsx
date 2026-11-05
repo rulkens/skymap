@@ -1,21 +1,18 @@
 /*
- * DocsLayout — one docs page on the site's twelve columns: the docs' contents in
- * the first three, the text in the next six (seven until the window has room
- * for the third part), and the page's own headings in the last three when it
- * has four or more. Narrow, the contents are a bar that stays under the top
- * bar, with those headings at the head of its list. The page's place, which
- * its caller reads from the docs tree, gives the group over its title, previous
- * and next within the group, and the landing page it links back up to. The
- * contents, the page's headings and the figure sheet are islands the page
- * passes in as `nav`, `toc` and `sheet`.
+ * DocsLayout — one docs page on the site's twelve columns: the docs' contents in the first three, the text in the
+ * next six (seven until the window has room for the third part), and the page's own headings in the last three when
+ * it has four or more. Narrow, the contents are a bar that stays under the top bar, with those headings at the head
+ * of its list. The page's place, which its caller reads from the docs tree, gives the group over its title,
+ * previous and next within the group, and the landing page it links back up to. The contents, the page's headings
+ * and the figure sheet are islands the page passes in as `nav`, `toc` and `sheet`.
  */
 import type { MarkdownHeading } from 'astro';
 import type { ReactNode } from 'react';
 
-import DocBody from '../../components/DocBody/DocBody.tsx';
-import ObjLink from '../../components/ObjLink/ObjLink.tsx';
-import Sources from '../../components/Sources/Sources.tsx';
-import type { DocsPlace } from '../../@types/DocsPlace.ts';
+import DocBody from '../../components/docs/DocBody/DocBody.tsx';
+import ObjLink from '../../components/shared/links/ObjLink/ObjLink.tsx';
+import Sources from '../../components/shared/text/Sources/Sources.tsx';
+import type { DocsPlace } from '../../@types/DocsPlace';
 import { landingLabel } from '../../utils/landingLabel.ts';
 import { sitePath } from '../../utils/sitePath.ts';
 import { tocSections } from '../../utils/tocSections.ts';

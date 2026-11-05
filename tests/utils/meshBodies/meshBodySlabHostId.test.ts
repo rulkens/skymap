@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { meshBodySlabHostId } from '../../../src/utils/meshBodies/meshBodySlabHostId';
+import type { PositionedId } from '../../../src/@types/scene/PositionedId';
 
 describe('meshBodySlabHostId', () => {
   it('routes to the host row when the host owns one', () => {

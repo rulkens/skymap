@@ -4,11 +4,11 @@
  * engine capabilities it will hand its dispatches to.
  *
  * `sagaMiddleware.setContext` is write-only: there is no `takeContext`, and
- * `getContext` inside a saga returns `undefined` rather than blocking. Every
- * other feature watcher is fine with that, because each one is woken by an
- * action and by then the context exists. `watchHashReadSaga` is the exception —
- * it is the only saga that DISPATCHES on its own initiative, at store
- * construction, from a URL. Its dispatches land in watchers whose `getContext`
+ * `getContext` inside a saga returns `undefined` rather than blocking. Most
+ * watchers are woken late enough that the context exists; `rootSaga`'s header
+ * names the ones that are not. `watchHashReadSaga` is the sharpest case — it
+ * DISPATCHES on its own initiative, at store construction, from a URL. Its
+ * dispatches land in watchers whose `getContext`
  * bag is still empty, and the resulting throw propagates to the root saga and
  * cancels every watcher in it: no wake, no tier transitions, no selection
  * resolution, no keyboard, for the rest of the session.

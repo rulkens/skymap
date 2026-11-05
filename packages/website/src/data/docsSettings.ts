@@ -4,9 +4,9 @@ const ON = 'On';
 const OFF = 'Off';
 const SWITCH = 'On or off';
 const PANEL = 'src/components/SettingsPanel';
-const GALAXIES = 'src/layers/galaxyCatalog/ui/GalaxiesSection.tsx';
-const STARS = 'src/layers/starCatalog/ui/StarsSection.tsx';
-const STRUCTURES = 'src/layers/structure/ui/StructuresSection/StructuresSection.tsx';
+const GALAXIES = 'src/layers/galaxyCatalog/controls/ui/GalaxiesSection.tsx';
+const STARS = 'src/layers/starCatalog/controls/ui/StarsSection.tsx';
+const STRUCTURES = 'src/layers/structure/controls/ui/StructuresSection/StructuresSection.tsx';
 const LABELS = `${PANEL}/LabelsAndGuidesSection.tsx`;
 const DISPLAY = `${PANEL}/DisplaySection.tsx`;
 
@@ -302,7 +302,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'cosmic-web-density',
     title: 'Cosmic web density',
-    file: 'src/layers/cosmicWebDensity/ui/CosmicWebDensitySection.tsx',
+    file: 'src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensitySection.tsx',
     rows: [
       {
         name: 'Cosmic web density',
@@ -345,7 +345,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'cosmic-web-filaments',
     title: 'Cosmic web filaments',
-    file: 'src/layers/cosmicWebFilaments/ui/CosmicWebFilamentsSection.tsx',
+    file: 'src/layers/cosmicWebFilaments/filaments/ui/CosmicWebFilamentsSection.tsx',
     rows: [
       {
         name: 'Cosmic web filaments',
@@ -370,7 +370,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'flow',
     title: 'Flow',
-    file: 'src/layers/flow/ui/FlowSection.tsx',
+    file: 'src/layers/flow/streamlines/ui/FlowSection.tsx',
     rows: [
       {
         name: 'Flow',
@@ -389,6 +389,49 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         first: '0.18',
         state: 'flow.intensity',
         firstValue: 0.18,
+      },
+    ],
+  },
+  {
+    id: 'satellites',
+    title: 'Satellites',
+    file: 'src/layers/satellites/controls/ui/SatellitesSection.tsx',
+    rows: [
+      {
+        name: 'Satellites',
+        control: 'switch',
+        does: 'Shows the satellites and debris that CelesTrak tracks round Earth, as points, when the camera is near Earth. Their file downloads only then, while the search is open, or while a satellite is selected.',
+        values: SWITCH,
+        first: OFF,
+        state: 'satellites.enabled',
+        firstValue: false,
+      },
+      {
+        name: 'Active satellites',
+        control: 'switch',
+        does: 'Shows the satellites in service.',
+        values: SWITCH,
+        first: ON,
+        state: 'satellites.items.active.enabled',
+        firstValue: true,
+      },
+      {
+        name: 'Debris',
+        control: 'switch',
+        does: 'Shows the debris clouds of the 2007 Fengyun-1C missile test and the 2009 Iridium–Cosmos collision, and debris among the month’s launches.',
+        values: SWITCH,
+        first: ON,
+        state: 'satellites.items.debris.enabled',
+        firstValue: true,
+      },
+      {
+        name: 'Other tracked objects',
+        control: 'switch',
+        does: 'Shows the objects that are neither: unidentified ones, rocket stages and other launch hardware.',
+        values: SWITCH,
+        first: ON,
+        state: 'satellites.items.other.enabled',
+        firstValue: true,
       },
     ],
   },
@@ -486,8 +529,8 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Labels & Guides',
         control: 'switch',
-        does: 'Sets the twenty-one switches under it at once. With every one off it switches them all on, the Local Bubble and the constellations included; otherwise it switches them all off.',
-        values: 'On, off, or a dash while the twenty-one differ',
+        does: 'Sets every switch under it at once. With every one off it switches them all on, the Local Bubble and the constellations included; otherwise it switches them all off.',
+        values: 'On, off, or a dash while they differ',
         first: 'A dash',
       },
       label('Famous Galaxies', 'galaxyCatalogs.items.famousGalaxy.labelEnabled', 'the named galaxies'),
@@ -513,7 +556,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         ...label('Galactic Centre', 'blackHoles.items.sgr-a-star.labelEnabled', ''),
         does: 'Shows the name of Sagittarius A*.',
       },
-      label('Mesh bodies', 'bodies.items.mesh-body.labelEnabled', 'the spacecraft and the other 3D models'),
+      label('Spacecraft', 'missions.items.craft.labelEnabled', 'the spacecraft and the other 3D models'),
       label('Open clusters', 'structures.items.open-cluster.labelEnabled', 'the open clusters'),
       label('Globular clusters', 'structures.items.globular-cluster.labelEnabled', 'the globular clusters'),
       {
@@ -522,6 +565,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: false,
       },
       label('Galactic Centre', 'structures.items.gc-cluster.labelEnabled', 'the star clusters near the centre of the Milky Way'),
+      label('Small bodies', 'bodies.items.small-body.labelEnabled', 'the asteroids Vesta and Bennu and the dwarf planet Ceres'),
       {
         name: 'S-star trails',
         control: 'switch',
@@ -566,6 +610,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         first: OFF,
         state: 'lightTime.enabled',
         firstValue: false,
+      },
+      {
+        name: 'Universe horizon',
+        control: 'switch',
+        does: 'Shows the edge of the observable universe, a sphere centred on us. It fades in as the camera pulls back from about 2 to about 19 billion light-years out.',
+        values: SWITCH,
+        first: ON,
+        state: 'cosmicHorizon.enabled',
+        firstValue: true,
       },
       {
         name: 'Constellations',
@@ -702,37 +755,63 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
     ],
   },
   {
-    id: 'earth',
-    title: 'Earth',
-    under: 'Display',
-    file: `${PANEL}/EarthSection.tsx`,
+    id: 'camera-controls',
+    title: 'Camera controls',
+    file: `${PANEL}/CameraControlsSection.tsx`,
     rows: [
       {
-        name: 'Atmosphere exposure',
-        control: 'slider',
-        does: 'Sets how bright Earth’s atmosphere is drawn: the blue rim and the haze over the surface.',
-        values: '0 to 4, in steps of 0.05',
-        first: '2.35',
-        state: 'earth.atmosphereExposure',
-        firstValue: 2.35,
+        name: 'Scheme',
+        control: 'list',
+        does: 'Chooses how the mouse moves the camera. In OpenSpace a drag sets the camera moving and it slows to a stop after you let go, as in the OpenSpace planetarium software. Shift+C switches between the two.',
+        values: 'Skymap, OpenSpace',
+        first: 'Skymap',
+        state: 'cameraControls.scheme',
+        firstValue: 'skymap',
       },
       {
-        name: 'Ambient light',
-        control: 'slider',
-        does: 'Sets how much light Earth’s night side keeps. At 0 it is black but for the city lights.',
-        values: '0 to 0.2, in steps of 0.005',
-        first: '0.080',
-        state: 'earth.ambientLight',
-        firstValue: 0.08,
+        name: 'Focus moves',
+        control: 'list',
+        does: 'Chooses how the camera flies to something you focus on. Eased keeps every part of the move on one curve over a fixed time. Geodesic flies the zoom and the pan together at an even pace, and takes longer for longer journeys.',
+        values: 'Eased, Geodesic',
+        first: 'Eased',
+        state: 'focusMoves.style',
+        firstValue: 'eased',
       },
       {
-        name: 'Ocean roughness',
+        name: 'Orbit friction',
+        control: 'switch',
+        does: 'Slows the orbit to a stop after you let go. Off, the camera keeps orbiting. Shown in the OpenSpace scheme only.',
+        values: SWITCH,
+        first: ON,
+        state: 'cameraControls.frictionOn.rotational',
+        firstValue: true,
+      },
+      {
+        name: 'Zoom friction',
+        control: 'switch',
+        does: 'Slows the zoom to a stop after you let go. Off, the camera keeps moving in or out. Shown in the OpenSpace scheme only.',
+        values: SWITCH,
+        first: ON,
+        state: 'cameraControls.frictionOn.zoom',
+        firstValue: true,
+      },
+      {
+        name: 'Look & roll friction',
+        control: 'switch',
+        does: 'Slows looking around and rolling to a stop after you let go, as OpenSpace’s roll friction does. Shown in the OpenSpace scheme only.',
+        values: SWITCH,
+        first: ON,
+        state: 'cameraControls.frictionOn.roll',
+        firstValue: true,
+      },
+      {
+        name: 'Friction',
         control: 'slider',
-        does: 'Sets how wide the Sun’s reflection on Earth’s oceans is: a low value gives a small sharp glint, a high one a broad dull patch.',
-        values: '0.02 to 0.6, in steps of 0.01',
-        first: '0.30',
-        state: 'earth.oceanRoughness',
-        firstValue: 0.3,
+        does: 'Sets how long the camera takes to catch up with a drag and to stop after it. At 0 it follows the mouse at once and stops dead. Shown in the OpenSpace scheme only.',
+        values: '0 to 1, in steps of 0.05',
+        first: '0.50',
+        state: 'cameraControls.friction',
+        firstValue: 0.5,
       },
     ],
   },

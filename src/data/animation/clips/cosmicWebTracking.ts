@@ -10,10 +10,10 @@
 import type { Clip } from '../../../@types/animation/Clip';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { hide, hold, moveTarget } from '../../../services/engine/animation/effectHelpers';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
-import { COSMIC_WEB_POSE } from '../../exhibits/cosmicWebPose';
+import { COSMIC_WEB_POSE } from '../../../compositions/exhibits/cosmicWebPose';
 
 const CENTRE = COSMIC_WEB_POSE.target;
 const OUTWARD = normalize3(CENTRE);

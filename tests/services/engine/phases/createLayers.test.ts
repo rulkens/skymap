@@ -124,11 +124,13 @@ describe('createLayers', () => {
   it('throws at boot when two rows share a pick source code', async () => {
     const { store } = createAppStore();
     const state = makeState();
-    state.selectionKindRows = [{ type: 'body', pickSources: [1] } as never];
-    const layer = stubLayer('stub', {
+    const body = stubLayer('body', {
+      selection: () => [{ type: 'body', pickSources: [1] } as never],
+    });
+    const galaxy = stubLayer('galaxy', {
       selection: () => [{ type: 'galaxy', pickSources: [1] } as never],
     });
 
-    await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow();
+    await expect(createLayers(state, makeDeps([body, galaxy], store))).rejects.toThrow();
   });
 });

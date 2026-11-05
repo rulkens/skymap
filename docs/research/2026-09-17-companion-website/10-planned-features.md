@@ -167,7 +167,7 @@ These are user-facing rows only (developer tooling counts developers as its user
 
 | Item | What it would add for a user | Status | Evidence | Last activity | Blockers or open decisions |
 | --- | --- | --- | --- | --- | --- |
-| OpenSpace-style controls | A second, optional control scheme with orbit, look, zoom and roll on mouse buttons and optional coasting, familiar to planetarium operators; `shift+c` toggles it. | in review | draft PR #837; `docs/superpowers/specs/2026-09-29-openspace-camera-mode-design.md`; plan on branch `worktree-openspace-camera-mode-pr2`; prep shipped in #830 | 2026-10-05 | Code-complete, in the owner's visual check. A deletion audit and `/feature-done` come before merge. |
+| OpenSpace-style controls | A second, optional control scheme with orbit, look, zoom and roll on mouse buttons and optional coasting, familiar to planetarium operators; `shift+c` toggles it. | in review | PR #917 (rebuilt from #837); `docs/superpowers/specs/completed/2026-09-29-openspace-camera-mode-design.md`; prep shipped in #830 | 2026-10-21 | Done audit passed; waiting on the merge. |
 | Evenly paced focus flights | Fly-to moves that follow one zoom-and-pan curve with a duration set by distance, instead of a fixed 600 ms. | stalled | PR #531, branch `worktree-focus-move-interpolation` | 2026-07-31 | Open 66 days. The PR body shows tasks 6 to 10 unchecked while session notes call it complete; state is **unknown** without reading the branch. The camera has been rebuilt since (#647, #788, #830). |
 | Smooth wheel zoom and flick coast | A wheel notch that animates and a drag that coasts briefly on release. | idea | `docs/backlog/2026-09-09-camera-smooth-zoom-and-flick-coast.md`, tag `awaiting-decision` | 2026-09-09 | Needs the owner to revise ruling Q8 in `docs/grill-sessions/globe-camera-pivot-2026-08-24.md` for the default scheme. |
 | Camera stays above sharp peaks | The camera cannot pass through a narrow summit. | designed, not started | `docs/backlog/2026-09-17-camera-floor-clips-sharp-peaks.md`, tag `ready` | 2026-09-17 | None recorded. |
@@ -404,7 +404,7 @@ Not user-facing; listed so nobody mistakes them for features. Counts are approxi
 
 | Area | About how many | Representative items | Evidence |
 | --- | ---: | --- | --- |
-| Engine composition and registries | 12 | Derive `SettingsSnapshot` from the Layer registry; focusable-kind registry; source-registry factory; scene anchors as places; seeded stars out of the body tables; `URL_GATES` table | `docs/BACKLOG.md` "Engine & State"; `docs/backlog/2026-09-21-derive-settings-snapshot.md`, `2026-08-17-focusable-kind-registry.md` |
+| Engine composition and registries | 12 | Derive `SettingsSnapshot` from the Layer registry; focusable-kind registry; source-registry factory; scene anchors as places; seeded stars out of the body tables; `URL_GATES` table | `docs/BACKLOG.md` "Engine & State"; `docs/backlog/2026-09-21-derive-settings-snapshot.md`, `2026-10-28-selection-kind-facts-in-the-layer.md` |
 | Layer composition, remaining Layers | 2 | `structure` and `body` Layers still to form | `docs/superpowers/specs/2026-09-09-layer-composition-design.md` §3; `docs/backlog/2026-09-22-stars-still-in-the-body-tables.md` |
 | Declarative frame program | 1 | Layers declare where their passes go; needs an ADR superseding 0011 | `docs/grill-sessions/declarative-frame-program-2026-09-23.md` (three cases unruled) |
 | Subsystem bundles spec | 1 | Reference only, "not executable" | `docs/superpowers/specs/2026-08-17-subsystem-bundles-design.md` status banner |

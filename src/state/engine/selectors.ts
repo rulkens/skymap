@@ -47,9 +47,10 @@ const selectEngine = (state: RootState): CoreEngineSliceState => state[engineRou
  * `createLayers` when the engine bootstraps, so it is absent for the first
  * frames the shell renders. The reducer cannot seed it (that import closes D1's
  * module cycle), so the absence is read here rather than asserted away — and the
- * cast lives here, so `Partial` is the only typed path to a facts key.
+ * cast lives here, so `Partial` is the only typed path to a facts key. Exported for
+ * a Layer's own `ui/` selectors, whose fact types core must not import.
  */
-const selectEngineFacts = (state: RootState): Partial<EngineSliceState> =>
+export const selectEngineFacts = (state: RootState): Partial<EngineSliceState> =>
   selectEngine(state) as Partial<EngineSliceState>;
 
 /** Stable identities for the pre-seed window, so a subscriber sees no spurious change. */

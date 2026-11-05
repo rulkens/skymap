@@ -13,29 +13,30 @@ import { selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
-import { lonLatFocusPose } from '../../utils/camera/lonLatFocusPose';
-import { bodyFixedEyeM } from '../../utils/camera/bodyFixedEyeM';
-import { eyeFrameOf } from '../../utils/camera/eyeFrameOf';
-import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
-import { centreLookingArm } from '../../utils/camera/centreLookingArm';
+import { lonLatFocusPose } from '../../utils/camera/arms/lonLatFocusPose';
+import { bodyFixedEyeM } from '../../utils/camera/surfaceFrame/bodyFixedEyeM';
+import { eyeFrameOf } from '../../utils/camera/surfaceFrame/eyeFrameOf';
+import { eyeMpcOf } from '../../utils/camera/orbitPose/eyeMpcOf';
+import { centreLookingArm } from '../../utils/camera/arms/centreLookingArm';
 import { bodyRowAt } from '../../utils/scene/bodyRowAt';
-import { datumOnlyTerrainHeight } from '../../utils/camera/datumOnlyTerrainHeight';
-import { toBodyArm, toWorldArm } from '../../services/engine/camera/poseFrameConversion';
-import { focusFraming } from '../../services/engine/camera/focusFraming';
-import { hostOf } from '../../services/engine/camera/rungs/hostOf';
+import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerrainHeight';
+import { toBodyArm, toWorldArm } from '../../services/engine/camera/arms/body/poseFrameConversion';
+import { focusFraming } from '../../services/engine/camera/framing/focusFraming';
+import { hostOf } from '../../services/engine/camera/arms/hostOf';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { FLY_TO_LON_LAT_TWEEN_MS } from '../../data/camera/flyToLonLatTweenMs';
+import { EASED_FOCUS_EASE } from '../../data/camera/focusMoveDefaults';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../data/scaleUnits';
-import type { BodyId } from '../../@types/data/body/BodyId';
-import type { BodyState } from '../../@types/scene/BodyState';
 import type { SagaContext } from '../../store/types';
+import { isSceneBodyId } from '../../utils/scene/isSceneBodyId';
 
 export function* watchFlyToLonLatSaga() {
   yield* takeLatest(flyToLonLat, function* (action) {
     const { lonDeg, latDeg, altKm, headingRad } = action.payload;
-    const body = action.payload.body ?? (SCENE_EARTH.id as BodyId);
+    const body = action.payload.body ?? SCENE_EARTH.id;
+    if (!isSceneBodyId(body)) return;
     const durationMs = action.payload.durationMs ?? FLY_TO_LON_LAT_TWEEN_MS;
 
     const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
@@ -52,7 +53,7 @@ export function* watchFlyToLonLatSaga() {
     // kilometres underground. Only a frame of slack survives this (the tween can
     // end no sooner than the first frame past `durationMs`).
     const simDays = deriveSimDays(yield* select(selectTimeState), performance.now() + durationMs);
-    const bodies = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
+    const bodies = deriveBodyStates(simDays);
     // No terrain lookup reaches a saga (SagaContext carries none): a lon/lat fly-to
     // over hilly terrain lands `rangeM` above the datum, not the ground under it.
     const host = hostOf(
@@ -100,8 +101,7 @@ export function* watchFlyToLonLatSaga() {
       startCameraTween({
         from: runtime.from,
         to: to.pose,
-        durationMs,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs, ease: EASED_FOCUS_EASE },
         frame,
       }),
     );

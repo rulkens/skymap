@@ -13,8 +13,11 @@ import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningActive';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
+import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
+import type { FocusMoveSettings } from '../../@types/settings/FocusMoveSettings';
+import type { FocusMoveStyle } from '../../@types/camera/focusMotion/FocusMoveStyle';
 
 // --- orientation (bare scalar) ------------------------------------------------
 
@@ -34,6 +37,19 @@ export const selectOrientation = (state: RootState): OrientationFrameId =>
  * `cameraRuntime.outputs.projection.fovYRad` once per frame.
  */
 export const selectFovDeg = (state: RootState): number => selectSettings(state).camera.fovDeg;
+
+// --- cameraControls cluster ----------------------------------------------------
+
+export const selectCameraControls = (state: RootState): CameraControlsSettings =>
+  selectSettings(state).cameraControls;
+
+// --- focusMoves cluster --------------------------------------------------------
+
+export const selectFocusMoves = (state: RootState): FocusMoveSettings =>
+  selectSettings(state).focusMoves;
+
+export const selectFocusMoveStyle = (state: RootState): FocusMoveStyle =>
+  selectFocusMoves(state).style;
 
 // --- tonemap cluster ----------------------------------------------------------
 
@@ -65,9 +81,6 @@ export const selectBloomThreshold = (state: RootState): number =>
 
 export const selectDebugOverlays = (state: RootState): Record<DebugOverlayKey, boolean> =>
   selectSettings(state).debug.overlays;
-
-export const selectTerrainPickMarkerRadiusM = (state: RootState): number =>
-  selectSettings(state).debug.terrainPickMarkerRadiusM;
 
 export const selectDisabledPasses = (state: RootState): Record<string, boolean> =>
   selectSettings(state).debug.disabledPasses;

@@ -15,7 +15,7 @@ import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { rotateVec3ByTightMat3T } from '../../../src/utils/math/rotateVec3ByTightMat3T';
 import { MESH_SOURCES } from '../io/meshSources';
 
-const SEATED_IDS = new Set(
+const SEATED_IDS = new Set<string>(
   SURFACE_FIXED_SITES.filter((site) => site.seat === 'resting').map((site) => site.id),
 );
 

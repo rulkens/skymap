@@ -1,10 +1,10 @@
 /**
  * flow — the Layer's user-settable defaults, seeding `flowSlice`. These values
- * ARE the spike's hand-dialled advect look; the SOURCE_REGISTRY flow row
+ * ARE the spike's hand-dialled advect look; the APP_SOURCE_REGISTRY flow row
  * carries the asset, not the look, so retune them here.
  */
 
-import { MAX_PARTICLES } from '../../../data/flow/flowFieldConstants';
+import { MAX_PARTICLES } from '../streamlines/data/flowFieldConstants';
 import type { FlowSettings } from '../../../@types/settings/FlowSettings';
 
 /**

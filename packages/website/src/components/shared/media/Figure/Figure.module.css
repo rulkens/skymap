@@ -1,0 +1,19 @@
+.root {
+  margin: 0;
+}
+
+.caption {
+  margin-top: var(--site-space-2xs);
+}
+
+/* The margin is the room the disc's ring stands in. */
+.ringed {
+  max-width: min(26rem, 78svh);
+  margin: var(--disc-ring) auto;
+}
+
+@media (--narrow) {
+  .ringed {
+    max-width: min(85%, 78svh);
+  }
+}

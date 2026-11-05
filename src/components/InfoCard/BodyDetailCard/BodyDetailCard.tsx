@@ -1,8 +1,8 @@
 /**
  * BodyDetailCard — rich panel for a focused scene body (Earth, a planet/moon, a
- * mesh body); stars have `StarDetailCard`. The engine hands React a lean
- * `BodyInfo`; the rest comes from the compiled-in `BODY_FACTS` table, keyed by
- * `id` (no entry: radius alone). Camera distance swings as the body orbits, so
+ * mesh body), a craft or an Earth scene, each read as a body; stars have
+ * `StarDetailCard`. The engine hands React a lean `BodyInfo`; the rest comes
+ * from the compiled-in `BODY_FACTS` table, keyed by `id` (no entry: radius alone). Camera distance swings as the body orbits, so
  * it arrives as the `distanceMpc` prop, never read from the engine here.
  * Optional fields drop their row rather than show a blank.
  */
@@ -10,6 +10,8 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
+import type { CraftInfo } from '../../../@types/engine/CraftInfo';
+import type { EarthSceneInfo } from '../../../@types/engine/EarthSceneInfo';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import { formatDistance } from '../../../utils/format/formatDistance';
 import { formatRadiusM } from '../../../utils/format/formatRadiusM';
@@ -33,7 +35,7 @@ import styles from '../cardChrome.module.css';
 import local from './BodyDetailCard.module.css';
 
 export type BodyDetailCardProps = {
-  target: BodyInfo;
+  target: BodyInfo | CraftInfo | EarthSceneInfo;
   isPinned?: boolean;
   layout?: CardLayout;
   /**
@@ -77,17 +79,17 @@ function BodyDetailCard({
   const leadRows: Extract<CardRowProps, { value: ReactNode }>[] = [];
   if (seed !== undefined && !isMeshBody(seed)) {
     leadRows.push({
-      label: <InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>,
+      label: <InfoTip {...TIPS.bodyRadius}>Radius</InfoTip>,
       value: formatRadiusM(seed.surface.datumRadiusM),
     });
   }
   if (distanceMpc != null) leadRows.push({ label: 'Distance', value: formatDistance(distanceMpc) });
   if (facts?.mass) {
-    leadRows.push({ label: <InfoTip {...TIPS.bodyMass!}>Mass</InfoTip>, value: facts.mass });
+    leadRows.push({ label: <InfoTip {...TIPS.bodyMass}>Mass</InfoTip>, value: facts.mass });
   }
   if (facts?.gravity) {
     leadRows.push({
-      label: <InfoTip {...TIPS.bodyGravity!}>Gravity</InfoTip>,
+      label: <InfoTip {...TIPS.bodyGravity}>Gravity</InfoTip>,
       value: facts.gravity,
     });
   }
@@ -125,14 +127,14 @@ function BodyDetailCard({
           {!shotBeside && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
           {facts?.dayLength && (
             <CardRow
-              label={<InfoTip {...TIPS.bodyDayLength!}>Day length</InfoTip>}
+              label={<InfoTip {...TIPS.bodyDayLength}>Day length</InfoTip>}
               value={facts.dayLength}
             />
           )}
           {facts?.yearLength && (
             <CardRow
               label={
-                <InfoTip {...TIPS.bodyYearLength!}>
+                <InfoTip {...TIPS.bodyYearLength}>
                   {facts.parent ? 'Orbital period' : 'Year length'}
                 </InfoTip>
               }
@@ -142,7 +144,7 @@ function BodyDetailCard({
           {facts?.distance && (
             <CardRow
               label={
-                <InfoTip {...TIPS.bodyDistance!}>
+                <InfoTip {...TIPS.bodyDistance}>
                   {facts.parent ? `Distance from ${facts.parent}` : 'Distance from Sun'}
                 </InfoTip>
               }
@@ -151,22 +153,22 @@ function BodyDetailCard({
           )}
           {facts?.meanTemp && (
             <CardRow
-              label={<InfoTip {...TIPS.bodyMeanTemp!}>Mean temperature</InfoTip>}
+              label={<InfoTip {...TIPS.bodyMeanTemp}>Mean temperature</InfoTip>}
               value={facts.meanTemp}
             />
           )}
           {facts?.moons && (
-            <CardRow label={<InfoTip {...TIPS.bodyMoons!}>Moons</InfoTip>} value={facts.moons} />
+            <CardRow label={<InfoTip {...TIPS.bodyMoons}>Moons</InfoTip>} value={facts.moons} />
           )}
           {facts?.axialTilt && (
             <CardRow
-              label={<InfoTip {...TIPS.bodyAxialTilt!}>Axial tilt</InfoTip>}
+              label={<InfoTip {...TIPS.bodyAxialTilt}>Axial tilt</InfoTip>}
               value={facts.axialTilt}
             />
           )}
           {facts?.atmosphere && (
             <CardRow
-              label={<InfoTip {...TIPS.bodyAtmosphere!}>Atmosphere</InfoTip>}
+              label={<InfoTip {...TIPS.bodyAtmosphere}>Atmosphere</InfoTip>}
               value={facts.atmosphere}
             />
           )}

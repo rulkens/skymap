@@ -4,10 +4,10 @@
  * family and again by what may be done with it, made from data/dataPages.ts.
  * A row's `Use` terms and their meanings are the record's; the counts are counted.
  */
-import DocFigure from '../../../components/DocFigure/DocFigure.tsx';
-import DocLink from '../../../components/DocLink/DocLink.tsx';
-import DocTable from '../../../components/DocTable/DocTable.tsx';
-import UseLegend from '../../../components/UseLegend/UseLegend.tsx';
+import DocFigure from '../../../components/docs/DocFigure/DocFigure.tsx';
+import DocLink from '../../../components/docs/DocLink/DocLink.tsx';
+import DocTable from '../../../components/docs/DocTable/DocTable.tsx';
+import UseLegend from '../../../components/docs/UseLegend/UseLegend.tsx';
 import { ATTRIBUTION_USES } from '../../../../../../tools/utils/io/attributionUses';
 import { DATA_ENTRIES, DATA_FAMILIES_USED } from '../../../data/dataPages';
 import Docs from '../../../layouts/Docs.astro';
@@ -44,7 +44,7 @@ const limited = DATA_ENTRIES.filter((entry) => entry.record.use.some((term) => A
   </p>
   <p>
     A picture made with Skymap carries the terms of every source in it: see <DocLink href="/about/#press"
-      >Pictures and their terms</DocLink
+      >the press kit</DocLink
     >. The lines to print are on <DocLink href="/docs/credits/">Credits</DocLink>, and how the files become what the app loads is on <DocLink
       href="/docs/data/pipeline/">From catalogue to pixels</DocLink
     >.

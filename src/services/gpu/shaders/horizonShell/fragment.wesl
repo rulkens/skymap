@@ -2,7 +2,7 @@
 // Fresnel-rim shading for the observable-universe horizon shell.
 //
 // Each fragment builds its world-space view ray from the camera basis
-// (origin = camera, direction from FOV + NDC), then solves for the
+// (origin = camera, direction from the frustum + NDC), then solves for the
 // ray's intersection with the sphere centred at the world origin and
 // shades the hit point with a Fresnel rim so the silhouette glows and
 // the face-on centre fades to transparent.
@@ -25,11 +25,11 @@ const INTENSITY: f32 = 0.25;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
-  // World-space view ray for this pixel, from the camera basis + FOV.
+  // World-space view ray for this pixel, from the camera basis + frustum.
   let rayDir = normalize(
-    u.camForward
-    + input.ndc.x * u.tanHalfFovY * u.aspect * u.camRight
-    + input.ndc.y * u.tanHalfFovY * u.camUp,
+    u.rayAxis
+    + input.ndc.x * u.tanHalfX * u.camRight
+    + input.ndc.y * u.tanHalfY * u.camUp,
   );
 
   // Sphere centre relative to the camera (= ray origin at 0), in Gpc.

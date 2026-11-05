@@ -37,6 +37,7 @@ import { moonRatesFromSiderealPeriods } from '../../../utils/orbit/moonRatesFrom
 import { planeFrameFromPole } from '../orbitPlaneFrames';
 import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 export function satellite(spec: {
   id: string;
@@ -56,8 +57,8 @@ export function satellite(spec: {
   color: Vec3;
 }): OrbitalElements {
   return {
-    id: spec.id,
-    focusId: spec.focusId,
+    id: asSceneBodyId(spec.id),
+    focusId: asSceneBodyId(spec.focusId),
     semiMajorMpc: spec.semiMajorKm * SCALE_UNITS.KM_TO_MPC,
     eccentricity: spec.eccentricity,
     inclinationRad: degToRad(spec.inclinationDeg),

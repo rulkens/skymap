@@ -7,11 +7,9 @@
  * fixtures source it differently (a hand-advanced row vs. a real player).
  */
 
-import type { CameraState } from '../../../src/@types/camera/CameraState';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../src/@types/scene/BodyState';
+import type { CameraState } from '../../../src/@types/camera/orbitCamera/CameraState';
 import type { Epoch } from '../../../src/@types/engine/camera/Epoch';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import type { CameraSimHarness } from './CameraSimHarness';
 
 import { stepCameraRuntime } from '../../../src/services/engine/camera/stepCameraRuntime';
@@ -20,6 +18,7 @@ import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { selectPendingInput } from '../../../src/state/input/selectors';
+import { selectViewCoverPx } from '../../../src/state/viewCover/selectors';
 import { inputConsumed } from '../../../src/state/input/inputSlice';
 import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
@@ -40,12 +39,13 @@ export function simulateCameraFrame(
     simDays,
     rootState: stored,
     canvasPx,
+    coverPx: selectViewCoverPx(stored),
     aspect: deps.canvas.width / deps.canvas.height,
     steps: pendingToInputSteps(pending, canvasPx),
-    bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
+    bodies: deriveBodyStates(simDays),
     terrainHeightAt: () => 0,
     clipEpoch,
-    drivers: deps.controlSchemes.skymap.drivers,
+    schemes: deps.controlSchemes,
   });
   state.cameraRuntime = next;
   for (const action of actions) store.dispatch(action);

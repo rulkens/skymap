@@ -15,7 +15,7 @@ import {
   hold,
   show,
 } from '../../../services/engine/animation/effectHelpers';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 import { GALACTIC_EDGE_ON } from './makers/galacticSightlines';
 

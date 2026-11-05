@@ -1,5 +1,5 @@
 /**
- * CubemapCaptureRuntimes — every `CUBEMAP_CAPTURES` row's cross-frame bake
+ * CubemapCaptureRuntimes — every `APP_CUBEMAP_CAPTURE_REGISTRY` row's cross-frame bake
  * memory, keyed by row. Total over both key unions, so a read is a plain
  * property access whose kind the key already decides.
  */

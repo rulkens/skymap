@@ -5,7 +5,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { gateLabelProducer } from '../../../../src/services/engine/layer/gateLabelProducer';
@@ -18,7 +18,7 @@ import type { Label2DProducerOutput } from '../../../../src/@types/engine/subsys
 const OUTPUT: Label2DProducerOutput = { labels: [], awake: true };
 const MID_FADE_MS = 300;
 
-function makeState(clip = 1, entries: readonly VisibilityEntry[] = APP_VISIBILITY) {
+function makeState(clip = 1, entries: readonly VisibilityEntry[] = APP_VISIBILITY_REGISTRY) {
   const fades = createFadeRegistry({ requestRender: () => {} });
   const clipPlayer = { clipOpacityOf: () => clip };
   const state = {
@@ -82,7 +82,7 @@ describe('gateLabelProducer', () => {
   });
 
   it('band 0 for every item skips a live producer', () => {
-    const banded = APP_VISIBILITY.map((e) =>
+    const banded = APP_VISIBILITY_REGISTRY.map((e) =>
       'label' in e && e.label === 'milkyWay' ? { ...e, bands: { near: { out: [0, 0.4] } } } : e,
     ) as readonly VisibilityEntry[];
     const { state, fades } = makeState(1, banded);
@@ -93,7 +93,7 @@ describe('gateLabelProducer', () => {
   });
 
   it('the only live item sits at band 0 while a dead item has band > 0 → skipped', () => {
-    const banded = APP_VISIBILITY.map((e) =>
+    const banded = APP_VISIBILITY_REGISTRY.map((e) =>
       'label' in e && e.label === 'structure'
         ? { ...e, bands: { near: { out: [0, 0.4], items: ['void'] } } }
         : e,

@@ -6,44 +6,64 @@ frame. Core composes Layers; it does not reach inside one.
 
 The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 `defineLayer` (`src/services/engine/layer/defineLayer.ts`) and assembled by
-`createLayers`. `src/layers/galaxyCatalog/` is the reference implementation.
+`createLayers`. `src/layers/galaxyCatalog/` is the reference implementation for the contract; follow ADR 0014 for folders.
 
 ## Where things go
 
-**The folder layout is the contract, spelled out.** A contract member that is one
-function is a root file named for it; a member that is a collection is a folder.
+**A Layer is a set of concern modules plus the few files the composition root reads by path** ([ADR 0014](../../docs/adrs/0014-layers-organised-by-concern-modules.md)). Code is grouped by what it is for (`disks/`, `pointSprites/`, `aliases/`), never by kind of file, and no folder under `src/layers/` holds more than 15 files (`tests/conventions/concernFolderShape.test.ts`).
 
-| Contract member | Lives in                                       | Notes                                                                                                                                                                                                                          |
-| --------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `name`          | `layer.ts`                                     | The whole `defineLayer` call, nothing else                                                                                                                                                                                     |
-| `create`        | `create.ts`                                    | Mints the Runtime — the Layer's private guts                                                                                                                                                                                   |
-| `destroy`       | `destroy.ts`                                   | Releases exactly what `create` took                                                                                                                                                                                            |
-| `planners?`     | `frame.ts`                                     | Per-frame content planning; appended to `state.planners` by `createLayers`                                                                                                                                                     |
-| `settings?`     | `state/`                                       | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional                                                                                                          |
-| `sources?`      | `sources/`                                     | One `SOURCE_REGISTRY` row per file, + the rows array                                                                                                                                                                           |
-| `sagas?`        | `sagas/`                                       | One saga per file                                                                                                                                                                                                              |
-| `search?`       | `present/`                                     | Palette rows, an async iterable; each yield replaces the Layer's previous snapshot                                                                                                                                             |
-| `sourceCounts?` | `load/`                                        | Per-source counts, an async iterable, on the same terms as `search?`                                                                                                                                                           |
-| `slabs?`        | `present/`                                     | Static `readonly SlabRow[]` — metre-frame hosts this Layer draws on; no runtime needed (data, not a closure)                                                                                                                   |
-| `ui?`           | `ui/`                                          | SettingsPanel/DebugPanel sections, a `labelsAndGuides` row, or a `detailCard` InfoCard arm — hand-written                                                                                                                      |
-| `passes`        | `passes/`                                      | One `ContentPass` factory per file                                                                                                                                                                                             |
-| `assets?`       | `load/`                                        | The asset-row declaration, beside its slots                                                                                                                                                                                    |
-| `visibility?`   | `visibility.ts`                                | Static show and label entries, data only; `APP_VISIBILITY` imports the tuple, so it never imports `layer.ts`                                                                                                                   |
-| `guides?`       | `present/`                                     |                                                                                                                                                                                                                                |
-| `selection?`    | `present/`                                     |                                                                                                                                                                                                                                |
-| `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                                                                                                                                |
-| `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                                                                                                                                    |
-| `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import                                                                                                                       |
-| `bodies?`       | `bodies/`                                      | One body row per file, + the rows array. Leaf data: imports types and `src/data` makers only; `data/bodies/layerBodyRows.ts` folds them into the static body tables by import                                                  |
-| `terrain?`      | `terrain.ts`                                   | Runtime-bound: the ground core's camera reads (`heightAt`, `residentHeightLevelAt`, `subCamera`). One provider per composition, counting core's surface-tile provider (until the body Layer takes it over); boot throws on two |
+**At the Layer root** stay only:
 
-Three more folders hold the Runtime's private machinery — core never sees these:
+| Contract member | Lives in                                       | Notes                                                                                                                                                                                                                                                                                  |
+| --------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`          | `layer.ts`                                     | The whole `defineLayer` call, nothing else                                                                                                                                                                                                                                             |
+| `create`        | `create.ts`                                    | Mints the Runtime — the Layer's private guts                                                                                                                                                                                                                                           |
+| `destroy`       | `destroy.ts`                                   | Releases exactly what `create` took                                                                                                                                                                                                                                                    |
+| `planners?`     | `frame.ts`                                     | Per-frame content planning; appended to `state.planners` by `createLayers`                                                                                                                                                                                                             |
+| `visibility?`   | `visibility.ts`                                | Static show and label entries, data only; `APP_VISIBILITY_REGISTRY` imports the tuple, so it never imports `layer.ts`                                                                                                                                                                  |
+| `heightAt?`     | `heightAt.ts`                                  | Runtime-bound: the ground height core's camera reads; the datum with none. One provider per composition; boot throws on two                                                                                                                                                            |
+| `settings?`     | `state/`                                       | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional                                                                                                                                                                  |
+| `sources?`      | `sources/`                                     | One `APP_SOURCE_REGISTRY` row per file, + the rows array; optional code-keyed `<layer>SourceRecord.ts` for the Layer's own lookups (Layers never import `APP_SOURCE_REGISTRY`); its id types live in `@types/`                                                                         |
+| `bodies?`       | `bodies/`                                      | One body row per file, + the rows array. Leaf data: imports types, `src/data` constants and makers, and pure utils; never a body table, `layer.ts` or a pass. `compositions/appBodies.ts` collects them by import, a host's Layer (body's Earth) before the Layers whose rows orbit it |
+| —               | `bodies/makers/`                               | The Layer's own row builders (`heliocentricPlanet`, `satelliteBody`), imported by its `bodies/` rows only                                                                                                                                                                              |
+| `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import                                                                                                                                                                               |
+| `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                                                                                                                                                                                        |
+| `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                                                                                                                                                                                            |
+| —               | `@types/`                                      | The Layer's **contract** types only, one per file, filename = the type: `<Name>Runtime`, its facts, its settings types (`StructureSettings` and the like), its id and source types. Types shared with core or a sibling Layer stay under `src/@types/`                                 |
 
-- **`load/`** — fetchers, `AssetSlot`s and the wiring that binds them.
-- **`render/`** — GPU pipeline objects: renderers, vertex layouts, uniform packers.
-- **`@types/`** — the Layer's **own** contract types, one per file, filename = the
-  type. `<Name>Runtime.d.ts` is always here. Types shared with core or with a sibling
-  Layer stay under `src/@types/` instead.
+**Every other contract member and all runtime machinery live in a concern module,** `<concern>/<role>/`. The members that are collections (`sagas?`, `ui?`, `passes`, `computes?`, `assets?`, `search?`, `sourceCounts?`, `slabs?`, `skyCaptures?`, `guides?`, `selection?`) are still declared in `layer.ts`; each imports its leaves from the module that owns the concern. A module uses only the role folders it needs:
+
+| Role folder   | Holds                                                                                                                                                                                        |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `render/`     | GPU pipeline objects: renderers, vertex layouts, uniform packers                                                                                                                             |
+| `subsystems/` | Stateful per-frame machinery that decides what to draw (see below)                                                                                                                           |
+| `passes/`     | One `ContentPass` factory per file                                                                                                                                                           |
+| `load/`       | Fetchers, `AssetSlot`s and the `assets` / `sourceCounts` declarations, beside their slots                                                                                                    |
+| `present/`    | `guides`, `selection`, `search`, `slabs` rows (`search` is an async iterable; each yield replaces the Layer's previous snapshot; `slabs` is a static `readonly SlabRow[]`, data not closure) |
+| `ui/`         | SettingsPanel/DebugPanel sections, a `labelsAndGuides` row, a `detailCard` InfoCard arm — hand-written; store-reaching components live here                                                  |
+| `sagas/`      | One saga per file; store-reaching, so the store-boundary sweep exempts it                                                                                                                    |
+| `@types/`     | The module's own types, one per file                                                                                                                                                         |
+| `utils/`      | The module's helpers, one function per file; a helper with a second Layer or core user stays in `src/utils/`                                                                                 |
+| `data/`       | The module's constants and tables, one per file; a constant with a second Layer or core user stays in `src/data/`                                                                            |
+| `computes/`   | Compute passes                                                                                                                                                                               |
+
+A module's `utils/` is flat: one function per file, no `<area>` subfolders unless it passes the cap. A non-contract type lives in the `@types/` of the module that produces its values; sibling modules import it from there, and it never sits in the root `@types/`. A module whose role folder outgrows 15 files splits into sub-modules, each with its own role folders. A root folder over the cap (`bodies/`, `sources/`, `exhibits/`) groups its leaves in subfolders (`bodies/planets/`, `bodies/moons/`), still imported by the composition root leaf by leaf. Module names say what the thing is for; `helpers`, `misc`, `common`, `shared`, `other` and `utils` are refused as module names.
+
+galaxyCatalog's shipped modules, as an example of the layout:
+
+```
+galaxyCatalog/
+  layer.ts  create.ts  destroy.ts  frame.ts  visibility.ts
+  sources/  state/
+  @types/                      GalaxyCatalogRuntime.d.ts …
+  records/{load,data,present,utils,@types}/
+  pointSprites/{render,passes,data,utils,@types}/
+  lod/{data,subsystems,utils,@types}/
+  disks/{load, quad/, procedural/, textured/}   (sub-modules, each with its own role folders)
+  hiResFamous/{subsystems,load,data,utils,@types}/
+  aliases/{load,sagas,utils,@types}/
+  card/ui/  provenance/{ui,utils,data}/  controls/ui/
+```
 
 An exhibit's notes are sections, each `section(kind, data)`. A **section kind**
 (`ExhibitSectionKind`) carries its `Component`, and optionally a `hold` (the saga that
@@ -55,9 +75,9 @@ drag). A kind lives beside its exhibit (`exhibits/<area>/`); the files it reache
 read or write the store sit in `ui/` and `sagas/`, which the outbound sweep exempts. An
 exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 
-**`subsystems/` vs `render/`.** Both stay. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A Layer with no per-frame decision state has no `subsystems/` folder.
+**`subsystems/` vs `render/`.** Both stay, inside a module. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A module with no per-frame decision state has no `subsystems/` folder.
 
-**Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row. `load/` holds `assets` and `sourceCounts`; `present/` holds `guides`, `selection`, `search`, `slabs`; `passes/` and `computes/` already work this way. Every formed Layer follows both rules.
+**Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row: `assets` and `sourceCounts` sit in `load/`, `guides`, `selection`, `search` and `slabs` in `present/`.
 
 ## Rules
 
@@ -65,8 +85,8 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
   no `index.ts`.
 - **Types never live inline in implementation files.** A React component's own
   `Props` is the one exception.
-- **`passes/` files export only their one named symbol** — helpers go to
-  `src/utils/`, constants to `src/data/`. Ratchet:
+- **`passes/` files export only their one named symbol** — helpers go to the
+  module's `utils/`, constants to its `data/` (`src/utils/`, `src/data/` when shared). Ratchet:
   `tests/services/engine/frame/frameFilePurity.test.ts`.
 - **Pass names are globally unique.** `createLayers` throws at boot if two Layers
   answer to the same one, which is what catches a half-finished migration where
@@ -91,7 +111,15 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
-`milkyWay`, `lightTime`, `structure` and `missions` are formed. `body` is the one
-settings-only Layer: its `layer.ts` declares the body clusters, while its render
-and load code stay in core. `earthScenes` is a bodies-only Layer (its rows fold into
-the tables; core still draws them).
+`milkyWay`, `lightTime`, `cosmicHorizon`, `structure`, `missions` and `body` are formed.
+`cosmicHorizon` draws the particle-horizon shell and carries the Observable Universe exhibit. `body` draws
+Earth, the planets, moons and rings: its own renderers, texture slots, passes and
+atmosphere computes, with its Earth and planet slab rows declared in `layer.ts`; its
+shape-model moons go through core's one mesh handle. It also streams and plans the
+surface tiles, and its `heightAt` is the ground core's camera reads. It declares its identity: the body rows in `body/bodies/`, the
+`body` selection kind and card, palette rows, name captions, orbit trails and the
+Solar System exhibit. `missions` draws its craft: the rows live in
+`missions/bodies/`, and its own mesh, contact-shadow and glint passes draw
+through core's one mesh renderer handle. `earthScenes` declares the Earth scene rows (they
+fold into the tables), its own `earthScene` selection kind and palette row, and draws Søndermarken: its mesh through core's one mesh handle, its
+glint through its own renderer.

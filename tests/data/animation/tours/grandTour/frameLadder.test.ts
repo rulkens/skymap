@@ -42,7 +42,7 @@ import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
 import type { SceneEffect } from '../../../../../src/@types/animation/SceneEffect';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { OrientationFrameId } from '../../../../../src/@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../../../src/@types/camera/orientation/OrientationFrameId';
 import type { RootState } from '../../../../../src/store/types';
 
 /**

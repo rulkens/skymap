@@ -9,13 +9,13 @@ import { SOURCE_ENTRIES } from '../../data/sourceEntries';
 import { BODY_PICK_ROWS } from '../../data/bodies/bodyPickRows';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../data/selectionEncoding';
 import { seedIndexOfBody } from './seedIndexOfBody';
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../@types/data/body/BodySourceId';
 
 const BODY_ENTRIES = SOURCE_ENTRIES.filter((entry) => entry.type === 'body');
 
 export function sceneBodyPickId(id: string): number | null {
   for (const entry of BODY_ENTRIES) {
-    const index = seedIndexOfBody(id, BODY_PICK_ROWS[entry.id as BodyId]);
+    const index = seedIndexOfBody(id, BODY_PICK_ROWS[entry.id as BodySourceId]);
     if (index >= 0) return packSelection(entry.code, index + PICK_SENTINEL_OFFSET);
   }
   return null;

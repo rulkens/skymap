@@ -6,7 +6,7 @@
 
 import { ToneMapCurve, toneMapCurveSaturation } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
-import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../@types/camera/orientation/OrientationFrameId';
 
 // ── Camera drift ────────────────────────────────────────────────────────────
 
@@ -110,15 +110,6 @@ export const DEFAULT_BLOOM_THRESHOLD = 2.0;
  * SettingsPanel slider lets the user tune per field.
  */
 export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
-
-/**
- * Default renderer-wide palette LUT for the scalar-volume overlay.
- * 'viridis' is matplotlib's perceptually-uniform default — neutral
- * blue-green-yellow ramp that reads as "scientific" without leaning
- * warm or cool.  Mutated at runtime via `setVolumePalette`; persisted
- * to localStorage by the App shell so reloads keep the user's choice.
- */
-export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
 
 // ── Camera lens ───────────────────────────────────────────────────────────────
 

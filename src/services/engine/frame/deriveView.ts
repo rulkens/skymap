@@ -7,29 +7,28 @@
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { ViewSpec } from '../../../@types/engine/frame/ViewSpec';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { computeViewProj } from '../../../utils/camera/computeViewProj';
-import { viewFromCameraEye } from '../../../utils/camera/viewFromCameraEye';
-import { turnedOrbitCamera } from '../../../utils/camera/turnedOrbitCamera';
+import { computeViewProj } from '../../../utils/camera/projection/computeViewProj';
+import { viewFromCameraEye } from '../../../utils/camera/projection/viewFromCameraEye';
+import { turnedOrbitCamera } from '../../../utils/camera/viewRig/turnedOrbitCamera';
 import { multiply3x3 } from '../../../utils/math/multiply3x3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { starSphereRangeM } from '../../../utils/star/starSphereRangeM';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/meshBodies/meshBodiesAttachedTo';
-import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
-import { bodySlabRowOf } from '../../../utils/scene/bodySlabRowOf';
-import { viewBodyPose } from '../camera/viewBodyPose';
+import { viewBodyPose } from '../camera/bodyFrame/viewBodyPose';
 import { deriveSlabs } from './slabs';
-import { visibleSlabBodies } from './visibleSlabBodies';
+import { visibleBodyRows } from './visibleBodyRows';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
 import { near0SphereBodies } from './near0SphereBodies';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 export function deriveView(
   snapshot: ReadyFrameContext,
@@ -59,31 +58,12 @@ export function deriveView(
   // for a symmetric frustum.
   const pxPerRad = sizePx.height / (frustum.tanUp - frustum.tanDown);
 
-  const slabGate = {
-    bodyStates,
+  const visibleRows = visibleBodyRows(snapshot, {
     camPosMpc: drawCamPos,
     camForwardMpc: viewForward,
     frustum,
     pxPerRad,
-  };
-  const gatedRows = visibleSlabBodies({ ...slabGate, rows: slabBodyCandidates });
-  // A hosted mesh body owns no slab row — it rides its host's
-  // (`meshBodiesPass`), so the host's roster entry is what keeps it drawable; a
-  // hostless one keys on itself and is already a candidate. From a 400 km
-  // orbit Earth's ~70° angular radius takes it out of the frustum gate around
-  // 126° off-axis, which would blank a mesh body sitting dead centre. The SAME
-  // gate run over the mesh bodies re-admits their hosts, so there is one cull
-  // applied twice rather than two culls to keep in step. The body rides along
-  // on the row so the surviving rows can name their hosts.
-  const meshHostIds = new Set(
-    visibleSlabBodies({
-      ...slabGate,
-      rows: meshBodies.map((body) => ({ ...bodySlabRowOf(body), body })),
-    }).map((row) => meshBodySlabHostId(row.body.id)),
-  );
-  const visibleRows = gatedRows.concat(
-    slabBodyCandidates.filter((row) => meshHostIds.has(row.anchorId) && !gatedRows.includes(row)),
-  );
+  });
 
   // Both providers' output turned and offset alike, so a body arm stays
   // metre-native; unconditional because an identity turn and a zero offset are
@@ -96,7 +76,7 @@ export function deriveView(
   // Host body id → the mesh bodies riding its slab row (spec's fifth
   // `SceneBody` arm), each resolved into the host's own frame — the SAME
   // `bodyStates` snapshot `bodyPose` reads above, so this can never disagree
-  // with a slab row's own pose. Hosts with no mesh-body attachment (every
+  // with a slab row's own pose. Hosts with no mesh body attachment (every
   // body but Earth, today) get no map entry, and `deriveSlabs` reads a
   // missing entry as `undefined` — see `bodySlabRow`'s `attachedBodies` doc.
   const attachedBodiesByHostId = new Map<string, readonly HostFrameSphere[]>();

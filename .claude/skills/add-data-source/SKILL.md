@@ -21,7 +21,7 @@ skymap has two kinds of "data source", with very different edit surfaces:
   detail. The edit surface is a registry row plus a handful of typed tables;
   the rest derives from the registry.
 
-**The core hazard (read this first).** The `SOURCE_REGISTRY` row is the single
+**The core hazard (read this first).** The `APP_SOURCE_REGISTRY` row is the single
 home of a structure category's identity; settings, counts, pick decode, search,
 deep links and the marker and label passes derive from it. What remains
 hand-edited is a short list: the source code, the row, the style row, the record
@@ -57,8 +57,8 @@ The common case: **a source row inside the `galaxyCatalog` Layer**
 galaxy-catalog sources (SDSS, 2MRS, GLADE, …) each get their own
 `sources/<id>.ts` row file inside the Layer; `sources/galaxyCatalogSourceRows.ts`
 lists them in draw/UI order and the Layer composes them into the global
-`SOURCE_REGISTRY` (`src/data/sources.ts`, still the single cross-Layer table —
-the `Source` code enum stays global, per the layer-composition spec). Adding a
+`APP_SOURCE_REGISTRY` (`src/compositions/appSources.ts`, still the single cross-Layer table —
+the `Source` code enum stays global, per the layer-composition spec). The Layer's own files read their rows through its `sources/<layer>SourceRecord.ts` (rows keyed by code), never `APP_SOURCE_REGISTRY`: Layers do not import `compositions/` (`layerImportBoundary`). Its `GalaxyCatalogId` and `GalaxyCatalogSourceType` live in the Layer's `@types/`, derived from those rows. Adding a
 tenth survey is a new row file plus a line in that list, not a new Layer.
 
 A genuinely **new Layer** (a new family with its own renderers/settings/passes,
@@ -133,10 +133,10 @@ stars, say — Decision A) mirrors these seams rather than inventing new ones.
 Walk them in the same registry row → settings cluster → fetcher/slot/wiring →
 renderer/layer order the galaxy catalogs use:
 
-- **Registry row + id domain** — a `type: 'starCatalog'` `SOURCE_REGISTRY` row
-  (`src/data/sources/gaia-stars.ts` is the template). `StarCatalogId`
-  (`@types/data/starCatalog/StarCatalogId`) is the `type: 'starCatalog'`
-  narrowing of the source-entry union, and `STAR_CATALOG_IDS`
+- **Registry row + id domain** — a `type: 'starCatalog'` `APP_SOURCE_REGISTRY` row
+  (`src/layers/starCatalog/sources/gaia-stars.ts` is the template). `StarCatalogId`
+  (`src/layers/starCatalog/@types/StarCatalogId`) is derived from the Layer's own
+  `STAR_CATALOG_SOURCE_RECORD` rows, and `STAR_CATALOG_IDS`
   (`src/data/starCatalog/starCatalogIds.ts`) its auto-widening runtime list —
   the star-only analogue of the galaxy-catalog id domain. Add the row and both
   widen with no further edit.
@@ -176,13 +176,13 @@ walk you to anything missed.
 | 2   | Registry row       | `src/layers/structure/sources/<x>.ts` (new, a `StructureSourceEntry`) + import and line in `src/layers/structure/sources/structureSourceRows.ts`                                                | `id`, `scale`, the copy fields `detailLabel` / `shortLabel` / `plural`          |
 | 3   | Non-survey guard   | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                                                                    | Keeps the `switch` exhaustive; a structure has no galaxy type                                   |
 | 4   | Record arm         | `src/@types/data/structure/StructureInfo.d.ts` (`XRecord` + the union)                                                                              | The category's own fields, if any (`nebulaKind`)                                                   |
-| 5   | Style row          | `src/layers/structure/present/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
+| 5   | Style row          | `src/layers/structure/markers/present/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
 | 6   | Distance band      | `src/layers/structure/visibility.ts`  | Nothing to edit: the category joins `STRUCTURE_IDS_BY_SCALE` through its registry row's `scale` and takes that scale's band (below) |
-| 7   | Build switch       | `src/layers/structure/load/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
+| 7   | Build switch       | `src/layers/structure/catalog/load/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
 | 8   | Seed parser        | `tools/parsers/parseStructureSeed.ts`                                                                                                               | Per-category fields: what is required, what is rejected elsewhere                               |
-| 9   | Card row (if any)  | `src/layers/structure/ui/StructureDetailCard/StructureDetailCard.tsx`; copy in `src/data/structure/` (`nebulaKindLabels.ts`, which stays in core)                       | A per-category fact such as a nebula's Type                                                     |
+| 9   | Card row (if any)  | `src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard.tsx`; copy in `src/data/structure/` (`nebulaKindLabels.ts`, which stays in core)                       | A per-category fact such as a nebula's Type                                                     |
 | 10  | Seed rows          | `data/seeds/structure_anchors.seed.json` (plain `git add`)                                                                                          | The data; fields below                                                                          |
-| 11  | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/layers/structure/load/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm |
+| 11  | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/layers/structure/catalog/load/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm |
 
 ### Source code (step 1)
 
@@ -254,7 +254,7 @@ prefix), the search chip and palette rows, default marker and label visibility,
 (chosen by `scale`). Counts and the palette's search list are the structure
 Layer's facts (`counts`, `searchList`), published by
 `load/wireStructureProjection.ts` off the store, with no per-category row.
-`BULK_CATALOG_CATEGORIES` in `src/layers/structure/load/structureAssetRows.ts`
+`BULK_CATALOG_CATEGORIES` in `src/layers/structure/catalog/load/structureAssetRows.ts`
 is the one list not derived: add the category **only if** it has a bulk
 `.ccat`, which a seed-only category does not.
 

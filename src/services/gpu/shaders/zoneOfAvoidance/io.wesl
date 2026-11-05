@@ -11,8 +11,8 @@
 
 // ── Uniforms layout (128 bytes) ─────────────────────────────────────
 //
-//   offset  0 : camForward    (vec3<f32>) + tanHalfFovY    (f32)
-//   offset 16 : camRight      (vec3<f32>) + aspect         (f32)
+//   offset  0 : rayAxis       (vec3<f32>) + tanHalfY       (f32)
+//   offset 16 : camRight      (vec3<f32>) + tanHalfX       (f32)
 //   offset 32 : camUp         (vec3<f32>) + innerRadiusMpc (f32)
 //   offset 48 : cameraPosMpc  (vec3<f32>) + outerRadiusMpc (f32)
 //   offset 64 : color         (vec3<f32>) + bulgeDeg       (f32)
@@ -40,10 +40,10 @@
 // target still builds the rays of the canvas pixels it stands for.
 
 struct Uniforms {
-  camForward: vec3<f32>,
-  tanHalfFovY: f32,
+  rayAxis: vec3<f32>,
+  tanHalfY: f32,
   camRight: vec3<f32>,
-  aspect: f32,
+  tanHalfX: f32,
   camUp: vec3<f32>,
   innerRadiusMpc: f32,
   cameraPosMpc: vec3<f32>,

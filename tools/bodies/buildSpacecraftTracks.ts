@@ -2,7 +2,7 @@
 /**
  * buildSpacecraftTracks — Voyager 1 and 2 state vectors (daily base + dense encounter windows
  * from `fetchHorizons` / `fetchVoyagerWindows`) → `public/data/spacecraftTracks.bin` plus
- * `src/data/missions/missionEvents.generated.ts`. Samples are merged, decimated so the Hermite
+ * `src/layers/missions/events/data/missionEvents.generated.ts`. Samples are merged, decimated so the Hermite
  * the app evaluates stays within 1 km of every raw sample, and every raw sample is re-checked
  * against the kept ones. Each encounter is first blended onto DE441 (`blendEncounterToDE441`);
  * closest approaches come straight from the craft-against-body-centre fetch. Launch,
@@ -33,7 +33,7 @@ const TOLERANCE_KM = 1;
 const RAW_ROOT = rawDataPath('horizons');
 const RAW_DIR = join(RAW_ROOT, '500@10');
 const TRACKS_PATH = 'public/data/spacecraftTracks.bin';
-const EVENTS_PATH = 'src/data/missions/missionEvents.generated.ts';
+const EVENTS_PATH = 'src/layers/missions/events/data/missionEvents.generated.ts';
 const TITAN_RADIUS_KM = 2574.73;
 
 const jdToIso = (jd: number): string => new Date(julianDaysToUnixMs(jd)).toISOString();
@@ -151,11 +151,11 @@ async function main(): Promise<void> {
   console.log(`wrote ${TRACKS_PATH}: ${bin.length} bytes`);
 
   const source =
-    '// src/data/missions/missionEvents.generated.ts\n' +
+    '// src/layers/missions/events/data/missionEvents.generated.ts\n' +
     '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
     '// Regenerate with:  npm run fetch-horizons -- voyager1 voyager2 && npm run fetch-voyager-windows && npm run build-spacecraft-tracks\n' +
     '// Source of truth:  data/raw/horizons/{500@10,500@5..500@8,500@599,500@699,500@606,500@799,500@899}/ (JPL Horizons); launch, boundary and milestone instants are cited literals\n' +
-    "import type { MissionEvent } from '../../@types/missions/MissionEvent';\n\n" +
+    "import type { MissionEvent } from '../../../../@types/missions/MissionEvent';\n\n" +
     `export const MISSION_EVENTS: readonly MissionEvent[] = ${JSON.stringify(events)};\n`;
   const outPath = resolve(EVENTS_PATH);
   writeFileSync(

@@ -36,11 +36,11 @@
 
 import type { RootState } from '../../store/types';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
-import { APP_SETTINGS_SLICES } from '../../compositions/appSettingsSlices';
+import { APP_SETTINGS_SLICE_REGISTRY } from '../../compositions/appSettingsSlices';
 import { CORE_SNAPSHOT_CLUSTERS } from '../../data/settings/coreSnapshotClusters';
 
 const SNAPSHOT_KEYS = [
-  ...APP_SETTINGS_SLICES.map((slice) => slice.reducerPath),
+  ...APP_SETTINGS_SLICE_REGISTRY.map((slice) => slice.reducerPath),
   ...CORE_SNAPSHOT_CLUSTERS,
 ];
 

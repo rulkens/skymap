@@ -9,16 +9,18 @@
  * own comment for why).
  */
 
-import type { CameraProjection } from '../../../@types/camera/CameraProjection';
-import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
+import type { CameraProjection } from '../../../@types/camera/projection/CameraProjection';
+import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { RootState } from '../../../store/types';
-import { UNSTARTED_EPOCHS } from './cameraEpochs';
-import { frameKey } from './rungs/frameKey';
-import { rowFor } from './rungs/rowFor';
-import { EMPTY_TILT_MEMORY } from '../../../data/camera/emptyTiltMemory';
+import { UNSTARTED_EPOCHS } from './drivers/cameraEpochs';
+import { frameKey } from './arms/frameKey';
+import { rowFor } from './arms/rowFor';
+import { EMPTY_TILT_MEMORY } from './data/emptyTiltMemory';
+import { NAV_AT_REST } from '../../../data/camera/openSpaceNavigation';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../data/time/constJ2000';
+import { symmetricFrustum } from '../../../utils/camera/frustum/symmetricFrustum';
 
 export function seedCameraRuntime(args: {
   /** Only the two slices the seed reads; call sites still hand over `store.getState()`. */
@@ -39,14 +41,18 @@ export function seedCameraRuntime(args: {
     follow: null,
     gesture: { key: frameKey(pose.frame), value: rowFor(pose.frame).emptyMemory },
     tilt: EMPTY_TILT_MEMORY,
+    navigator: NAV_AT_REST,
+    scheme: settings.cameraControls.scheme,
     own: {},
     pivotBody: null,
+    shiftNdc: [0, 0],
     outputs: {
       displayed: pose,
       simDays: CONST_J2000,
       // Copied, so the seed never aliases the shared registry entry.
       upBasis: [...ORIENTATION_FRAMES[settings.orientation]],
       projection: args.projection,
+      frustum: symmetricFrustum(args.projection.fovYRad, args.projection.aspect),
     },
   };
 }

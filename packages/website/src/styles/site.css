@@ -27,6 +27,27 @@
   --site-text-dim: #9aa7c9;
   /* The names of a picture label's parts: the dimmest text that still holds 4.5:1 on the page's black (6.2:1). */
   --site-text-faint: #7f8bab;
+  /* The page's foreground as a line: a rule or a frame's hairline, and the edge of a field or a mark. */
+  --site-line: color-mix(in srgb, var(--color-fg) 22%, transparent);
+  --site-line-strong: color-mix(in srgb, var(--color-fg) 45%, transparent);
+  /* A form's error: the field's edge and the words that say what is wrong. */
+  --site-error: #ff9d8a;
+  --site-error-text: #ffb4a6;
+
+  /*
+   * Colours sampled from the renders, one per subject, for the lines, rings and names drawn over them.
+   * Components pass them on as `var(--site-accent-…)` (from CSS, or as a style value from their .constants.ts).
+   */
+  --site-accent-earth: #8fb6ff;
+  --site-accent-orbits: #d9c27a;
+  --site-accent-web: #d98fe6;
+  --site-accent-planet: #dbc29e;
+  --site-accent-galaxy-core: #e8b98f;
+  --site-accent-survey: #e8a774;
+  --site-accent-starlight: #f1e2c4;
+  --site-accent-dome: #c9b8ff;
+  --site-accent-zoa: #aaa6ff;
+  --site-accent-universe: #b8d4ff;
 
   --font-family-display: 'Cormorant Site', ui-serif, Georgia, serif;
   --font-body: 'Jost Variable', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
@@ -49,15 +70,34 @@
   --measure: 44ch;
   --measure-lead: 52ch;
 
+  /*
+   * Every margin, padding and gap inside a section is a step of this scale (rem, so it grows with the
+   * reader's text size); the app's px `--space-*` is for its panels. What is not on it is geometry: a
+   * picture's size, an overlap, an optical nudge, an `em`. A link's reach to the thumb is --tap-reach.
+   */
+  --site-space-3xs: 0.25rem;
+  --site-space-2xs: 0.5rem;
+  --site-space-xs: 0.75rem;
+  --site-space-s: 1rem;
+  --site-space-m: 1.5rem;
+  --site-space-l: 2rem;
+  --site-space-xl: 2.5rem;
+  --site-space-2xl: 3.5rem;
+  --site-space-3xl: 5rem;
+
   /* One gap between sections; inside a section nothing exceeds half of it. */
   --gutter: 2.75rem;
   /* The one gap between columns of the page grid (`.grid`, styles/layout.module.css). */
   --col-gap: 3rem;
   --wrap-max: 77.5rem;
+  /* From the column's edge to the window's: `.wrap` centres a column at most `--wrap-max` wide, inside the gutter. */
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
   --section-space: 9.375rem;
-  --stack: 1.5rem;
+  --stack: var(--site-space-m);
   --nav-height: 4.5rem;
   --tap: 2.75rem;
+  /* How far a link in a line of text reaches above and below it to be --tap tall; a negative margin takes it back. */
+  --tap-reach: 0.625rem;
   /* How far the ring about a dome frame (Disc) stands outside it; its host leaves that room. */
   --disc-ring: 1.1875rem;
 
@@ -68,10 +108,15 @@
   --first-screen: calc(100svh - var(--nav-height));
   --open-top: 1.5rem;
   --open-rise: clamp(2rem, 20svh - 7.75rem, 4rem);
+
+  /* Motion beside the app's `--duration-*` and `--ease-standard`: entering decelerates, leaving accelerates. */
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-leave: cubic-bezier(0.4, 0, 1, 1);
+  --duration-reveal: 450ms;
 }
 
-/* The 900px breakpoint is also in components/Nav/Nav.module.css (CSS variables cannot be used in media queries). */
-@media (max-width: 900px) {
+/* The one layout break; its name and the others are in data/media.ts. */
+@media (--narrow) {
   :root {
     /* 18px body is under the 300 floor, so the phone reads in 400. */
     --text-body: 1.125rem;
@@ -101,9 +146,9 @@ html:has(dialog[open]) {
   overflow: hidden;
 }
 
+/* No ground of its own: the root's black shows through, and the star field (z-index −1) sits between them. */
 body {
   margin: 0;
-  background: var(--color-bg);
   color: var(--site-text);
   font: var(--weight-body) var(--text-body) / var(--leading-body) var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -174,7 +219,7 @@ kbd {
   display: inline-block;
   min-width: 1.5em;
   padding: 0 0.3em;
-  border: 1px solid rgb(232 238 255 / 0.3);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 30%, transparent);
   border-radius: 0.1875rem;
   font: var(--weight-small) 0.8125em / 1.45 var(--font-family-mono);
   color: var(--color-fg);

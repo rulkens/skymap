@@ -1,6 +1,6 @@
 # Dome remote — ground preparation (prep PR)
 
-**Spec:** [`docs/superpowers/specs/2026-10-11-dome-remote-design.md`](../specs/2026-10-11-dome-remote-design.md),
+**Spec:** [`docs/superpowers/specs/completed/2026-10-11-dome-remote-design.md`](../../specs/completed/2026-10-11-dome-remote-design.md),
 section "Ground preparation".
 
 **Goal:** create the joints the dome remote needs, with no behaviour change: palette search and its go-to runner

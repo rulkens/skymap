@@ -1,0 +1,13 @@
+.root {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+}

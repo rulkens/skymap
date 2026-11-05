@@ -40,9 +40,9 @@
  */
 
 import { moonRatesFromPeriods } from './moonRatesFromPeriods';
+import { DAYS_PER_JULIAN_CENTURY } from '../../data/time/daysPerJulianCentury';
 
 const TWO_PI = 2 * Math.PI;
-const DAYS_PER_JULIAN_CENTURY = 36_525;
 
 export function moonRatesFromSiderealPeriods(periods: {
   siderealPeriodDays: number;

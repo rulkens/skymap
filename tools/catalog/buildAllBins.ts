@@ -13,7 +13,7 @@
  *
  * Output files: sdss-*.bin, 2mrs.bin, glade-*.bin (one per source/tier),
  * written under `public/data/galaxy-catalog/v10/` — the epoch-prefixed
- * path `tierFilenameForSource` returns (see `src/data/tierTargets.ts`).
+ * path `tierFilenameForSource` returns (see `src/layers/galaxyCatalog/records/data/tierTargets.ts`).
  *
  * Cross-match dedup:
  *   - Priority: SDSS > 2MRS > GLADE > DESI patches. See `tools/crossMatch.ts`
@@ -69,7 +69,7 @@ import { parseFamousSeed } from '../parsers/famousSeed';
 import { DESI_PATCHES, DESI_TRACER_FILE_KEYS } from './desiPatches';
 import type { DesiPatch } from './desiPatches';
 
-import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import { encodeGalaxyCatalog } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 import { raDecZToCartesian } from '../../src/utils/math/index';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
@@ -82,13 +82,14 @@ import { CUTOFF_MPC } from './localVolumeCutoff';
 import type { Cf4CatalogIndex } from '../parsers/cosmicflows4';
 import { loadCf4CatalogIndex } from '../parsers/cosmicflows4';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
-import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import {
   tierTarget,
   tierFilenameForSource,
   fluxSupplementMagLimitFor,
-} from '../../src/data/tierTargets';
+} from '../../src/layers/galaxyCatalog/records/data/tierTargets';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 import { selectTierRecords } from './selectTierRecords';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
@@ -855,7 +856,7 @@ async function runCli(): Promise<void> {
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;
     process.stderr.write(
-      `  ${SOURCE_REGISTRY[source].label}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
+      `  ${APP_SOURCE_REGISTRY[source].label}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
     );
   }
 
@@ -879,7 +880,7 @@ async function runCli(): Promise<void> {
       const target = tierTarget(source, tier);
       if (target === 0) {
         process.stderr.write(
-          `tier ${tier}: ${SOURCE_REGISTRY[source].label} excluded — skipping ${filename}\n`,
+          `tier ${tier}: ${APP_SOURCE_REGISTRY[source].label} excluded — skipping ${filename}\n`,
         );
         continue;
       }

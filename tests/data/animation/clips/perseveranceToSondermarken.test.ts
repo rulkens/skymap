@@ -12,22 +12,23 @@ import {
   PERSEVERANCE_POSE,
 } from '../../../../src/data/animation/clips/perseveranceToSondermarken';
 import { sondermarkenFlyout } from '../../../../src/data/animation/clips/sondermarkenFlyout';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import { resolveClipFoci } from '../../../../src/services/engine/animation/resolveClipFoci';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/cameraFraming';
-import { linkedPoseToWorld } from '../../../../src/utils/camera/linkedPoseToWorld';
-import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { northUpRoll } from '../../../../src/utils/camera/northUpRoll';
+import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/framing/cameraFraming';
+import { linkedPoseToWorld } from '../../../../src/services/engine/camera/arms/utils/linkedPoseToWorld';
+import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { northUpRoll } from '../../../../src/utils/camera/orbitPose/northUpRoll';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const BASIS = ORIENTATION_FRAMES.ecliptic;
 // The clip names no subject, so the resolver is never asked.
@@ -72,8 +73,8 @@ describe('perseveranceToSondermarken', () => {
   const start = clip.data.start as CameraPose;
   const resolved = resolveClipFoci(clip.data, NO_SELECTION, 1, start, SIM_DAYS, BASIS);
   const bodies = deriveBodyStates(SIM_DAYS);
-  const mars = bodies.get('mars')!.positionMpc;
-  const earth = bodies.get('earth')!.positionMpc;
+  const mars = bodies.get(asSceneBodyId('mars'))!.positionMpc;
+  const earth = bodies.get(asSceneBodyId('earth'))!.positionMpc;
 
   it('opens on the Perseverance link pose', () => {
     const linked = linkedPoseToWorld(PERSEVERANCE_POSE, SIM_DAYS, BASIS);
@@ -95,7 +96,7 @@ describe('perseveranceToSondermarken', () => {
   it('passes overhead the park with north at the top, as sondermarkenFlyout does', () => {
     const pose = evaluateClip(resolved, OVERHEAD_PARK_SEC, BASIS);
     const forward = normalize3(sub(pose.target as Vec3, eyeMpc(pose)));
-    const orientation = bodies.get('earth')!.orientation;
+    const orientation = bodies.get(asSceneBodyId('earth'))!.orientation;
     expect(pose.roll!).toBeCloseTo(northUpRoll(forward, orientation, BASIS), 6);
   });
 
@@ -125,10 +126,10 @@ describe('perseveranceToSondermarken', () => {
       const c = perseveranceToSondermarken(simDays);
       const data = resolveClipFoci(c.data, NO_SELECTION, 1, c.data.start as CameraPose, simDays, BASIS);
       const b = deriveBodyStates(simDays);
-      const [m, e] = [b.get('mars')!.positionMpc, b.get('earth')!.positionMpc];
+      const [m, e] = [b.get(asSceneBodyId('mars'))!.positionMpc, b.get(asSceneBodyId('earth'))!.positionMpc];
       // The opening eye is ~1.3 m above the rover's radius, the tightest moment by design.
       const grounds: [Vec3, number][] = [
-        [m, Math.hypot(...sub(b.get('perseverance')!.positionMpc, m))],
+        [m, Math.hypot(...sub(b.get(asSceneBodyId('perseverance'))!.positionMpc, m))],
         [e, Math.hypot(...sub(evaluateClip(data, END_SEC, BASIS).target as Vec3, e))],
       ];
       let tightestM = Infinity;

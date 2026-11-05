@@ -9,8 +9,8 @@
  * across every call site. A flat single reducer would have forced a migration
  * the moment `tier` lifted out of the settings slice into its own root slice.
  *
- * `camera` holds the camera Intent (base pose, tween descriptor, auto-rotate,
- * dragging flag). The selection fold adds two sibling routes: `selection` holds
+ * `camera` holds the camera Intent (base pose, tween descriptor, auto-rotate).
+ * The selection fold adds two sibling routes: `selection` holds
  * the raw identity-Intent refs (hover/select/focus); `selectionRows` is the
  * saga-owned derived display cache that InfoCard reads. `engine` holds the
  * observable runtime state the engine reports (lifecycle status, per-source
@@ -40,6 +40,8 @@ import {
   timeRoute,
   arrivalRoute,
   inputRoute,
+  remoteRoute,
+  viewCoverRoute,
 } from './constants';
 import settingsReducer from '../state/settings/settingsReducer';
 import uiReducer from '../state/ui/uiSlice';
@@ -53,6 +55,8 @@ import engineReducer from '../state/engine/engineSlice';
 import timeReducer from '../state/time/timeSlice';
 import arrivalReducer from '../state/arrival/arrivalSlice';
 import inputReducer from '../state/input/inputSlice';
+import remoteReducer from '../state/remote/remoteSlice';
+import viewCoverReducer from '../state/viewCover/viewCoverSlice';
 
 export const rootReducer = combineReducers({
   [settingsRoute]: settingsReducer,
@@ -67,4 +71,6 @@ export const rootReducer = combineReducers({
   [timeRoute]: timeReducer,
   [arrivalRoute]: arrivalReducer,
   [inputRoute]: inputReducer,
+  [remoteRoute]: remoteReducer,
+  [viewCoverRoute]: viewCoverReducer,
 });

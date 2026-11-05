@@ -4,9 +4,9 @@
  * overrides are no-ops at the default.
  */
 
-import { ATMOSPHERE_PARAMS } from '../../../../data/bodies/atmosphereParams';
-import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
-import type { EarthSettings } from '../../../../@types/settings/EarthSettings';
+import { ATMOSPHERE_PARAMS } from '../../atmosphere/data/atmosphereParams';
+import { EARTH_SURFACE_PARAMS } from '../../surfaceTiles/format/data/earthSurfaceParams';
+import type { EarthSettings } from '../../@types/EarthSettings';
 
 export const initialState: EarthSettings = {
   // `earth` is a definitional atmosphere-table row, so this index read is non-null.

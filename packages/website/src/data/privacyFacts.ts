@@ -1,113 +1,99 @@
 import type { Fact } from '../@types/Fact';
 import { REPO_BLOB } from './siteIdentity';
 
-const CHECKED = '2026-10-06';
+const CHECKED = '2026-11-03';
+// The Counterscale rows were read from its source at the version our counter reported on this date.
+const COUNTER_CHECKED = '2026-10-06';
 const IN_REPO = 'in the Skymap repository';
 const COUNTER_REPO = 'https://github.com/benvinegar/counterscale';
-// The version our counter's own page reported on the check date: the rows below were read from that tag.
 const COUNTER_SOURCE = `${COUNTER_REPO}/blob/v3.4.1`;
 
 /**
  * The Privacy page's claims, spread into FACTS. Each was read from the code
- * that does it, or from the counter's published source and its live replies,
- * on the date in `CHECKED`. A change to what the app or the site requests or
- * stores changes a row here in the same commit.
+ * that does it, or from the counter's published source, on its `checked` date.
+ * A change to what the app or the site requests or stores changes a row here
+ * in the same commit.
  */
 export const PRIVACY_FACTS: readonly Fact[] = [
   {
-    id: 'privacy-site-requests',
-    about: 'app',
-    text: 'The pages of this website load their text, pictures, typefaces and scripts from Skymap’s own two addresses, skymap.rulkens.com and skymap-data.rulkens.com, and from nowhere else. They set no cookies, run no visit counter and keep nothing in your browser.',
-    source: `${REPO_BLOB}/packages/website/src/layouts/Base.astro`,
-    sourceLabel: `the page template, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'privacy-host',
-    about: 'app',
-    text: 'The website and the app are served by Cloudflare. The app’s data files and the film on the home page come from Cloudflare’s R2 storage at skymap-data.rulkens.com.',
-    source: `${REPO_BLOB}/wrangler.toml`,
-    sourceLabel: `the hosting configuration, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'privacy-host-sees',
-    about: 'app',
-    text: 'As with any web host, Cloudflare’s servers receive your IP address, your browser’s user-agent text and the address of each file you ask for. What Cloudflare does with them is set out in its privacy policy.',
-    source: 'https://www.cloudflare.com/privacypolicy/',
-    sourceLabel: 'Cloudflare’s privacy policy',
-    checked: CHECKED,
-  },
-  {
     id: 'privacy-counter',
     about: 'app',
-    text: 'The app counts visits with Counterscale, an open-source counter that we run ourselves on Cloudflare. Its script loads from counterscale.rulkens.workers.dev each time the app starts, even in a browser that cannot run the app.',
+    text: 'The app counts visits with Counterscale, an open-source counter we run on our own Cloudflare account. Its script loads from counterscale.rulkens.workers.dev each time you open the app. This website has no counter.',
     source: `${REPO_BLOB}/src/utils/analytics/injectAnalytics.ts`,
     sourceLabel: `where the app loads the counter, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
-    id: 'privacy-counter-sends',
+    id: 'privacy-counter-records',
     about: 'app',
-    text: 'Our counter runs Counterscale 3.4.1. Its script reports when the app starts, again each time the app adds an entry to your browser’s history, as it does when the view named in the address changes, and when you go back or forward. Each report carries the counter’s name for the site (Skymap), the app’s host name, the path of its address and a count of 1, 2 or 3 (see “No cookie”). Nothing after a # sign is sent, and what you look at in the app is written after the # sign. From the part after a question mark the script sends only the campaign labels a link may carry: utm_source, utm_medium, utm_campaign, utm_term and utm_content. It sends the address of the page that linked you, cut at the question mark. When your browser names no such page, it sends the value of ref, referer, referrer, source or utm_source from the app’s address instead.',
-    source: `${COUNTER_SOURCE}/packages/tracker/src/lib/track.ts`,
-    sourceLabel: 'the counter’s script at version 3.4.1, in the Counterscale repository',
-    checked: CHECKED,
-  },
-  {
-    id: 'privacy-counter-stores',
-    about: 'app',
-    text: 'For each report the counter stores what the script sent: the site’s name, the host name, the path, the referring address and the five campaign labels. It also stores your browser’s user-agent text; the browser’s name, its major version, and the model and kind of device, all worked out from that text; the country Cloudflare’s network reports for the request; and two numbers that say whether the report is your browser’s first of the day, its second or a later one. Each stored row also has the time of the report, which the database adds. The counter does not store your IP address.',
+    text: 'One row each time the app opens, its view changes, or you go back or forward. A row holds the app’s address up to the # sign, with only utm_ campaign labels after the ? sign; the linking page’s address up to the ? sign; your browser’s user-agent text, and the browser, version and kind of device read from it; your country, as Cloudflare reports it; whether this is your first visit of the day; and the time. It holds no IP address. What you look at in the app is written after the # sign, so it is not sent.',
     source: `${COUNTER_SOURCE}/packages/server/app/analytics/collect.ts`,
     sourceLabel: 'what the counter records at version 3.4.1, in the Counterscale repository',
-    checked: CHECKED,
-  },
-  {
-    id: 'privacy-counter-cache',
-    about: 'app',
-    text: 'The counter sets no cookie. To tell a first visit of the day from a later one, the script asks the counter’s /cache address before each report. The reply carries a date that your browser keeps in its cache and sends back the next time. The date is midnight of the current day plus a count of up to 3. It is the same for every visitor with that count, so it does not single you out.',
-    source: `${COUNTER_SOURCE}/packages/server/app/analytics/collect.ts`,
-    sourceLabel: 'how the counter recognises a return visit at version 3.4.1, in the Counterscale repository',
-    checked: CHECKED,
+    checked: COUNTER_CHECKED,
   },
   {
     id: 'privacy-counter-retention',
     about: 'app',
-    text: 'Counterscale’s documentation says that its database, Cloudflare Workers Analytics Engine, keeps 90 days of rows, and that older rows are copied to storage in the operator’s own Cloudflare account unless that is switched off.',
+    text: 'Its database, Cloudflare Workers Analytics Engine, keeps rows for 90 days. Counterscale copies older rows to storage in our Cloudflare account unless that is switched off.',
     source: COUNTER_REPO,
     sourceLabel: 'Counterscale’s documentation',
-    checked: CHECKED,
+    checked: COUNTER_CHECKED,
   },
   {
-    id: 'privacy-no-notice',
+    id: 'privacy-site-storage',
     about: 'app',
-    text: 'The app shows no notice about the counter and has no switch to turn it off.',
-    source: `${REPO_BLOB}/src/main.tsx`,
-    sourceLabel: `the app’s start-up code, ${IN_REPO}`,
+    text: 'Nothing: no cookies and no local storage.',
+    source: `${REPO_BLOB}/packages/website/src/layouts/Base.astro`,
+    sourceLabel: `the page template, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'privacy-app-storage',
     about: 'app',
-    text: 'The app keeps one item in your browser’s local storage, named skymap.splash.seenVersion. It holds the number of the welcome screen you closed, so that the screen stays closed on your next visit. The app sets no cookies and has no accounts.',
+    text: 'Two items in local storage, and no cookies. skymap.splash.seenVersion is written when you close the welcome screen, so it stays closed. skymap.cameraControls.v1 is written when you change the camera controls, so they stay as you set them.',
     source: `${REPO_BLOB}/src/state/persistedValues.ts`,
     sourceLabel: `what the app stores in the browser, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
-    id: 'privacy-thumbnails',
+    id: 'privacy-counter-cache',
     about: 'app',
-    text: 'The app fetches small pictures of galaxies from two astronomy archives outside Skymap: the Sloan Digital Sky Survey’s SkyServer (skyserver.sdss.org) and the CDS in Strasbourg (alasky.cds.unistra.fr). It does so in two cases, for a galaxy that has no photograph of its own in Skymap. First, whenever such a galaxy is drawn about 24 pixels across or larger, the app asks SkyServer for a picture to lay over it, and asks the CDS if SkyServer sends none. How large a galaxy is drawn depends on the window, so this can happen as the app opens, before you have touched anything: in a window 900 pixels high one such request went to each archive, and in one 720 pixels high none did. A tour sends them as it passes galaxies. Second, when the card of such a galaxy is pinned, by a click, a search or a link, its picture comes from SkyServer for a galaxy of the Sloan catalogue and from the CDS for any other. Pointing at a galaxy sends nothing. Each request holds the galaxy’s sky coordinates, so the archive can tell which patch of sky was on your screen, and, as every request does, it reaches the archive with your IP address and your browser’s description of itself. The 81 named galaxies use photographs kept with Skymap, and the app turns to an archive for one of them only if that file fails to load.',
-    source: `${REPO_BLOB}/src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem.ts`,
-    sourceLabel: `when the app fetches a galaxy’s picture, ${IN_REPO}`,
-    checked: '2026-10-07',
+    text: 'To tell your first visit of the day from a later one, your browser caches a reply from the counter that holds today’s date plus a count up to 3. Every visitor with the same count gets the same reply, so it does not single you out.',
+    source: `${COUNTER_SOURCE}/packages/server/app/analytics/collect.ts`,
+    sourceLabel: 'how the counter recognises a return visit at version 3.4.1, in the Counterscale repository',
+    checked: COUNTER_CHECKED,
   },
   {
-    id: 'privacy-form-closed',
+    id: 'privacy-host',
     about: 'app',
-    text: 'There is no contact form on this website today, so nothing you type here can reach us or anyone else.',
-    source: `${REPO_BLOB}/packages/website/src/data/contact.ts`,
-    sourceLabel: `the contact setting, ${IN_REPO}`,
+    text: 'Cloudflare serves this website, the app and the counter, and the app’s data files and the home page’s film from its R2 storage at skymap-data.rulkens.com.',
+    source: `${REPO_BLOB}/docs/DEPLOY.md`,
+    sourceLabel: `how Skymap is deployed, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'privacy-host-sees',
+    about: 'app',
+    text: 'As with any web host, its servers receive your IP address, your browser’s user-agent text and the address of each file you ask for.',
+    source: 'https://www.cloudflare.com/privacypolicy/',
+    sourceLabel: 'Cloudflare’s privacy policy',
+    checked: CHECKED,
+  },
+  {
+    id: 'privacy-thumbnails',
+    about: 'app',
+    text: 'For a galaxy with no photograph in Skymap, the app fetches a small picture from the Sloan Digital Sky Survey (skyserver.sdss.org) or the CDS in Strasbourg (alasky.cds.unistra.fr). It does so when the galaxy is drawn about 24 pixels across or larger, which can happen as the app opens, and when you pin its card. The request holds the galaxy’s sky coordinates and reaches the archive with your IP address.',
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem.ts`,
+    sourceLabel: `when the app fetches a galaxy’s picture, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    // Printed only while the form is open (CONTACT_ENDPOINT); the form's own note points here.
+    id: 'privacy-contact-form',
+    about: 'app',
+    text: 'When the form on the domes page comes into view, the page loads Cloudflare’s spam check, Turnstile, from challenges.cloudflare.com. Sending the form emails us your name, organisation, email address and message; the server that passes it on stores nothing.',
+    source: `${REPO_BLOB}/src/services/worker/handleContact.ts`,
+    sourceLabel: `what the contact form sends, ${IN_REPO}`,
     checked: CHECKED,
   },
 ];

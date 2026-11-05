@@ -1,2 +1,4 @@
-/** What a held press drives; #837 adds its navigator axes here. */
-export type HeldIntent = 'orbit' | 'pan';
+import type { NavIntent } from './NavIntent';
+
+/** What a held press drives; `tilt` is the two-finger drag, which no press binds. */
+export type HeldIntent = 'orbit' | 'pan' | 'tilt' | NavIntent;

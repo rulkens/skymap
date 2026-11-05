@@ -14,7 +14,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import { selectCameraActive } from '../../../state/camera/selectors';
 import { selectIsManualPlaying } from '../../../state/time/selectors';
-import { ridesWheelTarget } from '../camera/ridesWheelTarget';
+import { ridesWheelTarget } from '../camera/input/ridesWheelTarget';
 
 /**
  * Ease with no camera-slice flag behind it: without this term the loop sleeps
@@ -35,7 +35,6 @@ export function shouldKeepTicking(
   s: RootState,
   nowMs: number,
   anim: {
-    surfaceTilesAnimating: boolean;
     labelsAnimating: boolean;
     probeDue: boolean;
     layersAwake: boolean;
@@ -48,7 +47,6 @@ export function shouldKeepTicking(
     state.subsystems.structureFocus.isAwake(nowMs) ||
     selectIsManualPlaying(s) ||
     followApproachEaseActive(state, drivers) ||
-    anim.surfaceTilesAnimating ||
     anim.labelsAnimating ||
     anim.probeDue ||
     anim.layersAwake

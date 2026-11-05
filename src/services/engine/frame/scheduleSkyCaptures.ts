@@ -1,5 +1,5 @@
 /**
- * scheduleSkyCaptures — per sky `CUBEMAP_CAPTURES` row, which faces this frame
+ * scheduleSkyCaptures — per sky `APP_CUBEMAP_CAPTURE_REGISTRY` row, which faces this frame
  * re-bakes and the synthetic camera each one draws through. All six, or none.
  *
  * Two side effects: it is the SINGLE writer of each sky row's
@@ -14,16 +14,16 @@ import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import {
-  ALL_CUBE_FACES,
-  CUBEMAP_CAPTURES,
-  SKY_CAPTURE_KEYS,
-} from '../../../data/rendering/cubemapCaptures';
-import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
+  APP_CUBEMAP_CAPTURE_REGISTRY,
+  APP_SKY_CAPTURE_KEYS,
+} from '../../../compositions/appCubemapCaptures';
+import { faceViewSpec } from '../../../utils/camera/viewRig/faceViewSpec';
 import { cubemapCaptureFrame } from './cubemapCaptureFrame';
 import { deriveView } from './deriveView';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { sceneBodyStates } from './sceneBodyStates';
+import { ALL_CUBE_FACES } from '../../../data/rendering/cubemapCaptures';
 
 export function scheduleSkyCaptures(input: {
   readonly state: EngineState;
@@ -38,8 +38,8 @@ export function scheduleSkyCaptures(input: {
     state.subsystems.fades.isAnyAnimating(ctx.snapshot.nowMs) || ctx.snapshot.plans.settling;
 
   const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, CaptureFace>>();
-  for (const key of SKY_CAPTURE_KEYS) {
-    const row = CUBEMAP_CAPTURES[key];
+  for (const key of APP_SKY_CAPTURE_KEYS) {
+    const row = APP_CUBEMAP_CAPTURE_REGISTRY[key];
     const runtime = state.cubemapCaptures[key];
     // Unconditional, band or no band: the target's release-margin check needs
     // the distance on the very frame the band closes, not one frame later.
@@ -83,6 +83,7 @@ export function scheduleSkyCaptures(input: {
       eyeMpc: ctx.drawCamPos,
       nearMpc: row.nearMpc,
       nowMs: ctx.snapshot.nowMs,
+      bodyStates: ctx.snapshot.bodyStates,
     });
     if (capture.isReady) {
       for (const face of ALL_CUBE_FACES) {

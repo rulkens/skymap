@@ -1,0 +1,38 @@
+[
+  {
+    "from": "src/@types/settings/SatelliteClassSettings.d.ts",
+    "to": "src/layers/satellites/@types/SatelliteClassSettings.d.ts"
+  },
+  {
+    "from": "src/@types/settings/SatellitesSettings.d.ts",
+    "to": "src/layers/satellites/@types/SatellitesSettings.d.ts"
+  },
+  {
+    "from": "src/data/satellites/hubbleNoradId.ts",
+    "to": "src/layers/satellites/data/hubbleNoradId.ts"
+  },
+  {
+    "from": "src/data/satellites/satelliteClassEyebrows.ts",
+    "to": "src/layers/satellites/data/satelliteClassEyebrows.ts"
+  },
+  {
+    "from": "src/data/satellites/satelliteClassLabels.ts",
+    "to": "src/layers/satellites/data/satelliteClassLabels.ts"
+  },
+  {
+    "from": "src/data/satellites/satelliteFades.ts",
+    "to": "src/layers/satellites/data/satelliteFades.ts"
+  },
+  {
+    "from": "src/data/satellites/satelliteFocusGeometry.ts",
+    "to": "src/layers/satellites/data/satelliteFocusGeometry.ts"
+  },
+  {
+    "from": "src/data/satellites/satellitePointStyle.ts",
+    "to": "src/layers/satellites/data/satellitePointStyle.ts"
+  },
+  {
+    "from": "src/data/satellites/satelliteSweepTiming.ts",
+    "to": "src/layers/satellites/data/satelliteSweepTiming.ts"
+  }
+]

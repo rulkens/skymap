@@ -8,6 +8,7 @@
 import type { MeshPresentation } from '../../@types/scene/MeshPresentation';
 import { MESH_PRESENTATIONS } from '../../data/bodies/meshPresentations';
 import { meshBodySlabHostId } from './meshBodySlabHostId';
+import type { PositionedId } from '../../@types/scene/PositionedId';
 
 // Both inputs are static, so the join runs once here rather than per body-slab
 // row per frame (`enabled`, `draw`, `drawPick` each ask).

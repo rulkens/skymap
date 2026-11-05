@@ -17,8 +17,8 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { composeBodySlabMvp } from '../../../utils/camera/composeBodySlabMvp';
-import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
+import { composeBodySlabMvp } from '../../../utils/camera/bodyCompose/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../utils/camera/bodyCompose/bodySlabCamLocal';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { BODY_PICK_MIN_RADIUS_PX } from './minPickRadiusMpc';
 

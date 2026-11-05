@@ -1,0 +1,220 @@
+/*
+ * FeatureGallery — a FeatureSection whose large visual is a slideshow of app views and whose small slot is a row of
+ * thumbnails that choose the view. The state is the gallery's (useGallery), so it moves on by itself every 9 s,
+ * waits while the reader is at the thumbnails, and fetches a later view only once warmed. Each picture opens its
+ * own view in the app where a link can (shotLink); only the current one can be reached, as the others sit under
+ * `visibility: hidden`. Before the page's script runs the first view and its label stand. Everything a slide brings (data/FeatureSlide) changes
+ * with it: its piece of the app's interface hangs across the picture's outer edge, its figure stands in the inner
+ * top corner in its own colour, a film whose clock ran carries its clock (FilmClock) at its foot, and the section's
+ * accent follows it. `frameless` lets cut-outs float on the page; `under` lays a render behind the whole stage.
+ */
+import type { CSSProperties } from 'react';
+import { useCallback } from 'react';
+
+import type { FeatureSlide } from '../../../../@types/FeatureSlide';
+import { fact } from '../../../../data/fact.ts';
+import { SITE_LOOPS } from '../../../../data/siteLoops.ts';
+import { siteShot } from '../../../../data/siteShot.ts';
+import { cx } from '../../../../utils/cx.ts';
+import { linkTime } from '../../../../utils/linkTime.ts';
+import { shotLink } from '../../../../utils/shotLink.ts';
+import { wrapIndex } from '../../../../utils/wrapIndex.ts';
+import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
+import FeatureFilm from '../../../shared/media/FeatureFilm/FeatureFilm.tsx';
+import FeatureSection from '../../../shared/layout/FeatureSection/FeatureSection.tsx';
+import { useGallery } from '../../../shared/media/gallery/useGallery.ts';
+import { useGalleryMarks } from '../../../shared/media/gallery/useGalleryMarks.ts';
+import changing from '../../../shared/media/gallery/viewChange.module.css';
+import Shot from '../../../shared/media/Shot/Shot.tsx';
+import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
+import FilmClock from '../FilmClock/FilmClock.tsx';
+import styles from './FeatureGallery.module.css';
+import {
+  SIZES,
+  THUMB_SIZES,
+  PIECE_SIZES,
+  BAR_SIZES,
+  CUTOUT_SIZES,
+} from './FeatureGallery.constants.ts';
+
+type FeatureGalleryProps = {
+  title: string;
+  id?: string;
+  line: string;
+  href: string;
+  label: string;
+  side?: 'left' | 'right';
+  // The first slide stands before the script runs.
+  slides: readonly FeatureSlide[];
+  frameless?: boolean;
+  under?: string;
+};
+
+function FeatureGallery({ slides, frameless, under, ...section }: FeatureGalleryProps) {
+  const films = slides.map(({ view }) => SITE_LOOPS.find((loop) => loop.id === view));
+  const views = slides.map(({ view }, i) => films[i]?.shot ?? view);
+  const gallery = useGallery(views.map((id) => ({ id })));
+  const { at, live, byReader, choose, layers, warmed } = gallery;
+  const marks = useGalleryMarks(gallery);
+  const root = useCallback(
+    (el: HTMLDivElement | null) => {
+      gallery.root.current = el;
+    },
+    [gallery.root],
+  );
+
+  const current = (i: number) => (live ? i === at : i === 0);
+  const changes = (i: number) =>
+    cx(changing.view, !current(i) && changing.away, !warmed(i) && styles.cold);
+  const clocks = films.map((film, i) => {
+    const days =
+      film && typeof film.motion === 'object' && 'clockDays' in film.motion
+        ? film.motion.clockDays
+        : undefined;
+    const from = linkTime(siteShot(views[i]!).link);
+    return film && days && from ? { from, days, seconds: film.seconds } : undefined;
+  });
+  const accent = slides[live ? wrapIndex(at, slides.length) : 0]!.accent;
+
+  return (
+    <div ref={root} className={styles.root} style={{ '--slide-accent': accent } as CSSProperties}>
+      <FeatureSection
+        {...section}
+        small={
+          <div className={cx(styles.thumbs, !live && styles.idle)} {...marks.group}>
+            {views.map((id, i) => (
+              <button
+                key={id}
+                className={cx(styles.thumb, slides[i]!.cutout && styles.cutThumb)}
+                aria-label={siteShot(id).title}
+                {...marks.mark(i)}
+              >
+                {/* A slide's cut-out is its subject: at thumbnail size a drawing of thin paths reads as black. */}
+                <Shot id={slides[i]!.cutout ?? id} sizes={THUMB_SIZES} alt="" />
+              </button>
+            ))}
+          </div>
+        }
+      >
+        <figure
+          className={cx(
+            styles.figure,
+            section.side === 'left' && styles.left,
+            frameless && styles.frameless,
+          )}
+        >
+          <div className={styles.stage}>
+            {under && (
+              <div className={styles.under} aria-hidden>
+                <div className={styles.drift}>
+                  <Shot id={under} sizes={SIZES} />
+                </div>
+              </div>
+            )}
+            <div className={styles.frame}>
+              {views.map((id, i) => {
+                const shot = siteShot(id);
+                const link = shotLink(id);
+                const picture = <Shot id={id} sizes={SIZES} alt="" eager={i > 0 && warmed(i)} />;
+                return (
+                  <div
+                    key={id}
+                    ref={(el) => {
+                      layers.current[i] = el;
+                    }}
+                    className={cx(styles.layer, changes(i))}
+                  >
+                    {films[i] ? (
+                      <FeatureFilm
+                        film={films[i].id}
+                        sizes={SIZES}
+                        wide
+                        active={current(i)}
+                        view={link}
+                        query={shot.query}
+                        linkLabel={`Open ${shot.title} in the app`}
+                      />
+                    ) : link ? (
+                      <AppLink
+                        view={link}
+                        query={shot.query}
+                        aria-label={`Open ${shot.title} in the app`}
+                      >
+                        {picture}
+                      </AppLink>
+                    ) : (
+                      picture
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {slides.map(
+              ({ view, cutout }, i) =>
+                cutout && (
+                  <div key={view} className={cx(styles.cutout, changes(i))} aria-hidden>
+                    <div className={styles.drift}>
+                      <Shot id={cutout} sizes={CUTOUT_SIZES} />
+                    </div>
+                  </div>
+                ),
+            )}
+            {clocks.some(Boolean) && (
+              <div className={styles.clocks}>
+                {clocks.map(
+                  (clock, i) =>
+                    clock && (
+                      <div key={slides[i]!.view} className={changes(i)}>
+                        <FilmClock
+                          {...clock}
+                          film={() => layers.current[i]?.querySelector('video')}
+                          onScrub={() => choose(i)}
+                        />
+                      </div>
+                    ),
+                )}
+              </div>
+            )}
+          </div>
+          <div className={styles.readings}>
+            {slides.map(({ view, fact: id, accent: color }, i) => {
+              const figure = id ? fact(id).figure : undefined;
+              return (
+                figure && (
+                  <p key={view} className={cx(styles.reading, changes(i))} style={{ color }}>
+                    <span className={styles.value}>{figure.value}</span>
+                    <span className={styles.measure}>{figure.measure}</span>
+                  </p>
+                )
+              );
+            })}
+          </div>
+          {slides.some((slide) => slide.piece) && (
+            <div className={styles.pieces}>
+              {slides.map(
+                ({ view, piece, bar }, i) =>
+                  piece && (
+                    <div key={view} className={cx(styles.piece, bar && styles.bar, changes(i))}>
+                      <div className={styles.drift}>
+                        <Shot id={piece} sizes={bar ? BAR_SIZES : PIECE_SIZES} />
+                      </div>
+                    </div>
+                  ),
+              )}
+            </div>
+          )}
+          {/* A change nobody asked for is not read out: a label announced every few seconds talks over the page. */}
+          <figcaption className={styles.captions} aria-live={live && !byReader ? 'off' : 'polite'}>
+            {views.map((id, i) => (
+              <div key={id} className={cx(changing.view, !current(i) && changing.away)}>
+                <ShotCaption id={id} showDrawn={false} />
+              </div>
+            ))}
+          </figcaption>
+        </figure>
+      </FeatureSection>
+    </div>
+  );
+}
+
+export default FeatureGallery;

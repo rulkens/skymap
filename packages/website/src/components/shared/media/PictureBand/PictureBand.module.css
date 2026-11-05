@@ -1,0 +1,229 @@
+/*
+ * The words are the band's direct children: the last of them is the picture's label (a ShotCaption or a
+ * CaptionGallery), and the rules below place it by that, not by what it is.
+ */
+.root {
+  position: relative;
+  display: grid;
+  align-items: center;
+  /* Never taller than the picture's own shape, so a tall window does not crop it to a strip. */
+  min-height: min(56.25vw, var(--first-screen));
+  overflow-x: clip;
+  background: #000;
+}
+
+.back {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+
+  & img {
+    width: calc(100% * var(--zoom));
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
+    object-position: 70% 50%;
+  }
+
+  /*
+   * No frame edge: the picture fades into the page below and into the words beside it; a header has no section
+   * above it to fade out of. Its words include small dim text, so the dark side holds 0.8 as far as the words
+   * reach (40% of the width): the least that keeps 4.5:1 over a white star.
+   */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgb(0 0 0 / 0) 84%, #000 100%),
+      linear-gradient(90deg, rgb(0 0 0 / 0.8) 0%, rgb(0 0 0 / 0.8) 40%, rgb(0 0 0 / 0) 64%);
+  }
+}
+
+/* A gallery's pictures lie on one another. A later one does not exist until it is warmed, so it is not fetched. */
+.stack {
+  --view-out: 1.4s;
+  --view-in: 1.4s;
+  isolation: isolate;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+
+  & picture {
+    display: block;
+    height: 100%;
+  }
+}
+
+.cold {
+  display: none;
+}
+
+/*
+ * A column, so the label can leave the words: the two auto margins centre the words in the room above the
+ * label and push the label to the foot, where the picture has faded to black.
+ */
+.copy {
+  composes: wrap from '../../../../styles/layout.module.css';
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  width: 100%;
+  padding-block: var(--open-top) var(--site-space-l);
+
+  & > :first-child {
+    margin-top: auto;
+  }
+
+  /* A control is as wide as its words, not as the column. */
+  & > a {
+    align-self: flex-start;
+  }
+
+  & > h1 {
+    text-shadow: 0 0 1.5rem rgb(0 0 0 / 0.6);
+  }
+}
+
+@media (--wide) {
+  /* Through `.root`, so the words' measure outranks a child's own (a ring's 100%) wherever its sheet loads. */
+  .root .copy {
+    & > * {
+      max-width: min(27rem, 38vw);
+    }
+
+    /* A page's title is large text and may run past the words' column, over the picture: two lines, never three. */
+    & > h1 {
+      max-width: min(50rem, 60vw);
+    }
+  }
+
+  /*
+   * A gallery's title runs over pictures nobody framed for it, so the dark side also reaches along the title's
+   * first line, as far as a title goes: 0.6 is the least that keeps 4.5:1 over a white star.
+   */
+  .stack::before {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    inset: 0 auto auto 0;
+    width: 82%;
+    height: calc(var(--open-top) + var(--text-h2) * 1.05 + 4rem);
+    background: linear-gradient(180deg, rgb(0 0 0 / 0.6) calc(100% - 3.5rem), rgb(0 0 0 / 0) 100%);
+    mask-image: linear-gradient(90deg, #000 80%, rgb(0 0 0 / 0) 100%);
+  }
+}
+
+.copy > :last-child {
+  --caption-foot: '';
+  --caption-lift: 2.75rem;
+  --caption-rise: var(--open-rise);
+  max-width: none;
+  margin: auto 0 0;
+  padding-top: var(--caption-rise);
+}
+
+/* On a short window an opening section's paragraphs under the lead are set small: at 16px Jost is 400. */
+@media (--wide) and (max-height: 720px) {
+  .copy > p + p {
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    line-height: 1.5;
+    margin-bottom: var(--site-space-2xs);
+  }
+}
+
+/*
+ * Narrow: the picture first, fading into the words below it. The words' children become the band's own rows, so
+ * the title and the lead can stand above the picture, where a phone's first screen shows what page this is.
+ */
+@media (--narrow) {
+  .root {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .back {
+    position: relative;
+
+    & img {
+      width: 100%;
+      height: auto;
+      object-position: center;
+    }
+
+    &::after {
+      background: linear-gradient(
+        180deg,
+        #000 0%,
+        rgb(0 0 0 / 0) 14%,
+        rgb(0 0 0 / 0) 68%,
+        #000 100%
+      );
+    }
+  }
+
+  /* One box for every view; a view with no upright cut is cropped to it, about the side its subject is on. */
+  .stack {
+    aspect-ratio: var(--shape);
+
+    & img {
+      height: 100%;
+      object-position: 70% 50%;
+    }
+  }
+
+  .copy {
+    display: contents;
+
+    & > :first-child {
+      margin-top: 0;
+    }
+  }
+
+  .root .copy {
+    & > * {
+      order: 2;
+      margin-inline: var(--gutter);
+    }
+
+    & > a {
+      justify-self: start;
+    }
+
+    /* The title has the whole column: a page's own narrower measure would push it to a third line. */
+    & > h1 {
+      order: -2;
+      max-width: none;
+      margin-top: var(--site-space-l);
+    }
+
+    & > p:first-of-type {
+      order: -1;
+      margin-bottom: var(--site-space-2xs);
+    }
+
+    & > :last-child {
+      --caption-foot: none;
+      --caption-lift: 0rem;
+      order: 1;
+      width: auto;
+      margin: -1.5rem var(--gutter) var(--site-space-xl);
+      padding-top: 0;
+    }
+  }
+
+  @media (--phone) {
+    .stack {
+      aspect-ratio: var(--shape-tall);
+    }
+  }
+
+  /* A zoomed picture is cut taller here instead of wider, which enlarges its centre as much. */
+  .zoomed .back img {
+    aspect-ratio: calc(16 / 9 / var(--zoom));
+  }
+}

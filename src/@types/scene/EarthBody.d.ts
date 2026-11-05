@@ -15,9 +15,10 @@
  */
 
 import type { BodySurface } from './BodySurface';
+import type { SceneBodyId } from './SceneBodyId';
 
 export type EarthBody = {
-  readonly id: string;
+  readonly id: SceneBodyId;
   readonly label: string;
   readonly surface: BodySurface;
   /** Apparent diameter (px) at or above which the body draws resolved; below it, a point or glint. */

@@ -32,10 +32,8 @@ export function renderFrame(input: RenderFrameInput): void {
 
   const swapView = context.getCurrentTexture().createView();
 
-  // One timing window spans every submit below (faces, and every flushed
-  // batch): the query set is shared and `endFrame` resolves the whole of it,
-  // so a face pass's or a view's timestamps land in the same readback as the
-  // frame's.
+  // One timing window spans every submit below: the query set is shared and
+  // `endFrame` resolves the whole of it.
   const timingCtx = timingService.beginFrame();
   // 'auto' = per-layer timed passes when timing is on, else the merged
   // tile-local passes OVER blends need on Apple Silicon.
@@ -58,10 +56,8 @@ export function renderFrame(input: RenderFrameInput): void {
   // list; strength/threshold are read live by the bloom passes each draw.
   const bloomEnabled = state.settings.bloom.enabled;
 
-  // Every once-scope section's plan rows, in program order, ahead of the
-  // capture scheduler below (it reads the settling vote) and before any
-  // encoder exists. A perView section's own plan rows run per-view, inside
-  // the section loop, ahead of that view's first GPU step.
+  // Once-scope plan rows run ahead of the capture scheduler (it reads the settling
+  // vote) and before any encoder exists; perView rows run inside the section loop.
   const program = VIEW_RIGS[state.viewRig].program;
   for (const section of program) {
     if (section.scope === 'once') {
@@ -99,22 +95,15 @@ export function renderFrame(input: RenderFrameInput): void {
       bloomEnabled,
       foregroundChain: foregroundChainOrder(viewCtx.slabs),
       captureFaces,
-      bodyRowSlabs: bodyRowSlabs(state, viewCtx),
+      bodyRowSlabs: bodyRowSlabs(viewCtx),
     });
 
-  // The batch building up for `currentView` — several sections' steps land in
-  // ONE encoder as long as the view encoding into it doesn't change (`===`;
-  // mono's rig hands back `canvas` itself for every section, so this never
-  // changes and the whole frame lands in one submit, exactly as before the
-  // rig split).
+  // Several sections' steps share ONE encoder while the view stays `===`; mono's rig
+  // returns `canvas` for every section, so the whole frame is one submit.
   let pending: FrameStep[] = [];
   let currentView: FrameView | null = null;
 
-  /** Execute + submit whatever's pending. `executeFrame`'s own per-run first-touch
-   *  bookkeeping is private to each call; the frame-wide "does target X hold this
-   *  frame's content" fact every overlay pass reads lives on `canvas.snapshot`,
-   *  shared by every view, so a `perView` section's draws are visible to the
-   *  `once` overlays with no folding-back needed here. */
+  /** Execute + submit whatever's pending. The frame-wide "does target X hold content" fact lives on `canvas.snapshot`, shared by every view. */
   const flush = (isFinal: boolean): void => {
     if (currentView === null) {
       if (!isFinal) return;
@@ -148,9 +137,8 @@ export function renderFrame(input: RenderFrameInput): void {
       const steps = expand(section.steps, canvas);
       const { faces, frame } = partitionCaptureSteps(steps);
       if (faces.length > 0) {
-        // A capture face always gets its own encoder and submit, ahead of
-        // the running batch — flush that out of the way first so a body
-        // drawn for both never shares a submission (docs/RENDERER.md).
+        // A capture face gets its own submit, so flush the running batch first: a body
+        // drawn for both must never share a submission (docs/RENDERER.md).
         flush(false);
         for (const face of faces) {
           const faceEncoder = device.createCommandEncoder();

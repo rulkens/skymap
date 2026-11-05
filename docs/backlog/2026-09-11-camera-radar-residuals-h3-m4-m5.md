@@ -11,7 +11,7 @@ architecture, each a case of one fact re-derived by hand in a second place.
 
 **Where** — `src/state/camera/selectors.ts:29-38` (the `selectCameraActive`
 body) hand-copies each driver's activity test against the table rows at
-`src/services/engine/camera/cameraDrivers.ts:187` (clip), `:216` (orbitDrag),
+`src/services/engine/camera/drivers/cameraDrivers.ts:187` (clip), `:216` (orbitDrag),
 `:258` (tween), `:285` (autoRotate, arm gate included). The follow rows are
 covered separately by a third term in a third file
 (`src/services/engine/helpers/shouldKeepTicking.ts:26-32`).
@@ -61,7 +61,7 @@ and that ordering must survive the fold.
 
 ## M5 — `commitOnEdge.authoredOverride` carries two pipeline stages in one nullable field
 
-**Where** — `src/services/engine/camera/commitOnEdge.ts:29-31,43-48` returns
+**Where** — `src/services/engine/camera/drivers/commitOnEdge.ts:29-31,43-48` returns
 `authoredOverride: FramedCameraPose | null`; `src/services/engine/frame/projectFramePose.ts:87`
 reads it as `register = authoredOverride ?? displayed`.
 

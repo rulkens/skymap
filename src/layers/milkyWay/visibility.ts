@@ -8,6 +8,7 @@ export const milkyWayVisibility = [
     key: 'milkyWayDisk',
     cluster: 'milkyWay',
     recession: 'strong',
+    selects: ['milkyWay'],
     // The two multiply: the Sun's descent hands off to the real Gaia stars, and the Centre's
     // wider band stops the blowout there. Fully to 0: a dim floor reads as over-bright blobs.
     bands: {

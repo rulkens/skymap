@@ -1,6 +1,6 @@
 /**
  * palette — SHARED linear-RGB colours only. Per-body data read once at its seed site stays
- * inline (planet albedos in `scenePlanets.ts`); star tints come from `temperatureToLinearRgb`.
+ * inline (planet albedos in the body Layer's `bodies/` rows); star tints come from `temperatureToLinearRgb`.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -25,6 +25,9 @@ export const SAT_ROCK: Vec3 = [0.35, 0.34, 0.32];
 export const SAT_ICE: Vec3 = [0.45, 0.47, 0.5];
 export const IO_SULFUR: Vec3 = [0.5, 0.45, 0.22];
 export const TITAN_ORANGE: Vec3 = [0.5, 0.38, 0.2];
+
+// Shared by Vesta, Ceres and Bennu: a clay brown, warmer than SAT_ROCK and redder than PLUTO_TAN.
+export const SMALL_BODY_ROCK: Vec3 = [0.44, 0.33, 0.27];
 
 // Hitchhiker's Guide easter egg: a sperm whale and a bowl of petunias, 400 km up.
 export const WHALE_GREY: Vec3 = [0.28, 0.32, 0.38];

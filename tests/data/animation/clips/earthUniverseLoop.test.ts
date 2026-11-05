@@ -10,18 +10,19 @@
 import { describe, it, expect } from 'vitest';
 import { earthUniverseLoop } from '../../../../src/data/animation/clips/earthUniverseLoop';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 describe('earthUniverseLoop', () => {
   it('opens sunward, raised 30° above the ecliptic', () => {
     const start = earthUniverseLoop(CONST_J2000).data.start as CameraPose;
-    const earth = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    const earth = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
     const sMag = Math.hypot(earth[0], earth[1], earth[2]);
     const sunward: Vec3 = [earth[0] / sMag, earth[1] / sMag, earth[2] / sMag];
 

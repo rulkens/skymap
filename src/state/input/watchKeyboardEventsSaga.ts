@@ -25,7 +25,7 @@
 import { take, call, put, select } from 'typed-redux-saga';
 
 import { createKeyboardListener } from '../../services/input/createKeyboardListener';
-import { APP_EXHIBITS } from '../../compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from './keyboardShortcuts';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { asArray } from '../../utils/asArray';
@@ -39,7 +39,7 @@ import type { RootState } from '../../store/types';
 function exhibitRun(state: RootState, key: string) {
   const source = selectTakeoverSource(state);
   if (source?.kind !== 'exhibit') return null;
-  for (const { kind, data } of APP_EXHIBITS[source.id].body) {
+  for (const { kind, data } of APP_EXHIBIT_REGISTRY[source.id].body) {
     for (const shortcut of kind.shortcuts ?? []) {
       if (!shortcutKeys(shortcut.keys).includes(key)) continue;
       const actions = shortcut.run(state, data);
@@ -51,7 +51,7 @@ function exhibitRun(state: RootState, key: string) {
 
 export function* watchKeyboardEventsSaga() {
   const kindShortcuts = [
-    ...new Set(Object.values(APP_EXHIBITS).flatMap((e) => e.body.map((s) => s.kind))),
+    ...new Set(Object.values(APP_EXHIBIT_REGISTRY).flatMap((e) => e.body.map((s) => s.kind))),
   ].flatMap((kind) => kind.shortcuts ?? []);
   const bound = [
     ...KEYBOARD_SHORTCUTS,

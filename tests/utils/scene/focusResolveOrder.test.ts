@@ -2,17 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { focusResolveOrder } from '../../../src/utils/scene/focusResolveOrder';
 import type { AnchorBody } from '../../../src/@types/scene/AnchorBody';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 /**
  * Synthetic tables throughout. The real focus graph is two levels deep, so
  * pinning depth or a cycle against `ORBITAL_ELEMENTS` would mean seeding a fake
  * body into shipped data to make the case exist.
  */
-const ROOT: readonly AnchorBody[] = [{ id: 'root', positionMpc: [0, 0, 0] }];
+const ROOT: readonly AnchorBody[] = [{ id: asSceneBodyId('root'), positionMpc: [0, 0, 0] }];
 
 const row = (id: string, focusId: string): OrbitalElements => ({
-  id,
-  focusId,
+  id: asSceneBodyId(id),
+  focusId: asSceneBodyId(focusId),
   semiMajorMpc: 1,
   eccentricity: 0,
   inclinationRad: 0,

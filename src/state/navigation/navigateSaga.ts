@@ -32,22 +32,22 @@ import { startTour } from '../tour/tourActions';
 import { selectCameraBase } from '../camera/selectors';
 import { selectTimeState } from '../time/selectors';
 import { selectOrientation } from '../settings/selectors';
-import { framingPose } from '../../services/engine/camera/framingPose';
-import { homePose } from '../../services/engine/camera/homePose';
-import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
+import { framingPose } from '../../services/engine/camera/framing/framingPose';
+import { homePose } from '../../services/engine/camera/framing/homePose';
+import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { APP_EXHIBITS } from '../../compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { clipFactories } from '../../data/animation/clips/clipRegistry';
 import { isKeyOf } from '../../utils/object/isKeyOf';
-import { absoluteArm } from '../../utils/camera/absoluteArm';
+import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import type { LinkIntent } from '../../@types/url/LinkIntent';
 import type { Transition } from '../../@types/navigation/Transition';
 import type { NavigateOutcome } from '../../@types/navigation/NavigateOutcome';
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 import type { LiveCameraRuntime, SagaContext } from '../../store/types';
 
 const OK: NavigateOutcome = { ok: true };
@@ -153,7 +153,7 @@ export function* navigateSaga(
       return yield* call(frameFocusSaga, yield* call(liveCameraRuntimeSaga));
     }
     case 'exhibit':
-      if (!isKeyOf(APP_EXHIBITS, view.id)) return UNKNOWN_ID;
+      if (!isKeyOf(APP_EXHIBIT_REGISTRY, view.id)) return UNKNOWN_ID;
       // The fitted pose reads the live lens, so the cut waits for it.
       yield* call(liveCameraRuntimeSaga);
       yield* put(

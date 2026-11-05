@@ -31,6 +31,10 @@ body {
  * even before React mounts (so the page doesn't briefly show a smaller
  * default-sized canvas during boot).
  *
+ * `dvh`, not `vh`: mobile `100vh` assumes a hidden address bar, which never
+ * hides here (the page doesn't scroll), so the canvas ran below the screen
+ * and the view centre sat low, out of line with the `dvh`-sized dock.
+ *
  * `touch-action: none` is load-bearing on mobile.  Without it, the
  * browser claims any drag gesture after the first ~10 px of movement
  * for its native pan / pinch-zoom — at which point it fires a
@@ -45,15 +49,18 @@ body {
 #c {
   display: block;
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   touch-action: none;
 }
 
 /* Dome rig draws a fisheye disc, which only reads correctly on a square
    backing store — `resizeCanvasToDisplay` follows this box, not the 100vw
-   above. */
+   above. Opacity just under 1 bars Chrome from promoting the canvas to its
+   own hardware overlay layer — a field test for the Wisdome rig, where two
+   projectors on a second GPU showed the UI but not the render. */
 #c[data-view-rig='dome'] {
   width: min(100vw, 100vh);
   height: min(100vw, 100vh);
   margin-inline: auto;
+  opacity: 0.99;
 }

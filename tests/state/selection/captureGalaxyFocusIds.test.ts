@@ -26,7 +26,7 @@ import {
   updateSelectionFocus,
 } from '../../../src/state/selection/selectionSlice';
 import { setGalaxyCatalogVisible } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';

@@ -28,7 +28,7 @@ import { purgeCloudflareCache } from './r2/purgeCloudflareCache';
 import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv';
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
-import { SURFACE_TILE_REGISTRY } from '../../src/data/bodies/surfaceTileRegistry';
+import { SURFACE_TILE_REGISTRY } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
 import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
 
 const DATA_DIR = 'public/data';
@@ -95,11 +95,16 @@ function buildGroups(): R2SyncGroup[] {
       gzipOnWire: false,
     },
     // `no-cache`, not immutable: an edited `.blend` is re-saved under the same
-    // key, so an immutable header would hand a restore the pre-edit bytes.
+    // key, so an immutable header would hand a restore the pre-edit bytes. `bulk`
+    // because rclone uploads multipart: wrangler refuses files over 300 MiB (Vesta's mosaic).
     {
       label: 'Mesh sources',
       files: collectMeshSources(RAW_DATA['meshes.dir'].path),
-      transport: { kind: 'wrangler' },
+      transport: {
+        kind: 'bulk',
+        localRoot: RAW_DATA['meshes.dir'].path,
+        keyRoot: RAW_DATA['meshes.dir'].path,
+      },
       cacheControl: NO_CACHE,
       purge: false,
       gzipOnWire: false,

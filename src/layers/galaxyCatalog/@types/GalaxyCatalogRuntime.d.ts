@@ -6,26 +6,26 @@
 
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
+import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
+import type { GalaxyRecordSource } from '../records/@types/GalaxyRecordSource';
 import type { GalaxyCatalogFacts } from './GalaxyCatalogFacts';
-import type { GalaxyRecordBridge } from './GalaxyRecordBridge';
+import type { GalaxyRecordBridge } from '../selection/@types/GalaxyRecordBridge';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
+import type { FamousGalaxiesPayload } from '../famousGalaxies/@types/FamousGalaxiesPayload';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
-import type { HiResFamousReq } from '../../../@types/loading/HiResFamousReq';
-import type { HiResFamousPair } from '../../../@types/engine/subsystems/HiResFamousPair';
-import type { PgcAliasMap } from '../../../@types/loading/PgcAliasMap';
+import type { HiResFamousReq } from '../hiResFamous/@types/HiResFamousReq';
+import type { HiResFamousPair } from '../hiResFamous/@types/HiResFamousPair';
+import type { PgcAliasMap } from '../aliases/@types/PgcAliasMap';
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { TextureAtlas } from '../../../services/gpu/resources/textureAtlas';
-import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
-import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
-import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
-import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointRenderer';
-import type { GalaxyPickRenderer } from '../../../@types/rendering/GalaxyPickRenderer';
-import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
-import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
+import type { ProceduralDiskSubsystem } from '../disks/procedural/@types/ProceduralDiskSubsystem';
+import type { TexturedDiskSubsystem } from '../disks/textured/@types/TexturedDiskSubsystem';
+import type { DiskPlannerWalk } from '../lod/@types/DiskPlannerWalk';
+import type { GalaxyPointRenderer } from '../pointSprites/@types/GalaxyPointRenderer';
+import type { GalaxyPickRenderer } from '../pointSprites/@types/GalaxyPickRenderer';
+import type { TexturedDiskRenderer } from '../disks/textured/@types/TexturedDiskRenderer';
+import type { ProceduralDiskRenderer } from '../disks/procedural/@types/ProceduralDiskRenderer';
 
 export type GalaxyCatalogRuntime = {
   /** The CPU-side catalog mirror, kept for the flat-only readers (hi-res famous, famous labels). */
@@ -40,6 +40,8 @@ export type GalaxyCatalogRuntime = {
   readonly famousMeta: readonly FamousGalaxyMetaEntry[];
   /** Bumped by every point-slot commit; the two `frame` reconciles key on it. */
   readonly catalogsVersion: number;
+  /** Captured at `create` the way the pick renderer captures it (see the comment in `create.ts` on why that is safe): passes read the engine's `@group(3)` focus group here, not off `state.gpu`. */
+  readonly focusBindGroup: GPUBindGroup;
   /** Captured from `create`'s deps: `Layer.frame` hands `frame` only the runtime, never `deps`. */
   readonly publish: (patch: Partial<GalaxyCatalogFacts>) => void;
 

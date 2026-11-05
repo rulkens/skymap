@@ -96,10 +96,11 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-ephemeris',
-    text: 'Planet positions are Kepler orbits from JPL’s published elements plus a fitted correction that matches JPL Horizons to within 1,000 km from 1900 to 2100. What is fitted is Mercury, Venus, the Earth-Moon barycentre and, from Mars to Neptune, the centre of mass of each planet with its moons. Of the moons, 18 that belong to Jupiter, Saturn, Uranus and Neptune are fitted to the same bound against their planet. Earth’s Moon is not: it follows mean orbital elements.',
+    text: 'Planet positions are Kepler orbits from JPL’s published elements plus a fitted correction that matches JPL Horizons to within 1,000 km from 1900 to 2100. What is fitted is Mercury, Venus, the Earth-Moon barycentre and, from Mars to Neptune, the centre of mass of each planet with its moons. Of the moons, 18 that belong to Jupiter, Saturn, Uranus and Neptune are fitted to the same bound against their planet, 26 orbits in all. Earth’s Moon is not: it follows mean orbital elements.',
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data pipeline notes, ${IN_REPO}`,
     checked: CHECKED,
+    figure: { value: '26', measure: 'orbits fitted to JPL Horizons' },
   },
   {
     id: 'sci-density-field',
@@ -114,6 +115,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/tools/filaments/buildFilaments.ts`,
     sourceLabel: `the filament build, ${IN_REPO}`,
     checked: CHECKED,
+    figure: { value: '5', measure: 'standard deviations clear of the noise, or a ridge is not kept' },
   },
   {
     id: 'sci-flows',
@@ -155,7 +157,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-horizon-shell',
     text: 'The sphere at the edge of the observable universe is drawn at 14.3 gigaparsecs (46.6 thousand million light-years). It marks the particle horizon of a cosmological model: how far away, today, the most distant matter is from which any signal could have reached us. The matter whose glow we see as the microwave background is a little nearer.',
-    source: `${REPO_BLOB}/src/data/rendering/horizonRadiusGpc.ts`,
+    source: `${REPO_BLOB}/src/layers/cosmicHorizon/horizon/data/horizonRadiusGpc.ts`,
     sourceLabel: `the horizon radius, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -169,7 +171,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-atmospheres',
     text: 'The atmospheres of 9 bodies are computed from a light-scattering model after Bruneton and Neyret and Hillaire, with a table of gases and hazes for each body.',
-    source: `${REPO_BLOB}/src/data/bodies/atmosphereParams.ts`,
+    source: `${REPO_BLOB}/src/layers/body/atmosphere/data/atmosphereParams.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -190,7 +192,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-galaxy-discs',
     text: 'A galaxy smaller than about 8 pixels on screen is a point. Larger than that, it is drawn as a generated disc. From about 24 pixels it carries a picture: a photograph of our choosing for 81 named galaxies, and for the others a survey image the app fetches from the Sloan Digital Sky Survey or, failing that, from the Digitized Sky Survey through the CDS in Strasbourg.',
-    source: `${REPO_BLOB}/src/data/galaxyLodBands.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/lod/data/galaxyLodBands.ts`,
     sourceLabel: `the galaxy level-of-detail bands, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -211,7 +213,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-zoa-band',
     text: 'The blue Zone of Avoidance band is a guide we draw along the plane of the Milky Way, set to 10 degrees towards the galactic centre and 3 degrees away from it. The shortage of galaxies behind it is in the catalogues.',
-    source: `${REPO_BLOB}/src/data/zoneOfAvoidance/zoneOfAvoidanceShell.ts`,
+    source: `${REPO_BLOB}/src/layers/zoneOfAvoidance/shell/data/zoneOfAvoidanceShell.ts`,
     sourceLabel: `the band’s shape, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -255,7 +257,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sim-horizon-h0',
     text: 'The sphere at 14.3 gigaparsecs fits a Hubble constant near 67. With the 70 we use for galaxies and the same matter density, the same model gives about 13.6 gigaparsecs. The sphere is drawn about 5 per cent too far out for the galaxies inside it.',
-    source: `${REPO_BLOB}/src/data/rendering/horizonRadiusGpc.ts`,
+    source: `${REPO_BLOB}/src/layers/cosmicHorizon/horizon/data/horizonRadiusGpc.ts`,
     sourceLabel: `the horizon radius, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -332,7 +334,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sim-exposure',
     text: 'Brightness is adjusted for a screen. The exposure applied to stars rises nearly fivefold as the camera pulls back from 1 parsec to 10 kiloparsecs, because a monitor cannot adapt to the dark as an eye does.',
-    source: `${REPO_BLOB}/src/utils/star/starExposureRamp.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/photometry/utils/starExposureRamp.ts`,
     sourceLabel: `the star exposure ramp, ${IN_REPO}`,
     checked: CHECKED,
   },

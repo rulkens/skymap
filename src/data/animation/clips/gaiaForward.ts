@@ -8,7 +8,7 @@
 import type { Clip } from '../../../@types/animation/Clip';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { hide, show, hold, moveTarget } from '../../../services/engine/animation/effectHelpers';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { GAL_X_EQ, ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 import { SCALE_UNITS } from '../../scaleUnits';
 

@@ -5,7 +5,7 @@
  * Each point is a landmark inside its bbox, never the bbox centre — several
  * centres fall in open water. `altKm` frames the place: ~8-15 km for a city,
  * ~2-5 km for a single landmark; Everest/Grand Canyon/Cape Town reuse the
- * hand-tuned values from `data/debug/flyToPresets.ts`.
+ * hand-tuned values from the body Layer's `ui/flyToPresets.ts`.
  */
 import type { EarthPlace } from '../../@types/palette/EarthPlace';
 
@@ -45,5 +45,55 @@ export const EARTH_PLACES: readonly EarthPlace[] = [
     lonDeg: 31.1342,
     latDeg: 29.9792,
     altKm: 3,
+  },
+  {
+    id: 'cape-canaveral',
+    names: ['Cape Canaveral', 'Kennedy Space Center', 'KSC', 'LC-39A'],
+    lonDeg: -80.604,
+    latDeg: 28.608,
+    altKm: 5,
+  },
+  {
+    id: 'baikonur',
+    names: ['Baikonur', 'Baikonur Cosmodrome', "Gagarin's Start"],
+    lonDeg: 63.342,
+    latDeg: 45.92,
+    altKm: 5,
+  },
+  {
+    id: 'kourou',
+    names: ['Kourou', 'Guiana Space Centre', 'Centre Spatial Guyanais'],
+    lonDeg: -52.79,
+    latDeg: 5.26,
+    altKm: 5,
+  },
+  {
+    id: 'vandenberg',
+    names: ['Vandenberg', 'Vandenberg Space Force Base'],
+    lonDeg: -120.611,
+    latDeg: 34.632,
+    altKm: 5,
+  },
+  { id: 'starbase', names: ['Starbase', 'Boca Chica'], lonDeg: -97.156, latDeg: 25.997, altKm: 3 },
+  {
+    id: 'wenchang',
+    names: ['Wenchang', 'Wenchang Space Launch Site'],
+    lonDeg: 110.951,
+    latDeg: 19.614,
+    altKm: 5,
+  },
+  {
+    id: 'tanegashima',
+    names: ['Tanegashima', 'Tanegashima Space Center'],
+    lonDeg: 130.975,
+    latDeg: 30.4,
+    altKm: 5,
+  },
+  {
+    id: 'sriharikota',
+    names: ['Sriharikota', 'Satish Dhawan Space Centre'],
+    lonDeg: 80.235,
+    latDeg: 13.72,
+    altKm: 5,
   },
 ];

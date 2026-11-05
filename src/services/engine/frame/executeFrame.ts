@@ -96,6 +96,7 @@ import { captureFaceAttachment } from './captureFaceAttachment';
 import { runBloom } from './runBloom';
 import { sampledDepthFor } from './sampledDepthFor';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
+import { clearValueOf } from '../../../utils/gpu/clearValueOf';
 import { timestampSpread } from '../../../utils/gpu/timestampSpread';
 import { cpuSpans } from '../../../utils/perf/cpuSpans';
 
@@ -257,7 +258,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // threaded into every pass in the group. Resolved BEFORE the gate: a
         // body-row pass's `enabled` reads `view.slab.frame.hostId` off it, and
         // a `{ sample }` step's `sampledDepth` must be on `view` before the
-        // gate too — `contactShadowsPass.enabled` reads it to tell "my row"
+        // gate too — missions' `contactShadowsPass.enabled` reads it to tell "my row"
         // from some other row sampling the same texture. Capture rosters
         // carry no sample marker (`bodyRowSteps`'s module header), so a
         // capture step never takes this branch.
@@ -310,7 +311,10 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           if (loadOp === 'clear') lastDepthClear.set(step.target, view.slab);
           destination = {
             label: step.target,
-            dest: { view: viewFor(step.target, ctx, swapView), clearValue: spec.clearValue },
+            dest: {
+              view: viewFor(step.target, ctx, swapView),
+              clearValue: clearValueOf(spec, state),
+            },
             depth:
               spec.depth && loadOp !== undefined
                 ? { view: ctx.snapshot.renderTargets.depthViewOf(step.target), loadOp }
@@ -368,7 +372,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           colorAttachments: [
             colorAttachment(
               viewFor(dest, ctx, swapView),
-              ctx.snapshot.renderTargets.specOf(dest).clearValue,
+              clearValueOf(ctx.snapshot.renderTargets.specOf(dest), state),
               touched.has(dest),
             ),
           ],

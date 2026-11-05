@@ -72,19 +72,19 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
-import { liveBodyPosition } from '../../camera/liveBodyPosition';
+import { liveBodyPosition } from '../../camera/bodyFrame/liveBodyPosition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { sceneOccluderBodies } from '../sceneOccluderBodies';
 import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
 import { overflowFade } from '../../../../utils/scene/overflowFade';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
-import { NEAR0_OVERLAY_CLIP_SCALE } from '../near0OverlayClipScale';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
+import { near0OverlayClipScale } from '../near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../near0OverlayVpF32';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
-import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
+import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/frustum/foregroundFrustum';
 import { subjectOccludedByBodies } from '../../../../utils/occlusion/subjectOccludedByBodies';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
-import { pinInsideNearPlane } from '../../../../utils/camera/pinInsideNearPlane';
+import { pinInsideNearPlane } from '../../../../utils/camera/projection/pinInsideNearPlane';
 
 export const near0SelectionRingPass: ContentPass = {
   name: 'near0-selection-ring',
@@ -147,13 +147,13 @@ export const near0SelectionRingPass: ContentPass = {
     // centre, then rescale to clip metres (`near0OverlayVpF32`) and narrow HERE,
     // at the GPU-upload boundary: the rescale is this pass's own because the
     // ring renderer is shared with the COSMO sibling, which must not carry it.
-    const rebasedVp = near0OverlayVpF32(rebaseViewProj(view.slab.vp, view.camPos));
+    const clipScale = near0OverlayClipScale(view.slab.near);
+    const rebasedVp = near0OverlayVpF32(rebaseViewProj(view.slab.vp, view.camPos), clipScale);
 
     // Keep the centre between the slab's planes — BOTH can be crossed. The
     // adaptive far plane (`max(orbit·100, 3e-11)` Mpc, `foregroundFrustum`)
     // drops below a pinned anchor when the orbit target is much nearer; the
-    // near plane is FLOORED at `MIN_NEAR_MPC` (~6.2 m) while a mesh body parks
-    // the camera at two of its own radii (0.9 m for the bowl of petunias). One
+    // near plane is FLOORED at `MIN_NEAR_MPC`. One
     // clip z/w serves all six quad vertices, so outside either plane the whole
     // primitive is discarded and the halo vanishes rather than clips. Scaling
     // the centre is exactly screen-preserving (`clampVec3Length`'s header), the
@@ -162,7 +162,7 @@ export const near0SelectionRingPass: ContentPass = {
     const clampedCentre = pinInsideNearPlane(
       clampVec3Length(centre, view.slab.far * NEAR0_FAR_CLAMP_FRACTION),
       rebasedVp,
-      view.slab.near * NEAR0_OVERLAY_CLIP_SCALE,
+      view.slab.near * clipScale,
     );
 
     // The per-pixel occlusion variant is selected by HANDING the renderer the

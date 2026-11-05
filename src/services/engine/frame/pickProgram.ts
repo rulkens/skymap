@@ -91,8 +91,8 @@ function pickTargetId(slabIndex: number): string {
  * Exported because every pipeline drawing into that slab's pick pass must
  * declare the SAME format, so the target and its pipelines read one source
  * (`gpuHandleRegistry` sizes the label pick pipelines from it). The overlay
- * lands on the NEAR0 branch by construction: its one occupant is the NEAR0
- * caption stamp, whose pipeline is built from `pickDepthFormat(NEAR0)`.
+ * lands on the NEAR0 branch by construction: its occupants (the NEAR0 caption
+ * stamp, the satellite dots) build their pipelines from `pickDepthFormat(NEAR0)`.
  */
 export function pickDepthFormat(slabIndex: number): GPUTextureFormat {
   return slabIndex === COSMO ? COSMO_DEPTH_FORMAT : NEAR0_DEPTH_FORMAT;

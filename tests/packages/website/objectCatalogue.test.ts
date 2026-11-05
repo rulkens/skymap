@@ -15,14 +15,15 @@ import { OBJECT_ROWS, OBJECT_SECTIONS } from '../../../packages/website/src/data
 import { objectSubLists } from '../../../packages/website/src/utils/objectSubLists';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import { BODY_PICK_ROWS } from '../../../src/data/bodies/bodyPickRows';
+import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
 import { SEEDED_STAR_CATALOGS } from '../../../src/data/bodies/seededStarCatalogs';
-import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../src/data/palette/earthPlaces';
-import { buildStaticAnchorStructures } from '../../../src/layers/structure/load/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../../src/layers/structure/catalog/load/buildStaticAnchorStructures';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../src/layers/blackHoles/sources/blackHoleSourceRows';
-import { encodeBlackHoleFocusId } from '../../../src/layers/blackHoles/present/encodeBlackHoleFocusId';
+import { encodeBlackHoleFocusId } from '../../../src/layers/blackHoles/markers/present/encodeBlackHoleFocusId';
 import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
-import { decodeStarFocusId } from '../../../src/services/url/decodeStarFocusId';
+import { decodeStarFocusId } from '../../../src/layers/starCatalog/selection/utils/decodeStarFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { STAR_FOCUS_PREFIX } from '../../../src/services/url/starFocusId';
 import { isRegistryBodyId } from '../../../src/utils/scene/isRegistryBodyId';
@@ -62,7 +63,7 @@ const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
   'galaxy-cluster': (id) => structureIds.has(id),
   supercluster: (id) => structureIds.has(id),
   void: (id) => structureIds.has(id),
-  exhibit: (id) => id in APP_EXHIBITS,
+  exhibit: (id) => id in APP_EXHIBIT_REGISTRY,
   tour: (id) => id in tourRegistry,
   place: () => false,
 };
@@ -99,7 +100,7 @@ describe('object catalogue', () => {
     const prefixed = (prefix: string, rows: readonly { id: string }[]) =>
       rows.map((row) => `${prefix}${row.id}`).sort();
     expect(ids('planet', 'moon', 'spacecraft', 'model')).toEqual(
-      prefixed(BODY_FOCUS_PREFIX, Object.values(BODY_PICK_ROWS).flat()),
+      prefixed(BODY_FOCUS_PREFIX, [...Object.values(BODY_PICK_ROWS).flat(), ...SCENE_MESH_BODIES]),
     );
     expect(ids('sun', 'star', 'sStar')).toEqual(
       prefixed(STAR_FOCUS_PREFIX, Object.values(SEEDED_STAR_CATALOGS).flat()),
@@ -117,7 +118,7 @@ describe('object catalogue', () => {
         'void',
       ),
     ).toEqual([...structureIds].sort());
-    expect(ids('exhibit')).toEqual(Object.keys(APP_EXHIBITS).sort());
+    expect(ids('exhibit')).toEqual(Object.keys(APP_EXHIBIT_REGISTRY).sort());
     expect(ids('tour')).toEqual(
       Object.values(tourRegistry)
         .filter((tour) => tour.dev !== true)

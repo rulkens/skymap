@@ -12,11 +12,15 @@ import type { ClockKey } from '../../../@types/animation/ClockKey';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { all, clock, hide, hold } from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 import { SCALE_UNITS } from '../../scaleUnits';
 import { trackBody } from './makers/trackBody';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
+
+const PHOBOS_ID = asSceneBodyId('phobos');
+const MARS_ID = asSceneBodyId('mars');
 
 const PHOBOS_PERIOD_DAYS = 0.31891;
 const ELEVATION_RAD = 0.3;
@@ -29,8 +33,8 @@ export function phobosChase(simDays: number): Clip {
     { sec: 19.5, simDays: simDays + PHOBOS_PERIOD_DAYS },
   ];
   const bodies = deriveBodyStates(simDays);
-  const p = bodies.get('phobos')!.positionMpc;
-  const m = bodies.get('mars')!.positionMpc;
+  const p = bodies.get(PHOBOS_ID)!.positionMpc;
+  const m = bodies.get(MARS_ID)!.positionMpc;
   const bearing = orbitAnglesLookingAlong(
     normalize3([m[0] - p[0], m[1] - p[1], m[2] - p[2]]),
     ORIENTATION_FRAMES.ecliptic,
@@ -50,7 +54,7 @@ export function phobosChase(simDays: number): Clip {
         // Nothing but the moon and the planet: the turning light is the subject.
         hide(['labels', 'orbitTrails', 'missionTrails', 'structureRing'], 0),
         clock(keys),
-        all([trackBody('phobos', keys, 0.25, { bodyId: 'mars', elevationRad: ELEVATION_RAD })]),
+        all([trackBody(PHOBOS_ID, keys, 0.25, { bodyId: MARS_ID, elevationRad: ELEVATION_RAD })]),
         hold(2),
       ],
     },

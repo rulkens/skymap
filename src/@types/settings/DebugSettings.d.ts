@@ -13,18 +13,22 @@ import type { DebugOverlayKey } from '../data/debug/DebugOverlayKey';
 export type DebugSettings = {
   overlays: Record<DebugOverlayKey, boolean>;
   /**
-   * Radius of the `terrain-pick-marker` overlay's sphere, in WORLD metres —
-   * the gauge the user reads the CPU-floor/GPU-surface height gap against, so
-   * it is a physical size the user sets, never a screen-pixel one. Only the
-   * marker pass and its readout read it; dead with that overlay off.
-   */
-  terrainPickMarkerRadiusM: number;
-  /**
    * Pass names toggled off, membership by `[name] === true`. Consulted AFTER
    * each pass's own `enabled()`, so the override is ONE-WAY: it can hide a pass
    * that would run, never force-enable one whose gate said false.
    */
   disabledPasses: Record<string, boolean>;
+  /**
+   * The frame clears white instead of black (the `hdr` row's clear). Only the
+   * site shot tool sets it, to take a subject's alpha from a black/white pair.
+   */
+  matteWhite: boolean;
+  /**
+   * A uniform fill light on mesh bodies (craft, shape-model moons), as a fraction
+   * of sunlight from every direction: 0 is the app's own look. Only the site shot
+   * tool sets it, to open up a craft's shadow side against black space.
+   */
+  meshAmbient: number;
   /**
    * Decouples the frame's pass SHAPE from GPU-timing collection: `'auto'`
    * reproduces the timing-derived choice, keeping `?gpuTimings` byte-identical.

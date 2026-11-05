@@ -4,15 +4,16 @@
  */
 
 import { deriveBodyStates } from '../../src/services/engine/frame/deriveBodyStates';
-import { toBodyArm } from '../../src/services/engine/camera/poseFrameConversion';
+import { toBodyArm } from '../../src/services/engine/camera/arms/body/poseFrameConversion';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../src/data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../src/data/orientation/orientationFrames';
 import type { Vec3 } from '../../src/@types/math/Vec3';
-import type { FramedCameraPose } from '../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../src/@types/camera/pose/FramedCameraPose';
+import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 
 export function earthArm(radii: number): FramedCameraPose {
-  const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+  const earth = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
   const B = ORIENTATION_FRAMES.ecliptic;
   return {
     frame: { body: 'earth' },
@@ -25,7 +26,7 @@ export function earthArm(radii: number): FramedCameraPose {
       },
       B,
       B,
-      'earth',
+      asSceneBodyId('earth'),
       earth,
     ),
   } as FramedCameraPose;

@@ -13,11 +13,11 @@ import { cosmicWebDensityVisibility } from './visibility';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from './sources/cosmicWebDensitySourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
-import { cosmicWebDensityPass } from './passes/cosmicWebDensityPass';
-import { cosmicWebDensityUpsamplePass } from './passes/cosmicWebDensityUpsamplePass';
-import { cosmicWebDensityAssetRows } from './load/cosmicWebDensityAssetRows';
-import CosmicWebDensitySectionContainer from './ui/CosmicWebDensitySectionContainer';
-import CosmicWebDensityTuningSectionContainer from './ui/CosmicWebDensityTuningSectionContainer';
+import { cosmicWebDensityPass } from './densityCubes/passes/cosmicWebDensityPass';
+import { cosmicWebDensityUpsamplePass } from './densityCubes/passes/cosmicWebDensityUpsamplePass';
+import { cosmicWebDensityAssetRows } from './densityCubes/load/cosmicWebDensityAssetRows';
+import CosmicWebDensitySectionContainer from './densityCubes/ui/CosmicWebDensitySectionContainer';
+import CosmicWebDensityTuningSectionContainer from './densityCubes/ui/CosmicWebDensityTuningSectionContainer';
 
 export const cosmicWebDensityLayer = defineLayer({
   name: 'cosmicWebDensity',
@@ -40,7 +40,11 @@ export const cosmicWebDensityLayer = defineLayer({
   passes: (runtime) => [cosmicWebDensityPass(runtime), cosmicWebDensityUpsamplePass(runtime)],
   assets: cosmicWebDensityAssetRows,
   ui: [
-    { slot: 'main', content: CosmicWebDensitySectionContainer },
+    {
+      slot: 'main',
+      content: CosmicWebDensitySectionContainer,
+      title: 'Cosmic web density',
+    },
     { slot: 'debug', content: CosmicWebDensityTuningSectionContainer },
   ],
 });

@@ -1,40 +1,40 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { DriverCtx } from '../../../../../src/@types/engine/camera/DriverCtx';
-import type { MissionCameraMemory } from '../../../../../src/layers/missions/@types/MissionCameraMemory';
-import type { MissionOffsets } from '../../../../../src/@types/camera/MissionOffsets';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+import type { MissionCameraMemory } from '../../../../../src/layers/missions/missionCamera/@types/MissionCameraMemory';
+import type { MissionOffsets } from '../../../../../src/layers/missions/missionCamera/@types/MissionOffsets';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { FollowMemory } from '../../../../../src/@types/engine/camera/FollowMemory';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
 import type { MissionEvent } from '../../../../../src/@types/missions/MissionEvent';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import { MISSION_EASE_MS } from '../../../../../src/data/exhibits/mission/missionEaseMs';
-import { MISSION_FLYBY_LEAD_DAYS } from '../../../../../src/data/exhibits/mission/missionFlybyLeadDays';
-import { buildMissionProfile } from '../../../../../src/utils/exhibits/mission/buildMissionProfile';
+import { MISSION_EASE_MS } from '../../../../../src/layers/missions/missionCamera/data/missionEaseMs';
+import { MISSION_FLYBY_LEAD_DAYS } from '../../../../../src/layers/missions/events/data/missionFlybyLeadDays';
+import { buildMissionProfile } from '../../../../../src/layers/missions/missionCamera/utils/buildMissionProfile';
 import { interpolateClockProfile } from '../../../../../src/utils/time/interpolateClockProfile';
-import { MISSION_EVENTS } from '../../../../../src/data/missions/missionEvents.generated';
+import { MISSION_EVENTS } from '../../../../../src/layers/missions/events/data/missionEvents.generated';
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import { missionPose } from '../../../../../src/layers/missions/exhibits/timeline/missionPose';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { aimCamera, endDrag } from '../../../../../src/state/camera/cameraSlice';
-import { inputGestureStarted } from '../../../../../src/state/input/inputSlice';
+import { aimCamera } from '../../../../../src/state/camera/cameraSlice';
+import { inputGestureEnded, inputGestureStarted } from '../../../../../src/state/input/inputSlice';
 import { setMissionCraft } from '../../../../../src/layers/missions/state/missions/slice';
-import { absoluteArm } from '../../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
 import { rootReducer } from '../../../../../src/store/rootReducer';
-import { eyeMpcOf } from '../../../../../src/utils/camera/eyeMpcOf';
-import { bodyRelativeState } from '../../../../../src/utils/exhibits/mission/bodyRelativeState';
-import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitAnglesLookingAlong';
-import { missionStops } from '../../../../../src/utils/exhibits/mission/missionStops';
+import { eyeMpcOf } from '../../../../../src/utils/camera/orbitPose/eyeMpcOf';
+import { bodyRelativeState } from '../../../../../src/layers/missions/missionCamera/utils/bodyRelativeState';
+import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { missionStops } from '../../../../../src/layers/missions/missionCamera/utils/missionStops';
 import { voyagerTimeline } from '../../../../helpers/missions/voyagerTimeline';
-import { missionEventMs } from '../../../../../src/utils/exhibits/timeline/missionEventMs';
-import { bodyRadiusMpc } from '../../../../../src/utils/camera/bodyRadiusMpc';
+import { missionEventMs } from '../../../../../src/layers/missions/events/utils/missionEventMs';
+import { bodyRadiusMpc } from '../../../../../src/utils/camera/surfaceFrame/bodyRadiusMpc';
 import { dot3 } from '../../../../../src/utils/math/dot3';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { unixMsToJulianDays } from '../../../../../src/utils/time/unixMsToJulianDays';
 import { makeDriverCtx } from '../../../../helpers/camera/makeDriverCtx';
 import { loadVoyagerStopWindows } from '../../../../helpers/missions/loadVoyagerStopWindows';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const neptune = MISSION_EVENTS.find((e) => e.id === 'voyager2-neptune') as MissionEvent;
 const tc = unixMsToJulianDays(missionEventMs(neptune));
@@ -132,8 +132,8 @@ describe('missionPose', () => {
     const pose = worldPose(ctxAt(missionOf(), tc + dDays));
     const eye = eyeMpcOf(pose, BASIS);
     const states = deriveBodyStates(tc + dDays);
-    const craft = states.get('voyager2' as BodyId)!.positionMpc;
-    const target = states.get('neptune' as BodyId)!.positionMpc;
+    const craft = states.get(asSceneBodyId('voyager2'))!.positionMpc;
+    const target = states.get(asSceneBodyId('neptune'))!.positionMpc;
     expect(inFrustum(eye, pose.target, craft)).toBe(true);
     expect(inFrustum(eye, pose.target, target)).toBe(true);
   });
@@ -143,7 +143,7 @@ describe('missionPose', () => {
     // The pose the same mission shows once those offsets are in the store.
     const shown = worldPose(ctxAt(missionOf(want), tc));
     const ctx = ctxAt(missionOf(), tc, 'mission');
-    const dragging = { ...ctx.state, camera: { ...ctx.state.camera, dragging: true } };
+    const dragging = { ...ctx.state, input: { ...ctx.state.input, owner: 'canvas' as const } };
     const payload = poseAt({ ...ctx, state: dragging, authoredWorld: shown }).own!.offsets;
     expect(payload.yaw).toBeCloseTo(want.yaw, 9);
     expect(payload.pitch).toBeCloseTo(want.pitch, 9);
@@ -181,8 +181,8 @@ describe('missionPose', () => {
 
     it('keeps the eye outside the planet and slides the aim to the craft', () => {
       const states = deriveBodyStates(t);
-      const earth = states.get('earth' as BodyId)!.positionMpc;
-      const craft = states.get('voyager1' as BodyId)!.positionMpc;
+      const earth = states.get(asSceneBodyId('earth'))!.positionMpc;
+      const craft = states.get(asSceneBodyId('voyager1'))!.positionMpc;
       const pose = worldPose(ctxAt(zoomed, t));
       const exact = worldPose(ctxAt(missionOf(undefined, false, 'voyager1'), t));
       expect(dist(eyeMpcOf(pose, BASIS), earth)).toBeGreaterThanOrEqual(bodyRadiusMpc('earth'));
@@ -197,7 +197,7 @@ describe('missionPose', () => {
       const zoom = out.own!.offsets.zoom;
       expect(zoom).toBeLessThan(0.01);
       if (out.pose.frame !== 'absolute') throw new Error('expected the world arm');
-      const earth = deriveBodyStates(t).get('earth' as BodyId)!.positionMpc;
+      const earth = deriveBodyStates(t).get(asSceneBodyId('earth'))!.positionMpc;
       const eye = eyeMpcOf(out.pose.pose, BASIS);
       expect(dist(eye, earth) / bodyRadiusMpc('earth')).toBeCloseTo(1.02, 6);
       const again = worldPose(ctxAt(missionOf({ yaw: 0, pitch: 0, zoom }, false, 'voyager1'), t));
@@ -281,7 +281,7 @@ describe('missionPose', () => {
   }
 
   function craftInView(pose: CameraPose, simDays: number): boolean {
-    const craft = deriveBodyStates(simDays).get('voyager2' as BodyId)!.positionMpc;
+    const craft = deriveBodyStates(simDays).get(asSceneBodyId('voyager2'))!.positionMpc;
     return inFrustum(eyeMpcOf(pose, BASIS), pose.target, craft);
   }
 
@@ -346,7 +346,7 @@ describe('missionPose', () => {
     let out = 0;
     const frame = (f: number) => {
       const simDays = interpolateClockProfile(profile, w0 + f * FRAME_MS);
-      // The drag rung steps last frame's pose; here a steady yaw per frame.
+      // The drag arm steps last frame's pose; here a steady yaw per frame.
       const register = shown && { ...shown, yaw: shown.yaw + 0.003 };
       const r = missionPose(
         makeDriverCtx({
@@ -376,7 +376,7 @@ describe('missionPose', () => {
     expect(out).toBe(0);
     expect(Math.abs(own.offsets.yaw)).toBeGreaterThan(0.2);
     const held = shown!;
-    store.dispatch(endDrag());
+    store.dispatch(inputGestureEnded({ source: 'canvas' }));
     const released = frame(f);
     // The aim moves on with the craft as on any frame; the view and its distance hold.
     expect(Math.abs(released.yaw - held.yaw)).toBeLessThan(0.005);

@@ -15,7 +15,7 @@
  * data-resolution preset lifted out of the settings slice into its own root
  * slice so a settings/tour restore can't sweep it; `uiRoute` is the app-level
  * UI slice (palette / hide-UI / debug + splash); `cameraRoute` is the camera
- * Intent slice (base pose, tween descriptor, auto-rotate, dragging flag);
+ * Intent slice (base pose, tween descriptor, auto-rotate);
  * `selectionRoute` / `selectionRowsRoute` hold the selection Intent (focus +
  * select refs) and its reconciled rows.
  */
@@ -44,6 +44,11 @@ export const engineRoute = 'engine' as const;
 export const timeRoute = 'time' as const;
 // `arrivalRoute` is the boot link's arrival status — what the veil and `ready` wait on.
 export const arrivalRoute = 'arrival' as const;
+// `remoteRoute` is the dome's pairing with its remotes (`?remote` only): phase, room code, pairing address.
+export const remoteRoute = 'remote' as const;
 // `inputRoute` holds every source's folded intents: the steps the next frame
 // drains and the pick requests the pick driver answers.
 export const inputRoute = 'input' as const;
+// `viewCoverRoute` holds how far each resting panel reaches over the canvas,
+// which the camera runtime turns into the off-centre view.
+export const viewCoverRoute = 'viewCover' as const;

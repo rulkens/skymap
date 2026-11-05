@@ -1,15 +1,15 @@
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
-import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
-import { structureSelectionRow } from '../../src/layers/structure/present/structureSelectionRow';
-import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
-import { galaxyRecordBridge } from '../../src/layers/galaxyCatalog/present/galaxyRecordBridge';
-import { starCatalogSelectionRow } from '../../src/layers/starCatalog/present/starCatalogSelectionRow';
-import { milkyWaySelectionRow } from '../../src/layers/milkyWay/present/milkyWaySelectionRow';
+import { bodySelectionRow } from '../../src/layers/body/selection/present/bodySelectionRow';
+import { structureSelectionRow } from '../../src/layers/structure/picking/present/structureSelectionRow';
+import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
+import { galaxyRecordBridge } from '../../src/layers/galaxyCatalog/selection/present/galaxyRecordBridge';
+import { starCatalogSelectionRow } from '../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
+import { milkyWaySelectionRow } from '../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import { galaxyRecordsOver } from './galaxyRecordsOver';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { StructureStore } from '../../src/layers/structure/@types/StructureStore';
+import type { StructureStore } from '../../src/layers/structure/catalog/@types/StructureStore';
 import type { SelectionResolver } from '../../src/@types/engine/selection/SelectionResolver';
 
 /** What the structure selection row reads; the real store satisfies it. */
@@ -44,7 +44,7 @@ export function selectionResolverOver(
 ): SelectionResolver {
   return composeSelectionRows(
     () => [
-      ...coreSelectionRows(),
+      bodySelectionRow(),
       structureSelectionRow(structures),
       milkyWaySelectionRow(),
       ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))]),

@@ -12,6 +12,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // A live "now" far enough past J2000 that Earth has visibly moved along its
 // orbit — the exact divergence the investigation measured (~133 deg / 26 yrs).
@@ -19,10 +20,10 @@ const LIVE_SIM_DAYS = CONST_J2000 + 9727.95;
 
 describe('liveFocusRow', () => {
   it("swaps a focused body's positionMpc for deriveBodyStates(simDays), not the stale row value", () => {
-    const stalePositionMpc = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    const stalePositionMpc = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
     const focus: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [stalePositionMpc[0], stalePositionMpc[1], stalePositionMpc[2]],
       driver: bodyDriverGeometry('earth'),
@@ -30,7 +31,9 @@ describe('liveFocusRow', () => {
 
     const out = liveFocusRow(focus, LIVE_SIM_DAYS);
 
-    const livePositionMpc = deriveBodyStates(LIVE_SIM_DAYS).get('earth')!.positionMpc;
+    const livePositionMpc = deriveBodyStates(LIVE_SIM_DAYS).get(
+      asSceneBodyId('earth'),
+    )!.positionMpc;
     expect(out).toEqual({ ...focus, positionMpc: livePositionMpc });
     expect(livePositionMpc).not.toEqual(stalePositionMpc);
   });
@@ -38,7 +41,7 @@ describe('liveFocusRow', () => {
   it('keeps identity fields (type/id/label) untouched', () => {
     const focus: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [0, 0, 0],
       driver: bodyDriverGeometry('earth'),
@@ -61,12 +64,12 @@ describe('liveFocusRow', () => {
   it('falls back to the given row if the body id is unknown to deriveBodyStates', () => {
     const focus: SelectionRow = {
       type: 'body',
-      id: 'not-a-real-body',
+      id: asSceneBodyId('not-a-real-body'),
       label: 'Ghost',
       positionMpc: [1, 2, 3],
       // Hand-built: no seed to read, which is the point of this row.
       driver: {
-        poseId: 'not-a-real-body',
+        poseId: asSceneBodyId('not-a-real-body'),
         boundingRadiusM: 1,
         footprintRadiusM: 1,
         groundRadiusM: 1,

@@ -15,10 +15,11 @@ import { SCALE_UNITS } from '../../scaleUnits';
 import { raDecDistToCartesian } from '../../../utils/math/raDecDistToCartesian';
 import type { FamousStarRow } from '../../../@types/data/FamousStarRow';
 import type { AnchorBody } from '../../../@types/scene/AnchorBody';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 export function starAnchor(row: FamousStarRow): AnchorBody {
   return {
-    id: row.id,
+    id: asSceneBodyId(row.id),
     positionMpc: raDecDistToCartesian(
       row.raDeg,
       row.decDeg,

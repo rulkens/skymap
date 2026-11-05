@@ -1,7 +1,7 @@
 # Grill Session: Input architecture — 2026-10-14
 
 Source: the dome remote brainstorm
-([`2026-10-11-dome-remote-design.md`](../superpowers/specs/2026-10-11-dome-remote-design.md)). The remote is the
+([`2026-10-11-dome-remote-design.md`](../superpowers/specs/completed/2026-10-11-dome-remote-design.md)). The remote is the
 app's second input source, and both ways of adding it to today's input path were rejected as bolt-ons: a
 `SagaContext.pushGesture` member (prep Task 1 of #888, reverted in `2a0d4c6cc`) and replaying the remote's events as
 synthetic DOM events on the canvas.
@@ -356,6 +356,11 @@ dispatched after `inputConsumed` survives into the next frame.
 fingers together does nothing; lifting one ends the pinch but not the gesture, and the survivor stays inert. The
 cross-check's "centroid delta plus span ratio" pinch (pan with two fingers, zoom toward them) was briefly read as
 wanted and then **rejected: keep today's centre zoom**. A pinch motion carries only a ratio.
+
+**Amended 2026-11-03 (two-finger tilt):** two fingers that move together, rather than apart, now end the
+held gesture once and open a `tilt` gesture, which drives the body rung's secondary-drag tilt and heading
+and nothing elsewhere. The pair locks to tilt or pinch after `PAIR_LOCK_PX`, judged by midpoint travel
+against span change. Pinch keeps Option A and the centre zoom.
 
 ## GC4: Shape sign-off
 

@@ -54,7 +54,7 @@
 
 import type { SettingsSnapshot } from './SettingsSnapshot';
 import type { SelectionRef } from '../SelectionRef';
-import type { OrientationFrameId } from '../../camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../camera/orientation/OrientationFrameId';
 import type { TimeState } from '../../time/TimeState';
 
 export type SceneSnapshot = Readonly<{

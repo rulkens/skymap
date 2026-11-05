@@ -14,13 +14,16 @@
 // near the far plane the homogeneous w shrinks and the perspective
 // divide amplifies error, making the reconstructed sphere wobble in
 // size frame-to-frame.  Instead we pass the camera's world-space basis
-// (forward/right/up) and FOV directly and build the ray analytically:
+// (right/up), the ray through the frustum window's centre ('rayAxis', which
+// is 'forward' for a centred view) and the window's half-extents, and build
+// the ray analytically:
 //
-//   rayDir = normalize(forward
-//                    + ndc.x * tanHalfFovY * aspect * right
-//                    + ndc.y * tanHalfFovY * up)
+//   rayDir = normalize(rayAxis
+//                    + ndc.x * tanHalfX * right
+//                    + ndc.y * tanHalfY * up)
 //
-// which is exact and depends on nothing near/far-related.
+// which is exact, holds for an off-axis frustum, and depends on nothing
+// near/far-related.
 //
 // ## Why Gpc units
 //
@@ -31,21 +34,21 @@
 
 // ── Uniforms layout (64 bytes) ─────────────────────────────────────
 //
-//   offset 0  : camForward    (vec3<f32>) + tanHalfFovY (f32)
-//   offset 16 : camRight      (vec3<f32>) + aspect      (f32)
+//   offset 0  : rayAxis       (vec3<f32>) + tanHalfY    (f32)
+//   offset 16 : camRight      (vec3<f32>) + tanHalfX    (f32)
 //   offset 32 : camUp         (vec3<f32>) + radiusGpc   (f32)
 //   offset 48 : cameraPosGpc  (vec3<f32>) + fadeAlpha   (f32)
 //
-// 'fadeAlpha' is the CPU-computed distance fade (see
-// utils/math/horizonShellFade): 0 when the camera is too close for the
+// 'fadeAlpha' is the pass's handed fade (the switch times the reach band in
+// layers/cosmicHorizon/visibility.ts): 0 when the camera is too close for the
 // shell to be relevant, smoothstepping to 1 at cosmological pull-back.
 // The fragment stage multiplies it into the emitted (additive) colour.
 
 struct Uniforms {
-  camForward: vec3<f32>,
-  tanHalfFovY: f32,
+  rayAxis: vec3<f32>,
+  tanHalfY: f32,
   camRight: vec3<f32>,
-  aspect: f32,
+  tanHalfX: f32,
   camUp: vec3<f32>,
   radiusGpc: f32,
   cameraPosGpc: vec3<f32>,

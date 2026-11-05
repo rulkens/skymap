@@ -1,0 +1,894 @@
+[
+  {
+    "from": "src/layers/body/@types/AerialBundleResources.d.ts",
+    "to": "src/layers/body/atmosphere/@types/AerialBundleResources.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/AerialPerspectiveRenderer.d.ts",
+    "to": "src/layers/body/atmosphere/@types/AerialPerspectiveRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/AtmosphereConstituent.d.ts",
+    "to": "src/layers/body/atmosphere/@types/AtmosphereConstituent.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/AtmosphereDrawEntry.d.ts",
+    "to": "src/layers/body/atmosphere/@types/AtmosphereDrawEntry.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/AtmosphereParams.d.ts",
+    "to": "src/layers/body/atmosphere/@types/AtmosphereParams.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/AtmosphereShellDepth.d.ts",
+    "to": "src/layers/body/atmosphere/@types/AtmosphereShellDepth.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/AtmosphereShellRenderer.d.ts",
+    "to": "src/layers/body/atmosphere/@types/AtmosphereShellRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/BodyTextureReq.d.ts",
+    "to": "src/layers/body/textures/@types/BodyTextureReq.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/BodyTextureSinks.d.ts",
+    "to": "src/layers/body/textures/@types/BodyTextureSinks.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/CloudShellRenderer.d.ts",
+    "to": "src/layers/body/clouds/@types/CloudShellRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/DensityProfile.d.ts",
+    "to": "src/layers/body/atmosphere/@types/DensityProfile.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/EarthRenderer.d.ts",
+    "to": "src/layers/body/earth/@types/EarthRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/FlyToPreset.d.ts",
+    "to": "src/layers/body/surfaceTiles/debug/@types/FlyToPreset.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/HeightTileImage.d.ts",
+    "to": "src/layers/body/surfaceTiles/stream/@types/HeightTileImage.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/PhaseFunction.d.ts",
+    "to": "src/layers/body/atmosphere/@types/PhaseFunction.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/PlanetRenderer.d.ts",
+    "to": "src/layers/body/spheres/@types/PlanetRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/PreparedBodySurfaceFrame.d.ts",
+    "to": "src/layers/body/slabs/@types/PreparedBodySurfaceFrame.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/ResidentHeightLookup.d.ts",
+    "to": "src/layers/body/surfaceTiles/stream/@types/ResidentHeightLookup.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/ResidentSlot.d.ts",
+    "to": "src/layers/body/surfaceTiles/stream/@types/ResidentSlot.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/ResidentSurfaceTile.d.ts",
+    "to": "src/layers/body/surfaceTiles/stream/@types/ResidentSurfaceTile.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/ResolvedTileResidency.d.ts",
+    "to": "src/layers/body/surfaceTiles/stream/@types/ResolvedTileResidency.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/RingRenderer.d.ts",
+    "to": "src/layers/body/rings/@types/RingRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceCutTile.d.ts",
+    "to": "src/layers/body/surfaceTiles/plan/@types/SurfaceCutTile.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceEffectInputs.d.ts",
+    "to": "src/layers/body/surfaceTiles/patch/@types/SurfaceEffectInputs.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfacePatchAnchor.d.ts",
+    "to": "src/layers/body/surfaceTiles/patch/@types/SurfacePatchAnchor.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileBand.d.ts",
+    "to": "src/layers/body/surfaceTiles/format/@types/SurfaceTileBand.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileBodyId.d.ts",
+    "to": "src/layers/body/surfaceTiles/format/@types/SurfaceTileBodyId.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileDebugSnapshot.d.ts",
+    "to": "src/layers/body/surfaceTiles/debug/@types/SurfaceTileDebugSnapshot.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileDemand.d.ts",
+    "to": "src/layers/body/surfaceTiles/plan/@types/SurfaceTileDemand.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileDrawArgs.d.ts",
+    "to": "src/layers/body/surfaceTiles/patch/@types/SurfaceTileDrawArgs.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileId.d.ts",
+    "to": "src/layers/body/surfaceTiles/format/@types/SurfaceTileId.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileManifest.d.ts",
+    "to": "src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileManifestBand.d.ts",
+    "to": "src/layers/body/surfaceTiles/format/@types/SurfaceTileManifestBand.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileOver.d.ts",
+    "to": "src/layers/body/surfaceTiles/plan/@types/SurfaceTileOver.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTilePlan.d.ts",
+    "to": "src/layers/body/surfaceTiles/plan/@types/SurfaceTilePlan.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTilePlannerParams.d.ts",
+    "to": "src/layers/body/surfaceTiles/plan/@types/SurfaceTilePlannerParams.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileProduct.d.ts",
+    "to": "src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileProvenance.d.ts",
+    "to": "src/layers/body/surfaceTiles/format/@types/SurfaceTileProvenance.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileRenderer.d.ts",
+    "to": "src/layers/body/surfaceTiles/patch/@types/SurfaceTileRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileRequest.d.ts",
+    "to": "src/layers/body/surfaceTiles/plan/@types/SurfaceTileRequest.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileResidency.d.ts",
+    "to": "src/layers/body/surfaceTiles/stream/@types/SurfaceTileResidency.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileShading.d.ts",
+    "to": "src/layers/body/surfaceTiles/format/@types/SurfaceTileShading.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileSpec.d.ts",
+    "to": "src/layers/body/surfaceTiles/format/@types/SurfaceTileSpec.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileStream.d.ts",
+    "to": "src/layers/body/surfaceTiles/stream/@types/SurfaceTileStream.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileStreamDeps.d.ts",
+    "to": "src/layers/body/surfaceTiles/stream/@types/SurfaceTileStreamDeps.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/SurfaceTileVerdict.d.ts",
+    "to": "src/layers/body/surfaceTiles/plan/@types/SurfaceTileVerdict.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/TerrainPickMarkerReadout.d.ts",
+    "to": "src/layers/body/terrainPick/@types/TerrainPickMarkerReadout.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/TerrainPickMarkerRenderer.d.ts",
+    "to": "src/layers/body/terrainPick/@types/TerrainPickMarkerRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/TexturedBodyRenderer.d.ts",
+    "to": "src/layers/body/spheres/@types/TexturedBodyRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/body/@types/TileCamera.d.ts",
+    "to": "src/layers/body/surfaceTiles/plan/@types/TileCamera.d.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/ariel.ts",
+    "to": "src/layers/body/bodies/moons/uranus/ariel.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/bennu.ts",
+    "to": "src/layers/body/bodies/smallBodies/bennu.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/callisto.ts",
+    "to": "src/layers/body/bodies/moons/jupiter/callisto.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/ceres.ts",
+    "to": "src/layers/body/bodies/smallBodies/ceres.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/charon.ts",
+    "to": "src/layers/body/bodies/moons/neptunePluto/charon.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/deimos.ts",
+    "to": "src/layers/body/bodies/moons/earthMars/deimos.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/dione.ts",
+    "to": "src/layers/body/bodies/moons/saturn/dione.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/earth.ts",
+    "to": "src/layers/body/bodies/planets/earth.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/enceladus.ts",
+    "to": "src/layers/body/bodies/moons/saturn/enceladus.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/europa.ts",
+    "to": "src/layers/body/bodies/moons/jupiter/europa.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/ganymede.ts",
+    "to": "src/layers/body/bodies/moons/jupiter/ganymede.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/iapetus.ts",
+    "to": "src/layers/body/bodies/moons/saturn/iapetus.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/io.ts",
+    "to": "src/layers/body/bodies/moons/jupiter/io.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/jupiter.ts",
+    "to": "src/layers/body/bodies/planets/jupiter.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/mars.ts",
+    "to": "src/layers/body/bodies/planets/mars.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/mercury.ts",
+    "to": "src/layers/body/bodies/planets/mercury.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/mimas.ts",
+    "to": "src/layers/body/bodies/moons/saturn/mimas.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/miranda.ts",
+    "to": "src/layers/body/bodies/moons/uranus/miranda.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/moon.ts",
+    "to": "src/layers/body/bodies/moons/earthMars/moon.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/neptune.ts",
+    "to": "src/layers/body/bodies/planets/neptune.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/nereid.ts",
+    "to": "src/layers/body/bodies/moons/neptunePluto/nereid.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/oberon.ts",
+    "to": "src/layers/body/bodies/moons/uranus/oberon.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/phobos.ts",
+    "to": "src/layers/body/bodies/moons/earthMars/phobos.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/pluto.ts",
+    "to": "src/layers/body/bodies/planets/pluto.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/proteus.ts",
+    "to": "src/layers/body/bodies/moons/neptunePluto/proteus.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/puck.ts",
+    "to": "src/layers/body/bodies/moons/uranus/puck.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/rhea.ts",
+    "to": "src/layers/body/bodies/moons/saturn/rhea.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/saturn.ts",
+    "to": "src/layers/body/bodies/planets/saturn.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/tethys.ts",
+    "to": "src/layers/body/bodies/moons/saturn/tethys.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/titan.ts",
+    "to": "src/layers/body/bodies/moons/saturn/titan.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/titania.ts",
+    "to": "src/layers/body/bodies/moons/uranus/titania.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/triton.ts",
+    "to": "src/layers/body/bodies/moons/neptunePluto/triton.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/umbriel.ts",
+    "to": "src/layers/body/bodies/moons/uranus/umbriel.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/uranus.ts",
+    "to": "src/layers/body/bodies/planets/uranus.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/venus.ts",
+    "to": "src/layers/body/bodies/planets/venus.ts"
+  },
+  {
+    "from": "src/layers/body/bodies/vesta.ts",
+    "to": "src/layers/body/bodies/smallBodies/vesta.ts"
+  },
+  {
+    "from": "src/layers/body/computes/aerialPerspectiveCompute.ts",
+    "to": "src/layers/body/atmosphere/computes/aerialPerspectiveCompute.ts"
+  },
+  {
+    "from": "src/layers/body/computes/skyViewCompute.ts",
+    "to": "src/layers/body/atmosphere/computes/skyViewCompute.ts"
+  },
+  {
+    "from": "src/layers/body/data/bodyAtlas.generated.ts",
+    "to": "src/layers/body/textures/data/bodyAtlas.generated.ts"
+  },
+  {
+    "from": "src/layers/body/data/bodyTextureRegistry.ts",
+    "to": "src/layers/body/textures/data/bodyTextureRegistry.ts"
+  },
+  {
+    "from": "src/layers/body/data/earthSliderFields.ts",
+    "to": "src/layers/body/earth/data/earthSliderFields.ts"
+  },
+  {
+    "from": "src/layers/body/data/earthSurfaceParams.ts",
+    "to": "src/layers/body/surfaceTiles/format/data/earthSurfaceParams.ts"
+  },
+  {
+    "from": "src/layers/body/data/heightTileFormat.ts",
+    "to": "src/layers/body/surfaceTiles/format/data/heightTileFormat.ts"
+  },
+  {
+    "from": "src/layers/body/data/marsSurfaceParams.ts",
+    "to": "src/layers/body/surfaceTiles/format/data/marsSurfaceParams.ts"
+  },
+  {
+    "from": "src/layers/body/data/surfaceTileParams.ts",
+    "to": "src/layers/body/surfaceTiles/format/data/surfaceTileParams.ts"
+  },
+  {
+    "from": "src/layers/body/data/surfaceTileRegistry.ts",
+    "to": "src/layers/body/surfaceTiles/format/data/surfaceTileRegistry.ts"
+  },
+  {
+    "from": "src/layers/body/load/bodyAssetRows.ts",
+    "to": "src/layers/body/textures/load/bodyAssetRows.ts"
+  },
+  {
+    "from": "src/layers/body/load/bodyAtlasFetcher.ts",
+    "to": "src/layers/body/textures/load/bodyAtlasFetcher.ts"
+  },
+  {
+    "from": "src/layers/body/load/bodySurfaceTier.ts",
+    "to": "src/layers/body/textures/load/bodySurfaceTier.ts"
+  },
+  {
+    "from": "src/layers/body/load/bodyTextureAtlasSlot.ts",
+    "to": "src/layers/body/textures/load/bodyTextureAtlasSlot.ts"
+  },
+  {
+    "from": "src/layers/body/load/bodyTextureFetcher.ts",
+    "to": "src/layers/body/textures/load/bodyTextureFetcher.ts"
+  },
+  {
+    "from": "src/layers/body/load/bodyTextureLoadRadius.ts",
+    "to": "src/layers/body/textures/load/bodyTextureLoadRadius.ts"
+  },
+  {
+    "from": "src/layers/body/load/bodyTextureSlotKey.ts",
+    "to": "src/layers/body/textures/load/bodyTextureSlotKey.ts"
+  },
+  {
+    "from": "src/layers/body/load/bodyTextureSlots.ts",
+    "to": "src/layers/body/textures/load/bodyTextureSlots.ts"
+  },
+  {
+    "from": "src/layers/body/load/fetchHeightTile.ts",
+    "to": "src/layers/body/surfaceTiles/stream/load/fetchHeightTile.ts"
+  },
+  {
+    "from": "src/layers/body/load/fetchSurfaceTileBitmap.ts",
+    "to": "src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileBitmap.ts"
+  },
+  {
+    "from": "src/layers/body/load/fetchSurfaceTileManifest.ts",
+    "to": "src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileManifest.ts"
+  },
+  {
+    "from": "src/layers/body/load/pastTextureReleaseRadius.ts",
+    "to": "src/layers/body/textures/load/pastTextureReleaseRadius.ts"
+  },
+  {
+    "from": "src/layers/body/passes/aerialPerspectivePass.ts",
+    "to": "src/layers/body/atmosphere/passes/aerialPerspectivePass.ts"
+  },
+  {
+    "from": "src/layers/body/passes/atmosphereShellPass.ts",
+    "to": "src/layers/body/atmosphere/passes/atmosphereShellPass.ts"
+  },
+  {
+    "from": "src/layers/body/passes/bodyGlintsPass.ts",
+    "to": "src/layers/body/glints/passes/bodyGlintsPass.ts"
+  },
+  {
+    "from": "src/layers/body/passes/bodyMeshesPass.ts",
+    "to": "src/layers/body/meshes/passes/bodyMeshesPass.ts"
+  },
+  {
+    "from": "src/layers/body/passes/cloudShellPass.ts",
+    "to": "src/layers/body/clouds/passes/cloudShellPass.ts"
+  },
+  {
+    "from": "src/layers/body/passes/earthPass.ts",
+    "to": "src/layers/body/earth/passes/earthPass.ts"
+  },
+  {
+    "from": "src/layers/body/passes/planetsPass.ts",
+    "to": "src/layers/body/spheres/passes/planetsPass.ts"
+  },
+  {
+    "from": "src/layers/body/passes/ringsPass.ts",
+    "to": "src/layers/body/rings/passes/ringsPass.ts"
+  },
+  {
+    "from": "src/layers/body/passes/surfaceTilesPass.ts",
+    "to": "src/layers/body/surfaceTiles/patch/passes/surfaceTilesPass.ts"
+  },
+  {
+    "from": "src/layers/body/passes/terrainPickMarkerPass.ts",
+    "to": "src/layers/body/terrainPick/passes/terrainPickMarkerPass.ts"
+  },
+  {
+    "from": "src/layers/body/passes/texturedBodiesPass.ts",
+    "to": "src/layers/body/spheres/passes/texturedBodiesPass.ts"
+  },
+  {
+    "from": "src/layers/body/present/atmosphereDrawList.ts",
+    "to": "src/layers/body/atmosphere/present/atmosphereDrawList.ts"
+  },
+  {
+    "from": "src/layers/body/present/atmosphereDrawListCache.ts",
+    "to": "src/layers/body/atmosphere/present/atmosphereDrawListCache.ts"
+  },
+  {
+    "from": "src/layers/body/present/atmosphereInsideBand.ts",
+    "to": "src/layers/body/atmosphere/present/atmosphereInsideBand.ts"
+  },
+  {
+    "from": "src/layers/body/present/atmosphereParams.ts",
+    "to": "src/layers/body/atmosphere/data/atmosphereParams.ts"
+  },
+  {
+    "from": "src/layers/body/present/atmosphereShellUniforms.ts",
+    "to": "src/layers/body/atmosphere/present/atmosphereShellUniforms.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodyCameraDistanceMpc.ts",
+    "to": "src/layers/body/slabs/present/bodyCameraDistanceMpc.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodyDrawEnvelopes.ts",
+    "to": "src/layers/body/slabs/data/bodyDrawEnvelopes.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodyDrawRadiusM.ts",
+    "to": "src/layers/body/slabs/present/bodyDrawRadiusM.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodyLayerSlabRow.ts",
+    "to": "src/layers/body/slabs/present/bodyLayerSlabRow.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodySceneBodyIds.ts",
+    "to": "src/layers/body/slabs/data/bodySceneBodyIds.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodySceneBodyPartition.ts",
+    "to": "src/layers/body/slabs/present/bodySceneBodyPartition.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodySearch.ts",
+    "to": "src/layers/body/selection/present/bodySearch.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodySelectionRow.ts",
+    "to": "src/layers/body/selection/present/bodySelectionRow.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodySlabCamAltitudeSq.ts",
+    "to": "src/layers/body/slabs/present/bodySlabCamAltitudeSq.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodySlabRows.ts",
+    "to": "src/layers/body/slabs/present/bodySlabRows.ts"
+  },
+  {
+    "from": "src/layers/body/present/bodyTrailElements.ts",
+    "to": "src/layers/body/orbitTrails/data/bodyTrailElements.ts"
+  },
+  {
+    "from": "src/layers/body/present/cloudDeckFade.ts",
+    "to": "src/layers/body/clouds/present/cloudDeckFade.ts"
+  },
+  {
+    "from": "src/layers/body/present/cloudShellParams.ts",
+    "to": "src/layers/body/clouds/data/cloudShellParams.ts"
+  },
+  {
+    "from": "src/layers/body/present/composeBodySlabCamRelVp.ts",
+    "to": "src/layers/body/slabs/present/composeBodySlabCamRelVp.ts"
+  },
+  {
+    "from": "src/layers/body/present/computeBodySurfaceFrame.ts",
+    "to": "src/layers/body/slabs/present/computeBodySurfaceFrame.ts"
+  },
+  {
+    "from": "src/layers/body/present/froxelVolume.ts",
+    "to": "src/layers/body/atmosphere/data/froxelVolume.ts"
+  },
+  {
+    "from": "src/layers/body/present/glintBandClass.ts",
+    "to": "src/layers/body/glints/present/glintBandClass.ts"
+  },
+  {
+    "from": "src/layers/body/present/glintPickClasses.ts",
+    "to": "src/layers/body/glints/data/glintPickClasses.ts"
+  },
+  {
+    "from": "src/layers/body/present/hostBodyId.ts",
+    "to": "src/layers/body/textures/present/hostBodyId.ts"
+  },
+  {
+    "from": "src/layers/body/present/isBodyKindId.ts",
+    "to": "src/layers/body/selection/present/isBodyKindId.ts"
+  },
+  {
+    "from": "src/layers/body/present/isTexturedBodyKey.ts",
+    "to": "src/layers/body/textures/present/isTexturedBodyKey.ts"
+  },
+  {
+    "from": "src/layers/body/present/limbDarkeningParams.ts",
+    "to": "src/layers/body/spheres/data/limbDarkeningParams.ts"
+  },
+  {
+    "from": "src/layers/body/present/prepareBodySurfaceFrame.ts",
+    "to": "src/layers/body/slabs/present/prepareBodySurfaceFrame.ts"
+  },
+  {
+    "from": "src/layers/body/present/produceSceneBodyCaptions.ts",
+    "to": "src/layers/body/labels/present/produceSceneBodyCaptions.ts"
+  },
+  {
+    "from": "src/layers/body/present/sceneBodyForId.ts",
+    "to": "src/layers/body/slabs/present/sceneBodyForId.ts"
+  },
+  {
+    "from": "src/layers/body/present/sceneBodyLabels.ts",
+    "to": "src/layers/body/labels/present/sceneBodyLabels.ts"
+  },
+  {
+    "from": "src/layers/body/present/skyViewLutSizeByTier.ts",
+    "to": "src/layers/body/atmosphere/data/skyViewLutSizeByTier.ts"
+  },
+  {
+    "from": "src/layers/body/present/smallBodyTrailIds.ts",
+    "to": "src/layers/body/orbitTrails/data/smallBodyTrailIds.ts"
+  },
+  {
+    "from": "src/layers/body/present/terrainPickMarkerReadoutOf.ts",
+    "to": "src/layers/body/terrainPick/present/terrainPickMarkerReadoutOf.ts"
+  },
+  {
+    "from": "src/layers/body/present/terrainPickUnderCursor.ts",
+    "to": "src/layers/body/terrainPick/present/terrainPickUnderCursor.ts"
+  },
+  {
+    "from": "src/layers/body/render/aerialPerspectiveRenderer.ts",
+    "to": "src/layers/body/atmosphere/render/aerialPerspectiveRenderer.ts"
+  },
+  {
+    "from": "src/layers/body/render/atmosphereShellRenderer.ts",
+    "to": "src/layers/body/atmosphere/render/atmosphereShellRenderer.ts"
+  },
+  {
+    "from": "src/layers/body/render/cloudShellRenderer.ts",
+    "to": "src/layers/body/clouds/render/cloudShellRenderer.ts"
+  },
+  {
+    "from": "src/layers/body/render/earthRenderer.ts",
+    "to": "src/layers/body/earth/render/earthRenderer.ts"
+  },
+  {
+    "from": "src/layers/body/render/encodeAtmosphereAerialPerspective.ts",
+    "to": "src/layers/body/atmosphere/render/encodeAtmosphereAerialPerspective.ts"
+  },
+  {
+    "from": "src/layers/body/render/encodeAtmosphereSkyView.ts",
+    "to": "src/layers/body/atmosphere/render/encodeAtmosphereSkyView.ts"
+  },
+  {
+    "from": "src/layers/body/render/packAtmosphereUniforms.ts",
+    "to": "src/layers/body/atmosphere/render/packAtmosphereUniforms.ts"
+  },
+  {
+    "from": "src/layers/body/render/packCloudShellUniforms.ts",
+    "to": "src/layers/body/clouds/render/packCloudShellUniforms.ts"
+  },
+  {
+    "from": "src/layers/body/render/packEarthSurfaceUniforms.ts",
+    "to": "src/layers/body/earth/render/packEarthSurfaceUniforms.ts"
+  },
+  {
+    "from": "src/layers/body/render/packLitBodyUniforms.ts",
+    "to": "src/layers/body/spheres/render/packLitBodyUniforms.ts"
+  },
+  {
+    "from": "src/layers/body/render/packRingUniforms.ts",
+    "to": "src/layers/body/rings/render/packRingUniforms.ts"
+  },
+  {
+    "from": "src/layers/body/render/packScatteringParams.ts",
+    "to": "src/layers/body/atmosphere/render/packScatteringParams.ts"
+  },
+  {
+    "from": "src/layers/body/render/packTexturedBodyUniforms.ts",
+    "to": "src/layers/body/spheres/render/packTexturedBodyUniforms.ts"
+  },
+  {
+    "from": "src/layers/body/render/planetRenderer.ts",
+    "to": "src/layers/body/spheres/render/planetRenderer.ts"
+  },
+  {
+    "from": "src/layers/body/render/ringRenderer.ts",
+    "to": "src/layers/body/rings/render/ringRenderer.ts"
+  },
+  {
+    "from": "src/layers/body/render/surfaceTileLayout.ts",
+    "to": "src/layers/body/surfaceTiles/patch/render/surfaceTileLayout.ts"
+  },
+  {
+    "from": "src/layers/body/render/surfaceTileRenderer.ts",
+    "to": "src/layers/body/surfaceTiles/patch/render/surfaceTileRenderer.ts"
+  },
+  {
+    "from": "src/layers/body/render/surfaceTileShaderVariants.ts",
+    "to": "src/layers/body/surfaceTiles/patch/render/surfaceTileShaderVariants.ts"
+  },
+  {
+    "from": "src/layers/body/render/terrainPickMarkerRenderer.ts",
+    "to": "src/layers/body/terrainPick/render/terrainPickMarkerRenderer.ts"
+  },
+  {
+    "from": "src/layers/body/render/texturedBodyRenderer.ts",
+    "to": "src/layers/body/spheres/render/texturedBodyRenderer.ts"
+  },
+  {
+    "from": "src/layers/body/sagas/watchDebugPanelWakeSaga.ts",
+    "to": "src/layers/body/surfaceTiles/debug/sagas/watchDebugPanelWakeSaga.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/balanceSurfaceCut.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/balanceSurfaceCut.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/deepestBandLevelAt.ts",
+    "to": "src/layers/body/surfaceTiles/stream/subsystems/deepestBandLevelAt.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/deepestResidentAncestor.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/deepestResidentAncestor.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/derivePlannerParams.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/derivePlannerParams.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/earthTexelMetres.ts",
+    "to": "src/layers/body/surfaceTiles/patch/subsystems/earthTexelMetres.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/engageDistanceM.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/engageDistanceM.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/idleSurfaceTilePlan.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/isSurfaceTileBodyId.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/isSurfaceTileBodyId.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/latticePostGradient.ts",
+    "to": "src/layers/body/surfaceTiles/patch/subsystems/latticePostGradient.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/packSurfaceTileKey.ts",
+    "to": "src/layers/body/surfaceTiles/stream/subsystems/packSurfaceTileKey.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/patchOriginRelEyeM.ts",
+    "to": "src/layers/body/surfaceTiles/patch/subsystems/patchOriginRelEyeM.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/patchVertexOffsetM.ts",
+    "to": "src/layers/body/surfaceTiles/patch/subsystems/patchVertexOffsetM.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/planSurfaceTiles.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/planSurfaceTiles.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/resolveHeightLattice.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/resolveHeightLattice.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/surfaceEffectsKey.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/surfaceEffectsKey.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/surfaceNormalFromHeightCell.ts",
+    "to": "src/layers/body/surfaceTiles/patch/subsystems/surfaceNormalFromHeightCell.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/surfacePatchAnchor.ts",
+    "to": "src/layers/body/surfaceTiles/patch/subsystems/surfacePatchAnchor.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/surfacePatchIndices.ts",
+    "to": "src/layers/body/surfaceTiles/patch/subsystems/surfacePatchIndices.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/surfaceTileBandRefineAllowed.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/surfaceTileBandRefineAllowed.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/surfaceTileCentreUv.ts",
+    "to": "src/layers/body/surfaceTiles/patch/subsystems/surfaceTileCentreUv.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/surfaceTileDebugSnapshotOf.ts",
+    "to": "src/layers/body/surfaceTiles/debug/subsystems/surfaceTileDebugSnapshotOf.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/surfaceTileOverOf.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/surfaceTileOverOf.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/surfaceTileSpecOf.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/surfaceTileSpecOf.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/surfaceTileStream.ts",
+    "to": "src/layers/body/surfaceTiles/stream/subsystems/surfaceTileStream.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/terrainHeightM.ts",
+    "to": "src/layers/body/surfaceTiles/stream/subsystems/terrainHeightM.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/tileBodiesInView.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/tileBodiesInView.ts"
+  },
+  {
+    "from": "src/layers/body/subsystems/surfaceTiles/tileCamerasOf.ts",
+    "to": "src/layers/body/surfaceTiles/plan/subsystems/tileCamerasOf.ts"
+  },
+  {
+    "from": "src/layers/body/ui/EarthTuningSectionContainer.tsx",
+    "to": "src/layers/body/earth/ui/EarthTuningSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/body/ui/SurfaceTileAtlasSection.tsx",
+    "to": "src/layers/body/surfaceTiles/debug/ui/SurfaceTileAtlasSection.tsx"
+  },
+  {
+    "from": "src/layers/body/ui/SurfaceTileAtlasSectionContainer.tsx",
+    "to": "src/layers/body/surfaceTiles/debug/ui/SurfaceTileAtlasSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/body/ui/TerrainPickMarkerTuningSection.tsx",
+    "to": "src/layers/body/terrainPick/ui/TerrainPickMarkerTuningSection.tsx"
+  },
+  {
+    "from": "src/layers/body/ui/TerrainPickMarkerTuningSectionContainer.tsx",
+    "to": "src/layers/body/terrainPick/ui/TerrainPickMarkerTuningSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/body/ui/flyToPresets.ts",
+    "to": "src/layers/body/surfaceTiles/debug/ui/flyToPresets.ts"
+  },
+  {
+    "from": "src/layers/body/ui/selectSurfaceTileDebug.ts",
+    "to": "src/layers/body/surfaceTiles/debug/ui/selectSurfaceTileDebug.ts"
+  },
+  {
+    "from": "src/layers/body/ui/selectTerrainPickMarkerReadout.ts",
+    "to": "src/layers/body/terrainPick/ui/selectTerrainPickMarkerReadout.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/baseLevelForTier.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/baseLevelForTier.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/codeHeightM.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/codeHeightM.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/decodeHeightTileHeader.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/decodeHeightTileHeader.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/latticeHeightSample.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/latticeHeightSample.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/levelFittingWidth.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/levelFittingWidth.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/surfaceTileBandFromBounds.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/surfaceTileBandFromBounds.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/surfaceTileBandOverlapsUv.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/surfaceTileBandOverlapsUv.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/surfaceTileColumns.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/surfaceTileColumns.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/surfaceTileInBand.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/surfaceTileInBand.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/surfaceTilePath.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/surfaceTilePath.ts"
+  },
+  {
+    "from": "src/layers/body/utils/surfaceTiles/surfaceTileXyForUv.ts",
+    "to": "src/layers/body/surfaceTiles/format/utils/surfaceTileXyForUv.ts"
+  },
+  {
+    "from": "tests/layers/body/render/atmosphereUniformsLayout.parity.test.ts",
+    "to": "tests/layers/body/atmosphere/render/atmosphereUniformsLayout.parity.test.ts"
+  }
+]

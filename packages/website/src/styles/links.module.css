@@ -1,8 +1,7 @@
 /*
  * links.module.css — how links sit in running text and in the rows that close a section.
  * A vocabulary, not a component: no `.root`; take a class with
- * `composes: link-row from '../../styles/links.module.css'`. `.onward` is composed together
- * with `.link-row` (it only changes that row's alignment and top margin).
+ * `composes: link-row from '../../../../styles/links.module.css'`.
  */
 
 /*
@@ -11,20 +10,22 @@
  */
 .tap-links a {
   display: inline-block;
-  padding-block: 0.625rem;
-  margin-block: -0.625rem;
+  padding-block: var(--tap-reach);
+  margin-block: calc(-1 * var(--tap-reach));
 }
 
-/* Ring links side by side under the text they follow; `onward` is the row that closes a section, launch button included. */
+/* Ring links side by side under the text they follow. */
 .link-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 2.5rem;
-  margin-top: var(--row-top, 1.5rem);
+  gap: 0 var(--site-space-xl);
+  margin-top: var(--row-top, var(--site-space-m));
 }
 
-.link-row.onward {
+/* The row that closes a section, launch button included: a `.link-row` aligned to the button, with more air above. */
+.onward-row {
+  composes: link-row;
   align-items: center;
-  row-gap: 0.75rem;
-  margin-top: 2.5rem;
+  row-gap: var(--site-space-xs);
+  margin-top: var(--site-space-xl);
 }

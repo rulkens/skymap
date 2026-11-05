@@ -1,7 +1,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import type { StructureSettings } from '../../../../@types/settings/StructureSettings';
+import type { StructureSettings } from '../../@types/StructureSettings';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../../@types/settings/StructureItemSettings';
 

@@ -1,0 +1,65 @@
+---
+title: 'Privacy: what Skymap collects and keeps'
+description: This website sets no cookies and counts nothing. The app counts visits without cookies and keeps two settings in your browser.
+---
+
+import Caveat from '../../../components/shared/text/Caveat/Caveat.tsx';
+import Claims from '../../../components/shared/text/Claims/Claims.tsx';
+import Note from '../../../components/shared/text/Note/Note.tsx';
+import InlineAddress from '../../../components/pages/privacy/InlineAddress/InlineAddress.tsx';
+import PictureBand from '../../../components/shared/media/PictureBand/PictureBand.tsx';
+import Remark from '../../../components/shared/text/Remark/Remark.tsx';
+import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
+import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
+import Sources from '../../../components/shared/text/Sources/Sources.tsx';
+import Section from '../../../components/shared/layout/Section/Section.tsx';
+import { CONTACT_EMAIL } from '../../../data/contact';
+import { MAKER_NAME } from '../../../data/siteIdentity';
+import links from '../../../styles/links.module.css';
+import text from '../../../styles/type.module.css';
+import { checked, COLLECTED, factIds, IN_BROWSER, OTHERS } from './privacy.data';
+
+<PictureBand id="privacy-far-side">
+  <h1>Privacy</h1>
+  <p className={text.say}>This website sets no cookies and counts nothing. The app counts visits without cookies and keeps two settings in your browser.</p>
+  <Note flow>Last checked against the code on <span className={text.date}>{checked}</span>.</Note>
+  <ShotCaption id="privacy-far-side" />
+</PictureBand>
+
+<Section id="collected">
+  <SectionHead title="What we collect" narrow>
+    <p>Visits to the app, counted without cookies and without your IP address. This website counts nothing.</p>
+  </SectionHead>
+  <Claims items={COLLECTED} />
+  <Caveat landing title="Where this falls short">
+    <p>The app does not tell you about the counter and has no switch to turn it off. We have set no limit of our own on how long its rows are kept. A content blocker that stops <InlineAddress>counterscale.rulkens.workers.dev</InlineAddress> stops the counter, and the app works the same without it.</p>
+  </Caveat>
+</Section>
+
+<Section id="browser">
+  <SectionHead title="What stays in your browser" narrow>
+    <p>Two settings from the app and a date its counter leaves in your browser’s cache. No cookies.</p>
+  </SectionHead>
+  <Claims items={IN_BROWSER} />
+</Section>
+
+<Section id="others">
+  <SectionHead title="What others see" narrow>
+    <p>Cloudflare, which hosts Skymap, and two astronomy archives that supply galaxy pictures. Each sees your IP address when your browser asks it for a file.</p>
+  </SectionHead>
+  <Claims items={OTHERS} />
+  <Remark text="Your browser fetched every file on this page from Skymap’s own addresses." live="files-fetched" />
+</Section>
+
+<Section id="ask">
+  <SectionHead title="Who to ask" narrow>
+    <p>{MAKER_NAME} makes Skymap and decides what it loads and keeps.</p>
+  </SectionHead>
+  <div className={`${text.prose} ${links['tap-links']}`}>
+    <p>To ask what we hold about you, or to have it removed, write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. The counter’s rows carry no name, no IP address and no identifier, so we cannot find yours among them.</p>
+  </div>
+</Section>
+
+<Section as="div">
+  <Sources ids={factIds} all />
+</Section>

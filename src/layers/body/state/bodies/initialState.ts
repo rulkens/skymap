@@ -6,9 +6,9 @@
  */
 
 import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
-import type { BodyItemSettings } from '../../../../@types/settings/BodyItemSettings';
-import type { BodySettings } from '../../../../@types/settings/BodySettings';
+import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
+import type { BodyItemSettings } from '../../@types/BodyItemSettings';
+import type { BodySettings } from '../../@types/BodySettings';
 
 export const initialState: BodySettings = {
   items: Object.fromEntries(
@@ -16,5 +16,5 @@ export const initialState: BodySettings = {
       e.id,
       { enabled: true, labelEnabled: true },
     ]),
-  ) as Record<BodyId, BodyItemSettings>,
+  ) as Record<BodySourceId, BodyItemSettings>,
 };

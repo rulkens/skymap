@@ -22,19 +22,17 @@ import {
   spin,
   wait,
 } from '../../../../services/engine/animation/effectHelpers';
-import { frameUp } from '../../../../utils/camera/frameUp';
+import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
 import { normalize3 } from '../../../../utils/math/normalize3';
-import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { unixMsToJulianDays } from '../../../../utils/time/unixMsToJulianDays';
 import { ORIENTATION_FRAMES } from '../../../orientation/orientationFrames';
-import { MISSION_EVENTS } from '../../../missions/missionEvents.generated';
 import { SCALE_UNITS } from '../../../scaleUnits';
 
-const eventJd = (id: string) =>
-  unixMsToJulianDays(Date.parse(MISSION_EVENTS.find((e) => e.id === id)!.iso));
-
-const LAUNCH_JD = eventJd('voyager2-launch');
-const NEPTUNE_JD = eventJd('voyager2-neptune');
+// Voyager 2's launch and Neptune encounter, as the missions Layer's event table states them
+// (`missionEvents.generated`); a core clip may not import that Layer, and a day's drift is invisible.
+const LAUNCH_JD = unixMsToJulianDays(Date.parse('1977-08-20T14:29:00Z'));
+const NEPTUNE_JD = unixMsToJulianDays(Date.parse('1989-08-25T03:55:40Z'));
 
 const LEAD_IN_SEC = 1.5; // launch, held: the first frame shows the planets at rest
 const PLANETS_SEC = 14;

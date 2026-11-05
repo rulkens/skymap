@@ -5,7 +5,7 @@ atmosphere-constituents ground pass
 (`docs/superpowers/specs/2026-08-18-atmosphere-constituents-design.md`).
 
 `SCENE_PLANETS` rows carry an authored `albedo: Vec3`
-(`src/data/bodies/scenePlanets.ts`). Two consumers read it, and they want different
+(`src/layers/body/bodies/`). Two consumers read it, and they want different
 quantities:
 
 - the **lit-body shading** wants a per-channel surface reflectance — roughly what the

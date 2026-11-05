@@ -1,14 +1,13 @@
 /**
  * bodyCaption — the shared `ForegroundCaption` builder for a seeded scene
- * subject: position, size, tint, kind and pick id are the caller's own; font,
- * outline, size clamps and alignment are authored once here. `sceneBodyLabels`
- * (core), `produceStarCaptions` and `produceBlackHoleCaptions` call this rather
+ * subject: position, size, tint, priority and pick id are the caller's own; font,
+ * outline, size clamps and alignment are authored once here. `sceneBodyLabels`,
+ * `produceStarCaptions` and `produceBlackHoleCaptions` call this rather
  * than growing their own copy, so a caption reads the same regardless of producer.
  */
 
 import type { Label2D } from '../../@types/rendering/Label2D';
 import type { Vec3 } from '../../@types/math/Vec3';
-import type { CaptionKind } from '../../services/engine/presentation/captionPriority';
 import type { ForegroundCaption } from '../../services/engine/presentation/foregroundCaption';
 import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 import { SCALE_UNITS } from '../../data/scaleUnits';
@@ -39,7 +38,7 @@ export function bodyCaption(
   footprintRadiusM: number,
   positionMpc: Readonly<Vec3>,
   tint: Readonly<Vec3>,
-  kind: CaptionKind,
+  priority: number,
   pickId: number | undefined = sceneBodyPickId(body.id) ?? undefined,
 ): ForegroundCaption {
   const o = RENDER_ORIGIN_MPC;
@@ -50,7 +49,7 @@ export function bodyCaption(
   // pick set (the −1 contract) rather than aliasing body 0.
   return {
     id: `sceneBody-${body.id}`,
-    kind,
+    priority,
     worldPos,
     pickId,
     text: body.label,

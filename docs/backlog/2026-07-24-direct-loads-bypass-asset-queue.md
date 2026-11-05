@@ -28,8 +28,6 @@ Direct `.load()` sites outside the queue:
   to prevent, just not at boot.
 - `src/services/loading/AssetSlot.ts` `forceReload` — debug-panel
   Reload button.
-- `src/services/engine/volume/maybeLazyLoadDebugVolume.ts:31` — dev
-  synthetic volumes.
 
 `reevaluateDemand`'s enqueued fetcher re-checks `slot.state().kind ===
 'idle'` before loading, so a direct load racing a queued one is safe;

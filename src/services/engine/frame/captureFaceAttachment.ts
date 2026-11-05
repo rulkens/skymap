@@ -8,8 +8,9 @@
 import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../compositions/appCubemapCaptures';
 import { subjectProbe } from './subjectProbe';
+import { clearValueOf } from '../../../utils/gpu/clearValueOf';
 
 export function captureFaceAttachment(
   capture: CaptureFaceRef,
@@ -21,12 +22,12 @@ export function captureFaceAttachment(
   /** Null for a row that draws no body; attached only on the face's body-slab steps. */
   readonly depthView: GPUTextureView | null;
 } {
-  const row = CUBEMAP_CAPTURES[capture.key];
+  const row = APP_CUBEMAP_CAPTURE_REGISTRY[capture.key];
   if (row.kind === 'sky') {
     return {
       // One array LAYER: `viewOf` spans all six, which WebGPU rejects as a colour attachment.
       view: ctx.snapshot.renderTargets.layerViewOf(row.target, capture.face),
-      clearValue: ctx.snapshot.renderTargets.specOf(row.target).clearValue,
+      clearValue: clearValueOf(ctx.snapshot.renderTargets.specOf(row.target), state),
       depthView: null,
     };
   }

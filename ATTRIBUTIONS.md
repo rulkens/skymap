@@ -622,6 +622,31 @@ unclear, and no entry here reads them as a licence.
 - **Modified:** Yes. Only fitted correction series are shipped, not the vectors.
 - **Checked:** 2026-10-07: <https://ssd.jpl.nasa.gov/about/>
 
+### CelesTrak GP orbit data
+
+<!-- attribution: id=celestrak; keys=celestrak,celestrak.readme -->
+
+- **What:** SGP4 mean orbital elements (OMM) of about 20,000 Earth-orbiting
+  objects: the active satellites, three debris clouds, analyst objects and the
+  last 30 days of launches.
+- **By:** CelesTrak (T.S. Kelso), from the US Space Force's public catalog.
+- **Licence:** Not stated on the pages read. The usage policy sets download
+  limits ("Only download the data you need, when you are going to use it, and
+  only download data once per update") and says nothing on republishing,
+  credit or commercial use. Whether a daily copy may be republished from our
+  own storage is to be asked of CelesTrak before the satellites Layer ships.
+- **Use:** No licence stated
+- **Attribution:** None asked on the pages read; skymap credits CelesTrak.
+- **Upstream:** <https://celestrak.org/NORAD/elements/gp.php>
+- **Enters skymap:** the daily `.github/workflows/satellites.yml` (or
+  `npm run fetch-celestrak` locally) → `data/raw/celestrak/` →
+  `npm run build-satellites` → `satellite-catalog/v1/satellites.satg` on R2.
+- **Modified:** Yes. De-duplicated across groups, records SGP4 cannot run
+  dropped, and re-encoded; the element values are copied unchanged.
+- **Checked:** 2026-10-28: <https://celestrak.org/usage-policy.php>,
+  <https://celestrak.org/NORAD/documentation/gp-data-formats.php>,
+  <https://celestrak.org/NORAD/elements/>
+
 ### MCXC, the Meta-Catalogue of X-ray detected Clusters
 
 <!-- attribution: id=mcxc; keys=mcxc.* -->
@@ -2027,6 +2052,84 @@ rewritten only by `npm run build-meshes`, which re-bakes the models.
 - **Modified:** Yes. Painted the seed albedo; no colour map is used.
 - **Checked:** 2026-10-19: <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/>
 
+### Vesta shape model (Dawn icq0512) and HAMO mosaic
+
+<!-- attribution: id=mesh-vesta; keys=meshes.vesta*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Vesta up close: the Dawn gravity team's 3.1-million-plate shape
+  model and the Dawn Framing Camera HAMO clear-filter global mosaic.
+- **By:** Shape: Dawn Gravity Team (R. Park, JPL), archived by NASA's Planetary
+  Data System and served by NAIF. Mosaic: Roatsch et al. (DLR), from Dawn
+  Framing Camera images (NASA/JPL-Caltech/UCLA/MPS/DLR/IDA), served by USGS
+  Astrogeology.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it. The USGS Astropedia page for the
+  mosaic names no licence and asks users to cite its authors.
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: Dawn Gravity Team (R. Park, JPL), Vesta shape
+  model icq0512, NASA PDS / NAIF. Colour: Dawn FC HAMO mosaic,
+  NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds>,
+  <https://planetarymaps.usgs.gov/mosaic/Vesta_Dawn_FC_HAMO_Mosaic_Global_74ppd.tif>
+- **Enters skymap:** downloaded by hand → DSK converted to OBJ once →
+  Blender import and relief pre-bake → `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic's gaps and unlit north filled with its
+  median, downsampled, and rescaled to the seed albedo.
+- **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/>
+
+### Ceres shape model (Dawn icq0256) and Dawn mosaic
+
+<!-- attribution: id=mesh-ceres; keys=meshes.ceres*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Ceres up close: the Dawn gravity team's 786,432-plate shape model
+  and the DLR Dawn Framing Camera clear-filter global mosaic.
+- **By:** Shape: Dawn Gravity Team (JPL; R. Park), archived by NASA's
+  Planetary Data System and served by NAIF. Mosaic: Roatsch et al. (DLR), from
+  Dawn Framing Camera images (NASA/JPL-Caltech/UCLA/MPS/DLR/IDA), served by USGS
+  Astrogeology.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it. The USGS Astropedia page for the
+  mosaic names no licence and asks users to cite its authors.
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: Dawn Gravity Team (R. Park, JPL), Ceres shape
+  model icq0256, NASA PDS / NAIF. Colour: Dawn FC DLR mosaic,
+  NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds>,
+  <https://planetarymaps.usgs.gov/mosaic/Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif>
+- **Enters skymap:** downloaded by hand → DSK converted to OBJ once →
+  Blender import and relief pre-bake → `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic resampled and rescaled to the seed albedo.
+- **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/>
+
+### Bennu shape model (OSIRIS-REx v020) and albedo mosaic
+
+<!-- attribution: id=mesh-bennu; keys=meshes.bennu*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Bennu up close: the OSIRIS-REx laser-altimeter shape model
+  (3.1 million plates) and the ShapeV20 normal-albedo global mosaic.
+- **By:** Shape: OSIRIS-REx Altimetry Working Group (O. Barnouin, JHU/APL),
+  archived by NASA's Planetary Data System and served by NAIF. Mosaic: Golish
+  et al. 2021, from OSIRIS-REx images (NASA/University of Arizona), served by
+  USGS Astrogeology.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it; the mosaic's USGS use constraints
+  say "public domain".
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: OSIRIS-REx Altimetry Working Group (O.
+  Barnouin, JHU/APL), Bennu shape model v020 from OLA, NASA PDS / NAIF. Colour:
+  ShapeV20 normal-albedo mosaic (Golish et al. 2021), NASA/University of
+  Arizona, USGS Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds>,
+  <https://planetarymaps.usgs.gov/mosaic/Bennu/Bennu_global_ShapeV20_GndControl_ROLOphase_ALBEDO_8bit_v6.tif>
+- **Enters skymap:** downloaded by hand → DSK converted to OBJ once →
+  Blender import and relief pre-bake → `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic's polar gaps filled with its median,
+  downsampled, and rescaled to the seed albedo.
+- **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/>
+
 ## Fonts
 
 All three are under the SIL Open Font License 1.1, whose second condition
@@ -2465,7 +2568,9 @@ and where they come from".
 
 - **What:** 42 hand-placed structures (15 clusters, 16 groups, 8
   superclusters, 3 voids): a position, a distance, two radii and a paragraph
-  each. The voids and groups exist only here; no catalogue feeds them.
+  each. The voids and groups exist only here; no catalogue feeds them. The
+  same file's Milky Way rows have an entry of their own (see entry:
+  seed-milky-way-structures).
 - **By:** Typed by hand by the project; no source is recorded per row.
 - **Licence:** Ours (MIT).
 - **Use:** Ours (MIT)
@@ -2476,6 +2581,66 @@ and where they come from".
 - **Modified:** Not applicable.
 - **Checked:** 2026-10-07: the file itself; no outside page.
 - **Not verified:** every position, distance and radius in it.
+
+### Milky Way clusters, nebulae and the Galactic Centre
+
+<!-- attribution: id=seed-milky-way-structures -->
+
+- **What:** The 71 Milky Way rows of the structure seed (25 open clusters,
+  21 globular clusters, 22 nebulae and supernova remnants, 3 star clusters
+  at the Galactic Centre): a position, a distance, two radii and a paragraph
+  each. Each row's `source` field names where its numbers come from.
+- **By:** Typed by hand by the project from published measurements:
+  - Open clusters: Hunt & Reffert 2024, A&A 686, A42 (VizieR
+    J/A+A/686/A42, 24 rows); Westerlund 1 from Navarete et al. 2022, MNRAS
+    516, 1289, centred as in Clark et al. 2005.
+  - Globular clusters: the Galactic Globular Cluster Database of Baumgardt
+    et al. (version 4), distances from Baumgardt & Vasiliev 2021, MNRAS 505,
+    5957, tidal radii by Webb et al. 2013, eq. 8.
+  - Nebulae: distances from Zucker et al. 2020, A&A 633, A51; Kounkel et al.
+    2017, ApJ 834, 142 (Orion); Kuhn et al. 2019, ApJ 870, 32 (Carina, as a
+    comparison); Gaia EDR3 parallaxes of the central stars of five planetary
+    nebulae (Gaia Collaboration, VizieR I/350, through SIMBAD). Sizes from
+    the Sharpless 1959 catalogue (VizieR VII/20), the RCW catalogue of
+    Rodgers et al. 1960 (VizieR VII/216), SIMBAD's major axes, and, for the
+    Coalsack, Wikipedia and Astropixels.
+  - Supernova remnants: sizes from Green's Catalogue of Galactic Supernova
+    Remnants (2024 October version); distances from Lin et al. 2023, ApJ
+    (arXiv:2306.01617), Fesen et al. 2021, MNRAS 507, 244, Caraveo et al.
+    2001, ApJ 561, 930, Reed et al. 1995, ApJ 440, 706, Ruiz-Lapuente 2004,
+    ApJ 612, 357, Ruiz-Lapuente 2017, ApJ 842, 112 and Sankrit et al. 2016.
+  - Galactic Centre: Schödel et al. 2014, A&A 566, A47; Hosek et al. 2015
+    (arXiv:1509.04716); Rui et al. 2019, ApJ 877, 37; the position of
+    Sgr A\* from Reid & Brunthaler 2004; R₀ from the GRAVITY Collaboration
+    2019 (see entry: gravity-r0).
+- **Licence:** By part. The rows typed from VizieR tables and SIMBAD are
+  copies CDS serves, which state no licence; the CDS terms apply (see entry:
+  vizier). The Baumgardt database states "(C) Holger Baumgardt, Antonio
+  Sollima, Michael Hilker, Andrea Bellini, Eugene Vasiliev, Vincent
+  Henault-Brunet & Nolan Dickson, March 2023" and no licence. Green's
+  catalogue states "Copyright © D. A. Green 2024/2025." and no licence. The
+  five planetary-nebula distances are Gaia data, "distributed under the CC BY-NC
+  3.0 IGO license" (see entry: gaia). The papers supply a few numbers each.
+  Ours (MIT) for the paragraphs.
+- **Use:** No licence stated; Per item
+- **Attribution:** Cite the source each row names. Green asks to be cited
+  as "Green D. A., 2025, Journal of Astrophysics and Astronomy, 46, 14" and
+  "Green D. A., 2024, 'A Catalogue of Galactic Supernova Remnants (2024
+  October version)', Cavendish Laboratory, Cambridge, United Kingdom".
+- **Upstream:** <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/A+A/686/A42>,
+  <https://people.smp.uq.edu.au/HolgerBaumgardt/globular/>,
+  <https://www.mrao.cam.ac.uk/surveys/snrs/>, <https://simbad.cds.unistra.fr/>
+- **Enters skymap:** `data/seeds/structure_anchors.seed.json` (the rows whose
+  category is a Milky Way one) → bundled by
+  `src/layers/structure/load/buildStaticAnchorStructures.ts`.
+- **Modified:** Yes. Units converted; an angular size becomes a radius at the
+  row's distance; the Carina Nebula takes the distance of Trumpler 14, and
+  Westerlund 1's outer extent is three half-light radii, as each row says.
+- **Checked:** 2026-11-03: <https://people.smp.uq.edu.au/HolgerBaumgardt/globular/>,
+  <https://www.mrao.cam.ac.uk/surveys/snrs/>
+- **Not verified:** the VizieR pages and ReadMes of J/A+A/686/A42, VII/20
+  and VII/216 (CDS did not answer on 2026-11-03); each row against its named
+  source; the journals' terms.
 
 ### Famous galaxies
 
@@ -2563,7 +2728,7 @@ and where they come from".
 
 - **What:** Every render of the app that is published: the website's stills
   (76 rows in `packages/website/src/data/siteShots.ts`, files under
-  `packages/website/src/assets/shots/`), its nine film loops
+  `packages/website/public/shots/`), its nine film loops
   (`assets/loops/place-*.mp4`), the stills of the home page's flight
   (`assets/flight/`), the two social cards (`assets/og-card.jpg`,
   `public/og-image.jpg`), the 47 card thumbnails the app ships
@@ -2691,13 +2856,13 @@ and where they come from".
 - **What:** The libraries the app and the website bundle. Named in
   `package.json`: `react`, `react-dom`, `react-redux`, `@reduxjs/toolkit`,
   `redux-saga`, `typed-redux-saga`, `react-markdown`, `classnames`,
-  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`; for the website `astro`,
+  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`, `satellite.js`; for the website `astro`,
   `@astrojs/mdx`, `pagefind`. The bundles also hold what those pull in
   (`immer`, `redux`, `reselect`, `scheduler`, the `unified` and `micromark`
   families under `react-markdown`, and others); the build lists every one in
   `third-party-licenses.md`. Build-time tools are listed in `package.json`.
 - **By:** Their authors.
-- **Licence:** MIT, each of the fourteen named, as its own `package.json`
+- **Licence:** MIT, each of the fifteen named, as its own `package.json`
   states. Of the 74 packages the app's bundle holds, the build reports MIT
   for 71, ISC for one, and no licence field for two entry points of
   `redux-saga` (itself MIT).
@@ -2714,7 +2879,10 @@ and where they come from".
 - **Enters skymap:** `package.json`, `packages/website/package.json`.
 - **Modified:** No.
 - **Checked:** 2026-10-07: the `license` field of each of the fourteen
-  installed packages; the built bundle, searched for licence notices; the
+  installed packages then named; 2026-10-28: `satellite.js` 7.1.0's
+  `LICENSE.md` (MIT, © 2013 Shashwat Kandadai), whose plain-JS SGP4 the
+  satellites worker bundles; the built bundle, searched for licence notices; the
   generated `third-party-licenses.md`; the sentence quoted, in
   <https://opensource.org/license/mit> and in `node_modules/react/LICENSE`.
-- **Not verified:** what the website's scripts and the dev-tool pages bundle.
+- **Not verified:** what the website's scripts and the dev-tool pages bundle;
+  the package count of the app's bundle since `satellite.js` joined it.

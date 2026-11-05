@@ -7,13 +7,13 @@ import type { SiteLoopPlan } from '../@types/SiteLoopPlan';
  * page. One keyframe for the whole loop: it is played, never seeked.
  */
 export function loopVideoArgs(
-  plan: Pick<SiteLoopPlan, 'size' | 'fps'>,
+  plan: Pick<SiteLoopPlan, 'fps'> & { width: number; height: number },
   crf: number,
   framePattern: string,
   output: string,
 ): string[] {
   const scale =
-    `scale=${plan.size}:${plan.size}:flags=lanczos:in_range=pc:out_range=tv:` +
+    `scale=${plan.width}:${plan.height}:flags=lanczos:in_range=pc:out_range=tv:` +
     'out_color_matrix=bt709';
   return [
     '-y',

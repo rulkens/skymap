@@ -12,7 +12,8 @@
  * `row.objId` is the decimal string of the catalog objID; we parse it back to
  * a bigint once here because the SDSS/PGC URL + name logic compares it to 0n.
  */
-import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { Source } from '../../../data/source';
+import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import {
   DESI_TRACER_CLASS,
   sourceClassLabel,
@@ -85,7 +86,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     ? { magU: NaN, magG: NaN, magR: NaN, magI: NaN, magZ: NaN }
     : row;
 
-  const entry = SOURCE_REGISTRY[source];
+  const entry = APP_SOURCE_REGISTRY[source];
   if (entry.type !== 'galaxyCatalog') {
     throw new Error(
       `buildGalaxyInfo: non-galaxy catalog source ${source} has no photometric bands`,
@@ -249,7 +250,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     bands,
     colours,
     source,
-    sourceLabel: SOURCE_REGISTRY[source].label,
+    sourceLabel: APP_SOURCE_REGISTRY[source].label,
     agnClass,
     ...(suppressPhotometry ? { photometryNote: 'no photometry in source catalog' } : {}),
     catalogues,

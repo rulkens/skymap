@@ -6,11 +6,12 @@
  */
 
 import type { FollowMemory } from './FollowMemory';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
+import type { SceneBodyId } from '../../scene/SceneBodyId';
 
 export type DriverOutput<Own = unknown> = {
   readonly pose: FramedCameraPose;
   readonly memory: FollowMemory | null;
   readonly own?: Own;
-  readonly pivotBody?: string;
+  readonly pivotBody?: SceneBodyId;
 };

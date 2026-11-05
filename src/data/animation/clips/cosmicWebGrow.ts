@@ -7,7 +7,7 @@
 
 import type { Clip } from '../../../@types/animation/Clip';
 import { all, hide, seq, show, spin, wait } from '../../../services/engine/animation/effectHelpers';
-import { COSMIC_WEB_POSE } from '../../exhibits/cosmicWebPose';
+import { COSMIC_WEB_POSE } from '../../../compositions/exhibits/cosmicWebPose';
 
 const DURATION_SEC = 28;
 

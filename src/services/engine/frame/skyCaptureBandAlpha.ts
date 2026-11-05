@@ -11,13 +11,13 @@
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { SkyCaptureKey } from '../../../@types/rendering/SkyCaptureKey';
-import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../compositions/appCubemapCaptures';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { sceneBodyStates } from './sceneBodyStates';
 
 export function skyCaptureBandAlpha(key: SkyCaptureKey, state: PassState, ctx: FrameView): number {
-  const capture = CUBEMAP_CAPTURES[key];
+  const capture = APP_CUBEMAP_CAPTURE_REGISTRY[key];
   const distanceMpc = regionRelativeDistanceMpc(
     ctx.drawCamPos,
     capture.anchor,

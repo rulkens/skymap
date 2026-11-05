@@ -11,7 +11,7 @@
 
 import type { Clip } from '../../../@types/animation/Clip';
 import { fork, hide, oscillate, spin } from '../../../services/engine/animation/effectHelpers';
-import { COSMIC_WEB_POSE } from '../../exhibits/cosmicWebPose';
+import { COSMIC_WEB_POSE } from '../../../compositions/exhibits/cosmicWebPose';
 
 const PERIOD_SEC = 32;
 

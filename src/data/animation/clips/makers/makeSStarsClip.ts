@@ -22,11 +22,14 @@ import {
   wait,
 } from '../../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
-import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../../utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../orientation/orientationFrames';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../places/galacticCentre';
 import { SCALE_UNITS } from '../../../scaleUnits';
+import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
+
+const S2_ID = asSceneBodyId('s2');
 
 const YEAR_DAYS = 365.25;
 
@@ -52,8 +55,8 @@ export function makeSStarsClip(opts: {
 }): (simDays: number) => Clip {
   return function build(simDays: number): Clip {
     const centre = GALACTIC_CENTRE_ANCHOR.positionMpc;
-    const r1 = sub(deriveBodyStates(simDays).get('s2')!.positionMpc, centre);
-    const r2 = sub(deriveBodyStates(simDays + 4 * YEAR_DAYS).get('s2')!.positionMpc, centre);
+    const r1 = sub(deriveBodyStates(simDays).get(S2_ID)!.positionMpc, centre);
+    const r2 = sub(deriveBodyStates(simDays + 4 * YEAR_DAYS).get(S2_ID)!.positionMpc, centre);
     const normal = normalize3(cross(r1, r2));
     const inPlane = normalize3(r1);
     const c = Math.cos(opts.tiltRad);

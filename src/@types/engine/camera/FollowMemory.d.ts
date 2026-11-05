@@ -6,13 +6,15 @@
  * false while its own camera still eases.
  */
 
-import type { CameraPose } from '../../camera/CameraPose';
+import type { CameraPose } from '../../camera/pose/CameraPose';
 import type { Vec3 } from '../../math/Vec3';
 
 export type FollowMemory = {
   readonly from: CameraPose | null;
   /** Mpc; three sources, resolved in `followPose`. */
   readonly distanceTarget: number | null;
+  /** The approach's ease length, captured with `from` so a slider drag never re-times a flight. */
+  readonly durationMs: number | null;
   /** WORLD frame — a stable screen strafe at follow scales, no basis re-projection. */
   readonly panOffset: Vec3;
   readonly saturated: boolean;

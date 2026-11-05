@@ -13,7 +13,7 @@ export type RenderFrameInput = {
    * The frame's own view of the swap chain — what `once` sections run
    * against. They DO read view fields: composite/tonemap resolve
    * `viewFor(dest, ctx, swapView)` through `ctx.output`, and the sky-view
-   * compute's `atmosphereDrawList` reads `ctx.cam.distance` / `drawCamPos`.
+   * compute's `atmosphereDrawList` reads `snapshot.slabBodyCandidates` / `drawCamPos`.
    */
   canvas: FrameView;
   /** What `perView` sections iterate; mono is `[canvas]`. */

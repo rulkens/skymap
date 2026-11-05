@@ -1,17 +1,13 @@
-/** Derives CameraStateSection's PanelModel from a snapshot, the live tuning, and the marker radius. */
+/** Derives CameraStateSection's PanelModel from a snapshot and the live tuning. */
 
-import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
+import type { CameraDebugSnapshot } from '../../@types/camera/debug/CameraDebugSnapshot';
+import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
 import type { PanelModel } from '../../@types/components/PanelModel';
-import { frameKey } from '../../services/engine/camera/rungs/frameKey';
+import { frameKey } from '../../services/engine/camera/arms/frameKey';
 import { deg } from '../../utils/format/deg';
 import { num } from '../../utils/format/num';
 
-export function modelOf(
-  snap: CameraDebugSnapshot,
-  tuning: CameraTuning,
-  markerRadiusM: number,
-): PanelModel {
+export function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
   const { dofs, deltas } = snap;
   const off = !tuning.northUp;
   return {
@@ -25,11 +21,6 @@ export function modelOf(
     band: [
       { key: 'h_over_R', value: num(snap.hOverR) },
       { key: 'altitude_m', value: num(snap.altitudeM) },
-      { key: 'terrain_pick_height_m', value: num(snap.terrainPickHeightM) },
-      // The gauge's own size: a height written down beside a buried fraction
-      // means nothing without the sphere radius it was read against.
-      { key: 'terrain_pick_marker_radius_m', value: num(markerRadiusM) },
-      { key: 'resident_height_level_at_eye', value: num(snap.residentHeightLevelAtEye) },
       { key: 'band_up_weight', value: num(snap.bandUpWeight) },
       { key: 'engage/disengage_hr', value: `${tuning.engageHR} / ${tuning.disengageHR}` },
       { key: 'tilt_full/zero_hr', value: `${tuning.tiltFullHR} / ${tuning.tiltZeroHR}` },

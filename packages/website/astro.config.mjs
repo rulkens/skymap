@@ -28,14 +28,16 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DEV_PORTS } from '../../tools/utils/io/devPorts.ts';
 import { distDir } from '../../tools/utils/io/distDir.ts';
 import { toolPages } from '../../tools/utils/io/toolPages.ts';
+import { customMedia } from '../../tools/site/customMedia.ts';
 import { feedbackPlugin } from '../../tools/site/feedbackPlugin.ts';
 import { jsxSourceAttributes } from '../../tools/site/jsxSourceAttributes.ts';
 import { reviewPlugin } from '../../tools/site/reviewPlugin.ts';
-import { BASE, INDEXABLE } from './src/data/site.ts';
+import { SITE_SHOTS_DIR } from '../../tools/site/SITE_SHOTS_DIR.ts';
+import { shotFiles } from '../../tools/site/shotFiles.ts';
+import { BASE, INDEXABLE, SITE_ORIGIN } from './src/data/site.ts';
 import { robotsTxt } from './src/utils/robotsTxt.ts';
 import { sitemapXml } from './src/utils/sitemapXml.ts';
 
-const site = 'https://skymap.rulkens.com';
 const publicDir = resolve(import.meta.dirname, '../../public');
 
 const isFile = (path) => {
@@ -94,10 +96,13 @@ const crawlFiles = {
     'astro:build:done': ({ dir, pages }) => {
       if (!INDEXABLE) return;
       const urls = pages
-        .map((p) => new URL(p.pathname, site + BASE).href)
+        .map((p) => new URL(p.pathname, SITE_ORIGIN + BASE).href)
         .filter((u) => !u.endsWith('/404/'));
       writeFileSync(join(fileURLToPath(dir), 'sitemap.xml'), sitemapXml(urls));
-      writeFileSync(join(fileURLToPath(dir), 'robots.txt'), robotsTxt(`${site}/sitemap.xml`));
+      writeFileSync(
+        join(fileURLToPath(dir), 'robots.txt'),
+        robotsTxt(`${SITE_ORIGIN}/sitemap.xml`),
+      );
     },
   },
 };
@@ -113,7 +118,7 @@ const searchIndex = {
       if (!index) throw new Error(`pagefind: ${errors.join('; ')}`);
       await index.addDirectory({ path: out });
       const { outputPath } = await index.writeFiles({ outputPath: join(out, 'pagefind') });
-      // Pagefind also writes its ready-made interfaces; the site draws its own (components/DocsSearch/DocsSearch.tsx).
+      // Pagefind also writes its ready-made interfaces; the site draws its own (components/docs/DocsSearch/DocsSearch.tsx).
       for (const name of readdirSync(outputPath))
         if (/-ui\.|-highlight\./.test(name)) rmSync(join(outputPath, name));
       logger.info(`search index written to ${outputPath}`);
@@ -122,13 +127,13 @@ const searchIndex = {
 };
 
 // CSS-module class names are `{folder}-{class}` with no content hash. Every component sits in a folder of
-// its own (components/Nav/Nav.module.css), so the folder is already a unique prefix and the compiled CSS
+// its own (components/site/Nav/Nav.module.css), so the folder is already a unique prefix and the compiled CSS
 // stays readable; the stylesheet file name still carries the hash that busts caches. Same rule as
 // ~/Development/web/rulkens.com/astro.config.ts.
 const generateScopedName = (name, file) => `${basename(dirname(file))}-${name}`;
 
 export default defineConfig({
-  site,
+  site: SITE_ORIGIN,
   base: BASE,
   outDir: INDEXABLE ? distDir : resolve(distDir, toolPages.website),
   trailingSlash: 'always',
@@ -140,6 +145,9 @@ export default defineConfig({
   integrations: [react(), mdx(), devRootStatics, crawlFiles, searchIndex],
   vite: {
     envDir: resolve(import.meta.dirname, '../..'),
-    css: { modules: { generateScopedName } },
+    // The shots are the site's own public/ files, which the build copies as they are; the pages get their listing.
+    plugins: [shotFiles(resolve(import.meta.dirname, '../..', SITE_SHOTS_DIR), BASE)],
+    // `@media (--narrow)` and the other names of src/data/media.ts (tools/site/customMedia.ts).
+    css: { modules: { generateScopedName }, postcss: { plugins: [customMedia()] } },
   },
 });

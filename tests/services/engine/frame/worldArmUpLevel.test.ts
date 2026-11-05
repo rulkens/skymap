@@ -14,29 +14,28 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
-import { frameKey } from '../../../../src/services/engine/camera/rungs/frameKey';
+import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
+import { frameKey } from '../../../../src/services/engine/camera/arms/frameKey';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
-const RUNG_CTX = {
+const BODIES = deriveBodyStates(CONST_J2000);
+const ARM_CTX = {
   bodies: BODIES,
   poseBasis: B,
   upBasis: B,
@@ -44,8 +43,8 @@ const RUNG_CTX = {
 };
 
 const OPPORTUNITY = {
-  frame: { site: 'opportunity' as BodyId },
-  pose: { siteId: 'opportunity' as BodyId, headingRad: 0.4, elevationRad: 0.5, rangeM: 60 },
+  frame: { site: asSurfaceSiteId('opportunity') },
+  pose: { siteId: asSurfaceSiteId('opportunity'), headingRad: 0.4, elevationRad: 0.5, rangeM: 60 },
 };
 
 /** The drawn screen-up's tilt off the selected frame's pole, in degrees. */
@@ -62,10 +61,10 @@ function upTiltDeg(pose: CameraPose): number {
   return (Math.acos(Math.min(1, Math.max(-1, dot))) * 180) / Math.PI;
 }
 
-/** Land the site arm at Challenger Memorial Station, as the ladder fixtures do. */
+/** Land the site arm at Challenger Memorial Station, as the arm-tree fixtures do. */
 function standOnOpportunity(): ReturnType<typeof makeCameraSimHarness> {
   const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
-  h.seedPose(absoluteArm(foldToWorld(OPPORTUNITY, RUNG_CTX)));
+  h.seedPose(absoluteArm(foldToWorld(OPPORTUNITY, ARM_CTX)));
   h.focus('opportunity');
   h.frame(40);
   expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:opportunity');

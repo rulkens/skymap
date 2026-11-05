@@ -1,0 +1,81 @@
+/*
+ * Footer — the end of every page, set as a place rather than a strip: the
+ * name, what Skymap is and the way in; every page under three headings; then
+ * the small print. Its ground is the app's widest view, the sphere at the edge
+ * of the observable universe, of which only the top rises into the page, so
+ * each page ends at the edge of the map. The picture is a ground, so it has no
+ * label. The page's last sentence, which counts the light's
+ * distance, is passed in as `light` (LightLine, made live by its own small script).
+ */
+import type { ReactNode } from 'react';
+
+import pkg from '../../../../../../package.json';
+import { MAKER_NAME, REPO_BLOB } from '../../../data/siteIdentity.ts';
+import { sitePath } from '../../../utils/sitePath.ts';
+import ObjLink from '../../shared/links/ObjLink/ObjLink.tsx';
+import OpenApp from '../../shared/links/OpenApp/OpenApp.tsx';
+import Shot from '../../shared/media/Shot/Shot.tsx';
+import Wordmark from '../../shared/text/Wordmark/Wordmark.tsx';
+import { GROUND, groups } from './Footer.constants.ts';
+import styles from './Footer.module.css';
+
+type FooterProps = { path: string; light?: ReactNode };
+
+function Footer({ path, light }: FooterProps) {
+  return (
+    <footer className={styles.root}>
+      <div className={styles.ground} aria-hidden="true">
+        <Shot id={GROUND} sizes="clamp(64rem, 75vw, 80rem)" alt="" />
+      </div>
+
+      <div className={styles.inner}>
+        <div className={styles.top}>
+          <div className={styles.brand}>
+            <a className={styles.mark} href={sitePath('/')}>
+              <Wordmark />
+            </a>
+            <p className={styles.say}>
+              A free, open-source web app that draws the mapped universe in three dimensions at true
+              scale.
+            </p>
+            <OpenApp size="small" />
+          </div>
+
+          <nav className={styles.groups} aria-label="Footer">
+            {groups.map((group) => (
+              <div key={group.heading}>
+                <p className={styles.heading}>{group.heading}</p>
+                <ul className={styles.bare}>
+                  {group.links.map((link) => (
+                    <li key={link.href}>
+                      <ObjLink
+                        className={styles.link}
+                        size="small"
+                        icon={link.icon}
+                        href={link.href}
+                        aria-current={path === link.href ? 'page' : undefined}
+                      >
+                        {link.label}
+                      </ObjLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </nav>
+        </div>
+
+        <div className={styles.end}>
+          {light}
+          <p className={styles.fine}>
+            {`Skymap is made by ${MAKER_NAME}. The code is open source under the `}
+            <a href={`${REPO_BLOB}/LICENSE`}>{`${pkg.license} licence`}</a>
+            {`. Version ${pkg.version}.`}
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export default Footer;

@@ -11,11 +11,12 @@ import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import CompactBodyCard from '../../../src/components/InfoCard/CompactBodyCard/CompactBodyCard';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // Proxima Centauri is in the generated seed table, with a real constellation.
 const proxima: BodyInfo = {
   type: 'body',
-  id: 'proxima-centauri',
+  id: asSceneBodyId('proxima-centauri'),
   label: 'Proxima Centauri',
   positionMpc: [0, 0, 0],
 };
@@ -28,7 +29,7 @@ describe('CompactBodyCard', () => {
   });
 
   it('renders name-only for a body absent from the index (no crash)', () => {
-    const unindexed: BodyInfo = { ...proxima, id: 'not-a-star', label: 'Nowhere' };
+    const unindexed: BodyInfo = { ...proxima, id: asSceneBodyId('not-a-star'), label: 'Nowhere' };
     const { container } = render(createElement(CompactBodyCard, { target: unindexed }));
     expect(screen.getByText('Nowhere')).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/Centaurus/);
@@ -37,7 +38,7 @@ describe('CompactBodyCard', () => {
   it("drops the chip for the Sun rather than printing the 'None' sentinel", () => {
     // The Sun IS in the seed table, so the miss path never runs — its row spells
     // "in no constellation" as the string 'None', which used to render verbatim.
-    const sun: BodyInfo = { ...proxima, id: 'sun', label: 'Sun' };
+    const sun: BodyInfo = { ...proxima, id: asSceneBodyId('sun'), label: 'Sun' };
     const { container } = render(createElement(CompactBodyCard, { target: sun }));
     expect(screen.getByText('Sun')).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/None/);

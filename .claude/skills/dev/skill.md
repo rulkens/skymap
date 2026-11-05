@@ -53,6 +53,31 @@ Start: `/dev` for the app and `/dev website` for the site.
    the user — don't go hunting via `lsof` or `pkill`. Session-scoped lifecycle
    means a forgotten shell will be reaped when the session ends anyway.
 
+## Eye checks against the server
+
+- **Before/after pair, main vs branch.** One image can't show a change, so every
+  visual check shoots the same deep link on main (or the pre-change HEAD) and on
+  this branch, attached as the dash `check` question's `{ before, after, label }`.
+  Reuse a ledger shot of the same link if one exists; if a main shot isn't cheap,
+  say so in the question. Never claim "same as main" off one image.
+- **One deep link per item, on this worktree's port**: never a bare
+  `http://localhost:<port>` or manual steps ("set the clock to X, focus Y").
+  Shape: `#focus=body-<id>&t=<ISO 8601 UTC>` (a valid `t` lands the clock paused
+  there); other focus kinds use their own form (`galaxy-cluster-virgo-m87`,
+  `star-<seed id>`; each Layer's `focusId.encode` in its `*SelectionRow.ts`
+  under `src/layers/*/present/` spells its kind's id). Other
+  params: `pose` (copy one with the `l` key), `orientation`, `exhibit`, `tour`,
+  `clip`, `home`; values raw, not URL-encoded; full table in
+  `src/state/url/hashParamSources.ts`. No param toggles layers or trails, so name
+  the UI toggle. Plans put these links in the DoD smoke section.
+- **Phone or another device: HTTPS only.** Start `SKYMAP_HTTPS=1 npm run dev`
+  (binds the LAN), never `npm run dev -- --host` over http: on a bare IP WebGPU is
+  off (no secure context, blank app) and the remote's pairing QR link fails. It
+  needs a cert pair in the worktree's gitignored `.certs/` (`readCertPair` takes
+  any `*.pem` + `*-key.pem`); if missing or the LAN IP changed:
+  `mkdir -p .certs && cd .certs && mkcert <lan-ip> <tailscale-ip> localhost`.
+  Hand over the `https://` Network URL; on-device checks follow the `phone` skill.
+
 ## Why this design
 
 - **Ephemeral ports are fine.** The user does not need stable worktree-to-port

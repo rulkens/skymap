@@ -28,7 +28,12 @@ function sourceFilesUnder(root: string): string[] {
   return out;
 }
 
-const files = [...sourceFilesUnder('src'), ...sourceFilesUnder('tools')];
+const files = [
+  ...sourceFilesUnder('src'),
+  ...sourceFilesUnder('tools'),
+  ...sourceFilesUnder('packages/website/src'),
+  ...sourceFilesUnder('packages/move-files/src'),
+];
 expect(files.length).toBeGreaterThan(0);
 
 /** A top-level `type`/`interface` not exempted as a `.tsx` file's own `*Props`. */

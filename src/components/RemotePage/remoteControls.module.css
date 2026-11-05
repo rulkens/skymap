@@ -1,0 +1,161 @@
+/* Shared vocabulary of the remote's controls, applied with cx() beside each component's own
+   class. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.button {
+  min-height: var(--touch-target);
+  padding: var(--space-4) var(--space-6);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--font-size-input);
+  line-height: var(--line-height-tight);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.button:focus-visible,
+.input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.button:not(:disabled):active {
+  background: var(--surface-control-active);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* One tappable line: its leading glyph, a growing label, an optional trailing mark. */
+.row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  width: 100%;
+  min-height: 48px;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.quiet {
+  margin: 0;
+  color: var(--color-fg-muted);
+}
+
+.row > svg:first-child {
+  flex: none;
+  color: var(--color-fg-tertiary);
+}
+
+.input {
+  min-height: var(--touch-target);
+  padding: var(--space-4) var(--space-6);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--font-size-input);
+}
+
+/* A doubled border as well as the colour, so "this one is running" survives without colour vision. */
+.on {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+  color: var(--color-accent);
+}
+
+.on > svg:first-child {
+  color: inherit;
+}
+
+/* A switch, not a tick box: the thumb moves and takes the accent, so on survives without colour vision. */
+.switch {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-lg);
+  cursor: inherit;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-md);
+  background: var(--color-fg-dim);
+}
+
+.switch:checked {
+  background: var(--surface-control);
+  border-color: var(--color-accent);
+}
+
+.switch:checked::after {
+  left: 21px;
+  background: var(--color-accent);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .button:not(:disabled):hover {
+    border-color: var(--border-hover);
+    background: var(--surface-control);
+  }
+}
+
+/* A notice in place of the deck when the dome cannot be steered: an accent frame, the text, then its way out. */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-6);
+  margin: 0 var(--space-8) var(--space-8);
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-xl);
+}
+
+.noticeText {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-size: var(--font-size-input);
+  line-height: var(--line-height-base);
+  text-wrap: pretty;
+}

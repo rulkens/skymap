@@ -4,7 +4,12 @@ import { SITE_LOOP_PLAN } from '../../../tools/site/siteLoopPlan';
 import { loopVideoArgs } from '../../../tools/site/utils/loopVideoArgs';
 
 describe('loopVideoArgs', () => {
-  const args = loopVideoArgs(SITE_LOOP_PLAN, 35, 'frames/%04d.png', 'out.mp4');
+  const args = loopVideoArgs(
+    { fps: SITE_LOOP_PLAN.fps, width: 960, height: 540 },
+    35,
+    'frames/%04d.png',
+    'out.mp4',
+  );
   const after = (flag: string): string => args[args.indexOf(flag) + 1]!;
 
   // Untagged or full-range, the film sits brighter than the still it lies over.
@@ -14,9 +19,9 @@ describe('loopVideoArgs', () => {
     expect(after('-colorspace')).toBe('bt709');
   });
 
-  it('is silent, square at the plan size and at the CRF it was handed', () => {
+  it('is silent, at the size and the CRF it was handed', () => {
     expect(args).toContain('-an');
-    expect(after('-vf')).toContain(`scale=${SITE_LOOP_PLAN.size}:${SITE_LOOP_PLAN.size}:`);
+    expect(after('-vf')).toContain('scale=960:540:');
     expect(after('-framerate')).toBe(String(SITE_LOOP_PLAN.fps));
     expect(after('-crf')).toBe('35');
   });

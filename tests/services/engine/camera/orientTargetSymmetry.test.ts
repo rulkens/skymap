@@ -13,13 +13,13 @@ import { describe, it, expect } from 'vitest';
 
 import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
 
-import { bandRollTarget } from '../../../../src/services/engine/camera/frameAlignedRoll';
+import { bandRollTarget } from '../../../../src/services/engine/camera/arms/world/frameAlignedRoll';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { blendedEnuAt } from '../../../../src/utils/camera/blendedEnuAt';
-import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
+import { blendedEnuAt } from '../../../../src/utils/camera/surfaceFrame/blendedEnuAt';
+import { bodyUpWeight } from '../../../../src/services/engine/camera/orientation/utils/bodyUpWeight';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { rotateVec3ByTightMat3T } from '../../../../src/utils/math/rotateVec3ByTightMat3T';
@@ -28,14 +28,14 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { angleBetween } from '../../../helpers/math/angleBetween';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
-const EARTH = BODIES.get('earth')!;
+const BODIES = deriveBodyStates(CONST_J2000);
+const EARTH = BODIES.get(asSceneBodyId('earth'))!;
 const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 const UP_REF = frameUp(B);
 
@@ -48,11 +48,6 @@ function poseAtHR(hr: number, yaw: number, pitch: number): CameraPose {
     distance: R_MPC * (1 + hr),
     roll: 0,
   };
-}
-
-function angleBetween(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
-  const d = a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;
-  return Math.acos(Math.max(-1, Math.min(1, d)));
 }
 
 // Altitudes spanning below-engage (transient crossing notches), the whole

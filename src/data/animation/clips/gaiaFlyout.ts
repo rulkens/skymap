@@ -12,7 +12,7 @@
 import type { Clip } from '../../../@types/animation/Clip';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { all, dollyTo, hide, show, hold, moveTarget, seq, wait } from '../../../services/engine/animation/effectHelpers';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { GAL_X_EQ, GAL_Z_EQ, ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 import { GALACTIC_CENTRE_ANCHOR } from '../../places/galacticCentre';

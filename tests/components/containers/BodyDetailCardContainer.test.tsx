@@ -20,6 +20,7 @@ import { engineBodyDistanceReported } from '../../../src/state/engine/engineSlic
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { formatDistance } from '../../../src/utils/format/formatDistance';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // Render probe: wrap the real BodyDetailCard so we can count how many times the
 // container actually renders it. The wrapper renders the genuine component (so the
@@ -44,7 +45,7 @@ vi.mock('../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard', async 
 
 const jupiter: BodyInfo = {
   type: 'body',
-  id: 'jupiter',
+  id: asSceneBodyId('jupiter'),
   label: 'Jupiter',
   positionMpc: [0, 0, 0],
 };

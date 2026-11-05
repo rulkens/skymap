@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
@@ -11,7 +11,10 @@ import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { VisibilityEntry } from '../../../../src/@types/engine/layer/VisibilityEntry';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
-function makeSurvey(live: readonly string[], entries: readonly VisibilityEntry[] = APP_VISIBILITY) {
+function makeSurvey(
+  live: readonly string[],
+  entries: readonly VisibilityEntry[] = APP_VISIBILITY_REGISTRY,
+) {
   const fades = createFadeRegistry({ requestRender: () => {} });
   for (const item of GALAXY_CATALOG_IDS) {
     fades.register({ address: 'survey', item }, live.includes(item) ? 1 : 0);
@@ -61,7 +64,7 @@ describe('gatePassByFade', () => {
   });
 
   it('a pass whose band is 0 for every item is skipped and not picked', () => {
-    const banded = APP_VISIBILITY.map((e) =>
+    const banded = APP_VISIBILITY_REGISTRY.map((e) =>
       'key' in e && e.key === 'survey' ? { ...e, bands: { near: { out: [0, 1] } } } : e,
     ) as readonly VisibilityEntry[];
     const { gated, enabled, pickEnabled } = makeSurvey(GALAXY_CATALOG_IDS, banded);

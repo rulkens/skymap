@@ -4,8 +4,8 @@
  *
  * A `Label` whose tint, em height, and pixel clamps are ALWAYS authored —
  * unlike the general `Label`, where those fields are optional and fall back to
- * renderer defaults — tagged with a `kind` that drives the layer's declutter
- * priority (`CAPTION_PRIORITY`) and fade routing. Narrowing the required fields
+ * renderer defaults — carrying the declutter `priority` its owning Layer
+ * authors. Narrowing the required fields
  * here states that guarantee once at the type, so the layer hands them to
  * `liftedLabelPlacement` (which requires plain `number`s) without a per-field
  * `?? default` that would silently mask a caption built without its colour or
@@ -15,7 +15,7 @@
  * envelope pass: `sceneBodyLabels` (Earth + the planets + the local star map)
  * and `constellationCaptions` (the stick-figure names). Sharing one type — kept
  * in its own module so neither producer imports the other — is what lets the
- * pipeline stay source-agnostic: it reads `kind`, `worldPos`, and the required
+ * pipeline stay source-agnostic: it reads `priority`, `worldPos`, and the required
  * fields off every entry without caring which producer made it. The scene-body
  * captions ride a body anchor and hang off a leader line; the constellation
  * captions anchor in empty space at a figure centroid and emit direct, but both
@@ -24,16 +24,16 @@
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { FadeBand } from '../../../@types/math/FadeBand';
-import type { CaptionKind } from './captionPriority';
 
 export type ForegroundCaption = Label2D &
   Required<Pick<Label2D, 'color' | 'worldEmMpc' | 'minPixelSize' | 'maxPixelSize'>> & {
-    readonly kind: CaptionKind;
+    /** Declutter priority: higher wins a screen collision, whatever the size. */
+    readonly priority: number;
     /** The body this caption names, where the producer knows it (mesh bodies); read by the
      *  craft-emphasis dim, which must not parse it back out of the `sceneBody-` id. */
     readonly bodyId?: string;
     /** Per-caption approach reveal, in Mpc of anchor-to-camera distance,
-     *  multiplied on top of the kind's `CAPTION_FADE_RULES` band. Any kind may
-     *  carry one; a caption without it rides its kind's reach alone. */
+     *  multiplied on top of the handed label value. For a fade that differs per
+     *  caption within one label item, which no entry band can express. */
     readonly revealBand?: FadeBand;
   };

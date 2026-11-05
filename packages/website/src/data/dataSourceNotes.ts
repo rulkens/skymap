@@ -183,6 +183,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     title: 'Named galaxies, typed by hand',
     description:
       'The 81 galaxies Skymap knows by name, with the figures and the paragraph on each one’s card.',
+    about:
+      'This is a list we keep by hand of the galaxies Skymap knows by name, with what their cards show: names, position, distance, size, type and a paragraph. The names, positions, distances and sizes come from HyperLEDA. Most paragraphs come from Wikipedia, shortened; we wrote the rest.',
     shows: '“Famous” switch under Galaxy catalogs.',
     scene: 'nearby-galaxies',
     setting: 'galaxy-catalogs',
@@ -227,6 +229,15 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'clusters-superclusters-and-voids',
     setting: 'structures',
     figure: 'void-bootes',
+  },
+  'seed-milky-way-structures': {
+    description:
+      '71 star clusters and nebulae of the Milky Way placed by hand, each with the paper or catalogue its distance and size come from.',
+    title: 'Milky Way structures, placed by hand',
+    shows:
+      '“Open clusters”, “Globular clusters”, “Nebulae” and “Galactic Centre” switches under Structures.',
+    scene: 'the-milky-way',
+    setting: 'structures',
   },
   'mcpm-vac': {
     description:
@@ -280,6 +291,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'No switch. It corrects the positions of the planets and moons between 1900 and 2100.',
     scene: 'planets-and-their-moons',
     figure: 'guide-conjunction',
+  },
+  celestrak: {
+    description:
+      'CelesTrak’s orbits of the active satellites, the largest debris clouds and recent launches around Earth, refreshed daily.',
+    about:
+      'CelesTrak publishes the orbit of every tracked object the US Space Force releases, as the mean elements its SGP4 model needs. Once a day we download the active satellites, three debris clouds and the last month’s launches, drop the orbits SGP4 cannot run and store the rest in our own compact file.',
+    shows: 'Nothing yet. The data is fetched daily; the layer that draws the satellites is still being built.',
   },
   'seed-planet-facts': {
     title: 'Fact sheets of the Solar System bodies',
@@ -569,6 +587,30 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'Deimos up close.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-deimos&t=2026-10-07T12:00:00Z', label: 'Open Deimos' },
+  },
+  'mesh-vesta': {
+    title: 'Vesta shape model and Dawn mosaic',
+    description:
+      'The shape of the asteroid Vesta from 3.1 million facets, with its colour from a Dawn mosaic.',
+    shows: 'Vesta up close, with the Rheasilvia basin around its south pole.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-vesta&t=2026-10-20T00:00:00Z', label: 'Open Vesta' },
+  },
+  'mesh-ceres': {
+    title: 'Ceres shape model and Dawn mosaic',
+    description:
+      'The shape of the dwarf planet Ceres from 786,000 facets, with its colour from a Dawn mosaic.',
+    shows: 'Ceres up close, with the bright spots of Occator crater.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-ceres&t=2026-10-20T00:00:00Z', label: 'Open Ceres' },
+  },
+  'mesh-bennu': {
+    title: 'Bennu shape model and albedo mosaic',
+    description:
+      'The shape of the asteroid Bennu from OSIRIS-REx’s laser altimeter, with its brightness from an OSIRIS-REx mosaic.',
+    shows: 'Bennu up close, with its equatorial ridge and boulders.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-bennu&t=2026-10-20T00:00:00Z', label: 'Open Bennu' },
   },
   skraafoto: {
     description:

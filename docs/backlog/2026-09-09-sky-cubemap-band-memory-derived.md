@@ -38,5 +38,5 @@ current cubemap contents were baked under), not a derivable quantity. A
 previous-frame band value stays too if the band-entry edge survives: an edge is
 inherently a two-frame comparison.
 
-With more than one `CUBEMAP_CAPTURES` row the cost is per row, so this gets
+With more than one `APP_CUBEMAP_CAPTURE_REGISTRY` row the cost is per row, so this gets
 worse, not better, as the PBR reflection probes land.

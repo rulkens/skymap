@@ -13,7 +13,7 @@ import { sampleClipPath } from '../../../../src/services/engine/animation/sample
 import { flyPath, atPoint } from '../../../../src/services/engine/animation/effectHelpers';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 

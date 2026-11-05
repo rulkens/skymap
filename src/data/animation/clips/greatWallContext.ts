@@ -16,7 +16,7 @@ import {
   spin,
   wait,
 } from '../../../services/engine/animation/effectHelpers';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 

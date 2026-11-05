@@ -62,6 +62,9 @@ contracts · debug/UI surface without a story.
 **Scope fencing (always, fill in):** list settled rulings, ledgered deferred
 minors, deliberate comment-guarded oddities, and user-requested scaffolding —
 "question rows, not the panel". Without fencing the audit re-litigates history.
+Always add, verbatim: "A file the spec or plan names is still open to deletion;
+a file carried over in a move must re-justify existing in its new home." Naming
+a file in a plan is not a ruling that it stays.
 
 **Output contract (always):**
 

@@ -40,18 +40,19 @@
 import type { CameraAction } from '../../../@types/animation/CameraAction';
 import type { FocusBoundEffect } from '../../../@types/animation/FocusBoundEffect';
 import type { FocusId } from '../../../@types/animation/FocusId';
-import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Space } from '../../../@types/animation/Space';
-import type { PoseFrame } from '../../../@types/camera/PoseFrame';
+import type { PoseFrame } from '../../../@types/camera/pose/PoseFrame';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { GeodesicTuning } from '../../../@types/camera/focusMotion/GeodesicTuning';
 import type { VisibilityArg } from '../../../@types/animation/VisibilityArg';
 import type { ScopedVisibilityAddress } from '../../../@types/animation/ScopedVisibilityAddress';
 import { expandVisibilityLayers } from '../../../utils/animation/expandVisibilityLayers';
-import type { SettingsAction } from '../../../@types/animation/SettingsAction';
+import type { SettingsAction } from '../../../compositions/@types/SettingsAction';
 import type { ClockKey } from '../../../@types/animation/ClockKey';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
@@ -134,6 +135,21 @@ export function moveTarget(
     space: 'lin',
     ...(frame !== undefined ? { frame } : {}),
   };
+}
+
+/**
+ * geodesic — fly target and distance together along van Wijk & Nuij's zoom/pan
+ * path to `to`. `over` (seconds) omitted ⇒ the arc-length duration `tuning`
+ * derives. It owns target and distance for its window, so don't also drive them
+ * with `moveTarget` / `dollyTo` there; yaw and pitch tweens may run beside it.
+ */
+export function geodesic(
+  to: { readonly target: Vec3; readonly distance: number },
+  tuning: GeodesicTuning,
+  fovYRad: number,
+  over?: number,
+): Effect & { kind: 'geodesic' } {
+  return { kind: 'geodesic', to, tuning, fovYRad, ...(over !== undefined ? { over } : {}) };
 }
 
 /**

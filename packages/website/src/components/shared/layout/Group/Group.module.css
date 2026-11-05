@@ -1,0 +1,50 @@
+.root {
+  margin-top: var(--site-space-2xl);
+
+  & h3 {
+    margin: 0;
+  }
+}
+
+.big {
+  margin-top: var(--site-space-3xl);
+
+  & h3 {
+    font-size: var(--text-ring-big);
+  }
+}
+
+.root.first {
+  margin-top: 0;
+}
+
+.name {
+  margin-bottom: var(--site-space-m);
+
+  & p {
+    max-width: var(--measure-lead);
+    margin: 0;
+  }
+}
+
+.lede {
+  composes: grid from '../../../../styles/layout.module.css';
+  row-gap: var(--site-space-2xs);
+  align-items: baseline;
+}
+
+@media (--wide) {
+  .lede h3 {
+    grid-column: span 3;
+  }
+
+  .lede > p {
+    grid-column: 4 / -1;
+  }
+}
+
+@media (--narrow) {
+  .big {
+    margin-top: var(--site-space-2xl);
+  }
+}

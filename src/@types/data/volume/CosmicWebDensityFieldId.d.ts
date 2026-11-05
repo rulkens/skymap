@@ -1,6 +1,6 @@
-import type { SOURCE_REGISTRY } from '../../../data/sources';
+import type { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 
-type AnyEntry = (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY];
+type AnyEntry = (typeof APP_SOURCE_REGISTRY)[keyof typeof APP_SOURCE_REGISTRY];
 
 /**
  * CosmicWebDensityFieldId — the closed set of scalar-volume identifiers the
@@ -8,4 +8,7 @@ type AnyEntry = (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY];
  * rows, so adding a volume entry widens the union automatically — the
  * registry is the single source of truth for "what volumes exist".
  */
-export type CosmicWebDensityFieldId = Extract<AnyEntry, { readonly type: 'cosmicWebDensity' }>['id'];
+export type CosmicWebDensityFieldId = Extract<
+  AnyEntry,
+  { readonly type: 'cosmicWebDensity' }
+>['id'];

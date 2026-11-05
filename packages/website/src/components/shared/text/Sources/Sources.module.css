@@ -1,0 +1,34 @@
+.root {
+  composes: small from '../../../../styles/type.module.css';
+  padding-block: var(--site-space-s);
+  border-top: 1px solid var(--border-divider);
+  color: var(--site-text-dim);
+}
+
+.toggle {
+  composes: ring ring-small from '../../../../styles/ring.module.css';
+  list-style: none;
+}
+
+.toggle::-webkit-details-marker {
+  display: none;
+}
+
+.root ol {
+  max-width: 62rem;
+  margin: var(--site-space-2xs) 0 var(--site-space-s);
+  padding-left: var(--site-space-m);
+}
+
+.root li {
+  padding-block: var(--site-space-3xs);
+}
+
+/* When we last looked is a footnote to the footnote: the site's dimmest text. */
+.checked {
+  color: var(--site-text-faint);
+}
+
+.date {
+  composes: date from '../../../../styles/type.module.css';
+}

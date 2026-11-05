@@ -1,6 +1,6 @@
 /**
- * A file under `src/services/engine/frame/` — and its `timing/` and `passes/`
- * subfolders, and every Layer's own `passes/` — declares ONE thing: the symbol
+ * A file under `src/services/engine/frame/` — and its subfolders, and every
+ * Layer's own `passes/` — declares ONE thing: the symbol
  * it is named for (for a pass file, its `ContentPass`). Helpers and constants
  * inlined beside it are invisible to the rest of the codebase and untestable
  * alone, and agents keep re-adding them — hence a ratchet rather than a review
@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readdirSync, statSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Node, SyntaxKind, type Statement } from 'ts-morph';
 import { parseOnlyProject } from '../../../helpers/conventions/parseOnlyProject';
@@ -18,18 +18,23 @@ const FRAME_DIR = fileURLToPath(new URL('../../../../src/services/engine/frame/'
 const LAYERS_DIR = fileURLToPath(new URL('../../../../src/layers/', import.meta.url));
 
 // A Layer's passes are frame passes that happen to live in the Layer, so they
-// are swept on the same terms — derived, so a new Layer's `passes/` is gated
-// the day it appears rather than when someone remembers this file.
+// are swept on the same terms. Every folder named `passes` at any depth is
+// swept (ADR 0014 moves them into concern modules), keyed by its path relative
+// to `src/`, so a pass that moves changes its ALLOWED row key with it.
 // `withFileTypes` is load-bearing: `src/layers/` holds a README beside the Layer
-// folders, and `statSync('README.md/passes/')` throws ENOTDIR on Linux — which
-// `throwIfNoEntry: false` does NOT suppress (it covers ENOENT only). A plain file
-// here passed on macOS and failed CI.
-const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = readdirSync(LAYERS_DIR, {
-  withFileTypes: true,
-})
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => [`layers/${entry.name}/passes`, `${LAYERS_DIR}${entry.name}/passes/`] as const)
-  .filter(([, dir]) => statSync(dir, { throwIfNoEntry: false })?.isDirectory() === true);
+// folders, and `statSync('README.md/passes/')` throws ENOTDIR on Linux.
+function passDirsUnder(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry) => {
+      const path = `${dir}${entry.name}/`;
+      return entry.name === 'passes' ? [path, ...passDirsUnder(path)] : passDirsUnder(path);
+    });
+}
+const SRC_DIR = fileURLToPath(new URL('../../../../src/', import.meta.url));
+const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = passDirsUnder(LAYERS_DIR).map(
+  (dir) => [dir.slice(SRC_DIR.length, -1), dir] as const,
+);
 
 // Files that still inline helpers, with their current count. `slabs.ts` is the
 // slab vocabulary itself — a genuine multi-symbol module whose split is its own
@@ -50,17 +55,15 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/sceneOccluderSpheres': 1,
   'frame/slabs': 18,
   'frame/visibleSlabBodies': 2,
-  'frame/passes/bodyGlintsPass': 3,
-  'frame/passes/cloudShellPass': 1,
-  'frame/passes/earthPass': 4,
-  'frame/passes/horizonShellPass': 0,
   'frame/passes/orbitTrailsPass': 1,
-  'frame/passes/planetsPass': 1,
-  'frame/passes/ringsPass': 1,
-  'frame/passes/texturedBodiesPass': 2,
-  'layers/milkyWay/passes/milkyWayPass': 1,
-  'layers/starCatalog/passes/fieldStarSpherePass': 6,
-  'layers/starCatalog/passes/starPointsPass': 2,
+  'layers/body/glints/passes/bodyGlintsPass': 2,
+  'layers/body/clouds/passes/cloudShellPass': 1,
+  'layers/body/spheres/passes/planetsPass': 1,
+  'layers/body/rings/passes/ringsPass': 1,
+  'layers/body/spheres/passes/texturedBodiesPass': 2,
+  'layers/milkyWay/cloud/passes/milkyWayPass': 1,
+  'layers/starCatalog/resolvedStars/passes/fieldStarSpherePass': 6,
+  'layers/starCatalog/seededStars/passes/starPointsPass': 1,
 };
 
 type Declared = { readonly name: string; readonly exported: boolean };
@@ -73,7 +76,6 @@ type Declared = { readonly name: string; readonly exported: boolean };
 const isExportedStatement = (stmt: Statement): boolean =>
   Node.isModifierable(stmt) && stmt.hasModifier(SyntaxKind.ExportKeyword);
 
-/** Top-level VALUE declarations; types are `src/@types/`'s business, not this sweep's. */
 function declarationsOf(stmt: Statement): readonly Declared[] {
   if (Node.isImportDeclaration(stmt) || Node.isExportDeclaration(stmt)) return [];
   if (Node.isTypeAliasDeclaration(stmt) || Node.isInterfaceDeclaration(stmt)) return [];
@@ -99,7 +101,6 @@ function declarationsOf(stmt: Statement): readonly Declared[] {
 // underscores.
 const normalize = (name: string): string => name.replace(/_/g, '').toLowerCase();
 
-/** Everything declared beside the file's own symbol (the export it is named for). */
 function strayDeclarations(path: string, base: string): readonly string[] {
   const declared = parseOnlyProject
     .addSourceFileAtPath(path)
@@ -113,21 +114,35 @@ function strayDeclarations(path: string, base: string): readonly string[] {
   return declared.filter((_, i) => i !== own).map((d) => d.name);
 }
 
-describe.each([
+const SWEPT_DIRS = [
   ['frame', FRAME_DIR] as const,
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
-  ['frame/computes', FRAME_DIR + 'computes/'] as const,
   ...LAYER_PASS_DIRS,
-])('%s files declare only their own symbol', (label, dir) => {
-  // `passes/index.ts` and `computes/index.ts` are
-  // registry barrels, not rows; the other dirs have no barrel and CLAUDE.md
-  // forbids adding one.
-  const files = readdirSync(dir).filter(
-    (f) =>
-      f.endsWith('.ts') &&
-      !((label === 'frame/passes' || label === 'frame/computes') && f === 'index.ts'),
+];
+
+const sweptFiles = (label: string, dir: string): string[] =>
+  readdirSync(dir).filter(
+    (f) => f.endsWith('.ts') && !(label === 'frame/passes' && f === 'index.ts'),
   );
+
+it('every ALLOWED row names a swept file', () => {
+  const swept = new Set(
+    SWEPT_DIRS.flatMap(([label, dir]) =>
+      sweptFiles(label, dir).map((f) => `${label}/${f.replace(/\.ts$/, '')}`),
+    ),
+  );
+  const dangling = Object.keys(ALLOWED).filter((key) => !swept.has(key));
+  expect(
+    dangling,
+    `ALLOWED rows with no file: ${dangling.join(', ')}. A pass that moved changes its row key; rename or delete the row.`,
+  ).toEqual([]);
+});
+
+describe.each(SWEPT_DIRS)('%s files declare only their own symbol', (label, dir) => {
+  // `passes/index.ts` is a registry barrel, not a row; the other dirs have no
+  // barrel and CLAUDE.md forbids adding one.
+  const files = sweptFiles(label, dir);
   expect(files.length).toBeGreaterThan(0);
 
   it.each(files)('%s', (fileName) => {

@@ -9,7 +9,7 @@
 
 import type { Clip } from '../../../@types/animation/Clip';
 import { all, dollyTo, hide, hold, spin } from '../../../services/engine/animation/effectHelpers';
-import { COSMIC_WEB_POSE } from '../../exhibits/cosmicWebPose';
+import { COSMIC_WEB_POSE } from '../../../compositions/exhibits/cosmicWebPose';
 
 const DURATION_SEC = 26;
 

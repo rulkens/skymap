@@ -24,9 +24,9 @@ import { CANCEL } from 'redux-saga';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { clipStarted, clipEnded } from '../../../../src/state/camera/cameraSlice';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
-import type { OrientationFrameId } from '../../../../src/@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../../src/@types/camera/orientation/OrientationFrameId';
 
 // ---------------------------------------------------------------------------
 // Fixtures

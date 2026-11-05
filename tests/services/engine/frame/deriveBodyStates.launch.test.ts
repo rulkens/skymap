@@ -8,6 +8,7 @@ import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDay
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
 loadVoyagerStopWindows();
@@ -18,8 +19,8 @@ const MINUTE = 1 / 1440;
 
 const relKm = (simDays: number): Vec3 => {
   const s = deriveBodyStates(simDays);
-  const c = s.get('voyager1')!.positionMpc;
-  const e = s.get('earth')!.positionMpc;
+  const c = s.get(asSceneBodyId('voyager1'))!.positionMpc;
+  const e = s.get(asSceneBodyId('earth'))!.positionMpc;
   const k = 1 / SCALE_UNITS.KM_TO_MPC;
   return [(c[0] - e[0]) * k, (c[1] - e[1]) * k, (c[2] - e[2]) * k];
 };
@@ -40,7 +41,7 @@ describe('Voyager between launch and its first track sample', () => {
   it('sits on the LC-41 pad at launch, turning with Earth', () => {
     const r = relKm(LAUNCH);
     expect(Math.hypot(...r)).toBeCloseTo(6371, 0);
-    const p = bodyFixed(r, deriveBodyStates(LAUNCH).get('earth')!.orientation);
+    const p = bodyFixed(r, deriveBodyStates(LAUNCH).get(asSceneBodyId('earth'))!.orientation);
     expect((Math.asin(p[2] / Math.hypot(...p)) * 180) / Math.PI).toBeCloseTo(28.583, 2);
     expect((Math.atan2(p[1], p[0]) * 180) / Math.PI).toBeCloseTo(-80.583, 2);
   });
@@ -58,7 +59,7 @@ describe('Voyager between launch and its first track sample', () => {
 
   it('the scene snapshot and the per-body walk agree', () => {
     const t = LAUNCH + 30 * MINUTE;
-    expect(deriveBodyStates(t).get('voyager1')!.positionMpc).toEqual(
+    expect(deriveBodyStates(t).get(asSceneBodyId('voyager1'))!.positionMpc).toEqual(
       bodyPositionMpcAt('voyager1', t),
     );
   });

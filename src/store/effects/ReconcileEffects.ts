@@ -28,7 +28,7 @@
  * effect is added here.
  */
 
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 
 export type ReconcileEffects = {
   requestRender: () => void;

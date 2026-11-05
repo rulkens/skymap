@@ -1,0 +1,19 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl);
+}
+
+.row {
+  box-sizing: border-box;
+  padding: var(--space-4) var(--space-6);
+  color: var(--color-fg-base);
+  font-size: var(--font-size-input);
+  cursor: pointer;
+}
+
+.row + .row {
+  border-top: 1px solid var(--border-divider);
+}

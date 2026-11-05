@@ -6,13 +6,17 @@
  */
 
 import type { CameraEpochs } from '../camera/CameraEpochs';
+import type { ControlSchemeId } from '../camera/ControlSchemeId';
+import type { NavigatorState } from '../../camera/input/NavigatorState';
 import type { DriverId } from '../camera/DriverId';
 import type { FollowMemory } from '../camera/FollowMemory';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
-import type { OrientationFrameId } from '../../camera/OrientationFrameId';
-import type { RungMemory } from '../../camera/RungMemory';
-import type { TiltMemory } from '../../camera/TiltMemory';
+import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
+import type { OrientationFrameId } from '../../camera/orientation/OrientationFrameId';
+import type { CameraArmMemory } from '../../camera/arms/CameraArmMemory';
+import type { TiltMemory } from '../../camera/orientation/TiltMemory';
 import type { FrameOutputs } from './FrameOutputs';
+import type { SceneBodyId } from '../../scene/SceneBodyId';
+import type { Vec2 } from '../../math/Vec2';
 
 export type CameraRuntime = {
   /** The AUTHORED pose (pre-projection — a projected one walks ~8,500 km/frame,
@@ -28,12 +32,19 @@ export type CameraRuntime = {
   readonly orientation: OrientationFrameId;
   readonly epochs: CameraEpochs;
   readonly follow: FollowMemory | null;
-  /** Keyed by the register's `frameKey`: a rung change wipes it to that rung's `emptyMemory`. */
-  readonly gesture: RungMemory;
+  /** Keyed by the register's `frameKey`: an arm change wipes it to that arm's `emptyMemory`. */
+  readonly gesture: CameraArmMemory;
   readonly tilt: TiltMemory;
+  /** Stepped before the pick, so it lives here and not in a row's `own`. */
+  readonly navigator: NavigatorState;
+  /** The scheme last frame's winner was picked from: a toggled-away row exists
+   * only in its own table, which is where its edge commit must look it up. */
+  readonly scheme: ControlSchemeId;
   /** Each row's private memory, as its `pose` last returned it; core never reads or drops it. */
   readonly own: Readonly<Partial<Record<DriverId, unknown>>>;
   /** The last winner's `pivotBody`: the wheel's pivot over the focus while it frames a body. */
-  readonly pivotBody: string | null;
+  readonly pivotBody: SceneBodyId | null;
+  /** The lens shift drawn last frame, in NDC: eased toward the covers' target, so it is memory. */
+  readonly shiftNdc: Readonly<Vec2>;
   readonly outputs: FrameOutputs;
 };

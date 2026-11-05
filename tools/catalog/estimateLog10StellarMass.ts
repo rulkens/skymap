@@ -6,7 +6,7 @@
  * relation for this source, non-positive distance) always yields NaN out.
  */
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import type { SourceType } from '../../src/@types/data/SourceType';
 
 export type StellarMassEstimateInput = {

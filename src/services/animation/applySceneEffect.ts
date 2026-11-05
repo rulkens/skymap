@@ -13,7 +13,7 @@ import type { AppDispatch } from '../../store/types';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import { setOrientation } from '../../state/settings/core/orientationSlice';
 import { startFrameTween } from '../../state/camera/cameraSlice';
-import { liveUpBasisQuat } from '../engine/camera/liveUpBasisQuat';
+import { liveUpBasisQuat } from '../engine/camera/orientation/liveUpBasisQuat';
 import { setVisibilityActionsFor } from '../../utils/visibility/setVisibilityActionsFor';
 import { startClockProfile } from '../../state/time/timeSlice';
 

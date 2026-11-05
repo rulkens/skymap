@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { blackHoleSearch } from '../../../src/layers/blackHoles/present/blackHoleSearch';
+import { blackHoleSearch } from '../../../src/layers/blackHoles/markers/present/blackHoleSearch';
+import { bodySearch } from '../../../src/layers/body/selection/present/bodySearch';
+import { craftSearch } from '../../../src/layers/missions/craft/present/craftSearch';
+import { earthSceneSearch } from '../../../src/layers/earthScenes/scenes/present/earthSceneSearch';
+import { milkyWaySearch } from '../../../src/layers/milkyWay/card/present/milkyWaySearch';
+import { starSearch } from '../../../src/layers/starCatalog/selection/present/starSearch';
+import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
-import { actionForRow } from '../../../src/utils/palette/actionForRow';
-import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
@@ -27,17 +31,6 @@ const COMA: StructureSearchEntry = {
 
 function alias(names: readonly string[], pgc: number): AliasIndexEntry {
   return { pgc, names, source: Source.Glade };
-}
-
-function structure(name: string, abell: string | null, idx: number): StructureSearchEntry {
-  return {
-    id: `cluster-bulk-x${idx}`,
-    name,
-    category: 'galaxy-cluster',
-    abell,
-    description: '',
-    featured: false,
-  };
 }
 
 describe('rankPaletteMatches', () => {
@@ -80,26 +73,54 @@ describe('rankPaletteMatches', () => {
     expect(rows.some((r) => r.kind === 'famous')).toBe(true);
   });
 
-  it('surfaces a Milky Way row for the query "milky way"', () => {
-    const rows = rankPaletteMatches([M31], [], [], [], 'milky way');
-    expect(rows.some((r) => r.kind === 'milkyWay')).toBe(true);
+  it('surfaces a Milky Way row for the query "milky way", sorted among the primaries', async () => {
+    const rows = rankPaletteMatches([M31], [], [], await collect(milkyWaySearch()), 'milky way');
+    expect(rows.some((r) => r.kind === 'layer' && r.entry.id === MILKY_WAY_FOCUS_ID)).toBe(true);
   });
 
-  it('yields no Milky Way row for a query that matches nothing', () => {
-    const rows = rankPaletteMatches([M31], [], [], [], 'zzznotathing');
-    expect(rows.some((r) => r.kind === 'milkyWay')).toBe(false);
+  it('yields no Milky Way row for a query that matches nothing', async () => {
+    const rows = rankPaletteMatches([M31], [], [], await collect(milkyWaySearch()), 'zzznotathing');
+    expect(rows).toEqual([]);
   });
 });
 
+async function collect(feed: AsyncIterable<readonly LayerSearchEntry[]>) {
+  const layerRows: LayerSearchEntry[] = [];
+  for await (const rows of feed) layerRows.push(...rows);
+  return layerRows;
+}
+
+const bodyRows = () => collect(bodySearch());
+
+// Every Layer that publishes `body-<id>` rows, so a cross-Layer duplicate id fails the one-row tests.
+async function allBodyIdRows() {
+  return [
+    ...(await collect(bodySearch())),
+    ...(await collect(craftSearch())),
+    ...(await collect(earthSceneSearch())),
+  ];
+}
+
 describe('rankPaletteMatches — scene-body rows', () => {
-  it("surfaces Earth for the query 'earth'", () => {
-    const rows = rankPaletteMatches([M31], [], [], [], 'earth');
-    const hit = rows.find((r) => r.kind === 'body');
-    expect(hit?.kind === 'body' && hit.body.id).toBe('earth');
-    expect(hit?.kind === 'body' && hit.body).toBe(SCENE_EARTH);
+  it("surfaces Earth for the query 'earth'", async () => {
+    const rows = rankPaletteMatches([M31], [], [], await bodyRows(), 'earth');
+    const hit = rows.find((r) => r.kind === 'layer');
+    expect(hit?.kind === 'layer' && hit.entry.id).toBe('body-earth');
   });
 
-  it('ranks an exact body match above a famous row that only matched in its description', () => {
+  it('typing part of the shared "body-" id prefix lists no body row', async () => {
+    const rows = rankPaletteMatches([], [], [], await allBodyIdRows(), 'bod');
+    expect(rows.filter((r) => r.kind === 'layer')).toEqual([]);
+  });
+
+  it.each(['Mars', 'Titan'])('%s ranks exactly one palette row, chip "Solar System"', async (q) => {
+    const rows = rankPaletteMatches([], [], [], await allBodyIdRows(), q);
+    const hits = rows.filter((r) => r.kind === 'layer' && r.entry.id === `body-${q.toLowerCase()}`);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.kind === 'layer' && hits[0]!.entry.chip).toBe('Solar System');
+  });
+
+  it('ranks an exact body match above a famous row that only matched in its description', async () => {
     // A famous entry whose *description* contains 'earth' scores low (~15);
     // Earth the scene body is an exact *name* match (~1000). The body must
     // outrank the famous row, even though famous rows are otherwise listed
@@ -110,32 +131,36 @@ describe('rankPaletteMatches — scene-body rows', () => {
       description: 'A galaxy visible from Earth on a clear night.',
       type: 'Sc',
     };
-    const rows = rankPaletteMatches([earthlyFamous], [], [], [], 'earth');
-    const bodyIdx = rows.findIndex((r) => r.kind === 'body' && r.body.id === 'earth');
+    const rows = rankPaletteMatches([earthlyFamous], [], [], await bodyRows(), 'earth');
+    const bodyIdx = rows.findIndex((r) => r.kind === 'layer' && r.entry.id === 'body-earth');
     const famousIdx = rows.findIndex((r) => r.kind === 'famous');
     expect(bodyIdx).toBeGreaterThanOrEqual(0);
     expect(famousIdx).toBeGreaterThanOrEqual(0);
     expect(bodyIdx).toBeLessThan(famousIdx);
   });
 
-  it('a star is findable by its Bayer alias, on a star row', () => {
+  it('a star is findable by its Bayer alias, on a star row', async () => {
     // A query for Sirius's Bayer designation (not its common name) surfaces the
     // Sirius STAR row — pins the alias scoring over the star's full names[] and
     // that a star ranks as a star, not as a body (spec §7).
-    const rows = rankPaletteMatches([M31], [], [], [], 'Alpha Canis Majoris');
-    const hit = rows.find((r) => r.kind === 'starCatalog');
-    expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sirius');
-    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sirius')).toBe(false);
+    const rows = rankPaletteMatches(
+      [M31],
+      [],
+      [],
+      await collect(starSearch()),
+      'Alpha Canis Majoris',
+    );
+    const hit = rows.find((r) => r.kind === 'layer');
+    expect(hit?.kind === 'layer' && hit.entry.id).toBe('star-sirius');
   });
 
-  it('finds the Sun by its authored alias, and never as a body row', () => {
+  it('finds the Sun by its authored alias, and never as a body row', async () => {
     // The Sun is its own seeded catalog with no famous-star seed row, so its
     // aliases live in the authored half of BODY_SEARCH_NAMES; scoring stars off
     // that same map is what keeps 'Sol' finding it.
-    const rows = rankPaletteMatches([M31], [], [], [], 'Sol');
-    const hit = rows.find((r) => r.kind === 'starCatalog');
-    expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sun');
-    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sun')).toBe(false);
+    const rows = rankPaletteMatches([M31], [], [], await collect(starSearch()), 'Sol');
+    const hit = rows.find((r) => r.kind === 'layer');
+    expect(hit?.kind === 'layer' && hit.entry.id).toBe('star-sun');
   });
 
   it('finds Sgr A* by its Sagittarius alias, through its Layer row', async () => {
@@ -177,6 +202,34 @@ describe('rankPaletteMatches — Layer-published rows', () => {
     );
     expect(rows[0]).toMatchObject({ entry: { id: 'primary' } });
     expect(rows).toHaveLength(51);
+  });
+});
+
+describe('rankPaletteMatches — craft rows', () => {
+  async function craftRows() {
+    const layerRows = [];
+    for await (const rows of craftSearch()) layerRows.push(...rows);
+    return layerRows;
+  }
+
+  it.each([
+    ['HST', 'body-hubble'],
+    ['Oppy', 'body-opportunity'],
+    ['oh no not again', 'body-petunias'],
+  ])('a craft alias ranks exactly one palette row: %s', async (query, id) => {
+    const rows = rankPaletteMatches([], [], [], await craftRows(), query);
+    const hits = rows.filter((r) => r.kind === 'layer' && r.entry.id === id);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.kind).toBe('layer');
+  });
+});
+
+describe('rankPaletteMatches — Earth scene rows', () => {
+  it('Søndermarken ranks exactly one palette row, chip "Earth"', async () => {
+    const rows = rankPaletteMatches([], [], [], await allBodyIdRows(), 'Søndermarken');
+    const hits = rows.filter((r) => r.kind === 'layer' && r.entry.id === 'body-soendermarken');
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.kind === 'layer' && hits[0]!.entry.chip).toBe('Earth');
   });
 });
 

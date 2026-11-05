@@ -5,13 +5,15 @@
  * readers — drivers, approach tilt, framing, halo, pivot — stay pure functions
  * of the row and never resolve a focus id against a body table.
  */
+
+import type { PositionedId } from '../../scene/PositionedId';
 export type DriverGeometry = {
   /**
-   * `deriveBodyStates` key — a `SlabHostId` where a slab row names one. Null
+   * `deriveBodyStates` key — a `PositionedId` where a slab row names one. Null
    * when the focus has no table row to pose from (a survey star), which is what
    * every "does this focus drive the camera's target" gate reads.
    */
-  readonly poseId: string | null;
+  readonly poseId: PositionedId | null;
   /** Pivot floor for a groundless driver: a mesh hull, a hole's horizon. */
   readonly boundingRadiusM: number;
   /** Framing distance, halo radius, approach distance. */
@@ -21,4 +23,14 @@ export type DriverGeometry = {
   readonly standoffRadii: number;
   /** Fixed radius multiple to arrive at, overriding the screen-fill distance. */
   readonly focusDistanceRadii?: number;
+  /**
+   * The sim clock moves `poseId` though no body table says so. Bodies leave it
+   * unset; `bodyFollowsSimClock` answers for them.
+   */
+  readonly followsSimClock?: true;
+  /**
+   * Core re-extracts this row every frame and places its `positionMpc` under
+   * `poseId` (`placeLiveSelection`), so its kind's `extractRow` must be cheap.
+   */
+  readonly placedEachFrame?: true;
 };

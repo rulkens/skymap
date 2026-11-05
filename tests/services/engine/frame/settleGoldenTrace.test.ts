@@ -18,7 +18,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/body/isBodyArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { expectSigRows } from '../../../helpers/camera/expectSigRows';
 import { flatFramedPose } from '../../../helpers/camera/flatFramedPose';
@@ -26,7 +26,7 @@ import { goldenSig } from '../../../helpers/camera/goldenSig';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -35,10 +35,11 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import GOLDEN from '../../../fixtures/camera/settleGoldenTrace.json';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
-const EARTH = deriveBodyStates(SIM).get('earth')! as BodyState;
+const EARTH = deriveBodyStates(SIM).get(asSceneBodyId('earth'))! as BodyState;
 const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 const FIXTURE_PATH = fileURLToPath(
   new URL('../../../fixtures/camera/settleGoldenTrace.json', import.meta.url),

@@ -8,8 +8,8 @@ import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { FlowRuntime } from './@types/FlowRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
-import { createFlowFieldRenderer } from './render/flowFieldRenderer';
-import { createFlowFieldSlot } from './load/flowFieldSlot';
+import { createFlowFieldRenderer } from './streamlines/render/flowFieldRenderer';
+import { createFlowFieldSlot } from './streamlines/load/flowFieldSlot';
 
 export function create(deps: LayerCoreDeps): FlowRuntime {
   const renderer = createFlowFieldRenderer({

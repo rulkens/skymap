@@ -5,7 +5,7 @@
  */
 
 import type { AdditiveUpsample } from '../../../@types/rendering/AdditiveUpsample';
-import type { ZoneOfAvoidanceRenderer } from '../../../@types/rendering/ZoneOfAvoidanceRenderer';
+import type { ZoneOfAvoidanceRenderer } from '../shell/@types/ZoneOfAvoidanceRenderer';
 
 export type ZoneOfAvoidanceRuntime = {
   readonly renderer: ZoneOfAvoidanceRenderer;

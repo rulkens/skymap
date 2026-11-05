@@ -1,0 +1,23 @@
+/*
+ * The box of a disc that turns under domeTurn.client.ts: the sky turns inside the disc's round mask, by the
+ * turn the script sets. Compose `turn` onto the element carrying `data-dome-turn`, which is the disc's own box.
+ */
+.turn img {
+  rotate: var(--sky-turn, 0deg);
+}
+
+/* Once the turn works: a vertical swipe on a phone still scrolls the page. */
+.turn[data-turn-ready] {
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: calc(var(--disc-ring) + 0.25rem);
+  }
+}

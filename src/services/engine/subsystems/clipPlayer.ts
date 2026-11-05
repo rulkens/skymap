@@ -8,7 +8,7 @@
 
 import { createClipOpacityChannel } from '../../animation/clipOpacityChannel';
 import { compileClip } from '../animation/compileClip';
-import { advanceEpoch, elapsedMs } from '../camera/cameraEpochs';
+import { advanceEpoch, elapsedMs } from '../camera/drivers/cameraEpochs';
 import { applySceneEffect } from '../../animation/applySceneEffect';
 import { clipEnded } from '../../../state/camera/cameraSlice';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';

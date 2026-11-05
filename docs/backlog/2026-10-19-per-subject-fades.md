@@ -4,7 +4,7 @@
 
 ## Kind 2: per-label distance
 
-The star, Sun and Sgr A\* captions fade with each caption's own distance from the camera, a different number per label. Core applies them today in `CAPTION_FADE_RULES` (`captionFadeRules.ts`) with the core rows `starCaption`, `sunCaption`, `sgrAStarCaption`. The `constellation` caption is producer-supplied, and `ForegroundCaption.revealBand` already exists (mesh bodies stamp it).
+The star map's captions fade with each star's own distance from the camera, a different number per label. The starCatalog Layer stamps that band (`STAR_MAP_CAPTION_BAND`) on each caption's `ForegroundCaption.revealBand`, as the mesh bodies stamp theirs. The Sun and Sgr A\* name one subject at a region anchor, so they are ordinary entry bands (`from: 'solar-system'`, `from: 'galactic-centre'`).
 
 Direction: a `from: 'anchor'` value on label entries only, evaluated per label in the director loop (`label2DDirector.ts`, where emphasis is already applied per label), so a Layer declares the window in `visibility.ts` and core applies it.
 

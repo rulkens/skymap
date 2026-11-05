@@ -5,7 +5,7 @@
 
 import type { DriverId } from '../../../src/@types/engine/camera/DriverId';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 
 export function readRegister(state: EngineState): {
   readonly pose: FramedCameraPose;

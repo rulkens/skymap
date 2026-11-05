@@ -1,0 +1,65 @@
+.root {
+  composes: bare from '../../../styles/layout.module.css';
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.root li {
+  flex: 0 0 100%;
+}
+
+/* A letter is a square the size of a thumb's target, so a row of them is easy to hit. */
+.root li.letter {
+  flex: none;
+  min-width: 2rem;
+}
+
+.root a {
+  position: relative;
+  display: block;
+  padding-block: var(--site-space-2xs);
+  color: var(--site-text-muted);
+  text-decoration: none;
+}
+
+.root a:hover {
+  color: var(--color-fg);
+  text-decoration: underline;
+}
+
+/* The section being read: the app's point, hung left of the text edge as the contents hang theirs. */
+.root a[aria-current] {
+  color: var(--color-fg);
+}
+
+.root a[aria-current]::before {
+  content: '';
+  position: absolute;
+  left: -0.875rem;
+  top: 50%;
+  width: 0.3125rem;
+  height: 0.3125rem;
+  margin-top: -0.15625rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.root .letter a[aria-current]::before {
+  left: -0.5rem;
+}
+
+/* A list the object catalogue's filter has emptied of its section (components/ObjectFinder). */
+.root a[aria-disabled] {
+  color: var(--site-text-faint);
+  pointer-events: none;
+}
+
+@media (--narrow) {
+  .root a {
+    padding-block: var(--site-space-xs);
+  }
+
+  .root li.letter {
+    min-width: var(--tap);
+  }
+}

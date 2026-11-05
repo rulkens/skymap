@@ -49,6 +49,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: [
           'fetch-2mass-xsc',
+          'fetch-celestrak',
           'fetch-cf4',
           'fetch-desi',
           'fetch-dhm',
@@ -101,6 +102,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: ['build-spacecraft-tracks'],
         does: 'Write the file of Voyager trails from the state vectors and the encounter windows that fetch-horizons and fetch-voyager-windows downloaded.',
+        manual: DATA,
+      },
+      {
+        scripts: ['build-satellites'],
+        does: 'Write the file of satellite orbits from the CelesTrak groups that fetch-celestrak downloaded. A scheduled GitHub workflow runs both every day and uploads the file.',
         manual: DATA,
       },
       {
@@ -178,6 +184,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: ['site:shots', 'site:loops', 'site:media'],
         does: 'Take this site’s pictures and its short films from a running app, and cut the flight on the home page from a recording.',
+        manual: SITE_TOOLS,
+      },
+      {
+        scripts: ['site:press-kit'],
+        does: 'Builds the press kit the About page offers: the logo, the app icon, pictures, a portrait, a film and a fact sheet, in one zip.',
         manual: SITE_TOOLS,
       },
     ],
@@ -283,6 +294,21 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: ['site:links'],
         does: 'Follows every link, picture and anchor of the built site and fails on one that leads nowhere.',
+        manual: SITE_TOOLS,
+      },
+      {
+        scripts: ['site:structure'],
+        does: 'Compares the headings of each landing page in the built site with its structure file and fails on one that only one of the two has.',
+        manual: SITE_TOOLS,
+      },
+      {
+        scripts: ['site:sections'],
+        does: 'Shoots one page of the running site at each width, as the full page and one picture per section, for a design review.',
+        manual: SITE_TOOLS,
+      },
+      {
+        scripts: ['site:judge', 'site:requests'],
+        does: 'Report on every picture of one page of the running site: the file chosen against the width it is drawn at, how much its frame cuts away, how bright it is, beside a sheet of all of them. The second files a request for a new picture and answers it.',
         manual: SITE_TOOLS,
       },
       {

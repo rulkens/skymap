@@ -1,0 +1,94 @@
+job: "What is Skymap, and why is it worth using?"
+sections:
+  - heading: "Pick somewhere to start"
+    job: "Give the visitor an immediate way to start exploring some beautiful places in Skymap."
+    component: "Places"
+    layout: "nine places, nearest first, hung on one hairline out from Earth"
+    visual: "each a disc that grows with its distance; scrolling draws the line and drifts the discs, and a disc pointed at plays its film"
+  - heading: "More than a place to start"
+    job: "Show what else Skymap does at the places above, and take the visitor to the Features page."
+    component: "FeatureRow"
+    layout: "the heading left and one line right, then one row on the page grid: the Features page's Places sections in its order, each picture over its name and linking to that section, the ring link to the whole page last; three to a row on a phone"
+    visual: "each section's first picture, small and frameless: Earth, Saturn and Voyager 1 as cut-outs, the Milky Way and the filaments with feathered edges; pointed at, a picture grows a little"
+  - heading: "Stories in the sky"
+    job: "Show that Skymap has a way to animate a tour through the sky, and that it can be used to tell a story."
+    component: "Stories"
+    layout: "pinned for a screen: the stage left, out to the window edge; the title, line and the parts as a list right, the current one lit with a line filling beside it; unpinned on a phone and under reduced motion, each part by its stage"
+    visual: "each view taken apart into layers on true alpha, arriving in the stage as its part becomes current: the web pulls back and the tour caption slides in; then the orbits open out, Jupiter settles on its orbit and the exhibit's title slides in"
+    parts:
+      - heading: "The Long Way Out"
+        job: "The guided tour, Earth to the edge, playing."
+        shots: [stories-web, stories-tour-caption]
+      - heading: "Exhibits"
+        job: "One idea told as a short exhibit."
+        shots: [stories-orbits, cut-jupiter, stories-exhibit-title]
+  - heading: "Explore the universe from anywhere"
+    job: "Show that Skymap runs on phones, tablets, desktops and domes."
+    component: "Screens"
+    layout: "one row of four screens, same view, rising in size from the phone to the dome on one floor line, each turning on its own toward the pointer, none moving; two by two on a phone"
+    visual: "Phone3D, DeviceFrame tablet and desktop, dome Disc"
+    parts:
+      - heading: "Phone"
+        job: "In the browser, moved with your fingers."
+        shots: [features-phone]
+      - heading: "Tablet"
+        job: "The same view on a tablet."
+        shots: [saturn-portrait]
+      - heading: "Desktop"
+        job: "The full app, mouse and keyboard."
+        shots: [start-saturn]
+      - heading: "Dome"
+        job: "Fisheye on a dome, steered from a phone."
+        shots: [dome-saturn]
+  - heading: "Use it in the classroom"
+    job: "How can I best use Skymap to interactively teach my students about the universe?"
+    component: "Lessons"
+    layout: "the questions ordered outward, two to a row, questions and links on shared lines: first a horizon across the window, then two frameless windows of sky"
+    visual: "Earth and Jupiter cut out at one scale on one horizon, a scale bar drawing between them, each at its own depth with the scroll; Orion with the app's search riding over it, and Andromeda, both soft-edged; the section stands on Jezero crater (mars-horizon) with the classroom link in its sky"
+    parts:
+      - heading: "Can you see the North Pole on 21 June?"
+        job: "A link for pupils today, nothing to install."
+        shots: [lessons-earth]
+      - heading: "How many times does Io go round while Europa goes round once?"
+        job: "Watch a day, a year, a lunar month."
+        shots: [lessons-jupiter]
+      - heading: "Which is farther away: Betelgeuse, or the centre of the Milky Way?"
+        job: "A question pupils answer by going there."
+        shots: [features-constellations, ui-search]
+      - heading: "Had our species appeared when this light left Andromeda?"
+        job: "Fly from your town to the cosmic web."
+        shots: [lesson-andromeda]
+  - heading: "Data you can count on"
+    job: "To give the visitor confidence that this is a real scientific tool, what are the sources of the data?"
+    component: "RealData"
+    layout: "four round windows, each over a ledger of its sources and their counts"
+    visual: "the S-stars' orbits (orbits-s-stars) behind the title, lagging the scroll; one still per kind, the count pointed at large over it"
+    parts:
+      - heading: "Galaxies and quasars"
+        job: "Which catalogues place them?"
+        shots: [features-desi]
+      - heading: "Stars"
+        job: "Which catalogue places them?"
+        shots: [render-stars]
+      - heading: "Solar system"
+        job: "Where the orbits come from."
+        shots: [lesson-solar-system]
+      - heading: "Imagery"
+        job: "Where the surface pictures come from."
+        shots: [earth-terminator]
+  - heading: "Wish you were here"
+    job: "Show that it is easy to share Skymap locations with friends, colleagues and students."
+    component: "Sharing"
+    shots: [hubble, privacy-far-side, saturn, features-s-stars]
+    layout: "a frameless browser window across the page: one tab per view, ordered outward from Earth, over its address bar over the view; the picture's label, the two parts and Open app in one row on the picture's dissolving foot"
+    visual: "the chosen tab's view fills the window and its address types itself into the bar, the camera's numbers folded into a faint ellipsis; focus= and t= in the bar each in a colour that is also its part's name and rule"
+    parts:
+      - heading: "Every view is a link"
+        job: "The address bar holds your view."
+      - heading: "A place and a moment"
+        job: "A link can carry a date and time."
+  - heading: "Credits"
+    job: "Give the visitor confidence that the data on this page is accurate and trustworthy."
+    component: "Credits"
+    layout: "a colophon: the title, then each group as a list of sources beside their licences"
+    visual: "none"

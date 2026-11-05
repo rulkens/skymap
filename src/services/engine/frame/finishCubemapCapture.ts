@@ -7,7 +7,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
-import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../compositions/appCubemapCaptures';
 import { prefilterCubeGgx } from '../../gpu/lib/prefilterCubeGgx';
 import { subjectProbe } from './subjectProbe';
 
@@ -16,6 +16,6 @@ export function finishCubemapCapture(
   state: EngineState,
   device: GPUDevice,
 ): void {
-  if (CUBEMAP_CAPTURES[key].kind !== 'probe') return;
+  if (APP_CUBEMAP_CAPTURE_REGISTRY[key].kind !== 'probe') return;
   prefilterCubeGgx(device, subjectProbe(state).cube);
 }

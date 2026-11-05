@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { iauName } from '../../../src/utils/math/iauName';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 
 describe('iauName', () => {
   it('produces the canonical SDSS designation for a known (RA, Dec) pair', () => {

@@ -14,12 +14,15 @@
 
 import type { BodySurface } from './BodySurface';
 import type { Vec3 } from '../math/Vec3';
+import type { SceneBodyId } from './SceneBodyId';
 
 export type PlanetBody = {
-  readonly id: string;
+  readonly id: SceneBodyId;
   readonly label: string;
   readonly surface: BodySurface;
   readonly albedo: Vec3; // flat lit colour (no texture yet), linear RGB
   /** Apparent diameter (px) at or above which the body draws resolved; below it, a point or glint. */
   readonly resolvePx: number;
+  /** Which caption kind, and so which label checkbox, the row's name rides. */
+  readonly captionKind: 'planet' | 'smallBody';
 };

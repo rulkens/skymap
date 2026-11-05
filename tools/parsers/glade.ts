@@ -93,7 +93,7 @@
  * objID is always `0n` — see the cross-match note above.
  */
 
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import { type ParsedRecord } from './common';
 import { galaxyDiameterKpc } from '../../src/utils/math/galaxyDiameterKpc';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';

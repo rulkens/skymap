@@ -5,11 +5,11 @@
  * `of` returns the per-row deviations from an all-on baseline.
  */
 
-import { GALAXY_CATALOG_SOURCES } from '../../src/data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import { galaxyCatalogIdOf } from '../../src/utils/galaxyCatalogIdOf';
 
-import type { GalaxyCatalogId } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../src/@types/settings/GalaxyCatalogItemSettings';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import type { GalaxyCatalogItemSettings } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogItemSettings';
 
 export function makeGalaxyCatalogItems(
   of: (id: GalaxyCatalogId) => Partial<GalaxyCatalogItemSettings> = () => ({}),

@@ -4,14 +4,14 @@
  * body since), so every failure — a wrong tag, a wrong field count, a
  * non-finite number, or an id no body source seeds / outside
  * `SURFACE_FIXED_SITES` — returns null rather than throwing or guessing.
+ * Sky: k,<body>,<lonRad>,<latRad>,<azimuthRad>,<altitudeRad>, altitude in [−π/2, π/2].
  */
 
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 import { isRegistryBodyId } from '../scene/isRegistryBodyId';
 import { isSurfaceSiteId } from '../scene/isSurfaceSiteId';
 import { parseFiniteNumbers } from './parseFiniteNumbers';
-import { MIN_DISTANCE_MPC } from '../camera/clampDistance';
+import { MIN_DISTANCE_MPC } from '../camera/orbitCamera/clampDistance';
 
 export function decodeFramedPose(value: string): FramedCameraPose | null {
   const fields = value.split(',');
@@ -24,9 +24,9 @@ export function decodeFramedPose(value: string): FramedCameraPose | null {
     const n = parseFiniteNumbers(fields.slice(2));
     if (n === null) return null;
     return {
-      frame: { body: bodyId as BodyId },
+      frame: { body: bodyId },
       pose: {
-        bodyId: bodyId as BodyId,
+        bodyId,
         anchorLocalM: [n[0]!, n[1]!, n[2]!],
         eyeRelAnchorM: [n[3]!, n[4]!, n[5]!],
         basisLocal: [n[6]!, n[7]!, n[8]!, n[9]!, n[10]!, n[11]!, n[12]!, n[13]!, n[14]!],
@@ -43,8 +43,20 @@ export function decodeFramedPose(value: string): FramedCameraPose | null {
     // `rangeM` is a real metre distance, not `clampDistance`'s Mpc floor.
     if (n[2]! <= 0) return null;
     return {
-      frame: { site: siteId as BodyId },
-      pose: { siteId: siteId as BodyId, headingRad: n[0]!, elevationRad: n[1]!, rangeM: n[2]! },
+      frame: { site: siteId },
+      pose: { siteId, headingRad: n[0]!, elevationRad: n[1]!, rangeM: n[2]! },
+    };
+  }
+
+  if (tag === 'k') {
+    if (fields.length !== 6) return null;
+    const body = fields[1]!;
+    if (!isRegistryBodyId(body)) return null;
+    const n = parseFiniteNumbers(fields.slice(2));
+    if (n === null || Math.abs(n[3]!) > Math.PI / 2) return null;
+    return {
+      frame: { sky: { body, lonRad: n[0]!, latRad: n[1]! } },
+      pose: { azimuthRad: n[2]!, altitudeRad: n[3]! },
     };
   }
 

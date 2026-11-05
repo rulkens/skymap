@@ -19,6 +19,8 @@ import styles from './SectionPanel.module.css';
 type SectionPanelProps = {
   title: string;
   items: ReviewItem[];
+  /** What the page's structure file says this section is for, when it names the section. */
+  job?: string;
   /** The section's words before and after its marks apply; none for the history. */
   words?: { before: number; after: number };
   applying: boolean;
@@ -35,6 +37,7 @@ type SectionPanelProps = {
 function SectionPanel({
   title,
   items,
+  job,
   words,
   applying,
   apply,
@@ -91,6 +94,7 @@ function SectionPanel({
       data-review-panel=""
     >
       <strong className={styles.title}>{title}</strong>
+      {job && <div className={styles.job}>{job}</div>}
       {words && (
         <div className={styles.words}>
           {words.before} → {words.after} words

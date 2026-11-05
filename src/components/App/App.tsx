@@ -25,6 +25,7 @@ import LazySettingsPanelContainer from '../containers/LazySettingsPanelContainer
 import LazyCommandPaletteContainer from '../containers/LazyCommandPaletteContainer';
 import LazyDebugPanelContainer from '../containers/LazyDebugPanelContainer';
 import ArrivalVeilContainer from '../containers/ArrivalVeilContainer';
+import PairingOverlayContainer from '../containers/PairingOverlayContainer';
 import appStyles from './App.module.css';
 import { useAppSelector } from '../../store/hooks';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
@@ -35,7 +36,7 @@ import { selectTourActive } from '../../state/tour/selectors';
 import { selectTakeoverSource } from '../../state/takeover/selectors';
 import {
   selectPaletteOpen,
-  selectUiHidden,
+  selectUiStackHidden,
   selectDebugPanelOpen,
   selectSplashVisible,
 } from '../../state/ui/selectors';
@@ -47,7 +48,7 @@ export function App(): React.ReactElement {
   const isMobile = useIsMobile();
 
   const paletteOpen = useAppSelector(selectPaletteOpen);
-  const uiHidden = useAppSelector(selectUiHidden);
+  const uiStackHidden = useAppSelector(selectUiStackHidden);
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
 
   // A running tour or exhibit hides the HUD stack (derived, not a `setUiHidden`
@@ -83,13 +84,7 @@ export function App(): React.ReactElement {
       {canvas}
 
       {/* One wrapper so `Tab` fades the whole stack with a single opacity transition. */}
-      <div
-        className={cx(
-          appStyles.uiStack,
-          (uiHidden || splashVisible || tourActive || exhibitId !== null) &&
-            appStyles.uiStackHidden,
-        )}
-      >
+      <div className={cx(appStyles.uiStack, uiStackHidden && appStyles.uiStackHidden)}>
         <LoadingBarContainer />
         <StatusBarContainer />
         {isMobile ? (
@@ -126,6 +121,7 @@ export function App(): React.ReactElement {
       {tourActive && <TourBeatRailContainer />}
       <SplashContainer />
       <ArrivalVeilContainer />
+      <PairingOverlayContainer />
     </>
   );
 }

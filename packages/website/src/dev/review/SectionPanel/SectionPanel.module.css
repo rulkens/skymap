@@ -9,7 +9,7 @@
 }
 
 /* On a phone the panel is a sheet over the foot of the page, above the feedback button. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     bottom: calc(var(--review-bar, 2.75rem) + 4rem);
   }
@@ -20,9 +20,13 @@
   color: var(--color-accent);
 }
 
-.words {
+.job {
   composes: dim from '../ReviewControl/ReviewControl.module.css';
   margin-bottom: var(--space-4);
+}
+
+.words {
+  composes: job;
   font-variant-numeric: tabular-nums;
 }
 

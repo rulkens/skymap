@@ -5,19 +5,15 @@
  * the first save writes its file. Any other answer means no server to save to, so there is no review.
  */
 import { useEffect, useState } from 'react';
+import type { ComponentProps } from 'react';
 
 import type { DocsReview } from '../../../../../../tools/site/@types/DocsReview';
 import { wordsIn } from '../wordsIn';
 import ReviewPage from '../ReviewPage/ReviewPage.tsx';
-import type { JobMeta } from '../@types/JobMeta';
-
-const BASE = import.meta.env.BASE_URL.replace(/\/?$/, '/');
-const ROUTE = `${BASE}__review`;
-
-type Loaded = { article: Element; url: string; first: DocsReview; job: JobMeta | undefined };
+import { BASE, ROUTE } from './Review.constants.ts';
 
 function Review() {
-  const [loaded, setLoaded] = useState<Loaded>();
+  const [loaded, setLoaded] = useState<ComponentProps<typeof ReviewPage>>();
 
   useEffect(() => {
     const article = document.getElementById('page') ?? document.getElementById('main');
@@ -31,7 +27,7 @@ function Review() {
       const first: DocsReview = found.ok
         ? ((await found.json()) as DocsReview)
         : { page, words: { before: wordsIn(article.textContent ?? '') }, marks: [] };
-      // The job is not in the review file: the page carries it from its text's front matter (layouts/Base.astro).
+      // The job is not in the review file: the page carries it from its job file (layouts/Base.astro).
       const meta = document.querySelector<HTMLMetaElement>('meta[name="skymap:job"]');
       const job = meta ? { text: meta.content, setIn: meta.dataset.setIn } : undefined;
       if (!stale) setLoaded({ article, url, first, job });

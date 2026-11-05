@@ -10,20 +10,23 @@
 import {
   EMPTY_SURFACE_GESTURE_MEMORY,
   surfaceStep,
-} from '../../../src/services/camera/surfaceStep';
-import { frameKey } from '../../../src/services/engine/camera/rungs/frameKey';
-import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
-import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
+} from '../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
+import { frameKey } from '../../../src/services/engine/camera/arms/frameKey';
+import { surfaceGestureEdge } from '../../../src/services/engine/camera/arms/body/gesture/utils/surfaceGestureEdge';
+import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/orbitCamera/clampDistance';
 import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import type { CameraSimHarness } from './CameraSimHarness';
-import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
-import type { SurfaceGestureMemory } from '../../../src/@types/camera/SurfaceGestureMemory';
-import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
+import type { BodyFixedPose } from '../../../src/@types/camera/pose/BodyFixedPose';
+import type { SurfaceGestureMemory } from '../../../src/@types/camera/arms/SurfaceGestureMemory';
+import type { TiltMemory } from '../../../src/@types/camera/orientation/TiltMemory';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { symmetricFrustum } from '../../../src/utils/camera/frustum/symmetricFrustum';
 
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 const CTX = {
   viewportPx: [100, 100] as const,
+  frustum: symmetricFrustum(Math.PI / 2, 1),
   fovYRad: Math.PI / 2,
   bodyRadiusM: 1,
   standoffRadii: SURFACE_STANDOFF_RADII,
@@ -46,7 +49,7 @@ export function seedRememberedTilt(
     h.state.cameraRuntime.gesture.value ?? EMPTY_SURFACE_GESTURE_MEMORY;
   let tilt: TiltMemory = h.state.cameraRuntime.tilt;
   let p: BodyFixedPose = {
-    bodyId: 'earth',
+    bodyId: asSceneBodyId('earth'),
     anchorLocalM: [0, 0, 0],
     eyeRelAnchorM: [0, 0, 1.15],
     basisLocal: NADIR,

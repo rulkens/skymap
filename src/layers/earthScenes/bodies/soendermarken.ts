@@ -5,6 +5,8 @@
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
 import { meshBody } from '../../../data/bodies/makers/meshBody';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../utils/scene/asSurfaceSiteId';
 
 export const SOENDERMARKEN: LayerBody = {
   // ~170 m bounding radius: the default 2-radii standoff would park the
@@ -23,8 +25,8 @@ export const SOENDERMARKEN: LayerBody = {
     // DVR90 height (buildSiteGroundHeights): the scan's lawn sits a hair below
     // the drawn terrain tiles, which are no longer cut away around it.
     site: {
-      id: 'soendermarken',
-      hostId: 'earth',
+      id: asSurfaceSiteId('soendermarken'),
+      hostId: asSceneBodyId('earth'),
       latDeg: 55.670015,
       lonDeg: 12.524611,
       altitudeM: 0.8,

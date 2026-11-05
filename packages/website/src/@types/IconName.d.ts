@@ -21,4 +21,7 @@ export type IconName =
   | 'menu'
   | 'search'
   | 'enlarge'
-  | 'close';
+  | 'close'
+  | 'pause'
+  | 'play'
+  | 'download';

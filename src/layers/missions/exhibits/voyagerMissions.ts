@@ -7,18 +7,16 @@
 import { initialState as missionsInitialState } from '../state/missions/initialState';
 import { initialState as starCatalogsInitialState } from '../../starCatalog/state/starCatalogs/initialState';
 import { initialState as galaxyCatalogsInitialState } from '../../galaxyCatalog/state/galaxyCatalogs/initialState';
-import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../@types/settings/GalaxyCatalogItemSettings';
 import { initialState as structuresInitialState } from '../../structure/state/structures/initialState';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../@types/settings/StructureItemSettings';
-import { MISSION_EVENTS } from '../../../data/missions/missionEvents.generated';
+import { MISSION_EVENTS } from '../events/data/missionEvents.generated';
 import { section } from '../../../utils/exhibits/section';
 import { proseKind } from '../../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../../components/ExhibitOverlay/kinds/sourcesKind';
 import { missionTimelineKind } from './timeline/missionTimelineKind';
 import type { Exhibit } from '../../../@types/exhibits/Exhibit';
-import type { MissionTimeline } from '../../../@types/exhibits/MissionTimeline';
+import type { MissionTimeline } from '../timeline/@types/MissionTimeline';
 
 /** Held down so the trails read against the sky, as in the solar-system exhibit. */
 const STARFIELD_BRIGHTNESS = 0.3;
@@ -60,7 +58,7 @@ export const voyagerMissions: Exhibit = {
           id,
           { enabled: false, labelEnabled: false },
         ]),
-      ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
+      ) as typeof galaxyCatalogsInitialState.items,
     },
     structures: {
       items: Object.fromEntries(
@@ -83,12 +81,15 @@ export const voyagerMissions: Exhibit = {
     picking: {
       kinds: {
         body: true,
+        craft: true,
+        earthScene: true,
         starCatalog: true,
         galaxyCatalog: false,
         structure: false,
         milkyWay: false,
         zoneOfAvoidance: false,
         blackHole: true,
+        satellite: false,
       },
     },
   },

@@ -38,6 +38,28 @@ Every phone eye check gets its own deep link (`#focus=body-<id>&…`) and its ow
 `shot` image attached, the link beside it, the verdict left to the user. Never a bare origin, never
 "open the app and navigate to …".
 
+## Set app state by dispatch, never by tapping settings
+
+Settings taps are slow and break with every layout change; `window.__skymap`
+(`src/state/automation/installSkymapHook.ts`, present in every build including prod) exposes
+`dispatch`/`getState`/`ready`/`settled`. The tool has no dispatch command, so this is the one raw CDP
+step: register a script with `Page.addScriptToEvaluateOnNewDocument` before navigating that polls for
+`window.__skymap` and then dispatches, so no `Runtime.evaluate` reply is awaited (if you must
+evaluate: synchronous, no `awaitPromise`, short timeout). Action types come from each slice
+(`state/*/slice.ts`), e.g. `settings/milkyWay/setMilkyWayEnabled` with `false`, or
+`settings/galaxyCatalogs/setGalaxyCatalogVisible` with `{ id, enabled: false }` per catalog id.
+Only the splash persists in localStorage, so re-dispatch after every load and confirm with a `shot`.
+
+## Throttled-network check
+
+`npm run phone` has no throttle flag; `npm run loadtime` throttles the Mac, not the phone. On the
+phone: `adb forward tcp:9333 localabstract:chrome_devtools_remote`, then raw CDP
+`Target.createTarget`, `Security.setIgnoreCertificateErrors`, `Network.emulateNetworkConditions`,
+`Network.setCacheDisabled`. The throttle lasts only while that CDP client stays attached. Serve page
+and data over WiFi through a raw TCP proxy from `0.0.0.0` to the localhost-only
+`npm run loadtime -- --serve`. The USB link drops now and then and takes the forward with it.
+Reference on a OnePlus 7T at slow 4G: splash by 3 s, call-to-action buttons at 8–12 s.
+
 ## Traps
 
 | trap                                       | symptom                                     | what the tool does                                  |

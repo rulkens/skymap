@@ -36,8 +36,8 @@
  * dropped.
  */
 
-import { absoluteArm } from '../../src/utils/camera/absoluteArm';
-import type { BodyId } from '../../src/@types/data/body/BodyId';
+import { absoluteArm } from '../../src/utils/camera/arms/absoluteArm';
+import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 import type { PerfPose } from '../../src/@types/perf/PerfPose';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 
@@ -63,10 +63,7 @@ const GALACTIC_CENTRE_TARGET: Vec3 = [-0.00043726202, -0.0069827522, -0.00387942
 // would frame empty space at this scale).
 const SGR_A_STAR_TARGET: Vec3 = [-0.0004469860712, -0.007138118108, -0.003965748015];
 
-// `BodyId` is the settings-group union ('planet', 'earth', …), coarser than the
-// scene body ids a body arm names, so the cast is the same one `decodeFramedPose`
-// makes when it parses a `#pose=` body arm.
-const MARS = 'mars' as BodyId;
+const MARS = asSceneBodyId('mars');
 
 export const PERF_SCENARIOS: readonly PerfScenario[] = [
   {
@@ -85,7 +82,7 @@ export const PERF_SCENARIOS: readonly PerfScenario[] = [
   // body-arm pose is body-local, so it frames the same ground whatever the sim
   // clock reads; only the lighting moves. Decoded from a share link's `pose=`
   // value (see the README), not from a logState dump. `clearFocus` because the
-  // boot Earth focus sits outside Mars's subtree, and a body rung releases an
+  // boot Earth focus sits outside Mars's subtree, and a body arm releases an
   // arm its focus does not reach — the vantage would snap back to Earth on the
   // first frame.
   {

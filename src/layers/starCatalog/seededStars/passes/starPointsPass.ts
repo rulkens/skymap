@@ -1,0 +1,275 @@
+/**
+ * starPointsPass — the unresolved seeded stars (everything not resolved to a
+ * sphere) as additive point sprites in the depthless HDR accumulation.
+ *
+ * ### What it draws
+ *
+ * The seeded stars (found by `SEEDED_STAR_REFS`) in the `unresolved` branch of
+ * core's one scene-body sort — every admitted star whose apparent size stays
+ * below its `resolvePx`, the Sun included (its sphere is sub-pixel beyond ~tens
+ * of AU, and a point is what keeps it visible from the rest of the
+ * neighbourhood). `starSpheresPass` draws the stars of the complementary
+ * `resolved` branch of the SAME sort, so a star is a point XOR a sphere by
+ * construction.
+ *
+ * ### The odd row out: `hdr` target, NEAR0 slab
+ *
+ * Every other hdr layer projects through the COSMO slab, but COSMO's near
+ * plane (0.01 Mpc) would clip the parsec-scale star anchors, so this row
+ * projects through NEAR0 — whose near/far track the camera's orbit
+ * distance — while still accumulating into the HDR target so the stars ride
+ * the same tone-map as the galaxies. The frame program carries a dedicated
+ * `(hdr, NEAR0)` render step for it, placed after the `(hdr, COSMO)` step
+ * and before the hdr→swap composite.
+ *
+ * ### Why the f64 seam — the point anchors need double precision too
+ *
+ * The vertex stage projects each star as `clip = viewProj · vec4(pos, 1)` in
+ * f32. During the final approach to a local-map star the anchor (a parsec-scale
+ * coordinate, ~1.3×10⁻⁶ Mpc) AND the NEAR0 vp's view translation are BOTH
+ * ~1.3×10⁻⁶ Mpc from the render origin — the camera sits within tens of AU of a
+ * star that is itself parsecs from the Sun. Their f32 subtraction cancels to ~4
+ * digits, quantising the camera-relative anchor onto a ~0.04 AU grid, so the
+ * point sprite visibly jitters as the camera closes from tens of AU down to the
+ * sphere handoff — worse the nearer it gets. The precision killer is each term's
+ * distance FROM THE ORIGIN, not the star's angular size: a sprite that subtends
+ * under a pixel still has its projected CENTRE hop by several pixels. Consuming
+ * the f32-narrowed `view.vp` — whose translation bits are already gone — cannot
+ * fix this.
+ *
+ * The fix mirrors `labelsNearPass`'s caption seam exactly. Each frame we
+ * rebase both operands into a camera-relative frame in f64 before narrowing:
+ * `rebaseViewProj(view.slab.vp, camPos)` folds the eye offset into the vp
+ * (zeroing the large view translation) and each anchor is re-expressed as
+ * `pos − camPos` (a small camera-relative vector). Neither operand the f32
+ * shader multiplies carries a large-number-cancellation hazard, and the shader
+ * and renderer pipeline are untouched — only what this layer HANDS them changes.
+ *
+ * ### Per-frame upload, not upload-on-change
+ *
+ * Rebasing makes every anchor camera-relative, so the uploaded positions move
+ * every frame the camera does — a membership fingerprint can no longer gate the
+ * upload. `draw` therefore re-partitions and `setStars` the point subset every
+ * frame. That rebuilds the GPU instance buffer per frame, but the point set is
+ * the seeded roster (118 famous stars, the Sun's own table, plus 39 S-stars)
+ * minus whichever few resolve to a sphere via `starSpheresPass`, so the create/destroy is
+ * trivially cheap — the churn the old fingerprint cache guarded against does
+ * not exist at this scale.
+ *
+ * ### When it draws
+ *
+ * `enabled` gates on a seeded star set handing a value above 0 AND an
+ * unresolved seeded star — the same sort `draw` consumes, so the enable gate
+ * and the uploaded set cannot disagree. Each set's handed value carries its
+ * entry's backdrop band (dissolving it from its own region before the sprite
+ * field collapses into one blob at galaxy framing), so once every set hands 0
+ * the layer disables outright — the "opacity 0 ⇒ no render" house rule — which
+ * also empties the `(hdr, NEAR0)` render step the executor then skips. The
+ * sort is bound at `ctx.drawCamPos` (absolute frame) while `draw` rebases at
+ * `view.camPos` (NEAR0's origin-relative frame); the two coincide because
+ * `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
+ */
+
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { BodyRegionId } from '../../../../@types/data/BodyRegionId';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { BodyPointPick } from '../../../../@types/rendering/bodyPickRenderer/BodyPointPick';
+import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
+import { sceneBodyPresentation } from '../../../../services/engine/frame/sceneBodyPresentation';
+import { positionedSeededStars } from '../present/positionedSeededStars';
+import { SEEDED_STAR_REFS } from '../present/seededStarRefs';
+import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { seededStarsHandedZero } from '../present/seededStarsHandedZero';
+import { starExposureRamp } from '../../photometry/utils/starExposureRamp';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../../data/places/galacticCentre';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { FAMOUS_STAR_PICK_RADIUS_PX } from '../data/famousStarPickRadiusPx';
+import { regionOfBody } from '../../../../utils/regions/regionOfBody';
+import { projectToScreenPx } from '../../../../utils/camera/projection/projectToScreenPx';
+import { focusAlphaMultiplier } from '../../../../utils/structure/focusAlphaMultiplier';
+import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
+
+/** The regime whose satellites the Galactic Centre's click target covers. */
+const GALACTIC_CENTRE_REGION_ID: BodyRegionId = 'galactic-centre';
+
+export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCatalog'> {
+  return {
+    name: 'star-points',
+    fade: 'starCatalog',
+    // Deliberately OFF the sky-cubemap capture roster: the S-stars need
+    // finite-distance lensing rather than an at-infinity cubemap — see
+    // `docs/backlog/2026-09-03-s-star-analytic-lensing.md`.
+
+    // Fade before the sort, so the sort is not run at all when the camera is far.
+    enabled(_state, ctx, _view, fade) {
+      if (seededStarsHandedZero(fade)) return false;
+      return sceneBodyPresentation(ctx).unresolved.some(({ body }) =>
+        SEEDED_STAR_REFS.has(body.id),
+      );
+    },
+
+    draw(pass, view, ctx, state, catalogFade) {
+      const points = positionedSeededStars(sceneBodyPresentation(ctx).unresolved);
+
+      // Rebase into the camera-relative frame in f64 so the f32 upload carries no
+      // catastrophic cancellation — see the module header's f64-seam note.
+      // `view.camPos` is the origin-relative eye (the same frame `view.slab.vp`
+      // and the star anchors are built in), so subtracting it here zeroes the
+      // view translation `rebaseViewProj` folds into the vp.
+      const camPos = view.camPos;
+
+      // Re-express each anchor as a small camera-relative vector, and premultiply
+      // the colour by the star's fade. The subtraction runs on the f64 seed
+      // coordinates before the renderer narrows to f32; narrowing the raw ~1e-6
+      // Mpc anchor would already have lost the low bits. Re-partitioned and
+      // re-uploaded every frame — the point set is ≤25 stars, so the per-frame
+      // buffer rebuild (and the colour scale riding it) is trivially cheap
+      // (module header).
+      //
+      // Scaling the colour CPU-side is a COMPLETE fade, not an approximation: the
+      // pipeline is one/one additive into the depthless HDR target, so each
+      // fragment's rgb contribution scales linearly with the uploaded colour, and
+      // the hdr→swap composite runs `blend: 'replace'` (`preserveAlpha 0`,
+      // `compositor.ts` BLEND_TABLE), which discards the fragment's unscaled alpha
+      // channel — so multiplying rgb here is the whole story.
+      const rebasedPoints = points.map((star) => {
+        // Stars outside a focused structure's sphere recede with the survey; each fades
+        // with its own catalog's handed value.
+        const fade =
+          focusAlphaMultiplier(star.positionMpc, ctx.snapshot.focus) *
+          catalogFade[SEEDED_STAR_REFS.get(star.id)!.item];
+        return {
+          ...star,
+          positionMpc: [
+            star.positionMpc[0] - camPos[0],
+            star.positionMpc[1] - camPos[1],
+            star.positionMpc[2] - camPos[2],
+          ] as Vec3,
+          color: [star.color[0] * fade, star.color[1] * fade, star.color[2] * fade] as Vec3,
+        };
+      });
+      runtime.starPointRenderer.setStars(rebasedPoints, ctx.viewSlot);
+
+      // Fold the eye offset into the vp so it pairs with the camera-relative
+      // anchors. Uses the slab's f64 `vp`, NOT the f32-narrowed `view.vp` —
+      // narrowed HERE, at the GPU-upload boundary (`rebaseViewProj` stays f64
+      // for consumers that must invert it).
+      const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
+
+      // The same shared star appearance the survey (Gaia bin) leaf stage reads, so
+      // a famous star obeys the identical sizePx slider and exposure model. These
+      // are the cluster's APPEARANCE knobs, read unconditionally — the cluster's
+      // visibility is core's: it admits a star into the sort by its show entry. `brightness`
+      // folds the SAME scale-dependent `starExposureRamp` `starCatalogPass`
+      // applies: the user trim times the camera-distance ramp, keyed on the
+      // camera's heliocentric Mpc distance (the ramp's own input unit).
+      const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
+      const { sizePx, brightness: brightnessTrim } = state.settings.starCatalogs;
+      const brightness =
+        brightnessTrim *
+        starExposureRamp(
+          camDistMpc,
+          state.settings.starCatalogs.exposureNearX,
+          state.settings.starCatalogs.exposureMidX,
+          state.settings.starCatalogs.exposureFarX,
+        );
+      runtime.starPointRenderer.draw(pass, rebasedVp, view.viewportPx, {
+        sizePx,
+        brightness,
+        // This row draws straight into `hdr` at the view's own size (the NEAR0
+        // slab's viewport is `ctx.canvasSize`), so the view's `drawPxPerRad`
+        // already is the target's — no offscreen-height rescale needed here.
+        pxPerRad: ctx.drawPxPerRad,
+        viewSlot: ctx.viewSlot,
+      });
+    },
+
+    // Pick aspect — stamps the POINT-partition scene stars into the NEAR0 r32uint
+    // pick pass as ONE instanced pick-billboard draw (each expanded to a generous
+    // clickable 18 px footprint by `bodyPickRenderer` — these labelled scene stars
+    // are click-invited targets), so a sub-pixel star stays easily pickable at its
+    // true screen position. The point set is the SAME sort `draw` reads, so a
+    // star is pickable-as-a-point exactly when it draws as one (its complement
+    // rides `starSpheresPass`'s sphere pick).
+    //
+    // `bodyPickRenderer.drawPoints` is safe to call multiple times per submit —
+    // each caller claims its own slot (see `bodyPickRenderer`'s module header). This layer calls it exactly once
+    // per `drawPick`.
+    //
+    // Each point's packed id carries the source + STABLE seed-table index its
+    // drawn row was tagged with, NOT its slot in the sort (which shifts as a
+    // star crosses its `resolvePx`). One table per source, never
+    // merged: the index means nothing without the code beside it. Anchors are rebased
+    // into the camera-relative frame in f64 before narrowing, the SAME seam
+    // `draw` uses — the fade colour scale is a visual-only concern the pick
+    // omits (pick has no opacity; the `enabled` gate already drops the whole
+    // layer once every seeded set hands 0).
+    drawPick(pass, view, ctx, state) {
+      const pickRenderer = state.gpu.bodyPickRenderer;
+      if (pickRenderer === null) return;
+
+      const points = positionedSeededStars(sceneBodyPresentation(ctx).unresolved);
+
+      const camPos = view.camPos;
+      const pickPoints: BodyPointPick[] = [];
+      const relToCam = (positionMpc: Readonly<Vec3>): Vec3 => [
+        positionMpc[0] - camPos[0],
+        positionMpc[1] - camPos[1],
+        positionMpc[2] - camPos[2],
+      ];
+
+      // Fold the eye offset into the vp so it pairs with the camera-relative
+      // anchors — narrowed at the GPU-upload boundary, exactly as `draw` does.
+      // Hoisted above the pack loop because the satellite test below projects
+      // through it.
+      const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
+
+      // Where the Galactic Centre projects: its click target (the blackHoles
+      // Layer's marker stamp) is centred there. The exclusion below runs even
+      // when the hole takes no clicks (inside the band, label off), on purpose:
+      // it is this Layer's own rule about its satellites.
+      const anchorScreenPx = projectToScreenPx(
+        relToCam(sceneBodyStates(state, ctx).get(GALACTIC_CENTRE_ANCHOR.id)!.positionMpc),
+        rebasedVp,
+        view.viewportPx,
+      );
+
+      for (const star of points) {
+        // A star dimmed out by the focus is not aimable, as for the survey.
+        if (!isPickableUnderFocus(star.positionMpc, ctx.snapshot.focus)) continue;
+        const packedId = packSelection(star.source, star.seedIndex + PICK_SENTINEL_OFFSET);
+        const posRelCamMpc = relToCam(star.positionMpc);
+        // A satellite inside its anchor's click target is not separately
+        // aimable, so this Layer does not stamp it. Zoomed out, all 39 S-star
+        // orbits collapse inside the Galactic Centre's 18 px footprint and one
+        // would win the centre pixel on true depth, stealing the hole's click.
+        // Zoomed in, each orbit clears the footprint and its star becomes
+        // aimable again, outermost first, with no threshold of its own.
+        //
+        // Scoped to the anchor's OWN region rather than to every overlapping
+        // point: a famous star that merely lines up with Sagittarius from Earth is
+        // a different object at a different distance and keeps its click.
+        if (anchorScreenPx !== null && regionOfBody(star.id)?.id === GALACTIC_CENTRE_REGION_ID) {
+          const screenPx = projectToScreenPx(posRelCamMpc, rebasedVp, view.viewportPx);
+          if (
+            screenPx !== null &&
+            Math.hypot(screenPx[0] - anchorScreenPx[0], screenPx[1] - anchorScreenPx[1]) <
+              FAMOUS_STAR_PICK_RADIUS_PX
+          ) {
+            continue;
+          }
+        }
+        pickPoints.push({ posRelCamMpc, packedId });
+      }
+
+      pickRenderer.drawPoints(pass, {
+        vp: rebasedVp,
+        viewportPx: view.viewportPx,
+        pxPerRad: ctx.drawPxPerRad,
+        points: pickPoints,
+      });
+    },
+  };
+}

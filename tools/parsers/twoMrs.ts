@@ -70,7 +70,7 @@
  * definition; the merger uses 0n as the dedup-skip sentinel.
  */
 
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import { nonCommentLines, type ParsedRecord } from './common';
 import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
 import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';

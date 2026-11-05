@@ -9,7 +9,6 @@
  */
 
 import type { Mat3 } from '../../math/Mat3';
-import type { Vec2 } from '../../math/Vec2';
 import type { BodyState } from '../../scene/BodyState';
 import type { MeshBody } from '../../scene/MeshBody';
 import type { PositionedSceneBody } from './PositionedSceneBody';
@@ -18,6 +17,7 @@ import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
 import type { FramePlannerResultStore } from './FramePlannerResultStore';
 import type { SlabRow } from './SlabRow';
+import type { PositionedId } from '../../scene/PositionedId';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -31,13 +31,10 @@ export type ReadyFrameContext = {
    */
   camBasisWorld: Mat3;
   /**
-   * This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes
-   * one deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call
-   * this frame returns this SAME Map by reference — no second cache, no drift.
-   * Keyed by the raw orbital-element id string, one level wider than `BodyId`
-   * — the boundary `slabs.ts`/`liveWorldPose.ts` already cast at.
+   * This frame's ONE R_body(t) sample (spec §4), the moving selection placed
+   * in it (`frameBodyStates`); `sceneBodyStates(state, ctx)` returns this Map.
    */
-  bodyStates: ReadonlyMap<string, BodyState>;
+  bodyStates: ReadonlyMap<PositionedId, BodyState>;
   /**
    * The UN-turned pose provider (spec §5's provider seam), built once here so
    * a body-slab layer's own `bodyRelativePose` read can never drift from the
@@ -50,12 +47,12 @@ export type ReadyFrameContext = {
   /**
    * The rows eligible for a slab before any view's frustum gate: one per store
    * body (Earth, the planets, the mesh bodies that host their own row) plus the
-   * composed `state.slabRows` whose band is open. Frame-wide because the roster
+   * every composed or hostless row whose band is open. Frame-wide because the roster
    * is a store read and the band keys on the frame camera — a view culls it
    * (`visibleSlabBodies`), it never re-assembles it.
    */
   slabBodyCandidates: readonly SlabRow[];
-  /** The full mesh-body roster — a view runs the SAME gate over it to re-admit
+  /** The full mesh body roster — a view runs the SAME gate over it to re-admit
    *  the hosts of mesh bodies riding someone else's slab row. */
   meshBodies: readonly MeshBody[];
   /** Every admitted scene body but Earth (its own renderer), at this frame's
@@ -75,9 +72,9 @@ export type ReadyFrameContext = {
   /**
    * This frame's sim-clock instant in Julian days — `deriveSimDays(time, nowMs)`,
    * sampled ONCE by `runFrame` from the time-intent slice before the camera
-   * produce step. `sceneBodyStates` evaluates the whole body snapshot at THIS
-   * instant, so every per-frame body reader (planets, textured bodies, orbit
-   * trails) shares one epoch and can never draw the same body at two positions.
+   * produce step. The whole body snapshot is evaluated at THIS instant, so
+   * every per-frame body reader (planets, textured bodies, orbit trails)
+   * shares one epoch and can never draw the same body at two positions.
    * A paused clock holds it steady; live/manual playback advances it each frame.
    */
   simDays: number;
@@ -107,13 +104,6 @@ export type ReadyFrameContext = {
    * writes it before any GPU step of its target reads it; a miss throws.
    */
   plans: FramePlannerResultStore;
-  /**
-   * Live pointer position in texture pixels — `state.picking.cursorTexPx`
-   * forwarded, so a pass never reaches back into the picking bag `PassState`
-   * deliberately refuses. `null` unless the `terrain-pick-marker` debug overlay
-   * is on (its sole reader): the listener only writes it then.
-   */
-  cursorTexPx: Readonly<Vec2> | null;
   /**
    * Which render-target ids hold THIS FRAME's content — a target first-touched
    * in any view of this frame holds it, regardless of which view's program did

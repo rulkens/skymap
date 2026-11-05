@@ -1,13 +1,9 @@
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 
 /**
- * slotReady — true once a slot has a committed value: reads `committed()`,
- * not the live `state()`, so a slot reloading over a previous commit stays
- * ready for the fetch's duration — only `release()` clears it.
- *
- * The `null` arm absorbs the pre-`wireSlots` window: every `assetSlots` field
- * is `| null` until the GPU-init IIFE mints the slot, and consumers (passes,
- * encode steps) may read before then.
+ * slotReady — true once a slot has a committed value. Reads `committed()`, not
+ * `state()`, so a reload over a previous commit stays ready; only `release()` clears it.
+ * `null` is an optional Layer slot not minted yet.
  */
 export function slotReady<T, Req>(slot: AssetSlot<T, Req> | null): boolean {
   return slot != null && slot.committed() !== null;

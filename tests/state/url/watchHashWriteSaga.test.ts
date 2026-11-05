@@ -31,7 +31,7 @@ import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsS
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { timeRoute } from '../../../src/store/constants';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 
@@ -84,7 +84,9 @@ describe('watchHashWriteSaga', () => {
     // `setSelectionRow` is the SOLE writer of `selectionRows.focus`, so every
     // resolution path — a late catalog pulse, the star-count pulse, a direct ref
     // write — arrives here as this one action. Covering it covers all of them.
-    buildHarness().dispatch(setSelectionRow({ slot: 'focus', row: virgoRow }));
+    buildHarness().dispatch(
+      setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }),
+    );
     await settle();
 
     expect(lastBody()).toBe('focus=cluster-virgo-m87');

@@ -24,6 +24,7 @@ import { watchWakeSaga } from '../../../src/store/effects/watchWakeSaga';
 import { watchFadesSaga } from '../../../src/store/effects/watchFadesSaga';
 import { watchSwapFormatSaga } from '../../../src/store/effects/watchSwapFormatSaga';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
+import { sagaContextRegistered } from '../../../src/store/sagaContextRegistered';
 
 // A real reconcile spy object matching the ReconcileEffects surface. Typed
 // vi.fn<...>() throughout — bare vi.fn() fails tsc against typed callback fields.
@@ -56,6 +57,7 @@ export function buildStore() {
   sagaMiddleware.run(function* () {
     yield* all([watchWakeSaga(), watchFadesSaga(), watchSwapFormatSaga()]);
   });
+  store.dispatch(sagaContextRegistered());
 
   return { store, reconcile: reconcile as unknown as ReconcileSpies };
 }
