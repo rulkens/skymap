@@ -24,7 +24,7 @@ const TRANSFERS = 32;
  * `--checksum` compares size and MD5 against the ETag the bucket listing already carries
  * (MD5 for every single-part upload, which is anything under rclone's 200 MiB cutoff). The
  * default size+mtime check reads each object's mtime metadata with one HEAD per file:
- * minutes for ~40k tiles where nothing changed.
+ * minutes for tens of thousands of files where nothing changed.
  *
  * `copy` never deletes, so a stale remote object outlives a shrinking local
  * tree. That is the right default for immutable content and the reason a
