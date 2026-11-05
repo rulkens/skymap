@@ -255,6 +255,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // without it awaited fade-outs (catalog visibility, tier swaps) hang forever.
   state.subsystems.fades.tick(nowMs);
   state.fadesAnimating = state.subsystems.fades.isAnyAnimating(nowMs) || labelsAnimating;
+  state.layersSettling = snapshot.plans.settling;
   const keepTicking = shouldKeepTicking(
     state,
     rootState,

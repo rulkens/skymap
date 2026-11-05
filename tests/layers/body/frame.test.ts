@@ -26,8 +26,9 @@ function snapshotAt(nowMs: number): ReadyFrameContext {
 }
 
 describe('surfaceTilePlanner', () => {
-  it("the planner's wake vote holds while the manifest is in flight", () => {
-    // Bug caught: the plan's wake vote never reaching the loop. A landing tile wakes the
+  it("the planner's wake and settling votes hold while the manifest is in flight", () => {
+    // Bug caught: the plan's wake vote never reaching the loop, or the cold-load gate
+    // (sceneSettled) reading a streaming surface as settled. A landing tile wakes the
     // loop itself; a landing manifest does not, so only this vote carries it through the fetch.
     const apply = vi.fn();
     const residency = {
@@ -57,6 +58,7 @@ describe('surfaceTilePlanner', () => {
     const result = surfaceTilePlanner(runtime).plan(snapshotAt(0), [view], STATE);
 
     expect(result.awake).toBe(true);
+    expect(result.settling).toBe(true);
     expect(runtime.surfaceTiles.plan.awake).toBe(true);
     expect(apply).toHaveBeenCalledWith(runtime.surfaceTiles.plan);
   });

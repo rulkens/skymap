@@ -91,6 +91,7 @@ function buildStore(opts: { playClip?: PlayClipStub; cameraRuntime?: LiveCameraR
   sagaMiddleware.setContext({
     selection: selectionResolverOver(immediateStructures),
     cameraRuntime: () => cam,
+    sceneSettled: () => true,
     playClip: (clip: ClipData) => playClipFn(clip),
   });
 
@@ -556,6 +557,7 @@ describe('tourBodySaga', () => {
     sagaMiddleware.setContext({
       selection: selectionResolverOver(immediateStructures),
       cameraRuntime: () => CAMERA_RUNTIME,
+      sceneSettled: () => true,
       playClip: makeAutoFlyStub(),
     });
 

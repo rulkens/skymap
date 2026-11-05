@@ -41,6 +41,7 @@ export const NOOP_SAGA_CONTEXT: SagaContext = {
     () => ALL_KINDS_ENABLED,
   ),
   cameraRuntime: () => null,
+  sceneSettled: () => true,
   // Resolves immediately so the tour saga advances rather than awaiting a promise nothing settles.
   playClip: () => Promise.resolve(),
   clipPathInspect: {

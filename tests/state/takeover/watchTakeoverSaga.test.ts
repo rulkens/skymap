@@ -134,6 +134,7 @@ function buildHarness(opts: { playClip?: PlayClipStub } = {}) {
   sagaMiddleware.setContext({
     selection: selectionResolverOver(NARRATION_STRUCTURES),
     cameraRuntime: () => CAMERA_RUNTIME,
+    sceneSettled: () => true,
     playClip: (clip: ClipData) => playClipFn(clip),
   });
 

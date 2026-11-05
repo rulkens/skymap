@@ -18,6 +18,7 @@ import type { EngineState } from '../../@types/engine/state/EngineState';
 import { seedCameraRuntime } from './camera/seedCameraRuntime';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/framing/cameraFraming';
 import { liveUpBasisQuat } from './camera/orientation/liveUpBasisQuat';
+import { isSceneSettled } from './helpers/isSceneSettled';
 import type { CubemapCaptureRuntimes } from '../../@types/engine/state/CubemapCaptureRuntimes';
 import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../compositions/appCubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
@@ -225,6 +226,7 @@ export function createEngine(
     },
     booted: false,
     fadesAnimating: false,
+    layersSettling: false,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
@@ -322,6 +324,7 @@ export function createEngine(
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
           }
         : null,
+    sceneSettled: () => isSceneSettled(state),
     playClip,
     clipPathInspect,
     home: composition.home,
