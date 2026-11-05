@@ -9,8 +9,16 @@
  * `bulk` hands the whole group to a single `rclone copy`, which owns listing,
  * diffing, retry and concurrency. It needs the local directory and bucket
  * prefix the group's files hang off, because rclone works in terms of a tree
- * plus a relative file list, not absolute key pairs.
+ * plus a relative file list, not absolute key pairs. `refuseOverwrite` makes
+ * rclone fail on an existing remote object whose content differs (`--immutable`):
+ * a group whose files are only meaningful as a set (surface tile archives) must
+ * take a new key prefix rather than be replaced piecemeal.
  */
 export type R2Transport =
   | { readonly kind: 'wrangler' }
-  | { readonly kind: 'bulk'; readonly localRoot: string; readonly keyRoot: string };
+  | {
+      readonly kind: 'bulk';
+      readonly localRoot: string;
+      readonly keyRoot: string;
+      readonly refuseOverwrite: boolean;
+    };
