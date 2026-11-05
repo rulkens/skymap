@@ -1,6 +1,7 @@
 /**
  * SetupPanel — the setup steps' choices in one place, each saving at once, and the way back into the
- * steps. The test grid is not part of the setup: it is a view toggle main drops on a mode change.
+ * steps, a link in the head since it changes the view rather than a choice. The test grid is not part
+ * of the setup: it is a view toggle main drops on a mode change.
  */
 
 import { useId } from 'react';
@@ -46,6 +47,9 @@ function SetupPanel({
           Setup
         </h2>
         <SaveStatus state={saveState} />
+        <button type="button" className={chrome.link} onClick={onRunSetup}>
+          Run setup again
+        </button>
       </div>
       <ModeChoice mode={setup.mode} onPick={(mode) => onSave({ ...setup, mode })} compact />
       <div className={chrome.stack}>
@@ -67,11 +71,6 @@ function SetupPanel({
         </label>
       </div>
       <UpdatesChoice setup={setup} onSave={onSave} />
-      <div>
-        <button type="button" className={chrome.button} onClick={onRunSetup}>
-          Run setup again
-        </button>
-      </div>
     </section>
   );
 }

@@ -1,6 +1,6 @@
 .root {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+  align-content: start;
   align-items: start;
   gap: var(--space-12);
   width: 100%;
@@ -9,8 +9,16 @@
   padding: var(--space-4) var(--space-12) var(--space-12);
 }
 
-.column {
-  display: grid;
-  gap: var(--space-12);
-  min-width: 0;
+/* Past 60rem the setup takes the second column and the other panels flow down the first; the last
+   row takes up whatever height the setup leaves over. */
+@media (min-width: 60rem) {
+  .root {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto 1fr;
+  }
+
+  .setup {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
 }

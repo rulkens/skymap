@@ -58,6 +58,7 @@ function PairingPanel({
         online={networks.length > 0}
         skyRunning={skyRunning}
         onHelp={onHelp}
+        compact
       />
       <p className={chrome.dim}>
         Give this computer a DHCP reservation on its network, so the address in a tablet&apos;s

@@ -1,3 +1,9 @@
 .root {
   composes: panel from '../../../controlChrome.module.css';
 }
+
+/* Beside the buttons while a short line of it fits there, under them after. */
+.note {
+  composes: dim from '../../../controlChrome.module.css';
+  flex: 1 1 16rem;
+}

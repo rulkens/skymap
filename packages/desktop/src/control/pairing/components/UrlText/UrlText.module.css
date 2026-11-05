@@ -1,0 +1,8 @@
+.root {
+  composes: mono from '../../../controlChrome.module.css';
+}
+
+/* Unbreakable inside, so a line breaks only at the <wbr> between pieces. */
+.piece {
+  white-space: nowrap;
+}

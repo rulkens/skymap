@@ -38,10 +38,10 @@ function SyncPanel({ sync, onUpdateNow, onRestartSky }: SyncPanelProps): ReactNo
         >
           Restart sky
         </button>
+        <p className={styles.note} role="status">
+          {restartNote}
+        </p>
       </div>
-      <p className={chrome.dim} role="status">
-        {restartNote}
-      </p>
     </section>
   );
 }

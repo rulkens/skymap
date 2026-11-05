@@ -2,9 +2,10 @@
   composes: panel from '../../../controlChrome.module.css';
 }
 
+/* Heading, save status, link: a long failure wraps in its own column and leaves the link in place. */
 .head {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-8);
+  gap: var(--space-10);
 }

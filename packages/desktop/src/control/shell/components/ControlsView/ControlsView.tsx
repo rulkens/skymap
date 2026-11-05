@@ -1,6 +1,7 @@
 /**
- * ControlsView — the everyday window after setup: the data, the setup choices, tablets, and Quit. Two
- * columns when there is room, the data first, since it is what changes on its own.
+ * ControlsView — the everyday window after setup: the data, the setup choices, tablets, and Quit. The
+ * data comes first, since it is what changes on its own; on a wide window the setup takes a column of
+ * its own beside the rest, so the whole view fits a booth monitor without scrolling.
  */
 
 import type { ReactNode } from 'react';
@@ -27,8 +28,8 @@ function ControlsView(props: ControlsViewProps): ReactNode {
   const { setup, save } = session;
   return (
     <main className={styles.root}>
-      <div className={styles.column}>
-        <SyncPanel sync={session} onUpdateNow={onUpdateNow} onRestartSky={onRestartSky} />
+      <SyncPanel sync={session} onUpdateNow={onUpdateNow} onRestartSky={onRestartSky} />
+      <div className={styles.setup}>
         <SetupPanel
           setup={setup}
           displays={session.displays}
@@ -40,18 +41,16 @@ function ControlsView(props: ControlsViewProps): ReactNode {
           onRunSetup={props.onRunSetup}
         />
       </div>
-      <div className={styles.column}>
-        <PairingPanel
-          room={session.room}
-          networks={session.networks}
-          network={setup.network}
-          skyRunning={session.skyRunning}
-          onPickNetwork={(network) => void save({ ...setup, network })}
-          onRotate={onRotate}
-          onHelp={props.onHelp}
-        />
-        <QuitPanel onQuit={onQuit} />
-      </div>
+      <PairingPanel
+        room={session.room}
+        networks={session.networks}
+        network={setup.network}
+        skyRunning={session.skyRunning}
+        onPickNetwork={(network) => void save({ ...setup, network })}
+        onRotate={onRotate}
+        onHelp={props.onHelp}
+      />
+      <QuitPanel onQuit={onQuit} />
     </main>
   );
 }

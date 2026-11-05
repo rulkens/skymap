@@ -5,10 +5,11 @@ import styles from './PairingQr.module.css';
 
 export type PairingQrProps = {
   readonly text: string;
+  readonly compact?: boolean;
 };
 
 /** One canvas pixel per module, scaled up by CSS with pixelated rendering. */
-function PairingQr({ text }: PairingQrProps): ReactNode {
+function PairingQr({ text, compact = false }: PairingQrProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const modules = useMemo(() => qrModules(text), [text]);
   useEffect(() => {
@@ -24,7 +25,7 @@ function PairingQr({ text }: PairingQrProps): ReactNode {
   return (
     <canvas
       ref={canvasRef}
-      className={styles.root}
+      className={compact ? styles.compact : styles.root}
       width={modules.length}
       height={modules.length}
       role="img"

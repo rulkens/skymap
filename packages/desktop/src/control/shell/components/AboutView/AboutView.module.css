@@ -1,14 +1,10 @@
 .root {
-  display: grid;
-  gap: var(--space-12);
-  justify-items: start;
+  composes: overlay from '../../../controlChrome.module.css';
   max-width: 36rem;
-  margin: 0 auto;
-  padding: var(--space-12);
 }
 
 .mark {
-  margin: var(--space-8) 0 0;
+  margin: 0;
   color: var(--color-fg);
   font-size: calc(var(--text-title) * 1.6);
   font-weight: inherit;

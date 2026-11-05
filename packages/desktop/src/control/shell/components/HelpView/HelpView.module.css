@@ -1,10 +1,6 @@
 .root {
-  display: grid;
-  gap: var(--space-12);
-  justify-items: start;
+  composes: overlay from '../../../controlChrome.module.css';
   max-width: 46rem;
-  margin: 0 auto;
-  padding: var(--space-4) var(--space-12) calc(var(--space-12) * 2);
 }
 
 .title {

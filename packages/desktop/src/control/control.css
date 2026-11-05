@@ -42,4 +42,6 @@ body {
   font: var(--weight-body) var(--text-body) / var(--leading-body) var(--font-body);
   -webkit-font-smoothing: antialiased;
   overflow-wrap: break-word;
+  /* Short captions otherwise end on one word alone on a line. */
+  text-wrap: pretty;
 }

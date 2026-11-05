@@ -6,3 +6,9 @@
   border-radius: var(--radius-md);
   image-rendering: pixelated;
 }
+
+/* The controls' QR is read once per tablet from close by; it gives the panel's height to the steps. */
+.compact {
+  composes: root;
+  width: 10rem;
+}

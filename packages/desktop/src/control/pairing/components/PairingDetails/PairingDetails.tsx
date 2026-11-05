@@ -10,6 +10,7 @@ import { pairingUrl } from '../../../../../../../src/utils/remote/pairingUrl';
 import AlertIcon from '../../../../../../../src/components/icons/AlertIcon/AlertIcon';
 import { groupedCode } from '../../utils/groupedCode';
 import PairingQr from '../PairingQr/PairingQr';
+import UrlText from '../UrlText/UrlText';
 import chrome from '../../../controlChrome.module.css';
 import styles from './PairingDetails.module.css';
 
@@ -18,9 +19,17 @@ export type PairingDetailsProps = {
   readonly online: boolean;
   readonly skyRunning: boolean;
   readonly onHelp: () => void;
+  /** A smaller QR, for the controls' panel. */
+  readonly compact?: boolean;
 };
 
-function PairingDetails({ room, online, skyRunning, onHelp }: PairingDetailsProps): ReactNode {
+function PairingDetails({
+  room,
+  online,
+  skyRunning,
+  onHelp,
+  compact = false,
+}: PairingDetailsProps): ReactNode {
   if (!online) {
     return (
       <p className={styles.offline} role="status">
@@ -34,7 +43,7 @@ function PairingDetails({ room, online, skyRunning, onHelp }: PairingDetailsProp
   return (
     <div className={styles.root}>
       <div className={styles.code}>
-        <PairingQr text={url} />
+        <PairingQr text={url} compact={compact} />
         <p className={styles.room}>
           <span className={chrome.dim}>Code</span>
           <span className={styles.digits}>{groupedCode(room.code)}</span>
@@ -43,16 +52,15 @@ function PairingDetails({ room, online, skyRunning, onHelp }: PairingDetailsProp
       <div className={styles.how}>
         <ol className={styles.steps}>
           <li>
-            On the tablet, open <span className={chrome.mono}>{room.origin}/ca.crt</span> and
-            install it: a certificate, the file that lets the tablet trust this computer. Go past
-            the warning this once.{' '}
+            On the tablet, open <UrlText url={`${room.origin}/ca.crt`} /> and install it: a
+            certificate, the file that lets the tablet trust this computer. Go past the warning this
+            once.{' '}
             <button type="button" className={chrome.link} onClick={onHelp}>
               Steps for iPad and Android
             </button>
           </li>
           <li>
-            Scan the code with the tablet&apos;s camera, or open{' '}
-            <span className={chrome.mono}>{url}</span>.
+            Scan the code with the tablet&apos;s camera, or open <UrlText url={url} />.
           </li>
           <li>If this computer asks to accept incoming network connections, choose Allow.</li>
         </ol>

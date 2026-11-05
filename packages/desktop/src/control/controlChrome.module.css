@@ -49,6 +49,17 @@
   gap: var(--space-6);
 }
 
+/* Help and About: one column under the header, the Back link at the same height on both. */
+.overlay {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--space-12);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-12) calc(var(--space-12) * 2);
+}
+
 /* A glass panel with the app's starlight line along its top edge, as the HUD's panels have. */
 .panel {
   position: relative;
