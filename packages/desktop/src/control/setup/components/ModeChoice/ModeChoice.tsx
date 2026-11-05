@@ -18,7 +18,7 @@ export type ModeChoiceProps = {
 function ModeChoice({ mode, onPick, compact = false }: ModeChoiceProps): ReactNode {
   return (
     <fieldset className={styles.root}>
-      <legend className={chrome.unseen}>Where it shows</legend>
+      <legend className={chrome.unseen}>Your setup</legend>
       {MODES.map((option) => (
         <label key={option.mode} className={chrome.card}>
           <input

@@ -31,7 +31,7 @@ describe('SetupFlow', () => {
     await firstRun();
     expect(title()).toHaveAccessibleName('Skymap');
     press('Start setup');
-    expect(title()).toHaveTextContent('Where will it show?');
+    expect(title()).toHaveTextContent('Pick your setup');
     press('Next');
     expect(title()).toHaveTextContent('Which screen?');
     press('Next');
@@ -46,7 +46,7 @@ describe('SetupFlow', () => {
   it('Enter takes the primary action from the step, not from a button', async () => {
     await firstRun();
     fireEvent.keyDown(title(), { key: 'Enter' });
-    expect(title()).toHaveTextContent('Where will it show?');
+    expect(title()).toHaveTextContent('Pick your setup');
   });
 
   it('a choice saves the moment it is made, before Next', async () => {
@@ -54,7 +54,7 @@ describe('SetupFlow', () => {
     press('Start setup');
     await act(async () => fireEvent.click(screen.getByRole('radio', { name: /Dome/ })));
     expect(bridge.saveSetup).toHaveBeenLastCalledWith({ ...DEFAULT_INSTALL_SETUP, mode: 'dome' });
-    expect(title()).toHaveTextContent('Where will it show?');
+    expect(title()).toHaveTextContent('Pick your setup');
     expect(screen.getByText('Saved')).toBeInTheDocument();
   });
 
@@ -63,7 +63,7 @@ describe('SetupFlow', () => {
     const { set } = await firstRun();
     press('Start setup');
     set({ firstRun: false });
-    expect(title()).toHaveTextContent('Where will it show?');
+    expect(title()).toHaveTextContent('Pick your setup');
   });
 
   it('the screen step shows the test grid while open and moves the sky on a pick', async () => {
@@ -88,7 +88,7 @@ describe('SetupFlow', () => {
     expect(railStep('Which screen')).toBeDisabled();
     expect(railStep('Which screen')).toHaveTextContent('One screen, so the sky uses it');
     press('Back');
-    expect(title()).toHaveTextContent('Where will it show?');
+    expect(title()).toHaveTextContent('Pick your setup');
   });
 
   it('Finish waits on the download in words, then says the sky is ready', async () => {

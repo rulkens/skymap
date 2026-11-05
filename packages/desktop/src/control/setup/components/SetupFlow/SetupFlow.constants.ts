@@ -3,7 +3,7 @@ import { APP_SUMMARY } from '../../../shell/data/appSummary';
 
 // Welcome's title is the wordmark and Done's follows the sky, so neither is here.
 export const STEP_TITLES: Partial<Record<SetupStep, string>> = {
-  mode: 'Where will it show?',
+  mode: 'Pick your setup',
   display: 'Which screen?',
   tablet: 'Connect a tablet',
   daily: 'Every day',

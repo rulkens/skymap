@@ -37,7 +37,7 @@ Both installers are unsigned, so the system warns before it lets you open them. 
 The first start opens the setup window and starts the download at once. The steps, in order:
 
 1. **Welcome.** What Skymap is and what happens now.
-2. **Where it shows.** Kiosk (a flat screen) or Dome (a fisheye disc).
+2. **Your setup.** Kiosk (a flat screen) or Dome (a fisheye disc).
 3. **Which screen.** Pick the screen for the sky. The sky moves there and shows a test grid. In a
    dome the grid shows FRONT at the bottom. With one screen this step is skipped.
 4. **Connect a tablet.** Pick the network the tablet is on if the computer has several, then scan

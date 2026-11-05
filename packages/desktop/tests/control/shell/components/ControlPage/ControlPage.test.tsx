@@ -152,7 +152,7 @@ describe('ControlPage', () => {
   it('Run setup again brings the steps back', async () => {
     await renderControls();
     press('Run setup again');
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Where will it show?');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Pick your setup');
   });
 
   it('Help opens from its link and from main, and Escape or Back closes it', async () => {
