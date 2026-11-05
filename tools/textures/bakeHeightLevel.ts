@@ -6,7 +6,7 @@
  * before slicing (≈2.4 GB at z7) to label water across tile seams.
  */
 
-import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import sharp from 'sharp';
@@ -25,6 +25,7 @@ import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { quantizeHeightGrid } from '../utils/textures/quantizeHeightGrid';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { writeFileAtomic } from '../utils/io/writeFileAtomic';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 
@@ -280,10 +281,9 @@ export async function bakeHeightLevel(input: {
       const relPath = surfaceTilePath({ product: 'height', z, x, y }, prefix);
       const outPath = join(outDir, relPath);
       mkdirSync(dirname(outPath), { recursive: true });
-      // `.tmp` then rename: a bake killed mid-write must not leave a truncated
-      // file that the next run's existsSync skip-check trusts as complete.
-      writeFileSync(`${outPath}.tmp`, await encodeHeightTile(tile));
-      renameSync(`${outPath}.tmp`, outPath);
+      // Atomic: a bake killed mid-write must not leave a truncated file that
+      // the next run's existsSync skip-check trusts as complete.
+      writeFileAtomic(outPath, await encodeHeightTile(tile));
       written.push(relPath);
     }
   }
