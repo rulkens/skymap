@@ -5,6 +5,10 @@ brainstorm, rulings 2026-10-14 and the refactor-ground checkpoint 2026-10-16). *
 `docs/superpowers/specs/completed/2026-10-10-chunked-star-octree-design.md`, whose framing, node row, stratification and
 chunking this slice reuses unchanged. This spec is written against the architecture after the prep in §9.
 
+**Plan-time decisions** D1–D9 in `docs/superpowers/plans/2026-10-20-glade-galaxy-octree.md` supersede this spec's
+wording where they differ (info naming and self-describing `SKOF` headers, the chunk directory, shard entries, the
+angular-weight codec, blob rows in column blocks), as do the 2026-10-20 rulings recorded there (tier switch, boot flag).
+
 ## 1. Goal and non-goals
 
 GLADE streams as a brightness-stratified chunked octree: one build, coarse-to-fine by screen size, an unloaded subtree

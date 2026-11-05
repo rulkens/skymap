@@ -2,7 +2,7 @@
 // file: the header carries the scheme. A row owns the records bright enough for
 // its level and, when it has children, one blob standing for all of them; each
 // row gets two LOD fades (own, blob) and places in the two draw lists the vertex
-// stage reads. The pool holds the index's rows, then each chunk slot's rows.
+// stage reads. The pool holds the index's rows, then each chunk's row run.
 //
 // ## One flat pass over every row
 // The refine proxy 'edge^2 / distanceToBox^2' only shrinks going down the tree
@@ -11,7 +11,7 @@
 // records when its parent refines (the root always), and its blob when it draws
 // its own records and does not refine itself: own + blob is its subtree's whole
 // flux, so the cut conserves light level by level. A chunk root refines only
-// once its chunk is resident; an empty slot has slotRows = 0 and is skipped.
+// once its chunk is resident; a row no chunk holds is dead in pageRows and skipped.
 //
 // ## Folded subtrees
 // Placement by brightness alone leaves sparse outskirts as chains of rows
@@ -42,10 +42,10 @@
 // ## Bindings: writer -> reader
 //   u         CPU each frame -> all three entry points, and vertex.wesl
 //   nodes     CPU at upload  -> all three entry points, and vertex.wesl
-//   nodes     CPU at chunk land/evict: the slot's rows, then every root's row
-//   slotRows  CPU at chunk land/evict -> histogram, emit: a slot's live rows
-//   opacity   emit           -> emit (next frame), vertex.wesl; zeroed per slot
-//                               by the CPU when a chunk lands
+//   nodes     CPU at chunk land/evict: the chunk's rows, then every root's row
+//   pageRows  CPU at chunk land/evict -> histogram, emit: each page's live rows
+//   opacity   emit           -> emit (next frame), vertex.wesl; a chunk's rows
+//                               zeroed by the CPU when it lands
 //   leafList  emit           -> vertex.wesl (leaf stream: own records)
 //   aggList   emit           -> vertex.wesl (aggregate stream: blobs)
 //   draws     CPU at upload (vertex counts); pickThreshold zeroes the instance
@@ -88,16 +88,17 @@ const HALF_DIAGONAL: f32 = 0.8660254;
 @group(0) @binding(5) var<storage, read_write> draws: array<atomic<u32>, 8>;
 // CUT_BINS bins, then the chosen threshold bin at [CUT_BINS].
 @group(0) @binding(6) var<storage, read_write> hist: array<atomic<u32>, 1025>;
-// Rows each chunk slot holds; the rest of its chunkNodeCap stride is padding.
-@group(0) @binding(7) var<storage, read> slotRows: array<u32>;
+// Per page of nodePageRows chunk rows (the smallest row run), how many lead it
+// live; a chunk's run fills its pages in order, the rest of the run is padding.
+@group(0) @binding(7) var<storage, read> pageRows: array<u32>;
 
-// A slot is sized to the row bound, so most pool rows are padding: ruling
-// them out from this small table, before touching 'nodes' or 'opacity', is
-// what keeps the cut's memory traffic at the live rows'.
+// Runs round up to a power of two and free rows wait for a chunk, so many pool
+// rows are padding: ruling them out from this small table, before touching
+// 'nodes' or 'opacity', is what keeps the cut's memory traffic at the live rows'.
 fn isPadding(i: u32) -> bool {
   if (i < u.indexNodes) { return false; }
   let local = i - u.indexNodes;
-  return local % u.chunkNodeCap >= slotRows[local / u.chunkNodeCap];
+  return local % u.nodePageRows >= pageRows[local / u.nodePageRows];
 }
 
 fn proxyOf(i: u32) -> f32 {

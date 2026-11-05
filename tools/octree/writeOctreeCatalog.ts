@@ -3,7 +3,8 @@
  * `<outDir>/<name>/<level>-<morton>.<hash8>.bin` and the index `<outDir>/<name>.bin` last. An
  * object's header names its child chunks' hashes, so children are written before parents (ids
  * run breadth-first, so descending id order does it): a reader that sees an object never meets
- * a child not on disk yet. The quantiser covers the star schema's stores.
+ * a child not on disk yet. With `info`, each object gets an info object beside it (written
+ * first), and one hash over both objects' bytes names the pair, so neither half can go stale.
  */
 import fs from 'node:fs';
 import { join } from 'node:path';
@@ -14,25 +15,21 @@ import type { OctreeChunkRef } from '../../src/@types/octree/OctreeChunkRef';
 import type { OctreeIndexHeader } from '../../src/@types/octree/OctreeIndexHeader';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import type { OctreeCatalogMeta } from '../@types/octree/OctreeCatalogMeta';
+import type { OctreeInfoInput } from '../@types/octree/OctreeInfoInput';
 import type { OctreeObjects } from '../@types/octree/OctreeObjects';
 import type { OctreeRawColumn } from '../@types/octree/OctreeRawColumn';
-import { octreeChunkFileName, OFFSET_FRACTION_LEVELS } from '../../src/data/octree/octreeFormat';
-import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
+import { octreeChunkFileName, octreeChunkInfoFileName } from '../../src/data/octree/octreeFormat';
 import { contentHash8 } from '../utils/data/contentHash8';
+import { encodeOctreeInfo } from './encodeOctreeInfo';
 import { encodeOctreeObject } from './encodeOctreeObject';
-
-const INTEGER_STORES = {
-  u8: { array: Uint8Array, min: 0, max: 0xff },
-  u16: { array: Uint16Array, min: 0, max: 0xffff },
-  u32: { array: Uint32Array, min: 0, max: 0xffffffff },
-  i8: { array: Int8Array, min: -0x80, max: 0x7f },
-} as const;
+import { quantiseColumn } from './quantiseColumn';
 
 export function writeOctreeCatalog(
   objects: OctreeObjects,
   meta: OctreeCatalogMeta,
   outDir: string,
   name: string,
+  info?: OctreeInfoInput,
 ): OctreeIndexHeader {
   const chunkDir = join(outDir, name);
   fs.mkdirSync(chunkDir, { recursive: true });
@@ -53,7 +50,10 @@ export function writeOctreeCatalog(
       meta.schema,
       quantise(c.columns, meta.schema),
     );
-    const hash = contentHash8(bytes);
+    const infoBytes = info && encodeOctreeInfo(info, c.sourceRows);
+    const hash = contentHash8(infoBytes ? Buffer.concat([bytes, infoBytes]) : bytes);
+    if (infoBytes)
+      fs.writeFileSync(join(chunkDir, octreeChunkInfoFileName({ ...c, hash })), infoBytes);
     fs.writeFileSync(join(chunkDir, octreeChunkFileName({ ...c, hash })), bytes);
     refs[id] = {
       id,
@@ -80,6 +80,10 @@ export function writeOctreeCatalog(
     columns: meta.schema,
     stats: { ...meta.stats, chunkCount: objects.chunks.length },
     chunks: refsUnder(null),
+    // Refs sit at their ids, and record ordinals follow ids: already ascending recordBase.
+    ...(info ? { chunkDirectory: refs } : {}),
+    ...(meta.pgcShards ? { pgcShards: meta.pgcShards } : {}),
+    ...(meta.namedPgcs ? { namedPgcs: meta.namedPgcs } : {}),
   };
   const index = encodeOctreeObject(
     header,
@@ -87,6 +91,12 @@ export function writeOctreeCatalog(
     meta.schema,
     quantise(objects.index.columns, meta.schema),
   );
+  if (info) {
+    fs.writeFileSync(
+      join(outDir, `${name}.info.bin`),
+      encodeOctreeInfo(info, objects.index.sourceRows),
+    );
+  }
   fs.writeFileSync(join(outDir, `${name}.bin`), index);
   return header;
 }
@@ -102,27 +112,4 @@ function quantise(
   schema: readonly ColumnSchema[],
 ): Map<ColumnId, OctreeRawColumn> {
   return new Map(schema.map((c) => [c.id, quantiseColumn(columns.get(c.id)!, c)]));
-}
-
-function quantiseColumn(values: Float32Array, c: ColumnSchema): OctreeRawColumn {
-  switch (c.store) {
-    case 'f32':
-      return values;
-    case 'f16':
-      return Uint16Array.from(values, f32ToF16Bits);
-    case 'u16x3':
-      return Uint16Array.from(values, (f) =>
-        clamp(Math.round(f * OFFSET_FRACTION_LEVELS), 0, OFFSET_FRACTION_LEVELS - 1),
-      );
-    default: {
-      const { array, min, max } = INTEGER_STORES[c.store];
-      const out = new array(values.length);
-      values.forEach((v, i) => (out[i] = clamp(Math.round((v - c.q0) / c.q1), min, max)));
-      return out;
-    }
-  }
-}
-
-function clamp(v: number, lo: number, hi: number): number {
-  return v < lo ? lo : v > hi ? hi : v;
 }

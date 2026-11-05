@@ -98,6 +98,7 @@ const CORE_ALLOWED: Readonly<Record<string, number>> = {
   'services/engine/wiring/galaxyCatalogRequest': 2,
   'state/selection/captureGalaxyFocusIds': 1,
   'utils/galaxyCatalogIdOf': 3,
+  'utils/url/galaxyFormatsFromSearch': 2,
 };
 
 const coreFiles = walk('src').filter(

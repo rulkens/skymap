@@ -1,17 +1,16 @@
-import type { OctreeChunkRef } from '../../@types/octree/OctreeChunkRef';
-import type { OctreePoolLayout } from '../../@types/octree/OctreePoolLayout';
+import type { OctreeSlotRun } from '../../@types/octree/OctreeSlotRun';
 
-/** A pool-absolute record index as the catalog ordinal; null for an empty slot or a row past the chunk. */
+/** A pool-absolute record index as the catalog ordinal; null in a run nothing holds or past its chunk. */
 export function recordOrdinal(
-  layout: OctreePoolLayout,
-  slotRefs: readonly (OctreeChunkRef | null)[],
+  indexRecords: number,
+  slots: readonly (OctreeSlotRun<{ readonly count: number }> | null)[],
   poolIndex: number,
 ): number | null {
-  const { indexRecords, chunkCapacity, slots } = layout;
   if (poolIndex < indexRecords) return poolIndex;
-  const slot = Math.floor((poolIndex - indexRecords) / chunkCapacity);
-  const ref = slot < slots ? slotRefs[slot]! : null;
-  if (ref === null) return null;
-  const local = poolIndex - indexRecords - slot * chunkCapacity;
-  return local < ref.records ? ref.recordBase + local : null;
+  for (const run of slots) {
+    if (run === null) continue;
+    const local = poolIndex - run.poolBase;
+    if (local >= 0 && local < run.chunk.ref.records) return run.chunk.ref.recordBase + local;
+  }
+  return null;
 }

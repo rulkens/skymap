@@ -16,7 +16,7 @@ export type CatalogStore = {
     count: number;
     sourceBuffer: GPUBuffer;
   }>;
-  /** Full per-source draw essentials, in draw order, for `galaxyPointRenderer.draw()`. */
+  /** Full per-source draw essentials, in draw order, for `galaxyFlatPointRenderer.draw()`. */
   entries(): IterableIterator<CatalogDrawEntry>;
   destroy(): void;
 };

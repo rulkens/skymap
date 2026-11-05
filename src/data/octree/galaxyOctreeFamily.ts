@@ -1,0 +1,46 @@
+import type { ColumnId } from '../../@types/octree/ColumnId';
+import type { ColumnSchema } from '../../@types/octree/ColumnSchema';
+import type { OctreeFamilyRow } from '../../@types/octree/OctreeFamilyRow';
+
+// Defaults only: the bake overrides `absMag` from the catalog's own range and writes the schema
+// it used into the index header, which is what the decoder reads.
+export const GALAXY_COLUMN_SCHEMA: readonly ColumnSchema[] = [
+  { id: 'offset', store: 'u16x3', q0: 0, q1: 1 },
+  { id: 'absMag', store: 'u8', q0: -26, q1: 18 / 255 },
+  { id: 'colourIndex', store: 'u8', q0: 0, q1: 2 / 255 },
+  { id: 'axisRatio', store: 'u8', q0: 0, q1: 1 / 255 },
+  // /256, not /255: pa lives in [0, 180), and no code is spent on 180°, which is 0° for an axis.
+  { id: 'pa', store: 'u8', q0: 0, q1: 180 / 256 },
+  { id: 'logSize', store: 'u8', q0: -1, q1: 4 / 255 },
+  { id: 'flags', store: 'u8', q0: 0, q1: 1 },
+  // log10 w over [−1, 1] as 1..255 with w = 1 at 128: exactly `encodeAngularWeight`'s code.
+  { id: 'angularWeight', store: 'u8', q0: -128 / 127, q1: 1 / 127 },
+];
+
+export const GALAXY_OCTREE_FAMILY: OctreeFamilyRow = {
+  dataPrefix: 'galaxy-octree/v1',
+  schema: GALAXY_COLUMN_SCHEMA,
+  countStat: 'recordCount',
+  unitMpc: 1,
+};
+
+// CPU-only columns beside each chunk; the files carry their own copy, so the reader never assumes this one.
+export const GALAXY_INFO_SCHEMA: readonly ColumnSchema[] = [
+  { id: 'objId', store: 'u64', q0: 0, q1: 1 },
+  { id: 'specZ', store: 'f32', q0: 0, q1: 1 },
+  // Raw 0 is "no mass"; a real log10 mass is far above 1/16.
+  { id: 'logMass', store: 'u8', q0: 0, q1: 1 / 16 },
+  { id: 'magU', store: 'f16', q0: 0, q1: 1 },
+  { id: 'magG', store: 'f16', q0: 0, q1: 1 },
+  { id: 'magR', store: 'f16', q0: 0, q1: 1 },
+  { id: 'magI', store: 'f16', q0: 0, q1: 1 },
+  { id: 'magZ', store: 'f16', q0: 0, q1: 1 },
+];
+
+/** The info columns a reader cannot do without (spec §3.1); the rest are read when present. */
+export const GALAXY_INFO_REQUIRED_COLUMNS: readonly ColumnId[] = ['objId', 'specZ'];
+
+export const PGC_SHARD_SCHEMA: readonly ColumnSchema[] = [
+  { id: 'objId', store: 'u64', q0: 0, q1: 1 },
+  { id: 'ordinal', store: 'u32', q0: 0, q1: 1 },
+];

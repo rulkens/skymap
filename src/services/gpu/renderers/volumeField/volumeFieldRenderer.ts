@@ -200,7 +200,7 @@ export function createVolumeFieldRenderer<Id extends string>(
   // ArrayBuffer allocation. One 16-byte buffer shared across all fields
   // per draw call (values are written and consumed synchronously within
   // one field's iteration step). Matches the closure-captured pattern
-  // in galaxyPointRenderer and filamentRenderer.
+  // in galaxyFlatPointRenderer and filamentRenderer.
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 

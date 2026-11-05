@@ -1,6 +1,6 @@
 /**
  * GalaxyPointRenderer — public surface of the galaxy-catalog point renderer,
- * produced by `createGalaxyPointRenderer`. The pick renderer owns its own
+ * produced by `createGalaxyFlatPointRenderer`. The pick renderer owns its own
  * uniform buffer, rebuilt at pick time (see `pickUniformBytesOf`).
  */
 

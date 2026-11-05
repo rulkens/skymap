@@ -5,7 +5,7 @@ import type { AggregateRecord } from './AggregateRecord';
 export type ColumnAggregateRule = {
   /** Output values per record: 3 for a centroid, else 1. */
   readonly width: number;
-  /** f64 sums kept per row: 3 for a centroid, 1 for the flux means. */
+  /** f64 sums kept per row: 3 for a centroid, 2 for the axial mean, 1 for the flux means, 0 for none. */
   readonly sums: number;
   /** A centroid reads the record positions; every other kind its own input column. */
   readonly input: 'positions' | 'column';

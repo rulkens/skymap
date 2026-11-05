@@ -31,6 +31,8 @@ import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../../../src/layers/galaxyCatalog/@types/BiasMode';
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import { Source } from '../../../../../src/data/source';
+import type { GalaxyCatalogFormat } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogFormat';
+import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
@@ -43,6 +45,8 @@ function baseProps() {
     title: 'Galaxies',
     visibleCatalogs: ALL_ON,
     onToggleSource: vi.fn<(source: SourceType, visible: boolean) => void>(),
+    formats: { [Source.Glade]: 'octree' } as Partial<Record<SourceType, GalaxyCatalogFormat>>,
+    onFormatChange: vi.fn<(source: GalaxyCatalogSourceType, format: GalaxyCatalogFormat) => void>(),
     pointSize: 2.5,
     onPointSizeChange: vi.fn<(v: number) => void>(),
     depthFadeEnabled: true,
@@ -108,6 +112,24 @@ describe('GalaxiesSection', () => {
 
       expect(onToggleSource).toHaveBeenCalledOnce();
       expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, false);
+    });
+
+    it('choosing Flat files dispatches the format change for GLADE; rows without an octree show no choice', () => {
+      const onFormatChange =
+        vi.fn<(source: GalaxyCatalogSourceType, format: GalaxyCatalogFormat) => void>();
+      const props = { ...baseProps(), onFormatChange };
+      const { container } = render(createElement(GalaxiesSection, props));
+
+      const selects = container.querySelectorAll<HTMLSelectElement>(
+        'select[aria-label$=" format"]',
+      );
+      expect(selects).toHaveLength(1);
+      expect(selects[0]!.getAttribute('aria-label')).toBe('GLADE format');
+      expect(selects[0]!.value).toBe('octree');
+
+      fireEvent.change(selects[0]!, { target: { value: 'skmp' } });
+      expect(onFormatChange).toHaveBeenCalledOnce();
+      expect(onFormatChange).toHaveBeenCalledWith(Source.Glade, 'skmp');
     });
 
     it('calls onPointSizeChange with the stepped value on a keyboard nudge', () => {

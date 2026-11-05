@@ -1,6 +1,6 @@
 /**
  * GalaxiesSectionContainer — store boundary for the Galaxies settings section:
- * reads five settings selectors plus `selectSourceCounts`, wraps five dispatch
+ * reads six settings selectors plus `selectSourceCounts`, wraps five dispatch
  * calls in `useCallback` (all keyed on `[dispatch]` only — invariant, so each
  * handler has stable identity and the presentational child's `memo` bails
  * correctly). `GalaxiesSection` itself imports nothing from `store/`/`state/`.
@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import {
   selectVisibleCatalogs,
   selectGalaxyCatalogSize,
+  selectGalaxyCatalogFormats,
   selectDepthFade,
   selectGalaxySbScale,
   selectGalaxySbMax,
@@ -22,6 +23,7 @@ import { selectSourceCounts } from '../../../../state/engine/selectors';
 import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogSize,
+  setGalaxyCatalogFormat,
   setDepthFade,
   setGalaxySbScale,
   setGalaxySbMax,
@@ -32,6 +34,7 @@ import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 import type { BiasMode as BiasModeT } from '../../@types/BiasMode';
 import type { LayerMainSectionProps } from '../../../../@types/engine/layer/LayerMainSectionProps';
+import type { GalaxyCatalogFormat } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
 
 function GalaxiesSectionContainer({ title }: LayerMainSectionProps): React.ReactElement {
   const dispatch = useAppDispatch();
@@ -42,6 +45,7 @@ function GalaxiesSectionContainer({ title }: LayerMainSectionProps): React.React
   const sourceCounts = useAppSelector(selectSourceCounts);
 
   const visibleCatalogs = useAppSelector(selectVisibleCatalogs);
+  const formats = useAppSelector(selectGalaxyCatalogFormats);
   const pointSize = useAppSelector(selectGalaxyCatalogSize);
   const depthFadeEnabled = useAppSelector(selectDepthFade);
   const biasMode = useAppSelector(selectBiasMode);
@@ -53,6 +57,12 @@ function GalaxiesSectionContainer({ title }: LayerMainSectionProps): React.React
   const onToggleSource = useCallback(
     (source: GalaxyCatalogSourceType, enabled: boolean) =>
       dispatch(setGalaxyCatalogVisible({ id: galaxyCatalogIdOf(source), enabled })),
+    [dispatch],
+  );
+
+  const onFormatChange = useCallback(
+    (source: GalaxyCatalogSourceType, format: GalaxyCatalogFormat) =>
+      dispatch(setGalaxyCatalogFormat({ source, format })),
     [dispatch],
   );
 
@@ -91,6 +101,8 @@ function GalaxiesSectionContainer({ title }: LayerMainSectionProps): React.React
       visibleCatalogs={visibleCatalogs}
       onToggleSource={onToggleSource}
       sourceCounts={sourceCounts}
+      formats={formats}
+      onFormatChange={onFormatChange}
       pointSize={pointSize}
       onPointSizeChange={onPointSizeChange}
       depthFadeEnabled={depthFadeEnabled}

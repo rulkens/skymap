@@ -1,5 +1,6 @@
 import type { OctreeChunkHeader } from '../../@types/octree/OctreeChunkHeader';
 import type { OctreeIndexHeader } from '../../@types/octree/OctreeIndexHeader';
+import type { OctreeInfoHeader } from '../../@types/octree/OctreeInfoHeader';
 import {
   OCTREE_HEADER_BYTES_OFFSET,
   OCTREE_JSON_OFFSET,
@@ -7,13 +8,12 @@ import {
   OCTREE_VERSION_OFFSET,
 } from './octreeFormat';
 
-const REGENERATE = 'please regenerate via "npm run build-stars"';
+const REGENERATE = 'please regenerate it by re-running the bake that wrote it';
 
 /** Reads the framing only; a wrong magic or version is a stale file, never a misread. */
-export function readOctreeHeader<H extends OctreeIndexHeader | OctreeChunkHeader>(
-  buf: ArrayBuffer,
-  magic: string,
-): { header: H; nodeTableOffset: number } {
+export function readOctreeHeader<
+  H extends OctreeIndexHeader | OctreeChunkHeader | OctreeInfoHeader,
+>(buf: ArrayBuffer, magic: string): { header: H; nodeTableOffset: number } {
   const bytes = new Uint8Array(buf);
   const got = String.fromCharCode(...bytes.subarray(0, magic.length));
   if (got !== magic) {

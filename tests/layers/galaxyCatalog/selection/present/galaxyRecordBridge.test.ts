@@ -60,6 +60,24 @@ describe('galaxyRecordBridge', () => {
     expect(bridge.row(Source.Glade, 4)).toEqual(rowAt(4));
   });
 
+  it('a rejected lookup is not remembered: the next ask looks again', async () => {
+    const loadRow = vi
+      .fn<GalaxyRecordSource['loadRow']>()
+      .mockReturnValueOnce(Promise.reject(new Error('decode')))
+      .mockReturnValueOnce(Promise.resolve(rowAt(4)));
+    const bridge = galaxyRecordBridge(
+      new Map([[Source.Glade, fakeSource(Source.Glade, { loadRow })]]),
+    );
+
+    expect(bridge.row(Source.Glade, 4)).toBeNull();
+    await flush();
+    expect(bridge.row(Source.Glade, 4)).toBeNull();
+    await flush();
+
+    expect(bridge.row(Source.Glade, 4)).toEqual(rowAt(4));
+    expect(loadRow).toHaveBeenCalledTimes(2);
+  });
+
   it("a released source's settled row is never served", async () => {
     const pending = deferred<GalaxyRow | null>();
     const records = new Map([

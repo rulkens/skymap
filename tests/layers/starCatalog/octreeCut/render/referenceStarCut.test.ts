@@ -83,7 +83,7 @@ type Over = {
 function run(camCells: Vec3, over: Over = {}) {
   const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
   const camMpc = camCells.map((c) => c * SCALE_UNITS.PC_TO_MPC) as unknown as Vec3;
-  writeOctreeCutUniforms(buf, OCTREE, { slots: 0 }, camMpc, {
+  writeOctreeCutUniforms(buf, OCTREE, { nodes: { total: 0, minRun: 1, maxRun: 1 } }, camMpc, {
     refineThreshold: over.threshold ?? 2,
     fadeStep: over.fadeStep ?? 1,
     drawBudget: over.budget ?? 1_000_000,
@@ -298,7 +298,8 @@ function cutOver(
   const camMpc = camCells.map(
     (c) => c * octree.grid.cellEdge * SCALE_UNITS.PC_TO_MPC,
   ) as unknown as Vec3;
-  writeOctreeCutUniforms(buf, octree, { slots }, camMpc, {
+  const nodes = { total: slots * octree.chunkNodeCap, minRun: 1, maxRun: 1 };
+  writeOctreeCutUniforms(buf, octree, { nodes }, camMpc, {
     refineThreshold: over.threshold ?? 2,
     fadeStep: over.fadeStep ?? 1,
     drawBudget: over.budget ?? 1_000_000,
@@ -431,7 +432,7 @@ describe('referenceStarCut over own records and blobs', () => {
     chunk,
   );
   const root = { level: 1, morton: 0, rootRow: 0 };
-  const chunkRows = packOctreeChunkNodes(chunk, [root], { nodeBase: 1, recordBase: 3 }, 2, 0);
+  const chunkRows = packOctreeChunkNodes(chunk, [root], { nodeBase: 1, recordBase: 3 }, 0);
   const poolOf = (resident: boolean) => {
     const pool = new Uint32Array(3 * CUT_NODE_WORDS);
     pool.set(packOctreeCutNodes(octree, 0));

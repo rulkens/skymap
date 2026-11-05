@@ -8,4 +8,6 @@ export type StratifiedOctree = {
   readonly columns: ReadonlyMap<ColumnId, Float32Array>;
   /** 8 rows per node, by octant; −1 where the child is absent. */
   readonly childIndex: Int32Array;
+  /** Per record, in record order: its input row, or `NO_SOURCE_ROW` for a blob. */
+  readonly sourceRows: Uint32Array;
 };

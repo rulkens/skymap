@@ -16,6 +16,7 @@ import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@ty
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import { idleGalaxyOctree } from '../../fixtures/idleGalaxyOctree';
 
 // Same inert fixture as the other `frame` reconcile tests: nothing committed,
 // a no-op planner walk, no selection row — only the disk-work predicate
@@ -23,6 +24,7 @@ import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 function makeRuntime(fading: boolean) {
   return {
     hiResFamous: { committed: () => null },
+    ...idleGalaxyOctree(),
     catalogs: new Map(),
     records: new Map(),
     famousMeta: [],

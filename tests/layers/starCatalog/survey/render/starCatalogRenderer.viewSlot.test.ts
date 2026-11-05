@@ -43,6 +43,9 @@ function mockDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
+const NO_RUNS = { total: 0, minRun: 1, maxRun: 1 };
+const NO_POOL = { slots: 0, records: NO_RUNS, nodes: NO_RUNS };
+
 const CATALOG = {
   records: {
     count: 2,
@@ -76,7 +79,7 @@ describe('starCatalogRenderer viewSlot isolation', () => {
   it('writes each slot camera uniform into a different physical buffer', () => {
     const device = mockDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, CATALOG, 0);
+    renderer.upload(Source.GaiaStars, CATALOG, NO_POOL);
     const pass = {
       setPipeline: vi.fn(),
       setBindGroup: vi.fn(),
@@ -97,7 +100,7 @@ describe('starCatalogRenderer viewSlot isolation', () => {
   it('the leaf and aggregate streams of one view slot write different camera buffers', () => {
     const device = mockDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, CATALOG, 0);
+    renderer.upload(Source.GaiaStars, CATALOG, NO_POOL);
     const pass = {
       setPipeline: vi.fn(),
       setBindGroup: vi.fn(),
@@ -118,7 +121,7 @@ describe('starCatalogRenderer viewSlot isolation', () => {
   // Aggregates draw linear for `star-upsample` to knee; a capture face has no upsample.
   it('picks the kneed pipeline for leaves and capture aggregates, linear for real-view aggregates', () => {
     const renderer = createStarCatalogRenderer(mockDevice(), 'rgba16float');
-    renderer.upload(Source.GaiaStars, CATALOG, 0);
+    renderer.upload(Source.GaiaStars, CATALOG, NO_POOL);
     const setPipeline = vi.fn();
     const pass = {
       setPipeline,

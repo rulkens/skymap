@@ -15,6 +15,7 @@ import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import { idleGalaxyOctree } from '../../fixtures/idleGalaxyOctree';
 
 const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
@@ -30,6 +31,7 @@ function walkInputFor(fade: ReturnType<typeof makeGalaxyCatalogFade>): DiskWalkI
   const runFrame = vi.fn();
   const runtime = {
     hiResFamous: { committed: () => null },
+    ...idleGalaxyOctree(),
     diskPlannerWalk: { runFrame },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
     texturedDisks: { beginFrame: vi.fn(() => ({})), hasFadingContent: () => false },

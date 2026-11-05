@@ -15,18 +15,23 @@ import type { GalaxyCatalogReq } from '../../@types/loading/GalaxyCatalogReq';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
+import type { GalaxyColumns } from '../../@types/data/galaxyCatalog/GalaxyColumns';
+import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 
 import { GALAXY_CATALOG_SOURCE_RECORD } from './sources/galaxyCatalogSourceRecord';
 import { GALAXY_CATALOG_SOURCES } from './sources/galaxyCatalogSources';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, COSMO } from '../../services/engine/frame/slabs';
 
-import { createGalaxyPointRenderer } from './pointSprites/render/galaxyPointRenderer';
+import { createGalaxyFlatPointRenderer } from './pointSprites/render/galaxyFlatPointRenderer';
+import { createGalaxyPooledPointRenderer } from './octree/render/galaxyPooledPointRenderer';
 import { createGalaxyPickRenderer } from './pointSprites/render/galaxyPickRenderer';
 import { createTexturedDiskRenderer } from './disks/textured/render/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from './disks/procedural/render/proceduralDiskRenderer';
 import { wireImpostorSubsystems } from './disks/load/wireImpostorSubsystems';
 import { wireGalaxyCatalogSourceSlot } from './records/load/wireGalaxyCatalogSourceSlot';
+import { wireGalaxyOctreeSlot } from './octree/load/wireGalaxyOctreeSlot';
 import { createFamousGalaxiesMetaSlot } from './famousGalaxies/load/famousGalaxiesMetaSlot';
 import { createPgcAliasSlot } from './aliases/load/pgcAliasSlot';
 import { wireHiResFamousSlot } from './disks/load/wireHiResFamousSlot';
@@ -42,12 +47,22 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   // Same pattern: bumped by every point-slot commit (wireGalaxyCatalogSourceSlot),
   // read by `frame`'s reconciles through the getter below.
   let catalogsVersion = 0;
+  const bumpCatalogsVersion = () => {
+    catalogsVersion += 1;
+  };
+  const chunkStreams = new Map<SourceType, OctreeChunkStream<GalaxyColumns>>();
 
-  const pointRenderer = createGalaxyPointRenderer({
+  const pointRenderer = createGalaxyFlatPointRenderer({
     device,
     targetFormat: HDR_TARGET_FORMAT,
     fadeBgl: deps.fadeBgl,
     sourceBgl: deps.sourceBgl,
+    focusBgl: deps.focusBgl,
+  });
+
+  const pooledPointRenderer = createGalaxyPooledPointRenderer({
+    device,
+    targetFormat: HDR_TARGET_FORMAT,
     focusBgl: deps.focusBgl,
   });
 
@@ -73,6 +88,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     deps.focusBgl,
     deps.focusUniform.bindGroup,
     SLAB_REVERSED_Z[COSMO]!,
+    pooledPointRenderer.pickLayouts,
   );
 
   const { galaxyAtlas, texturedDisks, proceduralDisks, diskPlannerWalk } = wireImpostorSubsystems({
@@ -89,9 +105,21 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
         catalogs,
         records,
         famousMeta: () => famousMeta,
-        bumpCatalogsVersion: () => {
-          catalogsVersion += 1;
-        },
+        bumpCatalogsVersion,
+      }),
+    ]),
+  );
+  const octreePoints = new Map(
+    GALAXY_CATALOG_SOURCES.filter(
+      (code) =>
+        (GALAXY_CATALOG_SOURCE_RECORD[code] as GalaxyCatalogSourceEntry).octree !== undefined,
+    ).map((code) => [
+      code,
+      wireGalaxyOctreeSlot(GALAXY_CATALOG_SOURCE_RECORD[code], deps, {
+        pooledPointRenderer,
+        chunkStreams,
+        records,
+        bumpCatalogsVersion,
       }),
     ]),
   );
@@ -117,13 +145,17 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     get catalogsVersion() {
       return catalogsVersion;
     },
+    residencyVersion: 0,
     publish: deps.publish,
     focusBindGroup: deps.focusUniform.bindGroup,
     points,
+    octreePoints,
+    chunkStreams,
     famousGalaxiesMeta,
     pgcAlias,
     hiResFamous,
     pointRenderer,
+    pooledPointRenderer,
     pickRenderer,
     texturedDiskRenderer,
     proceduralDiskRenderer,

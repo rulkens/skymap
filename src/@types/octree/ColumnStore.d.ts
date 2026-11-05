@@ -1,5 +1,5 @@
 /**
  * How one record column is stored on the wire. Scalars take their natural size; `u16x3`
- * packs three u16 into 6 bytes.
+ * packs three u16 into 6 bytes; `u64` carries ids (never dequantised).
  */
-export type ColumnStore = 'f32' | 'f16' | 'u8' | 'u16' | 'u32' | 'i8' | 'u16x3';
+export type ColumnStore = 'f32' | 'f16' | 'u8' | 'u16' | 'u32' | 'i8' | 'u16x3' | 'u64';

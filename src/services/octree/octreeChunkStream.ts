@@ -1,7 +1,7 @@
 /**
  * octreeChunkStream — one octree source's chunks over `createTileStreamSubsystem`
- * and a `SlotPool`. Keys are `String(chunk id)`. Chunks nest: a chunk's ref is
- * learnt from its parent's header as that object decodes, a landing whose
+ * and `createOctreeChunkPool` (a slot, a record run and a row run per chunk). Keys are
+ * `String(chunk id)`. Chunks nest: a chunk's ref is learnt from its parent's header as that object decodes, a landing whose
  * parent was evicted in flight is dropped, and evicting a chunk first evicts
  * its resident descendants, so no root bit is ever written into a recycled
  * slot. A failed fetch is remembered here, not only in the tile stream: the
@@ -14,25 +14,17 @@ import type { OctreeChunk } from '../../@types/octree/OctreeChunk';
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 import type { OctreeChunkStreamDeps } from '../../@types/octree/OctreeChunkStreamDeps';
 import type { OctreeChunkRequest } from '../../@types/octree/OctreeChunkRequest';
-import { SlotPool } from '../../utils/cache/slotPool';
+import type { OctreeChunkPool } from '../../@types/octree/OctreeChunkPool';
+import { createOctreeChunkPool } from './createOctreeChunkPool';
 import { createTileStreamSubsystem } from '../engine/subsystems/tileStreamSubsystem';
-import { dataUrl } from '../loading/fetchWithProgress';
+import { fetchDataBytes } from '../loading/fetchDataBytes';
 import { OCTREE_CHUNK_CONCURRENCY } from '../../data/octree/octreeChunkConcurrency';
 import { decodeOctreeChunk } from '../../data/octree/decodeOctreeChunk';
-
-async function fetchChunkBytes(path: string): Promise<ArrayBuffer | null> {
-  try {
-    const res = await fetch(dataUrl(path));
-    return res.ok ? await res.arrayBuffer() : null;
-  } catch {
-    return null;
-  }
-}
 
 export function createOctreeChunkStream<C extends { readonly count: number }>(
   deps: OctreeChunkStreamDeps<C>,
 ): OctreeChunkStream<C> {
-  const { octree, format, fetchChunk = fetchChunkBytes } = deps;
+  const { octree, format, fetchChunk = fetchDataBytes } = deps;
   const residents = new Map<number, { slot: number; chunk: OctreeChunk<C> }>();
   const failed = new Set<number>();
   // Every ref a decoded object has named, by id: immutable bake facts, so kept past eviction.
@@ -50,13 +42,13 @@ export function createOctreeChunkStream<C extends { readonly count: number }>(
     parent === null ? null : residents.get(parent)!.slot;
   let epoch = 0;
 
-  const pool = new SlotPool(deps.slots);
-  const stream = createTileStreamSubsystem<OctreeChunk<C>, SlotPool>({
+  const pool = createOctreeChunkPool(deps.pool, (key) => refs[Number(key)]!);
+  const stream = createTileStreamSubsystem<OctreeChunk<C>, OctreeChunkPool>({
     slots: pool,
     concurrency: OCTREE_CHUNK_CONCURRENCY,
     requestRender: deps.requestRender,
     upload: (_pool, slot, chunk) => {
-      deps.upload(slot, chunk, hostSlotOf(chunk));
+      deps.upload(slot, chunk, hostSlotOf(chunk), pool.runsOf(slot));
       residents.set(chunk.ref.id, { slot, chunk });
       epoch++;
     },
@@ -129,7 +121,13 @@ export function createOctreeChunkStream<C extends { readonly count: number }>(
   }
 
   return {
-    slots: deps.slots,
+    capacity: {
+      slots: deps.pool.slots,
+      records: deps.pool.records.total,
+      nodes: deps.pool.nodes.total,
+      runRecords: (id) => pool.recordRunSize(refs[id]!.records),
+      runNodes: (id) => pool.nodeRunSize(refs[id]!.nodes),
+    },
     update,
     hasFailed: (id) => failed.has(id),
     resident: (id) => residents.get(id)?.chunk ?? null,

@@ -17,6 +17,7 @@ import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceTy
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
 import Slider from '../../../../components/common/Slider/Slider';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
+import type { GalaxyCatalogFormat } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
 
@@ -50,6 +51,10 @@ type GalaxiesSectionProps = {
    * render the toggle without a count rather than a misleading "0".
    */
   sourceCounts?: Partial<Record<GalaxyCatalogSourceType, number>>;
+  /** Each galaxy source's streaming format; a source with an octree row shows its choice. */
+  formats: Partial<Record<GalaxyCatalogSourceType, GalaxyCatalogFormat>>;
+  /** Called when the user picks Octree or Flat files for a source. */
+  onFormatChange: (source: GalaxyCatalogSourceType, format: GalaxyCatalogFormat) => void;
   /** Current point size in pixels. */
   pointSize: number;
   /** Called when the user moves the point-size slider. */
@@ -93,6 +98,8 @@ function GalaxiesSection({
   visibleCatalogs,
   onToggleSource,
   sourceCounts,
+  formats,
+  onFormatChange,
   pointSize,
   onPointSizeChange,
   depthFadeEnabled,
@@ -144,14 +151,27 @@ function GalaxiesSection({
       <CollapsibleSection title="Galaxy catalogs" defaultOpen>
         {TOGGLEABLE_SOURCES.map((s) => {
           const count = sourceCounts?.[s];
+          const entry = GALAXY_CATALOG_SOURCE_RECORD[s];
+          const hasOctree = 'octree' in entry && Object.keys(entry.tierTargets).length > 0;
           return (
             <div className={styles.panelRow} key={s}>
               <label htmlFor={`toggle-source-${s}`}>
-                {GALAXY_CATALOG_SOURCE_RECORD[s].label}
+                {entry.label}
                 {count !== undefined && (
                   <span className={styles.sourceCount}>{count.toLocaleString()}</span>
                 )}
               </label>
+              {hasOctree && (
+                <select
+                  className={styles.modeSelect}
+                  aria-label={`${entry.label} format`}
+                  value={formats[s]}
+                  onChange={(e) => onFormatChange(s, e.target.value as GalaxyCatalogFormat)}
+                >
+                  <option value="octree">Octree</option>
+                  <option value="skmp">Flat files</option>
+                </select>
+              )}
               <input
                 id={`toggle-source-${s}`}
                 type="checkbox"

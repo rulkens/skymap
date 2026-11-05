@@ -6,15 +6,16 @@
  * parent's; so is a row with no chunk root at or below it (`holdsChunkRoot`). A refining chunk root
  * requests its chunk (priority = its best root's proxy) when absent and is touched when resident,
  * so a chunk is only requested under a resident parent; the budget bin it cannot see may decline
- * a fetched chunk (bytes, never correctness). Only the `limit` best, resident or not, are kept: the
- * stream stamps touched chunks before allocating, so a weaker touched resident would hold its slot
- * against a nearer chunk forever. A child ranks below its parent, so the kept set keeps parents.
+ * a fetched chunk (bytes, never correctness). Only the best that fit the pool's slots, records and rows,
+ * resident or not, are kept: the stream stamps touched chunks before allocating, so a weaker touched
+ * resident would hold its run against a nearer chunk forever. A child ranks below its parent.
  */
 import type { OctreeChunk } from '../../@types/octree/OctreeChunk';
 import type { Octree } from '../../@types/octree/Octree';
 import type { OctreeCutSpec } from '../../@types/octree/OctreeCutSpec';
 import type { OctreeChunkPlan } from '../../@types/octree/OctreeChunkPlan';
 import type { OctreeChunkRequest } from '../../@types/octree/OctreeChunkRequest';
+import type { OctreePoolCapacity } from '../../@types/octree/OctreePoolCapacity';
 import { OCTREE_FAMILIES } from '../../data/octree/octreeFamilies';
 import { MAX_GRID_BITS, NO_CHUNK_REF, OCTANTS } from '../../data/octree/octreeFormat';
 import {
@@ -39,8 +40,9 @@ const TOUCHED = -1;
 const FAILED = -2;
 /** A stack entry's object: the index, else a resident chunk's id. */
 const INDEX = -1;
-// The ranked chunks' proxies, sorted natively to find the `limit`-th best without sorting objects.
-let ranked = new Float64Array(0);
+// Candidate positions (wanted, then touched) in rank order, and the kept chunks by id.
+let order = new Int32Array(0);
+let keep = new Uint8Array(0);
 // Depth-first with all children pushed holds at most seven siblings per level plus the root,
 // whichever objects the levels lie in.
 const STACK_DEPTH = 1 + (OCTANTS - 1) * (MAX_GRID_BITS + 1);
@@ -52,14 +54,15 @@ export function planOctreeChunks(
   cut: OctreeCutSpec,
   resident: (id: number) => OctreeChunk<{ readonly count: number }> | null,
   hasFailed: (id: number) => boolean,
-  limit: number,
+  pool: OctreePoolCapacity,
 ): OctreeChunkPlan {
   const chunks = octree.chunkCount;
   if (chunks === 0) return { requests: [], touched: [] };
   if (best.length < chunks) {
     best = new Float64Array(chunks);
     residentBest = new Float64Array(chunks);
-  } else for (const ref of written) best[ref] = residentBest[ref] = 0;
+    keep = new Uint8Array(chunks);
+  } else for (const ref of written) best[ref] = residentBest[ref] = keep[ref] = 0;
   written.length = 0;
 
   // Scalars hoisted out of the loop, which runs every frame the eye moves.
@@ -172,23 +175,31 @@ export function planOctreeChunks(
     }
   }
 
-  let floor = 0;
+  // Strongest first, a tie to the resident chunk (no churn between equals); keep while the slots,
+  // records and rows hold out. The first that overflows ends the set, so no child stays kept past a
+  // parent the set left out.
   const ranks = wanted.length + touched.length;
-  if (ranks > limit) {
-    if (ranked.length < ranks) ranked = new Float64Array(ranks);
-    for (let k = 0; k < wanted.length; k++) ranked[k] = best[wanted[k]!]!;
-    for (let k = 0; k < touched.length; k++) ranked[wanted.length + k] = residentBest[touched[k]!]!;
-    floor = ranked.subarray(0, ranks).sort()[ranks - limit]!;
+  const idOf = (k: number) => (k < wanted.length ? wanted[k]! : touched[k - wanted.length]!);
+  const proxyOf = (k: number) =>
+    k < wanted.length ? best[wanted[k]!]! : residentBest[touched[k - wanted.length]!]!;
+  if (order.length < ranks) order = new Int32Array(ranks);
+  const ranked = order.subarray(0, ranks);
+  for (let k = 0; k < ranks; k++) ranked[k] = k;
+  ranked.sort((a, b) => proxyOf(b) - proxyOf(a) || b - a);
+  let records = 0;
+  let rows = 0;
+  for (let k = 0; k < Math.min(ranks, pool.slots); k++) {
+    const id = idOf(ranked[k]!);
+    records += pool.runRecords(id);
+    rows += pool.runNodes(id);
+    if (records > pool.records || rows > pool.nodes) break;
+    keep[id] = 1;
   }
   // Walk order kept: the stream relies on a parent preceding its children.
-  const kept = touched.filter((ref) => residentBest[ref]! >= floor);
+  const kept = touched.filter((ref) => keep[ref] === 1);
   const requests: OctreeChunkRequest[] = [];
-  for (const ref of wanted) {
-    const priority = best[ref]!;
-    if (priority >= floor) requests.push({ chunkRef: ref, priority });
-  }
+  for (const ref of wanted)
+    if (keep[ref] === 1) requests.push({ chunkRef: ref, priority: best[ref]! });
   requests.sort((a, b) => b.priority - a.priority);
-  // A tie at the floor goes to the resident chunk: no churn between equals.
-  requests.length = Math.min(requests.length, Math.max(0, limit - kept.length));
   return { requests, touched: kept };
 }

@@ -58,11 +58,12 @@ galaxyCatalog/
   @types/                      GalaxyCatalogRuntime.d.ts …
   records/{load,data,present,utils,@types}/
   pointSprites/{render,passes,data,utils,@types}/
+  octree/{load,render,passes,computes,utils,@types}/   (the octree-streamed sources: pool, cut, blobs)
   lod/{data,subsystems,utils,@types}/
   disks/{load, quad/, procedural/, textured/}   (sub-modules, each with its own role folders)
   hiResFamous/{subsystems,load,data,utils,@types}/
   aliases/{load,sagas,utils,@types}/
-  card/ui/  provenance/{ui,utils,data}/  controls/ui/
+  card/ui/  provenance/{ui,utils,data}/  controls/{ui,@types}/
 ```
 
 An exhibit's notes are sections, each `section(kind, data)`. A **section kind**

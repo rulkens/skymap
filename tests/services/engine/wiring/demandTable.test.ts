@@ -153,6 +153,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     famousGalaxiesMeta: namedSlots.famousGalaxiesMeta ?? stubSlot(),
     pgcAlias: namedSlots.pgcAlias ?? stubSlot(),
     hiResFamous: stubSlot(),
+    octreePoints: new Map([[Source.Glade, stubSlot()]]),
   } as unknown as GalaxyCatalogRuntime;
   const densitySlots: Record<string, AssetSlot<unknown, unknown>> = {};
   for (const [, entry] of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
@@ -164,7 +165,8 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     tier: 'medium',
     settings: {
       ...(settings as unknown as EngineSettingsState),
-      galaxyCatalogs: { items: galaxyCatalogItems },
+      // GLADE pinned to its flat files: these tables are about the point rows.
+      galaxyCatalogs: { formats: { [Source.Glade]: 'skmp' }, items: galaxyCatalogItems },
       cosmicWebDensity: { items: volumeFields },
     } as unknown as EngineSettingsState,
     ui: { paletteOpen } as import('../../../../src/@types/ui/UiState').UiState,

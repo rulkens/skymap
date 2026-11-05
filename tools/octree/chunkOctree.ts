@@ -188,6 +188,7 @@ export function chunkOctree(
     index: {
       nodes: index.nodes,
       columns: index.columns,
+      sourceRows: index.sourceRows,
       chunkCapacity: capacity,
       chunkNodeCap: nodeCapacity,
     },
@@ -202,6 +203,7 @@ export function chunkOctree(
         recordBase,
         nodes: object.nodes,
         columns: object.columns,
+        sourceRows: object.sourceRows,
       };
       recordBase += object.records;
       return chunk;
@@ -215,7 +217,12 @@ function gatherRows(
   rows: readonly number[],
   recordsOf: (row: number) => number,
   chunkRefOf: (row: number) => number,
-): { nodes: OctreeNodeTable; columns: Map<ColumnId, Float32Array>; records: number } {
+): {
+  nodes: OctreeNodeTable;
+  columns: Map<ColumnId, Float32Array>;
+  sourceRows: Uint32Array;
+  records: number;
+} {
   const src = tree.nodes;
   const n = rows.length;
   const nodes: OctreeNodeTable = {
@@ -240,17 +247,19 @@ function gatherRows(
     records += recordsOf(row);
   });
 
-  const totalRecords =
-    src.count === 0 ? 0 : src.firstRecord[src.count - 1]! + recordsOf(src.count - 1);
-  const columns = new Map<ColumnId, Float32Array>();
-  for (const [id, values] of tree.columns) {
-    const width = totalRecords === 0 ? 1 : values.length / totalRecords;
-    const out = new Float32Array(records * width);
+  const copy = <T extends Float32Array | Uint32Array>(values: T, out: T, width: number): T => {
     rows.forEach((row, k) => {
       const from = src.firstRecord[row]! * width;
       out.set(values.subarray(from, from + recordsOf(row) * width), nodes.firstRecord[k]! * width);
     });
-    columns.set(id, out);
+    return out;
+  };
+  const totalRecords = tree.sourceRows.length;
+  const columns = new Map<ColumnId, Float32Array>();
+  for (const [id, values] of tree.columns) {
+    const width = totalRecords === 0 ? 1 : values.length / totalRecords;
+    columns.set(id, copy(values, new Float32Array(records * width), width));
   }
-  return { nodes, columns, records };
+  const sourceRows = copy(tree.sourceRows, new Uint32Array(records), 1);
+  return { nodes, columns, sourceRows, records };
 }

@@ -6,8 +6,10 @@
  * (procedural and textured). Once, not per view: the walk touches the whole
  * visible catalog, so it plans over the rig's views (anchor camera `views[0]`,
  * `pxPerRad` = the max over views) rather than five times per dome frame.
- * Its `awake`/`settling` votes report the textured planner's LANDED
- * thumbnail work — never its outstanding fetches; see the result at the tail.
+ * It also takes the octree sources' cut inputs and plans their chunks (the
+ * shared stream driver). Its `awake` vote adds the cut's fade timer; both votes
+ * report the textured planner's LANDED thumbnail work — never its outstanding
+ * fetches; see the result at the tail.
  */
 
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
@@ -18,6 +20,8 @@ import type { GalaxyCatalogSourceType } from './@types/GalaxyCatalogSourceType';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
+import type { GalaxyColumns } from '../../@types/data/galaxyCatalog/GalaxyColumns';
+import type { OctreeDriverStream } from '../../@types/octree/OctreeDriverStream';
 
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './aliases/load/buildAliasIndex';
@@ -25,6 +29,9 @@ import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale
 import { structureMemberCount } from './structureMembership/utils/structureMemberCount';
 import { visibleCatalogsOf } from './records/utils/visibleCatalogsOf';
 import { setsEqual } from '../../utils/set/setsEqual';
+import { galaxyCutInputs } from './octree/render/galaxyCutInputs';
+import { createOctreeFrameDriver } from '../../services/octree/createOctreeFrameDriver';
+import { OCTREE_PLAN_INTERVAL_FRAMES } from '../../data/octree/octreePlanIntervalFrames';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
@@ -39,6 +46,10 @@ export function galaxyCatalogPlanner(
   let memberCountRow: SelectionRow | null = null;
   let memberCountCatalogs: ReadonlySet<GalaxyCatalogId> | null = null;
   let memberCountVersion = -1;
+  // Members are the resident records, so an octree chunk landing or leaving recounts.
+  let memberCountResidency = -1;
+  // The star planner's cadence: a chunk fetch outlasts a few frames either way.
+  const driver = createOctreeFrameDriver<GalaxyColumns>(OCTREE_PLAN_INTERVAL_FRAMES);
 
   return {
     name: 'galaxy-catalog',
@@ -65,11 +76,13 @@ export function galaxyCatalogPlanner(
         selectRow !== memberCountRow ||
         memberCountCatalogs === null ||
         !setsEqual(visibleCatalogs, memberCountCatalogs) ||
-        runtime.catalogsVersion !== memberCountVersion
+        runtime.catalogsVersion !== memberCountVersion ||
+        runtime.residencyVersion !== memberCountResidency
       ) {
         memberCountRow = selectRow;
         memberCountCatalogs = visibleCatalogs;
         memberCountVersion = runtime.catalogsVersion;
+        memberCountResidency = runtime.residencyVersion;
         runtime.publish({
           // Narrowed on the row's own tag, never a structural sniff — only a
           // `structure` arm of a cosmic category (one with galaxy members) is countable.
@@ -89,6 +102,18 @@ export function galaxyCatalogPlanner(
       // for a threshold nudge.
       const cam = views[0]!.cam;
       const pxPerRad = Math.max(...views.map((view) => view.drawPxPerRad));
+
+      const cutInputs = galaxyCutInputs(runtime, state.settings.galaxyCatalogs, fade, views);
+      const streams: OctreeDriverStream<GalaxyColumns>[] = [];
+      for (const [source, slot] of runtime.octreePoints) {
+        const stream = runtime.chunkStreams.get(source);
+        const octree = slot.committed()?.value.octree;
+        const inCut = cutInputs?.cut.sources.some((s) => s.source === source) === true;
+        if (inCut && stream !== undefined && octree !== undefined) streams.push({ stream, octree });
+      }
+      const cutStep = driver.step(snapshot.nowMs, cutInputs?.cut ?? null, streams);
+      runtime.pooledPointRenderer.setFrameCut(cutInputs, cutStep.recut);
+      if (cutStep.residencyChanged) runtime.residencyVersion += 1;
 
       // hiResFamous must run BEFORE the shared disk walk: the textured-disk body
       // folds `hiResFamous.lastOutput.byFamousIdx` into the instances it emits;
@@ -141,7 +166,7 @@ export function galaxyCatalogPlanner(
       // LANDED is real motion, and it is the same content a sky capture must
       // re-bake for, so both votes read it.
       const fading = runtime.texturedDisks.hasFadingContent();
-      return { value: undefined, awake: fading, settling: fading };
+      return { value: undefined, awake: fading || cutStep.awake, settling: fading };
     },
   };
 }

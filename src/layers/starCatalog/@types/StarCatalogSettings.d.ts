@@ -40,10 +40,10 @@ export type StarCatalogSettings = {
    */
   aggregateIntensityCap: number;
   /**
-   * Debug override of the octree chunk pool's size, in slots; null = the
-   * source's per-tier `budgets[tier].slots`.
+   * Debug override of the octree chunk pool's size, in records; null = the
+   * source's per-tier `budgets[tier].poolRecords`.
    */
-  chunkSlotsOverride: number | null;
+  poolRecordsOverride: number | null;
   /**
    * One row per source, each gating only its own stars: `famousStar` the curated
    * map, `sun` the descent's aim point, `sStar` the Galactic-Centre cluster.

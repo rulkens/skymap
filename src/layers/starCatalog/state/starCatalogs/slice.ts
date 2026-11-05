@@ -58,8 +58,8 @@ export const starCatalogsSlice = createSlice({
     setStarCatalogAggregateIntensityCap: (starCatalogs, action: PayloadAction<number>) => {
       starCatalogs.aggregateIntensityCap = action.payload;
     },
-    setStarCatalogChunkSlotsOverride: (starCatalogs, action: PayloadAction<number | null>) => {
-      starCatalogs.chunkSlotsOverride = action.payload;
+    setStarCatalogPoolRecordsOverride: (starCatalogs, action: PayloadAction<number | null>) => {
+      starCatalogs.poolRecordsOverride = action.payload;
     },
     setStarCatalogVisible: (
       starCatalogs,
@@ -86,7 +86,7 @@ export const {
   setStarCatalogExposureMidX,
   setStarCatalogExposureFarX,
   setStarCatalogAggregateIntensityCap,
-  setStarCatalogChunkSlotsOverride,
+  setStarCatalogPoolRecordsOverride,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,
 } = starCatalogsSlice.actions;

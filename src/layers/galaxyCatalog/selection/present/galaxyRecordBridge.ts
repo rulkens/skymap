@@ -50,7 +50,9 @@ export function galaxyRecordBridge(
       if (records.get(record.source) !== record) return;
       for (const listener of listeners) listener(record.source);
     };
-    value.then(settle, () => settle(null));
+    // A rejection is forgotten, unannounced: the next ask retries, and a decode that
+    // throws every time cannot spin the deferring saga.
+    value.then(settle, () => into.delete(key));
     return undefined;
   }
 

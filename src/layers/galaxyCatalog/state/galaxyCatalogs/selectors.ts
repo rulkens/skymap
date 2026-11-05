@@ -2,9 +2,13 @@ import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../../sources/galaxyCatalogSourceRows';
+import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
+import { galaxyCatalogFormatOf } from '../../records/utils/galaxyCatalogFormatOf';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyCatalogSettings } from '../../@types/GalaxyCatalogSettings';
 import type { GalaxyProvenanceSettings } from '../../@types/GalaxyProvenanceSettings';
+import type { GalaxyCatalogFormat } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
+import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
 export const selectRoute = createSelector(
@@ -64,3 +68,17 @@ export const selectVisibleCatalogs = createSelector(
     return visible;
   },
 );
+
+/** Each source's format as the setting, else the row's default (see `galaxyCatalogFormatOf`). */
+export const selectGalaxyCatalogFormats = createSelector(
+  [selectRoute],
+  (route): Partial<Record<GalaxyCatalogSourceType, GalaxyCatalogFormat>> =>
+    Object.fromEntries(
+      GALAXY_CATALOG_SOURCES.map((src) => [src, galaxyCatalogFormatOf(route.formats, src)]),
+    ),
+);
+
+export const selectGalaxyCatalogFormat = (
+  state: Parameters<typeof selectSettings>[0],
+  source: GalaxyCatalogSourceType,
+): GalaxyCatalogFormat => selectGalaxyCatalogFormats(state)[source]!;

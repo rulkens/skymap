@@ -13,6 +13,17 @@ const GALAXY = { label: 'galaxy-catalog', transport: 'wrangler', gzipOnWire: tru
 const STARS = { label: 'star-catalog-v1', transport: 'wrangler', gzipOnWire: false };
 const STARS_V2_INDEX = { label: 'star-catalog-v2-index', transport: 'wrangler', gzipOnWire: true };
 const STARS_V2_CHUNKS = { label: 'star-catalog-v2-chunks', transport: 'bulk', gzipOnWire: true };
+const GLADE_INDEX_INFO = {
+  label: 'galaxy-octree-v1-index-info',
+  transport: 'wrangler',
+  gzipOnWire: true,
+};
+const GLADE_SHARDS = { label: 'galaxy-octree-v1-shards', transport: 'wrangler', gzipOnWire: true };
+const GLADE_CHUNK_INFO = {
+  label: 'galaxy-octree-v1-chunk-info',
+  transport: 'bulk',
+  gzipOnWire: true,
+};
 const SCALAR = { label: 'scalar-field', transport: 'wrangler', gzipOnWire: true };
 const FLOW = { label: 'flowfield', transport: 'wrangler', gzipOnWire: false };
 const FILAMENT = { label: 'filament', transport: 'wrangler', gzipOnWire: true };
@@ -37,6 +48,9 @@ const TRACKED: [string, typeof GALAXY][] = [
   ['star-catalog/v2/stars.bin', STARS_V2_INDEX],
   ['star-catalog/v2/stars.a3f19c2e.bin', STARS_V2_INDEX],
   ['star-catalog/v2/stars/6-12345.a3f19c2e.bin', STARS_V2_CHUNKS],
+  ['galaxy-octree/v1/glade.info.a3f19c2e.bin', GLADE_INDEX_INFO],
+  ['galaxy-octree/v1/glade.pgc-3.a3f19c2e.bin', GLADE_SHARDS],
+  ['galaxy-octree/v1/glade/2-17.info.a3f19c2e.bin', GLADE_CHUNK_INFO],
   ['mcpm-small.scfd', SCALAR],
   ['polyphorm-2mrs-medium.a3f19c2e.scfd', SCALAR],
   ['scalar-field/v3/edenhofer-dust-large.scfd', SCALAR],

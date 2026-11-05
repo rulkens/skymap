@@ -78,7 +78,7 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
   // GPU upload whose worker bake can't be aborted mid-flight).
   //
   // Why this matters: two concurrent commits for the same target (the
-  // galaxyPointRenderer's vertex buffer being the canonical case) race at the
+  // galaxyFlatPointRenderer's vertex buffer being the canonical case) race at the
   // side-effect layer — "last writer wins" — and the slower one is
   // typically the larger (older-tier) one, so without serialization a
   // user toggling medium → large → medium ends up staring at large data

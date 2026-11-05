@@ -17,12 +17,15 @@ import { galaxyCatalogPlanner } from './frame';
 import { galaxyCatalogAssetRows } from './records/load/galaxyCatalogAssetRows';
 import { galaxyCatalogSourceCounts } from './records/load/galaxyCatalogSourceCounts';
 import { galaxyPointSpritesPass } from './pointSprites/passes/galaxyPointSpritesPass';
+import { galaxyAggregatesPass } from './octree/passes/galaxyAggregatesPass';
+import { galaxyCutCompute } from './octree/computes/galaxyCutCompute';
 import { proceduralDisksPass } from './disks/procedural/passes/proceduralDisksPass';
 import { texturedDisksPass } from './disks/textured/passes/texturedDisksPass';
 import { galaxyCatalogSelectionRow } from './selection/present/galaxyCatalogSelectionRow';
 import { produceFamousGalaxyLabels } from './famousGalaxies/present/produceFamousGalaxyLabels';
 import { watchPaletteWakeSaga } from './aliases/sagas/watchPaletteWakeSaga';
 import GalaxiesSectionContainer from './controls/ui/GalaxiesSectionContainer';
+import GalaxyBlobTuningSectionContainer from './controls/ui/GalaxyBlobTuningSectionContainer';
 import GalaxyDetailCard from './card/ui/GalaxyDetailCard/GalaxyDetailCard';
 import CompactCard from './card/ui/CompactCard/CompactCard';
 import GalaxyProvenanceSectionContainer from './provenance/ui/GalaxyProvenanceSectionContainer';
@@ -43,9 +46,11 @@ export const galaxyCatalogLayer = defineLayer({
   destroy,
   passes: (runtime) => [
     galaxyPointSpritesPass(runtime),
+    galaxyAggregatesPass(runtime),
     proceduralDisksPass(runtime),
     texturedDisksPass(runtime),
   ],
+  computes: (runtime) => [galaxyCutCompute(runtime)],
   assets: galaxyCatalogAssetRows,
   sagas: [watchPaletteWakeSaga],
   sourceCounts: galaxyCatalogSourceCounts,
@@ -68,5 +73,6 @@ export const galaxyCatalogLayer = defineLayer({
       slot: 'detailCard',
       content: { type: 'galaxyCatalog', Detail: GalaxyDetailCard, Compact: CompactCard },
     },
+    { slot: 'debug', content: GalaxyBlobTuningSectionContainer },
   ],
 });

@@ -40,6 +40,7 @@ import {
   OCTREE_JSON_OFFSET,
 } from '../../src/data/octree/octreeFormat';
 import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
+import { octreeChunkInfoPath } from '../../src/utils/octree/octreeChunkInfoPath';
 import { octreeChunkPath } from '../../src/utils/octree/octreeChunkPath';
 import { readOctreeHeader } from '../../src/data/octree/readOctreeHeader';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
@@ -99,7 +100,7 @@ async function octreeHeader<H extends OctreeIndexHeader | OctreeChunkHeader>(
   return readOctreeHeader<H>(buf, magic).header;
 }
 
-/** Every chunk path one octree catalog's index names, at every depth, read off headers only. */
+/** Every chunk path (and, for a catalog with a `chunkDirectory`, its info sibling) one octree index names, read off headers only. */
 export async function octreeChunkPaths(
   host: string,
   dataDir: string,
@@ -107,18 +108,23 @@ export async function octreeChunkPaths(
   hashedPath: string,
 ): Promise<string[]> {
   const paths: string[] = [];
+  const index = await octreeHeader<OctreeIndexHeader>(
+    host,
+    dataDir,
+    hashedPath,
+    OCTREE_INDEX_MAGIC,
+  );
   const walk = async (refs: readonly OctreeChunkRef[]) => {
     for (const ref of refs) {
       const path = octreeChunkPath(catalog.family, catalog.name, ref);
       paths.push(path);
+      if (index.chunkDirectory) paths.push(octreeChunkInfoPath(catalog.family, catalog.name, ref));
       await walk(
         (await octreeHeader<OctreeChunkHeader>(host, dataDir, path, OCTREE_CHUNK_MAGIC)).chunks,
       );
     }
   };
-  await walk(
-    (await octreeHeader<OctreeIndexHeader>(host, dataDir, hashedPath, OCTREE_INDEX_MAGIC)).chunks,
-  );
+  await walk(index.chunks);
   return paths;
 }
 

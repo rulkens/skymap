@@ -153,7 +153,7 @@ describe('struct CutUniforms', () => {
     nodeCount: layout.NODE_COUNT_U32_INDEX,
     opacity: layout.OPACITY_FLOAT_INDEX,
     indexNodes: layout.INDEX_NODES_U32_INDEX,
-    chunkNodeCap: layout.CHUNK_NODE_CAP_U32_INDEX,
+    nodePageRows: layout.NODE_PAGE_ROWS_U32_INDEX,
     _pad0: layout.PLANES_FLOAT_INDEX - 3,
     _pad1: layout.PLANES_FLOAT_INDEX - 2,
     _pad2: layout.PLANES_FLOAT_INDEX - 1,
@@ -173,19 +173,24 @@ describe('struct CutUniforms', () => {
       family: 'star',
       grid: { bits: 9, cellEdge: 2, origin: [0, 0, 0] },
       nodes: { count: 5 },
-      chunkNodeCap: 4,
     } as unknown as Octree<StarColumns>;
     const planes = new Float32Array(FLOATS_PER_VIEW).fill(0.75);
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
-    writeOctreeCutUniforms(buf, catalog, { slots: 3 }, [0, 0, 0], {
-      refineThreshold: 0.5,
-      fadeStep: 0.125,
-      drawBudget: 777,
-      worldSpread: 3.5,
-      leafMarginRad: 0.0625,
-      opacity: 0.25,
-      planes,
-    });
+    writeOctreeCutUniforms(
+      buf,
+      catalog,
+      { nodes: { total: 12, minRun: 4, maxRun: 4 } },
+      [0, 0, 0],
+      {
+        refineThreshold: 0.5,
+        fadeStep: 0.125,
+        drawBudget: 777,
+        worldSpread: 3.5,
+        leafMarginRad: 0.0625,
+        opacity: 0.25,
+        planes,
+      },
+    );
     const at = (name: string) => fields.find((f) => f.name === name)!.byteOffset / WORD_BYTES;
     const f32 = new Float32Array(buf);
     const u32 = new Uint32Array(buf);
@@ -196,9 +201,9 @@ describe('struct CutUniforms', () => {
     expect(f32[at('worldSpread')]).toBe(3.5);
     expect(f32[at('leafMarginRad')]).toBe(0.0625);
     expect(u32[at('viewCount')]).toBe(1);
-    expect(u32[at('nodeCount')]).toBe(5 + 3 * 4);
+    expect(u32[at('nodeCount')]).toBe(5 + 12);
     expect(u32[at('indexNodes')]).toBe(5);
-    expect(u32[at('chunkNodeCap')]).toBe(4);
+    expect(u32[at('nodePageRows')]).toBe(4);
     expect(f32[at('opacity')]).toBe(0.25);
     expect(f32[at('planes')]).toBe(0.75);
   });

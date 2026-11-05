@@ -34,6 +34,10 @@ function setup() {
     records: new Map(),
     famousMeta: [],
     catalogsVersion: 0,
+    octreePoints: new Map(),
+    chunkStreams: new Map(),
+    pooledPointRenderer: { setFrameCut: vi.fn() },
+    residencyVersion: 0,
     pgcAlias: { committed: () => null },
     publish,
   } as unknown as GalaxyCatalogRuntime;

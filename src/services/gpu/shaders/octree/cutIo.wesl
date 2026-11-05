@@ -25,8 +25,8 @@ const OWN_OPACITY: u32 = 0u;
 const BLOB_OPACITY: u32 = 1u;
 const LEAF_ENTRY_NODE_MASK: u32 = (1u << LEAF_BLOCK_INDEX_SHIFT) - 1u;
 
-// One pool row, 24 B, array stride 24 (all u32): the index's rows, then each
-// slot's chunkNodeCap rows. A chunk row's parent and firstRecord are written
+// One pool row, 24 B, array stride 24 (all u32): the index's rows, then the
+// chunks' row runs. A chunk row's parent and firstRecord are written
 // pool-absolute on the CPU at upload, so both read as plain indices here.
 //   grid         box min corner in LEAF cells: x | y << 10 | z << 20
 //   firstRecord  first own record; the blob, if any, follows the own records
@@ -55,7 +55,7 @@ const CUT_MAX_VIEWS: u32 = 6u;
 //   16 camFrac vec3<f32>    28 refineThresholdSq
 //   32 fadeStep  36 drawBudget     40 worldSpread  44 leafMarginRad
 //   48 viewCount 52 nodeCount (pool rows)          56 opacity
-//   60 indexNodes 64 chunkNodeCap  68-76 pad
+//   60 indexNodes 64 nodePageRows  68-76 pad
 //   80 planes    6 unit planes per view, camera-relative Mpc
 struct CutUniforms {
   camCell: vec3<i32>,
@@ -70,7 +70,7 @@ struct CutUniforms {
   nodeCount: u32,
   opacity: f32,
   indexNodes: u32,
-  chunkNodeCap: u32,
+  nodePageRows: u32,
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,

@@ -7,7 +7,7 @@ export type OctreeChunkRef = {
   readonly morton: number;
   /** Rows of the parent object (the one listing this ref) that root the chunk, in Morton order. */
   readonly roots: readonly number[];
-  /** `contentHash8` of the encoded object, part of its file name. */
+  /** `contentHash8` of the encoded object (of render then info bytes, for a pair), part of its file names. */
   readonly hash: string;
   /** Raw (uncompressed) object size, a wire-size hint. */
   readonly bytes: number;

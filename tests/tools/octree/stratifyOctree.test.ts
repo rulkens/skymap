@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { mortonEncode3 } from '../../../src/utils/math/mortonEncode3';
+import { NO_SOURCE_ROW } from '../../../tools/octree/noSourceRow';
 import { stratifyOctree } from '../../../tools/octree/stratifyOctree';
 import { fluxFromAbsMag } from '../../../tools/stars/mergeFluxAggregate';
 import { makeOctreeBuildInput, randomOctreeRecords } from '../../fixtures/makeOctreeBuildInput';
@@ -94,5 +95,26 @@ describe('stratifyOctree', () => {
     }
     expect(nodes.firstRecord[0]).toBe(0);
     expect(tree.columns.get('absMag')!.length).toBe(n + blobs);
+  });
+
+  it('sourceRows is a permutation of the input rows plus one NO_SOURCE_ROW per blob', () => {
+    const n = 300;
+    const records = randomOctreeRecords(n, 13, 640, [-6, 14]);
+    const tree = stratifyOctree(makeOctreeBuildInput(records, SMALL_GRID));
+    const { nodes, sourceRows } = tree;
+    const mags = tree.columns.get('absMag')!;
+    let blobs = 0;
+    for (let i = 0; i < nodes.count; i++) {
+      if (nodes.childMask[i] === 0) continue;
+      blobs++;
+      expect(sourceRows[nodes.firstRecord[i]! + nodes.ownCount[i]!]).toBe(NO_SOURCE_ROW);
+    }
+    const real = Array.from(sourceRows).filter((r) => r !== NO_SOURCE_ROW);
+    expect(sourceRows.length - real.length).toBe(blobs);
+    expect(real.sort((a, b) => a - b)).toEqual(records.map((_, r) => r));
+    // The right permutation, not just any: each own record carries its input row's value.
+    sourceRows.forEach((r, rec) => {
+      if (r !== NO_SOURCE_ROW) expect(mags[rec]).toBe(Math.fround(records[r]!.absMag));
+    });
   });
 });

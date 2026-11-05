@@ -30,6 +30,8 @@ export const PRELUDE: FrameSection = {
     { kind: 'compute', name: 'sky-view' },
     // Any line ahead of SCENE's star draws would do; inputs come from the `star-catalog` plan row.
     { kind: 'compute', name: 'star-cut' },
+    // Inputs come from the `galaxy-catalog` plan row; ahead of the captures, whose COSMO roster draws the point sprites.
+    { kind: 'compute', name: 'galaxy-cut' },
     // Sky captures run ahead of every other render step so a same-frame lensing draw
     // can sample a cubemap written this frame. Most frames the face list is empty and
     // this line emits nothing (the lens's zero-dispatch guarantee).
@@ -46,7 +48,7 @@ export const PRELUDE: FrameSection = {
     {
       kind: 'capture',
       captures: APP_SKY_CAPTURE_KEYS,
-      cosmoPasses: ['point-sprites', 'textured-disks'],
+      cosmoPasses: ['point-sprites', 'galaxy-aggregates', 'textured-disks'],
       near0Passes: ['star-aggregates', 'star-catalog'],
       bodyPasses: [],
     },
@@ -92,6 +94,7 @@ export const SCENE: FrameSection = {
       slab: COSMO,
       passes: [
         'point-sprites',
+        'galaxy-aggregates',
         'procedural-disks',
         'textured-disks',
         'cosmic-web-filaments',
