@@ -7,13 +7,11 @@
 
 import { SELECTION_SOURCE_SENTINEL_CODE } from '../../../data/selectionEncoding';
 import type { PickCodeAllocator } from '../../../@types/engine/selection/PickCodeAllocator';
-import type { PickCodeOwner } from '../../../@types/engine/selection/PickCodeOwner';
 
 const MAX_PICK_CODES = SELECTION_SOURCE_SENTINEL_CODE - 1;
 
 export function createPickCodeAllocator(): PickCodeAllocator {
   const codeByKey = new Map<string, number>();
-  const owners: PickCodeOwner[] = [];
   const keyOf = (layer: string, id: string): string => `${layer}\u0000${id}`;
 
   return {
@@ -21,15 +19,15 @@ export function createPickCodeAllocator(): PickCodeAllocator {
       const key = keyOf(layer, pickSourceId);
       const known = codeByKey.get(key);
       if (known !== undefined) return known;
-      if (owners.length >= MAX_PICK_CODES) {
+      if (codeByKey.size >= MAX_PICK_CODES) {
         throw new Error(
           `createPickCodeAllocator: no free pick code for ${layer}/${pickSourceId} (max ${MAX_PICK_CODES})`,
         );
       }
-      owners.push({ layer, pickSourceId });
-      codeByKey.set(key, owners.length);
-      return owners.length;
+      const code = codeByKey.size + 1;
+      codeByKey.set(key, code);
+      return code;
     },
-    ownerOf: (code) => owners[code - 1] ?? null,
+    codeIfAsked: (layer, pickSourceId) => codeByKey.get(keyOf(layer, pickSourceId)) ?? null,
   };
 }

@@ -11,12 +11,6 @@ The pick word is `(code << 26) | localIdx` in one `r32uint` (`src/data/selection
 asserts the cap at boot. A two-channel target (`rg32uint`: code, index) would remove the cap and the 26-bit
 index limit. Do it when the assert fires or an index outgrows 26 bits.
 
-## Stale header in `src/data/source.ts`
-
-It claims codes live "in every .bin and saved selection URL" (neither holds codes) and that Sgr A\* is never
-stamped (`blackHoleMarkerPass.ts:93` stamps it). Moot once the `Source` table is deleted; fix only if that
-stream stalls.
-
 ## `GlobularCluster: 34` names a structure category
 
 `Source.GlobularCluster` is a structure marker category, while the plausible next selection kind is globular

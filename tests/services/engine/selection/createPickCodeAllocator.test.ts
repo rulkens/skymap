@@ -20,10 +20,12 @@ describe('createPickCodeAllocator', () => {
     expect(() => a.codeOf('layerX', 'overflow')).toThrow(/layerX.*overflow/);
   });
 
-  it('ownerOf inverts codeOf', () => {
+  it('codeIfAsked is null until asked, then the code, and never allocates', () => {
     const a = createPickCodeAllocator();
+    expect(a.codeIfAsked('body', 'planet')).toBeNull();
+    expect(a.codeOf('layer', 'first')).toBe(1);
     const code = a.codeOf('body', 'planet');
-    expect(a.ownerOf(code)).toEqual({ layer: 'body', pickSourceId: 'planet' });
-    expect(a.ownerOf(code + 1)).toBeNull();
+    expect(a.codeIfAsked('body', 'planet')).toBe(code);
+    expect(a.codeOf('layer', 'next')).toBe(code + 1);
   });
 });

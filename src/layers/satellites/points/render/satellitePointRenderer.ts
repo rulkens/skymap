@@ -22,7 +22,6 @@ import { NEAR0, SLAB_REVERSED_Z } from '../../../../services/engine/frame/slabs'
 import { pickDepthFormat } from '../../../../services/engine/frame/pickProgram';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import { Source } from '../../../../data/source';
 import {
   OCCLUDER_UNIFORM_BYTES,
   createTrailOcclusionUniforms,

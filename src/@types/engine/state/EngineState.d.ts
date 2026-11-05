@@ -92,7 +92,7 @@ export type EngineState = {
   terrainHeightAt: TerrainHeightAtLookup;
   /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */
   selectionKindRows: readonly SelectionKindRow[];
-  /** The engine's pick-code allocator; `createLayers` builds it, the debug overlay reads `ownerOf`. */
+  /** The engine's pick-code allocator; `createLayers` builds it, the debug overlay reads `codeIfAsked`. */
   pickCodes: PickCodeAllocator | null;
   /** Seeded by `createEngine` because the `renderTargets` GPU-handle row runs before `createLayers`. */
   readonly layerTargets: readonly (readonly RenderTargetSpec[])[];

@@ -21,7 +21,6 @@ import fsPickCode from '../../../../services/gpu/shaders/zoneOfAvoidance/fragmen
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { Source } from '../../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { ZoneOfAvoidanceRenderer } from '../@types/ZoneOfAvoidanceRenderer';

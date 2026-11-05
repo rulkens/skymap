@@ -104,7 +104,8 @@ export function drawPickDebugOverlay(state: EngineState, deps: DrawPickDebugOver
   // overlay rebuilds its bind group per `draw`, so multiple draws into one pass
   // are safe; the premultiplied OVER blend lets nearer slabs composite over
   // farther ones (background texels pack to 0 → alpha 0 → no-op).
-  const gaiaCode = state.pickCodes.codeOf('starCatalog', 'gaiaStars');
+  // 0 is never a real code, so a Gaia-less engine dims nothing.
+  const gaiaCode = state.pickCodes.codeIfAsked('starCatalog', 'gaiaStars') ?? 0;
   for (const pickTex of pickTextures) {
     state.gpu.pickDebugOverlay.draw(overlayPass, pickTex.createView(), gaiaCode);
   }
