@@ -8,7 +8,7 @@
   "scripts": {
     "build": "vite build --mode control && vite build --mode preload && vite build --mode main",
     "brand": "tsx scripts/buildBrandAssets.ts",
-    "dev": "npm run build && electron . --windowed",
+    "dev": "npm run build && tsx scripts/runDev.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "dist": "cd ../.. && vite build --mode desktop && cd packages/desktop && npm run brand && npm run build && electron-builder --mac --win"

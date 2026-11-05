@@ -91,7 +91,6 @@ npm run format      # prettier, only files this branch touches (format:all = who
 npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/skills/refactor)
 npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/refs/move) → .claude/skills/refactor/SKILL.md
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
-npm run desktop     # Electron kiosk + dome app (windowed, dev data) → packages/desktop/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 npm run perf:cpu    # main-thread ms per frame row at the perf poses → tools/perf/README.md
 npm run shot        # screenshot of any deep link → tools/shot/README.md
@@ -100,7 +99,7 @@ npm run phone       # Android phone over USB: serve, open, shot, net, trace → 
 npm run capture-featured # palette-card + cosmic-structure thumbnails → tools/capture/README.md
 npm run capture-structures # structure thumbnails from DSS2 sky cutouts → tools/capture/README.md
 npm run structure-audit  # import matrix + structure/quality audits page → tools/structure-audit/README.md
-npm run desktop     # desktop app in dev: builds main + control page, electron . --windowed → docs/DESKTOP.md
+npm run desktop     # desktop app in dev: builds main + control page, opens it windowed as "Skymap" → docs/DESKTOP.md
 npm run brand -w packages/desktop  # icon set + dmg/installer bitmaps from the brand page (needs Playwright Chromium)
 npm run dist -w packages/desktop   # unsigned dmg + Windows installer into packages/desktop/release/
 ```

@@ -239,7 +239,9 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 
 ## Dev runs
 
-- `npm run desktop` builds the main process and control page, then `electron . --windowed`.
+- `npm run desktop` builds the main process and control page, then runs `scripts/runDev.ts`, which opens
+  the app `--windowed`. On macOS it runs a copy of Electron.app renamed Skymap (cached in
+  `node_modules/.cache/skymap-desktop-dev/`), because the menu bar, Dock and firewall prompt take the bundle's name.
   It reads `public/data` (or `SKYMAP_DATA_DIR`) and serves the repo's root `dist/`, so run
   `vite build --mode desktop` at the root first.
 - `--windowed` gives the sky a normal 1280 x 720 window with DevTools and the full menu.
