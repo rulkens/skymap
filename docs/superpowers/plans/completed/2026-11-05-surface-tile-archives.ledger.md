@@ -52,3 +52,4 @@ CI green on 63b752555 (typecheck · test · format + Workers Builds)
 Ruling (owner, ask cYTV): 16 MiB parts → 0c1ff8b40; re-packed: 169 files (Earth 93, Mars 76), largest 16,776,638 B; 13 levels changed → 33 old R2 keys to delete (scratchpad repack-16mib-keys.txt), owner runs repack-16mib.sh delete → sync → purge
 Task 10: complete on 16 MiB parts — cold 0.62 s @0, 0.47 s deep; 8 concurrent cold max 0.85 s (was 2.44); objects 206 octet-stream; z13.idx served == local; purge confirmed (z7.p0 now 16.7 MB MISS)
 Landing: #1051 squash-merged bad1b787e on owner's word (CI green)
+Ruling (owner, ask FhnF): keep byteRangeOf bytes=-N branch; keep surfaceRequests; bakeHeightLevel tmp→writeFileAtomic fixed in #1055 (6413fd757)
