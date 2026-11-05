@@ -15,7 +15,7 @@ import { STAR_AGGREGATES_TARGET } from '../../../src/layers/starCatalog/survey/r
 import { MILKY_WAY_AGGREGATE_TARGET } from '../../../src/layers/milkyWay/cloud/render/milkyWayAggregateTarget';
 import { cosmicWebDensityLayer } from '../../../src/layers/cosmicWebDensity/layer';
 import { blackHolesLayer } from '../../../src/layers/blackHoles/layer';
-import { SCALE_FADE_BANDS } from '../../../src/data/scaleFadeBands';
+import { SGR_A_STAR_LENSING_BAND } from '../../../src/layers/blackHoles/lensing/data/sgrAStarLensingBand';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
 import { makeCubemapCaptureRuntimes } from '../../helpers/engine/makeCubemapCaptureRuntimes';
@@ -316,7 +316,7 @@ describe('createRenderTargets', () => {
     // row's 50 MB every frame. `goneAt` is the band's close distance;
     // `CAPTURE_ROW_RELEASE_MARGIN` (1.5×, named in
     // `captureRowAllocateWhen.ts`) is the row's own wider release edge.
-    const goneAt = SCALE_FADE_BANDS.sgrAStarLensing.goneAt;
+    const goneAt = SGR_A_STAR_LENSING_BAND.goneAt;
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const canvas = { width: 900, height: 600 };

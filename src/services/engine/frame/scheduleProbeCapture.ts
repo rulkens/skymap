@@ -13,7 +13,7 @@ import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../compositions/appCubemapCaptures';
 import { PROBE_REFRESH_INTERVAL_MS } from '../../../data/rendering/probeRefreshIntervalMs';
 import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
 import { faceViewSpec } from '../../../utils/camera/viewRig/faceViewSpec';
@@ -23,6 +23,7 @@ import { bodySlabRosterIds } from './bodySlabRosterIds';
 import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
+import { ALL_CUBE_FACES } from '../../../data/rendering/cubemapCaptures';
 
 export function scheduleProbeCapture(input: {
   readonly state: EngineState;
@@ -52,7 +53,7 @@ export function scheduleProbeCapture(input: {
   if (subject === null || ctx.snapshot.nowMs - refreshedAtMs < PROBE_REFRESH_INTERVAL_MS)
     return null;
 
-  const row = CUBEMAP_CAPTURES.probe;
+  const row = APP_CUBEMAP_CAPTURE_REGISTRY.probe;
   const bodyStates = sceneBodyStates(state, ctx);
   const eyeMpc = bodyStates.get(subject.id)!.positionMpc;
   const hostId = meshBodySlabHostId(subject.id);

@@ -22,7 +22,7 @@ import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { Source } from '../../../../src/data/source';
-import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../src/compositions/appCubemapCaptures';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
@@ -321,7 +321,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
   };
   const CAPTURE_LAST_SIM_DAYS = 2460000.0;
   const CAPTURE_EYE_MPC: Readonly<Vec3> = [12, -34, 56];
-  // Stands in for a capture row's `nearMpc`/`viewSlotBase` (CUBEMAP_CAPTURES.sgrAStar).
+  // Stands in for a capture row's `nearMpc`/`viewSlotBase` (APP_CUBEMAP_CAPTURE_REGISTRY.sgrAStar).
   const CAPTURE_NEAR_MPC = 0.1 * SCALE_UNITS.AU_TO_MPC;
   const CAPTURE_VIEW_SLOT_BASE = 1;
 
@@ -609,7 +609,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     const capture = cubemapCaptureFrame({
       state: makeCaptureState(),
       eyeMpc: voyager.positionMpc,
-      nearMpc: CUBEMAP_CAPTURES.probe.nearMpc,
+      nearMpc: APP_CUBEMAP_CAPTURE_REGISTRY.probe.nearMpc,
       nowMs: 0,
       axes: voyager.orientation,
       bodyStates,

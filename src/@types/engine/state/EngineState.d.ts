@@ -57,7 +57,7 @@ export type EngineState = {
   fadesAnimating: boolean;
   /** Seeded with placeholders in `engine.ts`, filled by `wireInput`'s bootstrap seed. */
   cameraRuntime: CameraRuntime;
-  /** Per-`CUBEMAP_CAPTURES`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky row's `allocateWhen`. */
+  /** Per-`APP_CUBEMAP_CAPTURE_REGISTRY`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky row's `allocateWhen`. */
   cubemapCaptures: CubemapCaptureRuntimes;
   /** Bumped per galaxy-catalog commit (`wireGalaxyCatalogSourceSlot` is the sole writer); `scheduleSkyCaptures`' re-bake key. */
   contentVersion: number;

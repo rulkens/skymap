@@ -32,6 +32,7 @@ const files = [
   ...sourceFilesUnder('src'),
   ...sourceFilesUnder('tools'),
   ...sourceFilesUnder('packages/website/src'),
+  ...sourceFilesUnder('packages/move-files/src'),
 ];
 expect(files.length).toBeGreaterThan(0);
 

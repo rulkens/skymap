@@ -15,7 +15,7 @@ import type { MeshResources } from '../../../../@types/rendering/MeshResources';
 import type { MeshProbe } from '../../../../@types/rendering/MeshProbe';
 import type { MeshAsset } from '../../../../@types/data/mesh/MeshAsset';
 import { MESH_BODY_UNIFORM_BYTES } from '../../../../data/mesh/meshBodyUniformLayout';
-import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../compositions/appCubemapCaptures';
 import { MESH_TEXTURE_SLOTS } from '../../../../data/mesh/meshTextureSlots';
 import { MESH_VERTEX_SLOTS } from '../../../../data/mesh/meshVertexSlots';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
@@ -216,7 +216,7 @@ export function createMeshBodyRenderer(init: {
   // renders the mips below it, so both textures are colour/depth attachments
   // as well as sampled. The chain runs to 1 px: its last mip is the
   // roughness-1 level the fragment's diffuse term reads.
-  const probeFaceSizePx = CUBEMAP_CAPTURES.probe.faceSizePx;
+  const probeFaceSizePx = APP_CUBEMAP_CAPTURE_REGISTRY.probe.faceSizePx;
   const probeMipLevelCount = mipLevelCount(probeFaceSizePx, probeFaceSizePx);
 
   function mintProbe(id: string): MeshProbe {

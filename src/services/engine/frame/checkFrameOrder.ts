@@ -16,7 +16,7 @@ import type { FrameContentPlanner } from '../../../@types/engine/frame/FrameCont
 import type { FrameSection } from '../../../@types/engine/frame/FrameSection';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
 import type { RenderTargetSpec } from '../../../@types/engine/frame/RenderTargetSpec';
-import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../compositions/appCubemapCaptures';
 import { rosterPassNames } from '../../../utils/render/rosterPassNames';
 
 type StepFacts = {
@@ -48,7 +48,7 @@ const STEP_FACTS: {
     // a declared render-target row; a bogus key is already a typecheck error.
     // Only a sky row names one — a probe's faces are its subject's own cube.
     targets: spec.captures.flatMap((key) => {
-      const row = CUBEMAP_CAPTURES[key];
+      const row = APP_CUBEMAP_CAPTURE_REGISTRY[key];
       return row.kind === 'sky' ? [row.target] : [];
     }),
   }),

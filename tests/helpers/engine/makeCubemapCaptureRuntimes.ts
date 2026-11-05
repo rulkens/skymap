@@ -8,13 +8,13 @@
 import type { CubemapCaptureRuntimes } from '../../../src/@types/engine/state/CubemapCaptureRuntimes';
 import type { SkyCaptureKey } from '../../../src/@types/rendering/SkyCaptureKey';
 import type { SkyCaptureRuntime } from '../../../src/@types/engine/state/SkyCaptureRuntime';
-import { SKY_CAPTURE_KEYS } from '../../../src/data/rendering/cubemapCaptures';
+import { APP_SKY_CAPTURE_KEYS } from '../../../src/compositions/appCubemapCaptures';
 
 export function makeCubemapCaptureRuntimes(
   overrides: { readonly [K in SkyCaptureKey]?: Partial<SkyCaptureRuntime> } = {},
 ): CubemapCaptureRuntimes {
   const sky = Object.fromEntries(
-    SKY_CAPTURE_KEYS.map((key) => [
+    APP_SKY_CAPTURE_KEYS.map((key) => [
       key,
       {
         lastBandActive: false,

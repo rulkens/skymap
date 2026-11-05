@@ -8,10 +8,11 @@
  */
 
 import type { CubemapCaptureKey } from '../../../../@types/rendering/CubemapCaptureKey';
-import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../compositions/appCubemapCaptures';
 import type { FrameInputs } from '../expandFrameOrder';
 import { NEAR0 } from '../slabs';
 import { SLAB_ROW_CEILING } from './slabRowCeiling';
+import { ALL_CUBE_FACES } from '../../../../data/rendering/cubemapCaptures';
 
 export const MAX_FRAME_INPUTS: FrameInputs = {
   tone: { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 },
@@ -22,12 +23,12 @@ export const MAX_FRAME_INPUTS: FrameInputs = {
   // sized off the registry, so a second capture row needs no edit here. A
   // probe face may draw its subject's host, which can sit in any body row.
   captureFaces: new Map(
-    (Object.keys(CUBEMAP_CAPTURES) as readonly CubemapCaptureKey[]).map((key) => [
+    (Object.keys(APP_CUBEMAP_CAPTURE_REGISTRY) as readonly CubemapCaptureKey[]).map((key) => [
       key,
       ALL_CUBE_FACES.map((face) => ({
         face,
         bodySlabs:
-          CUBEMAP_CAPTURES[key].kind === 'probe'
+          APP_CUBEMAP_CAPTURE_REGISTRY[key].kind === 'probe'
             ? Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2)
             : [],
       })),
