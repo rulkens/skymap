@@ -26,7 +26,6 @@ export function collectSurfaceTiles(imagesDir: string, manifestKey: string): R2U
   const products = new Set(bands.flatMap((band) => Object.keys(band.builtFrom)));
   for (const product of products as Set<SurfaceTileProduct>) {
     const ranged = bands.filter((band) => band.builtFrom[product] !== undefined);
-    if (ranged.length === 0) continue;
     const lo = Math.min(...ranged.map((band) => band.min));
     const hi = Math.max(...ranged.map((band) => band.max));
     for (let z = lo; z <= hi; z++) {

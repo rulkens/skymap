@@ -1,6 +1,6 @@
 # Surface tile archives Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Executed under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking. Executed under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`.
 
 **Goal:** Earth and Mars surface tiles (albedo + DEM height) are read from per-level `.idx` + `.pack` archives with HTTP Range, so ~70k R2 objects become ~125.
 
@@ -11,7 +11,7 @@
 
 **Tech Stack:** TypeScript, Vitest, Node `fs`/`http`, Playwright (loadtime), rclone (sync).
 
-**Spec:** `docs/superpowers/specs/2026-11-05-surface-tile-archives-design.md`. Read it first. The byte tables there are the format contract.
+**Spec:** `docs/superpowers/specs/completed/2026-11-05-surface-tile-archives-design.md`. Read it first. The byte tables there are the format contract.
 
 ## Global Constraints
 
@@ -47,20 +47,20 @@
 **Interfaces:**
 - Produces: `LoadMilestones.firstSurfaceTile?: number` (ms) and `LoadMilestones.surfaceRequests?: number`. The README milestone table gains both rows.
 
-- [ ] **Step 1: Add the two fields and record them.**
+- [x] **Step 1: Add the two fields and record them.**
   - `firstSurfaceTile`: the first finished response whose URL matches `/-tiles\/v\d+\/albedo\/.+\.(webp|pack)$/` with status 200 or 206.
   - `surfaceRequests`: every request under `/(earth|mars)-tiles\/v\d+\//` before `loaded` or the timeout: tiles, indexes, parts and 404s.
   - Both URL shapes count, so the before and after runs compare.
-- [ ] **Step 2: Pick the deep link.** It must frame Earth close enough that z ≥ 5 albedo streams, for example `#focus=body-earth` plus a camera range. Confirm with `--filmstrip`, and write the link into the README's example list.
-- [ ] **Step 3: Baseline loadtime.**
+- [x] **Step 2: Pick the deep link.** It must frame Earth close enough that z ≥ 5 albedo streams, for example `#focus=body-earth` plus a camera range. Confirm with `--filmstrip`, and write the link into the README's example list.
+- [x] **Step 3: Baseline loadtime.**
   - Run: `npm run loadtime -- --rebuild --profile 3g --profile fast-4g --link '<link>'`
   - Expected: both profiles print `firstSurfaceTile` and `surfaceRequests`.
   - Save stdout to `.superpowers/sdd/2026-11-05-surface-tile-archives/baseline-loadtime.txt`.
-- [ ] **Step 4: Baseline perf.**
+- [x] **Step 4: Baseline perf.**
   - Start this worktree's dev server (`/dev`) and read its `Local:` port.
   - Run: `npm run perf -- --url http://localhost:<port> --scenario earth-surface --scenario mars-jezero-146km`. Check `tools/perf/README.md` for the exact scenario flag.
   - Save it to `baseline-perf.txt` beside the loadtime file.
-- [ ] **Step 5: Commit.** `git commit -m "loadtime: first surface tile and surface request count"`
+- [x] **Step 5: Commit.** `git commit -m "loadtime: first surface tile and surface request count"`
 
 ### Task 2 (PREP): tile fetchers read from a `SurfaceTileSource`
 
@@ -88,16 +88,16 @@ export async function fetchHeightTile(tile: SurfaceTileId, source: SurfaceTileSo
 
 - The atlas record gains `readonly source: SurfaceTileSource`, built in `engage` from `manifest.prefix`. It keeps `prefix`, because residency keys still use `surfaceTilePath(tile, prefix)`.
 
-- [ ] **Step 1: Write `createLooseTileSource`.**
+- [x] **Step 1: Write `createLooseTileSource`.**
   - It moves the fetch out of both fetchers: the URL from `surfaceTilePath`, the deadline, `!res.ok` → `null`, and a catch → `null`.
   - The albedo fetcher's `content-type` `image/` check moves into the loose source as is. It goes away with the loose source in Task 6.
-- [ ] **Step 2: Fetchers take `source` and keep only decoding.**
+- [x] **Step 2: Fetchers take `source` and keep only decoding.**
   - Albedo decodes `new Blob([bytes], { type: 'image/webp' })` with `premultiplyAlpha: 'none'`.
   - Height keeps its SHGT, decode and size checks.
-- [ ] **Step 3: The stream builds the source at engage and passes it at :203 and :226.**
-- [ ] **Step 4: Verify.** Run `npm test -- tests/layers/body/surfaceTiles && npm run typecheck:fast`. Expected: PASS.
-- [ ] **Step 5: Visual sanity.** Shoot `npm run shot -- '<earth link from Task 1>' --url http://localhost:<port>`. Tiles render as before.
-- [ ] **Step 6: Commit on its own.** `git commit -m "refactor(surfaceTiles): fetchers read bytes from a SurfaceTileSource"`
+- [x] **Step 3: The stream builds the source at engage and passes it at :203 and :226.**
+- [x] **Step 4: Verify.** Run `npm test -- tests/layers/body/surfaceTiles && npm run typecheck:fast`. Expected: PASS.
+- [x] **Step 5: Visual sanity.** Shoot `npm run shot -- '<earth link from Task 1>' --url http://localhost:<port>`. Tiles render as before.
+- [x] **Step 6: Commit on its own.** `git commit -m "refactor(surfaceTiles): fetchers read bytes from a SurfaceTileSource"`
 
 ### Task 3: archive format: constants, path, key, encode, decode, lookup
 
@@ -138,7 +138,7 @@ export function findSurfaceTileArchiveEntry(index: SurfaceTileArchiveIndex, key:
 
 - Header and entry layout exactly as the spec's tables. The key is written as a low u32 at entry+0 and a high u16 at entry+4.
 
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
 
 ```ts
 it('round-trips the deepest z19 key exactly', () => {
@@ -161,10 +161,10 @@ it('names index and parts', () => {
 });
 ```
 
-- [ ] **Step 2: Run it.** `npm test -- tests/layers/body/surfaceTiles/format/utils/surfaceTileArchive`. Expected: FAIL (modules missing).
-- [ ] **Step 3: Implement.** Morton above 32 bits uses arithmetic (`* 2 ** n`), not `<<`.
-- [ ] **Step 4: Run it.** Expected: PASS.
-- [ ] **Step 5: Commit.** `git commit -m "surfaceTiles: archive index format"`
+- [x] **Step 2: Run it.** `npm test -- tests/layers/body/surfaceTiles/format/utils/surfaceTileArchive`. Expected: FAIL (modules missing).
+- [x] **Step 3: Implement.** Morton above 32 bits uses arithmetic (`* 2 ** n`), not `<<`.
+- [x] **Step 4: Run it.** Expected: PASS.
+- [x] **Step 5: Commit.** `git commit -m "surfaceTiles: archive index format"`
 
 ### Task 4: pack step in the bake
 
@@ -187,7 +187,7 @@ export function planSurfaceTileParts(
 export function packSurfaceTileLevels(outDir: string, tilePrefix: string, sortedPaths: readonly string[]): number;
 ```
 
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
 
 ```ts
 it('fills a part to exactly maxPartBytes before opening the next', () => {
@@ -202,20 +202,20 @@ it('is deterministic: a second pack produces identical bytes', …);
 it('deletes a stale higher-numbered part left by an earlier, larger pack', …); // pre-seed z3.p1.pack, pack one small level, expect it gone
 ```
 
-- [ ] **Step 2: Run.** `npm test -- tests/tools/textures/planSurfaceTileParts tests/tools/textures/packSurfaceTileLevels`. Expected: FAIL.
-- [ ] **Step 3: Implement.**
+- [x] **Step 2: Run.** `npm test -- tests/tools/textures/planSurfaceTileParts tests/tools/textures/packSurfaceTileLevels`. Expected: FAIL.
+- [x] **Step 3: Implement.**
   - Parse each path as `<prefix>/<product>/<z>/<x>/<y>.webp`, sort a level by Morton key, and plan its parts.
   - Write each part and then the index as `*.tmp`, renamed into place.
   - Remove `z<z>.p<k>.pack` for k ≥ partCount.
   - Call it from `bakeAll` after the `index.txt` write. Print `  <N> archive files packed` to stderr.
-- [ ] **Step 4: Run.** Expected: PASS. Then `npm test -- tests/tools/textures/buildSurfaceTiles`. Expected: PASS.
-- [ ] **Step 5: Pack the live sets.**
+- [x] **Step 4: Run.** Expected: PASS. Then `npm test -- tests/tools/textures/buildSurfaceTiles`. Expected: PASS.
+- [x] **Step 5: Pack the live sets.**
   - Run: `npm run build-surface-tiles -- --body earth`, then `-- --body mars`.
   - First confirm from the code path, then from the run's output, that no source raster or tile fetch happens: every tile hits its `existsSync` skip.
   - If sources are read, stop and report. The spec then needs a pack-only entry point.
   - Expected: Earth and Mars print an archive count, ~125 in total. `git status` is clean, since the data is gitignored.
   - Record the counts and the largest part per body in the ledger.
-- [ ] **Step 6: Commit.** `git commit -m "build-surface-tiles: pack each level into .idx + .pack"`
+- [x] **Step 6: Commit.** `git commit -m "build-surface-tiles: pack each level into .idx + .pack"`
 
 ### Task 5: local servers answer Range
 
@@ -233,7 +233,7 @@ export type ByteRange = { readonly start: number; readonly end: number } | 'unsa
 export function byteRangeOf(header: string | undefined, size: number): ByteRange | null;
 ```
 
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
 
 ```ts
 it.each([
@@ -249,10 +249,10 @@ it.each([
 it('serveGzipped answers a Range on a raw data file with 206 and Content-Range', …);
 ```
 
-- [ ] **Step 2: Run.** Expected: FAIL.
-- [ ] **Step 3: Implement.** In `serveGzipped`, the Range branch runs only on the raw (non-gzip) path: 206, `Content-Range: bytes s-e/size`, `Content-Length`, and `createReadStream(file, { start, end })`. Unsatisfiable gives 416 with `Content-Range: bytes */size`.
-- [ ] **Step 4: Run.** Expected: PASS.
-- [ ] **Step 5: Commit.** `git commit -m "serve: answer byte ranges on raw files"`
+- [x] **Step 2: Run.** Expected: FAIL.
+- [x] **Step 3: Implement.** In `serveGzipped`, the Range branch runs only on the raw (non-gzip) path: 206, `Content-Range: bytes s-e/size`, `Content-Length`, and `createReadStream(file, { start, end })`. Unsatisfiable gives 416 with `Content-Range: bytes */size`.
+- [x] **Step 4: Run.** Expected: PASS.
+- [x] **Step 5: Commit.** `git commit -m "serve: answer byte ranges on raw files"`
 
 ### Task 6: archive source replaces the loose source
 
@@ -266,7 +266,7 @@ it('serveGzipped answers a Range on a raw data file with 206 and Content-Range',
 - Consumes: Task 2's `SurfaceTileSource`; Task 3's path, key, decode and find functions.
 - Produces: `export function createArchiveTileSource(prefix: string): SurfaceTileSource;`
 
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
 
 ```ts
 it('reads a tile with one Range request after one index fetch', …);   // 2 fetch calls; 2nd has headers.Range 'bytes=100-149'
@@ -279,22 +279,22 @@ it('returns null when a 206 body length differs from the entry length', …);
 it('returns null when the index has a bad magic', …);
 ```
 
-- [ ] **Step 2: Run.** Expected: FAIL.
-- [ ] **Step 3: Implement.**
+- [x] **Step 2: Run.** Expected: FAIL.
+- [x] **Step 3: Implement.**
   - Keep one `Map<product:z, Promise<SurfaceTileArchiveIndex | null>>`. An index 404 resolves `null` (empty). A rejection deletes the map entry.
   - On a 200, call `res.body?.cancel()` before returning `null`.
   - Both requests use `mode: 'cors'` and the 10 s `AbortSignal.timeout`.
   - URLs via `dataUrl(\`images/${surfaceTileArchivePath(…)}\`)`.
-- [ ] **Step 4: Swap at engage, delete the loose source.** Then `grep -rn createLooseTileSource src tests` is empty.
-- [ ] **Step 5: Verify.**
+- [x] **Step 4: Swap at engage, delete the loose source.** Then `grep -rn createLooseTileSource src tests` is empty.
+- [x] **Step 5: Verify.**
   - `npm test -- tests/layers/body/surfaceTiles && npm run typecheck:fast` gives PASS.
   - A dev-server shot of the Task 1 link shows tiles rendering, and the network shows `.idx` + `.pack` 206s, no `.webp`.
   - Repeat at a Mars Jezero link.
-- [ ] **Step 6: Cross-origin Range against the live edge.**
+- [x] **Step 6: Cross-origin Range against the live edge.**
   - Run the dev server as `VITE_DATA_BASE_URL=https://skymap-data.rulkens.com npm run dev`.
   - In the page console: `fetch('https://skymap-data.rulkens.com/data/_probe/range-probe-64m.bin', { headers: { Range: 'bytes=0-15' }, mode: 'cors' }).then((r) => [r.status, r.headers.get('content-length')])`
   - Expected: `[206, '16']`.
-- [ ] **Step 7: Commit.** `git commit -m "surfaceTiles: read tiles from level archives with Range"`
+- [x] **Step 7: Commit.** `git commit -m "surfaceTiles: read tiles from level archives with Range"`
 
 ### Task 7: sync-r2 uploads archives, refuses overwrites
 
@@ -310,7 +310,7 @@ it('returns null when the index has a bad magic', …);
 - Consumes: Task 3's `decodeSurfaceTileArchiveIndex` and `surfaceTileArchivePath`.
 - Produces: `collectSurfaceTiles(imagesDir: string, manifestKey: string): R2Upload[]`. The signature is unchanged.
 
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
 
 ```ts
 it('returns [] when the manifest is missing', …);
@@ -321,14 +321,14 @@ it('never lists loose tiles', …);                                             
 it('passes --immutable only for a refuseOverwrite group', …);                 // uploadViaRclone args, if that file has a test seam
 ```
 
-- [ ] **Step 2: Run.** Expected: FAIL.
-- [ ] **Step 3: Implement** per the spec's four steps: manifest → bands' min..max per product → idx if present → parts from `partCount`.
-- [ ] **Step 4: Run.** Expected: PASS.
-- [ ] **Step 5: Dry run against the bucket, read-only.**
+- [x] **Step 2: Run.** Expected: FAIL.
+- [x] **Step 3: Implement** per the spec's four steps: manifest → bands' min..max per product → idx if present → parts from `partCount`.
+- [x] **Step 4: Run.** Expected: PASS.
+- [x] **Step 5: Dry run against the bucket, read-only.**
   - Run: `npx tsx tools/deploy/syncR2.ts --dry-run`, if the flag exists. Otherwise print `collectSurfaceTiles(IMAGES_DIR, key).length` for both keys.
   - Expected: Earth and Mars together ~125 files, no `.webp`.
   - If a read-only rclone listing is available, confirm rclone's content type for `.pack` is `application/octet-stream` (`rclone lsjson --metadata` on the probe object). Never write.
-- [ ] **Step 6: Commit.** `git commit -m "sync-r2: upload surface tile archives; refuse overwriting them"`
+- [x] **Step 6: Commit.** `git commit -m "sync-r2: upload surface tile archives; refuse overwriting them"`
 
 ### Task 8: docs
 
@@ -339,31 +339,31 @@ it('passes --immutable only for a refuseOverwrite group', …);                 
   - deleting the loose v11/v2 tiles from R2 after deploy
   - removing the range probe object
 
-- [ ] **Step 1: DATA.md.** The archive layout (link the spec's tables, don't copy them), the pack step, and the rule: **a published prefix is never changed; new tiles mean a new prefix**.
-- [ ] **Step 2: DEPLOY.md.**
+- [x] **Step 1: DATA.md.** The archive layout (link the spec's tables, don't copy them), the pack step, and the rule: **a published prefix is never changed; new tiles mean a new prefix**.
+- [x] **Step 2: DEPLOY.md.**
   - Archives are raw and Range-read, with `refuseOverwrite` → `--immutable`.
   - Before deploy: delete, re-sync, purge. After deploy: a new prefix.
   - Correct the stale "edge-caches nothing" note: `.bin` and `.json` come back MISS then HIT/REVALIDATED.
-- [ ] **Step 3: Commit.** `git commit -m "docs: surface tile archives"`
+- [x] **Step 3: Commit.** `git commit -m "docs: surface tile archives"`
 
 ### Task 9: after numbers + whole-branch gate
 
-- [ ] **Step 1: Loadtime after.** The Task 1 command with `--rebuild`. Save `after-loadtime.txt`.
-- [ ] **Step 2: Perf after.** The Task 1 perf command. Save `after-perf.txt`.
-- [ ] **Step 3: Report the table.** Before vs after: `firstSurfaceTile`, `surfaceRequests` and `loaded` per profile; perf ms for both scenarios; file counts 70,440 → N.
+- [x] **Step 1: Loadtime after.** The Task 1 command with `--rebuild`. Save `after-loadtime.txt`.
+- [x] **Step 2: Perf after.** The Task 1 perf command. Save `after-perf.txt`.
+- [x] **Step 3: Report the table.** Before vs after: `firstSurfaceTile`, `surfaceRequests` and `loaded` per profile; perf ms for both scenarios; file counts 70,440 → N.
   - If `firstSurfaceTile` regresses by more than one round trip (the 3g profile's RTT from `networkProfiles.ts`), or perf regresses beyond noise, **halt** for the owner's ruling.
-- [ ] **Step 4: Gate.** Run `npm test`, `npm run typecheck`, `npm run format`, and `/comment-audit` on touched files. Then the whole-branch review per `sdd-execution.md`.
+- [x] **Step 4: Gate.** Run `npm test`, `npm run typecheck`, `npm run format`, and `/comment-audit` on touched files. Then the whole-branch review per `sdd-execution.md`.
 
 ### Task 10 (after the owner's sync, before merge): live edge probe
 
 Runs only once the owner reports `npm run sync-r2` done. Nothing here writes to R2.
 
-- [ ] **Step 1: Cold vs warm.**
+- [x] **Step 1: Cold vs warm.**
   - Pick the Earth albedo z5 index and its part.
   - Run `range-probe.sh` against them (the session scratchpad script, recreated if gone): a fresh `?b=<random>` cache key for the cold read, the plain key for the warm.
   - Record the TTFB of a 16 KB read at the part's start and its tail.
-- [ ] **Step 2: Concurrency.** Fire 8 concurrent cold Range reads (`curl … &`, one fresh cache key) at different offsets of one part. Record the per-request TTFB and `cf-cache-status`.
-- [ ] **Step 3: Report.** Add the numbers to the PR body beside Task 9's table, for the owner's ruling. Smaller parts are the lever if the cold first tile costs too much.
+- [x] **Step 2: Concurrency.** Fire 8 concurrent cold Range reads (`curl … &`, one fresh cache key) at different offsets of one part. Record the per-request TTFB and `cf-cache-status`.
+- [x] **Step 3: Report.** Add the numbers to the PR body beside Task 9's table, for the owner's ruling. Smaller parts are the lever if the cold first tile costs too much.
 
 ### Coordination: desktop branch
 
