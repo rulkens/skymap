@@ -94,6 +94,8 @@ describe('Milky Way seed fields', () => {
     expect(() =>
       validateStructureSeedEntry(milkyWay({ category: 'nebula', nebulaKind: 'dark' })),
     ).not.toThrow();
-    expect(() => validateStructureSeedEntry(milkyWay({ category: 'gc-cluster' }))).not.toThrow();
+    expect(() =>
+      validateStructureSeedEntry(milkyWay({ category: 'gc-cluster' })),
+    ).not.toThrow();
   });
 });

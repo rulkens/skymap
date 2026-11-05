@@ -25,9 +25,9 @@ describe('starBandPosition', () => {
 
 describe('starDistanceLayer', () => {
   it('doubles each layer outward from the nearest edge, the last taking the rest', () => {
-    expect(
-      [4, 24.9, 25, 49.9, 50, 100, 399, 400, 5000].map((d) => starDistanceLayer(d, 25, 6)),
-    ).toEqual([0, 0, 1, 1, 2, 3, 4, 5, 5]);
+    expect([4, 24.9, 25, 49.9, 50, 100, 399, 400, 5000].map((d) => starDistanceLayer(d, 25, 6))).toEqual([
+      0, 0, 1, 1, 2, 3, 4, 5, 5,
+    ]);
   });
 });
 
