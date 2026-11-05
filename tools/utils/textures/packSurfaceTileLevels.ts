@@ -1,20 +1,14 @@
-import { existsSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import type { KeyedTilePath } from '../../@types/textures/KeyedTilePath';
+import { writeFileAtomic } from '../io/writeFileAtomic';
 import type { SurfaceTileProduct } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
 import { SURFACE_TILE_ARCHIVE_MAX_PART_BYTES } from '../../../src/layers/body/surfaceTiles/archive/data/surfaceTileArchiveFormat';
 import { surfaceTileArchivePath } from '../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 import { surfaceTileMortonKey } from '../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
 import { encodeSurfaceTileArchiveIndex } from './encodeSurfaceTileArchiveIndex';
 import { planSurfaceTileParts } from './planSurfaceTileParts';
-
-type LevelTile = { readonly key: number; readonly path: string };
-
-/** Write-then-rename, so a killed pack never leaves a torn file a reader trusts. */
-function writeAtomic(path: string, bytes: Uint8Array): void {
-  writeFileSync(`${path}.tmp`, bytes);
-  renameSync(`${path}.tmp`, path);
-}
 
 /**
  * packSurfaceTileLevels — writes every (product, z) level's `.p<k>.pack` parts
@@ -27,7 +21,10 @@ export function packSurfaceTileLevels(
   tilePrefix: string,
   sortedPaths: readonly string[],
 ): number {
-  const levels = new Map<string, { product: SurfaceTileProduct; z: number; tiles: LevelTile[] }>();
+  const levels = new Map<
+    string,
+    { product: SurfaceTileProduct; z: number; tiles: KeyedTilePath[] }
+  >();
   for (const path of sortedPaths) {
     if (!path.startsWith(`${tilePrefix}/`)) {
       throw new Error(
@@ -57,10 +54,10 @@ export function packSurfaceTileLevels(
         .filter((_, i) => entries[i]!.part === part)
         .map((t) => readFileSync(join(outDir, t.path)));
       const partPath = join(outDir, surfaceTileArchivePath(tilePrefix, product, z, part));
-      writeAtomic(partPath, Buffer.concat(members));
+      writeFileAtomic(partPath, Buffer.concat(members));
       files++;
     }
-    writeAtomic(
+    writeFileAtomic(
       join(outDir, surfaceTileArchivePath(tilePrefix, product, z)),
       encodeSurfaceTileArchiveIndex(entries, partCount),
     );
