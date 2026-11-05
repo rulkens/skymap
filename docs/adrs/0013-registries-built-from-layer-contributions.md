@@ -67,10 +67,10 @@ Concretely:
   cross-Layer exhibits) are assembly and content, never a per-kind table: `APP_EXHIBIT_REGISTRY` lists
   Layers' exhibit rows, it does not list kinds.
 - **Per-kind facts are fields on the Layer's row, and kind unions are derived.** The fact a
-  per-kind table answers (how a selection kind frames, what halo it draws, which caption tier it
+  per-kind table answers (how a selection kind frames, what halo it draws, which caption priority it
   has, how its id encodes into the URL) is a field on the declaration the Layer already
   contributes for that kind, and core reads the field off the composed row. The closed unions
-  core keys those tables on (`SelectionRef`, `FocusableTarget`, `CaptionKind`, `ExhibitId`,
+  core keys those tables on (`SelectionRef`, `FocusableTarget`, `ExhibitId`,
   `ClipId`, `TourId`) are derived from the composition's declarations, as `ShowKey` already is
   from `APP_VISIBILITY_REGISTRY` (ADR 0012); none stays hand-typed. Where no contract member carries the
   fact yet, the migration adds one, and that widening is sequenced and consented to per member,

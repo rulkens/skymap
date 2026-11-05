@@ -2,7 +2,7 @@
  * produceBlackHoleCaptions — the Galactic Centre caption is often the hole's
  * whole on-screen presence and its click target, so a pick id the Layer's own
  * selection row does not resolve fails silently: hover and click find nothing.
- * (Its caption kind's gates are pinned in `sources/sgrAStar.test.ts`.)
+ * (Its caption's gates are pinned in `sources/sgrAStar.test.ts`.)
  */
 
 import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';

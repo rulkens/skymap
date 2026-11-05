@@ -137,7 +137,7 @@ describe('produceFamousGalaxyLabels', () => {
     expect(anchor[0]).toBeCloseTo(dot[0], 2);
     expect(dot[1] - anchor[1]).toBeCloseTo(liftPx, 2);
     expect(label.fadeAlpha).toBe(1);
-    expect(label.prominencePx).toBeCloseTo(sizePxAt(120, 5), 3);
+    expect(label.declutterPriority).toBeCloseTo(sizePxAt(120, 5), 3);
 
     expect(label.leader).toBeDefined();
     expect(label.leader!.fromWorld).toEqual([5, 0, 0]);

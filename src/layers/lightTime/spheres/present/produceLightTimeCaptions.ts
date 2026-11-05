@@ -14,10 +14,8 @@ import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
 import { sphereSilhouetteTop } from '../../../../utils/math/sphereSilhouetteTop';
-import {
-  CAPTION_PRIORITY,
-  CAPTION_TIER_SCALE,
-} from '../../../../services/engine/presentation/captionPriority';
+import { CAPTION_PRIORITY_SCALE } from '../../../../data/labels/captionPriorityScale';
+import { LIGHT_TIME_CAPTION_PRIORITY } from '../data/lightTimeCaptionPriority';
 import { deriveLightTimeLiveness } from './deriveLightTimeLiveness';
 
 /** Both clamps, so every sphere's caption is the same size on screen. */
@@ -61,7 +59,7 @@ export const produceLightTimeCaptions: LayerScreenLabel<'lightTime'>['produceLab
       alignX: 'center',
       alignY: 'bottom',
       fadeAlpha: opacity,
-      prominencePx: CAPTION_PRIORITY.meshBody * CAPTION_TIER_SCALE,
+      declutterPriority: LIGHT_TIME_CAPTION_PRIORITY * CAPTION_PRIORITY_SCALE,
     });
   });
   return { labels, awake: false };

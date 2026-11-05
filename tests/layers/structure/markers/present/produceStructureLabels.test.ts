@@ -120,10 +120,10 @@ describe('produceStructureLabels', () => {
     ).toEqual(['c1']);
   });
 
-  it('sets prominencePx to the ring apparent radius and never declutters', () => {
+  it('sets declutterPriority to the ring apparent radius and never declutters', () => {
     // Two featured structures at the same position → both labels emitted
     // (no internal declutter; the director de-collides later). Their
-    // prominencePx equals the ring apparent radius.
+    // declutterPriority equals the ring apparent radius.
     const state = makeState();
     state.store.setGroup('anchors', [rec('a'), rec('b')]);
     const out = labelsOf(state, makeCtx(), 'cosmic');
@@ -131,7 +131,7 @@ describe('produceStructureLabels', () => {
     // radius 5 Mpc / 10 Mpc distance × pxPerRad (= halfH/tan(fovY/2) = 540/tan(30°))
     const pxPerRad = 540 / Math.tan((30 * Math.PI) / 180);
     const expected = (5 / 10) * pxPerRad;
-    expect(out.labels[0]!.prominencePx).toBeCloseTo(expected, 3);
+    expect(out.labels[0]!.declutterPriority).toBeCloseTo(expected, 3);
   });
 
   it('fades the label out as the ring grows past the close-approach band', () => {

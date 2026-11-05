@@ -16,6 +16,7 @@ import { composeForegroundCaption } from '../../../../utils/labels/composeForegr
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { BLACK_HOLES } from '../data/blackHoles';
+import { BLACK_HOLE_CAPTION_PRIORITY } from '../data/blackHoleCaptionPriority';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../sources/blackHoleSourceRows';
 import { blackHoleAnchorId } from './blackHoleAnchorId';
 
@@ -39,7 +40,7 @@ export function produceBlackHoleCaptions(): LayerScreenLabel<'blackHole'>['produ
         schwarzschildRadiusM(row.massSolar),
         states.get(blackHoleAnchorId(row))!.positionMpc,
         BLACK_HOLE_CAPTION_TINT,
-        'sgrAStar',
+        BLACK_HOLE_CAPTION_PRIORITY,
         packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),
       );
       return composeForegroundCaption(composeCtx, caption, fade[row.id]);
