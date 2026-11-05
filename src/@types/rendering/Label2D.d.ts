@@ -135,15 +135,15 @@ export type Label2D = {
    */
   readonly alignY?: LabelAlignY;
   /**
-   * On-screen prominence (apparent size, px) used as the declutter sort
-   * key by the `label2DDirector` merge: a ring's apparent radius for a
-   * structure, a galaxy's apparent diameter for a famous label.  When two
-   * labels' measured text rects overlap on screen, the higher
-   * `prominencePx` wins.  The label renderer ignores this field — it exists
-   * only to carry the producer's size signal across the director's
-   * cross-producer declutter.  Absent → treated as 0 (lowest priority).
+   * The declutter sort key of the `label2DDirector` merge: when two labels
+   * collide on screen, the higher number wins.  Size-ranked producers set
+   * apparent size in px (a ring's apparent radius for a structure, a galaxy's
+   * apparent diameter for a famous label); captions set
+   * `priority * CAPTION_PRIORITY_SCALE + clamped size`.  The label renderer
+   * ignores this field — it exists only to carry the producer's rank across
+   * the director's cross-producer declutter.  Absent → treated as 0 (lowest).
    */
-  readonly prominencePx?: number;
+  readonly declutterPriority?: number;
   /**
    * Optional anchor line, drawn from the subject dot up to this label. The
    * director synthesizes one `MarkerLine` per surviving leader-carrying

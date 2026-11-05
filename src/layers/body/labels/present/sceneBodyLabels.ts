@@ -10,7 +10,8 @@
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { ForegroundCaption } from '../../../../services/engine/presentation/foregroundCaption';
+import type { BodyCaption } from '../@types/BodyCaption';
+import { BODY_CAPTION_ROWS } from '../data/bodyCaptionRows';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { compressBrightness } from '../../../../utils/color/compressBrightness';
@@ -32,23 +33,30 @@ const PLANET_TINT_GAMMA = 0.3;
  * Positions come from the caller's `bodyStates` snapshot, so captions follow the sim clock;
  * a paused clock returns the same map by reference and `labelsNearPass` memoises on that.
  */
-export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
+export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): BodyCaption[] {
   return [
-    bodyCaption(
-      SCENE_EARTH,
-      bodyFootprintRadiusM(SCENE_EARTH),
-      bodyStates.get(SCENE_EARTH.id)!.positionMpc,
-      EARTH_TINT,
-      'earth',
-    ),
-    ...SCENE_PLANETS.map((planet) =>
-      bodyCaption(
-        planet,
-        bodyFootprintRadiusM(planet),
-        bodyStates.get(planet.id)!.positionMpc,
-        compressBrightness(planet.albedo, PLANET_TINT_GAMMA),
-        planet.captionKind,
+    {
+      ...bodyCaption(
+        SCENE_EARTH,
+        bodyFootprintRadiusM(SCENE_EARTH),
+        bodyStates.get(SCENE_EARTH.id)!.positionMpc,
+        EARTH_TINT,
+        BODY_CAPTION_ROWS.earth.priority,
       ),
-    ),
+      item: BODY_CAPTION_ROWS.earth.item,
+    },
+    ...SCENE_PLANETS.map((planet) => {
+      const row = BODY_CAPTION_ROWS[planet.captionKind];
+      return {
+        ...bodyCaption(
+          planet,
+          bodyFootprintRadiusM(planet),
+          bodyStates.get(planet.id)!.positionMpc,
+          compressBrightness(planet.albedo, PLANET_TINT_GAMMA),
+          row.priority,
+        ),
+        item: row.item,
+      };
+    }),
   ];
 }

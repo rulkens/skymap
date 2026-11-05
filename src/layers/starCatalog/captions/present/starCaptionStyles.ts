@@ -10,7 +10,8 @@ import type { StarCaptionStyle } from '../@types/StarCaptionStyle';
 import { STAR_MAP_CAPTION_BAND } from '../data/starMapCaptionBand';
 
 export const STAR_CAPTION_STYLES: Readonly<Record<LabelItemOf<'starCatalog'>, StarCaptionStyle>> = {
-  famousStar: { kind: 'star', revealBand: STAR_MAP_CAPTION_BAND },
+  famousStar: { priority: 10, revealBand: STAR_MAP_CAPTION_BAND },
   // One star at the solar system's anchor: its entry band already keys on its own distance.
-  sun: { kind: 'sun' },
+  // Outranks every caption: it is the star map's origin and the descent's aim point.
+  sun: { priority: 40 },
 };

@@ -1,7 +1,7 @@
 /**
  * produceStarCaptions — the star Layer's twin of `produceSceneBodyCaptions`'s
  * tests: candidate math for the curated map and the Sun. Cases specific to
- * the star family (kind routing, pick ids, each caption reading its own item of
+ * the star family (priority routing, pick ids, each caption reading its own item of
  * the handed value) live here; the shared fade-band / occlusion mechanics stay
  * covered once, on core's bodies, in `produceSceneBodyCaptions.test.ts`.
  */
@@ -10,6 +10,7 @@ import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/struct
 import { describe, it, expect } from 'vitest';
 
 import { produceStarCaptions } from '../../../../../src/layers/starCatalog/captions/present/produceStarCaptions';
+import { STAR_CAPTION_STYLES } from '../../../../../src/layers/starCatalog/captions/present/starCaptionStyles';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCENE_SUN } from '../../../../../src/data/bodies/sceneSun';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
@@ -114,27 +115,28 @@ describe('produceStarCaptions', () => {
     expect(alphaOf(0.25, 1)).toBeCloseTo(full * 0.25, 10);
   });
 
-  it('captions every drawn famous star and the Sun with their kinds, and no S-star', () => {
+  it('captions every drawn famous star and the Sun with their priorities, and no S-star', () => {
     // `Label2DProducerOutput` types its labels as the base `Label2D`, but
     // every one this producer emits is built by `bodyCaption` and so carries
-    // `kind` at runtime — the cast states that once, for every case below.
+    // `priority` at runtime — the cast states that once, for every case below.
     const out = produceStarCaptions()(makeState(), makeCtx(EARTH_POS), handed(1))
       .labels as readonly ForegroundCaption[];
 
     // No S-star ever enters: SCENE_S_STARS is 39 rows, so a count this size
     // would be off by 39 if one leaked in.
     expect(out).toHaveLength(SCENE_STARS.length + SCENE_SUN.length);
-    expect(out.filter((l) => l.kind === 'star')).toHaveLength(SCENE_STARS.length);
-    expect(out.filter((l) => l.kind === 'sun')).toHaveLength(SCENE_SUN.length);
+    const { famousStar, sun: sunStyle } = STAR_CAPTION_STYLES;
+    expect(out.filter((l) => l.priority === famousStar.priority)).toHaveLength(SCENE_STARS.length);
+    expect(out.filter((l) => l.priority === sunStyle.priority)).toHaveLength(SCENE_SUN.length);
 
     const proxima = out.find((l) => l.id === PROXIMA_ID)!;
-    expect(proxima.kind).toBe('star');
+    expect(proxima.priority).toBe(famousStar.priority);
     expect(proxima.pickId).toBe(
       packSelection(Source.FamousStar, PROXIMA_INDEX + PICK_SENTINEL_OFFSET),
     );
 
     const sun = out.find((l) => l.id === SUN_ID)!;
-    expect(sun.kind).toBe('sun');
+    expect(sun.priority).toBe(sunStyle.priority);
     expect(sun.pickId).toBe(packSelection(Source.Sun, PICK_SENTINEL_OFFSET));
   });
 

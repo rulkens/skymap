@@ -48,7 +48,7 @@ function baseCaptionsFor(
         bodyFootprintRadiusM(star),
         bodyStates.get(star.id)!.positionMpc,
         star.color,
-        row.kind,
+        row.priority,
         packSelection(row.source, seedIndex + PICK_SENTINEL_OFFSET),
       ),
       revealBand: row.revealBand,

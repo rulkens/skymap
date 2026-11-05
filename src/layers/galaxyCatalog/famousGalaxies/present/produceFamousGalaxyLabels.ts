@@ -33,7 +33,7 @@
  * ### No declutter here — the director owns it
  *
  * Like `produceStructureLabels`, this emits every surviving candidate tagged
- * with a `prominencePx` (the galaxy's apparent diameter); the
+ * with a `declutterPriority` (the galaxy's apparent diameter); the
  * `label2DDirector` declutters across all producers in its merge step.
  *
  * ### Distance-scaled pixel ceiling for near companions
@@ -195,7 +195,7 @@ export function produceFamousGalaxyLabels(
       const distanceMpc = Math.hypot(dx, dy, dz);
 
       // Apparent-size gate: skip below the threshold, smoothstep fade in the
-      // band above. `prominencePx` (the declutter sort key) is the galaxy's
+      // band above. `declutterPriority` (the sort key) is the galaxy's
       // apparent diameter.
       const sizePx = apparentSizePx({
         diameterKpc: p.apparentDiameterKpc,
@@ -203,7 +203,7 @@ export function produceFamousGalaxyLabels(
         pxPerRad: ctx.drawPxPerRad,
       });
       if (sizePx < p.minApparentSizePx) continue;
-      const prominencePx = sizePx;
+      const declutterPriority = sizePx;
       // Distance-scaled ceiling — see `famousLabelMaxPx`'s docblock for why the
       // category's flat 150 px cap can't stand for permanently-near companions
       // like the LMC/SMC. Computed once and reused by both the label object and
@@ -248,7 +248,7 @@ export function produceFamousGalaxyLabels(
         alignY: 'baseline',
         outlineColor: [...style.outlineColor],
         outlineEmFrac: style.outlineEmFrac,
-        prominencePx,
+        declutterPriority,
       };
 
       // Single derivation chain (see `liftedLabelPlacement`): the lift is
