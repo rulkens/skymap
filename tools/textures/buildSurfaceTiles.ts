@@ -33,8 +33,9 @@
  * `<tileRoot>/index.txt` (one path per line: the loose tiles' manifest, and
  * the pack step's input); `<prefix>/<product>/z<z>.idx` + `.p<k>.pack` per
  * level, which are what the deploy collector uploads and the runtime
- * range-reads (the loose tiles stay local). `public/data/` is gitignored — nothing here is
- * committed.
+ * range-reads (the loose tiles stay local). `--pack-only` re-packs the
+ * existing `index.txt` without opening any source. `public/data/` is
+ * gitignored — nothing here is committed.
  */
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -59,6 +60,7 @@ import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { mergeSurfaceTileManifest } from '../utils/textures/mergeSurfaceTileManifest';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { packSurfaceTileLevels } from './utils/packSurfaceTileLevels';
+import { repackSurfaceTiles } from './utils/repackSurfaceTiles';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { bakeHeightLevel } from './bakeHeightLevel';
@@ -603,11 +605,18 @@ function bodyFlag(argv: readonly string[]): SurfaceTileBodyId {
 async function main(): Promise<void> {
   const outDir = resolve('public/data/images');
   const argv = process.argv.slice(2);
-  const { '--dev': dev } = parseFlags(argv, { '--dev': 'bool' });
+  const { '--dev': dev, '--pack-only': packOnly } = parseFlags(argv, {
+    '--dev': 'bool',
+    '--pack-only': 'bool',
+  });
   const product = productFlag(argv);
   const products = new Set<SurfaceTileProduct>(product ? [product] : ['albedo', 'height']);
   const bodyId = bodyFlag(argv);
   const body = SURFACE_BODY_BAKES[bodyId];
+  if (packOnly) {
+    process.stderr.write(`  ${repackSurfaceTiles(outDir, body.tileRoot)} archive files packed\n`);
+    return;
+  }
 
   process.stderr.write(`buildSurfaceTiles: -> ${join(outDir, body.tileRoot)}\n`);
   const bands = await body.bands({ dev });
