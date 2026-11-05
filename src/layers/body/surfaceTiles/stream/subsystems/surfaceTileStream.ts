@@ -32,7 +32,7 @@ import { closeBitmap } from '../../../../../utils/gpu/closeBitmap';
 import { SURFACE_TILE_REGISTRY } from '../../format/data/surfaceTileRegistry';
 import { surfaceTilePath } from '../../format/utils/surfaceTilePath';
 import { fetchSurfaceTileManifest } from '../load/fetchSurfaceTileManifest';
-import { createLooseTileSource } from '../load/createLooseTileSource';
+import { createArchiveTileSource } from '../load/createArchiveTileSource';
 import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 import { fetchSurfaceTileBitmap } from '../load/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../load/fetchHeightTile';
@@ -154,7 +154,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       slotsPerRow: SURFACE_TILE_ATLAS_SIDE / tilePx,
       bodyId,
       prefix: manifest.prefix,
-      source: createLooseTileSource(manifest.prefix),
+      source: createArchiveTileSource(manifest.prefix),
     };
   }
 
