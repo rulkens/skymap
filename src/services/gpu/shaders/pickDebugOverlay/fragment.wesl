@@ -17,11 +17,9 @@ import package::lib::selectionEncoding::SELECTION_LOCAL_IDX_MASK;
 import package::lib::selectionEncoding::SELECTION_SOURCE_SENTINEL_CODE;
 import package::lib::util::hueToRgb;
 
-// Task 7 replaces this with the allocator's code in a uniform; until then it is
-// today's Gaia code (24, Source.GaiaStars), no longer in lib/selectionEncoding.
-const SOURCE_GAIA_STARS: u32 = 24u;
-
 @group(0) @binding(0) var pickTex: texture_2d<u32>;
+// The one pick code drawn dimmed: the Gaia survey's, from the engine's allocator.
+@group(0) @binding(1) var<uniform> dimCode: u32;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
@@ -69,7 +67,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let hash = f32((localIdx * 2654435761u) >> 24u) / 255.0;
   var value = 0.55 + 0.45 * hash;
 
-  // GaiaStars (SOURCE_GAIA_STARS above) is a survey-wide point cloud:
+  // The Gaia survey (dimCode above) is a survey-wide point cloud:
   // thousands of star footprints blanket the overlay, and at the golden-angle
   // value band above they drown out the sparse sources (bodies, famous stars)
   // that this debug view exists to make readable. Dim just this one dense source
@@ -78,7 +76,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // table would be over-engineering for a single outlier — one dense source
   // doesn't warrant enumerating brightness for the self-maintaining golden-angle
   // set.
-  if (srcCode == SOURCE_GAIA_STARS) {
+  if (srcCode == dimCode) {
     value = value * 0.25;
   }
 

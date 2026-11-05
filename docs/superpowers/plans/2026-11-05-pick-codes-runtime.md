@@ -216,9 +216,9 @@ This plan is the **prep PR**; `2026-11-05-selection-kind-facts.md` is the featur
 - Produces: the overlay's uniform block gains `dimCode: u32`; the shader compares against it. The Task 4
   local constant goes.
 
-- [ ] Implement; read the `wesl-shaders` skill first.
-- [ ] Dev server with the pick debug overlay on: Gaia stars still dim; other sources keep distinct colours.
-- [ ] Commit `Pick debug overlay dims Gaia by the allocator's code`.
+- [x] Implement; read the `wesl-shaders` skill first.
+- [x] Dev server with the pick debug overlay on: Gaia stars still dim; other sources keep distinct colours.
+- [x] Commit `Pick debug overlay dims Gaia by the allocator's code`.
 
 ### Task 8: Dense codes; no code is ever persisted
 

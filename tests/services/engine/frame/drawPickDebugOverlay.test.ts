@@ -22,6 +22,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { drawPickDebugOverlay } from '../../../../src/services/engine/frame/drawPickDebugOverlay';
 import type { DrawPickDebugOverlayDeps } from '../../../../src/services/engine/frame/drawPickDebugOverlay';
+import { createPickCodeAllocator } from '../../../../src/services/engine/selection/createPickCodeAllocator';
 
 // ── Stubs ────────────────────────────────────────────────────────────────────
 
@@ -114,9 +115,14 @@ function makeState({
   renderForDebugResult?: readonly GPUTexture[];
 } = {}) {
   const renderForDebug = vi.fn<() => readonly GPUTexture[]>(() => renderForDebugResult);
-  const overlayDraw = vi.fn<(pass: GPURenderPassEncoder, view: GPUTextureView) => void>();
+  const overlayDraw =
+    vi.fn<(pass: GPURenderPassEncoder, view: GPUTextureView, dimCode: number) => void>();
+  // Another Layer asks first, so Gaia's code is not the allocator's first.
+  const pickCodes = createPickCodeAllocator();
+  pickCodes.codeOf('galaxyCatalog', 'sdss');
 
   return {
+    pickCodes,
     settings: {
       debug: { overlays: { 'pick-buffer': pickBufferOn }, renderStrategy: 'auto' },
     },
@@ -195,7 +201,7 @@ describe('drawPickDebugOverlay', () => {
     expect(att.storeOp).toBe('store');
   });
 
-  it('calls pickDebugOverlay.draw with the render pass and the pick texture view', () => {
+  it("calls pickDebugOverlay.draw with the pick texture view and Gaia's allocated code", () => {
     const callLog: string[] = [];
     const deps = makeDeps(callLog);
     const pickTex = makePickTex();
@@ -204,9 +210,10 @@ describe('drawPickDebugOverlay', () => {
 
     const drawSpy = state.gpu.pickDebugOverlay!.draw as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledOnce();
-    const [, viewArg] = drawSpy.mock.calls[0]!;
+    const [, viewArg, dimCode] = drawSpy.mock.calls[0]!;
     // The view is the one createView() returned on the pick texture.
     expect(viewArg).toBe((pickTex.createView as ReturnType<typeof vi.fn>).mock.results[0]!.value);
+    expect(dimCode).toBe(state.pickCodes!.codeOf('starCatalog', 'gaiaStars'));
   });
 
   it('composites every returned texture in one pass, far→near, in order', () => {
