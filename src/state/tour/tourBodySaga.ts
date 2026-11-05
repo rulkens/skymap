@@ -41,6 +41,7 @@ import { computeSceneEntering } from './computeSceneEntering';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { tourStarted, tourEnded } from './tourSlice';
 import { clearSelection } from '../selection/selectionSlice';
+import { pause } from '../time/timeSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { mergeSettingsSnapshot } from '../settings/mergeSettingsSnapshot';
 import { captureSettings } from '../scene/captureSettings';
@@ -78,6 +79,10 @@ export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
   // the tour's. `select` is deliberately NOT restored: like `hover`, it is
   // ephemeral UI state (see `captureScene`).
   yield* put(clearSelection());
+
+  // The clock holds still for the whole run; only a beat's `clockTo` cue moves it. The
+  // bracket captured the viewer's clock before this body ran and puts it back on exit.
+  yield* put(pause({ nowMs: performance.now() }));
 
   try {
     yield* race({

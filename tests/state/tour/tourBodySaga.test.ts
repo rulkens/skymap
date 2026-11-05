@@ -50,6 +50,11 @@ import type { Tour } from '../../../src/@types/animation/tour/Tour';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import { inputGestureStarted } from '../../../src/state/input/inputSlice';
+import { goLive } from '../../../src/state/time/timeSlice';
+import { clockTo } from '../../../src/state/tour/clockTo';
+import { watchClockToSaga } from '../../../src/state/tour/watchClockToSaga';
+import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
+import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -594,5 +599,61 @@ describe('tourBodySaga', () => {
 
     store.dispatch(exitTakeover());
     await flush();
+  });
+
+  // ── (6) the clock: frozen for the run, the viewer's back on exit ─────────
+
+  const ONE_MS_DAYS = 1 / 86_400_000;
+  const LONG_BEAT: BeatData = {
+    enterClip: NARRATION_CLIP,
+    caption: { title: 'B', lines: ['x'] },
+    dwellClip: dwellDrift(9999),
+  };
+
+  it('the tour holds a playing clock still for its whole run', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
+    const { store, sagaMiddleware } = buildStore({ playClip: makeAutoFlyStub() });
+    store.dispatch(goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() }));
+    const at = () => deriveSimDays(store.getState().time, performance.now());
+    const start = at();
+
+    runTour(sagaMiddleware, makeTour([LONG_BEAT, LONG_BEAT]));
+    await vi.advanceTimersByTimeAsync(5_000);
+    store.dispatch(advanceTour());
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(store.getState().tour.beatIndex).toBe(1);
+    expect(Math.abs(at() - start)).toBeLessThanOrEqual(ONE_MS_DAYS);
+    store.dispatch(exitTakeover());
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
+  it("exit mid-beat restores the viewer's clock, even over a running clockTo", async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
+    // The dwell stands in for a beat whose clip fires `scene(clockTo(…))`.
+    let dispatch: (action: ReturnType<typeof clockTo>) => void = () => {};
+    let call = 0;
+    const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
+      if (++call === 1) return Promise.resolve();
+      dispatch(clockTo({ simDays: 2_460_000, overSec: 30 }));
+      return new Promise<void>(() => {});
+    });
+    const { store, sagaMiddleware } = buildStore({ playClip });
+    dispatch = store.dispatch;
+    sagaMiddleware.run(watchClockToSaga);
+    store.dispatch(goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() }));
+
+    runTour(sagaMiddleware, makeTour([LONG_BEAT]));
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(store.getState().time.profile).not.toBeNull();
+    store.dispatch(exitTakeover());
+    await vi.advanceTimersByTimeAsync(0);
+
+    const time = store.getState().time;
+    expect(time.profile).toBeNull();
+    expect(time.mode).toBe('live');
+    expect(time.paused).toBe(false);
+    const now = unixMsToJulianDays(Date.now());
+    expect(Math.abs(deriveSimDays(time, performance.now()) - now)).toBeLessThanOrEqual(ONE_MS_DAYS);
   });
 });
