@@ -533,11 +533,23 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         values: 'On, off, or a dash while they differ',
         first: 'A dash',
       },
-      label('Famous Galaxies', 'galaxyCatalogs.items.famousGalaxy.labelEnabled', 'the named galaxies'),
-      label('Galaxy clusters', 'structures.items.galaxy-cluster.labelEnabled', 'the galaxy clusters'),
+      label(
+        'Famous Galaxies',
+        'galaxyCatalogs.items.famousGalaxy.labelEnabled',
+        'the named galaxies',
+      ),
+      label(
+        'Galaxy clusters',
+        'structures.items.galaxy-cluster.labelEnabled',
+        'the galaxy clusters',
+      ),
       label('Superclusters', 'structures.items.supercluster.labelEnabled', 'the superclusters'),
       label('Voids', 'structures.items.void.labelEnabled', 'the voids'),
-      label('Galaxy groups', 'structures.items.galaxy-group.labelEnabled', 'the groups of galaxies'),
+      label(
+        'Galaxy groups',
+        'structures.items.galaxy-group.labelEnabled',
+        'the groups of galaxies',
+      ),
       {
         ...label('Milky Way', 'milkyWay.labelEnabled', ''),
         does: 'Shows the name of the Milky Way.',
@@ -556,16 +568,32 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         ...label('Galactic Centre', 'blackHoles.items.sgr-a-star.labelEnabled', ''),
         does: 'Shows the name of Sagittarius A*.',
       },
-      label('Spacecraft', 'missions.items.craft.labelEnabled', 'the spacecraft and the other 3D models'),
+      label(
+        'Spacecraft',
+        'missions.items.craft.labelEnabled',
+        'the spacecraft and the other 3D models',
+      ),
       label('Open clusters', 'structures.items.open-cluster.labelEnabled', 'the open clusters'),
-      label('Globular clusters', 'structures.items.globular-cluster.labelEnabled', 'the globular clusters'),
+      label(
+        'Globular clusters',
+        'structures.items.globular-cluster.labelEnabled',
+        'the globular clusters',
+      ),
       {
         ...label('Nebulae', 'structures.items.nebula.labelEnabled', 'the nebulae'),
         first: OFF,
         firstValue: false,
       },
-      label('Galactic Centre', 'structures.items.gc-cluster.labelEnabled', 'the star clusters near the centre of the Milky Way'),
-      label('Small bodies', 'bodies.items.small-body.labelEnabled', 'the asteroids Vesta and Bennu and the dwarf planet Ceres'),
+      label(
+        'Galactic Centre',
+        'structures.items.gc-cluster.labelEnabled',
+        'the star clusters near the centre of the Milky Way',
+      ),
+      label(
+        'Small bodies',
+        'bodies.items.small-body.labelEnabled',
+        'the asteroids Vesta and Bennu and the dwarf planet Ceres',
+      ),
       {
         name: 'S-star trails',
         control: 'switch',
@@ -659,7 +687,8 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         name: 'Tone curve',
         control: 'list',
         does: 'Chooses the curve that maps the light of the scene to the brightness of the screen. Linear clips everything above white; the others compress the bright end in different ways.',
-        values: 'Linear (baseline), Reinhard (natural), Asinh (filaments), Gamma 2.0, ACES (cinematic)',
+        values:
+          'Linear (baseline), Reinhard (natural), Asinh (filaments), Gamma 2.0, ACES (cinematic)',
         first: 'Reinhard (natural)',
         state: 'tonemap.curve',
         firstValue: 1,

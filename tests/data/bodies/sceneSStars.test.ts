@@ -21,11 +21,9 @@ import type { StarRowFixture } from '../../support/selectionResolverOver';
 
 /** The seeded star arms read no store data, so an empty fixture suffices — the
  *  star row needs no survey catalog to resolve a seed. */
-const resolver = selectionResolverOver(
-  { byId: () => null, byCategory: () => [] },
-  undefined,
-  { renderer: { loadedCatalogs: () => [][Symbol.iterator]() } } as unknown as StarRowFixture,
-);
+const resolver = selectionResolverOver({ byId: () => null, byCategory: () => [] }, undefined, {
+  renderer: { loadedCatalogs: () => [][Symbol.iterator]() },
+} as unknown as StarRowFixture);
 
 describe('SCENE_S_STARS', () => {
   it('shares no id with the famous-star map', () => {

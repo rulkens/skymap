@@ -14,7 +14,8 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     id: 'stars',
     name: 'Star catalogues',
-    about: 'Where each star stands, how bright it is and what colour, with the orbits at the centre of the Milky Way.',
+    about:
+      'Where each star stands, how bright it is and what colour, with the orbits at the centre of the Milky Way.',
     pages: 'each',
     sections: [],
     ids: [
@@ -34,7 +35,8 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     id: 'galaxies',
     name: 'Galaxy catalogues',
-    about: 'The surveys behind every galaxy and quasar point, and the tables that give them distances and tilt.',
+    about:
+      'The surveys behind every galaxy and quasar point, and the tables that give them distances and tilt.',
     pages: 'each',
     sections: ['Catalogue data'],
     ids: ['seed-famous-galaxies', 'seed-local-volume'],
@@ -43,7 +45,8 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     id: 'structures',
     name: 'Structure catalogues and fields',
-    about: 'Clusters and superclusters, the density and flow fields of the cosmic web, and the dust and gas near the Sun.',
+    about:
+      'Clusters and superclusters, the density and flow fields of the cosmic web, and the dust and gas near the Sun.',
     pages: 'each',
     sections: ['Fields, volumes and structures'],
     ids: ['mcxc', 'mscc', 'seed-structures', 'seed-milky-way-structures'],
@@ -52,7 +55,8 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     id: 'solar-system',
     name: 'Solar System ephemerides and facts',
-    about: 'The orbits of the planets, moons and Earth’s satellites, the positions they are corrected to, and the figures on each body’s card.',
+    about:
+      'The orbits of the planets, moons and Earth’s satellites, the positions they are corrected to, and the figures on each body’s card.',
     pages: 'each',
     sections: [],
     ids: ['jpl-elements', 'horizons', 'celestrak', 'seed-planet-facts'],
@@ -70,10 +74,19 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     id: 'terrain',
     name: 'Terrain and heights',
-    about: 'Height data for Earth, Mars and the moons: what lifts the ground and shades the relief.',
+    about:
+      'Height data for Earth, Mars and the moons: what lifts the ground and shades the relief.',
     pages: 'each',
     sections: ['Mars surface'],
-    ids: ['etopo', 'skadi', 'dhm', 'svs-moon-kit', 'gaskell', 'schenk-enceladus-dem', 'schenk-triton-dem'],
+    ids: [
+      'etopo',
+      'skadi',
+      'dhm',
+      'svs-moon-kit',
+      'gaskell',
+      'schenk-enceladus-dem',
+      'schenk-triton-dem',
+    ],
     step: 'imagery-and-terrain',
   },
   {
@@ -105,7 +118,8 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     id: 'code',
     name: 'Code and algorithms',
-    about: 'Functions ported from other people’s code, the papers our shaders follow, and the libraries in the bundle.',
+    about:
+      'Functions ported from other people’s code, the papers our shaders follow, and the libraries in the bundle.',
     pages: 'one',
     sections: ['Code and methods'],
     ids: ['npm-dependencies'],
@@ -113,7 +127,8 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     id: 'tools',
     name: 'Tools used in the pipeline',
-    about: 'Programs we run when we build the data and do not ship: what they did to the files, and their terms.',
+    about:
+      'Programs we run when we build the data and do not ship: what they did to the files, and their terms.',
     pages: 'one',
     sections: [],
     ids: ['starnet', 'disperse', 'pyslime'],
@@ -121,7 +136,8 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     id: 'own',
     name: 'Our own files and pictures',
-    about: 'What is ours in the data folder and on our hosts, and the terms that follow a picture made with Skymap.',
+    about:
+      'What is ours in the data folder and on our hosts, and the terms that follow a picture made with Skymap.',
     pages: 'one',
     sections: ['Hand-typed data'],
     ids: [],

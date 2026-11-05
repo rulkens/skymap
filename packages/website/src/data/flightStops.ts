@@ -10,7 +10,7 @@ import type { FlightStop } from '../@types/FlightStop';
  */
 export const FLIGHT_STOPS: readonly FlightStop[] = [
   { id: 'earth', atSec: 0, name: 'Earth' },
-  { id: 'moon-orbit', atSec: 20.5,name: 'The Moon’s orbit', factId: 'moon-orbit-light' },
+  { id: 'moon-orbit', atSec: 20.5, name: 'The Moon’s orbit', factId: 'moon-orbit-light' },
   {
     id: 'outer-planets',
     atSec: 28,

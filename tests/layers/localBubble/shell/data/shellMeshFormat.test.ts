@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import type { ShellMesh } from '../../../../../src/@types/data/shellMesh/ShellMesh';
 import type { ShellMeshDtype } from '../../../../../src/@types/data/shellMesh/ShellMeshDtype';
-import { decodeShellMesh, encodeShellMesh } from '../../../../../src/layers/localBubble/shell/data/shellMeshFormat';
+import {
+  decodeShellMesh,
+  encodeShellMesh,
+} from '../../../../../src/layers/localBubble/shell/data/shellMeshFormat';
 
 /** Two triangles sharing an edge: 4 vertices, 6 indices, a non-zero centre. */
 function makeFixture(dtype: ShellMeshDtype): ShellMesh {

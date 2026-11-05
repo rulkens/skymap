@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { encodeFilaments, decodeFilaments } from '../../../../../src/layers/cosmicWebFilaments/filaments/data/filamentBinaryFormat';
+import {
+  encodeFilaments,
+  decodeFilaments,
+} from '../../../../../src/layers/cosmicWebFilaments/filaments/data/filamentBinaryFormat';
 import type { FilamentCloud } from '../../../../../src/@types/data/filament/FilamentCloud';
 
 function makeFixture(): FilamentCloud {

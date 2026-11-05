@@ -10,7 +10,8 @@ const STAR_TERMS =
 const CATALOGUES = 'Data: SDSS, 2MRS, GLADE, DESI, Milliquas, Cosmicflows-4, HyperLEDA';
 const CATALOGUE_TERMS =
   'DESI is CC BY 4.0 and SDSS calls its data public domain. 2MRS, GLADE, Milliquas, Cosmicflows-4 and HyperLEDA state no licence. For the three we take from CDS (2MRS, GLADE and Cosmicflows-4), CDS says its data are free to use in a scientific context and that commercial use follows rules that depend on where the data come from.';
-const NASA_TERMS = 'which NASA says is generally not subject to copyright in the United States and may be used editorially in works that are not promotional';
+const NASA_TERMS =
+  'which NASA says is generally not subject to copyright in the United States and may be used editorially in works that are not promotional';
 
 /**
  * The press kit's pictures, in the kit's order, and what each contains. Terms come from ATTRIBUTIONS.md as
@@ -37,7 +38,8 @@ export const PRESS_PICTURES: readonly PressPicture[] = [
     file: 'milky-way-model-from-outside',
     title: 'The Milky Way from outside',
     credit: PRESS_CREDIT,
-    terms: 'A model drawn by Skymap. The stars and the catalogued galaxies are switched off, so no one else’s data or imagery is in the frame.',
+    terms:
+      'A model drawn by Skymap. The stars and the catalogued galaxies are switched off, so no one else’s data or imagery is in the frame.',
   },
   {
     shot: 'tour-cosmic-web',

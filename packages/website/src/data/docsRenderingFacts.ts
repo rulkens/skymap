@@ -373,7 +373,8 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'gloss-float',
     text: 'A 32-bit floating-point number is rounded at the 23rd binary digit after its first, which is about seven decimal digits. JavaScript’s own numbers are 64-bit.',
-    source: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/fround',
+    source:
+      'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/fround',
     sourceLabel: 'MDN, Math.fround()',
     checked: CHECKED,
   },
