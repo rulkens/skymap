@@ -265,11 +265,11 @@ placement (`positionMpc`, `radiusMpc`). Core and the store type against a base r
 - The reconcile log re-extracts the focused ref through the resolver's `extractRow(ref, simDays)` at the
   live `simDays`, for every kind. No kind list.
 
-- [ ] Modify the existing test: `the logged focus row is re-extracted at the live simDays` (a body whose
+- [x] Modify the existing test: `the logged focus row is re-extracted at the live simDays` (a body whose
       position differs between two `simDays`).
-- [ ] Implement; delete `liveFocusRow`.
-- [ ] Targeted test → pass.
-- [ ] Commit `The camera log re-extracts the focus row at the live clock`.
+- [x] Implement; delete `liveFocusRow`.
+- [x] Targeted test → pass.
+- [x] Commit `The camera log re-extracts the focus row at the live clock`.
 
 ### Task 7: `PickingSettings` names the kinds a view turns off
 

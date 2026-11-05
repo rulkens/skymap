@@ -2,7 +2,7 @@
  * liveBodyPosition — the live world position of a selection row's body in a
  * body snapshot. The SINGLE resolution of that lookup; four callers share it
  * (the follow rows' target term, the frame-loop pivot pin, the NEAR0 selection
- * ring, and `liveFocusRow`'s off-frame debug read) rather than copying it.
+ * ring) rather than copying it.
  *
  * Answers WHERE, never WHETHER: null means only that the snapshot holds no
  * position for the row. "Does this body move" is `bodyMovesThisFrame` — the

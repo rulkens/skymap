@@ -8,7 +8,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReconcileEffects } from '../../../store/effects/ReconcileEffects';
 import { logCameraState } from '../helpers/logCameraState';
 import { liveRenderCamera } from '../helpers/liveRenderCamera';
-import { liveFocusRow } from '../helpers/liveFocusRow';
 import { syncVisibilityTargets } from './syncVisibilityTargets';
 import { applySwapFormat } from '../phases/applySwapFormat';
 
@@ -22,13 +21,15 @@ export function makeReconcileEffects(
     logCameraState: () => {
       const simDays = state.cameraRuntime.outputs.simDays;
       const cam = liveRenderCamera(state);
-      logCameraState(
-        cam,
-        canvas,
-        liveFocusRow(state.selectionRows.focus, simDays),
-        simDays,
-        state.cameraRuntime.outputs.displayed,
-      );
+      // The stored row was extracted at its own instant; re-extract at the pose's clock.
+      const ref = state.selection.focus;
+      const focusRow =
+        ref === null
+          ? null
+          : (state.selectionKindRows
+              .find((kind) => kind.type === ref.type)
+              ?.extractRow(ref, simDays) ?? null);
+      logCameraState(cam, canvas, focusRow, simDays, state.cameraRuntime.outputs.displayed);
       return cam === null ? null : { framed: state.cameraRuntime.outputs.displayed, simDays };
     },
     applySwapFormat: (desired) => applySwapFormat(state, desired),
