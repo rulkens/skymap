@@ -16,6 +16,8 @@ import type { SourceCountReport } from '../../../@types/engine/layer/SourceCount
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
+import { LEGACY_PICK_CODES } from '../../../compositions/legacyPickCodes';
+import { createPickCodeAllocator } from '../selection/createPickCodeAllocator';
 import { composeTerrainHeightAt } from '../layer/composeTerrainHeightAt';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
@@ -60,6 +62,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   const uiCtx = state.gpu.uiCtx;
   if (uiCtx === null) throw new Error('createLayers: state.gpu.uiCtx is null');
 
+  const pickCodes = createPickCodeAllocator(LEGACY_PICK_CODES);
+  state.pickCodes = pickCodes;
   const requestRender = (): void => state.subsystems.scheduler.requestRender();
   // Core's "a source's catalog landed" pulse. The running total equals
   // `galaxyPointRenderer.totalCount()` by construction (per-source last count, summed,
@@ -96,6 +100,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       settings: () => deps.cb.store.getState().settings,
       debugPanelOpen: () => deps.cb.store.getState().ui.debugPanelOpen,
       requestRender,
+      pickCode: (pickSourceId: string) => pickCodes.codeOf(layer.name, pickSourceId),
     };
     // Facts is erased to `undefined` at this boundary (`Layer<string, unknown>`), so
     // `publish` cannot appear in `LayerCoreDeps<undefined>`; the cast below bridges it.

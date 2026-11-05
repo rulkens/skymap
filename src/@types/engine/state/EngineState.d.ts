@@ -29,6 +29,7 @@ import type { SlabRow } from '../frame/SlabRow';
 import type { VisibilityEntry } from '../layer/VisibilityEntry';
 import type { VisibilityGates } from './VisibilityGates';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
+import type { PickCodeAllocator } from '../selection/PickCodeAllocator';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { GatedOrbitTrailGroup } from '../frame/GatedOrbitTrailGroup';
@@ -91,6 +92,8 @@ export type EngineState = {
   terrainHeightAt: TerrainHeightAtLookup;
   /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */
   selectionKindRows: readonly SelectionKindRow[];
+  /** The engine's pick-code allocator; `createLayers` builds it, the debug overlay reads `ownerOf`. */
+  pickCodes: PickCodeAllocator | null;
   /** Seeded by `createEngine` because the `renderTargets` GPU-handle row runs before `createLayers`. */
   readonly layerTargets: readonly (readonly RenderTargetSpec[])[];
 };

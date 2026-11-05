@@ -75,15 +75,15 @@ This plan is the **prep PR**; `2026-11-05-selection-kind-facts.md` is the featur
 - `createLayers` builds one allocator per engine from `LEGACY_PICK_CODES`, keeps it on engine state, and
   binds `pickCode: (id) => allocator.codeOf(layer.name, id)` into `common`.
 
-- [ ] Test `same layer and id return the same code`.
-- [ ] Test `two layers with the same id get different codes`.
-- [ ] Test `a seeded id returns its seed value` and `an unseeded id never takes a seeded code`.
-- [ ] Test `throws when a 63rd code is asked for`; message names the layer and id.
-- [ ] Test `ownerOf inverts codeOf`.
-- [ ] Implement; add the member and the binding. No Layer reads it yet.
-- [ ] `npx vitest run tests/services/engine/selection/createPickCodeAllocator.test.ts` → pass;
+- [x] Test `same layer and id return the same code`.
+- [x] Test `two layers with the same id get different codes`.
+- [x] Test `a seeded id returns its seed value` and `an unseeded id never takes a seeded code`.
+- [x] Test `throws when a 63rd code is asked for`; message names the layer and id.
+- [x] Test `ownerOf inverts codeOf`.
+- [x] Implement; add the member and the binding. No Layer reads it yet.
+- [x] `npx vitest run tests/services/engine/selection/createPickCodeAllocator.test.ts` → pass;
       `npm run typecheck:fast` → clean.
-- [ ] Commit `Pick codes: a per-engine allocator bound onto LayerCoreDeps`.
+- [x] Commit `Pick codes: a per-engine allocator bound onto LayerCoreDeps`.
 
 ### Task 2: `resolvePick(pick)` drops the registry entry
 
