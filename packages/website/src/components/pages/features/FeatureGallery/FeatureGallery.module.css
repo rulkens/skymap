@@ -51,9 +51,6 @@
   }
 
   & img {
-    display: block;
-    width: 100%;
-    max-width: none;
     height: 100%;
     object-fit: cover;
   }
@@ -116,17 +113,10 @@
 }
 
 .piece img {
-  display: block;
-  width: 100%;
-  height: auto;
   filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
 }
 
-/*
- * A slide's figure, set as a picture: thin figures at the title's size in the slide's own colour, in the
- * picture's inner top corner (the words' side), over the dark of space or sky; its measure under it. The
- * body face, because the display face's figures are old-style and its 1 reads as an I.
- */
+/* A slide's figure, in the slide's own colour, in the picture's inner top corner (the words' side); its measure under it. */
 .reading {
   position: absolute;
   top: 5%;
@@ -150,12 +140,7 @@
 }
 
 .value {
-  font-size: var(--text-h2);
-  font-weight: 300;
-  line-height: 0.9;
-  letter-spacing: -0.04em;
-  text-shadow: 0 0 2rem rgb(0 0 0 / 0.8);
-  white-space: nowrap;
+  composes: figure-value from '../../../../styles/picture.module.css';
 }
 
 .measure {
@@ -188,9 +173,6 @@
   pointer-events: none;
 
   & img {
-    display: block;
-    width: 100%;
-    height: auto;
     mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%);
   }
 }
@@ -208,8 +190,6 @@
   mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 35%, transparent 70%);
 
   & img {
-    display: block;
-    width: 100%;
     height: 100%;
     object-fit: cover;
   }
@@ -360,9 +340,6 @@
   }
 
   & img {
-    display: block;
-    width: 100%;
-    max-width: none;
     height: 100%;
     object-fit: cover;
   }

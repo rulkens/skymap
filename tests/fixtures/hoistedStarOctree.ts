@@ -8,7 +8,7 @@
  * Ordinals: 0 blob, 1 hoisted star, 2 blob, 3 and 4 the chunk's stars.
  */
 import type { OctreeChunk } from '../../src/@types/octree/OctreeChunk';
-import type { StarColumns } from '../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../src/layers/starCatalog/survey/@types/StarColumns';
 import type { Octree } from '../../src/@types/octree/Octree';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import {

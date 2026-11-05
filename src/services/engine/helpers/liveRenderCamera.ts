@@ -6,7 +6,7 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { liveWorldPose } from './liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';

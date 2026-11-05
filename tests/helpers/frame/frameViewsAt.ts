@@ -14,13 +14,13 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { deriveFrameContext } from '../../../src/services/engine/frame/frameContext';
 import { deriveView } from '../../../src/services/engine/frame/deriveView';
 import { assembleOrbitCamera } from '../../../src/services/engine/camera/assembleOrbitCamera';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
-import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
+import { symmetricFrustum } from '../../../src/utils/camera/frustum/symmetricFrustum';
 import { cross3 } from '../../../src/utils/math/cross3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../src/utils/math/mat3FromColumns';
-import { BODY_SLAB_ROWS } from '../../../src/layers/body/present/bodySlabRows';
-import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
+import { BODY_SLAB_ROWS } from '../../../src/layers/body/slabs/present/bodySlabRows';
+import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 
 const FOV_Y_RAD = 1;
@@ -68,7 +68,7 @@ export function frameViewsAt(input: {
     slabRows: BODY_SLAB_ROWS,
     visibilityEntries: [],
     settings: { bodies: { items: {} } },
-    picking: { pickInFlight: false, cursorTexPx: null },
+    picking: { pickInFlight: false },
   } as unknown as EngineState;
   const snapshot = deriveFrameContext(state, {
     cam,

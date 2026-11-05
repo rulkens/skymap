@@ -1,0 +1,32 @@
+/**
+ * rowFor / climbRowFor — the table's only narrowing (spec §2.6.3). The two `as`
+ * expressions are the one thing the compiler cannot check, so a mis-keyed table
+ * would dispatch a frame to the wrong arm in silence; keying each answered
+ * row's own `kind` against `cameraArmKindOf` is what catches that.
+ */
+
+import { describe, it, expect } from 'vitest';
+
+import { rowFor } from '../../../../../src/services/engine/camera/arms/rowFor';
+import { climbRowFor } from '../../../../../src/services/engine/camera/arms/climbRowFor';
+import { cameraArmKindOf } from '../../../../../src/services/engine/camera/arms/cameraArmKindOf';
+import type { PoseFrame } from '../../../../../src/@types/camera/pose/PoseFrame';
+import type { FrameOf } from '../../../../../src/@types/camera/arms/FrameOf';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+
+const BODY_FRAME: FrameOf['body'] = { body: asSceneBodyId('earth') };
+
+describe('rowFor', () => {
+  it('returns the row whose kind matches cameraArmKindOf, for a frame of each kind', () => {
+    const frames: readonly PoseFrame[] = ['absolute', BODY_FRAME];
+    for (const frame of frames) {
+      expect(rowFor(frame).kind).toBe(cameraArmKindOf(frame));
+    }
+  });
+});
+
+describe('climbRowFor', () => {
+  it('returns the row whose kind matches cameraArmKindOf', () => {
+    expect(climbRowFor(BODY_FRAME).kind).toBe(cameraArmKindOf(BODY_FRAME));
+  });
+});

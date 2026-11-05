@@ -5,9 +5,6 @@
  */
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
-import { MILKY_WAY_NAMES } from '../../data/palette/milkyWayNames';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../data/bodies/seededStarCatalogsBySource';
-import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { EARTH_PLACES } from '../../data/palette/earthPlaces';
@@ -35,33 +32,11 @@ export function rankPaletteMatches(
 ): ScoredRow[] {
   if (query.trim().length === 0) return [];
 
-  const mwScore = scoreFamousMatch(
-    { id: 'milky-way', names: MILKY_WAY_NAMES, description: '' },
-    query,
-  );
-  const milkyWayRow: ScoredRow | null = mwScore > 0 ? { kind: 'milkyWay', score: mwScore } : null;
-
   const famousScored: ScoredRow[] = entries
     .map<ScoredRow>((entry) => {
       const raw = scoreFamousMatch(entry, query);
       return { kind: 'famous', entry, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
     })
-    .filter((s) => s.score > 0);
-
-  const starScored: ScoredRow[] = [...SEEDED_STAR_CATALOGS_BY_SOURCE]
-    .flatMap<ScoredRow>(([source, row]) =>
-      row.stars.map((star, index) => {
-        const names = BODY_SEARCH_NAMES.get(star.id) ?? [star.label];
-        const raw = scoreFamousMatch({ id: star.id, names, description: '' }, query);
-        return {
-          kind: 'starCatalog',
-          source,
-          index,
-          star,
-          score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0,
-        };
-      }),
-    )
     .filter((s) => s.score > 0);
 
   // Scored on the registry label alone (spec §7.4), so a focus card never duplicates the object
@@ -108,7 +83,6 @@ export function rankPaletteMatches(
   // The sort is stable, so earlier arrays stay ahead on a score tie (famous first).
   const primaryScored = [
     ...famousScored,
-    ...starScored,
     ...placeScored,
     ...exhibitScored,
     ...tourScored,
@@ -144,10 +118,5 @@ export function rankPaletteMatches(
   structureScored.sort((a, b) => b.score - a.score);
   const structureCapped = structureScored.slice(0, MAX_STRUCTURE_RESULTS);
 
-  return [
-    ...(milkyWayRow ? [milkyWayRow] : []),
-    ...primaryScored,
-    ...catalogCapped,
-    ...structureCapped,
-  ];
+  return [...primaryScored, ...catalogCapped, ...structureCapped];
 }

@@ -13,7 +13,10 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { composeControlSchemes } from '../../../src/services/engine/camera/composeControlSchemes';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
-import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../src/services/engine/camera/cameraFraming';
+import {
+  NEAR_CLIP_MPC,
+  FAR_CLIP_MPC,
+} from '../../../src/services/engine/camera/framing/cameraFraming';
 import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
@@ -28,7 +31,7 @@ import {
   inputGestureEnded,
 } from '../../../src/state/input/inputSlice';
 import { WHEEL_ZOOM_K } from '../../../src/data/input/wheelZoomK';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import { SCENE_CELESTIAL_BODIES } from '../../../src/data/bodies/sceneCelestialBodies';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
@@ -40,14 +43,14 @@ import type { SimBodyId } from './SimBodyId';
 import type { CameraSimHarnessOptions } from './CameraSimHarnessOptions';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { CameraEpochs } from '../../../src/@types/engine/camera/CameraEpochs';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import type { HeldIntent } from '../../../src/@types/input/HeldIntent';
 import type { UnitPoint } from '../../../src/@types/input/UnitPoint';
 import type { RunFrameDeps } from '../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
-import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {

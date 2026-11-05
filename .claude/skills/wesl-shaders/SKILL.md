@@ -77,7 +77,7 @@ Declaring `@builtin(position)` twice in one entry point (once on a member of the
 ## File layout and moves
 
 - **One folder per shader** with `io.wesl` + `vertex.wesl` + `fragment.wesl`; variants are extra fragments over one vertex (`galaxyCatalog/points/`: `colorFragment.wesl` + `pickFragment.wesl`). A draw-type `if` inside a shared fragment is the wrong split: it belongs in the pipeline table. Ground a new layout in the existing tree and checkpoint it with the user for anything beyond a one-file tweak. No register-style locals (`g0`, `w2`).
-- **A shader move needs a hand sweep** of literals no tool rewrites (`npm run move-files` included): `import package::…`, TS `?static` specifiers, `wesl.toml`, `vite.config.ts`, and bare directory literals in scraper/parity tests (no trailing slash, no filename).
+- **A shader move needs a hand sweep** of literals `npm run move-files` does not rewrite (it exits 1 on some, not all): `import package::…`, TS `?static` specifiers, `wesl.toml`, `vite.config.ts`, and bare directory literals in scraper/parity tests (no trailing slash, no filename).
 - **Tool shader symlinks go at the LEAF**: the galaxy-renderer tool's `wesl.toml` glob follows a symlinked dir but not a real subdir of one, so `tools/galaxy-renderer/src/engine/shaders/milkyWay/field/` is a real dir of per-file symlinks. The wrong shape fails "module not found" only at the tool's shader-link time, and tool-only trees are linked only by the tool's vite build, so both builds are gates.
 
 ## Mitigations baked into skymap

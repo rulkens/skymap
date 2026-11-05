@@ -23,7 +23,7 @@ import { seedRememberedTilt } from '../../../helpers/camera/seedRememberedTilt';
 import { hrOverBody } from '../../../helpers/camera/hrOverBody';
 import { tiltOverBody } from '../../../helpers/camera/tiltOverBody';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { mappedTiltRad } from '../../../../src/utils/camera/mappedTiltRad';
+import { mappedTiltRad } from '../../../../src/services/engine/camera/orientation/utils/mappedTiltRad';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';

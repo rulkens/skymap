@@ -18,10 +18,10 @@ import {
   writeOctreeCutUniforms,
 } from '../../../../src/services/gpu/octree/octreeCutLayout';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
+import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
 import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
 import type { OctreeChunk } from '../../../../src/@types/octree/OctreeChunk';
-import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 const NO_POOL = { nodes: { total: 0, minRun: 1, maxRun: 1 } };
 

@@ -9,9 +9,9 @@ import { localBubbleLayerSettings } from './state/slices';
 import { localBubbleVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
-import { localBubbleAssetRows } from './load/localBubbleAssetRows';
-import { localBubblePass } from './passes/localBubblePass';
-import LocalBubbleTuningSectionContainer from './ui/LocalBubbleTuningSectionContainer';
+import { localBubbleAssetRows } from './shell/load/localBubbleAssetRows';
+import { localBubblePass } from './shell/passes/localBubblePass';
+import LocalBubbleTuningSectionContainer from './shell/ui/LocalBubbleTuningSectionContainer';
 
 export const localBubbleLayer = defineLayer({
   name: 'localBubble',

@@ -15,7 +15,7 @@ to a Layer must also land in that core roster, or NEAR0 draws it a second time a
 - `bodySlabRosterIds` (`src/services/engine/frame/bodySlabRosterIds.ts`) builds that set from
   `SCENE_PLANETS` and the frame's present mesh bodies. It is static on purpose: deriving it from
   `state.slabRows` would let any Layer's slab row, whatever sits at its anchor, suppress a NEAR0 sphere.
-- The body Layer declares its Earth and planet rows in `src/layers/body/present/bodySlabRows.ts`;
+- The body Layer declares its Earth and planet rows in `src/layers/body/slabs/present/bodySlabRows.ts`;
   the roster and those rows are two lists that must agree.
 
 ## Idea
@@ -26,7 +26,7 @@ the rows come from the same fold. `near0SphereBodies` follows without a second l
 ## Caveat: the Sgr A* lens anchor
 
 blackHoles' row is anchored on a place, not a body (`blackHoleAnchorId`, a `PlaceId`: the Galactic
-Centre, `src/layers/blackHoles/present/blackHoleSlabRow.ts`), and its `hosts` line is `lens`, not a body
+Centre, `src/layers/blackHoles/markers/present/blackHoleSlabRow.ts`), and its `hosts` line is `lens`, not a body
 draw. A roster derived from `slabRows` anchors would catch it; the declaration must stay per body, and
 the lens row must remain a Layer `slabs` row with no body behind it.
 

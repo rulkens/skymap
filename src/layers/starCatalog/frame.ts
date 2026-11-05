@@ -16,10 +16,10 @@ import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameCont
 import type { OctreeDriverStream } from '../../@types/octree/OctreeDriverStream';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
 import { OCTREE_PLAN_INTERVAL_FRAMES } from '../../data/octree/octreePlanIntervalFrames';
-import { starCutInputs } from './render/cut/starCutInputs';
-import { resizeStarPools } from './load/resizeStarPools';
+import { starCutInputs } from './octreeCut/render/starCutInputs';
+import { resizeStarPools } from './survey/load/resizeStarPools';
 import { createOctreeFrameDriver } from '../../services/octree/createOctreeFrameDriver';
-import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from './survey/@types/StarColumns';
 
 export function starCatalogPlanner(
   runtime: StarCatalogRuntime,

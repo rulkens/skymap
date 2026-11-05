@@ -7,7 +7,7 @@
 
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from './@types/GalaxyCatalogSourceType';
-import type { GalaxyRecordSource } from '../../@types/data/galaxyCatalog/GalaxyRecordSource';
+import type { GalaxyRecordSource } from './records/@types/GalaxyRecordSource';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
@@ -24,18 +24,18 @@ import { GALAXY_CATALOG_SOURCES } from './sources/galaxyCatalogSources';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, COSMO } from '../../services/engine/frame/slabs';
 
-import { createGalaxyFlatPointRenderer } from './render/galaxyFlatPointRenderer';
-import { createGalaxyPooledPointRenderer } from './render/galaxyPooledPointRenderer';
-import { createGalaxyPickRenderer } from './render/galaxyPickRenderer';
-import { createTexturedDiskRenderer } from './render/texturedDiskRenderer';
-import { createProceduralDiskRenderer } from './render/proceduralDiskRenderer';
-import { wireImpostorSubsystems } from './load/wireImpostorSubsystems';
-import { wireGalaxyCatalogSourceSlot } from './load/wireGalaxyCatalogSourceSlot';
-import { wireGalaxyOctreeSlot } from './load/wireGalaxyOctreeSlot';
-import { createFamousGalaxiesMetaSlot } from './load/famousGalaxiesMetaSlot';
-import { createPgcAliasSlot } from './load/pgcAliasSlot';
-import { wireHiResFamousSlot } from './load/wireHiResFamousSlot';
-import { galaxyRecordBridge } from './present/galaxyRecordBridge';
+import { createGalaxyFlatPointRenderer } from './pointSprites/render/galaxyFlatPointRenderer';
+import { createGalaxyPooledPointRenderer } from './octree/render/galaxyPooledPointRenderer';
+import { createGalaxyPickRenderer } from './pointSprites/render/galaxyPickRenderer';
+import { createTexturedDiskRenderer } from './disks/textured/render/texturedDiskRenderer';
+import { createProceduralDiskRenderer } from './disks/procedural/render/proceduralDiskRenderer';
+import { wireImpostorSubsystems } from './disks/load/wireImpostorSubsystems';
+import { wireGalaxyCatalogSourceSlot } from './records/load/wireGalaxyCatalogSourceSlot';
+import { wireGalaxyOctreeSlot } from './octree/load/wireGalaxyOctreeSlot';
+import { createFamousGalaxiesMetaSlot } from './famousGalaxies/load/famousGalaxiesMetaSlot';
+import { createPgcAliasSlot } from './aliases/load/pgcAliasSlot';
+import { wireHiResFamousSlot } from './disks/load/wireHiResFamousSlot';
+import { galaxyRecordBridge } from './selection/present/galaxyRecordBridge';
 
 export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRuntime {
   const device = deps.ctx.device;

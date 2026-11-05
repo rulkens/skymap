@@ -177,16 +177,16 @@ type DeclutterResult = {
 };
 
 /**
- * `prominencePx` DESC, stable on input order — the one rank contract every
+ * `declutterPriority` DESC, stable on input order — the one rank contract every
  * declutter arm shares, whichever collision test it runs.  A label with no
- * prominence sinks to lowest priority rather than beating real structures.
+ * declutter priority sinks to lowest rather than beating real structures.
  * (Labels that must always win — the Milky Way "You are here" — declare it
- * explicitly with `prominencePx: Number.MAX_VALUE` in their producer.)
+ * explicitly with `declutterPriority: Number.MAX_VALUE` in their producer.)
  */
-function sortByProminenceDesc(labels: readonly Label2D[]): number[] {
+function sortByDeclutterPriorityDesc(labels: readonly Label2D[]): number[] {
   const order = labels.map((_, i) => i);
   order.sort((a, b) => {
-    const d = (labels[b]!.prominencePx ?? 0) - (labels[a]!.prominencePx ?? 0);
+    const d = (labels[b]!.declutterPriority ?? 0) - (labels[a]!.declutterPriority ?? 0);
     return d !== 0 ? d : a - b;
   });
   return order;
@@ -233,7 +233,7 @@ function declutterByBboxOverlap(
     });
   });
 
-  const order = sortByProminenceDesc(labels);
+  const order = sortByDeclutterPriorityDesc(labels);
   const accepted: number[] = [];
   for (const i of order) {
     const rect = rects[i];
@@ -280,7 +280,7 @@ function declutterByScreenSeparationArm(
   minSeparationPx: number,
 ): Label2D[] {
   const candidateIdx: number[] = [];
-  const candidates: { screenPx: Vec2; priorityPx: number }[] = [];
+  const candidates: { screenPx: Vec2; declutterPriority: number }[] = [];
   const accepted = new Set<number>();
   for (let i = 0; i < labels.length; i++) {
     const p = projected[i]!;
@@ -298,7 +298,7 @@ function declutterByScreenSeparationArm(
       label.lift === undefined
         ? p.screenPx
         : [p.screenPx[0], p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx)];
-    candidates.push({ screenPx, priorityPx: label.prominencePx ?? 0 });
+    candidates.push({ screenPx, declutterPriority: label.declutterPriority ?? 0 });
   }
   for (const k of declutterByScreenSeparation({ candidates, minSeparationPx })) {
     accepted.add(candidateIdx[k]!);

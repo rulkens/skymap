@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { visibleBodyRows } from '../../../../src/services/engine/frame/visibleBodyRows';
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
+import { orbitForwardOf } from '../../../../src/utils/camera/orbitPose/orbitForwardOf';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';

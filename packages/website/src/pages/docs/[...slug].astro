@@ -7,6 +7,7 @@
  */
 import { getCollection, render } from 'astro:content';
 
+import AnnotatedShot from '../../components/docs/AnnotatedShot/AnnotatedShot.astro';
 import Caveat from '../../components/shared/text/Caveat/Caveat.tsx';
 import CodeBlock from '../../components/shared/text/CodeBlock/CodeBlock.tsx';
 import ControlFigure from '../../components/docs/ControlFigure/ControlFigure.tsx';
@@ -51,6 +52,7 @@ const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)]
       table: DocTable,
       Table: DocTable,
       Figure: DocFigure,
+      AnnotatedShot,
       Control: ControlFigure,
       Fact: FactText,
       Example,

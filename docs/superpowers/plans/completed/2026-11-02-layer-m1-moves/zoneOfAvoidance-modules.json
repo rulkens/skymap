@@ -1,0 +1,74 @@
+[
+  {
+    "from": "src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceRenderer.d.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/@types/ZoneOfAvoidanceRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceShell.d.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/@types/ZoneOfAvoidanceShell.d.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceSliderField.d.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/@types/ZoneOfAvoidanceSliderField.d.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceSliderKey.d.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/@types/ZoneOfAvoidanceSliderKey.d.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/data/zoneOfAvoidanceShell.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/data/zoneOfAvoidanceShell.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/data/zoneOfAvoidanceSliderFields.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/data/zoneOfAvoidanceSliderFields.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/passes/zoneOfAvoidancePass.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/passes/zoneOfAvoidancePass.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/passes/zoneOfAvoidanceUpsamplePass.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/passes/zoneOfAvoidanceUpsamplePass.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/render/zoneOfAvoidanceRenderer.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/render/zoneOfAvoidanceRenderer.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/ui/formatZoneOfAvoidanceTuningDefaults.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/ui/formatZoneOfAvoidanceTuningDefaults.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSection.tsx",
+    "to": "src/layers/zoneOfAvoidance/shell/ui/ZoneOfAvoidanceTuningSection.tsx"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSectionContainer.tsx",
+    "to": "src/layers/zoneOfAvoidance/shell/ui/ZoneOfAvoidanceTuningSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/data/zoneOfAvoidanceLabelText.ts",
+    "to": "src/layers/zoneOfAvoidance/lettering/data/zoneOfAvoidanceLabelText.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/present/produceZoneOfAvoidanceLettering.ts",
+    "to": "src/layers/zoneOfAvoidance/lettering/present/produceZoneOfAvoidanceLettering.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/present/zoneOfAvoidanceSelectionRow.ts",
+    "to": "src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow.ts"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceDetailCard/ZoneOfAvoidanceDetailCard.tsx",
+    "to": "src/layers/zoneOfAvoidance/selection/ui/ZoneOfAvoidanceDetailCard/ZoneOfAvoidanceDetailCard.tsx"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/ui/CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard.tsx",
+    "to": "src/layers/zoneOfAvoidance/selection/ui/CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard.tsx"
+  },
+  {
+    "from": "src/layers/zoneOfAvoidance/shell/ui/formatZoneOfAvoidanceTuningDefaults.ts",
+    "to": "src/layers/zoneOfAvoidance/shell/utils/formatZoneOfAvoidanceTuningDefaults.ts"
+  }
+]

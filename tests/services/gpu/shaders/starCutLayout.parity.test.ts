@@ -25,8 +25,8 @@ import {
   writeOctreeCutUniforms,
 } from '../../../../src/services/gpu/octree/octreeCutLayout';
 import type { Octree } from '../../../../src/@types/octree/Octree';
-import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
-import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
+import type { StarColumns } from '../../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 function shader(file: string): string {
   return readFileSync(join(process.cwd(), 'src/services/gpu/shaders/octree', file), 'utf-8');

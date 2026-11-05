@@ -13,7 +13,7 @@ import {
   SHELL_DEPTH_KM_TO_LOCAL_OFFSET,
   SHELL_DEPTH_UNIFORM_BYTES,
   SHELL_DEPTH_VIEWPORT_OFFSET,
-} from '../../../../src/layers/body/render/atmosphereShellRenderer';
+} from '../../../../src/layers/body/atmosphere/render/atmosphereShellRenderer';
 import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../tools/utils/wgsl/parseWgslStructFields';
 import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource';

@@ -7,12 +7,12 @@
  */
 
 import type { BodyState } from '../../scene/BodyState';
-import type { CameraState } from '../../camera/CameraState';
+import type { CameraState } from '../../camera/orbitCamera/CameraState';
 import type { ControlScheme } from './ControlScheme';
 import type { ControlSchemeId } from './ControlSchemeId';
 import type { Epoch } from './Epoch';
-import type { InputStep } from '../../camera/InputStep';
-import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
+import type { InputStep } from '../../camera/input/InputStep';
+import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { Vec2 } from '../../math/Vec2';
 import type { InsetsPx } from '../../layout/InsetsPx';
 import type { RootState } from '../../../store/types';

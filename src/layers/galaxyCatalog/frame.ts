@@ -23,11 +23,11 @@ import type { GalaxyColumns } from '../../@types/data/galaxyCatalog/GalaxyColumn
 import type { OctreeDriverStream } from '../../@types/octree/OctreeDriverStream';
 
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
-import { buildAliasIndex } from './load/buildAliasIndex';
+import { buildAliasIndex } from './aliases/load/buildAliasIndex';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
-import { structureMemberCount } from './present/structureMemberCount';
-import { sourceMaskOf } from './present/sourceMaskOf';
-import { galaxyCutInputs } from './render/cut/galaxyCutInputs';
+import { structureMemberCount } from './structureMembership/utils/structureMemberCount';
+import { sourceMaskOf } from './records/utils/sourceMaskOf';
+import { galaxyCutInputs } from './octree/render/galaxyCutInputs';
 import { createOctreeFrameDriver } from '../../services/octree/createOctreeFrameDriver';
 import { OCTREE_PLAN_INTERVAL_FRAMES } from '../../data/octree/octreePlanIntervalFrames';
 

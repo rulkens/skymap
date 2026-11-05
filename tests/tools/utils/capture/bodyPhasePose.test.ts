@@ -5,7 +5,7 @@ import { bodyPhasePose } from '../../../../tools/utils/capture/bodyPhasePose';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 

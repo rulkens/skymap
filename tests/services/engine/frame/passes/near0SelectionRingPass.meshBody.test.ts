@@ -1,29 +1,29 @@
 /**
  * A mesh body is DRAWN through its host's metre-unit body row while the things that point at
  * it (the NEAR0 selection ring, the caption) project through the NEAR0 slab in heliocentric
- * Mpc. The three must land on one pixel wherever the ring draws, the ring must survive
- * NEAR0's near-plane floor (~6.2 m), and it must stand down once the body overflows the
- * screen, as it does at its own two-radii standoff. Built from the real seams, so a change
- * that moves one path and not the other fails here.
+ * Mpc. The three must land on one pixel wherever the ring draws, the ring's centre must stay
+ * inside the NEAR0 frustum, and it must stand down once the body overflows the screen, as it
+ * does at its own two-radii standoff. Built from the real seams, so a change that moves one
+ * path and not the other fails here.
  */
 
 import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
-import { missionMeshesPass } from '../../../../../src/layers/missions/passes/missionMeshesPass';
+import { missionMeshesPass } from '../../../../../src/layers/missions/craft/passes/missionMeshesPass';
 import { near0SelectionRingPass } from '../../../../../src/services/engine/frame/passes/near0SelectionRingPass';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { deriveSlabs, slabViewOf, NEAR0 } from '../../../../../src/services/engine/frame/slabs';
-import { createOrbitCamera } from '../../../../../src/utils/camera/createOrbitCamera';
-import { computeViewProj } from '../../../../../src/utils/camera/computeViewProj';
-import { imagePlaneBasis } from '../../../../../src/utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../../src/utils/camera/frameUp';
+import { createOrbitCamera } from '../../../../../src/utils/camera/orbitCamera/createOrbitCamera';
+import { computeViewProj } from '../../../../../src/utils/camera/projection/computeViewProj';
+import { imagePlaneBasis } from '../../../../../src/utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../../src/utils/camera/orbitPose/frameUp';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
-import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
+import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyFrame/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
-import { bodyLayerSlabRow } from '../../../../../src/layers/body/present/bodyLayerSlabRow';
+import { bodyLayerSlabRow } from '../../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
-import { meshBodyCaption } from '../../../../../src/utils/labels/meshBodyCaption';
+import { meshBodyCaption } from '../../../../../src/layers/missions/craft/utils/meshBodyCaption';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_BODIES } from '../../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -34,7 +34,7 @@ import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
@@ -179,10 +179,9 @@ function offsetPx(a: readonly number[], b: readonly number[]): number {
 }
 
 /**
- * Far enough out that the 1.5×-apparent ring fits the viewport (so the pass
- * draws at all), still inside NEAR0's MIN_NEAR_MPC floor for the pot — the
- * only window where both the projection agreement and the near pin are
- * observable at once.
+ * Far enough out that the 1.5×-apparent ring fits the viewport, so the pass
+ * draws at all. The near pin itself is `pinInsideNearPlane.test.ts`'s: NEAR0's
+ * ~0.5 m floor sits inside every distance a ring is visible from.
  */
 const RING_VISIBLE_RADII = 6;
 
@@ -198,10 +197,8 @@ describe('near0SelectionRingPass over a mesh body', () => {
       expect(offsetPx(captionClip, meshClip)).toBeLessThan(1);
     });
 
-    // NEAR0's near plane is floored at MIN_NEAR_MPC (~6.2 m), which the pot
-    // sits deep inside at every distance it is approachable from: without the
-    // pass's near pin the quad's single clip z/w fails `z <= w` and the whole
-    // ring is discarded.
+    // One clip z/w serves the whole quad, so a centre outside either NEAR0
+    // plane would discard the ring entirely.
     it(`keeps the ${id}'s ring centre inside the NEAR0 frustum`, () => {
       const { ringCall } = drawAt(id, RING_VISIBLE_RADII);
       const ringClip = clipOf(ringCall[1], ringCall[4].worldPos);

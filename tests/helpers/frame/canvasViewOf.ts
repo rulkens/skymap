@@ -10,8 +10,8 @@ import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { Size } from '../../../src/@types/rendering/Size';
 import { deriveFrameContext } from '../../../src/services/engine/frame/frameContext';
 import { deriveView } from '../../../src/services/engine/frame/deriveView';
-import { mainViewSpec } from '../../../src/utils/camera/mainViewSpec';
-import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
+import { mainViewSpec } from '../../../src/utils/camera/viewRig/mainViewSpec';
+import { symmetricFrustum } from '../../../src/utils/camera/frustum/symmetricFrustum';
 
 export function canvasViewOf(
   state: EngineState,

@@ -6,7 +6,7 @@
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { MissionsRuntime } from './@types/MissionsRuntime';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
-import { createMissionTrailRenderer } from './render/missionTrailRenderer';
+import { createMissionTrailRenderer } from './trails/render/missionTrailRenderer';
 import { createBodyGlintRenderer } from '../../services/gpu/renderers/bodies/bodyGlintRenderer';
 
 export function create(deps: LayerCoreDeps): MissionsRuntime {

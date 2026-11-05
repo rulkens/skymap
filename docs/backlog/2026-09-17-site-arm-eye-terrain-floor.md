@@ -5,7 +5,7 @@ terrain-aware camera work so the camera changes land in one place.
 
 ## Bug
 
-In the `site:<id>` frame (`src/services/engine/camera/rungs/siteRung.ts`) the
+In the `site:<id>` frame (`src/services/engine/camera/arms/site/siteCameraArm.ts`) the
 eye's only floor is `clampedSitePose`: 0.2 × the site mesh's bounding radius above
 the ANCHOR's tangent plane. On a slope the eye goes under the real terrain, and
 tiles seen from below are back-face culled (`surfaceTileRenderer.ts:160`), so the

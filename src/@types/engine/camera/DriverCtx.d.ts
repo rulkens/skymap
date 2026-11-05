@@ -4,13 +4,14 @@
  */
 
 import type { BodyState } from '../../scene/BodyState';
-import type { CameraPose } from '../../camera/CameraPose';
-import type { CameraProjection } from '../../camera/CameraProjection';
+import type { CameraPose } from '../../camera/pose/CameraPose';
+import type { CameraProjection } from '../../camera/projection/CameraProjection';
 import type { DriverId } from './DriverId';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
 import type { Mat3 } from '../../math/Mat3';
 import type { RootState } from '../../../store/types';
 import type { PositionedId } from '../../scene/PositionedId';
+import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 
 export type DriverCtx = {
   readonly state: RootState;
@@ -39,6 +40,8 @@ export type DriverCtx = {
   readonly projection: CameraProjection;
   /** This instant's body states — a frame-tagged keyframe converts through them. */
   readonly bodies: ReadonlyMap<PositionedId, BodyState>;
+  /** The live ground, for a clip leg's frame fold. */
+  readonly terrainHeightAt: TerrainHeightAtLookup;
   /** Mpc; null on a frame with no swallowed wheel notch. */
   readonly followDistanceTarget: number | null;
 };

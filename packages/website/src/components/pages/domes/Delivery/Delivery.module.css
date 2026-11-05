@@ -1,13 +1,6 @@
 .root {
-  composes: grid from '../../../../styles/layout.module.css';
+  composes: grid halves from '../../../../styles/layout.module.css';
   row-gap: 0;
-}
-
-@media (--wide) {
-  .root > * {
-    grid-column: span 6;
-    --cols: 6;
-  }
 }
 
 @media (--narrow) {

@@ -37,16 +37,16 @@ import {
   engineSourceCountReported,
   engineStatusChanged,
 } from '../../../src/state/engine/engineSlice';
-import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
-import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
+import { structureSelectionRow } from '../../../src/layers/structure/picking/present/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
-import { satellitesSelectionRow } from '../../../src/layers/satellites/present/satellitesSelectionRow';
+import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
+import { satellitesSelectionRow } from '../../../src/layers/satellites/focus/present/satellitesSelectionRow';
 import { buildSatelliteCatalog } from '../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../layers/satellites/fixtures/celestrakRecords';
 import { Source } from '../../../src/data/source';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
-import { foldToWorld } from '../../../src/services/engine/camera/rungs/foldToWorld';
+import { foldToWorld } from '../../../src/services/engine/camera/arms/foldToWorld';
 import { ARRIVAL_TIMEOUT_MS } from '../../../src/data/arrival/arrivalTimeoutMs';
 import { EARTH_HOME } from '../../../src/data/selection/earthHome';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
@@ -56,11 +56,11 @@ import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFra
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
-import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
+import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { worldArmOf } from '../../fixtures/worldArmOf';
-import { homePose } from '../../../src/services/engine/camera/homePose';
+import { homePose } from '../../../src/services/engine/camera/framing/homePose';
 import { makeCameraSimHarness } from '../../helpers/camera/makeCameraSimHarness';
 import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
 import { selectOrientation } from '../../../src/state/settings/selectors';

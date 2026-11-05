@@ -7,9 +7,9 @@
  * fixtures source it differently (a hand-advanced row vs. a real player).
  */
 
-import type { CameraState } from '../../../src/@types/camera/CameraState';
+import type { CameraState } from '../../../src/@types/camera/orbitCamera/CameraState';
 import type { Epoch } from '../../../src/@types/engine/camera/Epoch';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import type { CameraSimHarness } from './CameraSimHarness';
 
 import { stepCameraRuntime } from '../../../src/services/engine/camera/stepCameraRuntime';

@@ -41,14 +41,14 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-galaxy-light',
     text: 'A galaxy’s light on screen starts from its absolute magnitude M, taken from one band of its catalogue: g for SDSS, J for 2MRS, B for GLADE. It is counted from the median of that galaxy’s own catalogue and divided by the square of its diameter D over 30 kiloparsecs, as below. A compact luminous galaxy is bright and a large faint one is dim.',
-    source: `${REPO_BLOB}/src/utils/galaxy/galaxySbAmp.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/appearance/utils/galaxySbAmp.ts`,
     sourceLabel: `the galaxy brightness function, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'method-galaxy-colour',
     text: 'A galaxy’s colour on screen is the difference of two catalogued magnitudes, placed on a scale from blue through white to red. Each catalogue has its own pair and range: u − g from 0.5 to 2.0 for SDSS, B − J from 0.5 to 3.5 for GLADE, J − K from 0.7 to 1.1 for 2MRS, g − r from 0.35 to 1.05 for DESI and B − R from 0 to 2 for the quasars. For SDSS and GLADE the colour is first moved towards the blue in proportion to the redshift, a rough correction for the reddening that redshift itself causes. A galaxy without both magnitudes is drawn a pale neutral.',
-    source: `${REPO_BLOB}/src/data/galaxyCatalog/colourIndex.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/appearance/data/colourIndex.ts`,
     sourceLabel: `the colour-index function, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -85,7 +85,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-star-card',
     text: 'The temperature on a field star’s card comes from the colour C = BP − RP by the relation of Mucciarelli, Bellazzini and Massari (2021), taken at the Sun’s metal content; the paper gives its scatter as 60 to 80 kelvin. A star brighter than absolute magnitude 4.0 and redder than 0.9 is treated as a giant, any other as a dwarf. The luminosity adds the bolometric correction of Andrae and others (2018), which we use only between 4,000 and 8,000 kelvin, and takes the Sun’s bolometric magnitude as 4.74. The radius follows from the two, in solar units.',
-    source: `${REPO_BLOB}/src/utils/astro/deriveStarProperties.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/card/utils/deriveStarProperties.ts`,
     sourceLabel: `the star estimates, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -101,7 +101,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-atmosphere-earth',
     text: 'Earth’s table holds three ingredients. Air molecules scatter 5.8, 13.6 and 33.1 millionths of the light per metre in red, green and blue, thinning by a factor e every 8 kilometres of height: this is why the sky is blue. Aerosols have a scale height of 1.2 kilometres, and ozone absorbs in a layer centred 25 kilometres up. The other eight tables mix published values, values derived from them and values adjusted by eye; the file marks which is which.',
-    source: `${REPO_BLOB}/src/layers/body/present/atmosphereParams.ts`,
+    source: `${REPO_BLOB}/src/layers/body/atmosphere/data/atmosphereParams.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -124,7 +124,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-black-hole',
     text: 'For a non-rotating black hole, how far a ray of light is bent depends only on how close it passes. We compute that angle once for passes from 1 to 50 Schwarzschild radii and keep it as a table; a ray aimed closer than 3√3/2, about 2.6 radii, is captured and the pixel is black. The radius follows from the mass, r = 2GM/c²: with the 4.297 million solar masses in the code it is 12.7 million kilometres.',
-    source: `${REPO_BLOB}/src/utils/lensing/buildSchwarzschildDeflectionLut.ts`,
+    source: `${REPO_BLOB}/src/layers/blackHoles/lensing/utils/buildSchwarzschildDeflectionLut.ts`,
     sourceLabel: `the light-bending table, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -219,7 +219,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'depart-star-dust',
     text: 'Stars are drawn as catalogued, with no correction for dust: a star behind dust is dimmer and redder than it is, and reads cooler on its card.',
-    source: `${REPO_BLOB}/src/utils/astro/starLuminositySolar.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/card/utils/starLuminositySolar.ts`,
     sourceLabel: `the star luminosity estimate, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -233,7 +233,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'depart-earth-barycentre',
     text: 'Earth is drawn at the Earth-Moon barycentre, the point the pair turn about, since that is what JPL’s elements and our fit describe. The real Earth’s centre is off that point, always on the side away from the Moon.',
-    source: `${REPO_BLOB}/src/layers/body/bodies/earth.ts`,
+    source: `${REPO_BLOB}/src/layers/body/bodies/planets/earth.ts`,
     sourceLabel: `the orbital elements, ${IN_REPO}`,
     checked: CHECKED,
   },

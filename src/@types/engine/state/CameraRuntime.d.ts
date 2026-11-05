@@ -7,13 +7,13 @@
 
 import type { CameraEpochs } from '../camera/CameraEpochs';
 import type { ControlSchemeId } from '../camera/ControlSchemeId';
-import type { NavigatorState } from '../../camera/NavigatorState';
+import type { NavigatorState } from '../../camera/input/NavigatorState';
 import type { DriverId } from '../camera/DriverId';
 import type { FollowMemory } from '../camera/FollowMemory';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
-import type { OrientationFrameId } from '../../camera/OrientationFrameId';
-import type { RungMemory } from '../../camera/RungMemory';
-import type { TiltMemory } from '../../camera/TiltMemory';
+import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
+import type { OrientationFrameId } from '../../camera/orientation/OrientationFrameId';
+import type { CameraArmMemory } from '../../camera/arms/CameraArmMemory';
+import type { TiltMemory } from '../../camera/orientation/TiltMemory';
 import type { FrameOutputs } from './FrameOutputs';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
 import type { Vec2 } from '../../math/Vec2';
@@ -32,8 +32,8 @@ export type CameraRuntime = {
   readonly orientation: OrientationFrameId;
   readonly epochs: CameraEpochs;
   readonly follow: FollowMemory | null;
-  /** Keyed by the register's `frameKey`: a rung change wipes it to that rung's `emptyMemory`. */
-  readonly gesture: RungMemory;
+  /** Keyed by the register's `frameKey`: an arm change wipes it to that arm's `emptyMemory`. */
+  readonly gesture: CameraArmMemory;
   readonly tilt: TiltMemory;
   /** Stepped before the pick, so it lives here and not in a row's `own`. */
   readonly navigator: NavigatorState;

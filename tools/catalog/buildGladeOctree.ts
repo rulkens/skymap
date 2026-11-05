@@ -12,7 +12,7 @@ import type { OctreeIndexHeader } from '../../src/@types/octree/OctreeIndexHeade
 import type { GladeOctreeOptions } from '../@types/catalog/GladeOctreeOptions';
 import type { OctreeCatalogMeta } from '../@types/octree/OctreeCatalogMeta';
 import { GLADE_STRATIFY } from '../../src/data/galaxyCatalog/gladeStratify';
-import { pickColourIndex } from '../../src/data/galaxyCatalog/colourIndex';
+import { pickColourIndex } from '../../src/layers/galaxyCatalog/appearance/data/colourIndex';
 import {
   GALAXY_COLUMN_SCHEMA,
   GALAXY_INFO_SCHEMA,
@@ -23,8 +23,8 @@ import {
   FLAG_ORIENTATION_FALLBACK,
 } from '../../src/data/octree/galaxyRecordFlags';
 import { Source } from '../../src/data/source';
-import { countEstimatedProvenance } from '../../src/utils/countEstimatedProvenance';
-import { galaxyMagOffset } from '../../src/utils/galaxy/galaxyMagOffset';
+import { countEstimatedProvenance } from '../../src/layers/galaxyCatalog/provenance/utils/countEstimatedProvenance';
+import { galaxyMagOffset } from '../../src/layers/galaxyCatalog/appearance/utils/galaxyMagOffset';
 import { galaxyMedianAbsMag } from '../../src/utils/galaxy/galaxyMedianAbsMag';
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
 import { buildOctreeCatalog } from '../octree/buildOctreeCatalog';

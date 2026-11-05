@@ -8,7 +8,7 @@ import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFoc
 import { planOctreeChunks } from '../../../src/utils/octree/planOctreeChunks';
 import { starCatalogPlanner } from '../../../src/layers/starCatalog/frame';
 import type { StarCatalogRuntime } from '../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { StarCutInputs } from '../../../src/layers/starCatalog/@types/StarCutInputs';
+import type { StarCutInputs } from '../../../src/layers/starCatalog/octreeCut/@types/StarCutInputs';
 import type { OctreeChunkStream } from '../../../src/@types/octree/OctreeChunkStream';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
@@ -22,7 +22,7 @@ import { mat4d } from 'wgpu-matrix';
 import { makeSlab } from '../../fixtures/makeSlab';
 import { OCTREE_PLAN_INTERVAL_FRAMES } from '../../../src/data/octree/octreePlanIntervalFrames';
 import { EYE_SLACK_MPC, NODE_FADE_MS } from '../../../src/data/octree/octreeNodeFade';
-import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;

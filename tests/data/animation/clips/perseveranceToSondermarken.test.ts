@@ -12,20 +12,20 @@ import {
   PERSEVERANCE_POSE,
 } from '../../../../src/data/animation/clips/perseveranceToSondermarken';
 import { sondermarkenFlyout } from '../../../../src/data/animation/clips/sondermarkenFlyout';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import { resolveClipFoci } from '../../../../src/services/engine/animation/resolveClipFoci';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/cameraFraming';
-import { linkedPoseToWorld } from '../../../../src/utils/camera/linkedPoseToWorld';
-import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { northUpRoll } from '../../../../src/utils/camera/northUpRoll';
+import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/framing/cameraFraming';
+import { linkedPoseToWorld } from '../../../../src/services/engine/camera/arms/utils/linkedPoseToWorld';
+import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { northUpRoll } from '../../../../src/utils/camera/orbitPose/northUpRoll';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';

@@ -1,4 +1,4 @@
-import type { FramedCameraPose } from '../camera/FramedCameraPose';
+import type { FramedCameraPose } from '../camera/pose/FramedCameraPose';
 
 /**
  * LinkView — what a link opens on. Precedence is a parse rule

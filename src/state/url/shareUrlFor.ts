@@ -11,7 +11,7 @@ import { composeHashParams } from '../../utils/url/composeHashParams';
 import { encodeFramedPose } from '../../utils/url/encodeFramedPose';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 import type { RootState } from '../../store/types';
 
 export function shareUrlFor(

@@ -68,6 +68,8 @@ function makeSnapshot(
       localBubble: { ...f.localBubble, enabled: !f.localBubble.enabled },
       constellations: { ...f.constellations, enabled: !f.constellations.enabled },
       orbitTrails: { ...f.orbitTrails, enabled: !f.orbitTrails.enabled },
+      surfaceTileDebug: f.surfaceTileDebug,
+      terrainPickMarker: f.terrainPickMarker,
       missions: { ...f.missions },
       missionTrails: { ...f.missionTrails, enabled: !f.missionTrails.enabled },
       satellites: { ...f.satellites, enabled: !f.satellites.enabled },

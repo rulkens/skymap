@@ -55,10 +55,10 @@
 /* Where the remote's drag pad is on its picture, as shares of the screen. */
 .pad {
   position: absolute;
-  top: 6.1%;
+  top: 5.3%;
   left: 4.1%;
   width: 91.8%;
-  height: 40.2%;
+  height: 37.9%;
   container-type: inline-size;
 }
 

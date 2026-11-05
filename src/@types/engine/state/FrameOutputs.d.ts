@@ -9,10 +9,10 @@
  * view's, the one value draw and cursor-ray pick both read.
  */
 
-import type { CameraProjection } from '../../camera/CameraProjection';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { CameraProjection } from '../../camera/projection/CameraProjection';
+import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
 import type { Mat3 } from '../../math/Mat3';
-import type { ViewFrustum } from '../../camera/ViewFrustum';
+import type { ViewFrustum } from '../../camera/projection/ViewFrustum';
 
 export type FrameOutputs = {
   readonly displayed: FramedCameraPose;

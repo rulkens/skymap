@@ -173,6 +173,31 @@ describe('inputSourceSaga', () => {
     ]);
   });
 
+  it('two fingers moving together restart the gesture as a tilt and drag it', async () => {
+    const touch = (kind: 'down' | 'move', pointer: number, x: number, y: number): DeviceEvent => ({
+      kind,
+      t: (t += 10),
+      pointer,
+      pointerType: 'touch',
+      button: 0,
+      at: { x, y },
+      mods: NO_MODS,
+    });
+    emit(resize(200, 100));
+    emit(touch('down', 1, 0.4, 0.5));
+    emit(touch('down', 2, 0.6, 0.5));
+    for (const y of [0.47, 0.44, 0.41]) {
+      emit(touch('move', 1, 0.4, y));
+      emit(touch('move', 2, 0.6, y));
+    }
+    resolveFrame();
+    await settle();
+    expect(intentsOf()).toEqual(['orbit', 'tilt']);
+    const moved = actions.filter((a) => a.type === inputMoved.type);
+    const motion = (moved.at(-1)!.payload as { motion: { intent: string }[] }).motion;
+    expect(motion.map((m) => m.intent)).toEqual(['tilt']);
+  });
+
   it('cancelling the saga ends an open gesture before detaching', () => {
     emit(resize(200, 100));
     emit(pointer('down', A));

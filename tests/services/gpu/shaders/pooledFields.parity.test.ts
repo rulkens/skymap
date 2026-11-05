@@ -7,12 +7,12 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { derivePointRecord } from '../../../../src/utils/galaxy/derivePointRecord';
+import { derivePointRecord } from '../../../../src/layers/galaxyCatalog/pointSprites/utils/derivePointRecord';
 import { bandMagOfBakedAbsMag } from '../../../../src/utils/galaxy/bandMagOfBakedAbsMag';
 import { GALAXY_COLUMN_SCHEMA } from '../../../../src/data/octree/galaxyOctreeFamily';
 import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource';
 import type { ColumnId } from '../../../../src/@types/octree/ColumnId';
-import type { GalaxyPointDerived } from '../../../../src/@types/engine/GalaxyPointDerived';
+import type { GalaxyPointDerived } from '../../../../src/layers/galaxyCatalog/pointSprites/@types/GalaxyPointDerived';
 
 type Fn = (...args: (number | boolean)[]) => number | number[];
 

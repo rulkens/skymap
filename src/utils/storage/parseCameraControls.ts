@@ -6,7 +6,7 @@
 import { DEFAULT_CAMERA_CONTROLS } from '../../data/camera/openSpaceNavigation';
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
 import type { ControlSchemeId } from '../../@types/engine/camera/ControlSchemeId';
-import type { FrictionGroup } from '../../@types/camera/FrictionGroup';
+import type { FrictionGroup } from '../../@types/camera/input/FrictionGroup';
 
 // A Record, so a new scheme id fails to compile here until it is accepted.
 const SCHEME_IDS: Readonly<Record<ControlSchemeId, true>> = { skymap: true, openspace: true };

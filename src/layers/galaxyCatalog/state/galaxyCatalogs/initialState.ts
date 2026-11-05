@@ -2,7 +2,7 @@ import { DEFAULT_GALAXY_PROVENANCE } from '../defaults';
 import { GALAXY_REFINE_THRESHOLD } from '../../../../data/galaxyCatalog/galaxyRefineThreshold';
 import { GALAXY_BLOB_GLOW_OVERLAP } from '../../../../data/galaxyCatalog/galaxyBlobGlowOverlap';
 import { GALAXY_BLOB_PEAK_CAP } from '../../../../data/galaxyCatalog/galaxyBlobPeakCap';
-import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
+import type { GalaxyCatalogSettings } from '../../@types/GalaxyCatalogSettings';
 
 export const initialState: GalaxyCatalogSettings = {
   // 2.5 px: a visible Gaussian disc on mid-DPI displays without ~3 M overlapping

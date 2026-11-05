@@ -18,7 +18,11 @@ export default defineConfig({
   plugins: [react(), weslStaticPlugin()],
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    include: [
+      'tests/**/*.test.ts',
+      'tests/**/*.test.tsx',
+      'packages/move-files/tests/**/*.test.ts',
+    ],
     setupFiles: ['tests/setup/webgpuGlobals.ts', 'tests/setup/reactTestEnv.ts'],
   },
 });

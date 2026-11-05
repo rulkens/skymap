@@ -16,7 +16,7 @@ function FeaturesHero() {
         From Earth in 3D to rovers on Mars, from the Milky Way to the cosmic web, on your phone, PC
         or in a dome.
       </p>
-      <CaptionGallery showDrawn={false} />
+      <CaptionGallery />
     </PictureBand>
   );
 }

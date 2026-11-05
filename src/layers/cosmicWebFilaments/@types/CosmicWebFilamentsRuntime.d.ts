@@ -6,8 +6,8 @@
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
-import type { FilamentReq } from '../../../@types/loading/FilamentReq';
-import type { FilamentRenderer } from '../../../@types/rendering/FilamentRenderer';
+import type { FilamentReq } from '../filaments/@types/FilamentReq';
+import type { FilamentRenderer } from '../filaments/@types/FilamentRenderer';
 
 export type CosmicWebFilamentsRuntime = {
   readonly renderer: FilamentRenderer;

@@ -109,7 +109,7 @@
 // improvement, not a compromise traded for fewer varyings.
 //
 // Why 0.2 ('DISK_TINT_SPREAD'): the constant lives in RAMP-POSITION
-// units, not magnitudes. 'src/data/galaxyCatalog/colourIndex.ts' linearly
+// units, not magnitudes. 'src/layers/galaxyCatalog/appearance/data/colourIndex.ts' linearly
 // remaps each source's own raw colour onto this 0..2 ramp via
 // '((raw - rangeMin) / (rangeMax - rangeMin)) * 2', so one magnitude of
 // real colour is worth '2 / (rangeMax - rangeMin)' ramp units — and

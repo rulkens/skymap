@@ -4,16 +4,16 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { bodySceneBodyPartition } from '../../../../src/layers/body/present/bodySceneBodyPartition';
+import { bodySceneBodyPartition } from '../../../../src/layers/body/slabs/present/bodySceneBodyPartition';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
 import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySlabRosterIds';
-import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
+import { produceMissionCaptions } from '../../../../src/layers/missions/craft/present/produceMissionCaptions';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { EARTH_SCENE_BODY_IDS } from '../../../../src/data/bodies/earthSceneBodyIds';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
+import { EARTH_SCENE_BODY_IDS } from '../../../../src/layers/earthScenes/scenes/data/earthSceneBodyIds';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
@@ -24,7 +24,7 @@ import type { StarBody } from '../../../../src/@types/scene/StarBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
@@ -52,7 +52,7 @@ const STATE = {
     bodies: { items: makeBodyItems() },
     missions: { craft: null },
   },
-  picking: { pickInFlight: false, cursorTexPx: null },
+  picking: { pickInFlight: false },
 } as unknown as EngineState;
 
 const POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e-9 };

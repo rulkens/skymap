@@ -50,12 +50,12 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
-import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/drivers/cameraDrivers';
 import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
-import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
+import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/drivers/cameraEpochs';
 import {
   startCameraTween,
   setAutoRotate,
@@ -69,14 +69,14 @@ import {
 } from '../../../../src/data/orientation/orientationFrames';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { computeViewProj } from '../../../../src/utils/camera/projection/computeViewProj';
 import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
@@ -90,9 +90,9 @@ import {
   inputMoved,
   inputConsumed,
 } from '../../../../src/state/input/inputSlice';
-import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
-import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
+import { EMPTY_TILT_MEMORY } from '../../../../src/services/engine/camera/data/emptyTiltMemory';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { earthArm } from '../../../fixtures/earthArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
@@ -100,8 +100,8 @@ import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { angleBetween } from '../../../helpers/math/angleBetween';
 
 function makeStore() {
@@ -528,7 +528,7 @@ describe('runFrame — orientation-frame roll', () => {
     // pin that every produced pose and its view-projection are finite: at exactly
     // π/2 the lookAt would gimbal-lock to NaN, and the clamp is what keeps this
     // switch well-defined.
-    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors src/data/camera/pitchLimit.ts
+    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors src/services/engine/camera/arms/world/data/pitchLimit.ts
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -750,7 +750,7 @@ describe('runFrame — engineScaleChanged dispatch', () => {
     const ALTITUDE_KM = 100;
     const arm = earthArm(1 + ALTITUDE_KM / EARTH_RADIUS_KM);
     store.dispatch(commitCameraPose(arm));
-    // No focus row: nothing constrains a rung, so the arm holds at rest and
+    // No focus row: nothing constrains an arm, so the arm holds at rest and
     // the legend — this fixture's whole subject — is read off it. A focus here
     // would owe an approach that flies the range straight out of the km band.
     state.cameraRuntime = {
@@ -1039,7 +1039,7 @@ describe('runFrame — effective intent', () => {
 
   it('the frame’s actions reach the store in the same order as before', () => {
     // The `drag end` frame of the driver golden trace, reproduced: the
-    // replay's commit and `endDrag` dispatch first and in order, the scale
+    // replay's commit dispatches first, the scale
     // dispatch after them. Recorded the way the fixture records.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: 5 });
     h.frame(4);
@@ -1057,14 +1057,13 @@ describe('runFrame — effective intent', () => {
     h.frame();
 
     const want = GOLDEN.find((step) => step.label === 'drag end')!.actions;
-    expect(want).toContain('camera/endDrag');
     expect(recorded).toEqual(want);
   });
 
   it('commits the tail of a gesture that ended mid-frame', () => {
     // The commit fires on the frame after pointerup, so the moves that
     // preceded the release must land BEFORE it or the store bakes a pose one
-    // frame stale — and the drag flag clears in the same frame.
+    // frame stale.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, canvasSize: 1000 });
     h.seedPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }));
     h.press('orbit', [100, 100]);
@@ -1074,6 +1073,5 @@ describe('runFrame — effective intent', () => {
     h.frame();
 
     expect(worldArmOf(h.store.getState().camera.base).yaw).toBeCloseTo(-50 * 0.005, 6);
-    expect(h.store.getState().camera.dragging).toBe(false);
   });
 });

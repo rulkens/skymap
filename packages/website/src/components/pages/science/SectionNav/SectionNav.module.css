@@ -85,12 +85,12 @@
   }
 }
 
-@media (max-width: 560px) {
+@media not all and (--two-up) {
   .cells li {
     grid-column: 1 / -1;
   }
 
-  .cells li::before {
+  .cells li + li::before {
     content: none;
   }
 }

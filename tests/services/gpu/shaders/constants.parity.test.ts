@@ -18,25 +18,25 @@ import {
   FADE,
   DENS_SCALE,
   SPEED_COLOR_MAX,
-} from '../../../../src/data/flow/flowFieldConstants';
+} from '../../../../src/layers/flow/streamlines/data/flowFieldConstants';
 import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
 import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapFluidEvents';
 import { BODY_AMBIENT_LIGHT } from '../../../../src/data/bodies/bodyAmbientLight';
-import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
+import { EARTH_SURFACE_PARAMS } from '../../../../src/layers/body/surfaceTiles/format/data/earthSurfaceParams';
 import {
   SURFACE_TILE_MESH_RESOLUTION,
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,
   SURFACE_TILE_SKIRT_DEPTH_FRACTION,
-} from '../../../../src/data/bodies/surfaceTileParams';
+} from '../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import {
   HEIGHT_CODE_OFFSET_M,
   HEIGHT_CODE_STEP_M,
   HEIGHT_POSTS_PER_TILE,
-} from '../../../../src/data/scene/heightTileFormat';
+} from '../../../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 import { GALAXY_COLUMN_SCHEMA } from '../../../../src/data/octree/galaxyOctreeFamily';

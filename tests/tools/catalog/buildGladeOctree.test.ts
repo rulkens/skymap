@@ -12,8 +12,8 @@ import {
   octreeChunkFileName,
   octreeChunkInfoFileName,
 } from '../../../src/data/octree/octreeFormat';
-import { countEstimatedProvenance } from '../../../src/utils/countEstimatedProvenance';
-import { galaxyMagOffset } from '../../../src/utils/galaxy/galaxyMagOffset';
+import { countEstimatedProvenance } from '../../../src/layers/galaxyCatalog/provenance/utils/countEstimatedProvenance';
+import { galaxyMagOffset } from '../../../src/layers/galaxyCatalog/appearance/utils/galaxyMagOffset';
 import { galaxyMedianAbsMag } from '../../../src/utils/galaxy/galaxyMedianAbsMag';
 import { mulberry32 } from '../../../src/utils/random/mulberry32';
 import { buildGladeOctree } from '../../../tools/catalog/buildGladeOctree';

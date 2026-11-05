@@ -1,5 +1,5 @@
 import type { LinkView } from './LinkView';
-import type { OrientationFrameId } from '../camera/OrientationFrameId';
+import type { OrientationFrameId } from '../camera/orientation/OrientationFrameId';
 
 /**
  * LinkIntent — everything a hash says, merged across its rows. `t` is a Unix

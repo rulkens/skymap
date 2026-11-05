@@ -3,7 +3,7 @@
 // TourOverlay presentational tests.
 //
 // These cover the three presentational pieces in isolation: the caption's
-// readout + markdown body (TourCaption), the nav cluster's disabled/handler
+// readout + subtitle lines (TourCaption), the nav cluster's disabled/handler
 // wiring + pause aria-label (TourNav), and the overlay's caption-gating
 // behaviour (caption hidden during the fly, nav always shown).
 //
@@ -11,62 +11,64 @@
 // `() => void` fields under tsc — a bare `vi.fn()` infers a too-wide type and
 // fails the typecheck against the typed props.
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import TourCaption from '../../../src/components/TourOverlay/TourCaption';
 import TourNav from '../../../src/components/TourOverlay/TourNav';
 import TourOverlay from '../../../src/components/TourOverlay/TourOverlay';
+import { lineSchedule } from '../../../src/utils/animation/lineSchedule';
 import type { BeatCaption } from '../../../src/@types/animation/tour/BeatCaption';
 // Vitest replaces CSS-module imports with a stable name proxy, so class
 // assertions can use the same `styles.x` tokens the component renders
 // instead of hard-coding mangled class names.
 import styles from '../../../src/components/TourOverlay/TourOverlay.module.css';
 
+const captionProps = (over: Partial<React.ComponentProps<typeof TourCaption>> = {}) => ({
+  caption: { title: 'The Virgo Cluster', lines: ['First line here.', 'Second line follows.'] },
+  dwellSec: 10,
+  dwellNonce: 1,
+  paused: false,
+  ...over,
+});
+
 describe('TourCaption', () => {
-  it('renders the title and the zero-padded label readout', () => {
-    const caption: BeatCaption = { title: 'The Virgo Cluster' };
-    render(<TourCaption caption={caption} label="The Local Universe" index={0} total={3} />);
-
+  it('labels the beat with its title alone, no beat counter', () => {
+    render(<TourCaption {...captionProps()} />);
     expect(screen.getByText('The Virgo Cluster')).toBeInTheDocument();
-    expect(screen.getByText('The Local Universe · 01 / 03')).toBeInTheDocument();
-  });
-
-  it('omits the label prefix when the tour has no label', () => {
-    const caption: BeatCaption = { title: 'M87' };
-    render(<TourCaption caption={caption} label={null} index={2} total={3} />);
-
-    expect(screen.getByText('03 / 03')).toBeInTheDocument();
-  });
-
-  it('drops the beat counter without chrome (cinema) but keeps the series label', () => {
-    const caption: BeatCaption = { title: 'The Virgo Cluster' };
-    render(
-      <TourCaption
-        hasChrome={false}
-        caption={caption}
-        label="The Local Universe"
-        index={1}
-        total={14}
-      />,
-    );
-
-    expect(screen.getByText('The Local Universe')).toBeInTheDocument();
     expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
   });
 
-  it('renders markdown body: bold becomes <strong>, links open in a new tab', () => {
-    const caption: BeatCaption = {
-      title: 'The Milky Way',
-      body: 'Home — and a **bold** word, plus a [link](https://example.com).',
-    };
-    render(<TourCaption caption={caption} label={null} index={0} total={1} />);
+  describe('on the dwell clock', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'performance'] });
+    });
+    afterEach(() => vi.useRealTimers());
+    const advance = (sec: number) => act(() => vi.advanceTimersByTime(sec * 1000));
+    const opacity = (text: string) => screen.getByText(text).style.opacity;
 
-    const strong = screen.getByText('bold');
-    expect(strong.tagName).toBe('STRONG');
+    it('the second line shows after its slice start', () => {
+      const props = captionProps();
+      const { startSec } = lineSchedule(props.caption.lines, props.dwellSec)[1]!;
+      render(<TourCaption {...props} />);
+      advance(1);
+      expect(opacity('Second line follows.')).toBe('0');
+      advance(startSec);
+      expect(opacity('Second line follows.')).toBe('1');
+      expect(opacity('First line here.')).toBe('0');
+    });
 
-    const link = screen.getByRole('link', { name: 'link' });
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    it('pausing freezes the subtitle line', () => {
+      const props = captionProps();
+      const { startSec } = lineSchedule(props.caption.lines, props.dwellSec)[1]!;
+      const { rerender } = render(<TourCaption {...props} />);
+      advance(1);
+      rerender(<TourCaption {...captionProps({ paused: true })} />);
+      advance(startSec + 1);
+      expect(opacity('First line here.')).toBe('1');
+      rerender(<TourCaption {...captionProps({ paused: false })} />);
+      advance(startSec);
+      expect(opacity('Second line follows.')).toBe('1');
+    });
   });
 });
 
@@ -113,10 +115,8 @@ describe('TourNav', () => {
 
 describe('TourOverlay', () => {
   const baseProps = () => ({
-    caption: { title: 'The Virgo Cluster' } as BeatCaption,
-    label: 'The Local Universe',
+    caption: { title: 'The Virgo Cluster', lines: ['One.'] } as BeatCaption,
     index: 0,
-    total: 3,
     paused: false,
     dwellSec: 8,
     dwellNonce: 0,
@@ -131,25 +131,24 @@ describe('TourOverlay', () => {
     // dwellNonce 0 => the dwell has not landed => caption gated off.
     render(<TourOverlay {...baseProps()} dwellNonce={0} />);
 
-    expect(screen.queryByText('The Virgo Cluster')).not.toBeInTheDocument();
+    expect(screen.queryByText(/The Virgo Cluster/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Exit tour' })).toBeInTheDocument();
   });
 
   it('reveals the caption once the dwell lands (nonce bumps)', () => {
     const { rerender } = render(<TourOverlay {...baseProps()} dwellNonce={0} />);
-    expect(screen.queryByText('The Virgo Cluster')).not.toBeInTheDocument();
+    expect(screen.queryByText(/The Virgo Cluster/)).not.toBeInTheDocument();
 
     rerender(<TourOverlay {...baseProps()} dwellNonce={1} />);
-    expect(screen.getByText('The Virgo Cluster')).toBeInTheDocument();
+    expect(screen.getByText(/The Virgo Cluster/)).toBeInTheDocument();
   });
 
-  it('mounts transport + beat counter with chrome (interactive default)', () => {
+  it('mounts the transport with chrome (interactive default)', () => {
     render(<TourOverlay {...baseProps()} dwellNonce={1} />);
 
     expect(screen.getByRole('button', { name: 'Exit tour' })).toBeInTheDocument();
-    expect(screen.getByText('The Local Universe · 01 / 03')).toBeInTheDocument();
     // Interactive captions keep their nav clearance — no cinema layout class.
-    const captionRoot = screen.getByText('The Virgo Cluster').parentElement!;
+    const captionRoot = screen.getByText(/The Virgo Cluster/).parentElement!;
     expect(captionRoot.classList.contains(styles.captionNoChrome!)).toBe(false);
   });
 
@@ -157,14 +156,13 @@ describe('TourOverlay', () => {
     render(<TourOverlay {...baseProps()} hasChrome={false} dwellNonce={1} />);
 
     expect(screen.getByText('The Virgo Cluster')).toBeInTheDocument();
-    expect(screen.getByText('The Local Universe')).toBeInTheDocument();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
     // Layout: with the nav unmounted, bottom-anchored captions shed their
     // nav clearance via the captionNoChrome modifier. Class presence is the
     // house-appropriate depth — pixel assertions of CSS are brittle in jsdom
     // (styles aren't computed), the class is the contract.
-    const captionRoot = screen.getByText('The Virgo Cluster').parentElement!;
+    const captionRoot = screen.getByText(/The Virgo Cluster/).parentElement!;
     expect(captionRoot.classList.contains(styles.captionNoChrome!)).toBe(true);
   });
 });

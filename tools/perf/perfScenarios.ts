@@ -36,7 +36,7 @@
  * dropped.
  */
 
-import { absoluteArm } from '../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../src/utils/camera/arms/absoluteArm';
 import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 import type { PerfPose } from '../../src/@types/perf/PerfPose';
 import type { Vec3 } from '../../src/@types/math/Vec3';
@@ -82,7 +82,7 @@ export const PERF_SCENARIOS: readonly PerfScenario[] = [
   // body-arm pose is body-local, so it frames the same ground whatever the sim
   // clock reads; only the lighting moves. Decoded from a share link's `pose=`
   // value (see the README), not from a logState dump. `clearFocus` because the
-  // boot Earth focus sits outside Mars's subtree, and a body rung releases an
+  // boot Earth focus sits outside Mars's subtree, and a body arm releases an
   // arm its focus does not reach — the vantage would snap back to Earth on the
   // first frame.
   {

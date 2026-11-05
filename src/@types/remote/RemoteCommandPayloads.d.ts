@@ -20,4 +20,5 @@ export type RemoteCommandPayloads = {
   timeGoLive: null;
   controlSchemeSet: { scheme: ControlSchemeId };
   toggleSet: { id: string; enabled: boolean };
+  layerSet: { id: string; enabled: boolean };
 };

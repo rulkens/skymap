@@ -15,7 +15,7 @@ export function siteShotUrl(
   const flags = [
     ...(shot.settings?.ui ? [] : ['cinema']),
     ...(shot.query ? [shot.query] : []),
-    ...(shot.settings?.remote ? ['remote'] : []),
+    ...(shot.settings?.remote || shot.settings?.pairing ? ['remote'] : []),
   ];
   const hash = shot.settings?.tourStep === undefined ? `#${shot.link}` : '';
   return `${base.replace(/\/+$/, '')}/${flags.length > 0 ? `?${flags.join('&')}` : ''}${hash}`;

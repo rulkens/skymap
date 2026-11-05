@@ -4,7 +4,7 @@
 
 ## The gap
 
-`catalogStore.entries()` (`src/layers/galaxyCatalog/render/catalogStore.ts`) yields one
+`catalogStore.entries()` (`src/layers/galaxyCatalog/pointSprites/render/catalogStore.ts`) yields one
 `CatalogDrawEntry` per loaded catalog, in `GALAXY_CATALOG_SOURCES` draw order:
 
 ```ts
@@ -40,7 +40,7 @@ public type. Filing it here rather than fixing it in the reorg keeps that PR a p
 
 ## What a real test would assert
 
-In `tests/layers/galaxyCatalog/render/catalogStore.test.ts`, with the existing stub
+In `tests/layers/galaxyCatalog/pointSprites/render/catalogStore.test.ts`, with the existing stub
 device: make `createBuffer` / `createBindGroup` return **identity-bearing** stubs (echo the
 descriptor `label`, and have the bind-group stub retain the buffer it was built around). Then
 upload two catalogs with different ids and assert, per yielded entry:

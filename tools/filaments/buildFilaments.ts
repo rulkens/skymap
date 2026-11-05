@@ -78,13 +78,13 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 import {
   decodeGalaxyCatalog,
   GALAXY_CATALOG_DATA_PREFIX,
-} from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+} from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 import { resolveDataFile } from '../utils/data/resolveDataFile';
 import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl';
 import {
   encodeFilaments,
   FILAMENT_DATA_PREFIX,
-} from '../../src/data/filament/filamentBinaryFormat';
+} from '../../src/layers/cosmicWebFilaments/filaments/data/filamentBinaryFormat';
 import { FormatVersionError } from '../../src/data/formatVersionError';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../src/data/source';

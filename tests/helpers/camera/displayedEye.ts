@@ -6,7 +6,7 @@
  */
 
 import { liveWorldPose } from '../../../src/services/engine/helpers/liveWorldPose';
-import { eyeMpcOf } from '../../../src/utils/camera/eyeMpcOf';
+import { eyeMpcOf } from '../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';

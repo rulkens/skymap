@@ -1,4 +1,4 @@
-import type { CameraPose } from '../camera/CameraPose';
+import type { CameraPose } from '../camera/pose/CameraPose';
 import type { SettingsSnapshot } from '../engine/settings/SettingsSnapshot';
 
 /** How `npm run capture-featured` frames this card; presentation data, hand-written. */

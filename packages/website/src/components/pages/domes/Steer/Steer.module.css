@@ -61,7 +61,7 @@
 /* Narrow, the rings come inside the column: in the margin they would fall off a phone's edge. */
 @media (--narrow) {
   .track {
-    padding-left: 1.5rem;
+    padding-left: var(--site-space-m);
   }
 
   .root {

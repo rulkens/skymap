@@ -1,0 +1,28 @@
+{
+  "companions": [
+    {
+      "from": "src/",
+      "to": "tests/",
+      "sources": [".ts", ".tsx"],
+      "suffixes": [".test.ts", ".test.tsx"]
+    },
+    {
+      "from": "tools/",
+      "to": "tests/tools/",
+      "sources": [".ts", ".tsx"],
+      "suffixes": [".test.ts", ".test.tsx"]
+    },
+    {
+      "from": "packages/move-files/src/",
+      "to": "packages/move-files/tests/",
+      "sources": [".ts", ".tsx"],
+      "suffixes": [".test.ts", ".test.tsx"]
+    },
+    {
+      "from": "",
+      "to": "",
+      "sources": [".tsx"],
+      "suffixes": [".module.css"]
+    }
+  ]
+}

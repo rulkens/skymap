@@ -1,6 +1,7 @@
 /**
  * The galaxy-catalog Layer: nine point sources, their renderers, the thumbnail
- * LOD chain, the Galaxies settings section, `watchPaletteWakeSaga` (its own
+ * LOD chain, the Galaxies settings section, the galaxy InfoCard, the
+ * provenance debug section, `watchPaletteWakeSaga` (its own
  * demand trigger's wake) and every contribution they make to a frame. No
  * `targets`.
  */
@@ -13,18 +14,21 @@ import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { galaxyCatalogPlanner } from './frame';
-import { galaxyCatalogAssetRows } from './load/galaxyCatalogAssetRows';
-import { galaxyCatalogSourceCounts } from './load/galaxyCatalogSourceCounts';
-import { galaxyPointSpritesPass } from './passes/galaxyPointSpritesPass';
-import { galaxyAggregatesPass } from './passes/galaxyAggregatesPass';
-import { galaxyCutCompute } from './computes/galaxyCutCompute';
-import { proceduralDisksPass } from './passes/proceduralDisksPass';
-import { texturedDisksPass } from './passes/texturedDisksPass';
-import { galaxyCatalogSelectionRow } from './present/galaxyCatalogSelectionRow';
-import { produceFamousGalaxyLabels } from './present/produceFamousGalaxyLabels';
-import { watchPaletteWakeSaga } from './sagas/watchPaletteWakeSaga';
-import GalaxiesSectionContainer from './ui/GalaxiesSectionContainer';
-import GalaxyBlobTuningSectionContainer from './ui/GalaxyBlobTuningSectionContainer';
+import { galaxyCatalogAssetRows } from './records/load/galaxyCatalogAssetRows';
+import { galaxyCatalogSourceCounts } from './records/load/galaxyCatalogSourceCounts';
+import { galaxyPointSpritesPass } from './pointSprites/passes/galaxyPointSpritesPass';
+import { galaxyAggregatesPass } from './octree/passes/galaxyAggregatesPass';
+import { galaxyCutCompute } from './octree/computes/galaxyCutCompute';
+import { proceduralDisksPass } from './disks/procedural/passes/proceduralDisksPass';
+import { texturedDisksPass } from './disks/textured/passes/texturedDisksPass';
+import { galaxyCatalogSelectionRow } from './selection/present/galaxyCatalogSelectionRow';
+import { produceFamousGalaxyLabels } from './famousGalaxies/present/produceFamousGalaxyLabels';
+import { watchPaletteWakeSaga } from './aliases/sagas/watchPaletteWakeSaga';
+import GalaxiesSectionContainer from './controls/ui/GalaxiesSectionContainer';
+import GalaxyBlobTuningSectionContainer from './controls/ui/GalaxyBlobTuningSectionContainer';
+import GalaxyDetailCard from './card/ui/GalaxyDetailCard/GalaxyDetailCard';
+import CompactCard from './card/ui/CompactCard/CompactCard';
+import GalaxyProvenanceSectionContainer from './provenance/ui/GalaxyProvenanceSectionContainer';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 
 export const galaxyCatalogLayer = defineLayer({
@@ -63,7 +67,12 @@ export const galaxyCatalogLayer = defineLayer({
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
   planners: (runtime) => [galaxyCatalogPlanner(runtime)],
   ui: [
-    { slot: 'main', content: GalaxiesSectionContainer },
+    { slot: 'main', content: GalaxiesSectionContainer, title: 'Galaxies' },
+    { slot: 'debug', content: GalaxyProvenanceSectionContainer },
+    {
+      slot: 'detailCard',
+      content: { type: 'galaxyCatalog', Detail: GalaxyDetailCard, Compact: CompactCard },
+    },
     { slot: 'debug', content: GalaxyBlobTuningSectionContainer },
   ],
 });

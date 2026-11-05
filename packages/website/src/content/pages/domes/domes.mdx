@@ -58,11 +58,11 @@ import { STEPS } from './domes.data';
   <Steer>
     <div>
       <h3>Pair it</h3>
-      <p className={text.small}>The dome shows a QR code and a room code. Scan the QR code with a phone on the same network, or open the address shown under it.</p>
+      <p className={text.small}>The dome shows a QR code and a room code. Scan the QR code with a phone on the same network, or open the remote page at the address the server prints and type the room code.</p>
     </div>
     <div>
       <h3>Fly with your finger</h3>
-      <p className={text.small}>Drag to orbit, pinch to zoom. From the phone you can also search for an object, start a tour or an exhibit, set the time and switch labels on and off.</p>
+      <p className={text.small}>Drag to orbit, pinch to zoom. From the phone you can also search for an object, start a tour or an exhibit, set the time and switch layers and labels on and off.</p>
     </div>
     <div>
       <h3>More than one phone</h3>
@@ -70,7 +70,8 @@ import { STEPS } from './domes.data';
     </div>
     <div>
       <h3>Where it runs</h3>
-      <p className={text.small}>The phone and the dome talk through the computer that runs Skymap for your dome, so it works wherever the dome runs Skymap itself.</p>
+      <p className={text.small}>The dome’s computer runs Skymap’s own server, which passes the messages between the phone and the dome.</p>
+      <ObjLink hang size="small" href={sitePath('/docs/guide/dome-setup/')}>Setting up a dome</ObjLink>
     </div>
     <RemoteDemo slot="demo" sizes={narrowSizes('100vw', '36rem')} client:visible />
   </Steer>

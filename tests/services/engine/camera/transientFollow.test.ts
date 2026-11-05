@@ -1,7 +1,7 @@
 /**
  * A transient object the user focused: core places it each frame (`placeLiveSelection`), and the
  * camera poses from it and follows it as the clock moves, through the same runFrame loop a body
- * takes. Before the seam, an id with no body-table row threw inside the rungs on the first frame.
+ * takes. Before the seam, an id with no body-table row threw inside the arms on the first frame.
  */
 import { describe, expect, it, vi } from 'vitest';
 
@@ -16,10 +16,10 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { updateSelectionFocus } from '../../../../src/state/selection/selectionSlice';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
-import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
+import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { frameBodyStates } from '../../../../src/services/engine/frame/frameBodyStates';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';

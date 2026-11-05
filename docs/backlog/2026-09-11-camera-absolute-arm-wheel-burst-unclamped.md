@@ -4,7 +4,7 @@
 1; `f1-decay-review.md` finding F2). User ruled: backlog, not this PR.
 
 The body arm's zoom settle prices its per-notch turn on `u = |ln
-spentZoomFactor(factor)|`, where `spentZoomFactor` (`src/utils/camera/spentZoomFactor.ts`)
+spentZoomFactor(factor)|`, where `spentZoomFactor` (`src/services/engine/camera/input/utils/spentZoomFactor.ts`)
 folds a frame's wheel events through a `[0.5, 2]` altitude-step clamp before
 the turn is computed — a burst can never buy more settle than it bought zoom.
 The world (absolute) arm has no equivalent clamp: `u` is the raw folded
@@ -12,12 +12,12 @@ The world (absolute) arm has no equivalent clamp: `u` is the raw folded
 
 ## Where
 
-- `src/data/camera/orientDecay.ts:7-8` still documents the no-whip property
+- `src/services/engine/camera/data/orientDecay.ts:7-8` still documents the no-whip property
   ("a reference move beyond `rideBoundRad` in ONE notch is unauthored") — true
   of the ride, not of the decay.
-- `src/utils/camera/orientStepRad.ts:12` caps at `capRadPerLogZoom · u` with no
+- `src/services/engine/camera/orientation/utils/orientStepRad.ts:12` caps at `capRadPerLogZoom · u` with no
   ceiling on `u` itself; `src/services/engine/camera/levelledPose.ts:32` same.
-- `src/services/engine/camera/replayInput.ts:161,213` pass the raw folded
+- `src/services/engine/camera/input/replayInput.ts:161,213` pass the raw folded
   factor into the world-arm path; nothing clamps it before
   `frameAlignedRoll`/`orientStepRad` see it.
 - `zoomedDistance.ts:17-35` clamps only at the collision/recession envelope,

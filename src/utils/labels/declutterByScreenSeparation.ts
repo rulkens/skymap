@@ -11,15 +11,12 @@
  * priorities (not a camera or a vp), so it unit-tests headlessly, independent
  * of the director's projection and merge machinery.
  *
- * ### Why priority = apparent size
+ * ### One number, composed by the caller
  *
- * When two captions collide, the one for the nearer / brighter star is the one
- * worth keeping — its subject is the visually dominant object, and the distant
- * star behind it is exactly the clutter to drop. Apparent size (bigger when
- * near / large) is that signal, so the caller passes each candidate's apparent
- * size as `priorityPx`. This mirrors the director's own rationale for sorting
- * its declutter by prominence (`label2DDirector.ts`) — the higher
- * `prominencePx`/apparent-size wins an overlap.
+ * The caller passes each candidate's `Label2D.declutterPriority`. Between
+ * captions of one authored priority it is apparent size that decides: the
+ * nearer / bigger subject is the visually dominant one, and the distant star
+ * behind it is exactly the clutter to drop.
  *
  * The sort is a stable priority-DESC ordering (equal priorities keep input
  * order — the director's tiebreak convention), so the result is deterministic.
@@ -28,8 +25,8 @@
 import type { Vec2 } from '../../@types/math/Vec2';
 
 export function declutterByScreenSeparation(input: {
-  /** Projected screen positions + priority (apparent size / -distance). */
-  candidates: readonly { screenPx: Vec2; priorityPx: number }[];
+  /** Projected screen positions + declutter priority. */
+  candidates: readonly { screenPx: Vec2; declutterPriority: number }[];
   /** Minimum pixel gap a kept candidate must clear from every survivor. */
   minSeparationPx: number;
 }): readonly number[] {
@@ -39,7 +36,7 @@ export function declutterByScreenSeparation(input: {
   // stable, so sorting an ascending index array by priority leaves equal
   // priorities in input order — the director's stable tiebreak.
   const order = candidates.map((_, i) => i);
-  order.sort((a, b) => candidates[b]!.priorityPx - candidates[a]!.priorityPx);
+  order.sort((a, b) => candidates[b]!.declutterPriority - candidates[a]!.declutterPriority);
 
   const kept: number[] = [];
   const minSepSq = minSeparationPx * minSeparationPx;

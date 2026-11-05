@@ -8,7 +8,7 @@
  * isotropic pixel delta, not a pointer: the navigator integrates velocity.
  */
 
-import type { InputStep } from '../../@types/camera/InputStep';
+import type { InputStep } from '../../@types/camera/input/InputStep';
 import type { PendingStep } from '../../@types/input/PendingStep';
 import type { Vec2 } from '../../@types/math/Vec2';
 import { NAV_INTENT_AXIS } from '../../data/input/navIntentAxis';
@@ -29,7 +29,7 @@ export function pendingToInputSteps(
         duringGesture: step.held,
         cursorPx: step.at === null ? null : unitToViewPx(step.at, viewPx),
       });
-    } else if (step.intent === 'orbit' || step.intent === 'pan') {
+    } else if (step.intent === 'orbit' || step.intent === 'pan' || step.intent === 'tilt') {
       // A drag always carries its pointer: the body arm casts a ray through it.
       if (step.at === null) continue;
       const start = {

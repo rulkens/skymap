@@ -12,7 +12,7 @@ import { CAMERA_CONTROLS } from '../../persistedValues';
 import { readPersisted } from '../../../utils/storage/readPersisted';
 import type { CameraControlsSettings } from '../../../@types/settings/CameraControlsSettings';
 import type { ControlSchemeId } from '../../../@types/engine/camera/ControlSchemeId';
-import type { FrictionGroup } from '../../../@types/camera/FrictionGroup';
+import type { FrictionGroup } from '../../../@types/camera/input/FrictionGroup';
 
 const initialState: CameraControlsSettings =
   readPersisted(CAMERA_CONTROLS) ?? DEFAULT_CAMERA_CONTROLS;

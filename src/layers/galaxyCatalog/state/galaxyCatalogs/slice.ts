@@ -12,7 +12,7 @@ import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceTy
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { ProvenanceAxisId } from '../../../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../../../@types/settings/ProvenanceFilter';
-import type { GalaxyOctreeTuningKey } from '../../@types/GalaxyOctreeTuningKey';
+import type { GalaxyOctreeTuningKey } from '../../controls/@types/GalaxyOctreeTuningKey';
 
 export const galaxyCatalogsSlice = createSlice({
   name: 'settings/galaxyCatalogs',
