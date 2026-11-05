@@ -23,7 +23,7 @@ npm run loadtime -- --serve --rebuild             # serve the build at https://l
 | `firstFrame`       | The engine's first `getCurrentTexture()` call: the canvas is drawing.                                                                     |
 | `ctaReady`         | The splash's Explore button is enabled. Never set on a splash-less link.                                                                  |
 | `loaded`           | `window.__skymap.ready`: every boot download has settled.                                                                                 |
-| `firstSurfaceTile` | First finished 200/206 response for an albedo tile (`.webp` or `.pack`).                                                                  |
+| `firstSurfaceTile` | First finished 206 response for an albedo `.pack` range.                                                                                  |
 | `surfaceRequests`  | Count of requests under `earth-tiles/vN/` or `mars-tiles/vN/` before `loaded` or the timeout; tiles, indexes, parts and 404s. Not a time. |
 
 A milestone not reached within `--timeout` prints as `>90`.
