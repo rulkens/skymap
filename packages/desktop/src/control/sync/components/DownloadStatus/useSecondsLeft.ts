@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import type { SyncProgress } from '../../../../@types/SyncProgress';
 import { MIN_SAMPLE_MS } from './useSecondsLeft.constants';
 
-/** Seconds left at the average rate since this download started; null until a fair sample exists. */
+/** Seconds left at the average rate since this download started or resumed; null until a fair sample exists. */
 export function useSecondsLeft(progress: SyncProgress | null): number | null {
   const first = useRef<{ at: number; done: number; total: number } | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   useEffect(() => {
-    if (progress === null) return;
+    if (progress === null) {
+      first.current = null;
+      setSecondsLeft(null);
+      return;
+    }
     const now = performance.now();
     const start = first.current;
     if (start === null || start.total !== progress.totalBytes || progress.doneBytes < start.done) {

@@ -26,7 +26,8 @@ function DownloadStatus({ sync, onPause, onResume }: DownloadStatusProps): React
   const { progress } = sync;
   const running = sync.status.kind === 'syncing';
   const paused = sync.status.kind === 'paused';
-  const secondsLeft = useSecondsLeft(progress);
+  // Paused, there is no rate; the sample starts again on resume, so the pause never slows the estimate.
+  const secondsLeft = useSecondsLeft(running ? progress : null);
   const view = describeStatus(sync);
   const fraction = progress
     ? Math.min(1, progress.doneBytes / Math.max(progress.totalBytes, 1))
@@ -66,7 +67,7 @@ function DownloadStatus({ sync, onPause, onResume }: DownloadStatusProps): React
         <p className={styles.text} role={view.tone === 'problem' ? 'alert' : 'status'}>
           {view.text}
         </p>
-        {running && progress && (
+        {(running || paused) && progress && (
           <p className={chrome.dim}>
             <span className={styles.figures}>{syncProgressDetail(progress, secondsLeft)}</span>
           </p>

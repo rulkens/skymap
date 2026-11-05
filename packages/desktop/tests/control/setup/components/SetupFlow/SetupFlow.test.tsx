@@ -128,6 +128,7 @@ describe('SetupFlow', () => {
     expect(bridge.pauseSync).toHaveBeenCalledOnce();
     set({ status: { kind: 'paused' } });
     expect(screen.getByText('Download paused')).toBeVisible();
+    expect(screen.getByText('2.0 GB of 6.0 GB · 4.0 GB left')).toBeVisible();
     press('Resume download');
     expect(bridge.updateNow).toHaveBeenCalledOnce();
   });
