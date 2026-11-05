@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { surfaceTileArchivePath } from '../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileArchivePath';
 import { collectSurfaceTiles } from '../../../../tools/deploy/r2/collectSurfaceTiles';
-import { encodeSurfaceTileArchiveIndex } from '../../../../tools/textures/utils/encodeSurfaceTileArchiveIndex';
+import { encodeSurfaceTileArchiveIndex } from '../../../../tools/utils/textures/encodeSurfaceTileArchiveIndex';
 
 const KEY = 'earth-tiles';
 const PREFIX = 'earth-tiles/v11';

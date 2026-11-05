@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { decodeSurfaceTileArchiveIndex } from '../../../../../../src/layers/body/surfaceTiles/format/utils/decodeSurfaceTileArchiveIndex';
 import { findSurfaceTileArchiveEntry } from '../../../../../../src/layers/body/surfaceTiles/format/utils/findSurfaceTileArchiveEntry';
 import { surfaceTileMortonKey } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileMortonKey';
-import { encodeSurfaceTileArchiveIndex } from '../../../../../../tools/textures/utils/encodeSurfaceTileArchiveIndex';
+import { encodeSurfaceTileArchiveIndex } from '../../../../../../tools/utils/textures/encodeSurfaceTileArchiveIndex';
 
 const entry = (key: number) => ({ key, part: 0, offset: key * 10, length: 5 });
 

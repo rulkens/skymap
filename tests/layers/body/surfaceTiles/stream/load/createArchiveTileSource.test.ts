@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createArchiveTileSource } from '../../../../../../src/layers/body/surfaceTiles/stream/load/createArchiveTileSource';
 import { surfaceTileMortonKey } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileMortonKey';
-import { encodeSurfaceTileArchiveIndex } from '../../../../../../tools/textures/utils/encodeSurfaceTileArchiveIndex';
+import { encodeSurfaceTileArchiveIndex } from '../../../../../../tools/utils/textures/encodeSurfaceTileArchiveIndex';
 
 const tile = (x: number, y = 0) => ({ product: 'albedo' as const, z: 3, x, y });
 const entry = (x: number, offset: number, length: number) => ({

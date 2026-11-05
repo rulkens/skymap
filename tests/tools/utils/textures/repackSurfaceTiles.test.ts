@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
-import { repackSurfaceTiles } from '../../../tools/textures/utils/repackSurfaceTiles';
+import { repackSurfaceTiles } from '../../../../tools/utils/textures/repackSurfaceTiles';
 
 let dir: string;
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
