@@ -297,7 +297,8 @@ dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string /* 'HH:MM' local
     equidistant 180° grid: horizon ring, 30° and 60° rings, zenith cross, and FRONT, LEFT, RIGHT
     and BACK, with front at the bottom of the disc. Contain on a square image gives the
     renderer's own disc, centred and as wide as the shorter side.
-  - **Kiosk mode:** it shows "Skymap · display \<n\>".
+  - **Kiosk mode:** a frame at the screen edge, a 10% grid, a circle and a centre cross, with
+    "Skymap · display \<n\>" and the pixel size: a cut edge shows overscan, an oval a stretch.
 - **Supervision:** `render-process-gone` (not `clean-exit`) and `child-process-gone` of type `GPU`
   reload after 2 s. `unresponsive` for 30 s also reloads.
 - **Navigation lock:** `will-navigate` blocks every target outside `https://localhost:<port>`,

@@ -46,7 +46,7 @@ function DisplayStep({
       <p className={chrome.dim}>
         {setup.mode === 'dome'
           ? 'The dome grid shows on the picked screen. FRONT, at the bottom of the disc, belongs at the front of the dome.'
-          : 'The picked screen shows “Skymap · display n” with its number.'}
+          : 'The picked screen shows a grid with its number and size. The frame must show on all four edges and the circle must be round.'}
       </p>
     </div>
   );
