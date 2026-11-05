@@ -30,9 +30,10 @@
  * v9/height/<z>/<x>/<y>.webp` (`surfaceTilePath`, shared with the runtime
  * fetcher's own URL builder — drift 404s quietly, degrading to the base
  * texture); `<tileRoot>/manifest.json` (tile edge, baked band list, source);
- * `<tileRoot>/index.txt` (one path per line, walked by the deploy collector
- * instead of the filesystem, so a half-finished bake can't upload a partial
- * pyramid as complete). `public/data/` is gitignored — nothing here is
+ * `<tileRoot>/index.txt` (one path per line: the loose tiles' manifest, and
+ * the pack step's input); `<prefix>/<product>/z<z>.idx` + `.p<k>.pack` per
+ * level, which are what the deploy collector uploads and the runtime
+ * range-reads (the loose tiles stay local). `public/data/` is gitignored — nothing here is
  * committed.
  */
 
@@ -57,6 +58,7 @@ import { parseFlags } from '../utils/cli/args';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { mergeSurfaceTileManifest } from '../utils/textures/mergeSurfaceTileManifest';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
+import { packSurfaceTileLevels } from './utils/packSurfaceTileLevels';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { bakeHeightLevel } from './bakeHeightLevel';
@@ -550,6 +552,9 @@ export async function bakeAll(
   // resumed sync diff one against the other.
   const sorted = [...finalPaths].sort();
   writeFileSync(join(outDir, `${tileRoot}/index.txt`), `${sorted.join('\n')}\n`);
+  process.stderr.write(
+    `  ${packSurfaceTileLevels(outDir, tilePrefix, sorted)} archive files packed\n`,
+  );
 
   // Written LAST, after the index it implies and after the completeness
   // check above: an interrupted or now-incomplete bake then leaves the
