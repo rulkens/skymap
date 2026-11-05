@@ -9,7 +9,11 @@ export function planSurfaceTileParts(
   const entries: SurfaceTileArchiveEntry[] = [];
   let part = 0;
   let offset = 0;
+  let previous = -1;
   for (const { key, length } of tiles) {
+    if (key <= previous)
+      throw new Error(`planSurfaceTileParts: key ${key} is not above ${previous}`);
+    previous = key;
     if (length > maxPartBytes) {
       throw new Error(
         `planSurfaceTileParts: tile ${key} is ${length} B, over the ${maxPartBytes} B part cap`,

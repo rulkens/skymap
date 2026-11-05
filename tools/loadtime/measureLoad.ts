@@ -33,7 +33,7 @@ const MILESTONES = [
 const KBPS_TO_BYTES_PER_SECOND = 1000 / 8;
 // Both the loose-file and the archive shape count, so a before and an after run compare.
 const SURFACE_REQUEST = /(earth|mars)-tiles\/v\d+\//;
-const SURFACE_ALBEDO_TILE = /-tiles\/v\d+\/albedo\/.+\.(webp|pack)$/;
+const SURFACE_ALBEDO_TILE = /-tiles\/v\d+\/albedo\/.+\.pack$/;
 
 // Runs in the page before any app script. A string, because tsx wraps a nested
 // named function in a `__name` helper that exists only in Node. It wraps
@@ -100,8 +100,7 @@ async function measure(
     page.on('requestfinished', (request) => {
       if (firstSurfaceTile !== undefined || !SURFACE_ALBEDO_TILE.test(request.url())) return;
       void request.response().then((response) => {
-        const status = response?.status();
-        if ((status === 200 || status === 206) && firstSurfaceTile === undefined) {
+        if (response?.status() === 206 && firstSurfaceTile === undefined) {
           firstSurfaceTile = Date.now() - start;
         }
       });

@@ -24,6 +24,8 @@ describe('surface tile archive index', () => {
     expect(surfaceTileMortonKey(1, 0)).toBe(1);
     expect(surfaceTileMortonKey(0, 1)).toBe(2);
     expect(surfaceTileMortonKey(3, 5)).toBe(0b100111);
+    // Past 32 bits: a truncating rewrite would still round-trip against itself.
+    expect(surfaceTileMortonKey(2 ** 19 - 1, 2 ** 18 - 1)).toBe(2 ** 37 - 1);
   });
 
   it('returns null for a key between two entries', () => {

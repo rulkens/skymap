@@ -29,6 +29,11 @@ export function packSurfaceTileLevels(
 ): number {
   const levels = new Map<string, { product: SurfaceTileProduct; z: number; tiles: LevelTile[] }>();
   for (const path of sortedPaths) {
+    if (!path.startsWith(`${tilePrefix}/`)) {
+      throw new Error(
+        `packSurfaceTileLevels: ${path} is not under ${tilePrefix}/ (stale index.txt?)`,
+      );
+    }
     const [product, z, x, yFile] = path.slice(tilePrefix.length + 1).split('/');
     const y = Number.parseInt(yFile!, 10);
     const id = `${product}/${z}`;

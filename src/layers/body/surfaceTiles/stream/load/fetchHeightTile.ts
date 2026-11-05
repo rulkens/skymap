@@ -10,8 +10,8 @@ import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 
 /**
  * fetchHeightTile — one Terrain-RGB WebP height tile as header + still-encoded
- * bitmap, or `null` if absent (404s are normal; so is a missing `SHGT` chunk or
- * failed decode, e.g. an HTML error page). Pixels are never read back on the
+ * bitmap, or `null` if the source has no such tile or the bytes lack a valid `SHGT`
+ * chunk. Pixels are never read back on the
  * CPU: Brave, Safari and Firefox perturb canvas readback, so the shader decodes.
  */
 export async function fetchHeightTile(

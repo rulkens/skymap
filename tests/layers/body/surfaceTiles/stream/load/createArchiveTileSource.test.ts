@@ -88,7 +88,31 @@ it('returns null when a 206 body length differs from the entry length', async ()
   expect(await createArchiveTileSource('p').readTile(tile(1))).toBeNull();
 });
 
-it('returns null when the index has a bad magic', async () => {
-  fetchMock.mockResolvedValueOnce(ok(new Uint8Array(64)));
+it('reads a level whose index has a bad magic as empty and does not refetch it', async () => {
+  fetchMock.mockImplementation(async () => ok(new Uint8Array(64)));
+  const source = createArchiveTileSource('p');
+  expect(await source.readTile(tile(1))).toBeNull();
+  expect(await source.readTile(tile(2))).toBeNull();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it('retries the index after a 5xx', async () => {
+  fetchMock
+    .mockResolvedValueOnce(new Response(null, { status: 503 }))
+    .mockResolvedValueOnce(ok(idx(entry(1, 0, 4))))
+    .mockResolvedValueOnce(ok(new Uint8Array(4), 206));
+  const source = createArchiveTileSource('p');
+  expect(await source.readTile(tile(1))).toBeNull();
+  expect((await source.readTile(tile(1)))?.byteLength).toBe(4);
+});
+
+it('cancels the body of a 200 so a whole pack is not downloaded', async () => {
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const cancel = vi.fn();
+  const body = new ReadableStream({ cancel, pull: (c) => c.enqueue(new Uint8Array(8)) });
+  fetchMock
+    .mockResolvedValueOnce(ok(idx(entry(1, 0, 4))))
+    .mockResolvedValueOnce(new Response(body, { status: 200 }));
   expect(await createArchiveTileSource('p').readTile(tile(1))).toBeNull();
+  await vi.waitFor(() => expect(cancel).toHaveBeenCalled());
 });

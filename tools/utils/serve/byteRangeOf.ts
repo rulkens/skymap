@@ -15,7 +15,9 @@ export function byteRangeOf(header: string | undefined, size: number): ByteRange
   if (first === '') {
     // `bytes=-N`: the last N bytes.
     const length = Number(last);
-    return length === 0 ? 'unsatisfiable' : { start: Math.max(0, size - length), end: size - 1 };
+    return length === 0 || size === 0
+      ? 'unsatisfiable'
+      : { start: Math.max(0, size - length), end: size - 1 };
   }
   const start = Number(first);
   if (start >= size) return 'unsatisfiable';

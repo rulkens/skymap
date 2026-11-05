@@ -6,8 +6,6 @@ import { decodeSurfaceTileArchiveIndex } from '../../../src/layers/body/surfaceT
 import { surfaceTileArchivePath } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTileArchivePath';
 import type { R2Upload } from '../@types/R2Upload';
 
-const PRODUCTS: readonly SurfaceTileProduct[] = ['albedo', 'height'];
-
 /**
  * One `SURFACE_TILE_REGISTRY` row's packed tile archives (`z<z>.idx` plus the
  * `.p<k>.pack` parts each index names), found by walking the manifest's band
@@ -25,7 +23,8 @@ export function collectSurfaceTiles(imagesDir: string, manifestKey: string): R2U
   const add = (relPath: string): void => {
     uploads.push({ localPath: join(imagesDir, relPath), r2Key: `data/images/${relPath}` });
   };
-  for (const product of PRODUCTS) {
+  const products = new Set(bands.flatMap((band) => Object.keys(band.builtFrom)));
+  for (const product of products as Set<SurfaceTileProduct>) {
     const ranged = bands.filter((band) => band.builtFrom[product] !== undefined);
     if (ranged.length === 0) continue;
     const lo = Math.min(...ranged.map((band) => band.min));

@@ -27,9 +27,8 @@
  *
  * Lands on disk under the body's own `tileRoot`, e.g. `earth-tiles/v9/albedo/
  * <z>/<x>/<y>.webp` and, for a band declaring a height source, `earth-tiles/
- * v9/height/<z>/<x>/<y>.webp` (`surfaceTilePath`, shared with the runtime
- * fetcher's own URL builder — drift 404s quietly, degrading to the base
- * texture); `<tileRoot>/manifest.json` (tile edge, baked band list, source);
+ * v9/height/<z>/<x>/<y>.webp` (`surfaceTilePath`, which the pack step
+ * parses back into archive keys); `<tileRoot>/manifest.json` (tile edge, baked band list, source);
  * `<tileRoot>/index.txt` (one path per line: the loose tiles' manifest, and
  * the pack step's input); `<prefix>/<product>/z<z>.idx` + `.p<k>.pack` per
  * level, which are what the deploy collector uploads and the runtime

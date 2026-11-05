@@ -29,7 +29,13 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
     const res = await fetch(url, { mode: 'cors', signal: AbortSignal.timeout(FETCH_DEADLINE_MS) });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`archive index ${res.status}`);
-    return decodeSurfaceTileArchiveIndex(new Uint8Array(await res.arrayBuffer()));
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    try {
+      return decodeSurfaceTileArchiveIndex(bytes);
+    } catch {
+      // A malformed index will not mend on a retry: the level reads as empty.
+      return null;
+    }
   }
 
   function indexOf(tile: SurfaceTileId): Promise<SurfaceTileArchiveIndex | null> {
@@ -39,7 +45,7 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
       const fetching = fetchIndex(tile);
       pending = fetching;
       indexes.set(id, fetching);
-      // A failure (network, bad magic) must not poison the level for the session.
+      // A network error, deadline or 5xx must not poison the level for the session.
       fetching.catch(() => {
         if (indexes.get(id) === fetching) indexes.delete(id);
       });
