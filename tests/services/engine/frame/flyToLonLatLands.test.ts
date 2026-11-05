@@ -28,7 +28,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { liveUpBasisQuat } from '../../../../src/services/engine/camera/orientation/liveUpBasisQuat';
 import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
+import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { eyeFrameOf } from '../../../../src/utils/camera/surfaceFrame/eyeFrameOf';
 import { directionToLonLatDeg } from '../../../../src/utils/geo/directionToLonLatDeg';
@@ -171,7 +171,7 @@ describe('flyToLonLat through the frame loop', () => {
     // The distance the follow driver frames a focused Mars at (harness FOV 60°).
     const footprintM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'mars', 'test'));
     const framingM =
-      bodyFocusDistance(footprintM * SCALE_UNITS.M_TO_MPC, Math.PI / 3) / SCALE_UNITS.M_TO_MPC;
+      bodyArrivalDistanceMpc(footprintM * SCALE_UNITS.M_TO_MPC, Math.PI / 3) / SCALE_UNITS.M_TO_MPC;
     flyAndHold(h, () => fly({ body: asSceneBodyId('mars'), lonDeg: 137, latDeg: -5 }), 'mars', {
       lonDeg: 137,
       latDeg: -5,

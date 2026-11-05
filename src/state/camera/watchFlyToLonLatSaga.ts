@@ -21,13 +21,14 @@ import { centreLookingArm } from '../../utils/camera/arms/centreLookingArm';
 import { bodyRowAt } from '../../utils/scene/bodyRowAt';
 import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerrainHeight';
 import { toBodyArm, toWorldArm } from '../../services/engine/camera/arms/body/poseFrameConversion';
-import { focusFraming } from '../../services/engine/camera/framing/focusFraming';
+import { arrivalFraming } from '../../services/engine/camera/framing/arrivalFraming';
 import { hostOf } from '../../services/engine/camera/arms/hostOf';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { FLY_TO_LON_LAT_TWEEN_MS } from '../../data/camera/flyToLonLatTweenMs';
 import { EASED_FOCUS_EASE } from '../../data/camera/focusMoveDefaults';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
+import { BODY_FOCUS } from '../../data/selection/bodyFocus';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import type { SagaContext } from '../../store/types';
 import { isSceneBodyId } from '../../utils/scene/isSceneBodyId';
@@ -70,8 +71,8 @@ export function* watchFlyToLonLatSaga() {
     // Off the focused body, the eye stands where a click-to-focus frames it.
     const eyeRadiusM = sameBody
       ? Math.hypot(...bodyFixedEyeM(here))
-      : focusFraming(bodyRowAt(body, host.state.positionMpc), runtime.fovYRad).distance /
-        SCALE_UNITS.M_TO_MPC;
+      : arrivalFraming(bodyRowAt(body, host.state.positionMpc), BODY_FOCUS, runtime.fovYRad)
+          .distance / SCALE_UNITS.M_TO_MPC;
     const rangeM = altKm !== undefined ? altKm * 1000 : eyeRadiusM - host.radiusM;
     const heading =
       headingRad ?? (sameBody ? (eyeFrameOf(here, 1, BODY_LOCAL_FRAME.pole)?.azimuthRad ?? 0) : 0);

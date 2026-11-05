@@ -21,8 +21,6 @@ export type DriverGeometry = {
   /** Null = no surface to taper against (mesh bodies). */
   readonly groundRadiusM: number | null;
   readonly standoffRadii: number;
-  /** Fixed radius multiple to arrive at, overriding the screen-fill distance. */
-  readonly focusDistanceRadii?: number;
   /**
    * The sim clock moves `poseId` though no body table says so. Bodies leave it
    * unset; `bodyFollowsSimClock` answers for them.

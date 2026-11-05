@@ -186,18 +186,18 @@ placement (`positionMpc`, `radiusMpc`). Core and the store type against a base r
 - `ROW_FOCUSABLE[row.type]` at its two callers becomes `selectionKindOf(row.type).focus !== null`.
 - The NEAR0 ring keeps reading the live body position (`near0SelectionRingPass.ts:113`).
 
-- [ ] Repoint `arrivalGolden.test.ts` to `arrivalFraming` + `selectionHaloOf`: every 60° expectation passes
+- [x] Repoint `arrivalGolden.test.ts` to `arrivalFraming` + `selectionHaloOf`: every 60° expectation passes
       unchanged. Update only the 30° expectations of galaxy, Milky Way and Sgr A\* (they now scale with FOV),
       each with a comment citing the ruling.
-- [ ] Test `arrivalFraming clamps to maxDistanceMpc for an infinite radius` and
+- [x] Test `arrivalFraming clamps to maxDistanceMpc for an infinite radius` and
       `… frames a degenerate radius at 0.1 Mpc`.
-- [ ] Test `arrivalFraming keeps the same screen fill at any FOV` (60° and 30°, a body: fill =
+- [x] Test `arrivalFraming keeps the same screen fill at any FOV` (60° and 30°, a body: fill =
       `radiusMpc / (distance · tan(fovY/2))` equals `arrivalSize`).
-- [ ] Implement; migrate the callers; delete the old files and `focusDistanceRadii`.
-- [ ] `typecheck:fast`, `npx vitest run tests/services/engine/camera tests/services/engine/animation tests/services/engine/frame tests/state` → pass.
-- [ ] Dev server, default FOV: focus a galaxy, a planet, Sgr A\*, a structure and the Milky Way; each arrives
+- [x] Implement; migrate the callers; delete the old files and `focusDistanceRadii`.
+- [x] `typecheck:fast`, `npx vitest run tests/services/engine/camera tests/services/engine/animation tests/services/engine/frame tests/state` → pass.
+- [x] Dev server, default FOV: focus a galaxy, a planet, Sgr A\*, a structure and the Milky Way; each arrives
       as on main (shot before/after pairs per `dev` skill).
-- [ ] Commit `Arrival framing and the selection halo are generic over each kind's focus facts`.
+- [x] Commit `Arrival framing and the selection halo are generic over each kind's focus facts`.
 
 ### Task 4: `mayHaveLabel(ref)` on the kind
 

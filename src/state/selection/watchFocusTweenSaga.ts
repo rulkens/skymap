@@ -21,7 +21,7 @@ import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 import { updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
-import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
+import { selectionKindOf } from '../../compositions/selectionKindOf';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, factsReported } from '../engine/engineSlice';
@@ -75,15 +75,12 @@ export function* watchFocusTweenSaga() {
       }
       if (row === null) return;
 
-      // Some rows (the zone-of-avoidance band today) have no focus target —
-      // ROW_FOCUSABLE is exhaustive over SelectionRow['type'], so a future
-      // non-focusable arm fails to compile there until declared, instead of
-      // silently reaching focusFraming's throw. This is the ONE place every
-      // `updateSelectionFocus` dispatch funnels through (InfoCard,
-      // double-click, keyboard shortcut, deep link, tour restore), so it's
-      // the enforcement site for that invariant: a no-op here, not a crash
+      // Some kinds (the zone-of-avoidance band today) declare no focus. This is
+      // the ONE place every `updateSelectionFocus` dispatch funnels through
+      // (InfoCard, double-click, keyboard shortcut, deep link, tour restore), so
+      // it's the enforcement site: a no-op here, not `framingPose`'s throw
       // inside the saga worker.
-      if (!ROW_FOCUSABLE[row.type]) return;
+      if (selectionKindOf(row.type).focus === null) return;
 
       // Known ready since the wait above; re-read rather than reuse, since a
       // long catalog defer can move `from`/`fovYRad` in the meantime.

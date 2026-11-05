@@ -34,7 +34,7 @@ import {
   advanceEpoch,
   advanceEpochs,
 } from '../../../../../src/services/engine/camera/drivers/cameraEpochs';
-import { bodyLikeFraming } from '../../../../../src/services/engine/camera/framing/bodyLikeFraming';
+import { bodyArrivalDistanceMpc } from '../../../../support/bodyArrivalDistanceMpc';
 import { framingPose } from '../../../../../src/services/engine/camera/framing/framingPose';
 import { DEFAULT_FOCUS_MOVES } from '../../../../../src/data/camera/focusMoveDefaults';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
@@ -643,13 +643,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // Framing distance oracle — the shared body framing math, NOT the ease
     // formula. At elapsed 0 the pose sits at the captured `from` distance; by
     // the Eased duration it has converged to the framing distance, monotonically.
-    const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
-    const framingDistance = bodyLikeFraming(
-      livePos,
-      EARTH_ROW.driver.footprintRadiusM,
-      FOLLOW_FOV,
-    ).distance;
+    const framingDistance = bodyArrivalDistanceMpc(EARTH_ROW.radiusMpc, FOLLOW_FOV);
 
     const FROM: CameraPose = { target: [9, 9, 9], yaw: 0.2, pitch: 0.1, distance: 500 };
 
@@ -711,14 +705,14 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
   });
 
   it('a followed body holds the distance framingPose gives it', () => {
-    // A radius-multiple override must reach the follow seed too, or a followed
-    // body glides away from the pose its arrival framed it to.
+    // The follow seed must be the arrival's own distance, or a followed body
+    // glides away from the pose its arrival framed it to.
     const marsRow = {
       type: 'body' as const,
       id: asSceneBodyId('mars'),
       label: 'Mars',
       positionMpc: [0, 0, 0] as [number, number, number],
-      driver: { ...bodyDriverGeometry('mars'), focusDistanceRadii: 7 },
+      driver: bodyDriverGeometry('mars'),
       radiusMpc: bodyDriverGeometry('mars').footprintRadiusM * SCALE_UNITS.M_TO_MPC,
     };
     const store = makeStore();
@@ -742,13 +736,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // The follow driver must re-capture `base.distance` as the steady-state
     // target so the zoom is honoured, instead of re-asserting the framing
     // distance every frame (snap-back).
-    const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
-    const framingDistance = bodyLikeFraming(
-      livePos,
-      EARTH_ROW.driver.footprintRadiusM,
-      FOLLOW_FOV,
-    ).distance;
+    const framingDistance = bodyArrivalDistanceMpc(EARTH_ROW.radiusMpc, FOLLOW_FOV);
 
     // The user's committed drag-zoom — vastly larger than Earth's ~1e-15 Mpc
     // framing distance, so 'stuck to base' vs 'snapped to framing' is unambiguous.

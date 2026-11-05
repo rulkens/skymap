@@ -51,7 +51,8 @@ import { ARRIVAL_TIMEOUT_MS } from '../../../src/data/arrival/arrivalTimeoutMs';
 import { EARTH_HOME } from '../../../src/data/selection/earthHome';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
-import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
+import { framingPose } from '../../../src/services/engine/camera/framing/framingPose';
+import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -242,7 +243,9 @@ describe('arrivalSaga', () => {
     await flush();
 
     expect(h.arrivalCommits()).toBe(1);
-    expect(worldArmOf(h.store.getState().camera.base).distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(worldArmOf(h.store.getState().camera.base).distance).toBe(
+      framingPose(MILKY_WAY_ROW, LIVE.fovYRad, LIVE.from).distance,
+    );
     expect(h.status()).toEqual({ status: 'arrived' });
   });
 

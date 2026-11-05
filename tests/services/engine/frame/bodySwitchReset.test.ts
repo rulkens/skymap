@@ -23,7 +23,7 @@ import { tiltOverBody } from '../../../helpers/camera/tiltOverBody';
 import { displayedEye } from '../../../helpers/camera/displayedEye';
 import { hrOverBody } from '../../../helpers/camera/hrOverBody';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
+import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -38,7 +38,7 @@ const R_SATURN_M = 58232000;
 const R_SATURN_MPC = R_SATURN_M * SCALE_UNITS.M_TO_MPC;
 // The harness settings put fovDeg 60 on the store; runFrame stamps it onto
 // the projection every frame, so the framing target is computed at π/3.
-const FRAMING_MPC = bodyFocusDistance(R_SATURN_MPC, Math.PI / 3);
+const FRAMING_MPC = bodyArrivalDistanceMpc(R_SATURN_MPC, Math.PI / 3);
 
 function distTo(eye: Readonly<Vec3>, body: BodyState): number {
   return Math.hypot(

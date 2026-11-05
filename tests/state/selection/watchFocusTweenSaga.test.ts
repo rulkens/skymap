@@ -24,7 +24,8 @@ import {
 } from '../../../src/state/engine/engineSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute, selectionRoute } from '../../../src/store/constants';
-import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
+import { framingPose } from '../../../src/services/engine/camera/framing/framingPose';
+import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
 import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/picking/present/structureSelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
@@ -88,7 +89,7 @@ describe('watchFocusTweenSaga', () => {
   // Captures any error the saga worker throws uncaught. redux-saga swallows an
   // unhandled worker error (no visible test failure, no console output) unless
   // something observes it — `onError` is that observation point, so a
-  // regression that removes the ROW_FOCUSABLE filter shows up as a non-empty
+  // regression that removes the focus-facts filter shows up as a non-empty
   // array here rather than as a silently-still-null tween (see the
   // zoneOfAvoidance test below).
   let sagaErrors: unknown[];
@@ -126,7 +127,7 @@ describe('watchFocusTweenSaga', () => {
     const tween = store.getState()[cameraRoute].tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
-    expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(tween!.to.distance).toBe(framingPose(MILKY_WAY_ROW, 0.8, FROM).distance);
     expect(tween!.to.yaw).toBe(FROM.yaw);
   });
 
@@ -172,7 +173,7 @@ describe('watchFocusTweenSaga', () => {
     const tween = store.getState()[cameraRoute].tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
-    expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(tween!.to.distance).toBe(framingPose(MILKY_WAY_ROW, 0.8, FROM).distance);
   });
 
   // A survey star's row needs its bin; with none committed the ref extracts to
@@ -309,8 +310,8 @@ describe('watchFocusTweenSaga', () => {
   });
 
   // Regression: the zone-of-avoidance band has no x/y/z (a line-of-sight
-  // effect, not a point), so `focusFraming`'s zoneOfAvoidance arm throws —
-  // ROW_FOCUSABLE filters it out here, the ONE place every updateSelectionFocus
+  // effect, not a point), so `framingPose` throws on it — its kind's null
+  // `focus` filters it out here, the ONE place every updateSelectionFocus
   // dispatch (including a future band double-click) funnels through. If this
   // filter is ever removed, this test fails against that throw instead of the
   // crash surfacing only once band picking makes the ref reachable.
@@ -344,7 +345,7 @@ describe('watchFocusTweenSaga', () => {
     const tween = store.getState()[cameraRoute].tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
-    expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(tween!.to.distance).toBe(framingPose(MILKY_WAY_ROW, 0.8, FROM).distance);
     expect(tween!.to.yaw).toBe(FROM.yaw);
   });
 

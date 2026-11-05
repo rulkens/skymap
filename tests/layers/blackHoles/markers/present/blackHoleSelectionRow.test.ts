@@ -3,7 +3,7 @@
  * pick, a deep link, a focus) all land on this row, and each fails silently:
  * a stale pick resolves to nothing, a mis-spelled link falls through to the
  * galaxy decoder, and a wrong pose key frames empty space. (Arrival at
- * 30.4 r_s is pinned in `focusFraming.test.ts`.)
+ * 30.4 r_s is pinned in `arrivalGolden.test.ts`.)
  */
 
 import { describe, it, expect } from 'vitest';

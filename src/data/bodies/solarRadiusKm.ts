@@ -5,7 +5,7 @@
  * seed row's `radiusSolar` by it, and (Stage 1.5) the selection-row extractor
  * and focus-framing use it as the default physical size for a field star that
  * carries no measured radius. Before this module those readers each carried
- * their own literal — the maker used `696340`, `focusFraming` used the
+ * their own literal — the maker used `696340`, the focus framing used the
  * ~0.09%-drifted `6.957e5`. Folding them onto one constant removes that drift
  * (the maker's `696340` wins, so authored star radii do not move; the tiny
  * framing shift is accepted).

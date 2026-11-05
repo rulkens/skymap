@@ -36,6 +36,7 @@ import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
+import { footprintRadiusMpc } from '../../../../../src/utils/selection/footprintRadiusMpc';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { missionsPickCode } from '../../../../support/layerPickCodes';
 
@@ -127,6 +128,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     id: bodyId,
     label: body.label,
     positionMpc: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],
+    radiusMpc: footprintRadiusMpc(bodyDriverGeometry(bodyId)),
     driver: bodyDriverGeometry(bodyId),
   } as SelectionRow;
   const meshDraw = vi.fn();

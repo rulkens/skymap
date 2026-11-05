@@ -569,10 +569,8 @@ describe('a move after a composite continues from where it ended', () => {
       resolveFocusId: (id: string) => ({ id }),
       extractRow: (ref: { id: string }) => ({
         type: 'galaxyCatalog',
-        x: coord(ref.id, 1),
-        y: coord(ref.id, 2),
-        z: coord(ref.id, 3),
-        diameterKpc: 30,
+        positionMpc: [coord(ref.id, 1), coord(ref.id, 2), coord(ref.id, 3)],
+        radiusMpc: 0.015,
       }),
     } as unknown as SelectionResolver;
     const data = resolveClipFoci(
