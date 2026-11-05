@@ -1,4 +1,8 @@
-/* Drawn at 660 × 400, the window's size in points; the 2x shot doubles the pixels, not the layout. */
+/*
+ * Drawn at 660 × 400, the window's size in points; the 2x shot doubles the pixels, not the layout.
+ * electron-builder sizes the window's frame, not its content, to the image, so Finder's title bar and
+ * toolbar hide the bottom ~55 points: nothing that must be read goes below y 340.
+ */
 .root {
   position: fixed;
   inset: 0;
@@ -69,7 +73,7 @@
 
 .hint {
   position: absolute;
-  bottom: 34px;
+  top: 108px;
   left: 0;
   width: 100%;
   margin: 0;
