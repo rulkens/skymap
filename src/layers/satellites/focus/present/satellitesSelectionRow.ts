@@ -10,6 +10,7 @@ import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SATELLITE_CLASSES } from '../../../../data/satellites/satelliteClasses';
 import { SATELLITE_FOCUS_GEOMETRY } from '../data/satelliteFocusGeometry';
+import { footprintRadiusMpc } from '../../../../utils/selection/footprintRadiusMpc';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
 import { distanceMpc } from '../../../../utils/math/distanceMpc';
 import { catalogIndexOf } from '../../catalog/subsystems/catalogIndexOf';
@@ -63,6 +64,7 @@ export function satellitesSelectionRow(
         periodMin: 1440 / catalog.meanMotion[k]!,
         inclinationDeg: catalog.inclinationDeg[k]!,
         epochMs: catalog.epochMs[k]!,
+        radiusMpc: footprintRadiusMpc(SATELLITE_FOCUS_GEOMETRY),
         driver: {
           poseId: id,
           ...SATELLITE_FOCUS_GEOMETRY,

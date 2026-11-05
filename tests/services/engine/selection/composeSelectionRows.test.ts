@@ -61,6 +61,9 @@ import {
   satellitesPickCode,
   zoneOfAvoidancePickCode,
 } from '../../../support/layerPickCodes';
+import { placedStructureRow } from '../../../../src/layers/structure/picking/utils/placedStructureRow';
+import { MILKY_WAY_ROW } from '../../../fixtures/milkyWayRow';
+import { footprintRadiusMpc } from '../../../../src/utils/selection/footprintRadiusMpc';
 
 const SIM_DAYS = CONST_J2000;
 const EARTH_POS = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
@@ -74,6 +77,8 @@ const virgo: StructureInfo = {
   featured: true,
   physicalRadiusMpc: 2,
 };
+
+const VIRGO_ROW = placedStructureRow(virgo);
 
 function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): GalaxyCatalog {
   return makeGalaxyCatalog(1, {
@@ -239,11 +244,13 @@ describe('extractRow, composed', () => {
   });
 
   it('structure ref → the StructureInfo by id', () => {
-    expect(resolver.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toEqual(virgo);
+    expect(resolver.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toEqual(
+      placedStructureRow(virgo),
+    );
   });
 
   it('milkyWay ref → the singleton tag', () => {
-    expect(resolver.extractRow({ type: 'milkyWay' }, SIM_DAYS)).toEqual({ type: 'milkyWay' });
+    expect(resolver.extractRow({ type: 'milkyWay' }, SIM_DAYS)).toEqual(MILKY_WAY_ROW);
   });
 
   it('body ref → a self-contained row resolved at the passed simDays', () => {
@@ -253,6 +260,7 @@ describe('extractRow, composed', () => {
       id: SCENE_EARTH.id,
       label: SCENE_EARTH.label,
       positionMpc: EARTH_POS,
+      radiusMpc: footprintRadiusMpc(bodyDriverGeometry('earth')),
       driver: bodyDriverGeometry('earth'),
     });
 
@@ -267,6 +275,7 @@ describe('extractRow, composed', () => {
       id: SCENE_EARTH.id,
       label: SCENE_EARTH.label,
       positionMpc: [...expectedLater],
+      radiusMpc: footprintRadiusMpc(bodyDriverGeometry('earth')),
       driver: bodyDriverGeometry('earth'),
     });
   });
@@ -296,6 +305,7 @@ describe('extractRow, composed', () => {
       radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
       absMag: record.absMag,
       bpRp: record.bpRp,
+      radiusMpc: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_MPC,
       // A survey star poses from no table: `poseId` null is what keeps the
       // follow rows and the approach tilt off it, as `focusDriverId` once did.
       driver: {
@@ -327,6 +337,7 @@ describe('extractRow, composed', () => {
       label: sirius.label,
       positionMpc: [...deriveBodyStates(SIM_DAYS).get(asSceneBodyId('sirius'))!.positionMpc],
       radiusM: sirius.surface.datumRadiusM,
+      radiusMpc: sirius.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC,
       // A seeded star poses from its own seed id — the S-star / famous-star
       // half of the arm→poseId mapping.
       driver: {
@@ -654,7 +665,7 @@ describe('composeSelectionRows — picking gate', () => {
     pickSources: [STUB_CODE],
     resolvePick: () => ({ type: 'structure', id: 'virgo' }),
     encodePick: () => null,
-    extractRow: () => virgo,
+    extractRow: () => VIRGO_ROW,
     focusId: {
       claims: (id) => id.startsWith('galaxy-cluster-'),
       decode: () => ({ type: 'structure', id: 'virgo' }),
@@ -715,7 +726,9 @@ describe('composeSelectionRows — picking gate', () => {
         satellite: true,
       }),
     );
-    expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);
+    expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(
+      VIRGO_ROW,
+    );
     expect(structureDisabled.resolveFocusId('galaxy-cluster-virgo')).toEqual({
       type: 'structure',
       id: 'virgo',

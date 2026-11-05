@@ -34,6 +34,7 @@ import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { timeRoute } from '../../../src/store/constants';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
+import { placedStructureRow } from '../../../src/layers/structure/picking/utils/placedStructureRow';
 
 const write = vi.mocked(writeHashBody);
 
@@ -46,7 +47,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 /** JD 2451545.0 — the J2000.0 epoch, and the instant it names. */
 const J2000_ISO = '2000-01-01T12:00:00.000Z';
 
-const virgoRow: SelectionRow = {
+const virgoRow = placedStructureRow({
   type: 'structure',
   id: 'cluster-virgo-m87',
   name: 'Virgo Cluster',
@@ -54,7 +55,7 @@ const virgoRow: SelectionRow = {
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
-};
+});
 
 function buildHarness() {
   const sagaMiddleware = createSagaMiddleware();

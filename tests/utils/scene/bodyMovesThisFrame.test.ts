@@ -13,15 +13,10 @@ import { bodyMovesThisFrame } from '../../../src/utils/scene/bodyMovesThisFrame'
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
 
 function bodyRow(id: string): SelectionRow {
-  return {
-    type: 'body',
-    id: asSceneBodyId(id),
-    label: id,
-    positionMpc: [0, 0, 0],
-    driver: bodyDriverGeometry(id),
-  };
+  return bodyRowAt(id, [0, 0, 0]);
 }
 
 describe('bodyMovesThisFrame', () => {

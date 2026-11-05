@@ -14,6 +14,7 @@ import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../../fixtures/starRowDriver';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
 
 // The enable gate never touches ctx or view — bare casts stand in for both.
 const CTX = { snapshot: { renderedTargets: new Set<string>() } } as unknown as FrameView;
@@ -33,6 +34,7 @@ const STAR_ROW: SelectionRow = {
   label: 'Field star',
   positionMpc: [0.001, -0.002, 0.0005],
   radiusM: 696340000,
+  radiusMpc: 696340000 * SCALE_UNITS.M_TO_MPC,
   driver: starRowDriver(null, 696340000),
 };
 
@@ -102,6 +104,7 @@ const FAR_STAR_ROW: SelectionRow = {
   label: 'Field star',
   positionMpc: [3e-5, 4e-5, 0], // camera at origin ⇒ camDist 5e-5 Mpc
   radiusM: 696340000,
+  radiusMpc: 696340000 * SCALE_UNITS.M_TO_MPC,
   driver: starRowDriver(null, 696340000),
 };
 
@@ -178,13 +181,7 @@ describe('near0SelectionRingPass.draw — live body position', () => {
     // A deliberately-wrong snapshot: a magnitude/direction the live Earth never
     // has (Earth's heliocentric offset is ~1 AU ≈ 5e-12 Mpc). Both stay well
     // inside the far plane below, so neither is length-clamped.
-    const staleRow: SelectionRow = {
-      type: 'body',
-      id: asSceneBodyId('earth'),
-      label: 'Earth',
-      positionMpc: [1e-6, 0, 0],
-      driver: bodyDriverGeometry('earth'),
-    };
+    const staleRow: SelectionRow = bodyRowAt('earth', [1e-6, 0, 0]);
 
     const renderer = makeRendererSpy();
     const state = stateWith(staleRow, renderer);

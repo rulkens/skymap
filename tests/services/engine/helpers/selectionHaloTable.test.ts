@@ -17,6 +17,8 @@ import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../../src/utils/scene/bodyRowAt';
+import { MILKY_WAY_ROW } from '../../../fixtures/milkyWayRow';
 
 // A minimal GalaxyRow with x/y/z and a measured diameter.
 function galaxyRow(overrides: Partial<GalaxyRow> = {}) {
@@ -53,13 +55,7 @@ describe('selectionHalo', () => {
   // close approach, not the old radiusMpc:0 fixed-px dot. A null here would leave
   // a picked planet with no ring; a COSMO tag would revive the writeBuffer race.
   it('returns a NEAR0 descriptor for a body row carrying its physical radius', () => {
-    const bodyRow: SelectionRow = {
-      type: 'body',
-      id: asSceneBodyId('earth'),
-      label: 'Earth',
-      positionMpc: [4.8481e-12, 0, 0],
-      driver: bodyDriverGeometry('earth'),
-    };
+    const bodyRow: SelectionRow = bodyRowAt('earth', [4.8481e-12, 0, 0]);
     const halo = selectionHalo(bodyRow);
     expect(halo).not.toBeNull();
     expect(halo!.radiusMpc).toBeCloseTo(
@@ -91,10 +87,11 @@ describe('selectionHalo', () => {
       label: 'Field star',
       positionMpc: [0.001, -0.002, 0.0005],
       radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+      radiusMpc: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M * SCALE_UNITS.M_TO_MPC,
       driver: starRowDriver(null, SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M),
     };
     expect(selectionHalo(galaxyRow())!.slab).toBe(COSMO);
-    expect(selectionHalo({ type: 'milkyWay' })!.slab).toBe(COSMO);
+    expect(selectionHalo(MILKY_WAY_ROW)!.slab).toBe(COSMO);
     const starHalo = selectionHalo(star)!;
     expect(starHalo.slab).toBe(NEAR0);
     // The star arm must ride its REAL physical radius (radiusM → Mpc), not the

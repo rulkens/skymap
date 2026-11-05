@@ -11,6 +11,7 @@
 import { SOLAR_RADIUS_KM } from '../../../../data/bodies/solarRadiusKm';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { footprintRadiusMpc } from '../../../../utils/selection/footprintRadiusMpc';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
 import { STAR_FOCUS_PREFIX } from '../../../../services/url/starFocusId';
 import { encodeStarFocusId } from '../../../../services/url/encodeStarFocusId';
@@ -85,6 +86,7 @@ export function starCatalogSelectionRow(
         // The S-stars orbit, so a seeded star's position is the caller's instant,
         // never cached; the famous stars and the Sun are static anchors in it.
         const p = deriveBodyStates(simDays).get(star.id)!.positionMpc;
+        const driver = starDriver(star.id, star.surface.datumRadiusM);
         return {
           type: 'starCatalog',
           source: ref.source,
@@ -93,7 +95,8 @@ export function starCatalogSelectionRow(
           label: star.label,
           positionMpc: [p[0], p[1], p[2]],
           radiusM: star.surface.datumRadiusM,
-          driver: starDriver(star.id, star.surface.datumRadiusM),
+          radiusMpc: footprintRadiusMpc(driver),
+          driver,
         };
       }
       const catalog = catalogOf(runtime, ref.source);
@@ -105,6 +108,7 @@ export function starCatalogSelectionRow(
       );
       if (!record) return null;
       const radiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
+      const driver = starDriver(null, radiusM);
       return {
         type: 'starCatalog',
         source: ref.source,
@@ -115,7 +119,8 @@ export function starCatalogSelectionRow(
         radiusM,
         absMag: record.absMag,
         bpRp: record.bpRp,
-        driver: starDriver(null, radiusM),
+        radiusMpc: footprintRadiusMpc(driver),
+        driver,
       };
     },
     focusId: {

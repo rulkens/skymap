@@ -34,14 +34,9 @@ import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeo
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { blackHolePickCode } from '../../../../support/layerPickCodes';
+import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
 
-const EARTH_ROW: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('earth'),
-  label: 'Earth',
-  positionMpc: [0, 0, 0],
-  driver: bodyDriverGeometry('earth'),
-};
+const EARTH_ROW: SelectionRow = bodyRowAt('earth', [0, 0, 0]);
 
 const SUN_RADIUS_M = 696340000;
 
@@ -59,6 +54,7 @@ describe('pivotRadiusMpc', () => {
       label: 'Field star',
       positionMpc: [1, 2, 3],
       radiusM: SUN_RADIUS_M,
+      radiusMpc: SUN_RADIUS_M * SCALE_UNITS.M_TO_MPC,
       driver: starRowDriver(null, SUN_RADIUS_M),
     };
     expect(pivotRadiusMpc(star)).toBeCloseTo(696340 * SCALE_UNITS.KM_TO_MPC, 30);
@@ -96,13 +92,7 @@ describe('pivotFraming', () => {
     // measure an altitude over. The floor is the wheel-zoom snap regression:
     // the whale must keep the standoff the fly-to landed against instead of
     // being flung out to the backstop.
-    const whale: SelectionRow = {
-      type: 'body',
-      id: asSceneBodyId('whale'),
-      label: 'Whale',
-      positionMpc: [0, 0, 0],
-      driver: bodyDriverGeometry('whale'),
-    };
+    const whale: SelectionRow = bodyRowAt('whale', [0, 0, 0]);
     const seed = findByIdOrThrow(SCENE_MESH_BODIES, 'whale', 'test');
     expect(pivotFraming(whale).radiusMpc).toBeNull();
     expect(pivotFraming(whale).floorMpc).toBeCloseTo(
@@ -121,6 +111,7 @@ describe('pivotFraming', () => {
       label: 'Field star',
       positionMpc: [1, 2, 3],
       radiusM: SUN_RADIUS_M,
+      radiusMpc: SUN_RADIUS_M * SCALE_UNITS.M_TO_MPC,
       driver: starRowDriver(null, SUN_RADIUS_M),
     };
     expect(pivotFraming(star).floorMpc).toBeCloseTo(

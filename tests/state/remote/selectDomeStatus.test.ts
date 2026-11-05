@@ -12,6 +12,7 @@ import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry'
 import type { ToggleRow } from '../../../src/@types/settings/ToggleRow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
+import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
 
 const NO_ROWS: readonly ToggleRow[] = [];
 
@@ -57,13 +58,7 @@ describe('selectDomeStatus', () => {
     const state = stateAfter(
       setSelectionRow({
         slot: 'focus',
-        row: {
-          type: 'body',
-          id: asSceneBodyId('earth'),
-          label: 'Earth',
-          positionMpc: [0, 0, 0],
-          driver: bodyDriverGeometry('earth'),
-        },
+        row: bodyRowAt('earth', [0, 0, 0]),
         focusId: 'body-earth',
       }),
     );

@@ -16,6 +16,9 @@ import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import { starRowDriver } from '../../../../fixtures/starRowDriver';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { MILKY_WAY_ROW } from '../../../../fixtures/milkyWayRow';
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -103,19 +106,10 @@ function structureRow(): StructureInfo {
   };
 }
 
-// The milkyWay singleton row (bare tag — position resolved from the constant).
-const MILKY_WAY_ROW: SelectionRow = { type: 'milkyWay' };
-
 // A scene-body row (planet / famous star / Earth). Like a survey star its halo
 // is NEAR0-tagged (radiusMpc 0, floored to a pixel ring), so the COSMO layer
 // must ignore it and the NEAR0 sibling must own it.
-const BODY_ROW: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('jupiter'),
-  label: 'Jupiter',
-  positionMpc: [1e-9, 2e-9, -3e-9],
-  driver: bodyDriverGeometry('jupiter'),
-};
+const BODY_ROW: SelectionRow = bodyRowAt('jupiter', [1e-9, 2e-9, -3e-9]);
 
 // A survey-star row — its halo is NEAR0-tagged, so the COSMO layer must ignore
 // it and the NEAR0 sibling must own it.
@@ -127,6 +121,7 @@ const STAR_ROW: SelectionRow = {
   label: 'Field star',
   positionMpc: [0.001, -0.002, 0.0005],
   radiusM: 696340000,
+  radiusMpc: 696340000 * SCALE_UNITS.M_TO_MPC,
   driver: starRowDriver(null, 696340000),
 };
 

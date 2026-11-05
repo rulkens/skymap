@@ -8,6 +8,7 @@
 
 import { STRUCTURE_IDS } from '../../../../data/structure/structureIds';
 import { structurePickId } from '../utils/structurePickId';
+import { placedStructureRow } from '../utils/placedStructureRow';
 import { resolveStructureFromPick } from './resolveStructureFromPick';
 import type { StructureRuntime } from '../../@types/StructureRuntime';
 import type { StructureStore } from '../../catalog/@types/StructureStore';
@@ -44,7 +45,10 @@ export function structureSelectionRow(
       const index = store.byCategory(record.category).findIndex((r) => r.id === ref.id);
       return index < 0 ? null : structurePickId(record.category, index, pickCodes);
     },
-    extractRow: (ref) => store.byId(ref.id),
+    extractRow: (ref) => {
+      const record = store.byId(ref.id);
+      return record ? placedStructureRow(record) : null;
+    },
     focusId: {
       claims: (id) => STRUCTURE_IDS.some((cat) => id.startsWith(`${cat}-`)),
       decode: (id) => (SAFE_ID_RE.test(id) ? { type: 'structure', id } : null),

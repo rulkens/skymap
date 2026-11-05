@@ -16,14 +16,9 @@ import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeo
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
 
-const EARTH_FOCUS: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('earth'),
-  label: 'Earth',
-  positionMpc: [0, 0, 0],
-  driver: bodyDriverGeometry('earth'),
-};
+const EARTH_FOCUS: SelectionRow = bodyRowAt('earth', [0, 0, 0]);
 
 const POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const EARTH_RADIUS_MPC = pivotRadiusMpc(EARTH_FOCUS)!;

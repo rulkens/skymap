@@ -56,6 +56,7 @@ const rowAt = (simDays: number): SelectionRow => ({
     deriveBodyStates(simDays).get(asSceneBodyId('earth'))!.positionMpc,
   ),
   radiusM: 50,
+  radiusMpc: 50_000 * SCALE_UNITS.M_TO_MPC,
   driver: {
     poseId: ID,
     boundingRadiusM: 50,

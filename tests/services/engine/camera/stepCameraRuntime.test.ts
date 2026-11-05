@@ -79,17 +79,16 @@ import {
 import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { NO_INSETS_PX } from '../../../../src/data/layout/noInsetsPx';
+import { bodyRowAt } from '../../../../src/utils/scene/bodyRowAt';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);
 const EARTH = BODIES.get(asSceneBodyId('earth'))!;
-const EARTH_ROW: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('earth'),
-  label: 'Earth',
-  positionMpc: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
-  driver: bodyDriverGeometry('earth'),
-};
+const EARTH_ROW: SelectionRow = bodyRowAt('earth', [
+  EARTH.positionMpc[0]!,
+  EARTH.positionMpc[1]!,
+  EARTH.positionMpc[2]!,
+]);
 
 /** The frame's inputs as `runFrame` would build them, off the harness's live store, draining its pending input. */
 function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs> = {}): StepInputs {

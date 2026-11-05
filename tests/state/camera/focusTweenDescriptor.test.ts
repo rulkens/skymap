@@ -12,6 +12,8 @@ import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { FocusMotion } from '../../../src/@types/camera/focusMotion/FocusMotion';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
+import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
+import { placedStructureRow } from '../../../src/layers/structure/picking/utils/placedStructureRow';
 
 // A representative live pose to seed `from`. yaw/pitch must survive into `to`
 // (focus keeps the user's orientation; only target + distance change).
@@ -35,13 +37,13 @@ const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   });
 
 const structureRow = (over: Partial<StructureInfo> = {}) =>
-  ({
+  placedStructureRow({
     type: 'structure',
     worldPos: [10, -20, 30],
     physicalRadiusMpc: 2,
     apparentRadiusMpc: 5,
     ...over,
-  }) as StructureInfo;
+  } as StructureInfo);
 
 describe('focusTweenDescriptor', () => {
   it('carries the live from-pose, the caller-given motion, and the caller-stamped frame', () => {
@@ -89,7 +91,7 @@ describe('focusTweenDescriptor', () => {
   });
 
   it('the Milky Way arm targets the galactic centre at the fixed view distance', () => {
-    const d = focusTweenDescriptor({ type: 'milkyWay' }, FROM, FOVY, MOTION, FRAME);
+    const d = focusTweenDescriptor(MILKY_WAY_ROW, FROM, FOVY, MOTION, FRAME);
     expect(d.to.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],

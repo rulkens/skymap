@@ -41,6 +41,7 @@ import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness'
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../../src/utils/scene/bodyRowAt';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const EARTH = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))! as BodyState;
@@ -205,13 +206,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
     h.store.dispatch(
       setSelectionRow({
         slot: 'focus',
-        row: {
-          type: 'body',
-          id: asSceneBodyId('earth'),
-          label: 'Earth',
-          positionMpc: [0, 0, 0],
-          driver: bodyDriverGeometry('earth'),
-        },
+        row: bodyRowAt('earth', [0, 0, 0]),
         focusId: null,
       }),
     );

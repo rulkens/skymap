@@ -123,13 +123,13 @@ placement (`positionMpc`, `radiusMpc`). Core and the store type against a base r
 
   Existing fields (`x/y/z`, `worldPos`) stay; their own Layers read them.
 
-- [ ] Write `arrivalGolden.test.ts` against **today's** `focusFraming` and `selectionHalo`: one fixture row per
+- [x] Write `arrivalGolden.test.ts` against **today's** `focusFraming` and `selectionHalo`: one fixture row per
       kind (galaxy with 25 kpc diameter and one with no diameter; a structure with apparent radius, one with
       `+∞`, one with 0; the Milky Way; Earth; a craft; Søndermarken; a seeded star; Sgr A\*; a satellite), at
       `fovY = 60°` and at `fovY = 30°`. Assert target, distance and radius (`toBeCloseTo`, 1e-9 relative),
       and the halo's ring radius, position and slab. Record today's numbers as literals in the test.
-- [ ] Add the fields; the golden test passes unchanged.
-- [ ] Commit `Placed selection rows carry positionMpc and radiusMpc; golden arrival capture`.
+- [x] Add the fields; the golden test passes unchanged.
+- [x] Commit `Placed selection rows carry positionMpc and radiusMpc; golden arrival capture`.
 
 ### Task 3: `focus` facts; one generic framing and one generic halo
 

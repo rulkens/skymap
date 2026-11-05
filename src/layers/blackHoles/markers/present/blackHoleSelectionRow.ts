@@ -10,6 +10,7 @@
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
+import { footprintRadiusMpc } from '../../../../utils/selection/footprintRadiusMpc';
 import { BLACK_HOLES } from '../data/blackHoles';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../sources/blackHoleSourceRows';
 import { blackHoleAnchorId } from './blackHoleAnchorId';
@@ -41,6 +42,14 @@ export function blackHoleSelectionRow(
       const anchorId = blackHoleAnchorId(row);
       const p = deriveBodyStates(simDays).get(anchorId)!.positionMpc;
       const rS = schwarzschildRadiusM(row.massSolar);
+      const driver = {
+        poseId: anchorId,
+        boundingRadiusM: rS,
+        footprintRadiusM: rS,
+        groundRadiusM: rS,
+        standoffRadii: row.standoffRadii,
+        focusDistanceRadii: row.focusDistanceRadii,
+      };
       return {
         type: 'blackHole',
         id: row.id,
@@ -49,14 +58,8 @@ export function blackHoleSelectionRow(
         massSolar: row.massSolar,
         schwarzschildRadiusM: rS,
         positionMpc: [p[0], p[1], p[2]],
-        driver: {
-          poseId: anchorId,
-          boundingRadiusM: rS,
-          footprintRadiusM: rS,
-          groundRadiusM: rS,
-          standoffRadii: row.standoffRadii,
-          focusDistanceRadii: row.focusDistanceRadii,
-        },
+        radiusMpc: footprintRadiusMpc(driver),
+        driver,
       };
     },
     focusId: {

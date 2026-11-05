@@ -13,6 +13,9 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../../src/utils/scene/bodyRowAt';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { MILKY_WAY_ROW } from '../../../fixtures/milkyWayRow';
 
 // A live "now" far enough past J2000 that Earth has visibly moved along its
 // orbit — the exact divergence the investigation measured (~133 deg / 26 yrs).
@@ -21,13 +24,11 @@ const LIVE_SIM_DAYS = CONST_J2000 + 9727.95;
 describe('liveFocusRow', () => {
   it("swaps a focused body's positionMpc for deriveBodyStates(simDays), not the stale row value", () => {
     const stalePositionMpc = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
-    const focus: SelectionRow = {
-      type: 'body',
-      id: asSceneBodyId('earth'),
-      label: 'Earth',
-      positionMpc: [stalePositionMpc[0], stalePositionMpc[1], stalePositionMpc[2]],
-      driver: bodyDriverGeometry('earth'),
-    };
+    const focus: SelectionRow = bodyRowAt('earth', [
+      stalePositionMpc[0],
+      stalePositionMpc[1],
+      stalePositionMpc[2],
+    ]);
 
     const out = liveFocusRow(focus, LIVE_SIM_DAYS);
 
@@ -39,13 +40,7 @@ describe('liveFocusRow', () => {
   });
 
   it('keeps identity fields (type/id/label) untouched', () => {
-    const focus: SelectionRow = {
-      type: 'body',
-      id: asSceneBodyId('earth'),
-      label: 'Earth',
-      positionMpc: [0, 0, 0],
-      driver: bodyDriverGeometry('earth'),
-    };
+    const focus: SelectionRow = bodyRowAt('earth', [0, 0, 0]);
 
     const out = liveFocusRow(focus, LIVE_SIM_DAYS);
 
@@ -53,7 +48,7 @@ describe('liveFocusRow', () => {
   });
 
   it('passes a non-body row through unchanged (already live-resolved)', () => {
-    const focus: SelectionRow = { type: 'milkyWay' };
+    const focus: SelectionRow = MILKY_WAY_ROW;
     expect(liveFocusRow(focus, LIVE_SIM_DAYS)).toBe(focus);
   });
 
@@ -67,6 +62,7 @@ describe('liveFocusRow', () => {
       id: asSceneBodyId('not-a-real-body'),
       label: 'Ghost',
       positionMpc: [1, 2, 3],
+      radiusMpc: 1 * SCALE_UNITS.M_TO_MPC,
       // Hand-built: no seed to read, which is the point of this row.
       driver: {
         poseId: asSceneBodyId('not-a-real-body'),

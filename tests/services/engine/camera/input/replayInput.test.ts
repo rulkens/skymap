@@ -44,6 +44,7 @@ import { CAMERA_DRIVERS } from '../../../../../src/services/engine/camera/driver
 import { ridesWheelTarget } from '../../../../../src/services/engine/camera/input/ridesWheelTarget';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
+import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -53,13 +54,7 @@ function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-const EARTH_ROW: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('earth'),
-  label: 'Earth',
-  positionMpc: [0, 0, 0],
-  driver: bodyDriverGeometry('earth'),
-};
+const EARTH_ROW: SelectionRow = bodyRowAt('earth', [0, 0, 0]);
 
 /** The replay's frame context with the store snapshot taken NOW. */
 function ctxOf(

@@ -4,6 +4,7 @@ import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 
 describe('selectionDriver', () => {
   it('returns the driver on a driving arm', () => {
@@ -13,6 +14,7 @@ describe('selectionDriver', () => {
       id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [0, 0, 0],
+      radiusMpc: driver.footprintRadiusM * SCALE_UNITS.M_TO_MPC,
       driver,
     };
     expect(selectionDriver(row)).toBe(driver);

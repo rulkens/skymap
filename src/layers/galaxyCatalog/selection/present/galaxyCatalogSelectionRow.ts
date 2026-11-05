@@ -11,6 +11,7 @@ import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { encodeGalaxyId } from '../../../../services/url/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../../utils/math/cartesianToRaDec';
+import { placedGalaxyRow } from '../utils/placedGalaxyRow';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
@@ -39,7 +40,10 @@ export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<Ga
         ? null
         : packSelection(runtime.pickCodes.pickCodeOf(ref.source), pick + PICK_SENTINEL_OFFSET);
     },
-    extractRow: (ref) => runtime.recordBridge.row(ref.source, ref.index),
+    extractRow: (ref) => {
+      const row = runtime.recordBridge.row(ref.source, ref.index);
+      return row === null ? null : placedGalaxyRow(row);
+    },
     focusId: {
       claims: (id) =>
         id.startsWith('pgc-') ||

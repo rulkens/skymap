@@ -1,6 +1,7 @@
 import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
 import { findByIdOrThrow } from '../object/findByIdOrThrow';
 import { bodyDriverGeometry } from './bodyDriverGeometry';
+import { footprintRadiusMpc } from '../selection/footprintRadiusMpc';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../@types/math/Vec3';
 
@@ -10,11 +11,13 @@ export function bodyRowAt(
   positionMpc: Vec3,
 ): Extract<SelectionRow, { type: 'body' }> {
   const body = findByIdOrThrow(SCENE_BODIES, bodyId, 'bodyRowAt');
+  const driver = bodyDriverGeometry(body.id);
   return {
     type: 'body',
     id: body.id,
     label: body.label,
     positionMpc: [positionMpc[0], positionMpc[1], positionMpc[2]],
-    driver: bodyDriverGeometry(body.id),
+    radiusMpc: footprintRadiusMpc(driver),
+    driver,
   };
 }

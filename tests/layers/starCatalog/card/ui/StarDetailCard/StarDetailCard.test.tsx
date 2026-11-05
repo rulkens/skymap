@@ -135,6 +135,7 @@ describe('StarDetailCard', () => {
         label: 'S2',
         positionMpc: [0.0025, 0, 0],
         radiusM: 4.2e9,
+        radiusMpc: 4.2e9 * SCALE_UNITS.M_TO_MPC,
         driver: starRowDriver('s2', 4.2e9),
       },
       [],

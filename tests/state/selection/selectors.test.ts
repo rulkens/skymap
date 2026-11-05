@@ -36,6 +36,8 @@ import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
+import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
+import { placedStructureRow } from '../../../src/layers/structure/picking/utils/placedStructureRow';
 
 // --- fixtures -----------------------------------------------------------------
 
@@ -59,7 +61,7 @@ const galaxyRow = makeGalaxyRow({
   classByte: 3,
 });
 
-const structureInfo: StructureInfo = {
+const structureInfo = placedStructureRow({
   type: 'structure',
   category: 'galaxy-cluster',
   id: 'virgo',
@@ -67,7 +69,7 @@ const structureInfo: StructureInfo = {
   worldPos: [0.27, 0.22, 0.15],
   featured: true,
   physicalRadiusMpc: 1.7,
-};
+});
 
 // --- selectIsSelectionActive --------------------------------------------------
 
@@ -102,7 +104,7 @@ describe('selectHoveredFocusable', () => {
 
   it('returns MILKY_WAY_INFO for a milkyWay row in the hover slot', () => {
     const { store } = createAppStore();
-    store.dispatch(setSelectionRow({ slot: 'hover', row: { type: 'milkyWay' } }));
+    store.dispatch(setSelectionRow({ slot: 'hover', row: MILKY_WAY_ROW }));
     expect(selectHoveredFocusable(store.getState())).toBe(MILKY_WAY_INFO);
   });
 
@@ -116,13 +118,13 @@ describe('selectHoveredFocusable', () => {
 describe('selectSelectedFocusable', () => {
   it('memoizes across an unrelated-slot write: changing hover does not recompute the select focusable', () => {
     const { store } = createAppStore();
-    store.dispatch(setSelectionRow({ slot: 'select', row: { type: 'milkyWay' } }));
+    store.dispatch(setSelectionRow({ slot: 'select', row: MILKY_WAY_ROW }));
     const a = selectSelectedFocusable(store.getState());
     // A write to the hover slot changes the selectionRows state object but leaves
     // the select slot's row reference untouched — createSelector must return the
     // cached focusable, so identity is preserved. (A plain non-memoized selector
     // would rebuild a fresh object here and fail this assertion.)
-    store.dispatch(setSelectionRow({ slot: 'hover', row: { type: 'milkyWay' } }));
+    store.dispatch(setSelectionRow({ slot: 'hover', row: MILKY_WAY_ROW }));
     const b = selectSelectedFocusable(store.getState());
     expect(a).toBe(b);
   });
