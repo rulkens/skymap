@@ -12,7 +12,6 @@ import type { ForegroundCaption } from '../../services/engine/presentation/foreg
 import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from '../../services/engine/presentation/famousLabelStyle';
-import { sceneBodyPickId } from '../picking/sceneBodyPickId';
 
 /**
  * Vertical stagger so captions of bodies sharing a sub-pixel screen spot
@@ -29,9 +28,8 @@ const BODY_ALIGN_Y: Readonly<Record<string, Label2D['alignY']>> = {
  * `position`/`tint` are parameters because no `SceneBody` arm carries either
  * (each seed table derives its own colour); `footprintRadiusM` sizes the em,
  * and is a parameter so a subject with no body record (a black hole) can
- * caption. `pickId` defaults through the shared body-pick registry; a star's
- * caller packs its own (source + seed index) instead, since only it knows
- * which seed table it walked.
+ * caption. `pickId` is the caller's: only it knows which seed table it walked and
+ * which pick code its Layer holds.
  */
 export function bodyCaption(
   body: { readonly id: string; readonly label: string },
@@ -39,7 +37,7 @@ export function bodyCaption(
   positionMpc: Readonly<Vec3>,
   tint: Readonly<Vec3>,
   priority: number,
-  pickId: number | undefined = sceneBodyPickId(body.id) ?? undefined,
+  pickId: number | undefined,
 ): ForegroundCaption {
   const o = RENDER_ORIGIN_MPC;
   const p = positionMpc;

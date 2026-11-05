@@ -13,6 +13,7 @@ import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
+import { bodyPickCodes } from '../../../support/layerPickCodes';
 import { bodyLayerWithoutGpu } from '../../../helpers/engine/bodyLayerWithoutGpu';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/layers/body/textures/data/bodyTextureKeys';
 import { bodyTextureSlotKey } from '../../../../src/layers/body/textures/load/bodyTextureSlotKey';
@@ -278,6 +279,7 @@ describe('createLayers composition', () => {
       create: () => ({
         textureSlots: new Map(),
         atlasSlot: {},
+        pickCodes: bodyPickCodes(),
         surfaceTiles: { stream: { heightAt }, plan: IDLE_SURFACE_TILE_PLAN },
       }),
     } as unknown as Layer<string, unknown>;

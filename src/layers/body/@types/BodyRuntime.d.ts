@@ -15,6 +15,8 @@ import type { SurfaceTileStream } from '../surfaceTiles/stream/@types/SurfaceTil
 import type { SurfaceTilePlan } from '../surfaceTiles/plan/@types/SurfaceTilePlan';
 import type { BodyFacts } from './BodyFacts';
 import type { TrailingThrottle } from '../../../@types/utils/TrailingThrottle';
+import type { CatalogPickCodes } from '../../../@types/engine/selection/CatalogPickCodes';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 /** The Layer's whole runtime. Non-null: `create` builds it before returning. */
 export type BodyRuntime = {
@@ -36,6 +38,8 @@ export type BodyRuntime = {
   /** The stream owns residency; `plan` is the last planned frame's, written only by
    * `surfaceTilePlanner` and read by the passes, capture faces and the terrain seam. */
   readonly surfaceTiles: { readonly stream: SurfaceTileStream; plan: SurfaceTilePlan };
+  /** Row ↔ pick code; every pick word this Layer stamps or decodes goes through it. */
+  readonly pickCodes: CatalogPickCodes<SourceType>;
   readonly publish: (patch: Partial<BodyFacts>) => void;
   readonly debugPanelOpen: () => boolean;
   readonly readoutGate: TrailingThrottle;

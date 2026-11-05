@@ -17,6 +17,7 @@ import type { StarCatalogFacts } from './StarCatalogFacts';
 import type { OctreeChunkStream } from '../../../@types/octree/OctreeChunkStream';
 import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
 import type { StarColumns } from '../survey/@types/StarColumns';
+import type { CatalogPickCodes } from '../../../@types/engine/selection/CatalogPickCodes';
 
 export type StarCatalogRuntime = {
   /** One slot per survey source. */
@@ -27,6 +28,8 @@ export type StarCatalogRuntime = {
   /** A source's chunk stream while its committed index names chunks; the slot's commit fills it and release clears it. */
   readonly chunkStreams: Map<StarCatalogSourceType, OctreeChunkStream<StarColumns>>;
   readonly famousStarsMeta: AssetSlot<FamousStarsPayload, void>;
+  /** Catalog ↔ pick code; every pick word this Layer stamps or decodes goes through it. */
+  readonly pickCodes: CatalogPickCodes<StarCatalogSourceType>;
   readonly renderer: StarCatalogRenderer;
   readonly pickRenderer: StarCatalogPickRenderer;
   readonly starRenderer: StarRenderer; // spheres (starSpheresPass, fieldStarSpherePass)

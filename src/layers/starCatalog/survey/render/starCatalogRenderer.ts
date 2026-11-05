@@ -72,7 +72,14 @@ export function createStarCatalogRenderer(
   // Explicit layouts, not 'auto' — layouts don't cross pipelines.
   const cameraBgl = device.createBindGroupLayout({
     label: 'star-catalog-camera-bgl',
-    entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
+    // FRAGMENT for the pick fragment's `pickCode` read (starCatalog/pickFragment.wesl).
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+    ],
   });
   // One camera buffer per view slot: a capture sweep's faces and the real view
   // each carry a different vp, all before one `submit()`, and a shared buffer

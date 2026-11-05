@@ -9,7 +9,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { blackHoleMarkerPass } from '../../../../../src/layers/blackHoles/markers/passes/blackHoleMarkerPass';
 import { BLACK_HOLES } from '../../../../../src/layers/blackHoles/markers/data/blackHoles';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../../src/data/places/galacticCentre';
-import { Source } from '../../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -37,7 +36,9 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
 }));
 
 const ANCHOR = GALACTIC_CENTRE_ANCHOR.positionMpc as Vec3;
-const HOLE_ID = packSelection(Source.SgrAStar, 0 + PICK_SENTINEL_OFFSET);
+// Not a catalog value: the stamp must pack the code the runtime holds.
+const PICK_CODE = 37;
+const HOLE_ID = packSelection(PICK_CODE, 0 + PICK_SENTINEL_OFFSET);
 // From Earth: R₀ from the anchor, far outside the lens band.
 const FROM_EARTH: Vec3 = [0, 0, 0];
 // 50 AU out: inside the band's full edge (100 AU), where the lens has taken over.
@@ -69,7 +70,10 @@ function makeState() {
 
 function makePass() {
   const markerRenderer = { draw: vi.fn(), destroy: vi.fn() };
-  const pass = blackHoleMarkerPass({ markerRenderer } as unknown as BlackHolesRuntime);
+  const pass = blackHoleMarkerPass({
+    markerRenderer,
+    pickCode: PICK_CODE,
+  } as unknown as BlackHolesRuntime);
   return { pass, markerRenderer };
 }
 

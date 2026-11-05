@@ -44,12 +44,10 @@ export type PickDebugOverlay = {
    * @param pickView A view of the pick texture (r32uint, sized to
    *                 the canvas).  Bound fresh on every draw because
    *                 the texture is recreated on canvas resize.
+   * @param dimCode  The pick code drawn dimmed (the Gaia survey's, a dense
+   *                 point cloud that would drown the sparse sources).
    */
-  draw(pass: GPURenderPassEncoder, pickView: GPUTextureView): void;
-  /**
-   * No-op — pipeline + bind-group-layout have no explicit destroy
-   * methods (GC'd when their last reference drops).  Present for
-   * lifecycle symmetry with the other GPU-resource owners.
-   */
+  draw(pass: GPURenderPassEncoder, pickView: GPUTextureView, dimCode: number): void;
+  /** Frees the dim-code uniform buffer. */
   destroy(): void;
 };

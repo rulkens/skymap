@@ -1,8 +1,6 @@
-import type { StructureId } from '../../@types/data/structure/StructureId';
 import { SOURCE_ENTRIES } from '../sourceEntries';
 
-// The registry's structure rows, in source-code (registry iteration) order —
-// the one place both the id list and the pick-code map are read from.
+// The registry's structure rows, in source-code (registry iteration) order.
 const STRUCTURE_ENTRIES = SOURCE_ENTRIES.filter((e) => e.type === 'structure');
 
 /**
@@ -12,12 +10,3 @@ const STRUCTURE_ENTRIES = SOURCE_ENTRIES.filter((e) => e.type === 'structure');
  * style table, not list position.
  */
 export const STRUCTURE_IDS = STRUCTURE_ENTRIES.map((e) => e.id);
-
-/**
- * STRUCTURE_ID_CODES — each structure id's 6-bit code, packed into the pick
- * texture when its ring is drawn. The encode-side map; decode needs no inverse,
- * since APP_SOURCE_REGISTRY is already keyed by code (see `unpackPick`).
- */
-export const STRUCTURE_ID_CODES: Readonly<Record<StructureId, number>> = Object.fromEntries(
-  STRUCTURE_ENTRIES.map((e) => [e.id, e.code]),
-) as Record<StructureId, number>;

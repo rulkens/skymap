@@ -43,6 +43,12 @@ import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
+import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCodes';
+import { STAR_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/starCatalog/sources/starCatalogSourceRows';
+import { fakePickCode } from '../../../../support/fakePickCode';
+
+/** Codes from 40 up: a stamp that packs the catalog value instead fails. */
+const PICK_CODES = catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, fakePickCode());
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
@@ -120,6 +126,7 @@ function makeRuntime(
     renderer,
     chunkStreams: new Map(),
     starRenderer: { draw: vi.fn() },
+    pickCodes: PICK_CODES,
     ...overrides,
   } as unknown as StarCatalogRuntime;
 }
@@ -266,7 +273,7 @@ describe('fieldStarSpherePass.drawPick', () => {
     expect(drawSphere).toHaveBeenCalledTimes(1);
     // The nearest resolvable record is the middle star, index 1.
     const decoded = unpackPick(packedId)!;
-    expect(decoded.sourceCode).toBe(Source.GaiaStars);
+    expect(decoded.sourceCode).toBe(PICK_CODES.pickCodeOf(Source.GaiaStars));
     expect(decoded.localIdx).toBe(1);
   });
 });

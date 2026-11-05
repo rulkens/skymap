@@ -54,13 +54,13 @@ export const starCatalogLayer = defineLayer({
   computes: (runtime) => [starCutCompute(runtime)],
   assets: starCatalogAssetRows,
   sourceCounts: starCatalogSourceCounts,
-  guides: () => ({
+  guides: (runtime) => ({
     screenLabels: [
       {
         slab: NEAR0,
         id: 'starCaptions',
         label: 'starCatalog',
-        produceLabels: produceStarCaptions(),
+        produceLabels: produceStarCaptions(runtime),
       },
     ],
     orbitTrails: { show: 'sStarTrails', rows: S_STAR_ORBITAL_ELEMENTS },

@@ -147,7 +147,7 @@ function deriveFamousLabelInputs(
 }
 
 export function produceFamousGalaxyLabels(
-  runtime: Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>,
+  runtime: Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta' | 'pickCodes'>,
 ): LayerScreenLabel<'famousGalaxy'>['produceLabels'] {
   return (state, ctx, fade) => {
     const empty: Label2DProducerOutput = { labels: [], awake: false };
@@ -155,6 +155,7 @@ export function produceFamousGalaxyLabels(
     const meta = runtime.famousMeta;
     const catalog = runtime.catalogs.get(Source.FamousGalaxy);
     if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
+    const famousCode = runtime.pickCodes.pickCodeOf(Source.FamousGalaxy);
 
     // focusedOnly mode: only the focused subject's label draws. A famous focus
     // is a positional catalog ref; anything else focused (a structure, the
@@ -224,7 +225,7 @@ export function produceFamousGalaxyLabels(
       // Byte-identical to what the famous point batch's pick fragment writes:
       // the meta ⋈ catalog join is index-aligned, so this loop index IS the
       // catalog row the GPU stamps as `@builtin(instance_index)`.
-      const subjectId = packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET);
+      const subjectId = packSelection(famousCode, i + PICK_SENTINEL_OFFSET);
 
       // Build the label BEFORE its geometry so `measure` reads the same font /
       // text / alignment fields the final label carries — the measured ink

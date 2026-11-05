@@ -18,6 +18,9 @@ import {
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { structurePickId } from '../../../../../src/layers/structure/picking/utils/structurePickId';
 import { makeStructureFade } from '../../../../fixtures/makeStructureFade';
+import { structurePickCodes } from '../../../../support/layerPickCodes';
+
+const PICK_CODES = structurePickCodes();
 
 // Builds a real structure store (so `state.store` is the production store) and
 // state.selection refs that drive the ring bump, then drives the producer. The
@@ -77,7 +80,12 @@ describe('produceStructureMarkers', () => {
     const state = makeState();
     state.store.setGroup('bulk', [rec('b1'), rec('b2')]);
     state.store.setGroup('anchors', [rec('a1')]);
-    const markers = produceStructureMarkers(state.store, state, makeCtx(), ONE);
+    const markers = produceStructureMarkers(
+      { store: state.store, pickCodes: PICK_CODES },
+      state,
+      makeCtx(),
+      ONE,
+    );
     expect(markers.map((m) => m.id)).toEqual(['a1', 'b1', 'b2']);
   });
 
@@ -89,7 +97,12 @@ describe('produceStructureMarkers', () => {
       rec('near'),
       rec('far', 'galaxy-cluster', { worldPos: [10000, 0, 0] }),
     ]);
-    const markers = produceStructureMarkers(state.store, state, makeCtx(), ONE);
+    const markers = produceStructureMarkers(
+      { store: state.store, pickCodes: PICK_CODES },
+      state,
+      makeCtx(),
+      ONE,
+    );
     expect(markers.map((m) => m.id)).toEqual(['near', 'far']);
     const far = markers.find((m) => m.id === 'far')!;
     expect(far.ringColor[3]).toBe(0);
@@ -100,7 +113,7 @@ describe('produceStructureMarkers', () => {
     const state = makeState();
     state.store.setGroup('bulk', [rec('c1', 'galaxy-cluster'), rec('v1', 'void')]);
     const markers = produceStructureMarkers(
-      state.store,
+      { store: state.store, pickCodes: PICK_CODES },
       state,
       makeCtx(),
       makeStructureFade(1, { 'galaxy-cluster': 0 }),
@@ -112,11 +125,14 @@ describe('produceStructureMarkers', () => {
   it('a mid-fade category emits alpha-scaled descriptors (not skipped)', () => {
     const state = makeState();
     state.store.setGroup('anchors', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
-    const base = produceStructureMarkers(state.store, state, makeCtx(), ONE).find(
-      (m) => m.id === 'c1',
-    )!;
+    const base = produceStructureMarkers(
+      { store: state.store, pickCodes: PICK_CODES },
+      state,
+      makeCtx(),
+      ONE,
+    ).find((m) => m.id === 'c1')!;
     const half = produceStructureMarkers(
-      state.store,
+      { store: state.store, pickCodes: PICK_CODES },
       state,
       makeCtx(),
       makeStructureFade(1, { 'galaxy-cluster': 0.5 }),
@@ -134,7 +150,12 @@ describe('produceStructureMarkers', () => {
       rec('a', 'galaxy-cluster', { significance: 0 }),
       rec('b', 'galaxy-cluster', { significance: 0 }),
     ]);
-    const markers = produceStructureMarkers(sel.store, sel, makeCtx(), ONE);
+    const markers = produceStructureMarkers(
+      { store: sel.store, pickCodes: PICK_CODES },
+      sel,
+      makeCtx(),
+      ONE,
+    );
     const a = markers.find((m) => m.id === 'a')!;
     const b = markers.find((m) => m.id === 'b')!;
     // alpha = ringColor.a(1) × fade(1) × sigWeight(0.25), selected or not
@@ -153,9 +174,14 @@ describe('produceStructureMarkers', () => {
     const focusWord = structurePickId(
       'galaxy-cluster',
       state.store.categoryIndexOf('galaxy-cluster', 'a'),
+      PICK_CODES,
     );
     const byId = (ctx: FrameView) =>
-      new Map(produceStructureMarkers(state.store, state, ctx, ONE).map((m) => [m.id, m]));
+      new Map(
+        produceStructureMarkers({ store: state.store, pickCodes: PICK_CODES }, state, ctx, ONE).map(
+          (m) => [m.id, m],
+        ),
+      );
     const rest = byId(makeCtx());
     const focused = byId(makeCtx(1, FULL_BAND_CAM_Z, focusWord));
     expect(focused.get('a')!.ringColor[3]).toBeCloseTo(rest.get('a')!.ringColor[3], 6);
@@ -180,9 +206,12 @@ describe('produceStructureMarkers', () => {
     const focusWord = structurePickId(
       'galaxy-cluster',
       state.store.categoryIndexOf('galaxy-cluster', 'a'),
+      PICK_CODES,
     );
     const b = (ctx: FrameView) =>
-      produceStructureMarkers(state.store, state, ctx, ONE).find((m) => m.id === 'b')!;
+      produceStructureMarkers({ store: state.store, pickCodes: PICK_CODES }, state, ctx, ONE).find(
+        (m) => m.id === 'b',
+      )!;
     const rest = b(makeCtx());
     const focused = b(makeCtx(1, FULL_BAND_CAM_Z, focusWord));
     expect(focused.ringColor[3]).toBeCloseTo(rest.ringColor[3] * MILD_RECESSION, 6);
@@ -203,7 +232,12 @@ describe('produceStructureMarkers', () => {
         significance: 1,
       }),
     ]);
-    const [m] = produceStructureMarkers(state.store, state, makeCtx(0, camZ), ONE);
+    const [m] = produceStructureMarkers(
+      { store: state.store, pickCodes: PICK_CODES },
+      state,
+      makeCtx(0, camZ),
+      ONE,
+    );
     expect(m!.ringColor[3]).toBeGreaterThan(0);
   });
 
@@ -220,7 +254,12 @@ describe('produceStructureMarkers', () => {
       }),
     ]);
     const ctx = { ...makeCtx(0, camZ), drawPxPerRad: 900 } as FrameView;
-    const [m] = produceStructureMarkers(state.store, state, ctx, ONE);
+    const [m] = produceStructureMarkers(
+      { store: state.store, pickCodes: PICK_CODES },
+      state,
+      ctx,
+      ONE,
+    );
     const style = STRUCTURE_MARKER_STYLES['galaxy-cluster'];
     const t = Math.min(
       1,
@@ -247,12 +286,18 @@ describe('produceStructureMarkers', () => {
     const ctx = makeCtx();
     const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
 
-    expect(produceStructureMarkers(state.store, state, ctx, ONE).map((m) => m.pickable)).toEqual([
-      true,
-      true,
-    ]);
+    expect(
+      produceStructureMarkers({ store: state.store, pickCodes: PICK_CODES }, state, ctx, ONE).map(
+        (m) => m.pickable,
+      ),
+    ).toEqual([true, true]);
 
-    const under = produceStructureMarkers(state.store, state, focused, ONE);
+    const under = produceStructureMarkers(
+      { store: state.store, pickCodes: PICK_CODES },
+      state,
+      focused,
+      ONE,
+    );
     // Both descriptors stay, in order: the pick decodes by per-category index.
     expect(under.map((m) => [m.id, m.pickable])).toEqual([
       ['in', true],
@@ -264,7 +309,12 @@ describe('produceStructureMarkers', () => {
     const at = (value: number) => {
       const state = makeState();
       state.store.setGroup('anchors', [rec('a')]);
-      return produceStructureMarkers(state.store, state, makeCtx(), makeStructureFade(value))[0]!;
+      return produceStructureMarkers(
+        { store: state.store, pickCodes: PICK_CODES },
+        state,
+        makeCtx(),
+        makeStructureFade(value),
+      )[0]!;
     };
     const faint = at(RING_PICK_MIN_ALPHA / 2);
     const solid = at(0.5);
@@ -285,7 +335,12 @@ describe('produceStructureMarkers', () => {
         rec('a', 'galaxy-cluster', { significance: 0 }),
         rec('b', 'galaxy-cluster', { significance: 0 }),
       ]);
-      return produceStructureMarkers(state.store, state, makeCtx(), ONE);
+      return produceStructureMarkers(
+        { store: state.store, pickCodes: PICK_CODES },
+        state,
+        makeCtx(),
+        ONE,
+      );
     };
     const plain = build(makeState()).find((m) => m.id === 'a')!;
 

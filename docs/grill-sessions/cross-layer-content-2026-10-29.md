@@ -125,7 +125,7 @@ fourteen such files. Is this the same problem, or a separate one with its own ba
 
 **Decision:** Option B. The ADR covers both. Kind-B tables migrate step by step, one fork per
 table family, and every new or widened contract member is still asked for before it lands. The
-2026-10-28 ruling in `docs/backlog/2026-10-28-selection-kind-facts-in-the-layer.md` already
+2026-10-28 ruling in `docs/superpowers/specs/2026-11-05-selection-kind-facts-design.md` already
 consents to widening `SelectionKindRow`, so the selection facts go first.
 
 ## Q6: Where does the developer overview live?

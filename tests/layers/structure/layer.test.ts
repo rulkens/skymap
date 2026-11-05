@@ -14,6 +14,7 @@ import { FRAME_ORDER_PASS_NAMES } from '../../../src/services/engine/frame/frame
 import { COSMO, NEAR0 } from '../../../src/services/engine/frame/slabs';
 import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { structurePickCodes } from '../../support/layerPickCodes';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
@@ -23,6 +24,7 @@ import type { StructureRuntime } from '../../../src/layers/structure/@types/Stru
 function stubRuntime(): StructureRuntime {
   return {
     store: createStructureStore(),
+    pickCodes: structurePickCodes(),
     cosmoRenderer: {},
     nearRenderer: {},
     slot: {},

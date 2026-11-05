@@ -1,7 +1,7 @@
 /**
  * The milkyWay Layer's whole runtime: the generated point cloud, its
- * two-pass renderer, the pick impostor, and the aggregate offscreen's
- * upsample. Non-null throughout — `create` builds all four before
+ * two-pass renderer, the pick impostor, the aggregate offscreen's
+ * upsample and the disk's pick code. Non-null throughout — `create` builds them all before
  * returning, which is what lets the passes read them without a null check.
  */
 
@@ -15,4 +15,6 @@ export type MilkyWayRuntime = {
   readonly cloudRenderer: MilkyWayCloudRenderer;
   readonly pickRenderer: MilkyWayPickRenderer;
   readonly aggregateUpsample: AdditiveUpsample;
+  /** The disk's pick code; the pick impostor, label, emphasis and selection row all read it. */
+  readonly pickCode: number;
 };

@@ -43,6 +43,7 @@ vi.mock('../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal', () => ({
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { bodyPickCodes } from '../../../../support/layerPickCodes';
 
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 // Production reads the static scene tables, so `makeCtx` pins the snapshot to the fixture bodies.
@@ -128,6 +129,7 @@ function makePartitionFixture() {
   const textured = bodyAt('mars', 3390000);
   const glint = glintBodyAt('moon', 1737000);
   const runtime = {
+    pickCodes: bodyPickCodes(),
     planetRenderer: makeRendererSpy(),
     texturedBodyRenderer: {
       draw: vi.fn(),
@@ -277,6 +279,7 @@ describe('planetsPass.drawPick', () => {
     const state = { gpu: { bodyPickRenderer: pickRenderer } } as unknown as EngineState;
     const bodies = [flat, textured, glint];
     const planets = planetsPass({
+      pickCodes: bodyPickCodes(),
       planetRenderer: makeRendererSpy(),
       texturedBodyRenderer: {
         hasMap: (id: string, kind: string) => id === 'mars' && kind === 'surface',
@@ -301,6 +304,7 @@ describe('planetsPass.drawPick', () => {
     const pxPerRad = 720 / (2 * Math.tan(Math.PI / 6));
     const pose: BodyRelativePose = { eyeRelBodyM: [dM, 0, 0], basisM: IDENTITY_MAT3 };
     const planets = planetsPass({
+      pickCodes: bodyPickCodes(),
       planetRenderer: makeRendererSpy(),
       texturedBodyRenderer: { hasMap: () => false },
     } as unknown as BodyRuntime);

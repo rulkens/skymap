@@ -48,12 +48,16 @@ import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnde
 import { structurePickId } from '../../picking/utils/structurePickId';
 import { visibilityEntryOf } from '../../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../../../../services/engine/presentation/emphasisOf';
+import type { StructureRuntime } from '../../@types/StructureRuntime';
 import { structureVisibility } from '../../visibility';
 
 const RING_ENTRY = visibilityEntryOf(structureVisibility, 'structureRing');
 
 export function produceStructureMarkers(
-  store: Pick<StructureStore, 'all' | 'categoryIndexOf'>,
+  runtime: { readonly store: Pick<StructureStore, 'all' | 'categoryIndexOf'> } & Pick<
+    StructureRuntime,
+    'pickCodes'
+  >,
   state: PassState,
   ctx: FrameView,
   fade: Readonly<Record<StructureId, number>>,
@@ -67,7 +71,7 @@ export function produceStructureMarkers(
   const selectedStructureId = structureIdOf(state.selection.select);
   const hoveredStructureId = structureIdOf(state.selection.hover);
 
-  for (const p of store.all()) {
+  for (const p of runtime.store.all()) {
     // The category's handed value: toggle fade × clip × distance band. Skip only at
     // exactly 0 (the all-or-nothing case, safe for within-category alignment); a
     // mid-fade value scales the descriptor alpha below.
@@ -95,7 +99,11 @@ export function produceStructureMarkers(
     // SIG_MIN_ALPHA (significance 0) to 1 (significance 1). Featured anchors
     // omit significance, so `?? 1` leaves their at-rest alpha unchanged.
     const sigWeight = SIG_MIN_ALPHA + (1 - SIG_MIN_ALPHA) * (p.significance ?? 1);
-    const pickId = structurePickId(p.category, store.categoryIndexOf(p.category, p.id));
+    const pickId = structurePickId(
+      p.category,
+      runtime.store.categoryIndexOf(p.category, p.id),
+      runtime.pickCodes,
+    );
     const weightedFade =
       fadeAlpha * sigWeight * catFade * emphasisOf(RING_ENTRY, ctx.snapshot, pickId);
 

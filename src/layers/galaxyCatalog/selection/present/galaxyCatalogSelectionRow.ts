@@ -13,12 +13,11 @@ import { encodeGalaxyId } from '../../../../services/url/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../../utils/math/cartesianToRaDec';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 
 type GalaxyCatalogRef = Extract<SelectionRef, { type: 'galaxyCatalog' }>;
 /** The live reads every branch here makes; the runtime satisfies it. */
-type Records = Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'famousMeta'>;
+type Records = Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'famousMeta' | 'pickCodes'>;
 
 /** Strict pos@ form, anchored at both ends: `<ra>,<dec>` (legacy) or `<ra>,<dec>,<dMpc>`. */
 const POS_RE = /^pos@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,(\d+(?:\.\d+)?))?$/;
@@ -26,16 +25,19 @@ const POS_RE = /^pos@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,(\d+(?:\.\d+)?))?$/;
 export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<GalaxyCatalogRef> {
   return {
     type: 'galaxyCatalog',
-    pickSources: GALAXY_CATALOG_SOURCES,
+    pickSources: GALAXY_CATALOG_SOURCES.map(runtime.pickCodes.pickCodeOf),
     // A released source has no record: its picks and refs map to nothing.
-    resolvePick: (_entry, pick) => {
-      const source = pick.sourceCode as GalaxyCatalogSourceType;
+    resolvePick: (pick) => {
+      const source = runtime.pickCodes.catalogOfPickCode(pick.sourceCode);
+      if (source === null) return null;
       const index = runtime.records.get(source)?.ordinalOfPick(pick.localIdx) ?? null;
       return index === null ? null : { type: 'galaxyCatalog', source, index };
     },
     encodePick: (ref) => {
       const pick = runtime.records.get(ref.source)?.pickOfOrdinal(ref.index) ?? null;
-      return pick === null ? null : packSelection(ref.source, pick + PICK_SENTINEL_OFFSET);
+      return pick === null
+        ? null
+        : packSelection(runtime.pickCodes.pickCodeOf(ref.source), pick + PICK_SENTINEL_OFFSET);
     },
     extractRow: (ref) => runtime.recordBridge.row(ref.source, ref.index),
     focusId: {

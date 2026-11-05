@@ -17,6 +17,9 @@ import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slab
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../../../../fixtures/makeGalaxyCatalogItems';
 import { makeGalaxyCatalogFade } from '../../../../fixtures/makeGalaxyCatalogFade';
+import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
+import { galaxyRowRuntime } from '../../../../support/layerPickCodes';
+import { fakePickCode } from '../../../../support/fakePickCode';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
@@ -101,6 +104,12 @@ const SETTINGS_STUB = {
   },
 } as unknown as EngineState['settings'];
 
+// The selection row's reads: one SDSS catalog, codes far from every `Source` value.
+const ROW_RUNTIME = galaxyRowRuntime(
+  { catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]), famousMeta: [] },
+  fakePickCode(),
+);
+
 // The pass closes over its Layer's runtime, so the draw spy rides a runtime
 // stub while the settings/selection reads stay on the `state` argument.
 function makeStateWithRenderer(
@@ -122,6 +131,7 @@ function makeStateWithRenderer(
     gpu: { ...STATE_STUB.gpu, ...overrides.gpu },
   } as unknown as EngineState;
   const runtime = {
+    ...ROW_RUNTIME,
     focusBindGroup: {} as GPUBindGroup,
     pointRenderer: { draw: drawSpy, loadedSources: () => loadedSources },
     pickRenderer: { drawPoints: drawPointsSpy },
@@ -130,7 +140,7 @@ function makeStateWithRenderer(
 }
 
 describe('galaxyPointSpritesPass.draw', () => {
-  it('packs (source, index) into the selectedPacked u32', () => {
+  it('packs the pick code and pick index into the selectedPacked u32', () => {
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
     // Selection is sourced from state.selection.select, not the settings stub.
@@ -145,7 +155,8 @@ describe('galaxyPointSpritesPass.draw', () => {
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Selection lives on arg[3].selectedPacked (the GalaxyPointDrawSettings
     // record).
-    const expected = packSelection(Source.SDSS, 42);
+    // The stamp's word without its `+ PICK_SENTINEL_OFFSET`, under the allocator's code.
+    const expected = packSelection(ROW_RUNTIME.pickCodes.pickCodeOf(Source.SDSS), 42);
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(expected);
   });
