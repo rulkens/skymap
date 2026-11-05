@@ -19,6 +19,13 @@ import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 const POSTS = 3601;
 const INTERVALS = POSTS - 1;
 const VOID = -32768;
+/** N28W081 holds 20,368 lone posts of exactly this over the lagoons by Cape
+ *  Canaveral, among neighbours of about -2 m: no-data, not ground. */
+const INT16_MAX = 32767;
+
+function isVoid(value: number): boolean {
+  return value === VOID || value === INT16_MAX;
+}
 
 /** 1″ ≈ 30 m; z13's lattice step is 1.24″, the deepest level this still
  *  resolves (spec §4.1's z13.3). */
@@ -38,6 +45,18 @@ const SKADI_PROVENANCE = {
  *  only the few cells under the current strip are ever live. */
 const CELL_CACHE_LIMIT = 8;
 
+/** The whole-degree cells a box touches. Gating on the box itself let one post
+ *  read skadi from one tile's row run and the ETOPO underfill from another's,
+ *  so sibling tiles disagreed along their shared edge by up to 300 m. */
+function cellFootprint(box: LonLatBounds): LonLatBounds {
+  return {
+    west: Math.floor(box.west),
+    east: Math.ceil(box.east),
+    south: Math.floor(box.south),
+    north: Math.ceil(box.north),
+  };
+}
+
 function cellPath(dir: string, latDeg: number, lonDeg: number): string {
   const ns = `${latDeg < 0 ? 'S' : 'N'}${String(Math.abs(latDeg)).padStart(2, '0')}`;
   const ew = `${lonDeg < 0 ? 'W' : 'E'}${String(Math.abs(lonDeg)).padStart(3, '0')}`;
@@ -49,6 +68,7 @@ export function skadiHeightSource(opts: {
   readonly coverage: ReadonlyArray<LonLatBounds>;
 }): HeightSource {
   const cells = new Map<string, Int16Array | null>();
+  const coverage = opts.coverage.map(cellFootprint);
 
   function cell(latDeg: number, lonDeg: number): Int16Array | null {
     const key = `${latDeg},${lonDeg}`;
@@ -79,7 +99,7 @@ export function skadiHeightSource(opts: {
     const posts = cell(latDeg, lonDeg);
     if (posts === null) return Number.NaN;
     const value = posts[row * POSTS + col]!;
-    return value === VOID ? Number.NaN : value;
+    return isVoid(value) ? Number.NaN : value;
   }
 
   /** Bilinear between the four native posts around `(lon, lat)`. The cell and
@@ -127,12 +147,12 @@ export function skadiHeightSource(opts: {
     id: 'skadi-1arcsec',
     attribution: SKADI_PROVENANCE.attribution,
     maxLevel: SKADI_MAX_LEVEL,
-    coverage: opts.coverage,
+    coverage,
     provenance: SKADI_PROVENANCE,
 
     async readGrid(z, i0, j0, nx, ny) {
       const box = heightLatticeBounds(z, i0, j0, nx, ny);
-      if (!opts.coverage.some((c) => boundsOverlap(c, box))) return null;
+      if (!coverage.some((c) => boundsOverlap(c, box))) return null;
 
       const step = heightLatticeStepDeg(z);
       const grid = new Float32Array(nx * ny);
@@ -159,7 +179,7 @@ export function skadiHeightSource(opts: {
           for (let row = rowFrom; row <= rowTo; row++) {
             for (let col = colFrom; col <= colTo; col++) {
               const value = posts[row * POSTS + col]!;
-              if (value === VOID) continue;
+              if (isVoid(value)) continue;
               if (value < min) min = value;
               if (value > max) max = value;
             }

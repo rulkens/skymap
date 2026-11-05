@@ -6,7 +6,7 @@ Deep height source under the EOX s2cloudless imagery bands.
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Layout   | `<N55>/<N55E012>.hgt`, one file per 1°×1° cell, 25,934,402 B each                                                                                                                                                   |
 | Upstream | `https://elevation-tiles-prod.s3.amazonaws.com/skadi/<N55>/<N55E012>.hgt.gz`                                                                                                                                        |
-| Fetched  | 2026-09-15 (`npm run fetch-height -- --skadi`)                                                                                                                                                                      |
+| Fetched  | 2026-09-15, launch-site cells 2026-11-05 (`npm run fetch-height -- --skadi`)                                                                                                                                        |
 | Licence  | Per provider. The AWS registry's licence field points at <https://github.com/tilezen/joerd/blob/master/docs/attribution.md>, which says "Attribution is required for many terrain tile data providers" and lists the wording per provider (read 2026-10-07). Which providers lie under our regions is not worked out. |
 
 ## Why `skadi` and not `terrarium`
@@ -22,7 +22,9 @@ edge, column 0 = its WEST edge. Read little-endian, −7 m decodes as −1537 m 
 the terrain looks like noise, which is what
 `tests/tools/textures/skadiHeightSource.test.ts` pins.
 
-`-32768` is the void sentinel → NaN → the band's underfill.
+`-32768` is the void sentinel → NaN → the band's underfill. `32767` is treated
+the same: N28W081 carries 20,368 lone posts of it over the lagoons by Cape
+Canaveral, and none of the other 60 cells has any.
 
 ## Cell naming and shared edges
 

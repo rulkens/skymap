@@ -10,7 +10,7 @@ import { memo, useCallback } from 'react';
 import GalaxiesSection from './GalaxiesSection';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import {
-  selectVisibleSourceMask,
+  selectVisibleCatalogs,
   selectGalaxyCatalogSize,
   selectGalaxyCatalogFormats,
   selectDepthFade,
@@ -44,7 +44,7 @@ function GalaxiesSectionContainer({ title }: LayerMainSectionProps): React.React
   // the selector accumulates them one source at a time.
   const sourceCounts = useAppSelector(selectSourceCounts);
 
-  const sourceMask = useAppSelector(selectVisibleSourceMask);
+  const visibleCatalogs = useAppSelector(selectVisibleCatalogs);
   const formats = useAppSelector(selectGalaxyCatalogFormats);
   const pointSize = useAppSelector(selectGalaxyCatalogSize);
   const depthFadeEnabled = useAppSelector(selectDepthFade);
@@ -98,7 +98,7 @@ function GalaxiesSectionContainer({ title }: LayerMainSectionProps): React.React
   return (
     <GalaxiesSection
       title={title}
-      sourceMask={sourceMask}
+      visibleCatalogs={visibleCatalogs}
       onToggleSource={onToggleSource}
       sourceCounts={sourceCounts}
       formats={formats}
