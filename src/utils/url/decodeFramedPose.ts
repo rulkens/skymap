@@ -7,7 +7,7 @@
  * Sky: k,<body>,<lonRad>,<latRad>,<azimuthRad>,<altitudeRad>, altitude in [−π/2, π/2].
  */
 
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 import { isRegistryBodyId } from '../scene/isRegistryBodyId';
 import { isSurfaceSiteId } from '../scene/isSurfaceSiteId';
 import { parseFiniteNumbers } from './parseFiniteNumbers';

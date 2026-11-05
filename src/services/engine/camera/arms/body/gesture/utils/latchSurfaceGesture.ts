@@ -1,8 +1,8 @@
-import type { BodyFixedPose } from '../../../../../../../@types/camera/BodyFixedPose';
-import type { DragStep } from '../../../../../../../@types/camera/DragStep';
-import type { GroundRadiusLookup } from '../../../../../../../@types/camera/GroundRadiusLookup';
-import type { SurfaceGesture } from '../../../../../../../@types/camera/SurfaceGesture';
-import type { ViewFrustum } from '../../../../../../../@types/camera/ViewFrustum';
+import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
+import type { DragStep } from '../@types/DragStep';
+import type { GroundRadiusLookup } from '../../../../../../../@types/camera/terrain/GroundRadiusLookup';
+import type { SurfaceGesture } from '../../../../../../../@types/camera/arms/SurfaceGesture';
+import type { ViewFrustum } from '../../../../../../../@types/camera/projection/ViewFrustum';
 import type { Vec2 } from '../../../../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../../../../@types/math/Vec3';
 import { MIN_INCIDENCE_COS } from './anchoredDragRotation';

@@ -17,7 +17,7 @@ import { describe, it, expect } from 'vitest';
 import { anchoredZoomStep } from '../../../../../../../../src/services/engine/camera/arms/body/gesture/utils/anchoredZoomStep';
 import { surfaceFloorM } from '../../../../../../../../src/services/engine/camera/arms/body/utils/surfaceFloorM';
 import { SURFACE_STANDOFF_RADII } from '../../../../../../../../src/utils/camera/orbitCamera/clampDistance';
-import type { BodyFixedPose } from '../../../../../../../../src/@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../../../../../../src/@types/camera/pose/BodyFixedPose';
 import { asSceneBodyId } from '../../../../../../../../src/utils/scene/asSceneBodyId';
 
 const BASIS_IDENTITY: BodyFixedPose['basisLocal'] = [1, 0, 0, 0, 1, 0, 0, 0, 1];

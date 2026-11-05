@@ -10,8 +10,8 @@ import { describe, it, expect } from 'vitest';
 import { rowFor } from '../../../../../src/services/engine/camera/arms/rowFor';
 import { climbRowFor } from '../../../../../src/services/engine/camera/arms/climbRowFor';
 import { cameraArmKindOf } from '../../../../../src/services/engine/camera/arms/cameraArmKindOf';
-import type { PoseFrame } from '../../../../../src/@types/camera/PoseFrame';
-import type { FrameOf } from '../../../../../src/@types/camera/FrameOf';
+import type { PoseFrame } from '../../../../../src/@types/camera/pose/PoseFrame';
+import type { FrameOf } from '../../../../../src/@types/camera/arms/FrameOf';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const BODY_FRAME: FrameOf['body'] = { body: asSceneBodyId('earth') };

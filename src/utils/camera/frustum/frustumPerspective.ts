@@ -5,7 +5,7 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import { frustumPerspectiveF64 } from './frustumPerspectiveF64';
 
 export function frustumPerspective(

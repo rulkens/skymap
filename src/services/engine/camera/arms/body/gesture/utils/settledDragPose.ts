@@ -1,10 +1,10 @@
-import type { BodyFixedPose } from '../../../../../../../@types/camera/BodyFixedPose';
-import type { SettleCtx } from '../../../../../../../@types/camera/SettleCtx';
-import type { SurfaceGesture } from '../../../../../../../@types/camera/SurfaceGesture';
-import type { TiltMemory } from '../../../../../../../@types/camera/TiltMemory';
+import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
+import type { SettleCtx } from '../@types/SettleCtx';
+import type { SurfaceGesture } from '../../../../../../../@types/camera/arms/SurfaceGesture';
+import type { TiltMemory } from '../../../../../../../@types/camera/orientation/TiltMemory';
 import { BODY_LOCAL_FRAME } from '../../../../../../../data/camera/bodyLocalFrame';
 import { MAX_REMEMBERED_TILT_RAD } from '../../../../../../../data/camera/cameraTuning';
-import { ORIENT_DECAY } from '../../../../../../../data/camera/orientDecay';
+import { ORIENT_DECAY } from '../../../../data/orientDecay';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { bodyUpWeight } from '../../../../orientation/utils/bodyUpWeight';
 import { eyeFrameOf } from '../../../../../../../utils/camera/surfaceFrame/eyeFrameOf';

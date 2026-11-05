@@ -23,7 +23,7 @@ import { SCENE_EARTH } from '../../../../../../src/data/bodies/sceneEarth';
 import { absoluteArm } from '../../../../../../src/utils/camera/arms/absoluteArm';
 import { bodyDriverGeometry } from '../../../../../../src/utils/scene/bodyDriverGeometry';
 import type { BodyState } from '../../../../../../src/@types/scene/BodyState';
-import type { FramedCameraPose } from '../../../../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../../../../src/@types/camera/pose/FramedCameraPose';
 import type { SelectionRow } from '../../../../../../src/@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';

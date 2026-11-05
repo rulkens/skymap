@@ -10,8 +10,8 @@
  */
 
 import type { SceneBodyId } from '../../../../../../@types/scene/SceneBodyId';
-import type { BodyFixedPose } from '../../../../../../@types/camera/BodyFixedPose';
-import type { CameraPose } from '../../../../../../@types/camera/CameraPose';
+import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
+import type { CameraPose } from '../../../../../../@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../../../../data/camera/bodyLocalFrame';
 import { imagePlaneBasis } from '../../../../../../utils/camera/orbitPose/imagePlaneBasis';

@@ -13,7 +13,7 @@ import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
 import { earthArm } from '../../../../fixtures/earthArm';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 

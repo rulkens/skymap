@@ -7,7 +7,7 @@
  * re-spelling of its coordinates.
  */
 
-import type { FramedCameraPose } from '../camera/FramedCameraPose';
+import type { FramedCameraPose } from '../camera/pose/FramedCameraPose';
 
 export type PerfPose = {
   readonly framed: FramedCameraPose;

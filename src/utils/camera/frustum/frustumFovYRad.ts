@@ -5,7 +5,7 @@
  * to the gestures' `projection.fovYRad`); for a symmetric frustum both agree.
  */
 
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 
 export function frustumFovYRad(frustum: ViewFrustum): number {
   return 2 * Math.atan((frustum.tanUp - frustum.tanDown) / 2);

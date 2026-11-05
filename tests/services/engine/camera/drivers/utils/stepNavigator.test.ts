@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import type { NavigatorState } from '../../../../../../src/@types/camera/NavigatorState';
-import type { NavSettings } from '../../../../../../src/@types/camera/NavSettings';
-import type { NavStep } from '../../../../../../src/@types/camera/NavStep';
+import type { NavigatorState } from '../../../../../../src/@types/camera/input/NavigatorState';
+import type { NavSettings } from '../../../../../../src/@types/camera/input/NavSettings';
+import type { NavStep } from '../../../../../../src/services/engine/camera/@types/NavStep';
 import { NAV_AT_REST } from '../../../../../../src/data/camera/openSpaceNavigation';
 import { stepNavigator } from '../../../../../../src/services/engine/camera/drivers/utils/stepNavigator';
 

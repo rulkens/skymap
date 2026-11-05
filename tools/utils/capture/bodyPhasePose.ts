@@ -4,7 +4,7 @@
  * body's place, read from the engine's own `deriveBodyStates`, so this is the
  * pose the capture will get without a browser in the loop.
  */
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';

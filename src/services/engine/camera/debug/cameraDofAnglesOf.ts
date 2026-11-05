@@ -11,12 +11,12 @@
 
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { BodyState } from '../../../../@types/scene/BodyState';
-import type { CameraDofAngles } from '../../../../@types/camera/CameraDofAngles';
-import type { CameraDofRow } from '../../../../@types/camera/CameraDofRow';
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
-import type { CameraTuning } from '../../../../@types/camera/CameraTuning';
+import type { CameraDofAngles } from '../../../../@types/camera/debug/CameraDofAngles';
+import type { CameraDofRow } from '../../../../@types/camera/debug/CameraDofRow';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
+import type { CameraTuning } from '../../../../@types/camera/orbitCamera/CameraTuning';
 import type { Mat3 } from '../../../../@types/math/Mat3';
-import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
+import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { hOverR } from '../bodyFrame/hOverR';
 import { nearestBodyHR } from '../bodyFrame/nearestBodyHR';

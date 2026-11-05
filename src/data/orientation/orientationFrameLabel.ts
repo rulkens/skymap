@@ -9,7 +9,7 @@
  * fails to compile until its label is written here rather than falling back to
  * a raw id at runtime.
  */
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
 export function orientationFrameLabel(frame: OrientationFrameId): string {
   switch (frame) {

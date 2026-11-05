@@ -4,7 +4,7 @@
  * values they actually assert on.
  */
 
-import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
+import type { CameraDebugSnapshot } from '../../../src/@types/camera/debug/CameraDebugSnapshot';
 import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 
 const ABSENT_DOF = { currentRad: null, targetRad: null, residualRad: null };

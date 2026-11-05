@@ -7,8 +7,8 @@
  */
 
 import type { MeshBody } from '../../../../../../@types/scene/MeshBody';
-import type { SitePose } from '../../../../../../@types/camera/SitePose';
-import { SITE_CAMERA_ARM } from '../../../../../../data/camera/siteCameraArm';
+import type { SitePose } from '../../../../../../@types/camera/pose/SitePose';
+import { SITE_CAMERA_ARM } from '../data/siteCameraArm';
 
 export function clampedSitePose(pose: SitePose, body: MeshBody): SitePose {
   const rangeM = Math.max(pose.rangeM, body.standoffRadii * body.boundingRadiusM);

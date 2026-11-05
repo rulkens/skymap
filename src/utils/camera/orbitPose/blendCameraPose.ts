@@ -5,7 +5,7 @@
  * zooming in before it narrows, so it never slides further than the view is across in one step.
  */
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import { lerp } from '../../math/lerp';
 import { lerpAngleShortest } from '../../math/lerpAngleShortest';
 import { lerpVec3 } from '../../math/lerpVec3';

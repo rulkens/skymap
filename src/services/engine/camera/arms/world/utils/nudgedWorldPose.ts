@@ -1,8 +1,8 @@
-import type { ArmDelta } from '../../../../../../@types/camera/ArmDelta';
-import type { CameraPose } from '../../../../../../@types/camera/CameraPose';
-import type { PivotFraming } from '../../../../../../@types/camera/PivotFraming';
+import type { ArmDelta } from '../../../@types/ArmDelta';
+import type { CameraPose } from '../../../../../../@types/camera/pose/CameraPose';
+import type { PivotFraming } from '../../../../../../@types/camera/arms/PivotFraming';
 import type { Mat3 } from '../../../../../../@types/math/Mat3';
-import { PITCH_LIMIT } from '../../../../../../data/camera/pitchLimit';
+import { PITCH_LIMIT } from '../data/pitchLimit';
 import { applyInputToCamera } from '../applyInputToCamera';
 import { dot3 } from '../../../../../../utils/math/dot3';
 import { rotateVec3ByTightMat3 } from '../../../../../../utils/math/rotateVec3ByTightMat3';

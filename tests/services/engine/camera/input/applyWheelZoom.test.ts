@@ -9,8 +9,8 @@ import { describe, it, expect } from 'vitest';
 
 import { applyWheelZoom } from '../../../../../src/services/engine/camera/input/applyWheelZoom';
 import { MIN_DISTANCE_MPC } from '../../../../../src/utils/camera/orbitCamera/clampDistance';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
-import type { PivotFraming } from '../../../../../src/@types/camera/PivotFraming';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
+import type { PivotFraming } from '../../../../../src/@types/camera/arms/PivotFraming';
 import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
 
 const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 1, pitch: 0.2, distance: 100 };

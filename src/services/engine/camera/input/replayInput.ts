@@ -26,18 +26,18 @@ import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
 import cameraReducer, { commitCameraPose } from '../../../../state/camera/cameraSlice';
 
-import type { ClimbableKind } from '../../../../@types/camera/ClimbableKind';
+import type { ClimbableKind } from '../@types/ClimbableKind';
 import type { DriverId } from '../../../../@types/engine/camera/DriverId';
 import type { Epoch } from '../../../../@types/engine/camera/Epoch';
 import type { FollowMemory } from '../../../../@types/engine/camera/FollowMemory';
-import type { FramedCameraPose } from '../../../../@types/camera/FramedCameraPose';
-import type { FramedPose } from '../../../../@types/camera/FramedPose';
-import type { InputStep } from '../../../../@types/camera/InputStep';
-import type { MemOf } from '../../../../@types/camera/MemOf';
-import type { NavStep } from '../../../../@types/camera/NavStep';
-import type { CameraArmCtx } from '../../../../@types/camera/CameraArmCtx';
-import type { CameraArmKind } from '../../../../@types/camera/CameraArmKind';
-import type { TiltMemory } from '../../../../@types/camera/TiltMemory';
+import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
+import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
+import type { InputStep } from '../../../../@types/camera/input/InputStep';
+import type { MemOf } from '../../../../@types/camera/arms/MemOf';
+import type { NavStep } from '../@types/NavStep';
+import type { CameraArmCtx } from '../../../../@types/camera/arms/CameraArmCtx';
+import type { CameraArmKind } from '../../../../@types/camera/arms/CameraArmKind';
+import type { TiltMemory } from '../../../../@types/camera/orientation/TiltMemory';
 import type { RootState } from '../../../../store/types';
 
 export function replayInput(

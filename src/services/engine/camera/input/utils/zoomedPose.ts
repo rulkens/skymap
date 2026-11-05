@@ -20,8 +20,8 @@
  */
 
 import { zoomedDistance } from './zoomedDistance';
-import type { CameraPose } from '../../../../../@types/camera/CameraPose';
-import type { PivotFraming } from '../../../../../@types/camera/PivotFraming';
+import type { CameraPose } from '../../../../../@types/camera/pose/CameraPose';
+import type { PivotFraming } from '../../../../../@types/camera/arms/PivotFraming';
 
 export function zoomedPose(base: CameraPose, factor: number, pivot: PivotFraming): CameraPose {
   return {

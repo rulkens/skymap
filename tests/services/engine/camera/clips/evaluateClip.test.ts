@@ -34,7 +34,7 @@ import { neighbourhoodFlythrough } from '../../../../../src/data/animation/tours
 import { relErr } from '../../../../support/relErr';
 import { dwellDrift } from '../../../../../src/state/tour/dwellDrift';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { SelectionResolver } from '../../../../../src/@types/engine/selection/SelectionResolver';
 

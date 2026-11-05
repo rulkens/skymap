@@ -1,7 +1,7 @@
 /** THE display-tilt mapping (rulings 12 + 13, one home), read by BOTH arms so
  * the engage edge changes ownership of the tilt but never the image. */
 
-import type { CameraTuning } from '../../../../../@types/camera/CameraTuning';
+import type { CameraTuning } from '../../../../../@types/camera/orbitCamera/CameraTuning';
 import { bodyUpWeight } from './bodyUpWeight';
 
 export function mappedTiltRad(

@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 
 import { frameAlignedRoll } from '../../../../../../src/services/engine/camera/arms/world/frameAlignedRoll';
 import { deriveBodyStates } from '../../../../../../src/services/engine/frame/deriveBodyStates';
-import { ORIENT_DECAY } from '../../../../../../src/data/camera/orientDecay';
+import { ORIENT_DECAY } from '../../../../../../src/services/engine/camera/data/orientDecay';
 import { ORIENTATION_FRAMES } from '../../../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../../../src/data/defaults';
 import { SCENE_EARTH } from '../../../../../../src/data/bodies/sceneEarth';
@@ -25,7 +25,7 @@ import { frameUp } from '../../../../../../src/utils/camera/orbitPose/frameUp';
 import { orbitAnglesLookingAlong } from '../../../../../../src/utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../../../src/utils/math/rotateVec3ByTightMat3';
-import type { CameraPose } from '../../../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../../src/@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';

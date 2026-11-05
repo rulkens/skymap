@@ -13,7 +13,7 @@ import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { EARTH_SCENE_BODY_IDS } from '../../../../src/layers/earthScenes/scenes/data/earthSceneBodyIds';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';

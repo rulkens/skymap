@@ -5,7 +5,7 @@ import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
 import { distance3 } from '../../../../src/utils/math/distance3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { GroundRadiusLookup } from '../../../../src/@types/camera/GroundRadiusLookup';
+import type { GroundRadiusLookup } from '../../../../src/@types/camera/terrain/GroundRadiusLookup';
 
 // Earth-scale bounds (spec §8.1's [-430, 8849] relief, rounded for readable
 // fixtures) — every expectation below is derived from raySphereRoots (an

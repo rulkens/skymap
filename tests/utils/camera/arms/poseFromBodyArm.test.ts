@@ -10,7 +10,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { poseFromBodyArm } from '../../../../src/utils/camera/arms/poseFromBodyArm';
-import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 describe('poseFromBodyArm', () => {

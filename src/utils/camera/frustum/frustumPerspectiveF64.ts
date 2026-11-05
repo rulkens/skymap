@@ -8,7 +8,7 @@
  * caller post-mutating a finished vp.
  */
 
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 
 export function frustumPerspectiveF64(
   frustum: ViewFrustum,

@@ -10,7 +10,7 @@
  */
 
 import type { GalaxyRecordSource } from '../../records/@types/GalaxyRecordSource';
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 
 export type DiskWalkInput = {

@@ -17,7 +17,7 @@ import { innerBoundRadiusM } from '../../../../../../../src/utils/occlusion/inne
 import { outerBoundRadiusM } from '../../../../../../../src/utils/occlusion/outerBoundRadiusM';
 import { deriveBodyStates } from '../../../../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../../../../src/data/time/constJ2000';
-import type { HostBody } from '../../../../../../../src/@types/camera/HostBody';
+import type { HostBody } from '../../../../../../../src/services/engine/camera/arms/@types/HostBody';
 import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../../src/utils/scene/asSceneBodyId';
 

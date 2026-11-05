@@ -11,7 +11,7 @@ import { requestOrientationChange } from '../../../src/state/camera/orientationA
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { ORIENTATION_FRAME_QUATERNIONS } from '../../../src/data/orientation/orientationFrames';
 import { cameraRoute, settingsRoute } from '../../../src/store/constants';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { Vec4 } from '../../../src/@types/math/Vec4';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 

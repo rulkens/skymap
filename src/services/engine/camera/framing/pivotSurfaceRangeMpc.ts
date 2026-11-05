@@ -11,7 +11,7 @@
 
 import { pivotRadiusMpc } from './pivotRadiusMpc';
 import { isWorldArm } from '../arms/world/isWorldArm';
-import type { FramedCameraPose } from '../../../../@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
 import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
 
 export function pivotSurfaceRangeMpc(

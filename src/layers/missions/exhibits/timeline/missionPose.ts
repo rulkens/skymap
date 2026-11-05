@@ -8,7 +8,7 @@
  * `orbitAnglesLookingAlong` in the committed basis; an inverse here would drift off-equatorial.
  */
 
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { DriverCtx } from '../../../../@types/engine/camera/DriverCtx';
 import type { FollowMemory } from '../../../../@types/engine/camera/FollowMemory';

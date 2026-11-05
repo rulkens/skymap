@@ -27,7 +27,7 @@ import { selectTimeState } from '../../../../state/time/selectors';
 import { pause, resume, setSimDays, stepToEvent } from '../../../../state/time/timeSlice';
 import { missionPlaySaga } from './missionPlaySaga';
 import { playMission } from '../../exhibits/timeline/playMission';
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import type { MissionCourse } from '../../missionCamera/@types/MissionCourse';
 import type { MissionTimeline } from '../@types/MissionTimeline';
 import type { Transition } from '../../../../@types/navigation/Transition';

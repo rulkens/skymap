@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 
 import { frameKey } from '../../../../../src/services/engine/camera/arms/frameKey';
 import { sameFrame } from '../../../../../src/services/engine/camera/arms/sameFrame';
-import type { PoseFrame } from '../../../../../src/@types/camera/PoseFrame';
+import type { PoseFrame } from '../../../../../src/@types/camera/pose/PoseFrame';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 describe('frameKey', () => {

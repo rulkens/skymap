@@ -10,7 +10,7 @@ import { liveRenderCamera } from '../../../../src/services/engine/helpers/liveRe
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 

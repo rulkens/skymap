@@ -41,7 +41,7 @@ import {
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { applySceneEffect } from '../../../../src/services/animation/applySceneEffect';
 import { fade, hide, seq, hold } from '../../../../src/services/engine/animation/effectHelpers';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEpochs';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';

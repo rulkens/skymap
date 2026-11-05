@@ -1,8 +1,8 @@
-import type { BodyFixedPose } from '../../../../../../../@types/camera/BodyFixedPose';
-import type { CameraTuning } from '../../../../../../../@types/camera/CameraTuning';
-import type { GroundRadiusLookup } from '../../../../../../../@types/camera/GroundRadiusLookup';
-import type { SurfaceGesture } from '../../../../../../../@types/camera/SurfaceGesture';
-import type { ViewFrustum } from '../../../../../../../@types/camera/ViewFrustum';
+import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
+import type { CameraTuning } from '../../../../../../../@types/camera/orbitCamera/CameraTuning';
+import type { GroundRadiusLookup } from '../../../../../../../@types/camera/terrain/GroundRadiusLookup';
+import type { SurfaceGesture } from '../../../../../../../@types/camera/arms/SurfaceGesture';
+import type { ViewFrustum } from '../../../../../../../@types/camera/projection/ViewFrustum';
 import type { Vec2 } from '../../../../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../../../../@types/math/Vec3';
 import { anchoredZoomStep } from './anchoredZoomStep';

@@ -37,7 +37,7 @@ import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { bodyLayerSlabRow } from '../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';

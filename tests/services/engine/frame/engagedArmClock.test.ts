@@ -55,9 +55,9 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];

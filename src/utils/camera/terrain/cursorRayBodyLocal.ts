@@ -9,9 +9,9 @@
  * flipped to match the camera's y-up `up` column.
  */
 
-import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
-import type { BodyLocalRay } from '../../../@types/camera/BodyLocalRay';
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { BodyFixedPose } from '../../../@types/camera/pose/BodyFixedPose';
+import type { BodyLocalRay } from '../../../@types/camera/terrain/BodyLocalRay';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import { bodyFixedEyeM } from '../surfaceFrame/bodyFixedEyeM';
 

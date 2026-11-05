@@ -4,7 +4,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import type { DriverCtx } from '../../../../../src/@types/engine/camera/DriverCtx';
 import type { MissionCameraMemory } from '../../../../../src/layers/missions/missionCamera/@types/MissionCameraMemory';
 import type { MissionOffsets } from '../../../../../src/layers/missions/missionCamera/@types/MissionOffsets';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { FollowMemory } from '../../../../../src/@types/engine/camera/FollowMemory';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
 import type { MissionEvent } from '../../../../../src/@types/missions/MissionEvent';

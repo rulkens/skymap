@@ -4,12 +4,12 @@
  * a deactivation and a base re-commit are both ref changes.
  */
 import type { Epoch } from './Epoch';
-import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';
-import type { FrameTween } from '../../camera/FrameTween';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { CameraTweenDescriptor } from '../../camera/focusMotion/CameraTweenDescriptor';
+import type { FrameTween } from '../../camera/focusMotion/FrameTween';
+import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
 import type { SelectionRow } from '../SelectionRow';
-import type { CameraAim } from '../../camera/CameraAim';
-import type { CameraState } from '../../camera/CameraState';
+import type { CameraAim } from '../../camera/pose/CameraAim';
+import type { CameraState } from '../../camera/orbitCamera/CameraState';
 
 export type CameraEpochs = {
   readonly tween: Epoch<CameraTweenDescriptor>;

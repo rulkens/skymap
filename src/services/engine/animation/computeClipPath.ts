@@ -47,9 +47,9 @@ import { compileClip } from './compileClip';
 import { sampleClipPath } from './sampleClipPath';
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { ClipId } from '../../../@types/animation/ClipId';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
 import type { ClipPathInspector } from '../../../@types/engine/subsystems/ClipPathInspector';
 import type { ClipPathInspectSeam } from '../../../store/types';
 

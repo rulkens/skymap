@@ -8,7 +8,7 @@
 
 import type { Size } from '../../../@types/rendering/Size';
 import type { ViewSpec } from '../../../@types/engine/frame/ViewSpec';
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import { IDENTITY_MAT3 } from '../../math/identityMat3';
 
 export function mainViewSpec(sizePx: Size, frustum: ViewFrustum): ViewSpec {

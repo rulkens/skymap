@@ -6,10 +6,10 @@
  * arm's roll is its local horizon, which no world-arm reader reclaims.
  */
 
-import type { CameraPose } from '../../../../../@types/camera/CameraPose';
-import type { CameraTuning } from '../../../../../@types/camera/CameraTuning';
-import type { FramedCameraPose } from '../../../../../@types/camera/FramedCameraPose';
-import type { CameraArmBasisCtx } from '../../../../../@types/camera/CameraArmBasisCtx';
+import type { CameraPose } from '../../../../../@types/camera/pose/CameraPose';
+import type { CameraTuning } from '../../../../../@types/camera/orbitCamera/CameraTuning';
+import type { FramedCameraPose } from '../../../../../@types/camera/pose/FramedCameraPose';
+import type { CameraArmBasisCtx } from '../../../../../@types/camera/arms/CameraArmBasisCtx';
 import { eyeMpcOf } from '../../../../../utils/camera/orbitPose/eyeMpcOf';
 import { releasedWorldRoll } from '../../../../../utils/camera/arms/releasedWorldRoll';
 import { hOverR } from '../../bodyFrame/hOverR';

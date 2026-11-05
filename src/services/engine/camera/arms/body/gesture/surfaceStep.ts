@@ -7,11 +7,11 @@
  * `remembered × bodyUpWeight(h/R)`; only tilt/look write it.
  */
 
-import type { BodyFixedPose } from '../../../../../../@types/camera/BodyFixedPose';
-import type { InputStep } from '../../../../../../@types/camera/InputStep';
-import type { SurfaceStepCtx } from '../../../../../../@types/camera/SurfaceStepCtx';
-import type { SurfaceGestureMemory } from '../../../../../../@types/camera/SurfaceGestureMemory';
-import type { TiltMemory } from '../../../../../../@types/camera/TiltMemory';
+import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
+import type { InputStep } from '../../../../../../@types/camera/input/InputStep';
+import type { SurfaceStepCtx } from '../@types/SurfaceStepCtx';
+import type { SurfaceGestureMemory } from '../../../../../../@types/camera/arms/SurfaceGestureMemory';
+import type { TiltMemory } from '../../../../../../@types/camera/orientation/TiltMemory';
 import { draggedSurfacePose } from './utils/draggedSurfacePose';
 import { latchSurfaceGesture } from './utils/latchSurfaceGesture';
 import { settledDragPose } from './utils/settledDragPose';

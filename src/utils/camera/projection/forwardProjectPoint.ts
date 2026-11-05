@@ -8,7 +8,7 @@
  * per-label hot loop (`label2DDirector`'s `projectLabels`) allocates nothing.
  */
 import type { Vec2 } from '../../../@types/math/Vec2';
-import type { ForwardProjectedPoint } from '../../../@types/camera/ForwardProjectedPoint';
+import type { ForwardProjectedPoint } from '../../../@types/camera/projection/ForwardProjectedPoint';
 
 export function forwardProjectPoint(
   vp: Float32Array | Float64Array,

@@ -8,9 +8,9 @@
 import { spinAutoRotate } from './spinAutoRotate';
 import { zoomedPose } from './utils/zoomedPose';
 import { isWorldArm } from '../arms/world/isWorldArm';
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
-import type { FramedCameraPose } from '../../../../@types/camera/FramedCameraPose';
-import type { PivotFraming } from '../../../../@types/camera/PivotFraming';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
+import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
+import type { PivotFraming } from '../../../../@types/camera/arms/PivotFraming';
 
 export function applyWheelZoom(args: {
   readonly base: FramedCameraPose;

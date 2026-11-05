@@ -1,7 +1,7 @@
 /** Derives CameraStateSection's PanelModel from a snapshot and the live tuning. */
 
-import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
+import type { CameraDebugSnapshot } from '../../@types/camera/debug/CameraDebugSnapshot';
+import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
 import type { PanelModel } from '../../@types/components/PanelModel';
 import { frameKey } from '../../services/engine/camera/arms/frameKey';
 import { deg } from '../../utils/format/deg';

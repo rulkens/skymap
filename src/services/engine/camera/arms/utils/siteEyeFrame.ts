@@ -4,7 +4,7 @@
  * site). `tiltRad`/`azimuthRad` are unread by `canonicalBasisAt`, hence 0.
  */
 
-import type { EyeFrame } from '../../../../../@types/camera/EyeFrame';
+import type { EyeFrame } from '../../../../../@types/camera/pose/EyeFrame';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../../../data/camera/bodyLocalFrame';
 import { blendedEnuAt } from '../../../../../utils/camera/surfaceFrame/blendedEnuAt';

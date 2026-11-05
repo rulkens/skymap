@@ -4,9 +4,9 @@
  * silent fallback would teleport the camera.
  */
 
-import type { HostBody } from '../../../../@types/camera/HostBody';
-import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
-import type { CameraArmBasisCtx } from '../../../../@types/camera/CameraArmBasisCtx';
+import type { HostBody } from './@types/HostBody';
+import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
+import type { CameraArmBasisCtx } from '../../../../@types/camera/arms/CameraArmBasisCtx';
 import { frameKey } from './frameKey';
 import { hostOf } from './hostOf';
 

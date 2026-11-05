@@ -96,13 +96,13 @@ import type { ClipFrameOptions } from '../../../../@types/animation/ClipFrameOpt
 import type { FramedClipPose } from '../../../../@types/animation/FramedClipPose';
 import type { CompiledClip } from '../../../../@types/animation/compiledClip/CompiledClip';
 import type { BodyState } from '../../../../@types/scene/BodyState';
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
-import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
+import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
 import type { Channel } from '../../../../@types/animation/Channel';
 import type { Ease } from '../../../../@types/animation/Ease';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { Mat3 } from '../../../../@types/math/Mat3';
-import type { TerrainHeightAtLookup } from '../../../../@types/camera/TerrainHeightAtLookup';
+import type { TerrainHeightAtLookup } from '../../../../@types/camera/terrain/TerrainHeightAtLookup';
 import { compileClip } from '../../animation/compileClip';
 import { lerpInSpace } from '../../animation/channelSpace';
 import { EASE } from '../../animation/ease';

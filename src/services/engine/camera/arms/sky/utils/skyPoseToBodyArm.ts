@@ -5,11 +5,11 @@
  * horizontal axis comes from the azimuth alone, so the zenith needs no special case.
  */
 
-import type { BodyFixedPose } from '../../../../../../@types/camera/BodyFixedPose';
-import type { SkyPose } from '../../../../../../@types/camera/SkyPose';
-import type { SkySpot } from '../../../../../../@types/camera/SkySpot';
+import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
+import type { SkyPose } from '../../../../../../@types/camera/pose/SkyPose';
+import type { SkySpot } from '../../../../../../@types/camera/pose/SkySpot';
 import type { Vec3 } from '../../../../../../@types/math/Vec3';
-import { SKY_EYE_HEIGHT_M } from '../../../../../../data/camera/skyEyeHeightM';
+import { SKY_EYE_HEIGHT_M } from '../data/skyEyeHeightM';
 import { canonicalBasisAt } from '../../../../../../utils/camera/surfaceFrame/canonicalBasisAt';
 import { siteEyeFrame } from '../../utils/siteEyeFrame';
 import { skySpotRadial } from '../../../../../../utils/geo/skySpotRadial';

@@ -1,5 +1,5 @@
-import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
-import type { EyeFrame } from '../../../@types/camera/EyeFrame';
+import type { BodyFixedPose } from '../../../@types/camera/pose/BodyFixedPose';
+import type { EyeFrame } from '../../../@types/camera/pose/EyeFrame';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { blendedEnuAt } from './blendedEnuAt';
 import { bodyFixedEyeM } from './bodyFixedEyeM';

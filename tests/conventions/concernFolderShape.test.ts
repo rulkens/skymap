@@ -11,7 +11,13 @@ import { describe, expect, it } from 'vitest';
 
 const MAX_FILES = 15;
 const ADR = 'docs/adrs/0014-layers-organised-by-concern-modules.md';
-const CONCERN_ROOTS = ['src/layers', 'src/services/engine/camera', 'src/utils/camera'];
+const CONCERN_ROOTS = [
+  'src/layers',
+  'src/services/engine/camera',
+  'src/utils/camera',
+  'src/@types/camera',
+  'src/data/camera',
+];
 const BAG_NAMES = ['helpers', 'misc', 'common', 'shared', 'other'];
 const ROLE_FOLDERS = [
   'render',

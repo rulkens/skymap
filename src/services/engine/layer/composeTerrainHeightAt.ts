@@ -1,4 +1,4 @@
-import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
+import type { TerrainHeightAtLookup } from '../../../@types/camera/terrain/TerrainHeightAtLookup';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/terrain/datumOnlyTerrainHeight';
 
 /** One ground per composition: two providers would make the camera's height depend on fold order. */

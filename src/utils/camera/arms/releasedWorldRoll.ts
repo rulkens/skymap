@@ -5,7 +5,7 @@
  * so a cut lands on the frame pole. `northUp` off carries either way (ruling 11).
  */
 
-import type { CameraTuning } from '../../../@types/camera/CameraTuning';
+import type { CameraTuning } from '../../../@types/camera/orbitCamera/CameraTuning';
 
 export function releasedWorldRoll(rollRad: number, hOverR: number, tuning: CameraTuning): number {
   return tuning.northUp && hOverR <= tuning.disengageHR ? 0 : rollRad;

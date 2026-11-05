@@ -26,8 +26,8 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
 
 function stubCanvas(): { canvas: FrameView; layerViewOf: ReturnType<typeof vi.fn> } {
   const layerViewOf = vi.fn((_id: string, layer: number) => ({ __layer: layer }));

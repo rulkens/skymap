@@ -4,7 +4,7 @@
  * off-axis frustum's rays need no extra uniform. Symmetric ⇒ `forward` exactly.
  */
 
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 export function frustumRayAxis(

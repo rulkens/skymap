@@ -8,11 +8,11 @@
  * returned delta is one frame's worth, zero axes omitted because an
  * `orbit: [0, 0]` is not identity on the world arm.
  */
-import type { ArmDelta } from '../../../../../@types/camera/ArmDelta';
-import type { NavAxis } from '../../../../../@types/camera/NavAxis';
-import type { NavigatorState } from '../../../../../@types/camera/NavigatorState';
-import type { NavSettings } from '../../../../../@types/camera/NavSettings';
-import type { NavStep } from '../../../../../@types/camera/NavStep';
+import type { ArmDelta } from '../../@types/ArmDelta';
+import type { NavAxis } from '../../../../../@types/camera/input/NavAxis';
+import type { NavigatorState } from '../../../../../@types/camera/input/NavigatorState';
+import type { NavSettings } from '../../../../../@types/camera/input/NavSettings';
+import type { NavStep } from '../../@types/NavStep';
 import type { Vec2 } from '../../../../../@types/math/Vec2';
 import {
   NAV_DT_CAP_MS,

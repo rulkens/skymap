@@ -12,7 +12,7 @@ import { replayInput } from '../../../../../src/services/engine/camera/input/rep
 import { isBodyArm } from '../../../../../src/services/engine/camera/arms/body/isBodyArm';
 import * as surfaceStepModule from '../../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
-import { EMPTY_TILT_MEMORY } from '../../../../../src/data/camera/emptyTiltMemory';
+import { EMPTY_TILT_MEMORY } from '../../../../../src/services/engine/camera/data/emptyTiltMemory';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { rootReducer } from '../../../../../src/store/rootReducer';
 import {
@@ -34,8 +34,8 @@ import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientat
 import { earthArm } from '../../../../fixtures/earthArm';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
-import type { FramedCameraPose } from '../../../../../src/@types/camera/FramedCameraPose';
-import type { InputStep } from '../../../../../src/@types/camera/InputStep';
+import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
+import type { InputStep } from '../../../../../src/@types/camera/input/InputStep';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';

@@ -60,7 +60,7 @@
  * Over-pinned legs (pinned seconds ≥ total) throw here, loudly, at compile time.
  */
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';

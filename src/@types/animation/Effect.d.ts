@@ -71,7 +71,7 @@ import type { Ease } from './Ease';
 import type { SplineConfig } from './SplineConfig';
 import type { PassByConfig } from './PassByConfig';
 import type { Vec3 } from '../math/Vec3';
-import type { GeodesicTuning } from '../camera/GeodesicTuning';
+import type { GeodesicTuning } from '../camera/focusMotion/GeodesicTuning';
 
 export type Effect =
   | CameraAction

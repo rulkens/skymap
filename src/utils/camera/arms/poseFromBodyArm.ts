@@ -2,7 +2,7 @@
  * anchor fold `eyeRelBodyM = anchorLocalM + eyeRelAnchorM` is the WHOLE
  * conversion — no Mpc, no rotation, no cancellation (spec §5.3). */
 
-import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../@types/camera/pose/BodyFixedPose';
 import type { BodyRelativePose } from '../../../@types/engine/camera/BodyRelativePose';
 import { bodyFixedEyeM } from '../surfaceFrame/bodyFixedEyeM';
 

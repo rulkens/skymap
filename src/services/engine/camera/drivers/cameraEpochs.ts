@@ -7,7 +7,7 @@
 
 import type { Epoch } from '../../../../@types/engine/camera/Epoch';
 import type { CameraEpochs } from '../../../../@types/engine/camera/CameraEpochs';
-import type { CameraState } from '../../../../@types/camera/CameraState';
+import type { CameraState } from '../../../../@types/camera/orbitCamera/CameraState';
 import type { EpochRow } from '../../../../@types/engine/camera/EpochRow';
 import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
 

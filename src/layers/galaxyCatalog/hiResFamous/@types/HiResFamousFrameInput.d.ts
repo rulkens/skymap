@@ -1,5 +1,5 @@
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
 import type { FamousGalaxyMetaEntry } from '../../../../@types/loading/FamousGalaxyMetaEntry';
 import type { SourceType } from '../../../../@types/data/SourceType';
 

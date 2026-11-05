@@ -6,7 +6,7 @@
  * docs/superpowers/specs/completed/2026-10-27-geodesic-focus-moves-design.md
  */
 
-import type { ZoomPanGeodesic } from '../../../@types/camera/ZoomPanGeodesic';
+import type { ZoomPanGeodesic } from '../../../@types/camera/focusMotion/ZoomPanGeodesic';
 
 export function zoomPanGeodesic(
   u0: number,

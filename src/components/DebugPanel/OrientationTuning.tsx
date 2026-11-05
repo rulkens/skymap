@@ -9,7 +9,7 @@
 
 import type { ReactNode } from 'react';
 
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
+import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
 import { CAMERA_TUNING_LIMITS } from '../../data/camera/cameraTuning';
 import { setCameraTuning } from '../../state/camera/cameraSlice';
 import { useAppDispatch } from '../../store/hooks';

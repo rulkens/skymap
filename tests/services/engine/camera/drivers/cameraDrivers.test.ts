@@ -13,7 +13,7 @@ import { easeOutCubic } from '../../../../../src/utils/math/easeOutCubic';
 import { lerp } from '../../../../../src/utils/math/lerp';
 
 import type { CameraDriver } from '../../../../../src/@types/engine/camera/CameraDriver';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { CameraEpochs } from '../../../../../src/@types/engine/camera/CameraEpochs';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
 import type { DriverActivity } from '../../../../../src/@types/engine/camera/DriverActivity';
@@ -60,10 +60,10 @@ import { rotateVec3ByTightMat3 } from '../../../../../src/utils/math/rotateVec3B
 import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
-import type { FramedCameraPose } from '../../../../../src/@types/camera/FramedCameraPose';
-import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/CameraTweenDescriptor';
+import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
+import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
-import type { OrientationFrameId } from '../../../../../src/@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../../../src/@types/camera/orientation/OrientationFrameId';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 /** A real-ish store so we can observe dispatches. */

@@ -79,7 +79,7 @@
 
 import { mat4d } from 'wgpu-matrix';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import { frustumPerspectiveF64 } from '../frustum/frustumPerspectiveF64';
 
 /**

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { OrbitCameraInit } from '../../../../src/@types/camera/OrbitCameraInit';
+import type { OrbitCameraInit } from '../../../../src/@types/camera/orbitCamera/OrbitCameraInit';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/createOrbitCamera';

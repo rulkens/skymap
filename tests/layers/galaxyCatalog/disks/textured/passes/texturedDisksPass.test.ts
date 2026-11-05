@@ -5,7 +5,7 @@ import { makeCosmoSlab } from '../../../../../fixtures/makeCosmoSlab';
 import type { FrameView } from '../../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../../src/@types/engine/frame/SlabView';
 import type { EngineState } from '../../../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 
 function makeCam(): OrbitCamera {
   return {

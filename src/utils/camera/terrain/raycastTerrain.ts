@@ -4,9 +4,9 @@
  * path holds no state of its own — user ruling 2026-09-17). Algorithm: spec
  * §8.1, "Built in F3c".
  */
-import type { BodyLocalRay } from '../../../@types/camera/BodyLocalRay';
-import type { GroundRadiusLookup } from '../../../@types/camera/GroundRadiusLookup';
-import type { SurfacePick } from '../../../@types/camera/SurfacePick';
+import type { BodyLocalRay } from '../../../@types/camera/terrain/BodyLocalRay';
+import type { GroundRadiusLookup } from '../../../@types/camera/terrain/GroundRadiusLookup';
+import type { SurfacePick } from '../../../@types/camera/terrain/SurfacePick';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../data/camera/bodyLocalFrame';
 import { RAYCAST_BISECTION_ITERATION_CAP } from '../../../data/camera/raycastBisectionIterationCap';

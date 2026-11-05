@@ -4,7 +4,7 @@
  * `perspectiveReverseZ`'s `1 / tan(fovY/2)` bit for bit — the NEAR0 slabs' form.
  */
 
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 
 export function symmetricFrustum(fovYRad: number, aspect: number): ViewFrustum {
   const tanUp = Math.tan(fovYRad / 2);

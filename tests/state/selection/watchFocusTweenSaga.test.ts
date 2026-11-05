@@ -33,7 +33,7 @@ import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/source';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StarRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';

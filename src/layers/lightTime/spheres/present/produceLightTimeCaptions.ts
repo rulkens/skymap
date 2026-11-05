@@ -6,7 +6,7 @@
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
+import type { ImagePlaneBasis } from '../../../../@types/camera/pose/ImagePlaneBasis';
 import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';

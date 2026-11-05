@@ -28,10 +28,10 @@ import { advanceEpoch } from '../../../../../src/services/engine/camera/drivers/
 import { makeCameraSimHarness } from '../../../../helpers/camera/makeCameraSimHarness';
 import { simulateCameraFrame } from '../../../../helpers/camera/simulateCameraFrame';
 import type { CameraSimHarness } from '../../../../helpers/camera/CameraSimHarness';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
-import type { FramedCameraPose } from '../../../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 /**

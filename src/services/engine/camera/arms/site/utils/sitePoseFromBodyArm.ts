@@ -5,9 +5,9 @@
  * noise, while right stays horizontal at every tilt (it is `horiz × localUp`).
  */
 
-import type { BodyFixedPose } from '../../../../../../@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
 import type { MeshBody } from '../../../../../../@types/scene/MeshBody';
-import type { SitePose } from '../../../../../../@types/camera/SitePose';
+import type { SitePose } from '../../../../../../@types/camera/pose/SitePose';
 import type { SurfaceFixedSite } from '../../../../../../@types/scene/SurfaceFixedSite';
 import { bodyFixedEyeM } from '../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { clampedSitePose } from './clampedSitePose';

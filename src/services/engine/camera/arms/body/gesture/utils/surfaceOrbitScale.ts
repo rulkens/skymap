@@ -1,5 +1,5 @@
-import type { BodyFixedPose } from '../../../../../../../@types/camera/BodyFixedPose';
-import type { GroundRadiusLookup } from '../../../../../../../@types/camera/GroundRadiusLookup';
+import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
+import type { GroundRadiusLookup } from '../../../../../../../@types/camera/terrain/GroundRadiusLookup';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { normalize3 } from '../../../../../../../utils/math/normalize3';
 

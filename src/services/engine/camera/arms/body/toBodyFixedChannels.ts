@@ -7,7 +7,7 @@
 
 import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
 import type { BodyState } from '../../../../../@types/scene/BodyState';
-import type { CameraPose } from '../../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import { IDENTITY_MAT3 } from '../../../../../utils/math/identityMat3';

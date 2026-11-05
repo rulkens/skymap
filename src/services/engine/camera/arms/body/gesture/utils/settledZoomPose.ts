@@ -1,9 +1,9 @@
-import type { BodyFixedPose } from '../../../../../../../@types/camera/BodyFixedPose';
-import type { CameraTuning } from '../../../../../../../@types/camera/CameraTuning';
-import type { GroundRadiusLookup } from '../../../../../../../@types/camera/GroundRadiusLookup';
+import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
+import type { CameraTuning } from '../../../../../../../@types/camera/orbitCamera/CameraTuning';
+import type { GroundRadiusLookup } from '../../../../../../../@types/camera/terrain/GroundRadiusLookup';
 import type { Vec3 } from '../../../../../../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../../../../../data/camera/bodyLocalFrame';
-import { ORIENT_DECAY } from '../../../../../../../data/camera/orientDecay';
+import { ORIENT_DECAY } from '../../../../data/orientDecay';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { bodyUpWeight } from '../../../../orientation/utils/bodyUpWeight';
 import { eyeFrameOf } from '../../../../../../../utils/camera/surfaceFrame/eyeFrameOf';

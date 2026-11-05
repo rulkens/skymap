@@ -8,8 +8,8 @@
  * reader goes through here.
  */
 
-import type { FocusMotion } from '../../../../@types/camera/FocusMotion';
-import type { FocusMotionRow } from '../../../../@types/camera/FocusMotionRow';
+import type { FocusMotion } from '../../../../@types/camera/focusMotion/FocusMotion';
+import type { FocusMotionRow } from './@types/FocusMotionRow';
 import { FOCUS_MOTIONS } from './focusMotions';
 
 export function focusMotionRowOf(motion: FocusMotion): FocusMotionRow<FocusMotion> {

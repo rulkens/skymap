@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 
 import { canonicalBasisAt } from '../../../../src/utils/camera/surfaceFrame/canonicalBasisAt';
 import { eyeFrameOf } from '../../../../src/utils/camera/surfaceFrame/eyeFrameOf';
-import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
-import type { EyeFrame } from '../../../../src/@types/camera/EyeFrame';
+import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
+import type { EyeFrame } from '../../../../src/@types/camera/pose/EyeFrame';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';

@@ -7,9 +7,9 @@ import { imagePlaneBasis } from '../../../../../../../../src/utils/camera/orbitP
 import { eyeFrameOf } from '../../../../../../../../src/utils/camera/surfaceFrame/eyeFrameOf';
 import { SURFACE_STANDOFF_RADII } from '../../../../../../../../src/utils/camera/orbitCamera/clampDistance';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../../../../../src/data/camera/cameraTuning';
-import { EMPTY_TILT_MEMORY } from '../../../../../../../../src/data/camera/emptyTiltMemory';
-import type { BodyFixedPose } from '../../../../../../../../src/@types/camera/BodyFixedPose';
-import type { SurfaceStepCtx } from '../../../../../../../../src/@types/camera/SurfaceStepCtx';
+import { EMPTY_TILT_MEMORY } from '../../../../../../../../src/services/engine/camera/data/emptyTiltMemory';
+import type { BodyFixedPose } from '../../../../../../../../src/@types/camera/pose/BodyFixedPose';
+import type { SurfaceStepCtx } from '../../../../../../../../src/services/engine/camera/arms/body/@types/SurfaceStepCtx';
 import type { Mat3 } from '../../../../../../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../../../../src/@types/math/Vec3';

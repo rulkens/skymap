@@ -8,8 +8,8 @@ import {
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../../src/data/milkyWay/galacticCenter';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { FocusMotion } from '../../../src/@types/camera/FocusMotion';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import type { FocusMotion } from '../../../src/@types/camera/focusMotion/FocusMotion';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 

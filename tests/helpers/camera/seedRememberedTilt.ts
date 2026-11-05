@@ -16,9 +16,9 @@ import { surfaceGestureEdge } from '../../../src/services/engine/camera/arms/bod
 import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/orbitCamera/clampDistance';
 import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import type { CameraSimHarness } from './CameraSimHarness';
-import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
-import type { SurfaceGestureMemory } from '../../../src/@types/camera/SurfaceGestureMemory';
-import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
+import type { BodyFixedPose } from '../../../src/@types/camera/pose/BodyFixedPose';
+import type { SurfaceGestureMemory } from '../../../src/@types/camera/arms/SurfaceGestureMemory';
+import type { TiltMemory } from '../../../src/@types/camera/orientation/TiltMemory';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { symmetricFrustum } from '../../../src/utils/camera/frustum/symmetricFrustum';

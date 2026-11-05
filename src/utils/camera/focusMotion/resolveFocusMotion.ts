@@ -1,4 +1,4 @@
-import type { FocusMotion } from '../../../@types/camera/FocusMotion';
+import type { FocusMotion } from '../../../@types/camera/focusMotion/FocusMotion';
 import type { FocusMoveSettings } from '../../../@types/settings/FocusMoveSettings';
 import { EASED_FOCUS_EASE } from '../../../data/camera/focusMoveDefaults';
 

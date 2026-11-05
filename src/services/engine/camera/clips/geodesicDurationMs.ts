@@ -1,5 +1,5 @@
-import type { CameraTweenDescriptor } from '../../../../@types/camera/CameraTweenDescriptor';
-import type { FocusMotion } from '../../../../@types/camera/FocusMotion';
+import type { CameraTweenDescriptor } from '../../../../@types/camera/focusMotion/CameraTweenDescriptor';
+import type { FocusMotion } from '../../../../@types/camera/focusMotion/FocusMotion';
 import { geodesicPath } from '../../../../utils/camera/focusMotion/geodesicPath';
 
 /** geodesicDurationMs — the Geodesic focus move's length, from its arc length and the frozen tuning. */

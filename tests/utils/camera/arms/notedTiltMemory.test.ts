@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { notedTiltMemory } from '../../../../src/utils/camera/arms/notedTiltMemory';
-import type { TiltMemory } from '../../../../src/@types/camera/TiltMemory';
+import type { TiltMemory } from '../../../../src/@types/camera/orientation/TiltMemory';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 describe('notedTiltMemory', () => {

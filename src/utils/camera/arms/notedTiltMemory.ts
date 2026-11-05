@@ -1,4 +1,4 @@
-import type { TiltMemory } from '../../../@types/camera/TiltMemory';
+import type { TiltMemory } from '../../../@types/camera/orientation/TiltMemory';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 /** Once per frame with the tilt's host; a DIFFERENT host wipes the tilt (ruling 18), null keeps it. */

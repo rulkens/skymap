@@ -10,8 +10,8 @@
 
 import { quat, mat3 } from 'wgpu-matrix';
 import type { Mat3 } from '../../../../@types/math/Mat3';
-import type { OrientationFrameId } from '../../../../@types/camera/OrientationFrameId';
-import type { FrameTween } from '../../../../@types/camera/FrameTween';
+import type { OrientationFrameId } from '../../../../@types/camera/orientation/OrientationFrameId';
+import type { FrameTween } from '../../../../@types/camera/focusMotion/FrameTween';
 import {
   ORIENTATION_FRAMES,
   ORIENTATION_FRAME_QUATERNIONS,

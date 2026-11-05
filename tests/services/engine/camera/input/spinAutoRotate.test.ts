@@ -15,7 +15,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { spinAutoRotate } from '../../../../../src/services/engine/camera/input/spinAutoRotate';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 
 // The assumed frame budget used inside spinAutoRotate.
 // Kept here to make assertions self-documenting without importing internals.

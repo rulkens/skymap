@@ -17,7 +17,7 @@ import { selectArrivalPending } from '../../../src/state/arrival/selectors';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 /** A valid `b`-tagged, 17-field arm for the `#pose=` arrival case below; the numbers are arbitrary. */

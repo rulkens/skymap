@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { nudgedSitePose } from '../../../../../../../src/services/engine/camera/arms/site/utils/nudgedSitePose';
 import { steppedSitePose } from '../../../../../../../src/services/engine/camera/arms/site/utils/steppedSitePose';
 import type { MeshBody } from '../../../../../../../src/@types/scene/MeshBody';
-import type { SitePose } from '../../../../../../../src/@types/camera/SitePose';
+import type { SitePose } from '../../../../../../../src/@types/camera/pose/SitePose';
 import { asSceneBodyId } from '../../../../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../../../../src/utils/scene/asSurfaceSiteId';
 

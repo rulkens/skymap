@@ -6,7 +6,7 @@
  * Sky: k,<body>,<lonRad>,<latRad>,<azimuthRad>,<altitudeRad>
  */
 
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 import { isBodyArm } from '../../services/engine/camera/arms/body/isBodyArm';
 import { isSiteArm } from '../../services/engine/camera/arms/site/isSiteArm';
 import { isSkyArm } from '../../services/engine/camera/arms/sky/isSkyArm';

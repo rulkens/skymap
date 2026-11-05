@@ -8,9 +8,9 @@ import { cameraRoute } from '../../store/constants';
 import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
 import { selectGestureHeld } from '../input/selectors';
 import type { RootState } from '../../store/types';
-import type { CameraState } from '../../@types/camera/CameraState';
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+import type { CameraState } from '../../@types/camera/orbitCamera/CameraState';
+import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 
 const selectCameraIntent = (state: RootState): CameraState => state[cameraRoute];
 

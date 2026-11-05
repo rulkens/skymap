@@ -9,7 +9,7 @@
  * strafe in the anchor plane at grazing incidence).
  */
 
-import type { BodyFixedPose } from '../../../../../../../@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
 import type { Vec3 } from '../../../../../../../@types/math/Vec3';
 import { raySphereRoots } from '../../../../../../../utils/math/raySphereRoots';
 import { quatFromAxisAngle } from '../../../../../../../utils/math/quatFromAxisAngle';

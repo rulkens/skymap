@@ -17,9 +17,9 @@ import {
   SURFACE_STANDOFF_RADII,
 } from '../../../../../../src/utils/camera/orbitCamera/clampDistance';
 import { ORIENTATION_FRAMES } from '../../../../../../src/data/orientation/orientationFrames';
-import type { CameraPose } from '../../../../../../src/@types/camera/CameraPose';
-import type { PivotFraming } from '../../../../../../src/@types/camera/PivotFraming';
-import type { InputStep } from '../../../../../../src/@types/camera/InputStep';
+import type { CameraPose } from '../../../../../../src/@types/camera/pose/CameraPose';
+import type { PivotFraming } from '../../../../../../src/@types/camera/arms/PivotFraming';
+import type { InputStep } from '../../../../../../src/@types/camera/input/InputStep';
 import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
 
 /** Earth's mean radius (km → Mpc) — the pivot radius for the zoom-floor cases. */

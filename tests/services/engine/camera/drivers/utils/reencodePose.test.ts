@@ -13,7 +13,7 @@ import { reencodePose } from '../../../../../../src/services/engine/camera/drive
 import { yawPitchToDir } from '../../../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../../../../src/utils/math/rotateVec3ByTightMat3';
 import { ORIENTATION_FRAMES } from '../../../../../../src/data/orientation/orientationFrames';
-import type { CameraPose } from '../../../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../../src/@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 

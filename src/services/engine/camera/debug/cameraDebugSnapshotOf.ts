@@ -9,15 +9,15 @@
  */
 
 import type { BodyState } from '../../../../@types/scene/BodyState';
-import type { CameraDebugSnapshot } from '../../../../@types/camera/CameraDebugSnapshot';
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
-import type { CameraTuning } from '../../../../@types/camera/CameraTuning';
-import type { FramedCameraPose } from '../../../../@types/camera/FramedCameraPose';
+import type { CameraDebugSnapshot } from '../../../../@types/camera/debug/CameraDebugSnapshot';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
+import type { CameraTuning } from '../../../../@types/camera/orbitCamera/CameraTuning';
+import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
 import type { Mat3 } from '../../../../@types/math/Mat3';
-import type { OrientDeltas } from '../../../../@types/camera/OrientDeltas';
-import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
-import type { SurfaceGesture } from '../../../../@types/camera/SurfaceGesture';
-import type { TerrainHeightAtLookup } from '../../../../@types/camera/TerrainHeightAtLookup';
+import type { OrientDeltas } from '../../../../@types/camera/orientation/OrientDeltas';
+import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
+import type { SurfaceGesture } from '../../../../@types/camera/arms/SurfaceGesture';
+import type { TerrainHeightAtLookup } from '../../../../@types/camera/terrain/TerrainHeightAtLookup';
 import type { TimeState } from '../../../../@types/time/TimeState';
 import { deriveSimDays } from '../../../../utils/time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';

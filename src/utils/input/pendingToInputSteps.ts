@@ -8,7 +8,7 @@
  * isotropic pixel delta, not a pointer: the navigator integrates velocity.
  */
 
-import type { InputStep } from '../../@types/camera/InputStep';
+import type { InputStep } from '../../@types/camera/input/InputStep';
 import type { PendingStep } from '../../@types/input/PendingStep';
 import type { Vec2 } from '../../@types/math/Vec2';
 import { NAV_INTENT_AXIS } from '../../data/input/navIntentAxis';

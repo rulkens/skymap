@@ -21,7 +21,7 @@ import {
   DOCS_TOUR_IDS,
   DOCS_URL_PARAMS,
 } from '../../../packages/website/src/data/docsUrlParams';
-import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../src/@types/camera/orientation/OrientationFrameId';
 import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategory';
 import { APP_COMPOSITION } from '../../../src/compositions/app';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';

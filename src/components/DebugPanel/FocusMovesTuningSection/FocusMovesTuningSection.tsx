@@ -11,7 +11,7 @@ import { FOCUS_MOVE_SLIDER_FIELDS } from '../../../data/camera/focusMoveSliderFi
 import { GEODESIC_EASES } from '../../../data/camera/focusMoveDefaults';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { FocusMoveSettings } from '../../../@types/settings/FocusMoveSettings';
-import type { GeodesicTuning } from '../../../@types/camera/GeodesicTuning';
+import type { GeodesicTuning } from '../../../@types/camera/focusMotion/GeodesicTuning';
 
 export type FocusMovesTuningSectionProps = {
   readonly moves: FocusMoveSettings;

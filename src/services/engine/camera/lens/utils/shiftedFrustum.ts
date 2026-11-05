@@ -5,7 +5,7 @@
  * bit for bit (the settle golden trace holds it).
  */
 
-import type { ViewFrustum } from '../../../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../../../@types/camera/projection/ViewFrustum';
 import type { Vec2 } from '../../../../../@types/math/Vec2';
 import { symmetricFrustum } from '../../../../../utils/camera/frustum/symmetricFrustum';
 

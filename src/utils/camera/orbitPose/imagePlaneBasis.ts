@@ -46,7 +46,7 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
+import type { ImagePlaneBasis } from '../../../@types/camera/pose/ImagePlaneBasis';
 
 export function imagePlaneBasis(
   forward: Readonly<Vec3>,

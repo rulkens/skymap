@@ -1,4 +1,4 @@
-import type { BodyFixedPose } from '../../../../../@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../../../@types/camera/pose/BodyFixedPose';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import { bodyFixedEyeM } from '../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { turnedPose } from './turnedPose';

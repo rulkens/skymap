@@ -25,7 +25,7 @@ import { Source } from '../../../../../src/data/source';
 import { createHiResFamousSubsystem } from '../../../../../src/layers/galaxyCatalog/hiResFamous/subsystems/hiResFamousSubsystem';
 import { createHiResFamousTexture } from '../../../../../src/layers/galaxyCatalog/hiResFamous/load/hiResFamousTexture';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import type { FamousGalaxyMetaEntry } from '../../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';

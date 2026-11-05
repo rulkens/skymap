@@ -3,9 +3,9 @@
  * BY REFERENCE — that identity is what keeps the per-frame fold free (spec §7).
  */
 
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
-import type { FramedCameraPose } from '../../../../@types/camera/FramedCameraPose';
-import type { CameraArmBasisCtx } from '../../../../@types/camera/CameraArmBasisCtx';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
+import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
+import type { CameraArmBasisCtx } from '../../../../@types/camera/arms/CameraArmBasisCtx';
 import { climbRowFor } from './climbRowFor';
 import { isWorldArm } from './world/isWorldArm';
 

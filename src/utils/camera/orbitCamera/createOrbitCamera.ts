@@ -18,8 +18,8 @@
  * plain Node/Vitest environment.
  */
 
-import type { OrbitCameraInit } from '../../../@types/camera/OrbitCameraInit';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { OrbitCameraInit } from '../../../@types/camera/orbitCamera/OrbitCameraInit';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import { updatePosition } from './updatePosition';
 
 /**

@@ -20,7 +20,7 @@
  *     no gain.
  */
 
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 
 // Assumed frame duration at 60 fps. `rate` is radians-per-frame under this
 // budget. The actual frame rate does not affect the result: `elapsedMs /

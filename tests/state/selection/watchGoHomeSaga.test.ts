@@ -33,8 +33,8 @@ import {
 } from '../../../src/state/settings/core/focusMovesSlice';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute, selectionRoute, timeRoute } from '../../../src/store/constants';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import type { CameraTweenDescriptor } from '../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
