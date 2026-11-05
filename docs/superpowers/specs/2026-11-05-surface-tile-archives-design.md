@@ -49,8 +49,10 @@ app reads with HTTP Range requests. ~70k objects become ~125.
   - A cold miss streams the whole object into the edge at ~65 MB/s. A 16 KB read at the
     tail of a 64 MiB object took 1.06 s cold and ~0.09 s warm.
   - The per-file cache limit is 512 MB.
-- Ruled: one archive set per (body, product, level), at most 64 MiB per file, larger
-  levels split into parts.
+- Ruled: one archive set per (body, product, level), with larger levels split into parts.
+  The cap was 64 MiB per file, then cut to **16 MiB** after the live probe (ask cYTV,
+  2026-11-05). On a cold edge, 8 concurrent reads into a 64 MiB part waited up to 2.4 s
+  for the fill. 16 MiB means about 169 files instead of 127.
 - Ruled: manifest unchanged; archives go in beside the loose tiles under the live `v11`
   and `v2` prefixes; the owner syncs before the code deploys. Old and new code then both
   work from the same manifest.
@@ -117,7 +119,7 @@ Files per level, beside the loose tiles:
 
 ```
 <prefix>/<product>/z<z>.idx         index: header + one entry per tile
-<prefix>/<product>/z<z>.p<k>.pack   part k: raw tile bytes, ≤ 64 MiB (67,108,864 B)
+<prefix>/<product>/z<z>.p<k>.pack   part k: raw tile bytes, ≤ 16 MiB (16,777,216 B)
 ```
 
 Names come from one helper, `surfaceTileArchivePath(prefix, product, z, part?)` in
@@ -150,14 +152,13 @@ and one decoder (runtime) use them.
 - Morton order keeps neighbouring tiles in the same part, so a view mostly touches one
   part per level.
 - The packer walks tiles in key order and opens a new part whenever the next tile would
-  push the current one past 64 MiB.
+  push the current one past 16 MiB.
 - Packing is deterministic: the same tiles give the same bytes. A re-bake that changes
   nothing leaves the sync with nothing to upload.
 - The decoder throws on a wrong magic or an unknown version. The source catches it and the
   level reads as empty.
-- Expected splits: Earth albedo z7 (~81–94 MB) and z13 (~106–113 MB) into 2 parts each,
-  z19 (~91 MB) into 2. Mars albedo z7 (156 MB) and height z7 (166 MB) into 3 each. Every
-  other level fits one part.
+- Splits at 16 MiB: 13 levels need more than one part. The largest are Mars albedo z7
+  (156 MB) and height z7 (166 MB), at 10 parts each.
 - The largest index is a full z7 level: 8,192 entries, 128 KB.
 
 Byte order and the 6 B key width are the parts a hand-rolled reader gets wrong, so the
