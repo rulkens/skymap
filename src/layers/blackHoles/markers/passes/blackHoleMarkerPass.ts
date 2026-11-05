@@ -90,7 +90,7 @@ export function blackHoleMarkerPass(runtime: BlackHolesRuntime): ContentPass {
             positionMpc[2] - camPos[2],
           ] as Vec3,
           // The code + row index `blackHoleSelectionRow` resolves.
-          packedId: packSelection(Source.SgrAStar, rowIndex + PICK_SENTINEL_OFFSET),
+          packedId: packSelection(runtime.pickCode, rowIndex + PICK_SENTINEL_OFFSET),
         });
       });
       if (points.length === 0) return;

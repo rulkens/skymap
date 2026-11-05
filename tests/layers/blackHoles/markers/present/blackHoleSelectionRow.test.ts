@@ -10,20 +10,19 @@ import { describe, it, expect } from 'vitest';
 
 import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../../src/data/places/galacticCentre';
-import { Source } from '../../../../../src/data/source';
-import {
-  packSelection,
-  unpackPick,
-  PICK_SENTINEL_OFFSET,
-} from '../../../../../src/data/selectionEncoding';
+import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { blackHolePickCode } from '../../../../support/layerPickCodes';
+import { fakePickCode } from '../../../../support/fakePickCode';
 
-const ROW = blackHoleSelectionRow();
+// Codes from 40 up: a row that still packs the catalog value fails the round trip.
+const ROW = blackHoleSelectionRow(blackHolePickCode(fakePickCode()));
 const SGR_A_STAR_REF = { type: 'blackHole', id: 'sgr-a-star' } as const;
 
 describe('blackHoleSelectionRow', () => {
-  it('resolves a Source.SgrAStar pick to the Sgr A* ref', () => {
-    const pick = unpackPick(packSelection(Source.SgrAStar, 0 + PICK_SENTINEL_OFFSET))!;
+  it('refs round-trip under non-catalog codes', () => {
+    const pick = unpackPick(ROW.encodePick(SGR_A_STAR_REF)!)!;
+    expect(pick.sourceCode).toBeGreaterThanOrEqual(40);
     expect(ROW.pickSources).toContain(pick.sourceCode);
     expect(ROW.resolvePick(pick)).toEqual(SGR_A_STAR_REF);
   });

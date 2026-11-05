@@ -31,4 +31,26 @@ export const LEGACY_PICK_CODES: Readonly<Record<string, Readonly<Record<string, 
   missions: {
     craft: Source.Craft,
   },
+  structure: {
+    'galaxy-cluster': Source.GalaxyCluster,
+    supercluster: Source.Supercluster,
+    void: Source.Void,
+    'galaxy-group': Source.GalaxyGroup,
+    'open-cluster': Source.OpenCluster,
+    'globular-cluster': Source.GlobularCluster,
+    nebula: Source.Nebula,
+    'gc-cluster': Source.GcCluster,
+  },
+  milkyWay: {
+    milkyWay: Source.MilkyWay,
+  },
+  blackHoles: {
+    'sgr-a-star': Source.SgrAStar,
+  },
+  satellites: {
+    satellites: Source.Satellite,
+  },
+  zoneOfAvoidance: {
+    zoneOfAvoidance: Source.ZoneOfAvoidance,
+  },
 };

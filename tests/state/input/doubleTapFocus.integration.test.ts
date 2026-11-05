@@ -20,7 +20,7 @@ import { composeSelectionRows } from '../../../src/services/engine/selection/com
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { cameraRoute } from '../../../src/store/constants';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
-import { bodyPickCodes } from '../../support/layerPickCodes';
+import { bodyPickCodes, milkyWayPickCode } from '../../support/layerPickCodes';
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
 const NO_MODS = { shift: false, ctrl: false, alt: false, meta: false };
@@ -32,7 +32,10 @@ describe('double-tap focus', () => {
     const store = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.setContext({
       selection: composeSelectionRows(
-        () => [bodySelectionRow({ pickCodes: bodyPickCodes() }), milkyWaySelectionRow()],
+        () => [
+          bodySelectionRow({ pickCodes: bodyPickCodes() }),
+          milkyWaySelectionRow(milkyWayPickCode()),
+        ],
         () => ALL_KINDS_ENABLED,
       ),
       cameraRuntime: () => ({

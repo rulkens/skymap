@@ -2,7 +2,6 @@ import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/struct
 import { describe, expect, it } from 'vitest';
 import { produceStructureLabels } from '../../../../../src/layers/structure/markers/present/produceStructureLabels';
 import { createStructureStore } from '../../../../../src/layers/structure/catalog/load/createStructureStore';
-import { STRUCTURE_ID_CODES } from '../../../../../src/data/structure/structureIds';
 import { makeStructureFade } from '../../../../fixtures/makeStructureFade';
 import { MARKER_RADIUS_RETUNE } from '../../../../../src/layers/structure/markers/data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../../../src/layers/structure/markers/data/structureLabelAboveGapPx';
@@ -15,6 +14,11 @@ import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { StructureStore } from '../../../../../src/layers/structure/catalog/@types/StructureStore';
 import type { StructureId } from '../../../../../src/@types/data/structure/StructureId';
 import type { StructureScale } from '../../../../../src/@types/data/structure/StructureScale';
+import { structurePickCodes } from '../../../../support/layerPickCodes';
+import { fakePickCode } from '../../../../support/fakePickCode';
+
+// Codes from 40 up: a stamp that packs a catalog value fails the decode below.
+const PICK_CODES = structurePickCodes(fakePickCode());
 
 // produceStructureLabels reads its `store` argument for the records,
 // `state.selection.focus` for focusedOnly mode and `state.settings.labels`; the
@@ -46,7 +50,11 @@ function labelsOf(
   scale: StructureScale,
   fade: Readonly<Record<StructureId, number>> = makeStructureFade(),
 ) {
-  return produceStructureLabels(state.store, scale)(state, ctx, fade);
+  return produceStructureLabels({ store: state.store, pickCodes: PICK_CODES }, scale)(
+    state,
+    ctx,
+    fade,
+  );
 }
 
 // The fixture camera sits 5 Mpc from the heliocentric origin; every record's
@@ -220,7 +228,7 @@ describe('produceStructureLabels', () => {
     for (const label of labels) {
       const record = state.store.byId(label.id)!;
       const pick = unpackPick(label.pickId!)!;
-      expect(pick.sourceCode).toBe(STRUCTURE_ID_CODES[record.category]);
+      expect(pick.sourceCode).toBe(PICK_CODES.codeOf(record.category));
       expect(state.store.byCategory(record.category)[pick.localIdx]?.id).toBe(label.id);
     }
   });
@@ -249,6 +257,6 @@ describe('produceStructureLabels', () => {
     expect(byId(under, 'out').pickId).toBeUndefined();
     expect(byId(under, 'out').fadeAlpha).toBeGreaterThan(0);
     // Not clickable, still named: emphasis keys on the subject, not the pick.
-    expect(byId(under, 'out').subjectId).toBe(structurePickId('galaxy-cluster', 1));
+    expect(byId(under, 'out').subjectId).toBe(structurePickId('galaxy-cluster', 1, PICK_CODES));
   });
 });

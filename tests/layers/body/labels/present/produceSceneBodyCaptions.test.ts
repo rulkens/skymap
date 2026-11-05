@@ -11,7 +11,11 @@ import { describe, it, expect } from 'vitest';
 
 import { produceSceneBodyCaptions as produceSceneBodyCaptionsFor } from '../../../../../src/layers/body/labels/present/produceSceneBodyCaptions';
 import { bodyCodeOf } from '../../../../../src/layers/body/selection/present/bodyCodeOf';
-import { bodyPickCodes, missionsPickCodes } from '../../../../support/layerPickCodes';
+import {
+  blackHolePickCode,
+  bodyPickCodes,
+  missionsPickCodes,
+} from '../../../../support/layerPickCodes';
 import { produceBlackHoleCaptions } from '../../../../../src/layers/blackHoles/markers/present/produceBlackHoleCaptions';
 import { produceConstellationCaptions } from '../../../../../src/layers/constellations/figures/present/produceConstellationCaptions';
 import { sceneBodyLabels } from '../../../../../src/layers/body/labels/present/sceneBodyLabels';
@@ -127,7 +131,7 @@ function captionsAt(ctx: FrameView): readonly Label2D[] {
 
 function sgrAStarAlpha(state: EngineState, ctx: FrameView): number | undefined {
   return fadeAlphaOf(
-    produceBlackHoleCaptions()(state, ctx, { [SGR_A_STAR_ENTRY.id]: 1 }).labels,
+    produceBlackHoleCaptions(blackHolePickCode())(state, ctx, { [SGR_A_STAR_ENTRY.id]: 1 }).labels,
     SGR_A_STAR_LABEL_ID,
   );
 }

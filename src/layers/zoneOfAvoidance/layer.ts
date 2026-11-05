@@ -48,7 +48,7 @@ export const zoneOfAvoidanceLayer = defineLayer({
       },
     ],
   }),
-  selection: () => [zoneOfAvoidanceSelectionRow()],
+  selection: (runtime) => [zoneOfAvoidanceSelectionRow(runtime.pickCode)],
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'zoneOfAvoidance', label: 'Zone of Avoidance' } },
     { slot: 'debug', content: ZoneOfAvoidanceTuningSectionContainer },

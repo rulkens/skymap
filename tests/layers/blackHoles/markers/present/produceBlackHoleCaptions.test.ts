@@ -16,6 +16,7 @@ import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import { blackHolePickCode } from '../../../../support/layerPickCodes';
 
 // Occlusion is the shared compose's concern, covered beside core's captions.
 vi.mock('../../../../../src/services/engine/frame/sceneOccluderBodies', () => ({
@@ -39,13 +40,13 @@ const CTX = {
 } as unknown as FrameView;
 
 describe('produceBlackHoleCaptions', () => {
-  const [caption] = produceBlackHoleCaptions()(STATE, CTX, {
+  const [caption] = produceBlackHoleCaptions(blackHolePickCode())(STATE, CTX, {
     [SGR_A_STAR_ENTRY.id]: 1,
   }).labels;
 
   it('packs a pick id the Layer’s selection row resolves to the hole', () => {
     const pick = unpackPick(caption!.pickId!)!;
-    expect(blackHoleSelectionRow().resolvePick(pick)).toEqual({
+    expect(blackHoleSelectionRow(blackHolePickCode()).resolvePick(pick)).toEqual({
       type: 'blackHole',
       id: SGR_A_STAR_ENTRY.id,
     });

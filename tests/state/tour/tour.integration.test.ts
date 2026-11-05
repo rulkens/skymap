@@ -34,6 +34,7 @@ import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import { galaxyRowRuntime } from '../../support/selectionResolverOver';
+import { milkyWayPickCode } from '../../support/layerPickCodes';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
@@ -256,7 +257,11 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const alphaWith = (clipFactor: number): number | null => {
       const state = makeDrawState(fades, makeClipStub(clipFactor));
       const ctx = makeDrawCtx(0, MW_CAM_POS);
-      return deriveMilkyWayCloudAlpha(ctx, resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'));
+      return deriveMilkyWayCloudAlpha(
+        ctx,
+        resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'),
+        milkyWayPickCode(),
+      );
     };
     const unmasked = alphaWith(1);
     expect(unmasked).toBe(1);

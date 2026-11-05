@@ -57,7 +57,7 @@ import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { Transition } from '../../../src/@types/navigation/Transition';
-import { bodyPickCodes } from '../../support/layerPickCodes';
+import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -89,8 +89,8 @@ function build() {
     selection: composeSelectionRows(
       () => [
         bodySelectionRow({ pickCodes: bodyPickCodes() }),
-        structureSelectionRow(EMPTY_STRUCTURES),
-        milkyWaySelectionRow(),
+        structureSelectionRow(structureRowRuntime(EMPTY_STRUCTURES)),
+        milkyWaySelectionRow(milkyWayPickCode()),
       ],
       () => ALL_KINDS_ENABLED,
     ),

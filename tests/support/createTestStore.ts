@@ -17,7 +17,7 @@ import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import type { ReconcileEffects } from '../../src/store/effects/ReconcileEffects';
 import type { SagaContext } from '../../src/store/types';
 import type { StructureRowFixture } from './selectionResolverOver';
-import { bodyPickCodes } from './layerPickCodes';
+import { bodyPickCodes, structureRowRuntime } from './layerPickCodes';
 
 export const NOOP_RECONCILE: ReconcileEffects = {
   requestRender: () => {},
@@ -40,7 +40,7 @@ export const NOOP_SAGA_CONTEXT: SagaContext = {
   selection: composeSelectionRows(
     () => [
       bodySelectionRow({ pickCodes: bodyPickCodes() }),
-      structureSelectionRow(EMPTY_STRUCTURES),
+      structureSelectionRow(structureRowRuntime(EMPTY_STRUCTURES)),
     ],
     () => ALL_KINDS_ENABLED,
   ),

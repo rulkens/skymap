@@ -53,7 +53,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { StructureMarkerRenderer } from '../@types/StructureMarkerRenderer';
 import type { StructureMarkerDescriptor } from '../@types/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
-import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../../data/structure/structureIds';
+import { STRUCTURE_IDS } from '../../../../data/structure/structureIds';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -142,6 +142,8 @@ export function createStructureMarkerRenderer(
   slab: typeof NEAR0 | typeof COSMO,
   /** The categories this instance buckets, in draw order; descriptors of others are ignored. */
   categories: readonly StructureId[],
+  /** Each category's pick code, written into its SourceUniforms for `ringPick.wesl`. */
+  codeOf: (category: StructureId) => number,
   initialCapacity = 64,
 ): StructureMarkerRenderer {
   const device = ctx.device as GPUDevice | null;
@@ -392,7 +394,7 @@ export function createStructureMarkerRenderer(
       });
       // Write the 6-bit source code at offset 0; rest stays zero.
       const u32 = new Uint32Array(SOURCE_UNIFORM_BYTES / 4);
-      u32[0] = STRUCTURE_ID_CODES[cat];
+      u32[0] = codeOf(cat);
       device.queue.writeBuffer(buf, 0, u32);
       sourceBuffers[cat] = buf;
       sourceBindGroups[cat] = device.createBindGroup({

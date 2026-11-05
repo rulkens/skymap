@@ -43,6 +43,7 @@ const WHOLE_CANVAS_NDC: PickWindowNdc = { centre: [0, 0], halfExtent: [1, 1] };
 export function createZoneOfAvoidanceRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
+  pickCode: number,
 ): ZoneOfAvoidanceRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'zoneOfAvoidance.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'zoneOfAvoidance.fragment');
@@ -125,7 +126,7 @@ export function createZoneOfAvoidanceRenderer(
   // The band's pick identity never changes across its lifetime — write it
   // once directly into the shared uniform scratch below (see `packedId`'s
   // offset in io.wesl's byte table), rather than every `writeUniforms` call.
-  const packedId = packSelection(Source.ZoneOfAvoidance, 0) + PICK_SENTINEL_OFFSET;
+  const packedId = packSelection(pickCode, 0) + PICK_SENTINEL_OFFSET;
 
   // Per-frame scratch, allocated once to avoid GC churn.
   const uniforms = new ArrayBuffer(ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE);

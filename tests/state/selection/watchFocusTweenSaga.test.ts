@@ -40,7 +40,7 @@ import type { StarRowFixture, StructureRowFixture } from '../../support/selectio
 import { starRowRuntime } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
-import { bodyPickCodes } from '../../support/layerPickCodes';
+import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -103,8 +103,8 @@ describe('watchFocusTweenSaga', () => {
       selection: composeSelectionRows(
         () => [
           bodySelectionRow({ pickCodes: bodyPickCodes() }),
-          structureSelectionRow(structures),
-          milkyWaySelectionRow(),
+          structureSelectionRow(structureRowRuntime(structures)),
+          milkyWaySelectionRow(milkyWayPickCode()),
           starCatalogSelectionRow(starRowRuntime(NO_SURVEY_STARS)),
         ],
         () => ALL_KINDS_ENABLED,

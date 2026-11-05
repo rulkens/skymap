@@ -15,7 +15,7 @@ import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StructureStore } from '../../src/layers/structure/catalog/@types/StructureStore';
 import type { SelectionResolver } from '../../src/@types/engine/selection/SelectionResolver';
-import { bodyPickCodes } from './layerPickCodes';
+import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from './layerPickCodes';
 
 /** What the structure selection row reads; the real store satisfies it. */
 export type StructureRowFixture = Pick<StructureStore, 'byId' | 'byCategory'>;
@@ -64,8 +64,8 @@ export function selectionResolverOver(
   return composeSelectionRows(
     () => [
       bodySelectionRow({ pickCodes: bodyPickCodes() }),
-      structureSelectionRow(structures),
-      milkyWaySelectionRow(),
+      structureSelectionRow(structureRowRuntime(structures)),
+      milkyWaySelectionRow(milkyWayPickCode()),
       ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))]),
       ...(stars === undefined ? [] : [starCatalogSelectionRow(starRowRuntime(stars))]),
     ],

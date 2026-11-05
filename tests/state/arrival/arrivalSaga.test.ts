@@ -70,7 +70,7 @@ import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { SatellitesRuntime } from '../../../src/layers/satellites/@types/SatellitesRuntime';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
-import { bodyPickCodes } from '../../support/layerPickCodes';
+import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -118,8 +118,8 @@ function build({
     selection: composeSelectionRows(
       () => [
         bodySelectionRow({ pickCodes: bodyPickCodes() }),
-        structureSelectionRow(EMPTY_STRUCTURES),
-        ...(layerRows.landed ? [milkyWaySelectionRow()] : []),
+        structureSelectionRow(structureRowRuntime(EMPTY_STRUCTURES)),
+        ...(layerRows.landed ? [milkyWaySelectionRow(milkyWayPickCode())] : []),
         satellitesSelectionRow(satellites),
       ],
       () => ALL_KINDS_ENABLED,

@@ -1,19 +1,18 @@
 /** milkyWaySelectionRow — the singleton overlay: one tag, no per-instance data. */
 
-import { Source } from '../../../../data/source';
-import { MILKY_WAY_PICK_ID } from '../../picking/present/milkyWayPickId';
+import { milkyWayPickId } from '../../picking/present/milkyWayPickId';
 import { MILKY_WAY_FOCUS_ID } from '../../../../services/url/milkyWayFocusId';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
 
 type MilkyWayRef = Extract<SelectionRef, { type: 'milkyWay' }>;
 
-export function milkyWaySelectionRow(): SelectionKindRow<MilkyWayRef> {
+export function milkyWaySelectionRow(pickCode: number): SelectionKindRow<MilkyWayRef> {
   return {
     type: 'milkyWay',
-    pickSources: [Source.MilkyWay],
+    pickSources: [pickCode],
     resolvePick: () => ({ type: 'milkyWay' }),
-    encodePick: () => MILKY_WAY_PICK_ID,
+    encodePick: () => milkyWayPickId(pickCode),
     extractRow: () => ({ type: 'milkyWay' }),
     focusId: {
       claims: (id) => id === MILKY_WAY_FOCUS_ID,

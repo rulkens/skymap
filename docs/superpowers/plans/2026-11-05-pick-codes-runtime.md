@@ -197,10 +197,10 @@ This plan is the **prep PR**; `2026-11-05-selection-kind-facts.md` is the featur
   `tests/layers/satellites/focus/present/satellitesSelectionRow.test.ts`; create the milkyWay
   (`card/present/`) and zoneOfAvoidance (`selection/present/`) row tests beside their sources' mirrors
 
-- [ ] Test, per row: `refs round-trip under non-Source codes` (structure: one ref per category).
-- [ ] Implement. `structureIds.ts` keeps `STRUCTURE_IDS`; only the code map leaves `src/data/`.
-- [ ] Targeted tests, `typecheck:fast` → pass.
-- [ ] Commit `Structures, Milky Way, black holes, satellites and the zone of avoidance stamp the allocator's codes`.
+- [x] Test, per row: `refs round-trip under non-Source codes` (structure: one ref per category).
+- [x] Implement. `structureIds.ts` keeps `STRUCTURE_IDS`; only the code map leaves `src/data/`.
+- [x] Targeted tests, `typecheck:fast` → pass.
+- [x] Commit `Structures, Milky Way, black holes, satellites and the zone of avoidance stamp the allocator's codes`.
 
 ### Task 7: The pick debug overlay reads Gaia's code from the allocator
 

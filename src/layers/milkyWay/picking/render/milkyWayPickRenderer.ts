@@ -15,7 +15,6 @@ import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsB
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { createDummyFadeBindGroup } from '../../../../services/gpu/lib/dummyFade';
-import { Source } from '../../../../data/source';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_PICK_MIN_SIZE_PX } from '../data/milkyWayPickMinSizePx';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../data/milkyWay/milkyWayRadiusMpc';
@@ -65,6 +64,8 @@ export function createMilkyWayPickRenderer(
    * `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
    */
   reversedZ: boolean,
+  /** The disk's pick code, written once into the SourceUniforms the pick fragment stamps. */
+  pickCode: number,
 ): MilkyWayPickRenderer {
   const device = ctx.device as GPUDevice | null;
 
@@ -172,7 +173,7 @@ export function createMilkyWayPickRenderer(
     f32[0] = MILKY_WAY_CENTER_WORLD[0];
     f32[1] = MILKY_WAY_CENTER_WORLD[1];
     f32[2] = MILKY_WAY_CENTER_WORLD[2];
-    new Uint32Array(scratch, 12, 1)[0] = Source.MilkyWay;
+    new Uint32Array(scratch, 12, 1)[0] = pickCode;
     f32[MW_RADIUS_MPC_BYTE_OFFSET / 4] = MILKY_WAY_RADIUS_MPC;
     f32[MW_MIN_SIZE_PX_BYTE_OFFSET / 4] = MILKY_WAY_PICK_MIN_SIZE_PX;
     device.queue.writeBuffer(mwUniformBuffer, 0, scratch);

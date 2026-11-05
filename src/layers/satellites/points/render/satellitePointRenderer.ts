@@ -58,9 +58,11 @@ export const SATELLITE_UNIFORM_BYTES = 176;
 export function createSatellitePointRenderer({
   device,
   targetFormat,
+  pickCode: dotPickCode,
 }: {
   device: GPUDevice;
   targetFormat: GPUTextureFormat;
+  pickCode: number;
 }): SatellitePointRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'satellitePoints.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'satellitePoints.fragment');
@@ -120,7 +122,7 @@ export function createSatellitePointRenderer({
   let sweep: SatelliteSweep | null = null;
   const uniformScratch = new Float32Array(SATELLITE_UNIFORM_BYTES / 4);
   new Uint32Array(uniformScratch.buffer)[SATELLITE_UNIFORM_OFFSETS.pickBase / 4] = packSelection(
-    Source.Satellite,
+    dotPickCode,
     PICK_SENTINEL_OFFSET,
   );
 
