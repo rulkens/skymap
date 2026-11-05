@@ -11,12 +11,12 @@
  *
  * Caveat for standalone playback: a registry clip runs without
  * `withSceneSnapshotSaga`, so a beat's scene cues (the opening hide sweep,
- * focusedOnly flips) persist after the clip ends — wind them back via the
- * settings panel or a reload.
+ * focusedOnly flips, the clock) persist after the clip ends — wind them back
+ * via the settings panel or a reload.
  */
 
 import type { Clip } from '../../../@types/animation/Clip';
-import { openingTitle } from '../tours/grandTour/openingTitle';
+import { parkOpening, parkOpeningDwell } from '../tours/grandTour/parkOpening';
 import { youAreHere, youAreHereDwell } from '../tours/grandTour/youAreHere';
 import { approachM31 } from '../tours/grandTour/approachM31';
 import { localGroup } from '../tours/grandTour/localGroup';
@@ -31,11 +31,18 @@ import { deepField } from '../tours/grandTour/deepField';
 import { theEdge } from '../tours/grandTour/theEdge';
 import { homeAgain } from '../tours/grandTour/homeAgain';
 
-export const tourOpeningTitle: Clip = {
-  id: 'tourOpeningTitle',
-  label: 'Grand tour 00 — opening title',
+export const tourParkOpening: Clip = {
+  id: 'tourParkOpening',
+  label: 'Grand tour 00 — the long way out',
   dev: true,
-  data: openingTitle,
+  data: parkOpening,
+};
+
+export const tourParkOpeningDwell: Clip = {
+  id: 'tourParkOpeningDwell',
+  label: 'Grand tour 00 — noon to night',
+  dev: true,
+  data: parkOpeningDwell,
 };
 
 export const tourYouAreHere: Clip = {

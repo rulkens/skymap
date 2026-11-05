@@ -14,6 +14,11 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **`fade` cannot black out a frame** (beat 00, `parkOpening`): it moves a
+  layer's `clipOpacity`, and the planet, a scene mesh and the sky have no
+  visibility address; the channel also resets to 1 when the clip ends, so a
+  fade in an enter clip is gone before the cold-load gate waits. A cold open
+  that must hide its load needs a frame-wide veil, which the tour lacks.
 - **Captions are subtitles: `{ title, lines }`.** The overlay shows the title
   as a small label and one `lines` entry at a time, centred at the bottom;
   `body`, markdown and the five `position` anchors are gone. Lines share the
@@ -24,7 +29,7 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
   lines where they read well; text over motion means authoring the motion as
   the dwell; `subtitleFit.test.ts` is the guard — a line below its reading
   floor fails the suite, so lengthen the dwell or re-break the copy.
-- **The tour owns its pole** (`openingTitle`/`approachM31`/`homeAgain` `frameTo`
+- **The tour owns its pole** (`parkOpening`/`approachM31`/`homeAgain` `frameTo`
   cues): screen-up is the orientation frame's pole, so a yaw drift — and
   `dwellDrift` is a yaw spin, the dwell in nearly every beat — rolls the image
   by `sin(|pitch|)` per radian of drift: a horizontal pan at the frame's

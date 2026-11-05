@@ -9,7 +9,7 @@ focus: sky:soendermarken
 distance_mpc: 5.5e-23 # eye height, 1.7 m above the park
 motion: held, then tilt up to the zenith
 travel_s: 0
-dwell_s: 14
+dwell_s: 30
 effects: [clock noon → night]
 requires: [sky-frame, clock-to, caption]
 status: draft
@@ -25,14 +25,17 @@ Cygnus. The whole ladder starts from the viewer's feet.
 
 ## Camera
 
-No travel: the tour begins here. The enter clip opens black, snaps the clock to
-noon (`TOUR_NOON_SIM_DAYS`) and the camera to a southward horizon view on the
-`{ sky: SONDERMARKEN_SPOT }` frame (yaw = azimuth, pitch = altitude), then waits
-for the cold-load gate so the park mesh and terrain are in before anything
-shows. The dwell fades up under the title and tilts the pitch toward the zenith
-while `clockTo` runs the clock to 20:00 UTC (`TOUR_NIGHT_SIM_DAYS`). Authored
-tweens, not `dwellDrift`: a frame-tagged base writer may not overlap a composite
-window on the same channel.
+No travel: the tour begins here. The enter clip is all snaps: it strips the
+scene, sets the galactic pole, snaps the clock to noon (`TOUR_NOON_SIM_DAYS`)
+and stands the camera on the `{ sky: SONDERMARKEN_SPOT }` frame (yaw = azimuth,
+pitch = altitude) looking due north up the open lawn, then the cold-load gate
+waits for the park mesh and terrain before the caption shows. North because it
+is the scan's one corridor with sky down to the horizon, front-lit at noon;
+south and south-east are backlit canopy. The dwell holds the title for 4 s,
+then tilts the pitch to 80° while `clockTo` runs the clock to 20:00 UTC
+(`TOUR_NIGHT_SIM_DAYS`) over 22 s, and holds the night for 4 s. Authored
+tweens, not `dwellDrift`: a frame-tagged base writer may not overlap a
+composite window on the same channel.
 
 ## On screen
 
@@ -60,3 +63,7 @@ caption: {
   night reads as dusk → night.
 - A sky pose ignores drag and wheel, so the viewer can't look around here.
 - Dwell length is the clock run plus the title read; tune both by eye.
+- No fade to black on the cold load: the `fade` cue moves only layer
+  `clipOpacity`, which has no address for the planet, park mesh or sky, and it
+  resets when the enter clip ends, before the gate's wait. The gate alone holds
+  the caption; the park may show its tiles arriving.

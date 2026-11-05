@@ -5,10 +5,10 @@
  * home back through everything the tour visited rather than a blur. The
  * outbound journey was the story; the return is "you're home, go explore."
  *
- * The dive lands on the OPENING pose exactly: `dollyToId(milkyWay)` resolves
- * the same 0.15 Mpc framing the tour opened on, the target tracks to the
+ * The dive lands on the Milky Way beat's pose exactly: `dollyToId(milkyWay)`
+ * resolves the same 0.15 Mpc framing that beat landed on, the target tracks to the
  * galaxy's centre, and a concurrent `aimAlong(GALACTIC_DISC_FORWARD)` returns
- * the SAME world sightline `openingTitle`'s cold-open snap used — three
+ * the SAME world sightline `youAreHere`'s cold-open snap used — three
  * separate channels (target / distance / yaw+pitch), one `all`, played slow
  * instead of snapped. The focus + label reveal bookend beat 01: home is named
  * again as it swells back into frame. No enter clip — the rush IS the beat,

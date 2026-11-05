@@ -1,12 +1,12 @@
 /**
  * grandTour — "The Long Way Out": the full narrated powers-of-ten journey from
- * the Milky Way to the edge of the observable universe and back. Launched from
- * the splash Tour button. See `docs/tour/` (goal, script, stages).
+ * a park in Copenhagen to the edge of the observable universe and back. Launched
+ * from the splash Tour button. See `docs/tour/` (goal, script, stages).
  *
  * Built beat-by-beat in a live-tuning loop — beats are added and their pacing
- * dialled by eye. The opening beats anchor on the `milkyWay` singleton, which
- * resolves with NO catalog data loaded, so the tour always establishes even on
- * an unlinked worktree.
+ * dialled by eye. The opening stands on Earth and the Milky Way beat anchors on
+ * the `milkyWay` singleton; neither needs catalog data, so the tour establishes
+ * even on an unlinked worktree.
  *
  * This file is the storyboard — beat order, captions, dwell lengths. Each
  * beat's choreography lives in its own clip file under `./grandTour/`, so a
@@ -15,7 +15,7 @@
 
 import type { Tour } from '../../../@types/animation/tour/Tour';
 import { dwellDrift } from '../../../state/tour/dwellDrift';
-import { openingTitle } from './grandTour/openingTitle';
+import { parkOpening, parkOpeningDwell } from './grandTour/parkOpening';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31, approachM31Dwell } from './grandTour/approachM31';
 import { localGroup, localGroupDwell } from './grandTour/localGroup';
@@ -35,14 +35,15 @@ export const grandTour: Tour = {
   label: 'The Long Way Out',
   beats: [
     {
-      enterClip: openingTitle,
+      enterClip: parkOpening,
       caption: {
         title: 'The Long Way Out',
         lines: [
           'From home to the edge of the observable universe, and back.',
+          'Night falls, and the band of the Milky Way comes out overhead.',
         ],
       },
-      dwellClip: dwellDrift(8, { cruiseRate: (Math.PI * 2) / 120 }),
+      dwellClip: parkOpeningDwell,
     },
     {
       enterClip: youAreHere,

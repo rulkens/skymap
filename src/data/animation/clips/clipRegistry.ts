@@ -42,7 +42,8 @@ import { flowOrbit } from './flowOrbit';
 import { flyPathDemo } from './flyPathDemo';
 import { famousFlythrough } from './famousFlythrough';
 import {
-  tourOpeningTitle,
+  tourParkOpening,
+  tourParkOpeningDwell,
   tourYouAreHere,
   tourYouAreHereDwell,
   tourApproachM31,
@@ -72,7 +73,8 @@ export const clipFactories: Record<ClipId, (simDays: number) => Clip> = {
   flowOrbit: () => flowOrbit,
   flyPathDemo: () => flyPathDemo,
   famousFlythrough: () => famousFlythrough,
-  tourOpeningTitle: () => tourOpeningTitle,
+  tourParkOpening: () => tourParkOpening,
+  tourParkOpeningDwell: () => tourParkOpeningDwell,
   tourYouAreHere: () => tourYouAreHere,
   tourYouAreHereDwell: () => tourYouAreHereDwell,
   tourApproachM31: () => tourApproachM31,

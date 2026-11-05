@@ -5,7 +5,7 @@ reproduced.
 
 `computeSceneEntering` rebuilds a beat's scene on entry but leaves the pole out ("carried forward
 live", `src/state/tour/computeSceneEntering.ts:8-10`). Only three grand-tour beats set the pole
-(`openingTitle.ts:73`, `approachM31.ts:63`, `homeAgain.ts:48`), so:
+(`parkOpening.ts`, `approachM31.ts:63`, `homeAgain.ts:48`), so:
 
 - **Prev** from beat 2 (supergalactic) to beat 1 replays beat 1 under supergalactic instead of
   galactic.

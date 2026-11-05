@@ -33,6 +33,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../../src/store/rootReducer';
 import { grandTour } from '../../../../../src/data/animation/tours/grandTour';
+import { approachM31 } from '../../../../../src/data/animation/tours/grandTour/approachM31';
 import { mergeSnapshot } from '../../../../../src/state/settings/mergeSnapshotAction';
 import { mergeSettingsSnapshot } from '../../../../../src/state/settings/mergeSettingsSnapshot';
 import { computeSceneEntering } from '../../../../../src/state/tour/computeSceneEntering';
@@ -117,17 +118,19 @@ describe('grand tour frame ladder — effective orientation per beat', () => {
       orientationPerBeat.push(store.getState().settings.orientation);
     }
 
-    // docs/tour/implementation-notes.md's frame ladder: openingTitle (beat 0)
-    // tilts to galactic; nothing touches it again until approachM31 (beat 2)
-    // tilts to supergalactic for the rest of the outward journey; homeAgain
-    // (the last beat's dwell) tilts back to galactic for the landing. This is
-    // the DoD line "beats 02–09 with the supergalactic plane horizontal" —
-    // pinned here as the EFFECTIVE per-beat value, not the authored literal.
+    // docs/tour/implementation-notes.md's frame ladder: parkOpening (beat 0)
+    // tilts to galactic and the Earth beats and the Milky Way run under it;
+    // approachM31 tilts to supergalactic for the rest of the outward journey;
+    // homeAgain (the last beat's dwell) tilts back to galactic for the landing.
+    // Found by clip, not index, so Earth beats can land in between.
     const last = grandTour.beats.length - 1;
+    const m31 = grandTour.beats.findIndex((b) => b.enterClip === approachM31);
     expect(last).toBeGreaterThanOrEqual(9);
-    expect(orientationPerBeat[0]).toBe('galactic');
-    expect(orientationPerBeat[1]).toBe('galactic');
-    for (let i = 2; i < last; i++) {
+    expect(m31).toBeGreaterThan(0);
+    for (let i = 0; i < m31; i++) {
+      expect(orientationPerBeat[i]).toBe('galactic');
+    }
+    for (let i = m31; i < last; i++) {
       expect(orientationPerBeat[i]).toBe('supergalactic');
     }
     expect(orientationPerBeat[last]).toBe('galactic');
