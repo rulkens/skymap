@@ -111,7 +111,8 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
     id: 'method-galactic-centre',
     text: 'The centre of the Milky Way is put at the radio position of Sagittarius A*, 8,178 parsecs from the Sun, the distance the GRAVITY Collaboration measured in 2019 with an error of 13 parsecs statistical and 22 systematic. The 40 orbits around it are published in arcseconds and become lengths through that one distance.',
     source: 'https://arxiv.org/abs/1904.05721',
-    sourceLabel: 'GRAVITY Collaboration 2019, a geometric distance to the Galactic Centre black hole',
+    sourceLabel:
+      'GRAVITY Collaboration 2019, a geometric distance to the Galactic Centre black hole',
     checked: CHECKED,
   },
   {
@@ -269,7 +270,8 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
     id: 'depart-frame-size',
     text: 'The cosmic microwave background is 3.372 millikelvin warmer in one direction than its mean of 2.728 kelvin, which puts the Sun’s speed against it at 370 km/s. A redshift measured from the Sun differs from one in that frame by up to that speed, which is 5 megaparsecs at our Hubble constant.',
     source: 'https://arxiv.org/abs/astro-ph/9605054',
-    sourceLabel: 'Fixsen et al. 1996, the cosmic microwave background spectrum from the full COBE FIRAS data set',
+    sourceLabel:
+      'Fixsen et al. 1996, the cosmic microwave background spectrum from the full COBE FIRAS data set',
     checked: CHECKED,
   },
   {

@@ -14,7 +14,10 @@
 
 import { describe, expect, it } from 'vitest';
 import { Source } from '../../../../../src/data/source';
-import { tierTarget, tierFilenameForSource } from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
+import {
+  tierTarget,
+  tierFilenameForSource,
+} from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
 
 describe('tierTarget', () => {
   it('small tier excludes SDSS and caps GLADE at 256k', () => {

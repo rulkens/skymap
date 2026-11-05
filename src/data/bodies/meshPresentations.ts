@@ -20,6 +20,10 @@ function shapeModel(id: string): MeshPresentation {
 }
 
 export const MESH_PRESENTATIONS: readonly MeshPresentation[] = [
-  ...SCENE_MESH_BODIES.map(({ id, meshKey, boundingRadiusM }) => ({ id, meshKey, boundingRadiusM })),
+  ...SCENE_MESH_BODIES.map(({ id, meshKey, boundingRadiusM }) => ({
+    id,
+    meshKey,
+    boundingRadiusM,
+  })),
   ...SHAPE_MODEL_BODY_IDS.map(shapeModel),
 ];
