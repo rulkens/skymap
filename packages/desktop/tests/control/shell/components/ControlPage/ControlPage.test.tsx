@@ -73,6 +73,42 @@ describe('ControlPage', () => {
     expect(screen.getByRole('button', { name: 'Update now' })).toBeInTheDocument();
   });
 
+  // Regression: a retry that failed again in milliseconds brought back the same words, so Retry looked dead.
+  it('a pressed Retry reads Trying again for at least a second, and until main answers', async () => {
+    const { bridge, set } = await renderControls();
+    set({ status: { kind: 'offline' }, hasData: false, lastAttempt: 1000 });
+    vi.useFakeTimers();
+    try {
+      press('Retry');
+      expect(bridge.updateNow).toHaveBeenCalledOnce();
+      expect(screen.getByRole('button', { name: 'Trying again…' })).toBeDisabled();
+
+      act(() => void vi.advanceTimersByTime(5000));
+      expect(screen.getByRole('button', { name: 'Trying again…' })).toBeDisabled();
+
+      set({ lastAttempt: 2000 });
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a Retry answered at once still holds for a second', async () => {
+    const { set } = await renderControls();
+    set({ status: { kind: 'offline' }, hasData: false, lastAttempt: 1000 });
+    vi.useFakeTimers();
+    try {
+      press('Retry');
+      set({ lastAttempt: 2000 });
+      act(() => void vi.advanceTimersByTime(900));
+      expect(screen.getByRole('button', { name: 'Trying again…' })).toBeDisabled();
+      act(() => void vi.advanceTimersByTime(200));
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('the sync buttons are disabled while syncing', async () => {
     const { set } = await renderControls();
     set({ status: { kind: 'syncing' } });

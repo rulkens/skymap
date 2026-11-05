@@ -36,7 +36,12 @@ export function createSyncThenLoad(deps: SyncThenLoadDeps): (restart: boolean) =
       skyStale,
       restart,
     });
-    deps.update({ status: action.status, hasData, about: await deps.readAbout() });
+    deps.update({
+      status: action.status,
+      hasData,
+      about: await deps.readAbout(),
+      lastAttempt: Date.now(),
+    });
     if (action.then === 'showControl') deps.showControl();
     if (action.then === 'loadSky') await deps.loadSky();
   };

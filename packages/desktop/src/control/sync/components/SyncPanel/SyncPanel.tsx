@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import type { ReactNode } from 'react';
 import type { SyncState } from '../../@types/SyncState';
+import { useRetry } from '../DownloadStatus/useRetry';
 import { describeStatus } from '../../utils/describeStatus';
 import DownloadStatus from '../DownloadStatus/DownloadStatus';
 import chrome from '../../../controlChrome.module.css';
@@ -14,6 +15,8 @@ export type SyncPanelProps = {
 
 function SyncPanel({ sync, onUpdateNow, onRestartSky }: SyncPanelProps): ReactNode {
   const titleId = useId();
+  const { trying, retry } = useRetry(sync.lastAttempt, onUpdateNow);
+  const problem = describeStatus(sync).tone === 'problem';
   const syncing = sync.status.kind === 'syncing';
   const restartNote = sync.skyLoading
     ? 'Loading the sky'
@@ -27,8 +30,13 @@ function SyncPanel({ sync, onUpdateNow, onRestartSky }: SyncPanelProps): ReactNo
       </h2>
       <DownloadStatus sync={sync} />
       <div className={chrome.row}>
-        <button type="button" className={chrome.button} disabled={syncing} onClick={onUpdateNow}>
-          {describeStatus(sync).tone === 'problem' ? 'Retry' : 'Update now'}
+        <button
+          type="button"
+          className={chrome.button}
+          disabled={syncing || (problem && trying)}
+          onClick={problem ? retry : onUpdateNow}
+        >
+          {problem ? (trying ? 'Trying again…' : 'Retry') : 'Update now'}
         </button>
         <button
           type="button"

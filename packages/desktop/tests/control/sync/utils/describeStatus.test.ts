@@ -8,6 +8,7 @@ const at = (over: Partial<SyncState>): SyncState => ({
   hasData: false,
   skyRunning: false,
   skyLoading: false,
+  lastAttempt: null,
   ...over,
 });
 
@@ -21,6 +22,14 @@ describe('describeStatus', () => {
       expect(withData.tone).toBe('plain');
       expect(withData.text).toMatch(/saved data/);
     }
+  });
+
+  it('a problem ends with when it last tried, once an attempt has ended', () => {
+    const status = { kind: 'failed' } as const;
+    expect(describeStatus(at({ status })).text).not.toMatch(/Last tried/);
+    expect(
+      describeStatus(at({ status, lastAttempt: new Date(2026, 10, 5, 9, 7).getTime() })).text,
+    ).toMatch(/Last tried at 09:07\.$/);
   });
 
   it('a full disk names the space needed and free, and always offers Retry', () => {

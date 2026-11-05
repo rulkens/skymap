@@ -118,6 +118,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     setup: setup.current(),
     firstRun,
     about: await readAbout(),
+    lastAttempt: null,
   };
   // Nothing awaits from here to registerControlIpc, so the page's first getState finds its handler.
   const { window: control, show: showControl } = openControlWindow(mayClose);

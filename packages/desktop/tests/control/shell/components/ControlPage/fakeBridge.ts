@@ -26,6 +26,7 @@ const BASE_STATE: ControlState = {
   setup: DEFAULT_INSTALL_SETUP,
   firstRun: false,
   about: { version: '1.2.3', dataDate: null },
+  lastAttempt: null,
 };
 
 /** A main process stand-in: the page's calls are spies, `set` pushes a changed state, `view` asks for a view. */

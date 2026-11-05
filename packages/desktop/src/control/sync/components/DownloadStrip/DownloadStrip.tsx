@@ -5,6 +5,7 @@
 
 import type { ReactNode } from 'react';
 import type { SyncState } from '../../@types/SyncState';
+import { useRetry } from '../DownloadStatus/useRetry';
 import { describeStatus } from '../../utils/describeStatus';
 import DownloadStatus from '../DownloadStatus/DownloadStatus';
 import chrome from '../../../controlChrome.module.css';
@@ -16,12 +17,13 @@ export type DownloadStripProps = {
 };
 
 function DownloadStrip({ sync, onRetry }: DownloadStripProps): ReactNode {
+  const { trying, retry } = useRetry(sync.lastAttempt, onRetry);
   return (
     <footer className={styles.root} aria-label="Download">
       <DownloadStatus sync={sync} />
       {describeStatus(sync).tone === 'problem' && (
-        <button type="button" className={chrome.button} onClick={onRetry}>
-          Retry
+        <button type="button" className={chrome.button} disabled={trying} onClick={retry}>
+          {trying ? 'Trying again…' : 'Retry'}
         </button>
       )}
     </footer>

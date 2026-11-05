@@ -37,6 +37,13 @@ describe('createSyncThenLoad', () => {
     expect(d.showControl).toHaveBeenCalled();
   });
 
+  it('records when the attempt ended, whether or not it worked', async () => {
+    const { state, deps: d } = deps();
+    const before = Date.now();
+    await createSyncThenLoad(d)(true);
+    expect(state.lastAttempt).toBeGreaterThanOrEqual(before);
+  });
+
   it('runs one sync at a time', async () => {
     let finish: () => void = () => {};
     const sync = vi.fn(
