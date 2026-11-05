@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import StarDetailCard from '../../../../../../src/layers/starCatalog/card/ui/StarDetailCard/StarDetailCard';
-import { buildFocusable } from '../../../../../../src/services/engine/helpers/buildFocusable';
+import { starCatalogSelectionKinds } from '../../../../../../src/layers/starCatalog/selection/kinds';
 import { SGR_A_STAR_ENTRY } from '../../../../../../src/layers/blackHoles/sources/sgrAStar';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../../src/data/source';
@@ -124,9 +124,9 @@ describe('StarDetailCard', () => {
 
   it("orbit: an S-star's period, eccentricity, pericentre and pericentre speed", () => {
     // End to end through the real seam: a stored star row for S2 goes through
-    // buildFocusable's static seed lookup and out as rendered rows, so a missing
+    // the star kind's static seed lookup and out as rendered rows, so a missing
     // lookup or an unwired card block fails here rather than only in the browser.
-    const target = buildFocusable(
+    const target = starCatalogSelectionKinds[0]!.toFocusable(
       {
         type: 'starCatalog',
         source: Source.SStar,
@@ -139,7 +139,7 @@ describe('StarDetailCard', () => {
         driver: starRowDriver('s2', 4.2e9),
       },
       [],
-    ) as StarInfo;
+    );
 
     const { container } = render(createElement(StarDetailCard, { target }));
 

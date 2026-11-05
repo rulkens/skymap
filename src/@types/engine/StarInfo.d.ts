@@ -1,9 +1,9 @@
 /**
  * StarInfo — a selected star as a resolved focusable target, the one arm of
- * `FocusableTarget` every star reaches, survey or seeded; `buildFocusable`
- * derives it from the stored `SelectionRow` plus the famous-star sidecar.
- * Core, not the star Layer's `@types/`: core's `FocusableTarget`/`refOf`
- * name and produce it, so shelving it under `layers/` would import a Layer.
+ * `FocusableTarget` every star reaches, survey or seeded; the star kind's
+ * `toFocusable` derives it from the stored `SelectionRow` plus the famous-star
+ * sidecar. Core, not the star Layer's `@types/`: core's `FocusableTarget`
+ * names it, so shelving it under `layers/` would import a Layer.
  */
 
 import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';

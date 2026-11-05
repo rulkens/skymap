@@ -9,6 +9,7 @@ export type DetailCardProps<K extends SelectionKind = SelectionKind> = {
   isPinned: boolean;
   /** `phone` drops the panel frame (the sheet owns the surface). Defaults to `panel`. */
   layout?: CardLayout;
-  onFocus?: (target: FocusableTarget) => void;
+  /** The Focus pill; InfoCard binds it to this card's target. */
+  onFocus?: () => void;
   onClose?: () => void;
 };

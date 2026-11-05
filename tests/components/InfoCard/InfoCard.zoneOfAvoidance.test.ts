@@ -12,10 +12,13 @@ import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import InfoCard from '../../../src/components/InfoCard/InfoCard';
 import { ZONE_OF_AVOIDANCE_INFO } from '../../../src/data/zoneOfAvoidance/zoneOfAvoidanceInfo';
+import { zoneOfAvoidanceSelectionKinds } from '../../../src/layers/zoneOfAvoidance/selection/kinds';
+
+const ZOA_TARGET = zoneOfAvoidanceSelectionKinds[0]!.toFocusable({ type: 'zoneOfAvoidance' }, []);
 
 describe('InfoCard Zone of Avoidance', () => {
   it('renders the Zone of Avoidance card for a zoneOfAvoidance selection', () => {
-    render(createElement(InfoCard, { hovered: null, selected: ZONE_OF_AVOIDANCE_INFO }));
+    render(createElement(InfoCard, { hovered: null, selected: ZOA_TARGET }));
     expect(screen.getByText(ZONE_OF_AVOIDANCE_INFO.displayName)).toBeInTheDocument();
     expect(screen.getByText(ZONE_OF_AVOIDANCE_INFO.description)).toBeInTheDocument();
     // "Learn more" Wikipedia link — same WikipediaRow the body/famous-star cards use.
@@ -29,7 +32,7 @@ describe('InfoCard Zone of Avoidance', () => {
     render(
       createElement(InfoCard, {
         hovered: null,
-        selected: ZONE_OF_AVOIDANCE_INFO,
+        selected: ZOA_TARGET,
         onFocus: () => {},
       }),
     );

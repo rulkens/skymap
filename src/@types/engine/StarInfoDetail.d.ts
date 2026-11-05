@@ -3,7 +3,7 @@
  * keyed by its SHAPE rather than which catalog it came from, so a future
  * curated catalog reuses `curated` instead of growing a branch. `none` is
  * real: an unlanded famous-star sidecar renders its headline alone, and so
- * does `buildFocusable.ts`'s non-S-star fallthrough. Core for the same
+ * does `starDetail`'s non-S-star fallthrough. Core for the same
  * reason as `StarInfo`.
  */
 

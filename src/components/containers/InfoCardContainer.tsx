@@ -9,9 +9,11 @@
 import { memo, useCallback } from 'react';
 import InfoCard from '../InfoCard/InfoCard';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
+import {
+  selectHoveredFocusable,
+  selectSelectedFocusable,
+} from '../../state/selection/focusableSelectors';
 import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
-import { refOf } from '../../services/engine/helpers/refOf';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 
 function InfoCardContainer(): React.ReactElement {
@@ -20,7 +22,7 @@ function InfoCardContainer(): React.ReactElement {
   const selected = useAppSelector(selectSelectedFocusable);
 
   const onFocus = useCallback(
-    (target: FocusableTarget) => dispatch(updateSelectionFocus(refOf(target))),
+    (target: FocusableTarget) => dispatch(updateSelectionFocus(target.ref)),
     [dispatch],
   );
   const onClose = useCallback(() => dispatch(clearSelection()), [dispatch]);

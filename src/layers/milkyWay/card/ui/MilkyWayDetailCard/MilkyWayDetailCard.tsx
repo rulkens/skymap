@@ -8,8 +8,6 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { MilkyWayInfo } from '../../../../../@types/engine/MilkyWayInfo';
-import type { FocusableTarget } from '../../../../../@types/engine/FocusableTarget';
-import { MILKY_WAY_INFO } from '../../../../../data/milkyWay/milkyWayInfo';
 import { MILKY_WAY_FACTS } from '../../data/milkyWayFacts';
 import {
   MILKY_WAY_CENTER_WORLD,
@@ -36,7 +34,7 @@ export type MilkyWayDetailCardProps = {
   target: MilkyWayInfo;
   isPinned?: boolean;
   layout?: CardLayout;
-  onFocus?: (target: FocusableTarget) => void;
+  onFocus?: () => void;
   onClose?: () => void;
 };
 
@@ -70,7 +68,7 @@ function MilkyWayDetailCard({
         eyebrow="Home Galaxy"
         title={target.displayName}
         thumbnail={thumbnail}
-        onFocus={isPinned && onFocus ? () => onFocus(MILKY_WAY_INFO) : undefined}
+        onFocus={isPinned ? onFocus : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={isPinned ? onClose : undefined}
       />

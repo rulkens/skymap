@@ -6,12 +6,12 @@
  */
 
 import { selectCameraControls } from '../settings/selectors';
-import { selectFocusedFocusable } from '../selection/selectors';
+import { selectFocusedFocusable } from '../selection/focusableSelectors';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { selectTimeState } from '../time/selectors';
 import { selectTourBeatIndex, selectTourPaused, selectTourTotal } from '../tour/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { TARGET_NAME } from '../../services/engine/helpers/targetName';
+import { selectionKindOf } from '../../compositions/selectionKindOf';
 import type { DomeStatus } from '../../@types/remote/DomeStatus';
 import type { RemoteTakeover } from '../../@types/remote/RemoteTakeover';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
@@ -42,7 +42,7 @@ export function selectDomeStatus(
   const takeover = selectTakeoverSource(state);
   const time = selectTimeState(state);
   return {
-    focus: focused ? { name: TARGET_NAME[focused.type](focused) } : null,
+    focus: focused ? { name: selectionKindOf(focused.type).displayName(focused) } : null,
     takeover: takeover ? remoteTakeover(takeover, state) : null,
     time: {
       simDays: deriveSimDays(time, nowMs),

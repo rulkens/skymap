@@ -248,11 +248,11 @@ placement (`positionMpc`, `radiusMpc`). Core and the store type against a base r
     Milky Way, zone of avoidance and star; `name` for structure; `label` for the rest.
 - `InfoCardContainer.tsx:23` dispatches `updateSelectionFocus(target.ref)`.
 
-- [ ] Test `refKey separates kinds that share an id` and `refKey is independent of field order`.
-- [ ] Extend `selectors.test.ts`: `the focused target of every kind carries its ref` (one fixture per kind).
-- [ ] Implement; delete the four helpers and the old test.
-- [ ] `npx vitest run tests/state tests/components tests/utils/selection` → pass; `typecheck:fast` → clean.
-- [ ] Commit `Each kind builds its own focus target and name; refs key generically`.
+- [x] Test `refKey separates kinds that share an id` and `refKey is independent of field order`.
+- [x] Extend `selectors.test.ts`: `the focused target of every kind carries its ref` (one fixture per kind).
+- [x] Implement; delete the four helpers and the old test.
+- [x] `npx vitest run tests/state tests/components tests/utils/selection` → pass; `typecheck:fast` → clean.
+- [x] Commit `Each kind builds its own focus target and name; refs key generically`.
 
 ### Task 6: The debug log's live focus row is generic
 

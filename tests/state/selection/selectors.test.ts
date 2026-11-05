@@ -7,7 +7,7 @@
  * every case: the selectors are thin lifts and the slice's own initialState
  * shape is asserted in the slice tests. The `createAppStore`-backed tests
  * exercise the memoized `selectXFocusable` selectors through a live store to
- * verify the `buildFocusable` integration round-trips correctly.
+ * verify each kind's `toFocusable` round-trips correctly.
  *
  * The derived `selectHoveredFocusable` / `selectSelectedFocusable` selectors
  * each build a fresh `FocusableTarget` from their slot's `SelectionRow` — the memoization means the same row reference
@@ -17,11 +17,12 @@
 import { describe, it, expect } from 'vitest';
 
 import { createAppStore } from '../../../src/store/createAppStore';
+import { selectIsSelectionActive } from '../../../src/state/selection/selectors';
 import {
   selectHoveredFocusable,
   selectSelectedFocusable,
-  selectIsSelectionActive,
-} from '../../../src/state/selection/selectors';
+  selectFocusedFocusable,
+} from '../../../src/state/selection/focusableSelectors';
 import {
   updateSelectionHover,
   updateSelectionSelect,
@@ -29,7 +30,6 @@ import {
 } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants';
-import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
 import { Source } from '../../../src/data/source';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { RootState } from '../../../src/store/types';
@@ -38,6 +38,34 @@ import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
 import { placedStructureRow } from '../../../src/layers/structure/picking/utils/placedStructureRow';
+import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
+import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
+import { craftSelectionRow } from '../../../src/layers/missions/craft/present/craftSelectionRow';
+import { earthSceneSelectionRow } from '../../../src/layers/earthScenes/scenes/present/earthSceneSelectionRow';
+import { structureSelectionRow } from '../../../src/layers/structure/picking/present/structureSelectionRow';
+import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
+import { blackHoleSelectionRow } from '../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
+import { satellitesSelectionRow } from '../../../src/layers/satellites/focus/present/satellitesSelectionRow';
+import { zoneOfAvoidanceSelectionRow } from '../../../src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow';
+import { buildSatelliteCatalog } from '../../../tools/satellites/buildSatelliteCatalog';
+import { ISS } from '../../layers/satellites/fixtures/celestrakRecords';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import {
+  blackHolePickCode,
+  bodyPickCodes,
+  galaxyRowRuntime,
+  milkyWayPickCode,
+  missionsPickCode,
+  satellitesPickCode,
+  starRowRuntime,
+  structureRowRuntime,
+  zoneOfAvoidancePickCode,
+} from '../../support/layerPickCodes';
+import type { SelectionKindRow } from '../../../src/@types/engine/layer/SelectionKindRow';
+import type { SatellitesRuntime } from '../../../src/layers/satellites/@types/SatellitesRuntime';
 
 // --- fixtures -----------------------------------------------------------------
 
@@ -102,16 +130,13 @@ describe('selectHoveredFocusable', () => {
     expect(target).toMatchObject({ type: 'galaxyCatalog', source: Source.SDSS });
   });
 
-  it('returns MILKY_WAY_INFO for a milkyWay row in the hover slot', () => {
-    const { store } = createAppStore();
-    store.dispatch(setSelectionRow({ slot: 'hover', row: MILKY_WAY_ROW }));
-    expect(selectHoveredFocusable(store.getState())).toBe(MILKY_WAY_INFO);
-  });
-
-  it('returns the StructureInfo as-is for a structure row', () => {
+  it('returns the StructureInfo with its ref for a structure row', () => {
     const { store } = createAppStore();
     store.dispatch(setSelectionRow({ slot: 'hover', row: structureInfo }));
-    expect(selectHoveredFocusable(store.getState())).toBe(structureInfo);
+    expect(selectHoveredFocusable(store.getState())).toEqual({
+      ...structureInfo,
+      ref: { type: 'structure', id: 'virgo' },
+    });
   });
 });
 
@@ -128,4 +153,84 @@ describe('selectSelectedFocusable', () => {
     const b = selectSelectedFocusable(store.getState());
     expect(a).toBe(b);
   });
+});
+
+// --- one real row per kind ----------------------------------------------------
+
+const virgoEntry = {
+  type: 'structure',
+  id: 'virgo',
+  name: 'Virgo Cluster',
+  category: 'galaxy-cluster',
+  worldPos: [0.27, 0.22, 0.15],
+  featured: true,
+  physicalRadiusMpc: 1.7,
+} as StructureInfo;
+const { catalog: satellites } = buildSatelliteCatalog(
+  [{ group: { group: 'active', class: 'active' }, records: [ISS] }],
+  0,
+);
+
+/** Each kind's own row extractor and a ref it resolves. */
+function kindCase<Ref extends SelectionRef>(row: SelectionKindRow<Ref>, ref: Ref) {
+  return { row: row as unknown as SelectionKindRow, ref: ref as SelectionRef };
+}
+
+const KIND_CASES = [
+  kindCase(
+    galaxyCatalogSelectionRow(
+      galaxyRowRuntime({
+        catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(16)]]),
+        famousMeta: [],
+      }),
+    ),
+    { type: 'galaxyCatalog', source: Source.SDSS, index: 12 },
+  ),
+  kindCase(
+    starCatalogSelectionRow(starRowRuntime({ renderer: null as never, chunkStreams: new Map() })),
+    { type: 'starCatalog', source: Source.FamousStar, index: 3 },
+  ),
+  kindCase(bodySelectionRow({ pickCodes: bodyPickCodes() }), {
+    type: 'body',
+    id: SCENE_PLANETS[1]!.id,
+  }),
+  kindCase(craftSelectionRow(missionsPickCode()), { type: 'craft', id: asSceneBodyId('hubble') }),
+  kindCase(earthSceneSelectionRow(), {
+    type: 'earthScene',
+    id: asSceneBodyId('soendermarken'),
+  }),
+  kindCase(
+    structureSelectionRow(
+      structureRowRuntime({
+        byId: (id) => (id === virgoEntry.id ? virgoEntry : null),
+        byCategory: () => [virgoEntry],
+      }),
+    ),
+    { type: 'structure', id: 'virgo' },
+  ),
+  kindCase(milkyWaySelectionRow(milkyWayPickCode()), { type: 'milkyWay' }),
+  kindCase(blackHoleSelectionRow(blackHolePickCode()), { type: 'blackHole', id: 'sgr-a-star' }),
+  kindCase(
+    satellitesSelectionRow({
+      propagator: { catalog: () => satellites },
+      pickCode: satellitesPickCode(),
+    } as unknown as SatellitesRuntime),
+    { type: 'satellite', noradId: 25544 },
+  ),
+  kindCase(zoneOfAvoidanceSelectionRow(zoneOfAvoidancePickCode()), { type: 'zoneOfAvoidance' }),
+];
+
+describe('selectFocusedFocusable', () => {
+  // The InfoCard's Focus pill dispatches `target.ref`; a kind stamping a wrong or partial ref
+  // would focus something else, or nothing.
+  it.each(KIND_CASES.map((c) => [c.ref.type, c] as const))(
+    'the focused target of every kind carries its ref (%s)',
+    (_type, { row, ref }) => {
+      const { store } = createAppStore();
+      const focusRow = row.extractRow(ref, 0);
+      expect(focusRow).not.toBeNull();
+      store.dispatch(setSelectionRow({ slot: 'focus', row: focusRow, focusId: null }));
+      expect(selectFocusedFocusable(store.getState())?.ref).toEqual(ref);
+    },
+  );
 });

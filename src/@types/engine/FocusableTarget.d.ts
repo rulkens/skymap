@@ -8,6 +8,7 @@ import type { EarthSceneInfo } from './EarthSceneInfo';
 import type { StarInfo } from './StarInfo';
 import type { BlackHoleInfo } from './BlackHoleInfo';
 import type { SatelliteInfo } from './SatelliteInfo';
+import type { SelectionRef } from './SelectionRef';
 
 /**
  * FocusableTarget — tagged union (`type: FocusableTargetType`) of what the camera can focus:
@@ -15,17 +16,17 @@ import type { SatelliteInfo } from './SatelliteInfo';
  * (a line-of-sight effect with no `x`/`y`/`z`, so no focus target), a scene body, a craft,
  * an Earth scene, a star from any catalog, a black hole, or an Earth satellite.
  *
- * Dispatch is a table lookup on the tag (`DETAIL_CARD`, `REF_OF`), so a new
- * arm is one row per table. Used by InfoCard's `hovered` / `selected` and by `refOf`.
+ * Each arm carries the `ref` its kind's `toFocusable` stamped on it, so the InfoCard's Focus
+ * pill and identity compares read the ref instead of rebuilding it per kind.
  */
 export type FocusableTarget =
-  | GalaxyInfo
-  | StructureInfo
-  | MilkyWayInfo
-  | ZoneOfAvoidanceInfo
-  | BodyInfo
-  | CraftInfo
-  | EarthSceneInfo
-  | StarInfo
-  | BlackHoleInfo
-  | SatelliteInfo;
+  | (GalaxyInfo & { readonly ref: Extract<SelectionRef, { type: 'galaxyCatalog' }> })
+  | (StructureInfo & { readonly ref: Extract<SelectionRef, { type: 'structure' }> })
+  | (MilkyWayInfo & { readonly ref: Extract<SelectionRef, { type: 'milkyWay' }> })
+  | (ZoneOfAvoidanceInfo & { readonly ref: Extract<SelectionRef, { type: 'zoneOfAvoidance' }> })
+  | (BodyInfo & { readonly ref: Extract<SelectionRef, { type: 'body' }> })
+  | (CraftInfo & { readonly ref: Extract<SelectionRef, { type: 'craft' }> })
+  | (EarthSceneInfo & { readonly ref: Extract<SelectionRef, { type: 'earthScene' }> })
+  | (StarInfo & { readonly ref: Extract<SelectionRef, { type: 'starCatalog' }> })
+  | (BlackHoleInfo & { readonly ref: Extract<SelectionRef, { type: 'blackHole' }> })
+  | (SatelliteInfo & { readonly ref: Extract<SelectionRef, { type: 'satellite' }> });

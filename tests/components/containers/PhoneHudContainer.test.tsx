@@ -18,8 +18,8 @@ import type { FocusableTarget } from '../../../src/@types/engine/FocusableTarget
 let selected: FocusableTarget | null = null;
 let ticks = 0;
 
-vi.mock('../../../src/state/selection/selectors', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../src/state/selection/selectors')>()),
+vi.mock('../../../src/state/selection/focusableSelectors', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../src/state/selection/focusableSelectors')>()),
   selectSelectedFocusable: () => selected,
 }));
 vi.mock('../../../src/state/selection/goHome', () => ({
@@ -39,7 +39,12 @@ vi.mock('../../../src/components/containers/ScaleBracketContainer', () => ({
 }));
 
 const structure = (id: string): FocusableTarget =>
-  ({ type: 'structure', id, name: id }) as unknown as FocusableTarget;
+  ({
+    type: 'structure',
+    ref: { type: 'structure', id },
+    id,
+    name: id,
+  }) as unknown as FocusableTarget;
 
 function setup() {
   const { store } = createTestStore();

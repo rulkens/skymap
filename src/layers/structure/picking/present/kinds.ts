@@ -1,8 +1,12 @@
 import type { SelectionKindFacts } from '../../../../@types/engine/layer/SelectionKindFacts';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
+import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
+import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
 
 export const structureSelectionKinds: readonly SelectionKindFacts<
-  Extract<SelectionRef, { type: 'structure' }>
+  Extract<SelectionRef, { type: 'structure' }>,
+  Extract<SelectionRow, { type: 'structure' }>,
+  Extract<FocusableTarget, { type: 'structure' }>
 >[] = [
   {
     type: 'structure',
@@ -18,5 +22,7 @@ export const structureSelectionKinds: readonly SelectionKindFacts<
     },
     // Its ring brightens on hover, captioned or not.
     mayHaveLabel: () => true,
+    toFocusable: (row) => ({ ...row, ref: { type: 'structure', id: row.id } }),
+    displayName: (target) => target.name,
   },
 ];

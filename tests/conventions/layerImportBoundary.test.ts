@@ -94,7 +94,6 @@ const CORE_ALLOWED: Readonly<Record<string, number>> = {
   '@types/engine/SelectionRow.d': 1,
   '@types/engine/StarInfo.d': 1,
   'data/bodies/seededStarCatalogsBySource': 1,
-  'services/engine/helpers/refOf': 1,
   'services/engine/wiring/galaxyCatalogRequest': 2,
   'state/selection/captureGalaxyFocusIds': 1,
   'utils/galaxyCatalogIdOf': 3,

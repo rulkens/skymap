@@ -1,10 +1,15 @@
 import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../../data/milkyWay/galacticCenter';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { MILKY_WAY_INFO } from '../../../../data/milkyWay/milkyWayInfo';
 import type { SelectionKindFacts } from '../../../../@types/engine/layer/SelectionKindFacts';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
+import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
+import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
 
 export const milkyWaySelectionKinds: readonly SelectionKindFacts<
-  Extract<SelectionRef, { type: 'milkyWay' }>
+  Extract<SelectionRef, { type: 'milkyWay' }>,
+  Extract<SelectionRow, { type: 'milkyWay' }>,
+  Extract<FocusableTarget, { type: 'milkyWay' }>
 >[] = [
   {
     type: 'milkyWay',
@@ -16,5 +21,7 @@ export const milkyWaySelectionKinds: readonly SelectionKindFacts<
       ring: { radii: 1, slab: 'cosmo' },
     },
     mayHaveLabel: () => true,
+    toFocusable: () => ({ ...MILKY_WAY_INFO, ref: { type: 'milkyWay' } }),
+    displayName: (target) => target.displayName,
   },
 ];

@@ -10,7 +10,6 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { StarInfo } from '../../../../../@types/engine/StarInfo';
-import type { FocusableTarget } from '../../../../../@types/engine/FocusableTarget';
 import { SCALE_UNITS } from '../../../../../data/scaleUnits';
 import { deriveStarProperties } from '../../utils/deriveStarProperties';
 import { formatDistance } from '../../../../../utils/format/formatDistance';
@@ -36,7 +35,7 @@ type StarDetailCardProps = {
   target: StarInfo;
   isPinned?: boolean;
   layout?: CardLayout;
-  onFocus?: (target: FocusableTarget) => void;
+  onFocus?: () => void;
   onClose?: () => void;
 };
 
@@ -249,7 +248,7 @@ function StarDetailCard({
         }
         badge={detail.kind === 'photometry' ? detail.spectralClass : undefined}
         thumbnail={thumbnail}
-        onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
+        onFocus={isPinned ? onFocus : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={isPinned ? onClose : undefined}
       />

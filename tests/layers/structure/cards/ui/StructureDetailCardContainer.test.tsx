@@ -17,7 +17,7 @@ import { Provider } from 'react-redux';
 import StructureDetailCardContainer from '../../../../../src/layers/structure/cards/ui/StructureDetailCardContainer';
 import { createAppStore } from '../../../../../src/store/createAppStore';
 import { layerFactsSeeded, factsReported } from '../../../../../src/state/engine/engineSlice';
-import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
+import type { FocusableTarget } from '../../../../../src/@types/engine/FocusableTarget';
 
 // Render probe: wrap the real StructureDetailCard so we can count how many
 // times the container actually renders it. A same-count fact patch must leave
@@ -41,8 +41,9 @@ vi.mock(
   },
 );
 
-const virgo: StructureInfo = {
+const virgo: Extract<FocusableTarget, { type: 'structure' }> = {
   type: 'structure',
+  ref: { type: 'structure', id: 'virgo-m87' },
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'galaxy-cluster',

@@ -24,8 +24,7 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import InfoCard from '../../../src/components/InfoCard/InfoCard';
 import { createAppStore } from '../../../src/store/createAppStore';
-import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
-import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
+import type { FocusableTarget } from '../../../src/@types/engine/FocusableTarget';
 
 // A pinned structure renders its Detail through StructureDetailCardContainer
 // (the member-count fact is a store read), so every render below needs a
@@ -35,8 +34,9 @@ function withStore(children: ReactNode) {
   return createElement(Provider, { store, children });
 }
 
-const virgo: StructureInfo = {
+const virgo: Extract<FocusableTarget, { type: 'structure' }> = {
   type: 'structure',
+  ref: { type: 'structure', id: 'virgo-m87' },
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'galaxy-cluster',
@@ -44,8 +44,9 @@ const virgo: StructureInfo = {
   featured: true,
   physicalRadiusMpc: 2.2,
 };
-const coma: StructureInfo = {
+const coma: Extract<FocusableTarget, { type: 'structure' }> = {
   type: 'structure',
+  ref: { type: 'structure', id: 'coma' },
   id: 'coma',
   name: 'Coma Cluster',
   category: 'galaxy-cluster',
@@ -60,6 +61,7 @@ const coma: StructureInfo = {
 // because populating every field would obscure the test's intent.
 const galaxyStub = {
   type: 'galaxyCatalog',
+  ref: { type: 'galaxyCatalog', source: 0, index: 42 },
   index: 42,
   displayName: 'NGC 1234',
   sourceLabel: 'SDSS',
@@ -94,7 +96,7 @@ const galaxyStub = {
   diameterProvenance: 'fallback (30 kpc)',
   orientation: { axisRatio: 1, positionAngleDeg: 0, provenance: 'fallback' },
   thumbnailUrl: '',
-} as unknown as GalaxyInfo;
+} as unknown as FocusableTarget;
 
 describe('InfoCard hovered structure', () => {
   it('renders the structure hover preview when only a hovered structure is set', () => {

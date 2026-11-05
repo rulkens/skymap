@@ -9,6 +9,7 @@
  * Detail body for the MobileSheet to wrap.
  */
 
+import { useCallback } from 'react';
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
@@ -35,11 +36,24 @@ export type InfoCardProps = {
 
 function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): ReactNode {
   const isMobile = useIsMobile();
+  // Bound here so a card never rebuilds its target's identity; stable across hover changes.
+  const focusSelected = useCallback(() => {
+    if (selected !== null) onFocus?.(selected);
+  }, [selected, onFocus]);
+  const onFocusSelected = onFocus ? focusSelected : undefined;
 
   if (isMobile) {
     if (selected === null) return null;
     const { Detail } = detailCardFor(DETAIL_CARD, selected);
-    return <Detail target={selected} isPinned layout="phone" onFocus={onFocus} onClose={onClose} />;
+    return (
+      <Detail
+        target={selected}
+        isPinned
+        layout="phone"
+        onFocus={onFocusSelected}
+        onClose={onClose}
+      />
+    );
   }
 
   if (!hovered && !selected) return null;
@@ -52,7 +66,7 @@ function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): React
   return (
     <div className={cx(styles.root, 'infoCardStack')}>
       {selected && Detail && (
-        <Detail target={selected} isPinned onFocus={onFocus} onClose={onClose} />
+        <Detail target={selected} isPinned onFocus={onFocusSelected} onClose={onClose} />
       )}
       {compactTarget && Compact && <Compact target={compactTarget} />}
     </div>

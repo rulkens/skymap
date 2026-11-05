@@ -12,7 +12,6 @@ import cx from 'classnames';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
 import type { CraftInfo } from '../../../@types/engine/CraftInfo';
 import type { EarthSceneInfo } from '../../../@types/engine/EarthSceneInfo';
-import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import { formatDistance } from '../../../utils/format/formatDistance';
 import { formatRadiusM } from '../../../utils/format/formatRadiusM';
 import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
@@ -43,7 +42,7 @@ export type BodyDetailCardProps = {
    * distance is published. Rendered as a row on the non-star body branch only.
    */
   distanceMpc?: number | null;
-  onFocus?: (target: FocusableTarget) => void;
+  onFocus?: () => void;
   onClose?: () => void;
 };
 
@@ -107,7 +106,7 @@ function BodyDetailCard({
         eyebrow="Body"
         title={target.label}
         thumbnail={thumbnail}
-        onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
+        onFocus={isPinned ? onFocus : undefined}
         focusAriaLabel={`Focus camera on ${target.label}`}
         onClose={isPinned ? onClose : undefined}
       />

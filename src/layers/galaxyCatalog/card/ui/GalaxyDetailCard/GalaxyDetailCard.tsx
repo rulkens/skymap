@@ -29,7 +29,7 @@ export type GalaxyDetailCardProps = {
   target: GalaxyInfo;
   isPinned?: boolean;
   layout?: CardLayout;
-  onFocus?: (target: GalaxyInfo) => void;
+  onFocus?: () => void;
   onClose?: () => void;
 };
 
@@ -74,7 +74,7 @@ function GalaxyDetailCard({
         }
         badge={target.sourceLabel}
         thumbnail={thumbnail}
-        onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
+        onFocus={isPinned ? onFocus : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={isPinned ? onClose : undefined}
       />

@@ -12,8 +12,8 @@ import type { PlacedRow } from './selection/PlacedRow';
 
 /**
  * SelectionRow — the serializable display projection of a selected thing, held in the
- * saga-owned `selectionRows` cache. The galaxy arm is the small `GalaxyRow` (`buildFocusable`
- * builds the `GalaxyInfo` React-side). The `label` rides the row, not the async meta sidecar,
+ * saga-owned `selectionRows` cache. The galaxy arm is the small `GalaxyRow` (its kind's
+ * `toFocusable` builds the `GalaxyInfo` React-side). The `label` rides the row, not the async meta sidecar,
  * so a star's name shows before the JSON loads.
  *
  * `driver` rides only camera-hosting arms (`DrivenSelectionRow`), filled by the arm's
