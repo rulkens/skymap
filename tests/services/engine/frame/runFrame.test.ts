@@ -50,12 +50,12 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
-import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/drivers/cameraDrivers';
 import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
-import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
+import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/drivers/cameraEpochs';
 import {
   startCameraTween,
   setAutoRotate,
@@ -69,8 +69,8 @@ import {
 } from '../../../../src/data/orientation/orientationFrames';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { computeViewProj } from '../../../../src/utils/camera/projection/computeViewProj';
 import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
@@ -90,9 +90,9 @@ import {
   inputMoved,
   inputConsumed,
 } from '../../../../src/state/input/inputSlice';
-import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { earthArm } from '../../../fixtures/earthArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
@@ -100,8 +100,8 @@ import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { angleBetween } from '../../../helpers/math/angleBetween';
 
 function makeStore() {

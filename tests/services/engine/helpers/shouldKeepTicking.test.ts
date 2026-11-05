@@ -14,8 +14,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { shouldKeepTicking } from '../../../../src/services/engine/helpers/shouldKeepTicking';
-import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/drivers/cameraDrivers';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RootState } from '../../../../src/store/types';
 

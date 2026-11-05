@@ -18,21 +18,24 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 import { stepCameraRuntime } from '../../../../src/services/engine/camera/stepCameraRuntime';
 import { projectFramePose } from '../../../../src/services/engine/frame/projectFramePose';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
-import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../../src/services/engine/camera/cameraFraming';
+import {
+  NEAR_CLIP_MPC,
+  FAR_CLIP_MPC,
+} from '../../../../src/services/engine/camera/framing/cameraFraming';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
-import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
-import { isWorldArm } from '../../../../src/services/engine/camera/arms/isWorldArm';
+import { isWorldArm } from '../../../../src/services/engine/camera/arms/world/isWorldArm';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../../src/state/time/selectors';
 import { selectPendingInput } from '../../../../src/state/input/selectors';
 import { inputConsumed } from '../../../../src/state/input/inputSlice';
 import { pendingToInputSteps } from '../../../../src/utils/input/pendingToInputSteps';
-import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadiusMpc';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { pivotFraming } from '../../../../src/services/engine/camera/framing/pivotRadiusMpc';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import {
   aimCamera,
   commitCameraPose,
@@ -74,7 +77,7 @@ import {
   toggleControlScheme,
 } from '../../../../src/state/settings/core/cameraControlsSlice';
 import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { NO_INSETS_PX } from '../../../../src/data/layout/noInsetsPx';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];

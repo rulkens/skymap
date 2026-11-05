@@ -1,0 +1,51 @@
+/**
+ * Move a keyframe leg's START into a body's frame, through the §5.1 pair in
+ * `poseFrameConversion`; the body arm's `channels` cell owns the once-per-leg
+ * landmine. Nothing here converts Mpc↔metres — that stays the seam's alone
+ * (spec §10, `oneMpcSeam`).
+ */
+
+import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
+import type { BodyState } from '../../../../../@types/scene/BodyState';
+import type { CameraPose } from '../../../../../@types/camera/CameraPose';
+import type { Mat3 } from '../../../../../@types/math/Mat3';
+import type { Vec3 } from '../../../../../@types/math/Vec3';
+import { IDENTITY_MAT3 } from '../../../../../utils/math/identityMat3';
+import { bodyFixedEyeM } from '../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
+import { datumOnlyTerrainHeight } from '../../../../../utils/camera/terrain/datumOnlyTerrainHeight';
+import { orbitAnglesLookingAlong } from '../../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { bodyRelativePose } from '../../bodyFrame/bodyRelativePose';
+import { toBodyArm } from './poseFrameConversion';
+import { hostOrThrow } from '../hostOrThrow';
+import type { PositionedId } from '../../../../../@types/scene/PositionedId';
+
+/** Absolute Mpc channels → the same camera in `bodyId`'s fixed axes, metres. */
+export function toBodyFixedChannels(
+  pose: CameraPose,
+  bodyId: SceneBodyId,
+  bodies: ReadonlyMap<PositionedId, BodyState>,
+  basis: Readonly<Mat3>,
+): CameraPose {
+  const bodyState = hostOrThrow(
+    { body: bodyId },
+    { bodies, poseBasis: basis, upBasis: basis, terrainHeightAt: datumOnlyTerrainHeight },
+  ).state;
+  const eyeArm = toBodyArm(pose, basis, basis, bodyId, bodyState);
+  const eyeM = bodyFixedEyeM(eyeArm);
+  // The target is a POINT in the same world frame as the eye, so it crosses to
+  // metres through provider A directly; only `eyeRelBodyM` is meaningful for a
+  // point, so the basis argument is inert.
+  const target = bodyRelativePose({
+    camPosMpc: pose.target,
+    camBasisWorld: IDENTITY_MAT3,
+    bodyState,
+  }).eyeRelBodyM;
+  const forward: Vec3 = [eyeArm.basisLocal[6], eyeArm.basisLocal[7], eyeArm.basisLocal[8]];
+  const { yaw, pitch } = orbitAnglesLookingAlong(forward);
+  return {
+    target,
+    yaw,
+    pitch,
+    distance: Math.hypot(eyeM[0] - target[0], eyeM[1] - target[1], eyeM[2] - target[2]),
+  };
+}

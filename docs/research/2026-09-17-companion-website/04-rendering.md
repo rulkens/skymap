@@ -57,8 +57,8 @@ Authored list: `engine/frame/frameOrder.ts`; `expandFrameOrder.ts` → `executeF
 - **Slabs** — depth sliced into per-content-range brackets (NEAR0, COSMO, body-metre rows); each gets full depth precision; far-to-near composite is the inter-slab occlusion — `src/@types/engine/frame/Slab.d.ts`, `frame/slabs.ts`
 - **Reversed-Z, infinite far** — spec `docs/superpowers/specs/completed/2026-07-20-reversed-z-near0-depth.md`
 - **Camera-relative / RTC** — body-metre slab VPs built about the eye; star octree node origins rebased per node
-- **Unit ladder** — `src/data/scaleUnits.ts`, `src/data/renderOrigin.ts`; the one Mpc → m seam is `engine/camera/bodyRelativePose.ts`, gated by `tests/services/engine/camera/oneMpcSeam.test.ts`
-- **f64 compose, then narrow** — `utils/camera/composeBodySlabMvp.ts`; ADR 0010
+- **Unit ladder** — `src/data/scaleUnits.ts`, `src/data/renderOrigin.ts`; the one Mpc → m seam is `engine/camera/bodyFrame/bodyRelativePose.ts`, gated by `tests/services/engine/camera/oneMpcSeam.test.ts`
+- **f64 compose, then narrow** — `utils/camera/bodyCompose/composeBodySlabMvp.ts`; ADR 0010
 - **NEAR0 overlay clip rescale** — the rasterizer floors `w` near 1e-20 — `frame/near0OverlayClipScale.ts`
 - **Homogeneous far-point ray reconstruction** under reversed-Z — `gpu/shaders/atmosphere/shell/fragment.wesl`
 

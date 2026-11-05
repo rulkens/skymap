@@ -9,7 +9,7 @@ import type { FrameView } from '../../../../../@types/engine/frame/FrameView';
 import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
 import type { SurfaceTileBodyId } from '../../format/@types/SurfaceTileBodyId';
 import { isSurfaceTileBodyId } from '../../format/utils/isSurfaceTileBodyId';
-import { orbitForwardOf } from '../../../../../utils/camera/orbitForwardOf';
+import { orbitForwardOf } from '../../../../../utils/camera/orbitPose/orbitForwardOf';
 import { visibleBodyRows } from '../../../../../services/engine/frame/visibleBodyRows';
 
 export function tileBodiesInView(ctx: FrameView): readonly (SceneBodyId & SurfaceTileBodyId)[] {

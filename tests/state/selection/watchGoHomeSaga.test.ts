@@ -21,7 +21,7 @@ import { bodySelectionRow } from '../../../src/layers/body/selection/present/bod
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
-import { bodyHomePose } from '../../../src/services/engine/camera/bodyHomePose';
+import { bodyHomePose } from '../../../src/services/engine/camera/framing/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';

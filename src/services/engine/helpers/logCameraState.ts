@@ -9,11 +9,11 @@
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { pivotRadiusMpc } from '../camera/framing/pivotRadiusMpc';
 import { frameKey } from '../camera/arms/frameKey';
-import { isBodyArm } from '../camera/arms/isBodyArm';
-import { isSiteArm } from '../camera/arms/isSiteArm';
-import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
+import { isBodyArm } from '../camera/arms/body/isBodyArm';
+import { isSiteArm } from '../camera/arms/site/isSiteArm';
+import { bodyFixedEyeM } from '../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 

@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
 import { validateCompositeExclusivity } from '../../../../src/services/engine/animation/validateCompositeExclusivity';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CompositeTrack } from '../../../../src/@types/animation/compiledClip/CompositeTrack';
 import {

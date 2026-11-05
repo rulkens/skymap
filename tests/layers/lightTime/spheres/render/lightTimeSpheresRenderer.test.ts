@@ -5,7 +5,7 @@ import { LIGHT_TIME_SPHERES } from '../../../../../src/layers/lightTime/spheres/
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { ViewFrustum } from '../../../../../src/@types/camera/ViewFrustum';
-import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 
 // Float indices of the uniform block — `src/services/gpu/shaders/lightTime/io.wesl`, restated so a silent
 // renderer-side shift fails here rather than on screen.

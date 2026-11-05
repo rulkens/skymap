@@ -11,10 +11,10 @@
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
-import { frustumRayAxis } from '../../../../utils/camera/frustumRayAxis';
+import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitPose/orbitForwardOf';
+import { frustumRayAxis } from '../../../../utils/camera/frustum/frustumRayAxis';
 import vsCode from '../../../../services/gpu/shaders/zoneOfAvoidance/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/zoneOfAvoidance/fragment.wesl?static';
 import fsPickCode from '../../../../services/gpu/shaders/zoneOfAvoidance/fragmentPick.wesl?static';

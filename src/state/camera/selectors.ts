@@ -5,7 +5,7 @@
  */
 
 import { cameraRoute } from '../../store/constants';
-import { isWorldArm } from '../../services/engine/camera/arms/isWorldArm';
+import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
 import { selectGestureHeld } from '../input/selectors';
 import type { RootState } from '../../store/types';
 import type { CameraState } from '../../@types/camera/CameraState';

@@ -13,7 +13,7 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { deriveView } from '../../../../src/services/engine/frame/deriveView';
-import { faceViewSpec } from '../../../../src/utils/camera/faceViewSpec';
+import { faceViewSpec } from '../../../../src/utils/camera/viewRig/faceViewSpec';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
@@ -48,7 +48,7 @@ import { MILKY_WAY_FADE_FULL_PX } from '../../../../src/services/engine/galaxyGe
 import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';

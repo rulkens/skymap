@@ -19,7 +19,7 @@ import reducer, {
   resolveClipStart,
   commitCameraPose,
 } from '../../../src/state/camera/cameraSlice';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';

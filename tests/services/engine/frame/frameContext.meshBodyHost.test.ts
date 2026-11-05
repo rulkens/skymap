@@ -19,7 +19,7 @@ import { HOSTLESS_MESH_BODIES } from '../../../../src/data/bodies/hostlessMeshBo
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { BODY_SLAB_ROWS } from '../../../../src/layers/body/slabs/present/bodySlabRows';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -29,7 +29,7 @@ import type { CameraProjection } from '../../../../src/@types/camera/CameraProje
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };

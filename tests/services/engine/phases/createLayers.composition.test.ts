@@ -18,7 +18,7 @@ import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/layers/body/textures/data
 import { bodyTextureSlotKey } from '../../../../src/layers/body/textures/load/bodyTextureSlotKey';
 import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/layers/body/surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';

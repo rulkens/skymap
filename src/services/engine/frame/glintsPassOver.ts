@@ -12,7 +12,7 @@ import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
 import { bodyGlintBackdropFade } from '../../../utils/scene/bodyGlintBackdropFade';
 import { packBodyGlints } from '../../../utils/scene/packBodyGlints';
-import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 
 export function glintsPassOver(

@@ -6,8 +6,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { foldToWorld } from '../../../../../src/services/engine/camera/arms/foldToWorld';
-import { absoluteArm } from '../../../../../src/utils/camera/absoluteArm';
-import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
+import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 

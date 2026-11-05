@@ -11,7 +11,7 @@ import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 import { isRegistryBodyId } from '../scene/isRegistryBodyId';
 import { isSurfaceSiteId } from '../scene/isSurfaceSiteId';
 import { parseFiniteNumbers } from './parseFiniteNumbers';
-import { MIN_DISTANCE_MPC } from '../camera/clampDistance';
+import { MIN_DISTANCE_MPC } from '../camera/orbitCamera/clampDistance';
 
 export function decodeFramedPose(value: string): FramedCameraPose | null {
   const fields = value.split(',');

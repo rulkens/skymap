@@ -12,8 +12,8 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
 import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
-import { absoluteArm } from '../../utils/camera/absoluteArm';
-import { clampCameraTuning } from '../../utils/camera/clampCameraTuning';
+import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
+import { clampCameraTuning } from '../../utils/camera/orbitCamera/clampCameraTuning';
 import { inputGestureStarted } from '../input/inputSlice';
 import type { CameraState } from '../../@types/camera/CameraState';
 import type { CameraAim } from '../../@types/camera/CameraAim';

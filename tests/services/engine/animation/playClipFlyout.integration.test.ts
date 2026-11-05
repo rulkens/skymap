@@ -17,7 +17,7 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { simulateCameraFrame } from '../../../helpers/camera/simulateCameraFrame';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 

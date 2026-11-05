@@ -57,8 +57,8 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
   'src/services/engine/frame/runFrame.ts',
   'src/services/engine/phases/wireInput.ts',
   'src/services/engine/engine.ts',
-  'src/services/engine/camera/cameraDrivers.ts',
-  'src/services/engine/camera/replayInput.ts',
+  'src/services/engine/camera/drivers/cameraDrivers.ts',
+  'src/services/engine/camera/input/replayInput.ts',
   'src/services/engine/camera/stepCameraRuntime.ts',
   'src/layers/galaxyCatalog/frame.ts',
 ];

@@ -11,7 +11,7 @@ import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 import type { PoseFrame } from '../../../../../src/@types/camera/PoseFrame';
 import type { CameraArmBasisCtx } from '../../../../../src/@types/camera/CameraArmBasisCtx';
-import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import type { PositionedId } from '../../../../../src/@types/scene/PositionedId';
 

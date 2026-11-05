@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest';
 import { flowOrbit } from '../../../../src/data/animation/clips/flowOrbit';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import { resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 

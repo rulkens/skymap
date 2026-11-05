@@ -7,9 +7,9 @@ import { mat4 } from 'wgpu-matrix';
 
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
-import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
+import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { cross3 } from '../../../../src/utils/math/cross3';
 import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';

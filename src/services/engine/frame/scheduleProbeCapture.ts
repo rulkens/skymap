@@ -16,7 +16,7 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../compositions/appCubemapCaptures';
 import { PROBE_REFRESH_INTERVAL_MS } from '../../../data/rendering/probeRefreshIntervalMs';
 import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
-import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
+import { faceViewSpec } from '../../../utils/camera/viewRig/faceViewSpec';
 import { cubemapCaptureFrame } from './cubemapCaptureFrame';
 import { deriveView } from './deriveView';
 import { bodySlabRosterIds } from './bodySlabRosterIds';

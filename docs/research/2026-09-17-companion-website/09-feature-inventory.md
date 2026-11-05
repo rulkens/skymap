@@ -71,9 +71,9 @@ Counted as table rows in the area sections below (row ids A1…M21). The setting
 
 | # | Feature | What the user sees or does | How it is triggered | Source | Status |
 |---|---|---|---|---|---|
-| B1 | Orbit | Drag to swing the view around whatever you are looking at. | Left-drag; one-finger drag. | `src/services/camera/orbitControls.ts:57-60`; `src/services/camera/applyInputToCamera.ts:69-74` | shipped |
-| B2 | Pan | Slide the view sideways without turning. | Right-drag or middle-drag (mouse only). | `src/services/camera/orbitControls.ts:60`; `src/services/camera/applyInputToCamera.ts:45-66` | shipped |
-| B3 | Zoom | Move closer or further away. In open space you zoom toward the centre of view. | Mouse wheel. | `src/services/camera/orbitControls.ts:128-142`; `src/utils/camera/zoomedDistance.ts:17-36` | shipped |
+| B1 | Orbit | Drag to swing the view around whatever you are looking at. | Left-drag; one-finger drag. | `src/services/camera/orbitControls.ts:57-60`; `src/services/engine/camera/arms/world/applyInputToCamera.ts:69-74` | shipped |
+| B2 | Pan | Slide the view sideways without turning. | Right-drag or middle-drag (mouse only). | `src/services/camera/orbitControls.ts:60`; `src/services/engine/camera/arms/world/applyInputToCamera.ts:45-66` | shipped |
+| B3 | Zoom | Move closer or further away. In open space you zoom toward the centre of view. | Mouse wheel. | `src/services/camera/orbitControls.ts:128-142`; `src/services/engine/camera/input/utils/zoomedDistance.ts:17-36` | shipped |
 | B4 | Trackpad pinch | Pinch on a trackpad to zoom, eight times faster than a wheel notch. | Trackpad pinch (arrives as Ctrl+wheel). | `src/services/camera/orbitControls.ts:137`; `src/data/camera/pinchWheelGain.ts:1-5` | shipped |
 | B5 | Touch pinch | Spread or pinch two fingers to zoom. | Two-finger pinch. No two-finger rotate or pan. | `src/services/camera/orbitControls.ts:69-73,112-117` | shipped |
 | B6 | Select | Click or tap anything to pin its information card. Clicking empty sky unpins. The view does not move. | Click / tap (less than 4 px of movement). | `src/services/camera/orbitControls.ts:38-41,86-94`; `src/services/engine/phases/wireInput.ts:200-211` | shipped |
@@ -84,13 +84,13 @@ Counted as table rows in the area sections below (row ids A1…M21). The setting
 | B11 | Home | Fly back to Earth, sunlit side. | `H` or `E`, or the Home button (top bar). | `src/state/input/keyboardShortcuts.ts:59`; `src/components/containers/TopBarContainer.tsx:43,49` | shipped |
 | B12 | Clear | Unpin the card and stop any tour, exhibit or clip. | `Esc`, or the × on the card. | `src/state/input/keyboardShortcuts.ts:51`; `src/components/InfoCard/CardHeader/CardHeader.tsx:35-45` | shipped |
 | B13 | Flight | A flight to a galaxy, structure or star takes 0.6 seconds and keeps your viewing angle. | Any fly-to. | `src/data/camera/focusMoveDefaults.ts` (`DEFAULT_FOCUS_MOVES`); `src/state/camera/focusTweenDescriptor.ts:23-27` | shipped |
-| B14 | Following | When you fly to something that moves (a planet, moon or spacecraft) the view keeps travelling with it as time runs. | Automatic while it stays the focus. | `src/services/engine/camera/applyFocusedBodyPivot.ts:1-10,38-45` | shipped |
-| B15 | Surface mode | Close to a planet the controls change by themselves: drag the ground to slide across it, drag the sky to look around, and the ground stays put while the planet spins. | Automatic below about half a planet-radius of altitude; releases above about 0.9. | `src/services/engine/camera/arms/bodyCameraArm.ts:134-179`; `src/utils/camera/latchSurfaceGesture.ts:30-57` | shipped |
-| B16 | Tilt | Near a surface, tip the view up toward the horizon or swing the heading. | Right-drag or middle-drag near a surface. Mouse only; no touch equivalent. | `src/utils/camera/latchSurfaceGesture.ts:34-48`; `src/utils/camera/draggedSurfacePose.ts:83-117` | shipped |
-| B17 | Zoom to the cursor | Near a surface the wheel zooms toward the spot under the mouse pointer. | Mouse wheel in surface mode. | `src/utils/camera/surfaceZoomStep.ts:45-77` | shipped |
-| B18 | Site view | Near a rover or the scanned park, dragging circles around it like a turntable. | Automatic close to one of five ground sites. | `src/utils/camera/steppedSitePose.ts:25-50`; `src/data/bodies/surfaceFixedSites.ts:21-78` | shipped |
-| B19 | Ground floor | You cannot fly through the ground: the view is held about 15 m above the terrain (on Earth). | Automatic. | `src/utils/camera/flooredBodyPose.ts:12-32`; `src/services/engine/camera/pivotRadiusMpc.ts:42-46` | shipped |
-| B20 | Zoom limits | You can pull back as far as 60 billion parsecs and no further. | Automatic. | `src/utils/camera/clampDistance.ts:58` | shipped |
+| B14 | Following | When you fly to something that moves (a planet, moon or spacecraft) the view keeps travelling with it as time runs. | Automatic while it stays the focus. | `src/services/engine/camera/bodyFrame/applyFocusedBodyPivot.ts:1-10,38-45` | shipped |
+| B15 | Surface mode | Close to a planet the controls change by themselves: drag the ground to slide across it, drag the sky to look around, and the ground stays put while the planet spins. | Automatic below about half a planet-radius of altitude; releases above about 0.9. | `src/services/engine/camera/arms/body/bodyCameraArm.ts:134-179`; `src/services/engine/camera/arms/body/gesture/utils/latchSurfaceGesture.ts:30-57` | shipped |
+| B16 | Tilt | Near a surface, tip the view up toward the horizon or swing the heading. | Right-drag or middle-drag near a surface. Mouse only; no touch equivalent. | `src/services/engine/camera/arms/body/gesture/utils/latchSurfaceGesture.ts:34-48`; `src/services/engine/camera/arms/body/gesture/utils/draggedSurfacePose.ts:83-117` | shipped |
+| B17 | Zoom to the cursor | Near a surface the wheel zooms toward the spot under the mouse pointer. | Mouse wheel in surface mode. | `src/services/engine/camera/arms/body/gesture/utils/surfaceZoomStep.ts:45-77` | shipped |
+| B18 | Site view | Near a rover or the scanned park, dragging circles around it like a turntable. | Automatic close to one of five ground sites. | `src/services/engine/camera/arms/site/utils/steppedSitePose.ts:25-50`; `src/data/bodies/surfaceFixedSites.ts:21-78` | shipped |
+| B19 | Ground floor | You cannot fly through the ground: the view is held about 15 m above the terrain (on Earth). | Automatic. | `src/services/engine/camera/arms/body/utils/flooredBodyPose.ts:12-32`; `src/services/engine/camera/framing/pivotRadiusMpc.ts:42-46` | shipped |
+| B20 | Zoom limits | You can pull back as far as 60 billion parsecs and no further. | Automatic. | `src/utils/camera/orbitCamera/clampDistance.ts:58` | shipped |
 | B21 | Auto-rotate | Let the view turn slowly on its own (about one turn in two minutes). | Play/pause button in the top bar. Off by default. No key. | `src/components/AutoRotateToggle/AutoRotateToggle.tsx:20-33`; `src/state/camera/cameraSlice.ts:32-37` | shipped |
 | B22 | Which way is up | Choose what counts as "level": the solar system, Earth's equator, the Milky Way, or the local superclusters. The view turns over one second. | Settings → Display → Orientation, or `#orientation=`. | `src/data/orientation/orientationFrames.ts:54-63`; `src/state/camera/watchOrientationChangeSaga.ts:16-37` | shipped |
 | B23 | Field of view | Make the lens wider or narrower. | Settings → Display → Field of view (0.5–100°, default 60°). | `src/components/SettingsPanel/DisplaySection.tsx:201-209`; `src/data/defaults.ts:129` | shipped |
@@ -155,7 +155,7 @@ Result order: Milky Way first, then named things (famous galaxies, planets, moon
 | E11 | Exhibit: Observable Universe | Pulls back until the whole edge-of-the-universe sphere fits the screen, whatever its shape. | Search or `#exhibit=observableUniverse`. | `src/data/exhibits/observableUniverse.ts:13-59` | shipped |
 | E12 | Exhibit notes | Each exhibit shows a headline, a paragraph, "what you're seeing" and "how it was made" notes, a small facts table and links to the sources. Two have a colour key with a "Galaxies shown/hidden" switch. | Automatic; "Exit view" button or `Esc` leaves. | `src/components/ExhibitOverlay/ExhibitOverlay.tsx:46-79`; `src/data/exhibits/cosmicWeb.ts:54-68` | shipped |
 | E13 | Clips | 26 scripted camera moves: 10 stand-alone (for example "Earth to the Edge", "Fly to Horizon", "Perseverance to Søndermarken") and 16 that are the steps of the grand tour. | `#clip=<id>`, or the debug panel. Not in search, no card. | `src/data/animation/clips/clipRegistry.ts:63-91` (26 keys, counted) | shipped by link; otherwise dev-only |
-| E14 | Takeover behaviour | While a tour or exhibit runs, the normal panels disappear and dragging is ignored; leaving puts your settings back as they were. A clip keeps the panels. | Automatic. | `src/components/App/App.tsx:85-89,145-151`; `src/services/engine/camera/replayInput.ts:118-125` | shipped |
+| E14 | Takeover behaviour | While a tour or exhibit runs, the normal panels disappear and dragging is ignored; leaving puts your settings back as they were. A clip keeps the panels. | Automatic. | `src/components/App/App.tsx:85-89,145-151`; `src/services/engine/camera/input/replayInput.ts:118-125` | shipped |
 | E15 | Start-up on a tour or exhibit link | A link to a tour, exhibit or clip opens straight into it, without the welcome screen. | `#tour=`, `#exhibit=`, `#clip=`. | `src/state/navigation/navigateSaga.ts:147-166` | shipped |
 | E16 | Tour quick-start button | An extra top-bar button that starts the grand tour at once. | `?tour` in the address. | `src/components/containers/TopBarContainer.tsx:24-26,52`; `src/components/containers/TourDebugPillContainer.tsx:1-10` | flagged (marked temporary in code) |
 
@@ -353,9 +353,9 @@ All developer-facing. The debug panel has no build-time gate: pressing `D` opens
 
 | Gesture | In open space | Close to a planet's surface | Source |
 |---|---|---|---|
-| Left-drag | Orbit around the target | On ground: slide the ground under the cursor. On sky: look around. At a shallow angle: slide sideways. | `src/services/camera/applyInputToCamera.ts:69-74`; `src/utils/camera/latchSurfaceGesture.ts:30-57` |
-| Right-drag or middle-drag | Pan | Tilt and turn | `src/services/camera/applyInputToCamera.ts:45-66`; `src/utils/camera/draggedSurfacePose.ts:83-117` |
-| Wheel | Zoom toward the centre of view | Zoom toward the point under the cursor | `src/utils/camera/zoomedDistance.ts:17-36`; `src/utils/camera/surfaceZoomStep.ts:62-77` |
+| Left-drag | Orbit around the target | On ground: slide the ground under the cursor. On sky: look around. At a shallow angle: slide sideways. | `src/services/engine/camera/arms/world/applyInputToCamera.ts:69-74`; `src/services/engine/camera/arms/body/gesture/utils/latchSurfaceGesture.ts:30-57` |
+| Right-drag or middle-drag | Pan | Tilt and turn | `src/services/engine/camera/arms/world/applyInputToCamera.ts:45-66`; `src/services/engine/camera/arms/body/gesture/utils/draggedSurfacePose.ts:83-117` |
+| Wheel | Zoom toward the centre of view | Zoom toward the point under the cursor | `src/services/engine/camera/input/utils/zoomedDistance.ts:17-36`; `src/services/engine/camera/arms/body/gesture/utils/surfaceZoomStep.ts:62-77` |
 | Trackpad pinch / `Ctrl`+wheel | Zoom, 8× faster | Same | `src/services/camera/orbitControls.ts:137` |
 | Click | Select (pin the card) | Same | `src/services/engine/phases/wireInput.ts:200-211` |
 | Click on empty sky | Unselect | Same | `src/services/engine/interaction/clickHandler.ts:14-15` |
@@ -363,9 +363,9 @@ All developer-facing. The debug panel has no build-time gate: pressing `D` opens
 | Double-click | Fly to the selected thing | Same | `src/services/engine/phases/wireInput.ts:212-217` |
 | Hover | Preview card | Same | `src/services/engine/interaction/inputBindings.ts:101-112` |
 | Right-click menu | Suppressed on the picture | Same | `src/services/camera/orbitControls.ts:165-168` |
-| Any drag near a rover/site | Turntable around the site (all buttons alike) | — | `src/utils/camera/steppedSitePose.ts:25-38` |
+| Any drag near a rover/site | Turntable around the site (all buttons alike) | — | `src/services/engine/camera/arms/site/utils/steppedSitePose.ts:25-38` |
 
-Rates: 0.005 radians per pixel of drag in open space (100 px ≈ 29°), slower near a body; a click is a press-and-release within 4 px. Source: `src/utils/camera/orbitRadPerPixel.ts:17-28`; `src/services/camera/orbitControls.ts:41`.
+Rates: 0.005 radians per pixel of drag in open space (100 px ≈ 29°), slower near a body; a click is a press-and-release within 4 px. Source: `src/services/engine/camera/input/utils/orbitRadPerPixel.ts:17-28`; `src/services/camera/orbitControls.ts:41`.
 
 **Touch**
 

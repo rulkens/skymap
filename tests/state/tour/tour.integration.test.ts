@@ -14,7 +14,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
-import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
+import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/drivers/cameraEpochs';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { cosmicFlows } from '../../../src/compositions/clips/cosmicFlows';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';

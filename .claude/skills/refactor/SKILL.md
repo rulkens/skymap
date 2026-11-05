@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: Use when performing a mechanical code refactor in skymap. Rename a symbol repo-wide, extract a symbol into its own file, inline or delete a passthrough wrapper, find who uses a symbol, or move/reorganize `.ts`/`.tsx` files. Triggers like "/refactor", "rename this function everywhere", "extract X into its own file", "inline this wrapper", "delete this unused helper", "who uses this symbol", "move X to Y", "rename this file", "update all the imports", "reorganize the utils folder", "shift these renderers into a subfolder", "folder reorg".
+description: Use when performing a mechanical code refactor in skymap. Rename a symbol repo-wide, extract a symbol into its own file, inline or delete a passthrough wrapper, find who uses a symbol, or move/reorganize files of any kind (TS, CSS, assets). Triggers like "/refactor", "rename this function everywhere", "extract X into its own file", "inline this wrapper", "delete this unused helper", "who uses this symbol", "move X to Y", "rename this file", "update all the imports", "reorganize the utils folder", "shift these renderers into a subfolder", "folder reorg".
 ---
 
 # `/refactor`: ts-morph Refactoring CLI
@@ -60,8 +60,7 @@ single save; a throw on any entry aborts the whole batch before disk is touched)
   `{ target, summary: { refs, files, tests }, refs: [...] }`.
 
 - **Moving files** is `npm run move-files -- <from> <to>` (or `--manifest <moves.json>` with
-  `[{from,to}, ...]`), not a `refactor` subcommand. It rewrites both the moved file's own
-  imports and every importer's relative path, and drags the `tests/` mirror.
+  `[{from,to}, ...]`), not a `refactor` subcommand. See [`move-files`](#move-files) below.
 
 ## Refusals are the workflow, not errors to fight
 
@@ -84,10 +83,11 @@ re-run.
   delete has no safe partial form. It throws with the full reference list; remove the
   references first, then re-run.
 
-## Blind spots that apply to EVERY subcommand
+## Blind spots of the `refactor` subcommands
 
 Only TypeScript import/export specifiers and value references are AST-tracked. These
-are NOT rewritten by any subcommand:
+are NOT rewritten by `rename`, `extract`, `inline` or `delete`. `move-files` has its own
+list, below; it does handle `import()`, `vi.mock()` and `?worker` specifiers.
 
 - **`.wesl` shader imports** (`import package::...`): a separate module graph.
 - **String-literal paths**: `rawDataPath()` keys, shader/asset URLs, dynamic
@@ -115,15 +115,33 @@ catch those by hand.
 
 ### Per-subcommand gaps
 
-- **`move-files`** (`packages/move-files/README.md`) rewrites TS and CSS references, drags
-  the test mirror and a `.tsx`'s `.module.css`, and exits 1 listing `file:line` for every
-  string that still names an old path or no longer resolves. It does not rewrite
-  `.astro`/`.mdx` or non-import path strings (the exit-1 list is how you find them), does
-  not read `.wesl` at all (grep for `package::` by hand), does not mirror faceted tests (`foo.facet.test.ts`; add manifest entries), and
-  leaves the emptied source directory behind. `refactor rename`'s file move skips CSS.
+- **`rename`**: its file move skips CSS.
 - **`extract`** needs an exported symbol, can write `../../node_modules/<pkg>/index`
   specifiers (rewrite them to the bare package name), and re-quotes to double
   quotes, so run `npx prettier --write` on the touched files.
+
+## `move-files`
+
+Run it from the repo root. It rewrites JS, TS and CSS references project-wide: imports,
+`import()`, `require()`, `vi.mock()`/`jest.mock()` paths, `?worker` suffixes, aliases,
+`composes … from`, `@import` and `url()`. It drags the `tests/` mirror and a `.tsx`'s
+`.module.css`. Full reference: `packages/move-files/README.md`.
+
+| Exit | What it means                                   | What to do                                                                                                    |
+| ---- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 0    | Clean                                           | Commit the move                                                                                               |
+| 1    | **The moves are written** (unless `--dry`), and `file:line` findings list what they newly broke | Fix each finding by hand. Don't re-run: the sources are gone, so it would be refused                          |
+| 2    | Refused, nothing written, every reason listed   | Fix the batch and re-run                                                                                      |
+| 3    | A write failed partway; stderr names the path and every file finished | Finish by hand. A moved file not yet home sits beside its destination as `<name>.move-files-tmp` |
+
+Reported as findings when they break, not rewritten: `.astro`, `.mdx`, `.vue` and `.svelte`
+imports, Sass and Less, and non-import path strings.
+
+Not seen at all, so grep for these by hand: `.wesl` (`package::` imports),
+`/// <reference path>`, JSDoc `import()` and `import.meta.glob`.
+
+It doesn't mirror faceted tests (`foo.facet.test.ts`; add manifest entries), and it leaves
+the emptied source directory behind.
 
 ## Always
 
@@ -140,6 +158,6 @@ catch those by hand.
 ## For orchestrators
 
 Subagents do NOT see project skills. Any plan task or subagent dispatch that renames,
-extracts, inlines, deletes, moves, or reorganizes TS files MUST name the relevant
-`npm run refactor` subcommand in the dispatch prompt so the implementer uses it
-instead of hand-editing import paths.
+extracts, inlines, deletes, moves, or reorganizes files MUST name the command in the
+dispatch prompt (`npm run move-files` for a move, the `npm run refactor` subcommand for
+the rest) so the implementer uses it instead of hand-editing import paths.

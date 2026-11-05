@@ -16,7 +16,7 @@ import { deriveFrameContext } from './frameContext';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
-import { absoluteArm } from '../../../utils/camera/absoluteArm';
+import { absoluteArm } from '../../../utils/camera/arms/absoluteArm';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
 
 export function cubemapCaptureFrame(input: {

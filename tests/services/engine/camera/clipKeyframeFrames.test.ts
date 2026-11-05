@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
-import { evaluateFramedClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateFramedClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import {
   all,
   dollyTo,
@@ -15,18 +15,18 @@ import {
   spin,
   tween,
 } from '../../../../src/services/engine/animation/effectHelpers';
-import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/drivers/cameraDrivers';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
 import { rowFor } from '../../../../src/services/engine/camera/arms/rowFor';
-import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
+import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { skySpotRadial } from '../../../../src/utils/geo/skySpotRadial';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
-import { decodeBodyFixedChannels } from '../../../../src/utils/camera/decodeBodyFixedChannels';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { decodeBodyFixedChannels } from '../../../../src/services/engine/camera/arms/body/utils/decodeBodyFixedChannels';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
+import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { clipStarted } from '../../../../src/state/camera/cameraSlice';
@@ -43,14 +43,17 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { PositionedId } from '../../../../src/@types/scene/PositionedId';
 
-vi.mock('../../../../src/services/engine/camera/toBodyFixedChannels', async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import('../../../../src/services/engine/camera/toBodyFixedChannels')
-    >();
-  return { ...actual, toBodyFixedChannels: vi.fn(actual.toBodyFixedChannels) };
-});
-import { toBodyFixedChannels } from '../../../../src/services/engine/camera/toBodyFixedChannels';
+vi.mock(
+  '../../../../src/services/engine/camera/arms/body/toBodyFixedChannels',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('../../../../src/services/engine/camera/arms/body/toBodyFixedChannels')
+      >();
+    return { ...actual, toBodyFixedChannels: vi.fn(actual.toBodyFixedChannels) };
+  },
+);
+import { toBodyFixedChannels } from '../../../../src/services/engine/camera/arms/body/toBodyFixedChannels';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 

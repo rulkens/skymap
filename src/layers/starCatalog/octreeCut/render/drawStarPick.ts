@@ -1,7 +1,7 @@
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogPickRenderer } from '../../survey/@types/StarCatalogPickRenderer';
 import type { StarCutInputs } from '../@types/StarCutInputs';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import type { FocusUniformsValue } from '../../../../@types/rendering/FocusUniformsValue';
 import { starFocusRelCam } from './starFocusRelCam';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';

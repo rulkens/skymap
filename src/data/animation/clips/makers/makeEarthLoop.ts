@@ -14,7 +14,7 @@ import type { Ease } from '../../../../@types/animation/Ease';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { dollyTo, spin, all, seq, hold, hide } from '../../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
-import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { ORIENTATION_FRAMES } from '../../../orientation/orientationFrames';
 import { SCENE_EARTH } from '../../../bodies/sceneEarth';
 import { outerBoundRadiusM } from '../../../../utils/occlusion/outerBoundRadiusM';

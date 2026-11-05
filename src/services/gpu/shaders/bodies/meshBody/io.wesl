@@ -5,7 +5,7 @@
 // FRAME CONTRACT: 'camPosLocal' (metres, relative to this body's centre) and
 // 'sunDirLocal' are both in the HOST body's fixed axes -- the axes the vertex
 // stage's 'localPos = u.model * position' lands in, NOT the body's own frame
-// that 'utils/camera/sunDirLocal.ts' returns. 'u.model' is the body's tumble
+// that 'utils/camera/bodyCompose/sunDirLocal.ts' returns. 'u.model' is the body's tumble
 // rotation only (for rotating normal/tangent); the view rotation lives in
 // 'u.mvp' alone.
 // The reflection probe is CAPTURED in these host axes too ('scheduleProbeCapture'

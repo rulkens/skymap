@@ -21,7 +21,7 @@ revision and needs the user's word; the shape is already fixed.
 
 Every camera motion is an `InputStep` (`src/@types/camera/InputStep.d.ts`)
 that the `input` slice (`src/state/input/inputSlice.ts`)
-collapses per frame and `replayInput` (`src/services/engine/camera/replayInput.ts`)
+collapses per frame and `replayInput` (`src/services/engine/camera/input/replayInput.ts`)
 replays through one path — the surface controller in a body arm, the world-arm
 fold otherwise. `gestureEnd` is the single commit site: it bakes the register,
 and drops the surface latch. Nothing downstream can tell a

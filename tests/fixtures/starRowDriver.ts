@@ -5,7 +5,7 @@
  * null. Same churn rationale as `makeGalaxyRow`: one edit when the shape grows.
  */
 
-import { SURFACE_STANDOFF_RADII } from '../../src/utils/camera/clampDistance';
+import { SURFACE_STANDOFF_RADII } from '../../src/utils/camera/orbitCamera/clampDistance';
 
 import type { DriverGeometry } from '../../src/@types/engine/camera/DriverGeometry';
 import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';

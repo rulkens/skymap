@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { near0LabelProjection } from '../../../../src/services/engine/frame/near0LabelProjection';
-import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
-import { foregroundFrustum } from '../../../../src/utils/camera/foregroundFrustum';
+import { computeForegroundViewProj } from '../../../../src/utils/camera/projection/computeForegroundViewProj';
+import { foregroundFrustum } from '../../../../src/utils/camera/frustum/foregroundFrustum';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../src/services/engine/frame/slabs';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 
 const M = SCALE_UNITS.M_TO_MPC;
 

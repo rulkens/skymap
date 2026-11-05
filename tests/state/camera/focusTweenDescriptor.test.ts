@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { focusTweenDescriptor } from '../../../src/state/camera/focusTweenDescriptor';
-import { galaxyFocusDistance } from '../../../src/services/engine/camera/galaxyFocusDistance';
-import { structureFocusDistance } from '../../../src/services/engine/camera/structureFocusDistance';
+import { galaxyFocusDistance } from '../../../src/services/engine/camera/framing/galaxyFocusDistance';
+import { structureFocusDistance } from '../../../src/services/engine/camera/framing/structureFocusDistance';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,

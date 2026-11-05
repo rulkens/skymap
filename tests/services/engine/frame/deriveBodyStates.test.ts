@@ -14,8 +14,8 @@ import { EPHEMERIS_CORRECTIONS } from '../../../../src/data/bodies/ephemerisCorr
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { correctionSeriesAt } from '../../../../src/utils/orbit/correctionSeriesAt';
-import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadiusM';
-import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
+import { siteGroundRadiusM } from '../../../../src/utils/camera/arms/siteGroundRadiusM';
+import { sitePointBodyFixed } from '../../../../src/utils/camera/arms/sitePointBodyFixed';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SAMPLED_BODIES } from '../../../../src/data/bodies/sampledBodies';

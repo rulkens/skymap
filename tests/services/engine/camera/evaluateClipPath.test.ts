@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import {
   flyPath,
   atPoint,

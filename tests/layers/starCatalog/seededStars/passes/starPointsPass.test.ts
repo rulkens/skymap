@@ -20,7 +20,7 @@ import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes/
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
-import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../../src/utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { starExposureRamp } from '../../../../../src/layers/starCatalog/photometry/utils/starExposureRamp';
 import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
@@ -29,7 +29,7 @@ import { SCENE_S_STARS } from '../../../../../src/data/bodies/sceneSStars';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { positionedSeededStars } from '../../../../../src/layers/starCatalog/seededStars/present/positionedSeededStars';
 import { distanceMpc } from '../../../../../src/utils/math/distanceMpc';
-import { projectToScreenPx } from '../../../../../src/utils/camera/projectToScreenPx';
+import { projectToScreenPx } from '../../../../../src/utils/camera/projection/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../../src/layers/starCatalog/seededStars/data/famousStarPickRadiusPx';
 import { Source } from '../../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';

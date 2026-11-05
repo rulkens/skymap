@@ -18,7 +18,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { isBodyArm } from '../../../../src/services/engine/camera/arms/isBodyArm';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/body/isBodyArm';
 import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
 import { frameKey } from '../../../../src/services/engine/camera/arms/frameKey';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
@@ -26,12 +26,12 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { driveWheelEvents } from '../../../helpers/camera/driveWheelEvents';
 import { displayedEye } from '../../../helpers/camera/displayedEye';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
+import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadiusM';
-import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
+import { siteGroundRadiusM } from '../../../../src/utils/camera/arms/siteGroundRadiusM';
+import { sitePointBodyFixed } from '../../../../src/utils/camera/arms/sitePointBodyFixed';
 import { positionDriverById } from '../../../../src/data/bodies/positionDrivers';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
@@ -48,7 +48,7 @@ import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelesti
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';

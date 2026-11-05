@@ -4,12 +4,12 @@
  * fields its row reads.
  */
 
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { foldToWorld } from '../../../src/services/engine/camera/arms/foldToWorld';
-import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { DriverCtx } from '../../../src/@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';

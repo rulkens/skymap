@@ -4,7 +4,7 @@
  */
 
 import { deriveBodyStates } from '../../src/services/engine/frame/deriveBodyStates';
-import { toBodyArm } from '../../src/services/engine/camera/poseFrameConversion';
+import { toBodyArm } from '../../src/services/engine/camera/arms/body/poseFrameConversion';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../src/data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../src/data/orientation/orientationFrames';

@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
-import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
+import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/orbitCamera/clampDistance';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 
 const MARS = findByIdOrThrow(SCENE_PLANETS, 'mars', 'test');

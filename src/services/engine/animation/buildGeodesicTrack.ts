@@ -10,7 +10,7 @@ import type { CompositeSample } from '../../../@types/animation/compiledClip/Com
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { GeodesicTuning } from '../../../@types/camera/GeodesicTuning';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { geodesicPath } from '../../../utils/camera/geodesicPath';
+import { geodesicPath } from '../../../utils/camera/focusMotion/geodesicPath';
 import { EASE } from './ease';
 
 const GEODESIC_CHANNELS: readonly (keyof CompositeSample)[] = ['target', 'distance'];

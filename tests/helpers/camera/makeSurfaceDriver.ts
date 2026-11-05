@@ -10,9 +10,9 @@
 import {
   surfaceStep,
   EMPTY_SURFACE_GESTURE_MEMORY,
-} from '../../../src/services/camera/surfaceStep';
-import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
-import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
+} from '../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
+import { surfaceGestureEdge } from '../../../src/services/engine/camera/arms/body/gesture/utils/surfaceGestureEdge';
+import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/orbitCamera/clampDistance';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { CameraTuning } from '../../../src/@types/camera/CameraTuning';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
@@ -21,7 +21,7 @@ import type { SurfaceGestureMemory } from '../../../src/@types/camera/SurfaceGes
 import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
-import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../src/utils/camera/frustum/symmetricFrustum';
 
 export function makeSurfaceDriver() {
   let memory: SurfaceGestureMemory = EMPTY_SURFACE_GESTURE_MEMORY;
