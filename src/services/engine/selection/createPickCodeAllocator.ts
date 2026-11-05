@@ -8,16 +8,15 @@
 
 import { SELECTION_SOURCE_SENTINEL_CODE } from '../../../data/selectionEncoding';
 import type { PickCodeAllocator } from '../../../@types/engine/selection/PickCodeAllocator';
+import type { PickCodeOwner } from '../../../@types/engine/selection/PickCodeOwner';
 
 const MAX_PICK_CODES = SELECTION_SOURCE_SENTINEL_CODE - 1;
-
-type Owner = { readonly layer: string; readonly pickSourceId: string };
 
 export function createPickCodeAllocator(
   seed: Readonly<Record<string, Readonly<Record<string, number>>>> = {},
 ): PickCodeAllocator {
   const codeByKey = new Map<string, number>();
-  const ownerByCode = new Map<number, Owner>();
+  const ownerByCode = new Map<number, PickCodeOwner>();
   const keyOf = (layer: string, id: string): string => `${layer}\u0000${id}`;
 
   for (const [layer, ids] of Object.entries(seed)) {
