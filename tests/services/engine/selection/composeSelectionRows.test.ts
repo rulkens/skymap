@@ -26,6 +26,7 @@ import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
 import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
+import { testPickCode } from '../../../support/testPickCode';
 import { Source } from '../../../../src/data/source';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
@@ -130,6 +131,8 @@ function starsFixture(catalog: Octree<StarColumns> | null): StarRowFixture {
 }
 
 const resolver = selectionResolverOver(structures, galaxies, starsFixture(null));
+/** The pick code the resolver's rows were built under, as `createLayers` binds it. */
+const code = (layer: string, pickSourceId: string): number => testPickCode(layer)(pickSourceId);
 
 // ─── resolvePick dispatch (was resolvePick.test.ts / resolvePickTable.test.ts) ──
 
@@ -139,32 +142,42 @@ describe('resolvePick, composed', () => {
   });
 
   it('maps a galaxy pick to its record ref, or null when its source is not loaded', () => {
-    expect(resolver.resolvePick({ sourceCode: Source.Glade, localIdx: 0 })).toEqual({
+    expect(
+      resolver.resolvePick({ sourceCode: code('galaxyCatalog', 'glade'), localIdx: 0 }),
+    ).toEqual({
       type: 'galaxyCatalog',
       source: Source.Glade,
       index: 0,
     });
-    expect(resolver.resolvePick({ sourceCode: Source.DesiDeep, localIdx: 3 })).toBeNull();
+    expect(
+      resolver.resolvePick({ sourceCode: code('galaxyCatalog', 'desiDeep'), localIdx: 3 }),
+    ).toBeNull();
   });
 
   it('maps a structure code to a durable-id ref, or null with no backing record', () => {
-    expect(resolver.resolvePick({ sourceCode: Source.GalaxyCluster, localIdx: 0 })).toEqual({
+    expect(
+      resolver.resolvePick({ sourceCode: code('structure', 'galaxy-cluster'), localIdx: 0 }),
+    ).toEqual({
       type: 'structure',
       id: 'virgo',
     });
-    expect(resolver.resolvePick({ sourceCode: Source.GalaxyCluster, localIdx: 99 })).toBeNull();
+    expect(
+      resolver.resolvePick({ sourceCode: code('structure', 'galaxy-cluster'), localIdx: 99 }),
+    ).toBeNull();
   });
 
   it('maps a milkyWay code to the singleton ref', () => {
-    expect(resolver.resolvePick({ sourceCode: Source.MilkyWay, localIdx: 0 })).toEqual({
-      type: 'milkyWay',
-    });
+    expect(resolver.resolvePick({ sourceCode: code('milkyWay', 'milkyWay'), localIdx: 0 })).toEqual(
+      {
+        type: 'milkyWay',
+      },
+    );
   });
 
   it('warns and returns null for a non-pickable code', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
-      expect(resolver.resolvePick({ sourceCode: 30 as SourceType, localIdx: 0 })).toBeNull();
+      expect(resolver.resolvePick({ sourceCode: 62, localIdx: 0 })).toBeNull();
       expect(warn).toHaveBeenCalled();
     } finally {
       warn.mockRestore();
@@ -174,18 +187,22 @@ describe('resolvePick, composed', () => {
   it('maps every star code to the one positional star ref', () => {
     // The seeded codes used to resolve to a BODY ref (spec §7 reverses that):
     // identity follows the physics, so all four codes land on the star arm.
-    expect(resolver.resolvePick({ sourceCode: Source.GaiaStars, localIdx: 42 })).toEqual({
+    expect(
+      resolver.resolvePick({ sourceCode: code('starCatalog', 'gaiaStars'), localIdx: 42 }),
+    ).toEqual({
       type: 'starCatalog',
       source: Source.GaiaStars,
       index: 42,
     });
     const idx = SCENE_STARS.length - 1;
-    expect(resolver.resolvePick({ sourceCode: Source.FamousStar, localIdx: idx })).toEqual({
+    expect(
+      resolver.resolvePick({ sourceCode: code('starCatalog', 'famousStar'), localIdx: idx }),
+    ).toEqual({
       type: 'starCatalog',
       source: Source.FamousStar,
       index: idx,
     });
-    expect(resolver.resolvePick({ sourceCode: Source.Sun, localIdx: 0 })).toEqual({
+    expect(resolver.resolvePick({ sourceCode: code('starCatalog', 'sun'), localIdx: 0 })).toEqual({
       type: 'starCatalog',
       source: Source.Sun,
       index: 0,
@@ -194,9 +211,9 @@ describe('resolvePick, composed', () => {
 
   it('an out-of-range body pick index resolves to null', () => {
     expect(
-      resolver.resolvePick({ sourceCode: Source.Planet, localIdx: SCENE_PLANETS.length }),
+      resolver.resolvePick({ sourceCode: code('body', 'planet'), localIdx: SCENE_PLANETS.length }),
     ).toBeNull();
-    expect(resolver.resolvePick({ sourceCode: Source.Earth, localIdx: 1 })).toBeNull();
+    expect(resolver.resolvePick({ sourceCode: code('body', 'earth'), localIdx: 1 })).toBeNull();
   });
 });
 
@@ -631,9 +648,10 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
 // ─── kindsEnabled gate (resolvePick only) ───────────────────────────────────
 
 describe('composeSelectionRows — picking gate', () => {
+  const STUB_CODE = 7;
   const structureRow: SelectionKindRow = {
     type: 'structure',
-    pickSources: [Source.GalaxyCluster],
+    pickSources: [STUB_CODE],
     resolvePick: () => ({ type: 'structure', id: 'virgo' }),
     encodePick: () => null,
     extractRow: () => virgo,
@@ -645,7 +663,7 @@ describe('composeSelectionRows — picking gate', () => {
   };
 
   it('resolvePick returns null for a disabled kind and the ref for an enabled one', () => {
-    const pick = { sourceCode: Source.GalaxyCluster, localIdx: 0 };
+    const pick = { sourceCode: STUB_CODE, localIdx: 0 };
     const allEnabled = composeSelectionRows(
       () => [structureRow],
       () => ({

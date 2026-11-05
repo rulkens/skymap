@@ -1,7 +1,7 @@
 /**
- * Stable numeric tag for every data source: a `.bin` byte for galaxy catalog rows,
- * the upper 6 bits of the pick word (63 is the all-ones sentinel, `selectionEncoding.ts`),
- * and a registry key. Wire-format contract, so it runs over the comment budget.
+ * Stable numeric tag for every data source: a `.bin` byte for galaxy catalog rows and a
+ * registry key. Never a pick code: the pick word's 6-bit codes come from the runtime
+ * allocator (`createPickCodeAllocator`). Wire-format contract, so it runs over the comment budget.
  *
  * Append, never renumber: values are baked into every `.bin` and saved selection URL.
  * Retired and unassigned: 0, 10, 12-14. Insertion order here is cosmetic; the VALUE is the contract.

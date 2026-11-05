@@ -228,16 +228,16 @@ This plan is the **prep PR**; `2026-11-05-selection-kind-facts.md` is the featur
   words (find them: `grep -rn "packSelection(Source\." tests`, and `sourceCode: Source\.` in fixtures)
 - Test: `tests/services/engine/selection/pickCodesNeverPersisted.test.ts` (create)
 
-- [ ] Test `the URL hash of a focused ref of every kind holds no pick code`: for one ref per kind, build its
+- [x] Test `the URL hash of a focused ref of every kind holds no pick code`: for one ref per kind, build its
       focus id (the row's `focusId.encode`) and hash (`src/services/url/writeHashBody.ts`) with a dense
       allocator and with a seeded one; the strings are equal.
-- [ ] Test `the selection slice and saved settings hold no pick code`: same two allocators, the serialised
+- [x] Test `the selection slice and saved settings hold no pick code`: same two allocators, the serialised
       `selection` and `settings` state are equal after selecting and hovering one ref per kind.
-- [ ] Delete the seed; the allocator numbers from 1 in first-ask order.
-- [ ] Sweep the tests from the grep onto a test allocator; none keeps a `Source` literal as a pick code.
-- [ ] `npx vitest run tests/services/engine tests/layers tests/state` → pass; `typecheck:fast` → clean.
-- [ ] Dev server smoke (the DoD list below).
-- [ ] Commit `Pick codes are dense and runtime-only`.
+- [x] Delete the seed; the allocator numbers from 1 in first-ask order.
+- [x] Sweep the tests from the grep onto a test allocator; none keeps a `Source` literal as a pick code.
+- [x] `npx vitest run tests/services/engine tests/layers tests/state` → pass; `typecheck:fast` → clean.
+- [x] Dev server smoke (the DoD list below).
+- [x] Commit `Pick codes are dense and runtime-only`.
 
 ## Definition of Done
 

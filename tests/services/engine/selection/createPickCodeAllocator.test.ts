@@ -12,16 +12,6 @@ describe('createPickCodeAllocator', () => {
     expect(a.codeOf('one', 'points')).not.toBe(a.codeOf('two', 'points'));
   });
 
-  it('a seeded id returns its seed value', () => {
-    const a = createPickCodeAllocator({ body: { planet: 9 } });
-    expect(a.codeOf('body', 'planet')).toBe(9);
-  });
-
-  it('an unseeded id never takes a seeded code', () => {
-    const a = createPickCodeAllocator({ body: { planet: 1, moon: 2 } });
-    expect(a.codeOf('other', 'x')).toBe(3);
-  });
-
   it('codes run densely from 1 and throw past 62', () => {
     const a = createPickCodeAllocator();
     const codes = Array.from({ length: 62 }, (_, i) => a.codeOf('layer', `id${i}`));

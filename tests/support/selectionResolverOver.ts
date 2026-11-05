@@ -10,7 +10,7 @@ import { starCatalogSelectionRow } from '../../src/layers/starCatalog/selection/
 import { milkyWaySelectionRow } from '../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import { galaxyRecordsOver } from './galaxyRecordsOver';
-import { legacyPickCode } from './legacyPickCode';
+import { testPickCode } from './testPickCode';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StructureStore } from '../../src/layers/structure/catalog/@types/StructureStore';
@@ -29,7 +29,7 @@ export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams
 /** The galaxy selection row's reads over a fixture: flat record sources, their bridge and pick codes. */
 export function galaxyRowRuntime(
   galaxies: GalaxyRowFixture,
-  pickCode = legacyPickCode('galaxyCatalog'),
+  pickCode = testPickCode('galaxyCatalog'),
 ): Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'famousMeta' | 'pickCodes'> {
   const records = galaxyRecordsOver(galaxies.catalogs, () => galaxies.famousMeta);
   return {
@@ -43,7 +43,7 @@ export function galaxyRowRuntime(
 /** The star selection row's reads over a fixture, plus the Layer's pick codes. */
 export function starRowRuntime(
   stars: StarRowFixture,
-  pickCode = legacyPickCode('starCatalog'),
+  pickCode = testPickCode('starCatalog'),
 ): Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams' | 'pickCodes'> {
   return { ...stars, pickCodes: catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, pickCode) };
 }

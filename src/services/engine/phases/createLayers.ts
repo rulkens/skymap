@@ -16,7 +16,6 @@ import type { SourceCountReport } from '../../../@types/engine/layer/SourceCount
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
-import { LEGACY_PICK_CODES } from '../../../compositions/legacyPickCodes';
 import { createPickCodeAllocator } from '../selection/createPickCodeAllocator';
 import { composeTerrainHeightAt } from '../layer/composeTerrainHeightAt';
 import { instantiateLayer } from '../layer/instantiateLayer';
@@ -62,7 +61,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   const uiCtx = state.gpu.uiCtx;
   if (uiCtx === null) throw new Error('createLayers: state.gpu.uiCtx is null');
 
-  const pickCodes = createPickCodeAllocator(LEGACY_PICK_CODES);
+  const pickCodes = createPickCodeAllocator();
   state.pickCodes = pickCodes;
   const requestRender = (): void => state.subsystems.scheduler.requestRender();
   // Core's "a source's catalog landed" pulse. The running total equals
