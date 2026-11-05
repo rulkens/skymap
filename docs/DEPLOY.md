@@ -70,7 +70,20 @@ security add-generic-password -a "$USER" -s skymap-r2-access-key-id     -w 'KEY_
 security add-generic-password -a "$USER" -s skymap-r2-secret-access-key -w 'SECRET'
 ```
 
-rclone is configured entirely through `RCLONE_CONFIG_R2_*` environment variables, so no secret is ever written to a config file on disk.
+rclone is configured entirely through `RCLONE_CONFIG_R2_*` environment variables, so no secret is ever written to a config file on disk. That means a bare `rclone … r2:…` fails with `didn't find section in config file ("r2")`: every hand-run command in this file, such as the server-side copies above, needs those variables set first. The subshell keeps the secrets out of your shell afterwards:
+
+```
+(
+  key() { security find-generic-password -a "$USER" -s "$1" -w; }
+  export RCLONE_CONFIG_R2_TYPE=s3
+  export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
+  export RCLONE_CONFIG_R2_ACCESS_KEY_ID="$(key skymap-r2-access-key-id)"
+  export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$(key skymap-r2-secret-access-key)"
+  export RCLONE_CONFIG_R2_ENDPOINT="https://$(key skymap-r2-account-id).r2.cloudflarestorage.com"
+  export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
+  rclone copy r2:skymap-data/<from> r2:skymap-data/<to> --checksum --transfers 32 --checkers 32 --progress
+)
+```
 
 ### Films (`films/` prefix)
 
