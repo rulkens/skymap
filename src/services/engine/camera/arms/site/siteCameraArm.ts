@@ -5,7 +5,7 @@
  */
 
 import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
-import type { ClimbRow } from '../../../../../@types/camera/ClimbRow';
+import type { ClimbRow } from '../@types/ClimbRow';
 import type { MeshBody } from '../../../../../@types/scene/MeshBody';
 import type { SurfaceFixedSite } from '../../../../../@types/scene/SurfaceFixedSite';
 import { SCENE_MESH_BODIES } from '../../../../../data/bodies/sceneMeshBodies';

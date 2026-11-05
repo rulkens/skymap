@@ -4,7 +4,7 @@
 
 ## What is true today
 
-- `src/@types/camera/DragMode.d.ts` — the shared type is `'orbit' | 'pan'`.
+- `src/@types/camera/input/DragMode.d.ts` — the shared type is `'orbit' | 'pan'`.
 - `tools/utils/input/attachOrbitControls.ts:21` (the dev workbenches'
   recognizer; the app reads input through `recognize` + `CONTROL_BINDINGS`)
   declares a second, local `DragMode = 'orbit' | 'pan' | 'pinch'` — not an
@@ -23,7 +23,7 @@
   `step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)`
   gates the followed-body strafe path; any other mode skips it silently.
 - `src/services/engine/camera/arms/site/utils/steppedSitePose.ts` — `InputStep`'s `drag` variant carries
-  a `mode: DragMode` field (`src/@types/camera/InputStep.d.ts`), but this file
+  a `mode: DragMode` field (`src/@types/camera/input/InputStep.d.ts`), but this file
   never reads `.mode` at all: every `kind === 'drag'` step drives the
   turntable orbit math, so a `'pan'` (or future) mode on the site arm has no
   distinct effect here — it is not tested and not routed, just absorbed.

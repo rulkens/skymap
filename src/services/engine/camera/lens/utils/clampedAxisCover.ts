@@ -4,7 +4,7 @@
  * both keeps their ratio, so a clamped cover still shifts the right way.
  */
 
-import { MAX_COVERED_FRACTION } from '../../../../../data/camera/maxCoveredFraction';
+import { MAX_COVERED_FRACTION } from '../data/maxCoveredFraction';
 
 export function clampedAxisCover(
   nearPx: number,

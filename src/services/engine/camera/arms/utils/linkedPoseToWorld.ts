@@ -6,7 +6,7 @@
  * the app does on load.
  */
 
-import type { CameraPose } from '../../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../../@types/math/Mat3';
 import { deriveBodyStates } from '../../../frame/deriveBodyStates';
 import { refoldTo } from '../refoldTo';

@@ -4,8 +4,8 @@
  * at rover scale. `site.id === pose.siteId` is a precondition, not a check.
  */
 
-import type { BodyFixedPose } from '../../../../../../@types/camera/BodyFixedPose';
-import type { SitePose } from '../../../../../../@types/camera/SitePose';
+import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
+import type { SitePose } from '../../../../../../@types/camera/pose/SitePose';
 import type { SurfaceFixedSite } from '../../../../../../@types/scene/SurfaceFixedSite';
 import type { Vec3 } from '../../../../../../@types/math/Vec3';
 import { canonicalBasisAt } from '../../../../../../utils/camera/surfaceFrame/canonicalBasisAt';

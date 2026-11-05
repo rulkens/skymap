@@ -1,4 +1,4 @@
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import { eyeMpcOf } from '../orbitPose/eyeMpcOf';
 
 /**

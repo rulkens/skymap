@@ -10,9 +10,9 @@ import { siteEyeFrame } from '../../../../../../../src/services/engine/camera/ar
 import { sitePointBodyFixed } from '../../../../../../../src/utils/camera/arms/sitePointBodyFixed';
 import { sitePoseFromBodyArm } from '../../../../../../../src/services/engine/camera/arms/site/utils/sitePoseFromBodyArm';
 import { sitePoseToBodyArm } from '../../../../../../../src/services/engine/camera/arms/site/utils/sitePoseToBodyArm';
-import { SITE_CAMERA_ARM } from '../../../../../../../src/data/camera/siteCameraArm';
+import { SITE_CAMERA_ARM } from '../../../../../../../src/services/engine/camera/arms/site/data/siteCameraArm';
 import type { MeshBody } from '../../../../../../../src/@types/scene/MeshBody';
-import type { SitePose } from '../../../../../../../src/@types/camera/SitePose';
+import type { SitePose } from '../../../../../../../src/@types/camera/pose/SitePose';
 import type { SurfaceFixedSite } from '../../../../../../../src/@types/scene/SurfaceFixedSite';
 import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../../src/utils/scene/asSceneBodyId';

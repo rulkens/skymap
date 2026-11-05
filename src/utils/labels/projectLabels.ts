@@ -10,7 +10,7 @@
 import type { Label2D } from '../../@types/rendering/Label2D';
 import type { Label2DProjected } from '../../@types/rendering/Label2DProjected';
 import type { Label2DProjection } from '../../@types/rendering/Label2DProjection';
-import type { ForwardProjectedPoint } from '../../@types/camera/ForwardProjectedPoint';
+import type { ForwardProjectedPoint } from '../../@types/camera/projection/ForwardProjectedPoint';
 import { forwardProjectPoint } from '../camera/projection/forwardProjectPoint';
 
 export function projectLabels(

@@ -9,8 +9,8 @@
  * Memoisation lives one level up, in `focusMoveClip`.
  */
 
-import type { CameraTweenDescriptor } from '../../../../@types/camera/CameraTweenDescriptor';
-import type { FocusMotion } from '../../../../@types/camera/FocusMotion';
+import type { CameraTweenDescriptor } from '../../../../@types/camera/focusMotion/CameraTweenDescriptor';
+import type { FocusMotion } from '../../../../@types/camera/focusMotion/FocusMotion';
 import type { ClipData } from '../../../../@types/animation/ClipData';
 import { tween, moveTarget, all } from '../../animation/effectHelpers';
 

@@ -10,7 +10,7 @@ import { logCameraState } from '../../../../src/services/engine/helpers/logCamer
 import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/createOrbitCamera';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
-import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';

@@ -4,9 +4,9 @@
  *  degrade quietly without it — `projectFramePose`'s tilt host (re-keys the tilt), `frameContext`
  *  provider B, `cameraDofAnglesOf` (drops the id), `replayInput` (swallows the step). */
 
-import type { HostBody } from '../../../../@types/camera/HostBody';
-import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
-import type { CameraArmBasisCtx } from '../../../../@types/camera/CameraArmBasisCtx';
+import type { HostBody } from './@types/HostBody';
+import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
+import type { CameraArmBasisCtx } from '../../../../@types/camera/arms/CameraArmBasisCtx';
 import { rowFor } from './rowFor';
 
 export function hostOf(frame: PoseFrame, ctx: CameraArmBasisCtx): HostBody | null {

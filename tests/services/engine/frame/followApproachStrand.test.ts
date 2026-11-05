@@ -27,7 +27,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const SATURN = deriveBodyStates(CONST_J2000).get(asSceneBodyId('saturn'))! as BodyState;

@@ -30,9 +30,9 @@ import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
 import type { BodyState } from '../../../../../../src/@types/scene/BodyState';
-import type { CameraPose } from '../../../../../../src/@types/camera/CameraPose';
-import type { BodyFixedPose } from '../../../../../../src/@types/camera/BodyFixedPose';
-import type { OrbitCamera } from '../../../../../../src/@types/camera/OrbitCamera';
+import type { CameraPose } from '../../../../../../src/@types/camera/pose/CameraPose';
+import type { BodyFixedPose } from '../../../../../../src/@types/camera/pose/BodyFixedPose';
+import type { OrbitCamera } from '../../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { SceneBodyId } from '../../../../../../src/@types/scene/SceneBodyId';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 

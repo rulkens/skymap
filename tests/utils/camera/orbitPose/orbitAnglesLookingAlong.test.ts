@@ -16,7 +16,7 @@ import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchTo
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import type { OrientationFrameId } from '../../../../src/@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../../src/@types/camera/orientation/OrientationFrameId';
 
 /** The orbit convention's target→eye direction for a (yaw, pitch). */
 function dirOf(yaw: number, pitch: number): Vec3 {

@@ -12,7 +12,7 @@ The world (absolute) arm has no equivalent clamp: `u` is the raw folded
 
 ## Where
 
-- `src/data/camera/orientDecay.ts:7-8` still documents the no-whip property
+- `src/services/engine/camera/data/orientDecay.ts:7-8` still documents the no-whip property
   ("a reference move beyond `rideBoundRad` in ONE notch is unauthored") — true
   of the ride, not of the decay.
 - `src/services/engine/camera/orientation/utils/orientStepRad.ts:12` caps at `capRadPerLogZoom · u` with no

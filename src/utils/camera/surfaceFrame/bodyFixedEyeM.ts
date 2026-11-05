@@ -1,4 +1,4 @@
-import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../@types/camera/pose/BodyFixedPose';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 export function bodyFixedEyeM(pose: BodyFixedPose): Vec3 {

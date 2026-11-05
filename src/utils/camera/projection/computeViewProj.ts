@@ -11,10 +11,10 @@
 
 import { mat4 } from 'wgpu-matrix';
 import type { Mat4 } from 'wgpu-matrix';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { ImagePlaneBasis } from '../../../@types/camera/pose/ImagePlaneBasis';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import { imagePlaneBasis } from '../orbitPose/imagePlaneBasis';
 import { frameUp } from '../orbitPose/frameUp';
 import { orbitForwardOf } from '../orbitPose/orbitForwardOf';

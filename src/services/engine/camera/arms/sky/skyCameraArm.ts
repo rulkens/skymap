@@ -5,7 +5,7 @@
  * `nudge` decline by reference until sky mode fills them.
  */
 
-import type { ClimbRow } from '../../../../../@types/camera/ClimbRow';
+import type { ClimbRow } from '../@types/ClimbRow';
 import { focusInSubtree } from '../../../../../utils/camera/arms/focusInSubtree';
 import { skyPoseFromBodyArm } from './utils/skyPoseFromBodyArm';
 import { skyPoseToBodyArm } from './utils/skyPoseToBodyArm';

@@ -7,7 +7,7 @@
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { ViewSpec } from '../../../@types/engine/frame/ViewSpec';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';

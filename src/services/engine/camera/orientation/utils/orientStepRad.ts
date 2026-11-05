@@ -1,6 +1,6 @@
 /** One step of the bounded orientation decay, priced in spent log-zoom (`ORIENT_DECAY`). */
 
-import { ORIENT_DECAY } from '../../../../../data/camera/orientDecay';
+import { ORIENT_DECAY } from '../../data/orientDecay';
 
 export function orientStepRad(residualRad: number, logZoom: number): number {
   const u = Math.abs(logZoom);

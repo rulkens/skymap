@@ -22,7 +22,7 @@ import {
   NEAR_CLIP_MPC,
   FAR_CLIP_MPC,
 } from '../../../../src/services/engine/camera/framing/cameraFraming';
-import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
+import { EMPTY_TILT_MEMORY } from '../../../../src/services/engine/camera/data/emptyTiltMemory';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
@@ -66,8 +66,8 @@ import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
-import type { InputStep } from '../../../../src/@types/camera/InputStep';
-import type { NavVelocity } from '../../../../src/@types/camera/NavVelocity';
+import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
+import type { NavVelocity } from '../../../../src/@types/camera/input/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';

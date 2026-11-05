@@ -6,7 +6,7 @@
  * its pixels per radian are scaled by this.
  */
 
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 
 export function frustumCornerMagnification(frustum: ViewFrustum): number {
   const tanX = Math.max(-frustum.tanLeft, frustum.tanRight);

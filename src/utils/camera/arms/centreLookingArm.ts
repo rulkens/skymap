@@ -8,7 +8,7 @@
  * the remaining tilt on the flip frame.
  */
 
-import type { FramedPose } from '../../../@types/camera/FramedPose';
+import type { FramedPose } from '../../../@types/camera/pose/FramedPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 

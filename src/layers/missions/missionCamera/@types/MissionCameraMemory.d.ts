@@ -8,8 +8,8 @@
  * distance last written, Mpc, which a zoomed-in view holds as the frame shrinks.
  */
 
-import type { CameraAim } from '../../../../@types/camera/CameraAim';
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { CameraAim } from '../../../../@types/camera/pose/CameraAim';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import type { MissionOffsets } from './MissionOffsets';
 import type { MissionStop } from './MissionStop';
 

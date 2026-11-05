@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 
 import { nudgedWorldPose } from '../../../../../../../src/services/engine/camera/arms/world/utils/nudgedWorldPose';
 import { applyInputToCamera } from '../../../../../../../src/services/engine/camera/arms/world/applyInputToCamera';
-import { PITCH_LIMIT } from '../../../../../../../src/data/camera/pitchLimit';
-import type { CameraPose } from '../../../../../../../src/@types/camera/CameraPose';
-import type { PivotFraming } from '../../../../../../../src/@types/camera/PivotFraming';
+import { PITCH_LIMIT } from '../../../../../../../src/services/engine/camera/arms/world/data/pitchLimit';
+import type { CameraPose } from '../../../../../../../src/@types/camera/pose/CameraPose';
+import type { PivotFraming } from '../../../../../../../src/@types/camera/arms/PivotFraming';
 import type { Mat3 } from '../../../../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
 import { ORIENTATION_FRAMES } from '../../../../../../../src/data/orientation/orientationFrames';

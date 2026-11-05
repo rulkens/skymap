@@ -5,8 +5,8 @@
  * rows build clips from services code.
  */
 
-import type { FocusMotion } from '../../../../@types/camera/FocusMotion';
-import type { FocusMotionRow } from '../../../../@types/camera/FocusMotionRow';
+import type { FocusMotion } from '../../../../@types/camera/focusMotion/FocusMotion';
+import type { FocusMotionRow } from './@types/FocusMotionRow';
 import { easedFocusClip } from './easedFocusClip';
 import { geodesicFocusClip } from './geodesicFocusClip';
 import { geodesicDurationMs } from './geodesicDurationMs';

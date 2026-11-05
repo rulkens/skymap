@@ -17,7 +17,7 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';

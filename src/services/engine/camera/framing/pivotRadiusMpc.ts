@@ -11,7 +11,7 @@ import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { MIN_DISTANCE_MPC } from '../../../../utils/camera/orbitCamera/clampDistance';
 import { selectionDriver } from '../../../../utils/selection/selectionDriver';
 import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
-import type { PivotFraming } from '../../../../@types/camera/PivotFraming';
+import type { PivotFraming } from '../../../../@types/camera/arms/PivotFraming';
 
 export function pivotRadiusMpc(row: SelectionRow | null): number | null {
   // A groundless driver (a mesh body's hull) has nothing to report here.

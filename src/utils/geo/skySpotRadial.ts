@@ -1,4 +1,4 @@
-import type { SkySpot } from '../../@types/camera/SkySpot';
+import type { SkySpot } from '../../@types/camera/pose/SkySpot';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /** The spot's unit radial in its host's body-fixed axes (`surfacePointBodyFixed`'s convention, radians in). */

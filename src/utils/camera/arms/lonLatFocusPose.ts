@@ -1,4 +1,4 @@
-import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../@types/camera/pose/BodyFixedPose';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { LonLatDeg } from '../../../@types/scene/LonLatDeg';
 import type { Vec3 } from '../../../@types/math/Vec3';

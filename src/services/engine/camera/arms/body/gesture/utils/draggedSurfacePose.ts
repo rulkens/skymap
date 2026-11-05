@@ -1,11 +1,11 @@
-import type { BodyFixedPose } from '../../../../../../../@types/camera/BodyFixedPose';
-import type { DragStep } from '../../../../../../../@types/camera/DragStep';
-import type { DraggedSurfacePose } from '../../../../../../../@types/camera/DraggedSurfacePose';
-import type { SurfaceGesture } from '../../../../../../../@types/camera/SurfaceGesture';
-import type { ViewFrustum } from '../../../../../../../@types/camera/ViewFrustum';
+import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
+import type { DragStep } from '../@types/DragStep';
+import type { DraggedSurfacePose } from '../@types/DraggedSurfacePose';
+import type { SurfaceGesture } from '../../../../../../../@types/camera/arms/SurfaceGesture';
+import type { ViewFrustum } from '../../../../../../../@types/camera/projection/ViewFrustum';
 import type { Vec2 } from '../../../../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../../../../@types/math/Vec3';
-import { TILT_GAIN } from '../../../../../../../data/camera/tiltGain';
+import { TILT_GAIN } from '../data/tiltGain';
 import { anchoredDragRotation, MIN_INCIDENCE_COS } from './anchoredDragRotation';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { cursorRayBodyLocal } from '../../../../../../../utils/camera/terrain/cursorRayBodyLocal';

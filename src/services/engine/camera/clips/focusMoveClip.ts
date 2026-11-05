@@ -6,7 +6,7 @@
  * `ClipData`) reuses its tracks every frame, and steady frames allocate nothing.
  */
 
-import type { CameraTweenDescriptor } from '../../../../@types/camera/CameraTweenDescriptor';
+import type { CameraTweenDescriptor } from '../../../../@types/camera/focusMotion/CameraTweenDescriptor';
 import type { ClipData } from '../../../../@types/animation/ClipData';
 import { focusMotionRowOf } from './focusMotionRowOf';
 

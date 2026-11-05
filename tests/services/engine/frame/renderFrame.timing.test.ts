@@ -37,7 +37,7 @@ import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapC
 import { MILKY_WAY_FADE_FULL_PX } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 import type { SourceType } from '../../../../src/@types/data/SourceType';

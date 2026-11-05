@@ -24,8 +24,8 @@ import { RATE_LADDER } from '../../../../../src/data/time/rateLadder';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { makeCameraSimHarness } from '../../../../helpers/camera/makeCameraSimHarness';
 import { relErr } from '../../../../support/relErr';
-import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/CameraTweenDescriptor';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const FOV = Math.PI / 3;

@@ -1,5 +1,5 @@
 /** The world arm's row — the arm tree's floor: nothing to climb to, and no host body its numbers hang off. */
-import type { CameraArmRow } from '../../../../../@types/camera/CameraArmRow';
+import type { CameraArmRow } from '../@types/CameraArmRow';
 import { absoluteArm } from '../../../../../utils/camera/arms/absoluteArm';
 import { nudgedWorldPose } from './utils/nudgedWorldPose';
 import { applyInputToCamera } from './applyInputToCamera';

@@ -3,7 +3,7 @@
  * `poseBasis` (never `upBasis` — see `OrbitCameraInit.d.ts`). One derivation for
  * `updatePosition` and the regime predicate (spec §4); `undefined` = identity. */
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { yawPitchToDir } from './yawPitchToDir';

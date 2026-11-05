@@ -20,8 +20,8 @@ import { FLY_TO_LON_LAT_TWEEN_MS } from '../../../src/data/camera/flyToLonLatTwe
 import { focusMoveDurationMs } from '../../../src/services/engine/camera/clips/focusMoveDurationMs';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import type { CameraTweenDescriptor } from '../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 

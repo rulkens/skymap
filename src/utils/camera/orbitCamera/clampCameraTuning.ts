@@ -6,7 +6,7 @@
  * arm flips at disengage, so the blend must already be at scene up there.
  */
 
-import type { CameraTuning } from '../../../@types/camera/CameraTuning';
+import type { CameraTuning } from '../../../@types/camera/orbitCamera/CameraTuning';
 import { CAMERA_TUNING_LIMITS } from '../../../data/camera/cameraTuning';
 
 export function clampCameraTuning(patch: Partial<CameraTuning>, prev: CameraTuning): CameraTuning {

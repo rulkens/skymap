@@ -3,7 +3,7 @@
  * the tangent window crosses zero. The canvas centre for a symmetric frustum.
  */
 
-import type { ViewFrustum } from '../../../../../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../../../../../@types/camera/projection/ViewFrustum';
 import type { Vec2 } from '../../../../../../../@types/math/Vec2';
 
 export function opticalCentrePx(frustum: ViewFrustum, viewportPx: Readonly<Vec2>): Vec2 {

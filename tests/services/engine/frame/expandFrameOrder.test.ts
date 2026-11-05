@@ -18,7 +18,7 @@ import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { FrameStepSpec } from '../../../../src/@types/engine/frame/FrameStepSpec';
 import type { FrameInputs } from '../../../../src/services/engine/frame/expandFrameOrder';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };

@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState, type ReactElement } from 'react';
-import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
+import type { CameraDebugSnapshot } from '../../@types/camera/debug/CameraDebugSnapshot';
 import {
   clearOrientPeaks,
   watchOrientDeltas,

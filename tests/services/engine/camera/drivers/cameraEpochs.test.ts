@@ -14,9 +14,9 @@ import {
 } from '../../../../../src/services/engine/camera/drivers/cameraEpochs';
 import { DEFAULT_CAMERA_TUNING } from '../../../../../src/data/camera/cameraTuning';
 import type { Epoch } from '../../../../../src/@types/engine/camera/Epoch';
-import type { CameraState } from '../../../../../src/@types/camera/CameraState';
-import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/CameraTweenDescriptor';
-import type { FrameTween } from '../../../../../src/@types/camera/FrameTween';
+import type { CameraState } from '../../../../../src/@types/camera/orbitCamera/CameraState';
+import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
+import type { FrameTween } from '../../../../../src/@types/camera/focusMotion/FrameTween';
 
 function makeDescriptor(): CameraTweenDescriptor {
   return {

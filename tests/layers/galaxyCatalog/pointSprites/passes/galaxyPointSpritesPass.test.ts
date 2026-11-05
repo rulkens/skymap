@@ -19,7 +19,7 @@ import { makeGalaxyCatalogItems } from '../../../../fixtures/makeGalaxyCatalogIt
 import { makeGalaxyCatalogFade } from '../../../../fixtures/makeGalaxyCatalogFade';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { SelectionRef } from '../../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 

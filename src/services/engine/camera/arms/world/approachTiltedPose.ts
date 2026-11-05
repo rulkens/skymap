@@ -22,8 +22,8 @@ import { tiltFromNadirRad } from '../../../../../utils/camera/surfaceFrame/tiltF
 import { isWorldArm } from './isWorldArm';
 import { selectionDriver } from '../../../../../utils/selection/selectionDriver';
 import type { BodyState } from '../../../../../@types/scene/BodyState';
-import type { CameraTuning } from '../../../../../@types/camera/CameraTuning';
-import type { FramedCameraPose } from '../../../../../@types/camera/FramedCameraPose';
+import type { CameraTuning } from '../../../../../@types/camera/orbitCamera/CameraTuning';
+import type { FramedCameraPose } from '../../../../../@types/camera/pose/FramedCameraPose';
 import type { Mat3 } from '../../../../../@types/math/Mat3';
 import type { SelectionRow } from '../../../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../../@types/math/Vec3';

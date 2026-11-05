@@ -5,9 +5,9 @@
  * row module is the import cycle's entry.
  */
 
-import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
-import type { ClimbableKind } from '../../../../@types/camera/ClimbableKind';
-import type { CameraArmRow } from '../../../../@types/camera/CameraArmRow';
+import type { ClimbRow } from './@types/ClimbRow';
+import type { ClimbableKind } from '../@types/ClimbableKind';
+import type { CameraArmRow } from './@types/CameraArmRow';
 import { absoluteCameraArm } from './world/absoluteCameraArm';
 import { bodyCameraArm } from './body/bodyCameraArm';
 import { siteCameraArm } from './site/siteCameraArm';

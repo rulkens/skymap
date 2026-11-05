@@ -13,10 +13,10 @@ import {
   surfaceStep,
   EMPTY_SURFACE_GESTURE_MEMORY,
 } from '../../../../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
-import { EMPTY_TILT_MEMORY } from '../../../../../../../src/data/camera/emptyTiltMemory';
+import { EMPTY_TILT_MEMORY } from '../../../../../../../src/services/engine/camera/data/emptyTiltMemory';
 import { makeSurfaceDriver } from '../../../../../../helpers/camera/makeSurfaceDriver';
 import { bodyUpWeight } from '../../../../../../../src/services/engine/camera/orientation/utils/bodyUpWeight';
-import { ORIENT_DECAY } from '../../../../../../../src/data/camera/orientDecay';
+import { ORIENT_DECAY } from '../../../../../../../src/services/engine/camera/data/orientDecay';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../../../../src/data/camera/cameraTuning';
 import { cursorRayBodyLocal } from '../../../../../../../src/utils/camera/terrain/cursorRayBodyLocal';
 import { eyeFrameOf } from '../../../../../../../src/utils/camera/surfaceFrame/eyeFrameOf';
@@ -24,14 +24,14 @@ import { surfaceFloorM } from '../../../../../../../src/services/engine/camera/a
 import { SURFACE_STANDOFF_RADII } from '../../../../../../../src/utils/camera/orbitCamera/clampDistance';
 import { raySphereRoots } from '../../../../../../../src/utils/math/raySphereRoots';
 import { normalize3 } from '../../../../../../../src/utils/math/normalize3';
-import type { BodyFixedPose } from '../../../../../../../src/@types/camera/BodyFixedPose';
-import type { CameraTuning } from '../../../../../../../src/@types/camera/CameraTuning';
-import type { InputStep } from '../../../../../../../src/@types/camera/InputStep';
+import type { BodyFixedPose } from '../../../../../../../src/@types/camera/pose/BodyFixedPose';
+import type { CameraTuning } from '../../../../../../../src/@types/camera/orbitCamera/CameraTuning';
+import type { InputStep } from '../../../../../../../src/@types/camera/input/InputStep';
 import type { Mat3 } from '../../../../../../../src/@types/math/Mat3';
-import type { TiltMemory } from '../../../../../../../src/@types/camera/TiltMemory';
+import type { TiltMemory } from '../../../../../../../src/@types/camera/orientation/TiltMemory';
 import type { Vec2 } from '../../../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
-import { TILT_GAIN } from '../../../../../../../src/data/camera/tiltGain';
+import { TILT_GAIN } from '../../../../../../../src/services/engine/camera/arms/body/gesture/data/tiltGain';
 import { asSceneBodyId } from '../../../../../../../src/utils/scene/asSceneBodyId';
 import { angleBetween } from '../../../../../../helpers/math/angleBetween';
 import { symmetricFrustum } from '../../../../../../../src/utils/camera/frustum/symmetricFrustum';

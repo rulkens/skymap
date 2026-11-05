@@ -41,7 +41,7 @@
  * (defaulting to a zero pose for `'live'` until Task N resolves it).
  */
 
-import type { CameraPose } from '../camera/CameraPose';
+import type { CameraPose } from '../camera/pose/CameraPose';
 import type { Effect } from './Effect';
 
 export type ClipData = {

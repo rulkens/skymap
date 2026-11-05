@@ -55,7 +55,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { GALACTIC_DISC_FORWARD } from '../../../../src/services/engine/camera/framing/cameraFraming';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 

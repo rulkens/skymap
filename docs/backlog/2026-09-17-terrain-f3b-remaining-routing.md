@@ -89,7 +89,7 @@ sphere through `raySphereRoots`:
   against `bodyRadiusM`.
 
 `bodyRadiusM` there is `HostBody.radiusM`, documented as the datum
-(`src/@types/camera/HostBody.d.ts:9-10`), supplied at
+(`src/services/engine/camera/arms/@types/HostBody.d.ts:9-10`), supplied at
 `src/services/engine/camera/arms/body/bodyCameraArm.ts:80`.
 
 **The spec's "up to 8.8 km of parallax at grazing incidence" is the wrong figure.**

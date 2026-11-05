@@ -7,7 +7,7 @@
 
 import { focusFraming } from './focusFraming';
 import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 
 export function framingPose(row: SelectionRow, fovYRad: number, from: CameraPose): CameraPose {
   const { target, distance } = focusFraming(row, fovYRad);

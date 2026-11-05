@@ -6,7 +6,7 @@
  * turns it about the eye: yaw about the frame up, pitch about the resulting
  * right; the single place a view builder learns of the offset. */
 
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { yawPitchToDir } from './yawPitchToDir';
 import { frameUp } from './frameUp';

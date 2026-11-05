@@ -6,8 +6,8 @@
  * `cam` is this `cam`, by reference.
  */
 
-import type { AssembledOrbitCamera } from '../../camera/AssembledOrbitCamera';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { AssembledOrbitCamera } from '../../camera/orbitCamera/AssembledOrbitCamera';
+import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
 import type { BodyState } from '../../scene/BodyState';
 import type { PositionedId } from '../../scene/PositionedId';
 

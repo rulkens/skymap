@@ -6,9 +6,9 @@
 
 import { memo } from 'react';
 import type { ReactNode } from 'react';
-import type { FocusMoveStyle } from '../../@types/camera/FocusMoveStyle';
+import type { FocusMoveStyle } from '../../@types/camera/focusMotion/FocusMoveStyle';
 import type { ControlSchemeId } from '../../@types/engine/camera/ControlSchemeId';
-import type { FrictionGroup } from '../../@types/camera/FrictionGroup';
+import type { FrictionGroup } from '../../@types/camera/input/FrictionGroup';
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';

@@ -7,9 +7,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { latchSurfaceGesture } from '../../../../../../../../src/services/engine/camera/arms/body/gesture/utils/latchSurfaceGesture';
-import type { BodyFixedPose } from '../../../../../../../../src/@types/camera/BodyFixedPose';
-import type { DragStep } from '../../../../../../../../src/@types/camera/DragStep';
-import type { GroundRadiusLookup } from '../../../../../../../../src/@types/camera/GroundRadiusLookup';
+import type { BodyFixedPose } from '../../../../../../../../src/@types/camera/pose/BodyFixedPose';
+import type { DragStep } from '../../../../../../../../src/services/engine/camera/arms/body/gesture/@types/DragStep';
+import type { GroundRadiusLookup } from '../../../../../../../../src/@types/camera/terrain/GroundRadiusLookup';
 import type { Mat3 } from '../../../../../../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../../../../../../src/@types/math/Vec2';
 import { asSceneBodyId } from '../../../../../../../../src/utils/scene/asSceneBodyId';

@@ -2,7 +2,7 @@
  * at `tiltFullHR`, 0 = scene up at `tiltZeroHR`, and display tilt is
  * `remembered × this` — so tilt reaching 0 IS the blend reaching scene up. */
 
-import type { CameraTuning } from '../../../../../@types/camera/CameraTuning';
+import type { CameraTuning } from '../../../../../@types/camera/orbitCamera/CameraTuning';
 import { smoothstep } from '../../../../../utils/math/smoothstep';
 
 export function bodyUpWeight(hOverR: number, tuning: CameraTuning): number {

@@ -14,8 +14,8 @@ import { DEFAULT_ORIENTATION } from '../../../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../../../src/data/time/constJ2000';
 import { findByIdOrThrow } from '../../../../../../src/utils/object/findByIdOrThrow';
 import type { SceneBodyId } from '../../../../../../src/@types/scene/SceneBodyId';
-import type { CameraArmBasisCtx } from '../../../../../../src/@types/camera/CameraArmBasisCtx';
-import type { TerrainHeightAtLookup } from '../../../../../../src/@types/camera/TerrainHeightAtLookup';
+import type { CameraArmBasisCtx } from '../../../../../../src/@types/camera/arms/CameraArmBasisCtx';
+import type { TerrainHeightAtLookup } from '../../../../../../src/@types/camera/terrain/TerrainHeightAtLookup';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];

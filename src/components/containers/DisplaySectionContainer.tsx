@@ -41,7 +41,7 @@ import {
 } from '../../state/settings/core/bloomSlice';
 import { requestOrientationChange } from '../../state/camera/orientationActions';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
 function DisplaySectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

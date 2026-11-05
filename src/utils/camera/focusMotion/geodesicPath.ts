@@ -6,8 +6,8 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { GeodesicPath } from '../../../@types/camera/GeodesicPath';
-import type { GeodesicTuning } from '../../../@types/camera/GeodesicTuning';
+import type { GeodesicPath } from '../../../@types/camera/focusMotion/GeodesicPath';
+import type { GeodesicTuning } from '../../../@types/camera/focusMotion/GeodesicTuning';
 import { zoomPanGeodesic } from './zoomPanGeodesic';
 import { GEODESIC_RHO_MIN } from '../../../data/camera/focusMoveDefaults';
 import { distanceMpc } from '../../math/distanceMpc';

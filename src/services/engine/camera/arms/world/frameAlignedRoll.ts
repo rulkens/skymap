@@ -10,11 +10,11 @@
  */
 
 import type { BodyState } from '../../../../../@types/scene/BodyState';
-import type { CameraPose } from '../../../../../@types/camera/CameraPose';
-import type { CameraTuning } from '../../../../../@types/camera/CameraTuning';
+import type { CameraPose } from '../../../../../@types/camera/pose/CameraPose';
+import type { CameraTuning } from '../../../../../@types/camera/orbitCamera/CameraTuning';
 import type { Mat3 } from '../../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
-import { ORIENT_DECAY } from '../../../../../data/camera/orientDecay';
+import { ORIENT_DECAY } from '../../data/orientDecay';
 import { blendedUpDir } from '../../../../../utils/camera/surfaceFrame/blendedUpDir';
 import { bodyUpWeight } from '../../orientation/utils/bodyUpWeight';
 import { eyeMpcOf } from '../../../../../utils/camera/orbitPose/eyeMpcOf';

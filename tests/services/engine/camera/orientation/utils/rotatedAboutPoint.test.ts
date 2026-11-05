@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { rotatedAboutPoint } from '../../../../../../src/services/engine/camera/orientation/utils/rotatedAboutPoint';
 import { quatFromAxisAngle } from '../../../../../../src/utils/math/quatFromAxisAngle';
-import type { BodyFixedPose } from '../../../../../../src/@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../../../../src/@types/camera/pose/BodyFixedPose';
 import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 

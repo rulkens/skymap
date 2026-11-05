@@ -1,7 +1,7 @@
-import type { ArmDelta } from '../../../../../../../@types/camera/ArmDelta';
-import type { BodyFixedPose } from '../../../../../../../@types/camera/BodyFixedPose';
-import type { SurfaceStepCtx } from '../../../../../../../@types/camera/SurfaceStepCtx';
-import type { TiltMemory } from '../../../../../../../@types/camera/TiltMemory';
+import type { ArmDelta } from '../../../../@types/ArmDelta';
+import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
+import type { SurfaceStepCtx } from '../../@types/SurfaceStepCtx';
+import type { TiltMemory } from '../../../../../../../@types/camera/orientation/TiltMemory';
 import { lookedSurfacePose } from './lookedSurfacePose';
 import { orbitedSurfacePose } from './orbitedSurfacePose';
 import { rollBasisAboutView } from '../../../../orientation/utils/rollBasisAboutView';

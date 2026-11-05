@@ -1,4 +1,4 @@
-import type { FramedPose } from '../../../src/@types/camera/FramedPose';
+import type { FramedPose } from '../../../src/@types/camera/pose/FramedPose';
 import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 
 /** The camera arm turned `dyaw` radians about its target: the yaw of a world pose, the heading of a site's turntable. A body-fixed pose has no single angle to turn. */

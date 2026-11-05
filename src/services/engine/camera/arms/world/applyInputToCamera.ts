@@ -7,16 +7,16 @@
 
 import { vec3 } from 'wgpu-matrix';
 
-import { PITCH_LIMIT } from '../../../../../data/camera/pitchLimit';
+import { PITCH_LIMIT } from './data/pitchLimit';
 import { zoomedDistance } from '../../input/utils/zoomedDistance';
 import { orbitRadPerPixel } from '../../input/utils/orbitRadPerPixel';
 import { imagePlaneBasis } from '../../../../../utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../../../utils/camera/orbitPose/frameUp';
 import { eyeMpcOf } from '../../../../../utils/camera/orbitPose/eyeMpcOf';
 
-import type { CameraPose } from '../../../../../@types/camera/CameraPose';
-import type { InputStep } from '../../../../../@types/camera/InputStep';
-import type { PivotFraming } from '../../../../../@types/camera/PivotFraming';
+import type { CameraPose } from '../../../../../@types/camera/pose/CameraPose';
+import type { InputStep } from '../../../../../@types/camera/input/InputStep';
+import type { PivotFraming } from '../../../../../@types/camera/arms/PivotFraming';
 import type { Mat3 } from '../../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 

@@ -5,7 +5,7 @@
  */
 
 import type { Vec2 } from '../../../../../@types/math/Vec2';
-import { LENS_SHIFT_EASE_TAU_MS } from '../../../../../data/camera/lensShiftEaseTauMs';
+import { LENS_SHIFT_EASE_TAU_MS } from '../data/lensShiftEaseTauMs';
 
 // Frames stop once the shift settles, so the frame a cover change wakes can
 // follow seconds of idle; uncapped, that gap would read as a finished ease.

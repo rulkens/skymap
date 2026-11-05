@@ -28,7 +28,7 @@ import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 import type { SkymapPerfHook } from '../../../src/state/perf/@types/SkymapPerfHook';
 import type { PerfWindow } from '../../../src/state/perf/@types/PerfWindow';
 import type { GpuTimingFrame } from '../../../src/@types/gpu/timing/GpuTimingFrame';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 vi.mock('../../../src/utils/url/isPerfMode', () => ({

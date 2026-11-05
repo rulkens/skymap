@@ -12,7 +12,7 @@ import { foldToWorld } from '../../../src/services/engine/camera/arms/foldToWorl
 import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { DriverCtx } from '../../../src/@types/engine/camera/DriverCtx';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import type { RootState } from '../../../src/store/types';
 
 /** The rows that ride the wheel target: core's two follow rows and the mission's exhibit row. */

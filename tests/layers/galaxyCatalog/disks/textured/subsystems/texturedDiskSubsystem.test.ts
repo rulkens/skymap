@@ -17,7 +17,7 @@ import { createTexturedDiskSubsystem } from '../../../../../../src/layers/galaxy
 import { createDiskPlannerWalk } from '../../../../../../src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk';
 import { runTexturedSolo } from '../../../../../services/engine/subsystems/diskWalkHarness';
 import type { GalaxyCatalog } from '../../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { OrbitCamera } from '../../../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { SourceType } from '../../../../../../src/@types/data/SourceType';
 import type { HiResFamousSubsystem } from '../../../../../../src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousSubsystem';
 import type { FamousGalaxyMetaEntry } from '../../../../../../src/@types/loading/FamousGalaxyMetaEntry';

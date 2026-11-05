@@ -25,7 +25,7 @@ import { createProceduralDiskSubsystem } from '../../src/layers/galaxyCatalog/di
 import { createTexturedDiskSubsystem } from '../../src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem';
 import { createDiskPlannerWalk } from '../../src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../src/@types/camera/orbitCamera/OrbitCamera';
 import { makeGalaxyCatalog } from '../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../support/galaxyRecordsOver';
 

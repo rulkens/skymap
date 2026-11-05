@@ -11,11 +11,11 @@
 
 import type { UnknownAction } from '@reduxjs/toolkit';
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { CameraProjection } from '../../../@types/camera/CameraProjection';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../@types/camera/projection/CameraProjection';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
-import type { CameraArmCtx } from '../../../@types/camera/CameraArmCtx';
+import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
 import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
 

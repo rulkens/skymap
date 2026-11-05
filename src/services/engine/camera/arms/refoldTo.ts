@@ -4,14 +4,14 @@
  * site → its own host arm is one hop, never a round trip through Mpc (2 §10).
  */
 
-import type { ClimbableKind } from '../../../../@types/camera/ClimbableKind';
-import type { FrameOf } from '../../../../@types/camera/FrameOf';
-import type { FramedCameraPose } from '../../../../@types/camera/FramedCameraPose';
-import type { FramedPose } from '../../../../@types/camera/FramedPose';
-import type { ParentOf } from '../../../../@types/camera/ParentOf';
-import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
-import type { CameraArmBasisCtx } from '../../../../@types/camera/CameraArmBasisCtx';
-import type { CameraArmKind } from '../../../../@types/camera/CameraArmKind';
+import type { ClimbableKind } from '../@types/ClimbableKind';
+import type { FrameOf } from '../../../../@types/camera/arms/FrameOf';
+import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
+import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
+import type { ParentOf } from './@types/ParentOf';
+import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
+import type { CameraArmBasisCtx } from '../../../../@types/camera/arms/CameraArmBasisCtx';
+import type { CameraArmKind } from '../../../../@types/camera/arms/CameraArmKind';
 import { CAMERA_ARMS } from './cameraArms';
 import { climbRowFor } from './climbRowFor';
 import { hostOrThrow } from './hostOrThrow';

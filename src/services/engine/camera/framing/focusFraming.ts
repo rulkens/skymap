@@ -15,7 +15,7 @@ import {
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../../../data/milkyWay/galacticCenter';
 import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 
 /** kpc → Mpc; the fallback diameter mirrors `galaxyFocusDistance`. */
 const KPC_PER_MPC = 1000;

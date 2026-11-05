@@ -8,10 +8,10 @@
  * differing focus would release next frame is never entered either.
  */
 
-import type { ClimbRow } from '../../../../../@types/camera/ClimbRow';
-import type { HostBody } from '../../../../../@types/camera/HostBody';
-import type { CameraArmCtx } from '../../../../../@types/camera/CameraArmCtx';
-import type { SurfaceStepCtx } from '../../../../../@types/camera/SurfaceStepCtx';
+import type { ClimbRow } from '../@types/ClimbRow';
+import type { HostBody } from '../@types/HostBody';
+import type { CameraArmCtx } from '../../../../../@types/camera/arms/CameraArmCtx';
+import type { SurfaceStepCtx } from './@types/SurfaceStepCtx';
 import { EMPTY_SURFACE_GESTURE_MEMORY, surfaceStep } from './gesture/surfaceStep';
 import { SCENE_CELESTIAL_BODIES } from '../../../../../data/bodies/sceneCelestialBodies';
 import { bodyFixedEyeM } from '../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';

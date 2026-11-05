@@ -17,8 +17,8 @@ import {
   SURFACE_STANDOFF_RADII,
 } from '../../../../../../src/utils/camera/orbitCamera/clampDistance';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
-import type { CameraPose } from '../../../../../../src/@types/camera/CameraPose';
-import type { PivotFraming } from '../../../../../../src/@types/camera/PivotFraming';
+import type { CameraPose } from '../../../../../../src/@types/camera/pose/CameraPose';
+import type { PivotFraming } from '../../../../../../src/@types/camera/arms/PivotFraming';
 
 const makePose = (distance: number): CameraPose => ({
   target: [1, 2, 3],

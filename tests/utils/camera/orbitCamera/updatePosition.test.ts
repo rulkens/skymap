@@ -14,7 +14,7 @@
 import { describe, it, expect } from 'vitest';
 import { updatePosition } from '../../../../src/utils/camera/orbitCamera/updatePosition';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 
 function makeCam(overrides: Partial<OrbitCamera> = {}): OrbitCamera {
   return {

@@ -1,10 +1,10 @@
 /** One frame's pixel-free motion through the arm that owns `framed`'s frame — `nudge` as the drain's `stepRow` reads `step`. */
 
-import type { ArmDelta } from '../../../../@types/camera/ArmDelta';
-import type { FramedPose } from '../../../../@types/camera/FramedPose';
-import type { CameraArmCtx } from '../../../../@types/camera/CameraArmCtx';
-import type { CameraArmKind } from '../../../../@types/camera/CameraArmKind';
-import type { TiltMemory } from '../../../../@types/camera/TiltMemory';
+import type { ArmDelta } from '../@types/ArmDelta';
+import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
+import type { CameraArmCtx } from '../../../../@types/camera/arms/CameraArmCtx';
+import type { CameraArmKind } from '../../../../@types/camera/arms/CameraArmKind';
+import type { TiltMemory } from '../../../../@types/camera/orientation/TiltMemory';
 import { rowFor } from './rowFor';
 
 export function nudgeCameraArm<K extends CameraArmKind>(

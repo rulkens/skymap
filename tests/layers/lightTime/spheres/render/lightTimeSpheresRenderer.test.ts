@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { createLightTimeSpheresRenderer } from '../../../../../src/layers/lightTime/spheres/render/lightTimeSpheresRenderer';
 import { LIGHT_TIME_SPHERES } from '../../../../../src/layers/lightTime/spheres/data/lightTimeSpheres';
-import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { ViewFrustum } from '../../../../../src/@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../../../src/@types/camera/projection/ViewFrustum';
 import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 
 // Float indices of the uniform block — `src/services/gpu/shaders/lightTime/io.wesl`, restated so a silent

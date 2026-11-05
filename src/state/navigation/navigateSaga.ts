@@ -47,7 +47,7 @@ import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import type { LinkIntent } from '../../@types/url/LinkIntent';
 import type { Transition } from '../../@types/navigation/Transition';
 import type { NavigateOutcome } from '../../@types/navigation/NavigateOutcome';
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 import type { LiveCameraRuntime, SagaContext } from '../../store/types';
 
 const OK: NavigateOutcome = { ok: true };

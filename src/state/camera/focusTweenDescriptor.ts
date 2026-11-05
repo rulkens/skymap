@@ -29,10 +29,10 @@
 
 import { framingPose } from '../../services/engine/camera/framing/framingPose';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
-import type { CameraPose } from '../../@types/camera/CameraPose';
-import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
-import type { FocusMotion } from '../../@types/camera/FocusMotion';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { CameraPose } from '../../@types/camera/pose/CameraPose';
+import type { CameraTweenDescriptor } from '../../@types/camera/focusMotion/CameraTweenDescriptor';
+import type { FocusMotion } from '../../@types/camera/focusMotion/FocusMotion';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
 /**
  * Build the focus tween's `from → to` descriptor.

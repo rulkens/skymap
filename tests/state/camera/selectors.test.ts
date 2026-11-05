@@ -29,11 +29,11 @@ import {
 } from '../../../src/state/camera/cameraSlice';
 import { inputGestureStarted } from '../../../src/state/input/inputSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import type { CameraTweenDescriptor } from '../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
-import type { FrameTween } from '../../../src/@types/camera/FrameTween';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FrameTween } from '../../../src/@types/camera/focusMotion/FrameTween';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // Build a fresh store for each test so dispatch side-effects don't cross cases.

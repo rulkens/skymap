@@ -4,13 +4,13 @@
  * encodes which side of the band the camera is on.
  */
 
-import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
-import type { ClimbableKind } from '../../../../@types/camera/ClimbableKind';
-import type { FramedCameraPose } from '../../../../@types/camera/FramedCameraPose';
-import type { FramedPose } from '../../../../@types/camera/FramedPose';
-import type { ParentOf } from '../../../../@types/camera/ParentOf';
-import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
-import type { CameraArmCtx } from '../../../../@types/camera/CameraArmCtx';
+import type { ClimbRow } from './@types/ClimbRow';
+import type { ClimbableKind } from '../@types/ClimbableKind';
+import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
+import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
+import type { ParentOf } from './@types/ParentOf';
+import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
+import type { CameraArmCtx } from '../../../../@types/camera/arms/CameraArmCtx';
 import { CAMERA_ARMS } from './cameraArms';
 import { climbRowFor } from './climbRowFor';
 import { isWorldArm } from './world/isWorldArm';

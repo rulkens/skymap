@@ -16,16 +16,16 @@ import { symmetricFrustum } from '../../../../../../src/utils/camera/frustum/sym
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 import { SCENE_CELESTIAL_BODIES } from '../../../../../../src/data/bodies/sceneCelestialBodies';
 import { DEFAULT_CAMERA_TUNING } from '../../../../../../src/data/camera/cameraTuning';
-import { EMPTY_TILT_MEMORY } from '../../../../../../src/data/camera/emptyTiltMemory';
-import { SKY_EYE_HEIGHT_M } from '../../../../../../src/data/camera/skyEyeHeightM';
+import { EMPTY_TILT_MEMORY } from '../../../../../../src/services/engine/camera/data/emptyTiltMemory';
+import { SKY_EYE_HEIGHT_M } from '../../../../../../src/services/engine/camera/arms/sky/data/skyEyeHeightM';
 import { ORIENTATION_FRAMES } from '../../../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../../../src/data/time/constJ2000';
-import type { FrameOf } from '../../../../../../src/@types/camera/FrameOf';
-import type { FramedPose } from '../../../../../../src/@types/camera/FramedPose';
-import type { CameraArmCtx } from '../../../../../../src/@types/camera/CameraArmCtx';
+import type { FrameOf } from '../../../../../../src/@types/camera/arms/FrameOf';
+import type { FramedPose } from '../../../../../../src/@types/camera/pose/FramedPose';
+import type { CameraArmCtx } from '../../../../../../src/@types/camera/arms/CameraArmCtx';
 import type { SceneBodyId } from '../../../../../../src/@types/scene/SceneBodyId';
-import type { SkySpot } from '../../../../../../src/@types/camera/SkySpot';
+import type { SkySpot } from '../../../../../../src/@types/camera/pose/SkySpot';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];

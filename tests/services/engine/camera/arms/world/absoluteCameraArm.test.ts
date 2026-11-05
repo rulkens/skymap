@@ -8,10 +8,10 @@ import { SCENE_EARTH } from '../../../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../../src/data/time/constJ2000';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../../../src/data/camera/cameraTuning';
-import { EMPTY_TILT_MEMORY } from '../../../../../../src/data/camera/emptyTiltMemory';
+import { EMPTY_TILT_MEMORY } from '../../../../../../src/services/engine/camera/data/emptyTiltMemory';
 import { datumOnlyTerrainHeight } from '../../../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
-import type { FramedPose } from '../../../../../../src/@types/camera/FramedPose';
-import type { CameraArmCtx } from '../../../../../../src/@types/camera/CameraArmCtx';
+import type { FramedPose } from '../../../../../../src/@types/camera/pose/FramedPose';
+import type { CameraArmCtx } from '../../../../../../src/@types/camera/arms/CameraArmCtx';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 import { symmetricFrustum } from '../../../../../../src/utils/camera/frustum/symmetricFrustum';
 

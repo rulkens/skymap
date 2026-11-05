@@ -12,10 +12,10 @@
  * that logic.  It is pure: pose and projection are never mutated.
  */
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { CameraProjection } from '../../../@types/camera/CameraProjection';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../@types/camera/projection/CameraProjection';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { AssembledOrbitCamera } from '../../../@types/camera/AssembledOrbitCamera';
+import type { AssembledOrbitCamera } from '../../../@types/camera/orbitCamera/AssembledOrbitCamera';
 import { updatePosition } from '../../../utils/camera/orbitCamera/updatePosition';
 
 /**

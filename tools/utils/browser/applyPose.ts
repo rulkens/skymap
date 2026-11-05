@@ -5,7 +5,7 @@ import {
   commitCameraPose,
   setAutoRotate,
 } from '../../../src/state/camera/cameraSlice';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
 import { dispatchActions } from './dispatchActions';
 

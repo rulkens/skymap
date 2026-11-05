@@ -1,5 +1,5 @@
-import type { BodyLocalRay } from '../../../../../../../@types/camera/BodyLocalRay';
-import type { SurfacePick } from '../../../../../../../@types/camera/SurfacePick';
+import type { BodyLocalRay } from '../../../../../../../@types/camera/terrain/BodyLocalRay';
+import type { SurfacePick } from '../../../../../../../@types/camera/terrain/SurfacePick';
 import type { Vec3 } from '../../../../../../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../../../../../data/camera/bodyLocalFrame';
 import { dot3 } from '../../../../../../../utils/math/dot3';

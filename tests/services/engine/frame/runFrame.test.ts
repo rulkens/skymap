@@ -76,7 +76,7 @@ import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
@@ -91,7 +91,7 @@ import {
   inputConsumed,
 } from '../../../../src/state/input/inputSlice';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
-import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
+import { EMPTY_TILT_MEMORY } from '../../../../src/services/engine/camera/data/emptyTiltMemory';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { earthArm } from '../../../fixtures/earthArm';
@@ -528,7 +528,7 @@ describe('runFrame — orientation-frame roll', () => {
     // pin that every produced pose and its view-projection are finite: at exactly
     // π/2 the lookAt would gimbal-lock to NaN, and the clamp is what keeps this
     // switch well-defined.
-    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors src/data/camera/pitchLimit.ts
+    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors src/services/engine/camera/arms/world/data/pitchLimit.ts
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);

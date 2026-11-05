@@ -6,8 +6,8 @@
  * `JSON.stringify` precision, not `toFixed`, or a metre-scale altitude rounds away.
  */
 
-import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import { pivotRadiusMpc } from '../camera/framing/pivotRadiusMpc';
 import { frameKey } from '../camera/arms/frameKey';

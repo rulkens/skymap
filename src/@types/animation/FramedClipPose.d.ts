@@ -1,5 +1,5 @@
-import type { CameraPose } from '../camera/CameraPose';
-import type { PoseFrame } from '../camera/PoseFrame';
+import type { CameraPose } from '../camera/pose/CameraPose';
+import type { PoseFrame } from '../camera/pose/PoseFrame';
 
 /**
  * The four animation channels plus the frame they were interpolated in.

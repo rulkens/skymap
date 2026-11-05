@@ -7,7 +7,7 @@ import { imagePlaneBasis } from '../../../../../../../src/utils/camera/orbitPose
 import { SURFACE_STANDOFF_RADII } from '../../../../../../../src/utils/camera/orbitCamera/clampDistance';
 import { mat3FromColumns } from '../../../../../../../src/utils/math/mat3FromColumns';
 import { normalize3 } from '../../../../../../../src/utils/math/normalize3';
-import type { BodyFixedPose } from '../../../../../../../src/@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../../../../../src/@types/camera/pose/BodyFixedPose';
 import type { Mat3 } from '../../../../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../../src/utils/scene/asSceneBodyId';

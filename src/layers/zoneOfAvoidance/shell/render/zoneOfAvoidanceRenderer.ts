@@ -10,7 +10,7 @@
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
+import type { ImagePlaneBasis } from '../../../../@types/camera/pose/ImagePlaneBasis';
 import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
 import { orbitForwardOf } from '../../../../utils/camera/orbitPose/orbitForwardOf';
@@ -27,8 +27,8 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { ZoneOfAvoidanceRenderer } from '../@types/ZoneOfAvoidanceRenderer';
 import type { ZoneOfAvoidanceShell } from '../@types/ZoneOfAvoidanceShell';
 import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
-import type { ViewFrustum } from '../../../../@types/camera/ViewFrustum';
+import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
+import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { PickWindow } from '../../../../@types/engine/frame/PickWindow';
 import type { PickWindowNdc } from '../../../../@types/engine/frame/PickWindowNdc';

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 

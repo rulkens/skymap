@@ -9,8 +9,8 @@
 import type { Mat4 } from 'wgpu-matrix';
 import { mat4d } from 'wgpu-matrix';
 
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Slab } from '../../../@types/engine/frame/Slab';
@@ -38,7 +38,7 @@ import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { nearestSphereFaceM } from '../../../utils/occlusion/nearestSphereFaceM';
 import { timingSlotForView } from '../../../utils/frame/timingSlotForView';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
-import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
+import type { ImagePlaneBasis } from '../../../@types/camera/pose/ImagePlaneBasis';
 import { orbitForwardOf } from '../../../utils/camera/orbitPose/orbitForwardOf';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */

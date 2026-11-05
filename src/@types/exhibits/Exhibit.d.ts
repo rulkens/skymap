@@ -5,7 +5,7 @@
  * owns restore.
  */
 
-import type { CameraPose } from '../camera/CameraPose';
+import type { CameraPose } from '../camera/pose/CameraPose';
 import type { SettingsSnapshot } from '../engine/settings/SettingsSnapshot';
 import type { ExhibitId } from './ExhibitId';
 import type { ExhibitSection } from './ExhibitSection';

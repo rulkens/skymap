@@ -5,7 +5,7 @@
  * from a whole path.
  */
 
-import type { CameraTweenDescriptor } from '../../../../@types/camera/CameraTweenDescriptor';
+import type { CameraTweenDescriptor } from '../../../../@types/camera/focusMotion/CameraTweenDescriptor';
 import { focusMotionRowOf } from './focusMotionRowOf';
 
 const cache = new WeakMap<CameraTweenDescriptor, number>();

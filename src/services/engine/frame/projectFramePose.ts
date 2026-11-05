@@ -11,13 +11,13 @@
 
 import type { UnknownAction } from '@reduxjs/toolkit';
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { CameraState } from '../../../@types/camera/CameraState';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { CameraState } from '../../../@types/camera/orbitCamera/CameraState';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
-import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
-import type { CameraArmCtx } from '../../../@types/camera/CameraArmCtx';
+import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
+import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import type { TiltMemory } from '../../../@types/camera/TiltMemory';
+import type { TiltMemory } from '../../../@types/camera/orientation/TiltMemory';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 import { applyFocusedBodyPivot } from '../camera/bodyFrame/applyFocusedBodyPivot';

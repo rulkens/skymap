@@ -52,7 +52,7 @@
  * offset above.
  */
 
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import { deriveBodyStates } from '../../frame/deriveBodyStates';

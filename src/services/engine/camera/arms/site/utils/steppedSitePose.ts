@@ -6,9 +6,9 @@
  * law. Both signs are that arm's ORBIT handle re-derived, never its tilt.
  */
 
-import type { InputStep } from '../../../../../../@types/camera/InputStep';
+import type { InputStep } from '../../../../../../@types/camera/input/InputStep';
 import type { MeshBody } from '../../../../../../@types/scene/MeshBody';
-import type { SitePose } from '../../../../../../@types/camera/SitePose';
+import type { SitePose } from '../../../../../../@types/camera/pose/SitePose';
 import type { Vec2 } from '../../../../../../@types/math/Vec2';
 import { clampedSitePose } from './clampedSitePose';
 import { ORBIT_MAX_RAD_PER_PX } from '../../../input/utils/orbitRadPerPixel';

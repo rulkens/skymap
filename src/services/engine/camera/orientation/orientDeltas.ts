@@ -10,9 +10,9 @@
  * measured body-fixed, so a rotating body moves them under a still camera.
  */
 
-import type { CameraDofAngles } from '../../../../@types/camera/CameraDofAngles';
-import type { OrientDeltas } from '../../../../@types/camera/OrientDeltas';
-import type { OrientDofDelta } from '../../../../@types/camera/OrientDofDelta';
+import type { CameraDofAngles } from '../../../../@types/camera/debug/CameraDofAngles';
+import type { OrientDeltas } from '../../../../@types/camera/orientation/OrientDeltas';
+import type { OrientDofDelta } from '../../../../@types/camera/orientation/OrientDofDelta';
 import { wrapRad } from '../../../../utils/math/wrapRad';
 
 type DofRecord = {

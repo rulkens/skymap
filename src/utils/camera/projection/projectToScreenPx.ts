@@ -12,7 +12,7 @@
 
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ForwardProjectedPoint } from '../../../@types/camera/ForwardProjectedPoint';
+import type { ForwardProjectedPoint } from '../../../@types/camera/projection/ForwardProjectedPoint';
 import { forwardProjectPoint } from './forwardProjectPoint';
 
 // Reused across calls — this function has no per-label loop of its own, but

@@ -31,7 +31,7 @@ import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../src/@types/animation/ClipId';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../src/@types/camera/orientation/OrientationFrameId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 

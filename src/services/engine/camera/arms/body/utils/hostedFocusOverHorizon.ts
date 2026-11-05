@@ -11,7 +11,7 @@
  * lower standard — only by the site's own.
  */
 
-import type { HostBody } from '../../../../../../@types/camera/HostBody';
+import type { HostBody } from '../../@types/HostBody';
 import type { Vec3 } from '../../../../../../@types/math/Vec3';
 import { hostedFocusPivotM } from './hostedFocusPivotM';
 import { surfaceFloorM } from './surfaceFloorM';

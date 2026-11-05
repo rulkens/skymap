@@ -16,7 +16,7 @@ import {
   ORIENTATION_FRAMES,
   ORIENTATION_FRAME_QUATERNIONS,
 } from '../../../../../src/data/orientation/orientationFrames';
-import type { FrameTween } from '../../../../../src/@types/camera/FrameTween';
+import type { FrameTween } from '../../../../../src/@types/camera/focusMotion/FrameTween';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 
 const TOL = 1e-6;

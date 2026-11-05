@@ -24,7 +24,7 @@ import {
   SURFACE_STANDOFF_RADII,
 } from '../../../../../../src/utils/camera/orbitCamera/clampDistance';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
-import type { PivotFraming } from '../../../../../../src/@types/camera/PivotFraming';
+import type { PivotFraming } from '../../../../../../src/@types/camera/arms/PivotFraming';
 
 /** Earth's mean radius (km → Mpc). */
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;

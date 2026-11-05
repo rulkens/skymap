@@ -12,7 +12,7 @@
  */
 
 import { clampDistance } from '../../../../../utils/camera/orbitCamera/clampDistance';
-import type { PivotFraming } from '../../../../../@types/camera/PivotFraming';
+import type { PivotFraming } from '../../../../../@types/camera/arms/PivotFraming';
 
 export function zoomedDistance(distance: number, factor: number, pivot: PivotFraming): number {
   const { radiusMpc, floorMpc } = pivot;

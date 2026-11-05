@@ -5,8 +5,8 @@
  * a capture face's basis uses; `distance` stays the orbit's so distance gates agree.
  */
 
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
