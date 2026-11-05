@@ -72,19 +72,19 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
-import { liveBodyPosition } from '../../camera/liveBodyPosition';
+import { liveBodyPosition } from '../../camera/bodyFrame/liveBodyPosition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { sceneOccluderBodies } from '../sceneOccluderBodies';
 import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
 import { overflowFade } from '../../../../utils/scene/overflowFade';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { near0OverlayClipScale } from '../near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../near0OverlayVpF32';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
-import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
+import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/frustum/foregroundFrustum';
 import { subjectOccludedByBodies } from '../../../../utils/occlusion/subjectOccludedByBodies';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
-import { pinInsideNearPlane } from '../../../../utils/camera/pinInsideNearPlane';
+import { pinInsideNearPlane } from '../../../../utils/camera/projection/pinInsideNearPlane';
 
 export const near0SelectionRingPass: ContentPass = {
   name: 'near0-selection-ring',

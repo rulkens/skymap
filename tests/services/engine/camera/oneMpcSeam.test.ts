@@ -18,9 +18,9 @@ const FORBIDDEN_MEMBERS = ['MPC_TO_M', 'M_TO_MPC'];
 // The seams themselves: deliberately excluded from TS_FILES below (they
 // ARE the allowed conversion sites), documented instead in the first `it`.
 const SEAM_FILES: readonly string[] = [
-  'src/services/engine/camera/bodyRelativePose.ts',
-  'src/services/engine/camera/poseFrameConversion.ts',
-  'src/services/engine/camera/viewBodyPose.ts',
+  'src/services/engine/camera/bodyFrame/bodyRelativePose.ts',
+  'src/services/engine/camera/arms/body/poseFrameConversion.ts',
+  'src/services/engine/camera/bodyFrame/viewBodyPose.ts',
 ];
 
 // The body-slab and engaged-camera paths, DERIVED by sweeping directories (`walk` recurses), so a
@@ -30,7 +30,6 @@ const TS_FILES: readonly string[] = [
   ...walkFiles('src/services/engine/frame', ['.ts']),
   ...walkFiles('src/services/gpu/renderers/bodies', ['.ts']),
   ...walkFiles('src/services/engine/camera', ['.ts']),
-  ...walkFiles('src/services/camera', ['.ts']),
   ...walkFiles('src/utils/camera', ['.ts']),
   ...walkFiles('src/layers', ['.ts']),
   'src/utils/star/starSphereRangeM.ts',
@@ -44,9 +43,9 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
   'src/services/engine/frame/timing/timedSlots.ts',
   'src/services/engine/frame/visibleSlabBodies.ts',
   'src/layers/body/spheres/render/planetRenderer.ts',
-  'src/services/engine/camera/cameraDrivers.ts',
-  'src/services/camera/applyInputToCamera.ts',
-  'src/utils/camera/computeViewProj.ts',
+  'src/services/engine/camera/drivers/cameraDrivers.ts',
+  'src/services/engine/camera/arms/world/applyInputToCamera.ts',
+  'src/utils/camera/projection/computeViewProj.ts',
   'src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass.ts',
 ];
 
@@ -104,11 +103,11 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     "world-position precedent — phase 1c folds a surface site's AUTHORED metre offset (host radius + altitude) into the host's world Mpc position, the metres-in/Mpc-out boundary the authored table demands; no slab, no pose, no MVP",
   ],
   [
-    'src/services/engine/camera/bodyLikeFraming.ts',
+    'src/services/engine/camera/framing/bodyLikeFraming.ts',
     'framing-bridge precedent — converts a body radius to Mpc so bodyFocusDistance and the returned FocusFraming.radius can compose with Mpc-shaped framing math (camera-pivot controller verification, spec §10), not a pose re-derivation',
   ],
   [
-    'src/services/engine/camera/pivotRadiusMpc.ts',
+    'src/services/engine/camera/framing/pivotRadiusMpc.ts',
     "framing-bridge precedent — the SelectionRow's radiusM to Mpc bridge feeding clampDistance's floor argument (zoom floor, pinch floor, follow driver's distance target all derive from it), not a pose re-derivation",
   ],
   [

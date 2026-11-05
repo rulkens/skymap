@@ -16,7 +16,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import type { OrbitConic } from '../../@types/scene/OrbitConic';
 import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 import { CULL_PX, FULL_PX } from '../../data/bodies/orbitTrailConstants';
-import { composeOrbitConic } from '../camera/composeOrbitConic';
+import { composeOrbitConic } from '../camera/bodyCompose/composeOrbitConic';
 import { apparentSizePx } from '../math/apparentSizePx';
 import { eyeRelativeOrbitBasisKm } from './eyeRelativeOrbitBasisKm';
 

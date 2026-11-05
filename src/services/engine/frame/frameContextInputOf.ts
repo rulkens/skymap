@@ -14,7 +14,7 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
-import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
+import { pivotSurfaceRangeMpc } from '../camera/framing/pivotSurfaceRangeMpc';
 
 export function frameContextInputOf(
   state: EngineState,

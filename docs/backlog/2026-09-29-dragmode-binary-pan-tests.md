@@ -13,16 +13,16 @@
   88 gates click-to-pick on `endedMode === 'orbit'` specifically, so pan and
   pinch are both (correctly, today) excluded — but only because someone
   enumerated `'orbit'` by hand, not because the switch is exhaustive.
-- `src/services/camera/applyInputToCamera.ts:49` — `if (step.mode === 'pan') { ... }`
+- `src/services/engine/camera/arms/world/applyInputToCamera.ts:49` — `if (step.mode === 'pan') { ... }`
   with no accompanying `else if (step.mode === 'orbit')`; anything that is not
   `'pan'` falls through to the orbit math after the block.
-- `src/utils/camera/latchSurfaceGesture.ts:39` — same shape:
+- `src/services/engine/camera/arms/body/gesture/utils/latchSurfaceGesture.ts:39` — same shape:
   `if (step.mode === 'pan') { ... }`, tilt-handle logic follows unconditionally
   for every other mode.
-- `src/services/engine/camera/replayInput.ts:140` —
+- `src/services/engine/camera/input/replayInput.ts:140` —
   `step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)`
   gates the followed-body strafe path; any other mode skips it silently.
-- `src/utils/camera/steppedSitePose.ts` — `InputStep`'s `drag` variant carries
+- `src/services/engine/camera/arms/site/utils/steppedSitePose.ts` — `InputStep`'s `drag` variant carries
   a `mode: DragMode` field (`src/@types/camera/InputStep.d.ts`), but this file
   never reads `.mode` at all: every `kind === 'drag'` step drives the
   turntable orbit math, so a `'pan'` (or future) mode on the site arm has no

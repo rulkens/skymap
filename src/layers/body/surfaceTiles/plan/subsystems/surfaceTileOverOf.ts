@@ -16,7 +16,7 @@ import { findByIdOrThrow } from '../../../../../utils/object/findByIdOrThrow';
 import { asSceneBodyId } from '../../../../../utils/scene/asSceneBodyId';
 import { isSurfaceTileBodyId } from '../../format/utils/isSurfaceTileBodyId';
 import { engageDistanceM } from './engageDistanceM';
-import { frustumCornerMagnification } from '../../../../../utils/camera/frustumCornerMagnification';
+import { frustumCornerMagnification } from '../../../../../utils/camera/frustum/frustumCornerMagnification';
 
 export function surfaceTileOverOf(views: readonly FrameView[]): SurfaceTileOver | null {
   const eyeView = views[0];

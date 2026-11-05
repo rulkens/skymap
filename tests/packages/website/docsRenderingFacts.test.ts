@@ -118,7 +118,9 @@ describe('rendering rows and the constants behind them', () => {
 
   it('the camera’s stop round a focus with no surface', () => {
     const km =
-      (one('src/services/engine/camera/pivotRadiusMpc.ts', 'SURFACELESS_FLOOR_MPC') * MPC_M) / 1000;
+      (one('src/services/engine/camera/framing/pivotRadiusMpc.ts', 'SURFACELESS_FLOOR_MPC') *
+        MPC_M) /
+      1000;
     expect(text('render-floors')).toContain(`about ${Number(km.toPrecision(1))} kilometres away`);
   });
 

@@ -19,9 +19,9 @@ import { cross3 } from '../../../../utils/math/cross3';
 import { dot3 } from '../../../../utils/math/dot3';
 import { normalize3 } from '../../../../utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../utils/math/rotateVec3ByTightMat3';
-import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitAnglesLookingAlong';
-import { sphereFitDistance } from '../../../../utils/camera/sphereFitDistance';
-import { yawPitchToDir } from '../../../../utils/camera/yawPitchToDir';
+import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { sphereFitDistance } from '../../../../utils/camera/orbitCamera/sphereFitDistance';
+import { yawPitchToDir } from '../../../../utils/camera/orbitPose/yawPitchToDir';
 
 const NEAR_BELOW_MPC = 0.05 * SCALE_UNITS.AU_TO_MPC;
 const CRUISE_ABOVE_MPC = 0.5 * SCALE_UNITS.AU_TO_MPC;

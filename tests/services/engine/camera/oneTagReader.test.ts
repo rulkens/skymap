@@ -15,7 +15,6 @@ import { join } from 'node:path';
 
 const SWEPT_DIRS: readonly string[] = [
   'src/state',
-  'src/services/camera',
   'src/services/engine/camera',
   'src/services/engine/frame',
   'src/services/engine/helpers',

@@ -30,7 +30,7 @@ struct TintedSphereUniforms {
 // ── LitBodyUniforms ──────────────────────────────────────────────────
 //
 // `sunDirLocal` is rotated into the body's LOCAL frame CPU-side
-// (`utils/camera/sunDirLocal.ts`), so the fragment stays a plain dot product under
+// (`utils/camera/bodyCompose/sunDirLocal.ts`), so the fragment stays a plain dot product under
 // axial tilt. The 4-byte tail is padding, not an ambient field: lit paths read the
 // shared `AMBIENT` const in `lib/bodyLighting.wesl` directly.
 //

@@ -27,7 +27,7 @@
  * `MILKY_WAY_CENTER_WORLD` constant).
  */
 
-import { framingPose } from '../../services/engine/camera/framingPose';
+import { framingPose } from '../../services/engine/camera/framing/framingPose';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';

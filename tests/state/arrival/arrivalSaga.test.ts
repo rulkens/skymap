@@ -56,11 +56,11 @@ import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFra
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
-import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
+import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { worldArmOf } from '../../fixtures/worldArmOf';
-import { homePose } from '../../../src/services/engine/camera/homePose';
+import { homePose } from '../../../src/services/engine/camera/framing/homePose';
 import { makeCameraSimHarness } from '../../helpers/camera/makeCameraSimHarness';
 import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
 import { selectOrientation } from '../../../src/state/settings/selectors';

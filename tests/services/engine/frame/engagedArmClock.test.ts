@@ -40,11 +40,11 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
   };
 });
 
-import { isBodyArm } from '../../../../src/services/engine/camera/arms/isBodyArm';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/body/isBodyArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
-import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
+import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
 import { setRate, resume } from '../../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';

@@ -11,9 +11,9 @@ import {
   STAR_PICK_MIN_RADIUS_PX,
   STAR_SIZE_REF_PX,
 } from '../../photometry/data/starCullSlack';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
+import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustum/frustumPlanesFromViewProj';
 import { starExposureRamp } from '../../photometry/utils/starExposureRamp';
 import { starSourcesInBand } from './starSourcesInBand';
 import { FLOATS_PER_VIEW } from '../../../../services/gpu/octree/octreeCutLayout';

@@ -13,14 +13,14 @@ import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { RootState } from '../../../store/types';
-import { UNSTARTED_EPOCHS } from './cameraEpochs';
+import { UNSTARTED_EPOCHS } from './drivers/cameraEpochs';
 import { frameKey } from './arms/frameKey';
 import { rowFor } from './arms/rowFor';
 import { EMPTY_TILT_MEMORY } from '../../../data/camera/emptyTiltMemory';
 import { NAV_AT_REST } from '../../../data/camera/openSpaceNavigation';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../data/time/constJ2000';
-import { symmetricFrustum } from '../../../utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../utils/camera/frustum/symmetricFrustum';
 
 export function seedCameraRuntime(args: {
   /** Only the two slices the seed reads; call sites still hand over `store.getState()`. */

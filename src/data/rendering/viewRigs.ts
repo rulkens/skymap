@@ -7,7 +7,7 @@
 
 import type { ViewRig } from '../../@types/engine/frame/ViewRig';
 import type { ViewRigKey } from '../../@types/engine/frame/ViewRigKey';
-import { domeFaceSpecs } from '../../utils/camera/domeFaceSpecs';
+import { domeFaceSpecs } from '../../utils/camera/viewRig/domeFaceSpecs';
 import { DOME_RESAMPLE, OVERLAYS, POST, PRELUDE, SCENE, SCENE_TO_DOME_CUBE } from './frameSections';
 
 export const VIEW_RIGS: Readonly<Record<ViewRigKey, ViewRig>> = {

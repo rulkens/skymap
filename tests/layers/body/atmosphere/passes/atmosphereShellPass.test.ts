@@ -34,14 +34,14 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // ATMOSPHERE_PARAMS row fed it.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [1.0, 2.0, 3.0];
-vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
-vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal', () => ({
   bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
 }));
-import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
-import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // atmosphereDrawList reads live body positions off this snapshot; stub it to the fixtures' refs.

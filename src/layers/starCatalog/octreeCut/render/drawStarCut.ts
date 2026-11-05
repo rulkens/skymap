@@ -2,7 +2,7 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogRenderer } from '../../survey/@types/StarCatalogRenderer';
 import type { OctreeDrawStream } from '../../../../@types/octree/OctreeDrawStream';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { starFocusRelCam } from './starFocusRelCam';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 

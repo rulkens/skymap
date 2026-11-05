@@ -19,7 +19,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { GLINT_MIN_BRIGHTNESS } from '../../../../data/rendering/glintMinBrightness';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
 import { BODY_GLINT_INSTANCE_FLOATS } from '../../../../data/rendering/bodyGlintInstanceFloats';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { blackHoleAnchorId } from '../present/blackHoleAnchorId';
 import { blackHoleMarkerBrightness } from '../present/blackHoleMarkerBrightness';

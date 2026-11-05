@@ -27,14 +27,14 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { setAutoRotate, startCameraTween } from '../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
-import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
+import { bodyUpWeight } from '../../../../src/services/engine/camera/orientation/utils/bodyUpWeight';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';

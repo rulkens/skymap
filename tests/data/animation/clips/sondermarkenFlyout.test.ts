@@ -9,14 +9,14 @@ import {
   sondermarkenFlyout,
   SONDERMARKEN_POSE,
 } from '../../../../src/data/animation/clips/sondermarkenFlyout';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import { resolveClipFoci } from '../../../../src/services/engine/animation/resolveClipFoci';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { decodeFramedPose } from '../../../../src/utils/url/decodeFramedPose';
-import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
-import { linkedPoseToWorld } from '../../../../src/utils/camera/linkedPoseToWorld';
-import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
+import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
+import { linkedPoseToWorld } from '../../../../src/services/engine/camera/arms/utils/linkedPoseToWorld';
+import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';

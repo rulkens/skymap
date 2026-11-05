@@ -7,7 +7,7 @@ import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import { siteGroundRadiusM } from '../../../src/utils/camera/siteGroundRadiusM';
+import { siteGroundRadiusM } from '../../../src/utils/camera/arms/siteGroundRadiusM';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 

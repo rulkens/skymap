@@ -15,7 +15,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { LIMB_DARKENING_PARAMS } from '../../../../../src/layers/body/spheres/data/limbDarkeningParams';
-import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { sunDirLocal } from '../../../../../src/utils/camera/bodyCompose/sunDirLocal';
 import { bodySlabCamAltitudeSq } from '../../../../../src/layers/body/slabs/present/bodySlabCamAltitudeSq';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -35,14 +35,14 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
-vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
-vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal', () => ({
   bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
 }));
-import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
-import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;

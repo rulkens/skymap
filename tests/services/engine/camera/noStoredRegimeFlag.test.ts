@@ -32,7 +32,6 @@ const BOOLEAN_TYPE_TEXTS = new Set(['boolean', 'true', 'false']);
 const SWEPT_DIRS: readonly string[] = [
   'src/state',
   'src/services/engine/camera',
-  'src/services/camera',
   'src/@types/camera',
   'src/layers',
 ];

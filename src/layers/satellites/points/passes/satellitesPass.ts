@@ -16,7 +16,7 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SampledDepthBinding } from '../../../../@types/rendering/SampledDepthBinding';
 import type { SatellitePointFrame } from '../@types/SatellitePointFrame';
 import type { SatelliteClass } from '../../../../@types/satellites/SatelliteClass';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { julianDaysToUnixMs } from '../../../../utils/time/julianDaysToUnixMs';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { sampledDepthBinding } from '../../../../services/engine/frame/sampledDepthBinding';

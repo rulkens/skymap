@@ -38,7 +38,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { OrbitalElements } from '../../../../../src/@types/scene/OrbitalElements';
 import type { OrbitTrailDrawArgs } from '../../../../../src/@types/rendering/orbitTrailRenderer/OrbitTrailDrawArgs';
-import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_SUN } from '../../../../../src/data/bodies/sceneSun';
@@ -54,7 +54,7 @@ type ConicOut = {
   clipBasis: readonly [Float32Array, Float32Array, Float32Array];
   arc: readonly [number, number];
 };
-vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/composeOrbitConic', () => ({
   composeOrbitConic: vi.fn<() => ConicOut>(() => ({
     ginv: new Float32Array(12),
     clipBasis: [
@@ -65,7 +65,7 @@ vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
     arc: [601, 602],
   })),
 }));
-import { composeOrbitConic } from '../../../../../src/utils/camera/composeOrbitConic';
+import { composeOrbitConic } from '../../../../../src/utils/camera/bodyCompose/composeOrbitConic';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // Lets one test hand the pass a snapshot that differs from raw Kepler; unset, the

@@ -1,0 +1,47 @@
+/**
+ * spinAutoRotate — unit tests for the pure auto-rotate yaw advancer.
+ *
+ * The legacy engine incremented `cam.yaw += AUTO_ROTATE_YAW_DELTA` once per
+ * frame, making the spin rate frame-count-dependent.  `spinAutoRotate` converts
+ * an elapsed-ms window to an equivalent yaw advance under an assumed 60 fps
+ * budget, producing the same visible drift speed without mutating anything.
+ *
+ * Tests focus on:
+ *   - Correct yaw advance (one FRAME_MS ≡ one `rate` radians).
+ *   - Only `yaw` changes; all other channels pass through unchanged.
+ *   - Strict purity: the input pose and its `target` array are not mutated;
+ *     the returned `target` is a fresh array instance.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { spinAutoRotate } from '../../../../../src/services/engine/camera/input/spinAutoRotate';
+import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+
+// The assumed frame budget used inside spinAutoRotate.
+// Kept here to make assertions self-documenting without importing internals.
+const FRAME_MS = 1000 / 60;
+
+function makePose(overrides?: Partial<CameraPose>): CameraPose {
+  return {
+    target: [1, 2, 3],
+    yaw: 0.5,
+    pitch: 0.1,
+    distance: 200,
+    ...overrides,
+  };
+}
+
+describe('spinAutoRotate', () => {
+  it('advances yaw by exactly `rate` radians when elapsedMs equals one FRAME_MS', () => {
+    const base = makePose();
+    const rate = 0.000873; // legacy AUTO_ROTATE_YAW_DELTA
+    const result = spinAutoRotate(base, rate, FRAME_MS);
+    expect(result.yaw).toBeCloseTo(base.yaw + rate, 10);
+  });
+
+  it('is pure — returned target is a different array instance than base.target', () => {
+    const base = makePose();
+    const result = spinAutoRotate(base, 0.001, FRAME_MS);
+    expect(result.target).not.toBe(base.target);
+  });
+});

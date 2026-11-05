@@ -15,7 +15,7 @@ import type { CameraArmKind } from '../../../../@types/camera/CameraArmKind';
 import { CAMERA_ARMS } from './cameraArms';
 import { climbRowFor } from './climbRowFor';
 import { hostOrThrow } from './hostOrThrow';
-import { isWorldArm } from './isWorldArm';
+import { isWorldArm } from './world/isWorldArm';
 import { cameraArmKindOf } from './cameraArmKindOf';
 import { sameFrame } from './sameFrame';
 

@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { surfaceTileOverOf } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/surfaceTileOverOf';
 import { SCENE_CELESTIAL_BODIES } from '../../../../../../src/data/bodies/sceneCelestialBodies';
 import { engageDistanceM } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/engageDistanceM';
-import { frustumCornerMagnification } from '../../../../../../src/utils/camera/frustumCornerMagnification';
+import { frustumCornerMagnification } from '../../../../../../src/utils/camera/frustum/frustumCornerMagnification';
 import { findByIdOrThrow } from '../../../../../../src/utils/object/findByIdOrThrow';
 import { frameViewsAt } from '../../../../../helpers/frame/frameViewsAt';
 import type { FrameView } from '../../../../../../src/@types/engine/frame/FrameView';

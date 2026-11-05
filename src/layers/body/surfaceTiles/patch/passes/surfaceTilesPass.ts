@@ -20,7 +20,7 @@ import { EARTH_SURFACE_PARAMS } from '../../format/data/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../clouds/data/cloudShellParams';
 import { bodyCameraDistanceMpc } from '../../../slabs/present/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../../../clouds/present/cloudDeckFade';
-import { sunDirLocal } from '../../../../../utils/camera/sunDirLocal';
+import { sunDirLocal } from '../../../../../utils/camera/bodyCompose/sunDirLocal';
 import { isTexturedBodyKey } from '../../../textures/present/isTexturedBodyKey';
 import { prepareBodySurfaceFrame } from '../../../slabs/present/prepareBodySurfaceFrame';
 import { surfaceTileSpecOf } from '../../format/utils/surfaceTileSpecOf';

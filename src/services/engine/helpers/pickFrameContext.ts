@@ -12,7 +12,7 @@ import { deriveView } from '../frame/deriveView';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { frameContextInputOf } from '../frame/frameContextInputOf';
 import { frameBodyStates } from '../frame/frameBodyStates';
-import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
+import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
 import { liveWorldPose } from './liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';

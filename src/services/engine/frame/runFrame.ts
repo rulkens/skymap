@@ -12,10 +12,10 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { Vec2 } from '../../../@types/math/Vec2';
 
-import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
+import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientation/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
-import { cameraDofAnglesOf } from '../camera/cameraDofAnglesOf';
-import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
+import { cameraDofAnglesOf } from '../camera/debug/cameraDofAnglesOf';
+import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';

@@ -7,7 +7,7 @@ import type { CameraPose } from '../../../../@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../../../@types/camera/FramedCameraPose';
 import type { CameraArmBasisCtx } from '../../../../@types/camera/CameraArmBasisCtx';
 import { climbRowFor } from './climbRowFor';
-import { isWorldArm } from './isWorldArm';
+import { isWorldArm } from './world/isWorldArm';
 
 export function foldToWorld(framed: FramedCameraPose, ctx: CameraArmBasisCtx): CameraPose {
   if (isWorldArm(framed)) return framed.pose;
