@@ -2,7 +2,7 @@ import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../../sources/galaxyCatalogSourceRows';
-import { maskWith } from '../../../../utils/maskWith';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyCatalogSettings } from '../../@types/GalaxyCatalogSettings';
 import type { GalaxyProvenanceSettings } from '../../@types/GalaxyProvenanceSettings';
 
@@ -49,15 +49,18 @@ export const selectGalaxyFalloffStrength = createSelector(
 );
 
 /**
- * selectVisibleSourceMask — projects the per-galaxy-catalog `enabled` bits into
- * the 32-bit galaxy-catalog-visibility bitmask the SettingsPanel checkboxes
- * read. The panel's intent mask (no fade-out tail), not an engine mask: the
- * engine derives its own from the values core hands, in `sourceMaskOf`.
+ * selectVisibleCatalogs — the ids of the galaxy catalogs whose `enabled` bit is
+ * set, as the SettingsPanel checkboxes read them. The panel's intent set (no
+ * fade-out tail), not an engine set: the engine derives its own from the values
+ * core hands, in `visibleCatalogsOf`.
  */
-export const selectVisibleCatalogs = createSelector([selectRoute], (route) => {
-  let mask = 0;
-  for (const [code, { id }] of GALAXY_CATALOG_SOURCE_ROWS) {
-    if (route.items[id].enabled) mask = maskWith(mask, code);
-  }
-  return mask;
-});
+export const selectVisibleCatalogs = createSelector(
+  [selectRoute],
+  (route): ReadonlySet<GalaxyCatalogId> => {
+    const visible = new Set<GalaxyCatalogId>();
+    for (const [, { id }] of GALAXY_CATALOG_SOURCE_ROWS) {
+      if (route.items[id].enabled) visible.add(id);
+    }
+    return visible;
+  },
+);

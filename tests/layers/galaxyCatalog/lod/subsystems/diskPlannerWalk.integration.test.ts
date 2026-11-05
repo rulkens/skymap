@@ -17,6 +17,8 @@
  *   4. One `runFrame` call populates BOTH bodies' `lastOutput` in a single frame.
  */
 
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../../../../src/data/source';
 import { createProceduralDiskSubsystem } from '../../../../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
@@ -38,6 +40,8 @@ import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/O
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
+
+const ALL_CATALOGS: ReadonlySet<GalaxyCatalogId> = new Set(GALAXY_CATALOG_IDS);
 
 // ── Fixtures (same idioms as the two subsystem suites) ──────────────────────
 
@@ -120,12 +124,15 @@ function pxPerRadFor(cam: OrbitCamera): number {
   return 720 / (2 * Math.tan(cam.fovYRad / 2));
 }
 
-function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) {
+function makeInput(
+  catalogs: Map<SourceType, GalaxyCatalog>,
+  visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
+) {
   const cam = makeCam();
   return {
     cam,
     records: galaxyRecordsOver(catalogs),
-    sourceMask: mask,
+    visibleCatalogs,
     pxPerRad: pxPerRadFor(cam),
     // Live surface-brightness sliders — arbitrary plausible defaults; this
     // suite is about parity between merged/solo walks, not brightness math.

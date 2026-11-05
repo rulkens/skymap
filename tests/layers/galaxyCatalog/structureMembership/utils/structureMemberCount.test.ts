@@ -1,15 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { structureMemberCount } from '../../../../../src/layers/galaxyCatalog/structureMembership/utils/structureMemberCount';
 import { Source } from '../../../../../src/data/source';
-import { maskWith } from '../../../../../src/utils/maskWith';
+import { galaxyCatalogIdOf } from '../../../../../src/utils/galaxyCatalogIdOf';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 
-/** A visibility mask covering the two catalogs this file's fixtures populate. */
-const SDSS_AND_TWOMRS_MASK = maskWith(maskWith(0, Source.SDSS), Source.TwoMRS);
+/** The visible catalogs covering the two catalogs this file's fixtures populate. */
+const SDSS_AND_TWOMRS = new Set([galaxyCatalogIdOf(Source.SDSS), galaxyCatalogIdOf(Source.TwoMRS)]);
+const SDSS_ONLY = new Set([galaxyCatalogIdOf(Source.SDSS)]);
 
 /**
  * Minimal GalaxyCatalog from (x,y,z) tuples — only `positions`/`count` are
@@ -60,7 +61,7 @@ describe('structureMemberCount', () => {
         [0, 200, 0],
       ]), // 1 inside
     });
-    expect(structureMemberCount(cluster, getCloud, SDSS_AND_TWOMRS_MASK)).toBe(3);
+    expect(structureMemberCount(cluster, getCloud, SDSS_AND_TWOMRS)).toBe(3);
   });
 
   it('excludes galaxy catalogs toggled off in the visibility mask', () => {
@@ -74,8 +75,7 @@ describe('structureMemberCount', () => {
         [0, 2, 0],
       ]), // 2 inside, but hidden
     });
-    const sdssOnly = maskWith(0, Source.SDSS);
-    expect(structureMemberCount(cluster, getCloud, sdssOnly)).toBe(2);
+    expect(structureMemberCount(cluster, getCloud, SDSS_ONLY)).toBe(2);
   });
 
   it('returns 0 for a genuinely empty sphere over loaded data', () => {
@@ -85,7 +85,7 @@ describe('structureMemberCount', () => {
         [200, 0, 0],
       ]),
     });
-    expect(structureMemberCount(cluster, getCloud, SDSS_AND_TWOMRS_MASK)).toBe(0);
+    expect(structureMemberCount(cluster, getCloud, SDSS_AND_TWOMRS)).toBe(0);
   });
 
   it('prefers apparentRadiusMpc over physicalRadiusMpc for the cone', () => {
@@ -96,14 +96,8 @@ describe('structureMemberCount', () => {
       apparentRadiusMpc: 12,
     };
     const getCloud = cloudFrom({ [Source.SDSS]: makeCatalog([[8, 0, 0]]) });
-    expect(structureMemberCount(wide, getCloud, maskWith(0, Source.SDSS))).toBe(1);
+    expect(structureMemberCount(wide, getCloud, SDSS_ONLY)).toBe(1);
     // With no apparent extent, the same galaxy falls outside the 5 Mpc core.
-    expect(
-      structureMemberCount(
-        { ...cluster, physicalRadiusMpc: 5 },
-        getCloud,
-        maskWith(0, Source.SDSS),
-      ),
-    ).toBe(0);
+    expect(structureMemberCount({ ...cluster, physicalRadiusMpc: 5 }, getCloud, SDSS_ONLY)).toBe(0);
   });
 });

@@ -9,9 +9,10 @@
 import { memo } from 'react';
 import { Source } from '../../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
-import { maskHas } from '../../../../utils/maskHas';
+import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { BiasMode } from '../../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/BiasMode';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
 import Slider from '../../../../components/common/Slider/Slider';
@@ -40,8 +41,8 @@ const TOGGLEABLE_SOURCES: readonly GalaxyCatalogSourceType[] = [
 
 type GalaxiesSectionProps = {
   title: string;
-  /** Bitmask of currently-visible galaxy catalog sources. */
-  sourceMask: number;
+  /** Ids of the currently-visible galaxy catalogs. */
+  visibleCatalogs: ReadonlySet<GalaxyCatalogId>;
   /** Called when the user toggles a single catalog on or off. */
   onToggleSource: (source: GalaxyCatalogSourceType, visible: boolean) => void;
   /**
@@ -89,7 +90,7 @@ type GalaxiesSectionProps = {
  */
 function GalaxiesSection({
   title,
-  sourceMask,
+  visibleCatalogs,
   onToggleSource,
   sourceCounts,
   pointSize,
@@ -112,7 +113,7 @@ function GalaxiesSection({
   // Tri-state click convention (Windows Explorer / Finder / GitHub file-tree):
   //   "none" → set all on; "all" or "mixed" → clear everything.
   const enabledCount = TOGGLEABLE_SOURCES.reduce<number>(
-    (n, s) => (maskHas(sourceMask, s) ? n + 1 : n),
+    (n, s) => (visibleCatalogs.has(galaxyCatalogIdOf(s)) ? n + 1 : n),
     0,
   );
   const allOn = enabledCount === TOGGLEABLE_SOURCES.length;
@@ -155,7 +156,7 @@ function GalaxiesSection({
                 id={`toggle-source-${s}`}
                 type="checkbox"
                 className={styles.toggle}
-                checked={maskHas(sourceMask, s)}
+                checked={visibleCatalogs.has(galaxyCatalogIdOf(s))}
                 onChange={(e) => onToggleSource(s, e.target.checked)}
               />
             </div>

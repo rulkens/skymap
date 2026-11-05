@@ -20,7 +20,10 @@ import { cleanup, fireEvent, render } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import ControlsPanel from '../../../../tools/galaxy-renderer/src/ui/ControlsPanel/ControlsPanel';
-import { createGalaxyStore, type AppStore } from '../../../../tools/galaxy-renderer/src/state/createStore';
+import {
+  createGalaxyStore,
+  type AppStore,
+} from '../../../../tools/galaxy-renderer/src/state/createStore';
 import { DEFAULT_UI_STATE } from '../../../../tools/galaxy-renderer/src/data/defaultUiState';
 import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/data/defaultGalaxyParams';
 import { DEFAULT_EXTRAS_STATE } from '../../../../tools/galaxy-renderer/src/data/defaultExtrasState';
@@ -69,7 +72,12 @@ function mountPanel(type: string, fieldTuning?: GalaxyFieldTuning) {
  * where the SAME slider re-renders every time; a fresh Set per call keeps a
  * single-mount test's assertions self-contained).
  */
-function sweepPanel(store: AppStore, container: HTMLElement, checked: Set<string>, stale: string[]): void {
+function sweepPanel(
+  store: AppStore,
+  container: HTMLElement,
+  checked: Set<string>,
+  stale: string[],
+): void {
   const tips = Array.from(container.querySelectorAll('[role="tooltip"] code'));
   const paths = tips.map((tip) => tip.textContent ?? '');
   expect(tips).toHaveLength(container.querySelectorAll('[role="slider"]').length);

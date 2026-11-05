@@ -42,20 +42,21 @@
   bottom: 0;
   left: 0;
   width: 30%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--color-accent),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
   animation: splashProgressSweep 1.4s ease-in-out infinite;
 }
 
 @keyframes splashProgressSweep {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(400%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .indeterminate { animation: none; }
+  .indeterminate {
+    animation: none;
+  }
 }

@@ -15,6 +15,8 @@
  * path with a centred ([0, 0]) nucleus.
  */
 
+import type { GalaxyCatalogId } from '../../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import { GALAXY_CATALOG_IDS } from '../../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../../../src/data/source';
 import { createGalaxyAtlasSubsystem } from '../../../../../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
@@ -34,6 +36,8 @@ import type { FamousGalaxyMetaEntry } from '../../../../../../src/@types/loading
 import type { FamousCalibration } from '../../../../../../src/@types/loading/FamousCalibration';
 import { makeGalaxyCatalog } from '../../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../../support/galaxyRecordsOver';
+
+const ALL_CATALOGS: ReadonlySet<GalaxyCatalogId> = new Set(GALAXY_CATALOG_IDS);
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -95,13 +99,13 @@ function makeCam(): OrbitCamera {
 function makeInput(
   catalogs: Map<SourceType, GalaxyCatalog>,
   famousGalaxiesMeta: FamousGalaxyMetaEntry[] = [],
-  mask = 0xffffffff,
+  visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
 ) {
   const cam = makeCam();
   return {
     cam,
     records: galaxyRecordsOver(catalogs),
-    sourceMask: mask,
+    visibleCatalogs,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     famousGalaxiesMeta,
     nowMs: 0,

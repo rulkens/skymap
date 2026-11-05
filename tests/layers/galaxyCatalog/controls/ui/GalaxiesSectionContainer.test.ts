@@ -19,7 +19,7 @@
  *    GalaxiesSection.test.ts) dispatches `setGalaxyCatalogSize`, so
  *    `selectGalaxyCatalogSize(store.getState())` reflects the new value.
  *  - Toggling a per-catalog checkbox dispatches `setGalaxyCatalogVisible`,
- *    so `selectVisibleSourceMask(store.getState())` changes.
+ *    so `selectVisibleCatalogs(store.getState())` changes.
  *
  * Why assert on `store.getState()` rather than re-reading the DOM: RTK
  * `dispatch` is synchronous, so the store reflects the new value immediately.
@@ -76,9 +76,9 @@ describe('GalaxiesSectionContainer', () => {
     expect(selectGalaxyCatalogSize(store.getState())).toBeCloseTo(5.1);
   });
 
-  it('dispatches setGalaxyCatalogVisible and updates selectVisibleSourceMask when a catalog is toggled', () => {
+  it('dispatches setGalaxyCatalogVisible and updates selectVisibleCatalogs when a catalog is toggled', () => {
     const { store } = createAppStore();
-    const initialMask = selectVisibleCatalogs(store.getState());
+    const initialVisible = selectVisibleCatalogs(store.getState());
 
     const { container } = render(createElement(GalaxiesSectionContainer, null), {
       wrapper: makeWrapper(store),
@@ -94,9 +94,8 @@ describe('GalaxiesSectionContainer', () => {
     // e.target.checked for React-controlled inputs.
     fireEvent.click(sdssCheckbox!);
 
-    const newMask = selectVisibleCatalogs(store.getState());
-    expect(newMask).not.toBe(initialMask);
-    // SDSS bit (1 << Source.SDSS) must be cleared
-    expect(newMask & (1 << Source.SDSS)).toBe(0);
+    const newVisible = selectVisibleCatalogs(store.getState());
+    expect(newVisible).not.toBe(initialVisible);
+    expect(newVisible.has('sdss')).toBe(false);
   });
 });

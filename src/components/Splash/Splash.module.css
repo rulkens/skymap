@@ -50,16 +50,33 @@
   transform: translateY(8px);
   animation: splashReveal 0.4s ease-out forwards;
 }
-.column > *:nth-child(1) { animation-delay: 0ms; }
-.column > *:nth-child(2) { animation-delay: 80ms; }
-.column > *:nth-child(3) { animation-delay: 160ms; }
-.column > *:nth-child(4) { animation-delay: 320ms; }
-.column > *:nth-child(5) { animation-delay: 480ms; }
-.column > *:nth-child(6) { animation-delay: 600ms; }
-.column > *:nth-child(7) { animation-delay: 700ms; }
+.column > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.column > *:nth-child(2) {
+  animation-delay: 80ms;
+}
+.column > *:nth-child(3) {
+  animation-delay: 160ms;
+}
+.column > *:nth-child(4) {
+  animation-delay: 320ms;
+}
+.column > *:nth-child(5) {
+  animation-delay: 480ms;
+}
+.column > *:nth-child(6) {
+  animation-delay: 600ms;
+}
+.column > *:nth-child(7) {
+  animation-delay: 700ms;
+}
 
 @keyframes splashReveal {
-  to { opacity: 1; transform: translateY(0); }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .label {
@@ -104,7 +121,9 @@
   animation: splashDraw 1.2s 800ms ease-out forwards;
 }
 @keyframes splashDraw {
-  to { width: 80px; }
+  to {
+    width: 80px;
+  }
 }
 
 .body {
@@ -173,7 +192,9 @@
   bottom: 0;
   height: 1px;
   background: rgba(255, 255, 255, 0.4);
-  transition: height 0.18s ease-out, background 0.18s ease-out;
+  transition:
+    height 0.18s ease-out,
+    background 0.18s ease-out;
 }
 .cta .arrow {
   color: var(--color-accent);
@@ -242,14 +263,33 @@
     max-width: none;
     gap: 20px;
   }
-  .title { font-size: 32px; }
-  .body  { font-size: 13px; max-width: none; }
-  .ctas  { gap: 48px; }
-  .cta   { min-height: 44px; padding: 12px 0; }
-  .credits { display: none; }
+  .title {
+    font-size: 32px;
+  }
+  .body {
+    font-size: 13px;
+    max-width: none;
+  }
+  .ctas {
+    gap: 48px;
+  }
+  .cta {
+    min-height: 44px;
+    padding: 12px 0;
+  }
+  .credits {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .column > * { animation: none; opacity: 1; transform: none; }
-  .title::after { animation: none; width: 80px; }
+  .column > * {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .title::after {
+    animation: none;
+    width: 80px;
+  }
 }

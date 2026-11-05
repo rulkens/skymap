@@ -217,7 +217,11 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     sources.delete(source);
   }
 
-  function upload(source: SourceType, octree: Octree<{ readonly count: number }>, slots: number): void {
+  function upload(
+    source: SourceType,
+    octree: Octree<{ readonly count: number }>,
+    slots: number,
+  ): void {
     if (octree.records.count > 0) checkOctreePoolCaps(octree, slots);
     const packed = octree.records.count === 0 ? null : packOctreeCutNodes(octree);
     release(source);

@@ -5,7 +5,6 @@ import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSetti
 import { settingsRoute } from '../../../../../src/store/constants';
 import { Source } from '../../../../../src/data/source';
 import { GALAXY_CATALOG_SOURCES } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
-import { maskHas } from '../../../../../src/utils/maskHas';
 import { galaxyCatalogIdOf } from '../../../../../src/utils/galaxyCatalogIdOf';
 import type { RootState } from '../../../../../src/store/types';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
@@ -18,14 +17,14 @@ function makeRoot(patch?: Partial<EngineSettingsState>): RootState {
   return { [settingsRoute]: settings } as RootState;
 }
 
-describe('selectVisibleSourceMask', () => {
-  it('sets exactly the bit of every enabled galaxy catalog', () => {
+describe('selectVisibleCatalogs', () => {
+  it('lists exactly the id of every enabled galaxy catalog', () => {
     const root = makeRoot();
-    const mask = selectVisibleCatalogs(root);
+    const visible = selectVisibleCatalogs(root);
 
     for (const s of GALAXY_CATALOG_SOURCES) {
       const { enabled } = root[settingsRoute].galaxyCatalogs.items[galaxyCatalogIdOf(s)];
-      expect(maskHas(mask, s)).toBe(enabled);
+      expect(visible.has(galaxyCatalogIdOf(s))).toBe(enabled);
     }
   });
 
@@ -40,10 +39,10 @@ describe('selectVisibleSourceMask', () => {
         },
       },
     });
-    const mask = selectVisibleCatalogs(state);
+    const visible = selectVisibleCatalogs(state);
 
-    expect(maskHas(mask, Source.SDSS)).toBe(false);
-    expect(maskHas(mask, Source.TwoMRS)).toBe(true);
+    expect(visible.has('sdss')).toBe(false);
+    expect(visible.has('2mrs')).toBe(true);
   });
 
   it('memoizes on galaxyCatalogs alone — recomputes only when that cluster changes', () => {

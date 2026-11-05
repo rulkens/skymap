@@ -1,20 +1,22 @@
 /**
- * sourceMaskOf — the galaxy catalog bitmask of the sources core hands a value above 0.
+ * visibleCatalogsOf — the set of galaxy catalog ids of the sources core hands a value above 0.
  *
- * Pure and computed on read, never cached: a stored mask would need a writer to
+ * Pure and computed on read, never cached: a stored set would need a writer to
  * remember to refresh it. The handed value carries the switch and its fade-out tail, so
- * a just-hidden catalog stays in the mask while it fades instead of popping.
+ * a just-hidden catalog stays in the set while it fades instead of popping.
  */
 
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
-import { maskWith } from '../../../../utils/maskWith';
 
-export function visibleCatalogsOf(fade: Readonly<Record<GalaxyCatalogId, number>>): number {
-  let mask = 0;
+export function visibleCatalogsOf(
+  fade: Readonly<Record<GalaxyCatalogId, number>>,
+): ReadonlySet<GalaxyCatalogId> {
+  const visible = new Set<GalaxyCatalogId>();
   for (const src of GALAXY_CATALOG_SOURCES) {
-    if (fade[galaxyCatalogIdOf(src)] > 0) mask = maskWith(mask, src);
+    const id = galaxyCatalogIdOf(src);
+    if (fade[id] > 0) visible.add(id);
   }
-  return mask;
+  return visible;
 }
