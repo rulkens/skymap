@@ -8,7 +8,8 @@ import { toolPages } from '../../../../tools/utils/io/toolPages';
  * is one test (tests/packages/website/siteMode.test.ts). `live` writes the site
  * at the root of `dist/`: use it only once the app has moved to `/app`.
  */
-export const SITE_MODE: 'preview' | 'live' = process.env.SKYMAP_SITE_MODE === 'live' ? 'live' : 'preview';
+export const SITE_MODE: 'preview' | 'live' =
+  process.env.SKYMAP_SITE_MODE === 'live' ? 'live' : 'preview';
 export const INDEXABLE = SITE_MODE === 'live';
 export const BASE = INDEXABLE ? '/' : `/${toolPages.website}/`;
 /** The site's host, for an address printed outside a page (the press kit's fact sheet). */

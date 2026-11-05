@@ -60,7 +60,8 @@ export const PRIVACY_FACTS: readonly Fact[] = [
     about: 'app',
     text: 'To tell your first visit of the day from a later one, your browser caches a reply from the counter that holds today’s date plus a count up to 3. Every visitor with the same count gets the same reply, so it does not single you out.',
     source: `${COUNTER_SOURCE}/packages/server/app/analytics/collect.ts`,
-    sourceLabel: 'how the counter recognises a return visit at version 3.4.1, in the Counterscale repository',
+    sourceLabel:
+      'how the counter recognises a return visit at version 3.4.1, in the Counterscale repository',
     checked: COUNTER_CHECKED,
   },
   {

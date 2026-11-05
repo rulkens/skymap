@@ -8,7 +8,9 @@ import { walkFiles } from '../../helpers/conventions/walkFiles';
 describe('FOREGROUND_MAX_DISTANCE_MPC importers', () => {
   it('only band definitions import FOREGROUND_MAX_DISTANCE_MPC', () => {
     const importers = walkFiles('src', ['.ts', '.tsx'])
-      .filter((file) => /from\s+['"][^'"]*\/foregroundMaxDistance['"]/.test(readFileSync(file, 'utf8')))
+      .filter((file) =>
+        /from\s+['"][^'"]*\/foregroundMaxDistance['"]/.test(readFileSync(file, 'utf8')),
+      )
       .sort();
     expect(importers).toEqual([
       'src/data/bands/foregroundRecede.ts',

@@ -167,31 +167,56 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     // `small` normal: the shape model's ~0.6 km spacing resolves 2k, not 4k.
     kinds: { surface: 'medium', normal: 'small' },
     provenance: 'nasa',
-    treatment: { kind: 'monoTint', tint: [0.49, 0.49, 0.49], lift: 0.635, antimeridianCentred: true },
+    treatment: {
+      kind: 'monoTint',
+      tint: [0.49, 0.49, 0.49],
+      lift: 0.635,
+      antimeridianCentred: true,
+    },
   },
   tethys: {
     bodyId: 'tethys',
     kinds: { surface: 'large', normal: 'small' },
     provenance: 'nasa',
-    treatment: { kind: 'monoTint', tint: [0.47, 0.47, 0.47], lift: 0.678, antimeridianCentred: true },
+    treatment: {
+      kind: 'monoTint',
+      tint: [0.47, 0.47, 0.47],
+      lift: 0.678,
+      antimeridianCentred: true,
+    },
   },
   dione: {
     bodyId: 'dione',
     kinds: { surface: 'large', normal: 'small' },
     provenance: 'nasa',
-    treatment: { kind: 'monoTint', tint: [0.58, 0.58, 0.58], lift: 0.584, antimeridianCentred: true },
+    treatment: {
+      kind: 'monoTint',
+      tint: [0.58, 0.58, 0.58],
+      lift: 0.584,
+      antimeridianCentred: true,
+    },
   },
   rhea: {
     bodyId: 'rhea',
     kinds: { surface: 'large' },
     provenance: 'nasa',
-    treatment: { kind: 'monoTint', tint: [0.57, 0.57, 0.57], lift: 0.602, antimeridianCentred: true },
+    treatment: {
+      kind: 'monoTint',
+      tint: [0.57, 0.57, 0.57],
+      lift: 0.602,
+      antimeridianCentred: true,
+    },
   },
   iapetus: {
     bodyId: 'iapetus',
     kinds: { surface: 'large' },
     provenance: 'nasa',
-    treatment: { kind: 'monoTint', tint: [1.2, 1.16, 1.08], lift: 0.107, antimeridianCentred: true },
+    treatment: {
+      kind: 'monoTint',
+      tint: [1.2, 1.16, 1.08],
+      lift: 0.107,
+      antimeridianCentred: true,
+    },
   },
   // Uranus's five big moons: Schenk's Voyager 2 mosaics, scaled to each moon's geometric albedo and neutral grey; the
   // unseen hemisphere is flat albedo grey. Tiers follow source width (Miranda 6294, Ariel 3652, the

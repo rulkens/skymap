@@ -2,8 +2,14 @@ import type { GlossaryTerm } from '../@types/GlossaryTerm';
 import { HONESTY_BINS } from './honestyBins';
 
 const SOURCES = { label: 'The sources, in The science behind Skymap', path: '/science/#sources' };
-const BINS = { label: 'Measured, derived, drawn, in The science behind Skymap', path: '/science/#bins' };
-const SIMPLE = { label: 'Known simplifications, in The science behind Skymap', path: '/science/#simplifications' };
+const BINS = {
+  label: 'Measured, derived, drawn, in The science behind Skymap',
+  path: '/science/#bins',
+};
+const SIMPLE = {
+  label: 'Known simplifications, in The science behind Skymap',
+  path: '/science/#simplifications',
+};
 const SETTINGS = { label: 'All settings', path: '/docs/reference/settings/' };
 const gloss = (id: (typeof HONESTY_BINS)[number]['id']) =>
   HONESTY_BINS.find((bin) => bin.id === id)!.gloss;
@@ -559,7 +565,13 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     id: 'modelled',
     term: 'Modelled',
     text: 'Generated from a physical model. The model’s numbers are from the literature where a reference is given, and ours where the page says so. The docs use the word for the Milky Way seen from outside, the atmospheres, the black hole and the sphere at the edge of the observable universe; under the site’s three sorting words it counts as drawn.',
-    facts: ['gloss-honesty-words', 'sci-milky-way', 'sci-atmospheres', 'sci-black-hole', 'sci-horizon-shell'],
+    facts: [
+      'gloss-honesty-words',
+      'sci-milky-way',
+      'sci-atmospheres',
+      'sci-black-hole',
+      'sci-horizon-shell',
+    ],
     more: { label: 'Measured, derived, modelled, drawn', path: '/docs/science/' },
     see: ['drawn', 'derived'],
   },

@@ -190,10 +190,7 @@ export const grandTour: Tour = {
       // tour ends on its settle (snapshot restore + UI chrome return).
       caption: {
         title: 'Home again',
-        lines: [
-          'Back to where we began.',
-          'Everything you just saw is out there to explore.',
-        ],
+        lines: ['Back to where we began.', 'Everything you just saw is out there to explore.'],
       },
       dwellClip: homeAgain,
     },

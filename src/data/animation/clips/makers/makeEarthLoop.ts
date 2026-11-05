@@ -12,7 +12,14 @@ import type { Clip } from '../../../../@types/animation/Clip';
 import type { ClipId } from '../../../../@types/animation/ClipId';
 import type { Ease } from '../../../../@types/animation/Ease';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import { dollyTo, spin, all, seq, hold, hide } from '../../../../services/engine/animation/effectHelpers';
+import {
+  dollyTo,
+  spin,
+  all,
+  seq,
+  hold,
+  hide,
+} from '../../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
 import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { ORIENTATION_FRAMES } from '../../../orientation/orientationFrames';
