@@ -119,13 +119,13 @@ This plan is the **prep PR**; `2026-11-05-selection-kind-facts.md` is the featur
   pick code) and its inverse; every packer above uses it. The highlight word at `galaxyPointSpritesPass.ts:36`
   is the row's `encodePick(ref)`, not a hand-packed `ref.source`.
 
-- [ ] Test `encodePick then resolvePick round-trips under non-Source codes`: build the row with a fake
+- [x] Test `encodePick then resolvePick round-trips under non-Source codes`: build the row with a fake
       `pickCode` returning codes from 40 up; for an SDSS ref and a famous-galaxy ref,
       `resolvePick(unpack(encodePick(ref)))` deep-equals `ref`, and `ref.source` is still the catalog value.
-- [ ] Test `pickSources are exactly the codes the stamps use` (same fake).
-- [ ] Implement; add the Layer's ids to `LEGACY_PICK_CODES`.
-- [ ] Targeted tests and `typecheck:fast` → pass.
-- [ ] Commit `galaxyCatalog stamps the allocator's codes`.
+- [x] Test `pickSources are exactly the codes the stamps use` (same fake).
+- [x] Implement; add the Layer's ids to `LEGACY_PICK_CODES`.
+- [x] Targeted tests and `typecheck:fast` → pass.
+- [x] Commit `galaxyCatalog stamps the allocator's codes`.
 
 ### Task 4: starCatalog reads its codes from `pickCode`; the Gaia code becomes a uniform
 

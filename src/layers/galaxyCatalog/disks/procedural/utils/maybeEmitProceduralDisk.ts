@@ -1,6 +1,6 @@
 import { smoothstep } from '../../../../../utils/math/smoothstep';
 import type { ProceduralDiskInstance } from '../@types/ProceduralDiskInstance';
-import type { SourceType } from '../../../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../../../@types/GalaxyCatalogSourceType';
 
 /**
  * Decide whether (and how) to emit a per-frame ProceduralDiskInstance.
@@ -24,7 +24,7 @@ export function maybeEmitProceduralDisk(
   sbAmp: number,
   fadeStartPx: number,
   fadeEndPx: number,
-  sourceCode: SourceType,
+  sourceCode: GalaxyCatalogSourceType,
   localIdx: number,
 ): ProceduralDiskInstance | null {
   if (px <= fadeStartPx) return null;

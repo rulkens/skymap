@@ -1,16 +1,15 @@
 import type { SelectionRef } from '../SelectionRef';
 import type { SelectionRow } from '../SelectionRow';
-import type { SourceType } from '../../data/SourceType';
 import type { PickResult } from '../../data/PickResult';
 
 /**
  * D5's row: one `SelectionKindRow` per `SelectionRef['type']`, composed by
- * `composeSelectionRows` into the one `SelectionResolver`. `pickSources` are source
- * CODES, not entry types (Ruling 2) — disjoint across rows, asserted at boot.
+ * `composeSelectionRows` into the one `SelectionResolver`. `pickSources` are pick
+ * codes from `LayerCoreDeps.pickCode`, not entry types (Ruling 2) — disjoint across rows, asserted at boot.
  */
 export type SelectionKindRow<Ref extends SelectionRef = SelectionRef> = {
   readonly type: Ref['type'];
-  readonly pickSources: readonly SourceType[];
+  readonly pickSources: readonly number[];
   resolvePick(pick: PickResult): Ref | null;
   /** The inverse of `resolvePick`: the packed word this row's geometry stamps for `ref`, or null when it has none or cannot be resolved right now. */
   encodePick(ref: Ref): number | null;

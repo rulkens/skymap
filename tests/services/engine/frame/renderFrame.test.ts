@@ -52,6 +52,8 @@ import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetric
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import { galaxyRowRuntime } from '../../../support/selectionResolverOver';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 type CallLog = string[];
 
@@ -320,6 +322,11 @@ function makeInput(
   // The galaxy passes close over their Layer's runtime. Empty planner outputs make both disk
   // passes report `enabled: false`, keeping the fixtures on point + milky-way ordering.
   const galaxyRuntime = {
+    // An SDSS catalog under today's codes, for the selected-highlight case.
+    ...galaxyRowRuntime({
+      catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]),
+      famousMeta: [],
+    }),
     pointRenderer: galaxyPointRenderer,
     proceduralDisks: { lastOutput: { instances: [] } },
     texturedDisks: { lastOutput: { disks: [] } },

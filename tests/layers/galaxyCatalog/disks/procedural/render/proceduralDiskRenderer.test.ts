@@ -78,6 +78,7 @@ function makeStubInit() {
       focusBgl:
         {} as unknown as import('../../../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
       reversedZ: false,
+      pickCodeOf: (source: number) => source + 40,
     },
     writeBufferCalls,
     renderPipelines,
@@ -154,8 +155,9 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
     // Reinterpret the same bytes as u32 to inspect the bitcast-written slot 6.
     const u32 = new Uint32Array(visualPayload.buffer);
 
-    expect(u32[6]).toBe(packSelection(1, 7));
-    expect(u32[FLOATS_PER_INSTANCE + 6]).toBe(packSelection(3, 1_000_000));
+    // The catalog maps through `pickCodeOf` (source + 40 here).
+    expect(u32[6]).toBe(packSelection(41, 7));
+    expect(u32[FLOATS_PER_INSTANCE + 6]).toBe(packSelection(43, 1_000_000));
   });
 });
 

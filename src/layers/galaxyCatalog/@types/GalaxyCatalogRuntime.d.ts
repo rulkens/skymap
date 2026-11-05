@@ -10,6 +10,7 @@ import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../records/@types/GalaxyRecordSource';
 import type { GalaxyCatalogFacts } from './GalaxyCatalogFacts';
 import type { GalaxyRecordBridge } from '../selection/@types/GalaxyRecordBridge';
+import type { GalaxyPickCodes } from '../selection/@types/GalaxyPickCodes';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { FamousGalaxiesPayload } from '../famousGalaxies/@types/FamousGalaxiesPayload';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
@@ -34,6 +35,8 @@ export type GalaxyCatalogRuntime = {
   readonly records: ReadonlyMap<GalaxyCatalogSourceType, GalaxyRecordSource>;
   /** The records' lookups made synchronous for the selection row. */
   readonly recordBridge: GalaxyRecordBridge;
+  /** Catalog ↔ pick code; every pick word this Layer stamps or decodes goes through it. */
+  readonly pickCodes: GalaxyPickCodes;
   /** The lazy PGC → human-name alias fetch slot; the pgcAlias asset row's factory hands this back. */
   readonly pgcAlias: AssetSlot<PgcAliasMap, void>;
   /** A getter over the meta slot's private cell, so the runtime literal is complete in one expression. */

@@ -4,4 +4,17 @@
  * dense-code step; no new entries after that.
  */
 
-export const LEGACY_PICK_CODES: Readonly<Record<string, Readonly<Record<string, number>>>> = {};
+import { Source } from '../data/source';
+
+export const LEGACY_PICK_CODES: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  galaxyCatalog: {
+    sdss: Source.SDSS,
+    '2mrs': Source.TwoMRS,
+    glade: Source.Glade,
+    famousGalaxy: Source.FamousGalaxy,
+    milliquas: Source.Milliquas,
+    desiDeep: Source.DesiDeep,
+    desiWedge: Source.DesiWedge,
+    desiSgw: Source.DesiSgw,
+  },
+};

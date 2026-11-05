@@ -31,6 +31,7 @@ import { createFamousGalaxiesMetaSlot } from './famousGalaxies/load/famousGalaxi
 import { createPgcAliasSlot } from './aliases/load/pgcAliasSlot';
 import { wireHiResFamousSlot } from './disks/load/wireHiResFamousSlot';
 import { galaxyRecordBridge } from './selection/present/galaxyRecordBridge';
+import { galaxyPickCodes } from './selection/present/galaxyPickCodes';
 
 export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRuntime {
   const device = deps.ctx.device;
@@ -42,9 +43,11 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   // Same pattern: bumped by every point-slot commit (wireGalaxyCatalogSourceSlot),
   // read by `frame`'s reconciles through the getter below.
   let catalogsVersion = 0;
+  const pickCodes = galaxyPickCodes(deps.pickCode);
 
   const pointRenderer = createGalaxyPointRenderer({
     device,
+    pickCodeOf: pickCodes.pickCodeOf,
     targetFormat: HDR_TARGET_FORMAT,
     fadeBgl: deps.fadeBgl,
     sourceBgl: deps.sourceBgl,
@@ -62,6 +65,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     canvas: deps.ctx.canvas,
     focusBgl: deps.focusBgl,
     reversedZ: SLAB_REVERSED_Z[COSMO]!,
+    pickCodeOf: pickCodes.pickCodeOf,
   });
 
   // Captures `focusUniform.bindGroup` at construction, which is why core
@@ -111,6 +115,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     catalogs,
     records,
     recordBridge: galaxyRecordBridge(records),
+    pickCodes,
     get famousMeta() {
       return famousMeta;
     },

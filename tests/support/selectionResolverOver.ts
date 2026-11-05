@@ -3,10 +3,12 @@ import { bodySelectionRow } from '../../src/layers/body/selection/present/bodySe
 import { structureSelectionRow } from '../../src/layers/structure/picking/present/structureSelectionRow';
 import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
 import { galaxyRecordBridge } from '../../src/layers/galaxyCatalog/selection/present/galaxyRecordBridge';
+import { galaxyPickCodes } from '../../src/layers/galaxyCatalog/selection/present/galaxyPickCodes';
 import { starCatalogSelectionRow } from '../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { milkyWaySelectionRow } from '../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import { galaxyRecordsOver } from './galaxyRecordsOver';
+import { legacyPickCode } from './legacyPickCode';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StructureStore } from '../../src/layers/structure/catalog/@types/StructureStore';
@@ -21,12 +23,18 @@ export type GalaxyRowFixture = Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMe
 /** What the starCatalog Layer's selection row reads; the real runtime satisfies it. */
 export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'>;
 
-/** The galaxy selection row's reads over a fixture: flat record sources and their bridge. */
+/** The galaxy selection row's reads over a fixture: flat record sources, their bridge and pick codes. */
 export function galaxyRowRuntime(
   galaxies: GalaxyRowFixture,
-): Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'famousMeta'> {
+  pickCode = legacyPickCode('galaxyCatalog'),
+): Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'famousMeta' | 'pickCodes'> {
   const records = galaxyRecordsOver(galaxies.catalogs, () => galaxies.famousMeta);
-  return { records, recordBridge: galaxyRecordBridge(records), famousMeta: galaxies.famousMeta };
+  return {
+    records,
+    recordBridge: galaxyRecordBridge(records),
+    famousMeta: galaxies.famousMeta,
+    pickCodes: galaxyPickCodes(pickCode),
+  };
 }
 
 /**

@@ -33,6 +33,7 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
+import { galaxyRowRuntime } from '../../support/selectionResolverOver';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
@@ -200,7 +201,10 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     // The pass closes over its Layer's runtime, so the spy rides a stub runtime
     // rather than `state.gpu`.
-    const runtime = { pointRenderer: { draw: drawSpy } } as never;
+    const runtime = {
+      ...galaxyRowRuntime({ catalogs: new Map(), famousMeta: [] }),
+      pointRenderer: { draw: drawSpy },
+    } as never;
     const ctx = makeDrawCtx(nowMs, SURVEY_CAM_POS);
     const view = {
       vp: new Float32Array(16),
