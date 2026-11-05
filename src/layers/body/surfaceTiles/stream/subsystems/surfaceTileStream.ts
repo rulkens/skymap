@@ -32,6 +32,8 @@ import { closeBitmap } from '../../../../../utils/gpu/closeBitmap';
 import { SURFACE_TILE_REGISTRY } from '../../format/data/surfaceTileRegistry';
 import { surfaceTilePath } from '../../format/utils/surfaceTilePath';
 import { fetchSurfaceTileManifest } from '../load/fetchSurfaceTileManifest';
+import { createArchiveTileSource } from '../load/createArchiveTileSource';
+import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 import { fetchSurfaceTileBitmap } from '../load/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../load/fetchHeightTile';
 import { directionToLonLatDeg } from '../../../../../utils/geo/directionToLonLatDeg';
@@ -82,6 +84,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     readonly slotsPerRow: number;
     readonly bodyId: SceneBodyId & SurfaceTileBodyId;
     readonly prefix: string;
+    readonly source: SurfaceTileSource;
   } | null = null;
 
   // One map per product: the two atlases have different slot geometry, so a
@@ -151,6 +154,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       slotsPerRow: SURFACE_TILE_ATLAS_SIDE / tilePx,
       bodyId,
       prefix: manifest.prefix,
+      source: createArchiveTileSource(manifest.prefix),
     };
   }
 
@@ -200,7 +204,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
         streams.heightStream.enqueueFetch({
           key,
           priority: request.screenPx,
-          fetcher: () => fetchHeightTile(request.tile, streams.prefix),
+          fetcher: () => fetchHeightTile(request.tile, streams.source),
           onResult: (image) => {
             if (image === null) return;
             const slot = streams.heightStream.upload(key, image);
@@ -223,7 +227,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       streams.stream.enqueueFetch({
         key,
         priority: request.screenPx,
-        fetcher: () => fetchSurfaceTileBitmap(request.tile, streams.prefix),
+        fetcher: () => fetchSurfaceTileBitmap(request.tile, streams.source),
         onResult: (bitmap) => {
           pendingLevelOf.delete(key);
           if (bitmap === null) return;
