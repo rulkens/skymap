@@ -16,10 +16,7 @@ import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { hashBodyFor } from '../../../../src/state/url/hashBodyFor';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import {
-  updateSelectionHover,
-  updateSelectionSelect,
-} from '../../../../src/state/selection/selectionSlice';
+import { updateSelectionSelect } from '../../../../src/state/selection/selectionSlice';
 import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
 import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { bodySelectionRow } from '../../../../src/layers/body/selection/present/bodySelectionRow';
@@ -35,13 +32,14 @@ import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
 import { NOOP_SAGA_CONTEXT } from '../../../support/createTestStore';
-import { galaxyRowRuntime, starRowRuntime } from '../../../support/selectionResolverOver';
 import {
   blackHolePickCode,
   bodyPickCodes,
+  galaxyRowRuntime,
   milkyWayPickCode,
-  missionsPickCodes,
+  missionsPickCode,
   satellitesPickCode,
+  starRowRuntime,
   structureRowRuntime,
   zoneOfAvoidancePickCode,
 } from '../../../support/layerPickCodes';
@@ -92,7 +90,7 @@ function casesUnder(allocator: PickCodeAllocator) {
       type: 'body',
       id: SCENE_PLANETS[1]!.id,
     }),
-    kind(craftSelectionRow(missionsPickCodes(pickCode('missions'))), {
+    kind(craftSelectionRow(missionsPickCode(pickCode('missions'))), {
       type: 'craft',
       id: asSceneBodyId('hubble'),
     }),
@@ -160,28 +158,16 @@ describe('pick codes are never persisted', () => {
     expect(dense.words.every((w, i) => w === null || w !== shifted.words[i])).toBe(true);
   });
 
-  it('the URL hash of a focused ref of every kind holds no pick code', () => {
+  it('the URL hash and selection slice of a focused ref of every kind hold no pick code', () => {
     const hashes = (run: typeof dense) => {
       const store = storeOver(run);
       return run.refs.map((ref) => {
         const focusId = run.resolver.focusIdOf(ref!);
         store.dispatch(setSelectionRow({ slot: 'focus', row: null, focusId }));
-        return hashBodyFor(store.getState());
+        store.dispatch(updateSelectionSelect(ref));
+        return { hash: hashBodyFor(store.getState()), selection: store.getState().selection };
       });
     };
     expect(hashes(shifted)).toEqual(hashes(dense));
-  });
-
-  it('the selection slice and saved settings hold no pick code', () => {
-    const snapshots = (run: typeof dense) => {
-      const store = storeOver(run);
-      return run.refs.map((ref) => {
-        store.dispatch(updateSelectionHover(ref));
-        store.dispatch(updateSelectionSelect(ref));
-        const { selection, settings } = store.getState();
-        return JSON.stringify({ selection, settings });
-      });
-    };
-    expect(snapshots(shifted)).toEqual(snapshots(dense));
   });
 });

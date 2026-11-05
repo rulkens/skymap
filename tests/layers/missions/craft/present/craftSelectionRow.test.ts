@@ -13,11 +13,11 @@ import { craftPickId } from '../../../../../src/layers/missions/craft/present/cr
 import { MISSION_CRAFT_IDS } from '../../../../../src/layers/missions/craft/present/missionCraftIds';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { ALL_KINDS_ENABLED } from '../../../../support/allKindsEnabled';
-import { bodyPickCodes, missionsPickCodes } from '../../../../support/layerPickCodes';
+import { bodyPickCodes, missionsPickCode } from '../../../../support/layerPickCodes';
 import { fakePickCode } from '../../../../support/fakePickCode';
 
 // Codes from 40 up: a craft row that still packs the catalog value fails the round trip.
-const missions = missionsPickCodes(fakePickCode());
+const missions = missionsPickCode(fakePickCode());
 const resolver = composeSelectionRows(
   () => [bodySelectionRow({ pickCodes: bodyPickCodes() }), craftSelectionRow(missions)],
   () => ALL_KINDS_ENABLED,

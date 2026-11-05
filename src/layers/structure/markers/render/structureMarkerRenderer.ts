@@ -392,7 +392,7 @@ export function createStructureMarkerRenderer(
         size: SOURCE_UNIFORM_BYTES,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
-      // Write the 6-bit source code at offset 0; rest stays zero.
+      // Write the 6-bit pick code at offset 0; rest stays zero.
       const u32 = new Uint32Array(SOURCE_UNIFORM_BYTES / 4);
       u32[0] = codeOf(cat);
       device.queue.writeBuffer(buf, 0, u32);

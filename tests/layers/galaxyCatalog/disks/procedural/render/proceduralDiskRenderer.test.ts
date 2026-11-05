@@ -101,7 +101,7 @@ function fakeProceduralInstance(
     colourIndex: 0.7,
     crossfadeAlpha: 0.5,
     procFadeOut: 1,
-    sourceCode: 1,
+    source: 1,
     localIdx: 0,
     sbAmp: 1,
     ...overrides,
@@ -135,8 +135,8 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
     } as unknown as GPURenderPassEncoder;
 
     const instances: ProceduralDiskInstance[] = [
-      fakeProceduralInstance({ sourceCode: 1, localIdx: 7 }),
-      fakeProceduralInstance({ sourceCode: 3, localIdx: 1_000_000 }),
+      fakeProceduralInstance({ source: 1, localIdx: 7 }),
+      fakeProceduralInstance({ source: 3, localIdx: 1_000_000 }),
     ];
 
     renderer.draw(
@@ -311,9 +311,9 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
       100,
       FOCUS_BIND_GROUP,
       [
-        fakeProceduralInstance({ sourceCode: 1, localIdx: 42 }),
-        fakeProceduralInstance({ sourceCode: 2, localIdx: 99 }),
-        fakeProceduralInstance({ sourceCode: 3, localIdx: 7 }),
+        fakeProceduralInstance({ source: 1, localIdx: 42 }),
+        fakeProceduralInstance({ source: 2, localIdx: 99 }),
+        fakeProceduralInstance({ source: 3, localIdx: 7 }),
       ],
     );
 
@@ -352,9 +352,9 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
       100,
       FOCUS_BIND_GROUP,
       [
-        fakeProceduralInstance({ sourceCode: 1, localIdx: 10 }),
-        fakeProceduralInstance({ sourceCode: 1, localIdx: 11 }),
-        fakeProceduralInstance({ sourceCode: 1, localIdx: 12 }),
+        fakeProceduralInstance({ source: 1, localIdx: 10 }),
+        fakeProceduralInstance({ source: 1, localIdx: 11 }),
+        fakeProceduralInstance({ source: 1, localIdx: 12 }),
       ],
     );
     const pickPass1 = makeStubPass();

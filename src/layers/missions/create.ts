@@ -8,13 +8,12 @@ import type { MissionsRuntime } from './@types/MissionsRuntime';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createMissionTrailRenderer } from './trails/render/missionTrailRenderer';
 import { createBodyGlintRenderer } from '../../services/gpu/renderers/bodies/bodyGlintRenderer';
-import { catalogPickCodes } from '../../utils/picking/catalogPickCodes';
-import { MISSIONS_SOURCE_ROWS } from './sources/missionsSourceRows';
+import { CRAFT_ENTRY } from './sources/craft';
 
 export function create(deps: LayerCoreDeps): MissionsRuntime {
   return {
     trailRenderer: createMissionTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
     glintRenderer: createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
-    pickCodes: catalogPickCodes(MISSIONS_SOURCE_ROWS, deps.pickCode),
+    pickCode: deps.pickCode(CRAFT_ENTRY.id),
   };
 }

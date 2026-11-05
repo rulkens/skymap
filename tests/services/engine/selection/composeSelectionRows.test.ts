@@ -57,7 +57,7 @@ import type { StarColumns } from '../../../../src/layers/starCatalog/survey/@typ
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import {
   blackHolePickCode,
-  missionsPickCodes,
+  missionsPickCode,
   satellitesPickCode,
   zoneOfAvoidancePickCode,
 } from '../../../support/layerPickCodes';
@@ -550,7 +550,7 @@ describe('focusIdOf over the Layers the shared resolver omits', () => {
   );
   const full = composeSelectionRows(
     () => [
-      craftSelectionRow(missionsPickCodes()),
+      craftSelectionRow(missionsPickCode()),
       earthSceneSelectionRow(),
       zoneOfAvoidanceSelectionRow(zoneOfAvoidancePickCode()),
       blackHoleSelectionRow(blackHolePickCode()),

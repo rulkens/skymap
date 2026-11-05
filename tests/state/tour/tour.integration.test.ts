@@ -33,7 +33,7 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
-import { galaxyRowRuntime } from '../../support/selectionResolverOver';
+import { galaxyRowRuntime } from '../../support/layerPickCodes';
 import { milkyWayPickCode } from '../../support/layerPickCodes';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare

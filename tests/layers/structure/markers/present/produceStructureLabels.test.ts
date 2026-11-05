@@ -228,7 +228,7 @@ describe('produceStructureLabels', () => {
     for (const label of labels) {
       const record = state.store.byId(label.id)!;
       const pick = unpackPick(label.pickId!)!;
-      expect(pick.sourceCode).toBe(PICK_CODES.codeOf(record.category));
+      expect(pick.sourceCode).toBe(PICK_CODES.pickCodeOf(record.category));
       expect(state.store.byCategory(record.category)[pick.localIdx]?.id).toBe(label.id);
     }
   });

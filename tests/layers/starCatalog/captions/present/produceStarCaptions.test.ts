@@ -23,7 +23,8 @@ import {
   PICK_SENTINEL_OFFSET,
 } from '../../../../../src/data/selectionEncoding';
 import { Source } from '../../../../../src/data/source';
-import { selectionResolverOver, starRowRuntime } from '../../../../support/selectionResolverOver';
+import { selectionResolverOver } from '../../../../support/selectionResolverOver';
+import { starRowRuntime } from '../../../../support/layerPickCodes';
 import type { StarRowFixture } from '../../../../support/selectionResolverOver';
 
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';

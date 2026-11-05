@@ -18,7 +18,7 @@ import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/
 import { bodySelectionRow } from '../../../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../../src/layers/structure/picking/present/structureSelectionRow';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
-import { galaxyRowRuntime, starRowRuntime } from '../../../support/selectionResolverOver';
+import { galaxyRowRuntime, starRowRuntime } from '../../../support/layerPickCodes';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';

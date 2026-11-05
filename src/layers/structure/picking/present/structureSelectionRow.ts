@@ -28,9 +28,9 @@ export function structureSelectionRow(
   const { store, pickCodes } = runtime;
   return {
     type: 'structure',
-    pickSources: STRUCTURE_IDS.map(pickCodes.codeOf),
+    pickSources: STRUCTURE_IDS.map(pickCodes.pickCodeOf),
     resolvePick: (pick) => {
-      const category = pickCodes.categoryOf(pick.sourceCode);
+      const category = pickCodes.catalogOfPickCode(pick.sourceCode);
       if (category === null) return null;
       const record = resolveStructureFromPick(store, {
         category,

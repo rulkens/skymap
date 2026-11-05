@@ -9,8 +9,8 @@ import { craftPickId } from '../present/craftPickId';
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { MissionsRuntime } from '../../@types/MissionsRuntime';
 
-export function missionMeshesPass(runtime: Pick<MissionsRuntime, 'pickCodes'>): ContentPass {
+export function missionMeshesPass(runtime: Pick<MissionsRuntime, 'pickCode'>): ContentPass {
   return meshBodiesPassOver('mission-meshes', MISSION_CRAFT_IDS, (id) =>
-    craftPickId(id, runtime.pickCodes),
+    craftPickId(id, runtime.pickCode),
   );
 }

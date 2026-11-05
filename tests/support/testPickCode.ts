@@ -1,3 +1,5 @@
+// The real dense allocator (codes from 1, which can collide with a `Source` value), for tests that
+// compose several Layers; `fakePickCode` is the one that catches a stamp packing a `Source` value.
 import { createPickCodeAllocator } from '../../src/services/engine/selection/createPickCodeAllocator';
 
 // One allocator per test module, as one engine has one: two Layers asking the same id

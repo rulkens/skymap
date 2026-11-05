@@ -27,7 +27,7 @@ export type ProceduralDiskInstance = {
   crossfadeAlpha: number;
   procFadeOut: number;
   /** The catalog value, CPU-only; the renderer maps it to the pick word's code. */
-  sourceCode: GalaxyCatalogSourceType;
+  source: GalaxyCatalogSourceType;
   /** The record's pick index (`pickOfOrdinal`) — the localIdx half of the packed pick id. */
   localIdx: number;
   /**

@@ -52,7 +52,7 @@ import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetric
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
-import { galaxyRowRuntime } from '../../../support/selectionResolverOver';
+import { galaxyRowRuntime } from '../../../support/layerPickCodes';
 import { testPickCode } from '../../../support/testPickCode';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 

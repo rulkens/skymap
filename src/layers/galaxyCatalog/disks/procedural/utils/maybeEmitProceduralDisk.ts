@@ -24,7 +24,7 @@ export function maybeEmitProceduralDisk(
   sbAmp: number,
   fadeStartPx: number,
   fadeEndPx: number,
-  sourceCode: GalaxyCatalogSourceType,
+  source: GalaxyCatalogSourceType,
   localIdx: number,
 ): ProceduralDiskInstance | null {
   if (px <= fadeStartPx) return null;
@@ -40,7 +40,7 @@ export function maybeEmitProceduralDisk(
     colourIndex,
     crossfadeAlpha,
     procFadeOut: 1.0,
-    sourceCode,
+    source,
     localIdx,
     sbAmp,
   };

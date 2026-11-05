@@ -18,7 +18,7 @@ import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../../../../fixtures/makeGalaxyCatalogItems';
 import { makeGalaxyCatalogFade } from '../../../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
-import { galaxyRowRuntime } from '../../../../support/selectionResolverOver';
+import { galaxyRowRuntime } from '../../../../support/layerPickCodes';
 import { fakePickCode } from '../../../../support/fakePickCode';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';

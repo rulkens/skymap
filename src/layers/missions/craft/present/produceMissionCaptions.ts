@@ -15,8 +15,6 @@ import { emphasisDim } from '../../trails/utils/emphasisDim';
 import { meshBodyCaption } from '../utils/meshBodyCaption';
 import { captionComposeContextOf } from '../../../../utils/labels/captionComposeContextOf';
 import { composeForegroundCaption } from '../../../../utils/labels/composeForegroundCaption';
-import type { CatalogPickCodes } from '../../../../@types/engine/selection/CatalogPickCodes';
-import type { SourceType } from '../../../../@types/data/SourceType';
 import { craftPickId } from './craftPickId';
 
 const CRAFT = MISSIONS_BODY_ROWS.flatMap((row) =>
@@ -24,7 +22,7 @@ const CRAFT = MISSIONS_BODY_ROWS.flatMap((row) =>
 );
 
 export const produceMissionCaptions =
-  (pickCodes: CatalogPickCodes<SourceType>): LayerScreenLabel<'missions'>['produceLabels'] =>
+  (pickCode: number): LayerScreenLabel<'missions'>['produceLabels'] =>
   (state, ctx, fade) => {
     const { simDays } = ctx.snapshot;
     const composeCtx = captionComposeContextOf(state, ctx);
@@ -35,7 +33,7 @@ export const produceMissionCaptions =
       ({ body, sampled }) =>
         composeForegroundCaption(
           composeCtx,
-          meshBodyCaption(body, states.get(body.id)!.positionMpc, craftPickId(body.id, pickCodes)!),
+          meshBodyCaption(body, states.get(body.id)!.positionMpc, craftPickId(body.id, pickCode)!),
           fade[CRAFT_ENTRY.id]! * (sampled ? emphasisDim(emphasis, body.id) : 1),
         ),
     );

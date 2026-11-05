@@ -37,7 +37,7 @@ import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StarRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
-import { starRowRuntime } from '../../support/selectionResolverOver';
+import { starRowRuntime } from '../../support/layerPickCodes';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';

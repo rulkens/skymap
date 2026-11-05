@@ -4,7 +4,6 @@
  * claimed here for craft ids only, so the `body` kind's claim stays disjoint.
  */
 
-import { Source } from '../../../../data/source';
 import { BODY_FOCUS_PREFIX } from '../../../../services/url/bodyFocusId';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
 import { bodyRowAt } from '../../../../utils/scene/bodyRowAt';
@@ -13,15 +12,13 @@ import { CRAFT_ORDER } from './craftOrder';
 import { craftPickId } from './craftPickId';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
-import type { CatalogPickCodes } from '../../../../@types/engine/selection/CatalogPickCodes';
-import type { SourceType } from '../../../../@types/data/SourceType';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import { isSceneBodyId } from '../../../../utils/scene/isSceneBodyId';
 
 const isCraftId = (id: string): id is SceneBodyId => isSceneBodyId(id) && MISSION_CRAFT_IDS.has(id);
 
 export function craftSelectionRow(
-  pickCodes: CatalogPickCodes<SourceType>,
+  pickCode: number,
 ): SelectionKindRow<Extract<SelectionRef, { type: 'craft' }>> {
   const decode = (id: string): Extract<SelectionRef, { type: 'craft' }> | null => {
     if (!id.startsWith(BODY_FOCUS_PREFIX)) return null;
@@ -30,12 +27,12 @@ export function craftSelectionRow(
   };
   return {
     type: 'craft',
-    pickSources: [pickCodes.pickCodeOf(Source.Craft)],
+    pickSources: [pickCode],
     resolvePick: (pick) => {
       const id = CRAFT_ORDER[pick.localIdx];
       return id === undefined ? null : { type: 'craft', id };
     },
-    encodePick: (ref) => craftPickId(ref.id, pickCodes),
+    encodePick: (ref) => craftPickId(ref.id, pickCode),
     extractRow: (ref, simDays) => {
       if (!MISSION_CRAFT_IDS.has(ref.id)) return null;
       const row = bodyRowAt(ref.id, deriveBodyStates(simDays).get(ref.id)!.positionMpc);

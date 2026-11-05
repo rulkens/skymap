@@ -26,7 +26,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
-import { missionsPickCodes } from '../../../support/layerPickCodes';
+import { missionsPickCode } from '../../../support/layerPickCodes';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
 const T0 = 2444000.5;
@@ -85,7 +85,7 @@ const drawnIds = (simDays: number): string[] => {
 };
 // The missions Layer captions every craft; core captions none.
 const labelIds = (simDays: number): string[] =>
-  produceMissionCaptions(missionsPickCodes())(STATE, viewAt(simDays), { craft: 1 }).labels.map(
+  produceMissionCaptions(missionsPickCode())(STATE, viewAt(simDays), { craft: 1 }).labels.map(
     (label) => label.id,
   );
 

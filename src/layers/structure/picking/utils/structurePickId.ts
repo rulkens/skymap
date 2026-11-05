@@ -7,12 +7,12 @@
 
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
-import type { StructurePickCodes } from '../@types/StructurePickCodes';
+import type { CatalogPickCodes } from '../../../../@types/engine/selection/CatalogPickCodes';
 
 export function structurePickId(
   category: StructureId,
   categoryIndex: number,
-  pickCodes: Pick<StructurePickCodes, 'codeOf'>,
+  pickCodes: Pick<CatalogPickCodes<StructureId>, 'pickCodeOf'>,
 ): number {
-  return packSelection(pickCodes.codeOf(category), categoryIndex + PICK_SENTINEL_OFFSET);
+  return packSelection(pickCodes.pickCodeOf(category), categoryIndex + PICK_SENTINEL_OFFSET);
 }

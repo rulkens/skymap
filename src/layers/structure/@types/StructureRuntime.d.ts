@@ -9,7 +9,8 @@ import type { StructureStore } from '../catalog/@types/StructureStore';
 import type { StructureMarkerRenderer } from '../markers/@types/StructureMarkerRenderer';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { StructureCatalogPayload } from '../catalog/@types/StructureCatalogPayload';
-import type { StructurePickCodes } from '../picking/@types/StructurePickCodes';
+import type { CatalogPickCodes } from '../../../@types/engine/selection/CatalogPickCodes';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureCatalogReq } from '../catalog/@types/StructureCatalogReq';
 
 export type StructureRuntime = {
@@ -17,6 +18,6 @@ export type StructureRuntime = {
   readonly cosmoRenderer: StructureMarkerRenderer;
   readonly nearRenderer: StructureMarkerRenderer;
   /** Category ↔ pick code; the ring stamps, labels and selection row all read it. */
-  readonly pickCodes: StructurePickCodes;
+  readonly pickCodes: CatalogPickCodes<StructureId>;
   readonly slot: AssetSlot<StructureCatalogPayload, StructureCatalogReq>;
 };

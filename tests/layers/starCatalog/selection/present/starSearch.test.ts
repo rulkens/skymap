@@ -10,7 +10,8 @@ import { starSearch } from '../../../../../src/layers/starCatalog/selection/pres
 import { starCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../../src/data/bodies/seededStarCatalogsBySource';
 import type { LayerSearchEntry } from '../../../../../src/@types/engine/layer/LayerSearchEntry';
-import { starRowRuntime, type StarRowFixture } from '../../../../support/selectionResolverOver';
+import { type StarRowFixture } from '../../../../support/selectionResolverOver';
+import { starRowRuntime } from '../../../../support/layerPickCodes';
 
 async function rows(): Promise<readonly LayerSearchEntry[]> {
   const snapshots = [];

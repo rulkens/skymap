@@ -17,7 +17,7 @@ import { SCENE_SUN } from '../../src/data/bodies/sceneSun';
 import { SCENE_STARS } from '../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../src/data/bodies/sceneSStars';
 import { isBodyKindId } from '../../src/layers/body/selection/present/isBodyKindId';
-import { bodyPickCodes, missionsPickCodes } from '../support/layerPickCodes';
+import { bodyPickCodes, missionsPickCode } from '../support/layerPickCodes';
 import { ALL_KINDS_ENABLED } from '../support/allKindsEnabled';
 
 const STAR_IDS = new Set<string>([...SCENE_SUN, ...SCENE_STARS, ...SCENE_S_STARS].map((s) => s.id));
@@ -25,7 +25,7 @@ const STAR_IDS = new Set<string>([...SCENE_SUN, ...SCENE_STARS, ...SCENE_S_STARS
 const resolver = composeSelectionRows(
   () => [
     ...bodyLayer.selection!({ pickCodes: bodyPickCodes() } as never),
-    ...missionsLayer.selection!({ pickCodes: missionsPickCodes() } as never),
+    ...missionsLayer.selection!({ pickCode: missionsPickCode() } as never),
     ...earthScenesLayer.selection!(undefined as never),
   ],
   () => ALL_KINDS_ENABLED,

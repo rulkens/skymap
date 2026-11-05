@@ -275,7 +275,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       packed[o + 5] = ins.positionAngleDeg;
       // Slot 6 is the shader's 'orientation.z' (see proceduralDisks/io.wesl) —
       // the pick pass bitcasts it back to the packed (source, localIdx) id.
-      packedU32[o + 6] = packSelection(init.pickCodeOf(ins.sourceCode), ins.localIdx);
+      packedU32[o + 6] = packSelection(init.pickCodeOf(ins.source), ins.localIdx);
       packed[o + 7] = 0;
       packed[o + 8] = ins.colourIndex;
       packed[o + 9] = ins.crossfadeAlpha;

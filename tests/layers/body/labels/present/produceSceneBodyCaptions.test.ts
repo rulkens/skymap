@@ -14,7 +14,7 @@ import { bodyCodeOf } from '../../../../../src/layers/body/selection/present/bod
 import {
   blackHolePickCode,
   bodyPickCodes,
-  missionsPickCodes,
+  missionsPickCode,
 } from '../../../../support/layerPickCodes';
 import { produceBlackHoleCaptions } from '../../../../../src/layers/blackHoles/markers/present/produceBlackHoleCaptions';
 import { produceConstellationCaptions } from '../../../../../src/layers/constellations/figures/present/produceConstellationCaptions';
@@ -38,7 +38,7 @@ import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf
 import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
 
 const produceSceneBodyCaptions = produceSceneBodyCaptionsFor(bodyPickCodes());
-const produceMissionCaptions = produceMissionCaptionsFor(missionsPickCodes());
+const produceMissionCaptions = produceMissionCaptionsFor(missionsPickCode());
 
 // Pinned at J2000 so anchors match the producer's `sceneBodyStates` read at `ctx.simDays`.
 const J2000_STATES = deriveBodyStates(CONST_J2000);

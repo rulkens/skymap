@@ -4,7 +4,7 @@ import { GALAXY_CATALOG_SOURCES } from '../../../../../src/layers/galaxyCatalog/
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { Source } from '../../../../../src/data/source';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
-import { galaxyRowRuntime } from '../../../../support/selectionResolverOver';
+import { galaxyRowRuntime } from '../../../../support/layerPickCodes';
 import { fakePickCode } from '../../../../support/fakePickCode';
 
 /** Every catalog loaded, under codes from 40 up: no code equals any `Source` value. */

@@ -50,11 +50,11 @@ export const missionsLayer = defineLayer({
         slab: NEAR0,
         id: 'missionCaptions',
         label: 'missions',
-        produceLabels: produceMissionCaptions(runtime.pickCodes),
+        produceLabels: produceMissionCaptions(runtime.pickCode),
       },
     ],
   }),
-  selection: (runtime) => [craftSelectionRow(runtime.pickCodes)],
+  selection: (runtime) => [craftSelectionRow(runtime.pickCode)],
   search: () => craftSearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'missionTrails', label: 'Mission trails' } },

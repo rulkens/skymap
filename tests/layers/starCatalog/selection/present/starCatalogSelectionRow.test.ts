@@ -8,7 +8,8 @@ import { describe, it, expect } from 'vitest';
 import { starCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { Source } from '../../../../../src/data/source';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
-import { starRowRuntime, type StarRowFixture } from '../../../../support/selectionResolverOver';
+import { type StarRowFixture } from '../../../../support/selectionResolverOver';
+import { starRowRuntime } from '../../../../support/layerPickCodes';
 import { fakePickCode } from '../../../../support/fakePickCode';
 
 /**

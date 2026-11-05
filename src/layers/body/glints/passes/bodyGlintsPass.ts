@@ -102,7 +102,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
 
     // Stamps the `glints` partition into the NEAR0 pick pass as ONE instanced draw, so
     // a sub-pixel planet stays pickable. Each id carries the STABLE `SCENE_PLANETS`
-    // index (the `Source.Planet` code `planetsPass` also stamps), not its partition
+    // index (the planet pick code `planetsPass` also stamps), not its partition
     // slot, which shifts as a body crosses `BODY_GLINT_MAX_PX`. Pick follows the
     // visible AFFORDANCE: while the caption band is above 0 that is the body's
     // label, so a glint dissolved to 0 stays clickable there; beyond it the skip
@@ -127,7 +127,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       // Moon's 18 px footprint would own the area and steal the click. Class 0 is the
       // shallowest band (`lib/pickDepthBands.wesl`). Gated on the caption band, not
       // `earthPass.enabled`, which dies ten orders of magnitude earlier while the label
-      // still shows; the stamp writes the SAME `Source.Earth` id the sphere pick does.
+      // still shows; the stamp writes the SAME Earth pick code the sphere pick does.
       if (captionShown(ctx, EARTH_ENTRY.id)) {
         const earthPos = states.get(SCENE_EARTH.id)!.positionMpc;
         pickPoints.push({

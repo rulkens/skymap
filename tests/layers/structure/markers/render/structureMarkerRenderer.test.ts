@@ -10,7 +10,7 @@ import { rebaseViewProj } from '../../../../../src/utils/camera/projection/rebas
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { structurePickCodes } from '../../../../support/layerPickCodes';
 
-const CODE_OF = structurePickCodes().codeOf;
+const CODE_OF = structurePickCodes().pickCodeOf;
 
 // Null-device pattern, mirrors markerLineRenderer.test.ts.
 const newRenderer = (initialCapacity?: number) => {
