@@ -15,9 +15,10 @@
 //   offset 124  focusApparentRadiusMpc f32  rides the vec3's 4th lane
 //   offset 128  focusPhysicalRadiusMpc f32
 //   offset 132  focusBlend             f32  0 = no focus; the multiplier is 1
-//   size 144 (rounded to the prefix's 16 B alignment; 104..111 and 136..143 pad)
+//   offset 136  pickCode               u32  the survey's pick code, read by pickFragment only
+//   size 144 (rounded to the prefix's 16 B alignment; 104..111 and 140..143 pad)
 //
-// pickPass is written only by the pick pipeline, into its OWN uniform buffer;
+// pickPass and pickCode are written only by the pick pipeline, into its OWN uniform buffer;
 // the visual draw leaves it zero-init. One flag rather than a second vertex
 // module keeps both pipelines on one vertex stage. The pick draw is leaf-only,
 // so it leaves aggregateIntensityCap and pxPerRad zero.
@@ -37,6 +38,7 @@ struct StarUniforms {
   focusApparentRadiusMpc: f32,
   focusPhysicalRadiusMpc: f32,
   focusBlend: f32,
+  pickCode: u32,
 };
 
 struct VSOut {

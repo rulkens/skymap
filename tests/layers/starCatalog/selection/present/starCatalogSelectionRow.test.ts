@@ -7,11 +7,16 @@ import { describe, it, expect } from 'vitest';
 
 import { starCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { Source } from '../../../../../src/data/source';
-import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
+import { unpackPick } from '../../../../../src/data/selectionEncoding';
+import { starRowRuntime, type StarRowFixture } from '../../../../support/selectionResolverOver';
+import { fakePickCode } from '../../../../support/fakePickCode';
 
-/** Pool index 7 maps to ordinal 1007 while its chunk is resident; nothing else maps. */
-function runtime(resident: boolean): Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'> {
-  return {
+/**
+ * Pool index 7 maps to ordinal 1007 while its chunk is resident; nothing else
+ * maps. Codes from 40 up, so a row that packs a `Source` value fails.
+ */
+function runtime(resident: boolean) {
+  const stars = {
     renderer: {
       recordOrdinal: (_source: unknown, poolIndex: number) =>
         resident && poolIndex === 7 ? 1007 : null,
@@ -19,10 +24,12 @@ function runtime(resident: boolean): Pick<StarCatalogRuntime, 'renderer' | 'chun
         resident && ordinal === 1007 ? 7 : null,
     },
     chunkStreams: new Map(),
-  } as unknown as Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'>;
+  } as unknown as StarRowFixture;
+  return starRowRuntime(stars, fakePickCode());
 }
 
-const PICK = { sourceCode: Source.GaiaStars, localIdx: 7 };
+const GAIA_CODE = runtime(true).pickCodes.pickCodeOf(Source.GaiaStars);
+const PICK = { sourceCode: GAIA_CODE, localIdx: 7 };
 const REF = { type: 'starCatalog', source: Source.GaiaStars, index: 1007 } as const;
 
 describe('starCatalogSelectionRow', () => {
@@ -34,5 +41,18 @@ describe('starCatalogSelectionRow', () => {
   it('encodePick returns null for an ordinal whose chunk is not resident', () => {
     expect(starCatalogSelectionRow(runtime(true)).encodePick(REF)).not.toBeNull();
     expect(starCatalogSelectionRow(runtime(false)).encodePick(REF)).toBeNull();
+  });
+
+  it('seeded and survey refs round-trip under non-Source codes', () => {
+    const row = starCatalogSelectionRow(runtime(true));
+    for (const ref of [
+      REF,
+      { type: 'starCatalog', source: Source.FamousStar, index: 3 },
+      { type: 'starCatalog', source: Source.SStar, index: 2 },
+    ] as const) {
+      const pick = unpackPick(row.encodePick(ref)!)!;
+      expect(pick.sourceCode).toBeGreaterThanOrEqual(40);
+      expect(row.resolvePick(pick)).toEqual(ref);
+    }
   });
 });

@@ -18,7 +18,8 @@ import {
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalogRuntime } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import { galaxyPickCodes } from '../../../../../src/layers/galaxyCatalog/selection/present/galaxyPickCodes';
+import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCodes';
+import { GALAXY_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
 import { fakePickCode } from '../../../../support/fakePickCode';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousGalaxyMetaEntry } from '../../../../../src/@types/loading/FamousGalaxyMetaEntry';
@@ -105,7 +106,7 @@ const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog 
 
 type FamousRuntime = Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta' | 'pickCodes'>;
 
-const PICK_CODES = galaxyPickCodes(fakePickCode());
+const PICK_CODES = catalogPickCodes(GALAXY_CATALOG_SOURCE_ROWS, fakePickCode());
 
 function seed(
   entries: Partial<FamousGalaxyMetaEntry>[],

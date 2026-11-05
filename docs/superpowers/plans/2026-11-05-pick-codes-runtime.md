@@ -149,10 +149,10 @@ This plan is the **prep PR**; `2026-11-05-selection-kind-facts.md` is the featur
   replaces it. Until then, keep the overlay compiling by moving the constant into the overlay shader
   locally with a `// Task 7` note — not into the lib.
 
-- [ ] Test `seeded and survey refs round-trip under non-Source codes` (fake `pickCode`, codes ≥ 40).
-- [ ] Implement; read the `wesl-shaders` skill first.
-- [ ] `typecheck:fast`, targeted tests → pass; dev server: hover a Gaia star and a named star, both resolve.
-- [ ] Commit `starCatalog stamps the allocator's codes; Gaia's code is a uniform`.
+- [x] Test `seeded and survey refs round-trip under non-Source codes` (fake `pickCode`, codes ≥ 40).
+- [x] Implement; read the `wesl-shaders` skill first.
+- [x] `typecheck:fast`, targeted tests → pass; dev server: hover a Gaia star and a named star, both resolve.
+- [x] Commit `starCatalog stamps the allocator's codes; Gaia's code is a uniform`.
 
 ### Task 5: body, missions and earthScenes read their codes from `pickCode`
 

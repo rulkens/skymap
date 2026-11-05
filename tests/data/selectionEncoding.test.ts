@@ -137,9 +137,6 @@ describe('selectionEncoding TS↔WESL parity', () => {
       ['SELECTION_NONE_SENTINEL', SELECTION_NONE_SENTINEL],
       ['SELECTION_SOURCE_SENTINEL_CODE', SELECTION_SOURCE_SENTINEL_CODE],
       ['PICK_SENTINEL_OFFSET', PICK_SENTINEL_OFFSET],
-      // Survey (Gaia bin) stars — the star pick fragment packs this into the
-      // r32uint pick texture; mirror of TS Source.GaiaStars.
-      ['SOURCE_GAIA_STARS', Source.GaiaStars],
     ];
 
     for (const [name, tsValue] of cases) {

@@ -37,6 +37,7 @@ import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StarRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
+import { starRowRuntime } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
@@ -103,7 +104,7 @@ describe('watchFocusTweenSaga', () => {
           bodySelectionRow(),
           structureSelectionRow(structures),
           milkyWaySelectionRow(),
-          starCatalogSelectionRow(NO_SURVEY_STARS),
+          starCatalogSelectionRow(starRowRuntime(NO_SURVEY_STARS)),
         ],
         () => ALL_KINDS_ENABLED,
       ),

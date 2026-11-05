@@ -175,7 +175,10 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass<'s
         camPosMpc: view.camPos,
         drawPxPerRad: ctx.drawPxPerRad,
         orientation: IDENTITY_MAT3,
-        packedId: packSelection(loaded.source, poolIndex + PICK_SENTINEL_OFFSET),
+        packedId: packSelection(
+          runtime.pickCodes.pickCodeOf(loaded.source),
+          poolIndex + PICK_SENTINEL_OFFSET,
+        ),
       });
     },
   };

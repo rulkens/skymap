@@ -3,7 +3,9 @@ import { bodySelectionRow } from '../../src/layers/body/selection/present/bodySe
 import { structureSelectionRow } from '../../src/layers/structure/picking/present/structureSelectionRow';
 import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
 import { galaxyRecordBridge } from '../../src/layers/galaxyCatalog/selection/present/galaxyRecordBridge';
-import { galaxyPickCodes } from '../../src/layers/galaxyCatalog/selection/present/galaxyPickCodes';
+import { catalogPickCodes } from '../../src/utils/picking/catalogPickCodes';
+import { GALAXY_CATALOG_SOURCE_ROWS } from '../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
+import { STAR_CATALOG_SOURCE_ROWS } from '../../src/layers/starCatalog/sources/starCatalogSourceRows';
 import { starCatalogSelectionRow } from '../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { milkyWaySelectionRow } from '../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
@@ -33,8 +35,16 @@ export function galaxyRowRuntime(
     records,
     recordBridge: galaxyRecordBridge(records),
     famousMeta: galaxies.famousMeta,
-    pickCodes: galaxyPickCodes(pickCode),
+    pickCodes: catalogPickCodes(GALAXY_CATALOG_SOURCE_ROWS, pickCode),
   };
+}
+
+/** The star selection row's reads over a fixture, plus the Layer's pick codes. */
+export function starRowRuntime(
+  stars: StarRowFixture,
+  pickCode = legacyPickCode('starCatalog'),
+): Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams' | 'pickCodes'> {
+  return { ...stars, pickCodes: catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, pickCode) };
 }
 
 /**
@@ -56,7 +66,7 @@ export function selectionResolverOver(
       structureSelectionRow(structures),
       milkyWaySelectionRow(),
       ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))]),
-      ...(stars === undefined ? [] : [starCatalogSelectionRow(stars)]),
+      ...(stars === undefined ? [] : [starCatalogSelectionRow(starRowRuntime(stars))]),
     ],
     () => ALL_KINDS_ENABLED,
   );

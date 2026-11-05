@@ -43,6 +43,13 @@ import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structure
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { catalogPickCodes } from '../../../../src/utils/picking/catalogPickCodes';
+import { STAR_CATALOG_SOURCE_ROWS } from '../../../../src/layers/starCatalog/sources/starCatalogSourceRows';
+import { legacyPickCode } from '../../../support/legacyPickCode';
+
+const STAR_PICK_CODES = {
+  pickCodes: catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, legacyPickCode('starCatalog')),
+};
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get(asSceneBodyId('earth'))!.positionMpc;
@@ -197,7 +204,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({
       id: 'starCaptions',
-      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+      produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
     });
     const state = makeState();
 
@@ -240,7 +247,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({
       id: 'starCaptions',
-      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+      produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
     });
     dir.runFrame(makeState(), makeCtx(eye, slab));
 
@@ -283,7 +290,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({
       id: 'starCaptions',
-      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+      produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
     });
     dir.runFrame(makeState(), makeCtx(eye, slab));
     const cap = emittedCaption(labelStub, star.id)!;

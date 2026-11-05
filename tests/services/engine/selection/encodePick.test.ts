@@ -18,7 +18,7 @@ import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/
 import { bodySelectionRow } from '../../../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../../src/layers/structure/picking/present/structureSelectionRow';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
-import { galaxyRowRuntime } from '../../../support/selectionResolverOver';
+import { galaxyRowRuntime, starRowRuntime } from '../../../support/selectionResolverOver';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -57,7 +57,9 @@ describe('SelectionKindRow.encodePick', () => {
     const star = { type: 'starCatalog', source: Source.FamousStar, index: 3 } as const;
     expect(
       roundTrip(
-        starCatalogSelectionRow({ renderer: null as never, chunkStreams: new Map() }),
+        starCatalogSelectionRow(
+          starRowRuntime({ renderer: null as never, chunkStreams: new Map() }),
+        ),
         star,
       ),
     ).toEqual(star);

@@ -15,8 +15,11 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::selectionEncoding::SELECTION_SOURCE_SHIFT;
 import package::lib::selectionEncoding::SELECTION_LOCAL_IDX_MASK;
 import package::lib::selectionEncoding::SELECTION_SOURCE_SENTINEL_CODE;
-import package::lib::selectionEncoding::SOURCE_GAIA_STARS;
 import package::lib::util::hueToRgb;
+
+// Task 7 replaces this with the allocator's code in a uniform; until then it is
+// today's Gaia code (24, Source.GaiaStars), no longer in lib/selectionEncoding.
+const SOURCE_GAIA_STARS: u32 = 24u;
 
 @group(0) @binding(0) var pickTex: texture_2d<u32>;
 
@@ -66,8 +69,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let hash = f32((localIdx * 2654435761u) >> 24u) / 255.0;
   var value = 0.55 + 0.45 * hash;
 
-  // GaiaStars (imported SOURCE_GAIA_STARS — the single WESL home for the code,
-  // mirror of TS Source.GaiaStars, parity-tested) is a survey-wide point cloud:
+  // GaiaStars (SOURCE_GAIA_STARS above) is a survey-wide point cloud:
   // thousands of star footprints blanket the overlay, and at the golden-angle
   // value band above they drown out the sparse sources (bodies, famous stars)
   // that this debug view exists to make readable. Dim just this one dense source

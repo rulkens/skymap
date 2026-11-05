@@ -17,4 +17,10 @@ export const LEGACY_PICK_CODES: Readonly<Record<string, Readonly<Record<string, 
     desiWedge: Source.DesiWedge,
     desiSgw: Source.DesiSgw,
   },
+  starCatalog: {
+    gaiaStars: Source.GaiaStars,
+    famousStar: Source.FamousStar,
+    sun: Source.Sun,
+    sStar: Source.SStar,
+  },
 };

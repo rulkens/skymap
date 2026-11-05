@@ -23,7 +23,6 @@ import { SURFACE_STANDOFF_RADII } from '../../../../utils/camera/orbitCamera/cla
 import type { DriverGeometry } from '../../../../@types/engine/camera/DriverGeometry';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
-import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
@@ -57,13 +56,14 @@ function catalogOf(runtime: Pick<StarCatalogRuntime, 'renderer'>, source: Source
 }
 
 export function starCatalogSelectionRow(
-  runtime: Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'>,
+  runtime: Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams' | 'pickCodes'>,
 ): SelectionKindRow<StarCatalogRef> {
   return {
     type: 'starCatalog',
-    pickSources: STAR_CATALOG_SOURCE_ROWS.map(([code]) => code),
+    pickSources: STAR_CATALOG_SOURCE_ROWS.map(([source]) => runtime.pickCodes.pickCodeOf(source)),
     resolvePick: (pick) => {
-      const source = pick.sourceCode as StarCatalogSourceType;
+      const source = runtime.pickCodes.catalogOfPickCode(pick.sourceCode);
+      if (source === null) return null;
       const index = SEEDED_STAR_CATALOGS_BY_SOURCE.has(source)
         ? pick.localIdx
         : runtime.renderer.recordOrdinal(source, pick.localIdx);
@@ -73,7 +73,9 @@ export function starCatalogSelectionRow(
       const index = SEEDED_STAR_CATALOGS_BY_SOURCE.has(ref.source)
         ? ref.index
         : runtime.renderer.poolRecordIndex(ref.source, ref.index);
-      return index === null ? null : packSelection(ref.source, index + PICK_SENTINEL_OFFSET);
+      return index === null
+        ? null
+        : packSelection(runtime.pickCodes.pickCodeOf(ref.source), index + PICK_SENTINEL_OFFSET);
     },
     extractRow: (ref, simDays) => {
       const seededRow = SEEDED_STAR_CATALOGS_BY_SOURCE.get(ref.source);
