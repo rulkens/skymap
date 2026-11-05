@@ -21,6 +21,7 @@ import { glintsPassOver } from '../../services/engine/frame/glintsPassOver';
 import { MISSION_CRAFT_IDS } from './craft/present/missionCraftIds';
 import { produceMissionCaptions } from './craft/present/produceMissionCaptions';
 import { craftSelectionRow } from './craft/present/craftSelectionRow';
+import { missionsSelectionKinds } from './craft/present/kinds';
 import { craftSearch } from './craft/present/craftSearch';
 import { missionsLayerExhibits } from './exhibits/exhibits';
 import { MISSIONS_BODY_ROWS } from './bodies/missionsBodyRows';
@@ -54,7 +55,10 @@ export const missionsLayer = defineLayer({
       },
     ],
   }),
-  selection: (runtime) => [craftSelectionRow(runtime.pickCode)],
+  selection: {
+    kinds: missionsSelectionKinds,
+    rows: (runtime) => [craftSelectionRow(runtime.pickCode)],
+  },
   search: () => craftSearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'missionTrails', label: 'Mission trails' } },

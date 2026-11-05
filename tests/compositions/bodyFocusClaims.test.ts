@@ -24,9 +24,9 @@ const STAR_IDS = new Set<string>([...SCENE_SUN, ...SCENE_STARS, ...SCENE_S_STARS
 
 const resolver = composeSelectionRows(
   () => [
-    ...bodyLayer.selection!({ pickCodes: bodyPickCodes() } as never),
-    ...missionsLayer.selection!({ pickCode: missionsPickCode() } as never),
-    ...earthScenesLayer.selection!(undefined as never),
+    ...bodyLayer.selection!.rows({ pickCodes: bodyPickCodes() } as never),
+    ...missionsLayer.selection!.rows({ pickCode: missionsPickCode() } as never),
+    ...earthScenesLayer.selection!.rows(undefined as never),
   ],
   () => ALL_KINDS_ENABLED,
 );

@@ -16,6 +16,7 @@ import { zoneOfAvoidancePass } from './shell/passes/zoneOfAvoidancePass';
 import { zoneOfAvoidanceUpsamplePass } from './shell/passes/zoneOfAvoidanceUpsamplePass';
 import { produceZoneOfAvoidanceLettering } from './lettering/present/produceZoneOfAvoidanceLettering';
 import { zoneOfAvoidanceSelectionRow } from './selection/present/zoneOfAvoidanceSelectionRow';
+import { zoneOfAvoidanceSelectionKinds } from './selection/kinds';
 import ZoneOfAvoidanceTuningSectionContainer from './shell/ui/ZoneOfAvoidanceTuningSectionContainer';
 import ZoneOfAvoidanceDetailCard from './selection/ui/ZoneOfAvoidanceDetailCard/ZoneOfAvoidanceDetailCard';
 import CompactZoneOfAvoidanceCard from './selection/ui/CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard';
@@ -48,7 +49,10 @@ export const zoneOfAvoidanceLayer = defineLayer({
       },
     ],
   }),
-  selection: (runtime) => [zoneOfAvoidanceSelectionRow(runtime.pickCode)],
+  selection: {
+    kinds: zoneOfAvoidanceSelectionKinds,
+    rows: (runtime) => [zoneOfAvoidanceSelectionRow(runtime.pickCode)],
+  },
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'zoneOfAvoidance', label: 'Zone of Avoidance' } },
     { slot: 'debug', content: ZoneOfAvoidanceTuningSectionContainer },

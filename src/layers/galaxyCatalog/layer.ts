@@ -20,6 +20,7 @@ import { galaxyPointSpritesPass } from './pointSprites/passes/galaxyPointSprites
 import { proceduralDisksPass } from './disks/procedural/passes/proceduralDisksPass';
 import { texturedDisksPass } from './disks/textured/passes/texturedDisksPass';
 import { galaxyCatalogSelectionRow } from './selection/present/galaxyCatalogSelectionRow';
+import { galaxyCatalogSelectionKinds } from './selection/kinds';
 import { produceFamousGalaxyLabels } from './famousGalaxies/present/produceFamousGalaxyLabels';
 import { watchPaletteWakeSaga } from './aliases/sagas/watchPaletteWakeSaga';
 import GalaxiesSectionContainer from './controls/ui/GalaxiesSectionContainer';
@@ -59,7 +60,10 @@ export const galaxyCatalogLayer = defineLayer({
       },
     ],
   }),
-  selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
+  selection: {
+    kinds: galaxyCatalogSelectionKinds,
+    rows: (runtime) => [galaxyCatalogSelectionRow(runtime)],
+  },
   planners: (runtime) => [galaxyCatalogPlanner(runtime)],
   ui: [
     { slot: 'main', content: GalaxiesSectionContainer, title: 'Galaxies' },

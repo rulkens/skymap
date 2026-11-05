@@ -32,6 +32,7 @@ import { bodyAssetRows } from './textures/load/bodyAssetRows';
 import { BODY_BODY_ROWS } from './bodies/bodyBodyRows';
 import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
 import { bodySelectionRow } from './selection/present/bodySelectionRow';
+import { bodySelectionKinds } from './selection/kinds';
 import { bodySearch } from './selection/present/bodySearch';
 import { BODY_TRAIL_ELEMENTS } from './orbitTrails/data/bodyTrailElements';
 import { SMALL_BODY_TRAIL_IDS } from './orbitTrails/data/smallBodyTrailIds';
@@ -97,7 +98,7 @@ export const bodyLayer = defineLayer({
       selectedOnly: SMALL_BODY_TRAIL_IDS,
     },
   }),
-  selection: (runtime) => [bodySelectionRow(runtime)],
+  selection: { kinds: bodySelectionKinds, rows: (runtime) => [bodySelectionRow(runtime)] },
   search: () => bodySearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'orbitTrails', label: 'Orbit trails' } },

@@ -93,13 +93,13 @@ placement (`positionMpc`, `radiusMpc`). Core and the store type against a base r
   (or beside its row file where the Layer has no `selection/` folder), exporting `<layer>SelectionKinds`.
 - `createLayers` calls `layer.selection?.rows(runtime)` and then `assertSelectionKindsComplete`.
 
-- [ ] Test `selectionKindOf returns each composed kind's facts` (one assertion per kind type of today).
-- [ ] Test `selectionKindOf does not read APP_COMPOSITION at import`: import the module under a
+- [x] Test `selectionKindOf returns each composed kind's facts` (one assertion per kind type of today).
+- [x] Test `selectionKindOf does not read APP_COMPOSITION at import`: import the module under a
       `vi.doMock` of `./app` that throws on property access; the import succeeds, the first call throws.
-- [ ] Test `assertSelectionKindsComplete throws on a row type with no facts` and `… on a kind declared twice`.
-- [ ] Implement; reshape the ten Layers' `selection`.
-- [ ] `npm run typecheck` (tsc, both projects) → clean; targeted tests → pass.
-- [ ] Commit `Layer.selection holds the kinds' static facts beside the runtime rows`.
+- [x] Test `assertSelectionKindsComplete throws on a row type with no facts` and `… on a kind declared twice`.
+- [x] Implement; reshape the ten Layers' `selection`.
+- [x] `npm run typecheck` (tsc, both projects) → clean; targeted tests → pass.
+- [x] Commit `Layer.selection holds the kinds' static facts beside the runtime rows`.
 
 ### Task 2: Every placed row carries `positionMpc` and `radiusMpc`; the golden capture
 

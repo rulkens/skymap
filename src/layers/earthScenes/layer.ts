@@ -13,6 +13,7 @@ import { earthSceneMeshesPass } from './scenes/passes/earthSceneMeshesPass';
 import { glintsPassOver } from '../../services/engine/frame/glintsPassOver';
 import { EARTH_SCENE_BODY_IDS } from './scenes/data/earthSceneBodyIds';
 import { earthSceneSelectionRow } from './scenes/present/earthSceneSelectionRow';
+import { earthScenesSelectionKinds } from './scenes/present/kinds';
 import { earthSceneSearch } from './scenes/present/earthSceneSearch';
 import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
@@ -26,7 +27,7 @@ export const earthScenesLayer = defineLayer({
     earthSceneMeshesPass,
     glintsPassOver('earth-scene-glints', EARTH_SCENE_BODY_IDS, runtime.glintRenderer),
   ],
-  selection: () => [earthSceneSelectionRow()],
+  selection: { kinds: earthScenesSelectionKinds, rows: () => [earthSceneSelectionRow()] },
   search: () => earthSceneSearch(),
   ui: [
     {
