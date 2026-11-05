@@ -33,7 +33,9 @@ export function bodySelectionRow(): SelectionKindRow<Extract<SelectionRef, { typ
   return {
     type: 'body',
     pickSources: BODY_SOURCE_CODES,
-    resolvePick: (entry, pick) => {
+    resolvePick: (pick) => {
+      const entry = SOURCE_ENTRIES.find((e) => e.code === pick.sourceCode);
+      if (!entry) return null;
       if (entry.type !== 'body') return null;
       const seeds = BODY_PICK_ROWS[entry.id as BodySourceId];
       const body = seeds[pick.localIdx];

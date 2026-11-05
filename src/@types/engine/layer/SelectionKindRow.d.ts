@@ -1,7 +1,6 @@
 import type { SelectionRef } from '../SelectionRef';
 import type { SelectionRow } from '../SelectionRow';
 import type { SourceType } from '../../data/SourceType';
-import type { SourceEntry } from '../../data/SourceEntry';
 import type { PickResult } from '../../data/PickResult';
 
 /**
@@ -12,7 +11,7 @@ import type { PickResult } from '../../data/PickResult';
 export type SelectionKindRow<Ref extends SelectionRef = SelectionRef> = {
   readonly type: Ref['type'];
   readonly pickSources: readonly SourceType[];
-  resolvePick(entry: SourceEntry, pick: PickResult): Ref | null;
+  resolvePick(pick: PickResult): Ref | null;
   /** The inverse of `resolvePick`: the packed word this row's geometry stamps for `ref`, or null when it has none or cannot be resolved right now. */
   encodePick(ref: Ref): number | null;
   /** A driving arm fills `driver` (`DrivenSelectionRow`): the arm owns its camera-host geometry. */

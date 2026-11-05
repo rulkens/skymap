@@ -8,7 +8,6 @@ import { describe, it, expect } from 'vitest';
 import { starCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { Source } from '../../../../../src/data/source';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { SourceEntry } from '../../../../../src/@types/data/SourceEntry';
 
 /** Pool index 7 maps to ordinal 1007 while its chunk is resident; nothing else maps. */
 function runtime(resident: boolean): Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'> {
@@ -23,14 +22,13 @@ function runtime(resident: boolean): Pick<StarCatalogRuntime, 'renderer' | 'chun
   } as unknown as Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'>;
 }
 
-const ENTRY = {} as SourceEntry;
 const PICK = { sourceCode: Source.GaiaStars, localIdx: 7 };
 const REF = { type: 'starCatalog', source: Source.GaiaStars, index: 1007 } as const;
 
 describe('starCatalogSelectionRow', () => {
   it('starCatalogSelectionRow: a pick raced by an eviction resolves to null, never another star', () => {
-    expect(starCatalogSelectionRow(runtime(true)).resolvePick(ENTRY, PICK)).toEqual(REF);
-    expect(starCatalogSelectionRow(runtime(false)).resolvePick(ENTRY, PICK)).toBeNull();
+    expect(starCatalogSelectionRow(runtime(true)).resolvePick(PICK)).toEqual(REF);
+    expect(starCatalogSelectionRow(runtime(false)).resolvePick(PICK)).toBeNull();
   });
 
   it('encodePick returns null for an ordinal whose chunk is not resident', () => {

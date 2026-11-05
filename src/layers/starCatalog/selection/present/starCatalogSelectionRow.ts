@@ -62,7 +62,7 @@ export function starCatalogSelectionRow(
   return {
     type: 'starCatalog',
     pickSources: STAR_CATALOG_SOURCE_ROWS.map(([code]) => code),
-    resolvePick: (_entry, pick) => {
+    resolvePick: (pick) => {
       const source = pick.sourceCode as StarCatalogSourceType;
       const index = SEEDED_STAR_CATALOGS_BY_SOURCE.has(source)
         ? pick.localIdx

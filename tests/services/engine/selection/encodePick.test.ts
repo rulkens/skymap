@@ -7,7 +7,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { Source } from '../../../../src/data/source';
-import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { structurePickId } from '../../../../src/layers/structure/picking/utils/structurePickId';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -28,7 +27,7 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 function roundTrip<Ref extends SelectionRef>(row: SelectionKindRow<Ref>, ref: Ref): Ref | null {
   const word = row.encodePick(ref);
   const pick = unpackPick(word!)!;
-  return row.resolvePick(APP_SOURCE_REGISTRY[pick.sourceCode], pick);
+  return row.resolvePick(pick);
 }
 
 const STRUCTURES: StructureInfo[] = [

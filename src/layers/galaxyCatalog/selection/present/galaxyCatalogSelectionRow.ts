@@ -28,7 +28,7 @@ export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<Ga
     type: 'galaxyCatalog',
     pickSources: GALAXY_CATALOG_SOURCES,
     // A released source has no record: its picks and refs map to nothing.
-    resolvePick: (_entry, pick) => {
+    resolvePick: (pick) => {
       const source = pick.sourceCode as GalaxyCatalogSourceType;
       const index = runtime.records.get(source)?.ordinalOfPick(pick.localIdx) ?? null;
       return index === null ? null : { type: 'galaxyCatalog', source, index };

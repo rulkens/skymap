@@ -34,7 +34,7 @@ export function satellitesSelectionRow(
   return {
     type: 'satellite',
     pickSources: [Source.Satellite],
-    resolvePick: (_entry, pick) => {
+    resolvePick: (pick) => {
       const noradId = runtime.propagator.catalog()?.noradId[pick.localIdx];
       return noradId === undefined ? null : { type: 'satellite', noradId };
     },

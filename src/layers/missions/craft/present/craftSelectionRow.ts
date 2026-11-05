@@ -27,7 +27,7 @@ export function craftSelectionRow(): SelectionKindRow<Extract<SelectionRef, { ty
   return {
     type: 'craft',
     pickSources: [Source.Craft],
-    resolvePick: (_entry, pick) => {
+    resolvePick: (pick) => {
       const id = CRAFT_ORDER[pick.localIdx];
       return id === undefined ? null : { type: 'craft', id };
     },

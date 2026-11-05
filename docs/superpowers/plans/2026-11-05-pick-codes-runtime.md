@@ -98,10 +98,10 @@ This plan is the **prep PR**; `2026-11-05-selection-kind-facts.md` is the featur
   code). Rows that read `entry.id` (body: `BODY_PICK_ROWS[entry.id]`) look the entry up by code themselves
   until Tasks 3–7 give them their codes.
 
-- [ ] Change the signature and the caller; `composeSelectionRows` no longer imports `APP_SOURCE_REGISTRY`.
-- [ ] No new test: a signature sweep the compiler checks; existing row tests keep passing.
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/services/engine/selection tests/layers` → pass.
-- [ ] Commit `resolvePick takes the pick alone; each row knows its own codes`.
+- [x] Change the signature and the caller; `composeSelectionRows` no longer imports `APP_SOURCE_REGISTRY`.
+- [x] No new test: a signature sweep the compiler checks; existing row tests keep passing.
+- [x] `npm run typecheck:fast`; `npx vitest run tests/services/engine/selection tests/layers` → pass.
+- [x] Commit `resolvePick takes the pick alone; each row knows its own codes`.
 
 ### Task 3: galaxyCatalog reads its codes from `pickCode`
 

@@ -31,7 +31,9 @@ export function structureSelectionRow(
   return {
     type: 'structure',
     pickSources: STRUCTURE_SOURCE_CODES,
-    resolvePick: (entry, pick) => {
+    resolvePick: (pick) => {
+      const entry = SOURCE_ENTRIES.find((e) => e.code === pick.sourceCode);
+      if (!entry) return null;
       if (entry.type !== 'structure') return null;
       const record = resolveStructureFromPick(store, {
         category: entry.id as StructureId,

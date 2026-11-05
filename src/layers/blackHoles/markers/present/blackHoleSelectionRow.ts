@@ -27,7 +27,7 @@ export function blackHoleSelectionRow(): SelectionKindRow<
   return {
     type: 'blackHole',
     pickSources: [Source.SgrAStar],
-    resolvePick: (_entry, pick) => {
+    resolvePick: (pick) => {
       const row = BLACK_HOLES[pick.localIdx];
       return row ? { type: 'blackHole', id: row.id } : null;
     },

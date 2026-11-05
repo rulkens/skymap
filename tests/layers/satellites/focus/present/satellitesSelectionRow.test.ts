@@ -36,7 +36,7 @@ describe('satellitesSelectionRow', () => {
     const word = row.encodePick(ISS_REF)!;
     const pick = unpackPick(word)!;
     expect(pick.sourceCode).toBe(Source.Satellite);
-    expect(row.resolvePick(undefined as never, pick)).toEqual(ISS_REF);
+    expect(row.resolvePick(pick)).toEqual(ISS_REF);
   });
 
   it('puts the ISS about 400 km up, posed from the id the camera follows', () => {
