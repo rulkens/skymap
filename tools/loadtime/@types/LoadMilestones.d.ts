@@ -10,4 +10,8 @@ export type LoadMilestones = {
   ctaReady?: number;
   /** `window.__skymap.ready` resolved: every boot download has settled. */
   loaded?: number;
+  /** First 200/206 albedo tile response (`.webp` or `.pack`), ms since navigation start. */
+  firstSurfaceTile?: number;
+  /** Every request under `earth-tiles/vN/` or `mars-tiles/vN/` before `loaded` or the timeout. */
+  surfaceRequests?: number;
 };
