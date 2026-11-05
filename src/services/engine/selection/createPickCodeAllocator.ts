@@ -2,7 +2,8 @@
  * createPickCodeAllocator — hands each Layer's pick sources a 6-bit code for the pick word.
  * Codes are per engine and per session: never persisted, never a catalog `Source` value.
  * `seed` pins ids to fixed codes (the legacy table, until codes go dense); unseeded ids take
- * the lowest free code, skipping seeded ones. 63 is the all-ones sentinel, so 62 codes max.
+ * the lowest free code from 1, skipping seeded ones. 63 is the all-ones sentinel and 0 is never
+ * handed out (no `Source` value was ever 0), so codes run 1..62.
  */
 
 import { SELECTION_SOURCE_SENTINEL_CODE } from '../../../data/selectionEncoding';
@@ -31,7 +32,7 @@ export function createPickCodeAllocator(
       const key = keyOf(layer, pickSourceId);
       const known = codeByKey.get(key);
       if (known !== undefined) return known;
-      let code = 0;
+      let code = 1;
       while (ownerByCode.has(code)) code += 1;
       if (ownerByCode.size >= MAX_PICK_CODES) {
         throw new Error(

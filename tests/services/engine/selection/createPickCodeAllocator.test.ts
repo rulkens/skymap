@@ -18,13 +18,15 @@ describe('createPickCodeAllocator', () => {
   });
 
   it('an unseeded id never takes a seeded code', () => {
-    const a = createPickCodeAllocator({ body: { planet: 0, moon: 1 } });
-    expect(a.codeOf('other', 'x')).toBe(2);
+    const a = createPickCodeAllocator({ body: { planet: 1, moon: 2 } });
+    expect(a.codeOf('other', 'x')).toBe(3);
   });
 
-  it('throws when a 63rd code is asked for', () => {
+  it('codes run densely from 1 and throw past 62', () => {
     const a = createPickCodeAllocator();
-    for (let i = 0; i < 62; i++) a.codeOf('layer', `id${i}`);
+    const codes = Array.from({ length: 62 }, (_, i) => a.codeOf('layer', `id${i}`));
+    expect(codes[0]).toBe(1);
+    expect(codes[61]).toBe(62);
     expect(() => a.codeOf('layerX', 'overflow')).toThrow(/layerX.*overflow/);
   });
 
