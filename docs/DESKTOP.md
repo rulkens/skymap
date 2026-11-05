@@ -300,10 +300,6 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   survive. A second Electron on the machine fails to listen. An Electron left behind by a crashed
   dev run or a test harness keeps the port and the lock; find it with `lsof -i :47823` and kill
   it before blaming the code.
-- **`sync-r2` inventory has never run for real.** `syncR2.ts` builds and uploads
-  `offline-inventory.json`, but only typecheck, unit tests and reading cover that path. Its first
-  real run is also the first real test of `runSync` against R2. The inventory build throws on an
-  empty offline group, by design.
 - **Architecture.** The mac build is arm64 only. An Intel Mac gets no installer until someone
   builds `x64` or a universal one (backlog).
 - **Firewall prompt on macOS.** The unsigned app cannot be given a preinstalled rule, so macOS asks
