@@ -19,6 +19,7 @@
  * shared loop.
  */
 
+import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { strideWindow } from '../utils/strideWindow';
 import { maxVisibleCamDistSq } from '../utils/maxVisibleCamDistSq';
 import { apparentSizePxAtDistance } from '../utils/apparentSizePxAtDistance';
@@ -54,7 +55,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     procedural: DiskRowVisitor,
     textured: DiskRowVisitor,
   ): void {
-    const { cam, records, sourceMask, pxPerRad } = input;
+    const { cam, records, visibleCatalogs, pxPerRad } = input;
 
     // Looser (8-px) bound — see module header. Rows past it can't matter to
     // either body at any plausible galaxy diameter.
@@ -71,7 +72,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     let acceptedThisFrame = 0;
 
     for (const [source, record] of records) {
-      if (((sourceMask >> source) & 1) === 0) {
+      if (!visibleCatalogs.has(galaxyCatalogIdOf(source))) {
         procedural.onSourceHidden(source);
         textured.onSourceHidden(source);
         continue;

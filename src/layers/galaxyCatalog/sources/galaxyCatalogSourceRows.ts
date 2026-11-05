@@ -3,7 +3,7 @@
  * `GALAXY_CATALOG_SOURCES` order: draw order for `catalogStore`'s
  * back-to-front iteration, UI order for the panel. Listed explicitly, not
  * derived from `Source`, so a new enum code isn't silently promoted into
- * the UI and the visibility mask.
+ * the UI and the visibility set.
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';

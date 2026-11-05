@@ -10,7 +10,7 @@
  *  - Master tri-state: `indeterminate` when a subset of TOGGLEABLE_SOURCES
  *    bits are set; `checked` (allOn) when all are set; unchecked (noneOn)
  *    when none are set.
- *  - Per-catalog checkbox reflects `sourceMask`.
+ *  - Per-catalog checkbox reflects `visibleCatalogs`.
  *  - Point-size Slider echoes the `pointSize` prop as its aria value.
  *  - Toggling a catalog checkbox fires `onToggleSource` with correct args.
  *  - A keyboard nudge on the point-size Slider fires `onPointSizeChange`
@@ -20,9 +20,7 @@
  *   SDSS=1, TwoMRS=2, Glade=3, FamousGalaxy=4, Milliquas=8, DesiDeep=18, DesiWedge=19, DesiSgw=20
  *
  * TOGGLEABLE_SOURCES = [FamousGalaxy(4), TwoMRS(2), SDSS(1), Glade(3), Milliquas(8), DesiDeep(18), DesiWedge(19), DesiSgw(20)]
- * All-on mask = (1<<4)|(1<<2)|(1<<1)|(1<<3)|(1<<8)|(1<<18)|(1<<19)|(1<<20)
- * Partial mask (only SDSS + TwoMRS on): (1<<1)|(1<<2) = 6
- * None-on mask: 0
+ * All-on = every galaxy catalog id; partial = SDSS + TwoMRS; none-on = empty set
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -33,17 +31,17 @@ import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../../../src/layers/galaxyCatalog/@types/BiasMode';
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import { Source } from '../../../../../src/data/source';
+import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
-// All TOGGLEABLE_SOURCES bits set: FamousGalaxy(4)|TwoMRS(2)|SDSS(1)|Glade(3)|Milliquas(8)|DesiDeep(18)|DesiWedge(19)|DesiSgw(20)
-const ALL_ON_MASK =
-  (1 << 4) | (1 << 2) | (1 << 1) | (1 << 3) | (1 << 8) | (1 << 18) | (1 << 19) | (1 << 20);
+const ALL_ON: ReadonlySet<GalaxyCatalogId> = new Set(GALAXY_CATALOG_IDS);
 // Only SDSS + TwoMRS — a strict subset → should produce indeterminate
-const PARTIAL_MASK = (1 << Source.SDSS) | (1 << Source.TwoMRS);
+const PARTIAL = new Set<GalaxyCatalogId>(['sdss', '2mrs']);
 
 function baseProps() {
   return {
     title: 'Galaxies',
-    sourceMask: ALL_ON_MASK,
+    visibleCatalogs: ALL_ON,
     onToggleSource: vi.fn<(source: SourceType, visible: boolean) => void>(),
     pointSize: 2.5,
     onPointSizeChange: vi.fn<(v: number) => void>(),
@@ -65,7 +63,7 @@ function baseProps() {
 describe('GalaxiesSection', () => {
   describe('master tri-state', () => {
     it('is indeterminate when only a subset of sources are set', () => {
-      const props = { ...baseProps(), sourceMask: PARTIAL_MASK };
+      const props = { ...baseProps(), visibleCatalogs: PARTIAL };
       const { container } = render(createElement(GalaxiesSection, props));
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
@@ -75,11 +73,8 @@ describe('GalaxiesSection', () => {
   });
 
   describe('per-catalog checkbox', () => {
-    it('reflects the sourceMask for SDSS (source 1)', () => {
-      // SDSS bit set, TwoMRS not — only SDSS is in PARTIAL_MASK among SDSS|TwoMRS
-      // Use a mask with only SDSS bit set: (1 << 1) = 2
-      const sdssOnlyMask = 1 << Source.SDSS;
-      const props = { ...baseProps(), sourceMask: sdssOnlyMask };
+    it('reflects visibleCatalogs for SDSS (source 1)', () => {
+      const props = { ...baseProps(), visibleCatalogs: new Set<GalaxyCatalogId>(['sdss']) };
       const { container } = render(createElement(GalaxiesSection, props));
       // #toggle-source-1 = SDSS checkbox
       const sdssCheckbox = container.querySelector<HTMLInputElement>(
@@ -100,10 +95,10 @@ describe('GalaxiesSection', () => {
   describe('callbacks', () => {
     it('calls onToggleSource with source and false when a catalog checkbox is unchecked', () => {
       const onToggleSource = vi.fn<(source: SourceType, visible: boolean) => void>();
-      const props = { ...baseProps(), sourceMask: ALL_ON_MASK, onToggleSource };
+      const props = { ...baseProps(), visibleCatalogs: ALL_ON, onToggleSource };
       const { container } = render(createElement(GalaxiesSection, props));
 
-      // SDSS starts checked (ALL_ON_MASK); a click toggles it off.
+      // SDSS starts checked (ALL_ON); a click toggles it off.
       // fireEvent.click is the reliable trigger for controlled checkboxes in jsdom —
       // fireEvent.change does not update e.target.checked for React-controlled inputs.
       const sdssCheckbox = container.querySelector<HTMLInputElement>(
@@ -131,10 +126,10 @@ describe('GalaxiesSection', () => {
 
     it('calls onToggleSource for all TOGGLEABLE_SOURCES when master is toggled from noneOn', () => {
       const onToggleSource = vi.fn<(source: SourceType, visible: boolean) => void>();
-      const props = { ...baseProps(), sourceMask: 0, onToggleSource };
+      const props = { ...baseProps(), visibleCatalogs: new Set<GalaxyCatalogId>(), onToggleSource };
       const { container } = render(createElement(GalaxiesSection, props));
 
-      // Mask=0: noneOn=true, so onToggle fires each source with targetEnabled=true.
+      // Empty set: noneOn=true, so onToggle fires each source with targetEnabled=true.
       // fireEvent.click is the reliable trigger for controlled checkboxes in jsdom.
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;

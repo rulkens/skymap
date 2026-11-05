@@ -2,7 +2,7 @@
  * structureMemberCount — how many currently-rendered galaxies fall inside a
  * structure's membership sphere (the InfoCard row).
  *
- * Sums the visible galaxy catalog sources (`sourceMask`), so the count tracks
+ * Sums the visible galaxy catalog sources (`visibleCatalogs`), so the count tracks
  * the on-screen points. The radius is `apparentRadiusMpc ?? physicalRadiusMpc`,
  * the cone the GPU focus fade tests (`structureFocusSubsystem`), so "N galaxies"
  * matches the set that stays lit on focus.
@@ -13,7 +13,8 @@
 
 import { structureMembership } from './structureMembership';
 import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
-import { maskHas } from '../../../../utils/maskHas';
+import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../records/@types/GalaxyRecordSource';
 import type { StructureInfo } from '../../../../@types/data/structure/StructureInfo';
@@ -21,13 +22,13 @@ import type { StructureInfo } from '../../../../@types/data/structure/StructureI
 export function structureMemberCount(
   structure: StructureInfo,
   records: ReadonlyMap<GalaxyCatalogSourceType, GalaxyRecordSource>,
-  sourceMask: number,
+  visibleCatalogs: ReadonlySet<GalaxyCatalogId>,
 ): number | null {
   const radiusMpc = structure.apparentRadiusMpc ?? structure.physicalRadiusMpc;
 
   const visible: GalaxyRecordSource[] = [];
   for (const source of GALAXY_CATALOG_SOURCES) {
-    if (!maskHas(sourceMask, source)) continue;
+    if (!visibleCatalogs.has(galaxyCatalogIdOf(source))) continue;
     const record = records.get(source);
     if (record === undefined) continue;
     visible.push(record);

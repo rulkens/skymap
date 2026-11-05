@@ -15,6 +15,9 @@
  *     many rows clear the distance gate (the narrow-FOV admission-sphere bug)
  */
 
+import { galaxyCatalogIdOf } from '../../../../../src/utils/galaxyCatalogIdOf';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect } from 'vitest';
 import { Source } from '../../../../../src/data/source';
 import {
@@ -28,6 +31,8 @@ import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/O
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
+
+const ALL_CATALOGS: ReadonlySet<GalaxyCatalogId> = new Set(GALAXY_CATALOG_IDS);
 
 /**
  * Camera fixed at the origin so a row at (d, 0, 0) sits exactly d Mpc away —
@@ -73,11 +78,14 @@ function makeCatalog(rows: readonly { distMpc: number; diameterKpc: number }[]):
 
 const PX_PER_RAD = 600;
 
-function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) {
+function makeInput(
+  catalogs: Map<SourceType, GalaxyCatalog>,
+  visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
+) {
   return {
     cam: makeCam(),
     records: galaxyRecordsOver(catalogs),
-    sourceMask: mask,
+    visibleCatalogs,
     pxPerRad: PX_PER_RAD,
     sourceOpacity: () => 1,
   };
@@ -122,7 +130,7 @@ describe('createDiskPlannerWalk', () => {
     const events: WalkEvent[] = [];
     // Only the SDSS bit is set — FamousGalaxy is hidden this frame.
     walk.runFrame(
-      makeInput(catalogs, 1 << Source.SDSS),
+      makeInput(catalogs, new Set([galaxyCatalogIdOf(Source.SDSS)])),
       recordingVisitor(events),
       noopDiskRowVisitor(),
     );

@@ -20,6 +20,8 @@
  * eyeballing camera positions.
  */
 
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../../../../src/data/source';
 import { createHiResFamousSubsystem } from '../../../../../src/layers/galaxyCatalog/hiResFamous/subsystems/hiResFamousSubsystem';
@@ -29,6 +31,8 @@ import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/O
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import type { FamousGalaxyMetaEntry } from '../../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
+
+const ALL_CATALOGS: ReadonlySet<GalaxyCatalogId> = new Set(GALAXY_CATALOG_IDS);
 
 const LAYER_SIDE = 1024;
 const LAYER_COUNT = 8;
@@ -112,12 +116,12 @@ function makeInput(
   catalogs: Map<SourceType, GalaxyCatalog>,
   camDist: number,
   famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[],
-  mask = 0xffffffff,
+  visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
 ) {
   return {
     cam: makeCam(camDist),
     catalogs,
-    sourceMask: mask,
+    visibleCatalogs,
     pxPerRad: PX_PER_RAD,
     famousGalaxiesMeta,
   };

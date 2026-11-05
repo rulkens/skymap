@@ -1,5 +1,5 @@
 /**
- * galaxyCatalogPlanner — the disk walk's mask and the LOD disks' per-source opacity
+ * galaxyCatalogPlanner — the disk walk's visible catalogs and the LOD disks' per-source opacity
  * come from the value core hands the planner, never from settings or the fade
  * registry (the state stub carries neither a fade registry nor switches).
  */
@@ -7,7 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
 import { Source } from '../../../src/data/source';
-import { maskHas } from '../../../src/utils/maskHas';
+import { galaxyCatalogIdOf } from '../../../src/utils/galaxyCatalogIdOf';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import type { DiskWalkInput } from '../../../src/layers/galaxyCatalog/lod/@types/DiskWalkInput';
@@ -47,8 +47,8 @@ function walkInputFor(fade: ReturnType<typeof makeGalaxyCatalogFade>): DiskWalkI
 describe('galaxyCatalogPlanner — handed value', () => {
   it('the planner walk hides a catalog whose handed value is 0', () => {
     const input = walkInputFor(makeGalaxyCatalogFade({ sdss: 0 }));
-    expect(maskHas(input.sourceMask, Source.SDSS)).toBe(false);
-    expect(maskHas(input.sourceMask, Source.TwoMRS)).toBe(true);
+    expect(input.visibleCatalogs.has(galaxyCatalogIdOf(Source.SDSS))).toBe(false);
+    expect(input.visibleCatalogs.has(galaxyCatalogIdOf(Source.TwoMRS))).toBe(true);
   });
 
   it('the LOD disks take the planner handed value', () => {
