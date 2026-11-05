@@ -15,6 +15,7 @@ import { setOrientation } from '../../state/settings/core/orientationSlice';
 import { startFrameTween } from '../../state/camera/cameraSlice';
 import { liveUpBasisQuat } from '../engine/camera/liveUpBasisQuat';
 import { setVisibilityActionsFor } from '../../utils/visibility/setVisibilityActionsFor';
+import { startClockProfile } from '../../state/time/timeSlice';
 
 export function applySceneEffect(
   effect: SceneEffect,
@@ -68,6 +69,20 @@ export function applySceneEffect(
           to: effect.frame,
           durationMs: effect.over * 1000,
           easing: effect.ease,
+        }),
+      );
+      return;
+    }
+
+    case 'clock': {
+      // Stamped now, so the table's first row is the instant the cue fires.
+      store.dispatch(
+        startClockProfile({
+          profile: {
+            startWallMs: performance.now(),
+            wallMs: Float64Array.from(effect.keys, (k) => k.sec * 1000),
+            simDays: Float64Array.from(effect.keys, (k) => k.simDays),
+          },
         }),
       );
       return;

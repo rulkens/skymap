@@ -41,6 +41,35 @@ import { perseveranceToSondermarken } from './perseveranceToSondermarken';
 import { flowOrbit } from './flowOrbit';
 import { flyPathDemo } from './flyPathDemo';
 import { famousFlythrough } from './famousFlythrough';
+import { phobosOrbit } from './phobosOrbit';
+import { zoneOfAvoidanceReveal } from './zoneOfAvoidanceReveal';
+import { gaiaFlyout } from './gaiaFlyout';
+import { sloanGreatWall } from './sloanGreatWall';
+import { famousGalaxies } from './famousGalaxies';
+import { cosmicWebOrbit } from './cosmicWebOrbit';
+import { voyagerTopDown } from './voyagerTopDown';
+import { voyagerOblique } from './voyagerOblique';
+import { voyagerJupiter } from './voyagerJupiter';
+import { sStarsFaceOn } from './sStarsFaceOn';
+import { sStarsOrbit } from './sStarsOrbit';
+import { sStarsPushIn } from './sStarsPushIn';
+import { phobosApproach } from './phobosApproach';
+import { phobosChase } from './phobosChase';
+import { andromedaHero } from './andromedaHero';
+import { whirlpoolPushIn } from './whirlpoolPushIn';
+import { powersOfTenEames } from './powersOfTenEames';
+import { flowBasinOrbit } from './flowBasinOrbit';
+import { flowStream } from './flowStream';
+import { cosmicWebTracking } from './cosmicWebTracking';
+import { cosmicWebGrow } from './cosmicWebGrow';
+import { zoneOfAvoidancePullBack } from './zoneOfAvoidancePullBack';
+import { zoneOfAvoidanceSurveys } from './zoneOfAvoidanceSurveys';
+import { gaiaForward } from './gaiaForward';
+import { gaiaNeighbourhood } from './gaiaNeighbourhood';
+import { greatWallTracking } from './greatWallTracking';
+import { greatWallContext } from './greatWallContext';
+import { surveyOrbit } from './surveyOrbit';
+import { surveyPlunge } from './surveyPlunge';
 import {
   tourOpeningTitle,
   tourYouAreHere,
@@ -69,9 +98,38 @@ export const clipFactories: Record<ClipId, (simDays: number) => Clip> = {
   perseveranceToSondermarken,
   earthUniverseLoop,
   earthCosmicWebLoop,
+  phobosOrbit,
+  zoneOfAvoidanceReveal: () => zoneOfAvoidanceReveal,
+  gaiaFlyout: () => gaiaFlyout,
+  sloanGreatWall: () => sloanGreatWall,
+  famousGalaxies: () => famousGalaxies,
+  cosmicWebOrbit: () => cosmicWebOrbit,
   flowOrbit: () => flowOrbit,
   flyPathDemo: () => flyPathDemo,
   famousFlythrough: () => famousFlythrough,
+  voyagerTopDown,
+  voyagerOblique,
+  voyagerJupiter,
+  sStarsFaceOn,
+  sStarsOrbit,
+  sStarsPushIn,
+  phobosApproach,
+  phobosChase,
+  andromedaHero: () => andromedaHero,
+  whirlpoolPushIn: () => whirlpoolPushIn,
+  powersOfTenEames,
+  flowBasinOrbit: () => flowBasinOrbit,
+  flowStream: () => flowStream,
+  cosmicWebTracking: () => cosmicWebTracking,
+  cosmicWebGrow: () => cosmicWebGrow,
+  zoneOfAvoidancePullBack: () => zoneOfAvoidancePullBack,
+  zoneOfAvoidanceSurveys: () => zoneOfAvoidanceSurveys,
+  gaiaForward: () => gaiaForward,
+  gaiaNeighbourhood: () => gaiaNeighbourhood,
+  greatWallTracking: () => greatWallTracking,
+  greatWallContext: () => greatWallContext,
+  surveyOrbit: () => surveyOrbit,
+  surveyPlunge: () => surveyPlunge,
   tourOpeningTitle: () => tourOpeningTitle,
   tourYouAreHere: () => tourYouAreHere,
   tourYouAreHereDwell: () => tourYouAreHereDwell,

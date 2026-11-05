@@ -329,6 +329,22 @@ frame. They change what's _drawn_, not where the camera _is_.
 | `scene`   | `scene(action: SettingsAction) → SceneEffect`                       | Dispatch a non-visibility settings change. `SettingsAction` is a **narrow** union — `setFlowEnabled`, `setFlow`, `setGalaxyCatalogVisible`, `setLabelsFocusedOnly` — widened as tour beats need more knobs. It's the same action a UI control dispatches; every reconcile saga fires for free. `setLabelsFocusedOnly(true)` is the tour's label declutter: only the focused subject's label draws (multiplies on top of the per-layer label toggles).  |
 | `focus`   | `focus(id: FocusId \| null) → FocusBoundEffect`                     | Build an **unresolved** `focusId` cue addressed by a durable `FocusId` (`null` clears focus). `resolveClipFoci` rewrites it to the concrete `{ kind: 'focus', ref }` `SceneEffect` at play time. On a **structure** ref this engages focus mode — non-member galaxies dim toward 0.08 (a per-galaxy geometric isolation) and drop out of picking, while surrounding layers (filaments, volumes, structure rings, labels) recede. `null` releases both. |
 | `frameTo` | `frameTo(frame: OrientationFrameId, { over, ease? }) → SceneEffect` | Roll the horizon to another orientation frame over `over` seconds (`ease` defaults `'easeInOutCubic'`). The eye does **not** move and its aim does not change — only which way is up. Authored **in the clip**, never on the beat, so an act owns its pole; a clip pins the frame it started under, so a switch mid-clip cannot reinterpret its authored yaws. A tour restores the viewer's pre-tour frame when it ends.                               |
+| `clock`   | `clock(keys: { sec, simDays }[]) → SceneEffect`                    | Run the **sim clock** along a scripted table from the moment the cue fires: `sec` after it fires the clock reads `simDays` (a Julian day), linear between rows, clamped at the last. A hold is two rows with the same `simDays`; a ramp is rows whose spacing grows. Dispatches `startClockProfile` (the mission timeline's mechanism). Both columns must ascend. |
+
+**`clock` — time-lapse inside a clip.** A clip normally freezes the sim clock at
+its start (`clipBodySaga` pauses it, and instant-dependent factories read bodies at
+that frozen instant); a `clock` cue is the one way to run it. Keys are **absolute**
+Julian days because the applier has no time state to be relative to, so a clip that
+uses one is a `(simDays) => Clip` factory building its keys from the frozen start
+(`voyagerTopDown` jumps to launch and runs to its start instant; `sStarsOrbit`
+runs two years per second). When the clip ends, `clipBodySaga` re-pauses a clock the
+viewer had paused. **Trap:** camera targets are baked at clip start, so a body
+moving under a running clock drifts out of frame — follow it with the
+`trackBody(bodyId, keys, stepSec, faceToward?)` maker
+(`src/data/animation/clips/makers/trackBody.ts`), which reads the body at the
+instants the same keys will show and emits one linear `moveTarget` leg per step
+(plus an `aimAt` per leg in chase mode; see `phobosChase`). Put it in the same beat
+as the `clock` cue so both share a zero point.
 
 **`args` are visibility addresses**, derived from every Layer's `visibility.ts`
 (`APP_VISIBILITY`): show keys (`'flow'`, `'survey'`, `'structureRing'`,

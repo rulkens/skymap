@@ -13,7 +13,7 @@
  * imports this type and does NOT redeclare it; this file is the ONE canonical
  * home.
  *
- * ### The six arms
+ * ### The seven arms
  *
  *   - `show` / `hide` — visibility INTENT. Dispatches the same settings actions
  *     the UI does (`setVisibility`), which fades in/out over `over` seconds.
@@ -45,6 +45,13 @@
  *     steady pole. `commitCameraPose` is not dispatched here — see
  *     `stepCameraRuntime`, the loop stage that re-encodes `base` itself.
  *
+ *   - `clock` — runs the sim clock along a scripted wall→sim table
+ *     (`startClockProfile`, the mission timeline's mechanism), stamped at fire
+ *     time. Keys hold ABSOLUTE sim days: the applier has no time state to be
+ *     relative to, and the clip factory already knows its frozen start instant.
+ *     Awaits zero duration, like the other cues; `clipBodySaga` re-freezes a
+ *     paused clock it ran when the clip ends.
+ *
  * ### `args` are visibility addresses
  *
  * `show`/`hide`/`fade` name the addresses `APP_VISIBILITY` derives: show keys
@@ -62,6 +69,7 @@ import type { SettingsAction } from './SettingsAction';
 import type { SelectionRef } from '../engine/SelectionRef';
 import type { OrientationFrameId } from '../camera/OrientationFrameId';
 import type { Ease } from './Ease';
+import type { ClockKey } from './ClockKey';
 
 export type SceneEffect =
   | {
@@ -93,4 +101,9 @@ export type SceneEffect =
       readonly frame: OrientationFrameId;
       readonly over: number;
       readonly ease: Ease;
+    }
+  | {
+      // Runs the sim clock along `keys` from the moment it fires, clamped at the last key.
+      readonly kind: 'clock';
+      readonly keys: ClockKey[];
     };

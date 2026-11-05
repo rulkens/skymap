@@ -7,7 +7,8 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Action } from '@reduxjs/toolkit';
 
 import { applySceneEffect } from '../../../src/services/animation/applySceneEffect';
-import { frameTo, hide, show } from '../../../src/services/engine/animation/effectHelpers';
+import { clock, frameTo, hide, show } from '../../../src/services/engine/animation/effectHelpers';
+import { startClockProfile } from '../../../src/state/time/timeSlice';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
@@ -157,5 +158,28 @@ describe('applySceneEffect — fade', () => {
         { state, store },
       ),
     ).toThrow();
+  });
+});
+
+describe('applySceneEffect — clock', () => {
+  it('starts a clock profile stamped at the fire instant, seconds converted to wall ms', () => {
+    vi.spyOn(performance, 'now').mockReturnValue(5000);
+    const { store, dispatch } = makeSpyStore();
+
+    applySceneEffect(
+      clock([
+        { sec: 0, simDays: 100 },
+        { sec: 2, simDays: 100 },
+        { sec: 10, simDays: 900 },
+      ]),
+      { state: makeEngineState(), store },
+    );
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    const action = dispatch.mock.calls[0]![0] as ReturnType<typeof startClockProfile>;
+    expect(action.type).toBe(startClockProfile.type);
+    expect(action.payload.profile.startWallMs).toBe(5000);
+    expect([...action.payload.profile.wallMs]).toEqual([0, 2000, 10000]);
+    expect([...action.payload.profile.simDays]).toEqual([100, 100, 900]);
   });
 });

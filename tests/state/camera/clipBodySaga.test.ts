@@ -19,7 +19,14 @@ import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { startClip } from '../../../src/state/camera/clipActions';
 import { hashBodyFor } from '../../../src/state/url/hashBodyFor';
-import { setRate, setSimDays, goLive, pause, resume } from '../../../src/state/time/timeSlice';
+import {
+  setRate,
+  setSimDays,
+  goLive,
+  pause,
+  resume,
+  startClockProfile,
+} from '../../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -334,5 +341,31 @@ describe('clipBodySaga', () => {
       .map(([action]) => (action as { type: string }).type)
       .filter((t) => t === resume.type || t === goLive.type);
     expect(restored).toEqual([]);
+  });
+
+  it('re-freezes a paused manual clock that a clip clock cue set running', async () => {
+    const seam = blockingSeam(() => {});
+    const { store } = buildHarness(seam);
+    store.dispatch(setRate({ rateIndex: 2, nowMs: 100 }));
+    store.dispatch(pause({ nowMs: 100 }));
+
+    store.dispatch(startClip(CLIP_ID));
+    await flush();
+    // What a `clock` cue dispatches mid-clip.
+    store.dispatch(
+      startClockProfile({
+        profile: {
+          startWallMs: 0,
+          wallMs: Float64Array.of(0, 1000),
+          simDays: Float64Array.of(10, 20),
+        },
+      }),
+    );
+    expect(store.getState().time.paused).toBe(false);
+
+    store.dispatch(exitTakeover());
+    await flush();
+
+    expect(store.getState().time).toMatchObject({ mode: 'manual', paused: true, profile: null });
   });
 });

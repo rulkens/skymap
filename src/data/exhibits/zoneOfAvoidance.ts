@@ -2,7 +2,7 @@
  * zoneOfAvoidance — the dust-band exhibit, framed just outside the Milky Way
  * looking down the galactic plane, where the wedge the catalogs cannot see
  * through cuts across the galaxy field. The distance is dictated by the band's
- * own scale window, not by taste — see `FRAMING_MPC`. Copy is hand-written and
+ * own scale window, not by taste — see `FRAMING_MPC` in `zoneOfAvoidancePose.ts`. Copy is hand-written and
  * user-owned; nothing generates this file.
  */
 
@@ -15,6 +15,7 @@ import { factsKind } from '../../components/ExhibitOverlay/kinds/factsKind';
 import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
+import { ZONE_OF_AVOIDANCE_POSE } from './zoneOfAvoidancePose';
 
 // The band is the subject, so the exhibit forces it on rather than inheriting
 // it: it boots enabled, but a viewer who switched it off in the panel would
@@ -42,26 +43,6 @@ const PICK_BAND_AND_GALAXIES = {
   },
 };
 
-/**
- * Eye 20° above the galactic plane on the ANTICENTRE side, so the aim runs
- * toward the galactic centre where the wedge is at its 10° bulge width rather
- * than the 3° it narrows to the other way (`ZONE_OF_AVOIDANCE_SHELL`).
- * Derived through `orbitAnglesLookingAlong` against the ecliptic basis — the
- * default orientation — never a hand-rolled inverse. POSITIVE pitch is above
- * the plane: that helper solves `pitch = asin(-forward.y)`, and `-forward`
- * runs from target to EYE. Yaw is then swung off the exact centre so the band
- * crosses frame-left, clearing the overlay's right-hand notes column.
- */
-const GALACTIC_LATITUDE_YAW = -3.15;
-const GALACTIC_LATITUDE_PITCH = 0.263728;
-
-/**
- * LOAD-BEARING, and not a framing choice: the band is only drawn between
- * roughly 0.15 Mpc and 6 Mpc. The `zoneOfAvoidance` entry's `veil` band is an
- * approach window composed with a recede one (full at 2 Mpc, gone by 6), because the guide
- * is scoped to the Milky-Way-context shot. Frame this exhibit at cosmic-web distances and it renders nothing at all.
- */
-const FRAMING_MPC = 1.2;
 
 export const zoneOfAvoidance: Exhibit = {
   id: 'zoneOfAvoidance',
@@ -73,12 +54,7 @@ export const zoneOfAvoidance: Exhibit = {
     cosmicWebDensity: COSMIC_WEB_DENSITY_OFF,
     picking: PICK_BAND_AND_GALAXIES,
   },
-  pose: {
-    target: [0, 0, 0],
-    yaw: GALACTIC_LATITUDE_YAW,
-    pitch: GALACTIC_LATITUDE_PITCH,
-    distance: FRAMING_MPC,
-  },
+  pose: ZONE_OF_AVOIDANCE_POSE,
   lede: 'About a fifth of the extragalactic sky is blocked by our own galaxy. The band marks where the dust and stars of the Milky Way’s disc hide whatever lies behind them.',
   body: [
     section(proseKind, {

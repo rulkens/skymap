@@ -70,6 +70,9 @@ export function* clipBodySaga(id: ClipId): Generator {
       yield* put(goLiveNowAction());
     } else if (!priorPaused) {
       yield* put(resume({ nowMs: performance.now() }));
+    } else if (!(yield* select((state: RootState) => state.time.paused))) {
+      // A `clock` cue set the clock running; a clock the user had paused stays paused.
+      yield* put(pause({ nowMs: performance.now() }));
     }
   }
 }

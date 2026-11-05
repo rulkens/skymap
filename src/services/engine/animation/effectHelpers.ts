@@ -52,6 +52,7 @@ import type { VisibilityArg } from '../../../@types/animation/VisibilityArg';
 import type { ScopedVisibilityAddress } from '../../../@types/animation/ScopedVisibilityAddress';
 import { expandVisibilityLayers } from '../../../utils/animation/expandVisibilityLayers';
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
+import type { ClockKey } from '../../../@types/animation/ClockKey';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import type { PassByConfig } from '../../../@types/animation/PassByConfig';
@@ -399,6 +400,22 @@ export function fade(
  */
 export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
   return { kind: 'scene', action };
+}
+
+/**
+ * clock — run the sim clock along `keys` from the moment the cue fires: a hold is
+ * two keys with the same `simDays`, a ramp is keys whose spacing grows. Keys are
+ * absolute Julian days, so a clip that uses one is a `(simDays) => Clip` factory
+ * building them from its frozen start instant. Both columns must ascend: the
+ * profile interpolates wall → sim and cannot run the clock backwards.
+ */
+export function clock(keys: readonly ClockKey[]): SceneEffect & { kind: 'clock' } {
+  for (let i = 1; i < keys.length; i++) {
+    if (keys[i]!.sec <= keys[i - 1]!.sec || keys[i]!.simDays < keys[i - 1]!.simDays) {
+      throw new Error(`clock: keys must ascend in both sec and simDays (key ${i})`);
+    }
+  }
+  return { kind: 'clock', keys: [...keys] };
 }
 
 /**

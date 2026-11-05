@@ -23,6 +23,7 @@ import {
   all,
   flyPath,
   atPoint,
+  clock,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
 
@@ -102,5 +103,25 @@ describe('flyPath', () => {
     // on every flyPath — a group cloud flies through-centre regardless.
     const e = flyPath(wps, { over: 20 });
     expect(e.passBy).toEqual({ offset: 4, dir: 'outsideBend' });
+  });
+});
+
+describe('clock', () => {
+  it('rejects keys whose seconds do not ascend', () => {
+    expect(() =>
+      clock([
+        { sec: 2, simDays: 10 },
+        { sec: 1, simDays: 20 },
+      ]),
+    ).toThrow(/ascend/);
+  });
+
+  it('rejects a sim clock that runs backwards', () => {
+    expect(() =>
+      clock([
+        { sec: 0, simDays: 20 },
+        { sec: 1, simDays: 10 },
+      ]),
+    ).toThrow(/ascend/);
   });
 });

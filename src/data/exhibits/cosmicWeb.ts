@@ -14,6 +14,7 @@ import { keyKind } from '../../components/ExhibitOverlay/kinds/keyKind';
 import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
+import { COSMIC_WEB_POSE } from './cosmicWebPose';
 
 // The 2MRS Polyphorm run rides with MCPM here: same quantity, but an all-sky
 // footprint where MCPM only covers the SDSS wedge, so the web closes up behind
@@ -36,14 +37,7 @@ export const cosmicWeb: Exhibit = {
   id: 'cosmicWeb',
   label: 'Cosmic Web',
   settings: { galaxyCatalogs: SURVEYS_OFF, cosmicWebDensity: VOLUMES_WITH_2MRS },
-  // User-framed and verified live 2026-09-18 (docs/grill-sessions/search-palette-tabs-2026-09-18.md,
-  // "Capture spike findings"): no focus, target/yaw/pitch/distance below.
-  pose: {
-    target: [-181.2045404245461, -29.471262938089055, 52.200784784155374],
-    yaw: -3.93753522022247,
-    pitch: 0.4135452242339458,
-    distance: 251.18526964731848,
-  },
+  pose: COSMIC_WEB_POSE,
   lede: 'Galaxies trace the largest structure there is: a web of filaments and knots around empty voids, hundreds of millions of light-years across.',
   body: [
     section(proseKind, {

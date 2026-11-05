@@ -268,7 +268,8 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
     case 'fade':
     case 'scene':
     case 'focus':
-    case 'frameTo': {
+    case 'frameTo':
+    case 'clock': {
       acc.cues.push({ atSec, effect });
       return 0;
     }
