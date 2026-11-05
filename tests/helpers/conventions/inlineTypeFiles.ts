@@ -330,7 +330,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'tools/utils/io/textureSources.ts',
   'tools/utils/math/makeEllipsoidUnionFilter.ts',
   'tools/utils/perf/formatRunSummary.ts',
-  'tools/utils/refactor/applyMoves.ts',
   'tools/utils/refactor/classifyLocalDeps.ts',
   'tools/utils/refactor/collectRefs.ts',
   'tools/utils/refactor/detectPassthrough.ts',

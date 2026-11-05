@@ -26,5 +26,6 @@ describe('loadRefactorProject', () => {
     );
     expect(paths.has(resolve('tests/tools/utils/refactor/applyMoves.test.ts'))).toBe(true);
     expect(paths.has(resolve('tools/utils/refactor/applyMoves.ts'))).toBe(true);
+    expect(paths.has(resolve('packages/move-files/tests/planMoves.test.ts'))).toBe(true);
   }, 20000);
 });

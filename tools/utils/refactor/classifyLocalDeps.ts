@@ -57,9 +57,8 @@
  * among `findReferencesAsNodes()` — is filtered out; it points AT the symbol rather
  * than USING it.
  *
- * `LocalDepClass` is co-located with its classifier (the `applyMoves.ts` ->
- * `MovePair` pattern): it only means anything as this function's output. Output is
- * ordered by declaration position in the file so the extract's diagnostics are
+ * `LocalDepClass` is co-located with its classifier: it only means anything as
+ * this function's output. Output is ordered by declaration position in the file so the extract's diagnostics are
  * stable across runs.
  */
 

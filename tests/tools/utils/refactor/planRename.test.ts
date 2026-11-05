@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Project } from 'ts-morph';
 import { planRename } from '../../../../tools/utils/refactor/planRename';
 import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
@@ -76,6 +76,49 @@ describe('planRename', () => {
     expect(project.getSourceFileOrThrow('/src/app.ts').getText()).toContain(
       "from './@types/rendering/Bar'",
     );
+  });
+
+  it.each([
+    ['/home/me/tools/skymap', 'src/foo.ts', 'tests/foo.test.ts', 'src/bar.ts', 'tests/bar.test.ts'],
+    [
+      '/home/me/src/skymap',
+      'tools/foo.ts',
+      'tests/tools/foo.test.ts',
+      'tools/bar.ts',
+      'tests/tools/bar.test.ts',
+    ],
+  ])(
+    'finds the mirror from the Project root in a checkout at %s',
+    (root, src, test, newSrc, newTest) => {
+      const project = projectWith({
+        [`${root}/${src}`]: 'export const foo = 1;',
+        [`${root}/${test}`]: 'export const t = 1;',
+      });
+      vi.spyOn(project.getFileSystem(), 'getCurrentDirectory').mockReturnValue(root);
+      const resolved = resolveSymbol(project, { file: `${root}/${src}`, symbol: 'foo' });
+
+      planRename(project, resolved, 'bar', true);
+
+      expect(project.getSourceFile(`${root}/${newSrc}`)).toBeDefined();
+      expect(project.getSourceFile(`${root}/${newTest}`)).toBeDefined();
+      expect(project.getSourceFile(`${root}/${test}`)).toBeUndefined();
+    },
+  );
+
+  it('renames a file under no companion rule too', () => {
+    const project = projectWith({ '/packages/site/src/foo.ts': 'export const foo = 1;' });
+    const resolved = resolveSymbol(project, { file: '/packages/site/src/foo.ts', symbol: 'foo' });
+
+    planRename(project, resolved, 'bar', true);
+
+    expect(project.getSourceFile('/packages/site/src/bar.ts')).toBeDefined();
+    expect(project.getSourceFile('/packages/site/src/foo.ts')).toBeUndefined();
+  });
+
+  it('renames a file at the Project root', () => {
+    const project = projectWith({ '/foo.ts': 'export const foo = 1;' });
+    planRename(project, resolveSymbol(project, { file: '/foo.ts', symbol: 'foo' }), 'bar', true);
+    expect(project.getSourceFile('/bar.ts')).toBeDefined();
   });
 
   it('leaves the file name when renameFile is false', () => {

@@ -118,7 +118,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "move-files": "tsx tools/dev/moveFiles.ts",
+    "move-files": "tsx packages/move-files/src/cli.ts",
     "site": "npm run dev --workspace @skymap/website",
     "site:build": "npm run build --workspace @skymap/website",
     "site:check": "npm run check --workspace @skymap/website",
