@@ -4,6 +4,11 @@ import type { OfflineInventory } from '../../../../../../tools/deploy/@types/Off
 import { OFFLINE_INVENTORY_KEY } from '../../../../../../tools/deploy/data/offlineInventoryKey';
 import { INVENTORY_TIMEOUT_MS } from '../data/inventoryTimeoutMs';
 
+const noList = (detail: string): SyncOutcome => ({
+  kind: 'failed',
+  failure: { reason: 'noList', key: OFFLINE_INVENTORY_KEY, detail },
+});
+
 /** The published inventory, or why there is none: unreachable is offline, an error answer failed. */
 export async function fetchInventory(
   baseUrl: string,
@@ -14,7 +19,7 @@ export async function fetchInventory(
     const res = await fetch(`${baseUrl}/${OFFLINE_INVENTORY_KEY}`, {
       signal: AbortSignal.any([signal, AbortSignal.timeout(INVENTORY_TIMEOUT_MS)]),
     });
-    if (!res.ok) return { kind: 'failed' };
+    if (!res.ok) return noList(`HTTP ${res.status}`);
     text = await res.text();
   } catch {
     return { kind: 'offline' };
@@ -22,6 +27,6 @@ export async function fetchInventory(
   try {
     return { text, inventory: JSON.parse(text) as OfflineInventory };
   } catch {
-    return { kind: 'failed' };
+    return noList('not valid JSON');
   }
 }

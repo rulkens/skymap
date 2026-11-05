@@ -73,6 +73,11 @@ function DownloadStatus({ sync, onPause, onResume }: DownloadStatusProps): React
           </p>
         )}
       </div>
+      {view.detail !== undefined && (
+        <p className={chrome.dim}>
+          <span className={chrome.mono}>{view.detail}</span>
+        </p>
+      )}
     </div>
   );
 }

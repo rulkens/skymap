@@ -1,6 +1,7 @@
 import type { SyncOutcome } from '../sync/@types/SyncOutcome';
 import type { SyncThenLoad } from './@types/SyncThenLoad';
 import type { SyncThenLoadDeps } from './@types/SyncThenLoadDeps';
+import { errorDetail } from '../sync/utils/errorDetail';
 import { syncOutcomeAction } from './utils/syncOutcomeAction';
 
 /**
@@ -26,9 +27,13 @@ export function createSyncThenLoad(deps: SyncThenLoadDeps): SyncThenLoad {
       )
       .catch((error: unknown): SyncOutcome => {
         console.error('sync:', error);
-        return { kind: 'failed' };
+        return {
+          kind: 'failed',
+          failure: { reason: 'error', key: null, detail: errorDetail(error) },
+        };
       })
       .finally(() => (running = null));
+    if (outcome.kind === 'failed') console.error('sync failed:', outcome.failure);
     const done = outcome.kind === 'synced' || outcome.kind === 'unchanged';
     // The walk can throw (EPERM on a folder antivirus holds); a set it cannot read is not complete.
     const hasData =

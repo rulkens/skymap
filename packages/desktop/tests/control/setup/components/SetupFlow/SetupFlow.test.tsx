@@ -133,6 +133,19 @@ describe('SetupFlow', () => {
     expect(bridge.updateNow).toHaveBeenCalledOnce();
   });
 
+  it('a failed download shows the file and the error beside Retry', async () => {
+    const { set } = await firstRun();
+    set({
+      status: {
+        kind: 'failed',
+        failure: { reason: 'stale', key: 'data/images/earth-tiles/x.webp', detail: 'HTTP 404' },
+      },
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('being updated');
+    expect(screen.getByText('data/images/earth-tiles/x.webp: HTTP 404')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+  });
+
   it('offline, the strip says why and Retry asks main to download again', async () => {
     const { bridge, set } = await firstRun();
     set({ status: { kind: 'offline' } });

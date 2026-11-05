@@ -3,6 +3,7 @@ import type { StatusView } from '../@types/StatusView';
 import type { SyncState } from '../@types/SyncState';
 import { formatClockTime } from '../utils/formatClockTime';
 import { formatGigabytes } from '../utils/formatGigabytes';
+import { FAILURE_TEXT } from './failureText';
 
 const lastTried = ({ lastAttempt }: SyncState): string =>
   lastAttempt === null ? '' : ` Last tried at ${formatClockTime(lastAttempt)}.`;
@@ -42,13 +43,13 @@ export const STATUS_VIEW: {
           text: `Skymap needs the internet once to download its data.${lastTried(sync)}`,
           tone: 'problem',
         },
-  failed: (_, sync) =>
-    sync.hasData
-      ? { text: 'The update stopped. The sky uses the saved data.', tone: 'plain' }
-      : {
-          text: `The download stopped before it finished. Retry, or try again later.${lastTried(sync)}`,
-          tone: 'problem',
-        },
+  failed: ({ failure }, sync) => {
+    const detail = failure.key === null ? failure.detail : `${failure.key}: ${failure.detail}`;
+    if (sync.hasData) {
+      return { text: 'The update stopped. The sky uses the saved data.', tone: 'plain', detail };
+    }
+    return { text: `${FAILURE_TEXT[failure.reason]}${lastTried(sync)}`, tone: 'problem', detail };
+  },
   diskFull: ({ neededBytes, freeBytes }, sync) => ({
     text: `Not enough disk space: needs ${formatGigabytes(neededBytes)}, ${formatGigabytes(freeBytes)} free. Free some space, then retry.${lastTried(sync)}`,
     tone: 'problem',

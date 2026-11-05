@@ -23,14 +23,14 @@ export async function downloadVerified(
   let idle: NodeJS.Timeout | undefined;
   const rearm = (): void => {
     clearTimeout(idle);
-    idle = setTimeout(() => abort.abort(new Error(`${url}: no data for ${idleMs} ms`)), idleMs);
+    idle = setTimeout(() => abort.abort(new Error(`no data for ${idleMs} ms`)), idleMs);
   };
   const part = `${dest}.part`;
   try {
     rearm();
     const res = await fetch(url, { signal: AbortSignal.any([signal, abort.signal]) });
-    if (res.status === 404) throw new UpstreamChangedError(`${url}: HTTP 404`);
-    if (!res.ok || res.body === null) throw new Error(`${url}: HTTP ${res.status}`);
+    if (res.status === 404) throw new UpstreamChangedError('HTTP 404');
+    if (!res.ok || res.body === null) throw new Error(`HTTP ${res.status}`);
     await mkdir(dirname(dest), { recursive: true });
     const hash = createHash('sha256');
     const tap = new Transform({
@@ -47,7 +47,7 @@ export async function downloadVerified(
       createWriteStream(part),
       { signal: AbortSignal.any([signal, abort.signal]) },
     );
-    if (hash.digest('hex') !== sha256) throw new UpstreamChangedError(`${url}: sha256 mismatch`);
+    if (hash.digest('hex') !== sha256) throw new UpstreamChangedError('sha256 mismatch');
     await rename(part, dest);
   } catch (err) {
     await rm(part, { force: true });

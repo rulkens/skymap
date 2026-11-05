@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import type { SyncFailure } from '../../../../src/@types/SyncFailure';
 import type { SyncState } from '../../../../src/control/sync/@types/SyncState';
 import { describeStatus } from '../../../../src/control/sync/utils/describeStatus';
+
+const failed = (failure: Partial<SyncFailure> = {}) =>
+  ({
+    kind: 'failed',
+    failure: { reason: 'error', key: null, detail: 'HTTP 503', ...failure },
+  }) as const;
 
 const at = (over: Partial<SyncState>): SyncState => ({
   status: { kind: 'idle' },
@@ -14,9 +21,9 @@ const at = (over: Partial<SyncState>): SyncState => ({
 
 describe('describeStatus', () => {
   it('an offline or failed sync is a problem only without saved data', () => {
-    for (const kind of ['offline', 'failed'] as const) {
-      const without = describeStatus(at({ status: { kind } }));
-      const withData = describeStatus(at({ status: { kind }, hasData: true }));
+    for (const status of [{ kind: 'offline' } as const, failed()]) {
+      const without = describeStatus(at({ status }));
+      const withData = describeStatus(at({ status, hasData: true }));
       expect(without.tone).toBe('problem');
       expect(without.text).not.toMatch(/saved data/);
       expect(withData.tone).toBe('plain');
@@ -31,11 +38,23 @@ describe('describeStatus', () => {
   });
 
   it('a problem ends with when it last tried, once an attempt has ended', () => {
-    const status = { kind: 'failed' } as const;
+    const status = failed();
     expect(describeStatus(at({ status })).text).not.toMatch(/Last tried/);
     expect(
       describeStatus(at({ status, lastAttempt: new Date(2026, 10, 5, 9, 7).getTime() })).text,
     ).toMatch(/Last tried at 09:07\.$/);
+  });
+
+  it('a failure says whether Retry can help now and shows the file and error', () => {
+    const stale = describeStatus(
+      at({ status: failed({ reason: 'stale', key: 'data/a.webp', detail: 'HTTP 404' }) }),
+    );
+    expect(stale.text).toMatch(/^The data server is being updated/);
+    expect(stale.detail).toBe('data/a.webp: HTTP 404');
+    expect(describeStatus(at({ status: failed({ reason: 'noList' }) })).text).toMatch(
+      /no download list/,
+    );
+    expect(describeStatus(at({ status: failed(), hasData: true })).detail).toBe('HTTP 503');
   });
 
   it('a full disk names the space needed and free, and always offers Retry', () => {

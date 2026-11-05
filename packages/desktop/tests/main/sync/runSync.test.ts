@@ -95,10 +95,14 @@ describe('runSync', () => {
     expect(existsSync(join(root, 'g2/b.bin'))).toBe(true);
   });
 
-  it('a missing file fails the run at once and leaves the previous inventory.json', async () => {
+  // Regression: a list naming tiles a deploy had deleted read only "the download stopped".
+  it('a missing file fails the run at once, names it, and leaves the previous inventory.json', async () => {
     writeFileSync(join(root, 'inventory.json'), '{"groups":[]}');
     failing = { path: '/data/g2/c.bin', status: 404, times: Infinity };
-    expect(await run()).toEqual({ kind: 'failed' });
+    expect(await run()).toEqual({
+      kind: 'failed',
+      failure: { reason: 'stale', key: 'data/g2/c.bin', detail: 'HTTP 404' },
+    });
     expect(requests.filter((r) => r === '/data/g2/c.bin')).toHaveLength(1);
     expect(readFileSync(join(root, 'inventory.json'), 'utf8')).toBe('{"groups":[]}');
   });
@@ -123,7 +127,10 @@ describe('runSync', () => {
 
   it('a sha mismatch fails without a retry and leaves no renamed file', async () => {
     lyingSha = '/data/g1/a.bin';
-    expect(await run()).toEqual({ kind: 'failed' });
+    expect(await run()).toEqual({
+      kind: 'failed',
+      failure: { reason: 'stale', key: 'data/g1/a.bin', detail: 'sha256 mismatch' },
+    });
     expect(requests.filter((r) => r === '/data/g1/a.bin')).toHaveLength(1);
     expect(existsSync(join(root, 'g1/a.bin'))).toBe(false);
     expect(existsSync(join(root, 'g1/a.bin.part'))).toBe(false);
@@ -179,7 +186,10 @@ describe('runSync', () => {
   // looking at their network.
   it('an inventory the server does not have fails rather than reading as offline', async () => {
     failing = { path: '/data/offline-inventory.json', status: 404, times: Infinity };
-    expect(await run()).toEqual({ kind: 'failed' });
+    expect(await run()).toEqual({
+      kind: 'failed',
+      failure: { reason: 'noList', key: 'data/offline-inventory.json', detail: 'HTTP 404' },
+    });
   });
 
   it('unreachable inventory returns offline', async () => {

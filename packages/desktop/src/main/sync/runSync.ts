@@ -1,5 +1,6 @@
 import { mkdir, readFile, statfs } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { SyncFailure } from '../../@types/SyncFailure';
 import type { SyncedRecord } from './@types/SyncedRecord';
 import type { SyncOutcome } from './@types/SyncOutcome';
 import type { SyncRequest } from './@types/SyncRequest';
@@ -8,6 +9,7 @@ import { INVENTORY_FILE } from './data/inventoryFile';
 import { PROGRESS_INTERVAL_MS } from './data/progressIntervalMs';
 import { SYNCED_FILE } from './data/syncedFile';
 import { downloadWithRetries } from './utils/downloadWithRetries';
+import { errorDetail } from './utils/errorDetail';
 import { fetchInventory } from './utils/fetchInventory';
 import { keyToLocalPath } from './utils/keyToLocalPath';
 import { listMirrorKeys } from './utils/listMirrorKeys';
@@ -15,6 +17,7 @@ import { runPool } from './utils/runPool';
 import { readJsonFile } from '../files/utils/readJsonFile';
 import { writeFileAtomically } from '../files/utils/writeFileAtomically';
 import { planSync } from './planSync';
+import { UpstreamChangedError } from './UpstreamChangedError';
 
 /**
  * Downloads what the inventory lists and the mirror lacks, group by group. Never deletes:
@@ -55,29 +58,41 @@ export async function runSync({
     onProgress({ doneBytes, totalBytes: plan.downloadBytes });
   };
   report(true);
+  // The first file to fail is the one to name; the pool aborts the rest because of it.
+  let failure: SyncFailure | null = null;
   try {
     for (const { download } of plan.groups) {
       try {
         await runPool(download, CONCURRENT_DOWNLOADS, async (file) => {
           const url = `${baseUrl}/${file.key.split('/').map(encodeURIComponent).join('/')}`;
-          await downloadWithRetries(
-            url,
-            keyToLocalPath(dataRoot, file.key),
-            file.sha256,
-            signal,
-            (n) => {
-              doneBytes += n;
-              report(false);
-            },
-          );
+          try {
+            await downloadWithRetries(
+              url,
+              keyToLocalPath(dataRoot, file.key),
+              file.sha256,
+              signal,
+              (n) => {
+                doneBytes += n;
+                report(false);
+              },
+            );
+          } catch (error) {
+            const reason = error instanceof UpstreamChangedError ? 'stale' : 'error';
+            failure ??= { reason, key: file.key, detail: errorDetail(error) };
+            throw error;
+          }
           synced[file.key] = file.sha256;
         });
       } finally {
         await writeFileAtomically(syncedPath, JSON.stringify(synced));
       }
     }
-  } catch {
-    return { kind: signal.aborted ? 'paused' : 'failed' };
+  } catch (error) {
+    if (signal.aborted) return { kind: 'paused' };
+    return {
+      kind: 'failed',
+      failure: failure ?? { reason: 'error', key: null, detail: errorDetail(error) },
+    };
   } finally {
     report(true);
   }

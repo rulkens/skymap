@@ -37,6 +37,18 @@ describe('createSyncThenLoad', () => {
     expect(d.showControl).toHaveBeenCalled();
   });
 
+  it('a sync that throws fails with the error as its detail', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { state, deps: d } = deps({
+      sync: vi.fn(async () => Promise.reject(new Error('EACCES'))),
+    });
+    await createSyncThenLoad(d).syncThenLoad(true);
+    expect(state.status).toEqual({
+      kind: 'failed',
+      failure: { reason: 'error', key: null, detail: 'EACCES' },
+    });
+  });
+
   it('records when the attempt ended, whether or not it worked', async () => {
     const { state, deps: d } = deps();
     const before = Date.now();

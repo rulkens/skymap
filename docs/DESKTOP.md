@@ -104,6 +104,10 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   files are dropped with their `.part`, and the outcome is `paused`. Resume is Update now, whose
   bar counts on from the paused bytes (`createSyncThenLoad` carries them); a launch or daily update
   resumes too.
+- **Failure.** A failed run carries a `SyncFailure`: the first file to fail (null for none), its
+  error, and a reason. `stale` (a 404 or a hash mismatch) means the list names files the bucket no
+  longer holds as listed: a deploy landed, or a `sync-r2` without the inventory publisher replaced
+  them. The control page shows the file and error under the status line, and main logs it.
 - **Retries.** `downloadWithRetries` tries a file `DOWNLOAD_RETRIES` more times after a network or
   server error or a refused rename (Windows antivirus), and a download that receives nothing for
   `DOWNLOAD_IDLE_MS` is aborted. A 404 or a sha mismatch (`UpstreamChangedError`) fails at once:
