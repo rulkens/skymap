@@ -26,6 +26,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { missionsPickCodes } from '../../../support/layerPickCodes';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
 const T0 = 2444000.5;
@@ -84,7 +85,9 @@ const drawnIds = (simDays: number): string[] => {
 };
 // The missions Layer captions every craft; core captions none.
 const labelIds = (simDays: number): string[] =>
-  produceMissionCaptions(STATE, viewAt(simDays), { craft: 1 }).labels.map((label) => label.id);
+  produceMissionCaptions(missionsPickCodes())(STATE, viewAt(simDays), { craft: 1 }).labels.map(
+    (label) => label.id,
+  );
 
 describe('spacecraft presence', () => {
   it('a body with a presence date is absent before it, present after', () => {

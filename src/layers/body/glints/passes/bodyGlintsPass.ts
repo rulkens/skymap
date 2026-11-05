@@ -136,7 +136,10 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
             earthPos[1] - camPos[1],
             earthPos[2] - camPos[2],
           ] as Vec3,
-          packedId: packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
+          packedId: packSelection(
+            runtime.pickCodes.pickCodeOf(Source.Earth),
+            0 + PICK_SENTINEL_OFFSET,
+          ),
           bandClass: glintBandClass('earth'),
         });
       }
@@ -171,7 +174,10 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
             positionMpc[1] - camPos[1],
             positionMpc[2] - camPos[2],
           ] as Vec3,
-          packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
+          packedId: packSelection(
+            runtime.pickCodes.pickCodeOf(Source.Planet),
+            seedIndex + PICK_SENTINEL_OFFSET,
+          ),
           bandClass: glintBandClass(body.id),
         });
       }

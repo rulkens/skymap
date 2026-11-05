@@ -54,6 +54,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StarColumns } from '../../../../src/layers/starCatalog/survey/@types/StarColumns';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { missionsPickCodes } from '../../../support/layerPickCodes';
 
 const SIM_DAYS = CONST_J2000;
 const EARTH_POS = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
@@ -527,7 +528,7 @@ describe('focusIdOf over the Layers the shared resolver omits', () => {
   );
   const full = composeSelectionRows(
     () => [
-      craftSelectionRow(),
+      craftSelectionRow(missionsPickCodes()),
       earthSceneSelectionRow(),
       zoneOfAvoidanceSelectionRow(),
       blackHoleSelectionRow(),

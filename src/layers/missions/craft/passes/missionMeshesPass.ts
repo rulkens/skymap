@@ -6,9 +6,11 @@
 import { meshBodiesPassOver } from '../../../../services/engine/frame/meshBodiesPassOver';
 import { MISSION_CRAFT_IDS } from '../present/missionCraftIds';
 import { craftPickId } from '../present/craftPickId';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { MissionsRuntime } from '../../@types/MissionsRuntime';
 
-export const missionMeshesPass = meshBodiesPassOver(
-  'mission-meshes',
-  MISSION_CRAFT_IDS,
-  craftPickId,
-);
+export function missionMeshesPass(runtime: Pick<MissionsRuntime, 'pickCodes'>): ContentPass {
+  return meshBodiesPassOver('mission-meshes', MISSION_CRAFT_IDS, (id) =>
+    craftPickId(id, runtime.pickCodes),
+  );
+}

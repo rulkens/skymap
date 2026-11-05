@@ -13,12 +13,16 @@ import { CRAFT_ORDER } from './craftOrder';
 import { craftPickId } from './craftPickId';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
+import type { CatalogPickCodes } from '../../../../@types/engine/selection/CatalogPickCodes';
+import type { SourceType } from '../../../../@types/data/SourceType';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import { isSceneBodyId } from '../../../../utils/scene/isSceneBodyId';
 
 const isCraftId = (id: string): id is SceneBodyId => isSceneBodyId(id) && MISSION_CRAFT_IDS.has(id);
 
-export function craftSelectionRow(): SelectionKindRow<Extract<SelectionRef, { type: 'craft' }>> {
+export function craftSelectionRow(
+  pickCodes: CatalogPickCodes<SourceType>,
+): SelectionKindRow<Extract<SelectionRef, { type: 'craft' }>> {
   const decode = (id: string): Extract<SelectionRef, { type: 'craft' }> | null => {
     if (!id.startsWith(BODY_FOCUS_PREFIX)) return null;
     const craftId = id.slice(BODY_FOCUS_PREFIX.length);
@@ -26,12 +30,12 @@ export function craftSelectionRow(): SelectionKindRow<Extract<SelectionRef, { ty
   };
   return {
     type: 'craft',
-    pickSources: [Source.Craft],
+    pickSources: [pickCodes.pickCodeOf(Source.Craft)],
     resolvePick: (pick) => {
       const id = CRAFT_ORDER[pick.localIdx];
       return id === undefined ? null : { type: 'craft', id };
     },
-    encodePick: (ref) => craftPickId(ref.id),
+    encodePick: (ref) => craftPickId(ref.id, pickCodes),
     extractRow: (ref, simDays) => {
       if (!MISSION_CRAFT_IDS.has(ref.id)) return null;
       const row = bodyRowAt(ref.id, deriveBodyStates(simDays).get(ref.id)!.positionMpc);

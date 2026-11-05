@@ -15,29 +15,29 @@ import { emphasisDim } from '../../trails/utils/emphasisDim';
 import { meshBodyCaption } from '../utils/meshBodyCaption';
 import { captionComposeContextOf } from '../../../../utils/labels/captionComposeContextOf';
 import { composeForegroundCaption } from '../../../../utils/labels/composeForegroundCaption';
+import type { CatalogPickCodes } from '../../../../@types/engine/selection/CatalogPickCodes';
+import type { SourceType } from '../../../../@types/data/SourceType';
 import { craftPickId } from './craftPickId';
 
 const CRAFT = MISSIONS_BODY_ROWS.flatMap((row) =>
   isMeshBody(row.body) ? [{ body: row.body, sampled: row.position.kind === 'sampled' }] : [],
 );
 
-export const produceMissionCaptions: LayerScreenLabel<'missions'>['produceLabels'] = (
-  state,
-  ctx,
-  fade,
-) => {
-  const { simDays } = ctx.snapshot;
-  const composeCtx = captionComposeContextOf(state, ctx);
-  const states = sceneBodyStates(state, ctx);
-  const emphasis = state.settings.missions.craft;
+export const produceMissionCaptions =
+  (pickCodes: CatalogPickCodes<SourceType>): LayerScreenLabel<'missions'>['produceLabels'] =>
+  (state, ctx, fade) => {
+    const { simDays } = ctx.snapshot;
+    const composeCtx = captionComposeContextOf(state, ctx);
+    const states = sceneBodyStates(state, ctx);
+    const emphasis = state.settings.missions.craft;
 
-  const labels = CRAFT.filter(({ body }) => spacecraftPresent(body.id, simDays)).map(
-    ({ body, sampled }) =>
-      composeForegroundCaption(
-        composeCtx,
-        meshBodyCaption(body, states.get(body.id)!.positionMpc, craftPickId(body.id)!),
-        fade[CRAFT_ENTRY.id]! * (sampled ? emphasisDim(emphasis, body.id) : 1),
-      ),
-  );
-  return { labels, awake: false };
-};
+    const labels = CRAFT.filter(({ body }) => spacecraftPresent(body.id, simDays)).map(
+      ({ body, sampled }) =>
+        composeForegroundCaption(
+          composeCtx,
+          meshBodyCaption(body, states.get(body.id)!.positionMpc, craftPickId(body.id, pickCodes)!),
+          fade[CRAFT_ENTRY.id]! * (sampled ? emphasisDim(emphasis, body.id) : 1),
+        ),
+    );
+    return { labels, awake: false };
+  };

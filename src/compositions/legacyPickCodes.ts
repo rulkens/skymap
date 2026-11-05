@@ -23,4 +23,12 @@ export const LEGACY_PICK_CODES: Readonly<Record<string, Readonly<Record<string, 
     sun: Source.Sun,
     sStar: Source.SStar,
   },
+  body: {
+    planet: Source.Planet,
+    earth: Source.Earth,
+    'small-body': Source.SmallBody,
+  },
+  missions: {
+    craft: Source.Craft,
+  },
 };

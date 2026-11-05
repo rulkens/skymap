@@ -174,11 +174,11 @@ This plan is the **prep PR**; `2026-11-05-selection-kind-facts.md` is the featur
   - `sceneBodyPickId(id: string, codeOf: (entry: BodySourceEntry) => number): number | null` — core keeps
     the seed-table walk, the caller supplies the code. `bodyCaption` receives `codeOf` from the body Layer.
 
-- [ ] Test `body, craft and earth-scene refs round-trip under non-Source codes`.
-- [ ] Test `a body caption's pick id resolves to the same ref as its sphere's pick`.
-- [ ] Implement.
-- [ ] Targeted tests, `typecheck:fast` → pass.
-- [ ] Commit `Bodies, craft and Earth scenes stamp the allocator's codes`.
+- [x] Test `body, craft and earth-scene refs round-trip under non-Source codes`.
+- [x] Test `a body caption's pick id resolves to the same ref as its sphere's pick`.
+- [x] Implement.
+- [x] Targeted tests, `typecheck:fast` → pass.
+- [x] Commit `Bodies, craft and Earth scenes stamp the allocator's codes`.
 
 ### Task 6: structure, milkyWay, blackHoles, satellites and zoneOfAvoidance read their codes from `pickCode`
 

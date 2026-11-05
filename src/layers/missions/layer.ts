@@ -40,21 +40,21 @@ export const missionsLayer = defineLayer({
   destroy,
   passes: (runtime) => [
     missionTrailsPass(runtime),
-    missionMeshesPass,
+    missionMeshesPass(runtime),
     contactShadowsPass,
     glintsPassOver('mission-glints', MISSION_CRAFT_IDS, runtime.glintRenderer),
   ],
-  guides: () => ({
+  guides: (runtime) => ({
     screenLabels: [
       {
         slab: NEAR0,
         id: 'missionCaptions',
         label: 'missions',
-        produceLabels: produceMissionCaptions,
+        produceLabels: produceMissionCaptions(runtime.pickCodes),
       },
     ],
   }),
-  selection: () => [craftSelectionRow()],
+  selection: (runtime) => [craftSelectionRow(runtime.pickCodes)],
   search: () => craftSearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'missionTrails', label: 'Mission trails' } },

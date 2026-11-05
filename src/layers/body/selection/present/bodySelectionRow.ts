@@ -6,24 +6,25 @@
  * re-derived at `extractRow`'s own `simDays`, never cached.
  */
 
-import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
 import { SCENE_BODIES } from '../../../../data/bodies/sceneBodies';
 import { BODY_PICK_ROWS } from '../../../../data/bodies/bodyPickRows';
 import { BODY_FOCUS_PREFIX } from '../../../../services/url/bodyFocusId';
+import { BODY_SOURCE_ROWS } from '../../sources/bodySourceRows';
+import { bodyCodeOf } from './bodyCodeOf';
 import { sceneBodyPickId } from '../../../../utils/picking/sceneBodyPickId';
 import { bodyRowAt } from '../../../../utils/scene/bodyRowAt';
 import { isBodyKindId } from './isBodyKindId';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
-import type { SourceType } from '../../../../@types/data/SourceType';
+import type { BodyRuntime } from '../../@types/BodyRuntime';
 import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 
-const BODY_SOURCE_CODES: readonly SourceType[] = SOURCE_ENTRIES.filter(
-  (e) => e.type === 'body',
-).map((e) => e.code as SourceType);
-
-export function bodySelectionRow(): SelectionKindRow<Extract<SelectionRef, { type: 'body' }>> {
+export function bodySelectionRow(
+  runtime: Pick<BodyRuntime, 'pickCodes'>,
+): SelectionKindRow<Extract<SelectionRef, { type: 'body' }>> {
+  const { pickCodes } = runtime;
+  const codeOf = bodyCodeOf(pickCodes);
   // Exact, not the whole prefix: a craft's or an Earth scene's `body-<id>` is its own kind's claim.
   const decode = (id: string): Extract<SelectionRef, { type: 'body' }> | null => {
     if (!id.startsWith(BODY_FOCUS_PREFIX)) return null;
@@ -32,16 +33,16 @@ export function bodySelectionRow(): SelectionKindRow<Extract<SelectionRef, { typ
   };
   return {
     type: 'body',
-    pickSources: BODY_SOURCE_CODES,
+    pickSources: BODY_SOURCE_ROWS.map(([source]) => pickCodes.pickCodeOf(source)),
     resolvePick: (pick) => {
-      const entry = SOURCE_ENTRIES.find((e) => e.code === pick.sourceCode);
+      const source = pickCodes.catalogOfPickCode(pick.sourceCode);
+      const entry = BODY_SOURCE_ROWS.find(([s]) => s === source)?.[1];
       if (!entry) return null;
-      if (entry.type !== 'body') return null;
       const seeds = BODY_PICK_ROWS[entry.id as BodySourceId];
       const body = seeds[pick.localIdx];
       return body ? { type: 'body', id: body.id } : null;
     },
-    encodePick: (ref) => sceneBodyPickId(ref.id),
+    encodePick: (ref) => sceneBodyPickId(ref.id, codeOf),
     extractRow: (ref, simDays) => {
       if (!SCENE_BODIES.some((b) => b.id === ref.id)) return null;
       return bodyRowAt(ref.id, deriveBodyStates(simDays).get(ref.id)!.positionMpc);
