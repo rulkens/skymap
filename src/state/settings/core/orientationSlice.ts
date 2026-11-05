@@ -7,7 +7,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_ORIENTATION } from '../../../data/defaults';
-import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
 
 const initialState: OrientationFrameId = DEFAULT_ORIENTATION;
 

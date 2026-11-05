@@ -13,7 +13,7 @@ const one = (file: string, name: string): number => sourceNumbers(file, name)[0]
 const text = (id: string): string => fact(id).text;
 const grouped = (n: number): string => n.toLocaleString('en');
 
-const LOD = 'src/data/galaxyLodBands.ts';
+const LOD = 'src/layers/galaxyCatalog/lod/data/galaxyLodBands.ts';
 const TILES = 'src/layers/body/surfaceTiles/format/data/surfaceTileParams.ts';
 const SHELL = 'src/layers/body/atmosphere/render/atmosphereShellRenderer.ts';
 const SLABS = 'src/services/engine/frame/slabs.ts';
@@ -118,13 +118,15 @@ describe('rendering rows and the constants behind them', () => {
 
   it('the camera’s stop round a focus with no surface', () => {
     const km =
-      (one('src/services/engine/camera/pivotRadiusMpc.ts', 'SURFACELESS_FLOOR_MPC') * MPC_M) / 1000;
+      (one('src/services/engine/camera/framing/pivotRadiusMpc.ts', 'SURFACELESS_FLOOR_MPC') *
+        MPC_M) /
+      1000;
     expect(text('render-floors')).toContain(`about ${Number(km.toPrecision(1))} kilometres away`);
   });
 
   it('rows of galaxies taken in one frame', () => {
     const budget = one(
-      'src/layers/galaxyCatalog/subsystems/diskPlannerWalk.ts',
+      'src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk.ts',
       'DISK_ROW_ACCEPT_BUDGET',
     );
     expect(text('render-cpu-galaxies')).toContain(`at most ${grouped(budget)} rows`);

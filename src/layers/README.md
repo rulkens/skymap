@@ -10,7 +10,7 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 
 ## Where things go
 
-**A Layer is a set of concern modules plus the few files the composition root reads by path** ([ADR 0014](../../docs/adrs/0014-layers-organised-by-concern-modules.md)). Code is grouped by what it is for (`disks/`, `pointSprites/`, `aliases/`), never by kind of file, and no folder under `src/layers/` holds more than 15 files (`tests/conventions/layerFolderShape.test.ts`).
+**A Layer is a set of concern modules plus the few files the composition root reads by path** ([ADR 0014](../../docs/adrs/0014-layers-organised-by-concern-modules.md)). Code is grouped by what it is for (`disks/`, `pointSprites/`, `aliases/`), never by kind of file, and no folder under `src/layers/` holds more than 15 files (`tests/conventions/concernFolderShape.test.ts`).
 
 **At the Layer root** stay only:
 
@@ -31,7 +31,7 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 | `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                                                                                                                                                                                            |
 | —               | `@types/`                                      | The Layer's **contract** types only, one per file, filename = the type: `<Name>Runtime`, its facts, its settings types (`StructureSettings` and the like), its id and source types. Types shared with core or a sibling Layer stay under `src/@types/`                                 |
 
-**Every other contract member and all runtime machinery live in a concern module,** `<concern>/<role>/`. The members that are collections (`sagas?`, `ui?`, `passes`, `computes?`, `assets?`, `search?`, `sourceCounts?`, `slabs?`, `guides?`, `selection?`) are still declared in `layer.ts`; each imports its leaves from the module that owns the concern. A module uses only the role folders it needs:
+**Every other contract member and all runtime machinery live in a concern module,** `<concern>/<role>/`. The members that are collections (`sagas?`, `ui?`, `passes`, `computes?`, `assets?`, `search?`, `sourceCounts?`, `slabs?`, `skyCaptures?`, `guides?`, `selection?`) are still declared in `layer.ts`; each imports its leaves from the module that owns the concern. A module uses only the role folders it needs:
 
 | Role folder   | Holds                                                                                                                                                                                        |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -49,17 +49,20 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 
 A module's `utils/` is flat: one function per file, no `<area>` subfolders unless it passes the cap. A non-contract type lives in the `@types/` of the module that produces its values; sibling modules import it from there, and it never sits in the root `@types/`. A module whose role folder outgrows 15 files splits into sub-modules, each with its own role folders. A root folder over the cap (`bodies/`, `sources/`, `exhibits/`) groups its leaves in subfolders (`bodies/planets/`, `bodies/moons/`), still imported by the composition root leaf by leaf. Module names say what the thing is for; `helpers`, `misc`, `common`, `shared`, `other` and `utils` are refused as module names.
 
-An **illustrative** tree, not today's: a galaxyCatalog regrouped into modules.
+galaxyCatalog's shipped modules, as an example of the layout:
 
 ```
 galaxyCatalog/
   layer.ts  create.ts  destroy.ts  frame.ts  visibility.ts
   sources/  state/
   @types/                      GalaxyCatalogRuntime.d.ts …
-  pointSprites/{render,passes,load,data}/
-  disks/{render,subsystems,passes,@types,utils}/
-  hiResFamous/{load,render,subsystems,ui,sagas}/
-  aliases/{load,present,utils}/
+  records/{load,data,present,utils,@types}/
+  pointSprites/{render,passes,data,utils,@types}/
+  lod/{data,subsystems,utils,@types}/
+  disks/{load, quad/, procedural/, textured/}   (sub-modules, each with its own role folders)
+  hiResFamous/{subsystems,load,data,utils,@types}/
+  aliases/{load,sagas,utils,@types}/
+  card/ui/  provenance/{ui,utils,data}/  controls/ui/
 ```
 
 An exhibit's notes are sections, each `section(kind, data)`. A **section kind**

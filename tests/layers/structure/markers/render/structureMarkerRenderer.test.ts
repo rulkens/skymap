@@ -6,7 +6,7 @@ import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUn
 import { CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import { STRUCTURE_IDS } from '../../../../../src/data/structure/structureIds';
-import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../../src/utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 
 // Null-device pattern, mirrors markerLineRenderer.test.ts.

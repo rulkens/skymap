@@ -2,16 +2,16 @@
 
 One-shot generators for the website's committed assets and its hero media. Each is run by hand when its input changes.
 
-| Script                 | Run                                                        | Writes                                                                             |
-| ---------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `makeOgImage.ts`       | `npx tsx tools/site/makeOgImage.ts`                        | `public/og-image.jpg` from `docs/screenshots/cosmic-web.jpg`                       |
-| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`                        | `public/favicon.svg` and `public/apple-touch-icon.png`, from the mark              |
-| `buildHeroMedia.ts`    | `npm run site:media -- [recording]`                        | the flight's stills (one pair per stop) and its scrub video, from the recording    |
-| `shootSiteShots.ts`    | `npm run site:shots -- --url <app server>`                 | every picture in the shot manifest, AVIF and WebP, and the link-preview card       |
-| `shootSiteLoops.ts`    | `npm run site:loops -- --url <app server>`                 | every film in the loop manifest, H.264 in MP4                                      |
-| `buildPressKit.ts`     | `npm run site:press-kit -- [--recording <file>]`           | the About page's press kit zip, and its size for the page                          |
-| `compareSite.ts`       | `npm run site:compare -- --baseline <dir> --current <dir>` | `report.txt` and base/cur/diff PNGs of every page that differs, in the temp folder |
-| `subsetDisplayFont.ts` | `npx tsx tools/site/subsetDisplayFont.ts`                  | the site's subset of Cormorant Garamond (needs `pyftsubset`)                       |
+| Script                 | Run                                                        | Writes                                                                                                      |
+| ---------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `makeOgImage.ts`       | `npx tsx tools/site/makeOgImage.ts`                        | `public/og-image.jpg` from `docs/screenshots/cosmic-web.jpg`                                                |
+| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`                        | `public/favicon.svg`, `apple-touch-icon.png` and the remote's `icon-192.png`, `icon-512.png`, from the mark |
+| `buildHeroMedia.ts`    | `npm run site:media -- [recording]`                        | the flight's stills (one pair per stop) and its scrub video, from the recording                             |
+| `shootSiteShots.ts`    | `npm run site:shots -- --url <app server>`                 | every picture in the shot manifest, AVIF and WebP, and the link-preview card                                |
+| `shootSiteLoops.ts`    | `npm run site:loops -- --url <app server>`                 | every film in the loop manifest, H.264 in MP4                                                               |
+| `buildPressKit.ts`     | `npm run site:press-kit -- [--recording <file>]`           | the About page's press kit zip, and its size for the page                                                   |
+| `compareSite.ts`       | `npm run site:compare -- --baseline <dir> --current <dir>` | `report.txt` and base/cur/diff PNGs of every page that differs, in the temp folder                          |
+| `subsetDisplayFont.ts` | `npx tsx tools/site/subsetDisplayFont.ts`                  | the site's subset of Cormorant Garamond (needs `pyftsubset`)                                                |
 
 ## Hero media
 
@@ -36,7 +36,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## Shots
 
-`npm run site:shots -- --url http://localhost:<port>` takes every row of `packages/website/src/data/siteShots.ts` from a running app (this checkout's `npm run dev`, with catalogue data: see the `link-data` skill) and writes it to `packages/website/src/assets/shots/<id>-<width>.avif` and `.webp`, which are committed. Nothing is resized at build: the pages read those files by id.
+`npm run site:shots -- --url http://localhost:<port>` takes every row of `packages/website/src/data/siteShots.ts` from a running app (this checkout's `npm run dev`, with catalogue data: see the `link-data` skill) and writes it to `packages/website/public/shots/<id>-<width>.<hash>.avif` and `.webp` (`SITE_SHOTS_DIR.ts`), which are committed; a retake deletes the row's old files. The hash is the first 8 hex digits of the file's SHA-256 (`utils/shotFileName.ts`), so a retake is a new URL and `public/_headers` caches the folder for a year. Nothing is resized at build, and the bundler never opens the files: Astro copies the site's `public/` as it is, and the pages read one listing of the folder by id (`shotFiles.ts`, `virtual:shot-files`). Imported, all 918 were open at once and Cloudflare's build failed with "Too many open files".
 
 - A deep link carries no settings, so a row's `settings` lists what the runner changes after the link has loaded (labels off, a layer on, a lens). `tools/site/utils/siteShotActions.ts` turns them into store actions; `npm run shot` itself is untouched.
 - Two settings change what is photographed instead of the scene. `ui: true` loads the link without `?cinema` and takes the whole page, the app's interface included, where every other row is the canvas alone. `searchFor: 'Jupiter'` (with `ui`) opens the search with the `/` key and types that text before the shot. `keys` (with `ui`) presses keys in order before the shot, in Playwright's names (`]`, `Shift+N`), to bring the app to the state a page describes: `first-flight-clock` presses `]` five times for a clock at 6 hr/s. `crop` keeps one part of the frame, for a phone's cut of a wide interface shot; the master stays whole. `element: '<selector>'` (with `ui`, not with `crop`) takes one element of the interface alone on a transparent ground, grown by 24 px for its shadow, so the site can lay it over a picture; the AVIF and WebP keep the alpha.
@@ -93,7 +93,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## Picture report
 
-`npm run site:judge -- /features/ [--url http://localhost:5800] [--widths 1440,1024,400] [--dpr 2] [--label judge] [--out <dir>]` writes the section shots above, then judges every site shot (`<img>` from `assets/shots/`) and every `<video>` in `<main>` at each width, on a screen of `--dpr` (2 by default, the density the browser chooses files for). The output folder (the temp folder's `site-judge/<page>/` by default) holds `report.md`, `report.json` and `contact-<width>.png`.
+`npm run site:judge -- /features/ [--url http://localhost:5800] [--widths 1440,1024,400] [--dpr 2] [--label judge] [--out <dir>]` writes the section shots above, then judges every site shot (`<img>` from `shots/`) and every `<video>` in `<main>` at each width, on a screen of `--dpr` (2 by default, the density the browser chooses files for). The output folder (the temp folder's `site-judge/<page>/` by default) holds `report.md`, `report.json` and `contact-<width>.png`.
 
 - Per picture: its shot id and row link, its section, its laid-out box, the file width the browser chose against the device pixels the box needs, the share `object-fit: cover` cuts away, its brightness as displayed (mean, 5th and 95th percentile luma) and its alt text.
 - Flags: `UPSCALED` (the source is more than 5% narrower than needed; it says whether a wider file exists, a `sizes` fault, or the row needs a reshoot), `CROPPED` (cover cuts away over 30%), `STRETCHED`, `TOO DARK` (the brightest 5% stays under a fifth of white: ask for `exposure`), `BURNT` (5% at white), `NO ALT`, `NOT LOADED`. The thresholds are in `utils/judgePicture.ts` and `utils/brightnessFlags.ts`.

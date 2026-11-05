@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
 import type { PendingStep } from '../../../src/@types/input/PendingStep';
-import type { InputStep } from '../../../src/@types/camera/InputStep';
+import type { InputStep } from '../../../src/@types/camera/input/InputStep';
 
 const drag = (over: Partial<PendingStep & { kind: 'motion' }>): PendingStep => ({
   kind: 'motion',

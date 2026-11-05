@@ -52,14 +52,14 @@ Three kinds of content share the scene; this section says which is which.
 - **Accumulate then tone-map**: every layer draws into one `rgba16float` HDR target; a single composite pass applies a selectable curve, Linear, Reinhard, Asinh, Gamma 2.0, or ACES ([toneMapCurve.ts](../src/data/toneMapCurve.ts)).
 - **Bloom**: a five-level mip pyramid: soft-threshold prefilter, downsample chain, additive tent-filter upsample ([bloomPyramid.ts](../src/services/gpu/passes/bloomPyramid.ts)).
 - **Depth precision**: reversed-Z for the near-Earth pass, whose extreme near/far ratio would exhaust a classic depth buffer ([slabs.ts](../src/services/engine/frame/slabs.ts)).
-- **Floating origin**: camera matrices compose in float64 relative to a render origin and narrow to float32 only at upload ([computeForegroundViewProj.ts](../src/utils/camera/computeForegroundViewProj.ts)).
+- **Floating origin**: camera matrices compose in float64 relative to a render origin and narrow to float32 only at upload ([computeForegroundViewProj.ts](../src/utils/camera/projection/computeForegroundViewProj.ts)).
 - **HDR displays**: the swap chain switches to extended dynamic range when the display supports it ([applySwapFormat.ts](../src/services/engine/phases/applySwapFormat.ts)).
 
 ### Galaxies
 
-- **Brightness**: catalogue magnitude and diameter bake into a physical surface-brightness amplitude, spreading light over the actual apparent disk ([galaxySbAmp.ts](../src/utils/galaxy/galaxySbAmp.ts)); Settings knobs add a gain, a bloom ceiling, and a `pow(resolvedFraction, k)` falloff against the additive glow near the origin.
-- **Colour**: each survey's most informative photometric pair on a blue→white→red ramp with a first-order K-correction: SDSS u−g, GLADE B−J, 2MRS J−K ([colourIndex.ts](../src/data/galaxyCatalog/colourIndex.ts)).
-- **Four LOD tiers** ([galaxyLodBands.ts](../src/data/galaxyLodBands.ts)): point sprite below 8 px; procedural disk impostor from 8–14 px, oriented by axis ratio and position angle; real SDSS/DSS thumbnail from a 256-slot LRU atlas at 24–40 px; high-resolution texture from 120 px, famous galaxies only.
+- **Brightness**: catalogue magnitude and diameter bake into a physical surface-brightness amplitude, spreading light over the actual apparent disk ([galaxySbAmp.ts](../src/layers/galaxyCatalog/appearance/utils/galaxySbAmp.ts)); Settings knobs add a gain, a bloom ceiling, and a `pow(resolvedFraction, k)` falloff against the additive glow near the origin.
+- **Colour**: each survey's most informative photometric pair on a blue→white→red ramp with a first-order K-correction: SDSS u−g, GLADE B−J, 2MRS J−K ([colourIndex.ts](../src/layers/galaxyCatalog/appearance/data/colourIndex.ts)).
+- **Four LOD tiers** ([galaxyLodBands.ts](../src/layers/galaxyCatalog/lod/data/galaxyLodBands.ts)): point sprite below 8 px; procedural disk impostor from 8–14 px, oriented by axis ratio and position angle; real SDSS/DSS thumbnail from a 256-slot LRU atlas at 24–40 px; high-resolution texture from 120 px, famous galaxies only.
 - **Crossfades**: every handoff is a smoothstep whose sides sum to one, so brightness holds steady.
 
 ### Stars and the Sun

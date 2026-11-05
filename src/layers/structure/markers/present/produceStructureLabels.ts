@@ -6,7 +6,7 @@
  * × clip, and its ring's clip); a category is skipped only at a
  * value of exactly 0, so its fade-out tail still draws. The label's `of` entry
  * keeps it off while its own ring is off, per category. Every candidate is emitted with
- * `prominencePx` = ring apparent radius: the `label2DDirector` declutters
+ * `declutterPriority` = ring apparent radius: the `label2DDirector` declutters
  * across all producers, so the large structure under the camera wins.
  */
 
@@ -18,9 +18,9 @@ import { structurePickId } from '../../picking/utils/structurePickId';
 import { MARKER_RADIUS_RETUNE } from '../data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../data/structureLabelAboveGapPx';
 import { aboveRingAnchor } from '../utils/aboveRingAnchor';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
+import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitPose/orbitForwardOf';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
 import { structureIdOf } from './structureIdOf';
@@ -75,10 +75,10 @@ export function produceStructureLabels(
       const distanceMpc = Math.hypot(dx, dy, dz);
 
       let fadeAlpha = 1;
-      // On-screen prominence (px) — the declutter sort key, the ring's apparent
-      // radius (set below). Defaults to 0 so a label setting neither sinks to
-      // lowest priority rather than beating real ones.
-      let prominencePx = 0;
+      // The declutter sort key, the ring's apparent radius in px (set below).
+      // Defaults to 0 so a label setting neither sinks to lowest priority
+      // rather than beating real ones.
+      let declutterPriority = 0;
 
       // The ring's apparent-size fade applies to the LABEL too: once the ring
       // fills the viewport the floating label is just chrome, and at far zoom it
@@ -89,7 +89,7 @@ export function produceStructureLabels(
       const markerRadiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
       if (distanceMpc > 0) {
         const apRadPx = (markerRadiusMpc / distanceMpc) * pxPerRad;
-        prominencePx = apRadPx;
+        declutterPriority = apRadPx;
         fadeAlpha = structureApparentRadiusFade(style, apRadPx);
         if (fadeAlpha <= 0) continue;
       }
@@ -140,7 +140,7 @@ export function produceStructureLabels(
         alignY: above ? 'bottom' : 'center',
         outlineColor: [...style.outlineColor],
         outlineEmFrac: style.outlineEmFrac,
-        prominencePx,
+        declutterPriority,
       });
     }
 

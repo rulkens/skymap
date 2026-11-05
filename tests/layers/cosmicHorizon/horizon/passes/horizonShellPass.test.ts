@@ -11,10 +11,10 @@ import { horizonShellPass } from '../../../../../src/layers/cosmicHorizon/horizo
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
-import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { CosmicHorizonRuntime } from '../../../../../src/layers/cosmicHorizon/@types/CosmicHorizonRuntime';
 
@@ -63,7 +63,6 @@ function makeCtx(): FrameView {
         blend: 0,
       },
       renderTargets,
-      cursorTexPx: null,
       renderedTargets: new Set<string>(),
       plans: createFramePlannerResultStore(),
     },

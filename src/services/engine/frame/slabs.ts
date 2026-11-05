@@ -9,8 +9,8 @@
 import type { Mat4 } from 'wgpu-matrix';
 import { mat4d } from 'wgpu-matrix';
 
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Slab } from '../../../@types/engine/frame/Slab';
@@ -22,20 +22,24 @@ import type { ChainRow } from '../../../@types/scene/ChainRow';
 import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
-import { frustumPerspectiveF64 } from '../../../utils/camera/frustumPerspectiveF64';
-import { foregroundFrustum, MIN_NEAR_M, NEAR_RATIO } from '../../../utils/camera/foregroundFrustum';
-import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../utils/camera/frameUp';
-import { projectToScreenPx } from '../../../utils/camera/projectToScreenPx';
+import { computeForegroundViewProj } from '../../../utils/camera/projection/computeForegroundViewProj';
+import { frustumPerspectiveF64 } from '../../../utils/camera/frustum/frustumPerspectiveF64';
+import {
+  foregroundFrustum,
+  MIN_NEAR_M,
+  NEAR_RATIO,
+} from '../../../utils/camera/frustum/foregroundFrustum';
+import { imagePlaneBasis } from '../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
+import { projectToScreenPx } from '../../../utils/camera/projection/projectToScreenPx';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { chainOverlapViolations } from '../../../utils/regions/chainOverlapViolations';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { nearestSphereFaceM } from '../../../utils/occlusion/nearestSphereFaceM';
 import { timingSlotForView } from '../../../utils/frame/timingSlotForView';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
-import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
-import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
+import type { ImagePlaneBasis } from '../../../@types/camera/pose/ImagePlaneBasis';
+import { orbitForwardOf } from '../../../utils/camera/orbitPose/orbitForwardOf';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
 export const NEAR0 = 0;

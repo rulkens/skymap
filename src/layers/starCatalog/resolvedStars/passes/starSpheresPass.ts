@@ -59,7 +59,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { composeBodyMvp } from '../../../../utils/camera/bodyCompose/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { sceneBodyPresentation } from '../../../../services/engine/frame/sceneBodyPresentation';

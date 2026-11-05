@@ -11,7 +11,7 @@ import type { Slab } from '../../../../@types/engine/frame/Slab';
 import { mat4d } from 'wgpu-matrix';
 import { FROXEL_SLICE_KM } from '../data/froxelVolume';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
-import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
+import { composeBodySlabMvp } from '../../../../utils/camera/bodyCompose/composeBodySlabMvp';
 import { packAtmosphereUniforms } from '../render/packAtmosphereUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 

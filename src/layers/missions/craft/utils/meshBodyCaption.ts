@@ -11,6 +11,7 @@ import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { scaleToUnitMax } from '../../../../utils/color/scaleToUnitMax';
 import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiusM';
 import { bodyCaption } from '../../../../utils/labels/bodyCaption';
+import { MESH_BODY_CAPTION_PRIORITY } from '../data/meshBodyCaptionPriority';
 
 export function meshBodyCaption(
   body: MeshBody,
@@ -25,7 +26,7 @@ export function meshBodyCaption(
     bodyFootprintRadiusM(body),
     positionMpc,
     scaleToUnitMax(body.albedo),
-    'meshBody',
+    MESH_BODY_CAPTION_PRIORITY,
     pickId,
   );
   // The seed's reveal distance becomes alpha 1 at it and 0 at twice it; the ×2

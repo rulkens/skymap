@@ -79,7 +79,7 @@ import { sceneBodyPresentation } from '../../../../services/engine/frame/sceneBo
 import { positionedSeededStars } from '../present/positionedSeededStars';
 import { SEEDED_STAR_REFS } from '../present/seededStarRefs';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { seededStarsHandedZero } from '../present/seededStarsHandedZero';
 import { starExposureRamp } from '../../photometry/utils/starExposureRamp';
@@ -87,7 +87,7 @@ import { GALACTIC_CENTRE_ANCHOR } from '../../../../data/places/galacticCentre';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../data/famousStarPickRadiusPx';
 import { regionOfBody } from '../../../../utils/regions/regionOfBody';
-import { projectToScreenPx } from '../../../../utils/camera/projectToScreenPx';
+import { projectToScreenPx } from '../../../../utils/camera/projection/projectToScreenPx';
 import { focusAlphaMultiplier } from '../../../../utils/structure/focusAlphaMultiplier';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
 

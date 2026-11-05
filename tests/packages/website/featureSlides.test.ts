@@ -6,20 +6,22 @@ import type { FeatureSlide } from '../../../packages/website/src/@types/FeatureS
 import * as features from '../../../packages/website/src/content/pages/features/features.data';
 import { fact } from '../../../packages/website/src/data/fact';
 import { SITE_LOOPS } from '../../../packages/website/src/data/siteLoops';
+import { SITE_SHOTS_DIR } from '../../../tools/site/SITE_SHOTS_DIR';
 import { pictureAccent } from '../../../tools/site/utils/pictureAccent';
+import { shotFileIndex } from '../../../tools/site/utils/shotFileIndex';
 
-const SHOTS = resolve(import.meta.dirname, '../../../packages/website/src/assets/shots');
-const files = readdirSync(SHOTS);
+const SHOTS = resolve(import.meta.dirname, '../../..', SITE_SHOTS_DIR);
+const files = shotFileIndex(readdirSync(SHOTS));
 const slides = Object.values(features).filter(Array.isArray).flat() as FeatureSlide[];
 
 // The smallest file of a shot, or of the still a film opens on.
 const pictureOf = (view: string) => {
   const id = SITE_LOOPS.find((loop) => loop.id === view)?.shot ?? view;
-  const widths = files
+  const widths = Object.keys(files)
     .map((name) => new RegExp(`^${id}-(\\d+)\\.webp$`).exec(name)?.[1])
     .filter((w): w is string => Boolean(w))
     .map(Number);
-  return join(SHOTS, `${id}-${Math.min(...widths)}.webp`);
+  return join(SHOTS, files[`${id}-${Math.min(...widths)}.webp`]!);
 };
 
 describe('the Features galleries', () => {

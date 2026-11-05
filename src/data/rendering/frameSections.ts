@@ -6,6 +6,7 @@
  */
 
 import type { FrameSection } from '../../@types/engine/frame/FrameSection';
+import { APP_SKY_CAPTURE_KEYS } from '../../compositions/appCubemapCaptures';
 import { COSMO, NEAR0 } from '../../services/engine/frame/slabs';
 
 export const PRELUDE: FrameSection = {
@@ -44,7 +45,7 @@ export const PRELUDE: FrameSection = {
     // alone: a capture step hands it a SYNTHETIC per-face ctx, never the real camera.
     {
       kind: 'capture',
-      captures: ['sgrAStar', 'solarSystem'],
+      captures: APP_SKY_CAPTURE_KEYS,
       cosmoPasses: ['point-sprites', 'textured-disks'],
       near0Passes: ['star-aggregates', 'star-catalog'],
       bodyPasses: [],

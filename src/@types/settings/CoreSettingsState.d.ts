@@ -4,7 +4,7 @@
  * its `initialState` from there, so this composition cannot drift from them.
  */
 
-import type { OrientationFrameId } from '../camera/OrientationFrameId';
+import type { OrientationFrameId } from '../camera/orientation/OrientationFrameId';
 import type { CameraSettings } from './CameraSettings';
 import type { TonemapSettings } from './TonemapSettings';
 import type { HdrSettings } from './HdrSettings';

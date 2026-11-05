@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 
 import { focusTweenDescriptor } from '../../../src/state/camera/focusTweenDescriptor';
-import { galaxyFocusDistance } from '../../../src/services/engine/camera/galaxyFocusDistance';
-import { structureFocusDistance } from '../../../src/services/engine/camera/structureFocusDistance';
+import { galaxyFocusDistance } from '../../../src/services/engine/camera/framing/galaxyFocusDistance';
+import { structureFocusDistance } from '../../../src/services/engine/camera/framing/structureFocusDistance';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../../src/data/milkyWay/galacticCenter';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { FocusMotion } from '../../../src/@types/camera/FocusMotion';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import type { FocusMotion } from '../../../src/@types/camera/focusMotion/FocusMotion';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 

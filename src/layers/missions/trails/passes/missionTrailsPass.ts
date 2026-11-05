@@ -14,7 +14,7 @@ import { SAMPLED_BODIES } from '../../../../data/bodies/sampledBodies';
 import { trajectoryRegistry } from '../../../../services/bodies/trajectoryRegistry';
 import { spacecraftPresent } from '../../../../utils/scene/spacecraftPresent';
 import { countAtOrBefore } from '../../../../utils/math/countAtOrBefore';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { sampledDepthBinding } from '../../../../services/engine/frame/sampledDepthBinding';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
 import { sceneOccluderSpheres } from '../../../../services/engine/frame/sceneOccluderSpheres';

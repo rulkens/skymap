@@ -1,12 +1,8 @@
+import SHOT_FILES from 'virtual:shot-files';
+
 import { siteShot } from '../data/siteShot';
 import type { ShotSources } from '../@types/ShotSources';
-
-// `no-inline`: the smallest thumbnails are under Vite's inline limit and would land in the HTML as base64.
-const FILES = import.meta.glob<string>('../assets/shots/*.{avif,webp}', {
-  eager: true,
-  query: '?url&no-inline',
-  import: 'default',
-});
+import { sitePath } from './sitePath';
 
 /**
  * The committed files of one shot as srcsets. The runner wrote them at the
@@ -18,10 +14,10 @@ export function shotSources(id: string, shadow = false): ShotSources {
   const shot = siteShot(id);
   const name = shadow ? `${id}-shadow` : id;
   const url = (width: number, ext: string) => {
-    const file = FILES[`../assets/shots/${name}-${width}.${ext}`];
+    const file = SHOT_FILES[`${name}-${width}.${ext}`];
     if (!file)
       throw new Error(`No ${ext} at ${width}px for shot "${name}": run npm run site:shots`);
-    return file;
+    return sitePath(`/shots/${file}`);
   };
   const srcset = (ext: string) =>
     shot.widths.map((width) => `${url(width, ext)} ${width}w`).join(', ');

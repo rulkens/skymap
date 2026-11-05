@@ -50,10 +50,10 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // object identity and (b) hand the layer a recognisable Float64Array — real
 // composeBodyMvp returns f64; the layer narrows its own copy at the GPU draw
 // call. The real composition math is covered by composeBodyMvp's own tests.
-vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/composeBodyMvp', () => ({
   composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
-import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
+import { composeBodyMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodyMvp';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // The star entry's handed value with every catalog fully faded in.

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { decodeFramedPose } from '../../../src/utils/url/decodeFramedPose';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
@@ -26,6 +26,8 @@ const SITE_ARM: FramedCameraPose = {
   frame: { site: asSurfaceSiteId('curiosity') },
   pose: { siteId: asSurfaceSiteId('curiosity'), headingRad: 1.2, elevationRad: 0.3, rangeM: 12.5 },
 };
+
+const SKY_LINK = 'k,earth,0.21859354349348772,0.9716130157244841,3.14,1.05';
 
 const WORLD_ARM: FramedCameraPose = {
   frame: 'absolute',
@@ -53,6 +55,28 @@ describe('decodeFramedPose', () => {
     const got = worldArmOf(decodeFramedPose(encodeFramedPose(offset))!).lookOffset!;
     expect(got[0]).toBeCloseTo(0.3, 12);
     expect(got[1]).toBeCloseTo(-0.125, 12);
+  });
+
+  it('reads a sky link back to the framed pose it was written from', () => {
+    const sky: FramedCameraPose = {
+      frame: {
+        sky: {
+          body: asSceneBodyId('earth'),
+          lonRad: 0.21859354349348772,
+          latRad: 0.9716130157244841,
+        },
+      },
+      pose: { azimuthRad: 3.14, altitudeRad: 1.05 },
+    };
+    expect(decodeFramedPose(SKY_LINK)).toEqual(sky);
+  });
+
+  it('rejects a malformed sky link', () => {
+    expect(decodeFramedPose(SKY_LINK.replace('earth', 'notabody'))).toBeNull();
+    expect(decodeFramedPose(SKY_LINK.replace(',1.05', ',1.6'))).toBeNull();
+    expect(decodeFramedPose(SKY_LINK.replace(',3.14', ',Infinity'))).toBeNull();
+    expect(decodeFramedPose(`${SKY_LINK},0`)).toBeNull();
+    expect(decodeFramedPose(SKY_LINK.replace(',1.05', ''))).toBeNull();
   });
 
   it('rejects an unrecognised tag', () => {

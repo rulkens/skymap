@@ -4,7 +4,7 @@
  * as a different galaxy than the one the curator actually stood at.
  */
 
-import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { CameraPose } from '../../@types/camera/pose/CameraPose';
 import { num } from '../../utils/format/num';
 
 export function poseSnippetOf(pose: CameraPose): string {

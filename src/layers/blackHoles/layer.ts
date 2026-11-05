@@ -3,9 +3,8 @@
  * rows, the `blackHole` selection kind with its `blackhole-` deep links, the
  * palette rows, the InfoCard, the captions and their label setting, the
  * far-field marker and its pick stamp, the lens renderer and pass, the
- * `sky-cubemap` target the lens samples, one `lens` slab row per hole, and the
- * lens tuning DebugPanel section. The sky capture that
- * fills the cubemap stays in core (`CUBEMAP_CAPTURES`).
+ * `sky-cubemap` target the lens samples and the sky capture that fills it, one
+ * `lens` slab row per hole, and the lens tuning DebugPanel section.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -22,6 +21,7 @@ import { blackHoleSlabRow } from './markers/present/blackHoleSlabRow';
 import { blackHoleSelectionRow } from './markers/present/blackHoleSelectionRow';
 import { blackHoleSearch } from './markers/present/blackHoleSearch';
 import { produceBlackHoleCaptions } from './markers/present/produceBlackHoleCaptions';
+import { BLACK_HOLE_SKY_CAPTURES } from './lensing/data/blackHoleSkyCaptures';
 import { SKY_CUBEMAP_TARGET } from './lensing/render/skyCubemapTarget';
 import BlackHoleLensingTuningSectionContainer from './lensing/ui/BlackHoleLensingTuningSectionContainer';
 import BlackHoleDetailCard from './markers/ui/BlackHoleDetailCard/BlackHoleDetailCard';
@@ -33,6 +33,7 @@ export const blackHolesLayer = defineLayer({
   visibility: blackHolesVisibility,
   sources: BLACK_HOLE_SOURCE_ROWS,
   targets: [SKY_CUBEMAP_TARGET],
+  skyCaptures: BLACK_HOLE_SKY_CAPTURES,
   slabs: BLACK_HOLES.map(blackHoleSlabRow),
   create,
   destroy,

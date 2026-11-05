@@ -39,6 +39,7 @@ import { CANCEL } from '@redux-saga/core';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
+import { SCENE_SETTLE_TIMEOUT_MS } from '../../../src/state/tour/sceneSettleTimeoutMs';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
@@ -463,5 +464,51 @@ describe('visitBeatSaga', () => {
       kind: 'focus',
       ref: { type: 'structure', id: 'galaxy-cluster-virgo' },
     });
+  });
+
+  // ── (11) the cold-load gate: after the fly lands, before caption + dwell ──
+
+  it('awaitSettled holds the dwell after the fly lands until the scene has settled', async () => {
+    vi.useFakeTimers();
+    let settled = false;
+    const playClipMock = flyThenBlockingDrift(true);
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+    sagaMiddleware.setContext({ sceneSettled: () => settled });
+
+    sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0, { awaitSettled: true });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(playClipMock).toHaveBeenCalledTimes(1);
+    expect(store.getState().tour.dwellNonce).toBe(0);
+
+    settled = true;
+    await vi.advanceTimersByTimeAsync(200);
+    expect(store.getState().tour.dwellNonce).toBe(1);
+  });
+
+  it('the gate gives up after SCENE_SETTLE_TIMEOUT_MS, so a tile that never lands cannot hang the tour', async () => {
+    vi.useFakeTimers();
+    const playClipMock = flyThenBlockingDrift(true);
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+    sagaMiddleware.setContext({ sceneSettled: () => false });
+
+    sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0, { awaitSettled: true });
+    await vi.advanceTimersByTimeAsync(SCENE_SETTLE_TIMEOUT_MS - 200);
+    expect(store.getState().tour.dwellNonce).toBe(0);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(store.getState().tour.dwellNonce).toBe(1);
+  });
+
+  it("advanceTour during the gate returns 'next' without starting the dwell", async () => {
+    vi.useFakeTimers();
+    const playClipMock = flyThenBlockingDrift(true);
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+    sagaMiddleware.setContext({ sceneSettled: () => false });
+
+    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0, { awaitSettled: true });
+    await vi.advanceTimersByTimeAsync(300);
+    store.dispatch(advanceTour());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await task.toPromise()).toBe('next');
+    expect(store.getState().tour.dwellNonce).toBe(0);
   });
 });

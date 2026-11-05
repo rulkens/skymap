@@ -16,9 +16,9 @@ export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
   return {
     name: 'terrain-pick-marker',
 
-    enabled(state, ctx, view) {
-      if (!state.settings.debug.overlays['terrain-pick-marker']) return false;
-      if (ctx.snapshot.cursorTexPx === null) return false;
+    enabled(state, _ctx, view) {
+      if (!state.settings.terrainPickMarker.enabled) return false;
+      if (runtime.terrainPickCursor.texPx === null) return false;
       if (view.slab.frame.kind !== 'body-m') return false;
       if (!isSurfaceTileBodyId(view.slab.frame.hostId)) return false;
       // A non-empty cut signals THIS body is the one the tile stream serves; `heightAt` answers 0 for any other.
@@ -26,7 +26,7 @@ export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
     },
 
     draw(pass, view, ctx, state) {
-      const cursorTexPx = ctx.snapshot.cursorTexPx;
+      const cursorTexPx = runtime.terrainPickCursor.texPx;
       if (cursorTexPx === null || view.slab.frame.kind !== 'body-m') return;
       const bodyId = view.slab.frame.hostId;
       // A place hosts no terrain, so the registry guard is what makes the host a body.
@@ -52,7 +52,7 @@ export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
       ];
       // Nothing is drawn once the sphere would swallow the eye: the billboard proxy has no
       // plane in front of the eye there (`terrainPickMarker/io.wesl`'s MAX_SIN_THETA).
-      const radiusM = state.settings.debug.terrainPickMarkerRadiusM;
+      const radiusM = state.settings.terrainPickMarker.radiusM;
       if (!(radiusM > 0) || radiusM >= Math.hypot(...centreRelEyeM)) return;
 
       const basis = pose.basisM;

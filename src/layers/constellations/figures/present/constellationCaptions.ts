@@ -8,6 +8,7 @@
 import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { ForegroundCaption } from '../../../../services/engine/presentation/foregroundCaption';
+import { CONSTELLATION_CAPTION_PRIORITY } from '../data/constellationCaptionPriority';
 import { CONSTELLATION_LABEL_STYLE } from './constellationLabelStyle';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
@@ -32,7 +33,7 @@ export function constellationCaptions(artifact: ConstellationsArtifact): Foregro
     ];
     captions.push({
       id: figure.name,
-      kind: 'constellation',
+      priority: CONSTELLATION_CAPTION_PRIORITY,
       worldPos,
       // The Latin name verbatim — no abbreviation in v1.
       text: figure.name,

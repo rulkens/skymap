@@ -23,7 +23,7 @@
  */
 import { createAction } from '@reduxjs/toolkit';
 
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
 export const requestOrientationChange = createAction(
   'orientation/request',

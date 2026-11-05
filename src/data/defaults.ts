@@ -6,7 +6,7 @@
 
 import { ToneMapCurve, toneMapCurveSaturation } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
-import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../@types/camera/orientation/OrientationFrameId';
 
 // ── Camera drift ────────────────────────────────────────────────────────────
 

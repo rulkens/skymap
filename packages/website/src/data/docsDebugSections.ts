@@ -87,7 +87,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   {
     heading: 'Surface Tiles',
     shows:
-      'Near Earth or Mars: how many ground tiles are held and at what depth. Ten buttons fly to test sites, from Søndermarken and Everest to the four Mars rover sites, and two switches flatten the terrain or drop the tiles’ skirts.',
+      'Near Earth or Mars: how many ground tiles are held and at what depth. Ten buttons fly to test sites, from Søndermarken and Everest to the four Mars rover sites, and three switches tint each tile by its level of detail, flatten the terrain or drop the tiles’ skirts.',
     file: 'src/layers/body/surfaceTiles/debug/ui/SurfaceTileAtlasSection.tsx',
   },
   {
@@ -105,7 +105,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   {
     heading: 'Debug Overlays',
     shows:
-      'Three pictures laid over the scene: the buffer a click is looked up in, the stand-in shapes of the orbit trails, and the level of detail of each ground tile.',
+      'Two pictures laid over the scene: the buffer a click is looked up in, and the stand-in shapes of the orbit trails.',
     file: `${PANEL}/DebugOverlaysSection.tsx`,
   },
   {
@@ -118,7 +118,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     heading: 'Galaxy Provenance',
     shows:
       'How many loaded galaxies have no measured orientation and no measured size, with switches to colour them or to draw only the measured or only the unmeasured ones.',
-    file: `${PANEL}/GalaxyProvenanceSection.tsx`,
+    file: 'src/layers/galaxyCatalog/provenance/ui/GalaxyProvenanceSection.tsx',
   },
   {
     heading: 'Clips & Tours',

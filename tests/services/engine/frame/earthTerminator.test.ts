@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
+import { sunDirLocal } from '../../../../src/utils/camera/bodyCompose/sunDirLocal';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { cubeSphereMesh } from '../../../../src/utils/math/cubeSphereMesh';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';

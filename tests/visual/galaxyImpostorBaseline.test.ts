@@ -20,12 +20,13 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../src/data/source';
-import { createGalaxyAtlasSubsystem } from '../../src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem';
-import { createProceduralDiskSubsystem } from '../../src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem';
-import { createTexturedDiskSubsystem } from '../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem';
-import { createDiskPlannerWalk } from '../../src/layers/galaxyCatalog/subsystems/diskPlannerWalk';
+import { GALAXY_CATALOG_IDS } from '../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { createGalaxyAtlasSubsystem } from '../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
+import { createProceduralDiskSubsystem } from '../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
+import { createTexturedDiskSubsystem } from '../../src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem';
+import { createDiskPlannerWalk } from '../../src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../src/@types/camera/orbitCamera/OrbitCamera';
 import { makeGalaxyCatalog } from '../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../support/galaxyRecordsOver';
 
@@ -135,7 +136,7 @@ describe('galaxy-impostor visual baseline', () => {
         const sharedInput = {
           cam,
           records,
-          sourceMask: 0xffffffff,
+          visibleCatalogs: new Set(GALAXY_CATALOG_IDS),
           pxPerRad,
           // Live surface-brightness sliders — arbitrary plausible defaults;
           // this baseline is about emission/crossfade geometry, not brightness.

@@ -21,7 +21,7 @@ import {
   DOCS_TOUR_IDS,
   DOCS_URL_PARAMS,
 } from '../../../packages/website/src/data/docsUrlParams';
-import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../src/@types/camera/orientation/OrientationFrameId';
 import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategory';
 import { APP_COMPOSITION } from '../../../src/compositions/app';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
@@ -87,6 +87,7 @@ describe('Settings page', () => {
   // changes: the debug panel's, a tour's or an exhibit's, or nobody's.
   const NOT_IN_PANEL = [
     /^debug\./,
+    /^(surfaceTileDebug|terrainPickMarker)\./,
     /^missions\.(craft|speed)$/,
     /^(constellations|lightTime|zoneOfAvoidance)\.labelEnabled$/,
     /^missions\.items\.[\w-]+\.labelEnabled$/,
@@ -168,7 +169,7 @@ describe('Settings page', () => {
     );
     expect(values('Density correction')).toBe(
       options(
-        'src/layers/galaxyCatalog/ui/GalaxiesSection.tsx',
+        'src/layers/galaxyCatalog/controls/ui/GalaxiesSection.tsx',
         /<option value=\{BiasMode\.\w+\}>([^<]+)</g,
       ),
     );

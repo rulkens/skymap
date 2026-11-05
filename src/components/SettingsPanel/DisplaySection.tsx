@@ -31,7 +31,7 @@
 
 import { memo } from 'react';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import { orientationFrameLabel } from '../../data/orientation/orientationFrameLabel';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';

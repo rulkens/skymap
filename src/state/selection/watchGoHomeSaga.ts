@@ -16,11 +16,11 @@ import { goHome } from './goHome';
 import { EARTH_REF } from '../../data/selection/earthRef';
 import { updateSelectionSelect, updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
-import { bodyHomePose } from '../../services/engine/camera/bodyHomePose';
+import { bodyHomePose } from '../../services/engine/camera/framing/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { resolveFocusMotion } from '../../utils/camera/resolveFocusMotion';
+import { resolveFocusMotion } from '../../utils/camera/focusMotion/resolveFocusMotion';
 import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchGoHomeSaga() {

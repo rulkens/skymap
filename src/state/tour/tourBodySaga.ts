@@ -136,12 +136,14 @@ export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
           if (firstEntry && range !== undefined && from > 0) {
             yield* delay(FOLD_SETTLE_MS);
           }
+          // The run's first beat is the cold load: it waits for its scene to settle.
+          const awaitSettled = firstEntry;
           firstEntry = false;
 
           // Delegate (not `call`) so the typed `BeatOutcome` return flows back;
           // cancellation from the outer `exit` race still propagates through the
           // yield* into the in-flight worker.
-          const outcome = yield* visitBeatSaga(tour.beats[i]!, i);
+          const outcome = yield* visitBeatSaga(tour.beats[i]!, i, { awaitSettled });
           // Prev clamps at the window's start (beat 0 on a full run) — a
           // windowed take never steps outside its range.
           i = outcome === 'prev' ? Math.max(from, i - 1) : i + 1;

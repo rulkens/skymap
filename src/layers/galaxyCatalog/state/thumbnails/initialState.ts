@@ -4,7 +4,7 @@
  * debug/perf escape hatch.
  */
 
-import type { ThumbnailsSettings } from '../../../../@types/settings/ThumbnailsSettings';
+import type { ThumbnailsSettings } from '../../@types/ThumbnailsSettings';
 
 export const initialState: ThumbnailsSettings = {
   enabled: true,

@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { zoneOfAvoidancePass } from '../../../../../src/layers/zoneOfAvoidance/shell/passes/zoneOfAvoidancePass';
 import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../../src/layers/zoneOfAvoidance/shell/data/zoneOfAvoidanceShell';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/data/milkyWay/milkyWayRadiusMpc';
-import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { ZoneOfAvoidanceRuntime } from '../../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceRuntime';

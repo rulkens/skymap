@@ -35,7 +35,7 @@ export async function captureSiteShot(
 ): Promise<{ master: Buffer; shadow?: Buffer }> {
   await openSiteShot(page, base, shot);
   if (shot.settings?.matte) return shootMatte(page, shot);
-  if (shot.settings?.searchFor !== undefined && !shot.settings.remote) {
+  if (shot.settings?.searchFor !== undefined) {
     await page.keyboard.press('/');
     await page.keyboard.type(shot.settings.searchFor, { delay: KEY_DELAY_MS });
     await page.waitForTimeout(RESULTS_SETTLE_MS);

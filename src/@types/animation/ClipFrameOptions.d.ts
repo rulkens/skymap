@@ -1,7 +1,7 @@
 import type { BodyState } from '../scene/BodyState';
 import type { Mat3 } from '../math/Mat3';
 import type { PositionedId } from '../scene/PositionedId';
-import type { TerrainHeightAtLookup } from '../camera/TerrainHeightAtLookup';
+import type { TerrainHeightAtLookup } from '../camera/terrain/TerrainHeightAtLookup';
 
 /**
  * What `evaluateFramedClip` needs beyond the clip itself. Every field is

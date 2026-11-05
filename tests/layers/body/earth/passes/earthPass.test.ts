@@ -19,12 +19,12 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { seededBodyStates } from '../../../../helpers/frame/seededBodyStates';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
-import { imagePlaneBasis } from '../../../../../src/utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../../src/utils/camera/frameUp';
+import { sunDirLocal } from '../../../../../src/utils/camera/bodyCompose/sunDirLocal';
+import { imagePlaneBasis } from '../../../../../src/utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../../src/utils/camera/orbitPose/frameUp';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
-import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
+import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyFrame/bodyRelativePose';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/layers/body/surfaceTiles/format/data/earthSurfaceParams';
@@ -48,14 +48,14 @@ import type { SurfaceTileDrawArgs } from '../../../../../src/layers/body/surface
 // layer recognisable return values.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
-vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
-vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal', () => ({
   bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
 }));
-import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
-import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal';
 import { prepareBodySurfaceFrame } from '../../../../../src/layers/body/slabs/present/prepareBodySurfaceFrame';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
@@ -185,7 +185,7 @@ function makeState(): EngineState {
         ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
         oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
       },
-      debug: { overlays: { 'surface-lod-overlay': false } },
+      surfaceTileDebug: { overlays: { 'surface-lod-overlay': false } },
     },
   } as unknown as EngineState;
 }
@@ -442,7 +442,7 @@ describe('surfaceTilesPass', () => {
     expect(mvpMock.mock.calls[0]![1]).toBe(args.eyeRelBodyM);
   });
 
-  it("packs the live debug.overlays['surface-lod-overlay'] toggle into the tile draw args", () => {
+  it("packs the live surfaceTileDebug.overlays['surface-lod-overlay'] toggle into the tile draw args", () => {
     // The debug toggle must reach the tile renderer every draw, not just on change.
     const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs) => void>();
     const view = makeEarthBodyView('earth');
@@ -455,9 +455,9 @@ describe('surfaceTilesPass', () => {
     surfaceTilesPass(runtime).draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[0]![1].debugLodOverlay).toBe(false);
 
-    (state.settings as unknown as { debug: { overlays: Record<string, boolean> } }).debug.overlays[
-      'surface-lod-overlay'
-    ] = true;
+    (
+      state.settings as unknown as { surfaceTileDebug: { overlays: Record<string, boolean> } }
+    ).surfaceTileDebug.overlays['surface-lod-overlay'] = true;
     surfaceTilesPass(runtime).draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[1]![1].debugLodOverlay).toBe(true);
   });

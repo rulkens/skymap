@@ -7,23 +7,23 @@
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { ViewSpec } from '../../../@types/engine/frame/ViewSpec';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { computeViewProj } from '../../../utils/camera/computeViewProj';
-import { viewFromCameraEye } from '../../../utils/camera/viewFromCameraEye';
-import { turnedOrbitCamera } from '../../../utils/camera/turnedOrbitCamera';
+import { computeViewProj } from '../../../utils/camera/projection/computeViewProj';
+import { viewFromCameraEye } from '../../../utils/camera/projection/viewFromCameraEye';
+import { turnedOrbitCamera } from '../../../utils/camera/viewRig/turnedOrbitCamera';
 import { multiply3x3 } from '../../../utils/math/multiply3x3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { starSphereRangeM } from '../../../utils/star/starSphereRangeM';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/meshBodies/meshBodiesAttachedTo';
-import { viewBodyPose } from '../camera/viewBodyPose';
+import { viewBodyPose } from '../camera/bodyFrame/viewBodyPose';
 import { deriveSlabs } from './slabs';
 import { visibleBodyRows } from './visibleBodyRows';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';

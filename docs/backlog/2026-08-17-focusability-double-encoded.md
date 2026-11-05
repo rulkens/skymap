@@ -4,7 +4,7 @@
 
 `src/services/engine/helpers/rowFocusable.ts`'s `ROW_FOCUSABLE` (an
 exhaustive `Record<SelectionRow['type'], boolean>`) and
-`src/services/engine/camera/focusFraming.ts:122-123`'s `zoneOfAvoidance` arm
+`src/services/engine/camera/framing/focusFraming.ts:122-123`'s `zoneOfAvoidance` arm
 (a `throw new Error(...)` defended by a multi-line "unreachable by
 construction" comment) both encode the same fact — "this row kind carries no
 world position to frame a camera on" — and nothing checks the two against

@@ -14,19 +14,19 @@ import { describe, it, expect } from 'vitest';
 import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { pivotSurfaceRangeMpc } from '../../../../src/services/engine/camera/pivotSurfaceRangeMpc';
+import { pivotSurfaceRangeMpc } from '../../../../src/services/engine/camera/framing/pivotSurfaceRangeMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -90,7 +90,7 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.equatorial,
       },
     },
-    picking: { pickInFlight: false, cursorTexPx: null },
+    picking: { pickInFlight: false },
   } as unknown as EngineState;
 }
 

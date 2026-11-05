@@ -20,7 +20,7 @@ import { EARTH_SURFACE_PARAMS } from '../../format/data/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../clouds/data/cloudShellParams';
 import { bodyCameraDistanceMpc } from '../../../slabs/present/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../../../clouds/present/cloudDeckFade';
-import { sunDirLocal } from '../../../../../utils/camera/sunDirLocal';
+import { sunDirLocal } from '../../../../../utils/camera/bodyCompose/sunDirLocal';
 import { isTexturedBodyKey } from '../../../textures/present/isTexturedBodyKey';
 import { prepareBodySurfaceFrame } from '../../../slabs/present/prepareBodySurfaceFrame';
 import { surfaceTileSpecOf } from '../../format/utils/surfaceTileSpecOf';
@@ -95,9 +95,9 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         ambientLight: isTexturedBodyKey(view.slab.frame.hostId as BodyTextureId)
           ? BODY_AMBIENT_LIGHT
           : state.settings.earth.ambientLight,
-        debugLodOverlay: state.settings.debug.overlays['surface-lod-overlay'],
-        noDisplacement: state.settings.debug.overlays['terrain-no-displacement'],
-        noSkirts: state.settings.debug.overlays['terrain-no-skirts'],
+        debugLodOverlay: state.settings.surfaceTileDebug.overlays['surface-lod-overlay'],
+        noDisplacement: state.settings.surfaceTileDebug.overlays['terrain-no-displacement'],
+        noSkirts: state.settings.surfaceTileDebug.overlays['terrain-no-skirts'],
         surfaceAtlasView: surfaceTiles.stream.getAtlasView()!,
         heightAtlasView: surfaceTiles.stream.getHeightAtlasView()!,
       });

@@ -30,7 +30,7 @@ import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;

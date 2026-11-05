@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildDemandCtx } from '../../../../src/services/engine/wiring/buildDemandCtx';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { UiState } from '../../../../src/@types/ui/UiState';
@@ -17,7 +17,7 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { SelectionState } from '../../../../src/@types/store/SelectionState';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 
 function makeState(
   opts: {

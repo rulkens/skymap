@@ -8,17 +8,17 @@
  * hid a miss would hide the thing it is here to show.
  */
 
-import type { BodyFixedPose } from '../../../../@types/camera/BodyFixedPose';
+import type { BodyFixedPose } from '../../../../@types/camera/pose/BodyFixedPose';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
-import type { SurfacePick } from '../../../../@types/camera/SurfacePick';
+import type { SurfacePick } from '../../../../@types/camera/terrain/SurfacePick';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { ViewFrustum } from '../../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
-import { cursorRayBodyLocal } from '../../../../utils/camera/cursorRayBodyLocal';
-import { frustumFovYRad } from '../../../../utils/camera/frustumFovYRad';
-import { raycastTerrain } from '../../../../utils/camera/raycastTerrain';
-import { surfacePickToleranceM } from '../../../../utils/camera/surfacePickToleranceM';
+import { cursorRayBodyLocal } from '../../../../utils/camera/terrain/cursorRayBodyLocal';
+import { frustumFovYRad } from '../../../../utils/camera/frustum/frustumFovYRad';
+import { raycastTerrain } from '../../../../utils/camera/terrain/raycastTerrain';
+import { surfacePickToleranceM } from '../../../../utils/camera/terrain/surfacePickToleranceM';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { outerBoundRadiusM } from '../../../../utils/occlusion/outerBoundRadiusM';
 import { bodyGroundRadiusAtM } from '../../../../utils/scene/bodyGroundRadiusAtM';

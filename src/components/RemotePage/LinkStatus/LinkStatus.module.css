@@ -24,7 +24,9 @@
   animation: pulse 1.2s ease-in-out infinite alternate;
 }
 
-.lost {
+.lost,
+.domeOlder,
+.domeNewer {
   color: var(--color-accent);
 }
 

@@ -12,7 +12,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { shareUrlFor } from '../../../src/state/url/shareUrlFor';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { enterManualPausedAt } from '../../../src/state/time/enterManualPausedAt';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { parseHashParams } from '../../../src/utils/url/parseHashParams';
 import { julianDaysToUnixMs } from '../../../src/utils/time/julianDaysToUnixMs';

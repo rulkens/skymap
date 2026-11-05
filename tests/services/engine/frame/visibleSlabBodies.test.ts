@@ -17,7 +17,7 @@ import { bodyLayerSlabRow } from '../../../../src/layers/body/slabs/present/body
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;

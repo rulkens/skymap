@@ -44,7 +44,7 @@
  */
 
 import type { Channel } from '../Channel';
-import type { CameraPose } from '../../camera/CameraPose';
+import type { CameraPose } from '../../camera/pose/CameraPose';
 import type { BaseSegment } from './BaseSegment';
 import type { VelRamp } from './VelRamp';
 import type { OscTrack } from './OscTrack';

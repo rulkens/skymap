@@ -57,7 +57,7 @@ export const produceMilkyWayLabel: LayerScreenLabel<'milkyWay'>['produceLabels']
     // The orientation anchor always wins the director's declutter. MAX_VALUE, not
     // Infinity: the comparator subtracts, and Infinity − Infinity is NaN, which
     // would corrupt the sort the moment a second always-wins label appeared.
-    prominencePx: Number.MAX_VALUE,
+    declutterPriority: Number.MAX_VALUE,
   };
 
   // Endpoints are re-derived from the camera every frame — safe only because the

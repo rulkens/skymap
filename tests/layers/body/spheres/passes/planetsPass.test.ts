@@ -16,7 +16,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { INSTANCE_FLOATS } from '../../../../../src/layers/body/spheres/render/planetRenderer';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
-import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { sunDirLocal } from '../../../../../src/utils/camera/bodyCompose/sunDirLocal';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -34,14 +34,14 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // sunDirLocal runs for real so the packed sun direction reveals a drift in the rotate/pack.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
-vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
-vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal', () => ({
   bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
 }));
-import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
-import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;

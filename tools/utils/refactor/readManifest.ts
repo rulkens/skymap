@@ -1,7 +1,6 @@
 /**
  * readManifest — read a `--manifest <path>` value flag into a JSON array, the
- * one place the refactor CLI (and, once Task 10 rewires it, moveFiles) parses a
- * batch file.
+ * one place the refactor CLI parses a batch file.
  *
  * ## Why a shared helper rather than a per-command `indexOf` idiom
  *
@@ -14,13 +13,13 @@
  *
  * ## Why the element type stays `unknown`
  *
- * The array's ELEMENT shape is per-subcommand (a `move` entry is `{from,to}`; a
- * `rename` entry is a different tuple). Validating those belongs to each
+ * The array's ELEMENT shape is per-subcommand (a `rename` entry is a tuple,
+ * a `delete` entry something else). Validating those belongs to each
  * subcommand's own arg parsing, which knows what a valid entry looks like and can
  * report a precise error. This helper proves only the two things every manifest
  * shares — the flag has a path, and the file parses to an array — and hands the
  * untyped rows on. Typing the rows here would either lie (a single shape can't
- * cover six subcommands) or force a union this layer has no business owning.
+ * cover every subcommand) or force a union this layer has no business owning.
  *
  * ## Why failures throw
  *

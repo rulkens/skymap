@@ -8,11 +8,11 @@ docs page, 2026-11-03.
 
 **Current state.**
 
-- `tools/utils/vite/remoteRelayPlugin.ts:32-33` wires the relay into `configureServer` and
-  `configurePreviewServer` only; `tools/utils/vite/attachRemoteRelay.ts` is the room-per-path broadcaster.
-- `src/services/remote/createLocalTransport.ts:24` opens `/__remote/<room>` on the page's own host, and
-  both sides hard-code it: the dome at `src/main.tsx:105`, the phone at
-  `src/components/RemotePage/useRemoteLink.ts:37`.
+- `tools/utils/vite/remoteRelayPlugin.ts:34-35` wires the relay into `configureServer` and
+  `configurePreviewServer` only; `tools/utils/remote/attachRemoteRelay.ts` is the room-per-path broadcaster.
+- `src/services/remote/createLocalTransport.ts:36` opens `/__remote/<room>` on the page's own host, and
+  both sides hard-code it: the dome at `src/main.tsx:108`, the phone at
+  `src/components/RemotePage/useRemoteLink.ts:50`.
 - Windows dome computers have never been checked to run `npm run dev -- --host`; the docs page gives
   macOS and Linux terminal commands only. With a public relay the dome needs a browser, not a dev
   server, so this check matters only for the local path that stays.

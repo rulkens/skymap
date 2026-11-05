@@ -88,19 +88,11 @@ function assertSweep(
 }
 
 const CORE_ALLOWED: Readonly<Record<string, number>> = {
-  '@types/data/galaxyCatalog/GalaxyRecordSource.d': 1,
   '@types/data/starCatalog/SeededStarCatalogId.d': 1,
   '@types/engine/GalaxyRow.d': 1,
   '@types/engine/SelectionRef.d': 2,
   '@types/engine/SelectionRow.d': 1,
   '@types/engine/StarInfo.d': 1,
-  '@types/engine/subsystems/DiskRowVisitor.d': 1,
-  '@types/engine/subsystems/DiskWalkInput.d': 1,
-  '@types/palette/ScoredRow.d': 1,
-  '@types/rendering/GalaxyPointDrawSettings.d': 1,
-  '@types/rendering/GalaxyPointRenderer.d': 2,
-  '@types/settings/GalaxyCatalogSettings.d': 1,
-  'components/containers/GalaxyProvenanceSectionContainer': 2,
   'data/bodies/seededStarCatalogsBySource': 1,
   'services/engine/helpers/refOf': 1,
   'services/engine/wiring/galaxyCatalogRequest': 2,

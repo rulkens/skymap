@@ -7,7 +7,7 @@
 
 import type { SlabRow } from '../../../../@types/engine/frame/SlabRow';
 import type { BlackHoleRow } from '../../@types/BlackHoleRow';
-import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
+import { BLACK_HOLE_SKY_CAPTURES } from '../../lensing/data/blackHoleSkyCaptures';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { blackHoleAnchorId } from './blackHoleAnchorId';
 import { blackHoleLensEnvelopeM } from '../../lensing/present/blackHoleLensEnvelopeM';
@@ -17,7 +17,7 @@ export function blackHoleSlabRow(row: BlackHoleRow): SlabRow {
     anchorId: blackHoleAnchorId(row),
     drawRadiusM: blackHoleLensEnvelopeM(row),
     footprintRadiusM: schwarzschildRadiusM(row.massSolar),
-    activeBand: CUBEMAP_CAPTURES[row.capture].band,
+    activeBand: BLACK_HOLE_SKY_CAPTURES[row.capture].band,
     hosts: [{ line: 'lens' }],
   };
 }

@@ -1,4 +1,4 @@
-import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
+import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { SelectionKindRow } from './SelectionKindRow';

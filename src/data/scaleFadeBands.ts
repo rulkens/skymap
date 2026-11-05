@@ -1,6 +1,6 @@
 /**
  * scaleFadeBands — core's crossfade transitions, AS DATA: the rows no single Layer
- * owns (the body-glint backdrop, the cubemap-capture bands). A Layer's own
+ * owns (the body-glint backdrop, core's cubemap-capture band). A Layer's own
  * distance window is a `bands` entry on its `visibility.ts`; a new core transition is a
  * declared row here, not a hand-rolled smoothstep. Consumed through `fadeBand`, which
  * reads direction off each row's edge ordering.
@@ -34,12 +34,6 @@ export const SCALE_FADE_BANDS = {
   // `goneAt` IS the partition-boundary symbol `BODY_GLINT_MAX_PX` — one
   // source, cannot drift.
   bodyGlint: { fullAt: 1, goneAt: BODY_GLINT_MAX_PX },
-
-  // Keyed on: CAMERA distance from the `galactic-centre` region's anchor
-  // (Sgr A*), Mpc. An approach fade. Engages the black-hole lens pass on close
-  // approach to Sgr A*; the far-field glint alpha is derived from this band
-  // (1 - fadeBand) at its call site.
-  sgrAStarLensing: { fullAt: 100 * SCALE_UNITS.AU_TO_MPC, goneAt: 500 * SCALE_UNITS.AU_TO_MPC },
 
   // Keyed on: CAMERA distance from the `solar-system` region's anchor (the
   // Sun), Mpc. Holds the sky bake a reflection probe is captured over, so the

@@ -13,7 +13,7 @@
  *
  * Output files: sdss-*.bin, 2mrs.bin, glade-*.bin (one per source/tier),
  * written under `public/data/galaxy-catalog/v10/` — the epoch-prefixed
- * path `tierFilenameForSource` returns (see `src/data/tierTargets.ts`).
+ * path `tierFilenameForSource` returns (see `src/layers/galaxyCatalog/records/data/tierTargets.ts`).
  *
  * Cross-match dedup:
  *   - Priority: SDSS > 2MRS > GLADE > DESI patches. See `tools/crossMatch.ts`
@@ -69,7 +69,7 @@ import { parseFamousSeed } from '../parsers/famousSeed';
 import { DESI_PATCHES, DESI_TRACER_FILE_KEYS } from './desiPatches';
 import type { DesiPatch } from './desiPatches';
 
-import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import { encodeGalaxyCatalog } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 import { raDecZToCartesian } from '../../src/utils/math/index';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
@@ -89,7 +89,7 @@ import {
   tierTarget,
   tierFilenameForSource,
   fluxSupplementMagLimitFor,
-} from '../../src/data/tierTargets';
+} from '../../src/layers/galaxyCatalog/records/data/tierTargets';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 import { selectTierRecords } from './selectTierRecords';
 import { rawDataPath } from '../utils/io/rawDataRegistry';

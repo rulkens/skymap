@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import {
   flyPath,
   atPoint,
@@ -18,7 +18,7 @@ import {
   all,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 
 const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
 

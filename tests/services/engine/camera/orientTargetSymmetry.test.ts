@@ -13,13 +13,13 @@ import { describe, it, expect } from 'vitest';
 
 import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
 
-import { bandRollTarget } from '../../../../src/services/engine/camera/frameAlignedRoll';
+import { bandRollTarget } from '../../../../src/services/engine/camera/arms/world/frameAlignedRoll';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { blendedEnuAt } from '../../../../src/utils/camera/blendedEnuAt';
-import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
+import { blendedEnuAt } from '../../../../src/utils/camera/surfaceFrame/blendedEnuAt';
+import { bodyUpWeight } from '../../../../src/services/engine/camera/orientation/utils/bodyUpWeight';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { rotateVec3ByTightMat3T } from '../../../../src/utils/math/rotateVec3ByTightMat3T';
@@ -28,7 +28,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { angleBetween } from '../../../helpers/math/angleBetween';

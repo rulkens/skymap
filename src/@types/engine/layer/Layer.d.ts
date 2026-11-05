@@ -15,7 +15,8 @@ import type { Exhibit } from '../../exhibits/Exhibit';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
-import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
+import type { SkyCapture } from '../../rendering/SkyCapture';
+import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { SlabRow } from '../frame/SlabRow';
 import type { LayerCoreDeps } from './LayerCoreDeps';
@@ -62,6 +63,8 @@ export type Layer<
   readonly sources?: Sources;
   /** Typing only: the composition root collects the same rows in `compositions/appBodies.ts`. */
   readonly bodies?: readonly LayerBody[];
+  /** Typing only: `compositions/appCubemapCaptures.ts` collects the same rows by import. */
+  readonly skyCaptures?: Readonly<Record<string, SkyCapture>>;
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
   readonly facts?: Facts;
   /** Contributions to the `LayerUiSlots`: whole sections (`main` in SettingsPanel,

@@ -48,8 +48,8 @@ import { structureSelectionRow } from '../../../src/layers/structure/picking/pre
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
-import { sphereFitDistance } from '../../../src/utils/camera/sphereFitDistance';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
+import { sphereFitDistance } from '../../../src/utils/camera/orbitCamera/sphereFitDistance';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';

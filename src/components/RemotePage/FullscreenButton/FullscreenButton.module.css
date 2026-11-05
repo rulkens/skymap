@@ -1,0 +1,26 @@
+/* No panel box: the button is a full touch target in a header one line tall, and a box that size
+   would crowd the pad below it. */
+.root {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-xl);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.root:active {
+  background: var(--surface-control-active);
+}
+
+.root:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}

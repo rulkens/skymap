@@ -6,14 +6,14 @@ import { deriveView } from '../../../../src/services/engine/frame/deriveView';
 import { cubemapCaptureFrame } from '../../../../src/services/engine/frame/cubemapCaptureFrame';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
-import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
+import { computeViewProj } from '../../../../src/utils/camera/projection/computeViewProj';
+import { orbitForwardOf } from '../../../../src/utils/camera/orbitPose/orbitForwardOf';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { mainViewSpec } from '../../../../src/utils/camera/mainViewSpec';
-import { faceViewSpec } from '../../../../src/utils/camera/faceViewSpec';
+import { mainViewSpec } from '../../../../src/utils/camera/viewRig/mainViewSpec';
+import { faceViewSpec } from '../../../../src/utils/camera/viewRig/faceViewSpec';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
@@ -22,7 +22,7 @@ import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { Source } from '../../../../src/data/source';
-import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../src/compositions/appCubemapCaptures';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
@@ -34,16 +34,16 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabRow } from '../../../../src/@types/engine/frame/SlabRow';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 import type { CaptureFrame } from '../../../../src/@types/engine/frame/CaptureFrame';
-import type { ViewFrustum } from '../../../../src/@types/camera/ViewFrustum';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
-import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { ViewFrustum } from '../../../../src/@types/camera/projection/ViewFrustum';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { PositionedId } from '../../../../src/@types/scene/PositionedId';
 
@@ -78,7 +78,7 @@ function makeState(): EngineState {
     settings: {
       bodies: { items: {} },
     },
-    picking: { pickInFlight: false, cursorTexPx: null },
+    picking: { pickInFlight: false },
   } as unknown as EngineState;
 }
 
@@ -321,7 +321,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
   };
   const CAPTURE_LAST_SIM_DAYS = 2460000.0;
   const CAPTURE_EYE_MPC: Readonly<Vec3> = [12, -34, 56];
-  // Stands in for a capture row's `nearMpc`/`viewSlotBase` (CUBEMAP_CAPTURES.sgrAStar).
+  // Stands in for a capture row's `nearMpc`/`viewSlotBase` (APP_CUBEMAP_CAPTURE_REGISTRY.sgrAStar).
   const CAPTURE_NEAR_MPC = 0.1 * SCALE_UNITS.AU_TO_MPC;
   const CAPTURE_VIEW_SLOT_BASE = 1;
 
@@ -371,7 +371,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         register: { pose: CAPTURE_LAST_POSE },
         outputs: { projection: CAPTURE_PROJECTION, simDays: CAPTURE_LAST_SIM_DAYS },
       },
-      picking: { pickInFlight: false, cursorTexPx: null },
+      picking: { pickInFlight: false },
     } as unknown as EngineState;
   }
 
@@ -609,7 +609,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     const capture = cubemapCaptureFrame({
       state: makeCaptureState(),
       eyeMpc: voyager.positionMpc,
-      nearMpc: CUBEMAP_CAPTURES.probe.nearMpc,
+      nearMpc: APP_CUBEMAP_CAPTURE_REGISTRY.probe.nearMpc,
       nowMs: 0,
       axes: voyager.orientation,
       bodyStates,

@@ -12,18 +12,18 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
 import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
-import { absoluteArm } from '../../utils/camera/absoluteArm';
-import { clampCameraTuning } from '../../utils/camera/clampCameraTuning';
+import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
+import { clampCameraTuning } from '../../utils/camera/orbitCamera/clampCameraTuning';
 import { inputGestureStarted } from '../input/inputSlice';
-import type { CameraState } from '../../@types/camera/CameraState';
-import type { CameraAim } from '../../@types/camera/CameraAim';
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
-import type { CameraPose } from '../../@types/camera/CameraPose';
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
-import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
+import type { CameraState } from '../../@types/camera/orbitCamera/CameraState';
+import type { CameraAim } from '../../@types/camera/pose/CameraAim';
+import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
+import type { CameraPose } from '../../@types/camera/pose/CameraPose';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
+import type { CameraTweenDescriptor } from '../../@types/camera/focusMotion/CameraTweenDescriptor';
 import type { ClipData } from '../../@types/animation/ClipData';
-import type { FrameTween } from '../../@types/camera/FrameTween';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { FrameTween } from '../../@types/camera/focusMotion/FrameTween';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
 // `base` is a placeholder bootstrap overwrites via `commitCameraPose`; 0.43 Mpc
 // mirrors `cameraFraming.INITIAL_DISTANCE_MPC` so a pre-bootstrap frame is in the

@@ -2,7 +2,7 @@
  * The desktop app's folder shape (docs/DESKTOP.md, layout): process first, then concern module, then
  * role. Only the top level says which runtime a file runs in, so the import boundary
  * (desktopImportBoundary.test.ts) can guard it by prefix; inside a process each concern module holds
- * only role folders, the ADR 0014 shape. The 15-file cap and bag names are layerFolderShape's.
+ * only role folders, the ADR 0014 shape. The 15-file cap and bag names are concernFolderShape's.
  */
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';

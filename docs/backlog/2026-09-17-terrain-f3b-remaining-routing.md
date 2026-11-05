@@ -16,7 +16,7 @@ Found in F3a's F3 review, and it sets the order rather than merely suggesting on
 
 F3a routes site placement, so a rover is **drawn** at `datum + terrain + altitudeM`.
 The camera still anchors, pivots and pixel-locks at `datum + altitudeM`:
-`siteRung.engage:124`, `sitePoseToBodyArm`/`FromBodyArm` and
+`siteCameraArm.engage:124`, `sitePoseToBodyArm`/`FromBodyArm` and
 `hostedFocusPivotM:22` all pass a bare datum radius. That is item 1's remaining
 `radiusM` routing.
 
@@ -82,15 +82,15 @@ any framing where the body is clickable at all.
 The sites that matter are the **camera gestures**, all of which intersect the datum
 sphere through `raySphereRoots`:
 
-- `src/utils/camera/pickOnBody.ts:10` — the shared ray/datum intersection, called from
+- `src/services/engine/camera/arms/body/gesture/utils/pickOnBody.ts:10` — the shared ray/datum intersection, called from
   `latchSurfaceGesture.ts:20`, `draggedSurfacePose.ts:41` and `surfaceZoomStep.ts:59`.
-- `src/utils/camera/anchoredDragRotation.ts:33` — `pickDir`, the drag anchor.
-- `src/services/engine/camera/poseFrameConversion.ts:94` — the arm's range, near root
+- `src/services/engine/camera/arms/body/gesture/utils/anchoredDragRotation.ts:33` — `pickDir`, the drag anchor.
+- `src/services/engine/camera/arms/body/poseFrameConversion.ts:94` — the arm's range, near root
   against `bodyRadiusM`.
 
 `bodyRadiusM` there is `HostBody.radiusM`, documented as the datum
-(`src/@types/camera/HostBody.d.ts:9-10`), supplied at
-`src/services/engine/camera/rungs/bodyRung.ts:80`.
+(`src/services/engine/camera/arms/@types/HostBody.d.ts:9-10`), supplied at
+`src/services/engine/camera/arms/body/bodyCameraArm.ts:80`.
 
 **The spec's "up to 8.8 km of parallax at grazing incidence" is the wrong figure.**
 8,849 m is the _radial_ mismatch, which is the whole error at nadir and the least

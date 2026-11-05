@@ -16,10 +16,10 @@ import { resolveClipFoci } from '../../../../src/services/engine/animation/resol
 import { selectionResolverOver, type StructureRowFixture } from '../../../support/selectionResolverOver';
 import { resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
-import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
+import { structureFocusDistance } from '../../../../src/services/engine/camera/framing/structureFocusDistance';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 
 const FOV_Y = 0.8;
 const TEST_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };
