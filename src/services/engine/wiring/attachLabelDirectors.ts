@@ -10,8 +10,10 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
+import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
+import { textLayoutOf } from '../../gpu/labelLayout/textLayoutOf';
 
 type LabelDirectorAttachRow = {
   readonly director: (state: EngineState) => Label2DDirector;
@@ -22,21 +24,25 @@ type LabelDirectorAttachRow = {
 const LABEL_DIRECTOR_ATTACH_ROWS: readonly LabelDirectorAttachRow[] = [
   {
     director: (state) => state.subsystems.cosmoLabelDirector,
-    labelRenderer: (state) => state.gpu.labelRenderer,
-    markerLineRenderer: (state) => state.gpu.markerLineRenderer,
+    labelRenderer: (state) => state.gpu.labelRendererCosmo,
+    markerLineRenderer: (state) => state.gpu.markerLineRendererCosmo,
   },
   {
     director: (state) => state.subsystems.foregroundLabelDirector,
-    labelRenderer: (state) => state.gpu.foregroundLabelRenderer,
-    markerLineRenderer: (state) => state.gpu.foregroundMarkerLineRenderer,
+    labelRenderer: (state) => state.gpu.labelRendererNear,
+    markerLineRenderer: (state) => state.gpu.markerLineRendererNear,
   },
 ];
 
 export function attachLabelDirectors(state: EngineState): void {
+  const { metricsByFont } = state.gpu.fontAtlases!;
+  const measure = (label: Label2D) => textLayoutOf(metricsByFont, label).bbox;
   for (const row of LABEL_DIRECTOR_ATTACH_ROWS) {
     // Non-null: both phases run this only once their renderer pair has just
     // been (re)constructed — same assumption the two call sites made inline
     // before this table existed.
-    row.director(state).attachRenderers(row.labelRenderer(state)!, row.markerLineRenderer(state)!);
+    row
+      .director(state)
+      .attachRenderers(row.labelRenderer(state)!, row.markerLineRenderer(state)!, measure);
   }
 }

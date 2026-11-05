@@ -11,9 +11,6 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: () => ({ draw: 0, pick: 0 }),
-}));
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
@@ -22,7 +19,7 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { hrOverBody } from '../../../helpers/camera/hrOverBody';
 import { readRegister } from '../../../helpers/camera/readRegister';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
+import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { setAutoRotate } from '../../../../src/state/camera/cameraSlice';
@@ -30,9 +27,10 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-const SATURN = deriveBodyStates(CONST_J2000).get('saturn')! as BodyState;
+const SATURN = deriveBodyStates(CONST_J2000).get(asSceneBodyId('saturn'))! as BodyState;
 
 /** Turn the spin pill on at the store's own rate (the UI's only lever). */
 function spinOn(h: CameraSimHarness): void {

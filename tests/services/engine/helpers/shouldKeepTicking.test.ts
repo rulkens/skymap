@@ -1,33 +1,32 @@
 /**
  * shouldKeepTicking — the render-on-demand keep-alive predicate. An animated
- * overlay must keep the loop ticking INDEPENDENTLY of whether anything is
- * pickable — the predicate takes no pick/catalog information at all, so
- * 'only flow is on' is a first-class case here rather than needing a full
- * GPU-ready runFrame fixture. runFrame's job is only to REACH this predicate
- * every ready frame, guarded structurally by the pick block not
- * early-returning.
+ * Layer (e.g. flow, mid-advection) must keep the loop ticking INDEPENDENTLY
+ * of whether anything is pickable — that vote arrives pre-folded as
+ * `anim.layersAwake` (see `runFrame`'s per-Layer `frame` hook loop), so
+ * this predicate itself takes no pick/catalog/Layer information at all.
  *
  * The camera term is `selectCameraActive(s)` over the store `RootState`. The
  * final `anim` parameter is the in-frame-animation vote bag runFrame collects
- * from the planners it just ran (star LOD fade, Earth tile subsystem); every
+ * from the planners it just ran (the Earth tile subsystem, labels); every
  * case here defaults it to at-rest (`NO_ANIM`).
  */
 
 import { describe, it, expect } from 'vitest';
 
 import { shouldKeepTicking } from '../../../../src/services/engine/helpers/shouldKeepTicking';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/drivers/cameraDrivers';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RootState } from '../../../../src/store/types';
 
 /**
- * A RootState carrying the two slices shouldKeepTicking reads: the camera slice
- * and the time slice. Both default to their AT-REST value — camera still, clock
+ * A RootState carrying the slices shouldKeepTicking reads: camera, input (the
+ * held gesture) and time. All default to their AT-REST value — camera still, clock
  * live (so `selectIsManualPlaying` is false); a case flips exactly one.
  */
 function rootWithCamera(
   over: {
-    dragging?: boolean;
+    gestureHeld?: boolean;
     tween?: unknown;
     autoRotateActive?: boolean;
     timeMode?: 'live' | 'manual';
@@ -36,15 +35,16 @@ function rootWithCamera(
 ): RootState {
   return {
     camera: {
-      dragging: over.dragging ?? false,
       tween: over.tween ?? null,
       autoRotate: { active: over.autoRotateActive ?? false },
       clip: null,
+      clipId: null,
       frameTween: null,
       // The auto-rotate term is arm-gated (see `selectCameraActive`), so the
       // fixture carries the at-rest arm every real store boots with.
       base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
     },
+    input: { owner: over.gestureHeld ? 'canvas' : null },
     time: {
       mode: over.timeMode ?? 'live',
       paused: over.paused ?? false,
@@ -57,11 +57,9 @@ const restingRoot = rootWithCamera();
 
 /** No in-frame animation vote — the default for every case but the vote ones. */
 const NO_ANIM = {
-  starFadeAnimating: false,
-  surfaceTilesAnimating: false,
   labelsAnimating: false,
   probeDue: false,
-  layersAnimating: false,
+  layersAwake: false,
 };
 
 /**
@@ -70,24 +68,12 @@ const NO_ANIM = {
  *
  */
 function makeState(over: {
-  flowEnabled?: boolean;
-  flowReady?: boolean;
   fadesAnimating?: boolean;
   focusAwake?: boolean;
   followWinner?: boolean;
   followSaturated?: boolean | null;
 }): EngineState {
-  const flowSlot =
-    over.flowReady === true
-      ? ({
-          committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }),
-        } as unknown)
-      : over.flowReady === false
-        ? ({ committed: () => null } as unknown)
-        : null;
-
   return {
-    settings: { flow: { enabled: over.flowEnabled ?? false } },
     gpu: {
       galaxyPointRenderer: null,
       galaxyPickRenderer: null,
@@ -108,42 +94,36 @@ function makeState(over: {
       fades: { isAnyAnimating: () => over.fadesAnimating ?? false },
       structureFocus: { isAwake: () => over.focusAwake ?? false },
     },
-    assetSlots: { flow: flowSlot },
   } as unknown as EngineState;
 }
 
 describe('shouldKeepTicking', () => {
-  it('REGRESSION: flow enabled + loaded → true even with nothing else animating', () => {
-    // The bug: every galaxy catalog is off (nothing pickable), but the flow
-    // field is on and its cube committed — the loop MUST keep ticking so the
-    // ribbons keep advecting without the cursor poking requestRender.
-    const state = makeState({ flowEnabled: true, flowReady: true });
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(true);
-  });
-
-  it('at rest (flow off, camera at rest, no fades/focus) → false', () => {
+  it('at rest (camera at rest, no fades/focus) → false', () => {
     const state = makeState({});
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(false);
+    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(false);
   });
 
-  it('flow enabled but NOT loaded → false (the slotReady guard)', () => {
-    const state = makeState({ flowEnabled: true, flowReady: false });
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(false);
-  });
-
-  it('a dragging camera → true (selectCameraActive)', () => {
+  it('a held gesture → true (selectCameraActive)', () => {
     const state = makeState({});
-    expect(shouldKeepTicking(state, rootWithCamera({ dragging: true }), 1000, NO_ANIM)).toBe(true);
+    expect(
+      shouldKeepTicking(
+        state,
+        rootWithCamera({ gestureHeld: true }),
+        1000,
+        NO_ANIM,
+        CAMERA_DRIVERS,
+      ),
+    ).toBe(true);
   });
 
   it('a fade animating → true', () => {
     const state = makeState({ fadesAnimating: true });
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(true);
+    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(true);
   });
 
   it('structure-focus fade awake → true', () => {
     const state = makeState({ focusAwake: true });
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(true);
+    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(true);
   });
 
   it('manual clock playing → true even with everything else at rest', () => {
@@ -157,6 +137,7 @@ describe('shouldKeepTicking', () => {
         rootWithCamera({ timeMode: 'manual', paused: false }),
         1000,
         NO_ANIM,
+        CAMERA_DRIVERS,
       ),
     ).toBe(true);
   });
@@ -168,7 +149,13 @@ describe('shouldKeepTicking', () => {
     // deliberately absent from this predicate.
     const state = makeState({});
     expect(
-      shouldKeepTicking(state, rootWithCamera({ timeMode: 'live', paused: false }), 1000, NO_ANIM),
+      shouldKeepTicking(
+        state,
+        rootWithCamera({ timeMode: 'live', paused: false }),
+        1000,
+        NO_ANIM,
+        CAMERA_DRIVERS,
+      ),
     ).toBe(false);
   });
 
@@ -178,46 +165,42 @@ describe('shouldKeepTicking', () => {
     // the zoom on the next interaction. Everything else is at rest, so this
     // disjunct alone must keep the loop ticking.
     const state = makeState({ followWinner: true, followSaturated: false });
-    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(true);
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM, CAMERA_DRIVERS)).toBe(true);
   });
 
   it('a SATURATED follow ease → false (steady follow must not pin 60 fps)', () => {
     // The approach handed off: steady follow of a body must fall back to the
     // coarse-idle / manual-play paths, not this predicate.
     const state = makeState({ followWinner: true, followSaturated: true });
-    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM, CAMERA_DRIVERS)).toBe(false);
   });
 
   it('a follow row winning with no memory yet → false', () => {
     const state = makeState({ followWinner: true, followSaturated: null });
-    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM, CAMERA_DRIVERS)).toBe(false);
   });
 
   it('an unsaturated ease but no follow row winning → false (term is winner-gated)', () => {
     // A body is focused but autoRotate/drag won the orbit terms; that driver's own
     // wake (selectCameraActive) covers it, so the follow-ease term must not fire.
     const state = makeState({ followWinner: false, followSaturated: false });
-    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM, CAMERA_DRIVERS)).toBe(false);
   });
 
-  it('a star LOD fade in flight → true even with everything else at rest', () => {
-    // The star-cut planner (advanceStarFades) reports a node mid-dissolve for this
-    // frame; the loop must keep ticking to finish the ramp even though the camera
-    // is still, no thumbnails are loading, and nothing else animates. This is the
-    // vote read here instead of the star pass firing its own requestRender.
+  it('layersAwake is a keep-alive term — true even with everything else at rest', () => {
+    // A Layer's frame hook voted awake this frame (D2) — including the
+    // starCatalog Layer's own LOD-fade vote — and runFrame folds every hook's
+    // vote into this one bag entry, so the predicate need not know anything
+    // about Layers itself, or about the star cut, just this bit.
     const state = makeState({});
     expect(
-      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, starFadeAnimating: true }),
+      shouldKeepTicking(
+        state,
+        restingRoot,
+        1000,
+        { ...NO_ANIM, layersAwake: true },
+        CAMERA_DRIVERS,
+      ),
     ).toBe(true);
-  });
-
-  it('layersAnimating is a keep-alive term — true even with everything else at rest', () => {
-    // A Layer's frame hook voted true this frame (D2); runFrame folds every
-    // hook's return into this one bag entry, so the predicate need not know
-    // anything about Layers itself — just this bit.
-    const state = makeState({});
-    expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, layersAnimating: true })).toBe(
-      true,
-    );
   });
 });

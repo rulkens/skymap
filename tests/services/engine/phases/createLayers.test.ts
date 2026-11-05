@@ -40,7 +40,6 @@ function makeDeps(
     cb: { store, setSagaContext: vi.fn() },
     composition: { layers, home: { focus: null, seedSelection: false } },
     frameRef: { current: () => {} },
-    detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
     phaseLocals: {
@@ -81,9 +80,6 @@ describe('createLayers', () => {
     await createLayers(state, deps);
 
     expect(received?.focusUniform).toBe(state.gpu.focusUniform);
-
-    received!.reportSourceCount(1 as never, 5);
-    expect(store.getState().engine.sourceCounts[1 as never]).toBe(5);
   });
 
   it('creates in tuple order and stores instances in that order', async () => {
@@ -128,11 +124,13 @@ describe('createLayers', () => {
   it('throws at boot when two rows share a pick source code', async () => {
     const { store } = createAppStore();
     const state = makeState();
-    state.selectionKindRows = [{ type: 'body', pickSources: [1] } as never];
-    const layer = stubLayer('stub', {
+    const body = stubLayer('body', {
+      selection: () => [{ type: 'body', pickSources: [1] } as never],
+    });
+    const galaxy = stubLayer('galaxy', {
       selection: () => [{ type: 'galaxy', pickSources: [1] } as never],
     });
 
-    await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow();
+    await expect(createLayers(state, makeDeps([body, galaxy], store))).rejects.toThrow();
   });
 });

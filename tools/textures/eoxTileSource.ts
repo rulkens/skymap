@@ -16,7 +16,7 @@ import { join } from 'node:path';
 
 import sharp from 'sharp';
 
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** EOX only ever harvests z13 (`fetchEoxTiles.ts`'s header) — coarser levels

@@ -1,4 +1,3 @@
-// src/components/containers/TourBeatRailContainer.tsx
 /**
  * TourBeatRailContainer — store boundary for the tour progress rail.
  *

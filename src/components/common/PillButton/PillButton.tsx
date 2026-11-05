@@ -1,4 +1,3 @@
-// src/components/common/PillButton/PillButton.tsx
 /**
  * PillButton — the HUD's 40 × 40 frosted-glass icon pill.
  *

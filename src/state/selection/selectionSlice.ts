@@ -26,9 +26,9 @@
  * row is its consumer. The row's precedence ladder is `pending` first, then the
  * resolved value — so the two rungs have to MEET. They do not meet at the ref.
  *
- * The URL composes from `selectionRows.focus`, the saga-owned derived cache, not
- * from the ref: only the row carries the catalog-resolved identity a galaxy id
- * needs. That row lands one action AFTER the ref, because the reconciler
+ * The URL composes from `selectionRows.focusId`, stored with the saga-owned
+ * `selectionRows.focus` row, not from the ref: a galaxy id needs the
+ * catalog-resolved identity. That row lands one action AFTER the ref, because the reconciler
  * (`watchSelectionRowsSaga`) has to be woken by the ref write to produce it. So
  * retiring `pending` on `updateSelectionFocus` opened a one-action window in
  * which the lower rung still held the PREVIOUS target and the upper rung had
@@ -71,6 +71,7 @@ import { requestSelect } from './requestSelect';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import type { SelectionState } from '../../@types/store/SelectionState';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
+import type { Transition } from '../../@types/navigation/Transition';
 
 const setIfChanged =
   (slot: 'hover' | 'select' | 'focus') =>
@@ -89,7 +90,15 @@ const selectionSlice = createSlice({
   reducers: {
     updateSelectionHover: setIfChanged('hover'),
     updateSelectionSelect: setIfChanged('select'),
-    updateSelectionFocus: setIfChanged('focus'),
+    // The transition rides as `meta`: the reducer never reads it, only the
+    // tween saga's decision does, and every direct dispatcher is a fly.
+    updateSelectionFocus: {
+      reducer: setIfChanged('focus'),
+      prepare: (ref: SelectionRef | null, transition: Transition = 'fly') => ({
+        payload: ref,
+        meta: { transition },
+      }),
+    },
     clearSelection: (selection) => {
       selection.select = null;
       selection.focus = null;
@@ -100,7 +109,7 @@ const selectionSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(requestFocus, (selection, action) => {
-        selection.pending.focus = action.payload;
+        selection.pending.focus = action.payload.id;
       })
       .addCase(requestSelect, (selection, action) => {
         selection.pending.select = action.payload;

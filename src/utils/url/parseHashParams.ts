@@ -13,7 +13,7 @@
  * Encoding policy — raw passthrough, split on the FIRST `=`
  * ──────────────────────────────────────────────────────────────────────
  * Today's real hashes are raw and un-encoded: `focus=body-jupiter`,
- * `focus=cluster-virgo-m87`. We deliberately do NOT run
+ * `focus=galaxy-cluster-virgo-m87`. We deliberately do NOT run
  * `decodeURIComponent` on keys or values — doing so would change the bytes
  * of every existing deep link (`+` → space, `%` handling, etc.) and break
  * copy-pasted URLs that were never encoded in the first place. Keys and

@@ -1,0 +1,15 @@
+.root {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px var(--site-line-strong),
+    0 0 0 1.125rem #000,
+    0 0 0 var(--disc-ring) color-mix(in srgb, var(--color-fg) 18%, transparent);
+
+  & img {
+    height: 100%;
+    object-fit: cover;
+  }
+}

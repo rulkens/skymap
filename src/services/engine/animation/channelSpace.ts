@@ -40,7 +40,7 @@ import { lerp } from '../../../utils/math/lerp';
  * CHANNEL_SPACE — the canonical Channel → Space mapping.
  *
  * `distance` lives in log space (multiplicative — zooming 1→100 Mpc should
- * feel perceptually uniform, not linear). `yaw` and `pitch` are additive angle
+ * feel perceptually uniform, not linear). `yaw`, `pitch` and `roll` are additive angle
  * offsets (plain lerp + optional shortest-arc correction at the call site).
  * `target` is a Cartesian world-space coordinate and interpolates linearly.
  *
@@ -52,6 +52,7 @@ export const CHANNEL_SPACE: Record<Channel, Space> = {
   distance: 'log',
   yaw: 'add',
   pitch: 'add',
+  roll: 'add',
   target: 'lin',
 };
 

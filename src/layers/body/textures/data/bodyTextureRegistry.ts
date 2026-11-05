@@ -1,0 +1,269 @@
+/**
+ * bodyTextureRegistry — the one authored table of textured bodies: texture kinds,
+ * each kind's tier ceiling, its colour treatment. Registry membership IS "is this
+ * body textured?"; the runtime tier clamp and the texture build both derive from it,
+ * over the same `(bodyId|ring, kind)` key space as `tools/utils/io/textureSources.ts`,
+ * so a textured body with no raw source is a type/test failure, not a silent render.
+ * LANDMINE: nothing cross-checks an authored ceiling against the source it names.
+ * Author above what `tools/textures/tiersFittingSourceWidth.ts` can emit and the
+ * build omits the tile, the loader 404s, and the body stays on its boot-atlas tile.
+ */
+
+import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
+import type { BodyTextureSpec } from '../../../../@types/scene/BodyTextureSpec';
+import { MARS_GLOBE_GRADE } from '../../surfaceTiles/format/data/marsSurfaceParams';
+
+// Keyed by id rather than an array so a missing or extra body is a compile error,
+// and so the per-body-per-frame proximity-loader lookup stays O(1).
+export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSpec>> = {
+  mercury: {
+    bodyId: 'mercury',
+    kinds: { surface: 'large' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
+  // Look ceiling: the source is unresolved cloud, so there is no 8 k detail to have.
+  venus: {
+    bodyId: 'venus',
+    kinds: { surface: 'medium' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
+  // Beyond the day albedo: `night` (Black Marble city lights, sRGB) and `clouds`
+  // (sRGB colour + luminance-derived alpha) hold the full 8 k ceiling — both resolve
+  // fine detail. `material` (roughness + ocean mask) and `normal` (baked from the
+  // GEBCO heightfield) are linear-PNG and capped at 4 k: a land/ocean mask and a
+  // normal map both downsample cleanly, so 8 k buys nothing.
+  earth: {
+    bodyId: 'earth',
+    kinds: {
+      surface: 'large',
+      night: 'large',
+      material: 'medium',
+      normal: 'medium',
+      clouds: 'large',
+    },
+    provenance: 'nasa',
+    treatment: { kind: 'colour' },
+  },
+  // Graded to colour-match the tuned Viking surface tiles (marsAlbedoRecipe.ts).
+  mars: {
+    bodyId: 'mars',
+    kinds: { surface: 'large' },
+    provenance: 'sss',
+    treatment: { kind: 'grade', grade: MARS_GLOBE_GRADE },
+  },
+  // Jupiter / Saturn: a SOURCE ceiling, not a look one. Their Solar System Scope
+  // files are 4096×2048 despite the `8k_` filename prefix, so `large` has no tile to
+  // emit; raising it back without sourcing a bigger image is a regression.
+  jupiter: {
+    bodyId: 'jupiter',
+    kinds: { surface: 'medium' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
+  saturn: {
+    bodyId: 'saturn',
+    kinds: { surface: 'medium' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
+  // Look ceiling: near-featureless discs, so `small` is the highest useful tier.
+  uranus: {
+    bodyId: 'uranus',
+    kinds: { surface: 'small' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
+  neptune: {
+    bodyId: 'neptune',
+    kinds: { surface: 'small' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
+  // `normal` is baked from the LOLA heightfield, capped at 4 k like Earth's.
+  moon: {
+    bodyId: 'moon',
+    kinds: { surface: 'large', normal: 'medium' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
+  io: {
+    bodyId: 'io',
+    kinds: { surface: 'large' },
+    provenance: 'usgs',
+    treatment: { kind: 'colour' },
+  },
+  // Europa + Callisto: the USGS mosaics are single-channel with no colour source at
+  // all, so the build tints them to restore a plausible hue the mono map lacks.
+  europa: {
+    bodyId: 'europa',
+    kinds: { surface: 'large' },
+    provenance: 'usgs',
+    treatment: { kind: 'monoTint', tint: [0.86, 0.82, 0.74] },
+  },
+  ganymede: {
+    bodyId: 'ganymede',
+    kinds: { surface: 'large' },
+    provenance: 'usgs',
+    treatment: { kind: 'colour' },
+  },
+  callisto: {
+    bodyId: 'callisto',
+    kinds: { surface: 'large' },
+    provenance: 'usgs',
+    treatment: { kind: 'monoTint', tint: [0.62, 0.58, 0.52] },
+  },
+  // Pluto / Charon: a LOOK ceiling — both sources measure well past 8 k (24888 px
+  // and 12693 px) and both are single-channel (`sharp().metadata()`: channels=1,
+  // space=b-w). Pluto gets `panSharpen` because a co-registered global chroma source
+  // exists (NASA MVIC, PIA11707), so hue is derived rather than guessed. Charon stays
+  // `monoTint` because none does — only single-hemisphere disc portraits — and it is
+  // genuinely near-neutral but for a reddish polar cap (Grundy+16, Science 351
+  // aad9189); that is what its source supports, not a shortfall against Pluto's.
+  pluto: {
+    bodyId: 'pluto',
+    kinds: { surface: 'medium' },
+    provenance: 'usgs',
+    treatment: {
+      kind: 'panSharpen',
+      // Re-check with `npm run fit-pluto-chroma`; expect ~1% digit drift, since the
+      // fit averages gradient-quiet tiles and the reference rendition these came from
+      // is gone. Gate on outcome, not digits: stay within half a delta-E of a fresh
+      // fit (3.16 vs 3.13 today) and still beat the uniform-scale baseline (7.02).
+      calibration: {
+        matrix: [
+          [1.0354, 0.3565],
+          [-0.0686, 0.1579],
+        ],
+        gain: 0.958,
+      },
+    },
+  },
+  charon: {
+    bodyId: 'charon',
+    kinds: { surface: 'medium' },
+    provenance: 'usgs',
+    treatment: { kind: 'monoTint', tint: [0.6, 0.58, 0.56] },
+  },
+  // Cassini's global mosaic is relief SHADING (mean 104/255), not albedo, of the
+  // most reflective body in the solar system: the tint alone compresses the
+  // relief, so `lift` adds the missing brightness (mean lands ≈227/255, ~5%
+  // highlight clip).
+  enceladus: {
+    bodyId: 'enceladus',
+    kinds: { surface: 'large', normal: 'medium' },
+    provenance: 'usgs',
+    treatment: { kind: 'monoTint', tint: [0.5, 0.5, 0.5], lift: 0.686 },
+  },
+  // Saturn's mid-sized moons: CICLOPS albedo maps, greyed (their colour is
+  // enhanced UV/IR) and stretched for display. The four bright moons are fitted so
+  // the texture's mean lands on the body's flat albedo with ~3% highlight clip;
+  // Iapetus is anchored on its two terrains instead (dark-hemisphere median ->
+  // albedo 0.04, bright -> 0.6) with a mild warm cast, by eye. Mimas's source is
+  // 6356 px wide, so `medium` is its ceiling.
+  mimas: {
+    bodyId: 'mimas',
+    // `small` normal: the shape model's ~0.6 km spacing resolves 2k, not 4k.
+    kinds: { surface: 'medium', normal: 'small' },
+    provenance: 'nasa',
+    treatment: {
+      kind: 'monoTint',
+      tint: [0.49, 0.49, 0.49],
+      lift: 0.635,
+      antimeridianCentred: true,
+    },
+  },
+  tethys: {
+    bodyId: 'tethys',
+    kinds: { surface: 'large', normal: 'small' },
+    provenance: 'nasa',
+    treatment: {
+      kind: 'monoTint',
+      tint: [0.47, 0.47, 0.47],
+      lift: 0.678,
+      antimeridianCentred: true,
+    },
+  },
+  dione: {
+    bodyId: 'dione',
+    kinds: { surface: 'large', normal: 'small' },
+    provenance: 'nasa',
+    treatment: {
+      kind: 'monoTint',
+      tint: [0.58, 0.58, 0.58],
+      lift: 0.584,
+      antimeridianCentred: true,
+    },
+  },
+  rhea: {
+    bodyId: 'rhea',
+    kinds: { surface: 'large' },
+    provenance: 'nasa',
+    treatment: {
+      kind: 'monoTint',
+      tint: [0.57, 0.57, 0.57],
+      lift: 0.602,
+      antimeridianCentred: true,
+    },
+  },
+  iapetus: {
+    bodyId: 'iapetus',
+    kinds: { surface: 'large' },
+    provenance: 'nasa',
+    treatment: {
+      kind: 'monoTint',
+      tint: [1.2, 1.16, 1.08],
+      lift: 0.107,
+      antimeridianCentred: true,
+    },
+  },
+  // Uranus's five big moons: Schenk's Voyager 2 mosaics, scaled to each moon's geometric albedo and neutral grey; the
+  // unseen hemisphere is flat albedo grey. Tiers follow source width (Miranda 6294, Ariel 3652, the
+  // rest under 2048: their `small` tier is written at the source's own width, never upscaled).
+  miranda: {
+    bodyId: 'miranda',
+    kinds: { surface: 'medium', normal: 'medium' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  ariel: {
+    bodyId: 'ariel',
+    kinds: { surface: 'small', normal: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  umbriel: {
+    bodyId: 'umbriel',
+    kinds: { surface: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  titania: {
+    bodyId: 'titania',
+    kinds: { surface: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  oberon: {
+    bodyId: 'oberon',
+    kinds: { surface: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  // Triton: Schenk's 2014 Voyager 2 colour mosaic as distributed by USGS (hence `usgs`, the host the
+  // build pulls from; the Uranian moons, taken from Schenk's own repository, are `schenk`). Published
+  // colours are kept as they are; the build fills the polar-night black with the mean colour.
+  triton: {
+    bodyId: 'triton',
+    kinds: { surface: 'large', normal: 'large' },
+    provenance: 'usgs',
+    treatment: { kind: 'colour' },
+  },
+};
+
+// Takes `string`, not `BodyTextureId`, so a caller holding an arbitrary body id can
+// branch on the `null` — this doubles as the body makers' "is it textured?" test.
+export function bodyTextureSpec(id: string): BodyTextureSpec | null {
+  return (BODY_TEXTURE_REGISTRY as Record<string, BodyTextureSpec | undefined>)[id] ?? null;
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "from": "src/@types/loading/ConstellationsArtifact.d.ts",
+    "to": "src/layers/constellations/@types/ConstellationsArtifact.d.ts"
+  },
+  {
+    "from": "src/@types/rendering/ConstellationRenderer.d.ts",
+    "to": "src/layers/constellations/@types/ConstellationRenderer.d.ts"
+  },
+  {
+    "from": "src/@types/settings/ConstellationsSettings.d.ts",
+    "to": "src/layers/constellations/@types/ConstellationsSettings.d.ts"
+  },
+  {
+    "from": "src/data/constellation/constellationLineColor.ts",
+    "to": "src/layers/constellations/data/constellationLineColor.ts"
+  },
+  {
+    "from": "src/data/constellation/constellationLineHalfwidthPx.ts",
+    "to": "src/layers/constellations/data/constellationLineHalfwidthPx.ts"
+  }
+]

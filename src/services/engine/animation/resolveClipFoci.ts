@@ -77,12 +77,12 @@ import type { SelectionResolver } from '../../../@types/engine/selection/Selecti
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import { moveTarget, dollyTo, aimAt, spin } from './effectHelpers';
-import { focusFraming } from '../camera/focusFraming';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../utils/camera/frameUp';
+import { focusFraming } from '../camera/framing/focusFraming';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { imagePlaneBasis } from '../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 
 /**

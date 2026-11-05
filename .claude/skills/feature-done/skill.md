@@ -40,6 +40,9 @@ that shipped it.
 
 ## Audit steps
 
+First, if `session_progress` is available, call it with phase `verify`, label
+`Done audit` and `doc` = the plan path.
+
 Run the checks below in order. Don't short-circuit — collect every
 finding and report them together at the end. Use parallel tool calls
 where the checks are independent.
@@ -164,6 +167,9 @@ DoD audit — <plan filename>
 OVERALL: <READY / NOT READY: <reason>>
 ```
 
+On `READY`, call `session_progress` (if available) with phase `land`; on
+`BLOCKED`, leave the phase alone.
+
 If `READY`, **execute the housekeeping moves immediately** as part of
 the same response — no separate confirmation step. The audit _is_ the
 gate; reaching READY is the user's signal to move the files. State
@@ -209,6 +215,11 @@ lands on the feature branch / PR without a manual follow-up:
 - `git push` to the current branch's upstream if it has one, so the
   commit lands on the open PR. If the branch has no upstream yet, leave
   the first push to the user and say so.
+- **Watch CI unprompted.** Right after the push, run
+  `gh pr checks <n> --watch --interval 30` in the background and report
+  the settled result (on red: read the failed log and diagnose). Never
+  wait for the user to ask "is CI green?" — and never merge on green
+  without the user's word.
 
 Don't update CLAUDE.md, and don't commit anything beyond the completion
 moves — the implementation should already be committed; this commit is

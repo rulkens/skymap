@@ -24,4 +24,6 @@ export type StructureSearchEntry = {
   readonly abell: string | null;
   /** One-liner blurb — searchable as a last-resort fallback. */
   readonly description: string;
+  /** Curated anchor — the only structures that have a captured shot on disk. */
+  readonly featured: boolean;
 };

@@ -25,13 +25,24 @@ async function seedSession(): Promise<{ tmpId: string; dir: string }> {
   const png = await sharp({
     create: { width: 128, height: 128, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } },
   })
-    .composite([{
-      input: await sharp({
-        create: { width: 64, height: 64, channels: 4, background: { r: 240, g: 240, b: 240, alpha: 1 } },
-      }).png().toBuffer(),
-      top: 32, left: 32,
-    }])
-    .png().toBuffer();
+    .composite([
+      {
+        input: await sharp({
+          create: {
+            width: 64,
+            height: 64,
+            channels: 4,
+            background: { r: 240, g: 240, b: 240, alpha: 1 },
+          },
+        })
+          .png()
+          .toBuffer(),
+        top: 32,
+        left: 32,
+      },
+    ])
+    .png()
+    .toBuffer();
   writeFileSync(join(fullDir, 'source.png'), png);
   return { tmpId, dir: fullDir };
 }
@@ -78,7 +89,9 @@ describe('handleProcess', () => {
     // luminance pass alpha should be 0 there.  The centre is white
     // (luma≈240), so alpha should be well above 0 there.
     const alphaPng = await sharp(readFileSync(join(sess.dir, 'alpha.webp')))
-      .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
     const w = alphaPng.info.width;
     const cornerIdx = 0; // top-left pixel
     expect(alphaPng.data[cornerIdx * 4 + 3]!).toBe(0);

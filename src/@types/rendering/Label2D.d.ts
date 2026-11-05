@@ -86,7 +86,7 @@ export type Label2D = {
    * bounded by the clamps.  Defaults to 0.01 in the renderer if absent.
    */
   readonly worldEmMpc?: number;
-  /** Fade multiplier in [0,1] driven by milkyWayLabelVisibility. Default 1. */
+  /** Fade multiplier in [0,1] driven by produceMilkyWayLabel. Default 1. */
   readonly fadeAlpha?: number;
   /**
    * How much of the occlusion-variant fragment stage's per-pixel scene
@@ -98,6 +98,27 @@ export type Label2D = {
    * -occluding) pipeline.
    */
   readonly occludeWeight?: number;
+  /**
+   * Eye to the subject's NEAR surface (centre distance minus its radius), in
+   * km: the cutoff of the SECOND occluder channel, which reads the sampled
+   * scene depth and so sees the terrain the body spheres stop short of. The
+   * shader takes whichever channel fires. Judged once, at `occludeSubjectPos`
+   * (falling back to `worldPos`) in the vertex stage — not per rendered text
+   * pixel — so a caption hides whole instead of half-cut. Default 0 leaves it
+   * inert — right for every producer whose `occludeWeight` is already 1.
+   */
+  readonly occludeNearKm?: number;
+  /**
+   * World position the sampled-depth channel judges instead of `worldPos`,
+   * when set. A LIFTED caption's own `worldPos` sits screen-up from its
+   * subject (`label2DDirector`'s `applyLift`, unprojected at the lift target)
+   * — over terrain that reads nearer OR farther than the subject's own
+   * ground, which is the wrong question to ask. `applyLift` sets this to the
+   * pre-lift anchor (the same point its leader line's `fromWorld` end lerps
+   * from) for every label it lifts; an unlifted label leaves it undefined and
+   * the shader falls back to `worldPos`, where the two already coincide.
+   */
+  readonly occludeSubjectPos?: Vec3;
   /**
    * Horizontal alignment of the text relative to `worldPos`.
    * Default 'left' (text extends rightward from the anchor).
@@ -114,15 +135,15 @@ export type Label2D = {
    */
   readonly alignY?: LabelAlignY;
   /**
-   * On-screen prominence (apparent size, px) used as the declutter sort
-   * key by the `label2DDirector` merge: a ring's apparent radius for a
-   * structure, a galaxy's apparent diameter for a famous label.  When two
-   * labels' measured text rects overlap on screen, the higher
-   * `prominencePx` wins.  The label renderer ignores this field — it exists
-   * only to carry the producer's size signal across the director's
-   * cross-producer declutter.  Absent → treated as 0 (lowest priority).
+   * The declutter sort key of the `label2DDirector` merge: when two labels
+   * collide on screen, the higher number wins.  Size-ranked producers set
+   * apparent size in px (a ring's apparent radius for a structure, a galaxy's
+   * apparent diameter for a famous label); captions set
+   * `priority * CAPTION_PRIORITY_SCALE + clamped size`.  The label renderer
+   * ignores this field — it exists only to carry the producer's rank across
+   * the director's cross-producer declutter.  Absent → treated as 0 (lowest).
    */
-  readonly prominencePx?: number;
+  readonly declutterPriority?: number;
   /**
    * Optional anchor line, drawn from the subject dot up to this label. The
    * director synthesizes one `MarkerLine` per surviving leader-carrying
@@ -147,4 +168,10 @@ export type Label2D = {
    * came from rather than parsed back out of `id` at pick time.
    */
   readonly pickId?: number;
+  /**
+   * The same packed word as `pickId`, set whenever the label names a selectable subject,
+   * clickable this frame or not. Focus emphasis keys on it: a focused subject whose label the
+   * focus sphere makes unclickable still keeps full emphasis.
+   */
+  readonly subjectId?: number;
 };

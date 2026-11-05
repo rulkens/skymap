@@ -15,7 +15,8 @@
  * benchmark must therefore place the camera at an exact, reproducible vantage
  * and read the GPU's own timestamp queries, neither of which belongs in the
  * shipping app. The app's entire contribution is the `window.__skymapPerf` seam
- * (installed only under `?perf`) that this process drives through
+ * (installed only under `?perf`; boot and `ready` go through `window.__skymap`)
+ * that this process drives through
  * `page.evaluate`: `setStrategy` flips the encode path, `setPose` hard-cuts the
  * camera, `collectTimings` resolves with the accumulated `PerfSample[]`, and
  * `slotGroups` snapshots the name→groupKey map (see below).
@@ -47,7 +48,11 @@
  * ('npx playwright install chromium').
  */
 
-import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import type { Browser, BrowserContext, Page } from '@playwright/test';
+import { launchChromium } from '../utils/browser/launchChromium';
+import { bootHookedPage } from '../utils/browser/bootHookedPage';
+import { warnIfWrongCheckout } from '../utils/browser/warnIfWrongCheckout';
+import { collectPageErrors } from '../utils/browser/collectPageErrors';
 import { PERF_SCENARIOS, type PerfScenario } from './perfScenarios';
 import type { ScenarioReport, LayerStat } from './scenarioReport';
 import type { SweepReport, SweepScale, SweepPass } from './sweepReport';
@@ -65,6 +70,7 @@ import { scalingExponent } from '../utils/perf/scalingExponent';
 import { classifyBound } from '../utils/perf/classifyBound';
 import { ansiPalette } from '../utils/cli/ansiPalette';
 import type { PerfSample } from '../../src/@types/perf/PerfSample';
+import type { MemorySnapshot } from '../../src/@types/perf/MemorySnapshot';
 import type { Tier } from '../../src/@types/data/Tier';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 
@@ -180,63 +186,23 @@ function parseArgs(argv: readonly string[]): PerfOptions {
 }
 
 /**
- * Launch pattern mirrored from record.ts: the 'chromium' channel first (full
- * build, WebGPU with no flags), falling back to the headless shell with the
- * WebGPU flags only if the channel is not installed.
- */
-async function launchChromium(): Promise<Browser> {
-  try {
-    return await chromium.launch({ channel: 'chromium' });
-  } catch (err) {
-    console.warn(
-      `chromium channel launch failed (${err instanceof Error ? err.message.split('\n')[0] : String(err)})`,
-    );
-    console.warn(
-      "falling back to the headless shell with '--enable-unsafe-webgpu --use-angle=metal'; " +
-        "prefer 'npx playwright install chromium' for the proven full-build path",
-    );
-    return chromium.launch({ args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
-  }
-}
-
-/**
- * bootPerfPage — open a page in `context`, wire the page-error collectors, wait
- * for the `__skymapPerf` hook + its `ready` gate, and read the `slotGroups`
- * map. Returns everything a measurement path needs to start sampling.
+ * bootPerfPage — open a page, collect page errors, boot the `__skymapPerf`
+ * hook (see bootHookedPage), and read the `slotGroups` map. Shared by
+ * `measureScenario` and `measureSweep` so their boot sequences can't drift.
  *
- * Extracted so BOTH the single-viewport `measureScenario` and the multi-scale
- * `measureSweep` boot identically — the sequence (handlers, `goto ?perf`, wait
- * for hook, await `ready`, snapshot `slotGroups`) is the exact contract the app
- * seam expects, and duplicating it invites the two paths to drift.
- *
- * Page errors are collected rather than warned inline: a noisy page would spam
- * stderr and (in --json mode) risk leaking onto stdout. The formatters collapse
- * them to a ⚠ summary; JSON mode surfaces them raw. Mirrors record.ts's
- * handlers, but stores instead of printing. The returned `pageErrors` array is
- * live — it keeps filling as the page runs, so callers read it AFTER sampling.
+ * Page errors are collected rather than warned inline: a noisy page would
+ * spam stderr and (in --json mode) risk leaking onto stdout — the formatters
+ * collapse them to a summary, and JSON mode surfaces them raw. The returned
+ * array is live, so callers read it AFTER sampling.
  */
 async function bootPerfPage(
   context: BrowserContext,
   url: string,
 ): Promise<{ page: Page; slotGroups: Record<string, string>; pageErrors: string[] }> {
   const page = await context.newPage();
-  const pageErrors: string[] = [];
-  page.on('pageerror', (err) => pageErrors.push(`error: ${err.message}`));
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') pageErrors.push(`console.error: ${msg.text()}`);
-  });
-
-  await page.goto(`${url}/?perf`, { waitUntil: 'load' });
-  await page.waitForFunction(
-    () => (window as unknown as { __skymapPerf?: unknown }).__skymapPerf !== undefined,
-    undefined,
-    { polling: 100 },
-  );
-  // `ready` already debounces "engine ready + loads settled" over a ~1 s
-  // window, so awaiting it (no harness-side timeout) is the whole boot wait.
-  await page.evaluate(
-    () => (window as unknown as { __skymapPerf: { ready: Promise<void> } }).__skymapPerf.ready,
-  );
+  const pageErrors = collectPageErrors(page);
+  await bootHookedPage(page, `${url}/?perf`);
+  await warnIfWrongCheckout(page);
   const slotGroups = (await page.evaluate(
     () =>
       (window as unknown as { __skymapPerf: { slotGroups: Record<string, string> } }).__skymapPerf
@@ -277,10 +243,10 @@ async function applyTier(page: Page, tier: Tier | null): Promise<string> {
 /**
  * sampleStrategy — flip the encode strategy, hard-cut to `pose`, and collect
  * `frames` frames of per-pass timings. The evaluate body is the app-seam
- * protocol: setStrategy (next-frame flip) → setPose (hard-cut + arm auto-rotate,
- * resolves on the next rAF) → collectTimings (subscribe, accumulate, resolve).
- * Auto-rotate keeps the render-on-demand loop awake for the whole sampling
- * window with no manual pump. Shared by both measurement paths.
+ * protocol: setStrategy (next-frame flip) → setPose (hard-cut, resolves on the
+ * next rAF) → collectTimings (subscribe, accumulate, resolve). `collectTimings`
+ * keeps the render-on-demand loop awake itself, so a static vantage on any
+ * camera arm samples the full window. Shared by both measurement paths.
  */
 async function sampleStrategy(
   page: Page,
@@ -305,6 +271,17 @@ async function sampleStrategy(
     },
     { strategy, pose, frames },
   )) as PerfSample[];
+}
+
+/**
+ * sampleMemory — read the GPU-memory ledger + JS heap through the hook, once
+ * per scenario (not per strategy — the ledger doesn't care which encode path
+ * ran; it's a measure-only snapshot of what's resident right now).
+ */
+async function sampleMemory(page: Page): Promise<MemorySnapshot> {
+  return (await page.evaluate(() =>
+    (window as unknown as { __skymapPerf: { memory: () => MemorySnapshot } }).__skymapPerf.memory(),
+  )) as MemorySnapshot;
 }
 
 /**
@@ -343,6 +320,7 @@ async function measureScenario(
     const merged = statsByStrategy['merged'] ?? [];
     const perLayer = statsByStrategy['perLayerTimed'] ?? [];
     const zeroTotal = { median: 0, p90: 0 };
+    const memory = await sampleMemory(page);
     return {
       scenario: scenario.name,
       viewport: VIEWPORT,
@@ -357,6 +335,7 @@ async function measureScenario(
       perLayer,
       floors: floorsOf(merged, perLayer, slotGroups),
       pageErrors,
+      memory,
     };
   } finally {
     await context.close();

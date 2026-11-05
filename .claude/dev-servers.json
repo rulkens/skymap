@@ -1,0 +1,19 @@
+{
+    "version": 1,
+    "servers": [
+        {
+            "id": "app",
+            "label": "Skymap",
+            "icon": "app",
+            "match": { "cmd": ["vite"] },
+            "start": "/dev"
+        },
+        {
+            "id": "website",
+            "label": "Website",
+            "icon": "website",
+            "match": { "cmd": ["astro"], "dir": "packages/website" },
+            "start": "/dev website"
+        }
+    ]
+}

@@ -28,8 +28,9 @@
 import type { Action } from '@reduxjs/toolkit';
 import type { RootState } from '../../../store/types';
 
-export type KeyboardShortcut = {
+// `D`: an exhibit section kind's shortcut also gets the running exhibit's section data.
+export type KeyboardShortcut<D = void> = {
   readonly keys: string;
-  readonly run: (state: RootState) => Action | readonly Action[] | null;
+  readonly run: (state: RootState, data: D) => Action | readonly Action[] | null;
   readonly preventDefault?: boolean;
 };

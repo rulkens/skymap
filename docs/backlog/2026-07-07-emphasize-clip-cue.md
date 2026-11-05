@@ -10,9 +10,9 @@ The tour wants a staggered spotlight over the Local Volume groups: dim all
 group rings/labels, then pop them to full one at a time (and back), with
 authorable overlap. No current primitive reaches ONE structure:
 
-- `fade(...)` cues drive the clip-opacity channel per `VisibilityLayerKey` —
+- `fade(...)` cues drive the clip-opacity channel per `VisibilityAddress` —
   whole-layer grain (`'structureRing'` = every ring at once).
-- `FadeId`'s structure grain is per-_category_ (`{kind:'structure', id:'group'}`
+- `FadeIdentity`'s structure grain is per-_category_ (`{ address: 'structureRing', item: 'galaxy-group' }`
   is one controller for all groups), not per-structure.
 - Serial `focus()` staggers natively but (a) the recession exemption is a
   boolean per id, so an A→B handoff _snaps_ ring/label alphas (blend stays 1,
@@ -96,7 +96,7 @@ timeline, not the channel.
   the wiring precedent; reset sites in `resetState`/`stop`/`destroy`.
 - `src/@types/animation/SceneEffect.ts` — the cue union; `effectHelpers.ts`
   `focus()` for the `FocusId` addressing + resolution pattern.
-- `src/services/engine/presentation/produceStructureMarkers.ts` (~line 140)
+- `src/layers/structure/present/produceStructureMarkers.ts` (~line 140)
   and `produceStructureLabels.ts` (~line 165) — the recession composition the
   lerp slots into.
 - First consumer: staggered group highlights in

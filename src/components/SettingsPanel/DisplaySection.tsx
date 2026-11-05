@@ -1,4 +1,3 @@
-// src/components/SettingsPanel/DisplaySection.tsx
 /**
  * DisplaySection — presentational component for the Display settings section
  * inside the SettingsPanel.
@@ -9,9 +8,7 @@
  * and "HDR" (both use the same master-enable header-toggle idiom `FlowSection`
  * uses; HDR's toggle is additionally `disabled` when `hdrCapable` is false, so
  * a user on an SDR display sees why it can't be flipped rather than a toggle
- * that silently does nothing). Further subgroups (e.g. the Earth
- * atmosphere-exposure disclosure) are passed in as `children` and rendered
- * below, so Display need not drill their props. Isolating this into its own
+ * that silently does nothing). Isolating this into its own
  * component ensures a change here re-renders ONLY this section rather than
  * the entire HUD.
  *
@@ -33,9 +30,8 @@
  */
 
 import { memo } from 'react';
-import type { ReactNode } from 'react';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import { orientationFrameLabel } from '../../data/orientation/orientationFrameLabel';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
@@ -114,8 +110,6 @@ export type DisplaySectionProps = {
   bloomThreshold: number;
   /** Called with the new threshold as the slider drags. */
   onBloomThresholdChange: (next: number) => void;
-  /** Nested subgroups rendered below the tone-curve dropdown (e.g. Earth). */
-  children?: ReactNode;
 };
 
 // ── DisplaySection ─────────────────────────────────────────────────────────────
@@ -147,7 +141,6 @@ function DisplaySection({
   onBloomStrengthChange,
   bloomThreshold,
   onBloomThresholdChange,
-  children,
 }: DisplaySectionProps) {
   return (
     <CollapsibleSection title="Display">
@@ -279,8 +272,6 @@ function DisplaySection({
           />
         </div>
       </CollapsibleSection>
-
-      {children}
     </CollapsibleSection>
   );
 }

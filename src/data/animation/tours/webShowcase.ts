@@ -23,10 +23,10 @@
  *      Scene strip + camera move; no focus change.
  *   2. Virgo Cluster — `flyAndFocusOnClip` fires a `focus(id)` cue at beat
  *      start, then moves the camera in. The focus cue isolates the cluster:
- *      members stay bright, the rest of the sky recedes via `focusRecession`.
+ *      members stay bright, the rest of the sky recedes via `emphasisOf`.
  *   3. M87 Galaxy — `flyToClip` moves only the camera to M87 (Virgo A, the
  *      cluster's dominant member). It does NOT dispatch a focus cue, so
- *      `selection.focus` stays on `cluster-virgo-m87` from beat 2. M87 —
+ *      `selection.focus` stays on `galaxy-cluster-virgo-m87` from beat 2. M87 —
  *      a cluster member — rides bright under the isolation dim while the rest
  *      of the sky remains receded. The dive is the focus composition doing its
  *      job: beat 2 owns the "what is focused", beat 3 owns "where the camera is".
@@ -55,7 +55,10 @@ const establishTheWeb: ClipData = (() => {
   const fly = flyToClip(focusId('milkyWay'));
   return {
     ...fly,
-    timeline: [hide(['volumesMaster', 'filaments', 'surveyLabel'], 0), ...fly.timeline],
+    timeline: [
+      hide(['cosmicWebDensity', 'cosmicWebFilaments', 'label:famousGalaxy'], 0),
+      ...fly.timeline,
+    ],
   };
 })();
 
@@ -66,8 +69,10 @@ export const webShowcase: Tour = {
     {
       caption: {
         title: 'The Milky Way',
-        body: "Home — a few hundred billion stars, and the one vantage point in this entire map you're looking out **from**.",
-        position: 'bottom-left',
+        lines: [
+          'Home — a few hundred billion stars,',
+          "and the one vantage point in this entire map you're looking out from.",
+        ],
       },
       dwellClip: dwellDrift(8),
       enterClip: establishTheWeb,
@@ -75,17 +80,21 @@ export const webShowcase: Tour = {
     {
       caption: {
         title: 'The Virgo Cluster',
-        body: 'Two thousand galaxies bound by gravity — the dense heart of the supercluster we call **home**, 54 million light-years away.',
-        position: 'bottom-left',
+        lines: [
+          'Two thousand galaxies bound by gravity',
+          '— the dense heart of the supercluster we call home, 54 million light-years away.',
+        ],
       },
       dwellClip: dwellDrift(10),
-      enterClip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
+      enterClip: flyAndFocusOnClip(focusId('galaxy-cluster-virgo-m87')),
     },
     {
       caption: {
         title: 'M87',
-        body: "The cluster's giant — a trillion stars around a black hole six billion times the Sun's mass, the **first ever photographed**.",
-        position: 'bottom-right',
+        lines: [
+          "The cluster's giant — a trillion stars",
+          "around a black hole six billion times the Sun's mass, the first ever photographed.",
+        ],
       },
       dwellClip: dwellDrift(10),
       enterClip: flyToClip(focusId('m87')),

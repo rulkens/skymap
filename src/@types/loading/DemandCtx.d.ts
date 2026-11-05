@@ -18,7 +18,7 @@
  *      master-enable toggles (`filaments.enabled`, `volumes.enabled`,
  *      `milkyWay.enabled`).  Most predicates start here.  Per-item gates
  *      read the type's items map directly — volumes via
- *      `settings.volumes.items[id]?.enabled`, structures via
+ *      `settings.cosmicWebDensity.items[id]?.enabled`, structures via
  *      `settings.structures.items[cat].enabled`, galaxy catalogs via
  *      `settings.galaxyCatalogs.items[id].enabled` (wiring rows hoist the
  *      source → galaxy-catalog-id registry mapping at construction).  The galaxy catalog
@@ -59,6 +59,15 @@
  *      the fly-to-Earth tween all converge to `CameraPose`), and a
  *      one-frame-stale position is immaterial for a multi-frame async fetch.
  *
+ *   5. `tier` — the live data-volume preset. A catalog whose tier target is 0
+ *      (SDSS at `small`) has no file at that tier, so its row gates on this
+ *      to never demand it and to release a resident copy on a downward swap.
+ *
+ *   6. `selectedKinds` — the kinds in the select and focus slots. A deep link
+ *      to a satellite starts far from Earth, so its catalog must load on the
+ *      selection alone or the focus never resolves. Hover never counts: a
+ *      sweep across dots must not load anything.
+ *
  * Singleton overlay layers (filaments, milkyWay, flow) need no surface of
  * their own: their enable gate lives in `settings.<layer>.enabled`, read
  * through surface 1. See
@@ -76,7 +85,9 @@ import type { EngineSettingsState } from '../settings/EngineSettingsState';
 import type { AssetKey } from './AssetKey';
 import type { LoadState } from './LoadState';
 import type { UiState } from '../ui/UiState';
+import type { Tier } from '../data/Tier';
 import type { Vec3 } from '../math/Vec3';
+import type { SelectionRef } from '../engine/SelectionRef';
 
 export type DemandCtx = {
   /** Read-only view of the user-facing rendering settings. */
@@ -109,4 +120,8 @@ export type DemandCtx = {
    * proximity reads the same body positions the frame drew.
    */
   simDays: number;
+  /** The live tier (`state.tier`). */
+  tier: Tier;
+  /** Kinds in the select and focus slots; hover never counts. */
+  selectedKinds: ReadonlySet<SelectionRef['type']>;
 };

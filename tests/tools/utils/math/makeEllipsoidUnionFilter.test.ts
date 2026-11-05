@@ -34,10 +34,11 @@ describe('makeEllipsoidUnionFilter', () => {
     // deep inside the feather band, so keepProb saturates at 1 and rng() < 1 is
     // always true regardless of which hash the seed selects.
     for (const seed of [1, 42, 20260709, 999999]) {
-      const keep = makeEllipsoidUnionFilter(
-        [{ center: CENTRE, radii: [95, 130, 55] }],
-        { blendMpc: 100, falloffMpc: 25, seed },
-      );
+      const keep = makeEllipsoidUnionFilter([{ center: CENTRE, radii: [95, 130, 55] }], {
+        blendMpc: 100,
+        falloffMpc: 25,
+        seed,
+      });
       expect(keep(RA, DEC, Z)).toBe(true);
     }
   });
@@ -46,10 +47,11 @@ describe('makeEllipsoidUnionFilter', () => {
     // z=0.5 sits ~1500 Mpc beyond the shell in the same sky direction, so the
     // union field is large-positive → keepProb 0 → rejected for any seed.
     for (const seed of [1, 42, 20260709]) {
-      const keep = makeEllipsoidUnionFilter(
-        [{ center: CENTRE, radii: [95, 130, 55] }],
-        { blendMpc: 100, falloffMpc: 25, seed },
-      );
+      const keep = makeEllipsoidUnionFilter([{ center: CENTRE, radii: [95, 130, 55] }], {
+        blendMpc: 100,
+        falloffMpc: 25,
+        seed,
+      });
       expect(keep(RA, DEC, 0.5)).toBe(false);
     }
   });
@@ -58,10 +60,11 @@ describe('makeEllipsoidUnionFilter', () => {
     // Build an ellipsoid whose centre is 1000 Mpc away from where the query
     // (RA, DEC, Z) lands, so the query is far outside → rejected.
     const farCentre: Vec3 = [CENTRE[0] + 1000, CENTRE[1], CENTRE[2]];
-    const keep = makeEllipsoidUnionFilter(
-      [{ center: farCentre, radii: [95, 130, 55] }],
-      { blendMpc: 100, falloffMpc: 25, seed: 7 },
-    );
+    const keep = makeEllipsoidUnionFilter([{ center: farCentre, radii: [95, 130, 55] }], {
+      blendMpc: 100,
+      falloffMpc: 25,
+      seed: 7,
+    });
     expect(keep(RA, DEC, Z)).toBe(false);
   });
 
@@ -108,10 +111,11 @@ describe('makeEllipsoidUnionFilter', () => {
     // per-row hash. (A handful of individual points may coincide; the full
     // pattern must differ.)
     const mk = (seed: number) =>
-      makeEllipsoidUnionFilter(
-        [{ center: CENTRE, radii: [50, 50, 50] }],
-        { blendMpc: 100, falloffMpc: 1000, seed },
-      );
+      makeEllipsoidUnionFilter([{ center: CENTRE, radii: [50, 50, 50] }], {
+        blendMpc: 100,
+        falloffMpc: 1000,
+        seed,
+      });
     const a = mk(1);
     const b = mk(2);
     const pattern = (keep: (ra: number, dec: number, z: number) => boolean) => {

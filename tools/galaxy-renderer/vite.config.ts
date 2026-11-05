@@ -15,8 +15,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
-import { staticBuildExtension } from 'wesl-plugin';
-import viteWesl from 'wesl-plugin/vite';
+import { weslStaticPlugin } from '../utils/vite/weslStaticPlugin.ts';
 
 import { DEV_PORTS } from '../utils/io/devPorts.ts';
 import { distDir } from '../utils/io/distDir.ts';
@@ -39,20 +38,20 @@ export default defineConfig(({ command }) => ({
     // through symlinks at src/engine/shaders/<family> — one source, no copy.
     // WESL package paths are root-driven (an include glob alone can discover a
     // file outside the root but cannot bind package::<family>::, and two
-    // viteWesl instances conflict — the first claims every ?static load), so
+    // WESL plugin instances conflict — the first claims every ?static load), so
     // the file must APPEAR inside this tool's root. Each alias rewrites an
     // import targeting .../shaders/<family>/*.wesl onto the symlinked path so
-    // the wesl-plugin sees an id inside its root and names the module
+    // weslStaticPlugin sees an id inside its root and names the module
     // package::<family>::...; preserveSymlinks stops Vite from realpath-ing
     // that id back out to src/services/..., which would undo the alias.
     //
     // The aliases are needed because the RUNTIME modules this tool reuses
-    // (createGenerationPipelines, bloomPyramid, compositor, additiveUpsample,
-    // and — for its uniform-buffer size const — milkyWayCloudRenderer) spell
-    // their `?static` imports relative to the runtime tree. A shader this tool
-    // imports by its own relative path is already inside the root and needs no
-    // alias — that is why `lib/camera.wesl` and `lib/tonemap.wesl`, reached
-    // only through the linker's `package::lib::…`, have no entry here.
+    // (createGenerationPipelines, bloomPyramid, compositor, additiveUpsample)
+    // spell their `?static` imports relative to the runtime tree. A shader
+    // this tool imports by its own relative path is already inside the root
+    // and needs no alias — that is why `lib/camera.wesl` and
+    // `lib/tonemap.wesl`, reached only through the linker's
+    // `package::lib::…`, have no entry here.
     //
     // `milkyWay` is one family entry covering all three tier dirs: the trailing
     // capture takes the rest of the path, so `sprites/`, `field/` and `ismMap/`
@@ -63,11 +62,5 @@ export default defineConfig(({ command }) => ({
       replacement: `${resolve(import.meta.dirname, `src/engine/shaders/${family}`)}/$2`,
     })),
   },
-  plugins: [
-    viteWesl({
-      extensions: [staticBuildExtension],
-      weslToml: resolve(import.meta.dirname, 'wesl.toml'),
-    }),
-    react(),
-  ],
+  plugins: [weslStaticPlugin({ weslToml: resolve(import.meta.dirname, 'wesl.toml') }), react()],
 }));

@@ -10,11 +10,6 @@ export const MILLIQUAS_ENTRY = {
   allSky: true,
   bearsLabel: false,
   bearsMarker: false,
-  // Visible by default: the quasar source is stable enough to ship on.
-  // It renders with the shared galaxy-billboard path (no quasar-specific
-  // visuals yet), which is acceptable for the bright low-z tail the
-  // catalog mostly shows.
-  visible: true,
   // Milliquas reaches z ~ 7 (quasars at the edge of the observable
   // universe). Hubble's law with z = 7 ⇒ ~25 Gpc, but the bulk of
   // Milliquas is at z < 3 (~12 Gpc). While the renderer uses the
@@ -30,8 +25,7 @@ export const MILLIQUAS_ENTRY = {
   // expressed in ramp-position units over a span of only 2.0, but
   // Milliquas redshifts run z ≈ 1–7, so any non-zero coefficient
   // subtracts most of the range and clamps the whole catalog to the
-  // blue floor. The correction stays off until a quasar-specific
-  // bias-correction subsystem wires Milliquas in with its own QLF.
+  // blue floor. The correction stays off until the bake gets a quasar LF.
   colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.0 },
   // Milliquas's quasar-completeness limit varies wildly by parent
   // galaxy catalog (SDSS DR16Q reaches r ~ 22, DESI EDR ~ 23, bright optical/

@@ -1,5 +1,5 @@
 /**
- * buildPathTrack — compile a `flyPath`'s waypoints into an evaluable `PathTrack`.
+ * buildPathTrack — compile a `flyPath`'s waypoints into an evaluable `CompositeTrack`.
  *
  * This is where the flythrough cinematography lives. It runs ONCE at clip
  * compile time and returns a `sample(localSec)` closure the per-frame evaluator
@@ -60,8 +60,8 @@
  * Over-pinned legs (pinned seconds ≥ total) throw here, loudly, at compile time.
  */
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { PathTrack, PathSample } from '../../../@types/animation/CompiledClip';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
@@ -71,10 +71,10 @@ import type { PassByDir } from '../../../@types/animation/PassByDir';
 import { catmullRomNonUniform } from '../../../utils/math/catmullRomNonUniform';
 import { causalHermiteNonUniform } from '../../../utils/math/causalHermiteNonUniform';
 import { monotoneCubic } from '../../../utils/math/monotoneCubic';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
-import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../utils/camera/frameUp';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { yawPitchToDir } from '../../../utils/camera/orbitPose/yawPitchToDir';
+import { imagePlaneBasis } from '../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
@@ -86,6 +86,7 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from './pathDefaults';
 import { EASE } from './ease';
+import type { CompositeSample } from '../../../@types/animation/compiledClip/CompositeSample';
 
 /** A waypoint after focus resolution — always concrete (`at` + `distance`). */
 type AtWaypoint = {
@@ -217,7 +218,10 @@ function passByDirVec(
   }
 }
 
-export function buildPathTrack(params: BuildParams): PathTrack {
+// A flyPath's arc length couples all four aim/position channels; roll stays with the base layer.
+const FLY_PATH_CHANNELS: CompositeTrack['channels'] = ['target', 'distance', 'yaw', 'pitch'];
+
+export function buildPathTrack(params: BuildParams): CompositeTrack {
   const { start, startSec, over, ease, waypoints, align, rampSec, linger, frameBasis } = params;
   // Normalize the basis + its causal-only knobs. centripetal carries neither, so
   // turnDelay is irrelevant and lookAhead is forced to 0 (no lead); the causal
@@ -605,7 +609,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     };
   };
 
-  const sample = (localSec: number): PathSample => {
+  const sample = (localSec: number): CompositeSample => {
     const t = paramAtLocalSec(localSec);
     const pose = poseAtTau(t);
     const aim = aheadAim(localSec, pose.yaw, pose.pitch);
@@ -630,5 +634,5 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     };
   };
 
-  return { startSec, endSec: startSec + totalSec, sample };
+  return { startSec, endSec: startSec + totalSec, channels: FLY_PATH_CHANNELS, sample };
 }

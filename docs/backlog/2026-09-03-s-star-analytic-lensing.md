@@ -9,7 +9,7 @@ closed unmerged, branch kept). User ruling: not now.
 1. **The S-stars never enter the sky cubemap.** `starPointsPass` no longer
    carries `skyCapture` at all (removed once it was confirmed dead weight):
    each capture face's synthetic pose used a placeholder `distance: 1` (Mpc)
-   to land the eye (`cubemapFaceContext.ts`), and the layer's
+   to land the eye (`cubemapCaptureFrame.ts`), and the layer's
    `ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC` gate (~0.23 Mpc) rejected
    it on every face, so the flag never drew anything. The lens pass still
    shows no S-star behind the hole, contradicting the grill ruling that "a
@@ -82,6 +82,13 @@ closed unmerged, branch kept). User ruling: not now.
    real small distance.
 5. Interplay with `2026-09-02-lens-crossfade-duplicate-points.md`: that item
    fades the direct roster; this one hard-swaps the S-stars. Keep them agreeing.
+
+## Note (2026-09-22, `blackHoles` Layer ground prep)
+
+The S-star lensing rider rides the hole's `SlabRow` (the blackHoles Layer's
+`blackHoleSlabRow`), filtering `view.slab.frame.hostId === 'galactic-centre'`;
+no contract field — see `2026-09-22-black-holes-layer-design.md` §2.5. The
+S-stars' orbit `focusId` is `'galactic-centre'` too.
 
 ## Follow-on
 

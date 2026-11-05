@@ -2,15 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
-import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const hypot3 = (v: readonly [number, number, number]) => Math.hypot(v[0], v[1], v[2]);
 
 // Position + orientation live in each body's derived BodyState, not the record.
 const states = deriveBodyStates(CONST_J2000);
-const stateOf = (id: string) => states.get(id)!;
+const stateOf = (id: string) => states.get(asSceneBodyId(id))!;
 
 describe('SCENE_PLANETS', () => {
   it("Jupiter's heliocentric distance is Jovian-scale (~5.2 AU)", () => {
@@ -50,12 +50,9 @@ describe('SCENE_PLANETS', () => {
     // the expectation is built from the authored ROTATION_ELEMENTS table through
     // the same util the derive calls, so this exercises the WIRING (does Saturn's
     // orientation come from its rotation elements?) rather than restating a
-    // matrix. A textured body carries its baked IAU rotation; an irregular moon
-    // with no registry row (Phobos) carries the identity, the honest "no facing
-    // modelled" value.
+    // matrix.
     const saturnRow = rotationRowById('saturn')!;
-    if (!('poleRaDeg' in saturnRow)) throw new Error('saturn must be an IAU-pole row');
+    if (!('primeMeridianDeg' in saturnRow)) throw new Error('saturn must be an IAU-pole row');
     expect(stateOf('saturn').orientation).toEqual(rotationFromIau(saturnRow));
-    expect(stateOf('phobos').orientation).toEqual([...IDENTITY_MAT3]);
   });
 });

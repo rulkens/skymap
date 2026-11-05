@@ -38,7 +38,7 @@ export type AssetSlot<T, Req> = {
    *
    * Read by the demand loop's drift edge: when the request a resident slot
    * should hold no longer matches the one it was last loaded with, the slot
-   * reloads in place. Release is distance eviction only.
+   * reloads in place. Release is eviction only (distance or tier).
    */
   lastRequest(): Req | null;
   /**
@@ -60,7 +60,7 @@ export type AssetSlot<T, Req> = {
    */
   startedAtMs(): number | null;
   /**
-   * The evict edge of two-way demand — distance eviction only; a drifted
+   * The evict edge of two-way demand — eviction only (distance or tier); a drifted
    * request reloads the slot in place instead. From any state: aborts any
    * in-flight fetch and drops the slot to `idle`, bumping the generation so a
    * commit that resolves after this call cannot resurrect the slot.

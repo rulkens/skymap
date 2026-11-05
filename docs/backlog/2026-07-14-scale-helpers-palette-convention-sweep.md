@@ -16,7 +16,7 @@ Sites inlining the conversion as of 2026-07-14 (grep `Math.PI / 180` /
 - `src/utils/math/raDecDistToEqCart.ts`
 - `src/utils/math/eqRaDecToUnitCart.ts`
 - `src/utils/math/galacticToCartesian.ts`
-- `src/services/engine/camera/cameraFraming.ts:36` (`DEFAULT_FOV_Y_RAD`)
+- `src/services/engine/camera/framing/cameraFraming.ts:36` (`DEFAULT_FOV_Y_RAD`)
 
 Each is a one-line idiom that isn't lying to anyone — migrate when the file is
 next touched, or in one small mechanical PR. Same for any component-wise vec3

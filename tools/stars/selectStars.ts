@@ -56,25 +56,12 @@ import type { Vec3 } from '../../src/@types/math/Vec3';
  * The pre-quantization payload every downstream stage needs: a heliocentric
  * position in parsecs (the inputs arrive already positioned — this function is
  * pure over its inputs and never reprojects RA/Dec), the absolute magnitude and
- * BP−RP colour used for sizing and tinting, plus two build-tag fields the tier
- * truncation reads downstream — the apparent magnitude (its brightest-first
- * sort key) and whether the star is an always-kept supplement.
- *
- * `selectStars` never interprets `appMag`/`isSupplement`; it only forwards them,
- * exactly as it forwards `absMag`/`bpRp`. Carrying them on the row (rather than
- * re-joining them to the deduped output through a side-table) is deliberate: the
- * real build deduplicates ~16.8 M stars, and any per-star `Map`/`Set` keyed on
- * them would blow V8's 2^24-entry cap — see the note on `toStarInput` and the
- * `buildStars` module header.
+ * BP−RP colour used for sizing and tinting.
  */
 export type StarInput = {
   position: Vec3;
   absMag: number;
   bpRp: number;
-  /** Apparent magnitude — the tier truncation's brightest-first sort key. */
-  appMag: number;
-  /** GCNS-only faint nearby star, exempt from per-tier apparent-mag truncation. */
-  isSupplement: boolean;
 };
 
 /** A distance-resolved Gaia row, keyed by its DR3 `source_id`. */
@@ -103,14 +90,10 @@ export type SelectStarsResult = {
 const toStarInput = (row: StarInput): StarInput => ({
   // `position` is carried through BY REFERENCE, not copied — a defensive copy of
   // all ~16.8 M position arrays would cost gigabytes for no gain, since callers
-  // treat these outputs as read-only. The truncation tag rides on the row
-  // itself (`appMag`/`isSupplement`), so it survives the dedup with no side-table
-  // to re-join against.
+  // treat these outputs as read-only.
   position: row.position,
   absMag: row.absMag,
   bpRp: row.bpRp,
-  appMag: row.appMag,
-  isSupplement: row.isSupplement,
 });
 
 export function selectStars(inputs: SelectStarsInputs): SelectStarsResult {

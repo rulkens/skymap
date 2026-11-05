@@ -1,4 +1,3 @@
-// src/components/Splash/SplashProgress.tsx
 /**
  * SplashProgress — 1 px hairline at the viewport's bottom edge plus a
  * single line of mono text above it. Replaces the inline ProgressRow
@@ -27,9 +26,7 @@ function formatMB(bytes: number): string {
 function SplashProgress({ progress }: SplashProgressProps): ReactNode {
   if (!progress) return null;
   const indeterminate = progress.totalBytes === 0;
-  const fraction = indeterminate
-    ? 0
-    : Math.min(1, progress.loadedBytes / progress.totalBytes);
+  const fraction = indeterminate ? 0 : Math.min(1, progress.loadedBytes / progress.totalBytes);
   const pct = Math.round(fraction * 100);
   return (
     <div

@@ -1,0 +1,13 @@
+/**
+ * DriverActivity — the per-frame facts a driver row's `isActive` reads beyond
+ * the store, built once by `stepCameraRuntime` so every row sees the same bag.
+ */
+
+export type DriverActivity = {
+  // The follow memory saturated last frame; only `followApproach` reads it.
+  readonly approachDone: boolean;
+  // An exhibit row is active, so it reads the drag itself; `orbitDrag` would orbit a frozen point.
+  readonly dragClaimed: boolean;
+  // The navigator still has velocity after this frame's input; only the openspace coast reads it.
+  readonly navMoving: boolean;
+};

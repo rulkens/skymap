@@ -355,14 +355,14 @@ function famousHopClip(state: EngineState, ids: string[]): ClipData {
 
 The moment a runtime decision enters — *orbit only once the thumbnail has loaded*
 — it crosses into Layer 2: a saga composing small `flyTo` / `orbit` clips so it
-can `waitUntil`:
+can `waitUntilSaga`:
 
 ```ts
 function* famousHopTour(ids: string[]) {
   for (const id of ids) {
     const g = yield* call(resolveFamous, id);
     yield* call(playClip, flyTo(g));                  // fly to it
-    yield* call(waitUntil, () => thumbnailReady(id)); // ← the runtime decision that makes it a saga
+    yield* call(waitUntilSaga, () => thumbnailReady(id)); // ← the runtime decision that makes it a saga
     yield* call(playClip, orbit(g, 3));               // orbit the now-resolved image
   }
 }
@@ -793,7 +793,7 @@ type BeatData = {
 };
 
 function* visitBeat(beat: BeatData) {
-  yield* call(waitUntil, () => focusReady(beat.focus));           // reactive load-wait
+  yield* call(waitUntilSaga, () => focusReady(beat.focus));           // reactive load-wait
   yield* call(playClip, flyToClip(beat));                         // establishing move — plays out (awaited)
   for (const e of beat.effects ?? []) yield* put(e);             // per-beat intents — plain actions, same as the UI
   yield* put(showCaption(beat.caption));
@@ -857,7 +857,7 @@ scene by dispatching exactly what a user click would, so every reconcile saga
 
 | Tour need | Mechanism |
 | --- | --- |
-| Don't start a beat before its data loads | `call(waitUntil, () => focusReady(...))` |
+| Don't start a beat before its data loads | `call(waitUntilSaga, () => focusReady(...))` |
 | Auto-advance, but let the viewer click "next" | `race({ timeout: delay(...), next: take(TOUR_ADVANCE), drift: call(playClip, dwellDrift) })` |
 | Dwell is never frozen | a perpetual `dwellDrift` clip in the race — always loses, cancelled on advance |
 | End the tour (explicit stop control, not camera input) | `take(TOUR_EXIT)` races the beat loop → run cancelled → the `finally` runs |

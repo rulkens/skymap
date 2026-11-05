@@ -2,18 +2,15 @@
  * CoreEngineSliceState — the shape of the Redux 'engine' slice's core fields.
  * `EngineSliceState` widens this with each Layer's published facts.
  *
- * `sourceCounts`/`structureCounts` are sparse (Partial)
- * because the engine reports them one source/structure at a time; a missing
- * key means "not yet reported", not "zero".
+ * `sourceCounts` is sparse (Partial) because the engine reports it one source
+ * at a time; a missing key means "not yet reported", not "zero".
  */
 
 import type { EngineStatus } from '../engine/EngineStatus';
 import type { ScaleInfo } from '../engine/ScaleInfo';
 import type { SourceType } from '../data/SourceType';
-import type { StructureId } from '../data/structure/StructureId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
-import type { FamousStarMetaEntry } from '../loading/FamousStarMetaEntry';
-import type { StructureSearchEntry } from '../engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../engine/layer/LayerSearchEntry';
 
 export type CoreEngineSliceState = {
   status: EngineStatus;
@@ -37,37 +34,13 @@ export type CoreEngineSliceState = {
    */
   hdrCapable: boolean;
   sourceCounts: Partial<Record<SourceType, number>>;
-  structureCounts: Partial<Record<StructureId, number>>;
   loadProgress: LoadProgressState | null;
   /**
-   * The command palette's structure search index — every loaded structure
-   * (anchors + bulk) projected down to its lean searchable fields. Published
-   * by `wireStructureProjection` alongside `engineStructureCountsChanged`, on
-   * the same boot + group-change schedule, so a Cmd+K opened before any
-   * catalog lands still gets the anchor set.
+   * Palette rows published by each Layer's `search` feed, keyed by Layer name
+   * — a whole-snapshot replace per yield, so a Layer that clears its rows
+   * yields an empty array rather than deleting a key; only teardown drops the
+   * Layer's key (`layerSearchCleared`). `selectLayerSearchRows`
+   * flattens it for the ranker.
    */
-  structureSearchList: readonly StructureSearchEntry[];
-  /**
-   * Curated JSON sidecar payloads that the React layer selects — narrative and
-   * physical metadata not carried in a catalog's binary rows. Each field is
-   * written wholesale by its own asset slot when that sidecar's fetch settles,
-   * and is empty both before the slot settles and after a failed fetch, so no
-   * field needs a separate "loaded" flag beside its array.
-   *
-   * Grouping them keeps the qualifier in the key path instead of repeating it
-   * through every symbol, and gives the next sidecar a home rather than another
-   * flat field on `CoreEngineSliceState`. React-read is the criterion, not
-   * curated-ness: `structures_meta.json` is a curated sidecar too, but the
-   * engine is what consumes it, so its payload lives in `structureStore`.
-   */
-  meta: {
-    /**
-     * Famous-star narrative/physical metadata (`famous_stars_meta.json`), written
-     * wholesale by `engineFamousStarsMetaReported` when the sidecar's asset slot
-     * settles, empty both before that and after a failed fetch, which is the
-     * InfoCard's headline-alone path. The famous-GALAXY sidecar's twin left with
-     * the galaxyCatalog Layer, which publishes it as a fact.
-     */
-    readonly famousStars: readonly FamousStarMetaEntry[];
-  };
+  layerSearch: Record<string, readonly LayerSearchEntry[]>;
 };

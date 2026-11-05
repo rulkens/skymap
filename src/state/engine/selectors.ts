@@ -22,6 +22,8 @@
  * framework-agnostic.
  */
 
+import { createSelector } from '@reduxjs/toolkit';
+
 import { engineRoute } from '../../store/constants';
 import type { RootState } from '../../store/types';
 import type { CoreEngineSliceState } from '../../@types/store/CoreEngineSliceState';
@@ -36,6 +38,7 @@ import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMet
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
+import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 
 const selectEngine = (state: RootState): CoreEngineSliceState => state[engineRoute];
 
@@ -44,15 +47,19 @@ const selectEngine = (state: RootState): CoreEngineSliceState => state[engineRou
  * `createLayers` when the engine bootstraps, so it is absent for the first
  * frames the shell renders. The reducer cannot seed it (that import closes D1's
  * module cycle), so the absence is read here rather than asserted away — and the
- * cast lives here, so `Partial` is the only typed path to a facts key.
+ * cast lives here, so `Partial` is the only typed path to a facts key. Exported for
+ * a Layer's own `ui/` selectors, whose fact types core must not import.
  */
-const selectEngineFacts = (state: RootState): Partial<EngineSliceState> =>
+export const selectEngineFacts = (state: RootState): Partial<EngineSliceState> =>
   selectEngine(state) as Partial<EngineSliceState>;
 
 /** Stable identities for the pre-seed window, so a subscriber sees no spurious change. */
 const NO_FAMOUS_META: readonly FamousGalaxyMetaEntry[] = [];
+const NO_FAMOUS_STARS_META: readonly FamousStarMetaEntry[] = [];
 const NO_PROVENANCE: Partial<Record<SourceType, ProvenanceCounts>> = {};
 const NO_ALIAS_INDEX: readonly AliasIndexEntry[] = [];
+const NO_STRUCTURE_COUNTS: Partial<Record<StructureId, number>> = {};
+const NO_STRUCTURE_SEARCH_LIST: readonly StructureSearchEntry[] = [];
 
 export const selectEngineStatus = (state: RootState): EngineStatus => selectEngine(state).status;
 
@@ -61,8 +68,16 @@ export const selectScale = (state: RootState): ScaleInfo => selectEngine(state).
 export const selectSourceCounts = (state: RootState): Partial<Record<SourceType, number>> =>
   selectEngine(state).sourceCounts;
 
+/** The structure Layer's counts, on the pre-seed contract of `selectFamousGalaxiesMeta`. */
 export const selectStructureCounts = (state: RootState): Partial<Record<StructureId, number>> =>
-  selectEngine(state).structureCounts;
+  selectEngineFacts(state).structure?.counts ?? NO_STRUCTURE_COUNTS;
+
+/**
+ * The structure Layer's bulk-slot status; `'idle'` before the seed, as an
+ * undemanded slot must not hold a focus deferral.
+ */
+export const selectStructureBulk = (state: RootState) =>
+  selectEngineFacts(state).structure?.bulk ?? 'idle';
 
 /** The galaxyCatalog Layer's published tally (Ruling 12), empty until its first catalog lands. */
 export const selectProvenanceCounts = (
@@ -74,12 +89,21 @@ export const selectLoadProgress = (state: RootState): LoadProgressState | null =
   selectEngine(state).loadProgress;
 
 /**
- * The command palette's structure search index — published by
- * `wireStructureProjection` at boot (anchors) and on every later group
- * change (the bulk catalog landing or clearing).
+ * The command palette's structure search index, a structure Layer fact on the
+ * same pre-seed contract: the anchors from boot, the bulk catalog once it lands.
  */
 export const selectStructureSearchList = (state: RootState): readonly StructureSearchEntry[] =>
-  selectEngine(state).structureSearchList;
+  selectEngineFacts(state).structure?.searchList ?? NO_STRUCTURE_SEARCH_LIST;
+
+/**
+ * Every Layer's published palette rows, flattened for the ranker. The one
+ * `createSelector` here: the flatten mints a new array, which as a plain arrow
+ * would re-fire the palette's `useMemo` on every unrelated store write.
+ */
+export const selectLayerSearchRows = createSelector(
+  [(state: RootState) => selectEngine(state).layerSearch],
+  (byLayer): readonly LayerSearchEntry[] => Object.values(byLayer).flat(),
+);
 
 /**
  * Famous-galaxy metadata sidecar, published as a galaxyCatalog fact (Ruling 6):
@@ -108,11 +132,15 @@ export const selectStructureMemberCount = (state: RootState): number | null =>
   selectEngineFacts(state).galaxyCatalog?.structureMemberCount ?? null;
 
 /**
- * Famous-star metadata sidecar, on the same contract as
- * `selectFamousGalaxiesMeta`.
+ * Famous-star metadata sidecar, published as a starCatalog fact, on the same
+ * pre-seed contract as `selectFamousGalaxiesMeta`.
  */
 export const selectFamousStarsMeta = (state: RootState): readonly FamousStarMetaEntry[] =>
-  selectEngine(state).meta.famousStars;
+  selectEngineFacts(state).starCatalog?.famousStarsMeta ?? NO_FAMOUS_STARS_META;
+
+/** Why the Debug panel's last star chunk-pool resize failed, or null. */
+export const selectStarChunkSlotsError = (state: RootState): string | null =>
+  selectEngineFacts(state).starCatalog?.chunkSlotsError ?? null;
 
 /**
  * Live distance (Mpc) from the camera to the focused scene body, or null when no

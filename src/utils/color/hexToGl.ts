@@ -29,9 +29,7 @@ export function hexToGl(hex: HexString): Vec4 {
   // Throwing rather than returning a sentinel keeps the API total —
   // every successful call returns a usable Vec4.
   if (hex.length !== 7 && hex.length !== 9) {
-    throw new Error(
-      `hexToGl: expected #RRGGBB or #RRGGBBAA, got ${hex} (length ${hex.length})`,
-    );
+    throw new Error(`hexToGl: expected #RRGGBB or #RRGGBBAA, got ${hex} (length ${hex.length})`);
   }
   const body = hex.slice(1);
   if (!/^[0-9a-fA-F]+$/.test(body)) {

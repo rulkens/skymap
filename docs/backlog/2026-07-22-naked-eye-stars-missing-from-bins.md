@@ -1,4 +1,4 @@
-# ~24 naked-eye constellation stars absent from the star bins
+# ~24 naked-eye constellation stars absent from the star catalogue
 
 **Found:** 2026-07-22, during the constellations build (`tools/stars-rs`
 constellation stage, collect-all-unresolvable-vertices output).
@@ -33,5 +33,5 @@ Bin-content policy, not a bug fix: either
 2. accept the gap and keep the override seed as the permanent mechanism.
 
 Option 1 also lets the corresponding `constellation_overrides` entries be
-deleted (the resolver would find the real stars). Regenerating bins after any
-change: `npm run build-stars-rs` + `sync-r2-secure` from the MAIN worktree.
+deleted (the resolver would find the real stars). Regenerating the star data after any
+change: `npm run build-stars` (TypeScript, 16 GB heap) + `sync-r2-secure` (the chunk bulk group) from the MAIN worktree; the Rust build writes only the v1 SKST tiers.

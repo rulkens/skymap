@@ -21,7 +21,8 @@
  *       -2  0  +2                   0  0  0
  *       -1  0  +1                  +1 +2 +1
  *
- * Height is normalized to [0,1] (byte / 255) so `exaggeration` means the same
+ * Height is normalized to [0,1] (value / 255; a float grid on the same 0-255 scale
+ * avoids terracing where 8 bits are too coarse) so `exaggeration` means the same
  * thing regardless of the source's bit depth, and each weighted sum is divided
  * by 8 (the kernel's one-sided weight total, 1+2+1 = 4, times the ±1 central
  * span) to read as a per-texel derivative.
@@ -75,8 +76,9 @@
 export const DEFAULT_EXAGGERATION = 4;
 
 /**
- * Per-body gradient-gain override for the normal bake. A body ABSENT from this
- * table bakes at DEFAULT_EXAGGERATION — the data-gate shape of LIMB_DARKENING_PARAMS
+ * Per-body gradient-gain override for the normal bake.
+ * The bake maps each body's radius range to 0-255, so gain differs per body.
+ * A body ABSENT from this table bakes at DEFAULT_EXAGGERATION — the data-gate shape of LIMB_DARKENING_PARAMS
  * (absent row ⇒ default behaviour, no branch). The Moon's low-contrast LOLA relief
  * wants a stronger gain than Earth's coastlines; the seed here is eye-tuned in the
  * F4 shader visual pass, not a fixed contract.
@@ -87,6 +89,10 @@ export const DEFAULT_EXAGGERATION = 4;
  * `tools/` test drift-catches every key against the real body registry.
  */
 export const NORMAL_EXAGGERATION: Readonly<Record<string, number>> = {
+  mimas: 64, // measured: p50 tilt 10°, p99 38° over the 2k grid, so Herschel's walls read without saturating
+  tethys: 15, // measured: p50 tilt 4°, p99 17° over the 2k grid, tuned by eye
+  dione: 7, // measured: p50 tilt 2°, p99 16°, tuned by eye; its 12 km radius range is the narrowest, so the steepest per-texel slope
+  enceladus: 8, // measured: p50 tilt 4°, p99 17° over the 4k grid, tuned by eye (5 km of relief across the 0-255 range)
   moon: 8, // seed — stronger than DEFAULT_EXAGGERATION (4); tuned by eye at the terminator in F4
 };
 
@@ -104,7 +110,7 @@ export function exaggerationFor(bodyId: string): number {
  * seam) and clamp the row (poles). Returns the byte value at the resolved texel.
  */
 function sampleWrapClamp(
-  data: Uint8Array,
+  data: ArrayLike<number>,
   width: number,
   height: number,
   col: number,
@@ -117,7 +123,7 @@ function sampleWrapClamp(
 }
 
 export function bakeNormalMap(
-  height: { readonly data: Uint8Array; readonly width: number; readonly height: number },
+  height: { readonly data: ArrayLike<number>; readonly width: number; readonly height: number },
   exaggeration: number,
 ): { data: Buffer; info: { width: number; height: number; channels: 4 } } {
   const { data, width, height: h } = height;

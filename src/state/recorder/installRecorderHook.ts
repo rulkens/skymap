@@ -8,38 +8,30 @@
  * mode this is a pure no-op — nothing is attached to `window`, no store
  * subscription is created.
  *
- * ### `ready` — a debounced predicate, not a first-true resolve
- *
- * "Capture-ready" is the debounced stability window shared with the perf
- * harness: `ready` is `whenStablyReady(store)` from `../lifecycle/whenStablyReady`,
- * whose module header explains why a first-true resolve would fire mid-bootstrap
- * (the load-progress aggregate is null before the first slot starts) and why the
- * predicate must instead HOLD for `READY_STABLE_MS`.
- *
  * ### `startTour` — dispatch the existing action, observe the slice
  *
  * No recorder-specific action exists: the hook dispatches the same
- * `startTour` creator the UI uses and resolves on the `tour.active`
- * true → false transition, which `guidedTourSaga`'s finally guarantees on
- * both natural completion and exit. Watching the slice (rather than adding a
- * "tourFinished" callback seam) keeps the recorder a plain observer of state
- * the app already maintains.
+ * `startTour` creator the UI uses and resolves on `selectTourActive`'s
+ * true → false transition (derived from the `takeover` slice), which
+ * `runTakeoverSaga`'s finally guarantees on both natural completion and exit.
+ * Watching the slice (rather than adding a "tourFinished" callback seam)
+ * keeps the recorder a plain observer of state the app already maintains.
  *
  * SINGLE-FLIGHT: `startTour` rejects synchronously when a tour is already
- * active. The watcher is `takeLatest`, and a superseding start deliberately
- * skips `tourEnded` in the cancelled run's finally — `tour.active` never
- * flips false during the handoff — so a boolean latch cannot attribute a
- * later end to the earlier caller: the first promise would silently resolve
+ * active. A superseding start deliberately skips `takeoverEnded` in the
+ * cancelled run's finally — `selectTourActive` never flips false during the
+ * handoff — so a boolean latch cannot attribute a later end to the earlier
+ * caller: the first promise would silently resolve
  * when the SECOND tour finished. Rejecting loudly beats reporting the wrong
  * tour as done; the harness records takes strictly one at a time anyway.
  *
  * `startClip`'s guard cannot rely SOLELY on `runTour`'s store-state check.
  * `camera.clip` is only written by `clipStarted`, which `playClip` dispatches
- * AFTER `watchClipSaga`'s `waitUntil(clipFociReady && cameraRuntime)` clears —
+ * AFTER `clipBodySaga`'s `waitUntilSaga(clipFociReady && cameraRuntime)` clears —
  * an arbitrarily long window (catalog/structure loads) during which
  * `selectClipActive` reads false. A second `startClip` in that window would
- * be accepted, `takeLatest` would cancel worker A while it's still inside
- * `waitUntil` (before `playClip` ever ran, so no `[CANCEL]` hook fires and A
+ * be accepted, `watchTakeoverSaga` would cancel run A while it's still inside
+ * `waitUntilSaga` (before `playClip` ever ran, so no `[CANCEL]` hook fires and A
  * gets no `clipEnded`), and B's normal activate/end cycle would resolve BOTH
  * latches — caller A reports success for a clip it never filmed. So `startClip`
  * ALSO guards on `clipInFlight`, a flag closed over inside
@@ -59,7 +51,6 @@
  */
 
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
-import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { startTour } from '../tour/tourActions';
 import { selectTourActive } from '../tour/selectors';
 import { startClip } from '../camera/clipActions';
@@ -71,7 +62,7 @@ import type { TourId } from '../../@types/animation/tour/TourId';
 import type { BeatRange } from '../../@types/animation/tour/BeatRange';
 import type { ClipId } from '../../@types/animation/ClipId';
 
-// Dispatch the tour and resolve on the `tour.active` true → false transition.
+// Dispatch the tour and resolve on `selectTourActive`'s true → false transition.
 // Tracking "seen active" (instead of resolving on any false reading) makes
 // the wait immune to store changes that land before the saga flips the flag.
 // Single-flight: reject up front when a tour is already running — see the
@@ -104,8 +95,8 @@ export function installRecorderHook(store: AppStore): void {
   // `selectClipActive` the way `runTour` uses `selectTourActive`.
   let clipInFlight = false;
 
-  // Same seen-active latch `runTour` uses, guarding against `watchClipSaga`'s
-  // foci/runtime `waitUntil` gate: `camera.clip` stays null across however
+  // Same seen-active latch `runTour` uses, guarding against `clipBodySaga`'s
+  // foci/runtime `waitUntilSaga` gate: `camera.clip` stays null across however
   // many store updates land before the clip activates, so a latch that
   // resolved on any inactive reading would resolve instantly and film zero
   // frames. Single-flight checks BOTH `clipInFlight` (covers this window) AND
@@ -141,7 +132,6 @@ export function installRecorderHook(store: AppStore): void {
   }
 
   const hook: SkymapRecorderHook = {
-    ready: whenStablyReady(store),
     startTour: (id: TourId, beats?: BeatRange) => runTour(store, id, beats),
     startClip: (id: ClipId) => runClip(id),
   };

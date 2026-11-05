@@ -24,8 +24,14 @@ import { RenderTogglesSection } from '../../../src/components/DebugPanel/RenderT
 // reorders them: star-aggregates (Volumes & aggregates) leads, then the two
 // hdr·COSMO rows (Cosmos · HDR), then earth (Foreground bodies · depth), then
 // labels (Overlays).
-const ALL_NAMES = ['point-sprites', 'procedural-disks', 'labels', 'earth', 'star-aggregates'];
-const GROUPED_ORDER = ['star-aggregates', 'point-sprites', 'procedural-disks', 'earth', 'labels'];
+const ALL_NAMES = ['point-sprites', 'procedural-disks', 'labels-cosmo', 'earth', 'star-aggregates'];
+const GROUPED_ORDER = [
+  'star-aggregates',
+  'point-sprites',
+  'procedural-disks',
+  'earth',
+  'labels-cosmo',
+];
 
 describe('RenderTogglesSection', () => {
   it('renders one checkbox per pass name, ordered by pass group', () => {

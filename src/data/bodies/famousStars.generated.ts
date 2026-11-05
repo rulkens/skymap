@@ -6,18 +6,6 @@ import type { FamousStarRow } from '../../@types/data/FamousStarRow';
 
 export const FAMOUS_STARS_GENERATED: readonly FamousStarRow[] = [
   {
-    id: 'sun',
-    commonName: 'Sun',
-    names: ['Sun', 'Sol'],
-    constellation: 'None',
-    raDeg: 0,
-    decDeg: 0,
-    distancePc: 0,
-    absMag: 4.83,
-    temperatureK: 5772,
-    radiusSolar: 1,
-  },
-  {
     id: 'proxima-centauri',
     commonName: 'Proxima Centauri',
     names: ['Proxima Centauri', 'Alpha Centauri C', 'GJ 551', 'HIP 70890'],

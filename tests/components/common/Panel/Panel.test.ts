@@ -18,40 +18,22 @@ import { createElement } from 'react';
 import { Panel } from '../../../../src/components/common/Panel/Panel';
 
 describe('Panel', () => {
-  it('mounts closed when defaultOpen=false (body still in DOM)', () => {
-    render(
-      createElement(Panel, {
-        title: 'STATS',
-        defaultOpen: false,
-        children: createElement('span', null, 'BODY_CONTENT'),
-      }),
-    );
-    expect(screen.getByRole('button', { name: /STATS/i })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
-    // Body stays mounted in the DOM regardless of open state — the CSS
-    // grid-template-rows trick collapses its visual height to zero
-    // smoothly.  We verify the *intent* via aria-expanded above and
-    // confirm the children still exist in the tree here.
-    expect(screen.getByText('BODY_CONTENT')).toBeInTheDocument();
-  });
-
   it('toggles aria-expanded when the title button is clicked', async () => {
     const user = userEvent.setup();
     render(
       createElement(Panel, {
         title: 'STATS',
-        defaultOpen: false,
         children: createElement('span', null, 'BODY'),
       }),
     );
     const btn = screen.getByRole('button', { name: /STATS/i });
-    expect(btn).toHaveAttribute('aria-expanded', 'false');
-    await user.click(btn);
     expect(btn).toHaveAttribute('aria-expanded', 'true');
     await user.click(btn);
     expect(btn).toHaveAttribute('aria-expanded', 'false');
+    // Body stays mounted when folded; only its height collapses.
+    expect(screen.getByText('BODY')).toBeInTheDocument();
+    await user.click(btn);
+    expect(btn).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('wires aria-controls on the button to the body id', () => {

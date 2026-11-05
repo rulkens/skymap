@@ -14,24 +14,27 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
-import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
+import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/drivers/cameraEpochs';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
-import { resolveLayerOpacity } from '../../../src/services/engine/presentation/focusRecession';
-import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
-import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
+import { cosmicFlows } from '../../../src/compositions/clips/cosmicFlows';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
-import { deriveMilkyWayCloudAlpha } from '../../../src/services/engine/frame/milkyWayCloudLiveness';
-import { Source } from '../../../src/data/sources';
+import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
+import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/cloud/present/milkyWayCloudLiveness';
+import { Source } from '../../../src/data/source';
+import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
+import { gatePassByFade } from '../../../src/services/engine/layer/gatePassByFade';
+import { resolveFadeValue } from '../../../src/services/engine/presentation/resolveFadeValue';
 
 import type { ClipPlayer } from '../../../src/@types/engine/subsystems/ClipPlayer';
-import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
+import type { VisibilityAddress } from '../../../src/@types/animation/VisibilityAddress';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
-import type { FadeId } from '../../../src/@types/animation/FadeId';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
-import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
+import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
+import { galaxyRowRuntime } from '../../support/layerPickCodes';
+import { milkyWayPickCode } from '../../support/layerPickCodes';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
@@ -40,70 +43,19 @@ function makeClipStub(factor: number): ClipPlayer {
     tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })),
     stop: vi.fn<() => void>(),
     registerEndResolver: vi.fn<(onEnd: () => void) => void>(),
-    clipOpacityOf: vi.fn<(layer: VisibilityLayerKey, nowMs: number) => number>(() => factor),
+    clipOpacityOf: vi.fn<(address: VisibilityAddress, nowMs: number) => number>(() => factor),
     destroy: vi.fn<() => void>(),
   };
-}
-
-// Only the two fields `resolveLayerOpacity` reads. Cast through `unknown` because
-// the picked type still demands the full `EngineSubsystemHandles`.
-function makeResolveOpacityState(
-  fades: ReturnType<typeof createFadeRegistry>,
-  clipPlayer: ClipPlayer,
-): Pick<EngineState, 'subsystems'> {
-  return { subsystems: { fades, clipPlayer } } as unknown as Pick<EngineState, 'subsystems'>;
 }
 
 function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-// Carries only what applySceneEffect's show/hide/scene arms reach for: live
-// settings, the two fade/scheduler stubs the snap path calls, and stub gpu /
-// assetSlots bags for the demand-loaded rows' guard closures.
+// applySceneEffect's show/hide/scene arms only dispatch: the live settings are all they read.
 function makeEngineState(settings: EngineSettingsState): EngineState {
-  return {
-    settings,
-    subsystems: {
-      fades: {
-        fadeTo: vi.fn<() => Promise<void>>(() => Promise.resolve()),
-        setImmediate: vi.fn<() => void>(),
-        // null never matches a real 0/1 target, so applyIntent's skip never
-        // spuriously fires here — every call in this suite drives a fresh fade.
-        targetOf: vi.fn<() => number | null>(() => null),
-      },
-      scheduler: { requestRender: vi.fn<() => void>() },
-    },
-    gpu: { flowFieldRenderer: { fieldLoaded: () => false } },
-    assetSlots: {},
-    fadeRows: FADE_LAYERS,
-  } as unknown as EngineState;
+  return { settings } as unknown as EngineState;
 }
-
-describe('three-way opacity product: intent × focus × clip', () => {
-  it('a clip factor of 0 collapses composed alpha regardless of intent', () => {
-    const fades = createFadeRegistry({ requestRender: () => {} });
-    const handle: FadeId = { kind: 'flow' };
-    fades.register(handle, 1); // flow fully visible (intent=1)
-
-    const clipAtZero = makeClipStub(0);
-    const stateAtZero = makeResolveOpacityState(fades, clipAtZero);
-    // 1 (intent) × 1 (no focus recession for flow) × 0 (clip) = 0
-    expect(resolveLayerOpacity(stateAtZero, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0);
-  });
-
-  it('a clip factor of 1 is neutral — composed alpha is the bare intent × recession product', () => {
-    const fades = createFadeRegistry({ requestRender: () => {} });
-    const handle: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
-    fades.register(handle, 0);
-    fades.fadeTo(handle, 0.8, 0, 0); // intent = 0.8
-
-    const clipAtOne = makeClipStub(1);
-    const state = makeResolveOpacityState(fades, clipAtOne);
-    // Hand-computed: intent 0.8 × recession 1 (galaxyCatalog never recedes) × clip 1 = 0.8.
-    expect(resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0.8);
-  });
-});
 
 describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // The cosmicFlows start pose is concrete, not 'live', so `clipStarted` takes it
@@ -167,15 +119,14 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const surveyClipFactor = clipPlayer.clipOpacityOf('survey', 7_000);
     expect(surveyClipFactor).toBe(0);
 
-    // "Untouched" is the registry entry per id, NOT a blanket `true`:
-    // INITIAL_SETTINGS takes each catalog's gate from SOURCE_REGISTRY's `visible`,
+    // "Untouched" is the boot value per id, NOT a blanket `true`: the
+    // galaxy catalog cluster boots each catalog from its own Layer literal,
     // and DesiDeep boots false.
     const settings = store.getState().settings;
     const catalogItems = settings.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
+    const bootItems = INITIAL_SETTINGS.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
     for (const [id, item] of Object.entries(catalogItems)) {
-      const entry = SOURCE_ENTRIES.find((e) => e.id === id);
-      expect(entry).toBeDefined();
-      expect(item.enabled).toBe(entry!.visible);
+      expect(item.enabled).toBe(bootItems[id]?.enabled);
     }
 
     clipPlayer.destroy();
@@ -199,17 +150,6 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     expect(surveyAfterStop).toBe(1);
     expect(flowAfterStop).toBe(1);
 
-    const fades = createFadeRegistry({ requestRender: () => {} });
-    const flowHandle: FadeId = { kind: 'flow' };
-    fades.register(flowHandle, 0);
-    fades.fadeTo(flowHandle, 1, 0, 0); // intent = 1
-
-    const clipAtOne = makeClipStub(1); // factor 1 = clip is gone
-    const state = makeResolveOpacityState(fades, clipAtOne);
-    const composed = resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, flowHandle);
-    // 1 (intent) × 1 (no recession for flow) × 1 (clip gone) = 1
-    expect(composed).toBe(1);
-
     clipPlayer.destroy();
   });
 
@@ -219,7 +159,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   //
   // Two camera distances, each chosen so its site's OWN scale band reads
   // exactly 1 — the drawn alpha then starts at the intent value and any drop is
-  // attributable to the clip channel alone. 5 Mpc clears surveyDeepZoom's full
+  // attributable to the clip channel alone. 5 Mpc clears the survey deep-zoom band's full
   // edge (~0.23 Mpc); 1 Mpc keeps the Milky-Way disc above its 12-px
   // apparent-size edge, which 5 Mpc would not.
   const SURVEY_CAM_POS = [0, 0, 5] as Readonly<[number, number, number]>;
@@ -228,19 +168,14 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   const CANVAS = { width: 1280, height: 720 };
 
   // `galaxyPointRenderer` rides `state.gpu` now (D13), not this ctx.
-  function makeDrawCtx(
-    nowMs: number,
-    camPos: Readonly<[number, number, number]>,
-  ): ReadyFrameContext {
+  function makeDrawCtx(nowMs: number, camPos: Readonly<[number, number, number]>): FrameView {
     return {
-      nowMs,
-      focusBlend: 0,
+      snapshot: { nowMs, focusBlend: 0 },
       drawCamPos: camPos,
       fovYRad: FOV_Y_RAD,
       canvasSize: CANVAS,
       drawPxPerRad: CANVAS.height / (2 * Math.tan(FOV_Y_RAD / 2)),
-      visibleSourceMask: 0xffffffff,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
   }
 
   function makeDrawState(
@@ -249,16 +184,15 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   ): EngineState {
     return {
       subsystems: { fades, clipPlayer },
+      // The composed entries core resolves the handed value from.
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
       settings: {
         milkyWay: { enabled: true },
-        galaxyCatalogs: {},
+        galaxyCatalogs: { items: makeGalaxyCatalogItems() },
         bias: {},
       },
       selection: { select: null, hover: null, focus: null },
       gpu: { focusUniform: { bindGroup: {} } },
-      // The fade bridge walks the COMPOSED rows; this stub draws nothing from a
-      // Layer, so core's own manifest is the whole set.
-      fadeRows: FADE_LAYERS,
     } as unknown as EngineState;
   }
 
@@ -268,14 +202,23 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     // The pass closes over its Layer's runtime, so the spy rides a stub runtime
     // rather than `state.gpu`.
-    const runtime = { pointRenderer: { draw: drawSpy } } as never;
+    const runtime = {
+      ...galaxyRowRuntime({ catalogs: new Map(), famousMeta: [] }),
+      pointRenderer: { draw: drawSpy },
+    } as never;
     const ctx = makeDrawCtx(nowMs, SURVEY_CAM_POS);
     const view = {
       vp: new Float32Array(16),
       viewportPx: [CANVAS.width, CANVAS.height],
       camPos: SURVEY_CAM_POS,
     } as unknown as SlabView;
-    galaxyPointSpritesPass(runtime).draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
+    // Through core's gate, which resolves the value the pass is handed.
+    gatePassByFade(galaxyPointSpritesPass(runtime), state).draw(
+      {} as unknown as GPURenderPassEncoder,
+      view,
+      ctx,
+      state,
+    );
     const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: number) => number };
     return settings.fadeOpacityOf(Source.SDSS);
   }
@@ -311,16 +254,19 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     // no played cue can reach this site until it is fixed.
     const fades = createFadeRegistry({ requestRender: () => {} });
 
-    const unmasked = deriveMilkyWayCloudAlpha(
-      makeDrawState(fades, makeClipStub(1)),
-      makeDrawCtx(0, MW_CAM_POS),
-    );
+    const alphaWith = (clipFactor: number): number | null => {
+      const state = makeDrawState(fades, makeClipStub(clipFactor));
+      const ctx = makeDrawCtx(0, MW_CAM_POS);
+      return deriveMilkyWayCloudAlpha(
+        ctx,
+        resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'),
+        milkyWayPickCode(),
+      );
+    };
+    const unmasked = alphaWith(1);
     expect(unmasked).toBe(1);
 
-    const masked = deriveMilkyWayCloudAlpha(
-      makeDrawState(fades, makeClipStub(0.4)),
-      makeDrawCtx(0, MW_CAM_POS),
-    );
+    const masked = alphaWith(0.4);
     expect(masked).toBeCloseTo(0.4, 6);
   });
 });

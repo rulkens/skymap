@@ -1,7 +1,7 @@
 /**
  * DataItemSettings — the shared base for every per-item entry under a
  * source-type settings cluster (`settings.galaxyCatalogs.items`,
- * `settings.structures.items`, `settings.volumes.items`).
+ * `settings.structures.items`, `settings.cosmicWebDensity.items`).
  *
  * Visibility is the ONE axis every data item has, regardless of whether
  * it's a galaxy catalog point layer, a structure ring, or a scalar-volume field —

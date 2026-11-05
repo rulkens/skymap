@@ -5,7 +5,7 @@
  * Lives in `components/common/` because more than one surface needs to
  * pick a palette: today the per-field row in the SettingsPanel's
  * Volumes section, tomorrow potentially a future LoadingDevPanel
- * preview or a CF-4 cosmography control.  Centralising the option
+ * preview or a DebugPanel per-cube tuning control.  Centralising the option
  * source (`PALETTE_IDS`), the value/onChange contract, and the
  * styling (so the select doesn't get squeezed inside flex rows — see
  * `.paletteSelect`'s `flex-shrink: 0`) means each call site is a

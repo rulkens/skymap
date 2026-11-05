@@ -1,0 +1,57 @@
+/* No rule and no labels: small, faint words where the picture has faded to black, read only by who looks for them. */
+.root {
+  composes: caption from '../../../../styles/picture.module.css';
+  position: relative;
+  z-index: 0;
+  display: grid;
+  justify-items: start;
+  gap: 0.125rem;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0;
+  padding-top: var(--site-space-2xs);
+  /*
+   * A size under the page's small text: the label is the quietest words on the page. Not composed from `small`:
+   * a composed class is copied into every composing module, and a later copy would override this size.
+   */
+  font-size: 0.8125rem;
+  font-weight: var(--weight-small);
+  line-height: 1.45;
+  text-align: left;
+
+  & p {
+    max-width: none;
+    margin: 0;
+  }
+}
+
+.title {
+  color: var(--site-text-dim);
+}
+
+.notes {
+  color: var(--site-text-faint);
+}
+
+/* A label with no address keeps that line all the same: a docs figure sets "Enlarge" at its end (FigureFrame). */
+.room {
+  height: 2.125rem;
+}
+
+/* The control keeps its 44px for the thumb; the margin takes back what the row of text does not need. */
+.root > .view {
+  margin-block: 0 calc(-1 * var(--tap-reach));
+  font-size: inherit;
+}
+
+/* A label in a row (`foot`): as tall as its room, the address on the room's last line. */
+.foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: 100%;
+
+  & > .view {
+    margin-top: auto;
+  }
+}

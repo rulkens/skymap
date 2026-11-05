@@ -34,11 +34,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { clipStarted, clipEnded, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
-import { UNSTARTED_EPOCHS, elapsedMs } from '../../../../src/services/engine/camera/cameraEpochs';
+import {
+  UNSTARTED_EPOCHS,
+  elapsedMs,
+} from '../../../../src/services/engine/camera/drivers/cameraEpochs';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { applySceneEffect } from '../../../../src/services/animation/applySceneEffect';
 import { fade, hide, seq, hold } from '../../../../src/services/engine/animation/effectHelpers';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEpochs';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -141,22 +144,24 @@ describe('clipPlayer', () => {
     const store = makeStore();
     const { player, tick } = makePlayer(store);
 
-    // Two fade cues: survey at atSec=0, filaments at atSec=3.
+    // Two fade cues: survey at atSec=0, cosmicWebFilaments at atSec=3.
     // seq([fade@0, hold(3), fade@3, hold(5)]) — hold(3) advances cursor to 3.
     const data: ClipData = {
-      timeline: [seq([fade(['survey'], 0, 0), hold(3), fade(['filaments'], 0, 0), hold(5)])],
+      timeline: [
+        seq([fade(['survey'], 0, 0), hold(3), fade(['cosmicWebFilaments'], 0, 0), hold(5)]),
+      ],
     };
     installClip(store, data);
 
     // Tick 1 at t=0: elapsed=0. prevElapsed=-Inf. Fires cue@0 (survey).
     tick(0);
     expect(player.clipOpacityOf('survey', 0)).toBe(0);
-    expect(player.clipOpacityOf('filaments', 0)).toBe(1); // not yet
+    expect(player.clipOpacityOf('cosmicWebFilaments', 0)).toBe(1); // not yet
 
-    // Tick 2 at t=4000: elapsed=4. prevElapsed=0. Fires cue@3 (filaments) in (0,4].
+    // Tick 2 at t=4000: elapsed=4. prevElapsed=0. Fires cue@3 (cosmicWebFilaments) in (0,4].
     tick(4000);
     expect(player.clipOpacityOf('survey', 4000)).toBe(0); // still faded
-    expect(player.clipOpacityOf('filaments', 4000)).toBe(0); // now faded
+    expect(player.clipOpacityOf('cosmicWebFilaments', 4000)).toBe(0); // now faded
   });
 
   it('dispatches clipEnded the frame AFTER the clip reaches durationSec (post-produce defer)', () => {

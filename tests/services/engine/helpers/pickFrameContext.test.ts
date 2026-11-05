@@ -1,58 +1,52 @@
 /**
  * pickFrameContext — unit tests for the pick-time camera as a value.
  *
- * `pickFrameContext` re-derives a `ReadyFrameContext` from the last RENDERED
- * pose (`state.cameraRuntime.register.pose`) and the live projection, using
- * the PICK source mask so `ctx.visibleSourceMask` means "pickable sources". It
- * returns `null` before the engine is ready. These tests pin all three
- * properties.
+ * `pickFrameContext` re-derives a `FrameView` from the last RENDERED pose
+ * (`state.cameraRuntime.register.pose`) and the live projection. It returns
+ * `null` before the engine is ready.
  *
- * The fixture composes the two upstream fixtures this helper's inputs come from:
- * the bootstrap-gate handles that `frameContext.test.ts` builds (`cam`,
- * `gpu.*`), plus the `settings.galaxyCatalogs.items` +
- * `subsystems.fades` stub that `deriveSourceMasks.test.ts` builds, plus a
- * `cameraRuntime` carrying the last pose and projection.
+ * The fixture is the bootstrap-gate handles that `frameContext.test.ts` builds
+ * (`cam`, `gpu.*`) plus a `cameraRuntime` carrying the last pose and projection.
  */
 
 import { describe, it, expect } from 'vitest';
 
 import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
-import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
-import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
+import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
+import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
+import { pivotSurfaceRangeMpc } from '../../../../src/services/engine/camera/framing/pivotSurfaceRangeMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
-import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
-import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { FadeId } from '../../../../src/@types/animation/FadeId';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
+import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
+import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
-// A distinct non-J2000 instant so the pick's epoch is observable on `ctx.simDays`
-// and separable from the J2000 seed a construction-time derive would poison with.
+// A distinct non-J2000 instant so the pick's epoch is observable on
+// `ctx.snapshot.simDays` and separable from the J2000 seed a construction-time
+// derive would poison with.
 const LAST_SIM_DAYS = 2460000.0;
 
-/**
- * Build an `EngineState`-shaped fixture with every bootstrap-gate handle
- * populated (so `isEngineReady` passes by default), a `cameraRuntime` carrying
- * `LAST_POSE` + `PROJECTION`, and the `settings`/`fades` that `deriveSourceMasks`
- * reads. `enabledOverrides` flips specific galaxy-catalog ids to control the
- * pick mask; nulling any gate handle exercises the not-ready branch.
- */
 function makeState(
   overrides: {
     booted?: boolean;
     galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
     galaxyPickRenderer?: unknown;
+    lastFocus?: FocusUniformsValue;
+    lastFocusRef?: SelectionRef;
+    selectionKindRows?: unknown[];
     compositor?: unknown;
     texturedDisks?: unknown;
-    enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
+    viewRig?: EngineState['viewRig'];
   } = {},
 ): EngineState {
   const galaxyPointRenderer =
@@ -65,45 +59,38 @@ function makeState(
   const texturedDisks =
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
 
-  const items = Object.fromEntries(
-    GALAXY_CATALOG_SOURCES.map((s) => {
-      const id = galaxyCatalogIdOf(s);
-      const enabled = overrides.enabledOverrides?.[id] ?? true;
-      return [id, { enabled, labelEnabled: true }];
-    }),
-  );
-
   return {
     booted: overrides.booted ?? true,
+    viewRig: overrides.viewRig ?? 'mono',
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: {
       texturedDisks,
-      // Fully faded by default; pick mask is driven by `enabled` alone anyway.
-      fades: { opacityOf: (id: FadeId) => (id.kind === 'galaxyCatalog' ? 0 : 0) },
+      structureFocus: {
+        lastFocusUniforms: () => overrides.lastFocus ?? ZERO_FOCUS,
+        lastFocusRef: () => overrides.lastFocusRef ?? null,
+      },
     },
     settings: {
-      galaxyCatalogs: { items },
       orientation: 'equatorial',
-      // Read unconditionally by `visibleStars` past the ready gate — see
-      // frameContext.test.ts's makeState for the same addition and why.
-      starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
-      bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+      bodies: { items: {} },
     },
-    // No focused pivot in this fixture — see frameContext.test.ts's makeState
-    // for why `deriveSlabs` needs this field once a pivot radius is threaded in.
+    selection: { hover: null, select: null, focus: null },
     selectionRows: { hover: null, select: null, focus: null },
-    // No seeded bodies/stars — see frameContext.test.ts's makeState for why
-    // `deriveFrameContext` needs this now.
-    data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
+    selectionKindRows: overrides.selectionKindRows ?? [],
+    slabRows: [],
+    visibilityEntries: [],
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: { pose: absoluteArm(LAST_POSE) },
       outputs: {
         displayed: absoluteArm(LAST_POSE),
         projection: PROJECTION,
+        frustum: symmetricFrustum(PROJECTION.fovYRad, PROJECTION.aspect),
         simDays: LAST_SIM_DAYS,
         upBasis: ORIENTATION_FRAMES.equatorial,
       },
     },
+    picking: { pickInFlight: false },
   } as unknown as EngineState;
 }
 
@@ -113,13 +100,18 @@ function makeCanvas(width = 1920, height = 1080): HTMLCanvasElement {
 
 describe('pickFrameContext', () => {
   it('returns null before the engine is ready', () => {
-    // Missing one of the two core gate handles → `deriveFrameContext` reports
-    // not-ready → `pickFrameContext` returns null (not a not-ready context).
-    // The galaxy/pick renderers are no longer part of the gate (D13) — a null
-    // `galaxyPointRenderer` alone no longer blocks the pick context.
+    // Missing a core gate handle makes `deriveFrameContext` report not-ready, so `pickFrameContext`
+    // returns null. A null `galaxyPointRenderer` alone does not block the pick context.
     expect(pickFrameContext(makeState({ booted: false }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ renderTargets: null }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ compositor: null }), makeCanvas())).toBeNull();
+  });
+
+  it('is null under a non-pickable rig', () => {
+    // Dome has no single cursor ray to pick against — VIEW_RIGS.dome.pickable
+    // is false, and this must gate before any of the ready-state derivation
+    // below, or a dome click would resolve against the unseen main view.
+    expect(pickFrameContext(makeState({ viewRig: 'dome' }), makeCanvas())).toBeNull();
   });
 
   it('reproduces the frame’s camera from register.pose + projection', () => {
@@ -129,27 +121,23 @@ describe('pickFrameContext', () => {
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
 
-    // The camera the pick pass draws from must equal the one `deriveFrameContext`
-    // produces for the SAME register.pose + projection the last frame rendered.
-    const expected = deriveFrameContext(
+    const basis = ORIENTATION_FRAMES[state.settings.orientation];
+    const expected = canvasViewOf(
       state,
-      canvas,
-      LAST_POSE,
-      absoluteArm(LAST_POSE),
-      state.cameraRuntime.outputs.projection,
-      // Same steady basis `pickFrameContext` resolves internally for BOTH
-      // halves, so the two cameras decode position and screen-up through the
-      // same pole and their vp matches.
-      ORIENTATION_FRAMES[state.settings.orientation],
-      ORIENTATION_FRAMES[state.settings.orientation],
-      deriveSourceMasks(state, 0).pick,
-      0,
-      // simDays does not affect the view-projection this test compares; any
-      // valid epoch reproduces the same vp.
-      0,
+      {
+        cam: assembleOrbitCamera(LAST_POSE, state.cameraRuntime.outputs.projection, basis, basis),
+        arm: absoluteArm(LAST_POSE),
+        altitudeMpc: pivotSurfaceRangeMpc(absoluteArm(LAST_POSE), LAST_POSE.distance, null),
+        nowMs: 0,
+        // simDays does not affect the view-projection this test compares; any
+        // valid epoch reproduces the same vp.
+        simDays: 0,
+        bodyStates: deriveBodyStates(0),
+      },
+      { width: canvas.width, height: canvas.height },
     );
-    expect(expected.isReady).toBe(true);
-    if (!expected.isReady) return;
+    expect(expected).not.toBeNull();
+    if (expected === null) return;
     expect(Array.from(ctx.vp)).toEqual(Array.from(expected.vp));
   });
 
@@ -166,18 +154,27 @@ describe('pickFrameContext', () => {
     const ctx = pickFrameContext(state, makeCanvas());
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
-    expect(ctx.simDays).toBe(LAST_SIM_DAYS);
-    expect(ctx.simDays).not.toBe(CONST_J2000);
+    expect(ctx.snapshot.simDays).toBe(LAST_SIM_DAYS);
+    expect(ctx.snapshot.simDays).not.toBe(CONST_J2000);
   });
 
-  it('carries the pick mask as visibleSourceMask', () => {
-    // Disable one catalog: its pick bit clears, so the mask on the ready context
-    // must equal `deriveSourceMasks(state).pick`, NOT `.draw`.
-    const disabledId = galaxyCatalogIdOf(GALAXY_CATALOG_SOURCES[0]!);
-    const state = makeState({ enabledOverrides: { [disabledId]: false } });
-    const ctx = pickFrameContext(state, makeCanvas());
-    expect(ctx).not.toBeNull();
-    if (ctx === null) return;
-    expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state, 0).pick);
+  it('carries the drawn frame’s focus, so a pick excludes what that frame dimmed', () => {
+    const lastFocus: FocusUniformsValue = {
+      center: [1, 2, 3],
+      apparentRadiusMpc: 1e-5,
+      physicalRadiusMpc: 3e-6,
+      blend: 1,
+    };
+    const ctx = pickFrameContext(
+      makeState({
+        lastFocus,
+        lastFocusRef: { type: 'structure', id: 'virgo' },
+        selectionKindRows: [{ type: 'structure', encodePick: () => 42 }],
+      }),
+      makeCanvas(),
+    );
+    expect(ctx?.snapshot.focus).toBe(lastFocus);
+    expect(ctx?.snapshot.focusBlend).toBe(1);
+    expect(ctx?.snapshot.focusPickId).toBe(42);
   });
 });

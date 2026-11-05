@@ -1,8 +1,8 @@
 /**
- * The regression this guards against: R2 stores GZIPPED bytes for eligible
- * files (see uploadViaWrangler), so hashing the raw file here would make
- * etagMatches see a permanent mismatch and re-upload every eligible file on
- * every sync run forever.
+ * The regression this guards against: R2 stores GZIPPED bytes for a group
+ * that gzips on the wire (see uploadViaWrangler), so hashing the raw file here
+ * would make etagMatches see a permanent mismatch and re-upload every such
+ * file on every sync run forever.
  */
 import { createHash } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -25,20 +25,20 @@ afterEach(() => {
 });
 
 describe('localUploadHash', () => {
-  it('hashes the gzipped bytes for a gzip-eligible file', () => {
-    const localPath = join(dir, 'sdss-medium.bin');
+  it('hashes the gzipped bytes when the group gzips on the wire', () => {
+    const localPath = join(dir, 'gzipped.bin');
     writeFileSync(localPath, 'sdss-catalog-bytes-repeated-repeated-repeated');
 
     const expected = createHash('md5')
       .update(gzipSync(Buffer.from('sdss-catalog-bytes-repeated-repeated-repeated')))
       .digest('hex');
-    expect(localUploadHash({ localPath, r2Key: 'data/sdss-medium.bin' })).toBe(expected);
+    expect(localUploadHash({ localPath, r2Key: 'data/gzipped.bin' }, true)).toBe(expected);
   });
 
-  it('falls back to the raw-file MD5 for an incompressible-exempt file (stars-*.bin)', () => {
-    const localPath = join(dir, 'stars-medium.bin');
-    writeFileSync(localPath, 'already-internally-compressed-star-bytes');
+  it('hashes the raw bytes when the group does not gzip', () => {
+    const localPath = join(dir, 'raw.bin');
+    writeFileSync(localPath, 'raw-bytes');
 
-    expect(localUploadHash({ localPath, r2Key: 'data/stars-medium.bin' })).toBe(fileMd5(localPath));
+    expect(localUploadHash({ localPath, r2Key: 'data/raw.bin' }, false)).toBe(fileMd5(localPath));
   });
 });

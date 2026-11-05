@@ -1,23 +1,24 @@
 /**
  * AssetWiringRow — one fetchable asset's lifecycle contract. `createLayers`
- * composes core's rows with every Layer's into `state.assetRows`; `wireSlots`
- * walks that list to build the slot table. A row that tracks a sibling's
+ * composes core's rows with every Layer's into `state.assetRows`, and the demand
+ * loop walks that list. A row that tracks a sibling's
  * demand/priority/request is a `CompanionAssetRow`, folded into one of these.
  */
 
 import type { AssetKey } from './AssetKey';
 import type { AssetSlot } from './AssetSlot';
-import type { SlotDeps } from './SlotDeps';
 import type { DemandCtx } from './DemandCtx';
 import type { Tier } from '../data/Tier';
+import type { VisibilityAddress } from '../animation/VisibilityAddress';
 
 export type AssetWiringRow<T = unknown, R = unknown> = {
   key: AssetKey;
   /**
-   * Pure constructor: builds + subscribes + RETURNS the slot. Must NOT write
-   * `state.assetSlots` and must NOT call `slot.load()` — `wireSlots` does both.
+   * The slot this row drives, minted by whoever authors the row (a Layer's
+   * `create`, or core's `meshAssetRows`) and never loaded by them:
+   * `reevaluateDemand` owns when a slot loads.
    */
-  factory: (deps: SlotDeps) => AssetSlot<T, R>;
+  slot: AssetSlot<T, R>;
   /** Build the request from the current tier (void/empty for tier-agnostic). */
   req: (tier: Tier) => R;
   demand: (ctx: DemandCtx) => boolean;
@@ -35,9 +36,12 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
    */
   release?: (ctx: DemandCtx) => boolean;
   /**
-   * `'external'` when the slot is minted outside the registry (point sources,
-   * body textures — built directly in `wireSlots`). The construction pass
-   * skips these; the demand loop still evaluates their `demand`/`req`.
+   * The visibility address (and item) this slot's data draws. Its target stays 0 until the
+   * slot has a committed value, and every notification from the slot recomputes it, so a
+   * commit fades the thing in and a `release()` fades it out. Only a slot that holds one
+   * item's whole drawn data gates.
    */
-  built?: 'external';
+  readonly gates?:
+    | VisibilityAddress
+    | { readonly address: VisibilityAddress; readonly item: string };
 };

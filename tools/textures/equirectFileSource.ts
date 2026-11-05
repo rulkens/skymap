@@ -18,9 +18,9 @@
 
 import sharp from 'sharp';
 
-import { levelFittingWidth } from '../../src/utils/surfaceTiles/levelFittingWidth';
+import { levelFittingWidth } from '../../src/layers/body/surfaceTiles/format/utils/levelFittingWidth';
 import { rawDataPath, type RawDataKey } from '../utils/io/rawDataRegistry';
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 
 export async function equirectFileSource(source: {
   /** Stable identifier recorded in the manifest's `builtFrom`, vintage included. */

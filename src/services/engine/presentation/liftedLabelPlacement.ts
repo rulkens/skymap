@@ -59,13 +59,11 @@
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
-import { labelLeaderLine } from '../../../utils/camera/labelLeaderLine';
+import { labelLeaderLine } from '../../../utils/camera/projection/labelLeaderLine';
 import { ATLAS_FONT_SIZE } from '../../../data/fonts';
-import {
-  LEADER_LIFT_FACTOR,
-  LEADER_LINE_PADDING_PX,
-  MIN_LABEL_CLEARANCE_PX,
-} from './leaderLineStyle';
+import { LABEL_EM_PX_RETUNE } from '../../../data/labels/labelSizingDefaults';
+import { LEADER_LINE_PADDING_PX, MIN_LABEL_CLEARANCE_PX } from './leaderLineStyle';
+import { proposedLiftPx } from '../../../utils/labels/proposedLiftPx';
 
 export function liftedLabelPlacement(input: {
   /** The dot (galaxy / body) position in the layer's world frame. */
@@ -80,9 +78,11 @@ export function liftedLabelPlacement(input: {
   vp: Float32Array | Float64Array;
   /** Backing-store viewport size in pixels, `[width, height]`. */
   viewportPx: Vec2;
+  /** The drawn view's pixels per radian — the label shader's `cam.pxPerRad`. */
+  pxPerRad: number;
   /** The subject's apparent size (px) — drives the proportional lift. */
   subjectSizePx: number;
-  /** The caption's measured ink bbox (`labelRenderer.measure`), or null. */
+  /** The caption's measured ink bbox (`textLayoutOf`), or null. */
   textBbox: LabelBBox | null;
   /** The caption's `worldEmMpc` — the shader's primary size driver. */
   worldEmMpc: number;
@@ -97,12 +97,12 @@ export function liftedLabelPlacement(input: {
    */
   lineBottomLiftPx?: number;
 }): { labelWorldPos: Vec3; line: { fromWorld: Vec3; toWorld: Vec3 } | null } | null {
-  const proposedLiftPx = Math.max(MIN_LABEL_CLEARANCE_PX, LEADER_LIFT_FACTOR * input.subjectSizePx);
+  const liftPx0 = proposedLiftPx(input.subjectSizePx);
   const proposed = labelLeaderLine({
     anchorWorldPos: input.anchorWorldPos,
     vp: input.vp,
     viewportPx: input.viewportPx,
-    liftPx: proposedLiftPx,
+    liftPx: liftPx0,
   });
   if (proposed === null) return null;
 
@@ -113,7 +113,7 @@ export function liftedLabelPlacement(input: {
   // sized at the LIFTED anchor — and, being a property of the DOT's depth, it
   // is identical at any lift, so it is safe to derive from the proposed-lift
   // projection even when the lift is raised below.
-  const pxPerEm = (input.worldEmMpc / proposed.anchorClipW) * (input.viewportPx[1] * 0.5);
+  const pxPerEm = (input.worldEmMpc / proposed.anchorClipW) * input.pxPerRad * LABEL_EM_PX_RETUNE;
   const displayEmPx = Math.min(Math.max(pxPerEm, input.minPixelSize), input.maxPixelSize);
   const atlasToScreen = displayEmPx / ATLAS_FONT_SIZE;
 
@@ -128,8 +128,8 @@ export function liftedLabelPlacement(input: {
   // MIN_LABEL_CLEARANCE_PX of the dot. Re-running `labelLeaderLine` replays
   // the same forward projection of the same dot — it cannot flip to null —
   // and only moves the lifted world point; the guard keeps the type honest.
-  const deficitPx = MIN_LABEL_CLEARANCE_PX + inkDropPx - proposedLiftPx;
-  const liftPx = deficitPx > 0 ? proposedLiftPx + deficitPx : proposedLiftPx;
+  const deficitPx = MIN_LABEL_CLEARANCE_PX + inkDropPx - liftPx0;
+  const liftPx = deficitPx > 0 ? liftPx0 + deficitPx : liftPx0;
   const leader =
     deficitPx > 0
       ? labelLeaderLine({

@@ -1,23 +1,19 @@
 /**
- * logCameraState — debug aid for the `l` key: dumps the RENDERED frame's pose
- * as ONE lossless JSON blob for reconstructing a failing pose. `cam` and
- * `focusRow` must be the LIVE values the caller assembled this frame
- * (`liveRenderCamera` / `liveFocusRow`) — this module trusts them as-is.
- * `JSON.stringify`'s default formatting only — no `toFixed`/`toPrecision` —
- * because scales span ~1e2 Mpc down to a body's surface (a 50 m altitude at
- * Earth's radius is a ~1e-6 relative offset on `distance`), which digit-limited
- * formatting rounds to zero.
+ * logCameraState — debug aid for the `l` key: dumps the RENDERED frame's pose.
+ * `out.framed` is the round-trip key — `commitCameraPose(dump.framed)` restores
+ * it exactly; the `target`/`yaw`/`pitch`/`distanceMpc` rows below drop `roll`
+ * and are lossy in the surface regime, kept for reading only. Full
+ * `JSON.stringify` precision, not `toFixed`, or a metre-scale altitude rounds away.
  */
 
-import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
-import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
-import { frameKey } from '../camera/rungs/frameKey';
-import { isBodyArm } from '../camera/rungs/isBodyArm';
-import { isSiteArm } from '../camera/rungs/isSiteArm';
-import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
+import { pivotRadiusMpc } from '../camera/framing/pivotRadiusMpc';
+import { frameKey } from '../camera/arms/frameKey';
+import { isBodyArm } from '../camera/arms/body/isBodyArm';
+import { isSiteArm } from '../camera/arms/site/isSiteArm';
+import { bodyFixedEyeM } from '../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
@@ -26,7 +22,6 @@ export function logCameraState(
   canvas: HTMLCanvasElement,
   focusRow: SelectionRow | null,
   simDays: number,
-  earthSubCamera: SurfaceTileDebugSnapshot['subCamera'] = null,
   framed: FramedCameraPose | null = null,
 ): void {
   if (!cam) {
@@ -39,7 +34,10 @@ export function logCameraState(
   if (
     pivotMpc !== null &&
     focusRow !== null &&
-    (focusRow.type === 'body' || focusRow.type === 'star')
+    (focusRow.type === 'body' ||
+      focusRow.type === 'craft' ||
+      focusRow.type === 'earthScene' ||
+      focusRow.type === 'starCatalog')
   ) {
     // Measured from world positions directly, not `cam.distance` (target-to-
     // camera, which a follow-pan offset can pull away from the body's center)
@@ -51,34 +49,19 @@ export function logCameraState(
     };
   }
 
-  // The stored arm, named (spec §8): a body arm's numbers are body-FIXED
-  // metres, so reading the Mpc rows above as the whole truth would mislead.
-  // Absent ⇒ absolute, the same rule untagged serialized input parses under.
-  const bodyArm = framed !== null && isBodyArm(framed) ? framed.pose : null;
-  const siteArm = framed !== null && isSiteArm(framed) ? framed.pose : null;
-
   const out = {
+    // The whole restore: `dispatch(commitCameraPose(out.framed))`.
+    framed,
     frame: framed === null ? 'absolute' : frameKey(framed.frame),
-    bodyArmMetres:
-      bodyArm === null
-        ? null
-        : {
-            anchorLocalM: bodyArm.anchorLocalM,
-            eyeRelAnchorM: bodyArm.eyeRelAnchorM,
-            eyeFromCentreM: Math.hypot(...bodyFixedEyeM(bodyArm)),
-            basisLocal: bodyArm.basisLocal,
-          },
-    // `eyeHeightM` is metres above the site's tangent plane (spec §4.9) — the
-    // one number that shows whether `clampedSitePose`'s floor is doing its job.
-    siteArmPose:
-      siteArm === null
-        ? null
-        : {
-            headingRad: siteArm.headingRad,
-            elevationRad: siteArm.elevationRad,
-            rangeM: siteArm.rangeM,
-            eyeHeightM: siteArm.rangeM * Math.sin(siteArm.elevationRad),
-          },
+    // The two numbers `framed` doesn't already print, null off the arm not in
+    // play — a body arm's metres (spec §8) and a site arm's height above the
+    // tangent plane (spec §4.9).
+    eyeFromCentreM:
+      framed !== null && isBodyArm(framed) ? Math.hypot(...bodyFixedEyeM(framed.pose)) : null,
+    eyeHeightM:
+      framed !== null && isSiteArm(framed)
+        ? framed.pose.rangeM * Math.sin(framed.pose.elevationRad)
+        : null,
     target: cam.target,
     yaw: cam.yaw,
     pitch: cam.pitch,
@@ -94,7 +77,6 @@ export function logCameraState(
     focus: focusRow,
     pivotRadiusMpc: pivotMpc,
     derived,
-    earthSubCamera,
   };
 
   console.log('[engine] camera state (full precision):', JSON.stringify(out, null, 2));

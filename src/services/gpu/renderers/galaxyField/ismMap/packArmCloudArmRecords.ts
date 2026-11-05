@@ -14,7 +14,7 @@ import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFi
 /** Float count of one `ArmCloudArmRecord` — 3 vec4 rows. */
 export const ARM_CLOUD_ARM_RECORD_FLOATS = 12;
 
-export type ArmCloudArmRecords = {
+type ArmCloudArmRecords = {
   readonly buffer: Float32Array;
   /** Sum of every arm's own weight — `packPlaceArmCloudParams.ts`'s `armWeightSum` input. */
   readonly weightSum: number;

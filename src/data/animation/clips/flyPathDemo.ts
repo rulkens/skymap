@@ -42,14 +42,15 @@ import { focusId } from '../../../utils/animation/focusId';
 export const flyPathDemo: Clip = {
   id: 'flyPathDemo',
   label: 'Fly-path demo (groups flythrough)',
+  dev: true,
   data: {
     start: 'live', // the path's first knot is the live camera pose
     timeline: [
       flyPath(
         [
-          atFocus(focusId('group-m81-group')), // launch toward M81 group
-          atFocus(focusId('group-cen-a-group')), // slow glide past Cen A
-          atFocus(focusId('group-sculptor-group')), // settle on Sculptor group
+          atFocus(focusId('galaxy-group-m81-group')), // launch toward M81 group
+          atFocus(focusId('galaxy-group-cen-a-group')), // slow glide past Cen A
+          atFocus(focusId('galaxy-group-sculptor-group')), // settle on Sculptor group
         ],
         { over: 20 },
       ),

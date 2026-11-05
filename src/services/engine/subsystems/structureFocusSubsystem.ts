@@ -1,12 +1,10 @@
 /**
  * structureFocusSubsystem — focus-driven structure "focus mode".
  *
- * When a cluster / supercluster / void / group structure is focused, non-member
- * galaxies fade to ~8% alpha over ~400 ms (the shader does the
- * per-vertex membership test; this subsystem only supplies the centre,
- * radius, and the smoothstep blend). All four categories behave
- * identically — the focused structure's interior galaxies stay bright;
- * voids are just an underdense case of the same rule. See
+ * When any structure is focused, everything outside its sphere fades to ~8%
+ * alpha over ~400 ms (the shaders do the per-vertex test; this subsystem only
+ * supplies the centre, radius, and the smoothstep blend). Every category
+ * behaves identically; voids are just an underdense case of the same rule. See
  * `StructureFocusSubsystem.d.ts` for the rationale (focus as single
  * source of truth; GPU re-derivation instead of a CPU member list).
  *
@@ -37,9 +35,10 @@ import type { StructureFocusSubsystem } from '../../../@types/engine/subsystems/
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 
 /** Focus fade duration in ms. */
-export const FOCUS_FADE_DURATION_MS = 400;
+const FOCUS_FADE_DURATION_MS = 400;
 
 /**
  * At-rest sentinel: blend=0 makes the shader multiplier collapse to 1.0.
@@ -56,7 +55,7 @@ export const ZERO_FOCUS: FocusUniformsValue = {
 
 /** The latched display target while focus is active or fading out. */
 type ActiveFocus = {
-  readonly id: string;
+  readonly ref: Extract<SelectionRef, { type: 'structure' }>;
   readonly center: Vec3;
   readonly apparentRadiusMpc: number;
   readonly physicalRadiusMpc: number;
@@ -71,31 +70,26 @@ export function createStructureFocusSubsystem(
   let active: ActiveFocus | null = null;
   // The id we are currently fading toward; null = fading out / at rest.
   let focusedId: string | null = null;
+  let lastProduced: FocusUniformsValue = ZERO_FOCUS;
+  let lastRef: SelectionRef | null = null;
 
   function update(structure: StructureInfo | null, nowMs: number): void {
-    // Narrow to a focus-eligible extended structure. famousGalaxy has
-    // no radius, so it (and null) drives a fade-out. Groups share the
-    // same fade band mechanic as clusters — R0 > Rh gives a real band.
+    // null drives a fade-out. Groups share the same fade band mechanic as
+    // clusters — R0 > Rh gives a real band.
     let next: ActiveFocus | null = null;
-    if (
-      structure !== null &&
-      (structure.category === 'cluster' ||
-        structure.category === 'supercluster' ||
-        structure.category === 'void' ||
-        structure.category === 'group')
-    ) {
+    if (structure !== null) {
       // Pass the structure's two real radii; the shader ramps the fade
       // across the [physical, apparent] band (and supplies a soft band of
       // its own when the two are equal — SC/void have no wider extent).
       next = {
-        id: structure.id,
+        ref: { type: 'structure', id: structure.id },
         center: [structure.worldPos[0], structure.worldPos[1], structure.worldPos[2]],
         apparentRadiusMpc: structure.apparentRadiusMpc ?? structure.physicalRadiusMpc,
         physicalRadiusMpc: structure.physicalRadiusMpc,
       };
     }
 
-    const targetId = next?.id ?? null;
+    const targetId = next?.ref.id ?? null;
     // No transition → no re-fade (covers same focused structure every frame AND
     // an already-in-flight fade-out being re-observed every frame).
     if (targetId === focusedId) return;
@@ -103,29 +97,32 @@ export function createStructureFocusSubsystem(
     focusedId = targetId;
     if (next !== null) {
       active = next;
-      void fade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
+      fade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
     } else {
       // Keep `active` latched so the shader keeps the correct predicate
       // until blend settles at 0 (dropped lazily in produceFocusUniforms).
-      void fade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
+      fade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
     }
     // Essential wake: private fade controller — no FadeRegistry wake covers it.
     deps.requestRender();
   }
 
   function produceFocusUniforms(nowMs: number): FocusUniformsValue {
-    fade.tick(nowMs);
     const blend = fade.currentOpacity(nowMs);
     if (active !== null && blend === 0 && !fade.isAnimating(nowMs)) {
       active = null;
     }
-    if (active === null) return ZERO_FOCUS;
-    return {
-      center: active.center,
-      apparentRadiusMpc: active.apparentRadiusMpc,
-      physicalRadiusMpc: active.physicalRadiusMpc,
-      blend,
-    };
+    lastRef = active?.ref ?? null;
+    lastProduced =
+      active === null
+        ? ZERO_FOCUS
+        : {
+            center: active.center,
+            apparentRadiusMpc: active.apparentRadiusMpc,
+            physicalRadiusMpc: active.physicalRadiusMpc,
+            blend,
+          };
+    return lastProduced;
   }
 
   function isAwake(nowMs: number): boolean {
@@ -136,10 +133,14 @@ export function createStructureFocusSubsystem(
     id: 'structureFocus',
     update,
     produceFocusUniforms,
+    lastFocusUniforms: () => lastProduced,
+    lastFocusRef: () => lastRef,
     isAwake,
     destroy(): void {
       active = null;
       focusedId = null;
+      lastProduced = ZERO_FOCUS;
+      lastRef = null;
     },
   };
 }

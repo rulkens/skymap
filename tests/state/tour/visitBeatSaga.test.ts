@@ -39,12 +39,12 @@ import { CANCEL } from '@redux-saga/core';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
+import { SCENE_SETTLE_TIMEOUT_MS } from '../../../src/state/tour/sceneSettleTimeoutMs';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
-import { Source } from '../../../src/data/sources';
-import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import { Source } from '../../../src/data/source';
+import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -83,26 +83,24 @@ function collectTimelineNodes<T>(
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
 };
 
 // Structure resolved by id immediately — no catalog needed.
-const STRUCTURE_DEPS: ResolveDeps = {
-  stars: { current: () => null },
-  structures: {
-    byId: (id) =>
-      ({
-        type: 'structure',
-        id,
-        name: 'Test Structure',
-        category: 'cluster',
-        worldPos: [1, 2, 3] as [number, number, number],
-        physicalRadiusMpc: 1,
-        apparentRadiusMpc: 2,
-        featured: true,
-      }) as const,
-    byCategory: () => [],
-  },
+const STRUCTURES: StructureRowFixture = {
+  byId: (id) =>
+    ({
+      type: 'structure',
+      id,
+      name: 'Test Structure',
+      category: 'galaxy-cluster',
+      worldPos: [1, 2, 3] as [number, number, number],
+      physicalRadiusMpc: 1,
+      apparentRadiusMpc: 2,
+      featured: true,
+    }) as const,
+  byCategory: () => [],
 };
 
 // ─── Beat fixtures ───────────────────────────────────────────────────────────
@@ -111,7 +109,7 @@ const STRUCTURE_DEPS: ResolveDeps = {
 const milkyWayClip: ClipData = flyAndFocusOnClip(focusId('milkyWay'));
 const milkyWayBeat: BeatData = {
   enterClip: milkyWayClip,
-  caption: { title: 'Our galaxy' },
+  caption: { title: 'Our galaxy', lines: ['x'] },
   dwellClip: dwellDrift(5),
 };
 
@@ -119,11 +117,11 @@ const milkyWayBeat: BeatData = {
 // (null-caption) short-dwell beat in the timeout test.
 const narrationClip: ClipData = { start: 'live', timeline: [] };
 
-// A clip with a structure focus id — resolves immediately (structures are always in deps).
-const structureClip: ClipData = flyAndFocusOnClip(focusId('cluster-virgo'));
+// A clip with a structure focus id — resolves immediately (the store stub always has it).
+const structureClip: ClipData = flyAndFocusOnClip(focusId('galaxy-cluster-virgo'));
 const structureBeat: BeatData = {
   enterClip: structureClip,
-  caption: { title: 'Virgo Cluster' },
+  caption: { title: 'Virgo Cluster', lines: ['x'] },
   dwellClip: dwellDrift(3),
 };
 
@@ -133,7 +131,7 @@ type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 
 function buildStore(opts: {
   playClip?: PlayClipStub;
-  resolveDeps?: ResolveDeps;
+  structures?: StructureRowFixture;
   cameraRuntime?: LiveCameraRuntime | null;
 }) {
   const sagaMiddleware = createSagaMiddleware();
@@ -145,12 +143,11 @@ function buildStore(opts: {
   const playClipFn: PlayClipStub =
     opts.playClip ??
     (vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined) as PlayClipStub);
-  const deps = opts.resolveDeps ?? STRUCTURE_DEPS;
+  const structures = opts.structures ?? STRUCTURES;
   const cam = opts.cameraRuntime !== undefined ? opts.cameraRuntime : CAMERA_RUNTIME;
 
   sagaMiddleware.setContext({
-    resolveDeps: () => deps,
-    selection: selectionResolverOver(deps),
+    selection: selectionResolverOver(structures),
     cameraRuntime: () => cam,
     playClip: (clip: ClipData) => playClipFn(clip),
   });
@@ -201,10 +198,7 @@ describe('visitBeatSaga', () => {
       axisRatio: new Float32Array([1]),
     });
 
-    const lazyDeps: ResolveDeps = {
-      structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
-    };
+    const lazyStructures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
     // Read LIVE: the beat's readiness gate must clear only once the cloud lands.
     const lazyGalaxies = {
       get catalogs() {
@@ -215,25 +209,24 @@ describe('visitBeatSaga', () => {
 
     const famousBeat: BeatData = {
       enterClip: flyAndFocusOnClip(focusId(FAMOUS_ID)),
-      caption: { title: 'M87' },
+      caption: { title: 'M87', lines: ['x'] },
       dwellClip: dwellDrift(3),
     };
 
     const playClipMock = flyThenBlockingDrift(true);
-    const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: lazyDeps });
+    const { sagaMiddleware } = buildStore({ playClip: playClipMock, structures: lazyStructures });
 
     // Camera runtime is dynamic; override the context with a closure read.
     let currentRuntime: LiveCameraRuntime | null = null;
     sagaMiddleware.setContext({
-      resolveDeps: () => lazyDeps,
-      selection: selectionResolverOver(lazyDeps, lazyGalaxies),
+      selection: selectionResolverOver(lazyStructures, lazyGalaxies),
       cameraRuntime: () => currentRuntime,
       playClip: (clip: ClipData) => playClipMock(clip),
     });
 
     sagaMiddleware.run(visitBeatSaga, famousBeat, 0);
 
-    // Cloud not loaded, runtime null — saga blocked in waitUntil.
+    // Cloud not loaded, runtime null — saga blocked in waitUntilSaga.
     await vi.advanceTimersByTimeAsync(200);
     expect(playClipMock).not.toHaveBeenCalled();
 
@@ -252,7 +245,7 @@ describe('visitBeatSaga', () => {
 
   it('passes the resolved clip to playClip — no id-bearing cues remain', async () => {
     const playClipMock = flyThenBlockingDrift(true);
-    const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: STRUCTURE_DEPS });
+    const { sagaMiddleware } = buildStore({ playClip: playClipMock, structures: STRUCTURES });
 
     sagaMiddleware.run(visitBeatSaga, structureBeat, 0);
 
@@ -434,7 +427,10 @@ describe('visitBeatSaga', () => {
     const playClipMock = flyThenBlockingDrift(true);
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
 
-    const clipLessBeat: BeatData = { caption: { title: 'Still here' }, dwellClip: dwellDrift(5) };
+    const clipLessBeat: BeatData = {
+      caption: { title: 'Still here', lines: ['x'] },
+      dwellClip: dwellDrift(5),
+    };
     sagaMiddleware.run(visitBeatSaga, clipLessBeat, 1);
 
     await flush();
@@ -450,7 +446,7 @@ describe('visitBeatSaga', () => {
 
   it('a flyAndFocusOnClip beat resolves its focusId cue to a concrete focus ref', async () => {
     const playClipMock = flyThenBlockingDrift(true);
-    const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: STRUCTURE_DEPS });
+    const { sagaMiddleware } = buildStore({ playClip: playClipMock, structures: STRUCTURES });
 
     sagaMiddleware.run(visitBeatSaga, structureBeat, 0);
 
@@ -466,7 +462,53 @@ describe('visitBeatSaga', () => {
     expect(focusCues.length).toBeGreaterThan(0);
     expect(focusCues[0]).toEqual({
       kind: 'focus',
-      ref: { type: 'structure', id: 'cluster-virgo' },
+      ref: { type: 'structure', id: 'galaxy-cluster-virgo' },
     });
+  });
+
+  // ── (11) the cold-load gate: after the fly lands, before caption + dwell ──
+
+  it('awaitSettled holds the dwell after the fly lands until the scene has settled', async () => {
+    vi.useFakeTimers();
+    let settled = false;
+    const playClipMock = flyThenBlockingDrift(true);
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+    sagaMiddleware.setContext({ sceneSettled: () => settled });
+
+    sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0, { awaitSettled: true });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(playClipMock).toHaveBeenCalledTimes(1);
+    expect(store.getState().tour.dwellNonce).toBe(0);
+
+    settled = true;
+    await vi.advanceTimersByTimeAsync(200);
+    expect(store.getState().tour.dwellNonce).toBe(1);
+  });
+
+  it('the gate gives up after SCENE_SETTLE_TIMEOUT_MS, so a tile that never lands cannot hang the tour', async () => {
+    vi.useFakeTimers();
+    const playClipMock = flyThenBlockingDrift(true);
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+    sagaMiddleware.setContext({ sceneSettled: () => false });
+
+    sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0, { awaitSettled: true });
+    await vi.advanceTimersByTimeAsync(SCENE_SETTLE_TIMEOUT_MS - 200);
+    expect(store.getState().tour.dwellNonce).toBe(0);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(store.getState().tour.dwellNonce).toBe(1);
+  });
+
+  it("advanceTour during the gate returns 'next' without starting the dwell", async () => {
+    vi.useFakeTimers();
+    const playClipMock = flyThenBlockingDrift(true);
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+    sagaMiddleware.setContext({ sceneSettled: () => false });
+
+    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0, { awaitSettled: true });
+    await vi.advanceTimersByTimeAsync(300);
+    store.dispatch(advanceTour());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await task.toPromise()).toBe('next');
+    expect(store.getState().tour.dwellNonce).toBe(0);
   });
 });

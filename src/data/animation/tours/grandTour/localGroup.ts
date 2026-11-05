@@ -10,7 +10,7 @@
  * famous producer's 6 px apparent-size gate curates by itself at this
  * framing — the three big spirals clear it, every dwarf falls below it.
  * The focus() cue then names the group (its structure label draws because
- * 'structureRing:group' is this beat's own reveal), and only then does the
+ * 'structureRing:galaxy-group' is this beat's own reveal), and only then does the
  * camera commit: the target pans
  * from M31 to the group barycentre while the dolly pulls out to the ring's
  * framing. The barycentre sits ON the Milky-Way–M31 sightline (~0.43 Mpc
@@ -62,7 +62,7 @@ import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/core/labelsSlice';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
-const LOCAL_GROUP = focusId('group-local-group');
+const LOCAL_GROUP = focusId('galaxy-group-local-group');
 
 export const localGroup: ClipData = {
   start: 'live',
@@ -70,7 +70,7 @@ export const localGroup: ClipData = {
     // 2MRS arrives WITH the group: the family shot reads as a populated
     // region, and the later pull-out to neighbourhood scale is already
     // dressed (the flythrough's own show is then a dedup no-op).
-    show(['survey:2mrs', 'structureRing:group'], 3),
+    show(['survey:2mrs', 'structureRing:galaxy-group'], 3),
     scene(setLabelsFocusedOnly(false)),
     focus(LOCAL_GROUP),
     hold(1),

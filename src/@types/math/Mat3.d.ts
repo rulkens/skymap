@@ -23,8 +23,4 @@
  */
 
 /** 3×3 matrix, column-major (9 elements, mutable). */
-export type Mat3 = [
-  number, number, number,
-  number, number, number,
-  number, number, number,
-];
+export type Mat3 = [number, number, number, number, number, number, number, number, number];

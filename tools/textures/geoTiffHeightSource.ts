@@ -5,8 +5,8 @@
  * measured from the grid's own edges, not a hardcoded ±180/±90 extent.
  */
 
-import type { HeightSource } from './HeightSource';
-import type { GeoTiffGrid } from './GeoTiffGrid';
+import type { HeightSource } from './@types/HeightSource';
+import type { GeoTiffGrid } from './@types/GeoTiffGrid';
 import { boundsOverlap } from '../utils/textures/boundsOverlap';
 import { clamp } from '../utils/textures/clamp';
 import { heightLatticeBounds } from '../utils/textures/heightLatticeBounds';

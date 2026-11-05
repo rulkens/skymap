@@ -121,6 +121,23 @@ describe('gpuTimingService — active mode', () => {
     expect(desc!.querySet).toBeDefined();
   });
 
+  it('a repeat claim of a slot in one frame writes end only; the next frame starts full again', () => {
+    const device = makeDevice({ supportsTimestamp: true });
+    const svc = createGpuTimingService(device, true, SLOTS);
+
+    svc.beginFrame();
+    const first = svc.descriptorFor('procedural-disks')!;
+    const repeat = svc.descriptorFor('procedural-disks')!;
+    expect(first.beginningOfPassWriteIndex).toBe(2);
+    expect(first.endOfPassWriteIndex).toBe(3);
+    expect(repeat.beginningOfPassWriteIndex).toBeUndefined();
+    expect(repeat.endOfPassWriteIndex).toBe(3);
+    expect(repeat.querySet).toBe(first.querySet);
+
+    svc.beginFrame();
+    expect(svc.descriptorFor('procedural-disks')!.beginningOfPassWriteIndex).toBe(2);
+  });
+
   it('endFrame records resolveQuerySet + copyBufferToBuffer', () => {
     const device = makeDevice({ supportsTimestamp: true });
     const svc = createGpuTimingService(device, true, SLOTS);

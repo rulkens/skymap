@@ -1,0 +1,122 @@
+import type { UnknownAction } from '@reduxjs/toolkit';
+
+import type { SiteShot } from '../../../packages/website/src/@types/SiteShot';
+import { BiasMode } from '../../../src/data/galaxyCatalog/biasMode';
+import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { setBlackHoleLabelEnabled } from '../../../src/layers/blackHoles/state/blackHoles/slice';
+import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
+import { setCosmicWebFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
+import { setFlowEnabled } from '../../../src/layers/flow/state/flow/slice';
+import { setBiasMode } from '../../../src/layers/galaxyCatalog/state/bias/slice';
+import { setStarCatalogEnabled } from '../../../src/layers/starCatalog/state/starCatalogs/slice';
+import { setGalaxyCatalogVisible } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
+import {
+  setStructureItemEnabled,
+  setStructureLabelEnabled,
+} from '../../../src/layers/structure/state/structures/slice';
+import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/slice';
+import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
+import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
+import { setExposure } from '../../../src/state/settings/core/tonemapSlice';
+import { setMeshAmbient, setPassDisabled } from '../../../src/state/settings/core/debugSlice';
+import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
+import { setOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/slice';
+import { setBodyLabelEnabled } from '../../../src/layers/body/state/bodies/slice';
+import { requestTier } from '../../../src/state/tier/requestTier';
+import { startTour } from '../../../src/state/tour/tourActions';
+import { CURRENT_SPLASH_VERSION } from '../../../src/state/ui/splashStorage';
+import { dismissSplash, setDebugPanelOpen } from '../../../src/state/ui/uiSlice';
+import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
+import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { labelDeclutterActions } from '../../utils/capture/labelDeclutterActions';
+
+/**
+ * The store actions a shot's `settings` stand for, in the order they are
+ * dispatched. Auto-rotate is always stopped: a turning camera would make the
+ * same manifest row give a different picture on every run.
+ */
+export function siteShotActions({
+  link,
+  settings = {},
+}: Pick<SiteShot, 'link' | 'settings'>): UnknownAction[] {
+  const actions: UnknownAction[] = [setAutoRotate({ active: false, rate: 0 })];
+  if (settings.hideOrbitTrails) actions.push(setOrbitTrailsEnabled(false));
+  if (settings.hideStructures) {
+    actions.push(...STRUCTURE_IDS.map((id) => setStructureItemEnabled({ id, enabled: false })));
+  }
+  if (settings.hideStructureLabels) {
+    actions.push(...STRUCTURE_IDS.map((id) => setStructureLabelEnabled({ id, enabled: false })));
+  }
+  if (settings.hideGalaxyField) {
+    // `famousGalaxy` draws the photographs, which are the subject of a galaxy shot.
+    actions.push(
+      ...GALAXY_CATALOG_IDS.filter((id) => id !== 'famousGalaxy').map((id) =>
+        setGalaxyCatalogVisible({ id, enabled: false }),
+      ),
+    );
+  }
+  if (settings.hideStars) actions.push(setStarCatalogEnabled(false));
+  if (settings.hideCosmicWeb) actions.push(setCosmicWebDensityEnabled(false));
+  if (settings.hideZoneOfAvoidance) actions.push(setZoneOfAvoidanceEnabled(false));
+  if (settings.filaments) actions.push(setCosmicWebFilamentsEnabled(true));
+  if (settings.constellations) {
+    actions.push(
+      setVisibility({ cluster: 'constellations', field: 'enabled', on: true, overMs: 0 }),
+    );
+  }
+  if (settings.missionTrails) {
+    actions.push(
+      setVisibility({ cluster: 'missionTrails', field: 'enabled', on: true, overMs: 0 }),
+    );
+  }
+  if (settings.flow) actions.push(setFlowEnabled(true));
+  if (settings.desiWedge) actions.push(setGalaxyCatalogVisible({ id: 'desiWedge', enabled: true }));
+  if (settings.fovDeg !== undefined) actions.push(setFovDeg(settings.fovDeg));
+  if (settings.exposure !== undefined) actions.push(setExposure(settings.exposure));
+  if (settings.ambient !== undefined) actions.push(setMeshAmbient(settings.ambient));
+  if (settings.rawDensity) actions.push(setBiasMode(BiasMode.None));
+  // The new size's files load after this; the row's `settleMs` is the wait for them.
+  if (settings.dataSize !== undefined) actions.push(requestTier(settings.dataSize));
+  if (settings.hideLabels) {
+    actions.push(
+      ...labelDeclutterActions().filter(
+        (action) => !(settings.keepBodyLabels && setBodyLabelEnabled.match(action)),
+      ),
+      setBlackHoleLabelEnabled({ id: 'sgr-a-star', enabled: false }),
+    );
+    // The spacecraft's captions are the missions Layer's, not the bodies'.
+    if (!settings.keepBodyLabels) {
+      actions.push(
+        setVisibility({
+          cluster: 'missions',
+          item: 'craft',
+          field: 'labelEnabled',
+          on: false,
+          overMs: 0,
+        }),
+      );
+    }
+  }
+  // A matte row's passes are left out by shootMatte, after the shadow pair that needs the ground they hide.
+  if (settings.hidePasses && !settings.matte) {
+    actions.push(...settings.hidePasses.map((pass) => setPassDisabled({ pass, disabled: true })));
+  }
+  if (settings.debugPanel) actions.push(setDebugPanelOpen(true));
+  if (settings.tourStep !== undefined) {
+    const { view } = linkIntentFrom(link);
+    if (view.kind !== 'tour' || !(view.id in tourRegistry)) {
+      throw new Error(`tourStep needs a link to a registered tour, got "${link}"`);
+    }
+    // The runner boots a tour step on the bare address, which a visitor's first visit covers with the welcome screen.
+    // Last: the tour restores and rewrites settings itself, so it must own the scene from here.
+    actions.push(
+      dismissSplash(CURRENT_SPLASH_VERSION),
+      startTour(view.id as keyof typeof tourRegistry, {
+        from: settings.tourStep,
+        to: settings.tourStep,
+      }),
+    );
+  }
+  return actions;
+}

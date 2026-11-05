@@ -1,0 +1,54 @@
+/**
+ * ExhibitOverlayContainer — store boundary for the exhibit overlay.
+ *
+ * App mounts this only while the active takeover source is an exhibit (mirrors
+ * TourOverlayContainer: the container does not re-gate on `kind`), passing
+ * the resolved id rather than the whole `TakeoverSource` — a narrower read
+ * than the container re-deriving it from the takeover slice itself.
+ */
+
+import { useCallback } from 'react';
+import ExhibitOverlay from '../ExhibitOverlay/ExhibitOverlay';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { exitTakeover } from '../../state/takeover/takeoverActions';
+import { selectExhibitCopyDelaySec } from '../../state/takeover/selectors';
+import { viewCoverSet } from '../../state/viewCover/viewCoverSlice';
+import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
+import type { ExhibitId } from '../../@types/exhibits/ExhibitId';
+import type { ViewCover } from '../../@types/layout/ViewCover';
+
+export type ExhibitOverlayContainerProps = {
+  readonly id: ExhibitId;
+};
+
+function ExhibitOverlayContainer({ id }: ExhibitOverlayContainerProps): React.ReactElement {
+  const dispatch = useAppDispatch();
+  const exhibit = APP_EXHIBIT_REGISTRY[id];
+  const enterDelaySec = useAppSelector(selectExhibitCopyDelaySec);
+
+  const onExit = useCallback(() => dispatch(exitTakeover()), [dispatch]);
+  const onNotesCover = useCallback(
+    (cover: ViewCover | null) => dispatch(viewCoverSet({ id: 'exhibitNotes', cover })),
+    [dispatch],
+  );
+  const onCaptionCover = useCallback(
+    (cover: ViewCover | null) => dispatch(viewCoverSet({ id: 'exhibitCaption', cover })),
+    [dispatch],
+  );
+
+  return (
+    // Keyed on the id: a takeover passing to another exhibit remounts its sections' own state.
+    <ExhibitOverlay
+      key={id}
+      label={exhibit.label}
+      lede={exhibit.lede}
+      body={exhibit.body}
+      enterDelaySec={enterDelaySec}
+      onExit={onExit}
+      onNotesCover={onNotesCover}
+      onCaptionCover={onCaptionCover}
+    />
+  );
+}
+
+export default ExhibitOverlayContainer;

@@ -2,30 +2,39 @@
 
 `needs-design` — the design is settled except for one new read surface; see "Open choice".
 
+## Scope widened (2026-10-13)
+
+The [GPU memory audit](../research/engine/gpu-memory-audit-2026-10-13.md) found the same
+gap on every settings-gated row: galaxy catalogs, the flow cube, filaments,
+constellations and structures all keep their GPU memory after their layer is switched
+off. The fade-gated `release` below is the general mechanism; design it for all rows,
+with the volumes as the first and largest user.
+
 ## Problem
 
-Unticking a volume field in the Cosmic web panel fades it out but never frees its
-GPU memory. `onVolumeFieldEnabledChange` (`CosmicWebSectionContainer.tsx:81`)
-dispatches `writeVolumeField({ id, patch: { enabled } })`, a settings write that
-drives the `volumeField` fade row (`fadeLayers.ts:207`). The cube stays resident in
-`volumeFieldRenderer`'s field `Map` for the life of the engine — the only release is
-`destroy()` at teardown.
+Unticking a field in the "Cosmic web density" panel fades it out but never frees
+its GPU memory. `onRowEnabledChange`
+(`src/layers/cosmicWebDensity/ui/CosmicWebDensitySectionContainer.tsx`) dispatches
+`writeCosmicWebDensityField({ id, patch: { enabled } })`, a settings write that
+drives the field's item of the `cosmicWebDensity` visibility entry
+(`src/layers/cosmicWebDensity/visibility.ts`). The cube stays
+resident in the Layer's `VolumeFieldRenderer`'s field `Map` for the life of the
+engine — the only release is `destroy()` at teardown.
 
-The four volume slots in `assetWiring.ts:272` declare no `release` for exactly this
-reason, and the comment there says so.
+The three cube rows in `src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows.ts`
+declare no `release` for exactly this reason, and the module header says so.
 
 ## Why it matters
 
-Upload is `r16float` 3D (`volumeFieldRenderer.ts:217-222`) fed straight from the
+Upload is `r16float` 3D (`volumeFieldRenderer.ts:224`) fed straight from the
 `.scfd` voxels at `bytesPerRow = dims[0] * 2`, so the on-disk size **is** the VRAM
 footprint. Large tier:
 
-| field          | VRAM   | default                                   |
-| -------------- | ------ | ----------------------------------------- |
-| mcpm           | 155 MB | on (`sources/mcpm.ts:12` `visible: true`) |
-| polyphorm-2mrs | 217 MB | off                                       |
-| cf4-density    | 4 MB   | off                                       |
-| edenhofer-dust | 113 MB | not yet wired (renderer slice)            |
+| field          | VRAM   | default                                                                             |
+| -------------- | ------ | ------------------------------------------------------------------------------------ |
+| mcpm           | 155 MB | on (`src/layers/cosmicWebDensity/state/cosmicWebDensity/initialState.ts`, `enabled: true`) |
+| polyphorm-2mrs | 217 MB | off                                                                                   |
+| edenhofer-dust | 113 MB | not yet wired (renderer slice)                                                        |
 
 Only mcpm is default-on, so this is not idle boot cost — it is the opt-in workflow:
 tick polyphorm-2mrs to look at it, untick it, and 217 MB is stranded until page
@@ -46,12 +55,13 @@ The eviction mechanism already exists and has two users:
 - `AssetWiringRow.release?: (ctx) => boolean`, evaluated in `reevaluateDemand.ts`
   (`kind === 'ready' && row.release?.(ctx)` → `slot.release()` → the slot's
   `onRelease`).
-- `meshSlotRegistry.ts:24` and `bodyTextureSlotRegistry.ts:82` are both one-liners.
-- `volumeFieldRenderer.unload(id)` (`volumeFieldRenderer.ts:332-345`) already destroys
+- The mesh slots' `onRelease` (`meshAssetRows.ts`) and the body texture slots' are both
+  one-liners.
+- `VolumeFieldRenderer.unload(id)` (`volumeFieldRenderer.ts:329-342`) already destroys
   all four per-field resources and leaves the fade handle registered, which is the
-  correct split — `seedFades` owns the handle set across upload/unload.
+  correct split — `seedVisibilityFades` owns the identity set across upload/unload.
 
-So the wiring is four `onRelease` lines plus four `release` predicates.
+So the wiring is three `onRelease` lines plus three `release` predicates.
 
 ## The blocker
 
@@ -67,15 +77,3 @@ Add fade opacity by handle as a fifth `DemandCtx` read surface, so the predicate
 splitting it between the demand loop and a fade-completion callback;
 `state.subsystems.fades` is already reachable where the ctx is built. The cost is a new
 surface on a type whose docblock is deliberate about having exactly four.
-
-## Rides along
-
-`removeVolumeField` (`layers/volume/settings/volumesSettings.ts:44`) has no production
-dispatcher since #695 deleted `unloadVolumeField`, and it must **not** be the release
-path: `projectVolumeFieldRows` derives panel row identity from `volumes.items`, so
-deleting the row would remove the checkbox the user just unticked. Release frees the
-GPU cube and leaves the settings row. Delete the reducer with this work.
-
-This reverses `docs/research/engine/decisions.md` #14 D3, which kept the imperative
-door partly because `unloadVolumeField` was the only route to `unload`. Different
-driver now (VRAM), different caller (the demand loop, not a public handle).

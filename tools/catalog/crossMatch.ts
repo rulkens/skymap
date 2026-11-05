@@ -32,8 +32,7 @@
  * Why position+redshift instead of objID?
  *   GLADE's SDSS-DR12 cross-ID column is a *name*, not the numeric SDSS
  *   objID we carry through `ParsedRecord`. We can't match on the integer
- *   ID, so we fall back to the geometric criterion — which is the same one
- *   GLADE itself uses to pre-merge its constituent catalogues.
+ *   ID, so we fall back to the geometric criterion.
  *
  * Why are the DESI patches lowest priority, and why through crossMatch at all
  * (unlike Milliquas, which bypasses it — see `buildAllBins.ts`)?
@@ -45,10 +44,10 @@
  *   patches after the base keeps every existing bin byte-stable (SDSS/2MRS/
  *   GLADE rows are decided before any DESI row is compared, so a patch can
  *   only contribute rows nobody higher-priority has) while the ~15 % low-z
- *   BGS overlap with GLADE/SDSS dedups away. Same-sightline cluster members —
- *   the whole reason these sources exist — survive regardless, because the
- *   AND-gate (position AND redshift) never collapses two real objects at
- *   different z onto the same accepted slot.
+ *   BGS overlap with GLADE/SDSS dedups away. The AND-gate (position AND
+ *   redshift) keeps a foreground/background pair apart only when their
+ *   redshifts differ by more than the tolerance below (~3,000 km/s): two
+ *   members of one cluster within 5 arcsec of each other DO collapse.
  */
 
 import type { ParsedRecord } from '../parsers/common';
@@ -56,8 +55,7 @@ import type { ParsedRecord } from '../parsers/common';
 /**
  * Position tolerance: 5 arcseconds expressed in degrees.
  *
- * 5 arcsec is the standard cross-matching radius used by GLADE itself when
- * merging its parent catalogues, and it sits comfortably above SDSS's
+ * 5 arcsec sits comfortably above SDSS's
  * astrometric scatter (~0.1 arcsec) while still being well below the typical
  * separation of distinct galaxies (a few arcmin in the local universe).
  */
@@ -67,10 +65,11 @@ const POSITION_TOL_DEG = 5 * ARC_SEC_IN_DEG;
 /**
  * Relative redshift tolerance: |Δz| / (1+z_min) < 1 %.
  *
- * 1 % is loose enough to absorb the difference between SDSS spec-z (precision
- * ~10⁻⁴) and a 2MPZ photo-z (precision ~0.015) — both of which can describe
- * the same galaxy — but tight enough that two genuinely distinct galaxies on
- * the same line of sight (Δz of order 0.01 or more) are kept separate.
+ * 0.01 is ~3,000 km/s. It is NARROWER than a 2MPZ photo-z error (~0.015), so
+ * a spec-z row and a photo-z row of one galaxy can both survive; and wider
+ * than a cluster's velocity spread, so same-sightline cluster members within
+ * the position tolerance merge. Only pairs with Δz of order 0.01 or more are
+ * kept separate.
  */
 const REDSHIFT_TOL_REL = 0.01;
 

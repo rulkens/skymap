@@ -9,19 +9,17 @@ import { describe, it, expect } from 'vitest';
 
 import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from '../../../src/state/input/keyboardShortcuts';
 import { goHome } from '../../../src/state/selection/goHome';
-import { clearSelection, updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
+import { focusSelected } from '../../../src/state/selection/focusSelected';
+import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import {
   setPaletteOpen,
   toggleDebugPanelOpen,
   toggleUiHidden,
 } from '../../../src/state/ui/uiSlice';
 import { goLive, setRate, pause, resume } from '../../../src/state/time/timeSlice';
-import { exitTour, advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
-import { stopClip } from '../../../src/state/camera/clipActions';
+import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { RootState } from '../../../src/store/types';
-import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { UiState } from '../../../src/@types/ui/UiState';
-import type { SelectionState } from '../../../src/@types/store/SelectionState';
 import type { TimeState } from '../../../src/@types/time/TimeState';
 import type { TourRuntimeState } from '../../../src/@types/animation/tour/TourRuntimeState';
 
@@ -34,20 +32,15 @@ const byKeys = (keys: string) => {
 // Minimal RootState-shaped fixtures — only the slice each case's selector
 // reads, hand-rolled the way sibling slice tests do (e.g. tourSlice.test.ts's
 // `asState`).
-const stateWith = (partial: Partial<RootState>): RootState => partial as unknown as RootState;
+const stateWith = (partial: Partial<RootState>): RootState =>
+  ({ takeover: { active: null }, ...partial }) as unknown as RootState;
 
 const ui = (paletteOpen: boolean): UiState => ({
   paletteOpen,
   uiHidden: false,
   debugPanelOpen: false,
+  paletteTab: 'highlights',
   splash: { visible: false, dismissedVersion: null },
-});
-
-const selection = (select: SelectionRef | null): SelectionState => ({
-  hover: null,
-  select,
-  focus: null,
-  pending: { select: null, focus: null },
 });
 
 const time = (rateIndex: number, paused: boolean): TimeState => ({
@@ -56,15 +49,19 @@ const time = (rateIndex: number, paused: boolean): TimeState => ({
   rateIndex,
   direction: 1,
   paused,
+  profile: null,
 });
 
-const tour = (active: boolean): TourRuntimeState => ({
-  active,
-  tourId: active ? 'webShowcase' : '',
+const TOUR: TourRuntimeState = {
   beatIndex: 0,
   paused: false,
   dwellNonce: 0,
   dwellSec: 0,
+};
+
+// Which tour runs is the `takeover` slice's, so the "active" knob lands there.
+const takeover = (active: boolean) => ({
+  active: active ? { kind: 'tour' as const, id: 'webShowcase' as const } : null,
 });
 
 describe('KEYBOARD_SHORTCUTS', () => {
@@ -74,11 +71,8 @@ describe('KEYBOARD_SHORTCUTS', () => {
     expect(run(stateWith({ ui: ui(true) }))).toBeNull();
   });
 
-  it('f focuses selected ref, null when nothing selected', () => {
-    const run = byKeys('f').run;
-    const ref: SelectionRef = { type: 'milkyWay' };
-    expect(run(stateWith({ selection: selection(ref) }))).toEqual(updateSelectionFocus(ref));
-    expect(run(stateWith({ selection: selection(null) }))).toBeNull();
+  it('f issues the focusSelected command', () => {
+    expect(byKeys('f').run(stateWith({}))).toEqual(focusSelected());
   });
 
   it('[ and ] clamp via stepRate', () => {
@@ -118,8 +112,8 @@ describe('KEYBOARD_SHORTCUTS', () => {
 
     for (const { keys, action } of cases) {
       const run = byKeys(keys).run;
-      expect(run(stateWith({ tour: tour(false) }))).toBeNull();
-      expect(run(stateWith({ tour: tour(true) }))).toEqual(action());
+      expect(run(stateWith({ tour: TOUR, takeover: takeover(false) }))).toBeNull();
+      expect(run(stateWith({ tour: TOUR, takeover: takeover(true) }))).toEqual(action());
     }
   });
 });

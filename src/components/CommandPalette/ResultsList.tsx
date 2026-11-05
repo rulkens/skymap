@@ -9,7 +9,7 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import { ROW_VIEW } from './paletteRows';
-import type { ScoredRow } from './paletteRowModel';
+import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import styles from './ResultsList.module.css';
 
 export type ResultsListProps = {

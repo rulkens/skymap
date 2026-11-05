@@ -1,4 +1,4 @@
-# stars-rs — Gaia star-catalog builder (canonical real-scale pipeline)
+# stars-rs — Gaia star-catalog builder (canonical for SKST v1 only)
 
 Rust reimplementation of the Gaia star-bin build. It reads the paged Gaia DR3
 CSVs plus the GCNS 100 pc supplement and the Hipparcos-2 bright-star patch, and
@@ -6,7 +6,9 @@ emits the per-tier SKST binaries `public/data/star-catalog/v1/stars-{small,
 medium,large}.bin` the browser renderer loads (`constellations.json` writes
 straight to the `--out` dir, unversioned).
 
-This is the **canonical builder for real-scale runs**. The TypeScript builder at
+It still emits SKST v1 (`star-catalog/v1/`); the v2 octree (`star-catalog/v2/`) is baked by the TypeScript `npm run build-stars` only, until the Rust v2 port lands as its own plan.
+
+This is the **canonical builder for real-scale SKST v1 runs**; the v2 octree is baked by the TypeScript build only. The TypeScript builder at
 `tools/stars/buildStars.ts` is the **reference implementation** — it is the
 executable spec, and the one the vitest suite exercises. This crate is a
 speed-and-memory rewrite of that spec, far faster and with a much lower memory

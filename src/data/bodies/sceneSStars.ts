@@ -22,17 +22,20 @@ import { S_STAR_SEEDS } from './sStarElements';
 import { sStarAppearance } from './sStarAppearance';
 import { SCALE_UNITS } from '../scaleUnits';
 import { SOLAR_RADIUS_KM } from './solarRadiusKm';
+import { STAR_RESOLVE_PX } from './starResolvePx';
 import { temperatureToLinearRgb } from '../../utils/color/temperatureToLinearRgb';
 import type { StarBody } from '../../@types/scene/StarBody';
+import { asSceneBodyId } from '../../utils/scene/asSceneBodyId';
 
 export const SCENE_S_STARS: readonly StarBody[] = S_STAR_SEEDS.map((seed) => {
   const { temperatureK, absMag, radiusSolar } = sStarAppearance(seed.kMag, seed.spectralClass);
   return {
-    id: seed.id,
+    id: asSceneBodyId(seed.id),
     label: seed.label,
     absMag,
     color: temperatureToLinearRgb(temperatureK),
     // Wire/authored value is km; runtime convention is metres.
     surface: { datumRadiusM: radiusSolar * SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M, reliefM: [0, 0] },
+    resolvePx: STAR_RESOLVE_PX,
   };
 });

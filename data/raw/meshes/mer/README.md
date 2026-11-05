@@ -12,7 +12,7 @@ what `npm run build-meshes` reads.
 | Model      | "Mars Exploration Rover - Spirit and Opportunity"                                      |
 | Author     | NASA/JPL-Caltech                                                                       |
 | Source     | <https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/> |
-| Licence    | Public domain — NASA 3D Resources are "free and without copyright"                     |
+| Licence    | NASA media guidelines; the collection calls its assets "free and without copyright" |
 | Fetch date | 2026-09-11                                                                             |
 | File       | `Mars Exploration Rover - Spirit and Opportunity.blend`, 12,243,528 bytes              |
 | sha256     | `1f1e2b246aca461d6d1d2b5f9ac9dff7fd225d242fc000131277457815e160c2`                     |
@@ -87,7 +87,7 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 `npm run build-meshes` copies the string below onto the generated
 `MESH_ASSETS.mer` row:
 
-> Mars Exploration Rover - Spirit and Opportunity by NASA/JPL-Caltech — NASA 3D Resources, public domain (https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/)
+> Mars Exploration Rover - Spirit and Opportunity by NASA/JPL-Caltech — NASA 3D Resources (https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/)
 
 ## As inspected (2026-09-11)
 

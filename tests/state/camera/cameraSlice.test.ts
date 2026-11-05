@@ -17,12 +17,14 @@ import reducer, {
   clipStarted,
   clipEnded,
   resolveClipStart,
+  commitCameraPose,
 } from '../../../src/state/camera/cameraSlice';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import type { CameraTweenDescriptor } from '../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { EngineSubsystemHandles } from '../../../src/@types/engine/handles/EngineSubsystemHandles';
-import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../src/@types/camera/orientation/OrientationFrameId';
 
 // ── Compile-time freeze guards ──────────────────────────────────────────────
 // These never run; they fail at `tsc` time if the camera surface regrows a
@@ -51,8 +53,7 @@ const tweenFrame: OrientationFrameId = 'ecliptic';
 const tween: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
   to: pose,
-  durationMs: 1200,
-  easing: 'easeOutCubic',
+  motion: { style: 'eased', durationMs: 1200, ease: 'easeOutCubic' },
   frame: tweenFrame,
 };
 
@@ -91,6 +92,17 @@ describe('cameraSlice — clip lifecycle', () => {
     const cleared = reducer(withBoth, clipEnded());
     expect(cleared.clip).toBeNull();
     expect(cleared.tween).toBeNull();
+  });
+});
+
+describe('cameraSlice — commitCameraPose identity', () => {
+  it('stores the payload BY REFERENCE, not a copy', () => {
+    // `stepCameraRuntime`'s outside-commit check (`base !== prev.base`) and its
+    // `next.base` fold both depend on this: a defensive spread here would make
+    // every loop-authored commit misread as an outside one.
+    const payload = absoluteArm(pose);
+    const state = reducer(base(), commitCameraPose(payload));
+    expect(state.base).toBe(payload);
   });
 });
 

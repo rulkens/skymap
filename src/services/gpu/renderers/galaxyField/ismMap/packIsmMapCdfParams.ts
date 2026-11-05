@@ -1,3 +1,5 @@
+import type { IsmMapCdfChannelWeights } from '../../../../../@types/galaxy/IsmMapCdfChannelWeights';
+
 /**
  * packIsmMapCdfParams — the uniform every `ismMapDustCdfScan.wesl` pipeline
  * reads. THAT FILE'S `IsmMapCdfParams` IS THE OFFSET AUTHORITY (same
@@ -13,14 +15,6 @@ export const ISM_MAP_CDF_PARAMS_FLOATS = 12;
 
 /** Byte size of the params struct, for `createBuffer`. */
 export const ISM_MAP_CDF_PARAMS_BUFFER_SIZE = ISM_MAP_CDF_PARAMS_FLOATS * 4;
-
-export type IsmMapCdfChannelWeights = {
-  readonly gas: number;
-  readonly stars: number;
-  readonly activity: number;
-  readonly dust: number;
-};
-
 export type IsmMapCdfParamsInput = {
   readonly rMin: number;
   readonly rMax: number;

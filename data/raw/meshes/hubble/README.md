@@ -11,7 +11,7 @@ checksum sidecar (`../meshes.sha256`) are committed. Registered as
 | Model      | "Hubble Space Telescope (A)"                                                                         |
 | Author     | NASA (the mirror names no individual modeller)                                                       |
 | Source     | <https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)> |
-| Licence    | Public domain — NASA 3D Resources are "free and without copyright"                                   |
+| Licence    | NASA media guidelines; the collection calls its assets "free and without copyright" |
 | Fetch date | 2026-09-15                                                                                           |
 | File       | `Hubble Space Telescope (A).glb`, 1,694,988 bytes                                                    |
 | sha256     | `e5ba4de15c7d359ac8fa1ab7e286aff42dec09c0fadae3db99252587f39fa384`                                   |

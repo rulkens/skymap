@@ -1,0 +1,170 @@
+[
+  {
+    "from": "src/layers/structure/@types/StructureCatalogPayload.d.ts",
+    "to": "src/layers/structure/catalog/@types/StructureCatalogPayload.d.ts"
+  },
+  {
+    "from": "src/layers/structure/@types/StructureCatalogReq.d.ts",
+    "to": "src/layers/structure/catalog/@types/StructureCatalogReq.d.ts"
+  },
+  {
+    "from": "src/layers/structure/@types/StructureMetaEntry.d.ts",
+    "to": "src/layers/structure/catalog/@types/StructureMetaEntry.d.ts"
+  },
+  {
+    "from": "src/layers/structure/@types/StructureStore.d.ts",
+    "to": "src/layers/structure/catalog/@types/StructureStore.d.ts"
+  },
+  {
+    "from": "src/layers/structure/data/structureCatalogFormat.ts",
+    "to": "src/layers/structure/catalog/data/structureCatalogFormat.ts"
+  },
+  {
+    "from": "src/layers/structure/load/buildStaticAnchorStructures.ts",
+    "to": "src/layers/structure/catalog/load/buildStaticAnchorStructures.ts"
+  },
+  {
+    "from": "src/layers/structure/load/createStructureStore.ts",
+    "to": "src/layers/structure/catalog/load/createStructureStore.ts"
+  },
+  {
+    "from": "src/layers/structure/load/structureAssetRows.ts",
+    "to": "src/layers/structure/catalog/load/structureAssetRows.ts"
+  },
+  {
+    "from": "src/layers/structure/load/structureCatalogFetcher.ts",
+    "to": "src/layers/structure/catalog/load/structureCatalogFetcher.ts"
+  },
+  {
+    "from": "src/layers/structure/load/structureCatalogSlot.ts",
+    "to": "src/layers/structure/catalog/load/structureCatalogSlot.ts"
+  },
+  {
+    "from": "src/layers/structure/load/structureCatalogToStructures.ts",
+    "to": "src/layers/structure/catalog/load/structureCatalogToStructures.ts"
+  },
+  {
+    "from": "src/layers/structure/load/toStructureSearchEntry.ts",
+    "to": "src/layers/structure/catalog/load/toStructureSearchEntry.ts"
+  },
+  {
+    "from": "src/layers/structure/load/wireStructureProjection.ts",
+    "to": "src/layers/structure/catalog/load/wireStructureProjection.ts"
+  },
+  {
+    "from": "src/layers/structure/@types/StructureMarkerDescriptor.d.ts",
+    "to": "src/layers/structure/markers/@types/StructureMarkerDescriptor.d.ts"
+  },
+  {
+    "from": "src/layers/structure/@types/StructureMarkerRenderer.d.ts",
+    "to": "src/layers/structure/markers/@types/StructureMarkerRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/structure/@types/StructureMarkersPassSpec.d.ts",
+    "to": "src/layers/structure/markers/@types/StructureMarkersPassSpec.d.ts"
+  },
+  {
+    "from": "src/layers/structure/@types/StructureMarkerStyle.d.ts",
+    "to": "src/layers/structure/markers/@types/StructureMarkerStyle.d.ts"
+  },
+  {
+    "from": "src/layers/structure/data/markerRadiusRetune.ts",
+    "to": "src/layers/structure/markers/data/markerRadiusRetune.ts"
+  },
+  {
+    "from": "src/layers/structure/data/structureLabelAboveGapPx.ts",
+    "to": "src/layers/structure/markers/data/structureLabelAboveGapPx.ts"
+  },
+  {
+    "from": "src/layers/structure/passes/structureMarkersCosmoPass.ts",
+    "to": "src/layers/structure/markers/passes/structureMarkersCosmoPass.ts"
+  },
+  {
+    "from": "src/layers/structure/passes/structureMarkersNearPass.ts",
+    "to": "src/layers/structure/markers/passes/structureMarkersNearPass.ts"
+  },
+  {
+    "from": "src/layers/structure/present/produceStructureLabels.ts",
+    "to": "src/layers/structure/markers/present/produceStructureLabels.ts"
+  },
+  {
+    "from": "src/layers/structure/present/produceStructureMarkers.ts",
+    "to": "src/layers/structure/markers/present/produceStructureMarkers.ts"
+  },
+  {
+    "from": "src/layers/structure/present/structureApparentRadiusFade.ts",
+    "to": "src/layers/structure/markers/present/structureApparentRadiusFade.ts"
+  },
+  {
+    "from": "src/layers/structure/present/structureIdOf.ts",
+    "to": "src/layers/structure/markers/present/structureIdOf.ts"
+  },
+  {
+    "from": "src/layers/structure/present/structureMarkerStyles.ts",
+    "to": "src/layers/structure/markers/present/structureMarkerStyles.ts"
+  },
+  {
+    "from": "src/layers/structure/render/createStructureMarkersPass.ts",
+    "to": "src/layers/structure/markers/render/createStructureMarkersPass.ts"
+  },
+  {
+    "from": "src/layers/structure/render/structureMarkerRenderer.ts",
+    "to": "src/layers/structure/markers/render/structureMarkerRenderer.ts"
+  },
+  {
+    "from": "src/layers/structure/utils/format/wrapLabelName.ts",
+    "to": "src/layers/structure/markers/utils/wrapLabelName.ts"
+  },
+  {
+    "from": "src/layers/structure/utils/labels/aboveRingAnchor.ts",
+    "to": "src/layers/structure/markers/utils/aboveRingAnchor.ts"
+  },
+  {
+    "from": "src/layers/structure/present/resolveStructureFromPick.ts",
+    "to": "src/layers/structure/picking/present/resolveStructureFromPick.ts"
+  },
+  {
+    "from": "src/layers/structure/present/structureSelectionRow.ts",
+    "to": "src/layers/structure/picking/present/structureSelectionRow.ts"
+  },
+  {
+    "from": "src/layers/structure/utils/picking/structurePickId.ts",
+    "to": "src/layers/structure/picking/utils/structurePickId.ts"
+  },
+  {
+    "from": "src/layers/structure/ui/CompactStructureCard/CompactStructureCard.tsx",
+    "to": "src/layers/structure/cards/ui/CompactStructureCard/CompactStructureCard.tsx"
+  },
+  {
+    "from": "src/layers/structure/ui/StructureDetailCard/StructureDetailCard.tsx",
+    "to": "src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard.tsx"
+  },
+  {
+    "from": "src/layers/structure/ui/StructureDetailCardContainer.tsx",
+    "to": "src/layers/structure/cards/ui/StructureDetailCardContainer.tsx"
+  },
+  {
+    "from": "src/layers/structure/ui/structureTips.tsx",
+    "to": "src/layers/structure/cards/ui/structureTips.tsx"
+  },
+  {
+    "from": "src/layers/structure/utils/format/formatAbellDesignation.ts",
+    "to": "src/layers/structure/cards/utils/formatAbellDesignation.ts"
+  },
+  {
+    "from": "src/layers/structure/data/structureScaleTitles.ts",
+    "to": "src/layers/structure/controls/data/structureScaleTitles.ts"
+  },
+  {
+    "from": "src/layers/structure/ui/StructuresSection/StructuresSection.tsx",
+    "to": "src/layers/structure/controls/ui/StructuresSection/StructuresSection.tsx"
+  },
+  {
+    "from": "src/layers/structure/ui/StructuresSectionContainer.tsx",
+    "to": "src/layers/structure/controls/ui/StructuresSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/structure/ui/projectMarkerCategoryVisibility.ts",
+    "to": "src/layers/structure/controls/ui/projectMarkerCategoryVisibility.ts"
+  }
+]

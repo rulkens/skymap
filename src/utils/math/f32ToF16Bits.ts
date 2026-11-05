@@ -2,9 +2,9 @@
  * f32ToF16Bits — convert one IEEE-754 f32 value to its 16-bit f16 raw
  * bit pattern.
  *
- * Used offline by the SCFD volume / flow builders (`buildCf4Density`,
- * `buildMcpmVolume`, `buildFlowField`) to pack f32 source arrays into
- * Uint16 f16 voxel arrays for on-disk storage.
+ * Used offline by the SCFD volume / flow builders (`buildMcpmVolume`,
+ * `buildFlowField`) to pack f32 source arrays into Uint16 f16 voxel
+ * arrays for on-disk storage.
  *
  * Why hand-roll instead of importing a library?  This is fundamentally
  * bit twiddling on a Uint32 view of a Float32Array — a dependency for

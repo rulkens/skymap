@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { clippedImagerySource } from '../../../tools/textures/clippedImagerySource';
-import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
+import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
 
 const opaque: SurfaceImagerySource = {
   id: 'fake',

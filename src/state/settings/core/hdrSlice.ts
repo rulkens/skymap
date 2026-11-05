@@ -6,7 +6,11 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_HDR_ENABLED, DEFAULT_HDR_HEADROOM, DEFAULT_HDR_KNEE } from '../../../data/defaults';
+import {
+  DEFAULT_HDR_ENABLED,
+  DEFAULT_HDR_HEADROOM,
+  DEFAULT_HDR_KNEE,
+} from '../../../data/defaults';
 import type { HdrSettings } from '../../../@types/settings/HdrSettings';
 
 const initialState: HdrSettings = {

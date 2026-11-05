@@ -30,8 +30,13 @@ import package::lib::segmentQuad::expandSegmentQuad;
 // ndc-z terms) so an endpoint sitting exactly ON it still passes the clip test.
 const CLIP_Z_EPS: f32 = 1e-4;
 
-@vertex
-fn vs(input: VsIn) -> VsOut {
+// expandMarkerLineQuad — the quad-expansion body shared by 'vs' (this file)
+// and 'vsOcclude' (vertexOcclude.wesl). Takes the RESOLVED occlude weight as
+// a parameter rather than reading 'input.occludeWeight' itself: 'vsOcclude'
+// resolves it beforehand by folding in an anchor-depth verdict against
+// group(1) bindings this module must stay clear of (see vertexOcclude.wesl's
+// header for why). One definition of the corner math either way.
+fn expandMarkerLineQuad(input: VsIn, occludeWeight: f32) -> VsOut {
   // Unpack the packed instance attributes.
   let fromWorld = input.fromAndWidth.xyz;
   let pixelWidth = input.fromAndWidth.w;
@@ -41,7 +46,7 @@ fn vs(input: VsIn) -> VsOut {
   // Expand this corner into a clip-space vertex via the shared
   // segment-quad helper. 'pixelWidth' is a FULL width (the helper takes a
   // half-width), so we pass 'pixelWidth * 0.5'.
-  let p = expandSegmentQuad(u.cam, fromWorld, toWorld, input.uv, pixelWidth * 0.5);
+  let p = expandSegmentQuad(u.cam, fromWorld, toWorld, input.uv, pixelWidth * 0.5).clip;
 
   // Clamp z to survive any far plane. The NEAR0 foreground connectors keep
   // endpoints far beyond the adaptive far plane ('foregroundFrustum'
@@ -59,6 +64,11 @@ fn vs(input: VsIn) -> VsOut {
   // outputs a single premultiplied color * (edge-falloff) without an
   // extra varying for the alpha gate.
   out.color = input.color * fadeAlpha;
-  out.occludeWeight = input.occludeWeight;
+  out.occludeWeight = occludeWeight;
   return out;
+}
+
+@vertex
+fn vs(input: VsIn) -> VsOut {
+  return expandMarkerLineQuad(input, input.occludeWeight);
 }

@@ -1,0 +1,11 @@
+import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { Tier } from '../../../../@types/data/Tier';
+
+/**
+ * Request shape for `starCatalogFetcher`: which star-catalog source, and at
+ * which tier. Carries `source` because one fetcher serves EVERY `starCatalog`
+ * row of the registry: the `source` dimension is what lets a future famous-star catalog reuse
+ * the same fetcher unchanged. `tier` selects the `-<tier>.bin` file for an
+ * `skst` row and the chunk pool's size for an `octree` row.
+ */
+export type StarCatalogReq = { readonly source: StarCatalogSourceType; readonly tier: Tier };

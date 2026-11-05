@@ -1,4 +1,3 @@
-// src/components/containers/StatusBarContainer.tsx
 /**
  * StatusBarContainer — store boundary for the engine status readout.
  *

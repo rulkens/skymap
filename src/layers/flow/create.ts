@@ -1,0 +1,20 @@
+/**
+ * create — the flow family's construction in dependency order: the renderer,
+ * then the slot that commits into it. No fade is driven here: the asset row's
+ * `gates` lets core fade the field in on the slot's commit.
+ */
+
+import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
+import type { FlowRuntime } from './@types/FlowRuntime';
+
+import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
+import { createFlowFieldRenderer } from './streamlines/render/flowFieldRenderer';
+import { createFlowFieldSlot } from './streamlines/load/flowFieldSlot';
+
+export function create(deps: LayerCoreDeps): FlowRuntime {
+  const renderer = createFlowFieldRenderer({
+    device: deps.ctx.device,
+    targetFormat: HDR_TARGET_FORMAT,
+  });
+  return { renderer, slot: createFlowFieldSlot(renderer) };
+}

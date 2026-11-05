@@ -2,7 +2,8 @@
  * The impostor's hub and the black hole it is the hub of must be the SAME point.
  *
  * They were authored twice — this file's own rounded RA/Dec at a round-numbers
- * 8.0 kpc, and `sceneSgrAStar`'s catalogue pair at R₀ = 8.178 kpc. Each is
+ * 8.0 kpc, and the Sgr A* catalogue pair at R₀ = 8.178 kpc (now
+ * `GALACTIC_CENTRE_ANCHOR`). Each is
  * defensible alone (placing a spiral painting is 2%-tolerant), and the drift is
  * invisible until both are on screen together, where 2% of R₀ is 178 pc of
  * daylight between the disc's centre and the object at its centre.
@@ -15,10 +16,10 @@
 import { describe, it, expect } from 'vitest';
 
 import { MILKY_WAY_CENTER_WORLD } from '../../../src/data/milkyWay/galacticCenter';
-import { SGR_A_STAR_ANCHOR } from '../../../src/data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../src/data/places/galacticCentre';
 
 describe('MILKY_WAY_CENTER_WORLD', () => {
   it('is the Sgr A* anchor itself, not a second transcription of its coordinates', () => {
-    expect([...MILKY_WAY_CENTER_WORLD]).toEqual([...SGR_A_STAR_ANCHOR.positionMpc]);
+    expect([...MILKY_WAY_CENTER_WORLD]).toEqual([...GALACTIC_CENTRE_ANCHOR.positionMpc]);
   });
 });

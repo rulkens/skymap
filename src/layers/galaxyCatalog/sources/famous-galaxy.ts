@@ -8,10 +8,8 @@ export const FAMOUS_GALAXY_ENTRY = {
   label: 'Famous',
   binBaseName: 'famous',
   allSky: true, // hand-picked entries from across the sky
-  visible: true,
   bearsLabel: true,
   bearsMarker: false,
-  labelLayer: 'galaxy',
   detailLabel: 'Famous Galaxy',
   shortLabel: 'Galaxy',
   plural: 'Famous Galaxies',
@@ -54,6 +52,6 @@ export const FAMOUS_GALAXY_ENTRY = {
   // every other catalog's brightness.
   sbBoost: 0.45,
   falloffHalfMpc: 1000,
-  // Ahead of the star catalog (50): the only `surveyDeepZoom` exemption, so it draws at boot.
+  // Ahead of the star catalog (50): the only survey deep-zoom band exemption, so it draws at boot.
   priority: 20,
 } as const satisfies GalaxyCatalogSourceEntry;

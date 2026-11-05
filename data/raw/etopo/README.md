@@ -7,7 +7,7 @@ Global height source for the surface-tile pyramid's `height` product.
 | File     | `ETOPO_2022_v1_30s_N90W180_surface.tif` (1,585,813,987 B)                                                                                                                                                    |
 | Upstream | <https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO2022/data/30s/30s_surface_elev_gtif/ETOPO_2022_v1_30s_N90W180_surface.tif>                                                                                 |
 | Fetched  | 2026-09-15 (`npm run fetch-height -- --etopo`)                                                                                                                                                               |
-| Licence  | Public domain (US government work). Cite: NOAA National Centers for Environmental Information, _ETOPO 2022 15 Arc-Second Global Relief Model_, DOI [10.25921/fd45-gt74](https://doi.org/10.25921/fd45-gt74). |
+| Licence  | CC0 1.0, by NOAA's metadata record for the dataset. Cite: NOAA National Centers for Environmental Information, _ETOPO 2022 15 Arc-Second Global Relief Model_, DOI [10.25921/fd45-gt74](https://doi.org/10.25921/fd45-gt74). |
 
 The thredds path quoted in the terrain spec 404s; the NGDC path above is the
 one that answered 200.

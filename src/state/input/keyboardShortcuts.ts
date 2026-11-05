@@ -25,19 +25,25 @@
  */
 
 import { stepRate } from '../../utils/time/stepRate';
+import { shortcutKeys } from '../../utils/input/shortcutKeys';
 import { logCameraState } from '../camera/logCameraState';
 import { goHome } from '../selection/goHome';
-import { selectSelectedRef } from '../selection/selectors';
-import { clearSelection, updateSelectionFocus } from '../selection/selectionSlice';
+import { focusSelected } from '../selection/focusSelected';
+import { clearSelection } from '../selection/selectionSlice';
 import { selectTourActive } from '../tour/selectors';
-import { advanceTour, exitTour, prevBeat, togglePause } from '../tour/tourActions';
-import { stopClip } from '../camera/clipActions';
+import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
+import { exitTakeover } from '../takeover/takeoverActions';
 import { selectPaletteOpen } from '../ui/selectors';
 import { setPaletteOpen, toggleDebugPanelOpen, toggleUiHidden } from '../ui/uiSlice';
 import { selectTimeState } from '../time/selectors';
 import { pause, resume, setRate } from '../time/timeSlice';
 import { goLiveNowAction } from '../time/goLiveNowAction';
+import type { RootState } from '../../store/types';
+import { toggleControlScheme } from '../settings/core/cameraControlsSlice';
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
+
+const stepSpeed = (s: RootState, step: -1 | 1) =>
+  setRate({ rateIndex: stepRate(s, step), nowMs: performance.now() });
 
 export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: 'command+k,ctrl+k', run: () => setPaletteOpen(true), preventDefault: true },
@@ -46,25 +52,17 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
     run: (s) => (selectPaletteOpen(s) ? null : setPaletteOpen(true)),
     preventDefault: true,
   },
-  // `stopClip` alongside `exitTour`: a tour beat's clip plays via a direct
-  // `playClip` call (see `visitBeatSaga`), never through `startClip`, so the
-  // two stops target disjoint playback paths and can't fight over the same
-  // clip. Both are no-ops when their respective thing isn't running (same as
-  // `exitTour` already was), so no precedence check is needed here.
-  { keys: 'escape', run: () => [clearSelection(), exitTour(), stopClip()] },
-  {
-    keys: 'f',
-    run: (s) => {
-      const ref = selectSelectedRef(s);
-      return ref ? updateSelectionFocus(ref) : null;
-    },
-  },
+  // `exitTakeover` ends whatever runs — a tour, an exhibit, a registry clip, or
+  // the debug path replay — and is a no-op when nothing does.
+  { keys: 'escape', run: () => [clearSelection(), exitTakeover()] },
+  { keys: 'f', run: () => focusSelected() },
   { keys: 'h,e', run: () => goHome() },
   { keys: 'tab', run: () => toggleUiHidden(), preventDefault: true },
   { keys: 'l', run: () => logCameraState() },
   { keys: 'd', run: () => toggleDebugPanelOpen() },
-  { keys: '[', run: (s) => setRate({ rateIndex: stepRate(s, -1), nowMs: performance.now() }) },
-  { keys: ']', run: (s) => setRate({ rateIndex: stepRate(s, +1), nowMs: performance.now() }) },
+  // A running exhibit's section kinds may claim a key first (`watchKeyboardEventsSaga`).
+  { keys: '[', run: (s) => stepSpeed(s, -1) },
+  { keys: ']', run: (s) => stepSpeed(s, +1) },
   {
     keys: '\\',
     run: (s) =>
@@ -73,6 +71,7 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
         : pause({ nowMs: performance.now() }),
   },
   { keys: 'shift+n', run: () => goLiveNowAction() },
+  { keys: 'shift+c', run: () => toggleControlScheme() },
   // Tour keys — always registered, gated on an active tour by `run` (returns
   // null outside a tour). `preventDefault` is OMITTED: Space must stay free to
   // activate a focused button and the arrow keys must stay free to scroll,
@@ -84,7 +83,7 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
 
 export const SHORTCUTS_BY_KEY: Record<string, KeyboardShortcut> = KEYBOARD_SHORTCUTS.reduce(
   (byKey, shortcut) => {
-    for (const key of shortcut.keys.split(',')) byKey[key] = shortcut;
+    for (const key of shortcutKeys(shortcut.keys)) byKey[key] = shortcut;
     return byKey;
   },
   {} as Record<string, KeyboardShortcut>,

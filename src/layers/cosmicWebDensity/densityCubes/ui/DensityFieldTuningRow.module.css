@@ -1,0 +1,31 @@
+/*
+ * One field's tuning block inside the "Cosmic web density (tuning)" debug
+ * section — a label line, a stack of DebugSlider rows and the palette
+ * select. Bordered so consecutive fields (MCPM, Polyphorm 2MRS, the
+ * workbench export) read as distinct blocks in one collapsible section.
+ */
+
+.row {
+  padding: 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.row:first-child {
+  border-top: none;
+}
+
+.label {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.paletteRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.paletteLabel {
+  flex: 0 0 90px;
+}

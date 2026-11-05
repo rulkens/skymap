@@ -10,10 +10,10 @@
 // ## Bindings
 //
 // '@group(0) @binding(0)' holds 'TintedSphereUniforms' (80 bytes:
-// mat4x4<f32> mvp + vec3<f32> tint, padded to 80 — see lib/sphere.wesl
+// mat4x4<f32> mvp + vec3<f32> tint + f32 opacity — see lib/sphere.wesl
 // for the authoritative byte layout). The binding is declared in BOTH
 // this module and 'star/fragment.wesl' (the vertex stage reads 'mvp',
-// the fragment stage reads 'tint'); importing the one authoritative
+// the fragment stage reads 'tint' and 'opacity'); importing the one authoritative
 // struct from lib/sphere makes layout drift structurally impossible,
 // the same idiom 'points/io.wesl' uses.
 //

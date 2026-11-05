@@ -1,4 +1,3 @@
-// src/components/common/CopyButton/CopyButton.tsx
 /**
  * CopyButton — a button that copies `text` to the clipboard on click and
  * shows transient success/failure feedback in place of its label.

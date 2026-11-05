@@ -1,0 +1,39 @@
+/* The words' last line sits on the name's last baseline, not on the foot of its box, which the name's leading pads. */
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  align-items: last baseline;
+  row-gap: var(--site-space-s);
+  margin-bottom: var(--site-space-xl);
+
+  & h2 {
+    max-width: 20ch;
+    margin: 0;
+  }
+}
+
+.lead p:last-child {
+  margin-bottom: 0;
+}
+
+/* The words start on the page's middle line, where a section in two columns starts its second. */
+@media (--wide) {
+  .root h2:not(:only-child),
+  .lead {
+    grid-column: span 6;
+    --cols: 6;
+  }
+}
+
+.narrow {
+  & h2 {
+    max-width: 12ch;
+  }
+
+  & .lead p {
+    max-width: var(--measure-lead);
+  }
+}
+
+.top {
+  align-items: start;
+}

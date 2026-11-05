@@ -62,7 +62,7 @@ describe('applyLuminanceAsAlpha', () => {
       [200, 0, 0, 255], // red
       [0, 200, 0, 255], // green
       [0, 0, 200, 255], // blue
-      [0, 0, 0, 255],   // black control
+      [0, 0, 0, 255], // black control
     ]);
     applyLuminanceAsAlpha(buf, 2, 2, { blackPoint: 0, whitePoint: 255, gamma: 1 });
     const alphaRed = buf[3]!;

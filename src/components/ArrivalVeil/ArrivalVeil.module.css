@@ -1,0 +1,30 @@
+/* src/components/ArrivalVeil/ArrivalVeil.module.css */
+
+/* The splash's layer: a deep link hides the splash, so the two never meet. */
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--color-bg);
+  transition:
+    opacity 0.4s ease-out,
+    visibility 0s;
+}
+
+/* `visibility` flips only after the fade, taking the veil out of hit-testing
+ * and the accessibility tree without unmounting it mid-transition. */
+.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.4s ease-out,
+    visibility 0s 0.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .hidden {
+    transition: none;
+  }
+}

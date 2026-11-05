@@ -7,7 +7,7 @@
  */
 
 import type { ColourGrade } from '../../../src/@types/scene/ColourGrade';
-import type { AlbedoDelight } from '../AlbedoDelight';
+import type { AlbedoDelight } from '../@types/AlbedoDelight';
 
 export const MARS_VIKING_DELIGHT: AlbedoDelight = {
   reliefShade: 0.36,

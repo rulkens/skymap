@@ -34,7 +34,7 @@ import { readJsonBody } from '../../utils/http/readJsonBody.ts';
 import { readBinaryBody } from '../../utils/http/readBinaryBody.ts';
 import { sendJson } from '../../utils/http/sendJson.ts';
 import { statusForError } from '../../utils/http/statusForError.ts';
-import type { ErrorStatusRule } from '../../utils/http/ErrorStatusRule';
+import type { ErrorStatusRule } from '../../@types/http/ErrorStatusRule';
 import { handleFetch } from './routes/fetch.ts';
 import { handleProcess } from './routes/process.ts';
 import { handleProcessAlphaOnly } from './routes/processAlphaOnly.ts';

@@ -8,7 +8,7 @@
 //               is the full-resolution point-star path; its output is unchanged
 //               by the aggregate split.
 //   fsLinear  — the AGGREGATE stream. Same glow profile, NO knee: it writes the
-//               LINEAR premultiplied glow '(tint * I, I)' into the half-res
+//               LINEAR premultiplied glow '(tint * I, I)' into the low-res
 //               'star-aggregates' offscreen, storing the raw pre-knee scalar 'I'
 //               in the ALPHA channel. The offscreen additive-sums both, so its
 //               alpha holds the SUMMED scalar and its rgb the summed tinted
@@ -70,7 +70,7 @@
 // sub-knee AGGREGATE quads, each escaping compression, summed additively to a
 // region far brighter than the same region drawn as one concentrated leaf that
 // DID cross the knee. Splitting the streams fixes it: aggregates draw LINEAR
-// ('fsLinear') into the half-res offscreen and the composite applies 'starKnee'
+// ('fsLinear') into the low-res offscreen and the composite applies 'starKnee'
 // to their SUMMED field, so an aggregate-covered region now compresses exactly
 // like a bright leaf does. The only residual is the genuine concavity across a
 // cross-knee refine (sum of compressed children >= compress of the summed
@@ -122,7 +122,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
 // The AGGREGATE stream's LINEAR variant: same glow, NO knee. rgb is the
 // premultiplied tinted light 'tint * I'; alpha is the RAW pre-knee scalar 'I'.
-// The half-res 'star-aggregates' offscreen additive-sums both channels, so its
+// The low-res 'star-aggregates' offscreen additive-sums both channels, so its
 // alpha ends the frame holding the SUMMED scalar and its rgb the summed tinted
 // light. The 'star-upsample' composite reads that back and applies 'starKnee'
 // to the summed scalar -- so overlapping aggregate quads compress as one bright

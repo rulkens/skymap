@@ -4,6 +4,7 @@ Split rule: scene content is saved here; bake artefacts stay in meshPrebake.py.
 Run:  npm run import-mesh -- <key>   (Blender 5.2 LTS; not run in CI)
 """
 
+import math
 import os
 import sys
 
@@ -14,7 +15,8 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")
 SOURCE_UV = "source"
 
 
-def source(filename, frame=None, drop_materials=(), scale=1.0, materials=None):
+def source(filename, frame=None, drop_materials=(), scale=1.0, materials=None, weld=None,
+           rock=None):
     return {
         "filename": filename,
         # Modellers author in whatever unit suits them — Hubble in inches — and
@@ -33,7 +35,21 @@ def source(filename, frame=None, drop_materials=(), scale=1.0, materials=None):
         # An object whose materials are ALL in this set goes; the raise guards
         # against the name drifting upstream and the marker silently shipping.
         "drop_materials": set(drop_materials),
+        # Merge-by-distance threshold in metres, or None to skip (see weld()).
+        "weld": weld,
+        # A shape model's material, which the OBJ does not carry: `{"constant": rgb}`
+        # or `lonlat_albedo(...)`; None for an authored model (see dress_shape_model()).
+        "rock": rock,
     }
+
+
+def lonlat_albedo(filename, lon_offset_deg, mean_albedo):
+    """A planetocentric, east-positive equirect mosaic whose left edge is longitude
+    -180, sampled `lon_offset_deg` east of each surface point (its measured
+    registration against the shape's relief) and rescaled so its median is
+    `mean_albedo` — the body's seed, so the mesh reads as bright as the sphere did.
+    A mosaic whose left edge is 0 instead takes 180 more."""
+    return {"image": filename, "lon_offset_deg": lon_offset_deg, "mean_albedo": mean_albedo}
 
 
 SOURCES = {
@@ -54,7 +70,26 @@ SOURCES = {
         "hbltel_4": dict(metallic=1.0, roughness=0.2, bump=0.08),
         "hbltel_3": dict(metallic=0.8, roughness=0.35, bump=0.04),
     }),
+    "petunias": source("petunias.glb", weld=0.0002, drop_materials=("material",)),
+    # Shape models: km, already in the IAU body frame (+X sub-host, +Z pole), origin
+    # at the centre of mass.
+    "phobos": source("PHOBOS_M003_GAS_V01.OBJ", scale=1000.0, rock=lonlat_albedo(
+        "Phobos_Viking_Mosaic_40ppd_DLRcontrol.tif", 4.5, (0.30, 0.29, 0.28))),
+    "deimos": source("DEIMOS_K005_THO_V01.OBJ", scale=1000.0,
+                     rock={"constant": (0.32, 0.30, 0.28)}),
+    # Vesta's and Bennu's maps are pre-shrunk to 8192 px with their NoData filled (README).
+    "vesta": source("dawn_vesta_grv_icq0512_v1.obj", scale=1000.0, rock=lonlat_albedo(
+        "Vesta_Dawn_FC_HAMO_Mosaic_Global_74ppd.8192.png", 0.0, (0.45, 0.43, 0.40))),
+    "ceres": source("dawn_ceres_grv_icq0256_v2.obj", scale=1000.0, rock=lonlat_albedo(
+        "Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif", 180.0, (0.30, 0.29, 0.28))),
+    "bennu": source("bennu_g_00880mm_alt_obj_0000n00000_v020.obj", scale=1000.0,
+                    rock=lonlat_albedo("Bennu_global_ShapeV20_GndControl_ROLOphase_ALBEDO_8bit_v6.8192.png",
+                                       180.0, (0.30, 0.29, 0.28))),
 }
+
+# The mosaic is resampled to this before it is packed: a 4096 atlas over Phobos
+# never resolves the source's 0.24 km texels, and the .blend stays small.
+ROCK_IMAGE_PX = (8192, 4096)
 
 
 def log(msg):
@@ -65,6 +100,10 @@ def log(msg):
 def load(path):
     if path.endswith(".blend"):
         bpy.ops.wm.open_mainfile(filepath=path)
+    elif path.lower().endswith(".obj"):
+        # Identity axes: the shape model's body frame (+Z pole) IS the scene's +Z-up.
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.wm.obj_import(filepath=path, forward_axis="Y", up_axis="Z")
     else:
         bpy.ops.wm.read_factory_settings(use_empty=True)
         bpy.ops.import_scene.gltf(filepath=path, merge_vertices=True)
@@ -270,6 +309,18 @@ def unify_source_uvs(meshes):
     log("re-pointed %d uv references at '%s'" % (repointed, SOURCE_UV))
 
 
+def weld(meshes, threshold):
+    """SketchUp exports every face as its own island of loose vertices.
+    Unwelded, smart_project yields ~150k one-triangle islands (an atlas of
+    unusable confetti) and COLLAPSE decimation has no edges to collapse along."""
+    for obj in meshes:
+        select([obj])
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.mesh.remove_doubles(threshold=threshold)
+        bpy.ops.object.mode_set(mode="OBJECT")
+
+
 def repoint_uv_references():
     """Shader nodes that name a UV map by STRING — every glTF-imported Normal
     Map node does — go dangling when the rename above lands, and a Normal Map
@@ -299,6 +350,92 @@ def pack_images():
     return len(missing)
 
 
+def rock_image(directory, rock):
+    """The mosaic as an sRGB colour map whose median decodes to `mean_albedo`
+    (linear), capped at the 99.7th percentile so a saturated or no-data spike
+    stays a spike rather than setting the scale."""
+    import numpy as np
+    source = bpy.data.images.load(os.path.join(directory, rock["image"]))
+    source.scale(*ROCK_IMAGE_PX)
+    px = np.empty(ROCK_IMAGE_PX[0] * ROCK_IMAGE_PX[1] * 4, dtype=np.float32)
+    source.pixels.foreach_get(px)
+    bpy.data.images.remove(source)
+    grey = px.reshape(-1, 4)[:, 0]
+    valid = grey > 1.0 / 255
+    median = np.median(grey[valid])
+    ratio = np.clip(grey / median, 0.0, np.percentile(grey[valid], 99.7) / median)
+    ratio[~valid] = 1.0
+    out = np.ones((grey.size, 4), dtype=np.float32)
+    for c in range(3):
+        linear = np.clip(ratio * rock["mean_albedo"][c], 0.0, 1.0)
+        out[:, c] = np.where(linear <= 0.0031308, 12.92 * linear,
+                             1.055 * np.power(linear, 1 / 2.4) - 0.055)
+    # A NEW image, packed from memory: edits to the file-backed one are dropped
+    # when `pack_all` re-reads it from disk, which shipped the raw mosaic once.
+    image = bpy.data.images.new("rock_albedo", *ROCK_IMAGE_PX, alpha=False)
+    image.colorspace_settings.name = "sRGB"
+    image.pixels.foreach_set(out.ravel())
+    image.pack()
+    return image
+
+
+def rock_material(directory, rock):
+    """Principled rock (roughness 1, metallic 0). An image is looked up by the
+    planetocentric longitude/latitude of each shading point's OBJECT coordinates:
+    the shape has no UVs, and a direction is all an equirect mosaic needs."""
+    mat = bpy.data.materials.new("rock")
+    mat.use_nodes = True
+    tree = mat.node_tree
+    bsdf = tree.nodes["Principled BSDF"]
+    bsdf.inputs["Roughness"].default_value = 1.0
+    bsdf.inputs["Metallic"].default_value = 0.0
+    if "constant" in rock:
+        bsdf.inputs["Base Color"].default_value = (*rock["constant"], 1.0)
+        return mat
+
+    def op(name, a, b=None, value=None):
+        node = tree.nodes.new("ShaderNodeMath")
+        node.operation = name
+        tree.links.new(node.inputs[0], a)
+        if b is not None:
+            tree.links.new(node.inputs[1], b)
+        elif value is not None:
+            node.inputs[1].default_value = value
+        return node.outputs[0]
+
+    xyz = tree.nodes.new("ShaderNodeSeparateXYZ")
+    tree.links.new(xyz.inputs[0], tree.nodes.new("ShaderNodeTexCoord").outputs["Object"])
+    x, y, z = xyz.outputs
+    lon = op("ARCTAN2", y, x)
+    lat = op("ARCTAN2", z, op("SQRT", op("ADD", op("MULTIPLY", x, x), op("MULTIPLY", y, y))))
+    # Left edge at -180: u = lon/2pi + 1/2, shifted east by the registration offset.
+    u = op("FRACT", op("ADD", op("MULTIPLY", lon, value=1 / (2 * math.pi)),
+                       value=0.5 + rock["lon_offset_deg"] / 360))
+    v = op("ADD", op("MULTIPLY", lat, value=1 / math.pi), value=0.5)
+    uv = tree.nodes.new("ShaderNodeCombineXYZ")
+    tree.links.new(uv.inputs[0], u)
+    tree.links.new(uv.inputs[1], v)
+    tex = tree.nodes.new("ShaderNodeTexImage")
+    tex.image = rock_image(directory, rock)
+    tex.extension = "REPEAT"
+    tree.links.new(tex.inputs["Vector"], uv.outputs[0])
+    tree.links.new(bsdf.inputs["Base Color"], tex.outputs["Color"])
+    return mat
+
+
+def dress_shape_model(scene, directory, rock):
+    """The OBJ arrives as one material-less, flat-shaded object: give it the rock
+    and smooth normals (the relief bake measures slopes against the smooth surface)."""
+    mat = rock_material(directory, rock)
+    meshes = [o for o in scene.objects if o.type == "MESH"]
+    for obj in meshes:
+        obj.data.materials.clear()
+        obj.data.materials.append(mat)
+    select(meshes)
+    bpy.ops.object.shade_smooth()
+    return len(meshes)
+
+
 def main():
     key = sys.argv[-1]
     if key not in SOURCES:
@@ -313,6 +450,8 @@ def main():
     if cfg["frame"] is not None:
         scene.frame_set(cfg["frame"])
     log("%s: loaded %s at frame %s" % (key, cfg["filename"], cfg["frame"]))
+    if cfg["rock"] is not None:
+        log("dressed %d shape-model meshes in rock" % dress_shape_model(scene, directory, cfg["rock"]))
     log("colour management: %d images decoded as sRGB, %d relinked" % fix_colour_management())
     log("dropped %d rival material outputs" % unify_shader_outputs())
     log("overrode %d materials" % override_materials(cfg))
@@ -328,6 +467,9 @@ def main():
     if cfg["scale"] != 1.0:
         log("scaled %d root objects by %g -> metres" % (scale_roots(scene, cfg["scale"]), cfg["scale"]))
     unify_source_uvs(surfaces(scene))
+    if cfg["weld"] is not None:
+        weld(surfaces(scene), cfg["weld"])
+        log("welded %d meshes" % len(surfaces(scene)))
 
     log("packed images (%d missing images removed)" % pack_images())
     bpy.ops.wm.save_as_mainfile(filepath=out)

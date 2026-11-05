@@ -1,7 +1,8 @@
 # Cloudflare Workers deploy config for Skymap.
 #
 # The Worker (src/worker.ts) is a thin pass-through to the static assets
-# in `dist/`.  Its purpose is to register the project as "Worker + Assets"
+# in `dist/`, plus the website's contact endpoint (closed until configured).
+# Its purpose is to register the project as "Worker + Assets"
 # rather than "Assets-only" — see the docblock in src/worker.ts for the
 # rationale.  Once the project type is upgraded, the dashboard's Variables
 # and Secrets panel becomes available and infrastructure config (e.g.
@@ -28,6 +29,10 @@ compatibility_date = "2026-05-05"
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+# The contact form's endpoint (docs/DEPLOY.md, "Opening the contact form").
+# Named here so the Worker sees it before the SPA fallback does; the Worker
+# hands every other method on this path to ASSETS, so nothing else changes.
+run_worker_first = ["/api/contact"]
 
 # Worker-runtime + build-time variables.  Cloudflare's deploy pipeline
 # exposes `[vars]` to the build command's environment (so Vite picks

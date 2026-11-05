@@ -44,7 +44,7 @@ import package::lib::camera::CameraUniforms;
 // ── Uniforms layout (CameraUniforms-prefixed) ──────────────────────
 //
 // 96-byte uniform buffer.  The first 80 bytes are the shared
-// 'CameraUniforms' prefix (viewProj + viewportPx + 8B reserved pad);
+// 'CameraUniforms' prefix (viewProj + viewportPx + pxPerRad + 4B pad);
 // the renderer-specific 'camPosWorld + pxPerRad' pair sits AFTER it
 // starting at offset 80, matching the disks / quads layout.
 //
@@ -102,7 +102,7 @@ struct VsOut {
   // galaxies with a curated famous WebP loaded; 1.0 means no fade-out.
   // See 'ProceduralDiskInstance.d.ts' for the full semantic.
   @location(3) @interpolate(flat) procFadeOut: f32,
-  // Per-instance cluster-focus dim in [0.08, 1.0]: 1.0 for members of the
+  // Per-instance structure-focus dim in [0.08, 1.0]: 1.0 for members of the
   // focused structure (and for everything at rest), 0.08 for non-members, ramped
   // by the focus blend. Computed once per instance in the vertex stage.
   @location(4) @interpolate(flat) focusDim: f32,

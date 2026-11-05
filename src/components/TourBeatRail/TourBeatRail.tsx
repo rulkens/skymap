@@ -1,4 +1,3 @@
-// src/components/TourBeatRail/TourBeatRail.tsx
 /**
  * TourBeatRail — the vertical dot progress rail on the right edge of the
  * viewport: one dot per beat, top = start, bottom = end.

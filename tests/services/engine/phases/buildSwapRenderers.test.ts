@@ -38,7 +38,7 @@ import { buildSwapRenderers } from '../../../../src/services/engine/phases/build
 /**
  * The eight handle keys `buildSwapRenderers` owns on `state.gpu.*`, plus the
  * `uiCtx` / `fontAtlases` inputs it reads, plus one NOT-flagged row
- * (`constellationRenderer`) — the untouched-identity proof's subject.
+ * (`label3DRenderer`) — the untouched-identity proof's subject.
  */
 function makeState(): EngineState {
   return {
@@ -51,14 +51,14 @@ function makeState(): EngineState {
         canvas: { __mockCanvas: true },
       },
       fontAtlases: { __mockAtlases: true },
-      labelRenderer: null,
-      markerLineRenderer: null,
+      labelRendererCosmo: null,
+      markerLineRendererCosmo: null,
       debugLineRenderer: null,
       selectionRingRenderer: null,
       pickDebugOverlay: null,
-      foregroundLabelRenderer: null,
-      foregroundMarkerLineRenderer: null,
-      constellationRenderer: makeStub(),
+      labelRendererNear: null,
+      markerLineRendererNear: null,
+      label3DRenderer: makeStub(),
     },
     subsystems: {
       cosmoLabelDirector: {
@@ -77,13 +77,13 @@ describe('buildSwapRenderers', () => {
     buildSwapRenderers(state, 'bgra8unorm');
 
     const firstRound = {
-      labelRenderer: state.gpu.labelRenderer,
-      markerLineRenderer: state.gpu.markerLineRenderer,
+      labelRendererCosmo: state.gpu.labelRendererCosmo,
+      markerLineRendererCosmo: state.gpu.markerLineRendererCosmo,
       debugLineRenderer: state.gpu.debugLineRenderer,
       selectionRingRenderer: state.gpu.selectionRingRenderer,
       pickDebugOverlay: state.gpu.pickDebugOverlay,
-      foregroundLabelRenderer: state.gpu.foregroundLabelRenderer,
-      foregroundMarkerLineRenderer: state.gpu.foregroundMarkerLineRenderer,
+      labelRendererNear: state.gpu.labelRendererNear,
+      markerLineRendererNear: state.gpu.markerLineRendererNear,
     } as const;
 
     buildSwapRenderers(state, 'rgba16float');
@@ -99,8 +99,8 @@ describe('buildSwapRenderers', () => {
   it('re-attaches the label director to the new renderers', () => {
     const state = makeState();
     buildSwapRenderers(state, 'bgra8unorm');
-    const firstLabelRenderer = state.gpu.labelRenderer;
-    const firstMarkerLineRenderer = state.gpu.markerLineRenderer;
+    const firstLabelRenderer = state.gpu.labelRendererCosmo;
+    const firstMarkerLineRenderer = state.gpu.markerLineRendererCosmo;
 
     buildSwapRenderers(state, 'rgba16float');
 
@@ -115,15 +115,15 @@ describe('buildSwapRenderers', () => {
     // that they match the final field values and that they are NOT the
     // first-round instances.
     const [lastLabelArg, lastMarkerArg] = attachRenderers.mock.calls.at(-1)!;
-    expect(lastLabelArg).toBe(state.gpu.labelRenderer);
-    expect(lastMarkerArg).toBe(state.gpu.markerLineRenderer);
+    expect(lastLabelArg).toBe(state.gpu.labelRendererCosmo);
+    expect(lastMarkerArg).toBe(state.gpu.markerLineRendererCosmo);
     expect(lastLabelArg).not.toBe(firstLabelRenderer);
     expect(lastMarkerArg).not.toBe(firstMarkerLineRenderer);
   });
 
   it("a non-swap-format row's handle identity is unchanged across a rebuild", () => {
     const state = makeState();
-    const constellationRenderer = state.gpu.constellationRenderer;
+    const label3DRenderer = state.gpu.label3DRenderer;
 
     buildSwapRenderers(state, 'bgra8unorm');
     buildSwapRenderers(state, 'rgba16float');
@@ -131,8 +131,8 @@ describe('buildSwapRenderers', () => {
     // Proves the rebuildOnSwapFormat filter is exact, not a superset: a row
     // absent from GPU_HANDLE_ROWS's flagged 8 must survive two rebuilds
     // untouched — same reference, destroy() never called.
-    const stub = constellationRenderer as unknown as { destroy: ReturnType<typeof vi.fn> };
-    expect(state.gpu.constellationRenderer).toBe(constellationRenderer);
+    const stub = label3DRenderer as unknown as { destroy: ReturnType<typeof vi.fn> };
+    expect(state.gpu.label3DRenderer).toBe(label3DRenderer);
     expect(stub.destroy).not.toHaveBeenCalled();
   });
 });

@@ -16,7 +16,9 @@ import { handleFetch } from '../../../../tools/famous-curator/plugin/routes/fetc
 async function makePng(width = 32, height = 16): Promise<Buffer> {
   return await sharp({
     create: { width, height, channels: 4, background: { r: 80, g: 90, b: 100, alpha: 1 } },
-  }).png().toBuffer();
+  })
+    .png()
+    .toBuffer();
 }
 
 function fakeSession() {
@@ -70,7 +72,9 @@ describe('handleFetch', () => {
     const session = fakeSession();
     const result = await handleFetch({
       body: { bytes: png, mediaType: 'image/png' },
-      imageFetcher: async () => { throw new Error('should not fetch'); },
+      imageFetcher: async () => {
+        throw new Error('should not fetch');
+      },
       sessionFactory: () => session,
     });
     expect(result.width).toBe(32);

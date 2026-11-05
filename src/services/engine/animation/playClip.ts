@@ -9,12 +9,12 @@ import { CANCEL } from 'redux-saga';
 
 import { resolveClipStart, clipStarted } from '../../../state/camera/cameraSlice';
 import type { ClipData } from '../../../@types/animation/ClipData';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
 import type { AppDispatch } from '../../../store/types';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 
-export type PlayClipDeps = {
+type PlayClipDeps = {
   store: { dispatch: AppDispatch };
 
   clipPlayer: Pick<ClipPlayer, 'stop' | 'registerEndResolver'>;

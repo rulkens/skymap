@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { R2Upload } from './R2Upload';
+import type { R2Upload } from '../@types/R2Upload';
 import { RAW_DATA } from '../../utils/io/rawDataRegistry';
 
 /** Bytes of one `shasum -a 256` text-mode line before the path: 64 hex chars + two spaces. */

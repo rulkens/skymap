@@ -1,0 +1,23 @@
+/**
+ * localBubble — the Local Bubble shell overlay's settings cluster: the
+ * master toggle + intensity scale. Off by default for now; when on, the
+ * distance window keeps the shell invisible outside ~0.4-10 kpc. No source
+ * registry entry to read a default off of.
+ */
+
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+
+import { initialState } from './initialState';
+
+export const localBubbleSlice = createSlice({
+  name: 'settings/localBubble',
+  reducerPath: 'localBubble',
+  initialState,
+  reducers: {
+    setLocalBubbleIntensity: (localBubble, action: PayloadAction<number>) => {
+      localBubble.intensity = action.payload;
+    },
+  },
+});
+
+export const { setLocalBubbleIntensity } = localBubbleSlice.actions;

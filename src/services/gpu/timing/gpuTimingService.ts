@@ -143,13 +143,18 @@ export function createGpuTimingService(
 
   // Pre-built per-slot descriptors.  The slot mapping is static, so
   // each descriptor object is constructed once and reused per frame.
+  // A slot claimed by several passes in one frame (a cubemap capture's whole bake) is one
+  // contiguous span: the first claim writes begin+end, repeats write end only, so the last
+  // end wins.
   const slotDescriptors = new Map<TimingSlotName, GPURenderPassTimestampWrites>();
+  const endOnlyDescriptors = new Map<TimingSlotName, GPURenderPassTimestampWrites>();
   for (const [slot, [begin, end]] of slotIndices) {
     slotDescriptors.set(slot, {
       querySet,
       beginningOfPassWriteIndex: begin,
       endOfPassWriteIndex: end,
     });
+    endOnlyDescriptors.set(slot, { querySet, endOfPassWriteIndex: end });
   }
 
   // timestampPeriod is a per-queue scalar (nanoseconds per tick).
@@ -198,8 +203,9 @@ export function createGpuTimingService(
     // Record the intent to time this pass.  The pass orchestrator only
     // calls `descriptorFor` for passes whose `enabled()` returned true,
     // so this set matches the live "this frame's measured passes" set.
+    const repeat = consumedSlots.has(slot);
     consumedSlots.add(slot);
-    return slotDescriptors.get(slot);
+    return (repeat ? endOnlyDescriptors : slotDescriptors).get(slot);
   }
 
   function endFrame(ctx: TimingFrameContext, encoder: GPUCommandEncoder): void {

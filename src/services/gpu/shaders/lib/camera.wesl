@@ -45,16 +45,27 @@
 //
 //   offset 0:  mat4x4<f32> viewProj   (64 B)
 //   offset 64: vec2<f32>   viewportPx (8 B)
-//   offset 72: f32         _pad0      (4 B; reserves the 16-B-align
-//   offset 76: f32         _pad1       slot used by every renderer
+//   offset 72: f32         pxPerRad   (4 B; the view's focal term)
+//   offset 76: f32         _pad0      (4 B; reserves the 16-B-align
+//                                       slot used by every renderer
 //                                       between 'viewport' and the
 //                                       next vec3-aligned member).
 //   total: 80 bytes.
 //
 // 'cameraPos' is therefore NOT in CameraUniforms; the helpers that
-// need it ('worldEyeDepth', any future 'pxPerRad'-style scaling)
-// take it as an explicit 'vec3<f32>' parameter so renderers can
-// continue to put it wherever their own layout demands.
+// need it ('worldEyeDepth') take it as an explicit 'vec3<f32>'
+// parameter so renderers can continue to put it wherever their own
+// layout demands.
+//
+// ## pxPerRad — why the focal term is in the prefix
+//
+// Pixels per radian along y, 'viewportPx.y / (2 · tan(fovY/2))' for a
+// symmetric frustum and tangent-exact for an asymmetric one (the CPU
+// twin is 'FrameView.drawPxPerRad'). Screen-size math used to
+// reconstruct it from 'viewportPx.y · 0.5' alone, which silently
+// assumes fovY = 90 degrees; a dome face or a VR eye with its own fov
+// then sized rings and labels by the CANVAS fov. Carrying the term
+// per view is what makes 'worldLenToPx' correct for every view.
 //
 // ## Byte layout (canonical)
 //
@@ -63,13 +74,14 @@
 //
 //   0..63:  viewProj
 //   64..71: viewportPx
-//   72..79: _pad0, _pad1
+//   72..75: pxPerRad
+//   76..79: _pad0
 //   80..  : renderer-specific fields, naturally 16-B aligned.
 //
-// The two trailing pads are NOT decorative — they reserve the slots
-// the existing renderers' Uniforms structs already use to round
+// The trailing pad is NOT decorative — it reserves the slot the
+// existing renderers' Uniforms structs already use to round
 // 'viewport + 8B' up to a vec3<f32> alignment boundary at offset 80.
-// Without them, a renderer extending 'cam: CameraUniforms' with a
+// Without it, a renderer extending 'cam: CameraUniforms' with a
 // vec3 next field would silently insert implicit padding that the
 // CPU side might not match. Naming the bytes makes the JS-side
 // upload obvious and grep-able.
@@ -77,8 +89,8 @@
 struct CameraUniforms {
   viewProj:   mat4x4<f32>,
   viewportPx: vec2<f32>,
+  pxPerRad:   f32,
   _pad0:      f32,
-  _pad1:      f32,
 };
 
 // ── worldToClip ─────────────────────────────────────────────────────

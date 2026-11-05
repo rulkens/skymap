@@ -1,5 +1,5 @@
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-import type { EnuBoundsM } from './EnuBoundsM';
+import type { EnuBoundsM } from '../../@types/scene/EnuBoundsM';
 
 /** IUGG mean Earth radius, metres — the sphere PROJ's `+proj=topocentric`
  *  ellipsoid agrees with to well under a metre over a few kilometres. */

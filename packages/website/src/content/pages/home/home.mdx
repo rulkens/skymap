@@ -1,0 +1,139 @@
+---
+title: 'Skymap: the mapped universe at true scale, in your browser'
+description: Fly from a Copenhagen park to the cosmic web in one continuous scene built from star and galaxy catalogues. Free, no account, in a current browser.
+---
+
+import Credits from '../../../components/shared/text/Credits/Credits.tsx';
+import FeatureRow from '../../../components/pages/home/FeatureRow/FeatureRow.tsx';
+import Flight from '../../../components/pages/home/Flight/Flight.tsx';
+import Lessons from '../../../components/pages/home/Lessons/Lessons.tsx';
+import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
+import Places from '../../../components/pages/home/Places/Places.tsx';
+import { placeLines } from '../../../components/pages/home/Places/placeLines.ts';
+import RealData from '../../../components/pages/home/RealData/RealData.tsx';
+import Screens from '../../../components/pages/home/Screens/Screens.tsx';
+import Section from '../../../components/shared/layout/Section/Section.tsx';
+import Sharing from '../../../components/pages/home/Sharing/Sharing.tsx';
+import Stories from '../../../components/pages/home/Stories/Stories.tsx';
+import { sitePath } from '../../../utils/sitePath';
+
+{/* The flight's stops and film come from the route, which builds the stills; see pages/index.astro. */}
+
+<Flight
+  stops={props.stops}
+  videoUrl={props.videoUrl}
+  hint="Scroll to pull back"
+  onwardHint="Keep scrolling, there’s plenty of space"
+  scaleSuffix="from Earth"
+  here="You are here"
+  invite="Try it yourself!"
+  client:load
+>
+  <Fragment slot="tagline">Explore the universe in your browser,<br />At true scale.</Fragment>
+</Flight>
+
+<Places title="Pick somewhere to start" lines={placeLines()} client:visible>
+  <p>Skymap is full of places to explore. Choose one and the app opens there. They run from nearest to farthest: light from the Moon arrives in 1.3 seconds, from Andromeda in 2.5 million years.</p>
+</Places>
+
+<FeatureRow
+  title="More than a place to start"
+  subjects={[
+    { name: 'Earth in 3D', shot: 'cut-earth', href: sitePath('/features/#earth') },
+    { name: 'The Solar System', shot: 'cut-saturn', href: sitePath('/features/#solar-system') },
+    { name: 'Missions', shot: 'cut-voyager1', href: sitePath('/features/#missions') },
+    { name: 'The Milky Way', shot: 'render-milky-way', href: sitePath('/features/#milky-way') },
+    { name: 'The cosmic web and deep space', shot: 'filaments-derived', href: sitePath('/features/#cosmic-web') },
+  ]}
+  label="Everything Skymap does"
+  href={sitePath('/features/')}
+>
+  <p>Our features page shows more of each place in pictures and films, and what you can do there: run the clock, search by name, share a view.</p>
+</FeatureRow>
+
+<Stories
+  title="Stories in the sky"
+  tour={{
+    title: 'The Long Way Out',
+    text: 'The guided tour, from the Milky Way to the edge of the observable universe and back, with a caption at every step.',
+    action: 'Start the tour',
+  }}
+  exhibit={{
+    title: 'Exhibits',
+    text: 'One idea in one prepared view, such as the Solar System or the cosmic web, with notes that say where the numbers come from.',
+    action: 'Open the Solar System exhibit',
+    guide: { label: 'Tours and exhibits', href: sitePath('/docs/guide/tours/') },
+  }}
+>
+  <p>Explore the universe through tours and exhibits, from the Voyager missions to the cosmic web.</p>
+</Stories>
+
+<Screens
+  action="Open Saturn"
+  devices={{
+    phone: { title: 'Phone', note: 'In the phone’s browser, moved with your fingers.' },
+    tablet: { title: 'Tablet', note: 'The same view on a larger touch screen.' },
+    desktop: { title: 'Desktop', note: 'The full app, with a mouse and a keyboard.' },
+    dome: {
+      title: 'Dome',
+      note: 'A fisheye picture for a planetarium dome, steered from a phone.',
+      link: { label: 'Domes and museums', href: sitePath('/domes/') },
+    },
+  }}
+>
+  <Fragment slot="title">Explore the universe <br />from anywhere</Fragment>
+  <p>The same view of Saturn on four screens. Skymap runs in a browser, with nothing to install.</p>
+</Screens>
+
+<Lessons
+  title="Use it in the classroom"
+  asks={{
+    earth: {
+      ask: 'Can you see the North Pole on 21 June?',
+      line: 'Earth as the Sun lit it that day. Ask what it means for the length of a day there.',
+      action: 'Earth on 21 June',
+    },
+    jupiter: {
+      ask: 'How many times does Io go round while Europa goes round once?',
+      line: 'Jupiter and its four large moons. Pupils count Io’s laps while Europa makes one.',
+      action: 'Jupiter and its moons',
+    },
+    orion: {
+      ask: 'Which is farther away: Betelgeuse, or the centre of the Milky Way?',
+      line: 'Orion and the stars around it. Pupils search for both and compare.',
+      action: 'Orion and its neighbours',
+    },
+    andromeda: {
+      ask: 'Had our species appeared when this light left Andromeda?',
+      line: 'A photograph of Andromeda at its catalogued place. The light left 2.5 million years ago.',
+      action: 'Andromeda, the nearest large galaxy',
+    },
+  }}
+  more={{ label: 'Use Skymap in the classroom', href: sitePath('/classroom/') }}
+>
+  <p>Give the class a link and a question: a field trip with no bus, and nothing to install.</p>
+</Lessons>
+
+<RealData title="Data you can count on">
+  <p>Skymap places catalogued stars, galaxies and quasars in three dimensions. These are the catalogues and the imagery it is built from.</p>
+  <ObjLink size="small" hang href={sitePath('/science/#sources')}>The sources, on the Science page</ObjLink>
+</RealData>
+
+<Sharing
+  title="Wish you were here"
+  focus={{
+    title: 'Every view is a link',
+    text: 'The address holds the view: the object in focus and where the camera is. There is no share button; the address is the link.',
+  }}
+  clock={{
+    title: 'A place and a moment',
+    text: 'A link can also set the clock. The planets, moons and spacecraft then stand where they were at that moment.',
+  }}
+  client:visible
+>
+  <p>Every object and view in Skymap has its own unique link. Did you find a place you find interesting? Sharing with others is as easy as copy/paste.</p>
+</Sharing>
+
+<Section as="div">
+  <Credits />
+</Section>

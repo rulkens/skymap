@@ -1,4 +1,3 @@
-// src/components/TimeBar/DateEntryPopover/DateEntryPopover.tsx
 /**
  * DateEntryPopover — jump the sim clock to an exact instant.
  *
@@ -35,6 +34,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import Button from '../../common/Button/Button';
 import { useDismissablePopover } from '../../../hooks/useDismissablePopover';
+import { parseDatetimeLocalUtc } from '../../../utils/time/parseDatetimeLocalUtc';
+import { toDatetimeLocalUtc } from '../../../utils/time/toDatetimeLocalUtc';
 import styles from './DateEntryPopover.module.css';
 
 export type DateEntryPopoverProps = {
@@ -42,32 +43,6 @@ export type DateEntryPopoverProps = {
   readonly onCommit: (instant: Date) => void; // → container dispatches setSimDays
   readonly onCancel: () => void;
 };
-
-function pad2(value: number): string {
-  return value.toString().padStart(2, '0');
-}
-
-// A `datetime-local` value is 'YYYY-MM-DDTHH:mm'. Build it from the instant's
-// UTC fields so the input shows the same wall-clock the UTC readout does.
-function toDatetimeLocalUtc(date: Date): string {
-  const year = date.getUTCFullYear().toString().padStart(4, '0');
-  const month = pad2(date.getUTCMonth() + 1);
-  const day = pad2(date.getUTCDate());
-  const hours = pad2(date.getUTCHours());
-  const minutes = pad2(date.getUTCMinutes());
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-// Inverse of the above: interpret the field digits as UTC. Returns null for an
-// empty or malformed value so a blank input never commits an Invalid Date.
-function parseDatetimeLocalUtc(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
-  if (!match) return null;
-  const [, year, month, day, hours, minutes] = match;
-  return new Date(
-    Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hours), Number(minutes)),
-  );
-}
 
 function DateEntryPopover({ initial, onCommit, onCancel }: DateEntryPopoverProps): ReactNode {
   const [value, setValue] = useState(() => toDatetimeLocalUtc(initial));
@@ -122,11 +97,7 @@ function DateEntryPopover({ initial, onCommit, onCancel }: DateEntryPopoverProps
         onChange={(event) => setValue(event.target.value)}
         aria-label="Date and time (UTC)"
       />
-      <Button
-        className={styles.now}
-        onClick={fillNow}
-        aria-label="Fill with current time"
-      >
+      <Button className={styles.now} onClick={fillNow} aria-label="Fill with current time">
         Now
       </Button>
       <Button className={styles.set} variant="primary" onClick={commit}>

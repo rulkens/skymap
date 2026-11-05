@@ -14,8 +14,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
-import { staticBuildExtension } from 'wesl-plugin';
-import viteWesl from 'wesl-plugin/vite';
+import { weslStaticPlugin } from '../utils/vite/weslStaticPlugin.ts';
 
 import { DEV_PORTS } from '../utils/io/devPorts.ts';
 import { distDir } from '../utils/io/distDir.ts';
@@ -32,11 +31,5 @@ export default defineConfig(({ command }) => ({
   envDir: resolve(import.meta.dirname, '../../'),
   build: { outDir: resolve(distDir, toolPages.mcpmWorkbench), emptyOutDir: true },
   server: { port: DEV_PORTS.mcpmWorkbench },
-  plugins: [
-    viteWesl({
-      extensions: [staticBuildExtension],
-      weslToml: resolve(import.meta.dirname, 'wesl.toml'),
-    }),
-    react(),
-  ],
+  plugins: [weslStaticPlugin({ weslToml: resolve(import.meta.dirname, 'wesl.toml') }), react()],
 }));

@@ -5,6 +5,7 @@
  */
 
 import type { MeshProbe } from './MeshProbe';
+import type { ContactShadowResources } from './ContactShadowResources';
 
 export type MeshResources = {
   vertexBuffers: GPUBuffer[];
@@ -14,4 +15,7 @@ export type MeshResources = {
   probe: MeshProbe;
   uniformBuffer: GPUBuffer;
   bindGroup: GPUBindGroup;
+  /** Present only when the asset shipped a ground-contact mask; the
+   *  contact-shadows pass binds it, not the mesh's own bind group. */
+  contactShadow?: ContactShadowResources;
 };

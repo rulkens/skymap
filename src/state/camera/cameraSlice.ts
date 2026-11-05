@@ -12,16 +12,18 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
 import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
-import { absoluteArm } from '../../utils/camera/absoluteArm';
-import { clampCameraTuning } from '../../utils/camera/clampCameraTuning';
-import type { CameraState } from '../../@types/camera/CameraState';
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
-import type { CameraPose } from '../../@types/camera/CameraPose';
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
-import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
+import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
+import { clampCameraTuning } from '../../utils/camera/orbitCamera/clampCameraTuning';
+import { inputGestureStarted } from '../input/inputSlice';
+import type { CameraState } from '../../@types/camera/orbitCamera/CameraState';
+import type { CameraAim } from '../../@types/camera/pose/CameraAim';
+import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
+import type { CameraPose } from '../../@types/camera/pose/CameraPose';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
+import type { CameraTweenDescriptor } from '../../@types/camera/focusMotion/CameraTweenDescriptor';
 import type { ClipData } from '../../@types/animation/ClipData';
-import type { FrameTween } from '../../@types/camera/FrameTween';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { FrameTween } from '../../@types/camera/focusMotion/FrameTween';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
 // `base` is a placeholder bootstrap overwrites via `commitCameraPose`; 0.43 Mpc
 // mirrors `cameraFraming.INITIAL_DISTANCE_MPC` so a pre-bootstrap frame is in the
@@ -35,9 +37,9 @@ const initialState: CameraState = {
     // unit `spinAutoRotate` expects.
     rate: 0.000873,
   },
-  dragging: false,
   clip: null,
   frameTween: null,
+  aim: null,
   tuning: DEFAULT_CAMERA_TUNING,
 };
 
@@ -45,20 +47,17 @@ const cameraSlice = createSlice({
   name: 'camera',
   initialState,
   reducers: {
-    beginDrag: (camera) => {
-      camera.dragging = true;
-    },
-    endDrag: (camera) => {
-      camera.dragging = false;
-    },
-
-    // INVARIANT (R12b-3): every committed ABSOLUTE pose is centre-looking. The
+    // INVARIANT (R12b-3): every committed ABSOLUTE pose's orbit terms are
+    // centre-looking; `lookOffset` turns only the view. The
     // pivot pin re-reads an absolute `target` as the pivot and re-derives the eye
     // from yaw/pitch/distance one frame later, so a pose aimed anywhere else
     // teleports the eye by d·2sin(τ/2) (R12-1, up to ~24,000 km). Held by
     // CONSTRUCTION at three sites — the pin's stamp (projectFramePose), the gesture
     // folds (replayInput), and the fold's disengage retarget — never by a bake
     // here. Break any of them and the teleport re-enters through this reducer.
+    // `stepCameraRuntime` treats `base` reference inequality as an outside
+    // commit and relies on `cameraReducer` being the store's reducer; a
+    // defensive `{ ...action.payload }` here would misread every loop commit.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
     },
@@ -100,17 +99,27 @@ const cameraSlice = createSlice({
       camera.autoRotate = action.payload;
     },
 
+    // A fresh object every time: the token's identity is the re-aim.
+    aimCamera: (camera, action: PayloadAction<CameraAim>) => {
+      camera.aim = { ...action.payload };
+    },
+
     // A WHOLE new record, never a leaf write: the panel's sliders read it back
     // through a selector, and an in-place edit leaves that render stale.
     setCameraTuning: (camera, action: PayloadAction<Partial<CameraTuning>>) => {
       camera.tuning = clampCameraTuning(action.payload, camera.tuning);
     },
   },
+  extraReducers: (builder) => {
+    // A press cancels a focus fly. One atomic action, so a double-tap's fly
+    // (dispatched after its second press starts) is never cancelled by that press.
+    builder.addCase(inputGestureStarted, (camera) => {
+      camera.tween = null;
+    });
+  },
 });
 
 export const {
-  beginDrag,
-  endDrag,
   commitCameraPose,
   startCameraTween,
   cancelCameraTween,
@@ -120,6 +129,7 @@ export const {
   clipEnded,
   startFrameTween,
   clearFrameTween,
+  aimCamera,
 } = cameraSlice.actions;
 
 // Resolution happens at the dispatch site, not in the reducer, which is pure and

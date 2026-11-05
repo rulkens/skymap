@@ -2,7 +2,7 @@
 
 **Area:** engine / animation · **Readiness:** ready
 
-Any `applyIntent`-driven fade (volume fields, and every other layer routed
+Any `applyVisibilityTarget`-driven fade (volume fields, and every other layer routed
 through the same call) pops straight to its target opacity instead of
 ramping, if the toggle happens after the render-on-demand loop has been
 asleep for at least one fade-duration (~600 ms for fade-in).
@@ -30,12 +30,12 @@ Diagnosed while investigating a suspected regression on `refactor/wake-vote-fold
 (deleted `requestRender()` calls in `uploadVolumeField`/`unloadVolumeField`);
 traced to `fadeRegistry.fadeTo`'s start-stamp (`fadeRegistry.ts:125-133`) and
 ruled pre-existing — the same stale-clock path is reached through any
-`applyIntent`-driven fade, e.g. `syncVisibilityFades`'s per-row call
-(`syncVisibilityFades.ts:147`), not just the volume routes.
+`applyVisibilityTarget`-driven fade (`src/services/engine/wiring/applyVisibilityTarget.ts`,
+reached from every settings write through `syncVisibilityTargets`), not just the volume routes.
 
 ## Fix sketch
 
 Stamp fades from a real clock rather than the stale last-tick time — either
-have `applyIntent` pass an explicit `nowMs` (e.g. `performance.now()`) into
+have `applyVisibilityTarget` pass an explicit `nowMs` (e.g. `performance.now()`) into
 `fadeTo`, or have `fadeTo` fall back to a live clock read instead of
 `lastTickNowMs` when no `nowMs` is supplied.

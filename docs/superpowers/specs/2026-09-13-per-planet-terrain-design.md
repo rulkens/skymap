@@ -1012,7 +1012,7 @@ land/park call is the user's.
 | F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                                                                       | #713 closed superseded, landed via #719                 |
 | F2  | Displacement, normals, edge collapse, base-globe shrink                                                                                               | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
 | F3a | `SHGT` v3 CPU post grid (§8.4) + height re-bake, `terrainHeightM`, and the three §8.3 rows it serves: camera floor, site placement, altitude readouts | prep PR, then feature PR                                |
-| F3c | `raycastTerrain` (§8.1) and the two camera gesture anchors it serves: the zoom pick and the drag latch                                                | prep PR, then feature PR                                |
+| F3c | `raycastTerrain` (§8.1) and the two camera gesture anchors it serves: the zoom pick and the drag latch                                                | prep #751 → `597d0fe58`, feature #753                   |
 | F3b | Cloud-deck-as-altitude; separately, terrain under an atmosphere                                                                                       | split in two, see below                                 |
 | F4  | Mars: imagery bake, global height, four rover-site bands                                                                                              | prep #738, then feature PR                              |
 
@@ -1025,7 +1025,7 @@ greenfield cross-check that independently derived the same one-function shape an
 same declared-shell bounds). Two joints were missing, one prep item survives:
 
 - `HostBody` carries the datum alone (`HostBody.d.ts:9-10`), so the march has no shells.
-  Growth, not a bolt-on: `bodyRung.host()` already holds `body.surface`, and
+  Growth, not a bolt-on: `bodyCameraArm.host()` already holds `body.surface`, and
   `outerBoundRadiusM`/`innerBoundRadiusM` already exist as helpers. **This is the prep,
   packaged as its own PR (user, 2026-09-17).**
 - A per-march bound sampler was sketched and then **dropped** — it optimised an unmeasured
@@ -1055,7 +1055,7 @@ Everest is 68 m, not kilometres.
 
 **F3a depends on F4's prep landing first**, not the other way round: #738 renames the
 tile pass and edits `surfaceTileSubsystem.ts` and `deriveBodyStates.ts`, which are two
-of F3a's three feature files. F3a's own prep (`cutSurfaceTiles.ts`, `bodyRung.ts`)
+of F3a's three feature files. F3a's own prep (`cutSurfaceTiles.ts`, `bodyCameraArm.ts`)
 touches neither and can land in parallel. F4's rover placement then needs F3a — the four
 `SURFACE_FIXED_SITES` rows are all Mars, and all four sit 1.4–4.5 km below the datum,
 so they float without it.

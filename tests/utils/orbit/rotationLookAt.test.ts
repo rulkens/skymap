@@ -67,4 +67,10 @@ describe('rotationLookAt', () => {
     expect(boresight[1]).toBeCloseTo(pole[1], 12);
     expect(boresight[2]).toBeCloseTo(pole[2], 12);
   });
+
+  it('a body parked on its target keeps a finite orthonormal basis', () => {
+    const r = rotationLookAt([1, 2, 3], [1, 2, 3]);
+    for (const v of r) expect(Number.isFinite(v)).toBe(true);
+    expectOrthonormal(r);
+  });
 });

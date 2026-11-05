@@ -9,15 +9,15 @@
 import { describe, it, expect } from 'vitest';
 import { galaxyCatalogRequest } from '../../../../src/services/engine/wiring/galaxyCatalogRequest';
 import { sameRequest } from '../../../../src/utils/loading/sameRequest';
-import { tierFilenameForSource } from '../../../../src/data/tierTargets';
-import { SOURCE_ENTRIES } from '../../../../src/data/sourceEntries';
+import { tierFilenameForSource } from '../../../../src/layers/galaxyCatalog/records/data/tierTargets';
+import { GALAXY_CATALOG_SOURCE_ROWS } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
 import { TIER_LADDER } from '../../../../src/data/tierLadder';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 
 /** Every galaxy catalog that actually ships a `.bin` — the only ones with a filename. */
-const FILE_BACKED: readonly SourceType[] = SOURCE_ENTRIES.filter(
-  (e) => e.type === 'galaxyCatalog' && e.binBaseName !== null,
-).map((e) => e.code);
+const FILE_BACKED: readonly GalaxyCatalogSourceType[] = GALAXY_CATALOG_SOURCE_ROWS.filter(
+  ([, e]) => e.binBaseName !== null,
+).map(([code]) => code);
 
 describe('galaxyCatalogRequest', () => {
   it('the request agrees with the filename', () => {

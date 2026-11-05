@@ -5,7 +5,7 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { MAX_ORBIT_OCCLUDERS } from '../../../data/bodies/orbitTrailConstants';
 import { selectOccluderSpheresKm } from '../../../utils/occlusion/selectOccluderSpheresKm';
 import { sceneOccluderBodies } from './sceneOccluderBodies';
@@ -16,7 +16,7 @@ const spheresKm = new Float32Array(MAX_ORBIT_OCCLUDERS * 4);
 
 export function sceneOccluderSpheres(
   state: PassState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): { readonly count: number; readonly spheresKm: Float32Array } {
   return {
     count: selectOccluderSpheresKm(

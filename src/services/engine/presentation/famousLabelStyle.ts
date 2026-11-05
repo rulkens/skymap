@@ -14,7 +14,7 @@ import type { Vec4 } from '../../../@types/math/Vec4';
 import { hexToGl } from '../../../utils/color/hexToGl';
 
 /** Style fields the famous-galaxy label producer reads. */
-export type FamousLabelStyle = {
+type FamousLabelStyle = {
   /** Label glyph fill (straight RGBA). */
   readonly labelColor: Vec4;
   /** Colour of the vertical anchor line lifting the label off the dot. */

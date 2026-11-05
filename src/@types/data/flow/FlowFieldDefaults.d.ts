@@ -3,10 +3,10 @@ import type { FlowMode } from './FlowMode';
 /**
  * FlowFieldDefaults — the look/motion knobs of the flow-field overlay.
  *
- * Shared between the SOURCE_REGISTRY flow row (which seeds them) and
- * `FlowSettings` (the live, user-tunable copy), so the eight knob fields are
- * spelled in exactly one place. Mirrors how `VolumeFieldDefaults` backs both a
- * volume's registry row and its `VolumeFieldSettings`.
+ * Named separately from `FlowSettings` (which adds the master `enabled` gate)
+ * because the knobs are exactly what a settings patch may carry: `setFlow`
+ * takes a `Partial<FlowFieldDefaults>`, so a patch can never smuggle the gate
+ * through a tuning slider. The four UI prop types spell the same bound.
  */
 export type FlowFieldDefaults = {
   /** Active integration mode (default 'advect'). */

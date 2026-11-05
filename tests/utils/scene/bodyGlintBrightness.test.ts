@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { bodyGlintBrightness } from '../../../src/utils/scene/bodyGlintBrightness';
-import { BODY_GLINT_MAX_PX } from '../../../src/services/engine/frame/partitionBodiesByPresentation';
+import { BODY_GLINT_MAX_PX } from '../../../src/data/bodies/bodyGlintMaxPx';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const ORIGIN: Vec3 = [0, 0, 0];

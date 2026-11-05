@@ -21,7 +21,7 @@
  *
  * Two conditions must both hold:
  *
- *   1. `state.gpu.markerLineRenderer` must be non-null.  It's null
+ *   1. `state.gpu.markerLineRendererCosmo` must be non-null.  It's null
  *      until `createMarkerLineRenderer` construction completes in
  *      `initGpu.ts`.
  *
@@ -33,32 +33,31 @@
  *
  * ### Position among the swap-target layers
  *
- * Placed BEFORE `labelsPass` so the label text composites over the
+ * Placed BEFORE `labelsCosmoPass` so the label text composites over the
  * line where they overlap, preserving readability.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 
 export const markerLinesPass: ContentPass = {
   name: 'marker-lines',
 
   enabled(state, _ctx, _view) {
-    if (state.gpu.markerLineRenderer === null) return false;
-    return state.gpu.markerLineRenderer.lineCount() > 0;
+    if (state.gpu.markerLineRendererCosmo === null) return false;
+    return state.gpu.markerLineRendererCosmo.lineCount() > 0;
   },
 
   draw(pass, view, ctx, state) {
-    // Occlude the leader lines per-pixel behind an opaque body ONLY when the
-    // body pass actually ran this frame — else the `foreground:0` colour is
-    // stale/uninitialised and would spuriously blank every line. When
-    // undefined, the occlusion renderer falls back to its plain pipeline and
-    // draws the lines un-occluded. Mirrors `foregroundLabelsPass`'s guard.
-    const colorView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.viewOf('foreground:0')
-      : undefined;
     // `enabled()` proved markerLineRenderer is non-null and has at least
     // one line.  The `!` assertion is safe: the framework only calls
     // `draw` when `enabled` returns true.
-    state.gpu.markerLineRenderer!.draw(pass, view.vp, view.viewportPx, colorView);
+    state.gpu.markerLineRendererCosmo!.draw(
+      pass,
+      view.vp,
+      view.viewportPx,
+      ctx.drawPxPerRad,
+      overlaySceneOcclusion(ctx, view),
+    );
   },
 };

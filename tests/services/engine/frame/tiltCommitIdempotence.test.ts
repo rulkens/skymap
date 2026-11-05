@@ -14,9 +14,6 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: () => ({ draw: 0, pick: 0 }),
-}));
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
@@ -29,11 +26,11 @@ import { hrOfPose } from '../../../helpers/camera/hrOfPose';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { beginDrag, setAutoRotate } from '../../../../src/state/camera/cameraSlice';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
+import { setAutoRotate } from '../../../../src/state/camera/cameraSlice';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
-import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
+import { bodyUpWeight } from '../../../../src/services/engine/camera/orientation/utils/bodyUpWeight';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -42,9 +39,10 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
+const EARTH = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))! as BodyState;
 const EARTH_RADIUS_M = SCENE_EARTH.surface.datumRadiusM;
 const MPC_TO_KM = 1 / SCALE_UNITS.M_TO_MPC / 1000;
 
@@ -105,9 +103,8 @@ describe('commit → re-derive idempotence (R12-1)', () => {
     // accumulating per cycle.
     const eyes: Vec3[] = [];
     for (let cycle = 0; cycle < 4; cycle += 1) {
-      h.store.dispatch(beginDrag());
-      h.push({ kind: 'gestureStart' });
-      h.push({ kind: 'gestureEnd' });
+      h.press('orbit', [50, 50]);
+      h.release();
       h.frame(60);
       eyes.push(display(h.state).eye);
     }
@@ -133,11 +130,9 @@ describe('commit → re-derive idempotence (R12-1)', () => {
     toMidWindow(h);
     const before = display(h.state);
 
-    h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
-    h.push({ kind: 'dragMove', mode: 'orbit', xPx: 52, yPx: 50 });
-    h.push({ kind: 'gestureEnd' });
+    h.press('orbit', [50, 50]);
+    h.moveTo([52, 50]);
+    h.release();
     h.frame();
 
     // The committed base is centre-looking — the projection stayed render-side.

@@ -14,4 +14,8 @@ export type MeshAsset = {
   readonly tangents: Float32Array; // vertexCount * 4, w = handedness
   readonly uvs: Float32Array; // vertexCount * 2
   readonly indices: Uint32Array; // indexCount
+  /** Greyscale ground-contact mask, fetched only when the row has a
+   *  `contactDecal`; not a `MESH_TEXTURE_SLOTS` entry — the mesh shader never
+   *  binds it, only the separate contact-shadows pass does. */
+  readonly contactShadow?: ImageBitmap;
 } & { readonly [K in MeshTextureField]: ImageBitmap };

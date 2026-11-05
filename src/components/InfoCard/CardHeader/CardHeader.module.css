@@ -1,9 +1,124 @@
 /*
- * CardHeader.module.css — the header row's outermost hook.  CardHeader renders
- * nothing of its own beyond the shared title-row layout, so .root simply
- * composes it from the shared cardChrome vocabulary; the badge + buttons are
- * pulled straight from cardChrome in the component.
+ * CardHeader.module.css — the header's two arrangements. Without `.compact` the
+ * eyebrow bar stacks over the name (the desktop card). `.compact` (the phone
+ * sheet) turns the root into a grid: name first, actions at its right, the
+ * eyebrow and badge as a meta line.
  */
-.root {
+.bar {
   composes: cardTitle from '../cardChrome.module.css';
+}
+
+.actions {
+  display: contents;
+}
+
+.headlineRow {
+  composes: headlineRow from '../cardChrome.module.css';
+}
+
+.headline {
+  composes: cardHeadline from '../cardChrome.module.css';
+}
+
+.badge {
+  composes: sourceBadge from '../cardChrome.module.css';
+}
+
+.focus {
+  composes: focusButton from '../cardChrome.module.css';
+}
+
+.close {
+  composes: closeButton from '../cardChrome.module.css';
+}
+
+.compact {
+  /* Alias spans in the title (cardChrome's headlineAlias) read this: same size as the name. */
+  --headline-alias-size: 1em;
+  display: grid;
+  grid-template-columns: minmax(0, auto) auto 1fr auto;
+  grid-template-areas:
+    'name name name actions'
+    'eyebrow badge . actions';
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  align-content: center;
+  align-items: center;
+  /* One height for every card (thumbnail or not, one name line or two), so the
+     peek always ends on the header's bottom edge: see --mobile-sheet-peek. */
+  height: var(--sheet-header-height);
+}
+
+.compact.withThumbnail {
+  grid-template-columns: auto minmax(0, auto) auto 1fr auto;
+  grid-template-areas:
+    'thumb name name name actions'
+    'thumb eyebrow badge . actions';
+}
+
+.compact .bar,
+.compact .headlineRow {
+  display: contents;
+}
+
+.compact .headline {
+  grid-area: name;
+  /* Two lines at most: a long alias list must not push the meta line out of the peek. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  /* Break between words; the desktop card's break-all splits catalogue numbers. */
+  word-break: normal;
+  overflow-wrap: anywhere;
+  line-height: var(--line-height-tight);
+}
+
+/* The meta line stays one line: on a narrow phone the eyebrow gives way, the badge does not. */
+.compact .badge {
+  grid-area: badge;
+  white-space: nowrap;
+}
+
+.compact .eyebrow {
+  grid-area: eyebrow;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact .actions {
+  grid-area: actions;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Spans the name + meta lines; Thumbnail reads the size token. */
+.compact .thumbnail {
+  --thumbnail-size: var(--thumbnail-size-header);
+  grid-area: thumb;
+  align-self: center;
+}
+
+/* Focus keeps its pill; ::after grows the hit area to the touch target. */
+.compact .focus {
+  position: relative;
+  margin-left: 0;
+}
+
+.compact .focus::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--space-6)) calc(-1 * var(--space-2));
+}
+
+.compact .close {
+  margin-left: 0;
+  width: auto;
+  height: auto;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  font-size: var(--font-size-xl);
 }

@@ -11,34 +11,14 @@ import {
   ISM_MAP_RINGS,
 } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { createIsmMapDustCdfScan } from './createIsmMapDustCdfScan';
-import type { IsmMapDustCdfScan } from './createIsmMapDustCdfScan';
 import { createIsmMapGenerator } from './createIsmMapGenerator';
-import type { IsmMapGenerator } from './createIsmMapGenerator';
 import { createIsmMapOrientation } from './createIsmMapOrientation';
-import type { IsmMapOrientation } from './createIsmMapOrientation';
 import { createIsmMapPlaceArmCloud } from './createIsmMapPlaceArmCloud';
-import type { IsmMapPlaceArmCloud } from './createIsmMapPlaceArmCloud';
 import { createIsmMapPlaceArmSpurCloud } from './createIsmMapPlaceArmSpurCloud';
-import type { IsmMapPlaceArmSpurCloud } from './createIsmMapPlaceArmSpurCloud';
 import { createIsmMapPlaceDigVeil } from './createIsmMapPlaceDigVeil';
-import type { IsmMapPlaceDigVeil } from './createIsmMapPlaceDigVeil';
 import { createIsmMapPlaceDust } from './createIsmMapPlaceDust';
-import type { IsmMapPlaceDust } from './createIsmMapPlaceDust';
 import { createIsmMapRingReduce } from './createIsmMapRingReduce';
-import type { IsmMapRingReduce } from './createIsmMapRingReduce';
-
-export type IsmMapChain = {
-  readonly generator: IsmMapGenerator;
-  readonly orientation: IsmMapOrientation;
-  readonly ringReduce: IsmMapRingReduce;
-  readonly dustCdfScan: IsmMapDustCdfScan;
-  readonly digCdfScan: IsmMapDustCdfScan;
-  readonly placeDust: IsmMapPlaceDust;
-  readonly placeArmSpurCloud: IsmMapPlaceArmSpurCloud;
-  readonly placeArmCloud: IsmMapPlaceArmCloud;
-  readonly placeDigVeil: IsmMapPlaceDigVeil;
-  dispose(): void;
-};
+import type { IsmMapChain } from '../../../../../@types/galaxy/IsmMapChain';
 
 export function createIsmMapChain(
   device: GPUDevice,

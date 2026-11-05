@@ -1,49 +1,49 @@
+import type { DriverGeometry } from './camera/DriverGeometry';
 import type { GalaxyRow } from './GalaxyRow';
 import type { StructureInfo } from '../data/structure/StructureInfo';
+import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
+import type { BodyInfo } from './BodyInfo';
+import type { CraftInfo } from './CraftInfo';
+import type { EarthSceneInfo } from './EarthSceneInfo';
+import type { BlackHoleInfo } from './BlackHoleInfo';
+import type { SatelliteInfo } from './SatelliteInfo';
 import type { Vec3 } from '../math/Vec3';
 
 /**
- * SelectionRow — the serializable DISPLAY projection of a selected thing, held
- * in the saga-owned `selectionRows` derived cache. The galaxy arm is the small
- * `GalaxyRow` (built React-side into a `GalaxyInfo` by `buildFocusable`); the
- * structure arm is the already-serializable `StructureInfo` record used as-is;
- * the Milky Way and the zone of avoidance are each the singleton tag; the body
- * arm carries a seeded scene body's identity, label and live position only. It
- * carries NO size (see `MeshBody.boundingRadiusM`); whoever needs a number
- * resolves the seed by `id` against `SCENE_BODIES` and reads the arm it
- * actually got. The `label` rides the row (not the async
- * meta sidecar) so a star's name shows the instant it is selected, before the
- * JSON has loaded.
+ * SelectionRow — the serializable display projection of a selected thing, held in the
+ * saga-owned `selectionRows` cache. The galaxy arm is the small `GalaxyRow` (`buildFocusable`
+ * builds the `GalaxyInfo` React-side). The `label` rides the row, not the async meta sidecar,
+ * so a star's name shows before the JSON loads.
  *
- * Every arm is JSON-serializable (`GalaxyRow.objId` is a string,
- * `StructureInfo` is a plain record, the body arm is flat numbers + strings),
- * so the RTK serializability check stays on.
+ * `driver` rides only camera-hosting arms (`DrivenSelectionRow`), filled by the arm's
+ * `extractRow`; readers use `selectionDriver`. Every arm must stay JSON-serializable
+ * (`GalaxyRow.objId` is a string) so the RTK serializability check stays on.
  */
 export type SelectionRow =
   | GalaxyRow
   | StructureInfo
   | { readonly type: 'milkyWay' }
   | { readonly type: 'zoneOfAvoidance' }
+  | (BodyInfo & { readonly driver: DriverGeometry })
+  | (CraftInfo & { readonly driver: DriverGeometry })
+  | (EarthSceneInfo & { readonly driver: DriverGeometry })
+  // Star arm: fields snapshotted at extract time. `id` is the seed id the `star-<seedId>` URL
+  // needs; null for a survey star (which drives with a null `poseId`).
   | {
-      readonly type: 'body';
-      readonly id: string;
+      readonly type: 'starCatalog';
+      readonly source: StarCatalogSourceType;
+      readonly index: number;
+      readonly id: string | null;
       readonly label: string;
       readonly positionMpc: Vec3;
-    }
-  // Star arm — the self-contained display projection of a picked star, its
-  // physical fields (`positionMpc`/`absMag`/`bpRp`) snapshotted off the loaded
-  // StarCatalog at extract time so framing/card read them directly. It also
-  // carries `index` (from the ref) so `buildFocusable` can rebuild the ref /
-  // the `star-<index>` URL, mirroring how GalaxyRow carries its index.
-  | {
-      readonly type: 'star';
-      readonly index: number;
-      readonly positionMpc: Vec3;
-      readonly absMag: number;
-      readonly bpRp: number;
-      // Nominal solar radius (km), stamped by the extractor. The bin quantises
-      // position + photometry only, so a field star carries no measured size;
-      // this representative radius is the one framing (bodyLikeFraming) and the
-      // sphere gate read for a discrete near-field star.
+      // Photosphere radius; the nominal solar radius for a survey star (the bin carries no size).
       readonly radiusM: number;
-    };
+      // Survey-only; a seeded star's card reads its curated sidecar or orbit instead.
+      readonly absMag?: number;
+      readonly bpRp?: number;
+      readonly driver: DriverGeometry;
+    }
+  // A black hole poses from its PLACE (`driver.poseId`), not a body table.
+  | (BlackHoleInfo & { readonly driver: DriverGeometry })
+  // A satellite poses from the position core re-extracts each frame (`placeLiveSelection`).
+  | (SatelliteInfo & { readonly driver: DriverGeometry });

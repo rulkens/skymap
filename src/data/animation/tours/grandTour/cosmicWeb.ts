@@ -56,12 +56,12 @@ export const cosmicWeb: ClipData = {
   start: 'live',
   timeline: [
     scene(setLabelsFocusedOnly(true)),
-    hide(['structureRing:cluster'], 1),
+    hide(['structureRing:galaxy-cluster'], 1),
     show(['structureRing:supercluster'], 2),
     lookAtId(COMA_SC, 3),
     focus(COMA_SC),
     hold(1),
-    show(['volumesMaster'], 9),
+    show(['cosmicWebDensity'], 9),
     all([moveTargetId(COMA_SC, 9), dollyToId(COMA_SC, 9)]),
   ],
 };

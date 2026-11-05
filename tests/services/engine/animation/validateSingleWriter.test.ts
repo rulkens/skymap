@@ -31,7 +31,7 @@ import {
   seq,
   all,
 } from '../../../../src/services/engine/animation/effectHelpers';
-import type { BaseSegment } from '../../../../src/@types/animation/CompiledClip';
+import type { BaseSegment } from '../../../../src/@types/animation/compiledClip/BaseSegment';
 import type { Channel } from '../../../../src/@types/animation/Channel';
 
 // ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ import type { Channel } from '../../../../src/@types/animation/Channel';
 // ---------------------------------------------------------------------------
 
 function emptyTracks(): Record<Channel, BaseSegment[]> {
-  return { distance: [], yaw: [], pitch: [], target: [] };
+  return { distance: [], yaw: [], pitch: [], roll: [], target: [] };
 }
 
 // ---------------------------------------------------------------------------

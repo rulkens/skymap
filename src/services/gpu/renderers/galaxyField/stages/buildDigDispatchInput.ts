@@ -8,8 +8,8 @@ import {
   ismMapGridRadiusOrDefault,
 } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { findHiiSegment } from '../field/findHiiSegment';
-import type { DigVeilBudget } from '../ismMap/computeDigVeilBudget';
-import type { PlaceDigVeilDispatchInput } from '../ismMap/createIsmMapPlaceDigVeil';
+import type { DigVeilBudget } from '../../../../../@types/galaxy/DigVeilBudget';
+import type { PlaceDigVeilDispatchInput } from '../../../../../@types/galaxy/PlaceDigVeilDispatchInput';
 
 export function buildDigDispatchInput(
   ctx: GalaxyFieldStageContext,

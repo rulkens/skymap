@@ -1,29 +1,13 @@
 /**
- * tierSaga — integration tests over a real store + saga middleware.
+ * tierSaga — integration tests over a real store + saga middleware, asserting the observable
+ * outcome (tier write, hover clear, re-anchored selection) rather than the effect sequence.
  *
- * Rather than driving the generator by hand (which couples the test to the
- * exact effect sequence), these tests run the watcher inside an actual store
- * wired with `redux-saga`, dispatch the `requestTier` command, and assert on
- * the observable store outcome: the tier write, the Milky-Way re-seed, the
- * hover clear and the re-anchored selection. That keeps the tests honest about
- * the command/write split and the same-tier no-op without freezing the saga's
- * internal steps.
+ * Each test builds a FRESH store: `takeLatest` carries per-store worker state and the same-tier
+ * no-op depends on the watcher's prior view. Flush a macrotask after each dispatch; a bare
+ * microtask is not enough since the saga schedules its continuation on a macrotask.
  *
- * Each test builds a FRESH store, because `takeLatest` carries per-store
- * worker state and the same-tier no-op test depends on the watcher's prior view
- * of the current tier. A flushed macrotask (`setTimeout(…, 0)`) after each
- * dispatch lets the `takeLatest` worker run to completion — a bare
- * `Promise.resolve()` microtask is not enough, since the saga schedules its
- * continuation on a macrotask.
- *
- * ### Re-anchor tests
- *
- * The re-anchor suite seeds a galaxy select/focus ref BEFORE dispatching
- * `requestTier`, then simulates the new cloud arriving via the count pulse.
- * The `resolveDeps` closure is mutable: before the swap the cloud holds
- * objID at index 0; after the swap the new cloud has the same objID at index 3.
- * Asserting `select.index === 3` after the count pulse proves the saga re-anchored
- * via the durable id rather than preserving the stale positional index.
+ * Re-anchor suite: the galaxies fixture's `catalogs` getter is mutable; objID sits at index 0
+ * before the swap and index 3 after, so `select.index === 3` proves re-anchoring by durable id.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -41,15 +25,16 @@ import {
   updateSelectionHover,
 } from '../../../src/state/selection/selectionSlice';
 import { selectionRoute } from '../../../src/store/constants';
-import { Source } from '../../../src/data/sources';
-import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
-import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
+import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
+import { galaxyRowRuntime } from '../../support/layerPickCodes';
 import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import { bodyPickCodes } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -58,11 +43,6 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 /** The galaxyCatalog Layer's slice with nothing loaded — the default for the
  * cases that never seed a galaxy ref. */
 const NO_GALAXIES = { catalogs: new Map(), famousMeta: [] } as unknown as GalaxyRowFixture;
-
-const EMPTY_DEPS: ResolveDeps = {
-  structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
-};
 
 // ─── Cloud fixture ─────────────────────────────────────────────────────────────
 
@@ -89,10 +69,7 @@ function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
 describe('watchTierSaga', () => {
   let store: ReturnType<typeof buildStore>;
 
-  function buildStore(
-    resolveDeps: () => ResolveDeps = () => EMPTY_DEPS,
-    galaxies: GalaxyRowFixture = NO_GALAXIES,
-  ) {
+  function buildStore(galaxies: GalaxyRowFixture = NO_GALAXIES) {
     const sagaMiddleware = createSagaMiddleware();
     const built = configureStore({
       reducer: rootReducer,
@@ -100,10 +77,13 @@ describe('watchTierSaga', () => {
     });
     sagaMiddleware.run(watchTierSaga);
     sagaMiddleware.setContext({
-      selection: composeSelectionRows(() => [
-        ...coreSelectionRows(resolveDeps),
-        galaxyCatalogSelectionRow(galaxies),
-      ]),
+      selection: composeSelectionRows(
+        () => [
+          bodySelectionRow({ pickCodes: bodyPickCodes() }),
+          galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies)),
+        ],
+        () => ALL_KINDS_ENABLED,
+      ),
     });
     return built;
   }
@@ -117,20 +97,6 @@ describe('watchTierSaga', () => {
     await flush();
 
     expect(selectTier(store.getState())).toBe('large');
-  });
-
-  it('re-seeds the Milky-Way star count from the new tier budget', async () => {
-    // settings.milkyWay.starCount is an absolute count with no built-in tie to
-    // the tier — this saga's re-seed is what keeps it meaningful across a
-    // tier change. Assert the END state only, after `flush()`: redux-saga
-    // queues nested `put`s, so this saga's own setTier/setMilkyWayTuning pair
-    // is not guaranteed to land in source order relative to other watchers
-    // reacting to `setTier` — but both are guaranteed to have landed by the
-    // time the dispatched worker has run to completion.
-    store.dispatch(requestTier('large'));
-    await flush();
-
-    expect(store.getState().settings.milkyWay.starCount).toBe(MILKY_WAY_STARS_PER_TIER.large);
   });
 
   it('is a no-op for a same-tier request', async () => {
@@ -157,10 +123,6 @@ describe('watchTierSaga', () => {
     const SDSS_OBJ_ID = 99n;
     let currentCloud = makeCloud(SDSS_OBJ_ID, 0, 1);
 
-    const resolveDeps = (): ResolveDeps => ({
-      structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
-    });
     // The galaxyCatalog Layer's slice, read LIVE: the tier swap replaces the
     // cloud in place and the re-anchor must resolve against the NEW one.
     const galaxies = {
@@ -170,7 +132,7 @@ describe('watchTierSaga', () => {
       famousMeta: [],
     } as unknown as GalaxyRowFixture;
 
-    store = buildStore(resolveDeps, galaxies);
+    store = buildStore(galaxies);
     store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
 
     store.dispatch(requestTier('large'));
@@ -210,10 +172,6 @@ describe('watchTierSaga', () => {
     }
 
     let currentCloud = buildCloud(objIDsOld);
-    const resolveDeps = (): ResolveDeps => ({
-      structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
-    });
     // The galaxyCatalog Layer's slice, read LIVE: the tier swap replaces the
     // cloud in place and the re-anchor must resolve against the NEW one.
     const galaxies = {
@@ -223,7 +181,7 @@ describe('watchTierSaga', () => {
       famousMeta: [],
     } as unknown as GalaxyRowFixture;
 
-    store = buildStore(resolveDeps, galaxies);
+    store = buildStore(galaxies);
     // select → objID_A at old index 0; focus → objID_B at old index 1.
     store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
     store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: Source.SDSS, index: 1 }));

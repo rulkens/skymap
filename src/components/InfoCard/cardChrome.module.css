@@ -1,14 +1,10 @@
 /*
- * cardChrome.module.css — shared styling vocabulary for the detail cards
- * (galaxy / structure / Milky-Way).  The "loud" half of the InfoCard pair:
- * more padding, more opaque glass, a starlight gradient line along the top
- * edge.  Each detail card's own module composes the pieces it needs from here;
- * this file owns no component of its own.  All atoms reference tokens from
- * `src/styles/global.css`.
- *
- * CSS-modules note: the `pinned` variant is an extra class on the root —
- * `.infoCardFull.pinned` — and `.pinnedBadge` is always in the DOM, shown via
- * `.infoCardFull.pinned .pinnedBadge { display: inline }`.
+ * cardChrome.module.css — shared styling for the detail cards (galaxy /
+ * structure / Milky-Way): the "loud" half of the InfoCard pair, with more
+ * padding, opaque glass and a starlight line along the top edge. Each card's
+ * module composes the pieces it needs; this file owns no component. `.pinned`
+ * is an extra class on the root; `.pinnedBadge` is always in the DOM and shown
+ * by `.infoCardFull.pinned .pinnedBadge`.
  */
 
 /* ── Shared glass-panel base (shared by .infoCardFull and CompactCard) ──────── */
@@ -81,19 +77,24 @@
 }
 
 /*
- * Chromeless — chrome off means the surrounding sheet owns the surface, so the
- * card strips its panel frame (positioning, background, border, shadow, width
- * caps) and only keeps its content padding.  The compound selector wins over
- * both `.infoCardFull` and `.structure`'s min-width.
+ * Chromeless — the surrounding sheet owns the surface, so the card strips its
+ * panel frame (positioning, background, border, shadow, width caps) and only
+ * keeps its content padding.  The compound selector wins over both
+ * `.infoCardFull` and `.structure`'s min-width.
  */
 .infoCardFull.chromeless {
   position: static;
   background: none;
+  /* The sheet owns the blur; a nested backdrop-filter would leave its grabber strip unblurred. */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   border: none;
   border-radius: 0;
   box-shadow: none;
   min-width: 0;
   max-width: none;
+  /* The sheet's handle already sits above; the header's name row starts right under it. */
+  padding-top: 0;
   /* No explicit width: position:static block already fills its container at
      width:auto, and auto keeps padding inside — explicit 100% under
      content-box would add padding on top of the full width and overflow. */
@@ -198,7 +199,7 @@
  */
 .headlineAlias {
   color: var(--color-fg-subtle);
-  font-size: var(--font-size-lg);
+  font-size: var(--headline-alias-size, var(--font-size-lg));
 }
 
 /* ── Section separators ───────────────────────────────────────────────────── */
@@ -409,9 +410,11 @@ details:not([open]) > .detailsSummary::before {
   text-transform: uppercase;
 }
 
-.focusButton:hover {
-  background: var(--surface-control-hover);
-  border-color: var(--border-hover);
+@media (hover: hover) {
+  .focusButton:hover {
+    background: var(--surface-control-hover);
+    border-color: var(--border-hover);
+  }
 }
 
 .focusButton:active {
@@ -451,10 +454,12 @@ details:not([open]) > .detailsSummary::before {
   padding-bottom: 1px;
 }
 
-.closeButton:hover {
-  background: var(--surface-control);
-  border-color: var(--border-control);
-  color: var(--color-fg);
+@media (hover: hover) {
+  .closeButton:hover {
+    background: var(--surface-control);
+    border-color: var(--border-control);
+    color: var(--color-fg);
+  }
 }
 
 .closeButton:active {

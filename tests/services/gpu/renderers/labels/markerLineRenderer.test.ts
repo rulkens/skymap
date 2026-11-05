@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { MarkerLine } from '../../../../../src/@types/rendering/MarkerLine';
 import { createMarkerLineRenderer } from '../../../../../src/services/gpu/renderers/labels/markerLineRenderer';
 
 describe('MarkerLineRenderer occlusion variant', () => {
@@ -37,7 +38,7 @@ describe('MarkerLineRenderer occlusion variant', () => {
       canvas: null as unknown as HTMLCanvasElement,
       hdrCapable: false,
     };
-    createMarkerLineRenderer(ctx, ctx.format, 64, { occludeAgainstScene: true });
+    createMarkerLineRenderer(ctx, ctx.format, { occludeAgainstScene: true });
     return { bindGroupLayouts, pipelineLayouts, renderPipelines };
   }
 
@@ -59,6 +60,18 @@ describe('MarkerLineRenderer occlusion variant', () => {
     expect(Array.from(pipelineLayouts[1]!.bindGroupLayouts)).toHaveLength(2); // occlusion
   });
 
+  it('draws the occlusion pipeline through vsOcclude, never vs — vs must stay clear of group(1)', () => {
+    // See labelRenderer.test.ts's twin: vertex.wesl's 'vs' cannot statically
+    // reference lib::sceneDepth's group(1) bindings, so the occlusion
+    // pipeline's vertex stage comes from the separate vertexOcclude.wesl
+    // module's 'vsOcclude' entry.
+    const { renderPipelines } = buildOccluding();
+    const plain = renderPipelines.find((p) => p.label === 'marker-line-pipeline');
+    const occlude = renderPipelines.find((p) => p.label === 'marker-line-pipeline-occlude');
+    expect(plain!.vertex.entryPoint).toBe('vs');
+    expect(occlude!.vertex.entryPoint).toBe('vsOcclude');
+  });
+
   it('blends the occlusion pipeline PREMULTIPLIED — the contract sceneTransmittance depends on', () => {
     // See labelRenderer.test.ts's twin for the mechanism: `shadeLine(...) *
     // sceneTransmittance(...)` is a scalar on premultiplied rgba, which only
@@ -72,7 +85,9 @@ describe('MarkerLineRenderer occlusion variant', () => {
 });
 
 describe('MarkerLineRenderer (CPU state)', () => {
-  it('caps at maxLines', () => {
+  // The NEAR0 director flushes every caption leader in producer order; a fixed cap
+  // silently dropped the tail, so whichever Layer registered last lost its leaders.
+  it('keeps every line once the roster outgrows the starting capacity', () => {
     const ctx = {
       device: null as unknown as GPUDevice,
       context: null as unknown as GPUCanvasContext,
@@ -80,12 +95,15 @@ describe('MarkerLineRenderer (CPU state)', () => {
       canvas: null as unknown as HTMLCanvasElement,
       hdrCapable: false,
     };
-    const r = createMarkerLineRenderer(ctx, ctx.format, 2);
-    r.setLines([
-      { id: 'a', fromWorld: [0, 0, 0], toWorld: [0, 1, 0], pixelWidth: 1, color: [1, 1, 1, 1] },
-      { id: 'b', fromWorld: [0, 0, 0], toWorld: [0, 1, 0], pixelWidth: 1, color: [1, 1, 1, 1] },
-      { id: 'c', fromWorld: [0, 0, 0], toWorld: [0, 1, 0], pixelWidth: 1, color: [1, 1, 1, 1] },
-    ]);
-    expect(r.lineCount()).toBe(2);
+    const r = createMarkerLineRenderer(ctx, ctx.format);
+    const lines: MarkerLine[] = Array.from({ length: 200 }, (_, i) => ({
+      id: `line-${i}`,
+      fromWorld: [0, 0, 0],
+      toWorld: [0, 1, 0],
+      pixelWidth: 1,
+      color: [1, 1, 1, 1],
+    }));
+    r.setLines(lines);
+    expect(r.lineCount()).toBe(200);
   });
 });

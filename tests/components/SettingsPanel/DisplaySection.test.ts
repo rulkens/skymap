@@ -33,7 +33,7 @@ import { createElement } from 'react';
 import DisplaySection from '../../../src/components/SettingsPanel/DisplaySection';
 import type { DisplaySectionProps } from '../../../src/components/SettingsPanel/DisplaySection';
 import type { ToneMapCurve as ToneMapCurveT } from '../../../src/@types/data/ToneMapCurve';
-import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../src/@types/camera/orientation/OrientationFrameId';
 import { ToneMapCurve } from '../../../src/data/toneMapCurve';
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import type { DataManifest } from '../../../src/@types/data/DataManifest';
 import { logicalDataName } from '../../utils/data/logicalDataName';
 import { walkDataFiles } from '../../utils/data/walkDataFiles';
 import { allowDataFile } from './allowDataFile';
-import type { R2Upload } from './R2Upload';
+import type { R2Upload } from '../@types/R2Upload';
 
 /**
  * The `public/data/` upload set — read straight off `manifest.json` rather

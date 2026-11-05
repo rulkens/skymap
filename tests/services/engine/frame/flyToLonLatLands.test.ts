@@ -1,17 +1,13 @@
 /**
  * flyToLonLatLands — the `camera/flyToLonLat` command, saga and real runFrame
  * together: the camera must still stand where it was sent frames after the
- * flight ends. A plain commit under a followed focus was lost the next frame
- * (the commit-on-edge bake handed the frame straight back to `followHold`).
+ * flight ends, whatever focus or follow row is active when it lands.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
-}));
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: () => ({ draw: 0, pick: 0 }),
 }));
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
@@ -25,12 +21,16 @@ import { watchFlyToLonLatSaga } from '../../../../src/state/camera/watchFlyToLon
 import { watchSelectionRowsSaga } from '../../../../src/state/selectionRows/watchSelectionRowsSaga';
 import { flyToLonLat } from '../../../../src/state/camera/flyToLonLatActions';
 import type { FlyToLonLatPayload } from '../../../../src/state/camera/flyToLonLatActions';
+import { resume } from '../../../../src/state/time/timeSlice';
+import { selectTimeState } from '../../../../src/state/time/selectors';
+import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { liveUpBasisQuat } from '../../../../src/services/engine/camera/liveUpBasisQuat';
-import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
-import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
-import { eyeFrameOf } from '../../../../src/utils/camera/eyeFrameOf';
+import { liveUpBasisQuat } from '../../../../src/services/engine/camera/orientation/liveUpBasisQuat';
+import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
+import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
+import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
+import { eyeFrameOf } from '../../../../src/utils/camera/surfaceFrame/eyeFrameOf';
 import { directionToLonLatDeg } from '../../../../src/utils/geo/directionToLonLatDeg';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { BODY_LOCAL_FRAME } from '../../../../src/data/camera/bodyLocalFrame';
@@ -42,8 +42,8 @@ import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { SimBodyId } from '../../../helpers/camera/SimBodyId';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // Past the flight, then a further stretch the result must survive unchanged.
 const FLIGHT_FRAMES = Math.ceil(FLY_TO_LON_LAT_TWEEN_MS / 16) + 10;
@@ -71,6 +71,7 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
       cameraRuntime: () => ({
         from: liveWorldPose(h.state),
         fovYRad: h.state.cameraRuntime.outputs.projection.fovYRad,
+        aspect: h.state.cameraRuntime.outputs.projection.aspect,
         upBasisQuat: liveUpBasisQuat(h.state.cameraRuntime),
       }),
       selection: {
@@ -79,6 +80,7 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
           const p = h.bodies.get(ref.id)!.positionMpc;
           return { type: 'body', id: ref.id, label: ref.id, positionMpc: [p[0]!, p[1]!, p[2]!] };
         },
+        focusIdOf: () => null,
       },
     },
   };
@@ -87,10 +89,12 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
   return { h, fly: (p) => dispatch(flyToLonLat(p)) };
 }
 
-/** Where the DISPLAYED camera stands over `id`: sub-camera point, altitude, heading. */
-function standpoint(h: CameraSimHarness, id: SimBodyId) {
+/** Where the DISPLAYED camera stands over `id`: sub-camera point, altitude, heading.
+ *  `bodyState` defaults to the harness's frozen map, which only describes the
+ *  paused clock every case but the moving-body one runs on. */
+function standpoint(h: CameraSimHarness, id: SimBodyId, bodyState = h.bodies.get(id)!) {
   const basis = ORIENTATION_FRAMES[h.store.getState().settings.orientation];
-  const arm = toBodyArm(liveWorldPose(h.state), basis, basis, id as BodyId, h.bodies.get(id)!);
+  const arm = toBodyArm(liveWorldPose(h.state), basis, basis, asSceneBodyId(id), bodyState);
   const eyeM = bodyFixedEyeM(arm);
   return {
     ...directionToLonLatDeg(normalize3(eyeM)),
@@ -168,7 +172,7 @@ describe('flyToLonLat through the frame loop', () => {
     const footprintM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'mars', 'test'));
     const framingM =
       bodyFocusDistance(footprintM * SCALE_UNITS.M_TO_MPC, Math.PI / 3) / SCALE_UNITS.M_TO_MPC;
-    flyAndHold(h, () => fly({ body: 'mars' as BodyId, lonDeg: 137, latDeg: -5 }), 'mars', {
+    flyAndHold(h, () => fly({ body: asSceneBodyId('mars'), lonDeg: 137, latDeg: -5 }), 'mars', {
       lonDeg: 137,
       latDeg: -5,
       altM: framingM - h.radiusM('mars'),
@@ -176,5 +180,34 @@ describe('flyToLonLat through the frame loop', () => {
     });
     expect(h.store.getState().selection.focus).toEqual({ type: 'body', id: 'mars' });
     expect(h.store.getState().selectionRows.focus).toMatchObject({ id: 'mars' });
+  });
+
+  it('aims at where the body WILL be, not where it was when the command ran', () => {
+    const { h, fly } = setup();
+    // Every case above runs on the harness's PAUSED clock, where a target built
+    // against the body's dispatch-time state is indistinguishable from a correct
+    // one. Running, it is not: the tween carries ABSOLUTE world poses, and Earth
+    // covers ~45 km of its orbit during the 1.5 s flight — which landed the
+    // camera tens of km east and kilometres UNDERGROUND (2026-09-18).
+    vi.spyOn(performance, 'now').mockImplementation(() => h.nowMs());
+    h.store.dispatch(resume({ nowMs: h.nowMs() }));
+    h.frame(5);
+
+    fly({ lonDeg: 12, latDeg: 55, altKm: 6 });
+    h.frame(FLIGHT_FRAMES);
+
+    const simDays = deriveSimDays(selectTimeState(h.store.getState()), h.nowMs());
+    const got = standpoint(h, 'earth', deriveBodyStates(simDays).get(asSceneBodyId('earth'))!);
+    // Not the 1 m the paused cases assert: the tween can only END on a frame
+    // boundary, so up to one frame of orbital motion (~30 km/s × 16 ms ≈ 0.5 km)
+    // survives the prediction. That is inside the narrowest baked band; the bug
+    // this guards is two orders of magnitude bigger.
+    const MOVING_TOL_M = 2_000;
+    const groundErrM = Math.hypot(
+      (got.lonDeg - 12) * Math.cos((55 * Math.PI) / 180) * 111_320,
+      (got.latDeg - 55) * 111_320,
+    );
+    expect(groundErrM).toBeLessThan(MOVING_TOL_M);
+    expect(Math.abs(got.altM - 6_000)).toBeLessThan(MOVING_TOL_M);
   });
 });

@@ -1,19 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import { near0SelectionRingPass } from '../../../../../src/services/engine/frame/passes/near0SelectionRingPass';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
-import { Source } from '../../../../../src/data/sources';
+import { Source } from '../../../../../src/data/source';
 import { near0RingRadiusPx } from '../../../../../src/services/engine/helpers/near0RingRadiusPx';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
+import { starRowDriver } from '../../../../fixtures/starRowDriver';
+import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // The enable gate never touches ctx or view — bare casts stand in for both.
-const CTX = { renderedTargets: new Set<string>() } as unknown as ReadyFrameContext;
+const CTX = { snapshot: { renderedTargets: new Set<string>() } } as unknown as FrameView;
 const VIEW_STUB = {} as unknown as SlabView;
 
 // A minimal stand-in for the shared selection-ring renderer handle.
@@ -23,12 +26,14 @@ function makeRendererSpy() {
 
 // The star arm — a self-contained display projection of a picked survey star.
 const STAR_ROW: SelectionRow = {
-  type: 'star',
+  type: 'starCatalog',
+  source: Source.GaiaStars,
   index: 7,
+  id: null,
+  label: 'Field star',
   positionMpc: [0.001, -0.002, 0.0005],
-  absMag: 4.8,
-  bpRp: 0.65,
   radiusM: 696340000,
+  driver: starRowDriver(null, 696340000),
 };
 
 // A galaxy row — yields a NON-null halo, but tagged COSMO. It exercises the
@@ -45,7 +50,7 @@ const STRUCTURE_ROW: StructureInfo = {
   type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [10, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
@@ -90,12 +95,14 @@ describe('near0SelectionRingPass.enabled', () => {
 // distance, and the un-clamped ring quad frustum-clips away while the star
 // sprite (which clamps clip-z) survives.
 const FAR_STAR_ROW: SelectionRow = {
-  type: 'star',
+  type: 'starCatalog',
+  source: Source.GaiaStars,
   index: 3,
+  id: null,
+  label: 'Field star',
   positionMpc: [3e-5, 4e-5, 0], // camera at origin ⇒ camDist 5e-5 Mpc
-  absMag: 4.8,
-  bpRp: 0.65,
   radiusM: 696340000,
+  driver: starRowDriver(null, 696340000),
 };
 
 // A SlabView with `slab.far` BELOW the star's camDist. camPos at the origin
@@ -115,6 +122,7 @@ function farClippingView(farMpc: number): SlabView {
     vp: new Float32Array(16),
     camPos: [0, 0, 0],
     viewportPx: [1920, 1080],
+    window: { originPx: [0, 0], sizePx: [1920, 1080] },
   } as unknown as SlabView;
 }
 
@@ -127,15 +135,15 @@ describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
     const farMpc = 1e-6; // far below the anchor distance ⇒ would clip un-clamped
     const view = farClippingView(farMpc);
     const ctx = {
+      snapshot: { bodyStates: deriveBodyStates(0), simDays: 0, renderedTargets: new Set<string>() },
       drawPxPerRad: 1000,
-      renderedTargets: new Set<string>(),
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
 
     const pass = {} as unknown as GPURenderPassEncoder;
     near0SelectionRingPass.draw(pass, view, ctx, state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
-    const [, , , opts] = renderer.draw.mock.calls[0]!;
+    const [, , , , opts] = renderer.draw.mock.calls[0]!;
     const handed = opts.worldPos as [number, number, number];
     const handedLen = Math.hypot(handed[0], handed[1], handed[2]);
 
@@ -165,30 +173,34 @@ describe('near0SelectionRingPass.draw — live body position', () => {
     // Advance well past epoch so the derived Earth position is clearly not the
     // stale row snapshot — the exact reported bug.
     const simDays = CONST_J2000 + 300;
-    const livePos = deriveBodyStates(simDays).get('earth')!.positionMpc;
+    const livePos = deriveBodyStates(simDays).get(asSceneBodyId('earth'))!.positionMpc;
 
     // A deliberately-wrong snapshot: a magnitude/direction the live Earth never
     // has (Earth's heliocentric offset is ~1 AU ≈ 5e-12 Mpc). Both stay well
     // inside the far plane below, so neither is length-clamped.
     const staleRow: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [1e-6, 0, 0],
+      driver: bodyDriverGeometry('earth'),
     };
 
     const renderer = makeRendererSpy();
     const state = stateWith(staleRow, renderer);
     const view = farClippingView(1); // farMpc 1 Mpc ⇒ no clamp at this scale
     const ctx = {
-      simDays,
+      snapshot: {
+        bodyStates: deriveBodyStates(simDays),
+        simDays,
+        renderedTargets: new Set<string>(),
+      },
       drawPxPerRad: 1000,
-      renderedTargets: new Set<string>(),
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
 
     near0SelectionRingPass.draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
 
-    const [, , , opts] = renderer.draw.mock.calls[0]!;
+    const [, , , , opts] = renderer.draw.mock.calls[0]!;
     const handed = opts.worldPos as [number, number, number];
 
     // camPos is the origin, so the handed camera-relative centre equals the live

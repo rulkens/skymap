@@ -9,7 +9,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import type { HeightSource } from './HeightSource';
+import type { HeightSource } from './@types/HeightSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { boundsOverlap } from '../utils/textures/boundsOverlap';
 import { heightLatticeBounds } from '../utils/textures/heightLatticeBounds';

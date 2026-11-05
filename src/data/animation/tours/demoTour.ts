@@ -10,9 +10,9 @@
  *
  * The anchor id scheme is `${category}-${seed.id}` (see
  * `buildStaticAnchorStructures`), so Virgo — a cluster with seed id `virgo-m87`
- * — is `cluster-virgo-m87`, and Laniakea — a supercluster with seed id
+ * — is `galaxy-cluster-virgo-m87`, and Laniakea — a supercluster with seed id
  * `laniakea-sc` — is `supercluster-laniakea-sc`. A bare seed id never matches
- * `structures.byId`, so the beat's `waitUntil(clipFociReady)` would poll forever:
+ * `structures.byId`, so the beat's `waitUntilSaga(clipFociReady)` would poll forever:
  * the category prefix is load-bearing, not cosmetic.
  *
  * Each beat uses `flyAndFocusOnClip` so the InfoCard and isolation highlight
@@ -30,22 +30,21 @@ import { focusId } from '../../../utils/animation/focusId';
 export const demoTour: Tour = {
   id: 'demo',
   label: 'Demo Tour',
+  dev: true,
   beats: [
     {
       enterClip: flyAndFocusOnClip(focusId('milkyWay')),
       caption: {
         title: 'The Milky Way',
-        body: 'Home — one barred spiral among the millions mapped here.',
-        position: 'bottom-left',
+        lines: ['Home — one barred spiral among the millions mapped here.'],
       },
       dwellClip: dwellDrift(8),
     },
     {
-      enterClip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
+      enterClip: flyAndFocusOnClip(focusId('galaxy-cluster-virgo-m87')),
       caption: {
         title: 'The Virgo Cluster',
-        body: 'Two thousand galaxies, bound by gravity 54 million light-years away.',
-        position: 'bottom-left',
+        lines: ['Two thousand galaxies, bound by gravity 54 million light-years away.'],
       },
       dwellClip: dwellDrift(8),
     },
@@ -53,8 +52,9 @@ export const demoTour: Tour = {
       enterClip: flyAndFocusOnClip(focusId('supercluster-laniakea-sc')),
       caption: {
         title: 'Laniakea',
-        body: 'Our home supercluster — a hundred thousand galaxies streaming toward the Great Attractor.',
-        position: 'bottom-right',
+        lines: [
+          'Our home supercluster — a hundred thousand galaxies streaming toward the Great Attractor.',
+        ],
       },
       dwellClip: dwellDrift(9),
     },

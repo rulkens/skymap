@@ -12,11 +12,11 @@
  * that logic.  It is pure: pose and projection are never mutated.
  */
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { CameraProjection } from '../../../@types/camera/CameraProjection';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../@types/camera/projection/CameraProjection';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import { updatePosition } from '../../../utils/camera/updatePosition';
+import type { AssembledOrbitCamera } from '../../../@types/camera/orbitCamera/AssembledOrbitCamera';
+import { updatePosition } from '../../../utils/camera/orbitCamera/updatePosition';
 
 /**
  * Lift a store CameraPose into a full live OrbitCamera by merging the engine
@@ -39,14 +39,15 @@ export function assembleOrbitCamera(
   projection: CameraProjection,
   poseBasis: Mat3,
   upBasis: Mat3,
-): OrbitCamera {
-  const cam: OrbitCamera = {
+): AssembledOrbitCamera {
+  const cam: AssembledOrbitCamera = {
     // Fresh target copy — never alias the store's frozen pose array.
     target: [pose.target[0], pose.target[1], pose.target[2]],
     yaw: pose.yaw,
     pitch: pose.pitch,
     distance: pose.distance,
     roll: pose.roll,
+    lookOffset: pose.lookOffset,
     fovYRad: projection.fovYRad,
     aspect: projection.aspect,
     near: projection.near,

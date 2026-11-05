@@ -1,19 +1,34 @@
 /**
  * createLayers — the contribution composition: core's constants first, then
- * every Layer's, in tuple order, with each asset row's factory called exactly
- * once and no two rows claiming one slot key.
+ * every Layer's, in tuple order (asset rows the other way round: Layers' before
+ * core's meshes), with each asset row's slot indexed by its key and no two rows
+ * claiming one slot key.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { createLayers } from '../../../../src/services/engine/phases/createLayers';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
-import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
+import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
+import { bodyPickCodes } from '../../../support/layerPickCodes';
+import { bodyLayerWithoutGpu } from '../../../helpers/engine/bodyLayerWithoutGpu';
+import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/layers/body/textures/data/bodyTextureKeys';
+import { bodyTextureSlotKey } from '../../../../src/layers/body/textures/load/bodyTextureSlotKey';
+import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
+import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/layers/body/surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
+import type { ShowKey } from '../../../../src/@types/animation/ShowKey';
 
-function makeState(registerProducer: ReturnType<typeof vi.fn>): EngineState {
+function makeState(
+  registerProducer: ReturnType<typeof vi.fn>,
+  foregroundRegisterProducer: ReturnType<typeof vi.fn> = vi.fn(),
+): EngineState {
   return {
     gpu: {
       fadeBgl: {},
@@ -26,6 +41,7 @@ function makeState(registerProducer: ReturnType<typeof vi.fn>): EngineState {
       fades: {},
       scheduler: { requestRender: vi.fn() },
       cosmoLabelDirector: { registerProducer },
+      foregroundLabelDirector: { registerProducer: foregroundRegisterProducer },
     },
     layers: [],
     selectionKindRows: [],
@@ -48,38 +64,69 @@ function makeDeps(
 
 /**
  * A Layer contributing one distinctly named row of every kind. `assetKey` and
- * `factory` are separate so a test can aim two Layers at one key, or watch how
- * often the factory runs.
+ * `slot` are separate so a test can aim two Layers at one key.
  */
-function contributingLayer(
-  tag: string,
-  assetKey: string,
-  factory: () => object,
-): Layer<string, unknown> {
+function contributingLayer(tag: string, assetKey: string, slot: object): Layer<string, unknown> {
   return {
     name: tag,
     create: () => ({}),
     destroy: () => {},
     passes: () => [{ name: `${tag}-pass`, enabled: () => false, draw: () => {} }],
-    assets: () => [
-      { key: assetKey, factory, req: () => undefined, demand: () => false, priority: 1 },
-    ],
-    fades: () => [{ key: `${tag}-fade`, expand: () => [], handle: () => ({}), seed: () => 0 }],
-    labels: () => [{ id: `${tag}-labels`, produceLabels: () => ({}) }],
+    assets: () => [{ key: assetKey, slot, req: () => undefined, demand: () => false, priority: 1 }],
+    guides: () => ({
+      screenLabels: [{ id: `${tag}-labels`, slab: COSMO, produceLabels: () => ({}) }],
+    }),
+  } as unknown as Layer<string, unknown>;
+}
+
+function worldLabelLayer(tag: string): Layer<string, unknown> {
+  return {
+    name: tag,
+    create: () => ({}),
+    destroy: () => {},
+    passes: () => [],
+    guides: () => ({ worldLabels: [{ id: `${tag}-world`, produceLabels3D: () => ({}) }] }),
+  } as unknown as Layer<string, unknown>;
+}
+
+function slabRowLayer(tag: string, anchorIds: readonly string[]): Layer<string, unknown> {
+  return {
+    name: tag,
+    create: () => ({}),
+    destroy: () => {},
+    passes: () => [],
+    slabs: anchorIds.map((anchorId) => ({
+      anchorId,
+      boundingRadiusM: 1,
+      footprintRadiusM: 1,
+    })),
+  } as unknown as Layer<string, unknown>;
+}
+
+function orbitTrailLayer(
+  tag: string,
+  rows: readonly OrbitalElements[],
+  show: ShowKey,
+): Layer<string, unknown> {
+  return {
+    name: tag,
+    create: () => ({}),
+    destroy: () => {},
+    passes: () => [],
+    guides: () => ({ orbitTrails: { show, rows } }),
   } as unknown as Layer<string, unknown>;
 }
 
 describe('createLayers composition', () => {
-  it("composes a Layer's passes, assets, fades and labels after core's, in tuple order", async () => {
+  it("composes a Layer's passes and labels after core's and its assets before core's, in tuple order", async () => {
     const { store } = createAppStore();
     const registerProducer = vi.fn();
     const slotA = { name: 'slot-a' };
     const slotB = { name: 'slot-b' };
-    const factoryA = vi.fn(() => slotA);
     const state = makeState(registerProducer);
     const layers = [
-      contributingLayer('a', 'a-asset', factoryA),
-      contributingLayer('b', 'b-asset', () => slotB),
+      contributingLayer('a', 'a-asset', slotA),
+      contributingLayer('b', 'b-asset', slotB),
     ];
 
     await createLayers(state, makeDeps(layers, store));
@@ -89,39 +136,204 @@ describe('createLayers composition', () => {
       'a-pass',
       'b-pass',
     ]);
-    expect(state.fadeRows.map((row) => row.key)).toEqual([
-      ...FADE_LAYERS.map((row) => row.key),
-      'a-fade',
-      'b-fade',
-    ]);
-    expect(state.assetRows.map((row) => row.key).slice(-2)).toEqual(['a-asset', 'b-asset']);
-    expect(state.layerSlots.get('a-asset' as never)).toBe(slotA);
-    expect(state.layerSlots.get('b-asset' as never)).toBe(slotB);
-    // Once at composition, never per frame: a second call mints a second
-    // subscriber onto the same payload.
-    expect(factoryA).toHaveBeenCalledTimes(1);
+    expect(state.assetRows.map((row) => row.key).slice(0, 2)).toEqual(['a-asset', 'b-asset']);
+    expect(state.slotsByKey.get('a-asset' as never)).toBe(slotA);
+    expect(state.slotsByKey.get('b-asset' as never)).toBe(slotB);
     expect(registerProducer.mock.calls.map(([producer]) => producer.id)).toEqual([
       'a-labels',
       'b-labels',
     ]);
   });
 
+  it("createLayers composes only the Layers' orbit-trail groups", async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const aRow = { id: 'a-trail' } as unknown as OrbitalElements;
+    const bRow = { id: 'b-trail' } as unknown as OrbitalElements;
+    const aRows = [aRow];
+    const bRows = [bRow];
+    const layers = [
+      orbitTrailLayer('a', aRows, 'sStarTrails'),
+      orbitTrailLayer('b', bRows, 'orbitTrails'),
+    ];
+
+    await createLayers(state, makeDeps(layers, store));
+
+    // By reference, row for row: a structural compare would pass a copy that lost
+    // the identity `orbitTrailsPass` walks.
+    const groups = state.orbitTrailGroups;
+    expect(groups).toHaveLength(2);
+    expect(groups[0]!.rows).toBe(aRows);
+    expect(groups[0]!.show).toBe('sStarTrails');
+    expect(groups[1]!.rows).toBe(bRows);
+  });
+
+  it('each planet is captioned once', async () => {
+    const { store } = createAppStore();
+    const foregroundRegisterProducer = vi.fn();
+    const state = makeState(vi.fn(), foregroundRegisterProducer);
+
+    const deps = makeDeps([bodyLayerWithoutGpu], store);
+    // The body Layer publishes a `search` feed, which createLayers runs as a saga.
+    (deps.cb as unknown as { runSaga: unknown }).runSaga = vi.fn();
+    await createLayers(state, deps);
+
+    const ids = foregroundRegisterProducer.mock.calls.map(([producer]) => producer.id);
+    expect(ids.filter((id) => id === 'sceneBodyCaptions')).toHaveLength(1);
+  });
+
+  it('lists body texture rows before core mesh rows, so equal ranks load textures first', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const deps = makeDeps([bodyLayerWithoutGpu], store);
+    (deps.cb as unknown as { runSaga: unknown }).runSaga = vi.fn();
+    await createLayers(state, deps);
+
+    const keys = state.assetRows.map((row) => String(row.key));
+    const firstMesh = keys.findIndex((key) => key.startsWith(String(meshBodySlotKey(''))));
+    const lastTexture = Math.max(
+      ...ALL_BODY_TEXTURE_KEYS.map((e) =>
+        keys.indexOf(String(bodyTextureSlotKey(e.bodyId, e.kind))),
+      ),
+    );
+    expect(firstMesh).toBeGreaterThan(-1);
+    expect(lastTexture).toBeLessThan(firstMesh);
+  });
+
+  it('composes Layer world label producers onto state.label3DProducers', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const layers = [worldLabelLayer('a'), worldLabelLayer('b')];
+
+    await createLayers(state, makeDeps(layers, store));
+
+    expect(state.label3DProducers.map((producer) => producer.id)).toEqual(['a-world', 'b-world']);
+  });
+
+  it("composes every Layer's slabs, in tuple order", async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const layers = [slabRowLayer('a', ['a-anchor']), slabRowLayer('b', ['b-anchor'])];
+
+    await createLayers(state, makeDeps(layers, store));
+
+    expect(state.slabRows.map((row) => row.anchorId)).toEqual(['a-anchor', 'b-anchor']);
+  });
+
+  it('throws at boot when a composition’s slab rows exceed the ceiling', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    // One past the headroom — the GPU query set is already sized, so the
+    // overflow row would draw into nothing.
+    const anchorIds = Array.from({ length: LAYER_SLAB_ROW_HEADROOM + 1 }, (_, k) => `over-${k}`);
+
+    await expect(
+      createLayers(state, makeDeps([slabRowLayer('over', anchorIds)], store)),
+    ).rejects.toThrow(/slab rows exceed LAYER_SLAB_ROW_HEADROOM/);
+  });
+
+  it('throws at boot when two Layers name the same slab anchorId', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const layers = [slabRowLayer('a', ['shared-anchor']), slabRowLayer('b', ['shared-anchor'])];
+
+    await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-anchor/);
+  });
+
   it('throws at boot when two Layers mint the same slot key', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
     const layers = [
-      contributingLayer('a', 'shared-asset', () => ({})),
-      contributingLayer('b', 'shared-asset', () => ({})),
+      contributingLayer('a', 'shared-asset', {}),
+      contributingLayer('b', 'shared-asset', {}),
     ];
 
     await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-asset/);
   });
 
+  it('throws at boot when heightAt is provided more than once', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const heightAtLayer = (tag: string) =>
+      ({
+        name: tag,
+        create: () => ({}),
+        destroy: () => {},
+        passes: () => [],
+        heightAt: () => datumOnlyTerrainHeight,
+      }) as unknown as Layer<string, unknown>;
+
+    await expect(
+      createLayers(state, makeDeps([heightAtLayer('a'), heightAtLayer('b')], store)),
+    ).rejects.toThrow(/heightAt provided twice — a and b/);
+  });
+
+  it("createLayers composes the body Layer's heightAt and no core provider", async () => {
+    // Bug caught: a core tile provider left beside the body Layer's throws at boot as a
+    // second ground; a dropped body row would leave the camera on the flat datum.
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const heightAt = vi.fn(() => 42);
+    const body = {
+      ...bodyLayerWithoutGpu,
+      create: () => ({
+        textureSlots: new Map(),
+        atlasSlot: {},
+        pickCodes: bodyPickCodes(),
+        surfaceTiles: { stream: { heightAt }, plan: IDLE_SURFACE_TILE_PLAN },
+      }),
+    } as unknown as Layer<string, unknown>;
+    const deps = makeDeps([body], store);
+    (deps.cb as unknown as { runSaga: unknown }).runSaga = vi.fn();
+
+    await createLayers(state, deps);
+
+    expect(state.terrainHeightAt(asSceneBodyId('earth'), [1, 0, 0])).toBe(42);
+    expect(heightAt).toHaveBeenCalledTimes(1);
+  });
+
   it('throws at boot when a Layer mints a slot key core already owns', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
-    const layer = contributingLayer('a', 'structureCatalog', () => ({}));
+    const layer = contributingLayer('a', 'mesh:curiosity', {});
 
-    await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow(/structureCatalog/);
+    await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow(/mesh:curiosity/);
+  });
+
+  it('routes a screen label producer to the director owning its named slab, and throws for one naming an unknown slab', async () => {
+    const { store } = createAppStore();
+    const cosmoRegisterProducer = vi.fn();
+    const foregroundRegisterProducer = vi.fn();
+    const nearLayer = {
+      name: 'near',
+      create: () => ({}),
+      destroy: () => {},
+      passes: () => [],
+      guides: () => ({
+        screenLabels: [{ id: 'near-label', slab: NEAR0, produceLabels: () => ({}) }],
+      }),
+    } as unknown as Layer<string, unknown>;
+
+    await createLayers(
+      makeState(cosmoRegisterProducer, foregroundRegisterProducer),
+      makeDeps([nearLayer], store),
+    );
+
+    expect(foregroundRegisterProducer.mock.calls.map(([producer]) => producer.id)).toEqual([
+      'near-label',
+    ]);
+    expect(cosmoRegisterProducer).not.toHaveBeenCalled();
+
+    const bodySlabLayer = {
+      name: 'body',
+      create: () => ({}),
+      destroy: () => {},
+      passes: () => [],
+      guides: () => ({ screenLabels: [{ id: 'body-label', slab: 2, produceLabels: () => ({}) }] }),
+    } as unknown as Layer<string, unknown>;
+
+    await expect(
+      createLayers(makeState(vi.fn()), makeDeps([bodySlabLayer], store)),
+    ).rejects.toThrow(/BODY\[0\]/);
   });
 });

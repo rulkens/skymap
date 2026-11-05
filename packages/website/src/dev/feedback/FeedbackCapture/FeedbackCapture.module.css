@@ -1,0 +1,8 @@
+.root {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: crosshair;
+  user-select: none;
+  -webkit-user-select: none;
+}

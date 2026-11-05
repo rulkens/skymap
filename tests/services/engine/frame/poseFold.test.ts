@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Spies that DELEGATE to the real modules: the fold's placement is a call-order
 // property, so the frame has to run its production path while the probe records
 // where each step landed. `state` is the live EngineState, read inside the
-// stepRung spy to prove `register.pose` has not been updated yet at fold time.
+// stepCameraArm spy to prove `register.pose` has not been updated yet at fold time.
 const probe = vi.hoisted(() => ({
   order: [] as string[],
   lastPoseAtFold: [] as unknown[],
@@ -25,35 +25,37 @@ const probe = vi.hoisted(() => ({
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: () => ({ draw: 0, pick: 0 }),
-}));
 // Reads window.devicePixelRatio, which the node environment has no window for.
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
-vi.mock('../../../../src/services/engine/camera/applyFocusedBodyPivot', async (importOriginal) => {
+vi.mock(
+  '../../../../src/services/engine/camera/bodyFrame/applyFocusedBodyPivot',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('../../../../src/services/engine/camera/bodyFrame/applyFocusedBodyPivot')
+      >();
+    return {
+      ...actual,
+      applyFocusedBodyPivot: (...args: Parameters<typeof actual.applyFocusedBodyPivot>) => {
+        probe.order.push('pin');
+        return actual.applyFocusedBodyPivot(...args);
+      },
+    };
+  },
+);
+vi.mock('../../../../src/services/engine/camera/arms/stepCameraArm', async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import('../../../../src/services/engine/camera/applyFocusedBodyPivot')
+      typeof import('../../../../src/services/engine/camera/arms/stepCameraArm')
     >();
   return {
     ...actual,
-    applyFocusedBodyPivot: (...args: Parameters<typeof actual.applyFocusedBodyPivot>) => {
-      probe.order.push('pin');
-      return actual.applyFocusedBodyPivot(...args);
-    },
-  };
-});
-vi.mock('../../../../src/services/engine/camera/rungs/stepRung', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('../../../../src/services/engine/camera/rungs/stepRung')>();
-  return {
-    ...actual,
-    stepRung: (...args: Parameters<typeof actual.stepRung>) => {
+    stepCameraArm: (...args: Parameters<typeof actual.stepCameraArm>) => {
       probe.order.push('fold');
       probe.lastPoseAtFold.push((probe.state as EngineState | null)?.cameraRuntime.register.pose);
-      return actual.stepRung(...args);
+      return actual.stepCameraArm(...args);
     },
   };
 });
@@ -64,61 +66,60 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
     ...actual,
     deriveFrameContext: (...args: Parameters<typeof actual.deriveFrameContext>) => {
       probe.order.push('deriveFrameContext');
-      probe.drawnPoses.push(args[2]);
+      // The caller now assembles `cam` itself; its `target`/`yaw`/`pitch`/
+      // `distance` are the pose that used to arrive as the 3rd positional.
+      probe.drawnPoses.push(args[1].cam);
       return actual.deriveFrameContext(...args);
     },
   };
 });
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
-import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
-import { isSiteArm } from '../../../../src/services/engine/camera/rungs/isSiteArm';
-import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
-import { frameKey } from '../../../../src/services/engine/camera/rungs/frameKey';
-import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/body/isBodyArm';
+import { isSiteArm } from '../../../../src/services/engine/camera/arms/site/isSiteArm';
+import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
+import { frameKey } from '../../../../src/services/engine/camera/arms/frameKey';
+import { DEFAULT_FOCUS_MOVES } from '../../../../src/data/camera/focusMoveDefaults';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
-import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
-import { tiltFromNadirRad } from '../../../../src/utils/camera/tiltFromNadirRad';
+import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
+import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
+import { tiltFromNadirRad } from '../../../../src/utils/camera/surfaceFrame/tiltFromNadirRad';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
+import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
-import { SITE_RUNG } from '../../../../src/data/camera/siteRung';
+import { SITE_CAMERA_ARM } from '../../../../src/services/engine/camera/arms/site/data/siteCameraArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
-import {
-  beginDrag,
-  endDrag,
-  commitCameraPose,
-  startCameraTween,
-} from '../../../../src/state/camera/cameraSlice';
+import { commitCameraPose, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { all, tween } from '../../../../src/services/engine/animation/effectHelpers';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
+import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
-const EARTH: BodyState = deriveBodyStates(SIM).get('earth')!;
-const EARTH_ARM = { body: 'earth' as BodyId };
+const EARTH: BodyState = deriveBodyStates(SIM).get(asSceneBodyId('earth'))!;
+const EARTH_ARM = { body: asSceneBodyId('earth') };
 
 /** Eye, sightline and screen-up — the three quantities §4 rules continuous. */
 function renderedCamera(pose: CameraPose) {
@@ -160,7 +161,7 @@ function seedPose(
  * cursor pick and the focus coincide and hides every pivot defect they exist
  * for — the fixtures would be choosing the one input the bug cannot occur on.
  */
-const WHEEL_PX = { xPx: 70, yPx: 30 } as const;
+const WHEEL_PX = [70, 30] as const;
 
 /** Angle between the last DRAWN sightline and the rover — off screen centre. */
 function offRoverRad(rover: BodyState): number {
@@ -193,11 +194,11 @@ function rangeOf(framed: FramedCameraPose): number {
  * fresh at a flip is eye-preserving by construction and hides them).
  */
 function parkAtCuriositySite(h: ReturnType<typeof makeHarness>): void {
-  const site = { site: 'curiosity' as BodyId } as const;
+  const site = { site: asSurfaceSiteId('curiosity') } as const;
   const parked = foldToWorld(
     { frame: site, pose: { siteId: site.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 2e5 } },
     {
-      bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
+      bodies: deriveBodyStates(SIM),
       poseBasis: B,
       upBasis: B,
       terrainHeightAt: datumOnlyTerrainHeight,
@@ -206,7 +207,7 @@ function parkAtCuriositySite(h: ReturnType<typeof makeHarness>): void {
   h.seedPose(absoluteArm(parked));
   h.focus('curiosity');
   h.tick(0);
-  h.tick(FOCUS_TWEEN_MS + 16);
+  h.tick(DEFAULT_FOCUS_MOVES.eased.durationMs + 16);
 }
 
 function commitCalls(spy: { mock: { calls: readonly (readonly unknown[])[] } }): unknown[] {
@@ -283,8 +284,7 @@ describe('runFrame — the regime fold', () => {
       startCameraTween({
         from: FROM,
         to: TO,
-        durationMs: 4000,
-        easing: 'linear',
+        motion: { style: 'eased', durationMs: 4000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -341,7 +341,7 @@ describe('runFrame — the regime fold', () => {
     // sub-eye footprint) until the band's far edge hands the arm back.
     let flipAt = -1;
     for (let i = 0; i < 12 && flipAt < 0; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, xPx: 50, yPx: 50 });
+      h.notch(240, [50, 50]);
       h.frame(1); // the zoom lands, and on the last of these the fold flips
       if (h.state.cameraRuntime.register.pose.frame === 'absolute') {
         flipAt = probe.drawnPoses.length - 1;
@@ -390,7 +390,7 @@ describe('runFrame — the regime fold', () => {
 
     let crossing = -1;
     for (let i = 0; i < 80 && crossing < 0; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.notch(240, WHEEL_PX);
       h.frame(1);
       if (h.store.getState().camera.base.frame === 'absolute') {
         crossing = probe.drawnPoses.length - 1;
@@ -426,13 +426,10 @@ describe('runFrame — the regime fold', () => {
     // The approach must be saturated before the pan: a live ease writes the
     // eye every frame and the quiet frame would have no baseline of its own.
     h.frame(40);
-    h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
-    h.push({ kind: 'dragMove', mode: 'pan', xPx: 52, yPx: 50 });
+    h.press('pan', [50, 50]);
+    h.moveTo([52, 50]);
     h.frame(1);
-    h.push({ kind: 'gestureEnd' });
-    h.store.dispatch(endDrag());
+    h.release();
     h.frame(2);
     const panOffset = h.state.cameraRuntime.follow?.panOffset ?? [0, 0, 0];
     const panM = Math.hypot(...panOffset) * SCALE_UNITS.MPC_TO_M;
@@ -442,13 +439,13 @@ describe('runFrame — the regime fold', () => {
     // In past the engage edge, then back out through `disengageHR`. Two frames
     // per notch so each one is fully folded before the next arrives.
     for (let i = 0; i < 60 && h.store.getState().camera.base.frame === 'absolute'; i++) {
-      h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
+      h.notch(-240, WHEEL_PX);
       h.frame(2);
     }
     expect(h.store.getState().camera.base.frame).toEqual(EARTH_ARM);
     let crossing = -1;
     for (let i = 0; i < 80 && crossing < 0; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.notch(240, WHEEL_PX);
       h.frame(1);
       if (h.store.getState().camera.base.frame === 'absolute') {
         crossing = probe.drawnPoses.length - 1;
@@ -495,7 +492,7 @@ describe('runFrame — the regime fold', () => {
     let restedTilt: number[] = [];
     let crossed = false;
     for (let i = 0; i < 80 && !crossed; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.notch(240, WHEEL_PX);
       h.frame(1);
       const arm = h.state.cameraRuntime.register.pose;
       if (isBodyArm(arm)) {
@@ -522,7 +519,7 @@ describe('runFrame — the regime fold', () => {
       h.state.cameraRuntime.outputs.projection.fovYRad /
       (h.deps.canvas as { height: number }).height;
     for (const off of offRover) expect(off).toBeLessThan(onePixelRad);
-    // A frame with no input steps no rung, so the ramp cannot advance on one —
+    // A frame with no input steps no arm, so the ramp cannot advance on one —
     // the clock alone must not move the pose by so much as an ulp.
     restedTilt = [...new Set(restedTilt)];
     expect(restedTilt).toHaveLength(1);
@@ -537,11 +534,11 @@ describe('runFrame — the regime fold', () => {
     // The tilt belongs to the surface the focus stands on, so its key is the
     // focus's surface-fixed ROOT. Keyed on the focus's own id, selecting
     // Curiosity from Mars orbit re-keyed {mars, 0.8} to {curiosity, 0} on the
-    // very next frame — one frame before the descent reaches `siteRung.host`,
+    // very next frame — one frame before the descent reaches `siteCameraArm.host`,
     // whose stated job is to keep exactly that tilt alive.
     const h = makeHarness();
     h.seedPose(absoluteArm(poseAtHR(h.bodies.get('mars')!, h.radiusM('mars'), 2)));
-    const seeded = { hostId: 'mars' as BodyId, rememberedTiltRad: 0.8 };
+    const seeded = { hostId: asSceneBodyId('mars'), rememberedTiltRad: 0.8 };
     h.state.cameraRuntime = { ...h.state.cameraRuntime, tilt: seeded };
     h.focus('curiosity');
 
@@ -551,11 +548,11 @@ describe('runFrame — the regime fold', () => {
   });
 
   it('the hand-back from a ground-level site view keeps the rover centred', () => {
-    // The site rung rates its ground in the ROVER's bounding radii (0.5 m over
+    // The site arm rates its ground in the ROVER's bounding radii (0.5 m over
     // Curiosity's tangent plane) and the body arm that receives the hand-back
     // floors the eye at Mars's descent standoff (8.1 m over the datum), so a
     // view from rover height lands UNDER the receiving arm's floor — by design,
-    // the rung exists to get there. The first body-arm notch used to spend the
+    // the arm exists to get there. The first body-arm notch used to spend the
     // difference as a RADIAL shove, and the settle pivoting about the rover
     // while the shove did not, the rover left centre by 0.030 rad (3 px here,
     // ~31 px at 1080p) and STAYED there for every later notch.
@@ -564,21 +561,21 @@ describe('runFrame — the regime fold', () => {
     const roverR = findByIdOrThrow(SCENE_MESH_BODIES, 'curiosity', 'poseFold').boundingRadiusM;
     const RANGE_M = 150;
     h.seedPose({
-      frame: { site: 'curiosity' as BodyId },
+      frame: { site: asSurfaceSiteId('curiosity') },
       pose: {
-        siteId: 'curiosity' as BodyId,
+        siteId: asSurfaceSiteId('curiosity'),
         headingRad: 0.4,
-        elevationRad: Math.asin((SITE_RUNG.eyeFloorBoundingRadii * roverR) / RANGE_M),
+        elevationRad: Math.asin((SITE_CAMERA_ARM.eyeFloorBoundingRadii * roverR) / RANGE_M),
         rangeM: RANGE_M,
       },
     });
     h.focus('curiosity');
     // Settled, not two frames in: the focus owes an approach, and the climb
     // measured below is the WHEEL's — a notch drained while the debt is still
-    // owed rides the follow target instead of the rung. The settle leaves the
+    // owed rides the follow target instead of the arm. The settle leaves the
     // eye at the rover's framing (10.73 m), hence the longer climb.
     h.tick(0);
-    h.tick(FOCUS_TWEEN_MS + 16);
+    h.tick(DEFAULT_FOCUS_MOVES.eased.durationMs + 16);
 
     const eyeStepM: number[] = [];
     const offRover: number[] = [];
@@ -589,7 +586,7 @@ describe('runFrame — the regime fold', () => {
       // makes the floor's shove stand out against its neighbours. 60 of them
       // because the settle starts the climb at 10.73 m, not the seed's 150 —
       // the site band's far edge is 80 of the rover's bounding radii away.
-      h.push({ kind: 'wheel', deltaY: 60, duringGesture: false, ...WHEEL_PX });
+      h.notch(60, WHEEL_PX);
       h.frame(1);
       const drawn = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
       eyeStepM.push(
@@ -623,7 +620,7 @@ describe('runFrame — the regime fold', () => {
   it('diving back into the site arm engages with nothing to re-aim', () => {
     // The adverse eye check's other half: zooming back IN from Mars's arm to
     // the rover popped. `sitePoseFromBodyArm` DISCARDS the incoming basis (the
-    // rung looks at the site by construction), so whatever the body arm's
+    // arm looks at the site by construction), so whatever the body arm's
     // sightline missed the rover by is spent in the engage frame — 0.63 rad
     // (36°) against neighbouring notches at 1.9e-6, because the dive pivoted
     // about the cursor pick. The eye is continuous across it either way, so
@@ -635,12 +632,12 @@ describe('runFrame — the regime fold', () => {
     // Out of the site arm first — the park's own frame is what engages it, so
     // the test is AFTER the frame, never before it.
     for (let i = 0; i < 40; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.notch(240, WHEEL_PX);
       h.frame(1);
       if (!isSiteArm(h.state.cameraRuntime.register.pose)) break;
     }
     for (let i = 0; i < 12; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.notch(240, WHEEL_PX);
       h.frame(1);
     }
     expect(isBodyArm(h.state.cameraRuntime.register.pose)).toBe(true);
@@ -650,7 +647,7 @@ describe('runFrame — the regime fold', () => {
     let prev = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
     let engaged = 0;
     for (let i = 0; i < 60 && engaged < 3; i++) {
-      h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
+      h.notch(-240, WHEEL_PX);
       h.frame(1);
       const drawn = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
       fwdStep.push(
@@ -688,17 +685,17 @@ describe('runFrame — the regime fold', () => {
     const screenUp: Vec3[] = [];
     for (let cycle = 0; cycle < 2; cycle++) {
       for (let i = 0; i < 60; i++) {
-        h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+        h.notch(240, WHEEL_PX);
         h.frame(1);
         if (!isSiteArm(h.state.cameraRuntime.register.pose)) break;
       }
       for (let i = 0; i < 12; i++) {
-        h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+        h.notch(240, WHEEL_PX);
         h.frame(1);
       }
       expect(isBodyArm(h.state.cameraRuntime.register.pose)).toBe(true);
       for (let i = 0; i < 80; i++) {
-        h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
+        h.notch(-240, WHEEL_PX);
         h.frame(1);
         if (isSiteArm(h.state.cameraRuntime.register.pose)) break;
       }
@@ -719,19 +716,19 @@ describe('runFrame — the regime fold', () => {
     expect(spreadRad).toBeLessThan(1e-4);
   });
 
-  it('a site-framed clip leg over an absolute base cannot jump two rungs', () => {
+  it('a site-framed clip leg over an absolute base cannot jump two arms', () => {
     // S1: the clip authors `{ site: curiosity }` while the regime is still
-    // `absolute`. `stepRung` answers `body:mars` (the engage band), the flip
+    // `absolute`. `stepCameraArm` answers `body:mars` (the engage band), the flip
     // branch rightly declines to refold a pose in a THIRD frame — and the
     // commit below it then published that third frame anyway, so `camera.base`
     // went absolute → site:curiosity → body:mars in three frames, skipping a
-    // rung on the way down and climbing back on the next frame.
+    // arm on the way down and climbing back on the next frame.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
-    const SITE = { site: 'curiosity' as BodyId };
+    const SITE = { site: asSurfaceSiteId('curiosity') };
     const near = foldToWorld(
       { frame: SITE, pose: { siteId: SITE.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 3e5 } },
       {
-        bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
+        bodies: deriveBodyStates(SIM),
         poseBasis: B,
         upBasis: B,
         terrainHeightAt: datumOnlyTerrainHeight,
@@ -763,7 +760,7 @@ describe('runFrame — the regime fold', () => {
       regimes.push(frameKey(h.store.getState().camera.base.frame));
     }
 
-    // The clip owns the rung while it plays, so the regime holds where it was.
+    // The clip owns the arm while it plays, so the regime holds where it was.
     expect(new Set(regimes)).toEqual(new Set(['absolute']));
     // Not vacuous: the leg really is driving the camera through those frames.
     const first = renderedCamera(probe.drawnPoses[drawn] as CameraPose);
@@ -780,7 +777,7 @@ describe('runFrame — the regime fold', () => {
     const { store, state, deps } = makeHarness();
     const ENGAGING = poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1);
     seedPose(store, state, ENGAGING);
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
 
     runFrame(state, deps, 0);
 
@@ -788,7 +785,7 @@ describe('runFrame — the regime fold', () => {
     expect(state.cameraRuntime.register.pose.frame).toBe('absolute');
     expect(store.getState().camera.base.frame).toBe('absolute');
 
-    store.dispatch(endDrag());
+    store.dispatch(inputGestureEnded({ source: 'canvas' }));
     runFrame(state, deps, 16);
 
     expect(state.cameraRuntime.register.pose.frame).toEqual(EARTH_ARM);
@@ -835,7 +832,7 @@ describe('runFrame — the regime fold', () => {
     h.frame(1);
     expect(h.state.cameraRuntime.register.winner).toBe('followApproach');
 
-    h.frame(60); // past FOCUS_TWEEN_MS: the debt is settled at Earth's framing
+    h.frame(60); // past the Eased duration: the debt is settled at Earth's framing
     diveUntilEngaged(h, { body: 'earth' });
     const engaged = h.state.cameraRuntime.register.pose;
     expect(engaged.frame).toEqual(EARTH_ARM);
@@ -849,14 +846,14 @@ describe('runFrame — the regime fold', () => {
 
   it('an approach that starts inside the site band still lands the framing', () => {
     // What the deleted §4.8 gate guarded against: PARKING SHORT. The approach
-    // now runs in whatever arm the camera is in and the rungs release and
+    // now runs in whatever arm the camera is in and the arms release and
     // engage on geometry alone, so the descent happens up front — but the
     // arrival is still the rover's own framing distance, not the site band it
     // fell through on the way.
     const h = makeHarness();
-    const site = { site: 'curiosity' as BodyId } as const;
+    const site = { site: asSurfaceSiteId('curiosity') } as const;
     const ctx = {
-      bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
+      bodies: deriveBodyStates(SIM),
       poseBasis: B,
       upBasis: B,
       terrainHeightAt: datumOnlyTerrainHeight,
@@ -869,7 +866,12 @@ describe('runFrame — the regime fold', () => {
     h.seedPose(absoluteArm(parked));
     h.focus('curiosity');
 
-    const frames = [0, FOCUS_TWEEN_MS, FOCUS_TWEEN_MS + 16, FOCUS_TWEEN_MS + 32].map((nowMs) => {
+    const frames = [
+      0,
+      DEFAULT_FOCUS_MOVES.eased.durationMs,
+      DEFAULT_FOCUS_MOVES.eased.durationMs + 16,
+      DEFAULT_FOCUS_MOVES.eased.durationMs + 32,
+    ].map((nowMs) => {
       h.tick(nowMs);
       return frameKey(h.store.getState().camera.base.frame);
     });
@@ -897,7 +899,8 @@ describe('runFrame — the regime fold', () => {
     // in a body arm the range belongs to the anchored zoom gesture, which keeps
     // the pose in body-fixed metres. `applyWheelZoom`'s answer would arrive as
     // an ABSOLUTE arm, which is what the frame assertion below rules out.
-    const { store, state, deps } = makeHarness();
+    const harness = makeHarness();
+    const { store, state, deps } = harness;
     seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1));
 
     runFrame(state, deps, 0);
@@ -905,13 +908,7 @@ describe('runFrame — the regime fold', () => {
     expect(engaged.frame).toEqual(EARTH_ARM);
 
     const spy = vi.spyOn(store, 'dispatch');
-    state.subsystems.inputAggregator.push({
-      kind: 'wheel',
-      deltaY: 240,
-      duringGesture: false,
-      xPx: 500,
-      yPx: 500,
-    });
+    harness.notch(240, [500, 500]);
     runFrame(state, deps, 16);
 
     const commits = commitCalls(spy) as { payload: FramedCameraPose }[];

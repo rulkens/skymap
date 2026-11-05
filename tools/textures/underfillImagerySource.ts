@@ -9,7 +9,7 @@
 
 import sharp from 'sharp';
 
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 
 export function underfillImagerySource(
   primary: SurfaceImagerySource,

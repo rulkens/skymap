@@ -1,4 +1,3 @@
-// src/components/containers/DebugOverlaysSectionContainer.tsx
 /**
  * DebugOverlaysSectionContainer — store boundary for the renderer's raw
  * debug overlay toggles (pick-buffer view, orbit-trail impostor). All are

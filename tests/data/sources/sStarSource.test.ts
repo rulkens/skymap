@@ -1,36 +1,38 @@
 /**
- * The S-star registry row: a body row that draws but never captions.
+ * The S-star registry row: a seeded star catalog that draws but never captions.
  *
  * What can actually break here is not the row's field values (a compiler-checked
  * literal) but its CONSEQUENCES in the derived key domains — the settings row it
- * seeds, the label domain it must stay out of, and the pick-code budget it eats
- * into. Each of those is a separate file that reads the registry and would fail
- * silently, not loudly.
+ * seeds, the cluster it seeds it in, the label domain it must stay out of, and
+ * the pick-code budget it eats into. Each of those is a separate file that reads
+ * the registry and would fail silently, not loudly.
  */
 
 import { describe, it, expect } from 'vitest';
-import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
-import { S_STAR_ENTRY } from '../../../src/data/sources/s-star';
-import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
-import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
+import { Source } from '../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../src/compositions/appSources';
+import { S_STAR_ENTRY } from '../../../src/layers/starCatalog/sources/s-star';
+import { SUN_ENTRY } from '../../../src/layers/starCatalog/sources/sun';
+import { BODY_SOURCE_IDS } from '../../../src/data/bodies/bodySourceIds';
+import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { SELECTION_SOURCE_SHIFT } from '../../../src/data/selectionEncoding';
 
 describe('the S-star source row', () => {
-  it('seeds a body settings row whose default follows the registry', () => {
-    // `visibleStars` gates all 39 on `bodies.items['s-star'].enabled`. The row is
-    // derived, not authored, so the failure mode is an ABSENT key — an undefined
-    // read that throws on the first frame rather than a wrong boolean.
-    expect(BODY_IDS).toContain(S_STAR_ENTRY.id);
-    expect(INITIAL_SETTINGS.bodies.items[S_STAR_ENTRY.id]?.enabled).toBe(S_STAR_ENTRY.visible);
+  it('seeds a STAR-catalog settings row', () => {
+    // The star show entry gates all 39 on `starCatalogs.items.sStar.enabled`. The row
+    // is derived, not authored, so the failure mode is an ABSENT key — an
+    // undefined read that throws on the first frame rather than the row missing.
+    expect(STAR_CATALOG_IDS).toContain(S_STAR_ENTRY.id);
+    expect(INITIAL_SETTINGS.starCatalogs.items[S_STAR_ENTRY.id]).toBeDefined();
   });
 
-  it('stays out of the label domain, so nothing budgets it a caption', () => {
-    // `bearsLabel: false` is what keeps 39 names out of `LABEL_CATEGORIES` — the
-    // set the SettingsPanel's label rows, `projectLabelCategoryVisibility` and
-    // the `bodyLabel` fade row all iterate. Flipping the flag would register a
-    // caption handle for a caption `sceneBodyLabels` never emits.
-    expect(LABEL_CATEGORIES).not.toContain(S_STAR_ENTRY.id);
+  it('the Sun joins it in the star cluster, and neither is a body any more', () => {
+    // Both moved clusters at once: a half-migration would leave one of them
+    // gated by a `bodies.items` row nothing writes.
+    expect(STAR_CATALOG_IDS).toContain(SUN_ENTRY.id);
+    expect(BODY_SOURCE_IDS).not.toContain(S_STAR_ENTRY.id);
+    expect(BODY_SOURCE_IDS).not.toContain(SUN_ENTRY.id);
   });
 
   it('every registry code fits the pick texture’s source field, uniquely', () => {
@@ -38,10 +40,10 @@ describe('the S-star source row', () => {
     // bits with the all-ones value reserved as the no-hit sentinel, so 62 is the
     // last usable code. Nothing else checks the ceiling, and overflowing it would
     // corrupt `localIdx` rather than fail: the OR would carry into the index.
-    const codes = Object.values(SOURCE_REGISTRY).map((entry) => entry.code);
+    const codes = Object.values(APP_SOURCE_REGISTRY).map((entry) => entry.code);
     const maxCode = (1 << (32 - SELECTION_SOURCE_SHIFT)) - 1 - 1;
     expect(Math.max(...codes)).toBeLessThanOrEqual(maxCode);
     expect(new Set(codes).size).toBe(codes.length);
-    expect(SOURCE_REGISTRY[Source.SStar]).toBe(S_STAR_ENTRY);
+    expect(APP_SOURCE_REGISTRY[Source.SStar]).toBe(S_STAR_ENTRY);
   });
 });

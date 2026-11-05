@@ -2,24 +2,23 @@
  * VolumeFieldSettings — per-field runtime controls for one registered
  * scalar-volume field.
  *
- * Held in `state.settings.volumes.items`, keyed by `VolumeFieldId`.
- * The engine seeds these at construction from the field's SOURCE_REGISTRY
+ * Held in `state.settings.cosmicWebDensity.items`, keyed by `CosmicWebDensityFieldId`.
+ * The engine seeds these at construction from the field's APP_SOURCE_REGISTRY
  * entry; the SettingsPanel reads authoritative state directly from settings
  * without polling the GPU handle.
  *
  * Extends `DataItemSettings` so a volume field's on/off lives in the same
- * `enabled` field every other data item uses (`volumeFieldRenderer.setEnabled`
- * reads it when false). The per-field render knobs below ride on top — they're
+ * `enabled` field every other data item uses (the renderer's `hasActiveFields`
+ * reads it). The per-field render knobs below ride on top — they're
  * what makes a scalar-volume field richer than a galaxy catalog or structure item,
  * which carry only visibility (and an optional label axis).
  */
 
 import type { DataItemSettings } from './DataItemSettings';
 import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
-import type { FadeBand } from '../math/FadeBand';
 
 export type VolumeFieldSettings = DataItemSettings & {
-  /** Linear mix-in weight in [0, 1].  Seeded from `DEFAULT_VOLUME_FIELD_INTENSITY`. */
+  /** Linear mix-in weight in [0, 1].  Seeded by the owning Layer's `initialState` literal. */
   intensity: number;
   /**
    * LUT-coordinate contrast around the 0.5 pivot (gamma-style remap).
@@ -61,14 +60,4 @@ export type VolumeFieldSettings = DataItemSettings & {
    * brightest entry.
    */
   exposure: number;
-  /**
-   * Scale-fade bands multiplied into this field's opacity by
-   * `deriveVolumeLiveness` (`fadeOpacityOf`), keyed on camera distance from
-   * the heliocentric render origin. Values, not band names, so a field's
-   * choreography is tunable via `writeVolumeField` without touching code.
-   * Seeded from the registry's `fadeBands` (`buildVolumeFieldSettings`);
-   * a stale row missing this falls back to `[SCALE_FADE_BANDS.surveyDeepZoom]`
-   * at the `clampVolumeFieldSettings` read edge.
-   */
-  bands: readonly FadeBand[];
 };

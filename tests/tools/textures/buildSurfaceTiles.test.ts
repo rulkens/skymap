@@ -6,12 +6,12 @@ import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 
 import { bakeAll, bakeCoarserLevel } from '../../../tools/textures/buildSurfaceTiles';
-import { surfaceTilePath } from '../../../src/utils/surfaceTiles/surfaceTilePath';
-import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
-import type { HeightSource } from '../../../tools/textures/HeightSource';
-import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
+import { surfaceTilePath } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
+import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
+import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
+import type { SurfaceTileManifest } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-import type { SurfaceTileProduct } from '../../../src/@types/data/SurfaceTileProduct';
+import type { SurfaceTileProduct } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
 
 const TILE_PX = 512;
 /** Fixture stand-in for Earth's own `earthSurfaceBake` — the generic

@@ -23,13 +23,15 @@
 
 import { SCALE_UNITS } from '../../scaleUnits';
 import { SOLAR_RADIUS_KM } from '../solarRadiusKm';
+import { STAR_RESOLVE_PX } from '../starResolvePx';
 import { temperatureToLinearRgb } from '../../../utils/color/temperatureToLinearRgb';
 import type { FamousStarRow } from '../../../@types/data/FamousStarRow';
 import type { StarBody } from '../../../@types/scene/StarBody';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 export function star(row: FamousStarRow): StarBody {
   return {
-    id: row.id,
+    id: asSceneBodyId(row.id),
     label: row.commonName,
     absMag: row.absMag,
     color: temperatureToLinearRgb(row.temperatureK),
@@ -37,6 +39,7 @@ export function star(row: FamousStarRow): StarBody {
       datumRadiusM: row.radiusSolar * SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
       reliefM: [0, 0],
     },
+    resolvePx: STAR_RESOLVE_PX,
     // Absent oblateness stays absent — no `oblateness: undefined` key.
     ...(row.oblateness !== undefined ? { oblateness: row.oblateness } : {}),
   };

@@ -9,17 +9,35 @@ import { describe, it, expect } from 'vitest';
 import { timedSlotsOf } from '../../../../../src/services/engine/frame/timing/timedSlotsOf';
 import { expandFrameOrder } from '../../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
+import { bodyLayer } from '../../../../../src/layers/body/layer';
+import type { BodyRuntime } from '../../../../../src/layers/body/@types/BodyRuntime';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
+import { blackHoleLensingPass } from '../../../../../src/layers/blackHoles/lensing/passes/blackHoleLensingPass';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { FrameInputs } from '../../../../../src/services/engine/frame/expandFrameOrder';
 import type { FrameStep } from '../../../../../src/@types/engine/frame/FrameStep';
+import type { ContentPass } from '../../../../../src/@types/engine/frame/ContentPass';
 import type { ToneMap } from '../../../../../src/@types/rendering/ToneMap';
+import type { BlackHolesRuntime } from '../../../../../src/layers/blackHoles/@types/BlackHolesRuntime';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
-/** The real order + registry, with only the per-frame lists varied. */
+// The Layers' passes join core's registry, as `createLayers` does; expansion
+// matches by `name` and never reaches `draw`, so no runtime is read.
+const MILKY_WAY_STUB_PASSES: readonly ContentPass[] = [
+  'milky-way-aggregate',
+  'milky-way-upsample',
+  'milky-way',
+].map((name) => ({ name }) as unknown as ContentPass);
+const PASSES = [
+  ...CONTENT_PASSES,
+  ...bodyLayer.passes({} as BodyRuntime),
+  blackHoleLensingPass({} as BlackHolesRuntime),
+  ...MILKY_WAY_STUB_PASSES,
+];
+
 function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
-  return expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
+  return expandFrameOrder(FRAME_ORDER, PASSES, {
     tone: TONE,
     bloomEnabled: false,
     foregroundChain: [NEAR0],
@@ -30,25 +48,21 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
 }
 
 describe('timedSlotsOf', () => {
-  it('reaches sgrAStarLensingPass once a body slab is passed', () => {
-    // Until the lens got its own `FRAME_ORDER` line, no step ever matched
-    // `sgrAStarLensingPass` — the pass compiled and registered but was
-    // structurally unreachable. Passing a body-slab index (4, arbitrary) must
-    // surface its row right after the (hdr, NEAR0) group's own slot.
+  it('reaches blackHoleLensingPass once a body slab is passed', () => {
+    // A body-slab index (4, arbitrary) must surface the lens row right after the (hdr, NEAR0) group's
+    // own slot: with no `FRAME_ORDER` line the pass would register but be structurally unreachable.
     const slots = timedSlotsOf(program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } }));
     const rosterIdx = slots.indexOf('hdr·NEAR0');
     expect(rosterIdx).toBeGreaterThanOrEqual(0);
-    expect(slots[rosterIdx + 1]).toBe('sgr-a-star-lensing·BODY[2]');
+    expect(slots[rosterIdx + 1]).toBe('black-hole-lensing·BODY[2]');
     expect(slots[rosterIdx + 2]).toBe('hdr·BODY[2]');
   });
 
   it('bills orbit-trails and body-glints AFTER the lens step', () => {
-    // The evidenced gap: both used to share the pre-lens roster step and so drew
-    // UNDER the lens's OVER blend. They now have their own `FRAME_ORDER` lines
-    // past the lens — checked against the REAL registry, so moving either back
-    // into the roster line fails this.
+    // Both once shared the pre-lens roster step and drew UNDER the lens's OVER blend; they have their
+    // own lines past the lens, checked against the REAL registry so moving either back fails this.
     const slots = timedSlotsOf(program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } }));
-    const lensIdx = slots.indexOf('sgr-a-star-lensing·BODY[2]');
+    const lensIdx = slots.indexOf('black-hole-lensing·BODY[2]');
     expect(lensIdx).toBeGreaterThanOrEqual(0);
     expect(slots.indexOf('orbit-trails')).toBeGreaterThan(lensIdx);
     expect(slots.indexOf('body-glints')).toBeGreaterThan(lensIdx);

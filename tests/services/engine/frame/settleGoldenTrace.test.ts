@@ -14,22 +14,19 @@ import { fileURLToPath } from 'node:url';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: () => ({ draw: 0, pick: 0 }),
-}));
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/body/isBodyArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { expectSigRows } from '../../../helpers/camera/expectSigRows';
 import { flatFramedPose } from '../../../helpers/camera/flatFramedPose';
 import { goldenSig } from '../../../helpers/camera/goldenSig';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { beginDrag, setCameraTuning } from '../../../../src/state/camera/cameraSlice';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
+import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -38,10 +35,11 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import GOLDEN from '../../../fixtures/camera/settleGoldenTrace.json';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
-const EARTH = deriveBodyStates(SIM).get('earth')! as BodyState;
+const EARTH = deriveBodyStates(SIM).get(asSceneBodyId('earth'))! as BodyState;
 const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 const FIXTURE_PATH = fileURLToPath(
   new URL('../../../fixtures/camera/settleGoldenTrace.json', import.meta.url),
@@ -108,7 +106,7 @@ function snapshot(state: EngineState, label: string): Step {
  */
 function runScript(northUp: boolean): Trace {
   const harness = makeCameraSimHarness({ focusBody: 'earth', bootHR: BOOT_HR });
-  const { store, state, frame, push, wheel } = harness;
+  const { store, state, frame, press, moveTo, release, wheel } = harness;
   store.dispatch(setCameraTuning({ northUp }));
   const trace: Step[] = [];
   const record = (label: string) => trace.push(snapshot(state, label));
@@ -124,18 +122,16 @@ function runScript(northUp: boolean): Trace {
     label: string,
     expectMode: string,
   ) => {
-    store.dispatch(beginDrag());
-    push({ kind: 'gestureStart' });
-    push({ kind: 'dragAnchor', xPx: from[0], yPx: from[1] });
+    press(mode, from);
     moves.forEach(([x, y], i) => {
-      push({ kind: 'dragMove', mode, xPx: x, yPx: y });
+      moveTo([x, y]);
       frame();
       record(`${label} move ${i}`);
     });
     // The script must exercise the mode it names, or the trace is silently
     // pinning a different gesture.
     expect(state.cameraRuntime.gesture.value?.gesture).toMatchObject({ mode: expectMode });
-    push({ kind: 'gestureEnd' });
+    release();
     frame();
     record(`${label} end`);
   };
@@ -231,7 +227,7 @@ describe('settle golden trace (byte bar for the orientation settles)', () => {
       const trace = thin(runScript(northUp));
       if (process.env['SETTLE_GOLDEN_RECORD']) {
         recorded[key] = trace;
-        writeFileSync(FIXTURE_PATH, `${JSON.stringify(recorded)}\n`);
+        writeFileSync(FIXTURE_PATH, `${JSON.stringify(recorded, null, 2)}\n`);
         return;
       }
       expectTraceMatches(trace, (GOLDEN as Record<string, Trace>)[key]!);

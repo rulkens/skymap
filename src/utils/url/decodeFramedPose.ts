@@ -1,0 +1,85 @@
+/**
+ * decodeFramedPose — the inverse of `encodeFramedPose`. The `#pose=` value is
+ * external input (hand-edited, truncated, or from a session that added a scene
+ * body since), so every failure — a wrong tag, a wrong field count, a
+ * non-finite number, or an id no body source seeds / outside
+ * `SURFACE_FIXED_SITES` — returns null rather than throwing or guessing.
+ * Sky: k,<body>,<lonRad>,<latRad>,<azimuthRad>,<altitudeRad>, altitude in [−π/2, π/2].
+ */
+
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
+import { isRegistryBodyId } from '../scene/isRegistryBodyId';
+import { isSurfaceSiteId } from '../scene/isSurfaceSiteId';
+import { parseFiniteNumbers } from './parseFiniteNumbers';
+import { MIN_DISTANCE_MPC } from '../camera/orbitCamera/clampDistance';
+
+export function decodeFramedPose(value: string): FramedCameraPose | null {
+  const fields = value.split(',');
+  const tag = fields[0];
+
+  if (tag === 'b') {
+    if (fields.length !== 17) return null;
+    const bodyId = fields[1]!;
+    if (!isRegistryBodyId(bodyId)) return null;
+    const n = parseFiniteNumbers(fields.slice(2));
+    if (n === null) return null;
+    return {
+      frame: { body: bodyId },
+      pose: {
+        bodyId,
+        anchorLocalM: [n[0]!, n[1]!, n[2]!],
+        eyeRelAnchorM: [n[3]!, n[4]!, n[5]!],
+        basisLocal: [n[6]!, n[7]!, n[8]!, n[9]!, n[10]!, n[11]!, n[12]!, n[13]!, n[14]!],
+      },
+    };
+  }
+
+  if (tag === 's') {
+    if (fields.length !== 5) return null;
+    const siteId = fields[1]!;
+    if (!isSurfaceSiteId(siteId)) return null;
+    const n = parseFiniteNumbers(fields.slice(2));
+    if (n === null) return null;
+    // `rangeM` is a real metre distance, not `clampDistance`'s Mpc floor.
+    if (n[2]! <= 0) return null;
+    return {
+      frame: { site: siteId },
+      pose: { siteId, headingRad: n[0]!, elevationRad: n[1]!, rangeM: n[2]! },
+    };
+  }
+
+  if (tag === 'k') {
+    if (fields.length !== 6) return null;
+    const body = fields[1]!;
+    if (!isRegistryBodyId(body)) return null;
+    const n = parseFiniteNumbers(fields.slice(2));
+    if (n === null || Math.abs(n[3]!) > Math.PI / 2) return null;
+    return {
+      frame: { sky: { body, lonRad: n[0]!, latRad: n[1]! } },
+      pose: { azimuthRad: n[2]!, altitudeRad: n[3]! },
+    };
+  }
+
+  if (tag === 'a') {
+    // 8 fields, or 10 with a trailing `lookOffset` pair.
+    if (fields.length !== 8 && fields.length !== 10) return null;
+    const n = parseFiniteNumbers(fields.slice(1));
+    if (n === null) return null;
+    // `distance` is `CameraPose`'s Mpc field, so the same degeneracy floor
+    // the live orbit camera is clamped to applies here.
+    if (n[5]! < MIN_DISTANCE_MPC) return null;
+    return {
+      frame: 'absolute',
+      pose: {
+        target: [n[0]!, n[1]!, n[2]!],
+        yaw: n[3]!,
+        pitch: n[4]!,
+        distance: n[5]!,
+        roll: n[6]!,
+        ...(n.length === 9 && { lookOffset: [n[7]!, n[8]!] }),
+      },
+    };
+  }
+
+  return null;
+}

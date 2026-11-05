@@ -3,11 +3,14 @@
 // Regenerate with:  npm run build-meshes
 // Source of truth:  data/raw/meshes/**
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
+import type { Tier } from '../../@types/data/Tier';
 
 export type MeshAssetRow = {
   readonly key: string;
-  readonly path: string;
+  /** The highest tier this body ships; `meshBodyRow.req` clamps to it. */
+  readonly tierCeiling: Tier;
   readonly boundingRadiusM: number;
   /** How far the lowest vertex sits BELOW the origin along the body frame's −Z,
    *  metres, ≥ 0. A surface-locked body is lifted by this so it rests on the
@@ -21,15 +24,18 @@ export type MeshAssetRow = {
   readonly licence: string;
   /** author + URL; empty string for CC0 */
   readonly attribution: string;
+  /** The ground-contact box `contactShadow` projects into, body frame,
+   *  metres; absent for a floating mesh. */
+  readonly contactDecal?: ContactDecal;
 };
 
 export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   whale: {
     key: 'whale',
-    path: 'meshes/whale.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 7.236827809308258,
     groundOffsetM: 2.135997295379639,
-    meanAlbedo: [0.09916, 0.092641, 0.087149],
+    meanAlbedo: [0.068026, 0.066545, 0.064076],
     triangleCount: 5598,
     substituted: [],
     source: 'https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba',
@@ -39,12 +45,12 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   petunias: {
     key: 'petunias',
-    path: 'meshes/petunias.mesh',
-    boundingRadiusM: 0.49782164777444815,
-    groundOffsetM: 0.26998730477355426,
-    meanAlbedo: [0.094601, 0.106771, 0.066824],
-    triangleCount: 150000,
-    substituted: ['metalRough', 'normalMap'],
+    tierCeiling: 'small',
+    boundingRadiusM: 0.4978227272024157,
+    groundOffsetM: 0.26998705849627713,
+    meanAlbedo: [0.372149, 0.403405, 0.251171],
+    triangleCount: 222249,
+    substituted: [],
     source: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
     licence: 'CC BY 4.0',
     attribution:
@@ -52,10 +58,10 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   voyager: {
     key: 'voyager',
-    path: 'meshes/voyager.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 14.544853697326353,
     groundOffsetM: 4.791086139044178,
-    meanAlbedo: [0.098529, 0.094666, 0.089745],
+    meanAlbedo: [0.281682, 0.277295, 0.270372],
     triangleCount: 20378,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
@@ -65,10 +71,10 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   hubble: {
     key: 'hubble',
-    path: 'meshes/hubble.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 8.786712680737544,
     groundOffsetM: 6.5379468441961155,
-    meanAlbedo: [0.168474, 0.155995, 0.134209],
+    meanAlbedo: [0.235097, 0.21478, 0.199803],
     triangleCount: 7672,
     substituted: [],
     source:
@@ -79,41 +85,134 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   perseverance: {
     key: 'perseverance',
-    path: 'meshes/perseverance.mesh',
-    boundingRadiusM: 1.9895822183466751,
-    groundOffsetM: 0.9125953290707832,
-    meanAlbedo: [0.068496, 0.066304, 0.065025],
-    triangleCount: 100000,
+    tierCeiling: 'small',
+    boundingRadiusM: 1.9901394895098548,
+    groundOffsetM: 0.9143134790374972,
+    meanAlbedo: [0.3875, 0.376318, 0.365803],
+    triangleCount: 199482,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Mars 2020 Perseverance Rover" (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)',
+    contactDecal: {
+      centre: [-0.14952298327985314, -0.005148384292582237, -0.9143134790374972],
+      halfU: [0, 2.331205129623413, 0],
+      halfV: [-2.331205129623413, 0, 0],
+    },
   },
   curiosity: {
     key: 'curiosity',
-    path: 'meshes/curiosity.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 2.4789837008600912,
     groundOffsetM: 0.8980751162248013,
-    meanAlbedo: [0.077987, 0.076399, 0.075039],
+    meanAlbedo: [0.264723, 0.260275, 0.256093],
     triangleCount: 48384,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Curiosity Rover (MSL) (Clean)" (https://science.nasa.gov/3d-resources/curiosity-rover-msl/)',
+    contactDecal: {
+      centre: [0.23637191809611996, -0.026815513198097236, -0.8980751758294461],
+      halfU: [0, 2.9585468769073486, 0],
+      halfV: [-2.9585468769073486, 0, 0],
+    },
   },
   mer: {
     key: 'mer',
-    path: 'meshes/mer.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 1.2008228521056163,
     groundOffsetM: 0.574356440144803,
-    meanAlbedo: [0.113629, 0.095048, 0.068025],
+    meanAlbedo: [0.210745, 0.174312, 0.120399],
     triangleCount: 32562,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
     licence: 'Public domain (NASA)',
     attribution:
       'NASA/JPL-Caltech, "Mars Exploration Rover - Spirit and Opportunity" (https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/)',
+    contactDecal: {
+      centre: [-0.07798823068739452, -0.01337763976239624, -0.5743564252436418],
+      halfU: [0, 1.709266185760498, 0],
+      halfV: [-1.709266185760498, 0, 0],
+    },
+  },
+  soendermarken: {
+    key: 'soendermarken',
+    tierCeiling: 'medium',
+    boundingRadiusM: 162.5717065451265,
+    groundOffsetM: 0,
+    meanAlbedo: [0.072107, 0.083156, 0.073111],
+    triangleCount: 470046,
+    substituted: ['metalRough', 'normalMap'],
+    source: 'https://dataforsyningen.dk/ (Skråfotos 2019, via the scene-workbench bake)',
+    licence: 'CC BY 4.0',
+    attribution:
+      'Contains skråfoto © Klimadatastyrelsen (CC BY 4.0); photogrammetry by Alexander Rulkens',
+  },
+  phobos: {
+    key: 'phobos',
+    tierCeiling: 'medium',
+    boundingRadiusM: 13941.339598577306,
+    groundOffsetM: 9571.345703125,
+    meanAlbedo: [0.296296, 0.288033, 0.278901],
+    triangleCount: 150000,
+    substituted: [],
+    source: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/PHOBOS_M003_GAS_V01.OBJ',
+    licence: 'NASA PDS (no licence stated); USGS public domain',
+    attribution:
+      'Shape: R. Gaskell (PSI), Phobos shape model M003, NASA PDS / NAIF. Colour: Viking Orbiter mosaic, DLR control, USGS Astrogeology',
+  },
+  deimos: {
+    key: 'deimos',
+    tierCeiling: 'small',
+    boundingRadiusM: 8706.800137046559,
+    groundOffsetM: 5264.77197265625,
+    meanAlbedo: [0.318585, 0.305021, 0.278888],
+    triangleCount: 5184,
+    substituted: [],
+    source: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/DEIMOS_K005_THO_V01.OBJ',
+    licence: 'NASA PDS (no licence stated)',
+    attribution: 'Shape: P. Thomas (Cornell), Deimos shape model K005, NASA PDS / NAIF',
+  },
+  vesta: {
+    key: 'vesta',
+    tierCeiling: 'medium',
+    boundingRadiusM: 292397.2697036091,
+    groundOffsetM: 232888.984375,
+    meanAlbedo: [0.466205, 0.446498, 0.415164],
+    triangleCount: 150000,
+    substituted: [],
+    source: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds',
+    licence: 'NASA PDS (no licence stated); USGS mosaic (no licence stated, cite the authors)',
+    attribution:
+      'Shape: Dawn Gravity Team (R. Park, JPL), Vesta shape model icq0512, NASA PDS / NAIF. Colour: Dawn FC HAMO mosaic, NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology',
+  },
+  ceres: {
+    key: 'ceres',
+    tierCeiling: 'medium',
+    boundingRadiusM: 487040.34727217676,
+    groundOffsetM: 446696.78125,
+    meanAlbedo: [0.299953, 0.291729, 0.282739],
+    triangleCount: 150000,
+    substituted: [],
+    source: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds',
+    licence: 'NASA PDS (no licence stated); USGS mosaic (no licence stated, cite the authors)',
+    attribution:
+      'Shape: Dawn Gravity Team (R. Park, JPL), Ceres shape model icq0256, NASA PDS / NAIF. Colour: Dawn FC DLR mosaic, NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology',
+  },
+  bennu: {
+    key: 'bennu',
+    tierCeiling: 'small',
+    boundingRadiusM: 291.54111656998447,
+    groundOffsetM: 244.78289794921875,
+    meanAlbedo: [0.297344, 0.2908, 0.280846],
+    triangleCount: 150000,
+    substituted: [],
+    source:
+      'https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds',
+    licence: 'NASA PDS (no licence stated); USGS public domain',
+    attribution:
+      'Shape: OSIRIS-REx Altimetry Working Group (O. Barnouin, JHU/APL), Bennu shape model v020 from OLA, NASA PDS / NAIF. Colour: ShapeV20 normal-albedo mosaic (Golish et al. 2021), NASA/University of Arizona, USGS Astrogeology',
   },
 };

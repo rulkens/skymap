@@ -17,24 +17,39 @@
  */
 
 import type { SlabView } from './SlabView';
-import type { ReadyFrameContext } from './ReadyFrameContext';
+import type { FrameView } from './FrameView';
 import type { PassState } from './PassState';
+import type { FadeParam } from '../../animation/FadeParam';
+import type { ShowKey } from '../../animation/ShowKey';
 
-export type ContentPass = {
+// `K` types the handed value: a pass written as `ContentPass<'flow'>` must declare
+// `fade: 'flow'`, gets a `number`, and still sits in a plain `readonly ContentPass[]`.
+export type ContentPass<K extends ShowKey = ShowKey> = {
   /** Stable identifier: what `FRAME_ORDER` names, and the timing-slot list derives. */
   readonly name: string;
   /**
    * Whether this pass should record draw commands this frame, given the
    * step's already-resolved `SlabView` — a pass on a body roster reads
-   * `view.slab.frame.bodyId` to gate its own row. Pure: no side effects.
+   * `view.slab.frame.hostId` to gate its own row. Pure: no side effects.
    */
-  enabled(state: PassState, ctx: ReadyFrameContext, view: SlabView): boolean;
+  enabled(
+    state: PassState,
+    ctx: FrameView,
+    view: SlabView,
+    ...fade: FadeParam<K, ShowKey>
+  ): boolean;
   /**
    * Issue draw calls into the open render pass for this step. Called only when
    * `enabled` returned `true`. Must not call `pass.end()` — the pass lifetime
    * is owned by the executor's render step.
    */
-  draw(pass: GPURenderPassEncoder, view: SlabView, ctx: ReadyFrameContext, state: PassState): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    view: SlabView,
+    ctx: FrameView,
+    state: PassState,
+    ...fade: FadeParam<K, ShowKey>
+  ): void;
   /**
    * Where this pass's pick stamp composites, when that is NOT the pick
    * target its `FRAME_ORDER` slab derives. `'overlay'` is the pick-side twin
@@ -64,8 +79,8 @@ export type ContentPass = {
    *  - `bodyGlintsPass` draws only the `glints` branch but also stamps
    *    Earth's caption-range pick footprint, so it must be admitted even with
    *    an empty `glints` branch when the Earth caption is on;
-   *  - `starPointsPass` draws the star roster but also stamps Sgr A*, which
-   *    draws nothing anywhere and is invited by its caption alone.
+   *  - `blackHoleMarkerPass` stops drawing inside a hole's lens band, but its
+   *    stamp stays while the hole's caption still invites the click.
    *
    * Keeping `enabled` narrow (draw set) preserves the executor's "a row that
    * would draw zero bodies must leave the VISUAL pass plan" invariant; the
@@ -83,7 +98,12 @@ export type ContentPass = {
    * When absent the pick program falls back to `enabled`. Pure: no side
    * effects.
    */
-  pickEnabled?(state: PassState, ctx: ReadyFrameContext, view: SlabView): boolean;
+  pickEnabled?(
+    state: PassState,
+    ctx: FrameView,
+    view: SlabView,
+    ...fade: FadeParam<K, ShowKey>
+  ): boolean;
   /**
    * Issue pick-ID draw calls for this pass, into the parallel pick
    * program's render pass. Optional: passes that don't participate in
@@ -92,7 +112,17 @@ export type ContentPass = {
   drawPick?(
     pass: GPURenderPassEncoder,
     view: SlabView,
-    ctx: ReadyFrameContext,
+    ctx: FrameView,
     state: PassState,
+    ...fade: FadeParam<K, ShowKey>
   ): void;
-};
+} & ([ShowKey] extends [K]
+  ? {
+      /**
+       * The show entry this pass draws. Core resolves its value (fade × clip),
+       * skips the pass while it is 0 (every item 0), and hands the same value to all four
+       * methods, so one value gates draw and pick.
+       */
+      readonly fade?: K;
+    }
+  : { readonly fade: K });

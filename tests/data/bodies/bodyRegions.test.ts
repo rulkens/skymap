@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
-import { SGR_A_STAR_ANCHOR } from '../../../src/data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../src/data/places/galacticCentre';
 import { BODY_REGIONS } from '../../../src/data/bodies/bodyRegions';
+import { POSITION_DRIVERS } from '../../../src/data/bodies/positionDrivers';
+import { regionOfBody } from '../../../src/utils/regions/regionOfBody';
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
@@ -11,6 +13,14 @@ import { regionRelativeDistanceMpc } from '../../../src/utils/regions/regionRela
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 describe('BODY_REGIONS', () => {
+  it('every position driver belongs to exactly one region', () => {
+    for (const driver of POSITION_DRIVERS) {
+      const holders = BODY_REGIONS.filter((r) => r.memberIds.includes(driver.id));
+      expect(holders, driver.id).toHaveLength(1);
+      expect(regionOfBody(driver.id), driver.id).not.toBeNull();
+    }
+  });
+
   it('solar-system and solar-neighbourhood share an anchor but not an extent', () => {
     // The distinction the whole plan rests on: anchor is a position, extent is a
     // scale. Collapsing the two rows — or deriving one extent for both — passes
@@ -33,7 +43,8 @@ describe('BODY_REGIONS', () => {
     // discriminate against the real table: `solar-neighbourhood` is the RESIDUAL
     // region, claiming every anchor no tighter region took, so a fall-through
     // drags its extent 2.3e-3 → 8.178e-3 Mpc and `FOREGROUND_MAX_DISTANCE_MPC`
-    // (extent × 100) 0.23 → 0.82 Mpc — past `MILKY_WAY_LABEL_NEAR_MPC` (0.6),
+    // (extent × 100) 0.23 → 0.82 Mpc — past the Milky Way label's near fade
+    // edge (0.6 Mpc, the `youAreHere` band in `milkyWay/visibility.ts`),
     // where the "You are here" label stops reaching full alpha in the Local
     // Group. That is a SECOND route to the same gate, distinct from the
     // `|anchorPos|` term prep-02 removed from `foregroundMaxDistance`; both have
@@ -43,11 +54,11 @@ describe('BODY_REGIONS', () => {
       expect(anchoredRegions.some((r) => r.memberIds.includes(region.anchorId))).toBe(true);
     }
 
-    // The consequence, pinned directly. A fallen-through Sgr A* would set the
-    // residual extent to exactly its own distance from the Sun.
+    // The consequence, pinned directly. A fallen-through Galactic Centre would
+    // set the residual extent to exactly its own distance from the Sun.
     const neighbourhood = regionById('solar-neighbourhood');
-    expect(neighbourhood.memberIds).not.toContain('sgr-a-star');
-    expect(neighbourhood.extentMpc).toBeLessThan(Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc));
+    expect(neighbourhood.memberIds).not.toContain('galactic-centre');
+    expect(neighbourhood.extentMpc).toBeLessThan(Math.hypot(...GALACTIC_CENTRE_ANCHOR.positionMpc));
   });
 
   it('the galactic-centre region extent covers the widest S-star orbit, not S2', () => {
@@ -70,17 +81,27 @@ describe('BODY_REGIONS', () => {
     expect(galacticCentre.extentMpc).toBeGreaterThan(s2ApoapsisMpc * 10);
   });
 
-  it('the solar-system extent ignores the hyperbolic rows', () => {
-    // A hyperbola has no envelope, so `max |member − anchor|` at J2000 is a
-    // clock reading rather than a scale: Voyager 1 sat 76 au out at the epoch
-    // and is 172 au out today, against Pluto's ~30. The rows stay MEMBERS —
-    // `regionOfBody` and the palette chip still say "Solar System" — but are
-    // excluded from the extent, which `scaleFadeBands.bodyGlintBackdrop` reads.
-    // Pluto's aphelion is 49 au and Voyager 2's J2000 distance 60 au, so a
-    // bound between the two fails on either probe joining the max.
-    const solarSystem = regionById('solar-system');
+  it('the solar-system extent ignores the sampled rows', async () => {
+    // An escaping craft has no envelope, so `max |member − anchor|` is a clock
+    // reading rather than a scale. With a 150 au track loaded at J2000 the rows
+    // would dominate the max; they stay MEMBERS (`regionOfBody`, the palette chip)
+    // but are excluded from the extent `scaleFadeBands.bodyGlintBackdrop` reads.
+    // Fresh modules, so the track is in the registry when BODY_REGIONS snapshots J2000
+    // and nothing leaks into this file's other tests.
+    vi.resetModules();
+    const { trajectoryRegistry } = await import('../../../src/services/bodies/trajectoryRegistry');
+    const au150Km = 150 * 1.495978707e8;
+    trajectoryRegistry.set({
+      id: 'voyager1',
+      tDays: Float64Array.from([CONST_J2000 - 1, CONST_J2000 + 1]),
+      posKm: Float64Array.from([au150Km, 0, 0, au150Km, 0, 0]),
+      velKmS: new Float32Array(6),
+    });
+    const { BODY_REGIONS: fresh } = await import('../../../src/data/bodies/bodyRegions');
+    const solarSystem = fresh.find((r) => r.id === 'solar-system')!;
 
     expect(solarSystem.memberIds).toContain('voyager1');
+    // Pluto's aphelion is 49 au.
     expect(solarSystem.extentMpc).toBeLessThan(55 * SCALE_UNITS.AU_TO_MPC);
   });
 
@@ -114,20 +135,20 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
   it('has extent 0, not NaN, and never resolves the missing anchor', async () => {
     // `Math.max()` over an empty member list is −Infinity, and every edge that
     // scales off an extent would then read −Infinity too. `galactic-centre` no
-    // longer supplies the case — Sgr A* is seeded, so the region correctly holds
-    // its own anchor at extent 0 — so the empty region is made by taking that
-    // anchor back out, which is also the state `bodyRegions.ts` is written to
-    // tolerate (its anchor id is authored ahead of any seed). Emptiness must be
-    // answered BEFORE the anchor is read, or the row resolves a position nothing
-    // seeds and throws at import, taking the whole file with it.
+    // longer supplies the case — the place and Sgr A* are both seeded, so the
+    // region correctly holds them at extent 0 — so the empty region is made by
+    // taking both anchors back out, which is also the state `bodyRegions.ts` is
+    // written to tolerate (its anchor id is authored ahead of any seed).
+    // Emptiness must be answered BEFORE the anchor is read, or the row resolves
+    // a position nothing seeds and throws at import, taking the whole file with it.
     //
-    // "Ahead of the seed" means ahead of BOTH halves of it: with the anchor gone
-    // but the 39 S-star rows still focused on it, `focusResolveOrder` throws on
-    // the dangling focus before any region is built, so the element table is
-    // mocked in step with the anchor table.
+    // "Ahead of the seed" means ahead of BOTH halves of it: with the anchors
+    // gone but the 39 S-star rows still focused on the place, `focusResolveOrder`
+    // throws on the dangling focus before any region is built, so the element
+    // table is mocked in step with the anchor table.
     vi.resetModules();
     vi.doMock('../../../src/data/bodies/sceneAnchors', () => ({
-      SCENE_ANCHORS: SCENE_ANCHORS.filter((anchor) => anchor.id !== 'sgr-a-star'),
+      SCENE_ANCHORS: SCENE_ANCHORS.filter((anchor) => anchor.id !== 'galactic-centre'),
     }));
     vi.doMock('../../../src/data/bodies/orbitalElements', async () => {
       const actual = await vi.importActual<
@@ -135,7 +156,7 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
       >('../../../src/data/bodies/orbitalElements');
       return {
         ...actual,
-        ORBITAL_ELEMENTS: actual.ORBITAL_ELEMENTS.filter((el) => el.focusId !== 'sgr-a-star'),
+        ORBITAL_ELEMENTS: actual.ORBITAL_ELEMENTS.filter((el) => el.focusId !== 'galactic-centre'),
       };
     });
     const { BODY_REGIONS: unseeded } = await import('../../../src/data/bodies/bodyRegions');

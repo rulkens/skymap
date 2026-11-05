@@ -50,8 +50,8 @@ vi.mock('../../../../src/services/engine/phases/initGpu', () => ({
     order.push('initGpu');
     if (__phaseControl.initGpu.write) {
       // Simulate a state write that later phases should be able to read.
-      state.gpu.milkyWayCloudRenderer = { __mockRenderer: true };
-      stateWrites.fromInitGpu = state.gpu.milkyWayCloudRenderer;
+      state.gpu.label3DRenderer = { __mockRenderer: true };
+      stateWrites.fromInitGpu = state.gpu.label3DRenderer;
     }
     if (__phaseControl.initGpu.throw) throw __phaseControl.initGpu.throw;
   }),
@@ -68,7 +68,7 @@ vi.mock('../../../../src/services/engine/phases/wireSlots', () => ({
   wireSlots: vi.fn(async (state: any, _deps: any) => {
     order.push('wireSlots');
     // Capture what initGpu wrote so the test can assert visibility.
-    stateWrites.observedInWireSlots = state.gpu.milkyWayCloudRenderer;
+    stateWrites.observedInWireSlots = state.gpu.label3DRenderer;
     if (__phaseControl.wireSlots.throw) throw __phaseControl.wireSlots.throw;
   }),
 }));
@@ -108,7 +108,6 @@ function makeDeps(): any {
     canvas: { width: 100, height: 100 } as any,
     cb: {} as any,
     frameRef: { current: () => {} },
-    detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
   };
@@ -148,7 +147,7 @@ describe('runBootstrapPhases', () => {
     __phaseControl.initGpu.write = true;
     const state = makeState();
     await runBootstrapPhases(state, makeDeps());
-    // initGpu wrote `state.gpu.milkyWayCloudRenderer`; wireSlots's mock captured the
+    // initGpu wrote `state.gpu.label3DRenderer`; wireSlots's mock captured the
     // freshly-written value via the same `state` reference.
     expect(stateWrites.fromInitGpu).toEqual({ __mockRenderer: true });
     expect(stateWrites.observedInWireSlots).toBe(stateWrites.fromInitGpu);

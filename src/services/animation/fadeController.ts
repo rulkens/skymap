@@ -15,36 +15,6 @@
  * curve; matching it CPU-side means the registry's per-frame opacity
  * write produces the same visual shape the shader would have if we'd
  * baked the smoothstep into the shader instead.
- *
- * ### Why Promise<void> from fadeTo
- *
- * The slot orchestration code does
- *
- *   await fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
- *   renderer.upload(catalogId, newCatalog);
- *   fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
- *
- * — naturally sequential, naturally readable. A callback API would
- * force the second and third lines into a `.then(...)` continuation
- * and the local bindings would have to be re-captured.
- * The promise allocation per fade is negligible (a few per second at
- * most).
- *
- * ### Why tick(now), not setTimeout
- *
- * Promises resolve via the registry's per-frame tick rather than a
- * `setTimeout` scheduled at start-of-fade. Two reasons:
- *
- *   1. The render-on-demand scheduler already ticks the frame loop
- *      while any fade is in flight (the registry's `isAnyAnimating()`
- *      gate keeps it awake). Resolving promises in lockstep with the
- *      frame body means the slot's `await` chains complete in the same
- *      frame boundary the visual state advanced through — no off-by-one
- *      where a `setTimeout` fires before the GPU has drawn the final
- *      frame of the ramp.
- *   2. `setTimeout` precision is browser-throttled to 4 ms minimum
- *      (and worse under heavy load). `performance.now()` against the
- *      frame's rAF timestamp is sub-ms accurate.
  */
 
 import type { FadeController } from '../../@types/animation/FadeController';
@@ -70,11 +40,6 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
-type PendingResolve = {
-  resolveMs: number;
-  readonly resolve: () => void;
-};
-
 export function createFadeController(
   initialOpacity: number = 0,
   nowMs: number = performance.now(),
@@ -83,12 +48,6 @@ export function createFadeController(
   let targetOpacity = initialOpacity;
   let transitionStartMs = nowMs;
   let transitionDurationMs = 0;
-  const pending: PendingResolve[] = [];
-  // No explicit cleanup path. The registry owns FadeController lifetimes
-  // and discards a controller (drops its reference) only when the layer
-  // is unregistered. If a controller is abandoned mid-ramp, its pending
-  // promises never resolve — that's by design; callers tear down the
-  // registry, not individual controllers.
 
   function currentOpacity(now: number = performance.now()): number {
     if (transitionDurationMs <= 0) return targetOpacity;
@@ -105,16 +64,10 @@ export function createFadeController(
     return targetOpacity;
   }
 
-  function fadeTo(
-    target: number,
-    durationMs: number,
-    now: number = performance.now(),
-  ): Promise<void> {
-    // Already there: resolve without touching the ramp, so a re-sync of an
-    // unchanged intent can't restart an in-flight fade or mint a new pending
-    // entry (`syncVisibilityFades`' `applyIntent` relies on this being safe
-    // to call unconditionally).
-    if (target === targetOpacity) return Promise.resolve();
+  function fadeTo(target: number, durationMs: number, now: number = performance.now()): void {
+    // Already there: leave the ramp alone, so a re-sync of an unchanged
+    // intent can't restart an in-flight fade.
+    if (target === targetOpacity) return;
 
     // Capture the current opacity BEFORE updating the source, so mid-
     // flight retargeting picks up from wherever the previous ramp reached
@@ -123,38 +76,13 @@ export function createFadeController(
     targetOpacity = target;
     transitionStartMs = now;
     transitionDurationMs = Math.max(0, durationMs);
-    return new Promise<void>((resolve) => {
-      pending.push({
-        resolveMs: now + transitionDurationMs,
-        resolve,
-      });
-    });
   }
 
   function setImmediate(value: number): void {
     sourceOpacity = value;
     targetOpacity = value;
     transitionDurationMs = 0;
-    // Any pending promises are now satisfied — pull their deadlines back
-    // to 0 so the next tick (however soon it comes) resolves them.
-    // Don't resolve here directly to keep tick the single resolution site
-    // (matches the per-frame contract).
-    for (const p of pending) {
-      p.resolveMs = 0;
-    }
   }
 
-  function tick(now: number = performance.now()): void {
-    // Resolve and remove every pending promise whose deadline has
-    // elapsed. Iterate in place; the order doesn't matter because
-    // each promise resolves independently.
-    for (let i = pending.length - 1; i >= 0; i--) {
-      if (now >= pending[i]!.resolveMs) {
-        pending[i]!.resolve();
-        pending.splice(i, 1);
-      }
-    }
-  }
-
-  return { fadeTo, setImmediate, currentOpacity, isAnimating, tick, targetOf };
+  return { fadeTo, setImmediate, currentOpacity, isAnimating, targetOf };
 }

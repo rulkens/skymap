@@ -3,6 +3,7 @@ import { keplerianEllipse } from '../../../src/utils/orbit/keplerianEllipse';
 import { ECLIPTIC_FRAME } from '../../../src/data/bodies/orbitPlaneFrames';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const len = (a: Vec3) => Math.sqrt(dot(a, a));
@@ -15,8 +16,8 @@ const cross = (a: Vec3, b: Vec3): Vec3 => [
 // A minimal element set the individual tests override field-by-field. Colour /
 // ids / parent are irrelevant to the geometry under test.
 const base: OrbitalElements = {
-  id: 'test',
-  focusId: 'sun',
+  id: asSceneBodyId('test'),
+  focusId: asSceneBodyId('sun'),
   semiMajorMpc: 2,
   eccentricity: 0,
   inclinationRad: 0,

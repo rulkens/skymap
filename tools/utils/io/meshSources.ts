@@ -1,16 +1,20 @@
 /**
- * meshSources — one row per baked mesh body: the raw GLB it comes from and the
- * credit its licence obliges. `buildMeshes` derives its work list from here and
- * copies both onto the generated `MeshAssetRow` that the credit surface reads,
- * so a row that skipped them would silently ship an uncredited CC BY asset.
- * `source` is not repeated — it is `RAW_DATA[native].upstream`.
+ * meshSources — one row per baked mesh body: the raw GLB per tier it comes
+ * from and the credit its licence obliges. `buildMeshes` derives its work list
+ * from here and copies both onto the generated `MeshAssetRow` that the credit
+ * surface reads, so a row that skipped them would silently ship an uncredited
+ * CC BY asset. `source` is not repeated — it is the ceiling tier's
+ * `RAW_DATA[...].upstream`.
  */
 
+import type { GeodeticAnchor } from '../../../src/@types/geo/GeodeticAnchor';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { RawDataKey } from './rawDataRegistry';
+import type { Tier } from '../../../src/@types/data/Tier';
+import type { MeshTierSource } from '../../meshes/@types/MeshTierSource';
 
 export type MeshSourceEntry = {
-  readonly native: RawDataKey;
+  /** One raw GLB per tier this body ships; must be contiguous from `small`. */
+  readonly tiers: Readonly<Partial<Record<Tier, MeshTierSource>>>;
   readonly licence: string;
   /** Author + profile URL; empty string for CC0. */
   readonly attribution: string;
@@ -20,6 +24,12 @@ export type MeshSourceEntry = {
    * frame, which is the frame `rotationElements.ts` aims.
    */
   readonly bodyFromSource?: Mat3;
+  /** Present iff an `anchored` `SurfaceFixedSite` uses this key: the source's
+   *  real-world anchor. */
+  readonly georeferenced?: GeodeticAnchor;
+  /** `'source'` keeps the source frame's origin instead of recentring on the
+   *  surface centroid: a shape model's origin is the centre of mass its orbit tracks. */
+  readonly origin?: 'source';
 };
 
 /**
@@ -29,7 +39,7 @@ export type MeshSourceEntry = {
  */
 export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
   whale: {
-    native: 'meshes.whale',
+    tiers: { small: { raw: 'meshes.whale' } },
     licence: 'CC BY 4.0',
     attribution:
       'This work is based on "Livyatan melvillei" (https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba) by Major (https://sketchfab.com/majorgalah) licensed under CC-BY-4.0',
@@ -39,13 +49,13 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, 0, 1, 0, -1, 0, 1, 0, 0],
   },
   petunias: {
-    native: 'meshes.petunias',
+    tiers: { small: { raw: 'meshes.petunias' } },
     licence: 'CC BY 4.0',
     attribution:
       'This work is based on "Flowers Petunia White" (https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0) by Marianne Goudriaan (https://sketchfab.com/mariannegoudriaan) licensed under CC-BY-4.0',
   },
   voyager: {
-    native: 'meshes.voyager',
+    tiers: { small: { raw: 'meshes.voyager' } },
     licence: 'Public domain (NASA)',
     attribution:
       'NASA / Michael D. Carbajal (NASA Headquarters), "Voyager Probe (B)" (https://science.nasa.gov/3d-resources/voyager-probe-b/)',
@@ -54,7 +64,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, -1, 0, 1, 0, 0, 0, 0, 1],
   },
   hubble: {
-    native: 'meshes.hubble',
+    tiers: { small: { raw: 'meshes.hubble' } },
     licence: 'Public domain (NASA)',
     attribution:
       'NASA, "Hubble Space Telescope (A)" — NASA 3D Resources (https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A))',
@@ -63,7 +73,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, -1, 0, 1, 0, 0, 0, 0, 1],
   },
   perseverance: {
-    native: 'meshes.perseverance',
+    tiers: { small: { raw: 'meshes.perseverance' } },
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Mars 2020 Perseverance Rover" (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)',
@@ -72,7 +82,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, 1, 0, 0, 0, 1, 1, 0, 0],
   },
   curiosity: {
-    native: 'meshes.curiosity',
+    tiers: { small: { raw: 'meshes.curiosity' } },
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Curiosity Rover (MSL) (Clean)" (https://science.nasa.gov/3d-resources/curiosity-rover-msl/)',
@@ -80,11 +90,66 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, 1, 0, 0, 0, 1, 1, 0, 0],
   },
   mer: {
-    native: 'meshes.mer',
+    tiers: { small: { raw: 'meshes.mer' } },
     licence: 'Public domain (NASA)',
     attribution:
       'NASA/JPL-Caltech, "Mars Exploration Rover - Spirit and Opportunity" (https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/)',
     // Same source orientation as perseverance: up +Y → +Z, forward +Z → +X.
     bodyFromSource: [0, 1, 0, 0, 0, 1, 1, 0, 0],
+  },
+  soendermarken: {
+    tiers: {
+      small: { raw: 'meshes.soendermarken', triangles: 150_000 },
+      medium: { raw: 'meshes.soendermarken' },
+    },
+    licence: 'CC BY 4.0',
+    attribution:
+      'Contains skråfoto © Klimadatastyrelsen (CC BY 4.0); photogrammetry by Alexander Rulkens',
+    // Already authored in the body frame (+X east, +Z up) — no remap.
+    georeferenced: { latDeg: 55.67, lonDeg: 12.53, heightM: 18.53 },
+  },
+  phobos: {
+    // One 150k-triangle mesh for both tiers; they differ in atlas size only. The
+    // relief atlas carries the rest of the 3.1M-facet surface.
+    tiers: { small: { raw: 'meshes.phobos' }, medium: { raw: 'meshes.phobos' } },
+    licence: 'NASA PDS (no licence stated); USGS public domain',
+    attribution:
+      'Shape: R. Gaskell (PSI), Phobos shape model M003, NASA PDS / NAIF. Colour: Viking Orbiter mosaic, DLR control, USGS Astrogeology',
+    // Shape models live in the IAU body frame; the prebake's glTF export turned
+    // Blender's +Z-up into glTF +Y-up, so body = (x, -z, y) of the source.
+    bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
+    origin: 'source',
+  },
+  deimos: {
+    tiers: { small: { raw: 'meshes.deimos' } },
+    licence: 'NASA PDS (no licence stated)',
+    attribution: 'Shape: P. Thomas (Cornell), Deimos shape model K005, NASA PDS / NAIF',
+    bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
+    origin: 'source',
+  },
+  vesta: {
+    tiers: { small: { raw: 'meshes.vesta' }, medium: { raw: 'meshes.vesta' } },
+    licence: 'NASA PDS (no licence stated); USGS mosaic (no licence stated, cite the authors)',
+    attribution:
+      'Shape: Dawn Gravity Team (R. Park, JPL), Vesta shape model icq0512, NASA PDS / NAIF. Colour: Dawn FC HAMO mosaic, NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology',
+    bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
+    origin: 'source',
+  },
+  ceres: {
+    tiers: { small: { raw: 'meshes.ceres' }, medium: { raw: 'meshes.ceres' } },
+    licence: 'NASA PDS (no licence stated); USGS mosaic (no licence stated, cite the authors)',
+    attribution:
+      'Shape: Dawn Gravity Team (R. Park, JPL), Ceres shape model icq0256, NASA PDS / NAIF. Colour: Dawn FC DLR mosaic, NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology',
+    bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
+    origin: 'source',
+  },
+  bennu: {
+    // Small only: its 4096 relief atlas was 15 MB, for texels finer than an approach resolves.
+    tiers: { small: { raw: 'meshes.bennu' } },
+    licence: 'NASA PDS (no licence stated); USGS public domain',
+    attribution:
+      'Shape: OSIRIS-REx Altimetry Working Group (O. Barnouin, JHU/APL), Bennu shape model v020 from OLA, NASA PDS / NAIF. Colour: ShapeV20 normal-albedo mosaic (Golish et al. 2021), NASA/University of Arizona, USGS Astrogeology',
+    bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
+    origin: 'source',
   },
 };

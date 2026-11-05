@@ -1,0 +1,82 @@
+[
+  {
+    "from": "src/@types/data/starCatalog/StarColumns.d.ts",
+    "to": "src/layers/starCatalog/@types/StarColumns.d.ts"
+  },
+  {
+    "from": "src/@types/loading/StarCatalogReq.d.ts",
+    "to": "src/layers/starCatalog/@types/StarCatalogReq.d.ts"
+  },
+  {
+    "from": "src/@types/scene/PositionedStar.d.ts",
+    "to": "src/layers/starCatalog/@types/PositionedStar.d.ts"
+  },
+  {
+    "from": "src/@types/settings/SStarTrailsSettings.d.ts",
+    "to": "src/layers/starCatalog/@types/SStarTrailsSettings.d.ts"
+  },
+  {
+    "from": "src/@types/settings/StarCatalogItemSettings.d.ts",
+    "to": "src/layers/starCatalog/@types/StarCatalogItemSettings.d.ts"
+  },
+  {
+    "from": "src/@types/settings/StarCatalogSettings.d.ts",
+    "to": "src/layers/starCatalog/@types/StarCatalogSettings.d.ts"
+  },
+  {
+    "from": "src/data/famousStarPickRadiusPx.ts",
+    "to": "src/layers/starCatalog/data/famousStarPickRadiusPx.ts"
+  },
+  {
+    "from": "src/data/starCullSlack.ts",
+    "to": "src/layers/starCatalog/data/starCullSlack.ts"
+  },
+  {
+    "from": "src/data/starExposureRamp.ts",
+    "to": "src/layers/starCatalog/data/starExposureRamp.ts"
+  },
+  {
+    "from": "src/data/starPlanIntervalFrames.ts",
+    "to": "src/layers/starCatalog/data/starPlanIntervalFrames.ts"
+  },
+  {
+    "from": "src/services/engine/helpers/drawFlooredSpherePick.ts",
+    "to": "src/layers/starCatalog/render/drawFlooredSpherePick.ts"
+  },
+  {
+    "from": "src/services/engine/helpers/nearestResolvableStar.ts",
+    "to": "src/layers/starCatalog/render/nearestResolvableStar.ts"
+  },
+  {
+    "from": "src/services/engine/helpers/resolveStarRecord.ts",
+    "to": "src/layers/starCatalog/present/resolveStarRecord.ts"
+  },
+  {
+    "from": "src/services/url/decodeStarFocusId.ts",
+    "to": "src/layers/starCatalog/present/decodeStarFocusId.ts"
+  },
+  {
+    "from": "src/utils/star/packStarGpuRecords.ts",
+    "to": "src/layers/starCatalog/utils/star/packStarGpuRecords.ts"
+  },
+  {
+    "from": "src/utils/star/starColumnsOf.ts",
+    "to": "src/layers/starCatalog/utils/star/starColumnsOf.ts"
+  },
+  {
+    "from": "src/utils/star/starCrossfadeOpacity.ts",
+    "to": "src/layers/starCatalog/utils/star/starCrossfadeOpacity.ts"
+  },
+  {
+    "from": "src/utils/star/starExposureRamp.ts",
+    "to": "src/layers/starCatalog/utils/star/starExposureRamp.ts"
+  },
+  {
+    "from": "src/utils/star/starOctreeFromSkst.ts",
+    "to": "src/layers/starCatalog/utils/star/starOctreeFromSkst.ts"
+  },
+  {
+    "from": "src/utils/star/starSourceDrawOpacity.ts",
+    "to": "src/layers/starCatalog/utils/star/starSourceDrawOpacity.ts"
+  }
+]

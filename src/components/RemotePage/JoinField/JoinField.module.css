@@ -1,0 +1,21 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: max(var(--space-12), env(safe-area-inset-top, 0px)) var(--space-8) var(--space-12);
+}
+
+.label {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-input);
+}
+
+.input {
+  composes: input from '../remoteControls.module.css';
+  letter-spacing: var(--letter-spacing-max);
+  text-transform: uppercase;
+}
+
+.root > button {
+  text-align: center;
+}

@@ -75,11 +75,7 @@
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type {
-  BodyPickRenderer,
-  BodySpherePickArgs,
-  BodyPointPickArgs,
-} from '../../../../@types/rendering/BodyPickRenderer';
+import type { BodyPickRenderer } from '../../../../@types/rendering/bodyPickRenderer/BodyPickRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import {
   BODY_SPHERE_RINGS,
@@ -90,6 +86,8 @@ import spherePickCode from '../../shaders/bodies/spherePick.wesl?static';
 import starPointPickCode from '../../shaders/bodies/starPointPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
+import type { BodySpherePickArgs } from '../../../../@types/rendering/bodyPickRenderer/BodySpherePickArgs';
+import type { BodyPointPickArgs } from '../../../../@types/rendering/bodyPickRenderer/BodyPointPickArgs';
 
 /**
  * `SpherePickUniforms` byte size (spherePick.wesl): mat4x4<f32> (64) +
@@ -255,7 +253,7 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
   });
 
   // ── Scene-star / body-glint point pick pipeline (instanced billboards) ─────
-  // 20-float scratch: writeCameraPrefix fills [0..17]; [18..19] stay 0 pads.
+  // 20-float scratch: writeCameraPrefix fills [0..18]; [19] stays a 0 pad.
   // Shared across per-submit slots — writeBuffer copies it immediately, so
   // reusing the CPU scratch between slot uploads is safe.
   const pointUniformScratch = new Float32Array(POINT_UNIFORM_BYTES / 4);
@@ -405,7 +403,7 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
   }
 
   function drawPoints(pass: GPURenderPassEncoder, args: BodyPointPickArgs): void {
-    const { vp, viewportPx, points } = args;
+    const { vp, viewportPx, pxPerRad, points } = args;
     const n = points.length;
     if (n === 0) return;
 
@@ -415,7 +413,7 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     pointCursor += 1;
 
     // Own per-frame uniform (camera prefix only), written into this slot's buffer.
-    writeCameraPrefix(pointUniformScratch, vp, viewportPx);
+    writeCameraPrefix(pointUniformScratch, vp, viewportPx, pxPerRad);
     device.queue.writeBuffer(slot.uniformBuffer, 0, pointUniformScratch);
 
     // The glint variant carries a third `bandClass` u32 per instance (stride 20);

@@ -10,36 +10,23 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
-import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
-import type { BodyId } from '../../../@types/data/body/BodyId';
-import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
-import type { BodyState } from '../../../@types/scene/BodyState';
-import type { Slab } from '../../../@types/engine/frame/Slab';
-import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
-import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
-import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
+import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientation/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
-import { cameraDofAnglesOf } from '../../../utils/camera/cameraDofAnglesOf';
+import { cameraDofAnglesOf } from '../camera/debug/cameraDofAnglesOf';
+import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
-import { runMarkerProducers } from './runMarkerProducers';
 import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
-import { deriveBodyStates } from './deriveBodyStates';
+import { deriveView } from './deriveView';
+import { frameContextInputOf } from './frameContextInputOf';
+import { frameBodyStates } from './frameBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
-import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
-import { baseLevelForTier } from '../../../utils/surfaceTiles/baseLevelForTier';
-import { surfaceTilesEngaged } from '../../../utils/surfaceTiles/surfaceTilesEngaged';
-import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
-import { advanceStarFades } from './passes/starCatalogPass';
-import { prepareBodySurfaceFrame } from './passes/earthPass';
-import { slabViewOf } from './slabs';
-import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
-import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
-import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
+import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { computeScaleInfo } from '../helpers/scaleBar';
@@ -47,8 +34,15 @@ import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/e
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
+import { cpuSpans } from '../../../utils/perf/cpuSpans';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
-import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
+import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
+import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
+import { selectPendingInput } from '../../../state/input/selectors';
+import { selectViewCoverPx } from '../../../state/viewCover/selectors';
+import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
+import { inputConsumed } from '../../../state/input/inputSlice';
 
 /**
  * Scale-bar width, CSS px. Must stay under the ScaleBar panel's ~145 px content
@@ -63,55 +57,40 @@ const SCALE_TARGET_PX = 120;
 const publishBodyDistanceGate = throttleByTime(250);
 
 /**
- * Idle-tick cadence for a LIVE sim clock, ms. The terminator sweeps 0.00417°·T
- * of ground per tick; at the 127 km tile standoff the viewport spans ~147 km, so
- * a 3 s tick is a visible ~8 px jump on a 900 px canvas — 500 ms holds it under
- * 1.5 px at every altitude. A one-shot `requestIdleFrame`, not `setInterval`:
- * an interval fires unconditionally and double-schedules against real wakes.
+ * Idle-tick cadence for a LIVE sim clock, ms. At the 127 km tile standoff the
+ * viewport spans ~147 km, so a 3 s tick is a visible ~8 px terminator jump on a
+ * 900 px canvas; 500 ms holds it under 1.5 px. One-shot `requestIdleFrame`, not
+ * `setInterval`, which double-schedules against real wakes.
  */
 const LIVE_IDLE_TICK_MS = 500;
 
 /** `nowMs` is `performance.now()`-shaped, passed in so tests drive the timing. */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
-  // First statement, by contract: scene cues fired here (fade / show / hide /
-  // focus) are in the store before this frame derives masks, demand or the pose,
-  // and a frameTween a cue dispatches is seen by this frame's basis.
+  // First statement, by contract: cues fired here are in the store before this frame
+  // derives demand or the pose, and a cue's frameTween is seen by this frame's basis.
   const { clipEpoch } = state.subsystems.clipPlayer.tick(state.cameraRuntime.epochs.clip, nowMs);
 
-  // The masks are a per-frame projection of settings + fade opacity, never a
-  // hand-maintained mirror; demand itself reads settings directly. Sampled at
-  // THIS frame's nowMs — not the registry's last-ticked clock, which the frame
-  // tail's `fades.tick(nowMs)` (below) only advances to AFTER this call.
-  const masks = deriveSourceMasks(state, nowMs);
   reevaluateDemand(state);
 
-  // `reconcile` runs unconditionally (canvas size AND every state-driven scale
-  // feed it) and reallocates only rows whose pixel size moved; `renderTargets`
-  // is null until initGpu. The resize is the backing store's side effect, not
-  // the camera's; the step is handed the aspect it produced.
+  // `reconcile` runs unconditionally and reallocates only rows whose pixel size moved;
+  // `renderTargets` is null until initGpu. The step is handed the aspect it produced.
   resizeCanvasToDisplay(deps.canvas);
   state.gpu.renderTargets?.reconcile(state, {
     width: deps.canvas.width,
     height: deps.canvas.height,
   });
 
-  state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
-  state.gpu.flowFieldRenderer?.reconcile(state.settings.flow);
-  state.gpu.atmosphereShellRenderer?.reconcile({
-    skyViewLutSize: SKY_VIEW_LUT_SIZE_BY_TIER[state.tier],
-  });
-
-  // The frame's ONE store snapshot. The camera step runs before
-  // `deriveFrameContext` so a camera-only-ready frame still makes motion
-  // progress before the missing-GPU early return.
-  const steps = state.subsystems.inputAggregator.drain();
+  // The frame's ONE store snapshot. The camera step runs before `deriveFrameContext`
+  // so a camera-only-ready frame still makes progress before the missing-GPU return.
   const stored = deps.cb.store.getState();
+  const canvasPx: Vec2 = [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1];
+  const pending = selectPendingInput(stored);
+  const steps = pendingToInputSteps(pending, canvasPx);
 
-  // The sim instant is derived BEFORE the step: the follow driver aims at where
-  // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
-  // this call primes the map every later reader gets by reference.
+  // Derived BEFORE the step: the follow driver aims at where the body is this frame. The
+  // ONE placement of the moving selection; the frame context takes this same Map.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
-  const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
+  const bodyStates = frameBodyStates(stored, state.selectionKindRows, simDays);
 
   const {
     next,
@@ -123,28 +102,30 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     nowMs,
     simDays,
     rootState: stored,
-    canvasPx: [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1],
+    canvasPx,
+    // Only the mono rig's one view is the canvas the covers sit over.
+    coverPx: state.viewRig === 'mono' ? selectViewCoverPx(stored) : NO_INSETS_PX,
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
-    terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
+    terrainHeightAt: state.terrainHeightAt,
     clipEpoch,
-    drivers: deps.drivers,
+    schemes: deps.controlSchemes,
   });
   // The runtime is installed BEFORE any action reaches the store (ruled): a
   // listener fired by a commit sees this frame's register, not last frame's.
   state.cameraRuntime = next;
   for (const action of actions) deps.cb.store.dispatch(action);
+  // Same task as the read above, so no source dispatch can land in between.
+  if (pending.length > 0) deps.cb.store.dispatch(inputConsumed());
   if (requestRender) state.subsystems.scheduler.requestRender();
 
-  const { displayed: renderPose, projection, upBasis } = next.outputs;
+  const upBasis = next.outputs.upBasis;
   const poseBasis = ORIENTATION_FRAMES[stored.settings.orientation];
-  const pivotFocus = stored.selectionRows.focus;
 
-  // The debug panel's Δ/peak columns, at FRAME rate: its 4 Hz poll averages
-  // ~15 frames into one reading, which is precisely how a per-frame decay
-  // passes for a per-notch one. Gated on the panel being mounted — the
-  // derivation walks the body roster, which nobody who never opens it pays for.
+  // The debug panel's Δ/peak columns at FRAME rate: its 4 Hz poll averages ~15 frames,
+  // which lets a per-frame decay pass for a per-notch one. Gated on the panel being
+  // mounted: the derivation walks the body roster.
   if (orientDeltasWatched()) {
     recordOrientDeltas(
       cameraDofAnglesOf({
@@ -159,15 +140,23 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
+  // Shared with `pickFrameContext`; only the time, the bases and the body snapshot vary
+  // between callers. Safe here because `state.cameraRuntime = next` above already
+  // made `state`'s runtime THIS frame's.
+  const { input, cam } = frameContextInputOf(state, {
+    worldPose,
+    nowMs,
+    poseBasis,
+    upBasis,
+    simDays,
+    bodyStates,
+  });
+
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
   // silently breaks the bar on retina.
   if (state.booted) {
-    const snap = {
-      distance: pivotSurfaceRangeMpc(renderPose, worldPose.distance, pivotFocus),
-      fovYRad: projection.fovYRad,
-    };
     const scaleInfo = computeScaleInfo({
-      cam: snap,
+      cam: { distance: input.altitudeMpc, fovYRad: cam.fovYRad },
       canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
       targetPx: SCALE_TARGET_PX,
     });
@@ -176,24 +165,35 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     }
   }
 
+  // Minted here so `renderFrame` gets the SAME mutable `Set`; passes see only the
+  // `ReadonlySet` on `snapshot.renderedTargets`.
+  const renderedTargets = new Set<string>();
   // The 'not ready' branch is the window before cam + GPU handles populate.
-  const ctx = deriveFrameContext(
-    state,
-    deps.canvas,
-    worldPose,
-    renderPose,
-    projection,
-    poseBasis,
-    upBasis,
-    masks.draw,
-    nowMs,
-    simDays,
-  );
-  if (!ctx.isReady) {
+  const snapshot = deriveFrameContext(state, input, renderedTargets);
+  if (!snapshot.isReady) {
     // Bootstrap populates the handles without waking any channel: keep polling.
     state.subsystems.scheduler.requestRender();
     return;
   }
+
+  // The frame's views, once (mono is `[canvas]`). `deriveView` reads no stamp, so it can
+  // run ahead of focus/plans, and must run ahead of every planner row so each can walk
+  // every view's frustum.
+  const canvas = deriveView(
+    snapshot,
+    cam,
+    mainViewSpec(
+      { width: deps.canvas.width, height: deps.canvas.height },
+      state.cameraRuntime.outputs.frustum,
+    ),
+  );
+  // The rig hands back specs; deriving views HERE, off the one shared `snapshot`,
+  // makes the shared-snapshot invariant structural.
+  const viewSpecs = VIEW_RIGS[state.viewRig].views(canvas, state);
+  const views =
+    viewSpecs === null || viewSpecs.length === 0
+      ? [canvas]
+      : viewSpecs.map((spec) => deriveView(snapshot, cam, spec));
 
   // `produceFocusUniforms(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
   // per frame, before every consumer of the blend (label director, markers,
@@ -202,139 +202,72 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusedStructure = focusRow !== null && focusRow.type === 'structure' ? focusRow : null;
   state.subsystems.structureFocus.update(focusedStructure, nowMs);
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
-  ctx.focusBlend = focusUniforms.blend;
-  ctx.focus = focusUniforms;
-
-  // Each Layer's `frame` hook, in tuple order, right after the focus uniform
-  // and before any planner. No short-circuit: every hook runs every frame, so a
-  // later Layer's vote is never skipped by an earlier `true`.
-  let layersAnimating = false;
-  for (const layer of state.layers) {
-    if (layer.frame !== null && layer.frame(ctx, state)) layersAnimating = true;
-  }
-  // Published on the ctx so the sky-capture scheduler can read "a Layer's
-  // content is still settling" without reaching into a Layer's subsystems.
-  ctx.layersAnimating = layersAnimating;
+  snapshot.focusBlend = focusUniforms.blend;
+  snapshot.focus = focusUniforms;
+  snapshot.focusPickId = encodeSelectionPick(
+    state.selectionKindRows,
+    state.subsystems.structureFocus.lastFocusRef(),
+  );
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this
   // frame's snapshot is focused.
   if (publishBodyDistanceGate(nowMs)) {
     let focusedBodyDistanceMpc: number | null = null;
-    if (focusRow !== null && focusRow.type === 'body') {
-      const bodyState = sceneBodyStates(state, ctx).get(focusRow.id);
+    const focusId = selectionDriver(focusRow)?.poseId ?? null;
+    if (focusId !== null) {
+      const bodyState = sceneBodyStates(state, canvas).get(focusId);
       if (bodyState !== undefined) {
-        focusedBodyDistanceMpc = distanceMpc(ctx.drawCamPos, bodyState.positionMpc);
+        focusedBodyDistanceMpc = distanceMpc(canvas.drawCamPos, bodyState.positionMpc);
       }
     }
     deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
   }
 
-  // The tile planner keys off the ENGAGED body's own slab row (no row =
-  // already culled, and membership in the registry is the "this body
-  // tiles" predicate — never a literal bodyId), so tiles and layer never
-  // disagree about whether that body is on screen. A slab exists only for a
-  // body `sceneBodyPartition` actually iterated, so its presence already
-  // implies the body itself is seeded; no separate null check needed.
-  const surfaceTiles = state.subsystems.surfaceTiles;
-  const surfaceTileSlab = ctx.slabs.find(
-    (
-      slab,
-    ): slab is Slab & {
-      frame: Extract<SlabFrame, { kind: 'body-m' }> & { bodyId: SurfaceTileBodyId };
-    } => slab.frame.kind === 'body-m' && slab.frame.bodyId in SURFACE_TILE_REGISTRY,
-  );
-  if (surfaceTiles !== null && surfaceTileSlab !== undefined) {
-    const bodyId = surfaceTileSlab.frame.bodyId;
-    // The same slab view `earthPass.draw` samples into.
-    const surfaceTilesView = slabViewOf(ctx, surfaceTileSlab.index);
-    if (surfaceTilesEngaged(state, ctx, surfaceTilesView)) {
-      // The tier off the COMMITTED texture slot, so a swap in flight cannot make
-      // the planner believe in detail that is not on the GPU yet.
-      const baseLevel = baseLevelForTier(bodyId, bodySurfaceTier(state, bodyId));
-      const params = surfaceTiles.plannerParams(bodyId, baseLevel);
-      // `setLastCut` runs unconditionally so a tier swap in flight draws
-      // nothing stale rather than last frame's cut.
-      let cut: readonly SurfaceCutTile[] = [];
-      if (params !== null) {
-        const prepared = prepareBodySurfaceFrame(state, ctx, surfaceTilesView);
-        if (prepared !== null) {
-          // One walk yields both the draw cut and the fetch requests.
-          const result = cutSurfaceTiles({
-            ...params,
-            camPosLocalM: prepared.pose.eyeRelBodyM,
-            viewProjLocal: prepared.mvpLocal,
-            radiusM: prepared.radiusM,
-            reliefM: prepared.body.surface.reliefM,
-            viewportPx: surfaceTilesView.viewportPx,
-            residentSlot: surfaceTiles.residentSlot,
-          });
-          cut = result.cut;
-          surfaceTiles.update({ bodyId, plan: result.requests });
-        }
-      }
-      surfaceTiles.setLastCut(cut);
-    }
-  }
-
-  // Outside the gate: `isAnimating()` is true while the manifest is in flight,
-  // before the layer can engage — voting only on engaged frames would sleep
-  // the loop mid-fetch.
-  const surfaceTilesAnimating = surfaceTiles?.isAnimating() ?? false;
-
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
   // short-circuits.
-  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, ctx);
-  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, ctx);
-  const label3DAnimating = runLabel3DProducers(state, ctx);
+  const cosmoStartMs = cpuSpans.on ? performance.now() : 0;
+  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, canvas);
+  if (cpuSpans.on) cpuSpans.add('labels:cosmo', cosmoStartMs);
+  const nearStartMs = cpuSpans.on ? performance.now() : 0;
+  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, canvas);
+  if (cpuSpans.on) cpuSpans.add('labels:near0', nearStartMs);
+  const label3DAnimating = runLabel3DProducers(state, canvas);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
-  // ── Star-cut planner (advances the LOD fades, primes the per-ctx memo) ────
-  //
-  // Advance the survey-star per-node LOD fades ONCE here, as a planner peer of
-  // the disk/label planners above — the ONLY call in a real frame that mutates
-  // the fade ramps (see `advanceStarFades`'s own doc). Two reasons it lives at
-  // frame-body level rather than only inside the star draw:
-  //   1. The three star layers (leaf / aggregate / upsample) call the READ-ONLY
-  //      `prepareStarCut` during the GPU dispatch, which hits the per-ctx memo
-  //      this primes — so the walk still runs exactly once for the frame.
-  //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below. The
-  //      wake vote used to fire from inside the pass (a `requestRender` scattered
-  //      away from the single authority); now the pass computes the vote and
-  //      `shouldKeepTicking` decides.
-  // `advanceStarFades` is a no-op returning null when the star pass isn't live
-  // (renderer null / master off) — that maps to `starFadeAnimating: false` below.
-  const starCut = advanceStarFades(state, ctx);
-
-  // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
-  if (state.gpu.structureMarkerRenderer !== null) {
-    state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, ctx));
-  }
-
   renderFrame({
-    ctx,
+    canvas,
+    views,
     state,
     device: deps.device,
     context: deps.context,
     timingService: deps.timingService,
+    renderedTargets,
   });
 
   // After the submit as a latency choice only; it owns its own encoder with
-  // `loadOp: 'load'`. Hover picking is pointer-driven (hoverPickDriver).
+  // `loadOp: 'load'`. Hover and select picks run in `createPickDriver`.
   drawPickDebugOverlay(state, deps);
 
   // Render-on-demand. Tick the FadeRegistry BEFORE the predicate reads
   // isAnyAnimating: tick is the single resolution site for fadeTo promises, so
   // without it awaited fade-outs (catalog visibility, tier swaps) hang forever.
   state.subsystems.fades.tick(nowMs);
-  const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
-    starFadeAnimating: starCut?.anyNodeFading ?? false,
-    surfaceTilesAnimating,
-    labelsAnimating,
-    probeDue: state.cubemapCaptures.probe.due,
-    layersAnimating,
-  });
+  state.fadesAnimating = state.subsystems.fades.isAnyAnimating(nowMs) || labelsAnimating;
+  state.layersSettling = snapshot.plans.settling;
+  const keepTicking = shouldKeepTicking(
+    state,
+    rootState,
+    nowMs,
+    {
+      labelsAnimating,
+      probeDue: state.cubemapCaptures.probe.due,
+      // Read AFTER `renderFrame`: every planner row ran inside it.
+      layersAwake: snapshot.plans.awake,
+    },
+    deps.controlSchemes[next.scheme].drivers,
+  );
 
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();

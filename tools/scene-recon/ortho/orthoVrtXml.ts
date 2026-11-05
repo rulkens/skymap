@@ -10,8 +10,8 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { surfaceTileColumns } from '../../../src/utils/surfaceTiles/surfaceTileColumns';
-import type { TileIndexRect } from '../../utils/scene/TileIndexRect';
+import { surfaceTileColumns } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
+import type { TileIndexRect } from '../../@types/scene/TileIndexRect';
 
 export type OrthoVrtSpec = {
   /** `<geodanmark.dir>/19` — the level directory holding `<x>/<y>.jpg`. */

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { mergeSurfaceTileManifest } from '../../../../tools/utils/textures/mergeSurfaceTileManifest';
-import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
-import type { SurfaceTileManifestBand } from '../../../../src/@types/scene/SurfaceTileManifestBand';
+import type { SurfaceTileManifest } from '../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
+import type { SurfaceTileManifestBand } from '../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifestBand';
 
 const PREFIX = 'earth-tiles/v9';
 const BOUNDS_A = { west: -180, east: 0, south: -90, north: 90 };

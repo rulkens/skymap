@@ -25,7 +25,7 @@
  *
  *   - `loop`: when true, `clipPlayer` rewinds the clock instead of ending the
  *     clip once elapsed reaches `durationSec` — see `clipPlayer.tick`'s
- *     completion arm. The clip then only ends via `stop()` (a `stopClip`
+ *     completion arm. The clip then only ends via `stop()` (an `exitTakeover`
  *     dispatch or saga cancellation), never on its own. For the loop point to
  *     look seamless, author the timeline so `pose(durationSec) === pose(0)`
  *     (mod 2π on any spun angle channel) — the compiler does not verify this.
@@ -41,7 +41,7 @@
  * (defaulting to a zero pose for `'live'` until Task N resolves it).
  */
 
-import type { CameraPose } from '../camera/CameraPose';
+import type { CameraPose } from '../camera/pose/CameraPose';
 import type { Effect } from './Effect';
 
 export type ClipData = {

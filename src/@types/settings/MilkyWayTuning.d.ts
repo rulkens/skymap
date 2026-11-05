@@ -65,12 +65,12 @@ export type MilkyWayTuning = {
    * Absolute star count fed straight into `milkyWayCloud.generate`'s
    * `GalaxyParams.starCount`. Seeded from the current tier's budget
    * (`MILKY_WAY_STARS_PER_TIER[tier]`) at boot and re-seeded by
-   * `watchTierSaga` on every tier change, so a device that drops to the
-   * small tier gets the small tier's budget rather than whatever a previous
-   * session's slider left behind; the DebugPanel slider owns it between tier
-   * changes. Moving it regenerates the cloud's instance buffers outright
-   * (`runFrame`'s mismatch branch), unlike the uniform-write/render-target
-   * paths the other fields take.
+   * `reseedMilkyWayStarCountSaga` on every tier change, so a device that
+   * drops to the small tier gets the small tier's budget rather than
+   * whatever a previous session's slider left behind; the DebugPanel slider
+   * owns it between tier changes. Moving it regenerates the cloud's instance
+   * buffers outright (`milkyWayPlanner`'s `cloud.reconcile`), unlike the
+   * uniform-write/render-target paths the other fields take.
    *
    * `totalStarBudget` floors the total at 20,000 regardless of what's
    * requested, so `MILKY_WAY_SLIDER_FIELDS`'s `starCount.min` must match —

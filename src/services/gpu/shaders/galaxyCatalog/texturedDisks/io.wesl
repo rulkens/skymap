@@ -33,7 +33,7 @@ import package::lib::camera::CameraUniforms;
 //
 // 96-byte uniform buffer matching the CPU-side UNIFORM_BYTES in
 // 'instancedQuadRenderer.ts'. First 80 bytes are the shared
-// 'CameraUniforms' prefix (viewProj + viewportPx + 8B reserved pad);
+// 'CameraUniforms' prefix (viewProj + viewportPx + pxPerRad + 4B pad);
 // 'camPos' sits at offset 80 followed by an f32 tail pad to round up
 // to 16 bytes.
 //
@@ -86,7 +86,7 @@ struct VsOut {
   @location(2)       fadeAlpha:                            f32,
   @location(3) @interpolate(flat) hiResLayerIdx:           i32,
   @location(4)                    hiResCrossfadeAlpha:     f32,
-  // Per-instance cluster-focus dim in [0.08, 1.0]: 1.0 for members of the
+  // Per-instance structure-focus dim in [0.08, 1.0]: 1.0 for members of the
   // focused structure (and at rest), 0.08 for non-members, ramped by the focus
   // blend. Computed once per instance in the vertex stage; flat because it
   // is constant across the quad.

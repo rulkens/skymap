@@ -38,7 +38,7 @@
  * famous-galaxy module along.
  */
 
-import type { LuminanceAsAlphaOptions } from './LuminanceAsAlphaOptions';
+import type { LuminanceAsAlphaOptions } from '../../@types/image/LuminanceAsAlphaOptions';
 
 /**
  * Mutate `buf` in place: compute Rec 709 luma per pixel, remap through

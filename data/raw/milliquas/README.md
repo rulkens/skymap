@@ -54,8 +54,9 @@ before regenerating any `.bin` artefacts that depend on it.
 
 ## License
 
-Milliquas is **free for research and visualisation use**.  Cite Flesch
-(2023) in any derived work:
+Neither the catalogue's page nor its ReadMe states a licence. The ReadMe asks:
+"Please cite as Milliquas v8, Flesch, E.W. 2023,OJAp,6,49. (arXiv:2308.01505)"
+(<https://quasars.org/Milliquas-ReadMe.txt>, read 2026-10-07):
 
 > Flesch, E. W. 2023, "The Million Quasars (Milliquas) Catalog,
 > Version 8" — <https://arxiv.org/abs/2308.01505>

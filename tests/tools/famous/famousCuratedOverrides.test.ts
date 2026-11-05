@@ -13,7 +13,10 @@ import { join } from 'node:path';
 import { loadCuratedOverrides } from '../../../tools/famous/famousCuratedOverrides';
 
 function tmpPath(): string {
-  return join(mkdtempSync(join(tmpdir(), 'famous-cur-overrides-')), 'famous_curated_overrides.json');
+  return join(
+    mkdtempSync(join(tmpdir(), 'famous-cur-overrides-')),
+    'famous_curated_overrides.json',
+  );
 }
 
 describe('loadCuratedOverrides', () => {
@@ -24,12 +27,21 @@ describe('loadCuratedOverrides', () => {
 
   it('parses an existing index', () => {
     const path = tmpPath();
-    writeFileSync(path, JSON.stringify({
-      version: 1,
-      entries: {
-        m31: { dir: 'famous-curated/m31', sourceUrl: 'x', license: 'CC-BY', author: 'A', processedAt: 't' },
-      },
-    }));
+    writeFileSync(
+      path,
+      JSON.stringify({
+        version: 1,
+        entries: {
+          m31: {
+            dir: 'famous-curated/m31',
+            sourceUrl: 'x',
+            license: 'CC-BY',
+            author: 'A',
+            processedAt: 't',
+          },
+        },
+      }),
+    );
     const idx = loadCuratedOverrides(path);
     expect(idx.entries.m31?.author).toBe('A');
   });

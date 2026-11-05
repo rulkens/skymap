@@ -13,7 +13,6 @@ import { cosmoLabelProjection } from '../../services/engine/frame/cosmoLabelProj
  * `lift: null` states COSMO's stance explicitly — it has none.
  */
 export const COSMO_LABEL_DIRECTOR: Label2DDirectorConfig = {
-  id: 'labels',
   project: cosmoLabelProjection,
   declutter: { mode: 'bboxOverlap', padPx: 8 },
   envelope: { mode: 'smoothstepRamp', durationMs: 300 },

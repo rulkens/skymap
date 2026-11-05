@@ -1,12 +1,22 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { buildInitialUiState } from '../../../src/state/ui/buildInitialUiState';
-import { SPLASH_STORAGE_KEY, CURRENT_SPLASH_VERSION } from '../../../src/state/ui/splashStorage';
+import { CURRENT_SPLASH_VERSION } from '../../../src/state/ui/splashStorage';
+import { SPLASH_SEEN_VERSION } from '../../../src/state/persistedValues';
 
 describe('buildInitialUiState', () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.history.replaceState(null, '', '/');
+  });
+
+  describe('uiHidden', () => {
+    it('starts hidden under ?dome and shown otherwise', () => {
+      window.history.replaceState(null, '', '/?dome');
+      expect(buildInitialUiState().uiHidden).toBe(true);
+      window.history.replaceState(null, '', '/');
+      expect(buildInitialUiState().uiHidden).toBe(false);
+    });
   });
 
   describe('splash.visible', () => {
@@ -16,13 +26,13 @@ describe('buildInitialUiState', () => {
     });
 
     it('is false when seenVersion equals the current version', () => {
-      window.localStorage.setItem(SPLASH_STORAGE_KEY, String(CURRENT_SPLASH_VERSION));
+      window.localStorage.setItem(SPLASH_SEEN_VERSION.key, String(CURRENT_SPLASH_VERSION));
       const state = buildInitialUiState();
       expect(state.splash.visible).toBe(false);
     });
 
     it('is true when seenVersion is lower than the current version', () => {
-      window.localStorage.setItem(SPLASH_STORAGE_KEY, String(CURRENT_SPLASH_VERSION - 1));
+      window.localStorage.setItem(SPLASH_SEEN_VERSION.key, String(CURRENT_SPLASH_VERSION - 1));
       const state = buildInitialUiState();
       expect(state.splash.visible).toBe(true);
     });
@@ -48,11 +58,18 @@ describe('buildInitialUiState', () => {
       const state = buildInitialUiState();
       expect(state.splash.visible).toBe(false);
     });
+
+    it('is false under ?dome and under ?remote even on a first visit', () => {
+      for (const url of ['/?dome', '/?remote']) {
+        window.history.replaceState(null, '', url);
+        expect(buildInitialUiState().splash.visible).toBe(false);
+      }
+    });
   });
 
   describe('splash.dismissedVersion', () => {
     it('seeds to the stored seenVersion when present', () => {
-      window.localStorage.setItem(SPLASH_STORAGE_KEY, String(CURRENT_SPLASH_VERSION));
+      window.localStorage.setItem(SPLASH_SEEN_VERSION.key, String(CURRENT_SPLASH_VERSION));
       const state = buildInitialUiState();
       expect(state.splash.dismissedVersion).toBe(CURRENT_SPLASH_VERSION);
     });

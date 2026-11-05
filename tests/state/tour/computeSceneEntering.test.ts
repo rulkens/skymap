@@ -3,8 +3,8 @@
  *
  * The scene entering beat K is a pure function: the tour baseline folded
  * through every scene cue (show / hide / scene) of beats 0..K-1, applied via
- * the REAL settings reducer + the same action tables `applySceneEffect` uses.
- * These tests pin that contract with hand-built beats — no store, no sagas,
+ * the REAL settings reducer + the `setVisibilityActionsFor` writes
+ * `applySceneEffect` dispatches. These tests pin that contract with hand-built beats — no store, no sagas,
  * no playback.
  */
 
@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 
 import { computeSceneEntering } from '../../../src/state/tour/computeSceneEntering';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
-import { captureSettings } from '../../../src/state/tour/captureSettings';
+import { captureSettings } from '../../../src/state/scene/captureSettings';
 import {
   all,
   fork,
@@ -34,22 +34,22 @@ const clip = (timeline: ClipData['timeline']): ClipData => ({ start: 'live', tim
 // DWELL clip (dwell cues must count toward the prefix too).
 const BEATS: readonly BeatData[] = [
   {
-    caption: { title: 'strip' },
+    caption: { title: 'strip', lines: ['x'] },
     enterClip: clip([
-      hide(['volumesMaster', 'filaments', 'survey'], 0),
+      hide(['cosmicWebDensity', 'cosmicWebFilaments', 'survey'], 0),
       scene(setLabelsFocusedOnly(true)),
     ]),
     dwellClip: dwellDrift(1),
   },
   {
-    caption: { title: 'survey reveal' },
+    caption: { title: 'survey reveal', lines: ['x'] },
     enterClip: clip([show(['survey:2mrs'], 1)]),
     dwellClip: dwellDrift(1),
   },
   {
-    caption: { title: 'web reveal' },
-    enterClip: clip([show(['filaments'], 9)]),
-    dwellClip: clip([show(['volumesMaster'], 2)]),
+    caption: { title: 'web reveal', lines: ['x'] },
+    enterClip: clip([show(['cosmicWebFilaments'], 9)]),
+    dwellClip: clip([show(['cosmicWebDensity'], 2)]),
   },
 ];
 
@@ -64,8 +64,8 @@ describe('computeSceneEntering', () => {
     const base = INITIAL_SETTINGS;
     const result = computeSceneEntering(base, BEATS, 1);
 
-    expect(result.volumes.enabled).toBe(false);
-    expect(result.filaments.enabled).toBe(false);
+    expect(result.cosmicWebDensity.enabled).toBe(false);
+    expect(result.cosmicWebFilaments.enabled).toBe(false);
     expect(result.labels.focusedOnly).toBe(true);
     // The bare 'survey' key fans out over every catalog item.
     for (const item of Object.values(result.galaxyCatalogs.items)) {
@@ -85,8 +85,8 @@ describe('computeSceneEntering', () => {
     const base = INITIAL_SETTINGS;
     const result = computeSceneEntering(base, BEATS, 3);
 
-    expect(result.filaments.enabled).toBe(true); // beat 2 enter
-    expect(result.volumes.enabled).toBe(true); // beat 2 DWELL cue
+    expect(result.cosmicWebFilaments.enabled).toBe(true); // beat 2 enter
+    expect(result.cosmicWebDensity.enabled).toBe(true); // beat 2 DWELL cue
   });
 
   it('collects cues nested inside seq / all / fork', () => {
@@ -95,13 +95,16 @@ describe('computeSceneEntering', () => {
       {
         caption: null,
         enterClip: clip([
-          seq([hold(1), all([fork(hide(['filaments'], 0)), scene(setLabelsFocusedOnly(true))])]),
+          seq([
+            hold(1),
+            all([fork(hide(['cosmicWebFilaments'], 0)), scene(setLabelsFocusedOnly(true))]),
+          ]),
         ]),
         dwellClip: dwellDrift(1),
       },
     ];
     const result = computeSceneEntering(base, beats, 1);
-    expect(result.filaments.enabled).toBe(false);
+    expect(result.cosmicWebFilaments.enabled).toBe(false);
     expect(result.labels.focusedOnly).toBe(true);
   });
 

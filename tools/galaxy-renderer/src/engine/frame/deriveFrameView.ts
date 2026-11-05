@@ -48,7 +48,7 @@ const FIELD_EXPOSURE_GAUGE = 0.0539;
 const STAR_GRAIN_SCALE_NEAR_R = 1.0;
 const STAR_GRAIN_SCALE_FAR_R = 4.0;
 
-export type FrameView = {
+export type FieldFrameLanes = {
   readonly view: Float32Array;
   readonly proj: Float32Array;
   readonly viewProj: Float32Array;
@@ -80,7 +80,7 @@ export function deriveFrameView(input: {
   readonly render: RenderSettings;
   /** The dust's reach R, cached across frames by the dust rebuild — only the SLICE EDGES are view-dependent. */
   readonly dustReachR: number;
-}): FrameView {
+}): FieldFrameLanes {
   const { eye, fov, dist, viewportPx, render } = input;
   const view = mat4.lookAt(eye, input.target, [0, 1, 0]);
   // Near/far track orbit distance, the same adaptation the app's NEAR0 slab

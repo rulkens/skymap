@@ -1,11 +1,7 @@
 /**
- * DebugPanel — the umbrella for the dev panel, mounted by `App.tsx` on the `d`
- * shortcut. Every section that touches the store owns its own container, so this
- * component takes only the engine-handle props App reads off `handleRef`, and
- * section-level visibility is each section's own concern.
- *
- * `memo` is load-bearing: this is App's memo boundary for the panel, so an
- * unrelated App re-render doesn't cascade into every section's store reads.
+ * DebugPanel — the umbrella for the dev panel, mounted on the `d` shortcut.
+ * `memo` is load-bearing: it is the panel's boundary, so an unrelated App
+ * re-render doesn't cascade into every section's store reads.
  */
 
 import { memo } from 'react';
@@ -14,18 +10,16 @@ import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
+import { APP_COMPOSITION } from '../../compositions/app';
+import { layerUiContents } from '../../utils/layer/layerUiContents';
 import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
-import SurfaceTileAtlasSectionContainer from '../containers/SurfaceTileAtlasSectionContainer';
+import MemorySectionContainer from '../containers/MemorySectionContainer';
+import FocusMovesTuningSectionContainer from '../containers/FocusMovesTuningSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
-import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
-import MilkyWayTuningSectionContainer from '../containers/MilkyWayTuningSectionContainer';
-import ZoneOfAvoidanceTuningSectionContainer from '../containers/ZoneOfAvoidanceTuningSectionContainer';
-import SgrAStarLensingTuningSectionContainer from '../containers/SgrAStarLensingTuningSectionContainer';
 import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
-import GalaxyProvenanceSectionContainer from '../containers/GalaxyProvenanceSectionContainer';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
 import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
 import styles from './DebugPanel.module.css';
@@ -37,13 +31,9 @@ export type DebugPanelProps = {
   frameStats: () => FrameStats;
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
   passNames: readonly string[];
-  /**
-   * Authored `ASSET_WIRING` fetch rank per slot name, from the engine handle's
-   * `debug.assetPriorities`. A getter, not a Map, because slots are minted by
-   * the async bootstrap long after the handle is built.
-   */
+  /** Fetch rank per slot name (`debug.assetPriorities`); a getter because slots are minted after the handle is built. */
   assetPriorities: () => ReadonlyMap<string, number>;
-  /** Engine-handle ref, threaded to `SurfaceTileAtlasSectionContainer` for its `debug.surfaceTiles` / `debug.flyToLonLat` reach. */
+  /** Threaded to the sections that read engine-only data (`debug.cameraDebug`, `debug.gpuMemory`). */
   engineHandleRef: RefObject<EngineHandle | null>;
 };
 
@@ -59,19 +49,16 @@ function DebugPanel({
     <div className={styles.root}>
       <div className={styles.title}>Skymap Debug</div>
       <AssetLoadingSection slots={slots} assetPriorities={assetPriorities} />
-      {/* Always shown — its numbers need no GPU query, so it sits above the
-          GPU timings section, which is dark without `?gpuTimings`. */}
       <FrameStatsRow frameStats={frameStats} />
       <GpuTimingsSection service={timingService} />
+      <MemorySectionContainer engineHandleRef={engineHandleRef} />
       <CameraStateSectionContainer engineHandleRef={engineHandleRef} />
       <RenderTogglesSectionContainer passNames={passNames} />
-      <FlowTuningSectionContainer />
-      <MilkyWayTuningSectionContainer />
-      <ZoneOfAvoidanceTuningSectionContainer />
-      <SgrAStarLensingTuningSectionContainer />
+      {layerUiContents(APP_COMPOSITION.layers, 'debug').map((Section, index) => (
+        <Section key={index} />
+      ))}
       <DebugOverlaysSectionContainer />
-      <SurfaceTileAtlasSectionContainer engineHandleRef={engineHandleRef} />
-      <GalaxyProvenanceSectionContainer />
+      <FocusMovesTuningSectionContainer />
       <ClipTriggersSectionContainer />
       <ClipPathInspectorSectionContainer />
     </div>

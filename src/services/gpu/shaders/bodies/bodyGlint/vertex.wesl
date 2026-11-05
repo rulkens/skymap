@@ -43,10 +43,6 @@ import package::lib::billboard::expandBillboardScreen;
 
 @group(0) @binding(0) var<uniform> u: CameraUniforms;
 
-// Depth epsilon: pull the clamped clip-z this far inside the far plane (in
-// ndc-z terms) so a point sitting exactly ON it still passes the clip test.
-const CLIP_Z_EPS: f32 = 1e-4;
-
 @vertex
 fn vs(
   @builtin(vertex_index) vi: u32,
@@ -67,12 +63,7 @@ fn vs(
   var out: VSOut;
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);
 
-  // Survive the adaptive foreground far plane on a deep descent (the NEAR0 far
-  // plane tracks camera distance): clamp clip-z to just inside the far plane so
-  // a glint just beyond it stays on screen. Safe only because this is the
-  // depthless additive HDR pass — see 'starPoints/vertex.wesl' for the full
-  // argument.
-  out.clip.z = min(out.clip.z, out.clip.w * (1.0 - CLIP_Z_EPS));
+  // No clip-z clamp here — see 'starPoints/vertex.wesl' for why.
 
   out.uv = corner;
   // Premultiply the tint by brightness: the fragment then stays identical to

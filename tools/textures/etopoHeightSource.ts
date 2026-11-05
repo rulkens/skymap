@@ -8,7 +8,7 @@
 
 import sharp from 'sharp';
 
-import type { HeightSource } from './HeightSource';
+import type { HeightSource } from './@types/HeightSource';
 import { geoTiffHeightSource } from './geoTiffHeightSource';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 

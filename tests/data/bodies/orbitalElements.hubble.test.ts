@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // JPL Horizons' own geocentric state VECTOR for Hubble at the epoch its ELEMENTS
 // columns were fetched at (`-48`, CENTER='500@399', REF_PLANE='FRAME', km).
@@ -15,8 +16,8 @@ const HORIZONS_GEOCENTRIC_KM = [2792.527610933961, 5568.581049348909, -2851.3664
 describe('the Hubble orbit row', () => {
   it('reproduces JPL’s geocentric vector at the fetch epoch', () => {
     const states = deriveBodyStates(HORIZONS_EPOCH_JD);
-    const hubble = states.get('hubble')!.positionMpc;
-    const earth = states.get('earth')!.positionMpc;
+    const hubble = states.get(asSceneBodyId('hubble'))!.positionMpc;
+    const earth = states.get(asSceneBodyId('earth'))!.positionMpc;
 
     for (let axis = 0; axis < 3; axis += 1) {
       const km = (hubble[axis]! - earth[axis]!) / SCALE_UNITS.KM_TO_MPC;

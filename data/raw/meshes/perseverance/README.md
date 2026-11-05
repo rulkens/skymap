@@ -11,7 +11,7 @@ pre-baked `meshes.perseverance` beside it is what `npm run build-meshes` reads.
 | Model      | "Mars 2020 Perseverance Rover"                                        |
 | Author     | Brian Kumanchik, NASA/JPL-Caltech                                     |
 | Source     | <https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/> |
-| Licence    | Public domain — NASA 3D Resources are "free and without copyright"    |
+| Licence    | NASA media guidelines; the collection calls its assets "free and without copyright" |
 | Fetch date | 2026-09-11                                                            |
 | File       | `Mars 2020 Perseverance Rover.glb`, 4,987,176 bytes                   |
 | sha256     | `10db7c03a5e63a5a3b3e7baa6243aa4918ba045fa8ff0a731d0217491adc727f`    |
@@ -49,8 +49,7 @@ materials, save, update this file's line in `../meshes.sha256`, then
 ## The pre-bake — what `build-meshes` actually reads
 
 `MESH_SOURCES.perseverance` points at `perseverance.prebaked.glb`, **not**
-`perseverance.blend`: the source carries 47 materials and is over the
-triangle budget. `buildMeshes` refuses multi-material input by design, so the
+`perseverance.blend`: the source carries 47 materials. `buildMeshes` refuses multi-material input by design, so the
 flattening happens upstream, once:
 
 ```
@@ -59,7 +58,7 @@ npm run prebake-mesh -- perseverance    # Blender 5.2 LTS; ~20 s, not run in CI
 
 `tools/meshes/prebake/meshPrebake.py` joins the 68 remaining parts (leaving
 behind any face-less/materialless leftovers, such as the `Icosphere` ground
-helper), decimates 199,482 → 100,000 tris, smart-UV-projects and bakes all 47
+helper), keeps all 199,482 tris (under `MESH_TRIANGLE_BUDGET`), smart-UV-projects and bakes all 47
 materials into one 2048² atlas per `BAKE_PASSES` row — albedo, normal,
 roughness and metallic. Its output and the four loose
 `perseverance.prebaked.*.png` atlases beside it are gitignored build products
@@ -76,7 +75,7 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 `npm run build-meshes` copies the string below onto the generated
 `MESH_ASSETS.perseverance` row:
 
-> Mars 2020 Perseverance Rover by Brian Kumanchik, NASA/JPL-Caltech — NASA 3D Resources, public domain (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)
+> Mars 2020 Perseverance Rover by Brian Kumanchik, NASA/JPL-Caltech — NASA 3D Resources (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)
 
 ## As inspected (2026-09-11)
 

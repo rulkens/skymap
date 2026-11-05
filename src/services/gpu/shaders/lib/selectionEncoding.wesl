@@ -37,26 +37,6 @@ const SELECTION_SOURCE_SENTINEL_CODE: u32 = 63u;
 /** Offset the pick fragment adds before writing into the r32uint texture. */
 const PICK_SENTINEL_OFFSET: u32 = 1u;
 
-/** Source code for cluster structures — see TS Source.Cluster. */
-const SOURCE_CODE_CLUSTER: u32 = 5u;
-
-/** Source code for supercluster structures — see TS Source.Supercluster. */
-const SOURCE_CODE_SUPERCLUSTER: u32 = 6u;
-
-/** Source code for void structures — see TS Source.Void. */
-const SOURCE_CODE_VOID: u32 = 7u;
-
-/** Source code for nearby-galaxy-group structures — see TS Source.Group (= 15). */
-const SOURCE_CODE_GROUP: u32 = 15u;
-
-/**
- * Source code for the survey (Gaia bin) stars — see TS Source.GaiaStars (= 24).
- * The star pick fragment packs '(SOURCE_GAIA_STARS << 26) | recordIdx' so a
- * picked star's identity shares the one packed-encoding home instead of inlining
- * a bare 24u literal.
- */
-const SOURCE_GAIA_STARS: u32 = 24u;
-
 /** Pack a (sourceCode, localIdx) pair into the canonical u32 layout. */
 fn packSelection(sourceCode: u32, localIdx: u32) -> u32 {
   return (sourceCode << SELECTION_SOURCE_SHIFT) | localIdx;

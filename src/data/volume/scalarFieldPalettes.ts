@@ -21,14 +21,14 @@
  *                                 when a dataset should "feel hot" — e.g.,
  *                                 a future X-ray or thermal field — so it
  *                                 reads visually distinct from viridis.
- *   - blue-purple              : CF-4 default; matches the Pomarède/Tully
- *                                 publication aesthetic for cosmography.
- *   - yellow-green             : MCPM default; deliberately distinct from
- *                                 blue-purple so the two layers read as
- *                                 separate overlays when both are on.
+ *   - blue-purple              : matches the Pomarède/Tully publication
+ *                                 aesthetic for cosmography.
+ *   - yellow-green             : deliberately distinct from blue-purple so
+ *                                 two density-volume layers read as separate
+ *                                 overlays when both are on.
  *   - coolwarm                 : divergent blue→neutral→red with V-shaped
  *                                 alpha.  For fields centred on a meaningful
- *                                 zero (CF-4 density contrast, velocity
+ *                                 zero (density contrast, velocity
  *                                 divergence) where voids AND overdensities
  *                                 are both interesting and the cosmic mean
  *                                 should fade out.

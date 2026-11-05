@@ -9,9 +9,9 @@ import { defaultAppState } from '../../../../tools/mcpm-workbench/src/state/defa
 import { commitCameraPose } from '../../../../tools/mcpm-workbench/src/state/view/viewSlice';
 
 /**
- * The task input-port rewrite adopts the main app's `attachOrbitControls` recognizer
+ * The task input-port rewrite adopts the shared `attachOrbitControls` recognizer
  * instead of hand-rolled DOM handlers, so these tests drive it the way
- * `tests/services/camera/orbitControls.test.ts` does: a recorder standing in for the
+ * `tests/tools/utils/input/attachOrbitControls.test.ts` does: a recorder standing in for the
  * canvas plus a stubbed `window` (vitest runs `node`, no jsdom), firing real
  * pointer/wheel events rather than calling per-event methods that no longer exist on
  * the module's public surface (`drain`/`getCameraPose`/`getHoverHandle`/

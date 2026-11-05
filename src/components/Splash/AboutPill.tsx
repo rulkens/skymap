@@ -1,4 +1,3 @@
-// src/components/Splash/AboutPill.tsx
 /**
  * AboutPill — top-bar pill that reopens the splash dialog. Thin
  * semantic wrapper over the shared PillButton chrome; owns only
@@ -9,7 +8,7 @@
 
 import { memo, type ReactNode } from 'react';
 import PillButton from '../common/PillButton/PillButton';
-import InfoIcon from './InfoIcon';
+import InfoIcon from '../icons/InfoIcon/InfoIcon';
 
 export type AboutPillProps = {
   readonly onClick: () => void;
@@ -19,7 +18,7 @@ export type AboutPillProps = {
 function AboutPill({ onClick, hidden = false }: AboutPillProps): ReactNode {
   return (
     <PillButton onClick={onClick} hidden={hidden} aria-label="About skymap" tooltip="About skymap">
-      <InfoIcon />
+      <InfoIcon size={14} />
     </PillButton>
   );
 }

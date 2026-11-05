@@ -6,6 +6,19 @@
  * the projection, declutter policy, envelope policy, and lift policy, so a
  * second instance is data, not a second code path.
  *
+ * ### Emphasis
+ *
+ * At the merge, before declutter, each label of a producer that names its
+ * `label` entry is multiplied by `emphasisOf` keyed on its `subjectId`, so
+ * focus recession is written once for every label and the focused subject's
+ * own label keeps full emphasis. Producers never see recession.
+ *
+ * ### Highlight
+ *
+ * After the envelope and before the lift, a label whose `pickId` names the
+ * hovered or selected ref has its colour blended toward white — one place for
+ * every clickable caption, and the lift copies the colour onto the leader.
+ *
  * ### Declutter, envelope, and lift are policy arms
  *
  * `config.declutter.mode` / `config.envelope.mode` select which stage
@@ -53,7 +66,7 @@
  * `applySmoothstepEnvelope` (COSMO) and `applyExponentialEnvelope` (NEAR0)
  * resolve it per `config.envelope.mode` — see their docblocks for the
  * fade-out mechanics and the three axes they differ on (target shape, seed
- * value, absence rule; spec §4.6). Both are pure functions of `ctx.nowMs`
+ * value, absence rule; spec §4.6). Both are pure functions of `ctx.snapshot.nowMs`
  * given their entry's state, so a stepped recorder clock replays identical
  * fades. COSMO's envelope MULTIPLIES the producer's own `fadeAlpha` (both
  * continuous, so the product is too; a first appearance therefore stacks
@@ -89,8 +102,9 @@
 import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
+import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
@@ -112,6 +126,15 @@ import { clampVec3Length } from '../../../utils/math/clampVec3Length';
 import { liftedLabelPlacement } from '../presentation/liftedLabelPlacement';
 import { FAMOUS_LABEL_STYLE } from '../presentation/famousLabelStyle';
 import { declutterByScreenSeparation } from '../../../utils/labels/declutterByScreenSeparation';
+import { proposedLiftPx } from '../../../utils/labels/proposedLiftPx';
+import { whitenColor } from '../../../utils/labels/whitenColor';
+import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { emphasisOf } from '../presentation/emphasisOf';
+import {
+  HOVERED_LABEL_WHITEN,
+  SELECTED_LABEL_WHITEN,
+} from '../../../data/labels/labelHighlightWhiten';
 
 /**
  * Ramp record for one label id under `smoothstepRamp` (COSMO).
@@ -154,16 +177,16 @@ type DeclutterResult = {
 };
 
 /**
- * `prominencePx` DESC, stable on input order — the one rank contract every
+ * `declutterPriority` DESC, stable on input order — the one rank contract every
  * declutter arm shares, whichever collision test it runs.  A label with no
- * prominence sinks to lowest priority rather than beating real structures.
+ * declutter priority sinks to lowest rather than beating real structures.
  * (Labels that must always win — the Milky Way "You are here" — declare it
- * explicitly with `prominencePx: Number.MAX_VALUE` in their producer.)
+ * explicitly with `declutterPriority: Number.MAX_VALUE` in their producer.)
  */
-function sortByProminenceDesc(labels: readonly Label2D[]): number[] {
+function sortByDeclutterPriorityDesc(labels: readonly Label2D[]): number[] {
   const order = labels.map((_, i) => i);
   order.sort((a, b) => {
-    const d = (labels[b]!.prominencePx ?? 0) - (labels[a]!.prominencePx ?? 0);
+    const d = (labels[b]!.declutterPriority ?? 0) - (labels[a]!.declutterPriority ?? 0);
     return d !== 0 ? d : a - b;
   });
   return order;
@@ -172,7 +195,7 @@ function sortByProminenceDesc(labels: readonly Label2D[]): number[] {
 /**
  * `bboxOverlap` declutter arm (COSMO). Reads each label's shared `clipW` to
  * reproduce the vertex shader's em clamp on the CPU, places the measured
- * text rect (`labelRenderer.measure` — real glyph ink, alignment shifts
+ * text rect (`measure` — real glyph ink, alignment shifts
  * applied), and accepts a label in rank order when its padded rect
  * intersects no already-accepted rect.  Two labels collide when their padded
  * rects INTERSECT — a label merely anchored near another (e.g. just below a
@@ -186,31 +209,31 @@ function sortByProminenceDesc(labels: readonly Label2D[]): number[] {
  * sort-independent).
  */
 function declutterByBboxOverlap(
-  labelRenderer: LabelRenderer,
+  measure: (label: Label2D) => LabelBBox | null,
   labels: readonly Label2D[],
   projected: readonly Label2DProjected[],
   projection: Label2DProjection,
   padPx: number,
 ): Label2D[] {
-  const viewportHeightPx = projection.viewportPx[1];
+  const { pxPerRad } = projection;
   // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
   // the pick path derives its hit boxes from the same function, so a label
   // cannot be decluttered against one rect and clicked on another.
   const rects: (ScreenRectPx | null)[] = labels.map((label, i) => {
     const p = projected[i]!;
     if (!p.screenPx) return null;
-    const bbox = labelRenderer.measure(label);
+    const bbox = measure(label);
     if (!bbox) return null;
     return labelScreenRect({
       label,
       bbox,
       screenPx: p.screenPx,
       clipW: p.clipW,
-      viewportHeightPx,
+      pxPerRad,
     });
   });
 
-  const order = sortByProminenceDesc(labels);
+  const order = sortByDeclutterPriorityDesc(labels);
   const accepted: number[] = [];
   for (const i of order) {
     const rect = rects[i];
@@ -245,7 +268,11 @@ function declutterByBboxOverlap(
  * `screenPx` (behind the camera) bypasses the cull unconditionally, exactly
  * as `declutterByBboxOverlap` never blocks on an off-screen anchor; the pure
  * `declutterByScreenSeparation` util does the priority-sorted greedy accept
- * over everything else. Returns a fresh array in original input order.
+ * over everything else. A label carrying `lift` is judged at its text's
+ * proposed lifted position, not its anchor: the lift stage runs later, over
+ * survivors, so this is the one place that can keep a planet's floated name
+ * from culling a rover standing at the planet's own anchor. Returns a fresh
+ * array in original input order.
  */
 function declutterByScreenSeparationArm(
   labels: readonly Label2D[],
@@ -253,7 +280,7 @@ function declutterByScreenSeparationArm(
   minSeparationPx: number,
 ): Label2D[] {
   const candidateIdx: number[] = [];
-  const candidates: { screenPx: Vec2; priorityPx: number }[] = [];
+  const candidates: { screenPx: Vec2; declutterPriority: number }[] = [];
   const accepted = new Set<number>();
   for (let i = 0; i < labels.length; i++) {
     const p = projected[i]!;
@@ -267,7 +294,11 @@ function declutterByScreenSeparationArm(
       continue;
     }
     candidateIdx.push(i);
-    candidates.push({ screenPx: p.screenPx, priorityPx: label.prominencePx ?? 0 });
+    const screenPx: Vec2 =
+      label.lift === undefined
+        ? p.screenPx
+        : [p.screenPx[0], p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx)];
+    candidates.push({ screenPx, declutterPriority: label.declutterPriority ?? 0 });
   }
   for (const k of declutterByScreenSeparation({ candidates, minSeparationPx })) {
     accepted.add(candidateIdx[k]!);
@@ -278,6 +309,9 @@ function declutterByScreenSeparationArm(
 export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDirector {
   let labelRenderer: LabelRenderer | null = null;
   let lineRenderer: MarkerLineRenderer | null = null;
+  let measureText: ((label: Label2D) => LabelBBox | null) | null = null;
+  // What `setLabels` last received — the passes read it for their gates and pick quads.
+  let flushedLabels: readonly Label2D[] = [];
   let producers: readonly Label2DProducer[] = [];
   // Signature of the last flushed label set, or null on the first frame.
   // Empty string is a valid signature (no labels) and is distinct from null.
@@ -293,10 +327,16 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   const smoothstepEnvelopes = new Map<string, SmoothstepEnvelopeEntry>();
   const exponentialEnvelopes = new Map<string, ExponentialEnvelopeEntry>();
 
-  function attachRenderers(label: LabelRenderer, line: MarkerLineRenderer): void {
+  function attachRenderers(
+    label: LabelRenderer,
+    line: MarkerLineRenderer,
+    measure: (label: Label2D) => LabelBBox | null,
+  ): void {
     labelRenderer = label;
     lineRenderer = line;
+    measureText = measure;
     prevSignature = null; // force the next frame to re-flush
+    flushedLabels = []; // the new renderer holds nothing yet
   }
 
   function registerProducer(producer: Label2DProducer): void {
@@ -306,7 +346,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   }
 
   function signatureOf(labels: readonly Label2D[]): string {
-    // Cheap stable signature: per-label `id:fadeAlpha:worldPos[:leaderToWorld]`,
+    // Cheap stable signature: per-label `id:fadeAlpha:worldPos[:leaderToWorld][:color][:pickId]`,
     // joined. A label's synthesized leader line (see `synthesizeLines`) carries
     // no state of its own beyond what's keyed here, so one term covers both.
     //
@@ -332,11 +372,13 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // and then nothing else keys the label's motion.  Keying the label's own
     // position closes that gap: a camera-derived label re-uploads on its
     // own, independent of whether its leader is present.  The glyph layout
-    // in `labelRenderer.setLabels` is cheap and label counts are tiny, so
+    // is memoised (`textLayoutOf`) and label counts are tiny, so
     // the per-orbit-frame re-upload this implies is the intended cost;
     // static-position producers (structures) keep their positions stable
-    // and still benefit from the skip.  Colours are still excluded — no
-    // producer varies a label's colour at fixed id.
+    // and still benefit from the skip.  `color` is keyed too: a hovered or
+    // selected structure label changes colour at a fixed id and position.
+    // So is `pickId`: focus strips it at a fixed id, and a stale one left
+    // uploaded would keep the label clickable.
     //
     // `leader.toWorld`, when present, is included for the same
     // camera-derived reason: the leader lines (famous-galaxy connectors,
@@ -356,7 +398,9 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         const leaderKey = l.leader
           ? `:${l.leader.toWorld[0]},${l.leader.toWorld[1]},${l.leader.toWorld[2]}`
           : '';
-        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}${leaderKey}`;
+        const colorKey = l.color ? `:${l.color.join(',')}` : '';
+        const pickKey = l.pickId !== undefined ? `:${l.pickId}` : '';
+        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}${leaderKey}${colorKey}${pickKey}`;
       })
       .join('|');
     return `L:${labels.length}:${lIds}`;
@@ -381,9 +425,11 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         pixelWidth: leader.pixelWidth,
         color: leader.color,
         fadeAlpha: label.fadeAlpha ?? 1,
-        // Same subject, same depth verdict: a connector must not fade into a
-        // disc its caption is allowed to paint over.
+        // Same subject, same depth verdict — both channels — so a connector
+        // never fades into a disc its caption is allowed to paint over, nor
+        // survives a ridge its caption clips against.
         occludeWeight: label.occludeWeight,
+        occludeNearKm: label.occludeNearKm,
       });
     }
     return lines;
@@ -406,7 +452,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * survivors, so a culled-but-still-emitted label eases toward 0 instead of
    * popping — see `applyExponentialEnvelope`).
    */
-  function declutter(labels: readonly Label2D[], ctx: ReadyFrameContext): DeclutterResult {
+  function declutter(labels: readonly Label2D[], ctx: FrameView): DeclutterResult {
     const projection = config.project(ctx);
     const projected = projectLabels(labels, projection);
     const policy = config.declutter;
@@ -414,7 +460,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     switch (policy.mode) {
       case 'bboxOverlap':
         survivors = declutterByBboxOverlap(
-          labelRenderer!,
+          measureText!,
           labels,
           projected,
           projection,
@@ -625,13 +671,13 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * constellation captions (which anchor in empty space and have no subject
    * to float above) simply never carry one.
    */
-  function applyLift(labels: readonly Label2D[], ctx: ReadyFrameContext): readonly Label2D[] {
+  function applyLift(labels: readonly Label2D[], ctx: FrameView): readonly Label2D[] {
     const policy = config.lift;
     if (!policy) return labels;
     const slab = ctx.slabs[policy.slab];
     if (!slab) throw new Error(`label2DDirector: no slab at index ${policy.slab}`);
     const projection = config.project(ctx); // memoised per ctx — free here
-    const renderer = labelRenderer!;
+    const measure = measureText!;
 
     const out: Label2D[] = [];
     for (const label of labels) {
@@ -672,8 +718,9 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         anchorWorldPos: liftAnchor,
         vp: projection.vp,
         viewportPx: projection.viewportPx,
+        pxPerRad: projection.pxPerRad,
         subjectSizePx: lift.subjectSizePx,
-        textBbox: renderer.measure(label),
+        textBbox: measure(label),
         worldEmMpc: liftEmMpc,
         minPixelSize: label.minPixelSize ?? LABEL_MIN_PX_DEFAULT,
         maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
@@ -692,6 +739,10 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       out.push({
         ...label,
         worldPos: placement.labelWorldPos,
+        // The depth-occlusion verdict must be judged where the SUBJECT is,
+        // not at the lifted caption's own worldPos above — 'anchor' is the
+        // pre-lift point, the same one 'leader.fromWorld' lerps from.
+        occludeSubjectPos: anchor,
         worldEmMpc: liftEmMpc,
         leader:
           placement.line === null
@@ -707,7 +758,26 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     return out;
   }
 
-  function runFrame(state: EngineState, ctx: ReadyFrameContext): boolean {
+  /**
+   * Blend the hovered and selected subjects' labels toward white. Absent
+   * colour is already white, and a label that needs no change passes through
+   * by reference so the steady state allocates nothing.
+   */
+  function applyHighlight(labels: readonly Label2D[], state: EngineState): readonly Label2D[] {
+    const hoveredPickId = encodeSelectionPick(state.selectionKindRows, state.selection.hover);
+    const selectedPickId = encodeSelectionPick(state.selectionKindRows, state.selection.select);
+    if (hoveredPickId === null && selectedPickId === null) return labels;
+    return labels.map((label) => {
+      if (label.pickId === undefined || !label.color) return label;
+      // Selected wins over hovered: the later assignment is the stronger cue.
+      let whiten = 0;
+      if (label.pickId === hoveredPickId) whiten = HOVERED_LABEL_WHITEN;
+      if (label.pickId === selectedPickId) whiten = SELECTED_LABEL_WHITEN;
+      return whiten === 0 ? label : { ...label, color: whitenColor(label.color, whiten) };
+    });
+  }
+
+  function runFrame(state: EngineState, ctx: FrameView): boolean {
     if (!labelRenderer || !lineRenderer) return false;
 
     // Collect outputs.  Producers are pure of state, so we just call
@@ -716,10 +786,20 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // array via signature.
     const mergedLabels: Label2D[] = [];
     let anyAwake = false;
+    // At blend 0 every emphasis is exactly 1, so the resting frame skips the lookups.
+    const atRest = ctx.snapshot.focusBlend === 0;
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
-      for (const l of out.labels) mergedLabels.push(l);
       if (out.awake) anyAwake = true;
+      if (p.label === undefined || atRest) {
+        for (const l of out.labels) mergedLabels.push(l);
+        continue;
+      }
+      const entry = visibilityEntryOf(state.visibilityEntries, `label:${p.label}`);
+      for (const l of out.labels) {
+        const emphasis = emphasisOf(entry, ctx.snapshot, l.subjectId);
+        mergedLabels.push(emphasis === 1 ? l : { ...l, fadeAlpha: (l.fadeAlpha ?? 1) * emphasis });
+      }
     }
 
     // Cross-producer declutter — producers emit every candidate (no internal
@@ -735,13 +815,16 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     const { labels: enveloped, anyRamping } = applyEnvelope(
       mergedLabels,
       declutterResult,
-      ctx.nowMs,
+      ctx.snapshot.nowMs,
     );
+
+    // Highlight stage: before the lift, which copies the colour onto the leader.
+    const highlighted = applyHighlight(enveloped, state);
 
     // Lift stage (NEAR0 only — a no-op array pass-through when
     // `config.lift` is null): runs over survivors only, after the envelope
     // has resolved the final alpha for each.
-    const labels = applyLift(enveloped, ctx);
+    const labels = applyLift(highlighted, ctx);
 
     // Flush contract: one MarkerLine per surviving leader-carrying label,
     // derived from the FINAL (post-declutter, post-envelope, post-lift) set.
@@ -750,6 +833,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     const sig = signatureOf(labels);
     if (sig !== prevSignature) {
       labelRenderer.setLabels(labels);
+      flushedLabels = labels;
       lineRenderer.setLines(lines);
       prevSignature = sig;
     }
@@ -765,6 +849,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     attachRenderers,
     registerProducer,
     runFrame,
+    labels: () => flushedLabels,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.
     },

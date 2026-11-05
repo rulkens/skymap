@@ -1,0 +1,104 @@
+.root {
+  composes: wrap grid section from '../../../../styles/layout.module.css';
+  row-gap: var(--site-space-2xl);
+  align-items: center;
+}
+
+.line {
+  composes: lead from '../../../../styles/type.module.css';
+}
+
+.figure {
+  margin: 0;
+}
+
+/* The files keep 24 px round each piece for its shadow; the percentages below are of the files, 932 × 160 and 1220 × 1028. */
+.bar {
+  width: 76.4%;
+}
+
+.lean {
+  composes: lean from '../../../../styles/motion.module.css';
+  position: relative;
+}
+
+/* A key and what it does, as the docs' figures print them, standing over the part of the bar it works. */
+.tag {
+  position: absolute;
+  bottom: 92%;
+  display: flex;
+  align-items: baseline;
+  gap: var(--site-space-2xs);
+  margin: 0;
+  color: var(--site-text-dim);
+  font-size: var(--text-small);
+  white-space: nowrap;
+}
+
+.searchTag {
+  left: 8%;
+}
+
+.homeTag {
+  left: 70.8%;
+  translate: -50% 0;
+}
+
+/* The app's selection ring, round the Home button: the way back. */
+.ring {
+  position: absolute;
+  top: 45%;
+  left: 70.8%;
+  width: 10%;
+  aspect-ratio: 1;
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  translate: -50% -50%;
+}
+
+/* The search opens 12 px under the bar's foot, its left edge on the bar's. */
+.palette {
+  composes: drift from '../../../../styles/motion.module.css';
+  position: relative;
+  z-index: 1;
+  margin-top: -6.6%;
+}
+
+/* Its first rows, the list then dissolving into the page: there are more results than the picture keeps. */
+.clip {
+  aspect-ratio: 1220 / 600;
+  overflow: hidden;
+  mask-image: linear-gradient(#000 52%, transparent);
+}
+
+/* Wide, the words take five columns and the pieces the page's right half, the panels' edges on its lines. */
+@media (--wide) {
+  .words {
+    grid-column: 1 / span 5;
+  }
+
+  .figure {
+    grid-column: 7 / -1;
+    width: calc(100% * 1220 / 1124);
+    margin-left: calc(-100% * 48 / 1124);
+  }
+
+  .bar .lean {
+    --depth: 0.625rem;
+  }
+
+  .palette .lean {
+    --depth: 1.25rem;
+  }
+
+  .palette {
+    --drift: 1.5rem;
+  }
+}
+
+/* Narrow, the pieces take the window's width, their shadow margins in the gutters. */
+@media (--narrow) {
+  .figure {
+    margin-inline: calc(-1 * var(--gutter));
+  }
+}

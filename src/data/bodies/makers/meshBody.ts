@@ -10,7 +10,9 @@
  */
 
 import { MESH_ASSETS } from '../meshAssets.generated';
+import { BODY_GLINT_MAX_PX } from '../bodyGlintMaxPx';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 /** Camera floor at two radii: the body fills the view. A ratio, not metres, so the 0.46 m pot and the 6.8 m whale both frame. */
 const MESH_BODY_STANDOFF_RADII = 2;
@@ -23,18 +25,22 @@ export type MeshBodySeed = {
   readonly captionRevealM?: number;
   /** Overrides `MESH_BODY_STANDOFF_RADII` where a thin boom, not the body, sets the radius. */
   readonly standoffRadii?: number;
+  /** See `MeshBody.presentFromIso`. */
+  readonly presentFromIso?: string;
 };
 
 export function meshBody(seed: MeshBodySeed): MeshBody {
   const asset = MESH_ASSETS[seed.meshKey];
   if (!asset) throw new Error(`meshBody: no MESH_ASSETS entry for meshKey '${seed.meshKey}'`);
   return {
-    id: seed.id,
+    id: asSceneBodyId(seed.id),
     label: seed.label,
     meshKey: seed.meshKey,
     boundingRadiusM: asset.boundingRadiusM,
     albedo: asset.meanAlbedo,
     standoffRadii: seed.standoffRadii ?? MESH_BODY_STANDOFF_RADII,
     captionRevealM: seed.captionRevealM,
+    presentFromIso: seed.presentFromIso,
+    resolvePx: BODY_GLINT_MAX_PX,
   };
 }

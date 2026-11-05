@@ -48,7 +48,10 @@ fn shadeMsdf(
 ) -> vec4<f32> {
   let s = textureSample(atlas, atlasSampler, uv, i32(fontIndex)).rgb;
   let d = median3(s.r, s.g, s.b) - 0.5;
-  let aa = fwidth(d);
+  // Floored: where the atlas saturates (quad corners) fwidth(d) is exactly 0,
+  // and smoothstep with edge0 == edge1 is undefined in WGSL — SwiftShader
+  // returns 1 there, filling every glyph quad solid (trailOcclusion precedent).
+  let aa = max(fwidth(d), 1e-4);
 
   // Fill mask (1 inside the glyph, 0 outside, smoothed at the edge).
   let fillMask = smoothstep(-aa, aa, d);

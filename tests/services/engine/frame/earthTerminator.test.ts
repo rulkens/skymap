@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
+import { sunDirLocal } from '../../../../src/utils/camera/bodyCompose/sunDirLocal';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { cubeSphereMesh } from '../../../../src/utils/math/cubeSphereMesh';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 /**
  * Reproduces the reported bug: with the sim clock live at 2026-07-21T14:00Z, the
@@ -14,7 +15,7 @@ import { cubeSphereMesh } from '../../../../src/utils/math/cubeSphereMesh';
  * Sub-solar longitude at 14:00 UTC: the Sun crosses the Greenwich meridian near
  * 12:00 UTC and the sub-solar point moves 15°/hour westward, so at 14:00 it sits
  * near -30°. Cross-checked via sidereal time: GMST ≈ 149.3°, the Sun's apparent
- * right ascension ≈ 120.6° (ecliptic longitude ~118.5°, obliquity 23.44°), so the
+ * right ascension ≈ 120.6° (ecliptic longitude ~118.5°, obliquity 23.439°), so the
  * sub-solar geographic longitude = RA - GMST ≈ -28.7°. Sub-solar latitude ≈ +20.5°
  * (late-July solar declination). Denmark at (10°E, 56°N) is ~39° of longitude east
  * of that meridian — well inside the 90° day hemisphere — so it MUST be lit.
@@ -73,7 +74,7 @@ function denmarkLocalDir(): [number, number, number] {
 
 describe('earth terminator', () => {
   it('places the sub-solar point at the astronomically correct direction (W(t) guard)', () => {
-    const earth = deriveBodyStates(JD_2026_07_21_1400Z).get('earth')!;
+    const earth = deriveBodyStates(JD_2026_07_21_1400Z).get(asSceneBodyId('earth'))!;
     const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
     // Sub-solar point in Earth's IAU body frame: longitude ≈ -28.7°, latitude
     // ≈ +20.5° (ground truth above). This has always been correct — it guards the
@@ -86,7 +87,7 @@ describe('earth terminator', () => {
   });
 
   it('lights the Denmark texel (day/night not inverted against the live clock)', () => {
-    const earth = deriveBodyStates(JD_2026_07_21_1400Z).get('earth')!;
+    const earth = deriveBodyStates(JD_2026_07_21_1400Z).get(asSceneBodyId('earth'))!;
     const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
     const dk = denmarkLocalDir();
     const lambert = dk[0] * sun[0] + dk[1] * sun[1] + dk[2] * sun[2];

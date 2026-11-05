@@ -35,6 +35,8 @@ const initialState: DebugSettings = {
   // Empty in production: a developer populates it from the DebugPanel's
   // renderer-toggle section. A fresh record per engine — never persisted.
   disabledPasses: {},
+  matteWhite: false,
+  meshAmbient: 0,
   // 'auto' reproduces the old timing-derived pass shape, so production +
   // ?gpuTimings stay identical to before Joint 1 (see `resolveStrategy`).
   renderStrategy: 'auto',
@@ -78,6 +80,12 @@ export const debugSlice = createSlice({
     setPassDisabled: (debug, action: PayloadAction<{ pass: string; disabled: boolean }>) => {
       // Open-world membership record (any pass name): `[name] === true` disables.
       debug.disabledPasses[action.payload.pass] = action.payload.disabled;
+    },
+    setMatteWhite: (debug, action: PayloadAction<boolean>) => {
+      debug.matteWhite = action.payload;
+    },
+    setMeshAmbient: (debug, action: PayloadAction<number>) => {
+      debug.meshAmbient = action.payload;
     },
     // Override the frame's render-pass shape independently of GPU timing (Joint 1;
     // see `resolveStrategy`). 'auto' restores the timing-derived default.
@@ -176,6 +184,8 @@ export const debugSlice = createSlice({
 export const {
   setDebugOverlay,
   setPassDisabled,
+  setMatteWhite,
+  setMeshAmbient,
   setRenderStrategy,
   inspectClipPath,
   recalcClipPath,

@@ -43,15 +43,16 @@ import { parseStructureSeed, type StructureSeedEntry } from '../parsers/parseStr
 import {
   encodeStructureCatalog,
   STRUCTURE_CATALOG_DATA_PREFIX,
-} from '../../src/data/structure/structureCatalogFormat';
+} from '../../src/layers/structure/catalog/data/structureCatalogFormat';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 import { dedupeByProximity } from '../curation/dedupeByProximity';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
+import { lengthToMpc } from '../../src/utils/math/lengthToMpc';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { H0_KM_S_MPC } from '../../src/utils/math/constants';
-import type { StructureCatalog } from '../../src/@types/data/structure/StructureCatalog';
-import type { StructureCategoryByte } from '../../src/@types/data/structure/StructureCatalog';
+import type { StructureCatalog } from '../../src/@types/data/structure/structureCatalog/StructureCatalog';
+import type { StructureCategoryByte } from '../../src/@types/data/structure/structureCatalog/StructureCategoryByte';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 
 // ── Tunable threshold constants ───────────────────────────────────────────────
@@ -326,8 +327,12 @@ export function buildClusterEntries(
 
   // ── Step 3: featured anchor list from seed ────────────────────────────────
   const featuredAnchors = featuredSeed.map((e) => ({
-    worldPos: raDecDistToEqCart(e),
-    radiusMpc: e.apparentRadiusMpc,
+    worldPos: raDecDistToEqCart({
+      raHours: e.raHours,
+      decDeg: e.decDeg,
+      distMpc: lengthToMpc(e.distance),
+    }),
+    radiusMpc: lengthToMpc(e.apparentRadius),
   }));
 
   // ── Step 4: dedup bulk entries against featured anchors ───────────────────

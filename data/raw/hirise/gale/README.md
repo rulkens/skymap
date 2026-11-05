@@ -10,7 +10,10 @@ Site band for Curiosity.
 
 Upstream: <https://planetarymaps.usgs.gov/mosaic/Mars/MSL/> (both files; the
 bucket also holds a 7.6 GB uncompressed DEM under `mosaic/` — not the one
-here). Fetched by hand 2026-09-15. Public domain (US government work).
+here). Fetched by hand 2026-09-15. The Astropedia records of the DEM and of the 25 cm
+orthophoto mosaic give access constraints "Please credit authors" (Timothy
+Parker and Fred J. Calef III) and use constraints "None" (read 2026-10-07);
+no record was found for the 78-quad colour file itself.
 
 ## DTM
 

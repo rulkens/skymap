@@ -31,7 +31,7 @@
  *
  * ### `tween` rejects 'target' at the type level
  *
- * The `ch` parameter of `tween` is typed `'distance' | 'yaw' | 'pitch'`
+ * The `ch` parameter of `tween` is typed `'distance' | 'yaw' | 'pitch' | 'roll'`
  * (not the full `Channel` union). Passing `'target'` is a compile-time error.
  * Vec3 channels use the dedicated `moveTarget` helper, which emits a `setVec`
  * arm rather than a `set` arm.
@@ -40,19 +40,19 @@
 import type { CameraAction } from '../../../@types/animation/CameraAction';
 import type { FocusBoundEffect } from '../../../@types/animation/FocusBoundEffect';
 import type { FocusId } from '../../../@types/animation/FocusId';
-import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Space } from '../../../@types/animation/Space';
-import type { PoseFrame } from '../../../@types/camera/PoseFrame';
+import type { PoseFrame } from '../../../@types/camera/pose/PoseFrame';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { VisibilityLayerArg } from '../../../@types/animation/VisibilityLayerArg';
-import type { ScopedVisibilityArg } from '../../../@types/animation/ScopedVisibilityArg';
+import type { GeodesicTuning } from '../../../@types/camera/focusMotion/GeodesicTuning';
+import type { VisibilityArg } from '../../../@types/animation/VisibilityArg';
+import type { ScopedVisibilityAddress } from '../../../@types/animation/ScopedVisibilityAddress';
 import { expandVisibilityLayers } from '../../../utils/animation/expandVisibilityLayers';
-import { splitVisibilityArgs } from '../../../utils/animation/splitVisibilityArgs';
-import type { SettingsAction } from '../../../@types/animation/SettingsAction';
+import type { SettingsAction } from '../../../compositions/@types/SettingsAction';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import type { PassByConfig } from '../../../@types/animation/PassByConfig';
@@ -73,7 +73,7 @@ import {
 /**
  * tween — builds a `set` CameraAction on a SCALAR channel.
  *
- * `ch` is intentionally narrowed to `'distance' | 'yaw' | 'pitch'`. The Vec3
+ * `ch` is intentionally narrowed to the scalar channels. The Vec3
  * channel `'target'` is not a scalar and is NOT accepted here — use
  * `moveTarget` instead. Passing `'target'` is a compile-time error.
  *
@@ -84,7 +84,7 @@ import {
  * `ease` defaults to `'easeInOutCubic'` (the natural choice for A→B camera moves).
  */
 export function tween(
-  ch: 'distance' | 'yaw' | 'pitch',
+  ch: 'distance' | 'yaw' | 'pitch' | 'roll',
   opts: { to: number; over: number; ease?: Ease; space?: Space; frame?: PoseFrame },
 ): CameraAction & { kind: 'set' } {
   return {
@@ -134,6 +134,21 @@ export function moveTarget(
     space: 'lin',
     ...(frame !== undefined ? { frame } : {}),
   };
+}
+
+/**
+ * geodesic — fly target and distance together along van Wijk & Nuij's zoom/pan
+ * path to `to`. `over` (seconds) omitted ⇒ the arc-length duration `tuning`
+ * derives. It owns target and distance for its window, so don't also drive them
+ * with `moveTarget` / `dollyTo` there; yaw and pitch tweens may run beside it.
+ */
+export function geodesic(
+  to: { readonly target: Vec3; readonly distance: number },
+  tuning: GeodesicTuning,
+  fovYRad: number,
+  over?: number,
+): Effect & { kind: 'geodesic' } {
+  return { kind: 'geodesic', to, tuning, fovYRad, ...(over !== undefined ? { over } : {}) };
 }
 
 /**
@@ -339,54 +354,43 @@ export function fork(child: Effect): Effect & { kind: 'fork' } {
 // ---------------------------------------------------------------------------
 
 /**
- * show — set visibility INTENT for `layers` to visible, fading in over `over`
+ * show — set visibility INTENT for `args` to visible, fading in over `over`
  * seconds (`undefined` → default fade duration; `0` → instant).
  *
- * Dispatches the same settings actions the UI does. The bridge in
- * `syncVisibilityFades` handles the translation to per-layer fade controllers.
- *
- * `layers` accepts three vocabularies in one list: atomic keys, authoring
- * aggregates (`'labels'` → every label layer), and `'family:scope'`
- * scoped entries (`'survey:milliquas'`, `'structureRing:group'`,
- * `'label:milkyWay'`) that address ONE item where the bare key would fan over
- * all. `splitVisibilityArgs` resolves the mix at construction: aggregates
- * flatten to atomic keys, scoped entries move to the effect's `scoped` field.
- * Scoped fades ride the reactive settings→fade bridge, so `over` applies to
- * the atomic layers only.
+ * `args` mixes atomic addresses (`'flow'`, `'label:milkyWay'`), one item of a
+ * per-item entry (`'survey:milliquas'`, `'label:structure:void'`) and the
+ * `'labels'` aggregate, expanded here. Every arg takes the same write at fire
+ * time and honours `over`.
  */
 export function show(
-  layers: (VisibilityLayerArg | ScopedVisibilityArg)[],
+  args: readonly (VisibilityArg | ScopedVisibilityAddress)[],
   over?: number,
 ): SceneEffect & { kind: 'show' } {
-  const split = splitVisibilityArgs(layers);
   return {
     kind: 'show',
-    layers: split.layers,
-    ...(split.scoped.length > 0 ? { scoped: split.scoped } : {}),
+    args: expandVisibilityLayers(args),
     ...(over !== undefined ? { over } : {}),
   };
 }
 
 /**
- * hide — set visibility INTENT for `layers` to hidden, fading out over `over`
- * seconds (`undefined` → default fade duration; `0` → instant). Accepts
- * aggregates (`'labels'`) and scoped entries (`'survey:milliquas'`) — see `show`.
+ * hide — set visibility INTENT for `args` to hidden, fading out over `over`
+ * seconds (`undefined` → default fade duration; `0` → instant). Same args as
+ * `show`.
  */
 export function hide(
-  layers: (VisibilityLayerArg | ScopedVisibilityArg)[],
+  args: readonly (VisibilityArg | ScopedVisibilityAddress)[],
   over?: number,
 ): SceneEffect & { kind: 'hide' } {
-  const split = splitVisibilityArgs(layers);
   return {
     kind: 'hide',
-    layers: split.layers,
-    ...(split.scoped.length > 0 ? { scoped: split.scoped } : {}),
+    args: expandVisibilityLayers(args),
     ...(over !== undefined ? { over } : {}),
   };
 }
 
 /**
- * fade — move the transient clip opacity of `layers` to `to` over `over`
+ * fade — move the transient clip opacity of `args` to `to` over `over`
  * seconds.
  *
  * Does NOT touch intent (the layer stays loaded/enabled). Only drives
@@ -395,11 +399,11 @@ export function hide(
  * reveal" idioms.
  */
 export function fade(
-  layers: VisibilityLayerArg[],
+  args: readonly VisibilityArg[],
   to: number,
   over: number,
 ): SceneEffect & { kind: 'fade' } {
-  return { kind: 'fade', layers: expandVisibilityLayers(layers), to, over };
+  return { kind: 'fade', args: expandVisibilityLayers(args), to, over };
 }
 
 /**

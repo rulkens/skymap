@@ -4,7 +4,7 @@
 
 `src/services/engine/helpers/rowFocusable.ts`'s `ROW_FOCUSABLE` (an
 exhaustive `Record<SelectionRow['type'], boolean>`) and
-`src/services/engine/camera/focusFraming.ts:122-123`'s `zoneOfAvoidance` arm
+`src/services/engine/camera/framing/focusFraming.ts:122-123`'s `zoneOfAvoidance` arm
 (a `throw new Error(...)` defended by a multi-line "unreachable by
 construction" comment) both encode the same fact — "this row kind carries no
 world position to frame a camera on" — and nothing checks the two against
@@ -15,14 +15,12 @@ or a silently-ignored focus request (if the throw is softened but
 
 The root cause is that `SelectionRow` has no type-level way to say "carries
 no `x`/`y`/`z`" — every consumer that needs to know re-derives the answer by
-hand. At least seven do: `ROW_FOCUSABLE`, `focusFraming`, `focusIdOf`
-(`src/services/url/focusIdOf.ts`), `urlHashFor`
-(`src/services/url/urlHashFor.ts`), `selectionHaloTable`
-(`src/services/engine/frame/passes/selectionRingPass.ts` and
-`near0SelectionRingPass.ts`), `detailCardTable`'s omitted `onFocus` arm, and
-`focusRecession` (`src/services/engine/presentation/focusRecession.ts`).
+hand. At least four do: `ROW_FOCUSABLE`, `focusFraming`, `selectionHaloTable`
+(`src/services/engine/helpers/selectionHaloTable.ts`, read by
+`selectionRingPass.ts` and `near0SelectionRingPass.ts`) and `detailCardTable`'s
+omitted `onFocus` arm.
 
-Severity is bounded: every one of the seven sites is an exhaustive `Record`
+Severity is bounded: every one of the four sites is an exhaustive `Record`
 or exhaustive `switch`, so the compiler forces a visit on every new
 `SelectionRow` variant — you can answer the "is this focusable" question
 inconsistently across sites, but you cannot forget to answer it anywhere.
@@ -43,4 +41,4 @@ structure | milkyWay | body | star`), so a function that only accepts
   positioned rows can say so in its parameter type instead of re-checking at
   runtime. Larger change; would let `ROW_FOCUSABLE` disappear entirely for
   callers that can be typed against the narrower union, at the cost of
-  threading a second row type through the seven consumer sites.
+  threading a second row type through the four consumer sites.

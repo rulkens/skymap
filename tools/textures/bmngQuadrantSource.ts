@@ -33,8 +33,8 @@ import { existsSync } from 'node:fs';
 
 import sharp from 'sharp';
 
-import { levelFittingWidth } from '../../src/utils/surfaceTiles/levelFittingWidth';
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import { levelFittingWidth } from '../../src/layers/body/surfaceTiles/format/utils/levelFittingWidth';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Longitude and latitude extent of one quadrant, in degrees. */

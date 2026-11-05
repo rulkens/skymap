@@ -1,0 +1,147 @@
+/* The accent is the galaxy's core, from the render. */
+.root {
+  composes: wrap grid from '../../../../styles/layout.module.css';
+  --color-accent: var(--site-accent-galaxy-core);
+  row-gap: var(--site-space-xl);
+  padding-block: var(--site-space-2xl);
+}
+
+/* The distance, set as a picture across the render's lower right, under the card. */
+.reading {
+  display: grid;
+  margin: 0;
+  pointer-events: none;
+}
+
+.value {
+  composes: figure-value from '../../../../styles/picture.module.css';
+  color: var(--color-accent);
+}
+
+.measure {
+  color: var(--site-text-muted);
+  font-size: var(--text-small);
+}
+
+.title {
+  font-size: var(--text-ring-big);
+  line-height: var(--leading-display);
+}
+
+.words p {
+  max-width: var(--measure-lead);
+}
+
+.figure {
+  margin: 0;
+}
+
+/* The render has no frame: its edges dissolve into the page, so the pieces stand in the same space as the galaxy. */
+.render picture {
+  display: block;
+  mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 58%, transparent 100%);
+}
+
+.navigation img,
+.card img {
+  filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
+}
+
+.caption {
+  margin-top: var(--site-space-2xs);
+}
+
+/*
+ * Wide, the words take four columns and the render the other eight beside them, and the pieces break its edges:
+ * the card rises from its upper right, the Navigation panel hangs from its lower left under the words. Each is
+ * drawn a little under the size it has in the app.
+ */
+@media (--wide) {
+  .root {
+    align-items: start;
+  }
+
+  .words,
+  .figure {
+    grid-row: 1;
+  }
+
+  .words {
+    grid-column: 1 / span 4;
+  }
+
+  .figure {
+    grid-column: 5 / -1;
+  }
+
+  .stage {
+    position: relative;
+  }
+
+  .navigation,
+  .card {
+    position: absolute;
+    z-index: 1;
+    width: 31%;
+  }
+
+  /* The card, the nearest, leans furthest from the pointer and moves the most against the scroll. */
+  .navigation {
+    --depth: 1.25rem;
+    --drift: 1.5rem;
+    bottom: 2%;
+    left: -15%;
+  }
+
+  .card {
+    --depth: 2.5rem;
+    --drift: 3rem;
+    top: -10%;
+    right: 3%;
+  }
+
+  .reading {
+    position: absolute;
+    right: 4%;
+    bottom: 6%;
+    justify-items: end;
+  }
+}
+
+/* Narrow, the render takes the window's width and the two pieces stand side by side over its foot. */
+@media (--narrow) {
+  .stage {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    column-gap: var(--col-gap);
+    margin-inline: calc(-1 * var(--gutter));
+    padding-inline: var(--gutter);
+  }
+
+  .render {
+    grid-column: 1 / -1;
+    margin-inline: calc(-1 * var(--gutter));
+  }
+
+  .navigation,
+  .card {
+    position: relative;
+    z-index: 1;
+    margin-top: -3rem;
+  }
+
+  .reading {
+    grid-column: 1 / -1;
+    margin-top: var(--site-space-s);
+  }
+}
+
+/* Wide, the pieces are nearer than the galaxy: as the page scrolls they move against it. */
+.navigation {
+  composes: drift lean from '../../../../styles/motion.module.css';
+}
+
+.card {
+  composes: drift lean from '../../../../styles/motion.module.css';
+}

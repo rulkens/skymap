@@ -30,9 +30,9 @@ async function quadrantImage(): Promise<string> {
       const left = x < w / 2;
       const top = y < h / 2;
       data[i] = left && top ? 255 : top ? 0 : !left && !top ? 255 : 0; // R
-      data[i + 1] = !left && top ? 255 : 0;                              // G
-      data[i + 2] = left && !top ? 255 : !left && !top ? 255 : 0;        // B
-      data[i + 3] = 255;                                                  // A
+      data[i + 1] = !left && top ? 255 : 0; // G
+      data[i + 2] = left && !top ? 255 : !left && !top ? 255 : 0; // B
+      data[i + 3] = 255; // A
     }
   }
   const png = await sharp(data, { raw: { width: w, height: h, channels: 4 } })
@@ -50,7 +50,11 @@ describe('rotatedExtract', () => {
       .png()
       .toBuffer();
     const pipeline = await rotatedExtract(src, {
-      x: 10, y: 10, width: 40, height: 40, rotationDeg: 0,
+      x: 10,
+      y: 10,
+      width: 40,
+      height: 40,
+      rotationDeg: 0,
     });
     const result = await pipeline.png().toBuffer();
     expect(result.equals(baseline)).toBe(true);
@@ -60,12 +64,13 @@ describe('rotatedExtract', () => {
     const src = await quadrantImage();
     // x=-20 means the leftmost 20px of the extract is outside the image.
     const pipeline = await rotatedExtract(src, {
-      x: -20, y: 10, width: 40, height: 40, rotationDeg: 0,
+      x: -20,
+      y: 10,
+      width: 40,
+      height: 40,
+      rotationDeg: 0,
     });
-    const { data, info } = await pipeline
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+    const { data, info } = await pipeline.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     expect(info.width).toBe(40);
     expect(info.height).toBe(40);
     // First column (x=0 in the output) is at source-x=-20 → out of bounds.
@@ -83,14 +88,22 @@ describe('rotatedExtract', () => {
     // (red, green) over (blue, white); at rotation=90 (CW), the layout
     // becomes (blue, red) over (white, green).
     const unrotated = await rotatedExtract(src, {
-      x: 25, y: 25, width: 50, height: 50, rotationDeg: 0,
+      x: 25,
+      y: 25,
+      width: 50,
+      height: 50,
+      rotationDeg: 0,
     });
     const ub = await unrotated.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const topLeftUnrotated = [ub.data[0], ub.data[1], ub.data[2]];
     expect(topLeftUnrotated).toEqual([255, 0, 0]); // red
 
     const rotated = await rotatedExtract(src, {
-      x: 25, y: 25, width: 50, height: 50, rotationDeg: 90,
+      x: 25,
+      y: 25,
+      width: 50,
+      height: 50,
+      rotationDeg: 90,
     });
     const rb = await rotated.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const topLeftRotated = [rb.data[0], rb.data[1], rb.data[2]];

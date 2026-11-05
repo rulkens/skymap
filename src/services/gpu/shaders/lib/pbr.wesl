@@ -353,6 +353,8 @@ fn pbrDirectSphere(
 // the LUT's 'f0 * scale + bias' at (NoV, roughness). That product is also the
 // directional albedo the specular took, so the diffuse -- the coarsest mip, the
 // roughness-1 lobe standing in for the cosine hemisphere -- gets the remainder.
+// 'ao' (baked, 1 = open) dims this environment only, never the sun; specular
+// takes Lagarde 2014's occlusion, which lets grazing and glossy lobes escape.
 
 fn envSplitSum(
   n: vec3<f32>,
@@ -364,6 +366,7 @@ fn envSplitSum(
   probeSampler: sampler,
   lut: texture_2d<f32>,
   lutSampler: sampler,
+  ao: f32,
 ) -> vec3<f32> {
   let NoV = max(dot(n, v), 0.0);
   let r = reflect(-v, n);
@@ -373,7 +376,8 @@ fn envSplitSum(
   let ab = textureSampleLevel(lut, lutSampler, vec2<f32>(NoV, roughness), 0.0).rg;
 
   let specularAlbedo = f0 * ab.x + ab.y;
-  let specular = prefiltered * specularAlbedo;
-  let diffuse = (vec3<f32>(1.0) - specularAlbedo) * diffuseAlbedo * irradiance;
+  let specularOcclusion = saturate(pow(NoV + ao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ao);
+  let specular = prefiltered * specularAlbedo * specularOcclusion;
+  let diffuse = (vec3<f32>(1.0) - specularAlbedo) * diffuseAlbedo * irradiance * ao;
   return diffuse + specular;
 }

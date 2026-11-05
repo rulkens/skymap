@@ -5,13 +5,18 @@
  * body-fixed coordinates are not.
  */
 
+import type { MeshSeatKind } from './MeshSeatKind';
+import type { SceneBodyId } from './SceneBodyId';
+import type { SurfaceSiteId } from './SurfaceSiteId';
+
 export type SurfaceFixedSite = {
-  readonly id: string;
-  readonly hostId: string;
-  /** Planetocentric latitude, degrees. */
+  readonly id: SurfaceSiteId;
+  readonly hostId: SceneBodyId;
+  /** Latitude, degrees — planetocentric on Mars; geodetic (WGS84) on Earth, which the Earth tiles map straight onto the sphere. */
   readonly latDeg: number;
   /** EAST-positive longitude, degrees, on the host's IAU body-fixed frame. */
   readonly lonDeg: number;
   /** Height above the host's mean sphere, metres. */
   readonly altitudeM: number;
+  readonly seat: MeshSeatKind;
 };

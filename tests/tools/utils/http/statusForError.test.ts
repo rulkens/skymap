@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { statusForError } from '../../../../tools/utils/http/statusForError';
-import type { ErrorStatusRule } from '../../../../tools/utils/http/ErrorStatusRule';
+import type { ErrorStatusRule } from '../../../../tools/@types/http/ErrorStatusRule';
 
 describe('statusForError', () => {
   it("returns the first matching rule's status, ignoring later matches", () => {

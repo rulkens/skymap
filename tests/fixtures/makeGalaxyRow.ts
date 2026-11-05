@@ -9,7 +9,7 @@
  * an override supplies it when a test exercises the famous-galaxies-meta block.
  */
 
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 
 import type { GalaxyRow } from '../../src/@types/engine/GalaxyRow';
 

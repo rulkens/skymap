@@ -17,7 +17,7 @@ export type ScalarFieldPaletteId =
   /**
    * Divergent blue → neutral → red, with V-shaped alpha (visible at
    * both ends, transparent at the midpoint).  Designed for fields
-   * centered on a meaningful zero — CF-4 density contrast, residual
+   * centered on a meaningful zero — density contrast, residual
    * peculiar-velocity divergence, anything where voids and overdensities
    * are equally interesting and the cosmic mean should fade out.
    * Inspired by matplotlib's `coolwarm` / `bwr` colour scheme.

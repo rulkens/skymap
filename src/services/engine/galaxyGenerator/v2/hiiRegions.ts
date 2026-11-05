@@ -22,7 +22,7 @@ import {
 } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
 import { ismMapGridRadius, ISM_MAP_AZ, ISM_MAP_RINGS } from './galaxyIsmMapArmForcing';
-import type { GalaxyIsmMapGridRadius } from './galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../@types/galaxy/GalaxyIsmMapGridRadius';
 import { buildGalaxyIsmMapFluidEvents, ismMapFluidEventWindow } from './galaxyIsmMapFluidEvents';
 import { buildSfEventCatalog } from './sfEventCatalog';
 import {
@@ -562,15 +562,12 @@ function buildDigVeil(
   // cache miss, so a `complexes`/`elongation`/`coherence`/`texture` drag
   // (this tier's actually-common sliders) skips both the envelope setup AND
   // the CDF's O(rings x az x arms) sweep.
-  const cdf = digCdfMemo.get(
-    [ismMap, geometry, tuning.arms.widthScale, armBias],
-    () => {
-      const envelope = buildArmProximityEnvelope(geometry, tuning);
-      return buildIsmMapDustCdf(ismMap, (texel, radius, angle) =>
-        armBiasedDensity(texel.activity, armBias, envelope, radius, angle),
-      );
-    },
-  );
+  const cdf = digCdfMemo.get([ismMap, geometry, tuning.arms.widthScale, armBias], () => {
+    const envelope = buildArmProximityEnvelope(geometry, tuning);
+    return buildIsmMapDustCdf(ismMap, (texel, radius, angle) =>
+      armBiasedDensity(texel.activity, armBias, envelope, radius, angle),
+    );
+  });
   if (!(cdf.total > 0)) return [];
 
   const digRatio = Math.min(DIG_FLUX_RATIO_MAX, fraction / (1 - fraction));

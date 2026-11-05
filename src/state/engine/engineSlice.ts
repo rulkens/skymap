@@ -23,10 +23,8 @@ import type { CoreEngineSliceState } from '../../@types/store/CoreEngineSliceSta
 import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
-import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
-import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
-import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
@@ -40,10 +38,8 @@ const CORE_INITIAL: CoreEngineSliceState = {
   focusedBodyDistanceMpc: null,
   hdrCapable: false,
   sourceCounts: {},
-  structureCounts: {},
   loadProgress: null,
-  structureSearchList: [],
-  meta: { famousStars: [] },
+  layerSearch: {},
 };
 
 const engineSlice = createSlice({
@@ -65,44 +61,27 @@ const engineSlice = createSlice({
       state.sourceCounts[action.payload.source] = action.payload.count;
     },
 
-    // ── per-structure counts ─────────────────────────────────────────────────
-    // Whole-map replace: structure counts are computed once per source load,
-    // not incrementally per structure.
-    engineStructureCountsChanged: (
-      state,
-      action: PayloadAction<Partial<Record<StructureId, number>>>,
-    ) => {
-      state.structureCounts = action.payload;
-    },
-
     // ── load progress ────────────────────────────────────────────────────────
     engineLoadProgressChanged: (state, action: PayloadAction<LoadProgressState | null>) => {
       state.loadProgress = action.payload;
     },
 
-    // ── structure search index ───────────────────────────────────────────────
-    // Whole-array replace, dispatched by `wireStructureProjection` at boot and
-    // on every later group change — the same schedule as its counts dispatch.
-    engineStructureSearchListChanged: (
+    // ── per-Layer palette rows ───────────────────────────────────────────────
+    // Whole-snapshot replace under the Layer's own key, one dispatch per yield
+    // of its `search` feed — a Layer whose rows clear yields `[]`.
+    layerSearchReported: (
       state,
-      action: PayloadAction<readonly StructureSearchEntry[]>,
+      action: PayloadAction<{ layer: string; rows: readonly LayerSearchEntry[] }>,
     ) => {
-      state.structureSearchList = [...action.payload];
+      // Cast: Immer's draft type wants a mutable `names` array inside each row,
+      // but the rows are authored readonly and only ever replaced wholesale.
+      const byLayer = state.layerSearch as Record<string, readonly LayerSearchEntry[]>;
+      byLayer[action.payload.layer] = [...action.payload.rows];
     },
-
-    // ── curated metadata sidecars ────────────────────────────────────────────
-    // Whole-array replace, dispatched once per sidecar by its asset slot when
-    // the fetch settles — success writes the parsed entries, failure writes `[]`
-    // so React's fail-soft paths are reached by the same route as "not loaded
-    // yet". The asset slot is the payload's sole writer and this slice is its
-    // only home, so React and the engine can never see divergent copies. The
-    // spread copies the readonly payload into the Immer draft, which wants a
-    // mutable array slot even though nothing mutates it.
-    engineFamousStarsMetaReported: (
-      state,
-      action: PayloadAction<readonly FamousStarMetaEntry[]>,
-    ) => {
-      state.meta.famousStars = [...action.payload];
+    // Teardown drops the Layer's key, or an engine re-create (HMR, exhibit
+    // switch) would leave the old rows beside the fresh feed's.
+    layerSearchCleared: (state, action: PayloadAction<{ layer: string }>) => {
+      delete (state.layerSearch as Record<string, unknown>)[action.payload.layer];
     },
 
     // ── scale bar ────────────────────────────────────────────────────────────
@@ -168,10 +147,9 @@ const engineSlice = createSlice({
 export const {
   engineStatusChanged,
   engineSourceCountReported,
-  engineStructureCountsChanged,
   engineLoadProgressChanged,
-  engineStructureSearchListChanged,
-  engineFamousStarsMetaReported,
+  layerSearchReported,
+  layerSearchCleared,
   engineScaleChanged,
   engineBodyDistanceReported,
   engineHdrCapabilityChanged,

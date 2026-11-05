@@ -2,7 +2,7 @@
  * noStoredRegimeFlag — spec §4/§11's grep criterion: `camera.base.frame` (a
  * `PoseFrame`) IS the regime, so a boolean shadowing it — `isSurfaceMode`,
  * `regimeEngaged`, whatever the name — would make an inconsistent pair
- * representable, exactly the mirror-state failure the rung table exists to
+ * representable, exactly the mirror-state failure the arm table exists to
  * avoid. This is an import-graph / declaration scan (ts-morph, real AST
  * nodes), not a source-text grep, in the shape of `oneMpcSeam.test.ts`: a
  * substring search bans nothing a comment or a string literal couldn't dodge,
@@ -32,7 +32,6 @@ const BOOLEAN_TYPE_TEXTS = new Set(['boolean', 'true', 'false']);
 const SWEPT_DIRS: readonly string[] = [
   'src/state',
   'src/services/engine/camera',
-  'src/services/camera',
   'src/@types/camera',
   'src/layers',
 ];
@@ -41,9 +40,12 @@ const FILES: readonly string[] = SWEPT_DIRS.flatMap((dir) => walkFiles(dir, ['.t
 
 // Allow-list: pre-existing declarations the sweep's name pattern would catch
 // that are NOT a regime flag. Each entry names why it is not the thing §4
-// forbids. Empty — kept as the widening point a future false-positive should
-// use instead of loosening NAME_PATTERN or BOOLEAN_TYPE_TEXTS.
-const ALLOW_LIST: ReadonlySet<string> = new Set();
+// forbids. The widening point a future false-positive should use instead of
+// loosening NAME_PATTERN or BOOLEAN_TYPE_TEXTS.
+const ALLOW_LIST: ReadonlySet<string> = new Set([
+  // `engaged` is the tile stream's own per-body readout, not a camera regime.
+  'src/layers/body/surfaceTiles/debug/@types/SurfaceTileDebugSnapshot.d.ts',
+]);
 
 type NamedDeclaration = VariableDeclaration | PropertySignature | PropertyDeclaration;
 

@@ -5,6 +5,7 @@
  * off the names: neither can see a Layer closure that only exists after boot.
  */
 
+import { rosterPassNames } from '../../../utils/render/rosterPassNames';
 import { FRAME_ORDER } from './frameOrder';
 
 export const FRAME_ORDER_PASS_NAMES: readonly string[] = [
@@ -13,7 +14,8 @@ export const FRAME_ORDER_PASS_NAMES: readonly string[] = [
       if (spec.kind === 'render') return spec.passes;
       if (spec.kind === 'capture')
         return [...spec.cosmoPasses, ...spec.near0Passes, ...spec.bodyPasses];
-      if (spec.kind === 'foreground') return [...spec.near0Passes, ...spec.bodyPasses];
+      if (spec.kind === 'foreground')
+        return [...spec.near0Passes, ...rosterPassNames(spec.bodyPasses)];
       return [];
     }),
   ),

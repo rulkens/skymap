@@ -11,29 +11,45 @@
 
 import type { UnknownAction } from '@reduxjs/toolkit';
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { CameraProjection } from '../../../@types/camera/CameraProjection';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../@types/camera/projection/CameraProjection';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
-import type { RungCtx } from '../../../@types/camera/RungCtx';
+import type { DriverId } from '../../../@types/engine/camera/DriverId';
+import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
 import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
 
-import { replayInput } from './replayInput';
-import { pickWinner, elapsedForWinner } from './cameraDrivers';
-import { advanceEpochs, elapsedMs } from './cameraEpochs';
-import { commitOnEdge } from './commitOnEdge';
-import { pivotFraming } from './pivotRadiusMpc';
-import { releasedWorldArm } from './releasedWorldArm';
-import { frameKey } from './rungs/frameKey';
-import { rowFor } from './rungs/rowFor';
-import { resolveFrameBasis } from './resolveFrameBasis';
-import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './cameraFraming';
+import { replayInput } from './input/replayInput';
+import { pickWinner, elapsedForWinner, settledMemory } from './drivers/cameraDrivers';
+import { advanceEpochs, elapsedMs } from './drivers/cameraEpochs';
+import { commitOnEdge } from './drivers/commitOnEdge';
+import { pivotFraming } from './framing/pivotRadiusMpc';
+import { coverShiftNdc } from './lens/utils/coverShiftNdc';
+import { easedShiftNdc } from './lens/utils/easedShiftNdc';
+import { shiftedFrustum } from './lens/utils/shiftedFrustum';
+import { ridesWheelTarget } from './input/ridesWheelTarget';
+import { releasedWorldArm } from './arms/world/releasedWorldArm';
+import { frameKey } from './arms/frameKey';
+import { nudgeCameraArm } from './arms/nudgeCameraArm';
+import { rowFor } from './arms/rowFor';
+import { isWorldArm } from './arms/world/isWorldArm';
+import { resolveFrameBasis } from './orientation/resolveFrameBasis';
+import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './framing/cameraFraming';
 import { projectFramePose } from '../frame/projectFramePose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { stepNavigator } from './drivers/utils/stepNavigator';
+import { isNavigatorDriverId } from './drivers/utils/isNavigatorDriverId';
+import { NAV_AT_REST } from '../../../data/camera/openSpaceNavigation';
+import { reencodePose } from './drivers/utils/reencodePose';
+import { absoluteArm } from '../../../utils/camera/arms/absoluteArm';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
+import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
+import { focusMoveDurationMs } from './clips/focusMoveDurationMs';
+import { selectGestureHeld } from '../../../state/input/selectors';
 import cameraReducer, {
   cancelCameraTween,
   clearFrameTween,
+  commitCameraPose,
 } from '../../../state/camera/cameraSlice';
 
 export function stepCameraRuntime(
@@ -54,16 +70,54 @@ export function stepCameraRuntime(
   const {
     nowMs,
     simDays,
-    rootState: stored,
+    rootState: rawStored,
     canvasPx,
+    coverPx,
     aspect,
     steps,
     bodies,
     terrainHeightAt,
     clipEpoch,
-    drivers,
+    schemes,
   } = inputs;
+  const controls = rawStored.settings.cameraControls;
+  const drivers = schemes[controls.scheme].drivers;
+  // Last frame's winner came from last frame's table; a toggle can leave it in neither this one.
+  const prevDrivers = schemes[prev.scheme].drivers;
+  // A `base` the loop did not write is a commit from outside: `resting`
+  // authored it verbatim, so last frame's author reads as `resting` — the
+  // departing row bakes nothing over it and the follow rows adopt it. Read off
+  // the RAW snapshot: our own re-encode below is about to change `base`'s
+  // identity too, and that must never itself read as an outside commit.
+  const external = rawStored.camera.base !== prev.base;
+  const winnerLastFrame: DriverId = external ? 'resting' : prev.register.winner;
+
+  // The loop, not the orientation saga, re-encodes: the outgoing basis is what
+  // `base`'s angles are valid in, never a mid-slerp one. Folded in BEFORE the
+  // replay so every stage below reads a `base` already valid in the frame
+  // `settings.orientation` names, and pushed first into `actions` so it lands
+  // as this frame's own commit (never as an outside one — see `external` above).
+  const orientationActions: UnknownAction[] = [];
+  let stored = rawStored;
+  if (rawStored.settings.orientation !== prev.orientation && isWorldArm(rawStored.camera.base)) {
+    const reencodeAction = commitCameraPose(
+      absoluteArm(
+        reencodePose(
+          rawStored.camera.base.pose,
+          ORIENTATION_FRAMES[prev.orientation],
+          ORIENTATION_FRAMES[rawStored.settings.orientation],
+        ),
+      ),
+    );
+    orientationActions.push(reencodeAction);
+    stored = { ...rawStored, camera: cameraReducer(rawStored.camera, reencodeAction) };
+  }
   const focus = stored.selectionRows.focus;
+  // A row framing a body no focus names (the mission's craft) stands it in as the pivot: the
+  // wheel floors at the hull's standoff, not the surfaceless floor hundreds of km out.
+  const stand = prev.pivotBody === null ? undefined : bodies.get(prev.pivotBody);
+  const pivotRow = stand ? bodyRowAt(prev.pivotBody!, stand.positionMpc) : focus;
+  const lastWinnerRidesWheel = ridesWheelTarget(prevDrivers, winnerLastFrame);
   // Re-derived every frame: the FOV slider can change with no resize event.
   const projection: CameraProjection = {
     fovYRad: stored.settings.camera.fovDeg * (Math.PI / 180),
@@ -71,6 +125,14 @@ export function stepCameraRuntime(
     near: NEAR_CLIP_MPC,
     far: FAR_CLIP_MPC,
   };
+  // The navigator's clock is the step's: `lastNowMs` is last step's `nowMs`, null before the first.
+  // The shift borrows it, so a navigator reset to NAV_AT_REST mid-session snaps the next cover ease.
+  const lastNowMs = prev.navigator.lastNowMs;
+  const shiftTarget = coverShiftNdc(coverPx, canvasPx);
+  const shiftNdc =
+    lastNowMs === null ? shiftTarget : easedShiftNdc(prev.shiftNdc, shiftTarget, nowMs - lastNowMs);
+  const shiftSettled = shiftNdc[0] === shiftTarget[0] && shiftNdc[1] === shiftTarget[1];
+  const frustum = shiftedFrustum(projection.fovYRad, aspect, shiftNdc);
   // `poseBasis` is the COMMITTED frame — the saga writes the destination into
   // `settings.orientation` when a switch starts, so the eye holds still through
   // a roll and only up rotates (`upBasis`, the live B(t)).
@@ -78,20 +140,21 @@ export function stepCameraRuntime(
   // `stored`, not the post-replay snapshot: the replay runs before that exists,
   // and no action it emits writes `tuning`, so the two readings are identical.
   const tuning = stored.camera.tuning;
-  // Every rung field but the up-basis. The replay and the produce run BEFORE
+  // Every arm field but the up-basis. The replay and the produce run BEFORE
   // this frame's basis resolves, so they read the previous frame's; the fold
   // reads this frame's. One shared value would move the settle trace.
-  const rungFields = {
+  const armFields = {
     bodies,
     poseBasis,
-    focusBodyId: focus?.type === 'body' ? (focus.id as BodyId) : null,
-    pivot: pivotFraming(focus),
+    focusBodyId: selectionDriver(focus)?.poseId ?? null,
+    pivot: pivotFraming(pivotRow),
     viewportPx: canvasPx,
+    frustum,
     fovYRad: projection.fovYRad,
     tuning,
     terrainHeightAt,
   };
-  const replayCtx: RungCtx = { ...rungFields, upBasis: prev.outputs.upBasis };
+  const replayCtx: CameraArmCtx = { ...armFields, upBasis: prev.outputs.upBasis };
 
   const drained = replayInput(
     {
@@ -105,27 +168,60 @@ export function stepCameraRuntime(
       ctx: replayCtx,
       rootState: stored,
       nowMs,
-      winnerLastFrame: prev.register.winner,
+      winnerLastFrame,
+      lastWinnerRidesWheel,
       autoRotateEpoch: prev.epochs.autoRotate,
+      navOwns: isNavigatorDriverId(winnerLastFrame),
     },
   );
-  const actions: UnknownAction[] = [...drained.actions];
-  // The drivers must see this frame's commits (`endDrag` above all, or
-  // `orbitDrag` wins one frame too long). Identity on a steady frame, so a
-  // memoised selector keyed on the root object keeps its cache.
+  // The drivers must see this frame's commits: a release's `base` is the pose
+  // the resting row holds. Identity on a steady frame, so a memoised selector
+  // keyed on the root object keeps its cache.
   const rootState =
     drained.actions.length === 0
       ? stored
       : { ...stored, camera: drained.actions.reduce(cameraReducer, stored.camera) };
+  // A table without navigator rows drops navigator input, so a stray `navDrag` cannot
+  // nudge a skymap drag. `canvasPx` is CSS pixels, so the rate is the drag's own.
+  const navigates = drivers.some((d) => isNavigatorDriverId(d.id));
+  // The hold follows the gesture, not its motion: a still press eases a coast to rest.
+  const gestureHeld = selectGestureHeld(rootState);
+  const navHeld = navigates && gestureHeld;
+  const nav = stepNavigator(
+    prev.navigator,
+    navigates ? drained.navSteps : [],
+    navHeld,
+    nowMs,
+    controls,
+    projection.fovYRad / canvasPx[1],
+  );
+  // Everything below reads the nudged register, so a held or coasting frame moves exactly once.
+  const { pose: register, tilt } =
+    Object.keys(nav.delta).length === 0
+      ? { pose: drained.register, tilt: drained.tilt }
+      : nudgeCameraArm(drained.register, drained.tilt, nav.delta, replayCtx);
+  const actions: UnknownAction[] = [...orientationActions, ...drained.actions];
+  // Where `next.base`'s fold picks up below — everything before this index is
+  // already folded into `rootState.camera`.
+  const tailStart = actions.length;
 
   // The approach hands off on a frame it SATURATED, never on a clock the pick
   // reads independently: a fresh focus row starts a new approach whatever the
-  // old memory said, so the two are one fact and cannot disagree on phase.
+  // old memory said, so the two are one fact and cannot disagree on phase. An
+  // outside commit hands off too: the commit IS the framing, so no approach
+  // is owed, whatever the epoch reads.
   const approachDone =
-    focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false;
+    external || (focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false);
+  // A lifted exhibit row reads no activity, so the provisional bag cannot change its answer.
+  const dragClaimed = drivers.some(
+    (d) =>
+      d.ridesExhibit === true &&
+      d.isActive(rootState, { approachDone, dragClaimed: false, navMoving: false }),
+  );
+  const activity = { approachDone, dragClaimed, navMoving: nav.moving };
   // ONE pick per frame: the epoch advance, the commit gate and the produced pose
   // read the same driver object, so they cannot disagree on who won.
-  const winner = pickWinner(drivers, rootState, approachDone);
+  const winner = pickWinner(drivers, rootState, activity);
   const winnerId = winner.id;
   const epochs = advanceEpochs(prev.epochs, {
     intent: rootState.camera,
@@ -140,35 +236,45 @@ export function stepCameraRuntime(
   // target on its next produce.
   const followIn = epochs.follow.ref !== prev.epochs.follow.ref ? null : drained.follow;
   const edge = commitOnEdge({
-    register: drained.register,
+    register,
     displayed: prev.outputs.displayed,
-    prevWinner: prev.register.winner,
+    prevWinner: winnerLastFrame,
     winner,
-    drivers,
+    drivers: prevDrivers,
   });
 
-  const { pose, memory } = winner.pose(
+  // The produce reads the edge's commit, so a row that re-reads `base` starts from it.
+  const produced =
+    edge.committed === null
+      ? rootState
+      : { ...rootState, camera: { ...rootState.camera, base: edge.committed } };
+  const { pose, memory, own, pivotBody } = winner.pose(
     {
-      state: rootState,
+      state: produced,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),
-      register: drained.register,
+      register,
       // Both by reference in the world arm, so the follow rows' world numbers
       // — and the goldens — are untouched. Below it they are the world arm a
       // hand-back would land on: an arm's roll is its local horizon, and an
       // approach that carried it out would leave the image tilted for good
       // (the band test `releasedWorldRoll` makes is the same one).
-      authoredWorld: releasedWorldArm(drained.register, replayCtx, tuning),
+      authoredWorld: releasedWorldArm(register, replayCtx, tuning),
       // Post-edge: a follow row taking over from a tween adopts where the tween
       // LANDED, not the pose the tween departed from (still `base` this frame).
-      committedWorld: releasedWorldArm(edge.committed ?? rootState.camera.base, replayCtx, tuning),
-      winnerLastFrame: prev.register.winner,
+      committedWorld: releasedWorldArm(produced.camera.base, replayCtx, tuning),
+      winnerLastFrame,
+      lastWinnerRidesWheel,
       poseBasis,
       simDays,
       projection,
       bodies,
+      terrainHeightAt,
       followDistanceTarget: drained.followDistanceTarget,
     },
-    followIn,
+    // Same status a tween or clip has: an outside commit delivers the framing
+    // itself, so the follow row that resumes owes it no approach.
+    external ? settledMemory(followIn) : followIn,
+    prev.own[winnerId] ?? null,
   );
 
   // The runtime keeps `upBasis`, NOT `poseBasis`: it seeds the next switch's
@@ -193,13 +299,13 @@ export function stepCameraRuntime(
   if (
     winnerId === 'tween' &&
     rootState.camera.tween !== null &&
-    elapsedMs(epochs.tween, nowMs) >= rootState.camera.tween.durationMs
+    elapsedMs(epochs.tween, nowMs) >= focusMoveDurationMs(rootState.camera.tween)
   ) {
     actions.push(cancelCameraTween());
   }
 
   actions.push(...edge.actions);
-  const foldCtx: RungCtx = { ...rungFields, upBasis };
+  const foldCtx: CameraArmCtx = { ...armFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.
   const projected = projectFramePose({
@@ -208,15 +314,16 @@ export function stepCameraRuntime(
     pivotsOnFocusedBody: winner.pivotsOnFocusedBody ?? false,
     focus,
     follow: memory,
-    tilt: drained.tilt,
+    tilt,
     intent: rootState.camera,
+    gestureHeld,
     ctx: foldCtx,
   });
   actions.push(...projected.actions);
 
   // The gesture memory belongs to the arm it was taken on, so a crossing voids
   // it — inert today, because only the fold re-keys the register and it is
-  // skipped whole while `intent.dragging`, never between a latch and its
+  // skipped whole while `gestureHeld`, never between a latch and its
   // release. The identity keep needs BOTH halves: an already-empty value under
   // a changed key must still re-key, or the wipe re-fires every frame.
   const gestureKey = frameKey(projected.register.frame);
@@ -232,19 +339,36 @@ export function stepCameraRuntime(
   return {
     next: {
       register: { pose: projected.register, winner: winnerId },
+      // Reduce only the tail past `tailStart` — the rest is already folded
+      // into `rootState.camera`; identity on an idle frame (empty tail).
+      base: actions.slice(tailStart).reduce(cameraReducer, rootState.camera).base,
+      // Tracks the frame `base` is now valid in, whatever this frame did with
+      // it — a body arm sees no re-encode above but the switch still lands.
+      orientation: stored.settings.orientation,
       epochs,
       follow: memory,
       gesture,
       tilt: projected.tilt,
+      // Velocity survives only while a navigator row authors the camera, or an exhibit
+      // owns the drag and the navigator keeps nudging the register it reads.
+      navigator:
+        isNavigatorDriverId(winnerId) || dragClaimed
+          ? nav.state
+          : { ...NAV_AT_REST, lastNowMs: nowMs },
+      scheme: controls.scheme,
+      own: own === undefined ? prev.own : { ...prev.own, [winnerId]: own },
+      pivotBody: pivotBody ?? null,
+      shiftNdc,
       outputs: {
         displayed: projected.displayed,
         simDays,
         upBasis,
         projection,
+        frustum,
       },
     },
     actions,
-    requestRender: projected.requestRender,
+    requestRender: projected.requestRender || nav.moving || !shiftSettled,
     world: projected.world,
     rootState,
   };

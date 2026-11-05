@@ -7,13 +7,17 @@
  * nulls) so the derived rows clear in lockstep with the refs — Esc / InfoCard ×
  * depend on this. The gap-fill re-extracts any slot whose row is still null but
  * whose ref is set (a deep link resolved before its data landed), and it fires
- * on the catalog-landed pulse: engineSourceCountReported, which every source
- * reports on commit — the galaxy clouds and the Gaia star bin alike.
+ * on three pulses: engineSourceCountReported (every source's commit — the
+ * galaxy clouds and the Gaia star bin alike), factsReported (a Layer's facts,
+ * the structure store's only signal), and engineStatusChanged (`wireSlots`
+ * fires 'loading' right after `createLayers` appends each Layer's selection
+ * rows — a Layer-only id needs this one to resolve during boot).
  *
  * Keyed on the COMPLETE resolvability set (every selection-slice action ∪ the
- * catalog- and structure-landed pulses), so the cache can't hand-sync-drift the
- * way two authoritative homes do — this is what justifies materializing a
- * derived value in the store (see the spec's exception note).
+ * catalog-, structure- and Layer-rows-landed pulses), so the cache can't
+ * hand-sync-drift the way two authoritative homes do — this is what
+ * justifies materializing a derived value in the store (see the spec's
+ * exception note).
  *
  * Every action that writes a selection ref MUST appear here, or its slot's row
  * goes stale — a clear that the UI never sees.
@@ -30,7 +34,11 @@ import {
   updateSelectionFocus,
   clearSelection,
 } from '../selection/selectionSlice';
-import { engineSourceCountReported, engineStructureCountsChanged } from '../engine/engineSlice';
+import {
+  engineSourceCountReported,
+  factsReported,
+  engineStatusChanged,
+} from '../engine/engineSlice';
 import { setSelectionRow } from './selectionRowsSlice';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -45,7 +53,19 @@ function* reextract(slot: SelectionSlot) {
   // same way `watchGoHomeSaga` does, so a body row's position matches where the
   // render path draws it rather than a fixed epoch.
   const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
-  yield* put(setSelectionRow({ slot, row: selection.extractRow(ref, simDays) }));
+  const row = selection.extractRow(ref, simDays);
+  // The id rides the same action as the focus row so the two cannot disagree: no
+  // row, no id (ref-only encoders would otherwise publish an unresolvable ref).
+  // An empty id counts as none.
+  yield* put(
+    slot === 'focus'
+      ? setSelectionRow({
+          slot,
+          row,
+          focusId: (ref && row && selection.focusIdOf(ref)) || null,
+        })
+      : setSelectionRow({ slot, row }),
+  );
 }
 
 export function* watchSelectionRowsSaga() {
@@ -64,12 +84,11 @@ export function* watchSelectionRowsSaga() {
     yield* reextract('select');
     yield* reextract('focus');
   });
-  // A late catalog makes a previously-unresolvable ref resolvable — fill the
-  // gaps. Two commit pulses wake it: engineSourceCountReported (every source's
-  // count pulse) and engineStructureCountsChanged (the structure store's only
-  // signal). Extra firings for already-filled slots are guarded no-ops
-  // (row === null && ref !== null).
-  yield* takeEvery([engineSourceCountReported, engineStructureCountsChanged], function* () {
+  // A late catalog, or the Layer rows landing (engineStatusChanged: 'loading',
+  // fired by `wireSlots` right after `createLayers`), makes a previously-
+  // unresolvable ref resolvable — fill the gaps. Extra firings for
+  // already-filled slots are guarded no-ops (row === null && ref !== null).
+  yield* takeEvery([engineSourceCountReported, factsReported, engineStatusChanged], function* () {
     for (const slot of ['hover', 'select', 'focus'] as const) {
       const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
       const ref = yield* select((state: RootState) => state[selectionRoute][slot]);

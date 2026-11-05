@@ -57,36 +57,29 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
-import { SCENE_ANCHOR_POINT_BODIES } from '../../../../data/bodies/sceneAnchorPointBodies';
+import { BODY_GLINT_INSTANCE_FLOATS } from '../../../../data/rendering/bodyGlintInstanceFloats';
 
-// Headroom past today's exact seed count, so a new SCENE_PLANETS or
-// SCENE_ANCHOR_POINT_BODIES entry can still land without touching this file.
+// Headroom past today's exact seed count, so a new SCENE_PLANETS entry can
+// still land without touching this file.
 const GLINT_CAPACITY_MARGIN = 4;
 
 /**
  * Upper bound on body glints drawn per frame: worst case every `SCENE_PLANETS`
- * entry AND every `SCENE_ANCHOR_POINT_BODIES` entry packs as a glint the same
- * frame (the glints branch is a SUBSET of `SCENE_PLANETS` in practice — the
- * flat/textured branches take the rest — so this is a safe over-count, not a
- * tight one), plus `GLINT_CAPACITY_MARGIN` headroom. Mirrors
- * `BODY_SLAB_CAPACITY`'s derivation in `timing/bodySlabCapacity.ts` — sized off the
- * registries, not a hand-picked number that silently goes stale as the seed
- * tables grow. Both pack loops in `bodyGlintsPass` `break` on `count >=
- * MAX_GLINTS` with no error, so zero margin would let the next seeded body
- * silently starve a glint — see "Why draw takes the batch" above, its
- * instance buffer is a single fixed-capacity allocation.
+ * entry packs as a glint the same frame (the glints branch is a SUBSET of
+ * `SCENE_PLANETS` in practice — the flat/textured branches take the rest — so
+ * this is a safe over-count, not a tight one), plus `GLINT_CAPACITY_MARGIN`
+ * headroom. The black-hole marker's own instance packs one glint per hole, far
+ * inside this cap. Mirrors `SLAB_ROW_CEILING`'s derivation in
+ * `timing/slabRowCeiling.ts` — sized off the registries, not a hand-picked
+ * number that silently goes stale as the seed tables grow. The pack loop in
+ * `packBodyGlints` stops at the staging buffer's capacity with no error, so zero
+ * margin would let the next seeded body silently starve a glint — see "Why
+ * draw takes the batch" above, its instance buffer is a single
+ * fixed-capacity allocation.
  */
-export const MAX_GLINTS =
-  SCENE_PLANETS.length + SCENE_ANCHOR_POINT_BODIES.length + GLINT_CAPACITY_MARGIN;
+export const MAX_GLINTS = SCENE_PLANETS.length + GLINT_CAPACITY_MARGIN;
 
-/**
- * Per-glint instance record: position (f32x3) + colour (f32x3) + brightness
- * (f32) = 7 floats, 28 bytes. Must stay byte-exact with the attribute
- * declarations in `bodyGlint/vertex.wesl` (locations 0/1/2 at offsets 0/12/24)
- * — the vertex-stride keep-rule.
- */
-export const INSTANCE_FLOATS = 7;
-const STRIDE = INSTANCE_FLOATS * 4; // 28 bytes
+const STRIDE = BODY_GLINT_INSTANCE_FLOATS * 4; // 28 bytes
 
 export function createBodyGlintRenderer(
   device: GPUDevice,
@@ -182,20 +175,21 @@ export function createBodyGlintRenderer(
     count: number,
     viewProj: Float32Array,
     viewportPx: Vec2,
+    pxPerRad: number,
   ): void {
     // Clamp to the cap so an over-count caller draws MAX_GLINTS rather than off
     // the end of the buffer. Nothing to do for a zero-length batch.
     const n = Math.min(Math.max(count, 0), MAX_GLINTS);
     if (n === 0) return;
 
-    // uniformScratch[18..19] are CameraUniforms' named pads — never written, so
-    // they hold their construction-time zeros across frames.
-    writeCameraPrefix(uniformScratch, viewProj, viewportPx);
+    // uniformScratch[19] is CameraUniforms' named pad — never written, so it
+    // holds its construction-time zero across frames.
+    writeCameraPrefix(uniformScratch, viewProj, viewportPx, pxPerRad);
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
     // One upload of exactly the first `n` records (typed-array overload takes
     // the data offset + size in ELEMENTS, not bytes).
-    device.queue.writeBuffer(instanceBuffer, 0, instances, 0, n * INSTANCE_FLOATS);
+    device.queue.writeBuffer(instanceBuffer, 0, instances, 0, n * BODY_GLINT_INSTANCE_FLOATS);
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);

@@ -5,7 +5,7 @@ import type { BeatData } from '../../../../src/@types/animation/tour/BeatData';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 
 // Narration clip: empty timeline, no id-bearing cues — matches the fixture
-// shape guidedTourSaga.test.ts builds its beats from, so an enter clip's
+// shape tourBodySaga.test.ts builds its beats from, so an enter clip's
 // duration is exactly its authored `wait`/`hold` total with nothing to stub.
 const NARRATION_CLIP: ClipData = {
   start: 'live',
@@ -15,7 +15,11 @@ const NARRATION_CLIP: ClipData = {
 describe('tourFrameCap', () => {
   it('sums enter+dwell over the beats and applies the margin formula', () => {
     const beats: readonly BeatData[] = [
-      { enterClip: NARRATION_CLIP, caption: { title: 'B1' }, dwellClip: dwellDrift(8) },
+      {
+        enterClip: NARRATION_CLIP,
+        caption: { title: 'B1', lines: ['x'] },
+        dwellClip: dwellDrift(8),
+      },
       { caption: null, dwellClip: dwellDrift(5) }, // no enterClip — dwell only
     ];
     const fps = 30;

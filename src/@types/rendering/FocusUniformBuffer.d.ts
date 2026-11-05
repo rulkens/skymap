@@ -1,5 +1,5 @@
 /**
- * FocusUniformBuffer — the singleton cluster-focus uniform a pipeline binds
+ * FocusUniformBuffer — the singleton structure-focus uniform a pipeline binds
  * to render the member-isolation dim. Owns the 32-byte GPU buffer, its bind
  * group, and a reusable scratch packer; `createFocusUniformBuffer` is the
  * single place that knows the `vec4 centerApparent + blend + physicalRadiusMpc`

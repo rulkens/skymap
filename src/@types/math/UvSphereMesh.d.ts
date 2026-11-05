@@ -19,6 +19,6 @@
 
 export type UvSphereMesh = {
   readonly positions: Float32Array; // 3 per vertex, UNIT radius, centred at origin
-  readonly uvs: Float32Array;       // 2 per vertex, equirectangular (u=lon/2π, v=lat/π)
-  readonly indices: Uint16Array;    // triangle list, CCW = outward-facing
+  readonly uvs: Float32Array; // 2 per vertex, equirectangular (u=lon/2π, v=lat/π)
+  readonly indices: Uint16Array; // triangle list, CCW = outward-facing
 };

@@ -38,3 +38,19 @@
   padding: var(--space-2) var(--space-4);
   line-height: 1;
 }
+
+/* Phone: touch-sized controls, and 16px input text so iOS does not zoom the page on focus. */
+@media (max-width: 768px) {
+  .input {
+    flex: 1;
+    min-width: 0;
+    min-height: var(--touch-target);
+    font-size: var(--font-size-input);
+  }
+
+  .set,
+  .now {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+}

@@ -7,7 +7,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { SourceType } from '../../src/@types/data/SourceType';
 import {
   SELECTION_SOURCE_SHIFT,
   SELECTION_LOCAL_IDX_MASK,
@@ -18,11 +17,10 @@ import {
   unpackPick,
 } from '../../src/data/selectionEncoding';
 import type { PickResult } from '../../src/@types/data/PickResult';
-import { Source } from '../../src/data/sources';
 
 describe('selectionEncoding', () => {
   it('packs (source, localIdx) into the documented bit layout', () => {
-    // Source code 3 (e.g. GLADE) in bits 26..31, localIdx 42 in bits 0..25.
+    // Pick code 3 in bits 26..31, localIdx 42 in bits 0..25.
     // Expected: (3 << 26) | 42 = 0x0c000000 | 0x2a = 0x0c00002a.
     expect(packSelection(3, 42)).toBe(0x0c00002a);
   });
@@ -32,7 +30,7 @@ describe('selectionEncoding', () => {
     // arrives as 0x0c00002b. unpackPick subtracts 1 from the bottom 26 bits
     // and returns the decoded identity (classification is downstream).
     expect(unpackPick(0x0c00002b)).toEqual({
-      sourceCode: Source.Glade,
+      sourceCode: 3,
       localIdx: 42,
     });
   });
@@ -42,10 +40,8 @@ describe('selectionEncoding', () => {
   });
 
   it('round-trips pack → +1 → unpackPick for any source identity', () => {
-    // Codes 0..30 are allocated (unchanged by this widening — no new
-    // source is minted here); 62 is the new top of the 6-bit space and
-    // 63 deliberately returns null per the sentinel rule. unpackPick
-    // decodes them all uniformly.
+    // 62 is the top of the 6-bit space and 63 deliberately returns null
+    // per the sentinel rule. unpackPick decodes every code uniformly.
     const cases: Array<[number, number]> = [
       [0, 1],
       [0, SELECTION_LOCAL_IDX_MASK - 1],
@@ -67,7 +63,7 @@ describe('selectionEncoding', () => {
       const packed = packSelection(source, localIdx);
       const rawPick = (packed + PICK_SENTINEL_OFFSET) >>> 0;
       expect(unpackPick(rawPick)).toEqual({
-        sourceCode: source as SourceType,
+        sourceCode: source,
         localIdx,
       });
     }
@@ -80,10 +76,9 @@ describe('selectionEncoding', () => {
   });
 
   it('sentinel does not collide with any allocated packed identity', () => {
-    // Source codes 0..30 are allocated (6 bits, 64 slots, top slot 63
-    // intentionally unallocated). Packing the largest allocated source
-    // with the largest localIdx must remain < SELECTION_NONE_SENTINEL.
-    const largestAllocated = packSelection(30, SELECTION_LOCAL_IDX_MASK);
+    // Pick codes run 1..62 (63 is the all-ones sentinel). Packing the largest
+    // code with the largest localIdx must remain < SELECTION_NONE_SENTINEL.
+    const largestAllocated = packSelection(SELECTION_SOURCE_SENTINEL_CODE - 1, SELECTION_LOCAL_IDX_MASK);
     expect(largestAllocated).toBeLessThan(SELECTION_NONE_SENTINEL);
   });
 });
@@ -137,18 +132,6 @@ describe('selectionEncoding TS↔WESL parity', () => {
       ['SELECTION_NONE_SENTINEL', SELECTION_NONE_SENTINEL],
       ['SELECTION_SOURCE_SENTINEL_CODE', SELECTION_SOURCE_SENTINEL_CODE],
       ['PICK_SENTINEL_OFFSET', PICK_SENTINEL_OFFSET],
-      // Structure category source codes — mirror of TS Source.Cluster /
-      // Source.Supercluster / Source.Void / Source.Group. These appear
-      // at the WESL side so the future structure-marker pick fragment can
-      // refer to them by name instead of inlining a magic 5u/6u/7u/15u
-      // literal.
-      ['SOURCE_CODE_CLUSTER', Source.Cluster],
-      ['SOURCE_CODE_SUPERCLUSTER', Source.Supercluster],
-      ['SOURCE_CODE_VOID', Source.Void],
-      ['SOURCE_CODE_GROUP', Source.Group],
-      // Survey (Gaia bin) stars — the star pick fragment packs this into the
-      // r32uint pick texture; mirror of TS Source.GaiaStars.
-      ['SOURCE_GAIA_STARS', Source.GaiaStars],
     ];
 
     for (const [name, tsValue] of cases) {
@@ -184,7 +167,7 @@ describe('unpackPick — decode to (sourceCode, localIdx)', () => {
     // No warn here — that lives in resolvePick; unpackPick doesn't know
     // which codes are pickable. It just reverses the bits.
     expect(unpackPick(rawFor(14, 5))).toEqual<PickResult>({
-      sourceCode: 14 as SourceType,
+      sourceCode: 14,
       localIdx: 5,
     });
   });

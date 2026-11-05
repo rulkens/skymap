@@ -6,28 +6,34 @@
  * maps through; `aspect` is the backing store's, which only changes on a resize.
  */
 
-import type { BodyId } from '../../data/body/BodyId';
 import type { BodyState } from '../../scene/BodyState';
-import type { CameraDriver } from './CameraDriver';
-import type { CameraState } from '../../camera/CameraState';
+import type { CameraState } from '../../camera/orbitCamera/CameraState';
+import type { ControlScheme } from './ControlScheme';
+import type { ControlSchemeId } from './ControlSchemeId';
 import type { Epoch } from './Epoch';
-import type { InputStep } from '../../camera/InputStep';
-import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
+import type { InputStep } from '../../camera/input/InputStep';
+import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { Vec2 } from '../../math/Vec2';
+import type { InsetsPx } from '../../layout/InsetsPx';
 import type { RootState } from '../../../store/types';
+import type { PositionedId } from '../../scene/PositionedId';
 
 export type StepInputs = {
   readonly nowMs: number;
   readonly simDays: number;
   readonly rootState: RootState;
   readonly canvasPx: Readonly<Vec2>;
+  /** Resting UI's reach in from each canvas edge, CSS px like `canvasPx`. */
+  readonly coverPx: InsetsPx;
   /** `canvas.width / canvas.height` after `resizeCanvasToDisplay`. */
   readonly aspect: number;
   readonly steps: readonly InputStep[];
-  readonly bodies: ReadonlyMap<BodyId, BodyState>;
-  /** `SurfaceTileSubsystem.terrainHeightAt` bound by `runFrame`, or a `() =>
+  readonly bodies: ReadonlyMap<PositionedId, BodyState>;
+  /** `SurfaceTileStream.heightAt` bound by `runFrame`, or a `() =>
    *  0` stub pre-boot — the ground-collision row's source (F3a, spec §8.3). */
   readonly terrainHeightAt: TerrainHeightAtLookup;
   readonly clipEpoch: Epoch<NonNullable<CameraState['clip']>>;
-  readonly drivers: readonly CameraDriver[];
+  /** Every scheme, not just the active one: an edge commit looks the departing
+   *  row up in the table LAST frame's winner came from. */
+  readonly schemes: Readonly<Record<ControlSchemeId, ControlScheme>>;
 };

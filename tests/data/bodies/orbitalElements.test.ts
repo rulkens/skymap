@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../src/data/bodies/orbitalElements';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
+import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
 import { propagateElements } from '../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPositionMpc';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -18,13 +19,14 @@ describe('ORBITAL_ELEMENTS has a valid structure', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('resolves every focusId to a real body', () => {
-    // A focus is either another orbit in this table, the Sun (a seeded scene
-    // body), or another seeded scene body (the Moon orbits Earth). A dangling
-    // focusId would leave a trail orbiting nothing.
+  it('resolves every focusId to a real body or place', () => {
+    // A focus is either another orbit in this table, a seeded scene body (the
+    // Moon orbits Earth), or an anchor (the Sun, the Galactic Centre the S-stars
+    // orbit). A dangling focusId would leave a trail orbiting nothing.
     const known = new Set<string>([
       ...ORBITAL_ELEMENTS.map((e) => e.id),
       ...SCENE_BODIES.map((b) => b.id),
+      ...SCENE_ANCHORS.map((a) => a.id),
     ]);
     for (const e of ORBITAL_ELEMENTS) {
       expect(known.has(e.focusId)).toBe(true);
@@ -32,15 +34,12 @@ describe('ORBITAL_ELEMENTS has a valid structure', () => {
   });
 
   it('pairs every eccentricity with the sign of its semi-major axis', () => {
-    // The conic branch stated twice, so a transcription that "tidies" one half
-    // fails: an ellipse is e < 1 with a > 0, a hyperbola e > 1 with a < 0 —
-    // Horizons publishes the escaping rows' A negative and dropping that sign
-    // puts the probe on the wrong branch, visible nowhere else. e = 1
-    // (parabola) has no solver on either side.
+    // Bound rows only: `keplerianPositionMpc` has no hyperbola branch (the escaping
+    // craft are sampled tracks), so e >= 1 or a <= 0 would place a body at NaN.
     for (const el of ORBITAL_ELEMENTS) {
       expect(el.eccentricity, el.id).toBeGreaterThanOrEqual(0);
-      expect(el.eccentricity, el.id).not.toBe(1);
-      expect(Math.sign(el.semiMajorMpc), el.id).toBe(el.eccentricity < 1 ? 1 : -1);
+      expect(el.eccentricity, el.id).toBeLessThan(1);
+      expect(el.semiMajorMpc, el.id).toBeGreaterThan(0);
     }
   });
 });

@@ -31,7 +31,7 @@ import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsS
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { timeRoute } from '../../../src/store/constants';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 
@@ -50,7 +50,7 @@ const virgoRow: SelectionRow = {
   type: 'structure',
   id: 'cluster-virgo-m87',
   name: 'Virgo Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
@@ -74,7 +74,7 @@ describe('watchHashWriteSaga', () => {
   it('writes the pending id on requestFocus', async () => {
     // The cold deep-link case: the id is still resolving, no ref slot holds
     // anything, and the URL must carry the intent anyway.
-    buildHarness().dispatch(requestFocus('m31'));
+    buildHarness().dispatch(requestFocus({ id: 'm31', transition: 'fly' }));
     await settle();
 
     expect(lastBody()).toBe('focus=m31');
@@ -84,7 +84,9 @@ describe('watchHashWriteSaga', () => {
     // `setSelectionRow` is the SOLE writer of `selectionRows.focus`, so every
     // resolution path — a late catalog pulse, the star-count pulse, a direct ref
     // write — arrives here as this one action. Covering it covers all of them.
-    buildHarness().dispatch(setSelectionRow({ slot: 'focus', row: virgoRow }));
+    buildHarness().dispatch(
+      setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }),
+    );
     await settle();
 
     expect(lastBody()).toBe('focus=cluster-virgo-m87');
@@ -105,7 +107,7 @@ describe('watchHashWriteSaga', () => {
 
   it('writes an empty body on clearSelection', async () => {
     const store = buildHarness();
-    store.dispatch(requestFocus('m31'));
+    store.dispatch(requestFocus({ id: 'm31', transition: 'fly' }));
 
     // Settled BETWEEN the two dispatches on purpose. Without it they share one
     // debounce window and the only publish is the clear's — which would pass

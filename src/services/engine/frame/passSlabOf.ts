@@ -6,6 +6,7 @@
  */
 
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
+import { rosterPassNames } from '../../../utils/render/rosterPassNames';
 import { NEAR0 } from './slabs';
 
 export function passSlabOf(order: readonly FrameStepSpec[]): ReadonlyMap<string, number | 'body'> {
@@ -20,7 +21,7 @@ export function passSlabOf(order: readonly FrameStepSpec[]): ReadonlyMap<string,
       for (const name of spec.passes) slabs.set(name, slab);
     } else if (spec.kind === 'foreground') {
       for (const name of spec.near0Passes) slabs.set(name, NEAR0);
-      for (const name of spec.bodyPasses) slabs.set(name, 'body');
+      for (const name of rosterPassNames(spec.bodyPasses)) slabs.set(name, 'body');
     }
   }
   return slabs;

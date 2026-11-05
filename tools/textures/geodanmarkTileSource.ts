@@ -16,10 +16,10 @@ import { join } from 'node:path';
 
 import sharp from 'sharp';
 
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
-import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
-import { surfaceTileColumns } from '../../src/utils/surfaceTiles/surfaceTileColumns';
+import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
+import { surfaceTileColumns } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
 
 /** Deepest (and only) level the Søndermarken harvest reaches — the WMS
  *  server rendered z19 natively; every coarser level is a bake-time 2x2

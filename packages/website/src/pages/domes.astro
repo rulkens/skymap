@@ -1,0 +1,20 @@
+---
+/* The domes page: its text and front matter are content/pages/domes/domes.mdx, which places the contact section. */
+import { getEntry, render } from 'astro:content';
+
+import Base from '../layouts/Base.astro';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+
+const entry = (await getEntry('pages', 'domes'))!;
+const { Content } = await render(entry);
+const structure = (await getEntry('pageStructures', 'domes'))!.data;
+---
+
+<Base {...entry.data} {...structure} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Domes and museums', path: '/domes/' }])]}>
+  <Content />
+</Base>
+
+<script>
+  import '../components/pages/domes/DiscBand/domeTurn.client.ts';
+  import '../components/pages/domes/Exhibit/exhibitChooser.client.ts';
+</script>

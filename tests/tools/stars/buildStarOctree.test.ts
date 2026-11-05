@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { buildStarOctree, STAR_LEAF_CAPACITY } from '../../../tools/stars/buildStarOctree';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../tools/stars/buildStarOctree';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
   unpackStarRecord,
   RECORD_BYTES,
 } from '../../../src/data/starCatalog/starCatalogFormat';
@@ -41,7 +41,7 @@ describe('buildStarOctree', () => {
 
     // Survives the format's encode/decode round-trip — ties the octree assembly
     // to the byte contract without restating offsets.
-    const decoded = await decodeStarCatalog(await encodeStarCatalog(cat));
+    const decoded = await decodeSkstCatalog(await encodeSkstCatalog(cat));
     expect(decoded.nodes).toEqual(cat.nodes);
     expect(decoded.records).toEqual(cat.records);
   });
@@ -83,9 +83,9 @@ describe('buildStarOctree', () => {
 
     // The fat leaf's finest cells (level-0 mortons 8 and 9) do NOT appear —
     // they folded away, which is the whole point of the merge.
-    expect(cat.nodes.some((n) => n.level === 0 && (n.mortonIndex === 8 || n.mortonIndex === 9))).toBe(
-      false,
-    );
+    expect(
+      cat.nodes.some((n) => n.level === 0 && (n.mortonIndex === 8 || n.mortonIndex === 9)),
+    ).toBe(false);
 
     // A real aggregate spans the dense chain and the fat leaf (childMask != 0).
     expect(cat.nodes.some((n) => n.childMask !== 0)).toBe(true);

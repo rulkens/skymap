@@ -1,0 +1,245 @@
+.table {
+  composes: small from '../../../../styles/type.module.css';
+  font-variant-numeric: tabular-nums;
+
+  &,
+  & thead,
+  & tbody,
+  & th,
+  & td {
+    display: block;
+  }
+
+  /* Four columns of the page grid for the source, three for the release, two for the count, three for the licence. */
+  & tr {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    border-top: 1px solid var(--border-divider);
+  }
+
+  & tr > * {
+    grid-column: span 3;
+  }
+
+  & tr > :first-child {
+    grid-column: span 4;
+  }
+
+  & tr > :nth-child(3) {
+    grid-column: span 2;
+  }
+
+  & thead tr {
+    border-top: 0;
+  }
+
+  & th,
+  & td {
+    padding-block: var(--site-space-s);
+    text-align: left;
+    font-weight: var(--weight-small);
+    color: var(--site-text-muted);
+  }
+
+  & thead th {
+    color: var(--site-text-dim);
+  }
+
+  & th[scope='row'] a {
+    color: var(--color-fg);
+  }
+}
+
+/* A count is set from its right edge. */
+.table tr > .num {
+  display: flex;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.table tr.group {
+  border-top: 0;
+}
+
+.table .group > * {
+  grid-column: 1 / -1;
+}
+
+.table .group th,
+.list h3 {
+  padding-top: var(--site-space-xl);
+  font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+  color: var(--color-fg);
+}
+
+.table tbody:first-of-type .group th {
+  padding-top: var(--site-space-s);
+}
+
+.unseen {
+  composes: unseen from '../../../../styles/a11y.module.css';
+}
+
+.gives {
+  display: block;
+  margin-top: var(--site-space-3xs);
+}
+
+.evidence {
+  white-space: nowrap;
+}
+
+/* The two ways out on a line of their own under the licence, the same place in every row. */
+.ways {
+  display: flex;
+  gap: var(--site-space-m);
+  margin-top: var(--site-space-2xs);
+}
+
+.list {
+  composes: small from '../../../../styles/type.module.css';
+  display: none;
+}
+
+.summary {
+  composes: ring ring-small from '../../../../styles/ring.module.css';
+}
+
+.notes {
+  composes: grid from '../../../../styles/layout.module.css';
+  composes: small from '../../../../styles/type.module.css';
+  align-items: center;
+  margin-top: var(--site-space-l);
+  padding-top: var(--site-space-m);
+  border-top: 1px solid var(--border-divider);
+}
+
+.text {
+  composes: tap-links from '../../../../styles/links.module.css';
+}
+
+.text p {
+  max-width: 34rem;
+  margin-bottom: var(--site-space-xs);
+  color: var(--site-text-dim);
+}
+
+.figure {
+  margin: 0;
+}
+
+/*
+ * The model drifts across the notes and rests square mid-window; on black it needs no frame. Its frame's empty
+ * top and foot (in % of the width: 16:9) are tucked away so the label sits under the telescope.
+ */
+.drift {
+  margin: -6% 0 -12%;
+  pointer-events: none;
+
+  & picture {
+    display: block;
+  }
+}
+
+@keyframes notes-drift {
+  from {
+    translate: 3rem 2rem;
+    rotate: 5deg;
+  }
+
+  to {
+    translate: -3rem -2rem;
+    rotate: -5deg;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .drift picture {
+      animation: notes-drift linear both;
+      animation-timeline: view();
+    }
+  }
+}
+
+@media (--wide) {
+  .notes > .text {
+    grid-column: 1 / span 6;
+  }
+
+  .notes > .figure {
+    grid-column: 7 / span 6;
+  }
+}
+
+/* Narrow: the list in the table's place. */
+@media (--narrow) {
+  .table {
+    display: none;
+  }
+
+  .list {
+    display: block;
+    font-variant-numeric: tabular-nums;
+
+    & h3 {
+      margin: 0;
+      padding-bottom: var(--site-space-xs);
+    }
+
+    & section:first-child h3 {
+      padding-top: 0;
+    }
+
+    & details {
+      border-top: 1px solid var(--border-divider);
+    }
+
+    & summary::-webkit-details-marker {
+      display: none;
+    }
+
+    & summary b {
+      font-weight: inherit;
+      color: var(--color-fg);
+    }
+
+    & dl {
+      margin: 0;
+      padding-left: var(--site-space-m);
+    }
+
+    & dl > div {
+      padding-bottom: var(--site-space-xs);
+    }
+
+    & dt {
+      color: var(--site-text-dim);
+    }
+
+    & dd {
+      margin: 0;
+      color: var(--site-text-muted);
+    }
+  }
+
+  /* The whole row opens it; the ring is filled while it is open. */
+  .list .summary {
+    display: flex;
+    align-items: baseline;
+    width: 100%;
+    padding-block: var(--site-space-s);
+    list-style: none;
+    color: var(--site-text-muted);
+  }
+
+  .list .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--site-space-l);
+    max-width: none;
+    margin: 0 0 var(--site-space-xs);
+    padding-left: var(--site-space-m);
+  }
+}

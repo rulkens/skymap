@@ -17,6 +17,10 @@ import reducer, {
   pause,
   resume,
   goLive,
+  setSimDays,
+  restoreTime,
+  startClockProfile,
+  stepToEvent,
 } from '../../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import type { TimeState } from '../../../src/@types/time/TimeState';
@@ -27,6 +31,7 @@ const liveStart: TimeState = {
   rateIndex: 3,
   direction: 1,
   paused: false,
+  profile: null,
 };
 
 const manualStart: TimeState = {
@@ -35,6 +40,7 @@ const manualStart: TimeState = {
   rateIndex: 5,
   direction: -1,
   paused: false,
+  profile: null,
 };
 
 const NOW_MS = 20_000;
@@ -72,6 +78,7 @@ describe('timeSlice pause holds, resume advances', () => {
       rateIndex: 3,
       direction: 1,
       paused: false,
+      profile: null,
     };
 
     const t0 = 1_000;
@@ -102,9 +109,57 @@ describe('timeSlice goLive lands the ladder on the truthful detent', () => {
       rateIndex: 6,
       direction: -1,
       paused: true,
+      profile: null,
     };
 
     const next = reducer(fastManual, goLive({ simDays: 2451545.0, nowMs: 1_000 }));
     expect(next.rateIndex).toBe(0);
+  });
+});
+
+describe('mission profile', () => {
+  const profile = {
+    startWallMs: 0,
+    wallMs: Float64Array.from([0, 10_000]),
+    simDays: Float64Array.from([2460000, 2460010]),
+  };
+  const profiled = reducer(
+    manualStart,
+    startClockProfile({ profile: { ...profile, startWallMs: 50_000 } }),
+  );
+
+  it('startClockProfile un-pauses, anchors at the first sample and stamps the payload clock', () => {
+    const paused = reducer(
+      { ...manualStart, paused: true },
+      startClockProfile({ profile: { ...profile, startWallMs: 50_000 } }),
+    );
+    expect(paused.paused).toBe(false);
+    expect(paused.profile?.startWallMs).toBe(50_000);
+    expect(deriveSimDays(paused, 55_000)).toBe(2460005);
+  });
+
+  // The clock freezes where the profile was, not at either end of the table.
+  it('pause mid-profile freezes at the interpolated instant and drops the profile', () => {
+    const next = reducer(profiled, pause({ nowMs: 55_000 }));
+    expect(next.profile).toBeNull();
+    expect(next.paused).toBe(true);
+    expect(deriveSimDays(next, 90_000)).toBe(2460005);
+  });
+
+  const visitorActions = [
+    { name: 'setRate', action: setRate({ rateIndex: 4, nowMs: 55_000 }) },
+    { name: 'setDirection', action: setDirection({ direction: -1, nowMs: 55_000 }) },
+    { name: 'resume', action: resume({ nowMs: 55_000 }) },
+  ];
+
+  it('only startClockProfile keeps a profile: any other time action drops it, others ignore it', () => {
+    expect(reducer(profiled, { type: 'time/aFutureReducer' }).profile).toBeNull();
+    expect(reducer(profiled, { type: 'camera/anything' }).profile).not.toBeNull();
+    const restarted = startClockProfile({ profile: { ...profile, startWallMs: 60_000 } });
+    expect(reducer(profiled, restarted).profile?.startWallMs).toBe(60_000);
+  });
+
+  it.each(visitorActions)('$name keeps the clock continuous mid-profile', ({ action }) => {
+    expect(deriveSimDays(reducer(profiled, action), 55_000)).toBe(2460005);
   });
 });

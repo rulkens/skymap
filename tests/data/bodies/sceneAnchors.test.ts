@@ -19,7 +19,7 @@ describe('SCENE_ANCHORS', () => {
 
   it('every famous star seed has a matching anchor', () => {
     // Totality: a seed with no anchor has no snapshot entry, so
-    // `positionedVisibleStars`' lookup would miss and the star would draw at
+    // the frame context's scene-body lookup would miss and the star would draw at
     // whatever a fallback chose — the origin, on top of the Sun. This is what
     // makes that lookup's non-null assertion safe.
     const anchorIds = new Set(SCENE_ANCHORS.map((anchor) => anchor.id));

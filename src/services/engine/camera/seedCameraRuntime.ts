@@ -3,38 +3,56 @@
  * boot placeholder and `wireInput`'s first real pose both come through here, so
  * no seed site can leave a half-built bag. Displayed = authored at the seed:
  * nothing has been projected yet (`projectFramePose` splits them thereafter).
+ * A caller dispatches first, then seeds, so the runtime starts reconciled —
+ * `wireInput`'s BOOT seed is the one exception (seeds off the PRE-commit
+ * store, then dispatches, so frame 1 reads its own commit as outside; see its
+ * own comment for why).
  */
 
-import type { CameraProjection } from '../../../@types/camera/CameraProjection';
-import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
+import type { CameraProjection } from '../../../@types/camera/projection/CameraProjection';
+import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
-import { UNSTARTED_EPOCHS } from './cameraEpochs';
-import { frameKey } from './rungs/frameKey';
-import { rowFor } from './rungs/rowFor';
-import { EMPTY_TILT_MEMORY } from '../../../data/camera/emptyTiltMemory';
+import type { RootState } from '../../../store/types';
+import { UNSTARTED_EPOCHS } from './drivers/cameraEpochs';
+import { frameKey } from './arms/frameKey';
+import { rowFor } from './arms/rowFor';
+import { EMPTY_TILT_MEMORY } from './data/emptyTiltMemory';
+import { NAV_AT_REST } from '../../../data/camera/openSpaceNavigation';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
-import { DEFAULT_ORIENTATION } from '../../../data/defaults';
 import { CONST_J2000 } from '../../../data/time/constJ2000';
+import { symmetricFrustum } from '../../../utils/camera/frustum/symmetricFrustum';
 
 export function seedCameraRuntime(args: {
-  readonly committed: FramedCameraPose;
+  /** Only the two slices the seed reads; call sites still hand over `store.getState()`. */
+  readonly state: Pick<RootState, 'camera' | 'settings'>;
   readonly projection: CameraProjection;
 }): CameraRuntime {
+  const { camera, settings } = args.state;
   // Copied: the boot seed is the camera slice's `base`, and the register must
   // never alias the store's object.
-  const pose: FramedCameraPose = { ...args.committed };
+  const pose: FramedCameraPose = { ...camera.base };
   return {
     register: { pose, winner: 'resting' },
+    // BY IDENTITY (not a copy, unlike `pose` above): the loop compares this
+    // against the store's `base` next frame to detect an outside commit.
+    base: camera.base,
+    orientation: settings.orientation,
     epochs: UNSTARTED_EPOCHS,
     follow: null,
     gesture: { key: frameKey(pose.frame), value: rowFor(pose.frame).emptyMemory },
     tilt: EMPTY_TILT_MEMORY,
+    navigator: NAV_AT_REST,
+    scheme: settings.cameraControls.scheme,
+    own: {},
+    pivotBody: null,
+    shiftNdc: [0, 0],
     outputs: {
       displayed: pose,
       simDays: CONST_J2000,
       // Copied, so the seed never aliases the shared registry entry.
-      upBasis: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]],
+      upBasis: [...ORIENTATION_FRAMES[settings.orientation]],
       projection: args.projection,
+      frustum: symmetricFrustum(args.projection.fovYRad, args.projection.aspect),
     },
   };
 }

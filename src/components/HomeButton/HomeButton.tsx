@@ -1,4 +1,3 @@
-// src/components/HomeButton/HomeButton.tsx
 /**
  * HomeButton — top-bar pill that frames Earth (the viewer's starting point
  * is "home"). Thin semantic wrapper over the shared PillButton chrome; owns
@@ -10,7 +9,7 @@
 
 import { memo, type ReactNode } from 'react';
 import PillButton from '../common/PillButton/PillButton';
-import HomeIcon from './HomeIcon';
+import HomeIcon from '../icons/HomeIcon/HomeIcon';
 
 export type HomeButtonProps = {
   readonly onClick: () => void;
@@ -20,7 +19,7 @@ export type HomeButtonProps = {
 function HomeButton({ onClick, hidden = false }: HomeButtonProps): ReactNode {
   return (
     <PillButton onClick={onClick} hidden={hidden} aria-label="Fly camera home" tooltip="Home view">
-      <HomeIcon />
+      <HomeIcon size={14} />
     </PillButton>
   );
 }

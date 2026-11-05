@@ -7,8 +7,9 @@ import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import { siteGroundRadiusM } from '../../../src/utils/camera/siteGroundRadiusM';
+import { siteGroundRadiusM } from '../../../src/utils/camera/arms/siteGroundRadiusM';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const marsRow = rotationRowById('mars');
 if (marsRow === null || (marsRow.kind !== undefined && marsRow.kind !== 'iau-pole')) {
@@ -21,8 +22,8 @@ const MARS_RADIUS_M = findByIdOrThrow(SCENE_PLANETS, 'mars', 'surfaceFixedSites.
 
 function offsetFromMarsMpc(simDays: number): readonly number[] {
   const states = deriveBodyStates(simDays);
-  const rover = states.get('curiosity')!.positionMpc;
-  const mars = states.get('mars')!.positionMpc;
+  const rover = states.get(asSceneBodyId('curiosity'))!.positionMpc;
+  const mars = states.get(asSceneBodyId('mars'))!.positionMpc;
   return [rover[0] - mars[0], rover[1] - mars[1], rover[2] - mars[2]];
 }
 
@@ -66,11 +67,12 @@ describe('the Mars rover landing sites', () => {
     expect(distanceM).toBeCloseTo(siteGroundRadiusM(site, MARS_RADIUS_M) + site.altitudeM, 4);
   });
 
-  it('every surface-fixed site is lifted by its asset’s ground offset', () => {
+  it('every resting site is lifted by its asset’s ground offset', () => {
     // An invariant across two independently-edited files: the bake decides where
     // a mesh's origin sits, so a re-bake that moves it must move the site with
-    // it. Eyeballing the altitude back would bury a rover or float it.
-    for (const site of SURFACE_FIXED_SITES) {
+    // it. Eyeballing the altitude back would bury a rover or float it. An
+    // `anchored` site has no ground-fit, so its lift is hand-tuned instead.
+    for (const site of SURFACE_FIXED_SITES.filter((s) => s.seat === 'resting')) {
       const body = findByIdOrThrow(SCENE_MESH_BODIES, site.id, 'surfaceFixedSites.test');
       expect(site.altitudeM, site.id).toBe(MESH_ASSETS[body.meshKey]!.groundOffsetM);
     }

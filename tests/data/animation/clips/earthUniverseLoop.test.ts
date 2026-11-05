@@ -10,18 +10,19 @@
 import { describe, it, expect } from 'vitest';
 import { earthUniverseLoop } from '../../../../src/data/animation/clips/earthUniverseLoop';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
-import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 describe('earthUniverseLoop', () => {
   it('opens sunward, raised 30° above the ecliptic', () => {
     const start = earthUniverseLoop(CONST_J2000).data.start as CameraPose;
-    const earth = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    const earth = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
     const sMag = Math.hypot(earth[0], earth[1], earth[2]);
     const sunward: Vec3 = [earth[0] / sMag, earth[1] / sMag, earth[2] / sMag];
 
@@ -47,8 +48,11 @@ describe('earthUniverseLoop', () => {
     // sin(30°) up the ecliptic pole — the basis's second column, since a
     // column-major Mat3 stores column c at basis[c*3 + r].
     const pole: Vec3 = [basis[3], basis[4], basis[5]];
+    // The lift is from the sun line, and the Moon's reflex puts Earth ~1″ off the
+    // ecliptic, so the sun line's own latitude β is folded in.
     const eyeAlongPole = dirWorld[0] * pole[0] + dirWorld[1] * pole[1] + dirWorld[2] * pole[2];
-    expect(eyeAlongPole).toBeCloseTo(Math.sin((30 * Math.PI) / 180), 6);
+    const beta = Math.asin(sunward[0] * pole[0] + sunward[1] * pole[1] + sunward[2] * pole[2]);
+    expect(eyeAlongPole).toBeCloseTo(Math.sin((30 * Math.PI) / 180 - beta), 6);
   });
 
   it('loops seamlessly: pose(durationSec) equals pose(0) with yaw offset by exactly 2π', () => {

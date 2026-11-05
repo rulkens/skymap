@@ -23,4 +23,12 @@ export type MeshBodyRenderer = Renderer & {
   /** The probe minted with `setMesh`; `null` while the id is not resident. */
   probeOf(id: string): MeshProbe | null;
   draw(pass: GPURenderPassEncoder, id: string, uniforms: Float32Array): void;
+  /** Multiplies the body's contact mask onto the target where `depthView`'s
+   *  scene falls inside its box; a no-op for a body without one. */
+  drawContactShadow(
+    pass: GPURenderPassEncoder,
+    id: string,
+    uniforms: Float32Array,
+    depthView: GPUTextureView,
+  ): void;
 };

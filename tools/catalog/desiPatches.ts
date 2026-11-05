@@ -18,7 +18,7 @@
  */
 import type { DesiTracer } from '../parsers/desiFits';
 import type { SourceType } from '../../src/@types/data/SourceType';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import { makeConeFilter } from '../utils/math/makeConeFilter';
 import { makeDecBandFilter } from '../utils/math/makeDecBandFilter';
 import { makeEllipsoidUnionFilter } from '../utils/math/makeEllipsoidUnionFilter';
@@ -31,7 +31,7 @@ import { makeEllipsoidUnionFilter } from '../utils/math/makeEllipsoidUnionFilter
  *                    find the cone row.
  *   - `source`     — the `Source` this patch's rows are stamped with and
  *                    bucketed under; also the single source of truth for the
- *                    runtime `.bin` stem, via `SOURCE_REGISTRY[source].binBaseName`
+ *                    runtime `.bin` stem, via `APP_SOURCE_REGISTRY[source].binBaseName`
  *                    (`tierFilenameForSource`) — no separate `binName` field
  *                    here, since a hand-copied duplicate of that name could
  *                    drift from the registry with no test catching it.

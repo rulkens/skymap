@@ -7,11 +7,13 @@
  *     --sdss    path/to/sdss.csv \
  *     --twomrs  path/to/2mrs_table3.dat \
  *     --glade   path/to/glade2.3.dat \
- *     --out-dir public/data
+ *     --out-dir public/data \
+ *     --bias-weight angular   # angular (default) | schechter | vmax | none
+ *                             # (vmax clamps to [0.1, 1] in byte 55: NaN-photometry rows draw at 0.1×)
  *
  * Output files: sdss-*.bin, 2mrs.bin, glade-*.bin (one per source/tier),
- * written under `public/data/galaxy-catalog/v9/` — the epoch-prefixed
- * path `tierFilenameForSource` returns (see `src/data/tierTargets.ts`).
+ * written under `public/data/galaxy-catalog/v10/` — the epoch-prefixed
+ * path `tierFilenameForSource` returns (see `src/layers/galaxyCatalog/records/data/tierTargets.ts`).
  *
  * Cross-match dedup:
  *   - Priority: SDSS > 2MRS > GLADE > DESI patches. See `tools/crossMatch.ts`
@@ -67,7 +69,7 @@ import { parseFamousSeed } from '../parsers/famousSeed';
 import { DESI_PATCHES, DESI_TRACER_FILE_KEYS } from './desiPatches';
 import type { DesiPatch } from './desiPatches';
 
-import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import { encodeGalaxyCatalog } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 import { raDecZToCartesian } from '../../src/utils/math/index';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
@@ -80,17 +82,21 @@ import { CUTOFF_MPC } from './localVolumeCutoff';
 import type { Cf4CatalogIndex } from '../parsers/cosmicflows4';
 import { loadCf4CatalogIndex } from '../parsers/cosmicflows4';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
-import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import {
   tierTarget,
   tierFilenameForSource,
   fluxSupplementMagLimitFor,
-} from '../../src/data/tierTargets';
+} from '../../src/layers/galaxyCatalog/records/data/tierTargets';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 import { selectTierRecords } from './selectTierRecords';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { estimateLog10StellarMass } from './estimateLog10StellarMass';
+import { bakeBiasWeights } from './bias/bakeBiasWeights';
+import type { BiasWeightKind } from '../@types/catalog/BiasWeightKind';
+import { encodeAngularWeight } from '../../src/utils/galaxy/encodeAngularWeight';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
 // using the documented `tools/buildAllBins` import path.
@@ -157,6 +163,7 @@ export function recordsToCloud(
     spectroscopicZ: new Float32Array(count),
     orientationIsFallback: new Uint8Array(count),
     diameterIsFallback: new Uint8Array(count),
+    angularWeight: new Uint8Array(count),
     log10StellarMass: new Float32Array(count),
   };
   let overridesApplied = 0;
@@ -288,6 +295,7 @@ export function recordsToCloud(
       magZ: r.magZ,
       distMpc: adoptedDistMpc,
     });
+    cloud.angularWeight[i] = encodeAngularWeight(1);
   }
   if (overrides !== null && overridesApplied > 0) {
     process.stderr.write(
@@ -618,6 +626,12 @@ async function runCli(): Promise<void> {
     );
   }
 
+  const biasWeight = (args['bias-weight'] || 'angular') as BiasWeightKind;
+  if (!['angular', 'schechter', 'vmax', 'none'].includes(biasWeight)) {
+    throw new Error(`--bias-weight must be angular|schechter|vmax|none, got "${biasWeight}"`);
+  }
+  process.stderr.write(`bias weight: ${biasWeight}\n`);
+
   // Load the optional orientation caches before any parsing kicks off.
   // Both files are produced by separate `tools/fetch*.ts` scripts and may
   // not yet exist on a fresh checkout — that's intentional. A missing cache
@@ -842,7 +856,7 @@ async function runCli(): Promise<void> {
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;
     process.stderr.write(
-      `  ${SOURCE_REGISTRY[source].label}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
+      `  ${APP_SOURCE_REGISTRY[source].label}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
     );
   }
 
@@ -866,7 +880,7 @@ async function runCli(): Promise<void> {
       const target = tierTarget(source, tier);
       if (target === 0) {
         process.stderr.write(
-          `tier ${tier}: ${SOURCE_REGISTRY[source].label} excluded — skipping ${filename}\n`,
+          `tier ${tier}: ${APP_SOURCE_REGISTRY[source].label} excluded — skipping ${filename}\n`,
         );
         continue;
       }
@@ -883,9 +897,15 @@ async function runCli(): Promise<void> {
           : selectTierRecords(records, target, fluxSupplementMagLimitFor(source));
 
       const cloud = recordsToCloud(slice, overrides);
+      // Baked over this tier's own rows: the weight flattens what the tier draws.
+      if (biasWeight !== 'none') {
+        const weights = bakeBiasWeights(cloud, source, biasWeight);
+        for (let i = 0; i < cloud.count; i++)
+          cloud.angularWeight[i] = encodeAngularWeight(weights[i]!);
+      }
       const buf = encodeGalaxyCatalog(cloud);
       const outPath = resolve(outDir, filename);
-      // `filename` carries the family's epoch prefix (`galaxy-catalog/v9/…`,
+      // `filename` carries the family's epoch prefix (`galaxy-catalog/v10/…`,
       // see `tierFilenameForSource`), so the subfolder doesn't exist on a
       // fresh checkout — recursive mkdir is a no-op once it does.
       mkdirSync(dirname(outPath), { recursive: true });

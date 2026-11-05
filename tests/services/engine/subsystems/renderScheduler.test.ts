@@ -204,4 +204,87 @@ describe('createRenderScheduler', () => {
     sched.destroy();
     expect(timers.pendingCount()).toBe(0);
   });
+
+  describe('nextFrame', () => {
+    it('nextFrame resolves only after onFrame has run', async () => {
+      const fake = makeFakeRaf();
+      const order: string[] = [];
+      const sched = createRenderScheduler({
+        onFrame: () => order.push('frame'),
+        rafImpl: fake.rafImpl,
+        cafImpl: fake.cafImpl,
+      });
+
+      const p = sched.nextFrame().then(() => order.push('resolved'));
+      await Promise.resolve();
+      expect(order).toEqual([]);
+      fake.fireOne();
+      await p;
+      expect(order).toEqual(['frame', 'resolved']);
+    });
+
+    it('nextFrame still resolves when onFrame throws', async () => {
+      const fake = makeFakeRaf();
+      const sched = createRenderScheduler({
+        onFrame: () => {
+          throw new Error('frame failed');
+        },
+        rafImpl: fake.rafImpl,
+        cafImpl: fake.cafImpl,
+      });
+
+      const p = sched.nextFrame();
+      expect(() => fake.fireOne()).toThrow('frame failed');
+      await p;
+    });
+
+    it('nextFrame requests a render when none is queued', () => {
+      const fake = makeFakeRaf();
+      const sched = createRenderScheduler({
+        onFrame: vi.fn(),
+        rafImpl: fake.rafImpl,
+        cafImpl: fake.cafImpl,
+      });
+
+      void sched.nextFrame();
+      expect(fake.pendingCount()).toBe(1);
+    });
+
+    it('concurrent nextFrame callers share one frame', async () => {
+      const fake = makeFakeRaf();
+      const sched = createRenderScheduler({
+        onFrame: vi.fn(),
+        rafImpl: fake.rafImpl,
+        cafImpl: fake.cafImpl,
+      });
+
+      const both = Promise.all([sched.nextFrame(), sched.nextFrame()]);
+      expect(fake.pendingCount()).toBe(1);
+      fake.fireOne();
+      await both;
+    });
+
+    it('nextFrame called inside onFrame waits for the following frame', async () => {
+      const fake = makeFakeRaf();
+      let inner: Promise<void> | undefined;
+      let settled = false;
+      const sched = createRenderScheduler({
+        onFrame: () => {
+          inner ??= sched.nextFrame().then(() => {
+            settled = true;
+          });
+        },
+        rafImpl: fake.rafImpl,
+        cafImpl: fake.cafImpl,
+      });
+
+      sched.requestRender();
+      fake.fireOne();
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      fake.fireOne();
+      await inner;
+      expect(settled).toBe(true);
+    });
+  });
 });

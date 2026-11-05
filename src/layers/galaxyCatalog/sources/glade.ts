@@ -8,7 +8,6 @@ export const GLADE_ENTRY = {
   label: 'GLADE',
   binBaseName: 'glade',
   allSky: true,
-  visible: true,
   bearsLabel: false,
   bearsMarker: false,
   // Covers most of the GLADE distance distribution. GLADE has a long
@@ -35,4 +34,5 @@ export const GLADE_ENTRY = {
   sbBoost: 1.0,
   falloffHalfMpc: 1000,
   priority: 62,
+  durableId: { prefix: 'pgc', rank: 0 },
 } as const satisfies GalaxyCatalogSourceEntry;

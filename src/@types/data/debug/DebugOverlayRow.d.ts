@@ -3,8 +3,4 @@
 export type DebugOverlayRow = {
   key: string;
   label: string;
-  /** Which DebugPanel section renders this row. Absent = the Debug Overlays
-   *  list; `'surface-tiles'` = the Surface Tile Atlas section, for toggles
-   *  only legible next to that section's residency numbers. */
-  section?: 'surface-tiles';
 };

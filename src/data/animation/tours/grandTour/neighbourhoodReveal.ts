@@ -42,7 +42,7 @@ import {
 import { focusId } from '../../../../utils/animation/focusId';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
-export const REVEAL_DWELL_SEC = 12;
+const REVEAL_DWELL_SEC = 12;
 
 // Where the pull-out lands: wide enough that the neighbouring groups' scale
 // reads (the flythrough's subjects sit ~3.5 Mpc out), eye-tuned from there.
@@ -52,7 +52,7 @@ export const neighbourhoodReveal: ClipData = {
   start: 'live',
   timeline: [
     all([
-      ...dwellDrift(REVEAL_DWELL_SEC, { spinTo: focusId('group-m81-group') }).timeline,
+      ...dwellDrift(REVEAL_DWELL_SEC, { spinTo: focusId('galaxy-group-m81-group') }).timeline,
       // A beat of stillness, then release the focus and pull; the drift
       // outlasts the dolly so the wide shot breathes before the flythrough
       // launches.

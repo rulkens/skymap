@@ -15,10 +15,8 @@ import type { FadeAnchor } from '../../../@types/engine/FadeAnchor';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
-import {
-  MILKY_WAY_MODEL_SCALE,
-  MILKY_WAY_RADIUS_MPC,
-} from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import { apparentDiameterPx } from '../../../../../src/utils/math/apparentDiameterPx';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 
@@ -71,13 +69,13 @@ export function deriveMilkyWayFade(
   const distUnits = anchorDistUnits(eye, fade.anchor);
   const distMpc = distUnits * MILKY_WAY_MODEL_SCALE;
 
+  // This tool's camera carries only a symmetric fovY — no `ViewFrustum` to
+  // read `drawPxPerRad` off — so the tangent-exact pxPerRad is derived here,
+  // the one legitimate "genuinely needs the fov" site the app's helper no
+  // longer is.
+  const pxPerRad = viewportHeightPx / (2 * Math.tan(fovYRad / 2));
   // The same diameter `milkyWayFadeAlpha` measures, through the same helper.
-  const apparentPx = apparentDiameterPx(
-    2 * MILKY_WAY_RADIUS_MPC,
-    distMpc,
-    fovYRad,
-    viewportHeightPx,
-  );
+  const apparentPx = apparentDiameterPx(2 * MILKY_WAY_RADIUS_MPC, distMpc, pxPerRad);
 
   // `'none'` is the in-section A/B: the readout keeps tracking while the cloud
   // holds full strength, so both anchors can be compared against no fade at all

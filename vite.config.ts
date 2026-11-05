@@ -1,13 +1,16 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import { staticBuildExtension } from 'wesl-plugin';
-import viteWesl from 'wesl-plugin/vite';
+import { weslStaticPlugin } from './tools/utils/vite/weslStaticPlugin.ts';
 
 import { DEV_PORTS } from './tools/utils/io/devPorts.ts';
 import { distDir } from './tools/utils/io/distDir.ts';
+import { readCertPair } from './tools/utils/serve/readCertPair.ts';
+import { inlineEntryCssPlugin } from './tools/utils/vite/inlineEntryCssPlugin.ts';
+import { remoteRelayPlugin } from './tools/utils/vite/remoteRelayPlugin.ts';
+import { satelliteJsDistAlias } from './tools/utils/vite/satelliteJsDistAlias.ts';
+import { minifyStaticWgslPlugin } from './tools/utils/wgsl/minifyStaticWgslPlugin.ts';
 
 // ── Opt-in LAN HTTPS for on-device (iPad/iPhone) testing ────────────────────
 //
@@ -33,11 +36,8 @@ import { distDir } from './tools/utils/io/distDir.ts';
 function lanHttpsServer(): { host: boolean; https: { cert: Buffer; key: Buffer } } | undefined {
   if (process.env.SKYMAP_HTTPS !== '1') return undefined;
 
-  const certDir = join(import.meta.dirname, '.certs');
-  const files = existsSync(certDir) ? readdirSync(certDir) : [];
-  const keyFile = files.find((f) => f.endsWith('-key.pem'));
-  const certFile = files.find((f) => f.endsWith('.pem') && !f.endsWith('-key.pem'));
-  if (!keyFile || !certFile) {
+  const certs = readCertPair(join(import.meta.dirname, '.certs'));
+  if (certs === undefined) {
     throw new Error(
       'SKYMAP_HTTPS=1 but no cert pair found in .certs/. Run: ' +
         'mkdir -p .certs && cd .certs && mkcert <lan-ip> localhost',
@@ -46,28 +46,42 @@ function lanHttpsServer(): { host: boolean; https: { cert: Buffer; key: Buffer }
 
   return {
     host: true, // bind 0.0.0.0 so the LAN can reach it
-    https: {
-      cert: readFileSync(join(certDir, certFile)),
-      key: readFileSync(join(certDir, keyFile)),
-    },
+    https: certs,
   };
 }
 
-// `wesl-plugin/vite` registers a Vite plugin that intercepts imports of
-// `.wesl` (and `.wgsl`) files with recognised suffixes. We pass it just
-// the `staticBuildExtension`, which handles the `?static` suffix — it
-// runs the WESL linker at build time and returns a flat WGSL string,
-// preserving the existing `import x from './foo.wesl?static'` shape and
-// avoiding any runtime linker dependency. The alternative (`?link`)
-// would defer linking to runtime, which we don't need yet and which
-// would pull the `wesl` JS linker into the production bundle.
+// `weslStaticPlugin` resolves `import x from './foo.wesl?static'`: it runs
+// the WESL linker at build time and returns a flat WGSL string, so there
+// is no runtime linker dependency. Linking at runtime would buy
+// conditional compilation, which we don't need, at the cost of shipping
+// the `wesl` JS linker in the production bundle.
 //
 // `assetsInclude: ['**/*.wgsl']` is retained while a few `.wgsl` files
 // remain unmigrated; once Task 2 finishes the bulk rename it can be
 // dropped, but it's harmless until then.
-export default defineConfig({
-  plugins: [viteWesl({ extensions: [staticBuildExtension] }), react()],
+export default defineConfig(({ command }) => ({
+  plugins: [
+    weslStaticPlugin(),
+    minifyStaticWgslPlugin(),
+    react(),
+    inlineEntryCssPlugin(),
+    remoteRelayPlugin(),
+  ],
+  resolve: { alias: satelliteJsDistAlias },
   server: { port: DEV_PORTS.main, ...lanHttpsServer() },
+  // Dev only: a built bundle must not carry this machine's absolute path.
+  define: {
+    __SKYMAP_PROJECT_ROOT__: JSON.stringify(command === 'serve' ? import.meta.dirname : ''),
+  },
   assetsInclude: ['**/*.wgsl'],
-  build: { outDir: distDir },
-});
+  build: {
+    outDir: distDir,
+    license: { fileName: 'third-party-licenses.md' },
+    rollupOptions: {
+      input: {
+        main: join(import.meta.dirname, 'index.html'),
+        remote: join(import.meta.dirname, 'remote.html'),
+      },
+    },
+  },
+}));

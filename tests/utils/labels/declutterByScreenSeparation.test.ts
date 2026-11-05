@@ -17,11 +17,11 @@ describe('declutterByScreenSeparation', () => {
   it('keeps the highest-priority of an overlapping cluster', () => {
     // Three captions pile inside 20 px of each other (a cluster), plus one
     // well-separated 500 px away. Priorities differ within the cluster.
-    const candidates: readonly { screenPx: Vec2; priorityPx: number }[] = [
-      { screenPx: [100, 100], priorityPx: 2 }, // cluster, mid priority
-      { screenPx: [108, 104], priorityPx: 9 }, // cluster, TOP priority
-      { screenPx: [95, 110], priorityPx: 5 }, // cluster, low priority
-      { screenPx: [600, 100], priorityPx: 1 }, // isolated — always survives
+    const candidates: readonly { screenPx: Vec2; declutterPriority: number }[] = [
+      { screenPx: [100, 100], declutterPriority: 2 }, // cluster, mid priority
+      { screenPx: [108, 104], declutterPriority: 9 }, // cluster, TOP priority
+      { screenPx: [95, 110], declutterPriority: 5 }, // cluster, low priority
+      { screenPx: [600, 100], declutterPriority: 1 }, // isolated — always survives
     ];
 
     const kept = declutterByScreenSeparation({ candidates, minSeparationPx: 40 });
@@ -33,10 +33,10 @@ describe('declutterByScreenSeparation', () => {
   });
 
   it('keeps every candidate when all are well separated', () => {
-    const candidates: readonly { screenPx: Vec2; priorityPx: number }[] = [
-      { screenPx: [0, 0], priorityPx: 1 },
-      { screenPx: [200, 0], priorityPx: 3 },
-      { screenPx: [0, 200], priorityPx: 2 },
+    const candidates: readonly { screenPx: Vec2; declutterPriority: number }[] = [
+      { screenPx: [0, 0], declutterPriority: 1 },
+      { screenPx: [200, 0], declutterPriority: 3 },
+      { screenPx: [0, 200], declutterPriority: 2 },
     ];
     const kept = declutterByScreenSeparation({ candidates, minSeparationPx: 50 });
     // All survive; order is priority-DESC (3, 2, 1 → indices 1, 2, 0).

@@ -1,0 +1,4 @@
+.code {
+  letter-spacing: var(--letter-spacing-wider);
+  color: var(--color-accent);
+}

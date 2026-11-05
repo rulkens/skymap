@@ -1,4 +1,3 @@
-// src/components/containers/DisplaySectionContainer.tsx
 /**
  * DisplaySectionContainer — store boundary for the Display settings section.
  *
@@ -7,10 +6,6 @@
  * knobs, the live `hdrCapable` read off the engine slice, and the bloom trio —
  * each dispatch wrapped in `useCallback`. The presentational `DisplaySection`
  * imports nothing from `store/` or `state/`.
- *
- * Nested subgroups (e.g. `EarthSectionContainer`) are passed in as `children`
- * and forwarded to `DisplaySection`, keeping each subgroup's store reach in its
- * own container rather than drilling through here.
  *
  * ### Handler stability
  *
@@ -21,7 +16,6 @@
  */
 
 import { memo, useCallback } from 'react';
-import type { ReactNode } from 'react';
 import DisplaySection from '../SettingsPanel/DisplaySection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
@@ -47,14 +41,9 @@ import {
 } from '../../state/settings/core/bloomSlice';
 import { requestOrientationChange } from '../../state/camera/orientationActions';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
-type DisplaySectionContainerProps = {
-  /** Nested subgroups rendered inside the Display disclosure (e.g. Earth). */
-  children?: ReactNode;
-};
-
-function DisplaySectionContainer({ children }: DisplaySectionContainerProps): React.ReactElement {
+function DisplaySectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const orientation = useAppSelector(selectOrientation);
   const toneMapCurve = useAppSelector(selectToneMapCurve);
@@ -126,9 +115,7 @@ function DisplaySectionContainer({ children }: DisplaySectionContainerProps): Re
       onBloomStrengthChange={onBloomStrengthChange}
       bloomThreshold={bloomThreshold}
       onBloomThresholdChange={onBloomThresholdChange}
-    >
-      {children}
-    </DisplaySection>
+    />
   );
 }
 

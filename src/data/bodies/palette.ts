@@ -1,6 +1,6 @@
 /**
  * palette — SHARED linear-RGB colours only. Per-body data read once at its seed site stays
- * inline (planet albedos in `scenePlanets.ts`); star tints come from `temperatureToLinearRgb`.
+ * inline (planet albedos in the body Layer's `bodies/` rows); star tints come from `temperatureToLinearRgb`.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -26,15 +26,19 @@ export const SAT_ICE: Vec3 = [0.45, 0.47, 0.5];
 export const IO_SULFUR: Vec3 = [0.5, 0.45, 0.22];
 export const TITAN_ORANGE: Vec3 = [0.5, 0.38, 0.2];
 
+// Shared by Vesta, Ceres and Bennu: a clay brown, warmer than SAT_ROCK and redder than PLUTO_TAN.
+export const SMALL_BODY_ROCK: Vec3 = [0.44, 0.33, 0.27];
+
 // Hitchhiker's Guide easter egg: a sperm whale and a bowl of petunias, 400 km up.
 export const WHALE_GREY: Vec3 = [0.28, 0.32, 0.38];
 export const PETUNIA_PINK: Vec3 = [0.5, 0.22, 0.36];
 
-// Thermal-blanket gold, warm and cool so the two probes stay apart; unread
-// today — mesh bodies draw no trail.
-export const VOYAGER_1_GOLD: Vec3 = [0.5, 0.42, 0.2];
-export const VOYAGER_2_AMBER: Vec3 = [0.5, 0.36, 0.16];
+// Voyager trail tints (read by `SAMPLED_BODIES`): V1 lime, V2 green — a hue no planet
+// trail uses (the old gold was Saturn's own), with the two still apart where they run close.
+// Muted a quarter of the way toward grey; at full saturation they read as neon.
+export const VOYAGER_1_LIME: Vec3 = [0.342, 0.5, 0.163];
+export const VOYAGER_2_GREEN: Vec3 = [0.154, 0.5, 0.226];
 
-// Hubble's aluminium skin, cool enough to stay off the probes' gold; unread
+// Hubble's aluminium skin, cool enough to stay off the probes' lime and green; unread
 // today — mesh bodies draw no trail.
 export const HUBBLE_SILVER: Vec3 = [0.38, 0.42, 0.5];

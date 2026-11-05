@@ -11,7 +11,7 @@
  * path drawn in the overlay. That makes the path stable across replays — the
  * thing you tune is the thing you watch.
  *
- * ### Why no registry lookup or foci wait (unlike watchClipSaga)
+ * ### Why no registry lookup or foci wait (unlike clipBodySaga)
  *
  * The inspector already did both at "Calculate" time (`watchClipPathInspectSaga`
  * waits on `clipFociReady` then calls `resolveClipFoci`, and the seam pins the
@@ -27,21 +27,22 @@
  * though they were authored under whatever frame is live now — the exact
  * defect `camera.clip.frame` exists to prevent, relocated to between clicks.
  *
- * ### Why race against stopClip
+ * ### Why race against exitTakeover
  *
- * Same teardown contract as `watchClipSaga`: a `stopClip` (the panel's Stop
- * button, or Esc) cancels the in-flight play via the seam's `[CANCEL]` hook.
- * `takeLatest` also makes a second replay supersede the first.
+ * A replay is not a takeover, but it answers the same exit verb: the panel's
+ * Stop button or Esc cancels the in-flight play via the seam's `[CANCEL]`
+ * hook. `takeLatest` also makes a second replay supersede the first.
  *
  * ### getContext inside the worker
  *
  * The engine registers saga context AFTER the root saga forks, so both seams are
  * read inside the worker (when the action arrives), not at fork time — the same
- * pattern as `watchClipSaga` / `watchClipPathInspectSaga`.
+ * pattern as `clipBodySaga` / `watchClipPathInspectSaga`.
  */
 import { call, race, take, takeLatest, getContext } from 'typed-redux-saga';
 
-import { replayInspectedPath, stopClip } from './clipActions';
+import { replayInspectedPath } from './clipActions';
+import { exitTakeover } from '../takeover/takeoverActions';
 import type { SagaContext } from '../../store/types';
 
 export function* watchReplayInspectedPathSaga() {
@@ -59,7 +60,7 @@ export function* watchReplayInspectedPathSaga() {
 
     yield* race({
       run: call(playClipSeam, clip, frame),
-      stop: take(stopClip),
+      stop: take(exitTakeover),
     });
   });
 }

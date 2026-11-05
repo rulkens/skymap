@@ -20,13 +20,13 @@
  * sits ~15° off Saturn's equator) rides its true plane rather than the shared
  * equatorial one — hence `planeFrameFromPole` is exported. The ecliptic is
  * simply the frame of the ecliptic pole, so `planeFrameFromPole` reproduces
- * `ECLIPTIC_FRAME` exactly (it equals `planeFrameFromPole(270, 66.56)` to
+ * `ECLIPTIC_FRAME` exactly (it equals `planeFrameFromPole(270, 66.5607089)` to
  * floating-point noise); `ECLIPTIC_FRAME` is written out directly from the
- * obliquity so the 23.44° has a single, legible source.
+ * obliquity so the 23.439° has a single, legible source.
  *
  * The ecliptic — the plane of Earth's orbit, which every OTHER solar-system
  * body (the Moon, the planets) also orbits near — is tilted from the scene's
- * equatorial xy-plane by Earth's axial tilt, the obliquity ε ≈ 23.44°. The two
+ * equatorial xy-plane by Earth's axial tilt, the obliquity ε ≈ 23.439°. The two
  * planes share one line: the equinox, where the Sun crosses the equatorial
  * plane heading north each spring. That shared line is exactly frame +x, so +x
  * needs no transform to land in the ecliptic; rotating equatorial +y by ε about
@@ -68,14 +68,14 @@ export function planeFrameFromPole(poleRaDeg: number, poleDecDeg: number): Orbit
   return { xAxis, yAxis, normal };
 }
 
-// Earth's axial tilt: the angle between the equatorial and ecliptic planes.
-const OBLIQUITY_DEG = 23.44;
+// IAU J2000 mean obliquity: the angle between the equatorial and ecliptic planes.
+const OBLIQUITY_DEG = 23.4392911;
 
 /**
  * The ecliptic frame: the equinox +x is the shared node, and the y/z axes carry
  * the obliquity ε — `yAxis` is equatorial +y rotated by ε about +x, `normal` is
  * equatorial +z rotated the same. Written directly from `OBLIQUITY_DEG` so the
- * 23.44° has one source.
+ * 23.439° has one source.
  */
 const eps = degToRad(OBLIQUITY_DEG);
 export const ECLIPTIC_FRAME: OrbitPlaneFrame = {

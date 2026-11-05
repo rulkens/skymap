@@ -7,7 +7,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../compositions/appCubemapCaptures';
 import { skyCaptureBandAlpha } from '../skyCaptureBandAlpha';
 
 export const skyCubemapBlitPass: ContentPass = {
@@ -21,11 +21,15 @@ export const skyCubemapBlitPass: ContentPass = {
   draw(pass, _view, ctx, state) {
     const renderer = state.gpu.cubeFaceBlitRenderer;
     if (renderer === null) return;
-    // A face ctx always carries `cubemapFaceContext`'s basis; optional on the type.
+    // A face view always carries `deriveView`'s turned basis; optional on the type.
     const basis = ctx.cam.poseBasis;
     if (basis === undefined) {
       throw new Error('skyCubemapBlitPass: the face context carries no poseBasis');
     }
-    renderer.draw(pass, basis, ctx.renderTargets.cubeViewOf(CUBEMAP_CAPTURES.solarSystem.target));
+    renderer.draw(
+      pass,
+      basis,
+      ctx.snapshot.renderTargets.cubeViewOf(APP_CUBEMAP_CAPTURE_REGISTRY.solarSystem.target),
+    );
   },
 };

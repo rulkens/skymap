@@ -2,7 +2,7 @@
  * near0LabelProjection — the NEAR0 label director's `Label2DDirectorConfig.project`.
  *
  * Rebases the slab's f64 `vp` about the camera in f64 (`rebaseViewProj`) — the
- * same precision fix `foregroundLabelsPass.ts` applies today, load-bearing at
+ * same precision fix `labelsNearPass.ts` applies today, load-bearing at
  * solar-system zoom where the raw vp's view translation and a near anchor's
  * coordinate agree to only ~4 f32 digits (see `rebaseViewProj`'s module
  * header). `vp` stays f64 in Mpc for the lift stage's inverse-projection math;
@@ -11,25 +11,29 @@
  * its COSMO sibling.
  */
 
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
-import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../utils/camera/projection/rebaseViewProj';
+import { near0OverlayClipScale } from './near0OverlayClipScale';
 import { near0OverlayVpF32 } from './near0OverlayVpF32';
 import { NEAR0 } from './slabs';
 
-const cache = new WeakMap<ReadyFrameContext, Label2DProjection>();
+const cache = new WeakMap<FrameView, Label2DProjection>();
 
-export function near0LabelProjection(ctx: ReadyFrameContext): Label2DProjection {
+export function near0LabelProjection(ctx: FrameView): Label2DProjection {
   const cached = cache.get(ctx);
   if (cached) return cached;
 
   const slab = ctx.slabs[NEAR0];
   if (!slab) throw new Error(`near0LabelProjection: no slab at index ${NEAR0}`);
   const vp = rebaseViewProj(slab.vp, ctx.drawCamPos);
+  const clipScale = near0OverlayClipScale(slab.near);
   const projection: Label2DProjection = {
     vp,
-    vpF32: near0OverlayVpF32(vp),
+    vpF32: near0OverlayVpF32(vp, clipScale),
     viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
+    pxPerRad: ctx.drawPxPerRad,
+    clipScale,
   };
   cache.set(ctx, projection);
   return projection;

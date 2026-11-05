@@ -1,0 +1,25 @@
+.root {
+  max-width: 36rem;
+}
+
+/* The address is the section's action, so it is set large; on a narrow phone it may break anywhere. */
+.lead {
+  margin-bottom: 0.5em;
+  font: var(--weight-display) var(--text-ring-big) / var(--leading-display)
+    var(--font-family-display);
+  overflow-wrap: anywhere;
+
+  & a {
+    color: var(--color-fg);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+}
+
+.note {
+  composes: small from '../../../../styles/type.module.css';
+  max-width: none;
+  margin-top: var(--site-space-l);
+  margin-bottom: var(--site-space-2xs);
+  color: var(--site-text-dim);
+}

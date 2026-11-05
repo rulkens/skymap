@@ -5,7 +5,7 @@ title: The Local Group
 narration: >
   The Milky Way and Andromeda travel together, dozens of dwarf galaxies in
   tow: a single family bound by gravity, the Local Group.
-focus: structure:group-local-group
+focus: structure:galaxy-group-local-group
 distance_mpc: 2.5
 motion: pull-back + orbit
 travel_s: 9

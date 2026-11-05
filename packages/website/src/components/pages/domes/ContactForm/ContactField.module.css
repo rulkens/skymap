@@ -1,0 +1,48 @@
+.root {
+  margin-bottom: var(--site-space-m);
+
+  & label {
+    display: block;
+    font: var(--weight-display) var(--text-h3) / 1.2 var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  /* 16px and up, so a phone does not zoom the page when a field takes focus. */
+  & :is(input, textarea) {
+    display: block;
+    width: 100%;
+    min-height: var(--tap);
+    margin-top: var(--site-space-2xs);
+    padding: var(--site-space-xs) var(--site-space-xs);
+    border: 1px solid var(--site-line-strong);
+    border-radius: 0.25rem;
+    background: transparent;
+    color: var(--color-fg);
+    font: var(--weight-small) 1.125rem / 1.5 var(--font-body);
+
+    &:focus-visible {
+      outline-offset: 2px;
+      border-color: var(--color-accent);
+    }
+
+    &[aria-invalid='true'] {
+      border-color: var(--site-error);
+    }
+  }
+
+  & textarea {
+    resize: vertical;
+  }
+}
+
+.hint {
+  composes: small from '../../../../styles/type.module.css';
+  margin: var(--site-space-3xs) 0 0;
+  color: var(--site-text-dim);
+}
+
+.error {
+  composes: small from '../../../../styles/type.module.css';
+  margin: var(--site-space-2xs) 0 0;
+  color: var(--site-error-text);
+}

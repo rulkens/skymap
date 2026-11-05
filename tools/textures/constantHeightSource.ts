@@ -5,7 +5,7 @@
  * pixel would otherwise abort a long bake at `bakeHeightLevel`'s finiteness assert.
  */
 
-import type { HeightSource } from './HeightSource';
+import type { HeightSource } from './@types/HeightSource';
 
 const WHOLE_GLOBE = [{ west: -180, east: 180, south: -90, north: 90 }] as const;
 

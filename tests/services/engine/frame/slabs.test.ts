@@ -23,26 +23,31 @@ import {
   COSMO,
   SLAB_REVERSED_Z,
 } from '../../../../src/services/engine/frame/slabs';
-import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
-import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
-import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
-import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
+import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/createOrbitCamera';
+import { computeForegroundViewProj } from '../../../../src/utils/camera/projection/computeForegroundViewProj';
+import { computeViewProj } from '../../../../src/utils/camera/projection/computeViewProj';
+import { orbitForwardOf } from '../../../../src/utils/camera/orbitPose/orbitForwardOf';
 import {
   foregroundFrustum,
   MIN_NEAR_M,
   MIN_NEAR_MPC,
   NEAR_RATIO,
-} from '../../../../src/utils/camera/foregroundFrustum';
+} from '../../../../src/utils/camera/frustum/foregroundFrustum';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
+import { bodyLayerSlabRow } from '../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import { frustumPerspectiveF64 } from '../../../../src/utils/camera/frustum/frustumPerspectiveF64';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 function makeCam(distance: number): OrbitCamera {
   return createOrbitCamera({
@@ -57,38 +62,37 @@ function makeCam(distance: number): OrbitCamera {
   });
 }
 
-/** A distinctive, non-identity Mat4 so byte-equality checks aren't vacuous. */
 function makeCosmoVp(): Mat4 {
   return mat4.perspective(1, 16 / 9, 0.01, 50000);
 }
 
 const NO_POSE: BodyPoseProvider = () => null;
 
-function makePlanet(overrides: Partial<PlanetBody> = {}): PlanetBody {
+function makePlanet(overrides: Partial<Omit<PlanetBody, 'captionKind'>> = {}): PlanetBody {
   return {
-    id: 'test-planet',
+    id: asSceneBodyId('test-planet'),
     label: 'Test Planet',
+    captionKind: 'planet',
+    resolvePx: 3,
     surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
     albedo: [1, 1, 1],
     ...overrides,
   };
 }
 
-/**
- * Every `deriveSlabs` input, defaulted to "no bodies" so each test overrides
- * only what it exercises. `altitudeMpc` defaults to the camera's own distance —
- * the surfaceless case — and tests that care override it.
- */
+/** Every `deriveSlabs` input, defaulted to "no bodies"; `altitudeMpc` defaults to the camera's own
+ *  distance (the surfaceless case). */
 function baseInput(
   overrides: Partial<Parameters<typeof deriveSlabs>[0]> = {},
 ): Parameters<typeof deriveSlabs>[0] {
   const cam = overrides.cam ?? makeCam(100);
   return {
     cam,
+    frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
     cosmoVp: makeCosmoVp(),
     altitudeMpc: cam.distance,
     pose: NO_POSE,
-    visibleBodies: [],
+    visibleRows: [],
     viewportPx: [1920, 1080] as Vec2,
     starSphereRangeM: null,
     ...overrides,
@@ -145,10 +149,8 @@ describe('deriveSlabs', () => {
     const distance = 250;
     const cam = makeCam(distance);
     const slabs = deriveSlabs(baseInput({ cam }));
-    // Pin the util as the derivation: rebuild the matrix from the same camera
-    // inputs and assert Float64Array equality. A reimplemented-but-equal matrix
-    // would drift the moment computeForegroundViewProj changes, so equality
-    // against the live util — not a hand-rolled expectation — is the contract.
+    // Equality against the live util, not a hand-rolled expectation, is the contract: a
+    // reimplemented-but-equal matrix would drift the moment computeForegroundViewProj changes.
     const { near, far } = foregroundFrustum(distance);
     const forward = orbitForwardOf(cam);
     const expected = computeForegroundViewProj({
@@ -160,8 +162,7 @@ describe('deriveSlabs', () => {
       ],
       up: [0, 1, 0],
       renderOrigin: RENDER_ORIGIN_MPC,
-      fovYRad: cam.fovYRad,
-      aspect: cam.aspect,
+      frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
       near,
       far,
       // NEAR0 is reversed-Z (`SLAB_REVERSED_Z[NEAR0] === true`), so the derived
@@ -183,7 +184,7 @@ describe('deriveSlabs', () => {
 
   it('keys the near-field bracket off `altitudeMpc`, never the camera distance', () => {
     // A low orbit, where the pivot's radius dominates raw `cam.distance` and
-    // the ratio still clears `MIN_NEAR_MPC` (~6 m) so the bracket, not the
+    // the ratio still clears `MIN_NEAR_MPC` so the bracket, not the
     // floor, is what the assertion reads.
     const altitudeMpc = 500 * SCALE_UNITS.KM_TO_MPC;
     const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
@@ -208,9 +209,9 @@ describe('deriveSlabs', () => {
   });
 
   it('emits one body row per visible body, back-to-front', () => {
-    const far = makePlanet({ id: 'body-far' });
-    const mid = makePlanet({ id: 'body-mid' });
-    const near = makePlanet({ id: 'body-near' });
+    const far = makePlanet({ id: asSceneBodyId('body-far') });
+    const mid = makePlanet({ id: asSceneBodyId('body-mid') });
+    const near = makePlanet({ id: asSceneBodyId('body-near') });
 
     const poseByBody = new Map<string, BodyRelativePose>([
       ['body-far', { eyeRelBodyM: [1e10, 0, 0], basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],
@@ -221,14 +222,16 @@ describe('deriveSlabs', () => {
 
     // Deliberately NOT in distance order, so the assertion below exercises the
     // sort rather than coincidentally matching input order.
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [near, far, mid] }));
+    const slabs = deriveSlabs(
+      baseInput({ pose, visibleRows: [near, far, mid].map(bodyLayerSlabRow) }),
+    );
 
     expect(slabs).toHaveLength(2 + 3);
     expect(slabs[2]!.distanceRangeM![0]).toBeGreaterThan(slabs[3]!.distanceRangeM![0]);
     expect(slabs[3]!.distanceRangeM![0]).toBeGreaterThan(slabs[4]!.distanceRangeM![0]);
-    expect(slabs[2]?.frame).toEqual({ kind: 'body-m', bodyId: 'body-far' });
-    expect(slabs[3]?.frame).toEqual({ kind: 'body-m', bodyId: 'body-mid' });
-    expect(slabs[4]?.frame).toEqual({ kind: 'body-m', bodyId: 'body-near' });
+    expect(slabs[2]?.frame).toEqual({ kind: 'body-m', hostId: 'body-far' });
+    expect(slabs[3]?.frame).toEqual({ kind: 'body-m', hostId: 'body-mid' });
+    expect(slabs[4]?.frame).toEqual({ kind: 'body-m', hostId: 'body-near' });
     for (const slab of slabs.slice(2)) {
       expect(slab.precision).toBe('f64');
       expect(slab.reversedZ).toBe(true);
@@ -236,14 +239,16 @@ describe('deriveSlabs', () => {
   });
 
   it('drops a body whose pose is null this frame (culled)', () => {
-    const body = makePlanet({ id: 'culled-body' });
-    const slabs = deriveSlabs(baseInput({ pose: NO_POSE, visibleBodies: [body] }));
+    const body = makePlanet({ id: asSceneBodyId('culled-body') });
+    const slabs = deriveSlabs(
+      baseInput({ pose: NO_POSE, visibleRows: [body].map(bodyLayerSlabRow) }),
+    );
     expect(slabs).toHaveLength(2);
   });
 
   it('brackets a body row around its drawn radius — dM=1e9 m, rMaxM=1e5 m', () => {
     const body = makePlanet({
-      id: 'bracket-body',
+      id: asSceneBodyId('bracket-body'),
       surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
     });
     // ON-AXIS: eyeRelBodyM points along -forward ([0,0,1]), so viewZ === dM
@@ -253,7 +258,7 @@ describe('deriveSlabs', () => {
       eyeRelBodyM: [0, 0, -1e9],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const row = slabs[2]!;
     // Hand-written, not re-derived from bodyDrawRadiusM/dM inside the test.
     // rMaxM (1e5) has no atmosphere/ring/cloud to widen it, so the margin is
@@ -267,18 +272,14 @@ describe('deriveSlabs', () => {
   });
 
   it("keys a body row's reversedZ + projection off SLAB_REVERSED_Z[NEAR0], not a hard-coded literal (M3 fix)", () => {
-    // `bodySlabRow` must key both `reversedZ` and the projection SHAPE off
-    // `SLAB_REVERSED_Z[NEAR0]` together — the same constant every body-row
-    // PIPELINE (`gpuHandleRegistry`) already reads for its `depthCompare`.
-    // Mutating the shared constant (it's a plain object at runtime, only
-    // `Readonly` at the type level) and re-deriving must flip BOTH the
-    // `reversedZ` field and the projection SHAPE together, or the module
-    // header's "partial flip impossible" claim is false. `computeForegroundViewProj`
-    // pins the identical NEAR0-side coupling by rebuilding the expected
-    // matrix from the same util this test rebuilds by hand for the body row
-    // (no shared "foreground" util exists for body rows, so the two mat4d
-    // calls are inlined here).
-    const body = makePlanet({ id: 'flip-body', surface: { datumRadiusM: 1e5, reliefM: [0, 0] } });
+    // `bodySlabRow` must key both `reversedZ` and the projection SHAPE off `SLAB_REVERSED_Z[NEAR0]`, the
+    // constant every body-row PIPELINE already reads for its `depthCompare`. Mutating it (a plain object
+    // at runtime) and re-deriving must flip BOTH together. The expected matrix is rebuilt inline (no
+    // shared "foreground" util exists for body rows).
+    const body = makePlanet({
+      id: asSceneBodyId('flip-body'),
+      surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
+    });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [0, 0, -1e9],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -288,13 +289,19 @@ describe('deriveSlabs', () => {
     const original = mutableFlag[NEAR0];
     mutableFlag[NEAR0] = false;
     try {
-      const slabs = deriveSlabs(baseInput({ cam, pose, visibleBodies: [body] }));
+      const slabs = deriveSlabs(
+        baseInput({ cam, pose, visibleRows: [body].map(bodyLayerSlabRow) }),
+      );
       const row = slabs[2]!;
       expect(row.reversedZ).toBe(false);
       const view = mat4d.lookAt([0, 0, 0], [0, 0, 1], [0, 1, 0]);
       const dM = 1e9;
       const rMaxM = 1e5; // no atmosphere/ring/cloud widens a bare radiusM body.
-      const expectedProj = mat4d.perspective(cam.fovYRad, cam.aspect, row.near, dM + rMaxM);
+      const expectedProj = frustumPerspectiveF64(
+        symmetricFrustum(cam.fovYRad, cam.aspect),
+        row.near,
+        dM + rMaxM,
+      );
       const expectedVp = mat4d.multiply(expectedProj, view);
       expect(Array.from(row.vp)).toEqual(Array.from(expectedVp));
     } finally {
@@ -303,16 +310,16 @@ describe('deriveSlabs', () => {
   });
 
   it("keys a body row's near plane off VIEW-AXIS depth, not radial distance, for an off-axis body (Saturn pose-B repro)", () => {
-    // Real numbers from the investigation
-    // (.superpowers/sdd/2026-08-26-body-render-slabs/saturn-vanish-investigation.md,
-    // Phase 2): Saturn, θ=33.8° off the camera's forward axis, dM≈1.22e9 m.
-    // Saturn's own registry radiusM (58,232 km) and ring outer (140,220 km,
-    // `SCENE_RINGS`) come along for free via id: 'saturn' + `bodyDrawRadiusM`.
+    // Saturn, θ=33.8° off the camera's forward axis, dM≈1.22e9 m. Its registry radiusM (58,232 km) and
+    // ring outer (140,220 km, `SCENE_RINGS`) come via id: 'saturn' + `bodyDrawRadiusM`.
     const dM = 1.22e9;
     const thetaRad = (33.8 * Math.PI) / 180;
     const radiusM = 58_232_000;
     const ringOuterM = 140_220_000;
-    const body = makePlanet({ id: 'saturn', surface: { datumRadiusM: radiusM, reliefM: [0, 0] } });
+    const body = makePlanet({
+      id: asSceneBodyId('saturn'),
+      surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
+    });
     const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
     // forward=[0,0,-1]; bodyRelEye = dM*(cosθ·forward + sinθ·right) =
     // [dM sinθ, 0, -dM cosθ]. eyeRelBodyM = -bodyRelEye (bodyRelativePose.ts:
@@ -321,7 +328,7 @@ describe('deriveSlabs', () => {
     const eyeRelBodyM: Vec3 = [-bodyRelEye[0], -bodyRelEye[1], -bodyRelEye[2]];
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
 
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const row = slabs[2]!;
 
     const viewZ = dM * Math.cos(thetaRad);
@@ -334,10 +341,9 @@ describe('deriveSlabs', () => {
     expect(row.near).toBeLessThanOrEqual(globeProxyNearFaceM);
     expect(row.near).toBeLessThanOrEqual(ringNearFaceM);
 
-    // Documents the bug this guards against: the OLD formula pinned near to
-    // the RADIAL dM - rMaxM, which at this θ sits IN FRONT of the globe
-    // proxy's true near face — i.e. it clipped the globe. This assertion is
-    // about the scenario's geometry, not the fix, so it holds either way.
+    // The OLD formula pinned near to the RADIAL dM - rMaxM, which at this θ sits IN FRONT of the globe
+    // proxy's true near face and clipped it; this assertion is about the scenario's geometry, so it
+    // holds either way.
     const oldRadialNear = dM - ringOuterM;
     expect(oldRadialNear).toBeGreaterThan(globeProxyNearFaceM);
   });
@@ -351,7 +357,7 @@ describe('deriveSlabs', () => {
     const thetaRad = (20 * Math.PI) / 180;
     const radiusM = 5e6;
     const body = makePlanet({
-      id: 'ringless-off-axis-body',
+      id: asSceneBodyId('ringless-off-axis-body'),
       surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     });
     const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
@@ -361,7 +367,7 @@ describe('deriveSlabs', () => {
     const eyeRelBodyM: Vec3 = [-bodyRelEye[0], -bodyRelEye[1], -bodyRelEye[2]];
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
 
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const row = slabs[2]!;
 
     const viewZ = dM * Math.cos(thetaRad);
@@ -371,34 +377,34 @@ describe('deriveSlabs', () => {
 
   it("floors a body row's near plane at MIN_NEAR_M when the camera is inside the drawn radius", () => {
     const body = makePlanet({
-      id: 'inside-body',
+      id: asSceneBodyId('inside-body'),
       surface: { datumRadiusM: 1000, reliefM: [0, 0] },
     });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [100, 0, 0], // dM = 100 m < rMaxM = 1000 m
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const row = slabs[2]!;
     expect(row.near).toBe(MIN_NEAR_M);
     expect(row.distanceRangeM![0]).toBe(0);
   });
 
   it("keys a body row's near plane off altitude above the SURFACE, not MIN_NEAR_M, once the camera is inside the outermost shell", () => {
-    // Earth-shaped: radiusM 6.371e6 m, id 'earth' pulls the real
-    // ATMOSPHERE_PARAMS row so rMaxM (bodyDrawRadiusM) is the atmosphere top,
-    // ~100 km above the surface — the exact regression this guards
-    // (.superpowers/sdd/2026-08-26-body-render-slabs/label-window-investigation.md).
-    // Camera at 78 km altitude: inside the atmosphere shell (dM < rMaxM), so
-    // a naive `max(dM - rMaxM, MIN_NEAR_M)` formula would collapse near to 1e-6 m.
+    // Earth-shaped: radiusM 6.371e6 m, id 'earth' pulls the real ATMOSPHERE_PARAMS row so rMaxM is the
+    // atmosphere top, ~100 km up. Camera at 78 km altitude is inside the shell (dM < rMaxM), so a naive
+    // `max(dM - rMaxM, MIN_NEAR_M)` would collapse near to 1e-6 m.
     const radiusM = 6.371e6;
     const dM = 6.449e6; // altitude = dM - radiusM = 78,000 m
-    const body = makePlanet({ id: 'earth', surface: { datumRadiusM: radiusM, reliefM: [0, 0] } });
+    const body = makePlanet({
+      id: asSceneBodyId('earth'),
+      surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
+    });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [dM, 0, 0],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const row = slabs[2]!;
     const expectedNear = (dM - radiusM) * NEAR_RATIO;
     expect(row.near).toBeCloseTo(expectedNear, 6);
@@ -407,14 +413,10 @@ describe('deriveSlabs', () => {
   });
 
   it('NEAR0 honours a non-zero camera roll identically to COSMO (roll parity)', () => {
-    // Regression for the layer-shear bug: `deriveSlabs` hard-coded roll 0 in
-    // its `imagePlaneBasis` call while COSMO's `computeViewProj` honoured
-    // `cam.roll` — so the moment `toWorldArm` produced a non-zero roll (the
-    // body arm engaging), stars/MW/orbit-trails (NEAR0) rotated about the
-    // screen centre against galaxies (COSMO). Cross-derivation agreement:
-    // project one off-axis world point through both slabs' vps and require
-    // the same screen position. Nothing exercised a non-zero roll across two
-    // slabs before, which is how the parity gap shipped.
+    // Layer-shear guard: `deriveSlabs` once hard-coded roll 0 in its `imagePlaneBasis` call while COSMO's
+    // `computeViewProj` honoured `cam.roll`, so a non-zero roll (the body arm engaging) rotated
+    // stars/MW/orbit-trails (NEAR0) against galaxies (COSMO). Projects one off-axis world point through
+    // both slabs' vps and requires the same screen position.
     const roll = 0.3;
     const cam = createOrbitCamera({
       target: [0, 0, 0],
@@ -427,7 +429,7 @@ describe('deriveSlabs', () => {
       far: 10000,
       roll,
     });
-    const cosmoVp = computeViewProj(cam);
+    const cosmoVp = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
     const slabs = deriveSlabs(baseInput({ cam, cosmoVp }));
 
     // An off-axis point: 20 Mpc lateral of the target at 100 Mpc range
@@ -465,7 +467,10 @@ describe('deriveSlabs', () => {
   });
 
   it("builds a body row's vp about the eye — RTC-native, no translation, body centre projects to screen centre", () => {
-    const body = makePlanet({ id: 'eye-body', surface: { datumRadiusM: 1e5, reliefM: [0, 0] } });
+    const body = makePlanet({
+      id: asSceneBodyId('eye-body'),
+      surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
+    });
     // right=[1,0,0], up=[0,1,0], forward=[0,0,-1] — an orthonormal basis
     // satisfying right×up=−forward (this codebase's camera-basis handedness,
     // per `imagePlaneBasis`), with the camera looking straight down −Z.
@@ -476,7 +481,7 @@ describe('deriveSlabs', () => {
     const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
 
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const vp = slabs[2]!.vp;
 
     // A translation leaking into `view` would show up in `vp`'s column 3
@@ -517,15 +522,14 @@ describe('bodySlabRow attachedBodies widening', () => {
 
   function hostRow(attachedBodies?: Parameters<typeof bodySlabRow>[0]['attachedBodies']) {
     const body = makePlanet({
-      id: 'host-body',
+      id: asSceneBodyId('host-body'),
       surface: { datumRadiusM: HOST_RADIUS_M, reliefM: [0, 0] },
     });
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM: EYE_REL_BODY_M, basisM: BASIS_M });
     return bodySlabRow({
-      body,
+      row: bodyLayerSlabRow(body),
       pose,
-      fovYRad: 1,
-      aspect: 16 / 9,
+      frustum: symmetricFrustum(1, 16 / 9),
       viewportPx: [1920, 1080] as Vec2,
       attachedBodies,
     })!;
@@ -562,8 +566,8 @@ describe('slabName', () => {
 
 describe('foregroundChainOrder', () => {
   it('sorts NEAR0 and body rows back-to-front, excluding COSMO', () => {
-    const far = makePlanet({ id: 'body-far' });
-    const near = makePlanet({ id: 'body-near' });
+    const far = makePlanet({ id: asSceneBodyId('body-far') });
+    const near = makePlanet({ id: asSceneBodyId('body-near') });
     const poseByBody = new Map<string, BodyRelativePose>([
       ['body-far', { eyeRelBodyM: [1e10, 0, 0], basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],
       ['body-near', { eyeRelBodyM: [1e6, 0, 0], basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],
@@ -573,7 +577,11 @@ describe('foregroundChainOrder', () => {
     // the §7.1 ordering case (frame kind and painter position are independent
     // axes).
     const slabs = deriveSlabs(
-      baseInput({ pose, visibleBodies: [near, far], starSphereRangeM: [1e8, 1e8] }),
+      baseInput({
+        pose,
+        visibleRows: [near, far].map(bodyLayerSlabRow),
+        starSphereRangeM: [1e8, 1e8],
+      }),
     );
     expect(foregroundChainOrder(slabs)).toEqual([2, NEAR0, 3]);
   });
@@ -583,22 +591,24 @@ describe('foregroundChainOrder', () => {
     // the Milky Way impostor — are pickable with no sphere backing them, and
     // must not claim the frontmost hit). Reading a null range as "distance 0"
     // would sort it nearest, which is the regression this pins.
-    const body = makePlanet({ id: 'body-near' });
+    const body = makePlanet({ id: asSceneBodyId('body-near') });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [1e6, 0, 0],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body], starSphereRangeM: null }));
+    const slabs = deriveSlabs(
+      baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow), starSphereRangeM: null }),
+    );
     expect(foregroundChainOrder(slabs)).toEqual([NEAR0, 2]);
   });
 
   it('the body the camera is inside is the last foreground chain row', () => {
     const deeplyInside = makePlanet({
-      id: 'deeply-inside',
+      id: asSceneBodyId('deeply-inside'),
       surface: { datumRadiusM: 1e7, reliefM: [0, 0] },
     });
     const barelyInside = makePlanet({
-      id: 'barely-inside',
+      id: asSceneBodyId('barely-inside'),
       surface: { datumRadiusM: 1.1e6, reliefM: [0, 0] },
     });
     const poseByBody = new Map<string, BodyRelativePose>([
@@ -610,43 +620,42 @@ describe('foregroundChainOrder', () => {
     // Both rows clamp to distanceRangeM[0] === 0 (the camera is inside both), so
     // the primary sort key alone ties — deeply-inside is listed first to prove
     // the secondary key, not input order, decides the outcome.
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [deeplyInside, barelyInside] }));
+    const slabs = deriveSlabs(
+      baseInput({ pose, visibleRows: [deeplyInside, barelyInside].map(bodyLayerSlabRow) }),
+    );
     const chain = foregroundChainOrder(slabs);
 
     expect(chain).toHaveLength(3);
     const lastSlab = slabs[chain[chain.length - 1]!];
-    expect(lastSlab?.frame).toEqual({ kind: 'body-m', bodyId: 'deeply-inside' });
+    expect(lastSlab?.frame).toEqual({ kind: 'body-m', hostId: 'deeply-inside' });
   });
 });
 
 describe('slabViewOf', () => {
-  function makeReadyCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
-    const cam = makeCam(100);
+  function makeReadyCtx(overrides: { cam?: OrbitCamera } = {}): FrameView {
+    const cam = overrides.cam ?? makeCam(100);
     const cosmoVp = makeCosmoVp();
     const slabs = deriveSlabs(baseInput({ cam, cosmoVp }));
     return {
-      isReady: true,
+      snapshot: {
+        isReady: true,
+        nowMs: 0,
+        simDays: 0,
+        focusBlend: 0,
+        focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
+        renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
+        renderedTargets: new Set<string>(),
+      },
       viewSlot: 0,
-      renderedTargets: new Set<string>(),
+      viewKind: 'frame',
       cam,
       vp: cosmoVp,
       canvasSize: { width: 1920, height: 1080 },
       drawCamPos: [cam.position[0], cam.position[1], cam.position[2]],
       drawPxPerRad: 1000,
-      nowMs: 0,
-      simDays: 0,
-      fovYRad: cam.fovYRad,
-      focusBlend: 0,
-      layersAnimating: false,
-      visibleSourceMask: 0xffffffff,
-      focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
-      renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
       slabs,
-      // Nothing in this file reads bodyPose — a stub that never resolves a
-      // body is a safe default, overridable like every other field.
       bodyPose: () => null,
-      ...overrides,
-    };
+    } as unknown as FrameView;
   }
 
   it('slabViewOf(ctx, COSMO).vp is byte-equal to ctx.vp', () => {

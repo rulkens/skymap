@@ -1,39 +1,24 @@
 /**
- * cubemapCaptures — the frame's environment bakes, AS DATA: one row per
- * six-face capture. A `sky` row bakes the sky into a render-target row while its
- * anchor band is open; the `probe` row bakes a body's surroundings into its cube.
+ * cubemapCaptures — core's environment bakes, AS DATA: one row per six-face capture.
+ * A `sky` row bakes the sky into a render-target row while its anchor band is open;
+ * the `probe` row bakes a body's surroundings into its cube. Both serve mesh probes;
+ * `APP_CUBEMAP_CAPTURE_REGISTRY` adds the Layers' sky rows to these.
  *
- * A row's faces claim view slots `viewSlotBase … +5`, under `VIEW_SLOT_COUNT`
- * and disjoint from every other row's: two rows sharing a slot overwrite each
- * other's per-view uniform writes, with no error anywhere.
+ * A row's faces claim view slots `viewSlotBase … +5`, under `VIEW_SLOT_COUNT` and
+ * disjoint from every other row in the registry: two rows sharing a slot overwrite
+ * each other's per-view uniform writes, with no error anywhere.
  */
 
 import type { CubeFace } from '../../@types/rendering/CubeFace';
 import type { ProbeCapture } from '../../@types/rendering/ProbeCapture';
-import type { ProbeCaptureKey } from '../../@types/rendering/ProbeCaptureKey';
 import type { SkyCapture } from '../../@types/rendering/SkyCapture';
-import type { SkyCaptureKey } from '../../@types/rendering/SkyCaptureKey';
 import { regionById } from '../../utils/regions/regionById';
-import { SCALE_FADE_BANDS } from '../../services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../scaleFadeBands';
 import { SCALE_UNITS } from '../scaleUnits';
 
 export const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
-/** The sky rows, in table order — what `scheduleSkyCaptures` sweeps. */
-export const SKY_CAPTURE_KEYS: readonly SkyCaptureKey[] = ['sgrAStar', 'solarSystem'];
-
-export const CUBEMAP_CAPTURES: Readonly<
-  Record<SkyCaptureKey, SkyCapture> & Record<ProbeCaptureKey, ProbeCapture>
-> = {
-  sgrAStar: {
-    kind: 'sky',
-    target: 'sky-cubemap',
-    anchor: regionById('galactic-centre'),
-    band: SCALE_FADE_BANDS.sgrAStarLensing,
-    nearMpc: 0.1 * SCALE_UNITS.AU_TO_MPC,
-    viewSlotBase: 1,
-    rebakeOnSettings: true,
-  },
+export const CORE_CUBEMAP_CAPTURES = {
   // The star field a probe is captured over. One bake per band entry: a survey
   // toggle re-baking six faces on every slider frame near Earth buys nothing
   // observable in a reflection.
@@ -54,4 +39,4 @@ export const CUBEMAP_CAPTURES: Readonly<
     nearMpc: 1 * SCALE_UNITS.M_TO_MPC,
     viewSlotBase: 13,
   },
-};
+} as const satisfies Record<string, SkyCapture | ProbeCapture>;

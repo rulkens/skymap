@@ -14,12 +14,12 @@ serial head-of-line delay before any other asset fetch begins.
 - No retry: if either fetch fails, `loadFontAtlases` rejects and the
   bootstrap catch block dispatches `engineStatusChanged({ kind: 'error' })`
   (documented in the file's own header, lines 35-45).
-- `src/services/engine/phases/initGpu.ts` awaits `loadFontAtlases()` at
-  line 216. Everything constructed after that line in `initGpu` blocks on
+- `src/services/engine/phases/initGpu.ts` awaits `loadFontAtlases()` (paired
+  with `loadEnvBrdfLut`) at lines 73-76. Everything constructed after that line in `initGpu` blocks on
   it: the label/marker-line/debug-line/selection-ring/structure-marker/
-  Milky-Way-pick renderers built immediately after (lines 226-270), the
+  Milky-Way-pick renderers built immediately after, the
   `GALAXY_CATALOG_SOURCE_REGISTRY` fetch loop that kicks off the big
-  per-catalog `.bin` downloads (line 302), and every renderer built further
+  per-catalog `.bin` downloads, and every renderer built further
   down (star, planet, body, ring, atmosphere, etc.).
 
 ## Fix

@@ -178,7 +178,7 @@ export async function bakeSplats(
   const asset: GaussianSplatAsset = {
     kind: 'gaussianSplat',
     id: ASSET_ID,
-    label: `${group.name} — skråfoto Gaussian splats`,
+    label: 'skråfoto Gaussian splats',
     transform: { translationM: [0, 0, 0], rotation: [0, 0, 0, 1], scale: 1 },
     provenance: {
       source: 'nationalGeodataApi',

@@ -4,7 +4,7 @@
  * `dwellClip` plays as ambient motion; the viewer can advance, step back, or
  * pause/resume any number of times. This saga owns exactly that concern — the
  * countdown, the pause bookkeeping, and playing the ambient clip — and returns
- * the steering outcome the outer `guidedTourSaga` loop reads.
+ * the steering outcome the outer `tourBodySaga` loop reads.
  *
  * ### One race, pause as state
  *
@@ -52,7 +52,7 @@ import { put, take, race, delay, fork, cancel, getContext } from 'typed-redux-sa
 import { advanceTour, prevBeat, togglePause } from './tourActions';
 import { setPaused } from './tourSlice';
 import type { ClipData } from '../../@types/animation/ClipData';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 import type { SagaContext } from '../../store/types';
 
 /** The steering signal the outer tour loop reads: advance forward or step back. */

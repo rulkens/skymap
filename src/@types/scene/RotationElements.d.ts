@@ -3,7 +3,7 @@
  * IAU/WGCCRE J2000 mean elements (`iau-pole`, whose discriminant is optional
  * because the authored rows predate the union), a probe's boresight aimed at
  * another body (`lookAt`), or a lander pinned to its host's local horizon
- * (`surfaceLocked`). `OrbitalElements` places a body; this aims it, and a body
+ * (`surfaceLocked`), or a synchronous moon facing its host (`tidallyLocked`). `OrbitalElements` places a body; this aims it, and a body
  * with no row is rotation-invariant. Degrees throughout; each arm bakes to a
  * `Mat3` through its own util in `src/utils/orbit/`.
  */
@@ -12,10 +12,14 @@ export type RotationElements =
   | {
       readonly kind?: 'iau-pole';
       readonly id: string;
-      /** IAU north-pole right ascension α₀, in degrees at J2000 (the α̇ rate is dropped). */
+      /** IAU north-pole right ascension α₀, in degrees at J2000. */
       readonly poleRaDeg: number;
-      /** IAU north-pole declination δ₀, in degrees at J2000 (the δ̇ rate is dropped). */
+      /** IAU north-pole declination δ₀, in degrees at J2000. */
       readonly poleDecDeg: number;
+      /** Pole rate α̇, degrees per Julian century; absent = a fixed pole. */
+      readonly poleRaRateDegPerCty?: number;
+      /** Pole rate δ̇, degrees per Julian century; absent = a fixed pole. */
+      readonly poleDecRateDegPerCty?: number;
       /** Prime meridian W₀ at the J2000 epoch, in degrees; the live W is W₀ + Ẇ·d. */
       readonly primeMeridianDeg: number;
       /** Spin rate Ẇ, degrees per day — advances the prime meridian from W₀. */
@@ -32,4 +36,12 @@ export type RotationElements =
       readonly id: string;
       /** Bearing of forward (+X), degrees from local north toward local east. */
       readonly headingDeg: number;
+    }
+  | {
+      readonly kind: 'tidallyLocked';
+      readonly id: string;
+      /** IAU north-pole right ascension α₀, degrees: +Z of the moon's frame; +X faces the host. */
+      readonly poleRaDeg: number;
+      /** IAU north-pole declination δ₀, degrees. */
+      readonly poleDecDeg: number;
     };

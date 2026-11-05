@@ -49,3 +49,9 @@ No design done. The ladder assignment suggests two paths, either acceptable:
    cheap opportunistically. Check rung 3's actual scope before assuming
    this is still open — it may have shipped narrower than this note
    anticipated.
+
+`SlotPool` (`src/utils/cache/slotPool.ts`) is now the shared substrate, but
+`hiResFamousTexture` evicts the resident with the smallest recent apparent
+diameter and refuses a newcomer smaller than that victim (its `allocate`), a
+policy `SlotPool` does not have. Folding it in needs a victim-policy seam on
+`SlotPool`, so it is not a one-line change.

@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { clippedHeightSource } from '../../../tools/textures/clippedHeightSource';
-import type { HeightSource } from '../../../tools/textures/HeightSource';
+import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
 
 /** Each post's value encodes its GLOBAL index and `sign`, so a misplaced

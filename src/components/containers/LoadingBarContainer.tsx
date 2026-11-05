@@ -1,4 +1,3 @@
-// src/components/containers/LoadingBarContainer.tsx
 /**
  * LoadingBarContainer — store boundary for the load-progress strip.
  *

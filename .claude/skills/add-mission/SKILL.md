@@ -141,16 +141,19 @@ Every step is a literal edit site. Tick them all.
    line to `meshes.sha256`. Edits the row cannot express are hand edits in
    Blender 5.2 LTS that a re-import overwrites, so the README lists each one.
 4. **Prebake** — `tools/meshes/prebake/meshPrebake.py` `SOURCES`: one
-   `source("<key>", triangles=…)` row, `triangles` when over the 150k budget.
+   `source("<key>")` row, no per-row `triangles=`: the prebake decimates to the
+   one `MESH_TRIANGLE_BUDGET` (`src/data/mesh/meshTriangleBudget.ts`).
    Run `npm run prebake-mesh -- <key>` (Blender 5.2, ~10–30 s) and read the
    log: extent in metres must match the fact sheet.
-5. **Mesh source row** — `tools/utils/io/meshSources.ts`: `native:
-'meshes.<key>'`, licence, the attribution string, and `bodyFromSource` as a
+5. **Mesh source row** — `tools/utils/io/meshSources.ts`: `tiers: { small: {
+raw: 'meshes.<key>' } }`, licence, the attribution string, and `bodyFromSource` as a
    column-major **proper** rotation (det +1) from the axis table. Same source
    frame as a rover (up +Y, forward +Z) → `[0, 1, 0, 0, 0, 1, 1, 0, 0]`;
    dish/boresight on +Y, up +Z → `[0, -1, 0, 1, 0, 0, 0, 0, 1]`.
 6. **Bake** — `npm run build-meshes` rewrites `meshAssets.generated.ts` (all
-   keys; the others must not change) and `public/data/meshes/<key>.*`. Check the
+   keys; the others must not change) and per-tier
+   `public/data/meshes/<key>-<tier>.mesh` / `<key>-<tier>_{albedo,mr,normal}.webp`
+   plus the untiered `<key>_contact.webp`. Check the
    row: `substituted: []` for a PBR-baked source, `boundingRadiusM` plausible,
    `groundOffsetM` for a lander. In a worktree every OTHER key's prebaked GLB
    must be copied in from the main checkout first, or this step DELETES their
@@ -160,19 +163,25 @@ Every step is a literal edit site. Tick them all.
    symlink, so every rebake is invisible until you run it against main's tree:
    `npx tsx -e "import { buildDataManifest } from './tools/deploy/buildDataManifest.ts'; buildDataManifest('<main>/public/data');"`
    then hard-refresh.
-7. **Seed** — `src/data/bodies/sceneMeshBodies.ts`: `{ id, label, meshKey }`.
-   `standoffRadii` only when a boom or array sets the bounding sphere; no
-   `captionRevealM` for a real object.
-8. **Driver** — `src/data/bodies/orbitalElements.ts` (`probe()` / `orbiter()`
-   row + a `palette.ts` tint, comment naming the Horizons epoch) **or**
-   `src/data/bodies/surfaceFixedSites.ts` (`altitudeM: groundOffsetM('<key>')`,
-   host must be an IAU-pole body in `SCENE_CELESTIAL_BODIES`).
-9. **Rotation** — `src/data/bodies/rotationElements.ts`: one row per the arm
-   chosen. On the `iau-pole` arm the row's pole IS body +Z, so aiming the
-   boresight (+X) somewhere means putting the pole PERPENDICULAR to it and
-   phasing with W₀ — `rotationFromIau` composes `Rz(90 + α₀)·Rx(90 − δ₀)·Rz(W₀)`.
-10. **Names + facts** — `bodySearchNames.ts` `AUTHORED` (designations and
-    nicknames a reader types), `data/seeds/planet_facts.seed.json` (id,
+7. **Craft row** — ONE file in `src/layers/missions/bodies/<id>.ts` exporting a
+   `LayerBody`, plus one entry in `MISSIONS_BODY_ROWS`
+   (`missionsBodyRows.ts`). `body` is the seed via `meshBody({ id, label,
+   meshKey })`; `standoffRadii` only when a boom or array sets the bounding
+   sphere; no `captionRevealM` for a real object. Rows never import a body
+   table (module-init cycle); import only types, makers and constants.
+8. **Position** — the row's `position`, one of: `kind: 'orbit'` (`orbiter()` /
+   `probe()` elements, a `palette.ts` tint, comment naming the Horizons epoch),
+   `kind: 'sampled'` (a tabulated trajectory), or `kind: 'site'` (`altitudeM:
+   meshGroundOffsetM('<key>')`, `seat: 'resting'` for a lander or rover set down
+   on the terrain — `'anchored'` is for a georeferenced scan that carries its own
+   height; `hostId` must be an IAU-pole body in `SCENE_CELESTIAL_BODIES`).
+9. **Rotation** — the row's optional `rotation`, one per the arm chosen. On the
+   `iau-pole` arm the row's pole IS body +Z, so aiming the boresight (+X)
+   somewhere means putting the pole PERPENDICULAR to it and phasing with W₀ —
+   `rotationFromIau` composes `Rz(90 + α₀)·Rx(90 − δ₀)·Rz(W₀)`. A surface site
+   uses `{ kind: 'surfaceLocked', id, headingDeg }`.
+10. **Names + facts** — `layers/missions/present/craftSearch.ts` `ALIASES`
+    (designations and nicknames a reader types; the label is added for you), `data/seeds/planet_facts.seed.json` (id,
     `wikiTitle`, `description`; `yearLength`/`distance`/`dayLength` as the
     neighbours do), then `npm run build-planet-facts`. A figure on the card must
     agree with the ROW rather than the fact sheet — the card sits beside the body
@@ -209,7 +218,7 @@ worktree dev server that symlinks `public/data`.
 | `bodyFromSource` must have det +1        | A mirror turns the model inside out; cycle axes, never flip one                                                                |
 | A hostless body costs a slab row         | A `focusId: 'sun'` mesh body grows `BODY_SLAB_CAPACITY`; an Earth/Mars orbiter rides its host                                  |
 | Mesh bodies draw no orbit trail          | By design (`trailElements.ts`); an orbiter shows only the moving mesh                                                          |
-| All mesh captions share one label toggle | `src/data/sources/mesh-body.ts` is one row; per-body muting is a separate change                                               |
+| All craft captions share one label toggle | The missions `craft` registry row is the one "Spacecraft" item; per-craft muting is a separate change                         |
 | `meshBody()` throws on a missing asset   | Seed rows land only after step 6; a seed without a bake breaks every import                                                    |
 | Prebake is not CI                        | Blender output is gitignored; deploy re-bakes on main, so the download and the `.blend` must exist there too                   |
 | `import-mesh` overwrites the `.blend`    | Every hand edit goes; the README's edit list is what lets them be redone                                                       |

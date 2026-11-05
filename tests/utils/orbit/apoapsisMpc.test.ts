@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 
 import { apoapsisMpc } from '../../../src/utils/orbit/apoapsisMpc';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 function elements(semiMajorMpc: number, eccentricity: number): OrbitalElements {
   return {
-    id: 'x',
-    focusId: 'sun',
+    id: asSceneBodyId('x'),
+    focusId: asSceneBodyId('sun'),
     semiMajorMpc,
     eccentricity,
     inclinationRad: 0,

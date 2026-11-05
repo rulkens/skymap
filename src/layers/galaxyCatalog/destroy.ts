@@ -3,10 +3,9 @@
  * hi-res pair are destroyed by hand, subsystems before the renderers they hold.
  */
 
-import type { GalaxyCatalogRuntime } from './types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
 export function destroy(runtime: GalaxyCatalogRuntime): void {
-  runtime.biasCorrection.destroy();
   // Impostor teardown order matters: texturedDisks subscribes to galaxyAtlas's
   // eviction handler (destroy it first); the hi-res planner subscribes to its
   // texture's evict handler (planner before texture); galaxyAtlas releases its

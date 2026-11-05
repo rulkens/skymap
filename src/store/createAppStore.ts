@@ -32,10 +32,8 @@
  *
  * Registering the context also DISPATCHES `sagaContextRegistered`. `setContext`
  * alone is invisible from inside a saga — `getContext` yields `undefined` rather
- * than blocking — which is fine for every watcher woken by an action, and not
- * fine for the one saga that dispatches unprompted at construction (the hash
- * arrival read). The action is what `watchHashSaga` waits on before it forks
- * either half of the bridge.
+ * than blocking — fine for most watchers, not for the ones that can run before
+ * registration (named in `rootSaga`'s header). The action is what they wait on.
  *
  * That is why the setter takes a WHOLE `SagaContext` rather than a `Partial`: the
  * dispatch announces "the capabilities the sagas reach for are registered", and
@@ -80,6 +78,9 @@ export type PreloadedState = Partial<RootState>;
 const ALIAS_INDEX_FACT_KEY = 'aliasIndex';
 const ALIAS_INDEX_STATE_PATH = `engine.galaxyCatalog.${ALIAS_INDEX_FACT_KEY}`;
 const ALIAS_INDEX_ACTION_PATH = `payload.patch.${ALIAS_INDEX_FACT_KEY}`;
+// A mission profile's wall→sim table is two Float64Arrays of thousands of rows: not plain, and not worth a per-dispatch walk.
+const MISSION_PROFILE_STATE_PATH = 'time.profile';
+const MISSION_PROFILE_ACTION_PATH = 'payload.profile';
 
 export function createAppStore(preloadedState?: PreloadedState) {
   const sagaMiddleware = createSagaMiddleware();
@@ -89,10 +90,10 @@ export function createAppStore(preloadedState?: PreloadedState) {
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
-          ignoredPaths: [ALIAS_INDEX_STATE_PATH],
-          ignoredActionPaths: [ALIAS_INDEX_ACTION_PATH],
+          ignoredPaths: [ALIAS_INDEX_STATE_PATH, MISSION_PROFILE_STATE_PATH],
+          ignoredActionPaths: [ALIAS_INDEX_ACTION_PATH, MISSION_PROFILE_ACTION_PATH],
         },
-        immutableCheck: { ignoredPaths: [ALIAS_INDEX_STATE_PATH] },
+        immutableCheck: { ignoredPaths: [ALIAS_INDEX_STATE_PATH, MISSION_PROFILE_STATE_PATH] },
       }).concat(sagaMiddleware),
   });
   sagaMiddleware.run(mainSaga);

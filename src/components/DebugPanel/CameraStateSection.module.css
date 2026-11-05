@@ -88,3 +88,8 @@
   composes: button from './debugSection.module.css';
   align-self: flex-start;
 }
+
+.copyRow {
+  display: flex;
+  gap: 6px;
+}

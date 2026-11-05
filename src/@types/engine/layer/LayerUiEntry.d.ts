@@ -1,0 +1,10 @@
+import type { LayerUiSlots } from './LayerUiSlots';
+
+/** One Layer contribution to one `LayerUiSlots` slot, tagged by slot name. A `main` section
+ * also carries its heading, the Layer's human name, which core hands it as `title`. */
+export type LayerUiEntry = {
+  [K in keyof LayerUiSlots]: {
+    readonly slot: K;
+    readonly content: LayerUiSlots[K];
+  } & (K extends 'main' ? { readonly title: string } : unknown);
+}[keyof LayerUiSlots];

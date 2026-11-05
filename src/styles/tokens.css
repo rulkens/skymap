@@ -1,0 +1,244 @@
+/*
+ * tokens.css — skymap design tokens + font faces, imported by global.css and the website.
+ *
+ * Raw rgba/hex values appear here once; CSS modules reference the semantic name
+ * (`--surface-panel`) or the scalar rung (`--space-4`). A deviation (the scale bar's
+ * softer surface) stays inline in its component so it is visible where it is used.
+ * Not here: component layout (thumbnail sizes, palette dimensions), shader colours,
+ * and the pinned-badge gold `#ffd97a` — one use, and a token would imply a reusable accent.
+ */
+
+/* Self-hosted (no Google Fonts request): subset to Latin + general
+ * punctuation, matching the glyphs the DOM actually sets in this face. */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/CormorantGaramond-SemiBold.woff2') format('woff2');
+}
+
+/* ExhibitOverlay's body voice, self-hosted on the same terms as Cormorant. */
+@font-face {
+  font-family: 'Sora';
+  font-weight: 100;
+  font-display: swap;
+  src: url('/fonts/Sora-Thin.woff2') format('woff2');
+}
+
+:root {
+  /* ── Color palette ──────────────────────────────────────────────────────
+   *
+   * Foreground hierarchy descends from bright (#e8eeff, primary readout
+   * text) through muted body text down to dim/faint heading colours.
+   * Every level still reads as "blue-tinted off-white" — the palette is
+   * intentionally narrow so the eye doesn't pick up colour drift between
+   * adjacent rows.
+   */
+
+  --color-bg: #000;
+
+  --color-fg: #e8eeff;
+
+  --color-fg-base: #cfd8ff;
+
+  --color-fg-muted: rgba(200, 220, 255, 0.85);
+
+  --color-fg-subtle: rgba(200, 220, 255, 0.8);
+
+  --color-fg-tertiary: rgba(200, 220, 255, 0.7);
+
+  --color-fg-dim: rgba(160, 180, 230, 0.5);
+
+  --color-fg-faint: rgba(160, 180, 230, 0.45);
+
+  --color-fg-ghost: rgba(160, 180, 230, 0.4);
+
+  --color-fg-label: rgba(160, 180, 230, 0.55);
+
+  /* ── Accent (interactive highlights) ─────────────────────────────────── */
+
+  --color-accent: #a8d0ff;
+
+  --color-accent-control: rgba(180, 220, 255, 0.85);
+
+  --color-accent-link: rgba(160, 200, 255, 0.65);
+
+  --color-accent-link-strong: rgba(160, 200, 255, 0.7);
+
+  --color-accent-bright: rgba(220, 230, 255, 0.85);
+
+  /* ── Surfaces (glassmorphic panel + card backgrounds) ────────────────── */
+
+  --surface-panel: rgba(8, 12, 28, 0.65);
+
+  --surface-card-strong: rgba(8, 12, 28, 0.72);
+
+  --surface-card-soft: rgba(8, 12, 28, 0.6);
+
+  --surface-soft: rgba(8, 12, 28, 0.55);
+
+  --surface-control: rgba(40, 60, 100, 0.35);
+
+  --surface-control-hover: rgba(60, 90, 140, 0.5);
+
+  --surface-control-active: rgba(80, 120, 180, 0.55);
+
+  --surface-badge: rgba(160, 200, 255, 0.12);
+
+  --surface-scrim: rgba(0, 0, 0, 0.5);
+
+  /* ── Borders & strokes ──────────────────────────────────────────────── */
+
+  --border-default: rgba(160, 200, 255, 0.16);
+
+  --border-card: rgba(160, 200, 255, 0.18);
+
+  --border-control: rgba(160, 200, 255, 0.25);
+
+  --border-divider: rgba(160, 200, 255, 0.12);
+
+  --border-section: rgba(160, 200, 255, 0.1);
+
+  --border-hover: rgba(180, 220, 255, 0.4);
+
+  /* ── Focus + shadow ─────────────────────────────────────────────────── */
+
+  --focus-ring: rgba(160, 200, 255, 0.5);
+
+  --shadow-card-outer: rgba(0, 0, 0, 0.6);
+
+  --shadow-card-inset: rgba(160, 200, 255, 0.06);
+
+  /* ── Decorative gradient: the "starlight" line on the top edge of glass surfaces ── */
+  --color-accent-gradient-mid: rgba(180, 220, 255, 0.7);
+  --color-accent-gradient-edge: rgba(120, 180, 255, 0.45);
+
+  --gradient-accent-bar: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-accent-gradient-edge) 30%,
+    var(--color-accent-gradient-mid) 50%,
+    var(--color-accent-gradient-edge) 70%,
+    transparent 100%
+  );
+
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  /* System mono (no webfont round-trip): `ui-monospace` is SF Mono / Cascadia Mono / the Linux Mono. */
+  --font-family-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Display serif: the face baked into the MSDF label atlas (src/data/fonts.ts), for marquee text echoing the in-scene labels. */
+  --font-family-display: 'Cormorant Garamond', ui-serif, Georgia, serif;
+
+  --font-size-xxs: 8px; /* chevrons */
+  --font-size-xs: 9px; /* badges, tiny chips */
+  --font-size-sm: 10px; /* panel section titles, data labels */
+  --font-size-md: 11px; /* default body text in panels */
+  --font-size-lg: 12px; /* info-card body, status bar */
+  --font-size-xl: 13px; /* info-card headline */
+  --font-size-input: 16px; /* form input text (CommandPalette) */
+
+  /* Wide tracking is for uppercase eyebrows / titles only. */
+  --letter-spacing-zero: 0;
+  --letter-spacing-tight: 0.02em;
+  --letter-spacing-mid: 0.04em;
+  --letter-spacing-wide: 0.06em;
+  --letter-spacing-wider: 0.1em;
+  --letter-spacing-widest: 0.12em; /* uppercase headings */
+  --letter-spacing-max: 0.15em; /* PINNED badge — most stretched */
+
+  /* Tight for stacked numeric readouts, relaxed for card prose. */
+  --line-height-tight: 1.3;
+  --line-height-base: 1.4;
+  --line-height-relaxed: 1.45;
+
+  /* ── Spacing scale ──────────────────────────────────────────────────── */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 14px;
+  --space-8: 16px;
+  --space-9: 18px;
+  --space-10: 20px;
+  --space-12: 24px;
+
+  /* ── Radii ──────────────────────────────────────────────────────────── */
+  /* Panels sit one radius below cards so cards read as the louder element. */
+  --radius-xs: 1px; /* the gradient accent line's rounded tip */
+  --radius-sm: 3px; /* source badges */
+  --radius-md: 4px; /* small buttons, dropdowns, focus rings */
+  --radius-lg: 6px; /* thumbnails */
+  --radius-xl: 8px; /* panels */
+  --radius-2xl: 10px; /* info cards */
+
+  /* ── Layout primitives ──────────────────────────────────────────────── */
+
+  --panel-width: 300px;
+
+  --card-min-width: 240px;
+  --card-max-width: 320px;
+
+  --corner-offset: 16px;
+
+  /**
+   * Height of the TimeBar's collapsed pill. A token because two files need it:
+   * the pill sets it directly, and the ScaleBar (plus the date popover) lift
+   * off the corner by this height so they stack directly above the toolbar.
+   */
+  --time-toolbar-height: 2.5rem;
+
+  /** Phone selection-card header: two name lines plus the type line; fits the thumbnail. */
+  --sheet-header-height: 56px;
+  /** Collapsed-peek height of the mobile info-card bottom sheet: the grabber
+   *  strip (16px), the header, and the gap under it, so the peek ends where the
+   *  header does. Single source for the peek snap AND the scale-bracket lift. */
+  --mobile-sheet-peek: calc(var(--space-8) + var(--sheet-header-height) + var(--space-4));
+  /** Minimum tap target on touch surfaces. */
+  --touch-target: 44px;
+  /** Phone Layers list row: tighter than a touch target; a switch's hit area spans it exactly. */
+  --list-row-height: 36px;
+  /** Detail-card thumbnail: full size in the card body, compact in the phone sheet header. */
+  --thumbnail-size: 80px;
+  --thumbnail-size-header: 48px;
+
+  /* ── Phone bottom stack ─────────────────────────────────────────────── */
+  /*
+   * Dock and time row heights are fixed on purpose: the stack's total height
+   * (`--bottom-stack-height`, set by BottomStack) is derived from them in CSS,
+   * so the sheet and scale bracket sit above it without any measuring.
+   */
+  /* 3rem of icon and label plus a --space-6 breath split evenly above and below. */
+  --dock-height: calc(
+    3rem + var(--space-6) + max(var(--space-4), env(safe-area-inset-bottom, 0px))
+  );
+  --time-row-height: 2.75rem;
+  /** Panel sheets (Layers) leave a strip of canvas visible above them. */
+  --sheet-panel-max-height: 60dvh;
+  --z-bottom-stack: 10;
+  /** The time popovers open above the stack they anchor to. */
+  --z-bottom-stack-popover: calc(var(--z-bottom-stack) + 1);
+  --sheet-handle-width: 36px;
+
+  /* ── Glass blur ─────────────────────────────────────────────────────── */
+  /* Cards blur harder than panels so text stays legible over a bright cluster. */
+  --blur-panel: 10px;
+  --blur-card: 12px;
+
+  /* ── Motion ─────────────────────────────────────────────────────────── */
+  /* Material standard easing. `prefers-reduced-motion` is honoured by consumers; this file holds magnitudes. */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-color: 150ms;
+
+  --transition-color: color var(--duration-color) ease;
+  --transition-collapse: grid-template-rows var(--duration-base) var(--ease-standard);
+  --transition-fade: opacity var(--duration-base) var(--ease-standard);
+  --transition-chevron: transform var(--duration-fast) ease-out;
+
+  /* ── Composite shadows ──────────────────────────────────────────────── */
+  /* Soft outer drop plus a 1 px inset rim-light along the glass top. */
+  --shadow-card: 0 8px 32px var(--shadow-card-outer), 0 0 0 1px var(--shadow-card-inset) inset;
+}

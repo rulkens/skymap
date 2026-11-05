@@ -10,10 +10,18 @@
 import { describe, it, expect } from 'vitest';
 
 import { bodyMovesThisFrame } from '../../../src/utils/scene/bodyMovesThisFrame';
+import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 function bodyRow(id: string): SelectionRow {
-  return { type: 'body', id, label: id, positionMpc: [0, 0, 0] };
+  return {
+    type: 'body',
+    id: asSceneBodyId(id),
+    label: id,
+    positionMpc: [0, 0, 0],
+    driver: bodyDriverGeometry(id),
+  };
 }
 
 describe('bodyMovesThisFrame', () => {

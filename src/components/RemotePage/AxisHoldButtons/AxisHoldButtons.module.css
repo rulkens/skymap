@@ -1,0 +1,49 @@
+.root {
+  position: absolute;
+  top: 50%;
+  right: var(--space-4);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Held by a thumb: the browser must not turn the press into a scroll, a text selection or a callout menu. */
+.button {
+  display: grid;
+  place-items: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+  color: var(--color-fg-tertiary);
+  background: var(--surface-card-strong);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-2xl);
+  backdrop-filter: blur(var(--blur-panel));
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* A doubled border as well as the fill, so the state is not colour alone; a shadow, so nothing shifts. */
+.active {
+  background: var(--surface-control-active);
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+  color: var(--color-accent);
+}
+
+@media (hover: hover) {
+  .button:not(.active):hover {
+    border-color: var(--border-hover);
+    color: var(--color-fg-muted);
+  }
+}

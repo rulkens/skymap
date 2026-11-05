@@ -2,7 +2,7 @@
  * computePlaceDustBudget — the reservation + per-rebuild uniform inputs, a
  * pure function of (geometry, dust) with no rng/placement work. Its own
  * file, deliberately separate from `createIsmMapPlaceDust.ts`: THAT file's
- * `?static` shader import only resolves under the Vite/wesl-plugin pipeline,
+ * `?static` shader import only resolves under the Vite + weslStaticPlugin pipeline,
  * but `probeGpuErrors.ts` imports this pure function directly on the plain
  * Node/tsx side — importing from a `?static`-importing module there throws
  * `ERR_UNKNOWN_FILE_EXTENSION` before the probe boots a browser.
@@ -23,29 +23,7 @@ import { stretchExtinctionChroma } from '../../../../../utils/galaxy/stretchExti
 import { pcToUnits } from '../../../../../utils/galaxy/pcToUnits';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyDustParams } from '../../../../../@types/galaxy/GalaxyDustParams';
-
-export type PlaceDustBudget = {
-  /** Reserved slot count — `fieldPack`'s dust range sizes off this, not off any placed particle. */
-  readonly count: number;
-  readonly childrenPerComplex: number;
-  readonly complexSpread: number;
-  readonly elongation: number;
-  readonly sigmaZComplex: number;
-  readonly discWeightSum: number;
-  readonly discSigmaR: readonly [number, number, number, number];
-  readonly sizeMin: number;
-  readonly sizeMax: number;
-  readonly extinctionRgb: readonly [number, number, number];
-  /**
-   * `dust.tau`'s entire measured column, expressed as a MASS total —
-   * `dustParticleCloud.ts:287`'s `totalMass = dust.tau * 2*PI*weightedSigma2`,
-   * a pure function of geometry/tuning with no placement dependency (unlike
-   * `sumR2`, which only exists after particles land). `ringReduce.wesl`'s
-   * survivor-sum kernel divides this by the GPU-computed `sumR2` to get
-   * `massPerR2` — see that kernel's own doc.
-   */
-  readonly totalMass: number;
-};
+import type { PlaceDustBudget } from '../../../../../@types/galaxy/PlaceDustBudget';
 
 export function computePlaceDustBudget(
   geometry: GalaxyDescription,

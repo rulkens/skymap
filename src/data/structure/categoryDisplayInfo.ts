@@ -1,9 +1,9 @@
 /**
- * Per-category display metadata for label-bearing sources (cluster,
- * supercluster, void, group, famousGalaxy, famousStar, earth, planet, sun,
+ * Per-category display metadata for label-bearing sources (galaxy-cluster,
+ * supercluster, void, galaxy-group, famousGalaxy, famousStar, earth, planet, sun,
  * milkyWay).  Keyed by `LabelCategory`.
  *
- * Derived from the SOURCE_REGISTRY rows that carry `bearsLabel: true` — the
+ * Derived from the APP_SOURCE_REGISTRY rows that carry `bearsLabel: true` — the
  * canonical home of per-category copy.  A hand-maintained table beside the
  * registry would be a second place to edit and a second place to forget; this
  * accessor keeps the copy in exactly one place, so a new label-bearing source
@@ -26,7 +26,7 @@ function buildDisplayInfo(): Readonly<Record<LabelCategory, CategoryDisplayInfo>
     if (detailLabel === undefined || shortLabel === undefined || plural === undefined) {
       throw new Error(
         `Source '${id}' has bearsLabel:true but is missing detailLabel/shortLabel/plural — ` +
-          'add these fields to its SOURCE_REGISTRY row.',
+          'add these fields to its APP_SOURCE_REGISTRY row.',
       );
     }
     result[id as LabelCategory] = { label: detailLabel, shortLabel, plural };
@@ -36,13 +36,13 @@ function buildDisplayInfo(): Readonly<Record<LabelCategory, CategoryDisplayInfo>
 
 /**
  * Display metadata for each label-bearing source category.  Sourced from
- * `detailLabel` / `shortLabel` / `plural` on the SOURCE_REGISTRY rows where
+ * `detailLabel` / `shortLabel` / `plural` on the APP_SOURCE_REGISTRY rows where
  * `bearsLabel` is true.
  *
  * Field semantics:
  *   - `label`      — long form for detail surfaces ('Galaxy Cluster')
- *   - `shortLabel` — compact form for chips ('Cluster')
- *   - `plural`     — plural for list/toggle headers ('Clusters')
+ *   - `shortLabel` — compact form for chips ('Galaxy cluster')
+ *   - `plural`     — plural for list/toggle headers ('Galaxy clusters')
  */
 export const CATEGORY_DISPLAY_INFO: Readonly<Record<LabelCategory, CategoryDisplayInfo>> =
   buildDisplayInfo();

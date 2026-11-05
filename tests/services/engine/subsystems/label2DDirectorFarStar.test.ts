@@ -1,75 +1,66 @@
 /**
  * label2DDirector — far-star caption/leader-line stability at Earth zoom.
  *
- * The user report: zoomed all the way to Earth (cam.distance ~1e-13 Mpc), the
- * caption and leader line of a FAR famous star (VY Canis Majoris at ~1170 pc)
- * flicker/jump frame to frame. The diagnosis is POSITIONAL: the star anchor
- * sits ~1e-3 Mpc out — tens of millions of times BEYOND the NEAR0 far plane
- * (which floors at `FAR_MIN_MPC = 3e-11` on a deep descent). The director's
- * lift stage un-projects through the INVERSE of the ill-conditioned NEAR0 vp;
- * for an anchor that far past the far plane `ndc_z ≈ 1.0` to within f64
- * round-off, so the inverse's huge depth-row elements amplify residual error
- * and the un-projected point (the drawn caption world position AND both
- * leader-line endpoints) shifts every frame as the camera — hence the
- * matrix — moves.
- *
- * Moved from `foregroundLabelsPass.test.ts` (spec §5.2): the lift stage this
- * regression guards now lives in `label2DDirector.ts`'s `applyLift`, driven
- * here through the REAL `produceSceneBodyCaptions` producer and a REAL
- * Earth-zoom NEAR0 frustum, so the ill-conditioning is genuine. The fix
- * clamps the anchor handed to the lift to just inside the far plane
- * (direction-preserving, in the camera-relative frame, so the on-screen
- * position is unchanged) — mirroring `near0SelectionRingPass`'s ring-clip
- * clamp. After the fix the un-projected geometry lands inside the
- * well-conditioned part of the frustum, so it is stable frame-to-frame and
- * bounded by the far plane.
+ * Zoomed to Earth (cam.distance ~1e-13 Mpc), a FAR famous star's caption and leader line (VY Canis
+ * Majoris, ~1170 pc) flickered. The anchor sits ~1e-3 Mpc out, tens of millions of times BEYOND the
+ * NEAR0 far plane (floored at `FAR_MIN_MPC = 3e-11`); `applyLift` in `label2DDirector.ts` un-projects
+ * through the INVERSE of that ill-conditioned vp, where ndc_z ≈ 1.0 to f64 round-off, so residual error
+ * is amplified and the un-projected points shift every frame. The fix clamps the anchor handed to the
+ * lift to just inside the far plane (direction-preserving; mirrors `near0SelectionRingPass`'s clamp).
+ * Driven through the REAL `produceStarCaptions` and a REAL Earth-zoom NEAR0 frustum.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 import { createLabel2DDirector } from '../../../../src/services/engine/subsystems/label2DDirector';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
-import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
+import { produceStarCaptions } from '../../../../src/layers/starCatalog/captions/present/produceStarCaptions';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import {
-  sceneBodyLabels,
-  sceneBodyLabelId,
-  SCENE_STAR_LABEL_IDS,
-} from '../../../../src/services/engine/presentation/sceneBodyLabels';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { STAR_MAP_CAPTION_BAND } from '../../../../src/layers/starCatalog/captions/data/starMapCaptionBand';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
-import { foregroundFrustum } from '../../../../src/utils/camera/foregroundFrustum';
-import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
+import { computeForegroundViewProj } from '../../../../src/utils/camera/projection/computeForegroundViewProj';
+import { foregroundFrustum } from '../../../../src/utils/camera/frustum/foregroundFrustum';
+import { rebaseViewProj } from '../../../../src/utils/camera/projection/rebaseViewProj';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { LabelRenderer } from '../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
+import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { catalogPickCodes } from '../../../../src/utils/picking/catalogPickCodes';
+import { STAR_CATALOG_SOURCE_ROWS } from '../../../../src/layers/starCatalog/sources/starCatalogSourceRows';
+import { testPickCode } from '../../../support/testPickCode';
 
-const SUN_LABEL_ID = sceneBodyLabelId('sun');
+const STAR_PICK_CODES = {
+  pickCodes: catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, testPickCode('starCatalog')),
+};
+
 const J2000_STATES = deriveBodyStates(CONST_J2000);
+const EARTH_POS = J2000_STATES.get(asSceneBodyId('earth'))!.positionMpc;
+// The handed value is full: this fixture is about the ill-conditioned-projection regression, not the fade channels.
+const STAR_FADE = { sun: 1, famousStar: 1 };
 
 function makeLabelStub(): LabelRenderer {
   return {
     label: 'foregroundLabelRenderer',
     setLabels: vi.fn<(labels: readonly Label2D[]) => void>(),
     draw: vi.fn<(...args: unknown[]) => void>(),
-    measure: vi.fn<() => null>(() => null),
-    glyphCount: () => 0,
-    labelCount: () => 0,
     destroy: vi.fn(),
   } as unknown as LabelRenderer;
 }
@@ -86,29 +77,21 @@ function makeLineStub(): MarkerLineRenderer {
 
 function makeState(): EngineState {
   return {
+    selection: { hover: null, select: null },
+    selectionKindRows: [],
     // The seed tables `sceneOccluderBodies` reads for the captions' depth gate.
-    gpu: { texturedBodyRenderer: null },
-    data: {
-      bodies: {
-        earth: SCENE_EARTH,
-        planets: SCENE_PLANETS,
-        stars: SCENE_STARS,
-        meshBodies: SCENE_MESH_BODIES,
-      },
-    },
+    gpu: {},
     settings: {
       labels: { focusedOnly: false },
       bodies: { items: makeBodyItems() },
-      starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
-    },
-    // Fail-safe pass-throughs (the real registry's unregistered-id default,
-    // the real clip player's no-clip-playing default): every row here is
-    // already `labelEnabled: true`, so these leave `produceSceneBodyCaptions`'s
-    // composition unchanged from its pre-fade-wire value — this fixture is
-    // about the ill-conditioned-projection regression, not the fade channels.
-    subsystems: {
-      fades: { opacityOf: () => 1 },
-      clipPlayer: { clipOpacityOf: () => 1 },
+      starCatalogs: {
+        enabled: true,
+        items: {
+          famousStar: { enabled: true, labelEnabled: true },
+          sun: { enabled: true, labelEnabled: true },
+          sStar: { enabled: true, labelEnabled: false },
+        },
+      },
     },
   } as unknown as EngineState;
 }
@@ -127,8 +110,7 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
     targetMpc: target,
     up: [0, 1, 0],
     renderOrigin: RENDER_ORIGIN_MPC,
-    fovYRad: 1,
-    aspect: 1280 / 720,
+    frustum: symmetricFrustum(1, 1280 / 720),
     near,
     far,
     reversedZ: false,
@@ -145,38 +127,56 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
   };
 }
 
-function makeCtx(eye: Vec3, slab: Slab): ReadyFrameContext {
+// Matches the NEAR0 slab's own frustum (`symmetricFrustum(1, 1280 / 720)`
+// above) — tangent-exact, so `drawPxPerRad` and the slab's projection agree.
+const FIXTURE_FRUSTUM = symmetricFrustum(1, 1280 / 720);
+const FIXTURE_PX_PER_RAD = 720 / (FIXTURE_FRUSTUM.tanUp - FIXTURE_FRUSTUM.tanDown);
+
+const SCENE_BODIES = positionedBodiesOf(
+  [...SCENE_PLANETS, ...SCENE_MESH_BODIES, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
+  deriveBodyStates(CONST_J2000),
+);
+
+function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
+    snapshot: {
+      bodyStates: deriveBodyStates(CONST_J2000),
+      nowMs: 0,
+      simDays: CONST_J2000,
+      meshBodies: SCENE_MESH_BODIES,
+      sceneBodies: SCENE_BODIES,
+      focusBlend: 0,
+      focus: ZERO_FOCUS,
+    },
     slabs: [slab],
     drawCamPos: eye,
     canvasSize: { width: 1280, height: 720 },
     cam: { distance: 1e-13 },
-    fovYRad: 1,
-    nowMs: 0,
-    simDays: CONST_J2000,
-  } as unknown as ReadyFrameContext;
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
 }
 
 // The farthest star still inside the star-caption full-alpha band, seen from
 // Earth — the most ill-conditioned caption that still emits at alpha 1. This
 // is the class the user saw flicker (VY CMa at ~1170 pc; the roster's Eta
 // Carinae at ~2300 pc is farther still). Deriving it from the seed keeps the
-// test anchored to real data, not a magic id.
+// test anchored to real data, not a magic id. RENDER_ORIGIN is the Sun, so a
+// star's world position IS its J2000 heliocentric position.
 function farVisibleStar(): { id: string; worldPos: Vec3; distPc: number } {
-  const base = sceneBodyLabels(J2000_STATES);
-  const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
-  const cam = earth.worldPos;
-  const stars = base
-    .filter((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)
-    .map((l) => ({
-      id: l.id,
-      worldPos: [...l.worldPos] as Vec3,
+  const candidates = SCENE_STARS.map((star) => {
+    const worldPos = [...J2000_STATES.get(star.id)!.positionMpc] as Vec3;
+    return {
+      id: `sceneBody-${star.id}`,
+      worldPos,
       distPc:
-        Math.hypot(l.worldPos[0] - cam[0], l.worldPos[1] - cam[1], l.worldPos[2] - cam[2]) /
-        SCALE_UNITS.PC_TO_MPC,
-    }))
-    .filter((s) => s.distPc <= SCALE_FADE_BANDS.starCaption.fullAt);
-  return stars.reduce((a, b) => (b.distPc > a.distPc ? b : a));
+        Math.hypot(
+          worldPos[0] - EARTH_POS[0],
+          worldPos[1] - EARTH_POS[1],
+          worldPos[2] - EARTH_POS[2],
+        ) / SCALE_UNITS.PC_TO_MPC,
+    };
+  }).filter((s) => s.distPc * SCALE_UNITS.PC_TO_MPC <= STAR_MAP_CAPTION_BAND.fullAt);
+  return candidates.reduce((a, b) => (b.distPc > a.distPc ? b : a));
 }
 
 function emittedLine(lineStub: MarkerLineRenderer, starId: string): MarkerLine | undefined {
@@ -193,9 +193,7 @@ function emittedCaption(labelStub: LabelRenderer, starId: string): Label2D | und
 describe('label2DDirector — far-star caption/leader stability at Earth zoom', () => {
   it('keeps a far star caption + leader endpoints stable under a sub-parsec camera nudge', () => {
     const star = farVisibleStar();
-    const base = sceneBodyLabels(J2000_STATES);
-    const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
-    const eyeA: Vec3 = [...earth.worldPos] as Vec3;
+    const eyeA: Vec3 = [...EARTH_POS] as Vec3;
     // Orbit step ~1e-15 Mpc — a fraction of a metre at 1 AU, well below one
     // rendered pixel. The caption must not visibly hop for a nudge this small.
     const eyeB: Vec3 = [eyeA[0] + 1e-15, eyeA[1], eyeA[2]];
@@ -203,8 +201,11 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
-    dir.attachRenderers(labelStub, lineStub);
-    dir.registerProducer({ id: 'sceneBodyCaptions', produceLabels: produceSceneBodyCaptions });
+    dir.attachRenderers(labelStub, lineStub, () => null);
+    dir.registerProducer({
+      id: 'starCaptions',
+      produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
+    });
     const state = makeState();
 
     dir.runFrame(state, makeCtx(eyeA, makeRealNear0Slab(eyeA, star.worldPos)));
@@ -237,16 +238,17 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
 
   it('bounds the lifted caption + leader endpoints inside the NEAR0 far plane', () => {
     const star = farVisibleStar();
-    const base = sceneBodyLabels(J2000_STATES);
-    const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
-    const eye: Vec3 = [...earth.worldPos] as Vec3;
+    const eye: Vec3 = [...EARTH_POS] as Vec3;
     const slab = makeRealNear0Slab(eye, star.worldPos);
 
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
-    dir.attachRenderers(labelStub, lineStub);
-    dir.registerProducer({ id: 'sceneBodyCaptions', produceLabels: produceSceneBodyCaptions });
+    dir.attachRenderers(labelStub, lineStub, () => null);
+    dir.registerProducer({
+      id: 'starCaptions',
+      produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
+    });
     dir.runFrame(makeState(), makeCtx(eye, slab));
 
     const cap = emittedCaption(labelStub, star.id);
@@ -256,10 +258,8 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
 
     const len = (p: Vec3) => Math.hypot(p[0], p[1], p[2]);
     const farMpc = slab.far;
-    // The lifted geometry is derived from the anchor pulled to just inside the
-    // far plane, so — camera at the origin of the rebased frame — every point
-    // sits within the far plane. Before the clamp these lengths are the raw
-    // anchor distance (~1e-3 Mpc), tens of millions of times past the plane.
+    // The lifted geometry derives from the anchor pulled just inside the far plane, so every point sits
+    // within it (camera at the origin of the rebased frame); unclamped these are the raw ~1e-3 Mpc distance.
     expect(len(cap!.worldPos as Vec3), 'caption beyond far plane').toBeLessThanOrEqual(farMpc);
     expect(len(line!.toWorld as Vec3), 'leader top beyond far plane').toBeLessThanOrEqual(farMpc);
     expect(len(line!.fromWorld as Vec3), 'leader bottom beyond far plane').toBeLessThanOrEqual(
@@ -279,17 +279,19 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     // the same ratio, so em/clipW — hence the drawn px size — matches the
     // true-depth value.
     const star = farVisibleStar();
-    const base = sceneBodyLabels(J2000_STATES);
-    const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
-    const trueLabel = base.find((l) => l.id === star.id)!;
-    const eye: Vec3 = [...earth.worldPos] as Vec3;
+    const starBody = SCENE_STARS.find((s) => `sceneBody-${s.id}` === star.id)!;
+    const trueWorldEmMpc = bodyFootprintRadiusM(starBody) * SCALE_UNITS.M_TO_MPC;
+    const eye: Vec3 = [...EARTH_POS] as Vec3;
     const slab = makeRealNear0Slab(eye, star.worldPos);
 
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
-    dir.attachRenderers(labelStub, lineStub);
-    dir.registerProducer({ id: 'sceneBodyCaptions', produceLabels: produceSceneBodyCaptions });
+    dir.attachRenderers(labelStub, lineStub, () => null);
+    dir.registerProducer({
+      id: 'starCaptions',
+      produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
+    });
     dir.runFrame(makeState(), makeCtx(eye, slab));
     const cap = emittedCaption(labelStub, star.id)!;
     expect(cap).toBeDefined();
@@ -314,7 +316,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
       star.worldPos[1] - eye[1],
       star.worldPos[2] - eye[2],
     ];
-    const intendedPx = shaderPx(trueLabel.worldEmMpc, clipW(trueAnchor));
+    const intendedPx = shaderPx(trueWorldEmMpc, clipW(trueAnchor));
 
     // 1% tolerance: the clamp ratio cancels algebraically, so the only slack
     // needed is f64 round-off — a drawn size at the 150px ceiling instead of

@@ -8,19 +8,20 @@
 
 import { createClipOpacityChannel } from '../../animation/clipOpacityChannel';
 import { compileClip } from '../animation/compileClip';
-import { advanceEpoch, elapsedMs } from '../camera/cameraEpochs';
+import { advanceEpoch, elapsedMs } from '../camera/drivers/cameraEpochs';
 import { applySceneEffect } from '../../animation/applySceneEffect';
 import { clipEnded } from '../../../state/camera/cameraSlice';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
-import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
+import type { VisibilityAddress } from '../../../@types/animation/VisibilityAddress';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { AppDispatch } from '../../../store/types';
-import type { CompiledClip, SceneCue } from '../../../@types/animation/CompiledClip';
+import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { ClipData } from '../../../@types/animation/ClipData';
+import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 
-export type ClipPlayerDeps = {
+type ClipPlayerDeps = {
   /** A narrow `{ getState, dispatch }` stub satisfies this at the wiring site. */
   store: { getState(): RootState; dispatch: AppDispatch };
   /** Wakes the loop after a `fade` cue so the ramp is drawn. */
@@ -82,9 +83,9 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     const { effect } = cue;
     if (effect.kind === 'fade') {
       // The fade verb is the player's own (`applySceneEffect` throws on it).
-      for (const layer of effect.layers) {
+      for (const address of effect.args) {
         // `effect.over` is SECONDS; `fadeTo` takes ms.
-        clipOpacity.fadeTo(layer, effect.to, effect.over * 1000, nowMs);
+        clipOpacity.fadeTo(address, effect.to, effect.over * 1000, nowMs);
       }
       requestRender();
     } else {
@@ -143,8 +144,8 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     fireEndResolver();
   }
 
-  function clipOpacityOf(layer: VisibilityLayerKey, nowMs: number): number {
-    return clipOpacity.factorOf(layer, nowMs);
+  function clipOpacityOf(address: VisibilityAddress, nowMs: number): number {
+    return clipOpacity.factorOf(address, nowMs);
   }
 
   function destroy(): void {

@@ -31,7 +31,7 @@
  * ### Structure and milkyWay ids are always ready
  *
  * The composed resolver's `resolveFocusId` returns a non-null `SelectionRef` for structure-prefixed ids
- * (e.g. `cluster-virgo-m87`) and for `milkyWay` without consulting the catalog
+ * (e.g. `galaxy-cluster-virgo-m87`) and for `milkyWay` without consulting the catalog
  * map — the resolution is by id format alone. So structure and milkyWay ids in
  * a clip never block the readiness gate.
  */

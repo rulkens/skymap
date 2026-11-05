@@ -15,7 +15,7 @@
  * if the caller indexes through a typed record.
  */
 
-import type { FlagSchema } from './FlagSchema';
+import type { FlagSchema } from '../../@types/cli/FlagSchema';
 
 export function parseFlags<S extends FlagSchema>(
   argv: readonly string[],

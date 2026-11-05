@@ -1,13 +1,15 @@
 /**
  * HOSTLESS_MESH_BODIES — the mesh bodies that own a `body-m` row rather than
- * riding a host's, and so count towards `BODY_SLAB_CAPACITY`. Derived from
+ * riding a host's, and so count towards `SLAB_ROW_CEILING`
+ * (`frame/timing/slabRowCeiling.ts`). Derived from
  * `meshBodySlabHostId`, never authored, so a new seed lands its row by existing.
  */
 
 import type { MeshBody } from '../../@types/scene/MeshBody';
 import { meshBodySlabHostId } from '../../utils/meshBodies/meshBodySlabHostId';
 import { SCENE_MESH_BODIES } from './sceneMeshBodies';
+import type { PositionedId } from '../../@types/scene/PositionedId';
 
 export const HOSTLESS_MESH_BODIES: readonly MeshBody[] = SCENE_MESH_BODIES.filter(
-  (body) => meshBodySlabHostId(body) === body.id,
+  (body) => meshBodySlabHostId(body.id) === body.id,
 );

@@ -15,7 +15,7 @@
  * data-resolution preset lifted out of the settings slice into its own root
  * slice so a settings/tour restore can't sweep it; `uiRoute` is the app-level
  * UI slice (palette / hide-UI / debug + splash); `cameraRoute` is the camera
- * Intent slice (base pose, tween descriptor, auto-rotate, dragging flag);
+ * Intent slice (base pose, tween descriptor, auto-rotate);
  * `selectionRoute` / `selectionRowsRoute` hold the selection Intent (focus +
  * select refs) and its reconciled rows.
  */
@@ -26,10 +26,14 @@ export const tierRoute = 'tier' as const;
 export const cameraRoute = 'camera' as const;
 export const selectionRoute = 'selection' as const;
 export const selectionRowsRoute = 'selectionRows' as const;
-// `tourRoute` is the guided-tour runtime slice (active / tourId / beatIndex /
-// paused / dwellNonce) — the single-writer state the tour sagas drive and the
+// `tourRoute` is the guided-tour runtime slice (beatIndex / paused /
+// dwellNonce) — the single-writer state the tour sagas drive and the
 // TourOverlay reads; everything else it shows derives from the registry.
+// Which tour runs, if any, lives on `takeoverRoute`.
 export const tourRoute = 'tour' as const;
+// `takeoverRoute` is the mutual-exclusion slice `runTakeoverSaga` writes: what
+// runs (a tour, an exhibit or a registry clip), if anything.
+export const takeoverRoute = 'takeover' as const;
 // `engineRoute` is the engine runtime slice — lifecycle status, per-source and
 // per-structure counts, load progress, and the scale-bar descriptor. Written
 // by the engine via action dispatches; read by React UI components.
@@ -38,3 +42,13 @@ export const engineRoute = 'engine' as const;
 // (simDays, realMs) anchor, rate-ladder index, direction, and pause. No
 // wall-clock tick lives here; the current instant is derived on demand.
 export const timeRoute = 'time' as const;
+// `arrivalRoute` is the boot link's arrival status — what the veil and `ready` wait on.
+export const arrivalRoute = 'arrival' as const;
+// `remoteRoute` is the dome's pairing with its remotes (`?remote` only): phase, room code, pairing address.
+export const remoteRoute = 'remote' as const;
+// `inputRoute` holds every source's folded intents: the steps the next frame
+// drains and the pick requests the pick driver answers.
+export const inputRoute = 'input' as const;
+// `viewCoverRoute` holds how far each resting panel reaches over the canvas,
+// which the camera runtime turns into the off-centre view.
+export const viewCoverRoute = 'viewCover' as const;

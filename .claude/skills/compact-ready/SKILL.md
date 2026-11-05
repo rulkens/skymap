@@ -33,12 +33,25 @@ reason to answer "no":
 
 ## Verdict format
 
-One short block, nothing more:
+Your **final message** of the turn is the verdict: do all writing first, and
+make no tool calls after it. Its **first line** starts with exactly one of
+these, as plain text (no markdown, bold, backticks, quote or preamble before
+it), because tools such as claude-dash read it to auto-compact:
 
-- `Compact-safe — resume map: <path(s)>` + one line per thing just written.
-- `Hold: <the one thing in progress>` + what makes it safe (usually <2 min).
+    Compact-safe — resume map: <path(s)>
+    Hold: <the one thing in progress>
 
-Never answer a bare "yes" — the value of the check is the writing it triggers.
+- After `Compact-safe`, one line per thing just written.
+- After `Hold:`, what makes it safe and roughly how long (usually <2 min). Don't
+  put the words "Compact-safe" anywhere in a Hold reply.
+
+Nothing else in the message: no summary, no question. Never answer a bare
+"yes" — the value of the check is the writing it triggers.
+
+If the `mcp__claude-dash-ui__compact_verdict` tool is available, call it with
+the verdict right before your final message (after all writing):
+`verdict: "safe"` with `resumeMap`, or `verdict: "hold"` with `reason`. Then
+give the text verdict as usual.
 
 ## Proactive use
 

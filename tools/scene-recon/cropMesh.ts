@@ -6,32 +6,21 @@
  * printed coverage is what part 2 budgets a re-pack from.
  */
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-
-import { NodeIO } from '@gltf-transform/core';
 
 import { cropMeshGeometry } from './crop/cropMeshGeometry';
 import { normalizeRing } from './crop/normalizeRing';
 import { triangulateOutline } from './crop/triangulateOutline';
 import { uvCoverage } from './crop/uvCoverage';
+import { publishDerivedMesh } from './derive/publishDerivedMesh';
+import { readSourceMesh } from './derive/readSourceMesh';
 import { sceneGroupFromArgv } from './groups/sceneGroupFromArgv';
-import {
-  assetArtifactUrl,
-  groupAssetDir,
-  groupManifestPath,
-  meshOutlinePath,
-} from './manifest/geo3dLayout';
-import { publishAsset } from './manifest/publishAsset';
-import { meshGlbGeometry } from './pack/meshGlbGeometry';
-import { packMeshGlb } from './pack/packMeshGlb';
+import { meshOutlinePath } from './manifest/geo3dLayout';
 import { argValue } from '../utils/cli/argValue';
 import type { CropMeshReport } from './@types/CropMeshReport';
 import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { MeshOutline } from '../scene-workbench/@types/MeshOutline';
-import type { SceneManifest } from '../scene-workbench/@types/SceneManifest';
-import type { TexturedMeshAsset } from '../scene-workbench/@types/TexturedMeshAsset';
 
 /** Hex digits of the outline's sha256 stamped as the step version. */
 const OUTLINE_HASH_HEX = 12;
@@ -50,44 +39,18 @@ export async function cropMesh(
   }
   const ringM = normalizeRing(outline.ringM);
 
-  const manifest = JSON.parse(await readFile(groupManifestPath(group.id), 'utf8')) as SceneManifest;
-  const source = manifest.assets.find((asset) => asset.id === assetId);
-  if (source?.kind !== 'mesh') {
-    throw new Error(`cropMesh: group ${group.id} has no mesh asset "${assetId}"`);
-  }
-
-  const geometry = meshGlbGeometry(
-    await new NodeIO().read(join(groupAssetDir(group.id, assetId), 'mesh.glb')),
-  );
+  const { source, geometry } = await readSourceMesh(group, assetId);
   const cropped = cropMeshGeometry(geometry, ringM, triangulateOutline(ringM));
 
-  const croppedId = `${assetId}-cropped`;
-  const outDir = groupAssetDir(group.id, croppedId);
-  await mkdir(outDir, { recursive: true });
-  await writeFile(join(outDir, 'mesh.glb'), await packMeshGlb(cropped));
-
-  const asset: TexturedMeshAsset = {
-    kind: 'mesh',
-    id: croppedId,
-    label: `${source.label} — cropped`,
-    transform: source.transform,
-    provenance: {
-      ...source.provenance,
-      pipeline: [
-        ...source.provenance.pipeline,
-        {
-          step: 'cropMesh',
-          version: createHash('sha256')
-            .update(outlineBytes)
-            .digest('hex')
-            .slice(0, OUTLINE_HASH_HEX),
-        },
-      ],
+  const asset = await publishDerivedMesh(group, source, {
+    idSuffix: 'cropped',
+    labelSuffix: 'cropped',
+    step: {
+      step: 'cropMesh',
+      version: createHash('sha256').update(outlineBytes).digest('hex').slice(0, OUTLINE_HASH_HEX),
     },
-    triangleCount: cropped.indices.length / 3,
-    artifactUrl: assetArtifactUrl(group.id, croppedId, 'mesh.glb'),
-  };
-  await publishAsset(group, asset);
+    geometry: cropped,
+  });
 
   return {
     asset,

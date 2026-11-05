@@ -3,7 +3,7 @@
 **Area:** tour/animation · **Readiness:** ready
 
 Surfaced by rung 7's T7 review (`decisions.md` #18 closing paragraphs,
-2026-08-20): `compileClip(cosmicFlows.data)` (`src/data/animation/clips/cosmicFlows.ts`)
+2026-08-20): `compileClip(cosmicFlows.data)` (`src/compositions/clips/cosmicFlows.ts`)
 yields `durationSec = 20`, with beat D's cue —
 `fade([… milkyWayDisk …], 0, 3)` at `:96` — landing at `atSec = 20`, exactly
 on the compiled boundary. `fade` cues contribute **zero awaited seconds** to
@@ -19,7 +19,7 @@ frame either in the harness or in the app.
 
 This was invisible before rung 7 (`decisions.md` #18, D8) migrated
 `milkyWayDisk` off a raw `opacityOf` read onto the clip-aware
-`resolveLayerOpacity` path — before that migration nothing consumed the
+handed-value path (today `resolveVisibilityOpacity`) — before that migration nothing consumed the
 clip factor for this key, so the dead cue had no visible symptom. Two of
 `cosmicFlows`'s three inert-key moments are now live from that migration
 (the pre-roll `fade(['flow'], 0, 0)` load mask and beat A's crossfade);

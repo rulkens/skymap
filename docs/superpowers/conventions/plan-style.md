@@ -44,11 +44,19 @@ These four kinds of code are the contract. Include them, exactly.
 4. **Tiny before / after sketches** when the prose alone can't make the
    intended diff obvious. Keep these to a few lines each.
 5. **The `npm run move-files` invocation, spelled out, in any task that moves
-   or renames TS files.** Implementers who aren't told otherwise default to
+   or renames files.** Implementers who aren't told otherwise default to
    `git mv` + hand-editing every import path (observed, repeatedly); naming
    the tool in the task text is the only channel that reliably reaches a
    subagent, since they never load project skills. See
    `.claude/skills/refactor/SKILL.md`.
+6. **The incumbent's new name, in any task that adds a sibling variant.** A
+   second renderer, pass, handle, pipeline or producer beside an existing one
+   renames the first to its marked name in the same task: `fooCosmo` +
+   `fooNear`, never `foo` + `fooNear`. The task names both, lists the
+   incumbent's files under `Files:`, and spells out the rename command. Only
+   symbols naming the contract both variants share (the module, its type, a
+   shared planner) keep the unmarked name. An unmarked incumbent reads as "the
+   real one", and an implementer told only the newcomer's name will leave it.
 
 ## Every task carries `Files:` and, when it earns it, `review: yes`
 

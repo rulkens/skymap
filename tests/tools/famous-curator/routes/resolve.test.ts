@@ -61,7 +61,9 @@ describe('handleResolve', () => {
     await expect(
       handleResolve({
         body: { url: 'https://noirlab.edu/public/images/noao-foo/' },
-        htmlFetcher: async () => { throw new Error('network'); },
+        htmlFetcher: async () => {
+          throw new Error('network');
+        },
         hostDispatch: new Map([['noirlab.edu', stub]]),
       }),
     ).rejects.toBeInstanceOf(UpstreamError);

@@ -1,0 +1,10 @@
+.root {
+  composes: grid halves from '../../../../styles/layout.module.css';
+  row-gap: 0;
+}
+
+@media (--narrow) {
+  .root > * + * {
+    margin-top: var(--site-space-3xl);
+  }
+}

@@ -1,95 +1,83 @@
-import { describe, it, expect } from 'vitest';
+/**
+ * Listing a star index's chunks reads only headers: a chunk not on disk is asked for by a
+ * ranged GET, never its whole body, so a `--dry-run` moves kilobytes, not the catalog.
+ */
+import fs from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { STAR_COLUMN_SCHEMA } from '../../../src/data/octree/starOctreeFamily';
+import { octreeChunkPaths } from '../../../tools/fetch/fetchPrebuiltData';
+import { chunkOctree } from '../../../tools/octree/chunkOctree';
+import { stratifyOctree } from '../../../tools/octree/stratifyOctree';
+import { writeOctreeCatalog } from '../../../tools/octree/writeOctreeCatalog';
 import {
-  volumeVisibilityByFileName,
-  selectManifestFiles,
-} from '../../../tools/fetch/fetchPrebuiltData';
-import type { SourceEntry } from '../../../src/@types/data/SourceEntry';
-import type { DataManifest } from '../../../src/@types/data/DataManifest';
+  makeOctreeBuildInput,
+  randomOctreeRecords,
+  TEST_STRATIFY,
+} from '../../fixtures/makeOctreeBuildInput';
 
-/** Narrow fixture carrying only the fields `volumeVisibilityByFileName` reads. */
-function volumeEntry(opts: {
-  visible: boolean;
-  binBaseName: string | null;
-  tiered: boolean;
-}): SourceEntry {
-  return { type: 'volume', ...opts } as unknown as SourceEntry;
-}
+const GRID = { bits: 6, origin: [0, 0, 0] as [number, number, number], cellEdge: 10 };
+const CAPACITY = 300;
+const N = 2000;
+const HOST = 'https://data.test';
 
-function flowEntry(opts: { visible: boolean; binBaseName: string }): SourceEntry {
-  return { type: 'flow', ...opts } as unknown as SourceEntry;
-}
-
-describe('volumeVisibilityByFileName', () => {
-  it('maps every tier of a tiered volume to its visible default', () => {
-    const map = volumeVisibilityByFileName([
-      volumeEntry({ visible: true, binBaseName: 'mcpm', tiered: true }),
-    ]);
-    expect(map.get('mcpm-small.scfd')).toBe(true);
-    expect(map.get('mcpm-medium.scfd')).toBe(true);
-    expect(map.get('mcpm-large.scfd')).toBe(true);
+describe('octreeChunkPaths', () => {
+  const dirs: string[] = [];
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
   });
 
-  it('maps the single file of an untiered volume', () => {
-    const map = volumeVisibilityByFileName([
-      volumeEntry({ visible: false, binBaseName: 'cf4_density', tiered: false }),
-    ]);
-    expect(map.get('cf4_density.scfd')).toBe(false);
-  });
+  it('lists every depth from ranged header reads, writing nothing', async () => {
+    const remote = fs.mkdtempSync(join(tmpdir(), 'fetch-remote-'));
+    const local = fs.mkdtempSync(join(tmpdir(), 'fetch-local-'));
+    dirs.push(remote, local);
+    const epochDir = join(remote, 'star-catalog/v2');
+    // A 40-row bound nests chunks two deep, so some are named only by another chunk.
+    writeOctreeCatalog(
+      chunkOctree(
+        stratifyOctree(makeOctreeBuildInput(randomOctreeRecords(N, 5, 640, [4, 14]), GRID)),
+        CAPACITY,
+        40,
+      ),
+      {
+        family: 'star',
+        grid: GRID,
+        stratify: TEST_STRATIFY,
+        schema: STAR_COLUMN_SCHEMA,
+        stats: { starCount: N },
+      },
+      epochDir,
+      'stars',
+    );
+    const served: { path: string; ranged: boolean }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: { headers?: Record<string, string> }) => {
+        const path = url.slice(`${HOST}/data/`.length);
+        const body = fs.readFileSync(join(remote, path));
+        const range = /^bytes=0-(\d+)$/.exec(init?.headers?.Range ?? '');
+        const end = range ? Math.min(Number(range[1]) + 1, body.length) : body.length;
+        served.push({ path, ranged: range !== null });
+        return new Response(body.subarray(0, end), { status: range ? 206 : 200 });
+      }),
+    );
 
-  it('maps a flow entry (no tiered field at all)', () => {
-    const map = volumeVisibilityByFileName([
-      flowEntry({ visible: false, binBaseName: 'flowfield' }),
-    ]);
-    expect(map.get('flowfield.scfd')).toBe(false);
-  });
+    const paths = await octreeChunkPaths(
+      HOST,
+      local,
+      { family: 'star', name: 'stars' },
+      'star-catalog/v2/stars.bin',
+    );
 
-  it('skips a procedural fixture with no on-disk file (binBaseName null)', () => {
-    const map = volumeVisibilityByFileName([
-      volumeEntry({ visible: false, binBaseName: null, tiered: false }),
-    ]);
-    expect(map.size).toBe(0);
-  });
-
-  it('ignores non-volume, non-flow entries entirely', () => {
-    const galaxyEntry = { type: 'galaxyCatalog', visible: true } as unknown as SourceEntry;
-    expect(volumeVisibilityByFileName([galaxyEntry]).size).toBe(0);
-  });
-});
-
-describe('selectManifestFiles', () => {
-  const manifest: DataManifest = {
-    'galaxy-catalog/v9/sdss-large.bin': 'galaxy-catalog/v9/sdss-large.aaaa1111.bin',
-    'scalar-field/v3/mcpm-large.scfd': 'scalar-field/v3/mcpm-large.bbbb2222.scfd',
-    'scalar-field/v3/flowfield.scfd': 'scalar-field/v3/flowfield.cccc3333.scfd',
-    // A volume with no registry row at all — a data pipeline baked and
-    // synced ahead of its renderer wiring (the real-world Edenhofer case).
-    'scalar-field/v3/edenhofer-dust-large.scfd':
-      'scalar-field/v3/edenhofer-dust-large.dddd4444.scfd',
-  };
-  const visibility = new Map([
-    ['mcpm-large.scfd', true],
-    ['flowfield.scfd', false],
-  ]);
-
-  it('keeps non-scalar-field entries unconditionally', () => {
-    const selected = selectManifestFiles(manifest, visibility, false);
-    expect(selected).toContain('galaxy-catalog/v9/sdss-large.bin');
-  });
-
-  it('keeps a registered visible volume and drops a registered hidden one', () => {
-    const selected = selectManifestFiles(manifest, visibility, false);
-    expect(selected).toContain('scalar-field/v3/mcpm-large.scfd');
-    expect(selected).not.toContain('scalar-field/v3/flowfield.scfd');
-  });
-
-  it('drops a scalar-field file with no registry row at all', () => {
-    const selected = selectManifestFiles(manifest, visibility, false);
-    expect(selected).not.toContain('scalar-field/v3/edenhofer-dust-large.scfd');
-  });
-
-  it('--volumes all waves through every scalar-field file, registered or not', () => {
-    const selected = selectManifestFiles(manifest, visibility, true);
-    expect(selected.sort()).toEqual(Object.keys(manifest).sort());
+    const baked = fs.readdirSync(join(epochDir, 'stars'));
+    expect(paths.sort()).toEqual(baked.map((name) => `star-catalog/v2/stars/${name}`).sort());
+    const chunkReads = served.filter((s) => s.path.includes('/stars/'));
+    expect(chunkReads.length).toBe(baked.length);
+    expect(chunkReads.every((r) => r.ranged)).toBe(true);
+    expect(fs.readdirSync(local)).toEqual([]);
   });
 });

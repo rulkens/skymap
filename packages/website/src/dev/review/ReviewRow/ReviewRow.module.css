@@ -1,0 +1,26 @@
+/* ReviewRow — what a mark's row and a feedback note's row in a section panel share, as a vocabulary: take a class with `composes`. */
+.row {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--review-line-dim);
+}
+
+.reason {
+  color: var(--site-text-dim);
+  font-size: 0.75rem;
+}
+
+/* The passage the row is about; pressed, the page scrolls to it. */
+.passage {
+  flex: 1 0 100%;
+  padding: var(--space-2) 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.passage:disabled {
+  cursor: default;
+}

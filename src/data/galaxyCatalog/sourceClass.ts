@@ -18,8 +18,8 @@
  *     InfoCard to reconstruct the historical "<PARENT> J<RA><Dec>"
  *     display name from the bin without a sidecar JSON.
  *
- * Why a separate module rather than members on `sources.ts`?
- * `sources.ts` is the canonical "what's a galaxy catalog?" file and is
+ * Why a separate module rather than members on the source registry?
+ * `appSources.ts` is the canonical "what's a galaxy catalog?" file and is
  * imported almost everywhere; growing it with per-row interpretation
  * tables would blur the boundary between "galaxy catalog identity" and "row
  * payload semantics".  Splitting them lets each module say one thing
@@ -30,7 +30,7 @@
  * values — append, never renumber.
  */
 
-import { Source } from '../sources';
+import { Source } from '../source';
 import type { SourceType } from '../../@types/data/SourceType';
 
 /**
@@ -127,11 +127,7 @@ export function sourceClassLabel(source: SourceType, classByte: number): string 
   // All DESI patches (deep cone + dec-band wedge + Sloan Great Wall) stamp the
   // same tracer classByte, so they share the tracer-label lookup. (The SGW patch
   // is pure BGS by geometry, but it flows through the same lookup.)
-  if (
-    source === Source.DesiDeep ||
-    source === Source.DesiWedge ||
-    source === Source.DesiSgw
-  )
+  if (source === Source.DesiDeep || source === Source.DesiWedge || source === Source.DesiSgw)
     return DESI_TRACER_LABEL[classByte] ?? null;
   return null;
 }

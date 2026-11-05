@@ -8,22 +8,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // The harness's `state.settings`/`state.gpu` slices are minimal (camera-only);
-// these three run inside `runFrame` regardless and reach past what the
+// these two run inside `runFrame` regardless and reach past what the
 // fixture stubs, same as every other camera-only frame-level fixture.
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
-}));
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: () => ({ draw: 0, pick: 0 }),
 }));
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-// A crossing frame's SAME-simDays pre-flip world (arg 2) vs its post-flip
-// displayed pose (arg 3) is the only continuity comparison an accelerated
-// clock cannot contaminate with legitimate orbital motion between frames —
-// so the probe records both, per frame, like `poseFold.test.ts`'s.
+// A crossing frame's SAME-simDays pre-flip world (`input.cam`) vs its
+// post-flip displayed pose (`input.arm`) is the only continuity comparison an
+// accelerated clock cannot contaminate with legitimate orbital motion between
+// frames — so the probe records both, per frame, like `poseFold.test.ts`'s.
 const probe = vi.hoisted(() => ({
   worldPose: [] as unknown[],
   renderPose: [] as unknown[],
@@ -34,18 +31,20 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
   return {
     ...actual,
     deriveFrameContext: (...args: Parameters<typeof actual.deriveFrameContext>) => {
-      probe.worldPose.push(args[2]);
-      probe.renderPose.push(args[3]);
+      // The caller now assembles `cam` itself, off the same world pose that
+      // used to arrive as the 3rd positional; `arm` is the 4th's replacement.
+      probe.worldPose.push(args[1].cam);
+      probe.renderPose.push(args[1].arm);
       return actual.deriveFrameContext(...args);
     },
   };
 });
 
-import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/body/isBodyArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
-import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
+import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
 import { setRate, resume } from '../../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -55,15 +54,15 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const EARTH: BodyState = deriveBodyStates(CONST_J2000).get('earth')!;
-const EARTH_ARM = { body: 'earth' as BodyId };
+const EARTH: BodyState = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
+const EARTH_ARM = { body: asSceneBodyId('earth') };
 // The ladder's fastest detent, ~3.16e8 s/s — three decades past the spec's
 // literal 10^6x, so a Clock leak this size cannot hide inside float noise.
 const FASTEST_RATE_INDEX = RATE_LADDER.length - 1;
@@ -147,7 +146,7 @@ describe('engaged-arm clock invariance (spec §14)', () => {
     let nowMs = 0;
     let crossing = -1;
     for (let i = 0; i < 200 && crossing < 0; i += 1) {
-      h.push({ kind: 'wheel', deltaY: 60, duringGesture: false, xPx: 50, yPx: 50 });
+      h.notch(60, [50, 50]);
       h.tick(nowMs);
       nowMs += 16;
       if ((probe.renderPose[i] as FramedCameraPose).frame === 'absolute') crossing = i;
@@ -155,9 +154,10 @@ describe('engaged-arm clock invariance (spec §14)', () => {
 
     expect(crossing).toBeGreaterThan(-1);
     // Both eyes come from THIS ONE frame's probe entries — the pre-flip world
-    // (arg 2, the old arm resolved off the frame's own bodyState) and the
-    // post-flip displayed pose (arg 3) — so a racing clock cannot leak a
-    // legitimate orbital shift into the comparison; only the flip itself can.
+    // (`input.cam`, the old arm resolved off the frame's own bodyState) and
+    // the post-flip displayed pose (`input.arm`) — so a racing clock cannot
+    // leak a legitimate orbital shift into the comparison; only the flip
+    // itself can.
     // Bound: poseFold's crossing tests hold the same conversion to ~5e-5 m at
     // the same heliocentric magnitude with the clock frozen; a clock-dependent
     // leak here would be decades above it at any clock speed.

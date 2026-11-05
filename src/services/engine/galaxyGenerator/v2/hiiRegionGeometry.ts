@@ -25,7 +25,7 @@ const LUMINOSITY_MAX = 1e4;
 const RADIUS_MIN_PC = 10;
 
 /** Inverse CDF of dN/dL ~ L^-a over [1, LUMINOSITY_MAX], in units of the faintest. */
-export function hiiLuminosity(u: number): number {
+function hiiLuminosity(u: number): number {
   const exp = 1 - LUMINOSITY_POWER;
   const maxPow = LUMINOSITY_MAX ** exp;
   return (u * (maxPow - 1) + 1) ** (1 / exp);

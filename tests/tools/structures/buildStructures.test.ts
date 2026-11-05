@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { extractAbell, buildClusterEntries } from '../../../tools/structures/buildStructures';
+import { lengthToMpc } from '../../../src/utils/math/lengthToMpc';
 import { parseStructureSeed } from '../../../tools/parsers/parseStructureSeed';
 import type { McxcRow } from '../../../tools/parsers/parseMcxc';
 import type { MsccRow } from '../../../tools/parsers/parseMscc';
@@ -186,7 +187,7 @@ describe('buildClusterEntries drops a bulk entry near a featured seed anchor', (
 
     // Cluster at Coma's exact position → should be suppressed.
     // Use z that puts it at ~Coma's distMpc via approximation (H0=70).
-    const comaDist = coma.distMpc;
+    const comaDist = lengthToMpc(coma.distance);
     // Approximate z ≈ d * H0 / c (linear) — fine for test purposes; the test
     // checks dedup, not cosmological precision.
     const comaZ = (comaDist * H0_KM_S_MPC) / 299792.458;

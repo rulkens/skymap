@@ -1,0 +1,71 @@
+---
+/*
+ * One docs page per file of the docs collection, at the file's path. The
+ * names a page's text may use without importing them are listed here once.
+ * A page's sources are the fact rows it prints through `<Fact>`, found in its
+ * text, and the ones its frontmatter adds.
+ */
+import { getCollection, render } from 'astro:content';
+
+import AnnotatedShot from '../../components/docs/AnnotatedShot/AnnotatedShot.astro';
+import Caveat from '../../components/shared/text/Caveat/Caveat.tsx';
+import CodeBlock from '../../components/shared/text/CodeBlock/CodeBlock.tsx';
+import ControlFigure from '../../components/docs/ControlFigure/ControlFigure.tsx';
+import DocFigure from '../../components/docs/DocFigure/DocFigure.tsx';
+import DocLink from '../../components/docs/DocLink/DocLink.tsx';
+import DocTable from '../../components/docs/DocTable/DocTable.tsx';
+import Example from '../../components/docs/Example/Example.tsx';
+import FactText from '../../components/docs/FactText/FactText.tsx';
+import Flow from '../../components/docs/Flow/Flow.tsx';
+import Formula from '../../components/docs/Formula/Formula.tsx';
+import Keys from '../../components/docs/Keys/Keys.tsx';
+import Links from '../../components/docs/Links/Links.tsx';
+import Note from '../../components/shared/text/Note/Note.tsx';
+import RepoLink from '../../components/docs/RepoLink/RepoLink.tsx';
+import SourceLink from '../../components/docs/SourceLink/SourceLink.tsx';
+import Spans from '../../components/docs/Spans/Spans.tsx';
+import View from '../../components/docs/View/View.tsx';
+import Docs from '../../layouts/Docs.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('docs');
+  return entries.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)].map((match) => match[1]!);
+---
+
+<Docs
+  path={`/docs/${entry.id}/`}
+  description={entry.data.description}
+  image={entry.data.image}
+  job={entry.data.job}
+  headings={headings}
+  factIds={[...printed, ...entry.data.facts]}
+>
+  <Content
+    components={{
+      a: DocLink,
+      pre: CodeBlock,
+      table: DocTable,
+      Table: DocTable,
+      Figure: DocFigure,
+      AnnotatedShot,
+      Control: ControlFigure,
+      Fact: FactText,
+      Example,
+      View,
+      Links,
+      Keys,
+      Note,
+      Caveat,
+      Source: SourceLink,
+      Flow,
+      Formula,
+      Spans,
+      Repo: RepoLink,
+    }}
+  />
+</Docs>

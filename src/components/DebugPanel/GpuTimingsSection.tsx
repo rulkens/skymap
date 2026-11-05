@@ -49,7 +49,6 @@ import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService'
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
 import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/timing/timedSlotGroups';
-import { foldCaptureFaceRows } from '../../utils/perf/foldCaptureFaceRows';
 import { Sparkline } from './Sparkline';
 import DebugSection from './DebugSection';
 import styles from './GpuTimingsSection.module.css';
@@ -171,23 +170,20 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
             <div className={styles.groupHeader}>
               {group.title} ({groupMs.toFixed(1)} ms)
             </div>
-            {foldCaptureFaceRows(
-              liveRows.map((r) => r.name),
-              (name) => {
-                const row = stats.get(name)!;
-                return { avgMs: avgOf(row), spark: row.spark, staleFrames: row.staleFrames };
-              },
-            ).map((row) => (
-              // An idle row (pass gated off) keeps its last avg + sparkline,
-              // dimmed so it isn't read as a live cost.
-              <div key={row.name} className={cx(row.idle && styles.rowIdle)}>
-                <span className={styles.name}>{row.name}</span>
-                <span className={styles.avg}>{row.avgMs.toFixed(1)} ms</span>
-                <span className={styles.sparklineWrap}>
-                  <Sparkline samples={row.spark} />
-                </span>
-              </div>
-            ))}
+            {liveRows.map((r) => {
+              const row = stats.get(r.name)!;
+              return (
+                // An idle row (pass gated off) keeps its last avg + sparkline,
+                // dimmed so it isn't read as a live cost.
+                <div key={r.name} className={cx(row.staleFrames > 0 && styles.rowIdle)}>
+                  <span className={styles.name}>{r.name}</span>
+                  <span className={styles.avg}>{avgOf(row).toFixed(1)} ms</span>
+                  <span className={styles.sparklineWrap}>
+                    <Sparkline samples={row.spark} />
+                  </span>
+                </div>
+              );
+            })}
           </div>
         );
       })}

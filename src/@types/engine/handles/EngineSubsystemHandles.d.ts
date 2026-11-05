@@ -9,8 +9,7 @@
  *
  *   - Eager (no GPU dep): `scheduler`, `fades`, `assetQueue` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
- *   - Lazy (inside the GPU init IIFE): `earthTiles`, `clickResolver`,
- *     `inputBindings`.
+ *   - Lazy (inside the GPU init IIFE): `pickDriver`, `resizeWake`.
  *
  * The mixed nullability matches `EngineGpuHandles.d.ts` so consumer
  * null-checks stay honest and `destroy()` can null fields back out
@@ -18,14 +17,10 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { SurfaceTileSubsystem } from '../subsystems/SurfaceTileSubsystem';
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
-import type { ClickResolver } from '../ClickResolver';
-import type { InputBindings } from '../../input/InputBindings';
-import type { InputAggregator } from '../subsystems/InputAggregator';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
 import type { FadeRegistry } from '../../animation/FadeRegistry';
 import type { LoadProgressEmitter } from '../../loading/LoadProgressEmitter';
@@ -33,26 +28,13 @@ import type { Destroyable } from '../../rendering/Destroyable';
 import type { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 
 export type EngineSubsystemHandles = {
-  /**
-   * Earth's surface virtual texture — tile atlas, page table and residency
-   * bookkeeping. Constructed in `wireSlots`; allocates no GPU memory until
-   * the planner says the base texture has started magnifying, so a session
-   * that never approaches Earth pays nothing. Null before `wireSlots` runs.
-   */
-  surfaceTiles: SurfaceTileSubsystem | null;
-  clickResolver: ClickResolver | null;
-  inputBindings: InputBindings | null;
-  /**
-   * Queue between the orbit-controls gesture recognizer (which only emits) and
-   * `runFrame`'s replay, the frame's one input-apply site. Eager — the recognizer is
-   * attached in `wireInput`, but `runFrame` drains from its first tick, which
-   * can precede that async phase.
-   */
-  inputAggregator: InputAggregator;
+  /** Answers the `input` slice's hover and select requests with GPU picks; built in `wireInput`. */
+  pickDriver: Destroyable | null;
+  resizeWake: Destroyable | null;
   scheduler: RenderScheduler;
   /**
    * Unified fade registry — owns one FadeController per registered
-   * FadeId. Constructed eagerly BEFORE any renderer so renderer
+   * FadeIdentity. Constructed eagerly BEFORE any renderer so renderer
    * construction can call `register(...)` without a null-check. Drives
    * the render-on-demand predicate and the slot orchestration's
    * fade-out → upload → fade-in sequence. See
@@ -74,8 +56,8 @@ export type EngineSubsystemHandles = {
    */
   assetQueue: PriorityQueue<void>;
   /**
-   * Label director — owns `labelRenderer.setLabels` /
-   * `markerLineRenderer.setLines`, polls every registered `Label2DProducer`
+   * Label director — owns `labelRendererCosmo.setLabels` /
+   * `markerLineRendererCosmo.setLines`, polls every registered `Label2DProducer`
    * each frame, merges outputs, and flushes once. Lets multiple overlays
    * (the Milky Way "you are here" pin, cluster structures, future
    * galaxy/void labels) coexist without stomping each other's full-set
@@ -93,14 +75,14 @@ export type EngineSubsystemHandles = {
    * The NEAR0 sibling of `cosmoLabelDirector` — same `createLabel2DDirector`
    * factory, `screenSeparation`/`exponentialApproach`/lift arms instead of
    * COSMO's `bboxOverlap`/`smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
-   * in `src/data/labels/`). Attaches `foregroundLabelRenderer` +
-   * `foregroundMarkerLineRenderer` at the same two sites `cosmoLabelDirector`
+   * in `src/data/labels/`). Attaches `labelRendererNear` +
+   * `markerLineRendererNear` at the same two sites `cosmoLabelDirector`
    * attaches its own pair.
    */
   foregroundLabelDirector: Label2DDirector;
   /**
-   * Cluster focus-mode subsystem — drives the "dim non-members of the
-   * selected cluster/SC/void" effect. Selection-driven: `runFrame` calls
+   * Structure focus-mode subsystem — drives the "dim everything outside the
+   * selected structure" effect. Selection-driven: `runFrame` calls
    * `update(selectedStructure, nowMs)` each frame and threads
    * `produceFocusUniforms(nowMs)` into the points draw. Constructed
    * eagerly; no GPU dep, non-null from t=0.
@@ -132,20 +114,4 @@ export type EngineSubsystemHandles = {
    * dev panel. Null until the GPU init runs.
    */
   loadProgress: LoadProgressEmitter | null;
-};
-
-/**
- * Compile-time guard: every subsystem field must satisfy `Destroyable`.
- *
- * The mapped type strips `| null` via `NonNullable<...>` (nullable fields
- * are fine — the engine null-checks before calling destroy) and requires
- * the rest to be assignable to `Destroyable`. A missing `destroy()`
- * resolves to `never` for that key, surfacing as a compile error here
- * rather than as a silent leak at runtime when `engine.destroy()` walks
- * the bag uniformly.
- */
-type _EnforceDestroyable = {
-  [K in keyof EngineSubsystemHandles]: NonNullable<EngineSubsystemHandles[K]> extends Destroyable
-    ? true
-    : never;
 };

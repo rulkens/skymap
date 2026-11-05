@@ -8,34 +8,35 @@
  */
 
 import type { CubemapCaptureKey } from '../../../../@types/rendering/CubemapCaptureKey';
-import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../compositions/appCubemapCaptures';
 import type { FrameInputs } from '../expandFrameOrder';
 import { NEAR0 } from '../slabs';
-import { BODY_SLAB_CAPACITY } from './bodySlabCapacity';
+import { SLAB_ROW_CEILING } from './slabRowCeiling';
+import { ALL_CUBE_FACES } from '../../../../data/rendering/cubemapCaptures';
 
 export const MAX_FRAME_INPUTS: FrameInputs = {
   tone: { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 },
   bloomEnabled: true,
   // NEAR0 plus every capacity body row — sized off the registry, never by hand.
-  foregroundChain: [NEAR0, ...Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2)],
+  foregroundChain: [NEAR0, ...Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2)],
   // Every row's 6 faces, so the capture slots exist even when no band is on —
   // sized off the registry, so a second capture row needs no edit here. A
   // probe face may draw its subject's host, which can sit in any body row.
   captureFaces: new Map(
-    (Object.keys(CUBEMAP_CAPTURES) as readonly CubemapCaptureKey[]).map((key) => [
+    (Object.keys(APP_CUBEMAP_CAPTURE_REGISTRY) as readonly CubemapCaptureKey[]).map((key) => [
       key,
       ALL_CUBE_FACES.map((face) => ({
         face,
         bodySlabs:
-          CUBEMAP_CAPTURES[key].kind === 'probe'
-            ? Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2)
+          APP_CUBEMAP_CAPTURE_REGISTRY[key].kind === 'probe'
+            ? Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2)
             : [],
       })),
     ]),
   ),
   bodyRowSlabs: {
-    // Every capacity index: Sgr A*'s painter-order row moves with the live bodies.
-    lens: Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
-    insideAtmosphere: [],
+    // Every capacity index, for both: the two rows move with the live bodies.
+    lens: Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2),
+    insideAtmosphere: Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2),
   },
 };

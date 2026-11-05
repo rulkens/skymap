@@ -1,25 +1,13 @@
 /**
- * RunFrameDeps — closure captures the per-frame body relies on.
- *
- * Every entry was a free reference in the original
- * `engine.ts:1407–1708` body; the galaxy catalog done in Phase 3 Task 3.1
- * enumerated each one by source (createEngine arg, IIFE-local renderer,
- * createEngine helper, etc.) and confirmed read-only vs. mutated.
- *
- * ### Why no renderer fields
- *
- * Pre-unification this bag also carried `milkyWayCloudRenderer`,
- * `horizonShellRenderer`, `filamentRenderer`, `texturedDiskRenderer`, and
- * `proceduralDiskRenderer` — but `runFrame` only ever forwarded them,
- * unread, into `RenderFrameInput`.  Now that every `ContentPass` reads its
- * renderer straight off `state.gpu.*` (see `passes/index.ts`), those fields
- * were dead weight here; they're gone along with the matching
- * `RenderFrameInput` fields.
+ * RunFrameDeps — the closure captures the per-frame body relies on. It carries no
+ * renderers: every `ContentPass` reads its own (core's off `state.gpu`, a Layer's
+ * off its runtime).
  */
 
 import type { EngineCallbacks } from '../EngineCallbacks';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
-import type { CameraDriver } from '../camera/CameraDriver';
+import type { ControlScheme } from '../camera/ControlScheme';
+import type { ControlSchemeId } from '../camera/ControlSchemeId';
 
 export type RunFrameDeps = {
   /** createEngine arg — for resize + viewport reads. */
@@ -37,10 +25,10 @@ export type RunFrameDeps = {
    */
   timingService: GpuTimingService;
   /**
-   * Camera-control drivers (`CAMERA_DRIVERS`, overridable by a fixture).
-   * `pickWinner` picks the single highest-priority active winner each frame and
-   * is also the source of truth for "is the camera animating" (render-on-demand
-   * gate). Order in this array is not significant — `priority` decides.
+   * Control-scheme registry (`composeControlSchemes`, overridable by a fixture); each
+   * scheme's driver table feeds `pickWinner`, which picks the single
+   * highest-priority active winner each frame and is also the source of truth
+   * for "is the camera animating" (render-on-demand gate).
    */
-  readonly drivers: readonly CameraDriver[];
+  readonly controlSchemes: Readonly<Record<ControlSchemeId, ControlScheme>>;
 };

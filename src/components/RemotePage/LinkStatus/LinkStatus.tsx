@@ -1,0 +1,29 @@
+/** LinkStatus — the link to the dome in words, with a mark whose shape changes too. */
+
+import cx from 'classnames';
+import type { ReactNode } from 'react';
+import type { DomeLinkState } from '../../../@types/remote/DomeLinkState';
+import styles from './LinkStatus.module.css';
+
+export type LinkStatusProps = {
+  readonly state: DomeLinkState;
+};
+
+const TEXT = {
+  connected: 'Connected',
+  looking: 'Looking for the dome',
+  lost: 'Dome not there',
+  domeOlder: 'Dome needs a reload',
+  domeNewer: 'Remote needs a reload',
+} as const;
+
+function LinkStatus({ state }: LinkStatusProps): ReactNode {
+  return (
+    <span role="status" className={cx(styles.root, styles[state])}>
+      <span className={styles.mark} aria-hidden="true" />
+      {TEXT[state]}
+    </span>
+  );
+}
+
+export default LinkStatus;

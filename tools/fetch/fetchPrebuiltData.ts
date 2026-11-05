@@ -9,7 +9,10 @@
  * never touch it, and fonts ship git-tracked under `public/fonts/` — so
  * nothing here has to special-case excluding them. A download lands at
  * `<dest>.part`, renamed into place only on success, so a same-named file
- * on disk is always trustworthy as "already fetched".
+ * on disk is always trustworthy as "already fetched". Octree chunks are
+ * never in the manifest: each manifested index of an `OCTREE_CATALOGS` catalog names its own, and each chunk
+ * the next depth's, so they are listed by reading headers down the tree (off
+ * disk, else by a ranged GET of the header alone) and fetched with the rest.
  */
 import {
   createWriteStream,
@@ -19,63 +22,32 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, posix } from 'node:path';
+import { dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 
+import type { OctreeCatalog } from '../deploy/@types/OctreeCatalog';
+import { OCTREE_CATALOGS } from '../deploy/r2/octreeCatalogs';
 import type { DataManifest } from '../../src/@types/data/DataManifest';
-import type { SourceEntry } from '../../src/@types/data/SourceEntry';
-import { SOURCE_ENTRIES } from '../../src/data/sourceEntries';
-import { TIER_LADDER } from '../../src/data/tierLadder';
+import type { OctreeChunkHeader } from '../../src/@types/octree/OctreeChunkHeader';
+import type { OctreeChunkRef } from '../../src/@types/octree/OctreeChunkRef';
+import type { OctreeIndexHeader } from '../../src/@types/octree/OctreeIndexHeader';
+import {
+  OCTREE_CHUNK_MAGIC,
+  OCTREE_HEADER_BYTES_OFFSET,
+  OCTREE_INDEX_MAGIC,
+  OCTREE_JSON_OFFSET,
+} from '../../src/data/octree/octreeFormat';
+import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
+import { octreeChunkPath } from '../../src/utils/octree/octreeChunkPath';
+import { readOctreeHeader } from '../../src/data/octree/readOctreeHeader';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
+import { readOctreeFileHeader } from '../utils/io/readOctreeFileHeader';
 
 const DATA_DIR = 'public/data';
-
-/**
- * `.scfd` filename -> its registry row's `visible` default, for every
- * volume/flow entry that has an on-disk file. A `.scfd` can be live on R2
- * with NO row at all — a data pipeline that shipped ahead of its renderer
- * wiring (e.g. the Edenhofer dust volume) — so this is deliberately a
- * lookup, not a blocklist: an unlisted file is exactly as "not visible" as
- * one that's registered `visible: false`, and both stay out of the default
- * pull. `src/data/sources/*` is the single source of visibility truth, so
- * the registered half of this can't drift from what the app defaults to.
- */
-export function volumeVisibilityByFileName(entries: readonly SourceEntry[]): Map<string, boolean> {
-  const map = new Map<string, boolean>();
-  for (const entry of entries) {
-    if (entry.type !== 'volume' && entry.type !== 'flow') continue;
-    const base = entry.binBaseName;
-    if (base == null) continue; // procedural debug fixtures have no on-disk file
-    const fileNames =
-      entry.type === 'volume' && entry.tiered
-        ? TIER_LADDER.map((tier) => `${base}-${tier}.scfd`)
-        : [`${base}.scfd`];
-    for (const fileName of fileNames) map.set(fileName, entry.visible);
-  }
-  return map;
-}
-
-/**
- * Manifest logical paths to download. Every non-volume family (galaxy
- * catalogs, star catalogs, structures, filaments, root JSON) always passes;
- * a `scalar-field/` entry passes only when its filename maps to `visible:
- * true`, unless `includeHiddenVolumes` (the `--volumes all` case) waves
- * every scalar-field file through regardless. Pure over the manifest so the
- * rule is unit-testable without a network call.
- */
-export function selectManifestFiles(
-  manifest: DataManifest,
-  visibilityByFileName: ReadonlyMap<string, boolean>,
-  includeHiddenVolumes: boolean,
-): string[] {
-  return Object.keys(manifest).filter((logicalPath) => {
-    if (!logicalPath.startsWith('scalar-field/')) return true;
-    if (includeHiddenVolumes) return true;
-    return visibilityByFileName.get(posix.basename(logicalPath)) === true;
-  });
-}
+// A leaf's header fits; a parent's (≤ ~20 KB on the real bake) takes a second, exact read.
+const HEADER_PROBE_BYTES = 4096;
 
 async function fetchManifest(host: string): Promise<DataManifest> {
   const url = `${host}/data/manifest.json`;
@@ -106,33 +78,80 @@ async function downloadFile(url: string, destPath: string): Promise<number> {
   return statSync(destPath).size;
 }
 
+/** An octree object's header: off disk when present, else a ranged GET of its first bytes. */
+async function octreeHeader<H extends OctreeIndexHeader | OctreeChunkHeader>(
+  host: string,
+  dataDir: string,
+  path: string,
+  magic: string,
+): Promise<H> {
+  const localPath = join(dataDir, path);
+  if (existsSync(localPath)) return readOctreeFileHeader<H>(localPath, magic);
+  const url = `${host}/data/${path}`;
+  const head = async (bytes: number) => {
+    const res = await fetch(url, { headers: { Range: `bytes=0-${bytes - 1}` } });
+    if (!res.ok) throw new Error(`GET ${url} (ranged) -> HTTP ${res.status}`);
+    return res.arrayBuffer();
+  };
+  let buf = await head(HEADER_PROBE_BYTES);
+  const span = OCTREE_JSON_OFFSET + new DataView(buf).getUint32(OCTREE_HEADER_BYTES_OFFSET, true);
+  if (buf.byteLength < span) buf = await head(span);
+  return readOctreeHeader<H>(buf, magic).header;
+}
+
+/** Every chunk path one octree catalog's index names, at every depth, read off headers only. */
+export async function octreeChunkPaths(
+  host: string,
+  dataDir: string,
+  catalog: OctreeCatalog,
+  hashedPath: string,
+): Promise<string[]> {
+  const paths: string[] = [];
+  const walk = async (refs: readonly OctreeChunkRef[]) => {
+    for (const ref of refs) {
+      const path = octreeChunkPath(catalog.family, catalog.name, ref);
+      paths.push(path);
+      await walk(
+        (await octreeHeader<OctreeChunkHeader>(host, dataDir, path, OCTREE_CHUNK_MAGIC)).chunks,
+      );
+    }
+  };
+  await walk(
+    (await octreeHeader<OctreeIndexHeader>(host, dataDir, hashedPath, OCTREE_INDEX_MAGIC)).chunks,
+  );
+  return paths;
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
-  const volumesAll = args.includes('--volumes') && args[args.indexOf('--volumes') + 1] === 'all';
 
   const host = readEnvProductionValue('VITE_DATA_BASE_URL');
   process.stderr.write(`fetchPrebuiltData: manifest ${host}/data/manifest.json\n`);
   const manifest = await fetchManifest(host);
 
-  const visibility = volumeVisibilityByFileName(SOURCE_ENTRIES);
-  const selected = selectManifestFiles(manifest, visibility, volumesAll).sort();
-  const excluded = Object.keys(manifest).length - selected.length;
+  const selected = Object.keys(manifest).sort();
+  const files = selected.map((logicalPath) => ({
+    logicalPath,
+    hashedPath: manifest[logicalPath]!,
+  }));
+  for (const catalog of OCTREE_CATALOGS) {
+    const logicalPath = `${OCTREE_FAMILIES[catalog.family].dataPrefix}/${catalog.name}.bin`;
+    const hashedPath = manifest[logicalPath];
+    if (hashedPath === undefined) continue;
+    for (const chunkPath of await octreeChunkPaths(host, DATA_DIR, catalog, hashedPath)) {
+      files.push({ logicalPath: chunkPath, hashedPath: chunkPath });
+    }
+  }
 
   process.stderr.write(
-    `  ${selected.length} of ${Object.keys(manifest).length} manifest entries selected\n`,
+    `  ${selected.length} manifest entries selected, ${files.length - selected.length} octree chunks\n`,
   );
-  if (excluded > 0) {
-    process.stderr.write(
-      `  (${excluded} hidden/unwired volume file(s) excluded — pass --volumes all to include)\n`,
-    );
-  }
 
   let presentBytes = 0;
   let toDownloadBytes = 0;
   const rows: { logicalPath: string; hashedPath: string; size: number; cached: boolean }[] = [];
-  for (const logicalPath of selected) {
-    const hashedPath = manifest[logicalPath]!;
+  for (const { logicalPath, hashedPath } of files) {
     const destPath = join(DATA_DIR, hashedPath);
     const cached = existsSync(destPath);
     const size = cached

@@ -4,14 +4,14 @@ import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import type { HeightSource } from '../../../tools/textures/HeightSource';
+import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
 import { bakeHeightLevel } from '../../../tools/textures/bakeHeightLevel';
-import { HEIGHT_POSTS_PER_TILE } from '../../../src/data/scene/heightTileFormat';
-import { codeHeightM } from '../../../src/utils/surfaceTiles/codeHeightM';
+import { HEIGHT_POSTS_PER_TILE } from '../../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
+import { codeHeightM } from '../../../src/layers/body/surfaceTiles/format/utils/codeHeightM';
 import { heightCode } from '../../../tools/utils/textures/heightCode';
-import { surfaceTilePath } from '../../../src/utils/surfaceTiles/surfaceTilePath';
+import { surfaceTilePath } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
 import { surfaceTileBounds } from '../../../tools/utils/scene/surfaceTileBounds';
-import { SURFACE_TILE_PX } from '../../../src/data/bodies/surfaceTileParams';
+import { SURFACE_TILE_PX } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import { flattenWaterComponents } from '../../../tools/utils/textures/flattenWaterComponents';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
 import { readHeightTileFile } from '../../../tools/utils/textures/readHeightTileFile';

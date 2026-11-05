@@ -12,13 +12,16 @@
 // palette, re-render — which is the only way to catch it; a static render never
 // crosses the boundary.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import TopBarContainer from '../../../src/components/containers/TopBarContainer';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { selectPaletteOpen } from '../../../src/state/ui/selectors';
+
+let mobile = false;
+vi.mock('../../../src/hooks/useIsMobile', () => ({ useIsMobile: () => mobile }));
 
 function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
   return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });
@@ -31,6 +34,20 @@ function searchTrigger(container: HTMLElement): HTMLButtonElement {
 }
 
 describe('TopBarContainer', () => {
+  // About moved into the phone dock; a second About button up here would duplicate it.
+  it('shows the About pill on desktop and not on a phone', () => {
+    const { store } = createAppStore();
+    const wrapper = makeWrapper(store);
+    mobile = false;
+    const desktop = render(createElement(TopBarContainer), { wrapper });
+    expect(desktop.container.querySelector('[aria-label="About skymap"]')).not.toBeNull();
+    desktop.unmount();
+    mobile = true;
+    const phone = render(createElement(TopBarContainer), { wrapper });
+    expect(phone.container.querySelector('[aria-label="About skymap"]')).toBeNull();
+    mobile = false;
+  });
+
   it('survives the palette opening — the hidden gate reads both flags every render', () => {
     const { store } = createAppStore();
     const { container, rerender } = render(createElement(TopBarContainer), {

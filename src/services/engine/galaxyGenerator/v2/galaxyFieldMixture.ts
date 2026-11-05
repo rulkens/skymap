@@ -586,12 +586,12 @@ const ARM_AGE_CONTRAST_SPAN = 0.75;
  * tuning ASKS for. What the cloud actually carries is `buildGalaxyFieldMixture`'s
  * `cloudShare`, which is this only when a cloud will really be built.
  */
-export function clampedArmCloudShare(tuning: GalaxyFieldTuning): number {
+function clampedArmCloudShare(tuning: GalaxyFieldTuning): number {
   return Math.min(1, Math.max(0, tuning.arms.cloud.share));
 }
 
 /** Same role as `clampedArmCloudShare`, for the spur tier's own `tuning.arms.spurs.share`. */
-export function clampedArmSpurShare(tuning: GalaxyFieldTuning): number {
+function clampedArmSpurShare(tuning: GalaxyFieldTuning): number {
   return Math.min(1, Math.max(0, tuning.arms.spurs.share));
 }
 

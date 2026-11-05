@@ -38,11 +38,11 @@ Branch: `grand-tour`, draft PR #400. Full suite must stay green.
 | Registry key-freeze test                                   | `tests/data/animation/clips/clipRegistry.test.ts` |
 | Authoring vocabulary (all helpers)                         | `src/services/engine/animation/effectHelpers.ts`  |
 | Default dwell (`dwellDrift(sec, { rampSec, cruiseRate })`) | `src/state/tour/dwellDrift.ts`                    |
-| Scene cues union (`SettingsAction`)                        | grep `SettingsAction` in `src/@types/animation/`  |
+| Scene cues union (`SettingsAction`)                        | grep `SettingsAction` in `src/compositions/@types/` |
 | Tour script + stage docs                                   | `docs/tour/script.md`, `docs/tour/stages/`        |
 
-Focus ids: structures are `${category}-${seedId}` (`cluster-virgo-m87`,
-`group-m81-group`, `void-bootes-void`); famous galaxies are bare (`m31`,
+Focus ids: structures are `${category}-${seedId}` (`galaxy-cluster-virgo-m87`,
+`galaxy-group-m81-group`, `void-bootes-void`); famous galaxies are bare (`m31`,
 `m87`); the Milky Way is `milkyWay` (resolves with no catalog loaded).
 Scoped visibility: `'survey:<catalogId>'`, `'structureRing:<category>'`,
 `'label:milkyWay'|'label:survey'|'label:structure'|'label:<category>'`.

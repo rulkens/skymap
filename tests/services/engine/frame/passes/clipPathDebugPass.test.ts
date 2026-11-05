@@ -1,15 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { clipPathDebugPass } from '../../../../../src/services/engine/frame/passes/clipPathDebugPass';
 import { NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
-import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFrustum';
-import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
+import { foregroundFrustum } from '../../../../../src/utils/camera/frustum/foregroundFrustum';
+import { computeForegroundViewProj } from '../../../../../src/utils/camera/projection/computeForegroundViewProj';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ClipPathSnapshot } from '../../../../../src/@types/engine/debug/ClipPathSnapshot';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Mat4 } from 'wgpu-matrix';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 
 /**
  * The clip-path overlay projects through NEAR0 (see the layer header): a
@@ -23,15 +24,14 @@ import type { Mat4 } from 'wgpu-matrix';
 const CAM_POS: Vec3 = [3e-7, -1e-7, 2e-7]; // parsec-scale eye (starSpiral regime)
 const TARGET_POS: Vec3 = [3.2e-7, -1e-7, 2e-7];
 
-function makeCtx(): ReadyFrameContext {
+function makeCtx(): FrameView {
   const { near, far } = foregroundFrustum(2e-7);
   const near0Vp = computeForegroundViewProj({
     eyeMpc: CAM_POS,
     targetMpc: TARGET_POS,
     up: [0, 1, 0],
     renderOrigin: [0, 0, 0],
-    fovYRad: (60 * Math.PI) / 180,
-    aspect: 1280 / 720,
+    frustum: symmetricFrustum((60 * Math.PI) / 180, 1280 / 720),
     near,
     far,
     reversedZ: true,
@@ -47,9 +47,22 @@ function makeCtx(): ReadyFrameContext {
     reversedZ: true,
   };
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      simDays: 0,
+      focusBlend: 0,
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets: {} as never,
+      renderedTargets: new Set<string>(),
+    },
     viewSlot: 0,
-    renderedTargets: new Set<string>(),
+    viewKind: 'frame',
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,
     cam: {} as never,
@@ -59,20 +72,8 @@ function makeCtx(): ReadyFrameContext {
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: CAM_POS as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
-    nowMs: 0,
-    simDays: 0,
-    fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    layersAnimating: false,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
-    },
-    renderTargets: {} as never,
-  };
+    frustum: symmetricFrustum((60 * Math.PI) / 180, 1280 / 720),
+  } as unknown as FrameView;
 }
 
 function makeRendererSpy() {

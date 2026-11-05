@@ -1,25 +1,19 @@
 /**
- * logCameraState — verifies the `l`-key dump stays lossless and reports what
- * it's handed. The caller (engine.ts / makeReconcileEffects.ts) is now
- * responsible for assembling the LIVE camera/focus/simDays; this module just
- * trusts and serialises them, so these tests feed it synthetic live-looking
- * values rather than any stale `state.cam`/`SelectionRow` register.
- *
- * The lossless-round-trip regression this guards: the previous implementation
- * ran `distance`/`target` through `toPrecision(8)` and `yaw`/`pitch`/`fovYRad`
- * through `toFixed(4)`, which rounds away exactly the sub-radian pitch
- * difference that separates a grazing surface-tile view from a clean one.
- * `JSON.parse` round-tripping the logged blob back to the input numbers is the
- * property that catches a reintroduced `toFixed`/`toPrecision` call.
+ * logCameraState — verifies the `l`-key dump reports what it's handed, at
+ * full f64 precision: a prior `toPrecision(8)`/`toFixed(4)` implementation
+ * rounded away a sub-radian pitch difference a grazing surface-tile view
+ * needs; `JSON.parse` round-tripping the reading rows catches a regression.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
 import { logCameraState } from '../../../../src/services/engine/helpers/logCameraState';
-import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
+import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/createOrbitCamera';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 
 const EARTH_RADIUS_M = 6_371_000;
 const EARTH_RADIUS_MPC = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
@@ -62,9 +56,10 @@ describe('logCameraState', () => {
     // cam.distance and the altitude assertion below stays simple.
     const focus: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: cam.target,
+      driver: bodyDriverGeometry('earth'),
     };
 
     logCameraState(cam, fakeCanvas(1920, 1080), focus, SIM_DAYS);
@@ -106,9 +101,10 @@ describe('logCameraState', () => {
     // pivot) — cam.distance (5) must NOT leak into the derived block.
     const focus: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [3, 4, 0],
+      driver: bodyDriverGeometry('earth'),
     };
 
     logCameraState(cam, fakeCanvas(800, 600), focus, SIM_DAYS);
@@ -158,29 +154,29 @@ describe('logCameraState', () => {
       far: 100,
     });
     const bodyArm: FramedCameraPose = {
-      frame: { body: 'earth' },
+      frame: { body: asSceneBodyId('earth') },
       pose: {
-        bodyId: 'earth',
+        bodyId: asSceneBodyId('earth'),
         anchorLocalM: [0, 0, 0],
         eyeRelAnchorM: [0, 0, EARTH_RADIUS_M + 50],
         basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1],
       },
     };
 
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, bodyArm);
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, bodyArm);
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
     expect(out.frame).toBe('body:earth');
     // Metres, at full precision: the 50 m standoff must survive the print.
-    expect(out.bodyArmMetres.eyeRelAnchorM).toEqual([0, 0, EARTH_RADIUS_M + 50]);
-    expect(out.bodyArmMetres.eyeFromCentreM).toBe(EARTH_RADIUS_M + 50);
+    expect(out.eyeFromCentreM).toBe(EARTH_RADIUS_M + 50);
+    expect(out.framed).toEqual(bodyArm);
 
     // Untagged input (and every world-arm frame) reads as absolute.
     logSpy.mockClear();
     logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
     const [, world] = logSpy.mock.calls[0] as [string, string];
     expect(JSON.parse(world).frame).toBe('absolute');
-    expect(JSON.parse(world).bodyArmMetres).toBeNull();
+    expect(JSON.parse(world).eyeFromCentreM).toBeNull();
   });
 
   it('names the frame and derives eye height in a site arm', () => {
@@ -197,21 +193,21 @@ describe('logCameraState', () => {
       far: 100,
     });
     const siteArm: FramedCameraPose = {
-      frame: { site: 'curiosity' as BodyId },
-      pose: { siteId: 'curiosity' as BodyId, headingRad: 0.7, elevationRad: 0.2, rangeM: 12 },
+      frame: { site: asSurfaceSiteId('curiosity') },
+      pose: {
+        siteId: asSurfaceSiteId('curiosity'),
+        headingRad: 0.7,
+        elevationRad: 0.2,
+        rangeM: 12,
+      },
     };
 
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, siteArm);
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, siteArm);
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
     expect(out.frame).toBe('site:curiosity');
-    expect(out.bodyArmMetres).toBeNull();
-    expect(out.siteArmPose).toEqual({
-      headingRad: 0.7,
-      elevationRad: 0.2,
-      rangeM: 12,
-      eyeHeightM: 12 * Math.sin(0.2),
-    });
+    expect(out.eyeFromCentreM).toBeNull();
+    expect(out.eyeHeightM).toBe(12 * Math.sin(0.2));
   });
 
   it('prints a single not-ready line and touches neither canvas nor window when the camera is null', () => {

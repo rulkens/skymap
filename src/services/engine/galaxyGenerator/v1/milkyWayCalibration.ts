@@ -12,20 +12,9 @@
  */
 import type { Tier } from '../../../../@types/data/Tier';
 import type { MilkyWayTuning } from '../../../../@types/settings/MilkyWayTuning';
-import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../../data/milkyWay/galacticCenter';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../data/milkyWay/milkyWayRadiusMpc';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../data/milkyWay/milkyWayGalaxyParams';
 import { outerRadiusOf } from '../shared/outerRadiusOf';
-
-/**
- * Disk radius in Mpc — a pure unit conversion of the physical fact, which
- * lives in the data layer (`galacticCenter.ts`'s `MILKY_WAY_DISC_RADIUS_KPC`,
- * alongside the Sgr A* centre it is calibrated against). The rendered
- * cloud, the pick billboard, and the selection ring all size from that one
- * number; this module only derives the Mpc form the renderer-side formulas
- * consume. Data must not import from services, so the kpc → Mpc conversion
- * happens here rather than the other way around.
- */
-export const MILKY_WAY_RADIUS_MPC = MILKY_WAY_DISC_RADIUS_KPC / 1000;
 
 /**
  * Per-tier star-count SEEDS. `medium` IS the preset's `starCount` — the tier
@@ -36,11 +25,11 @@ export const MILKY_WAY_RADIUS_MPC = MILKY_WAY_DISC_RADIUS_KPC / 1000;
  *
  * Not read by `milkyWayCloud.generate` — the live `settings.milkyWay.starCount`
  * is an absolute count, not a per-tier multiplier, so generation never
- * indexes this table directly. It is read by `watchTierSaga`, which re-seeds
- * `starCount` from here on every explicit tier change (see `MilkyWayTuning`'s
- * docblock for why: an absolute count would otherwise decouple the cloud from
- * tier LOD entirely) and by `MILKY_WAY_TUNING_DEFAULTS` below for the boot
- * value.
+ * indexes this table directly. It is read by `reseedMilkyWayStarCountSaga`,
+ * which re-seeds `starCount` from here on every explicit tier change (see
+ * `MilkyWayTuning`'s docblock for why: an absolute count would otherwise
+ * decouple the cloud from tier LOD entirely) and by
+ * `MILKY_WAY_TUNING_DEFAULTS` below for the boot value.
  *
  * `GalaxyLegacyParams.starCount` is optional on the type, even though this
  * particular preset always sets it — the `|| 0` satisfies the type checker

@@ -16,6 +16,8 @@
  * value out from under a sibling layer.
  */
 
+import type { PickWindow } from './PickWindow';
+import type { SampledDepth } from './SampledDepth';
 import type { Slab } from './Slab';
 import type { Vec2 } from '../../math/Vec2';
 import type { Vec3 } from '../../math/Vec3';
@@ -29,4 +31,8 @@ export type SlabView = {
   readonly camPos: Vec3;
   /** Backing-store-pixel viewport size for this slab's draw. */
   readonly viewportPx: Vec2;
+  /** The canvas rectangle this view rasterises; the whole canvas outside pick(). */
+  readonly window: PickWindow;
+  /** Present only on a `{ sample }` step. */
+  readonly sampledDepth?: SampledDepth;
 };

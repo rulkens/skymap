@@ -1,0 +1,3 @@
+.root {
+  composes: wrap section from '../../../../styles/layout.module.css';
+}

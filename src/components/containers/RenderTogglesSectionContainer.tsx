@@ -1,4 +1,3 @@
-// src/components/containers/RenderTogglesSectionContainer.tsx
 /**
  * RenderTogglesSectionContainer — store boundary for the per-pass renderer
  * toggle list. `passNames` is handle-bound (sourced from the engine via

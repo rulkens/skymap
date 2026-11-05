@@ -46,7 +46,12 @@ export async function packMeshGlb(geometry: TexturedMeshGeometry): Promise<Uint8
     .createTexture('baseColor')
     .setImage(geometry.image.bytes)
     .setMimeType(geometry.image.mimeType);
-  const material = doc.createMaterial('meshTexture').setBaseColorTexture(texture);
+  // glTF's metallicFactor defaults to 1: left unset, a PBR viewer draws the
+  // photographed ground as bare metal, with no diffuse term at all.
+  const material = doc
+    .createMaterial('meshTexture')
+    .setBaseColorTexture(texture)
+    .setMetallicFactor(0);
   material
     .getBaseColorTextureInfo()!
     .setMinFilter(TextureInfo.MinFilter.LINEAR!)

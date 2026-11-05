@@ -1,0 +1,37 @@
+.root {
+  composes: grid from '../../../../styles/layout.module.css';
+  row-gap: var(--site-space-xl);
+
+  & h2 {
+    margin: 0;
+  }
+}
+
+/* Each link on its own rule, its drawing on the rule's left edge. */
+.links {
+  display: flex;
+  flex-direction: column;
+
+  & > a {
+    display: flex;
+    padding-block: var(--site-space-s);
+    border-top: 1px solid var(--border-divider);
+  }
+}
+
+@media (--wide) {
+  .root > h2,
+  .foot {
+    grid-column: span 6;
+  }
+
+  .links {
+    grid-row: 1 / span 2;
+    grid-column: 7 / -1;
+  }
+
+  .foot {
+    grid-row: 2;
+    align-self: end;
+  }
+}

@@ -1,4 +1,3 @@
-// src/components/TourOverlay/NavButton.tsx
 /**
  * NavButton — the tour nav cluster's bare text/icon button (previous, next).
  * Factoring the repeated `<button className={navBtn} …>` shell into one

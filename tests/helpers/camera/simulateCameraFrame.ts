@@ -7,11 +7,9 @@
  * fixtures source it differently (a hand-advanced row vs. a real player).
  */
 
-import type { CameraState } from '../../../src/@types/camera/CameraState';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../src/@types/scene/BodyState';
+import type { CameraState } from '../../../src/@types/camera/orbitCamera/CameraState';
 import type { Epoch } from '../../../src/@types/engine/camera/Epoch';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import type { CameraSimHarness } from './CameraSimHarness';
 
 import { stepCameraRuntime } from '../../../src/services/engine/camera/stepCameraRuntime';
@@ -19,6 +17,11 @@ import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyS
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../src/state/time/selectors';
+import { selectPendingInput } from '../../../src/state/input/selectors';
+import { selectViewCoverPx } from '../../../src/state/viewCover/selectors';
+import { inputConsumed } from '../../../src/state/input/inputSlice';
+import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
+import type { Vec2 } from '../../../src/@types/math/Vec2';
 
 export function simulateCameraFrame(
   harness: CameraSimHarness,
@@ -28,30 +31,34 @@ export function simulateCameraFrame(
   const { state, store, deps } = harness;
   const stored = store.getState();
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
+  const canvasPx: Vec2 = [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1];
+  const pending = selectPendingInput(stored);
 
   const { next, actions } = stepCameraRuntime(state.cameraRuntime, {
     nowMs,
     simDays,
     rootState: stored,
-    canvasPx: [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1],
+    canvasPx,
+    coverPx: selectViewCoverPx(stored),
     aspect: deps.canvas.width / deps.canvas.height,
-    steps: state.subsystems.inputAggregator.drain(),
-    bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
+    steps: pendingToInputSteps(pending, canvasPx),
+    bodies: deriveBodyStates(simDays),
     terrainHeightAt: () => 0,
     clipEpoch,
-    drivers: deps.drivers,
+    schemes: deps.controlSchemes,
   });
   state.cameraRuntime = next;
   for (const action of actions) store.dispatch(action);
+  if (pending.length > 0) store.dispatch(inputConsumed());
 
   return {
     pose: next.register.pose,
     activeId: next.register.winner,
     // `commitCameraPose` has three producers: `commitOnEdge`, the fold's regime
     // crossing, and `replayInput` (every at-rest wheel/drag fold). This reads the
-    // edge commit only while the caller neither crosses a regime nor feeds the
-    // input aggregator — true of both fixtures today; a caller that pushes input
-    // must narrow it instead.
+    // edge commit only while the caller neither crosses a regime nor feeds
+    // input — true of both fixtures today; a caller that feeds input must
+    // narrow it instead.
     committed: actions.some((action) => action.type === commitCameraPose.type),
   };
 }

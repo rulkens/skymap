@@ -43,18 +43,10 @@ import package::constellations::io::Uniforms;
 import package::constellations::io::PerVertex;
 import package::constellations::io::VSOut;
 import package::lib::segmentQuad::expandSegmentQuad;
-import package::lib::camera::worldToClip;
 import package::lib::starPhotometry::STAR_GLOW_MIN_PX;
 import package::lib::starPhotometry::STAR_GLOW_MAX_PX;
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
-
-// Depth epsilon: pull the clamped clip-z this far inside the far plane (in
-// ndc-z terms) so an endpoint sitting exactly ON it still passes the clip test.
-// Inert for depth here — the constellation pass is depthless additive HDR (no
-// depth test or write), so a clamped z perturbs no comparison; it only keeps a
-// beyond-far endpoint from frustum-clipping. Mirrors markerLines/vertex.wesl.
-const CLIP_Z_EPS : f32 = 1e-4;
 
 // Apparent magnitude at/above which an endpoint star barely glows, so the gap
 // is just the point-source floor. ~6 = the naked-eye limit; eye-tuning start.
@@ -77,20 +69,13 @@ fn endpointGapPx(appMag : f32) -> f32 {
 fn vs(in : PerVertex) -> VSOut {
   // 1. Thickness/base clip via the shared helper. 'u.halfWidthPx' is already a
   //    half-width, so it passes straight through. 'base.w' is the SELECTED
-  //    endpoint's w (the helper returns the endpoint's z/w untouched), which the
-  //    gap step below re-uses to convert its NDC offset back to clip space.
-  let base = expandSegmentQuad(u.cam, in.aWorld, in.bWorld, in.uv, u.halfWidthPx);
+  //    endpoint's w (the off-screen point's for a corner behind the eye), which
+  //    the gap step below re-uses to convert its NDC offset back to clip space.
+  let q = expandSegmentQuad(u.cam, in.aWorld, in.bWorld, in.uv, u.halfWidthPx);
+  let base = q.clip;
 
-  // 2. Screen-space tangent, recomputed here (a few lines, NOT a second
-  //    expansion): project both endpoints, perspective-divide, take the NDC
-  //    direction from a to b. This is the same project->divide the helper does
-  //    internally, but the helper hides its tangent, so the gap step derives it
-  //    once more rather than re-copying the whole expansion.
-  let aClip = worldToClip(u.cam, in.aWorld);
-  let bClip = worldToClip(u.cam, in.bWorld);
-  let aNdc = aClip.xy / aClip.w;
-  let bNdc = bClip.xy / bClip.w;
-  let tangent = normalize(bNdc - aNdc);
+  // 2. The helper's screen tangent, valid with an endpoint behind the eye.
+  let tangent = q.tangent;
 
   // This corner's endpoint, by the SAME public convention the helper documents
   // (corner.x >0.5 -> b). Pull it toward the OTHER end: endpoint a moves +tangent
@@ -108,9 +93,7 @@ fn vs(in : PerVertex) -> VSOut {
 
   var out : VSOut;
   let gapped = base.xy + gapNdc * base.w;
-  // Clamp z just inside the far plane so a beyond-far endpoint survives (inert
-  // for depth — depthless additive pass), mirroring markerLines/vertex.wesl.
-  out.clip = vec4<f32>(gapped, min(base.z, base.w * (1.0 - CLIP_Z_EPS)), base.w);
+  out.clip = vec4<f32>(gapped, base.z, base.w);
   out.uv = in.uv;
   return out;
 }

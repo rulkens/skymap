@@ -67,13 +67,25 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
   // does not — so the one assignment site below asserts back to this handle type.
   let idleToken: ReturnType<typeof setTimeout> | null = null;
 
+  // Resolvers for `nextFrame()` callers, drained by the tick that serves them.
+  let frameWaiters: Array<() => void> = [];
+
   function tick(): void {
     // Clear the token BEFORE running the frame body so that a
     // `requestRender()` call from inside `onFrame` (e.g. the engine's
     // "still animating" tail) is allowed to schedule the *next* frame
     // rather than being short-circuited as a duplicate of this one.
     token = 0;
-    opts.onFrame();
+    // Snapshot first: a `nextFrame()` made from inside `onFrame` lands in the
+    // fresh array and waits for the following frame, not this one.
+    const served = frameWaiters;
+    frameWaiters = [];
+    // finally: a throwing frame must not strand waiters (arrival would never report).
+    try {
+      opts.onFrame();
+    } finally {
+      for (const resolve of served) resolve();
+    }
   }
 
   function requestRender(): void {
@@ -95,6 +107,12 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
   // "scheduler always exposes destroy()" invariant a compile-time check.
   const scheduler: RenderScheduler = {
     requestRender,
+    nextFrame(): Promise<void> {
+      return new Promise<void>((resolve) => {
+        frameWaiters.push(resolve);
+        requestRender();
+      });
+    },
     requestIdleFrame(delayMs: number): void {
       // Ignore while the loop is already awake (a rAF frame queued) — that
       // frame will refresh the scene sooner than any idle tick would. And
@@ -104,6 +122,7 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
       idleToken = setIdleTimer(fireIdle, delayMs) as ReturnType<typeof setTimeout>;
     },
     destroy(): void {
+      frameWaiters = []; // dropped, never settled: no frame will come
       if (idleToken !== null) {
         clearIdleTimer(idleToken);
         idleToken = null;

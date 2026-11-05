@@ -1,0 +1,26 @@
+/**
+ * bias — the galaxy-catalog Layer's Malmquist-correction cluster: which
+ * correction the point vertex stage applies, and the volume-limited cut-off it
+ * reads. Both are uniforms: a mode change is a redraw, never a bake.
+ */
+
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+
+import { initialState } from './initialState';
+import type { BiasMode } from '../../@types/BiasMode';
+
+export const biasSlice = createSlice({
+  name: 'settings/bias',
+  reducerPath: 'bias',
+  initialState,
+  reducers: {
+    setBiasMode: (bias, action: PayloadAction<BiasMode>) => {
+      bias.mode = action.payload;
+    },
+    setAbsMagLimit: (bias, action: PayloadAction<number>) => {
+      bias.absMagLimit = action.payload;
+    },
+  },
+});
+
+export const { setBiasMode, setAbsMagLimit } = biasSlice.actions;

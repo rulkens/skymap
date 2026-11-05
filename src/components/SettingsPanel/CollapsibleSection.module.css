@@ -1,40 +1,10 @@
 /*
- * CollapsibleSection.module.css — visual style for a sub-section folder
- * inside the SettingsPanel.
- *
- * ### Why a separate component (and stylesheet) at all
- *
- * The SettingsPanel grew to ~80 controls.  Without internal grouping the
- * user had to scroll a wall of rows to find one slider.  Sub-section
- * folding lets the user collapse the parts they don't currently care
- * about while keeping the panel a single overlay.
- *
- * ### Design family
- *
- * The look-and-feel intentionally MIRRORS the parent Panel's header
- * (`Panel.module.css`'s `.titleButton` / `.chevron` / `.title`).  Same
- * uppercase letterspacing, same dim colour, same chevron glyph.  The
- * difference is *position*: section headers sit inline within the panel
- * body (no border, no bleed) so they read as list-markers for a row of
- * controls rather than a top-level heading.
- *
- * All atoms reference tokens from `src/styles/global.css`.
+ * CollapsibleSection.module.css — a sub-section folder inside the settings
+ * panel. Mirrors Panel's header (uppercase, dim, same chevron) but sits inline
+ * in the body so it reads as a list marker, not a top-level heading.
  */
 
-.root {
-  /*
-   * No outer margin — adjacent sections sit flush; the body's own
-   * top/bottom padding gives the breathing room.  Stacking two sections
-   * doesn't double-space; collapsing one doesn't leave a ghost gap.
-   */
-}
-
-/*
- * Section header — a real <button> for keyboard focus + Enter/Space
- * activation + free `aria-expanded` semantics.  We strip ALL default
- * <button> chrome so the row reads as a plain heading; only the cursor
- * changes on hover.
- */
+/* A real <button> for focus, Enter/Space and `aria-expanded`, stripped of chrome. */
 button.header {
   display: flex;
   align-items: baseline;
@@ -54,30 +24,14 @@ button.header {
   border-radius: var(--radius-md);
 }
 
-/*
- * Chevron — sits LEFT of the title like a tree-twirl / disclosure marker.
- * Same dim treatment as the parent Panel's chevron so the two read as the
- * same affordance at different scales.
- *
- * The animated rotation (▸ → ▾) is done by rotating the same triangle
- * glyph 90° rather than swapping characters.  Two reasons:
- *   1. CSS transitions can animate `transform` smoothly; they can't
- *      animate text-content swaps.
- *   2. The character box stays the same width across states, so the
- *      title text doesn't shift horizontally when you toggle.
- */
+/* One glyph rotated 90deg rather than swapped: transform animates and the title does not shift. */
 .chevron {
   display: inline-block;
   font-size: var(--font-size-sm);
   color: var(--color-fg-ghost);
   margin-right: var(--space-3);
-  /* Nudge up slightly for visual balance with the uppercase heading,
-   * matching the parent Panel's chevron. */
   position: relative;
   top: -1px;
-  /* Hover-brighten the chevron in lockstep with the title — the
-   * transform transition (open/close rotate) and the colour transition
-   * are independent properties, so listing both keeps each smooth. */
   transition: var(--transition-chevron), var(--transition-color);
   transform: rotate(0deg);
 }
@@ -86,37 +40,19 @@ button.header {
   transform: rotate(90deg);
 }
 
-/*
- * Optional master toggle — sits between the chevron and the title.  The pill
- * look comes from the shared `pillToggle` vocabulary so the master + per-row
- * controls read as one family; only layout + the indeterminate state are local.
- *
- * Why a margin-right rather than `gap` on the header: the existing header is a
- * flexbox with `align-items: baseline` and no `gap`, so spacing comes from
- * per-child margins on the chevron + this element.  `align-self: center` reads
- * more cleanly than the default baseline alignment because checkboxes have no
- * text baseline of their own.
- */
+/* Optional master toggle between chevron and title; `composes` keeps the pill look shared. */
 .headerToggle {
   composes: pillToggle from './pillToggle.module.css';
   margin: 0 var(--space-4) 0 0;
   align-self: center;
 }
 
-/* `indeterminate` is a JS-set IDL flag (see the component docblock); the
- * `:indeterminate` pseudo-class targets that state.  Park the thumb at
- * the midpoint of its travel and keep the track at the off colour, so
- * "some on, some off" reads as visually distinct from both extremes
- * without claiming the on-state accent. */
+/* `indeterminate` is a JS-set flag: thumb parked mid-travel on the off colour reads as "some on". */
 .headerToggle:indeterminate::before {
   transform: translateX(6px);
   background: var(--color-accent-link);
 }
 
-/*
- * Section title — uppercase + spaced, matching the parent Panel's title
- * style at a smaller scale.
- */
 .title {
   font-size: var(--font-size-sm);
   letter-spacing: var(--letter-spacing-widest);
@@ -125,47 +61,18 @@ button.header {
   transition: var(--transition-color);
 }
 
-/*
- * Subtle hover affordance — lift the title (and chevron) one alpha
- * notch toward `--color-fg-subtle` so the header reads as
- * interactive without flashing in the user's peripheral vision.  Scoped
- * to the header button so hovering the section body doesn't trigger it,
- * and gated behind `:hover:not(:disabled)` so future disabled-section
- * variants stay quiet.  No background fill — a colour shift alone is
- * enough at this scale and avoids competing with the panel's glass
- * texture.
- */
-.header:hover:not(:disabled) .title,
-.header:hover:not(:disabled) .chevron {
-  color: var(--color-fg-subtle);
+@media (hover: hover) {
+  .header:hover:not(:disabled) .title,
+  .header:hover:not(:disabled) .chevron {
+    color: var(--color-fg-subtle);
+  }
 }
 
 /*
- * Body wrapper + body — animates open/closed using the modern
- * `grid-template-rows: 0fr → 1fr` trick.
- *
- * Why the wrapper.  CSS still can't animate `height: auto`.  The
- * `interpolate-size: allow-keywords` directive (Chrome 129+, May 2024)
- * fixes that natively but isn't yet on Safari.  The grid trick is the
- * widely-supported escape hatch:
- *
- *   - The wrapper is a single-row CSS Grid.  Its row template is `0fr`
- *     when closed (row collapses to zero), `1fr` when open (row grows
- *     to fit its child's intrinsic height).
- *   - The body child has `min-height: 0` (so the grid actually CAN
- *     collapse it — without this, grid items default to a min-height of
- *     `auto`, defeating the trick) and `overflow: hidden` (so content
- *     visibly clips during the transition).
- *   - Browsers interpolate `grid-template-rows` between `0fr` and `1fr`
- *     smoothly — what was impossible with `height` becomes a pure CSS
- *     transition.
- *
- * Opacity is tracked in parallel for a subtle fade-in: visible content
- * shouldn't pop into existence at full opacity from a zero-height
- * container — the eye reads that as a flicker.
- *
- * `prefers-reduced-motion` skips the transitions entirely for users
- * who've opted out at the OS level.  WCAG 2.1 SC 2.3.3 best practice.
+ * Open/close animates `grid-template-rows: 0fr → 1fr` (CSS cannot animate
+ * `height: auto`, and `interpolate-size` is not on Safari). The body needs
+ * `min-height: 0`, or the grid item refuses to collapse, and `overflow: hidden`
+ * to clip during the transition.
  */
 .bodyWrapper {
   display: grid;
@@ -177,25 +84,14 @@ button.header {
   grid-template-rows: 1fr;
 }
 
+/*
+ * The left rail ties the indented rows to the header; nested sections stack
+ * their own. Vertical padding lives on the open state below: a box can never be
+ * shorter than its padding, so it would survive the 0fr collapse as a ghost gap.
+ */
 .body {
   min-height: 0;
   overflow: hidden;
-  /* Indent via left padding.  A bare left padding made the rows
-   * feel detached from the header — the per-row checkboxes drifted
-   * right while the master toggle stayed left, with nothing tying the
-   * group together visually.  A thin left "rail" (border-left) at the
-   * indent boundary fixes that: the indented body now reads as a tree
-   * branch hanging off the header, the same affordance file trees and
-   * outline editors use.  Nested CollapsibleSections inherit the
-   * indent + rail cumulatively, so deeper levels step in further with
-   * their own guide line.
-   *
-   * VERTICAL padding lives on the open state below, not here.  A box
-   * can never be shorter than its own padding, so top/bottom padding
-   * on the always-rendered body would survive the 0fr track collapse
-   * and leave a ghost gap under every collapsed header.  Transitioning
-   * the padding with the same timing as the row collapse keeps the
-   * open/close animation smooth instead of popping at the state flip. */
   padding: 0 0 0 var(--space-5);
   margin-left: var(--space-2);
   border-left: 1px solid var(--border-divider);
@@ -205,14 +101,20 @@ button.header {
     padding var(--duration-base) var(--ease-standard);
 }
 
-/* Direct child (`>`), NOT a descendant, so an open PARENT section doesn't
- * reach past its own body into a collapsed CHILD section's body and re-inflate
- * its padding + opacity.  The descendant form leaves a ghost gap under every
- * nested collapsed header (Galaxies → Advanced, etc.). */
+/* Direct child, not descendant: an open parent must not re-inflate a collapsed child's body. */
 .bodyWrapperOpen > .body {
   padding-top: var(--space-1);
   padding-bottom: var(--space-1);
   opacity: 1;
+}
+
+/* Phone: the header row (disclosure + switch) matches a settings row. */
+@media (max-width: 768px) {
+  button.header {
+    align-items: center;
+    min-height: var(--list-row-height);
+    padding-block: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

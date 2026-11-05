@@ -1,7 +1,7 @@
 // starAggregateUpsample/vertex.wesl — fullscreen covering-triangle vertex
 // stage. Identical to additiveUpsample/vertex.wesl: synthesise three vertices
 // that cover the whole viewport with uv in [0,1]^2. The fragment samples the
-// half-res 'star-aggregates' offscreen at 'in.uv' with a linear sampler, which
+// low-res 'star-aggregates' offscreen at 'in.uv' with a linear sampler, which
 // gives the 2x bilinear upscale for free.
 
 import package::starAggregateUpsample::io::VSOut;

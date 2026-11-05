@@ -1,9 +1,5 @@
 /**
- * watchFadesSaga — every settings write re-syncs every fade row.
- *
- * Task 4's `targetOf` skip in `applyIntent` is what makes this affordable: a
- * row whose intent didn't change costs one `targetOf` lookup, not a fade
- * restart, so no per-action FADE_ROW lookup is needed to narrow the sync.
+ * watchFadesSaga — every settings write recomputes every visibility target.
  *
  * The engine is reached via getContext so the store layer keeps no engine imports.
  */
@@ -12,14 +8,18 @@ import { takeEvery, getContext } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
 import { settingsRoute } from '../constants';
+import { setVisibility } from '../../state/settings/setVisibilityAction';
 import type { ReconcileEffects } from './ReconcileEffects';
 
 const isSettingsWrite = (a: Action): boolean =>
   typeof a.type === 'string' && a.type.startsWith(`${settingsRoute}/`);
 
 export function* watchFadesSaga() {
-  yield* takeEvery(isSettingsWrite, function* () {
+  yield* takeEvery(isSettingsWrite, function* (action: Action) {
     const fx = yield* getContext<ReconcileEffects>('reconcile');
-    fx.syncFades();
+    // A cue's duration travels with its write: this sync runs inside the cue's `dispatch`,
+    // so it is the one that starts the ramp, and nothing after it may restart it.
+    if (setVisibility.match(action)) fx.syncFades({ overMs: action.payload.overMs });
+    else fx.syncFades();
   });
 }

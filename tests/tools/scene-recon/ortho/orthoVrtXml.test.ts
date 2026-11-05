@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { describe, expect, it, afterEach } from 'vitest';
 
 import { orthoVrtXml } from '../../../../tools/scene-recon/ortho/orthoVrtXml';
-import type { TileIndexRect } from '../../../../tools/utils/scene/TileIndexRect';
+import type { TileIndexRect } from '../../../../tools/@types/scene/TileIndexRect';
 
 /** Pulls the six comma-separated GeoTransform numbers out of the XML. */
 function geoTransform(xml: string): number[] {

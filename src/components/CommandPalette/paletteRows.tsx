@@ -1,30 +1,47 @@
 /**
- * paletteRows — the JSX table-dispatch vocabulary for the command palette.
- *
- * `ROW_VIEW` turns a `ScoredRow` into its rendered parts (leading visual +
- * primary/secondary text) for the shared <li>, keyed on the row's `kind`.
- *
- * Split from `paletteRowModel` (the non-JSX type/const seam) so the pure
- * ranking pipeline can import the row vocabulary without pulling in React +
- * the CSS module.  A new row kind is one entry here, not a new render branch.
- * Selection routing is NOT here — every row maps to a durable focus id via
- * `utils/focusIdForRow` and fires the single `requestFocus` command.
- *
- * Styling: ROW_VIEW emits the per-row internals into ResultsList's <li>, so it
- * composes ResultsList's module rather than carrying its own — the row styles
- * belong to the one component that renders them.
+ * paletteRows — the JSX table-dispatch vocabulary for the command palette:
+ * `ROW_VIEW` turns a `ScoredRow` into its rendered parts for the shared <li>,
+ * keyed on `kind`. `ScoredRow` lives outside this module so
+ * the pure ranking pipeline imports it without React. Selection routing is in
+ * `utils/palette/actionForRow`. ROW_VIEW composes ResultsList's CSS module, the
+ * one component that renders these rows.
  */
 import type { ReactNode } from 'react';
-import { SOURCE_REGISTRY } from '../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
-import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
-import { bodyRowChip } from './utils/bodyRowChip';
-import { MILKY_WAY_NAMES } from './paletteRowModel';
-import type { ScoredRow } from './paletteRowModel';
+import { structureShotUrl } from '../../utils/structure/structureShotUrl';
+import { cardShotUrl } from '../../utils/palette/cardShotUrl';
+import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
+import { actionForRow } from '../../utils/palette/actionForRow';
+import { paletteRowLabel } from '../../utils/palette/paletteRowLabel';
+import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import styles from './ResultsList.module.css';
 
+/** A row's leading visual: its captured shot when it has one, else a letter glyph. */
+function thumbOrGlyph(shotUrl: string | undefined, label: string): ReactNode {
+  if (shotUrl !== undefined) {
+    return <img className={styles.thumb} src={shotUrl} alt="" loading="lazy" />;
+  }
+  return (
+    <span className={styles.glyph} aria-hidden="true">
+      {label[0] ?? '·'}
+    </span>
+  );
+}
+
+/**
+ * A layer row's leading visual: the captured card shot of the
+ * featured card that names the same focus id `actionForRow` resolves to (the
+ * id grammar the URL deep-link layer uses), else the letter glyph.
+ */
+function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
+  const action = actionForRow(row);
+  const hasShot = action.kind === 'focus' && SHOT_CARD_IDS.has(action.focusId);
+  return thumbOrGlyph(hasShot ? cardShotUrl(action.focusId) : undefined, label);
+}
+
 /** What InfoCard's row renderer needs, computed per row kind. */
-export type RowView = {
+type RowView = {
   readonly key: string;
   readonly testid?: string;
   readonly leading: ReactNode;
@@ -34,13 +51,40 @@ export type RowView = {
 
 const EMPTY_ROW_VIEW: RowView = { key: '', leading: null, primary: null, secondary: null };
 
+const EARTH_CHIP = <span className={styles.source}>Earth</span>;
+
+/** Shared render for the `place` and `layer` arms; only a layer row shows a captured card shot, a place is a glyph. */
+function glyphRowView(
+  m: Extract<ScoredRow, { kind: 'place' | 'layer' }>,
+  chip?: ReactNode,
+): RowView {
+  const primary = paletteRowLabel(m).name;
+  const aliases = m.entry.names.slice(1);
+  return {
+    key: `${m.kind}:${m.entry.id}`,
+    testid: `${m.kind}-row-${m.entry.id}`,
+    leading:
+      m.kind === 'layer' ? (
+        shotOrGlyph(m, primary)
+      ) : (
+        <span className={styles.glyph} aria-hidden="true">
+          {primary[0] ?? '·'}
+        </span>
+      ),
+    primary,
+    secondary: (
+      <>
+        {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
+        {chip}
+      </>
+    ),
+  };
+}
+
 /**
- * ROW_VIEW — table dispatch from a ScoredRow kind to its rendered parts, keyed
- * on `m.kind`. The list renderer wraps every row in one identical <li> (active
- * styling, hover, click → dispatchSelection); this table only supplies the
- * kind-specific leading visual + primary/secondary text. Each row narrows `m`
- * on `kind` (the fallback RowView is unreachable — the table is indexed by the
- * row's own tag). A new row kind is one entry here, not a new render branch.
+ * ROW_VIEW — kind-specific leading visual and primary/secondary text; the list
+ * renderer wraps every row in one identical <li>. The fallback RowView is
+ * unreachable (the table is indexed by the row's own tag).
  */
 export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
   famous: (m) =>
@@ -55,35 +99,22 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
               loading="lazy"
             />
           ),
-          primary: m.entry.names[0],
+          primary: paletteRowLabel(m).name,
           secondary:
             m.entry.names.length > 1 ? (
               <span className={styles.secondary}>{m.entry.names.slice(1).join(' · ')}</span>
             ) : null,
         }
       : EMPTY_ROW_VIEW,
-  // The Milky Way is a procedural backdrop with no atlas WebP, so it renders a
-  // first-letter glyph like an alias row, but it is its own row kind.
-  milkyWay: () => ({
-    key: 'milkyWay',
-    testid: 'milky-way-row',
-    leading: (
-      <span className={styles.glyph} aria-hidden="true">
-        {MILKY_WAY_NAMES[0][0]}
-      </span>
-    ),
-    primary: MILKY_WAY_NAMES[0],
-    secondary: <span className={styles.secondary}>{MILKY_WAY_NAMES.slice(1).join(' · ')}</span>,
-  }),
   // Alias row — no thumbnail (we don't pre-render NGC galaxies); letter-glyph
   // placeholder + source-label chip so GLADE vs 2MRS reads at a glance.
   alias: (m) => {
     if (m.kind !== 'alias') return EMPTY_ROW_VIEW;
-    const primary = m.entry.names[0] ?? '(unnamed)';
+    const primary = paletteRowLabel(m).name;
     const remaining = m.entry.names.slice(1);
     return {
-      key: `alias:${m.entry.source}:${m.entry.localIdx}`,
-      testid: `alias-row-${m.entry.localIdx}`,
+      key: `alias:${m.entry.source}:${m.entry.pgc}`,
+      testid: `alias-row-${m.entry.source}-${m.entry.pgc}`,
       leading: (
         <span className={styles.glyph} aria-hidden="true">
           {primary[0] ?? '·'}
@@ -95,53 +126,23 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
           {remaining.length > 0 && (
             <span className={styles.secondary}>{remaining.join(' · ')}</span>
           )}
-          <span className={styles.source}>{SOURCE_REGISTRY[m.entry.source].label}</span>
+          <span className={styles.source}>{APP_SOURCE_REGISTRY[m.entry.source].label}</span>
         </>
       ),
     };
   },
-  // Scene-body row — letter glyph like the Milky Way (no atlas thumb for a
-  // procedurally-rendered sphere). Aliases come from the same lookup the ranker
-  // scores over, so a row shows exactly the names it can be found by; the chip
-  // is the body's constellation or, failing that, its scale regime (e.g.
-  // "Alpha Canis Majoris · … · Canis Major", or "Sagittarius A* · Galactic
-  // Centre").
-  body: (m) => {
-    if (m.kind !== 'body') return EMPTY_ROW_VIEW;
-    const aliases = (BODY_SEARCH_NAMES.get(m.body.id) ?? []).slice(1);
-    const chip = bodyRowChip(m.body.id, m.body.label);
-    return {
-      key: `body:${m.body.id}`,
-      testid: `body-row-${m.body.id}`,
-      leading: (
-        <span className={styles.glyph} aria-hidden="true">
-          {m.body.label[0] ?? '·'}
-        </span>
-      ),
-      primary: m.body.label,
-      secondary: (
-        <>
-          {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
-          {chip && <span className={styles.source}>{chip}</span>}
-        </>
-      ),
-    };
-  },
-  // Structure row — glyph placeholder like an alias (no atlas thumb) + a
-  // category chip (Cluster / Supercluster / Void / Group) from the per-category
-  // display copy, plus the Abell designation as a secondary name when present.
+  // Structure row — the captured shot of a featured anchor (bulk rows have none),
+  // else a glyph placeholder, + a category chip (Cluster / Supercluster /
+  // Void / Group) from the per-category display copy, plus the Abell
+  // designation as a secondary name when present.
   structure: (m) => {
     if (m.kind !== 'structure') return EMPTY_ROW_VIEW;
     const { id, name, category, abell } = m.entry;
     return {
       key: `structure:${id}`,
       testid: `structure-row-${id}`,
-      leading: (
-        <span className={styles.glyph} aria-hidden="true">
-          {name[0] ?? '·'}
-        </span>
-      ),
-      primary: name,
+      leading: thumbOrGlyph(m.entry.featured ? structureShotUrl(id) : undefined, name),
+      primary: paletteRowLabel(m).name,
       secondary: (
         <>
           {abell !== null && abell !== name && <span className={styles.secondary}>{abell}</span>}
@@ -150,4 +151,42 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ),
     };
   },
+  // Exhibit row — letter glyph (no atlas thumb: an exhibit
+  // is a scene takeover, not a picturable object).
+  exhibit: (m) => {
+    if (m.kind !== 'exhibit') return EMPTY_ROW_VIEW;
+    return {
+      key: `exhibit:${m.exhibit.id}`,
+      testid: `exhibit-row-${m.exhibit.id}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {m.exhibit.label[0] ?? '·'}
+        </span>
+      ),
+      primary: paletteRowLabel(m).name,
+      secondary: <span className={styles.source}>Exhibit</span>,
+    };
+  },
+  // Tour row — same glyph treatment as an exhibit; a tour is a beat sequence,
+  // not a picturable object either.
+  tour: (m) => {
+    if (m.kind !== 'tour') return EMPTY_ROW_VIEW;
+    return {
+      key: `tour:${m.tour.id}`,
+      testid: `tour-row-${m.tour.id}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {m.tour.label[0] ?? '·'}
+        </span>
+      ),
+      primary: paletteRowLabel(m).name,
+      secondary: <span className={styles.source}>Tour</span>,
+    };
+  },
+  // The chip is the entry's own category tag (a craft's kind), never the publishing Layer's name.
+  layer: (m) =>
+    m.kind !== 'layer'
+      ? EMPTY_ROW_VIEW
+      : glyphRowView(m, m.entry.chip && <span className={styles.source}>{m.entry.chip}</span>),
+  place: (m) => (m.kind !== 'place' ? EMPTY_ROW_VIEW : glyphRowView(m, EARTH_CHIP)),
 };

@@ -1,10 +1,10 @@
 /**
  * oneTagReader — spec §2/§3's structural gate: `PoseFrame`'s spelling (the bare
  * `'absolute'` string, the `{ body }` object) is vocabulary, not a branch.
- * Outside `rungs/`, ask `rungKindOf` / `isWorldArm` / `hostOf` / `frameKey`.
+ * Outside `arms/`, ask `cameraArmKindOf` / `isWorldArm` / `hostOf` / `frameKey`.
  * A declaration scan (ts-morph, real AST nodes) rather than a source-text grep,
  * per `conventions/testing.md`: a substring search bans nothing a comment or a
- * string literal couldn't dodge, and would trip on the unrelated `.frame.bodyId`
+ * string literal couldn't dodge, and would trip on the unrelated `.frame.hostId`
  * of the render slabs.
  */
 
@@ -15,7 +15,6 @@ import { join } from 'node:path';
 
 const SWEPT_DIRS: readonly string[] = [
   'src/state',
-  'src/services/camera',
   'src/services/engine/camera',
   'src/services/engine/frame',
   'src/services/engine/helpers',
@@ -39,7 +38,7 @@ function walk(dir: string): string[] {
 // The allow-list is a DIRECTORY, not a file list: a new row file needs no edit
 // here, while any file outside the vocabulary's own folder needs a justified
 // one — which is the whole point of the ratchet.
-const VOCABULARY_DIR = 'src/services/engine/camera/rungs/';
+const VOCABULARY_DIR = 'src/services/engine/camera/arms/';
 
 const FILES: readonly string[] = SWEPT_DIRS.flatMap(walk).filter(
   (f) => !f.startsWith(VOCABULARY_DIR),
@@ -52,13 +51,13 @@ function readsTheFrame(node: Node): boolean {
   return /(?:^|\.)frame$/.test(node.getText());
 }
 
-function asksRungKindOf(node: Node): boolean {
-  return Node.isCallExpression(node) && node.getExpression().getText() === 'rungKindOf';
+function asksCameraArmKindOf(node: Node): boolean {
+  return Node.isCallExpression(node) && node.getExpression().getText() === 'cameraArmKindOf';
 }
 
-// `rungKindOf(x) === 'absolute'` compares the vocabulary's ANSWER, a `RungKind`,
+// `cameraArmKindOf(x) === 'absolute'` compares the vocabulary's ANSWER, a `CameraArmKind`,
 // not the frame's spelling — the table is keyed by that kind, so branching on it
-// is the sanctioned route and stays legal outside `rungs/`.
+// is the sanctioned route and stays legal outside `arms/`.
 function comparesTheTag(node: BinaryExpression): boolean {
   const op = node.getOperatorToken().getKind();
   if (op !== SyntaxKind.EqualsEqualsEqualsToken && op !== SyntaxKind.ExclamationEqualsEqualsToken) {
@@ -74,17 +73,17 @@ function comparesTheTag(node: BinaryExpression): boolean {
     return true;
   if (!sides.some((s) => Node.isStringLiteral(s) && s.getLiteralValue() === 'absolute'))
     return false;
-  return !sides.some(asksRungKindOf);
+  return !sides.some(asksCameraArmKindOf);
 }
 
 // `switch (frame) { case 'absolute': }` is the most natural spelling of a
-// three-rung branch, and the `===` scan above cannot see it.
+// three-arm branch, and the `===` scan above cannot see it.
 function switchesOnTheTag(node: Node): boolean {
   if (!Node.isCaseClause(node)) return false;
   const label = node.getExpression();
   if (!Node.isStringLiteral(label) || label.getLiteralValue() !== 'absolute') return false;
   const switched = node.getFirstAncestorByKind(SyntaxKind.SwitchStatement)?.getExpression();
-  return switched === undefined || !asksRungKindOf(switched);
+  return switched === undefined || !asksCameraArmKindOf(switched);
 }
 
 function tagComparisons(file: string): string[] {
@@ -100,7 +99,7 @@ function frameBodyReads(file: string): string[] {
   return [
     ...sourceFile
       .getDescendantsOfKind(SyntaxKind.PropertyAccessExpression)
-      // `body` EXACTLY: `view.slab.frame.bodyId` is the render slab's frame, a
+      // `body` EXACTLY: `view.slab.frame.hostId` is the render slab's frame, a
       // different type with ~30 legitimate sites under `frame/passes/`, and a
       // suffix match would turn this gate into noise on day one.
       .filter((node) => node.getName() === 'body')
@@ -118,7 +117,7 @@ function frameBodyReads(file: string): string[] {
   ].map((node) => node.getText());
 }
 
-describe('the rung vocabulary is the only reader of the frame tag', () => {
+describe('the arm vocabulary is the only reader of the frame tag', () => {
   it('the sweep found real files in every swept directory', () => {
     // Loud-failure guard: a typo'd dir returns [] and every it.each below
     // passes vacuously — same shape as noStoredRegimeFlag/oneMpcSeam.

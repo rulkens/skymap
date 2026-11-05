@@ -15,10 +15,7 @@ describe('updateFrameStats', () => {
   it('folds a steady 16.7 ms interval toward 60 fps', () => {
     // prev.fps = 0; sample interval 16.7 ms → instantaneous fps = 1000/16.7 ≈ 59.88.
     // One EMA step with alpha 0.1: 0 * 0.9 + 59.88 * 0.1 ≈ 5.988.
-    const next = updateFrameStats(
-      { fps: 0, cpuMs: 0 },
-      { intervalMs: 16.7, cpuMs: 4 },
-    );
+    const next = updateFrameStats({ fps: 0, cpuMs: 0 }, { intervalMs: 16.7, cpuMs: 4 });
     expect(next.fps).toBeCloseTo((1000 / 16.7) * 0.1, 5);
     expect(next.fps).toBeGreaterThan(0);
     expect(next.fps).toBeLessThan(60);

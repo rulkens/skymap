@@ -437,7 +437,7 @@ export async function createGalaxyEngine(
       render,
       dustReachR: field.dustHeaderLanes.reachR,
     });
-    const { view, viewProj: vp, fade, galaxyWeight, debugViews } = frameView;
+    const { viewProj: vp, fade, galaxyWeight, debugViews } = frameView;
     lastFade = fade;
 
     // Two packs of the same struct, differing only in `viewportPx`: star gets
@@ -449,12 +449,24 @@ export async function createGalaxyEngine(
     // symmetric dim, never a hard suppression of the primary alone.
     const tuning = toMilkyWayTuning(render, model.starCount);
     const aggregatePx = targets.reducedSize(render.aggregateDivisor);
-    packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha * galaxyWeight, cloudData);
+    // Each pack's own target height gives its focal term (symmetric fovY).
+    const pxPerRadOf = (heightPx: number): number => heightPx / (2 * Math.tan(fov / 2));
+    // `model` is the identity here, so the world eye IS the model-space eye.
+    packCloudUniforms(
+      vp,
+      eye,
+      aggregatePx,
+      pxPerRadOf(aggregatePx[1]),
+      tuning,
+      fade.alpha * galaxyWeight,
+      cloudData,
+    );
     device.queue.writeBuffer(starUbo, 0, cloudData);
     packCloudUniforms(
       vp,
-      view,
+      eye,
       [canvas.width, canvas.height],
+      pxPerRadOf(canvas.height),
       tuning,
       fade.alpha * galaxyWeight,
       cloudData,

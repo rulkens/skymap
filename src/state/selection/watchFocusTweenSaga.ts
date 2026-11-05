@@ -24,53 +24,37 @@ import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
-import {
-  engineStatusChanged,
-  engineSourceCountReported,
-  engineStructureCountsChanged,
-} from '../engine/engineSlice';
-import { selectOrientation } from '../settings/selectors';
+import { engineStatusChanged, factsReported } from '../engine/engineSlice';
+import { selectStructureBulk } from '../engine/selectors';
+import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { resolveFocusMotion } from '../../utils/camera/focusMotion/resolveFocusMotion';
+import { focusMotionRowOf } from '../../services/engine/camera/clips/focusMotionRowOf';
 import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {
   yield* takeLatest(
     updateSelectionFocus,
     suspendDuringClip(function* (action) {
-      const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
       const selection = yield* getContext<SagaContext['selection']>('selection');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
-      // A star or structure deep link resolves its ref statically at bootstrap
-      // (index-based / a durable id), before its backing store is fed, so the
-      // row comes back null until that store's first commit. `NOT_YET_LOADED`
-      // states the one rule ("is this ref's store still empty?") once, keyed on
-      // `ref.type`, rather than a second `type === 'structure'` arm bolted onto
-      // the star check below — each entry pairs the store-empty predicate with
-      // the action that pulses the instant the store is fed, so the loop stays
-      // a single generic shape. A garbage id/index (row null with the store
-      // already fed) falls through to the no-op below rather than waiting for a
-      // pulse that never recurs. `takeLatest` discards this waiter if a newer
-      // focus supersedes it.
-      type Deferral = {
-        empty(): boolean;
-        pulse: typeof engineSourceCountReported | typeof engineStructureCountsChanged;
-      };
-      const NOT_YET_LOADED: Partial<Record<NonNullable<typeof action.payload>['type'], Deferral>> =
-        {
-          star: {
-            empty: () => resolveDeps().stars.current() === null,
-            pulse: engineSourceCountReported,
-          },
-          structure: {
-            empty: () => resolveDeps().structures.loaded?.() === false,
-            pulse: engineStructureCountsChanged,
-          },
-        };
-      // `ref.type` never changes across retries, so the deferral (if any) is
-      // looked up once; only `empty()` is re-polled per pulse.
-      const deferral = action.payload ? NOT_YET_LOADED[action.payload.type] : undefined;
+      // A cut's caller places the camera itself.
+      if (action.meta.transition === 'cut') return;
+
+      // A focus that resolves before `wireInput` runs has no camera to fly yet.
+      while (cameraRuntime() === null) {
+        yield* take(engineStatusChanged);
+      }
+
+      // A structure deep link resolves statically at bootstrap, so its row is
+      // null until the store is fed. It waits only while the bulk slot is
+      // loading: an idle (undemanded), ready or failed slot will not fill the
+      // row, so a garbage id falls through to the no-op below. `bulk` is re-read
+      // after every `factsReported`, which pulses for every Layer's facts.
+      // `takeLatest` discards this waiter if a newer focus supersedes it.
+      const waitsOnBulk = action.payload?.type === 'structure';
 
       // Off-frame resolve — same `deriveSimDays(time, nowMs)` derivation
       // `watchGoHomeSaga` uses, so a body row's position matches where the
@@ -82,8 +66,8 @@ export function* watchFocusTweenSaga() {
         action.payload,
         deriveSimDays(yield* select(selectTimeState), performance.now()),
       );
-      while (row === null && deferral?.empty()) {
-        yield* take(deferral.pulse);
+      while (row === null && waitsOnBulk && (yield* select(selectStructureBulk)) === 'loading') {
+        yield* take(factsReported);
         row = selection.extractRow(
           action.payload,
           deriveSimDays(yield* select(selectTimeState), performance.now()),
@@ -101,30 +85,21 @@ export function* watchFocusTweenSaga() {
       // inside the saga worker.
       if (!ROW_FOCUSABLE[row.type]) return;
 
-      // A body the follow rows WILL handle is followed, not tweened — the
-      // tween compiles fixed vec3 endpoints and cannot track a body the sim clock
-      // moves. But 'body row' is BROADER than 'followed body': famous stars are
-      // scene bodies too (star-body presence), yet they are static, so the follow
-      // driver leaves them and they must fall through to the tween. Gate on the
-      // SAME predicate the follow driver activates on, rather than a bare
-      // `row.type === 'body'` that would swallow a famous-star focus into a no-op
-      // neither mechanism honours.
-      if (bodyMovesThisFrame(row)) return;
+      // Known ready since the wait above; re-read rather than reuse, since a
+      // long catalog defer can move `from`/`fovYRad` in the meantime.
+      const runtime = cameraRuntime()!;
+      // Frozen here, at dispatch: a style flip or slider drag mid-flight never bends this move.
+      const motion = resolveFocusMotion(yield* select(selectFocusMoves), runtime.fovYRad);
 
-      // A focus that resolves during bootstrap can outrun the camera: the ref is
-      // known but the camera (hence `cameraRuntime()`) isn't seeded until wireInput
-      // runs. Defer on the engine-status pulse — the first one past bootstrap fires
-      // after the camera exists — re-reading the live Resources each time, so the
-      // tween lands once the camera is ready instead of being dropped. `takeLatest`
-      // discards this waiting worker if a newer focus supersedes it.
-      let runtime = cameraRuntime();
-      while (runtime === null) {
-        yield* take(engineStatusChanged);
-        runtime = cameraRuntime();
-      }
+      // The motion row decides whether a moving body is tweened.
+      // Gate on `bodyMovesThisFrame`, not `row.type === 'body'`: a focused
+      // S-star is a `starCatalog` row the sim clock still moves.
+      if (bodyMovesThisFrame(row) && !focusMotionRowOf(motion).tweensMovingBodies) return;
 
       const frame = yield* select(selectOrientation);
-      yield* put(startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, frame)));
+      yield* put(
+        startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, motion, frame)),
+      );
     }),
   );
 }

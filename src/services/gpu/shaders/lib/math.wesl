@@ -60,7 +60,8 @@ fn saturate(x: f32) -> f32 {
 // 'mat2x2', 'fract').
 //
 // Returned as a fresh vec2 (no in-place mutation, unlike the
-// ShaderToy GLSL original which used 'inout vec2 p') so it composes
+// ShaderToy GLSL original, mrange's CC0 "Spiral galaxy", which also gave
+// 'sabs', 'toPolar' and 'toRect' below and used 'inout vec2 p') so it composes
 // cleanly inside expressions: 'sabs(rot2(p, t).x, 0.1)' just works.
 
 fn rot2(p: vec2<f32>, a: f32) -> vec2<f32> {
@@ -124,8 +125,8 @@ fn toRect(p: vec2<f32>) -> vec2<f32> {
 // ── rotateAroundAxis ─────────────────────────────────────────────────
 //
 // Rodrigues' rotation formula: rotate 'v' by 'angleRad' about 'axis'
-// (right-hand rule). First consumer: the Sgr A* lens fragment
-// (bodies/sgrAStarLensing/fragment.wesl), which has no camera-basis
+// (right-hand rule). First consumer: the black-hole lens fragment
+// (bodies/blackHoleLensing/fragment.wesl), which has no camera-basis
 // uniform to build a billboard/deflection frame from and derives both
 // from a single direction vector instead — a general enough primitive
 // to live beside 'rot2' rather than inline in that one shader.

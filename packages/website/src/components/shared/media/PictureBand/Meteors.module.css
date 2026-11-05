@@ -1,0 +1,47 @@
+/*
+ * Under the band's own shading (`.back::after`), so a meteor dims where the words are, as the stars do. Not `.root`:
+ * the site names a module's classes by its folder, so that would be PictureBand's own `.root` and paint the band black.
+ */
+.sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* The head is the right end; the tail grows behind it as it travels, then all of it fades. */
+.streak {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-fg) 70%, transparent)
+  );
+  transform-origin: 100% 50%;
+  opacity: 0;
+  animation: streak var(--duration) linear forwards;
+}
+
+@keyframes streak {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateX(0) scaleX(0.2);
+  }
+
+  15%,
+  55% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateX(var(--travel)) scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky {
+    display: none;
+  }
+}

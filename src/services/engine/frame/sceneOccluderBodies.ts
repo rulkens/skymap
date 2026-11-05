@@ -1,87 +1,50 @@
 /**
- * sceneOccluderBodies — resolve THE per-frame set of bodies that can hide
- * something drawn behind them: centre + radius, one entry per body presented
- * as an OPAQUE SPHERE this frame.
- *
- * The set is read off the partitions the `foreground:0` sphere layers
- * themselves consume, bound exactly as those binders bind them
- * (`ctx.drawCamPos`, `ctx.canvasSize.height`, `ctx.fovYRad`). "Drawn" would be
- * the wrong fact: a 1–3 px planet is drawn, as an additive glint, and occludes
- * nothing. Radii are the INNER bound — an occluder must under-occlude; an
- * atmosphere, ring or lens quad is not opaque. For a mesh body it is the bake's
- * BOUNDING sphere, so the whale's elongated silhouette hides more than it covers.
+ * sceneOccluderBodies: the per-frame set of bodies that can hide something behind
+ * them, one entry per body presented as an OPAQUE SPHERE (every resolved body with
+ * a ground `surface`, off `sceneBodyPresentation`). "Drawn" would be wrong: a 1-3 px
+ * planet is an additive glint and occludes nothing. `radiusM` is the INNER bound (an
+ * occluder must under-occlude). Mesh bodies are deliberately NOT here: they occlude
+ * trails through the sampled `foreground:0` depth, and a bounding sphere would
+ * over-occlude.
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
+import type { BodySurface } from '../../../@types/scene/BodySurface';
+import type { OccluderBody } from '../../../@types/scene/OccluderBody';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
-import { BODY_GLINT_MAX_PX } from './partitionBodiesByPresentation';
-import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
-import { positionedVisibleStars } from './positionedVisibleStars';
-import { sceneBodyPartition } from './sceneBodyPartition';
+import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
+import { sceneBodyPresentation } from './sceneBodyPresentation';
 import { sceneBodyStates } from './sceneBodyStates';
+import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 
-export function sceneOccluderBodies(
-  state: PassState,
-  ctx: ReadyFrameContext,
-): readonly { readonly positionMpc: Readonly<Vec3>; readonly radiusM: number }[] {
-  const states = sceneBodyStates(state, ctx);
-  const { flat, textured, meshes } = sceneBodyPartition(state, ctx);
-  const { spheres } = partitionStarsByResolution({
-    stars: positionedVisibleStars(state, ctx),
-    camPosMpc: ctx.drawCamPos,
-    thresholdPx: STAR_RESOLVE_PX,
-    viewportHeightPx: ctx.canvasSize.height,
-    fovYRad: ctx.fovYRad,
+export function sceneOccluderBodies(state: PassState, ctx: FrameView): readonly OccluderBody[] {
+  const occluderOf = (positionMpc: Readonly<Vec3>, surface: BodySurface): OccluderBody => ({
+    positionMpc,
+    radiusM: innerBoundRadiusM(surface),
+    outerRadiusM: outerBoundRadiusM(surface),
   });
 
-  const occluders: { positionMpc: Readonly<Vec3>; radiusM: number }[] = [];
-  for (const body of flat) {
-    occluders.push({
-      positionMpc: states.get(body.id)!.positionMpc,
-      radiusM: innerBoundRadiusM(body.surface),
-    });
-  }
-  for (const body of textured) {
-    occluders.push({
-      positionMpc: states.get(body.id)!.positionMpc,
-      radiusM: innerBoundRadiusM(body.surface),
-    });
-  }
-  // Mesh bodies carry a second gate `drawableMeshBodies` also applies: inside
-  // the load radius but not yet decoded, the body draws nothing, and an
-  // occluder that draws nothing punches a hole in whatever crosses it.
-  const meshRenderer = state.gpu.meshBodyRenderer;
-  for (const body of meshes) {
-    if (!(meshRenderer?.hasMesh(body.id) ?? false)) continue;
-    occluders.push({
-      positionMpc: states.get(body.id)!.positionMpc,
-      radiusM: body.boundingRadiusM,
-    });
-  }
-  for (const star of spheres) {
-    occluders.push({ positionMpc: star.positionMpc, radiusM: innerBoundRadiusM(star.surface) });
+  const occluders: OccluderBody[] = [];
+  for (const { body, positionMpc } of sceneBodyPresentation(ctx).resolved) {
+    if ('surface' in body) occluders.push(occluderOf(positionMpc, body.surface));
   }
 
-  // Earth sits in neither partition — `earthPass` draws it alone, and it has no
-  // glint form, so strictly it is opaque from the slab floor (1 px) up. It
-  // still rides the partition's own opacity threshold rather than importing a
-  // second constant: under 3 px its disc hides under a pixel of stroke.
-  const earth = state.data.bodies.earth;
-  if (earth !== null) {
-    const positionMpc = states.get(earth.id)!.positionMpc;
-    const radiusM = innerBoundRadiusM(earth.surface);
-    const diameterPx = bodyApparentDiameterPx({
-      positionMpc,
-      radiusM,
-      camPosMpc: ctx.drawCamPos,
-      viewportHeightPx: ctx.canvasSize.height,
-      fovYRad: ctx.fovYRad,
-    });
-    if (diameterPx >= BODY_GLINT_MAX_PX) occluders.push({ positionMpc, radiusM });
-  }
+  // Earth is not a sorted scene body (`earthPass` draws it alone, with no glint form),
+  // yet uses its resolve size: under 3 px its disc hides under a pixel of stroke.
+  const earth = occluderOf(
+    sceneBodyStates(state, ctx).get(SCENE_EARTH.id)!.positionMpc,
+    SCENE_EARTH.surface,
+  );
+  const diameterPx = bodyApparentDiameterPx({
+    positionMpc: earth.positionMpc,
+    radiusM: earth.radiusM,
+    camPosMpc: ctx.drawCamPos,
+    pxPerRad: ctx.drawPxPerRad,
+  });
+  if (diameterPx >= SCENE_EARTH.resolvePx) occluders.push(earth);
 
   return occluders;
 }

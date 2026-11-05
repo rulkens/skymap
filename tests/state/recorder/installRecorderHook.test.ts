@@ -4,22 +4,16 @@
  * harness drives through.
  *
  * The store is the REAL `rootReducer` behind a plain `configureStore` (the
- * guidedTourSaga suite's buildStore pattern) — no saga middleware, because
- * these tests drive the tour slice directly (`tourStarted` / `tourEnded`
- * stand in for the saga's writes) and running the real root saga would need
- * the whole engine context. A recording middleware captures dispatched
+ * tourBodySaga suite's buildStore pattern) — no saga middleware, because these
+ * tests drive the takeover slice directly (`takeoverStarted` / `takeoverEnded`
+ * stand in for `runTakeoverSaga`'s writes) and running the real root saga would
+ * need the whole engine context. A recording middleware captures dispatched
  * actions so the `startTour` payload contract (`{ id, beats }`) is asserted
  * on the actual action, not on state.
  *
  * `isCinemaMode` is module-mocked (same technique as App.cinema.test.tsx):
  * the installer reads it per call, so flipping `mockReturnValue` covers both
  * the gate's no-op branch and the installed branch in one file.
- *
- * The `ready` tests run under fake timers so the READY_STABLE_MS stability
- * window elapses instantly — the contract under test is that a momentary
- * true reading of the ready predicate does NOT resolve the promise (the
- * load-progress aggregate is null before the first slot starts, so the
- * predicate flickers true mid-bootstrap); only an undisturbed window does.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -27,16 +21,11 @@ import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/to
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { installRecorderHook } from '../../../src/state/recorder/installRecorderHook';
-import { READY_STABLE_MS } from '../../../src/state/lifecycle/whenStablyReady';
 import { startTour } from '../../../src/state/tour/tourActions';
-import { tourStarted, tourEnded } from '../../../src/state/tour/tourSlice';
+import { takeoverStarted, takeoverEnded } from '../../../src/state/takeover/takeoverActions';
 import { startClip } from '../../../src/state/camera/clipActions';
 import { clipStarted, clipEnded } from '../../../src/state/camera/cameraSlice';
-import {
-  engineStatusChanged,
-  engineLoadProgressChanged,
-} from '../../../src/state/engine/engineSlice';
-import { Source } from '../../../src/data/sources';
+import { engineLoadProgressChanged } from '../../../src/state/engine/engineSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { isCinemaMode } from '../../../src/utils/url/isCinemaMode';
 import type { SkymapRecorderHook } from '../../../src/@types/recorder/SkymapRecorderHook';
@@ -91,42 +80,7 @@ describe('installRecorderHook', () => {
 
     const hook = getHook();
     expect(hook).toBeDefined();
-    expect(hook?.ready).toBeInstanceOf(Promise);
     expect(typeof hook?.startTour).toBe('function');
-  });
-
-  it('ready resolves once the engine is ready and load progress has settled', async () => {
-    vi.useFakeTimers();
-    vi.mocked(isCinemaMode).mockReturnValue(true);
-    const { store } = buildStore();
-    installRecorderHook(store);
-    const hook = getHook();
-    if (!hook) throw new Error('hook not installed');
-
-    let settled = false;
-    void hook.ready.then(() => {
-      settled = true;
-    });
-
-    // The engine turns ready while loadProgress is still null (no slot has
-    // started yet) — the predicate flickers true...
-    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100 }));
-    // ...then the first fetch registers within the stability window. The
-    // flicker must NOT resolve `ready`, even well past the window.
-    store.dispatch(engineLoadProgressChanged({ loadedBytes: 0, totalBytes: 10, inFlightCount: 1 }));
-    await vi.advanceTimersByTimeAsync(READY_STABLE_MS * 2);
-    expect(settled).toBe(false);
-
-    // The last in-flight slot settles: the aggregator reports null and the
-    // predicate holds. Just short of the window it is still pending...
-    store.dispatch(engineLoadProgressChanged(null));
-    await vi.advanceTimersByTimeAsync(READY_STABLE_MS - 1);
-    expect(settled).toBe(false);
-
-    // ...and the full undisturbed window resolves it.
-    await vi.advanceTimersByTimeAsync(1);
-    expect(settled).toBe(true);
-    await expect(hook.ready).resolves.toBeUndefined();
   });
 
   it('startTour dispatches tour/start and resolves when the tour ends', async () => {
@@ -151,13 +105,13 @@ describe('installRecorderHook', () => {
     expect(dispatched).toBeDefined();
     expect(dispatched?.payload).toEqual({ id: 'demo', beats: { from: 1, to: 2 } });
 
-    // The saga's writes, driven directly: activation must not resolve it...
-    store.dispatch(tourStarted({ tourId: 'demo' }));
+    // The bracket's writes, driven directly: activation must not resolve it...
+    store.dispatch(takeoverStarted({ kind: 'tour', id: 'demo' }));
     await Promise.resolve();
     expect(settled).toBe(false);
 
-    // ...the tour-ended signal must.
-    store.dispatch(tourEnded());
+    // ...the takeover-ended signal must.
+    store.dispatch(takeoverEnded());
     await expect(done).resolves.toBeUndefined();
   });
 
@@ -168,11 +122,11 @@ describe('installRecorderHook', () => {
     const hook = getHook();
     if (!hook) throw new Error('hook not installed');
 
-    // Tour A is running (the saga's activation write, driven directly). A
-    // takeLatest supersede never emits tourEnded for the cancelled run, so an
-    // overlapping call could not attribute the eventual end — the hook is
+    // Tour A is running (the bracket's activation write, driven directly). A
+    // supersede never emits takeoverEnded for the cancelled run, so
+    // an overlapping call could not attribute the eventual end — the hook is
     // single-flight and must refuse loudly instead of resolving on tour B.
-    store.dispatch(tourStarted({ tourId: 'demo' }));
+    store.dispatch(takeoverStarted({ kind: 'tour', id: 'demo' }));
     const dispatchedBefore = actions.filter((action) => action.type === startTour.type).length;
 
     await expect(hook.startTour('webShowcase')).rejects.toThrow(

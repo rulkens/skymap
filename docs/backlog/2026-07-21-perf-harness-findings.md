@@ -5,6 +5,8 @@ machine, 20–30 frames per sample, merged (production-shape) strategy. Each is 
 optimization target; none was chased. Reproduce with the commands shown — the harness is
 deterministic enough that medians land within ~0.5 ms run-to-run.
 
+> **Stars (2026-10-13):** the star numbers below (`star-catalog`, `star-upsample`, and any tier-dependent star cost) were measured on the v1 tier files. The shipped star data is one v2 bake for every tier (a tier now sets only the pool size), so re-measure before trusting them; the galaxy rows are unaffected.
+
 ## 1. `large` tier ≈ 3× `medium` — blows the 60fps budget on its own
 
 `npm run perf -- --scenario full-survey --compare-tiers --frames 20`

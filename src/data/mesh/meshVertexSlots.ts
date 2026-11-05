@@ -1,8 +1,8 @@
 /**
- * meshVertexSlots — the mesh-body vertex layout: one buffer slot per
+ * meshVertexSlots — the vertex layout of a mesh body: one buffer slot per
  * de-interleaved attribute array, in `@location` order.
  *
- * `decodeMesh` splits the file's 48-byte interleaved stride into the SoA arrays
+ * `decodeMesh` unpacks the file's quantised v3 streams into the float32 SoA arrays
  * of `MeshAsset`. The renderer's pipeline descriptor and its upload path both
  * read this table, so they cannot disagree about a stride, a location or a
  * format.

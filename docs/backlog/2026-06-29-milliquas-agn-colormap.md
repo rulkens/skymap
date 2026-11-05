@@ -17,7 +17,7 @@ No distinct AGN encoding exists. No `colourMode` discriminant anywhere (zero hit
 - **(b) Encode redshift** instead of colour — z is the meaningful axis for objects spanning the observable universe.
 - **(c) Tint by the Milliquas class byte** (Q/A/B/K/N/S) or parent-survey byte — both already on the `.bin`.
 
-Likely needs a `colourMode` discriminant on `SOURCE_REGISTRY` + a shader ramp branch.
+Likely needs a `colourMode` discriminant on `APP_SOURCE_REGISTRY` + a shader ramp branch.
 
 ## Notes
 

@@ -5,7 +5,7 @@ title: Our neighbourhood
 narration: >
   The Local Group is one small family among many. Our galactic neighbourhood
   stretches tens of millions of light-years.
-focus: structure:group-local-group
+focus: structure:galaxy-group-local-group
 distance_mpc: 4.5
 motion: pull-back + drift
 travel_s: 0

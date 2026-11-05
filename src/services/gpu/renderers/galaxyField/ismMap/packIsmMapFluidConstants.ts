@@ -8,7 +8,7 @@
  * 20 lanes for 18 members — the uniform address space rounds a struct's
  * size up to a multiple of 16 bytes, so lanes 18/19 are slack.
  */
-import type { GalaxyIsmMapGridRadius } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../../@types/galaxy/GalaxyIsmMapGridRadius';
 import type { GalaxyIsmMapFluidParams } from '../../../../../@types/galaxy/GalaxyIsmMapFluidParams';
 
 /** Float count of `ismMapFluidStep.wesl`'s `IsmMapFluidConstants` — 18 members, rounded up to a whole 16-byte row. */

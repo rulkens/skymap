@@ -12,7 +12,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMeshBodyRenderer } from '../../../../../src/services/gpu/renderers/bodies/meshBodyRenderer';
 import { MESH_TEXTURE_SLOTS } from '../../../../../src/data/mesh/meshTextureSlots';
-import { CUBEMAP_CAPTURES } from '../../../../../src/data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../../src/compositions/appCubemapCaptures';
 import { mipLevelCount } from '../../../../../src/services/gpu/lib/generateMipChain';
 import type { MeshAsset } from '../../../../../src/@types/data/mesh/MeshAsset';
 
@@ -110,6 +110,10 @@ function stubAsset(): MeshAsset {
   };
 }
 
+function stubAssetWithContactShadow(): MeshAsset {
+  return { ...stubAsset(), contactShadow: { width: 4, height: 4 } as unknown as ImageBitmap };
+}
+
 function stubPass(): GPURenderPassEncoder & { setBindGroup: ReturnType<typeof vi.fn> } {
   return {
     setPipeline: vi.fn(),
@@ -121,10 +125,14 @@ function stubPass(): GPURenderPassEncoder & { setBindGroup: ReturnType<typeof vi
 }
 
 describe('createMeshBodyRenderer', () => {
-  it('mints two bind-group layouts: the per-body one carries the uniform, MESH_TEXTURE_SLOTS and probe-cube bindings and no sampler', () => {
+  it('mints the body, global and contact layouts; the per-body one carries the uniform, MESH_TEXTURE_SLOTS and probe-cube bindings and no sampler', () => {
     const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
     makeRenderer(mockDevice({ bindGroupLayouts }));
-    expect(bindGroupLayouts).toHaveLength(2);
+    expect(bindGroupLayouts.map((l) => l.label)).toEqual([
+      'meshBody-body-bgl',
+      'meshBody-global-bgl',
+      'meshBody-contact-bgl',
+    ]);
 
     // Binding 5 is the probe cube the fragment declares after the material maps.
     const bodyEntries = Array.from(bindGroupLayouts[0]!.entries);
@@ -169,7 +177,7 @@ describe('createMeshBodyRenderer', () => {
     expect(probe).not.toBeNull();
     expect(renderer.probeOf('missing')).toBeNull();
 
-    const faceSizePx = CUBEMAP_CAPTURES.probe.faceSizePx;
+    const faceSizePx = APP_CUBEMAP_CAPTURE_REGISTRY.probe.faceSizePx;
     const expectedMipLevelCount = mipLevelCount(faceSizePx, faceSizePx);
 
     const cube = textures.find((t) => t.desc.format === 'rgba16float')!;
@@ -186,6 +194,24 @@ describe('createMeshBodyRenderer', () => {
     expect(cube.destroy).toHaveBeenCalledTimes(1);
     expect(depth.destroy).toHaveBeenCalledTimes(1);
     expect(renderer.probeOf('a')).toBeNull();
+  });
+
+  it('uploads a contact shadow as r8unorm and frees it on clear', () => {
+    const textures: TextureStub[] = [];
+    const renderer = makeRenderer(mockDevice({ textures }));
+
+    renderer.setMesh('a', stubAsset());
+    expect(textures.some((t) => t.desc.format === 'r8unorm')).toBe(false);
+
+    renderer.setMesh('b', stubAssetWithContactShadow());
+    const shadow = textures.find((t) => t.desc.format === 'r8unorm')!;
+    expect(shadow.desc.size).toEqual([4, 4, 1]);
+    // copyExternalImageToTexture rejects a destination without RENDER_ATTACHMENT,
+    // leaving the mask all zeros — a black patch under the rover.
+    expect(shadow.desc.usage & GPUTextureUsage.RENDER_ATTACHMENT).not.toBe(0);
+
+    renderer.clearMesh('b');
+    expect(shadow.destroy).toHaveBeenCalledTimes(1);
   });
 
   it("draw binds the body's own group at index 0 and the shared group at index 1", () => {

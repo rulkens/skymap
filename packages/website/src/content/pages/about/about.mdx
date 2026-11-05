@@ -1,0 +1,110 @@
+---
+title: 'About Skymap'
+description: Skymap is made by one person, Alexander Rulkens, and is open source. Who he is, how to get in touch, a press kit, and a colophon.
+---
+
+import AboutHero from '../../../components/pages/about/AboutHero/AboutHero.tsx';
+import Claims from '../../../components/shared/text/Claims/Claims.tsx';
+import Colophon from '../../../components/pages/about/Colophon/Colophon.tsx';
+import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
+import Credits from '../../../components/shared/text/Credits/Credits.tsx';
+import DomeSky from '../../../components/pages/about/DomeSky/DomeSky.tsx';
+import ContactHead from '../../../components/pages/about/ContactHead/ContactHead.tsx';
+import MakerPortrait from '../../../components/pages/about/MakerPortrait/MakerPortrait.tsx';
+import Note from '../../../components/shared/text/Note/Note.tsx';
+import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
+import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
+import PressKit from '../../../components/pages/about/PressKit/PressKit.tsx';
+import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
+import Sources from '../../../components/shared/text/Sources/Sources.tsx';
+import Section from '../../../components/shared/layout/Section/Section.tsx';
+import { CONTACT_EMAIL, CONTACT_ENDPOINT, ISSUES_URL } from '../../../data/contact';
+import { fact } from '../../../data/fact';
+import { MAKER_NAME, MAKER_SITE, REPO_URL } from '../../../data/siteIdentity';
+import links from '../../../styles/links.module.css';
+import text from '../../../styles/type.module.css';
+import { formatDate } from '../../../utils/formatDate';
+import { sitePath } from '../../../utils/sitePath';
+import { COLOPHON, factIds, licence, makerProfile, whatIs } from './about.data';
+
+<AboutHero>
+  <h1>About Skymap</h1>
+  <p className={text.say}>{whatIs}</p>
+  <div className={links['onward-row']}>
+    <OpenApp />
+    <ObjLink href={sitePath('/science/')}>The science behind Skymap</ObjLink>
+  </div>
+</AboutHero>
+
+<Section id="maker">
+  <MakerPortrait alt="Alexander Rulkens, arms crossed, in a patterned shirt against a dark wall">
+    <h2>About me</h2>
+    <p>I’m Alexander Rulkens. I’ve loved astronomy since my school’s astronomy club, and I’ve written software for more than twenty years, among it design apps such as <a href="https://repper.app">Repper</a>. Skymap is where the two meet: data visualisation that shows the measured universe, and some of the awe that comes with it. It’s my way of giving something back to the astronomy community.</p>
+    <div className={links['link-row']}>
+      <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
+      <ObjLink hang size="small" href={MAKER_SITE}>rulkens.com</ObjLink>
+    </div>
+  </MakerPortrait>
+</Section>
+
+<Section id="dome">
+  <DomeSky>
+    <h2>On a dome</h2>
+    <p>Skymap renders a fisheye picture for a dome theatre, live from the app or as a 4K film.</p>
+    <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
+  </DomeSky>
+</Section>
+
+<Section id="contact">
+  <ContactHead email={CONTACT_ENDPOINT ? undefined : CONTACT_EMAIL}>
+    <h2>Get in touch</h2>
+  </ContactHead>
+  <Columns count={2}>
+    <div>
+      <h3>For a dome, a museum or a commission</h3>
+      {CONTACT_ENDPOINT ? (
+        <>
+          <p>The form on the domes page reaches us by email. Four fields, and one message is enough to start.</p>
+          <ObjLink hang size="small" href={sitePath('/domes/#contact')}>Write to us, on the domes page</ObjLink>
+        </>
+      ) : (
+        <p>Write to the address above. A few lines are enough: the dome or the room, the screen, the audience, and a date if there is one.</p>
+      )}
+    </div>
+    <div>
+      <h3>For a fault, a correction or a question</h3>
+      <p>Open an issue in the repository. Issues are public and anyone can read them, so leave out anything confidential.</p>
+      <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
+    </div>
+  </Columns>
+  <Note>What the site and the app load and keep is on the{' '}<a href={sitePath('/privacy/')}>privacy page</a>.</Note>
+</Section>
+
+<Section id="open-source">
+  <SectionHead title="Open source" narrow>
+    <p>Skymap is open source under the {licence} licence, and maintained.</p>
+    <ObjLink hang href={REPO_URL}>The repository on GitHub</ObjLink>
+  </SectionHead>
+</Section>
+
+<Section id="press">
+  <SectionHead title="Press kit" narrow>
+    <p>The logo and the app icon, seven pictures, a portrait, a short film and a fact sheet, in one zip file. Its credits.txt names what is in each picture and the full credit to print; every credit opens with ours.</p>
+  </SectionHead>
+  <PressKit label="Download the press kit" creditLabel="Credit to print" copyLabel="Copy the credit" />
+  <Note>{fact('about-picture-reuse').text} {fact('gaia-licence').text}{' '}<a href={fact('gaia-licence').source}>{fact('gaia-licence').sourceLabel}</a>. The <a href={sitePath('/docs/credits/')}>credits page</a> has every source.</Note>
+</Section>
+
+<Section id="colophon">
+  <SectionHead title="Colophon" narrow>
+    <p>How this site is made, as of {formatDate(fact('about-built-with').checked)}.</p>
+  </SectionHead>
+  <Colophon>
+    <Claims items={COLOPHON} narrow />
+  </Colophon>
+</Section>
+
+<Section as="div">
+  <Sources ids={factIds} />
+  <Credits />
+</Section>
