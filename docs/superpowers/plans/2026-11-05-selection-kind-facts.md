@@ -16,7 +16,7 @@ placement (`positionMpc`, `radiusMpc`). Core and the store type against a base r
 **Tech Stack:** TypeScript, Redux Toolkit + Redux-Saga, WebGPU passes, Vitest.
 
 **Spec:** `docs/superpowers/specs/2026-11-05-selection-kind-facts-design.md` §4 (all), §5, §6.
-**Depends on:** the prep PR, `docs/superpowers/plans/2026-11-05-pick-codes-runtime.md`, merged first.
+**Depends on:** the prep PR, `docs/superpowers/plans/completed/2026-11-05-pick-codes-runtime.md`, merged as #1057.
 
 ## Global Constraints
 
