@@ -27,7 +27,7 @@ export async function runSync({
   onProgress,
 }: SyncRequest): Promise<SyncOutcome> {
   const fetched = await fetchInventory(baseUrl);
-  if (fetched === null) return { kind: 'offline' };
+  if ('kind' in fetched) return fetched;
 
   await mkdir(dataRoot, { recursive: true });
   const syncedPath = join(dataRoot, SYNCED_FILE);

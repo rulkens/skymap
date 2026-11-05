@@ -30,7 +30,7 @@ export const STATUS_VIEW: {
   failed: (_, { hasData }) =>
     hasData
       ? { text: 'The update stopped. The sky uses the saved data.', tone: 'plain' }
-      : { text: 'The download stopped. Skymap needs the internet once to finish it.', tone: 'problem' },
+      : { text: 'The download stopped before it finished. Retry, or try again later.', tone: 'problem' },
   diskFull: ({ neededBytes, freeBytes }) => ({
     text: `Not enough disk space: needs ${formatGigabytes(neededBytes)}, ${formatGigabytes(freeBytes)} free. Free some space, then retry.`,
     tone: 'problem',

@@ -43,11 +43,11 @@ beforeEach(async () => {
   server = createServer((req, res) => {
     const path = req.url ?? '';
     requests.push(path);
-    if (path === '/data/offline-inventory.json') {
-      res.end(JSON.stringify(inventoryBody));
-    } else if (failing?.path === path && failing.times-- > 0) {
+    if (failing?.path === path && failing.times-- > 0) {
       res.statusCode = failing.status;
       res.end();
+    } else if (path === '/data/offline-inventory.json') {
+      res.end(JSON.stringify(inventoryBody));
     } else if (objects[path]) {
       res.end(path === lyingSha ? Buffer.from('tampered') : objects[path]);
     } else {
@@ -140,6 +140,13 @@ describe('runSync', () => {
     const outcome = await run();
     expect(outcome).toMatchObject({ kind: 'diskFull', neededBytes: 1e18 });
     expect(requests).toEqual(['/data/offline-inventory.json']);
+  });
+
+  // A reachable server without a published inventory is not "no internet": that copy sent people
+  // looking at their network.
+  it('an inventory the server does not have fails rather than reading as offline', async () => {
+    failing = { path: '/data/offline-inventory.json', status: 404, times: Infinity };
+    expect(await run()).toEqual({ kind: 'failed' });
   });
 
   it('unreachable inventory returns offline', async () => {
