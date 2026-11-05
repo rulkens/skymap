@@ -1,7 +1,8 @@
 /**
- * DmgBackground — the disk image's window: the star field, the wordmark, and an arrow from the app to
- * Applications. The two empty slots keep stars off the icons Finder lays on top; their centres are
- * electron-builder.yml's `dmg.contents` x and y, so a move there moves them here.
+ * DmgBackground — the disk image's window: the star field, the wordmark, a twilight band behind the icon
+ * row and an arrow from the app to Applications. The two empty slots keep stars off the icons Finder
+ * lays on top; their centres are electron-builder.yml's `dmg.contents` x and y, so a move there moves
+ * them here.
  */
 
 import type { ReactNode } from 'react';
@@ -13,6 +14,7 @@ function DmgBackground(): ReactNode {
   return (
     <div className={styles.root}>
       <ControlSky />
+      <div className={styles.twilight} />
       <h1 className={styles.mark}>
         <Wordmark />
       </h1>

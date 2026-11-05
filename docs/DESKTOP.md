@@ -215,9 +215,14 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   `npm run build` bakes the R2 URL in and is the wrong input.
 - `scripts/buildBrandAssets.ts` (`npm run brand -w packages/desktop`) builds the brand page
   (`src/brand/`, mode `brand`) and shoots it with Playwright's Chromium into `resources/`: `icon.icns`,
-  `icon.ico`, `icon.png`, the dmg background at 1x and 2x, and the NSIS header and sidebar
-  bitmaps. The encoders are in `scripts/utils/`. `resources/` is gitignored, so a changed mark is a
-  source change. It needs `npx playwright install chromium`.
+  `icon.ico`, `icon.png`, `volume.icns` (the mounted dmg's drive icon, `dmg.icon`), the dmg background
+  at 1x and 2x, and the NSIS header and sidebar bitmaps. The icons draw the Skymap mark from
+  `packages/website/src/utils/skymapIcon.ts`, the favicon's source too; slots of 32 px and under get
+  its heavier small drawing (`?drawing=small`). The encoders are in `scripts/utils/`. `resources/` is
+  gitignored, so a changed mark is a source change. It needs `npx playwright install chromium`.
+- The dmg background's twilight band sits under Finder's icon labels, which are black in light mode
+  and white in dark mode whatever the dmg says: its luminance (about 0.18) gives both about 4.6:1.
+  Re-measure both after changing the band or `dmg.contents`.
 - `electron-builder.yml`: mac `dmg` (arm64, the host's arch), win `nsis` x64, artifact names
   `Skymap-<version>-mac.dmg` and `Skymap-<version>-win-setup.exe`, the version from the package's
   `package.json`. The web build rides as `extraResources` at `resources/dist`, outside the asar
@@ -252,7 +257,7 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 - Manual checks that no test covers: install on Windows (firewall rule, uninstaller box, "Launch
   Skymap"), boot with networking off, WebGPU on D3D12, a tablet pairing after trusting `/ca.crt`,
   a projector switched on after boot, the dome grid landing front-down, the dmg's Finder labels in
-  light mode, and the black wait at show start (up to 10 s while tiles load).
+  light and dark mode, and the black wait at show start (up to 10 s while tiles load).
 
 ## Tests
 

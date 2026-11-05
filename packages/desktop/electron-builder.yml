@@ -2,7 +2,7 @@ appId: com.rulkens.skymap
 productName: Skymap
 directories:
   output: release
-  # icon.icns, icon.ico, the dmg background and the installer bitmaps, from `npm run brand`.
+  # icon.icns, icon.ico, volume.icns, the dmg background and the installer bitmaps, from `npm run brand`.
   buildResources: resources
 files:
   - build/**
@@ -20,6 +20,8 @@ mac:
   target: dmg
 dmg:
   title: Skymap
+  # The mounted disk's own icon; unset, it would be the app icon.
+  icon: volume.icns
   artifactName: ${productName}-${version}-mac.${ext}
   iconSize: 112
   # Centres match the empty slots in src/brand/components/DmgBackground (the 660 × 400 window).

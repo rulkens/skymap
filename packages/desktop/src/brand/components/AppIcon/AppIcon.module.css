@@ -1,40 +1,6 @@
 .root {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
-}
-
-.tile {
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 1;
-  background: var(--color-bg);
-}
-
-/* A hairline of the page's foreground, so the black tile keeps its edge on a dark Dock or taskbar. */
-.tile::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 max(1px, 0.25vw) color-mix(in srgb, var(--color-fg) 22%, transparent);
-}
-
-.mac {
-  composes: tile;
-  width: 80.47vw;
-  border-radius: 18vw;
-  box-shadow: 0 1vw 2vw var(--surface-scrim);
-}
-
-.win {
-  composes: tile;
-  width: 96vw;
-  border-radius: 16vw;
-}
-
-.mark {
   display: block;
   width: 100%;
   height: 100%;
