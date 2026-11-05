@@ -35,7 +35,7 @@ import GalaxiesSectionContainer from '../../../../../src/layers/galaxyCatalog/co
 import { createTestStore as createAppStore } from '../../../../support/createTestStore';
 import {
   selectGalaxyCatalogSize,
-  selectVisibleSourceMask,
+  selectVisibleCatalogs,
 } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { setGalaxyCatalogSize } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { Source } from '../../../../../src/data/source';
@@ -78,7 +78,7 @@ describe('GalaxiesSectionContainer', () => {
 
   it('dispatches setGalaxyCatalogVisible and updates selectVisibleSourceMask when a catalog is toggled', () => {
     const { store } = createAppStore();
-    const initialMask = selectVisibleSourceMask(store.getState());
+    const initialMask = selectVisibleCatalogs(store.getState());
 
     const { container } = render(createElement(GalaxiesSectionContainer, null), {
       wrapper: makeWrapper(store),
@@ -94,7 +94,7 @@ describe('GalaxiesSectionContainer', () => {
     // e.target.checked for React-controlled inputs.
     fireEvent.click(sdssCheckbox!);
 
-    const newMask = selectVisibleSourceMask(store.getState());
+    const newMask = selectVisibleCatalogs(store.getState());
     expect(newMask).not.toBe(initialMask);
     // SDSS bit (1 << Source.SDSS) must be cleared
     expect(newMask & (1 << Source.SDSS)).toBe(0);

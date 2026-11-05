@@ -22,7 +22,7 @@ import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './aliases/load/buildAliasIndex';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
 import { structureMemberCount } from './structureMembership/utils/structureMemberCount';
-import { sourceMaskOf } from './records/utils/sourceMaskOf';
+import { visibleCatalogsOf } from './records/utils/visibleCatalogsOf';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
@@ -56,7 +56,7 @@ export function galaxyCatalogPlanner(
 
       // Built from the handed value, so the counts, the hi-res famous gate and the
       // disk walk keep a hidden catalog through its fade-out, as the point sprites do.
-      const sourceMask = sourceMaskOf(fade);
+      const sourceMask = visibleCatalogsOf(fade);
 
       const selectRow = state.selectionRows.select;
       if (

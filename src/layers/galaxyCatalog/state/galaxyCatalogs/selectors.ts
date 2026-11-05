@@ -54,7 +54,7 @@ export const selectGalaxyFalloffStrength = createSelector(
  * read. The panel's intent mask (no fade-out tail), not an engine mask: the
  * engine derives its own from the values core hands, in `sourceMaskOf`.
  */
-export const selectVisibleSourceMask = createSelector([selectRoute], (route) => {
+export const selectVisibleCatalogs = createSelector([selectRoute], (route) => {
   let mask = 0;
   for (const [code, { id }] of GALAXY_CATALOG_SOURCE_ROWS) {
     if (route.items[id].enabled) mask = maskWith(mask, code);

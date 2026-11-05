@@ -11,7 +11,7 @@ import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { maskWith } from '../../../../utils/maskWith';
 
-export function sourceMaskOf(fade: Readonly<Record<GalaxyCatalogId, number>>): number {
+export function visibleCatalogsOf(fade: Readonly<Record<GalaxyCatalogId, number>>): number {
   let mask = 0;
   for (const src of GALAXY_CATALOG_SOURCES) {
     if (fade[galaxyCatalogIdOf(src)] > 0) mask = maskWith(mask, src);

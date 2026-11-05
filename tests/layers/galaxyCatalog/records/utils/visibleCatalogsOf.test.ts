@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { sourceMaskOf } from '../../../../../src/layers/galaxyCatalog/records/utils/sourceMaskOf';
+import { visibleCatalogsOf } from '../../../../../src/layers/galaxyCatalog/records/utils/visibleCatalogsOf';
 import { Source } from '../../../../../src/data/source';
 import { GALAXY_CATALOG_SOURCES } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import { maskHas } from '../../../../../src/utils/maskHas';
@@ -12,7 +12,7 @@ import { makeGalaxyCatalogFade } from '../../../../fixtures/makeGalaxyCatalogFad
 
 describe('sourceMaskOf', () => {
   it('sets a catalog bit exactly while its value is above 0', () => {
-    const mask = sourceMaskOf(makeGalaxyCatalogFade({ sdss: 0.25 }, 0));
+    const mask = visibleCatalogsOf(makeGalaxyCatalogFade({ sdss: 0.25 }, 0));
     expect(maskHas(mask, Source.SDSS)).toBe(true);
     for (const s of GALAXY_CATALOG_SOURCES) {
       if (s !== Source.SDSS) expect(maskHas(mask, s)).toBe(false);
@@ -20,13 +20,13 @@ describe('sourceMaskOf', () => {
   });
 
   it('clears the bit at a value of exactly 0', () => {
-    const mask = sourceMaskOf(makeGalaxyCatalogFade({ sdss: 0 }));
+    const mask = visibleCatalogsOf(makeGalaxyCatalogFade({ sdss: 0 }));
     expect(maskHas(mask, Source.SDSS)).toBe(false);
     expect(maskHas(mask, Source.TwoMRS)).toBe(true);
   });
 
   it('lights every galaxy-catalog bit when every value is above 0', () => {
-    const mask = sourceMaskOf(makeGalaxyCatalogFade());
+    const mask = visibleCatalogsOf(makeGalaxyCatalogFade());
     for (const s of GALAXY_CATALOG_SOURCES) expect(maskHas(mask, s)).toBe(true);
   });
 });

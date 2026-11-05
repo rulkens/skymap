@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { selectVisibleSourceMask } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
+import { selectVisibleCatalogs } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSettings';
 import { settingsRoute } from '../../../../../src/store/constants';
 import { Source } from '../../../../../src/data/source';
@@ -21,7 +21,7 @@ function makeRoot(patch?: Partial<EngineSettingsState>): RootState {
 describe('selectVisibleSourceMask', () => {
   it('sets exactly the bit of every enabled galaxy catalog', () => {
     const root = makeRoot();
-    const mask = selectVisibleSourceMask(root);
+    const mask = selectVisibleCatalogs(root);
 
     for (const s of GALAXY_CATALOG_SOURCES) {
       const { enabled } = root[settingsRoute].galaxyCatalogs.items[galaxyCatalogIdOf(s)];
@@ -40,17 +40,17 @@ describe('selectVisibleSourceMask', () => {
         },
       },
     });
-    const mask = selectVisibleSourceMask(state);
+    const mask = selectVisibleCatalogs(state);
 
     expect(maskHas(mask, Source.SDSS)).toBe(false);
     expect(maskHas(mask, Source.TwoMRS)).toBe(true);
   });
 
   it('memoizes on galaxyCatalogs alone — recomputes only when that cluster changes', () => {
-    selectVisibleSourceMask.resetRecomputations();
+    selectVisibleCatalogs.resetRecomputations();
     const state = makeRoot();
-    selectVisibleSourceMask(state);
-    const baseline = selectVisibleSourceMask.recomputations();
+    selectVisibleCatalogs(state);
+    const baseline = selectVisibleCatalogs.recomputations();
 
     const stateWithUnrelatedWrite = makeRoot({
       tonemap: {
@@ -58,8 +58,8 @@ describe('selectVisibleSourceMask', () => {
         exposure: state[settingsRoute].tonemap.exposure + 1,
       },
     });
-    selectVisibleSourceMask(stateWithUnrelatedWrite);
-    expect(selectVisibleSourceMask.recomputations()).toBe(baseline);
+    selectVisibleCatalogs(stateWithUnrelatedWrite);
+    expect(selectVisibleCatalogs.recomputations()).toBe(baseline);
 
     const stateWithGalaxyCatalogsWrite = makeRoot({
       galaxyCatalogs: {
@@ -70,7 +70,7 @@ describe('selectVisibleSourceMask', () => {
         },
       },
     });
-    selectVisibleSourceMask(stateWithGalaxyCatalogsWrite);
-    expect(selectVisibleSourceMask.recomputations()).toBe(baseline + 1);
+    selectVisibleCatalogs(stateWithGalaxyCatalogsWrite);
+    expect(selectVisibleCatalogs.recomputations()).toBe(baseline + 1);
   });
 });
