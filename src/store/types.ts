@@ -161,6 +161,12 @@ export type SagaContext = {
    */
   cameraRuntime: () => LiveCameraRuntime | null;
   /**
+   * True once everything the current view asked for has arrived: no asset slot
+   * loading, no Layer still streaming, no fade running (`isSceneSettled`). The
+   * tour's cold-load gate polls it after the first beat's establishing clip.
+   */
+  sceneSettled: () => boolean;
+  /**
    * Plays a data clip and resolves when the clip completes or is cancelled.
    * The tour saga awaits this Promise for the establishing fly and races it
    * (as dwellDrift) against the dwell timer during the interactive dwell.
