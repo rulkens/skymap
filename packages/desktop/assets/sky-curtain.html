@@ -27,12 +27,58 @@
           opacity: 0;
         }
       }
+      /* Held back, so a quick reload stays plain black and only a real wait says it is loading. */
+      p {
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        width: 16em;
+        height: fit-content;
+        text-align: center;
+        font:
+          400 2.4vmin/1.4 system-ui,
+          sans-serif;
+        letter-spacing: 0.04em;
+        color: rgba(255, 255, 255, 0.7);
+        opacity: 0;
+        animation: show 600ms ease-out 600ms forwards;
+      }
+      p::after {
+        content: '';
+        display: block;
+        height: 2px;
+        margin-top: 1em;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent) 0 0 /
+          40% 100% no-repeat;
+        animation: sweep 1.6s ease-in-out infinite;
+      }
+      @keyframes sweep {
+        from {
+          background-position: -60% 0;
+        }
+        to {
+          background-position: 160% 0;
+        }
+      }
+      @keyframes show {
+        to {
+          opacity: 1;
+        }
+      }
       @media (prefers-reduced-motion: reduce) {
         html {
           animation: none;
           transition: none;
         }
+        p,
+        p::after {
+          animation: none;
+          opacity: 1;
+        }
       }
     </style>
   </head>
+  <body>
+    <p>Loading the sky</p>
+  </body>
 </html>
