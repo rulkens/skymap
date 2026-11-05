@@ -141,7 +141,7 @@ export function galaxyCatalogPlanner(
       // LANDED is real motion, and it is the same content a sky capture must
       // re-bake for, so both votes read it.
       const fading = runtime.texturedDisks.hasFadingContent();
-      return { value: undefined, awake: fading, settling: fading };
+      return { value: undefined, awake: fading, settling: fading, loading: fading };
     },
   };
 }

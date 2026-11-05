@@ -26,6 +26,7 @@ export function flowPlanner(
         // Never settling, though the ribbons advect forever: flow draws in no
         // capture roster, so nothing it does can stale a sky bake.
         settling: false,
+        loading: false,
       };
     },
   };
