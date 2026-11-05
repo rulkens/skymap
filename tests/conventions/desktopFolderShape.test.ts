@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const SRC = 'packages/desktop/src';
-const PROCESS_FOLDERS = ['@types', 'data', 'utils', 'main', 'preload', 'control', 'brand'];
+const PROCESS_FOLDERS = ['@types', 'data', 'main', 'preload', 'control', 'brand'];
 const MAIN_ROLES = ['@types', 'data', 'utils'];
 const PAGE_ROLES = ['@types', 'data', 'utils', 'components'];
 

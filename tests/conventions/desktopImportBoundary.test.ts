@@ -2,7 +2,7 @@
  * The desktop app runs in three contexts the bundler and sandbox keep apart: Electron main, the
  * sandboxed preload, and two renderer pages (control, brand). Its top-level folder says which, so a
  * prefix check guards the line a stray import would cross silently: `electron` in the `file://`
- * page bundle, React in main. The root `@types/ data/ utils/` are what crosses a process boundary,
+ * page bundle, React in main. The root `@types/ data/` are what crosses a process boundary,
  * so they stay runtime-neutral. Empty allowlist; the rules are docs/DESKTOP.md's layout table.
  */
 import { builtinModules } from 'node:module';
@@ -12,7 +12,7 @@ import { parseOnlyProject } from '../helpers/conventions/parseOnlyProject';
 import { walkFiles } from '../helpers/conventions/walkFiles';
 
 const SRC = 'packages/desktop/src';
-const SHARED = ['@types', 'data', 'utils'].map((dir) => `${SRC}/${dir}/`);
+const SHARED = ['@types', 'data'].map((dir) => `${SRC}/${dir}/`);
 const under = (folder: string) => `${SRC}/${folder}/`;
 
 const NODE = new Set(builtinModules);
@@ -22,7 +22,7 @@ const isReact = (spec: string) => /^react(-dom)?(\/|$)/.test(spec);
 
 /** Each rule: the folder it sweeps and what a file there may not import (package name or repo path). */
 const RULES = {
-  'root @types/data/utils stay runtime-neutral': {
+  'root @types/data stay runtime-neutral': {
     files: 'shared',
     banned: (spec, target) =>
       isElectron(spec) ||
@@ -91,7 +91,7 @@ describe('desktop import boundary between processes', () => {
     );
     expect(
       offenders,
-      `${offenders.join('\n')}\nMove the shared piece to ${SRC}/{@types,data,utils}/ (runtime-neutral), ` +
+      `${offenders.join('\n')}\nMove the shared piece to ${SRC}/{@types,data}/ (runtime-neutral), ` +
         'or keep it in the one process that uses it (docs/DESKTOP.md, layout).',
     ).toEqual([]);
   });

@@ -38,7 +38,7 @@ const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = passDirsUnder(LA
 
 // The desktop's main process is services by another name: each concern module's root holds its
 // service files, beside @types/, data/ and utils/. `main/` itself holds only the `main.ts` entry
-// script, and a module of utils alone (`files/`, `lan/`) has no root file to sweep.
+// script, and a module of utils alone (`files/`) has no root file to sweep.
 const DESKTOP_MAIN_DIR = fileURLToPath(
   new URL('../../packages/desktop/src/main/', import.meta.url),
 );

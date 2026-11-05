@@ -17,7 +17,7 @@ Layer does in the app (ADR 0014). `tests/conventions/desktopFolderShape.test.ts`
 
 | Folder                         | Holds                                                                                                                                        | May import                                                                         |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `@types/`, `data/`, `utils/`   | only what crosses a process boundary: the bridge contract and what it carries (`ControlState`), the IPC channel table and constants read by two processes, runtime-neutral helpers. A root home exists only while something lives in it (`utils/` is empty today) | no `electron`, Node or React; nothing under `main/`, `preload/`, `control/`, `brand/` |
+| `@types/`, `data/`             | only what crosses a process boundary: the bridge contract and what it carries (`ControlState`), the IPC channel table and constants read by two processes, runtime-neutral constants. A root home exists only while something lives in it (a root `utils/` joins when a shared helper does) | no `electron`, Node or React; nothing under `main/`, `preload/`, `control/`, `brand/` |
 | `main/`                        | the Electron main process (Vite mode `main`). Root: `main.ts` and `@types/`. Modules: `lifecycle`, `windows`, `sky`, `menu`, `server`, `certificates`, `lan`, `relay`, `setup`, `sync`, `files` | Electron, Node, the root homes, `tools/` (the relay); no React, CSS or page code    |
 | `preload/`                     | `preload.cts`, the sandboxed bridge (Vite mode `preload`)                                                                                    | `electron` and the root homes only                                                 |
 | `control/`                     | the control page (Vite root). Root: `index.html`, `main.tsx`, `control.css`, `controlChrome.module.css`. Modules: `shell`, `setup`, `pairing`, `sync`, `sky` | no `electron`, Node, `main/`, `preload/`, `brand/` or `tools/`                     |
@@ -91,8 +91,8 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   [DEPLOY.md](DEPLOY.md)): every offline group's files with sha256 and size. Its key has one home,
   `tools/deploy/data/offlineInventoryKey.ts`, read by both sides. The app fetches it from
   `DESKTOP_DATA_ORIGIN` (the app's R2 data host, read from `.env.production` at build time by
-  `vite.config.ts` and baked in as a define) within `INVENTORY_TIMEOUT_MS`. No answer, or a non-OK
-  status, means `offline`.
+  `vite.config.ts` and baked in as a define) within `INVENTORY_TIMEOUT_MS`. No answer means `offline`; a non-OK
+  status means `failed`.
 - **Mirror.** `<userData>/data/` holds the bucket's `data/` tree key for key. `synced.json` maps
   each key to the sha256 of the file verified there. `listMirrorKeys` lists what is on disk in one
   async walk (never `existsSync` per key: 70k of them blocked main for seconds), and runSync,
@@ -116,8 +116,6 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   sky. Syncs, prunes and sky loads share one queue in `runLifecycle`, so a prune never meets a
   download (the old inventory would delete files being downloaded) and two loads never overlap; a
   sky load asked for during a sync waits for it.
-- **Disk check.** Before downloading, the plan's bytes are compared with free space; the
-  `diskFull` outcome carries needed and free bytes to the control page.
 - **Outcome table.** `syncOutcomeAction` is spec §5: synced loads the sky (or, for a manual
   Update now, waits for Restart sky); offline, failed or a full disk with data on disk shows the
   status and loads the sky if none runs; with no data it raises the control window. Restart sky

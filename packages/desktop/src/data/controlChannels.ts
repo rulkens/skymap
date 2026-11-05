@@ -1,7 +1,7 @@
-/** Every IPC channel between the control page and main: main sends `state` and `view`, the page invokes the rest. */
+/** Every IPC channel between the control page and main: main sends `state` and `help`, the page invokes the rest. */
 export const CONTROL_CHANNELS = {
   state: 'control:state',
-  view: 'control:view',
+  help: 'control:help',
   getState: 'control:getState',
   saveSetup: 'control:saveSetup',
   updateNow: 'control:updateNow',

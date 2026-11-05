@@ -43,13 +43,9 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
 
   useEffect(
     () =>
-      bridge.onView((next, section) => {
+      bridge.onHelp((section) => {
         setHelpSection(section);
-        if (next === 'help' || next === 'about') setOver(next);
-        else {
-          setOver(null);
-          setHome(next);
-        }
+        setOver('help');
       }),
     [bridge],
   );

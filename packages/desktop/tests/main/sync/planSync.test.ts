@@ -34,11 +34,6 @@ describe('planSync', () => {
     expect(plan.groups[1]?.download.map((f) => f.key)).toEqual(['data/b.bin']);
   });
 
-  it('keeps inventory group order', () => {
-    const plan = planSync(inventory, {}, new Set());
-    expect(plan.groups.map((g) => g.label)).toEqual(['one', 'two']);
-  });
-
   it('sums downloadBytes over downloads only', () => {
     const plan = planSync(inventory, { 'data/a.bin': 'A', 'data/b.bin': 'B' }, all);
     expect(plan.downloadBytes).toBe(40);

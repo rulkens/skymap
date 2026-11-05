@@ -201,7 +201,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     testGrid: setTestGrid,
     help: (section) => {
       showControl();
-      if (!control.isDestroyed()) control.webContents.send(CONTROL_CHANNELS.view, 'help', section);
+      if (!control.isDestroyed()) control.webContents.send(CONTROL_CHANNELS.help, section);
     },
   });
 

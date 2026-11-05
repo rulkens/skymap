@@ -1,6 +1,5 @@
 import type { Unsubscribe } from '../../../../src/@types/remote/Unsubscribe';
 import type { ControlState } from './ControlState';
-import type { ControlView } from './ControlView';
 import type { HelpSection } from './HelpSection';
 import type { InstallSetup } from './InstallSetup';
 
@@ -8,8 +7,8 @@ import type { InstallSetup } from './InstallSetup';
 export type ControlBridge = {
   getState: () => Promise<ControlState>;
   onState: (listener: (state: ControlState) => void) => Unsubscribe;
-  /** A view main asks for, as a menu's Help item does, with the Help section it names. */
-  onView: (listener: (view: ControlView, section?: HelpSection) => void) => Unsubscribe;
+  /** Main asks for Help, as a menu's Help item does, at the section it names. */
+  onHelp: (listener: (section?: HelpSection) => void) => Unsubscribe;
   /** Resolves once main has stored the setup and applied it (a moved sky included). */
   saveSetup: (setup: InstallSetup) => Promise<void>;
   updateNow: () => void;

@@ -19,7 +19,6 @@
     "scripts",
     "tests",
     "vitest.config.ts",
-    "vite.config.ts",
-    "../../tools/deploy/@types/OfflineInventory*.d.ts"
+    "vite.config.ts"
   ]
 }

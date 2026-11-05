@@ -2,7 +2,6 @@ import { act } from '@testing-library/react';
 import { vi } from 'vitest';
 import type { ControlBridge } from '../../../../../src/@types/ControlBridge';
 import type { ControlState } from '../../../../../src/@types/ControlState';
-import type { ControlView } from '../../../../../src/@types/ControlView';
 import type { DisplayInfo } from '../../../../../src/@types/DisplayInfo';
 import type { HelpSection } from '../../../../../src/@types/HelpSection';
 import { DEFAULT_INSTALL_SETUP } from '../../../../../src/main/setup/data/defaultInstallSetup';
@@ -29,11 +28,11 @@ const BASE_STATE: ControlState = {
   lastAttempt: null,
 };
 
-/** A main process stand-in: the page's calls are spies, `set` pushes a changed state, `view` asks for a view. */
+/** A main process stand-in: the page's calls are spies, `set` pushes a changed state, `help` asks for Help. */
 export function fakeBridge(over: Partial<ControlState> = {}) {
   let state: ControlState = { ...BASE_STATE, ...over };
   let onState: ((state: ControlState) => void) | null = null;
-  let onView: ((view: ControlView, section?: HelpSection) => void) | null = null;
+  let onHelp: ((section?: HelpSection) => void) | null = null;
   const push = (patch: Partial<ControlState>): void => {
     state = { ...state, ...patch };
     onState?.(state);
@@ -44,8 +43,8 @@ export function fakeBridge(over: Partial<ControlState> = {}) {
       onState = listener;
       return () => {};
     }),
-    onView: vi.fn((listener: (view: ControlView, section?: HelpSection) => void) => {
-      onView = listener;
+    onHelp: vi.fn((listener: (section?: HelpSection) => void) => {
+      onHelp = listener;
       return () => {};
     }),
     // Main stores the setup, then pushes the state that carries it.
@@ -58,7 +57,6 @@ export function fakeBridge(over: Partial<ControlState> = {}) {
     quit: vi.fn(),
   } satisfies ControlBridge;
   const set = (patch: Partial<ControlState>): void => act(() => push(patch));
-  const view = (next: ControlView, section?: HelpSection): void =>
-    act(() => onView?.(next, section));
-  return { bridge, set, view };
+  const help = (section?: HelpSection): void => act(() => onHelp?.(section));
+  return { bridge, set, help };
 }

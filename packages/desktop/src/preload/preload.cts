@@ -20,7 +20,7 @@ const command =
 const bridge: ControlBridge = {
   getState: () => ipcRenderer.invoke(C.getState),
   onState: subscribe(C.state),
-  onView: subscribe(C.view),
+  onHelp: subscribe(C.help),
   saveSetup: (setup) => ipcRenderer.invoke(C.saveSetup, setup),
   updateNow: command(C.updateNow),
   restartSky: command(C.restartSky),

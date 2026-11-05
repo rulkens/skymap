@@ -156,13 +156,13 @@ describe('ControlPage', () => {
   });
 
   it('Help opens from its link and from main, and Escape or Back closes it', async () => {
-    const { view } = await renderControls();
+    const { help } = await renderControls();
     press('Help');
     expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toBeVisible();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.getByRole('heading', { name: 'Data' })).toBeVisible();
 
-    view('help');
+    help();
     expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toBeVisible();
     press('Back to the controls');
     expect(screen.getByRole('heading', { name: 'Data' })).toBeVisible();
@@ -175,8 +175,8 @@ describe('ControlPage', () => {
     Element.prototype.scrollIntoView = function (this: Element) {
       scrolled.push(this.querySelector('h2')?.textContent ?? '');
     };
-    const { view } = await renderControls();
-    view('help', 'troubleshooting');
+    const { help } = await renderControls();
+    help('troubleshooting');
     Element.prototype.scrollIntoView = original;
     expect(scrolled).toEqual(['Troubleshooting']);
   });

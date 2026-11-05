@@ -8,8 +8,7 @@ export function planSync(
   synced: SyncedRecord,
   onDisk: ReadonlySet<string>,
 ): SyncPlan {
-  const groups = inventory.groups.map(({ label, files }) => ({
-    label,
+  const groups = inventory.groups.map(({ files }) => ({
     download: files.filter((f) => synced[f.key] !== f.sha256 || !onDisk.has(f.key)),
   }));
   const downloadBytes = groups.reduce(
