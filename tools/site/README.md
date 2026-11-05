@@ -5,7 +5,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 | Script                 | Run                                                        | Writes                                                                             |
 | ---------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `makeOgImage.ts`       | `npx tsx tools/site/makeOgImage.ts`                        | `public/og-image.jpg` from `docs/screenshots/cosmic-web.jpg`                       |
-| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`                        | `public/apple-touch-icon.png` from `public/favicon.svg`                            |
+| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`                        | `public/favicon.svg` and `public/apple-touch-icon.png`, from the mark              |
 | `buildHeroMedia.ts`    | `npm run site:media -- [recording]`                        | the flight's stills (one pair per stop) and its scrub video, from the recording    |
 | `shootSiteShots.ts`    | `npm run site:shots -- --url <app server>`                 | every picture in the shot manifest, AVIF and WebP, and the link-preview card       |
 | `shootSiteLoops.ts`    | `npm run site:loops -- --url <app server>`                 | every film in the loop manifest, H.264 in MP4                                      |
@@ -28,7 +28,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 `npm run site:press-kit` writes `public/data/site/skymap-press-kit.zip` (gitignored; upload it with `tools/deploy/uploadSiteMedia.sh`, see "Site media" in `docs/DEPLOY.md`) and `packages/website/src/data/pressKit.json`, the zip's name and size the About page prints, which is committed. What goes in is in `pressKitPlan.ts`:
 
-- `logo/`: the site's Wordmark as SVG, with the word turned to outlines (opentype.js, from `fonts/CormorantGaramond-SemiBold.ttf`) so it draws with no font installed, and as 2000 px PNGs, transparent and on a ground, in light ink for dark grounds and dark ink for light ones. `icon/`: `public/favicon.svg` and PNGs of it at 512 and 1024.
+- `logo/`: the site's Wordmark as SVG, with the word turned to outlines (opentype.js, from `fonts/CormorantGaramond-SemiBold.ttf`) so it draws with no font installed, and as 2000 px PNGs, transparent and on a ground, in light ink for dark grounds and dark ink for light ones. `icon/`: the app icon as macOS draws it (`packages/website/src/utils/skymapIcon.ts`), as SVG and as PNGs at 512 and 1024.
 - `pictures/`: the rows of `packages/website/src/data/pressPictures.ts`, each from its shot master in `data/shots/site/` (the widest committed file if the master is missing), as JPEG on black. `credits.txt` gives each one's words from the shot manifest, the credit to print and its sources' terms from that file. A new picture is a row there.
 - `portrait/`: the maker's portrait. `film/`: a cut of the hero recording, through the same encoder as the hero video (`utils/scrubVideoArgs.ts`); the recording is in the main checkout only, so a worktree passes `--recording <absolute path>`.
 - `fact-sheet.md`: a 50-word and a 150-word description made of the fact registry's own sentences (`short` and `long` in the plan), the licence, the data sources, the addresses and the contact. `tests/tools/site/pressFactSheet.test.ts` fails when a fact row grows the descriptions past their lengths.
