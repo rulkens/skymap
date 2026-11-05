@@ -74,6 +74,8 @@ re-run.
   fix: `extract` that helper into its own file first, then re-run so the closure is
   all-exclusive. The refusal is a design signal telling you which helpers need their
   own file.
+- **`extract` refuses an existing destination.** It only creates a new file, so it
+  can't place a second symbol in a file it has already made.
 
 - **`inline` refuses on a non-passthrough.** Folding a body with real logic into each
   call site is a per-site judgement. It throws with the classified reference list (the
