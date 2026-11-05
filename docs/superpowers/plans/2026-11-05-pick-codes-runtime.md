@@ -70,7 +70,7 @@ This plan is the **prep PR**; `2026-11-05-selection-kind-facts.md` is the featur
   ```
 - `legacyPickCodes.ts` exports `LEGACY_PICK_CODES`: layer name → pick-source id → today's `Source` value, one
   entry per id Tasks 3–7 introduce. It exists only until Task 8. Ids are short and Layer-local
-  (`'planet'`, `'earth'`, `'sdss'`, `'gaia'`, `'famousGalaxy'`, …); the implementer of each later task adds
+  (`'planet'`, `'earth'`, `'sdss'`, `'gaiaStars'`, `'famousGalaxy'`, …); the implementer of each later task adds
   its ids here.
 - `createLayers` builds one allocator per engine from `LEGACY_PICK_CODES`, keeps it on engine state, and
   binds `pickCode: (id) => allocator.codeOf(layer.name, id)` into `common`.
@@ -212,7 +212,7 @@ This plan is the **prep PR**; `2026-11-05-selection-kind-facts.md` is the featur
 - Test: none (debug view; the smoke check covers it)
 
 **Interfaces:**
-- Consumes: `PickCodeAllocator.codeOf('starCatalog', 'gaia')` (Task 1, Task 4's id).
+- Consumes: `PickCodeAllocator.codeOf('starCatalog', 'gaiaStars')` (Task 1, Task 4's id).
 - Produces: the overlay's uniform block gains `dimCode: u32`; the shader compares against it. The Task 4
   local constant goes.
 
