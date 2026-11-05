@@ -44,6 +44,8 @@ import { famousFlythrough } from './famousFlythrough';
 import {
   tourParkOpening,
   tourParkOpeningDwell,
+  tourYouAreHereEarth,
+  tourYouAreHereEarthDwell,
   tourYouAreHere,
   tourYouAreHereDwell,
   tourApproachM31,
@@ -75,6 +77,8 @@ export const clipFactories: Record<ClipId, (simDays: number) => Clip> = {
   famousFlythrough: () => famousFlythrough,
   tourParkOpening: () => tourParkOpening,
   tourParkOpeningDwell: () => tourParkOpeningDwell,
+  tourYouAreHereEarth: () => tourYouAreHereEarth,
+  tourYouAreHereEarthDwell: () => tourYouAreHereEarthDwell,
   tourYouAreHere: () => tourYouAreHere,
   tourYouAreHereDwell: () => tourYouAreHereDwell,
   tourApproachM31: () => tourApproachM31,

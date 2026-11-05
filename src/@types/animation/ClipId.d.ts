@@ -36,4 +36,6 @@ export type ClipId =
   | 'tourLocalGroup'
   | 'tourNeighbourhoodReveal'
   | 'tourParkOpening'
-  | 'tourParkOpeningDwell';
+  | 'tourParkOpeningDwell'
+  | 'tourYouAreHereEarth'
+  | 'tourYouAreHereEarthDwell';

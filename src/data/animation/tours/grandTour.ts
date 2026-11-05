@@ -16,6 +16,7 @@
 import type { Tour } from '../../../@types/animation/tour/Tour';
 import { dwellDrift } from '../../../state/tour/dwellDrift';
 import { parkOpening, parkOpeningDwell } from './grandTour/parkOpening';
+import { youAreHereEarth, youAreHereEarthDwell } from './grandTour/youAreHereEarth';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31, approachM31Dwell } from './grandTour/approachM31';
 import { localGroup, localGroupDwell } from './grandTour/localGroup';
@@ -44,6 +45,17 @@ export const grandTour: Tour = {
         ],
       },
       dwellClip: parkOpeningDwell,
+    },
+    {
+      enterClip: youAreHereEarth,
+      caption: {
+        title: 'You are here',
+        lines: [
+          'Earth, our home planet, nearly 13,000 kilometres across.',
+          'All eight billion of us live on it.',
+        ],
+      },
+      dwellClip: youAreHereEarthDwell,
     },
     {
       enterClip: youAreHere,

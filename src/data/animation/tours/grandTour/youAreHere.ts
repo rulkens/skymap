@@ -22,7 +22,6 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { GALACTIC_DISC_FORWARD } from '../../../../services/engine/camera/framing/cameraFraming';
-import { OPENING_HIDDEN_LAYERS } from './openingHiddenLayers';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
 const MW = focusId('milkyWay');
@@ -35,7 +34,7 @@ export const youAreHere: ClipData = {
   timeline: [
     all([moveTargetId(MW, 0), dollyTo(FAR_OPEN_MPC, 0), aimAlong(GALACTIC_DISC_FORWARD, 0)]),
     focusOnId(MW, 7),
-    show(['label:milkyWay', ...OPENING_HIDDEN_LAYERS], 1),
+    show(['label:milkyWay'], 1),
   ],
 };
 

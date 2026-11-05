@@ -24,19 +24,14 @@ import {
 import { setLabelsFocusedOnly } from '../../../../state/settings/core/labelsSlice';
 import { clockTo } from '../../../../state/tour/clockTo';
 import { OPENING_HIDDEN_LAYERS } from './openingHiddenLayers';
+import { PARK_VIEW } from './parkView';
 import { SONDERMARKEN_SPOT } from './sondermarkenSpot';
 import { TOUR_NOON_SIM_DAYS } from './tourNoonSimDays';
 import { TOUR_NIGHT_SIM_DAYS } from './tourNightSimDays';
 
 const SKY: PoseFrame = { sky: SONDERMARKEN_SPOT };
 
-// Due north up the scan's open lawn: the one corridor with sky to the horizon,
-// front-lit by the noon Sun (south and south-east are backlit canopy).
-const OPEN_AZIMUTH_RAD = 0.15;
 const OPEN_ALTITUDE_RAD = 0.35;
-// Short of the zenith, where azimuth stops meaning anything: Cassiopeia to
-// Cygnus fills the frame at 20:00 UTC.
-const NIGHT_ALTITUDE_RAD = 1.4;
 
 const TITLE_SEC = 4;
 const NIGHTFALL_SEC = 22;
@@ -44,7 +39,7 @@ const NIGHT_HOLD_SEC = 4;
 
 const standAt = (altitudeRad: number) =>
   all([
-    tween('yaw', { to: OPEN_AZIMUTH_RAD, over: 0, frame: SKY }),
+    tween('yaw', { to: PARK_VIEW.azimuthRad, over: 0, frame: SKY }),
     tween('pitch', { to: altitudeRad, over: 0, frame: SKY }),
   ]);
 
@@ -83,7 +78,7 @@ export const parkOpeningDwell: ClipData = {
     wait(TITLE_SEC),
     all([
       scene(clockTo({ simDays: TOUR_NIGHT_SIM_DAYS, overSec: NIGHTFALL_SEC })),
-      tween('pitch', { to: NIGHT_ALTITUDE_RAD, over: NIGHTFALL_SEC, frame: SKY }),
+      tween('pitch', { to: PARK_VIEW.nightAltitudeRad, over: NIGHTFALL_SEC, frame: SKY }),
     ]),
     hold(NIGHT_HOLD_SEC),
   ],
