@@ -7,6 +7,7 @@ import type { AppRoots } from '../@types/AppRoots';
 import { CONTENT_TYPE_BY_EXTENSION } from '../data/contentTypeByExtension';
 import { resolveAppPath } from '../resolveAppPath';
 import { isUnderARoot } from './isUnderARoot';
+import { parseByteRange } from './parseByteRange';
 
 /** Answers one GET or HEAD from the web build, the data mirror or /ca.crt; anything else is 404 or 405. */
 export async function serveAppRequest(
@@ -33,12 +34,21 @@ export async function serveAppRequest(
     response.writeHead(404).end();
     return;
   }
-  response.writeHead(200, {
+  // The surface tiles are packs the app reads one tile at a time with a Range request.
+  const range = parseByteRange(request.headers.range, info.size);
+  if (range === 'unsatisfiable') {
+    response.writeHead(416, { 'Content-Range': `bytes */${info.size}` }).end();
+    return;
+  }
+  const span = range ?? { start: 0, end: info.size - 1 };
+  response.writeHead(range === null ? 200 : 206, {
     'Content-Type': CONTENT_TYPE_BY_EXTENSION[extname(target)] ?? 'application/octet-stream',
-    'Content-Length': info.size,
+    'Content-Length': span.end - span.start + 1,
+    'Accept-Ranges': 'bytes',
+    ...(range === null ? {} : { 'Content-Range': `bytes ${span.start}-${span.end}/${info.size}` }),
     // A sync replaces the manifest under the same name; "Restart sky" must see the new one.
     'Cache-Control': 'no-cache',
   });
-  if (request.method === 'HEAD') response.end();
-  else await pipeline(createReadStream(target), response);
+  if (request.method === 'HEAD' || info.size === 0) response.end();
+  else await pipeline(createReadStream(target, span), response);
 }

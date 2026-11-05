@@ -136,7 +136,8 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   `dist/` otherwise), `/data/` from the mirror, and `/ca.crt`. Paths are resolved lexically
   (`main/server/resolveAppPath.ts`) and then by realpath, so a symlink cannot leave a root. The
   mirror's bookkeeping files and `.part` downloads are 404. Responses are `no-cache` so Restart sky
-  sees a replaced manifest.
+  sees a replaced manifest. A single-span `Range` gets a 206: the surface tiles are packs the app
+  reads one tile at a time, and it skips a pack whose server answers 200.
 - `main/certificates/ensureCa.ts`: a per-install EC CA (20 years, name `Skymap local CA <hex>`,
   `pathLenConstraint 0`), read once per launch so `/ca.crt` and the leaf always agree. It has no
   name constraints (`selfsigned` drops the extension), so a tablet that trusts it trusts it for

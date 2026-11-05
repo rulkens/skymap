@@ -19,6 +19,7 @@ beforeAll(async () => {
   for (const dir of ['dist', 'data', 'certs']) mkdirSync(join(root, dir));
   writeFileSync(join(root, 'dist/index.html'), '<html>sky</html>');
   writeFileSync(join(root, 'data/manifest.json'), '{}');
+  writeFileSync(join(root, 'data/z8.p0.pack'), '0123456789');
   writeFileSync(join(root, 'secret.txt'), 'secret');
   symlinkSync(join(root, 'secret.txt'), join(root, 'data/link.txt'));
   symlinkSync(join(root, 'data/manifest.json'), join(root, 'data/alias.json'));
@@ -36,14 +37,23 @@ afterAll(async () => {
   rmSync(root, { recursive: true, force: true });
 });
 
-function get(path: string): Promise<{ status: number; type: string; body: string }> {
+function get(
+  path: string,
+  headers: Record<string, string> = {},
+): Promise<{ status: number; type: string; body: string; range: string | undefined }> {
   const { port } = server.address() as AddressInfo;
   return new Promise((resolve, reject) => {
-    const req = request({ host: '127.0.0.1', servername: 'localhost', port, path, ca }, (res) => {
+    const options = { host: '127.0.0.1', servername: 'localhost', port, path, ca, headers };
+    const req = request(options, (res) => {
       let body = '';
       res.on('data', (chunk) => (body += chunk));
       res.on('end', () =>
-        resolve({ status: res.statusCode ?? 0, type: res.headers['content-type'] ?? '', body }),
+        resolve({
+          status: res.statusCode ?? 0,
+          type: res.headers['content-type'] ?? '',
+          body,
+          range: res.headers['content-range'],
+        }),
       );
     });
     req.on('error', reject);
@@ -69,6 +79,22 @@ describe('startAppServer', () => {
     ]) {
       expect((await get(path)).status, path).toBe(404);
     }
+  });
+
+  // The surface tiles ship as packs the app reads one tile at a time; a 200 makes it skip them.
+  it('answers a byte range with 206 and just those bytes', async () => {
+    const pack = '/data/z8.p0.pack';
+    expect(await get(pack, { Range: 'bytes=2-4' })).toMatchObject({
+      status: 206,
+      body: '234',
+      range: 'bytes 2-4/10',
+    });
+    expect(await get(pack, { Range: 'bytes=7-' })).toMatchObject({ status: 206, body: '789' });
+    expect(await get(pack, { Range: 'bytes=-2' })).toMatchObject({ status: 206, body: '89' });
+    expect(await get(pack, { Range: 'bytes=20-30' })).toMatchObject({
+      status: 416,
+      range: 'bytes */10',
+    });
   });
 
   it('follows a symlink only while it stays inside a root', async () => {
