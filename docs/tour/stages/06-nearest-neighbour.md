@@ -1,5 +1,5 @@
 ---
-stage:        2
+stage:        6
 id:           nearest-neighbour
 title:        Nearest neighbour
 narration:    >

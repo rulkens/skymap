@@ -1,5 +1,5 @@
 ---
-stage: 4
+stage: 8
 id: our-neighbourhood
 title: Our neighbourhood
 narration: >

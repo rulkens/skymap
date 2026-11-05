@@ -1,5 +1,5 @@
 ---
-stage: 8
+stage: 12
 id: cosmic-web
 title: The cosmic web
 narration: >
@@ -21,7 +21,7 @@ The showcase beat — and the first half of the web's central idea: **fullness
 and emptiness belong together.** This stage is the _fullness_ — the dense
 side. Galaxies resolve into a web; the **MCPM density volume** makes that web
 visible as continuous structure, and the bright clumps are where
-superclusters sit. Stage 10 (the voids) is the _emptiness_ half; the two read
+superclusters sit. Stage 14 (the voids) is the _emptiness_ half; the two read
 as one idea in two beats.
 
 ## Camera
@@ -49,8 +49,8 @@ puts a name on the clump, reinforcing "superclusters live in the dense knots."
 
 - Tune both ramps to complete as the camera settles, so the reveal peaks on
   the dwell.
-- These effects stay on through the cosmic-web section (flows 09, voids 10) —
+- These effects stay on through the cosmic-web section (flows 13, voids 14) —
   the flow + void beats need the MCPM field still lit so they read as the
   _same web_. The tour-end restore reverts them to the user's pre-tour state.
 - Consider framing so a node (supercluster clump) and an adjacent dark void
-  are both in shot — it pre-stages the flows (09) and the void (10).
+  are both in shot — it pre-stages the flows (13) and the void (14).

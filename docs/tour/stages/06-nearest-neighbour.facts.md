@@ -1,4 +1,4 @@
-# Facts — Stage 02: Nearest neighbour
+# Facts — Stage 06: Nearest neighbour
 
 > Candidate "did you know?" facts. Every fact has a real, retrieved source.
 > **On screen** = shown / inferable at this framing? **New feature** = what the

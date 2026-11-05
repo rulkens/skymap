@@ -1,5 +1,5 @@
 ---
-stage: 3
+stage: 7
 id: local-group
 title: The Local Group
 narration: >

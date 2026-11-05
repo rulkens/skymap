@@ -1,4 +1,4 @@
-# Facts — Stage 07: The cosmic web
+# Facts — Stage 12: The cosmic web
 
 > Candidate "did you know?" facts. Every fact has a real, retrieved source.
 > **On screen** = shown / inferable at this framing? **New feature** = what the
@@ -15,7 +15,7 @@
 - **Recency:** 2021
 - **Confidence:** high — arXiv abstract retrieved.
 - **On screen:** Inferable — filaments ARE shown; their *spin* is not animated. The subject is visible, the motion isn't.
-- **New feature:** animate galaxies along helical/rotational paths within filaments — a natural extension of the flow-field layer (stage 06). Makes "the largest spinning things" visible.
+- **New feature:** animate galaxies along helical/rotational paths within filaments — a natural extension of the flow-field layer (stage 13). Makes "the largest spinning things" visible.
 
 ## Candidate 2 — WELL-GROUNDED
 - **Fact:** In 2025, astronomers used fast radio bursts — millisecond flashes from distant galaxies — as cosmic flashlights to locate the universe's long-missing ordinary matter, finding ~76% of it hides as invisibly thin gas strung between galaxies in the cosmic web.
@@ -32,7 +32,7 @@
 - **Source:** Lopez, Clowes & Williger, *JCAP* 2024(7):055. https://en.wikipedia.org/wiki/Big_Ring
 - **Recency:** 2024
 - **Confidence:** high (claim) — figures confirmed; "challenges the cosmological principle" framing is contested.
-- **On screen:** Not shown — at 9.2 Gly it's far beyond this 90-Mpc framing and not in the catalog. Also appears in the stage-00 pool; use at most once.
+- **On screen:** Not shown — at 9.2 Gly it's far beyond this 90-Mpc framing and not in the catalog.
 - **New feature:** a featured distant large-scale-structure overlay (the Big Ring + Giant Arc as marker rings/arcs at their real distance). Notable build.
 
 ## Candidate 4

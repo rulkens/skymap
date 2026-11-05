@@ -1,5 +1,5 @@
 ---
-stage: 5
+stage: 9
 id: meeting-the-neighbours
 title: Meeting the neighbours
 narration: >

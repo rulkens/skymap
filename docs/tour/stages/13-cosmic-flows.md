@@ -1,5 +1,5 @@
 ---
-stage: 9
+stage: 13
 id: cosmic-flows
 title: Everything is flowing
 narration: >
@@ -18,7 +18,7 @@ status: draft
 ## Intent
 
 The dynamic heart of the cosmic-web section — and the **bridge** between its
-two halves. Stage 08 showed fullness, stage 10 will show emptiness; this beat
+two halves. Stage 12 showed fullness, stage 14 will show emptiness; this beat
 shows the _mechanism_ that links them: matter flows **out of the voids, along
 the filaments, into the dense clumps.** The CF4++ flow field makes that
 motion visible. It's also the only beat that adds _time_ to the tour — the
@@ -40,7 +40,7 @@ evocative anchor for "our whole neighbourhood is drifting somewhere."
 
 - **Flow field fades in** over the travel leg (animated streamlines /
   velocity field from the CF4++ layer). The MCPM volume + filaments from
-  stage 08 stay on underneath, so the flow reads as motion _through_ the
+  stage 12 stay on underneath, so the flow reads as motion _through_ the
   density field, not a separate overlay.
 
 ## Tweaks

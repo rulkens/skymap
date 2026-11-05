@@ -1,5 +1,5 @@
 ---
-stage: 12
+stage: 16
 id: the-edge
 title: The edge
 narration: >
@@ -34,4 +34,4 @@ pulling far enough out. Long, quiet dwell.
 
 - Final framing distance is set by where the horizon shell reads strongest —
   tune `distance_mpc` against the shell's fade band, not a fixed number.
-- This is the turnaround point; stage 13 returns inward from here.
+- This is the turnaround point; stage 17 returns inward from here.

@@ -1,4 +1,4 @@
-# Facts — Stage 06: The nearest cluster
+# Facts — Stage 10: The nearest cluster
 
 > Candidate "did you know?" facts. Every fact has a real, retrieved source.
 > **On screen** = shown / inferable at this framing? **New feature** = what the

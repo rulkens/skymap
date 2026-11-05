@@ -2,19 +2,20 @@
 
 **"The Long Way Out" — "From home to the edge, and back."**
 
-Full narrated powers-of-ten tour, ~2½ min. Overview + index into the
+Full narrated powers-of-ten tour, ~5 min. Overview + index into the
 per-stage files (`stages/NN-<slug>.md`). See `goal.md`, `cinematography.md`,
 `writing-style.md`, `graphic-design.md`.
 
 ## Arc
 
-**title → home → neighbourhood → structure → flows → emptiness → deep field
-→ edge → home again.** Familiar to vast, then a fast return to where we
+**park → Earth → Moon → Solar System → nearest stars → Milky Way →
+neighbourhood → structure → flows → emptiness → deep field → edge → home
+again.** Familiar to vast, then a fast return to where we
 started. Through-line out is an almost-monotonic logarithmic pull-back, broken
 by lateral motion (the groups flythrough, the cosmic-web section). Its
 centrepiece is the **cosmic-web triad — web → flows → voids**: fullness, the
 currents that feed it, and the emptiness they drain — one idea in three beats.
-The tour **ends where it began** (the Milky Way) so the viewer is oriented to
+The tour **ends where it began** (Home again lands on Earth) so the viewer is oriented to
 explore. Each hero object gets a small local orbit for dimensionality. Every
 stage shows on-screen text.
 
@@ -22,22 +23,26 @@ stage shows on-screen text.
 
 | #   | Stage                  | File                                                                  | Focus / dist             | Motion                    | Travel+dwell |
 | --- | ---------------------- | --------------------------------------------------------------------- | ------------------------ | ------------------------- | ------------ |
-| 00  | Opening title          | [`00-opening-title.md`](stages/00-opening-title.md)                   | Milky Way, ~0.05 Mpc     | held / drift              | 0+8 s        |
-| 01  | You are here           | [`01-you-are-here.md`](stages/01-you-are-here.md)                     | Milky Way, ~0.05 Mpc     | local orbit               | 3+7 s        |
-| 02  | Nearest neighbour      | [`02-nearest-neighbour.md`](stages/02-nearest-neighbour.md)           | M31, ~0.8 Mpc            | log dolly + lean          | 7+7 s        |
-| 03  | The Local Group        | [`03-local-group.md`](stages/03-local-group.md)                       | Local Group, ~2.5 Mpc    | pull-back + orbit         | 9+14 s       |
-| 04  | Our neighbourhood      | [`04-our-neighbourhood.md`](stages/04-our-neighbourhood.md)           | local groups, ~4.5 Mpc   | pull-back + drift         | 0+12 s       |
-| 05  | Meeting the neighbours | [`05-meeting-the-neighbours.md`](stages/05-meeting-the-neighbours.md) | famous sweep, ~4 Mpc     | lateral flythrough        | 0+32 s       |
-| 06  | The nearest cluster    | [`06-nearest-cluster.md`](stages/06-nearest-cluster.md)               | Virgo, ~16 Mpc           | log dolly + orbit         | 7+7 s        |
-| 07  | Laniakea               | [`07-laniakea.md`](stages/07-laniakea.md)                             | Laniakea SC, ~220 Mpc    | two-stage log dolly       | 17+12 s      |
-| 08  | The cosmic web         | [`08-cosmic-web.md`](stages/08-cosmic-web.md)                         | Coma SC, ~90 Mpc         | log dolly + orbit reveal  | 9+9 s        |
-| 09  | Cosmic flows           | [`09-cosmic-flows.md`](stages/09-cosmic-flows.md)                     | flow basin, ~80 Mpc      | lateral reframe + reveal  | 5+9 s        |
-| 10  | The emptiness          | [`10-emptiness.md`](stages/10-emptiness.md)                           | Boötes void, hold scale  | lateral drift             | 6+5 s        |
-| 11  | The deep field         | [`11-deep-field.md`](stages/11-deep-field.md)                         | quasar shell, ~2,000 Mpc | big log dolly             | 8+4 s        |
-| 12  | The edge               | [`12-the-edge.md`](stages/12-the-edge.md)                             | horizon, ~6,000+ Mpc     | log dolly to max          | 9+8 s        |
-| 13  | Home again             | [`13-home-again.md`](stages/13-home-again.md)                         | Milky Way, ~0.05 Mpc     | inward log dolly to start | 8+5 s        |
+| 00  | The Long Way Out | [`00-the-long-way-out.md`](stages/00-the-long-way-out.md) | Søndermarken, eye 1.7 m | held, tilt up, clock to night | 0+14 s |
+| 01  | You are here | [`01-you-are-here.md`](stages/01-you-are-here.md) | Earth, ~30,000 km | rise, sky → body → world | 10+7 s |
+| 02  | Earth and Moon | [`02-earth-and-moon.md`](stages/02-earth-and-moon.md) | Earth–Moon, ~800,000 km | log dolly + orbit | 8+7 s |
+| 03  | The Solar System | [`03-the-solar-system.md`](stages/03-the-solar-system.md) | Sun, ~80 au | log dolly + lean | 8+8 s |
+| 04  | Our stellar neighbourhood | [`04-stellar-neighbourhood.md`](stages/04-stellar-neighbourhood.md) | Sun, ~30 ly | log dolly + orbit | 8+7 s |
+| 05  | The Milky Way | [`05-the-milky-way.md`](stages/05-the-milky-way.md) | Milky Way, ~0.05 Mpc | log dolly + local orbit | 8+7 s |
+| 06  | Nearest neighbour      | [`06-nearest-neighbour.md`](stages/06-nearest-neighbour.md)           | M31, ~0.8 Mpc            | log dolly + lean          | 7+7 s        |
+| 07  | The Local Group        | [`07-local-group.md`](stages/07-local-group.md)                       | Local Group, ~2.5 Mpc    | pull-back + orbit         | 9+14 s       |
+| 08  | Our neighbourhood      | [`08-our-neighbourhood.md`](stages/08-our-neighbourhood.md)           | local groups, ~4.5 Mpc   | pull-back + drift         | 0+12 s       |
+| 09  | Meeting the neighbours | [`09-meeting-the-neighbours.md`](stages/09-meeting-the-neighbours.md) | famous sweep, ~4 Mpc     | lateral flythrough        | 0+32 s       |
+| 10  | The nearest cluster    | [`10-nearest-cluster.md`](stages/10-nearest-cluster.md)               | Virgo, ~16 Mpc           | log dolly + orbit         | 7+7 s        |
+| 11  | Laniakea               | [`11-laniakea.md`](stages/11-laniakea.md)                             | Laniakea SC, ~220 Mpc    | two-stage log dolly       | 17+12 s      |
+| 12  | The cosmic web         | [`12-cosmic-web.md`](stages/12-cosmic-web.md)                         | Coma SC, ~90 Mpc         | log dolly + orbit reveal  | 9+9 s        |
+| 13  | Cosmic flows           | [`13-cosmic-flows.md`](stages/13-cosmic-flows.md)                     | flow basin, ~80 Mpc      | lateral reframe + reveal  | 5+9 s        |
+| 14  | The emptiness          | [`14-emptiness.md`](stages/14-emptiness.md)                           | Boötes void, hold scale  | lateral drift             | 6+5 s        |
+| 15  | The deep field         | [`15-deep-field.md`](stages/15-deep-field.md)                         | quasar shell, ~2,000 Mpc | big log dolly             | 8+4 s        |
+| 16  | The edge               | [`16-the-edge.md`](stages/16-the-edge.md)                             | horizon, ~6,000+ Mpc     | log dolly to max          | 9+8 s        |
+| 17  | Home again             | [`17-home-again.md`](stages/17-home-again.md)                         | Milky Way, ~0.05 Mpc     | inward log dolly to start | 8+5 s        |
 
-**Total ≈ 2½ min.** Tune timings per file; this table is regenerated from them.
+**Total ≈ 5 min.** Tune timings per file; this table is regenerated from them.
 
 ## Stage front-matter schema
 
@@ -61,7 +66,7 @@ Body below front matter = director's notes (intent, exact move, on-screen,
 effect timing, tweaks). Front matter is the machine-ingest surface.
 
 `focus` union: `milkyWay` · `home` · `famous:<id>` · `structure:<id>` ·
-`point:<x>,<y>,<z>`.
+`point:<x>,<y>,<z>` · `body:<id>` · `sky:<spot>`.
 
 `requires` tags collated across stages = the primitive checklist
 (`cinematography.md`). Keep honest.

@@ -1,5 +1,5 @@
 ---
-stage: 10
+stage: 14
 id: emptiness
 title: The emptiness
 narration: >
@@ -17,9 +17,9 @@ status: draft
 
 ## Intent
 
-The _emptiness_ third of the cosmic-web triad (08 web → 09 flows → 10 voids).
+The _emptiness_ third of the cosmic-web triad (12 web → 13 flows → 14 voids).
 After the dense threads and the flows that feed them, the complement: the
-voids — where the matter drains _from_. The flows (09) are the bridge that
+voids — where the matter drains _from_. The flows (13) are the bridge that
 makes the **dichotomy** causal: fullness and emptiness are two ends of the
 same currents. Mid-sequence on purpose: the camera never _ends_ on a void.
 
@@ -31,15 +31,15 @@ the slide _within the web_, not by zooming into nothing.
 
 ## On screen
 
-`The emptiness` + narration; the narration explicitly calls back to stage 08
+`The emptiness` + narration; the narration explicitly calls back to stage 12
 ("the empty side of that web"). The Boötes Void name auto-labels — and
 reassures the viewer the blank region is the subject, not a glitch.
 
 ## Effects
 
-- The MCPM volume + filaments (08) **stay on** — the void must read as a
+- The MCPM volume + filaments (12) **stay on** — the void must read as a
   _dark region of the same density field_, not an unlit gap. The flow field
-  (09) can ease back here so the void reads clean, or stay faint to show the
+  (13) can ease back here so the void reads clean, or stay faint to show the
   current draining outward. Either way the pairing stays legible in one web.
 
 ## Tweaks

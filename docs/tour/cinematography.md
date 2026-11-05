@@ -109,6 +109,9 @@ Union of every stage's `requires`. **This is the input to the engine spec.**
 | `look-offset` | (optional) offset look direction from `focus` for look-ahead |
 | `auto-reveal` | none — relies on shipped auto-render (horizon shell, "You are here") |
 | `flow-field` | none new — toggles the shipped CF4++ flow layer as an animated effect |
+| `sky-frame` | `tween` with `frame: { sky }`: yaw/pitch as azimuth/altitude at a ground spot |
+| `frame-handover` | one clip split into legs per frame tag (`{ sky }` → `{ body }` → world) |
+| `clock-to` | `scene(clockTo({ simDays, overSec }))`: snap or run the sim clock from a beat |
 
 **Driver consequence:** `log-dolly` + `pass-through-spline` + `dwell-drift`
 mean the tour subsystem must **own the camera per-frame** — own a global tour

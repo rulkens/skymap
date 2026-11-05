@@ -1,4 +1,4 @@
-# Facts — Stage 01: You are here
+# Facts — Stage 05: The Milky Way
 
 > Candidate "did you know?" facts. Every fact has a real, retrieved source.
 > **On screen** = is it shown, or inferable from what's shown, at this stage's
@@ -8,8 +8,8 @@
 > **This stage shows:** the whole Milky Way as the procedural impostor disk +
 > the "You are here" marker, framed at ~0.05 Mpc. We see the *galaxy as a
 > whole*, not anything inside it — so facts about sub-galactic structure (the
-> Local Bubble, the Radcliffe Wave, etc.) were dropped: they'd need a
-> solar-neighbourhood scale tier we're not building.
+> Local Bubble, the Radcliffe Wave, etc.) were dropped here; if they return,
+> they belong to the stellar-neighbourhood stage (04).
 
 ## Candidate 1 — RELEVANT AT THIS FRAMING
 - **Fact:** The Milky Way's disk isn't flat — its outer edge is bent like a warped vinyl record, and that warp slowly wobbles around the galaxy like a spinning top, completing one turn every 600–700 million years. The wobble is so fast that a past collision with a smaller galaxy most likely drives it.
