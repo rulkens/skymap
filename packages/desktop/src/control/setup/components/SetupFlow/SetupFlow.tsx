@@ -44,7 +44,8 @@ export type SetupFlowProps = {
   readonly onStep: (step: SetupStep) => void;
   readonly onSave: (next: InstallSetup) => Promise<void>;
   readonly onShowTestGrid: (on: boolean) => void;
-  readonly onRetry: () => void;
+  readonly onUpdateNow: () => void;
+  readonly onPauseSync: () => void;
   readonly onHelp: () => void;
   /** Leaves setup for the controls; `hide` also hides the window so a single screen shows the sky. */
   readonly onClose: (hide: boolean) => void;
@@ -53,7 +54,7 @@ export type SetupFlowProps = {
 function SetupFlow(props: SetupFlowProps): ReactNode {
   const { step, setup, sync, room, displays, placement, networks, saveState } = props;
   const { skyRunning } = sync;
-  const { onStep, onSave, onShowTestGrid, onRetry, onHelp, onClose } = props;
+  const { onStep, onSave, onShowTestGrid, onUpdateNow, onPauseSync, onHelp, onClose } = props;
   const titleId = useId();
   const titleRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => titleRef.current?.focus(), [step]);
@@ -136,7 +137,7 @@ function SetupFlow(props: SetupFlowProps): ReactNode {
           <SaveStatus state={saveState} />
         </div>
       </section>
-      <DownloadStrip sync={sync} onRetry={onRetry} />
+      <DownloadStrip sync={sync} onUpdateNow={onUpdateNow} onPause={onPauseSync} />
     </div>
   );
 }

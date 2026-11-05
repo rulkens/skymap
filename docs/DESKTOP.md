@@ -100,6 +100,10 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   changed, or gone from disk, group by group, 8 files at a time (`downloadVerified` checks the
   hash and writes a `.part` file first). `synced.json` is written after every group, also on
   failure, so the next run resumes. A key that would leave the mirror is refused.
+- **Pause.** The button beside the progress bar aborts the run's signal (`pauseSync`): in-flight
+  files are dropped with their `.part`, and the outcome is `paused`. Resume is Update now, whose
+  bar counts on from the paused bytes (`createSyncThenLoad` carries them); a launch or daily update
+  resumes too.
 - **Retries.** `downloadWithRetries` tries a file `DOWNLOAD_RETRIES` more times after a network or
   server error or a refused rename (Windows antivirus), and a download that receives nothing for
   `DOWNLOAD_IDLE_MS` is aborted. A 404 or a sha mismatch (`UpstreamChangedError`) fails at once:

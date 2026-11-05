@@ -23,6 +23,7 @@ const bridge: ControlBridge = {
   onHelp: subscribe(C.help),
   saveSetup: (setup) => ipcRenderer.invoke(C.saveSetup, setup),
   updateNow: command(C.updateNow),
+  pauseSync: command(C.pauseSync),
   restartSky: command(C.restartSky),
   showTestGrid: command(C.showTestGrid),
   rotateCode: () => ipcRenderer.invoke(C.rotateCode),

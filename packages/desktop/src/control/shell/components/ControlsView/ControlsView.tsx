@@ -15,6 +15,7 @@ import styles from './ControlsView.module.css';
 export type ControlsViewProps = {
   readonly session: ControlSession;
   readonly onUpdateNow: () => void;
+  readonly onPauseSync: () => void;
   readonly onRestartSky: () => void;
   readonly onShowTestGrid: (on: boolean) => void;
   readonly onRotate: () => Promise<void>;
@@ -24,11 +25,17 @@ export type ControlsViewProps = {
 };
 
 function ControlsView(props: ControlsViewProps): ReactNode {
-  const { session, onUpdateNow, onRestartSky, onShowTestGrid, onRotate, onQuit } = props;
+  const { session, onUpdateNow, onPauseSync, onRestartSky, onShowTestGrid, onRotate, onQuit } =
+    props;
   const { setup, save } = session;
   return (
     <main className={styles.root}>
-      <SyncPanel sync={session} onUpdateNow={onUpdateNow} onRestartSky={onRestartSky} />
+      <SyncPanel
+        sync={session}
+        onUpdateNow={onUpdateNow}
+        onPause={onPauseSync}
+        onRestartSky={onRestartSky}
+      />
       <div className={styles.setup}>
         <SetupPanel
           setup={setup}

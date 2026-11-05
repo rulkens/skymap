@@ -9,13 +9,14 @@ import { UpstreamChangedError } from '../UpstreamChangedError';
 /**
  * Streams `url` to `dest.part`, checks the sha256 of the decoded bytes (fetch inflates wire
  * gzip, and the inventory hashes raw bytes), then renames into place. Throws and leaves no
- * renamed file on an HTTP error, a mismatch, or `idleMs` without a byte.
+ * renamed file on an HTTP error, a mismatch, `idleMs` without a byte, or an aborted `signal`.
  */
 export async function downloadVerified(
   url: string,
   dest: string,
   sha256: string,
   idleMs: number,
+  signal: AbortSignal,
   onBytes: (n: number) => void,
 ): Promise<void> {
   const abort = new AbortController();
@@ -27,7 +28,7 @@ export async function downloadVerified(
   const part = `${dest}.part`;
   try {
     rearm();
-    const res = await fetch(url, { signal: abort.signal });
+    const res = await fetch(url, { signal: AbortSignal.any([signal, abort.signal]) });
     if (res.status === 404) throw new UpstreamChangedError(`${url}: HTTP 404`);
     if (!res.ok || res.body === null) throw new Error(`${url}: HTTP ${res.status}`);
     await mkdir(dirname(dest), { recursive: true });
@@ -44,7 +45,7 @@ export async function downloadVerified(
       Readable.fromWeb(res.body as import('node:stream/web').ReadableStream),
       tap,
       createWriteStream(part),
-      { signal: abort.signal },
+      { signal: AbortSignal.any([signal, abort.signal]) },
     );
     if (hash.digest('hex') !== sha256) throw new UpstreamChangedError(`${url}: sha256 mismatch`);
     await rename(part, dest);

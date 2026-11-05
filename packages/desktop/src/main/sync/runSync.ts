@@ -18,15 +18,17 @@ import { planSync } from './planSync';
 
 /**
  * Downloads what the inventory lists and the mirror lacks, group by group. Never deletes:
- * inventory.json is written last, so a failed run leaves the previous complete set intact and
- * the next run resumes from synced.json.
+ * inventory.json is written last, so a failed or paused run leaves the previous complete set intact
+ * and the next run resumes from synced.json.
  */
 export async function runSync({
   baseUrl,
   dataRoot,
+  signal,
   onProgress,
 }: SyncRequest): Promise<SyncOutcome> {
-  const fetched = await fetchInventory(baseUrl);
+  const fetched = await fetchInventory(baseUrl, signal);
+  if (signal.aborted) return { kind: 'paused' };
   if ('kind' in fetched) return fetched;
 
   await mkdir(dataRoot, { recursive: true });
@@ -58,10 +60,16 @@ export async function runSync({
       try {
         await runPool(download, CONCURRENT_DOWNLOADS, async (file) => {
           const url = `${baseUrl}/${file.key.split('/').map(encodeURIComponent).join('/')}`;
-          await downloadWithRetries(url, keyToLocalPath(dataRoot, file.key), file.sha256, (n) => {
-            doneBytes += n;
-            report(false);
-          });
+          await downloadWithRetries(
+            url,
+            keyToLocalPath(dataRoot, file.key),
+            file.sha256,
+            signal,
+            (n) => {
+              doneBytes += n;
+              report(false);
+            },
+          );
           synced[file.key] = file.sha256;
         });
       } finally {
@@ -69,7 +77,7 @@ export async function runSync({
       }
     }
   } catch {
-    return { kind: 'failed' };
+    return { kind: signal.aborted ? 'paused' : 'failed' };
   } finally {
     report(true);
   }

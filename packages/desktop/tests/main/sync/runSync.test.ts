@@ -4,7 +4,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SyncProgress } from '../../../src/@types/SyncProgress';
 import { runSync } from '../../../src/main/sync/runSync';
 
@@ -21,11 +21,14 @@ let inventoryBody: object;
 /** Answers `path` with `status`, `times` times (Infinity: always). */
 let failing: { path: string; status: number; times: number } | null;
 let lyingSha: string | null;
+/** Sends the first bytes of this path, then holds the response open. */
+let stalling: string | null;
 let requests: string[];
 let progress: SyncProgress[];
 
 const entry = (key: string, bytes: Buffer) => ({ key, size: bytes.length, sha256: sha(bytes) });
-const run = () => runSync({ baseUrl, dataRoot: root, onProgress: (p) => void progress.push(p) });
+const run = (signal = new AbortController().signal) =>
+  runSync({ baseUrl, dataRoot: root, signal, onProgress: (p) => void progress.push(p) });
 
 beforeEach(async () => {
   root = mkdtempSync(join(tmpdir(), 'run-sync-'));
@@ -38,6 +41,7 @@ beforeEach(async () => {
   };
   failing = null;
   lyingSha = null;
+  stalling = null;
   requests = [];
   progress = [];
   server = createServer((req, res) => {
@@ -48,6 +52,8 @@ beforeEach(async () => {
       res.end();
     } else if (path === '/data/offline-inventory.json') {
       res.end(JSON.stringify(inventoryBody));
+    } else if (path === stalling) {
+      res.write(objects[path]!.subarray(0, 2));
     } else if (objects[path]) {
       res.end(path === lyingSha ? Buffer.from('tampered') : objects[path]);
     } else {
@@ -132,6 +138,33 @@ describe('runSync', () => {
     expect(progress[0]).toEqual({ doneBytes: 0, totalBytes: big.length });
     expect(progress.at(-1)).toEqual({ doneBytes: big.length, totalBytes: big.length });
     expect(progress.length).toBeLessThan(10);
+  });
+
+  it('a pause stops the run, keeps the files that finished, and the next run resumes', async () => {
+    stalling = '/data/g2/c.bin';
+    const pause = new AbortController();
+    const paused = run(pause.signal);
+    await vi.waitFor(() => {
+      expect(requests).toContain('/data/g2/c.bin');
+      expect(existsSync(join(root, 'g2/b.bin'))).toBe(true);
+    });
+    pause.abort();
+    expect(await paused).toEqual({ kind: 'paused' });
+    expect(progress.at(-1)).toEqual({ doneBytes: 10, totalBytes: 17 });
+    expect(existsSync(join(root, 'g2/c.bin.part'))).toBe(false);
+    expect(existsSync(join(root, 'inventory.json'))).toBe(false);
+
+    stalling = null;
+    requests = [];
+    expect(await run()).toEqual({ kind: 'synced' });
+    expect(requests).toEqual(['/data/offline-inventory.json', '/data/g2/c.bin']);
+  });
+
+  it('a run paused before it starts downloads nothing', async () => {
+    const pause = new AbortController();
+    pause.abort();
+    expect(await run(pause.signal)).toEqual({ kind: 'paused' });
+    expect(requests.filter((r) => r.endsWith('.bin'))).toEqual([]);
   });
 
   it('not enough free disk returns the space needed before downloading', async () => {

@@ -1,26 +1,34 @@
 import type { SyncOutcome } from '../sync/@types/SyncOutcome';
+import type { SyncThenLoad } from './@types/SyncThenLoad';
 import type { SyncThenLoadDeps } from './@types/SyncThenLoadDeps';
 import { syncOutcomeAction } from './utils/syncOutcomeAction';
 
 /**
  * A sync, then what spec §5's table says follows it; never rejects, and always ends the syncing
  * status. `restart` is a launch or daily sync, which ends in a sky load; Update now waits for
- * Restart sky. A second call while one runs does nothing.
+ * Restart sky. A second call while one runs does nothing. A sync after a pause counts its bytes on
+ * from the paused one's, so the bar resumes where it stopped.
  */
-export function createSyncThenLoad(deps: SyncThenLoadDeps): (restart: boolean) => Promise<void> {
-  let syncing = false;
-  return async (restart) => {
-    if (syncing) return;
-    syncing = true;
-    const skyStale = deps.state().status.kind === 'ready';
-    deps.update({ status: { kind: 'syncing' }, progress: null });
+export function createSyncThenLoad(deps: SyncThenLoadDeps): SyncThenLoad {
+  let running: AbortController | null = null;
+  const syncThenLoad = async (restart: boolean): Promise<void> => {
+    if (running !== null) return;
+    const controller = new AbortController();
+    running = controller;
+    const before = deps.state();
+    const skyStale = before.status.kind === 'ready';
+    const carried = before.status.kind === 'paused' ? before.progress : null;
+    const carry = carried?.doneBytes ?? 0;
+    deps.update({ status: { kind: 'syncing' }, progress: carried });
     const outcome = await deps
-      .sync()
+      .sync(controller.signal, ({ doneBytes, totalBytes }) =>
+        deps.update({ progress: { doneBytes: carry + doneBytes, totalBytes: carry + totalBytes } }),
+      )
       .catch((error: unknown): SyncOutcome => {
         console.error('sync:', error);
         return { kind: 'failed' };
       })
-      .finally(() => (syncing = false));
+      .finally(() => (running = null));
     const done = outcome.kind === 'synced' || outcome.kind === 'unchanged';
     // The walk can throw (EPERM on a folder antivirus holds); a set it cannot read is not complete.
     const hasData =
@@ -45,4 +53,5 @@ export function createSyncThenLoad(deps: SyncThenLoadDeps): (restart: boolean) =
     if (action.then === 'showControl') deps.showControl();
     if (action.then === 'loadSky') await deps.loadSky();
   };
+  return { syncThenLoad, pause: () => running?.abort() };
 }

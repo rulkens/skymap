@@ -5,6 +5,7 @@ export const CONTROL_CHANNELS = {
   getState: 'control:getState',
   saveSetup: 'control:saveSetup',
   updateNow: 'control:updateNow',
+  pauseSync: 'control:pauseSync',
   restartSky: 'control:restartSky',
   showTestGrid: 'control:showTestGrid',
   rotateCode: 'control:rotateCode',

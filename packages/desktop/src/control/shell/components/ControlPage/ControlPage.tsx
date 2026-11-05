@@ -107,7 +107,8 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
             onStep={setStep}
             onSave={session.save}
             onShowTestGrid={bridge.showTestGrid}
-            onRetry={bridge.updateNow}
+            onUpdateNow={bridge.updateNow}
+            onPauseSync={bridge.pauseSync}
             onHelp={openHelp}
             onClose={closeSetup}
           />
@@ -116,6 +117,7 @@ function ControlPage({ bridge }: ControlPageProps): ReactNode {
           <ControlsView
             session={session}
             onUpdateNow={bridge.updateNow}
+            onPauseSync={bridge.pauseSync}
             onRestartSky={bridge.restartSky}
             onShowTestGrid={bridge.showTestGrid}
             onRotate={bridge.rotateCode}

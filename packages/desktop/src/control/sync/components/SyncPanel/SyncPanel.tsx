@@ -10,10 +10,11 @@ import styles from './SyncPanel.module.css';
 export type SyncPanelProps = {
   readonly sync: SyncState;
   readonly onUpdateNow: () => void;
+  readonly onPause: () => void;
   readonly onRestartSky: () => void;
 };
 
-function SyncPanel({ sync, onUpdateNow, onRestartSky }: SyncPanelProps): ReactNode {
+function SyncPanel({ sync, onUpdateNow, onPause, onRestartSky }: SyncPanelProps): ReactNode {
   const titleId = useId();
   const { trying, retry } = useRetry(sync.lastAttempt, onUpdateNow);
   const problem = describeStatus(sync).tone === 'problem';
@@ -28,7 +29,7 @@ function SyncPanel({ sync, onUpdateNow, onRestartSky }: SyncPanelProps): ReactNo
       <h2 id={titleId} className={chrome.heading}>
         Data
       </h2>
-      <DownloadStatus sync={sync} />
+      <DownloadStatus sync={sync} onPause={onPause} onResume={onUpdateNow} />
       <div className={chrome.row}>
         <button
           type="button"

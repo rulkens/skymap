@@ -13,14 +13,15 @@ import styles from './DownloadStrip.module.css';
 
 export type DownloadStripProps = {
   readonly sync: SyncState;
-  readonly onRetry: () => void;
+  readonly onUpdateNow: () => void;
+  readonly onPause: () => void;
 };
 
-function DownloadStrip({ sync, onRetry }: DownloadStripProps): ReactNode {
-  const { trying, retry } = useRetry(sync.lastAttempt, onRetry);
+function DownloadStrip({ sync, onUpdateNow, onPause }: DownloadStripProps): ReactNode {
+  const { trying, retry } = useRetry(sync.lastAttempt, onUpdateNow);
   return (
     <footer className={styles.root} aria-label="Download">
-      <DownloadStatus sync={sync} />
+      <DownloadStatus sync={sync} onPause={onPause} onResume={onUpdateNow} />
       {describeStatus(sync).tone === 'problem' && (
         <button type="button" className={chrome.button} disabled={trying} onClick={retry}>
           {trying ? 'Trying again…' : 'Retry'}

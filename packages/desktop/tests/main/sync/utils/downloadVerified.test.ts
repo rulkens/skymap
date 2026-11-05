@@ -29,7 +29,9 @@ it('gives up on a download that stops sending, and leaves no .part file', async 
   const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/x.bin`;
   const dest = join(root, 'x.bin');
   const started = Date.now();
-  await expect(downloadVerified(url, dest, 'sha', 200, () => {})).rejects.toThrow();
+  await expect(
+    downloadVerified(url, dest, 'sha', 200, new AbortController().signal, () => {}),
+  ).rejects.toThrow();
   expect(Date.now() - started).toBeLessThan(5000);
   expect(existsSync(`${dest}.part`)).toBe(false);
 });

@@ -31,7 +31,7 @@ describe('createSyncThenLoad', () => {
     const { state, deps: d } = deps({
       hasCompleteSet: vi.fn(async () => Promise.reject(new Error('EPERM'))),
     });
-    await expect(createSyncThenLoad(d)(true)).resolves.toBeUndefined();
+    await expect(createSyncThenLoad(d).syncThenLoad(true)).resolves.toBeUndefined();
     expect(state.status.kind).toBe('offline');
     expect(state.hasData).toBe(false);
     expect(d.showControl).toHaveBeenCalled();
@@ -40,8 +40,35 @@ describe('createSyncThenLoad', () => {
   it('records when the attempt ended, whether or not it worked', async () => {
     const { state, deps: d } = deps();
     const before = Date.now();
-    await createSyncThenLoad(d)(true);
+    await createSyncThenLoad(d).syncThenLoad(true);
     expect(state.lastAttempt).toBeGreaterThanOrEqual(before);
+  });
+
+  // Without the carry, a resumed download's bar started again from zero against what was left.
+  it('pause stops the sync, and the resumed one counts on from where it paused', async () => {
+    const sync = vi.fn<SyncThenLoadDeps['sync']>(async (signal, onProgress) => {
+      if (sync.mock.calls.length === 1) {
+        onProgress({ doneBytes: 40, totalBytes: 100 });
+        await new Promise((r) => signal.addEventListener('abort', r));
+        return { kind: 'paused' };
+      }
+      await new Promise((r) => setTimeout(r));
+      onProgress({ doneBytes: 0, totalBytes: 60 });
+      onProgress({ doneBytes: 60, totalBytes: 60 });
+      return { kind: 'synced' };
+    });
+    const { state, deps: d } = deps({ sync });
+    const { syncThenLoad, pause } = createSyncThenLoad(d);
+    const first = syncThenLoad(true);
+    await vi.waitFor(() => expect(state.progress).toEqual({ doneBytes: 40, totalBytes: 100 }));
+    pause();
+    await first;
+    expect(state.status.kind).toBe('paused');
+
+    const resumed = syncThenLoad(false);
+    expect(state.progress).toEqual({ doneBytes: 40, totalBytes: 100 });
+    await resumed;
+    expect(state.progress).toEqual({ doneBytes: 100, totalBytes: 100 });
   });
 
   it('runs one sync at a time', async () => {
@@ -50,7 +77,7 @@ describe('createSyncThenLoad', () => {
       () => new Promise<{ kind: 'unchanged' }>((r) => (finish = () => r({ kind: 'unchanged' }))),
     );
     const { deps: d } = deps({ sync });
-    const syncThenLoad = createSyncThenLoad(d);
+    const { syncThenLoad } = createSyncThenLoad(d);
     const first = syncThenLoad(true);
     await syncThenLoad(true);
     finish();

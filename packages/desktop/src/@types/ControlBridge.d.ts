@@ -12,6 +12,8 @@ export type ControlBridge = {
   /** Resolves once main has stored the setup and applied it (a moved sky included). */
   saveSetup: (setup: InstallSetup) => Promise<void>;
   updateNow: () => void;
+  /** Stops the running download, keeping the files that finished; updateNow resumes it. */
+  pauseSync: () => void;
   restartSky: () => void;
   showTestGrid: (on: boolean) => void;
   /** Resolves once the new code is stored and in the state. */

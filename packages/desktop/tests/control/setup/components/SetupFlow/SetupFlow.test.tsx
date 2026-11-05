@@ -121,6 +121,17 @@ describe('SetupFlow', () => {
     expect(bridge.hide).toHaveBeenCalledOnce();
   });
 
+  it('the strip pauses a running download and resumes a paused one', async () => {
+    const { bridge, set } = await firstRun();
+    set({ status: { kind: 'syncing' }, progress: { doneBytes: 2e9, totalBytes: 6e9 } });
+    press('Pause download');
+    expect(bridge.pauseSync).toHaveBeenCalledOnce();
+    set({ status: { kind: 'paused' } });
+    expect(screen.getByText('Download paused')).toBeVisible();
+    press('Resume download');
+    expect(bridge.updateNow).toHaveBeenCalledOnce();
+  });
+
   it('offline, the strip says why and Retry asks main to download again', async () => {
     const { bridge, set } = await firstRun();
     set({ status: { kind: 'offline' } });

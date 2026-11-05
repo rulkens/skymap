@@ -5,6 +5,7 @@
 export type ControlStatus =
   | { kind: 'idle' }
   | { kind: 'syncing' }
+  | { kind: 'paused' }
   | { kind: 'complete' }
   | { kind: 'ready' }
   | { kind: 'offline' }

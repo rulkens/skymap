@@ -24,6 +24,12 @@ describe('describeStatus', () => {
     }
   });
 
+  it('a paused download is never a problem, so it offers no Retry', () => {
+    const status = { kind: 'paused' } as const;
+    expect(describeStatus(at({ status }))).toEqual({ text: 'Download paused', tone: 'plain' });
+    expect(describeStatus(at({ status, hasData: true })).text).toMatch(/saved data/);
+  });
+
   it('a problem ends with when it last tried, once an attempt has ended', () => {
     const status = { kind: 'failed' } as const;
     expect(describeStatus(at({ status })).text).not.toMatch(/Last tried/);

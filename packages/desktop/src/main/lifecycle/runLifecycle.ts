@@ -164,15 +164,9 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   });
   const loadSky = (): Promise<void> => work(loadOnce);
 
-  const syncThenLoad = createSyncThenLoad({
-    sync: () =>
-      work(() =>
-        runSync({
-          baseUrl: DESKTOP_DATA_ORIGIN,
-          dataRoot,
-          onProgress: (progress) => update({ progress }),
-        }),
-      ),
+  const { syncThenLoad, pause: pauseSync } = createSyncThenLoad({
+    sync: (signal, onProgress) =>
+      work(() => runSync({ baseUrl: DESKTOP_DATA_ORIGIN, dataRoot, signal, onProgress })),
     hasCompleteSet: () => hasCompleteLocalSet(dataRoot),
     state: () => state,
     update,
@@ -213,6 +207,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
       update({ setup: setup.current(), firstRun: false });
     },
     updateNow: () => dev || void syncThenLoad(false),
+    pauseSync,
     restartSky,
     showTestGrid: (shown) => setTestGrid(shown === true),
     // Queued: a second click must rotate from the first one's new code, not the old one.

@@ -50,6 +50,7 @@ export function fakeBridge(over: Partial<ControlState> = {}) {
     // Main stores the setup, then pushes the state that carries it.
     saveSetup: vi.fn(async (setup: ControlState['setup']) => push({ setup })),
     updateNow: vi.fn(),
+    pauseSync: vi.fn(),
     restartSky: vi.fn(),
     showTestGrid: vi.fn(),
     rotateCode: vi.fn(async () => {}),

@@ -26,6 +26,10 @@ export const STATUS_VIEW: {
     text: progress === null ? 'Starting the download' : 'Downloading data',
     tone: 'plain',
   }),
+  paused: (_, { hasData }) => ({
+    text: hasData ? 'Update paused. The sky uses the saved data.' : 'Download paused',
+    tone: 'plain',
+  }),
   complete: (_, { skyRunning }) => ({
     text: skyRunning ? 'Data up to date' : 'Download complete. Starting the sky.',
     tone: 'done',

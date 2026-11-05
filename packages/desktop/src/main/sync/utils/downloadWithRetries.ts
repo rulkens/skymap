@@ -7,26 +7,29 @@ import { downloadVerified } from './downloadVerified';
 
 /**
  * downloadVerified, tried again after a network or server error or a refused rename (Windows
- * antivirus holds new files for a moment). A failed try takes its bytes back through `onBytes`, so progress never
- * counts a file twice.
+ * antivirus holds new files for a moment), but never after `signal` aborts. A failed try takes its
+ * bytes back through `onBytes`, so progress never counts a file twice.
  */
 export async function downloadWithRetries(
   url: string,
   dest: string,
   sha256: string,
+  signal: AbortSignal,
   onBytes: (n: number) => void,
 ): Promise<void> {
   for (let attempt = 1; ; attempt++) {
     let bytes = 0;
     try {
-      return await downloadVerified(url, dest, sha256, DOWNLOAD_IDLE_MS, (n) => {
+      return await downloadVerified(url, dest, sha256, DOWNLOAD_IDLE_MS, signal, (n) => {
         bytes += n;
         onBytes(n);
       });
     } catch (error) {
       onBytes(-bytes);
-      if (error instanceof UpstreamChangedError || attempt > DOWNLOAD_RETRIES) throw error;
-      await delay(DOWNLOAD_RETRY_BACKOFF_MS * attempt);
+      if (signal.aborted || error instanceof UpstreamChangedError || attempt > DOWNLOAD_RETRIES) {
+        throw error;
+      }
+      await delay(DOWNLOAD_RETRY_BACKOFF_MS * attempt, undefined, { signal });
     }
   }
 }

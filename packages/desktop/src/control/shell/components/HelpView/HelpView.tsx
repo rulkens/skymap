@@ -90,7 +90,8 @@ function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactN
         <p className={chrome.text}>
           Skymap fetches new data at every launch, every day at a set time, or only with Update now,
           as set under Setup. An update you start with Update now waits for Restart sky; the others
-          load by themselves.
+          load by themselves. The button beside the progress bar pauses a download and resumes it; a
+          paused download also resumes at the next launch or daily update.
         </p>
       </section>
 

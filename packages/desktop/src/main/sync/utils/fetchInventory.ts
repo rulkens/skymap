@@ -5,11 +5,14 @@ import { OFFLINE_INVENTORY_KEY } from '../../../../../../tools/deploy/data/offli
 import { INVENTORY_TIMEOUT_MS } from '../data/inventoryTimeoutMs';
 
 /** The published inventory, or why there is none: unreachable is offline, an error answer failed. */
-export async function fetchInventory(baseUrl: string): Promise<FetchedInventory | SyncOutcome> {
+export async function fetchInventory(
+  baseUrl: string,
+  signal: AbortSignal,
+): Promise<FetchedInventory | SyncOutcome> {
   let text: string;
   try {
     const res = await fetch(`${baseUrl}/${OFFLINE_INVENTORY_KEY}`, {
-      signal: AbortSignal.timeout(INVENTORY_TIMEOUT_MS),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(INVENTORY_TIMEOUT_MS)]),
     });
     if (!res.ok) return { kind: 'failed' };
     text = await res.text();
