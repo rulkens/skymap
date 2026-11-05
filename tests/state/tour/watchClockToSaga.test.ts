@@ -1,20 +1,20 @@
 /**
  * watchClockToSaga — a tour beat's `clockTo` cue, run through the app store so the root-saga
  * fork is covered too. Fake timers fake `performance.now`, which both the saga and the
- * derivation read.
+ * derivation read; the end-pause sits behind a saga `delay`, hence the async advances.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { createAppStore } from '../../../src/store/createAppStore';
 import { clockTo } from '../../../src/state/tour/clockTo';
-import { pause } from '../../../src/state/time/timeSlice';
+import { pause, setSimDays } from '../../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 
 const JD = 2_460_000;
 
 function pausedStore() {
   const { store } = createAppStore();
-  store.dispatch(clockTo({ simDays: JD, overSec: 0 }));
+  store.dispatch(setSimDays({ simDays: JD, nowMs: performance.now() }));
   store.dispatch(pause({ nowMs: performance.now() }));
   const at = () => deriveSimDays(store.getState().time, performance.now());
   return { store, at };
@@ -38,18 +38,18 @@ describe('watchClockToSaga', () => {
     expect(store.getState().time.paused).toBe(true);
   });
 
-  it('a timed clockTo runs from the live instant to simDays over overSec, then holds', () => {
+  it('a timed clockTo runs from the live instant to simDays over overSec, then pauses there', async () => {
     const { store, at } = pausedStore();
     store.dispatch(clockTo({ simDays: JD + 0.5, overSec: 10 }));
 
-    vi.advanceTimersByTime(5_000);
+    await vi.advanceTimersByTimeAsync(5_000);
     expect(at()).toBeGreaterThan(JD);
     expect(at()).toBeLessThan(JD + 0.5);
-    vi.advanceTimersByTime(5_000);
+    await vi.advanceTimersByTimeAsync(5_000);
     expect(at()).toBe(JD + 0.5);
-    vi.advanceTimersByTime(10_000);
+    expect(store.getState().time.paused).toBe(true);
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(at()).toBe(JD + 0.5);
-    expect(store.getState().time.profile).not.toBeNull();
   });
 
   it('a snap during a running profile replaces it', () => {

@@ -655,5 +655,9 @@ describe('tourBodySaga', () => {
     expect(time.paused).toBe(false);
     const now = unixMsToJulianDays(Date.now());
     expect(Math.abs(deriveSimDays(time, performance.now()) - now)).toBeLessThanOrEqual(ONE_MS_DAYS);
+
+    // The cut-short run's end-pause must not freeze the restored clock.
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(store.getState().time.paused).toBe(false);
   });
 });
