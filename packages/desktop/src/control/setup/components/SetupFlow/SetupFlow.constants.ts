@@ -11,7 +11,7 @@ export const STEP_TITLES: Partial<Record<SetupStep, string>> = {
 
 export const STEP_LEADS: Partial<Record<SetupStep, string>> = {
   welcome: APP_SUMMARY,
-  mode: 'Pick how the sky is drawn. You can change it later in the controls.',
+  mode: 'Choose how the sky is drawn. You can change it later in the controls.',
   display: 'Pick the screen the sky fills. It shows a test grid until you move on.',
   tablet: 'A phone or tablet on the same network can drive the sky.',
   daily: 'How Skymap starts and when it fetches new data.',
