@@ -7,7 +7,6 @@
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
-import { Source } from '../../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
 import { captionComposeContextOf } from '../../../../utils/labels/captionComposeContextOf';
@@ -16,6 +15,7 @@ import { composeForegroundCaption } from '../../../../utils/labels/composeForegr
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { BLACK_HOLES } from '../data/blackHoles';
+import { BLACK_HOLE_CAPTION_PRIORITY } from '../data/blackHoleCaptionPriority';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../sources/blackHoleSourceRows';
 import { blackHoleAnchorId } from './blackHoleAnchorId';
 
@@ -28,7 +28,9 @@ const BLACK_HOLE_CAPTION_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
 
 const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry);
 
-export function produceBlackHoleCaptions(): LayerScreenLabel<'blackHole'>['produceLabels'] {
+export function produceBlackHoleCaptions(
+  pickCode: number,
+): LayerScreenLabel<'blackHole'>['produceLabels'] {
   return (state, ctx, fade) => {
     const composeCtx = captionComposeContextOf(state, ctx);
     const states = sceneBodyStates(state, ctx);
@@ -39,8 +41,8 @@ export function produceBlackHoleCaptions(): LayerScreenLabel<'blackHole'>['produ
         schwarzschildRadiusM(row.massSolar),
         states.get(blackHoleAnchorId(row))!.positionMpc,
         BLACK_HOLE_CAPTION_TINT,
-        'sgrAStar',
-        packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),
+        BLACK_HOLE_CAPTION_PRIORITY,
+        packSelection(pickCode, i + PICK_SENTINEL_OFFSET),
       );
       return composeForegroundCaption(composeCtx, caption, fade[row.id]);
     });

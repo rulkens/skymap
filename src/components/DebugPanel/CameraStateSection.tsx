@@ -9,9 +9,12 @@
  */
 
 import { useEffect, useState, type ReactElement } from 'react';
-import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
-import { clearOrientPeaks, watchOrientDeltas } from '../../services/engine/camera/orientDeltas';
-import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
+import type { CameraDebugSnapshot } from '../../@types/camera/debug/CameraDebugSnapshot';
+import {
+  clearOrientPeaks,
+  watchOrientDeltas,
+} from '../../services/engine/camera/orientation/orientDeltas';
+import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
 import { selectCameraBase, selectCameraTuning } from '../../state/camera/selectors';
 import { shareUrlFor } from '../../state/url/shareUrlFor';
 import { useAppSelector, useAppStore } from '../../store/hooks';

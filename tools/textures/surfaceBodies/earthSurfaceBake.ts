@@ -5,8 +5,8 @@
  */
 
 import { TIER_LADDER } from '../../../src/data/tierLadder';
-import { SURFACE_TILE_REGISTRY } from '../../../src/data/bodies/surfaceTileRegistry';
-import { baseLevelForTier } from '../../../src/utils/surfaceTiles/baseLevelForTier';
+import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
+import { baseLevelForTier } from '../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { BMNG_QUADRANT_KEYS } from '../../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../utils/io/bmngVintage';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';
@@ -37,8 +37,9 @@ const TILE_ROOT = SURFACE_TILE_REGISTRY.earth.manifestKey;
  * then mixes old and new tiles. A new version is new keys, which cost nothing
  * extra and need no purge. v9: height tiles became Terrain-RGB WebP instead of
  * raw f32. v10: the `SHGT` chunk grew the v3 CPU post grid (`heightTileFormat.ts`).
+ * v11: launch-site EOX regions re-nested the z3–z7 height tiles above them.
  */
-const TILE_PREFIX = `${TILE_ROOT}/v10`;
+const TILE_PREFIX = `${TILE_ROOT}/v11`;
 
 /**
  * Shallowest level this bake emits: one finer than the COARSEST whole-globe

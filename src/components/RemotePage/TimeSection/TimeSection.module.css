@@ -1,11 +1,69 @@
-.date {
+.root {
+  gap: var(--space-6);
+}
+
+.readout {
+  margin: 0;
+  color: var(--color-fg);
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: var(--line-height-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.zone {
+  margin-left: var(--space-3);
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-input);
+  font-weight: 400;
+}
+
+.state {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--space-3);
+  margin: var(--space-2) 0 0;
   color: var(--color-fg-muted);
   font-size: var(--font-size-input);
 }
 
-.input {
-  composes: input from '../remoteControls.module.css';
+/* Hollow while the clock is off real time, filled in the accent on it: shape as well as colour. */
+.dot {
+  box-sizing: border-box;
+  width: var(--space-4);
+  height: var(--space-4);
+  border: 1.5px solid var(--color-fg-dim);
+  border-radius: 50%;
+}
+
+.live {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* The middle third is wider, so Pause / Play is the largest target. */
+.transport {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: var(--space-4);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+  white-space: nowrap;
+}
+
+.primary {
+  background: var(--surface-control);
+  border-color: var(--border-hover);
 }

@@ -1,0 +1,12 @@
+.row {
+  text-align: left;
+}
+
+.row > svg {
+  flex: none;
+}
+
+/* The running row's marker takes the row's accent instead. */
+.row:not([aria-current]) > svg:last-child {
+  color: var(--color-fg-dim);
+}

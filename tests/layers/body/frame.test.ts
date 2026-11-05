@@ -6,8 +6,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { surfaceTilePlanner } from '../../../src/layers/body/frame';
-import { createSurfaceTileStream } from '../../../src/layers/body/subsystems/surfaceTiles/surfaceTileStream';
-import { IDLE_SURFACE_TILE_PLAN } from '../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
+import { createSurfaceTileStream } from '../../../src/layers/body/surfaceTiles/stream/subsystems/surfaceTileStream';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../src/layers/body/surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
 import { throttleWithTrailingCall } from '../../../src/utils/throttle/throttleWithTrailingCall';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import type { BodyRuntime } from '../../../src/layers/body/@types/BodyRuntime';
@@ -18,16 +18,17 @@ import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFr
 
 const STATE = {
   tier: 'medium',
-  settings: { debug: { overlays: { 'terrain-pick-marker': false } } },
+  settings: { terrainPickMarker: { enabled: false } },
 } as unknown as PassState;
 
 function snapshotAt(nowMs: number): ReadyFrameContext {
-  return { nowMs, cursorTexPx: null } as unknown as ReadyFrameContext;
+  return { nowMs } as unknown as ReadyFrameContext;
 }
 
 describe('surfaceTilePlanner', () => {
-  it("the planner's wake vote holds while the manifest is in flight", () => {
-    // Bug caught: the plan's wake vote never reaching the loop. A landing tile wakes the
+  it("the planner's wake and settling votes hold while the manifest is in flight", () => {
+    // Bug caught: the plan's wake vote never reaching the loop, or the cold-load gate
+    // (sceneSettled) reading a streaming surface as settled. A landing tile wakes the
     // loop itself; a landing manifest does not, so only this vote carries it through the fetch.
     const apply = vi.fn();
     const residency = {
@@ -57,6 +58,7 @@ describe('surfaceTilePlanner', () => {
     const result = surfaceTilePlanner(runtime).plan(snapshotAt(0), [view], STATE);
 
     expect(result.awake).toBe(true);
+    expect(result.settling).toBe(true);
     expect(runtime.surfaceTiles.plan.awake).toBe(true);
     expect(apply).toHaveBeenCalledWith(runtime.surfaceTiles.plan);
   });

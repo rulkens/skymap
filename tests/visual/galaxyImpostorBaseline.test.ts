@@ -20,12 +20,13 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../src/data/source';
-import { createGalaxyAtlasSubsystem } from '../../src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem';
-import { createProceduralDiskSubsystem } from '../../src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem';
-import { createTexturedDiskSubsystem } from '../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem';
-import { createDiskPlannerWalk } from '../../src/layers/galaxyCatalog/subsystems/diskPlannerWalk';
+import { GALAXY_CATALOG_IDS } from '../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { createGalaxyAtlasSubsystem } from '../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
+import { createProceduralDiskSubsystem } from '../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
+import { createTexturedDiskSubsystem } from '../../src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem';
+import { createDiskPlannerWalk } from '../../src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../src/@types/camera/orbitCamera/OrbitCamera';
 import { makeGalaxyCatalog } from '../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../support/galaxyRecordsOver';
 
@@ -135,7 +136,7 @@ describe('galaxy-impostor visual baseline', () => {
         const sharedInput = {
           cam,
           records,
-          sourceMask: 0xffffffff,
+          visibleCatalogs: new Set(GALAXY_CATALOG_IDS),
           pxPerRad,
           // Live surface-brightness sliders — arbitrary plausible defaults;
           // this baseline is about emission/crossfade geometry, not brightness.
@@ -174,7 +175,7 @@ describe('galaxy-impostor visual baseline', () => {
         {
           "procDisks": {
             "count": 8,
-            "hash": "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=7|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.007|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=6|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.006|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=5|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.005|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=4|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.004|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=3|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.003|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=2|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.002|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=1|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.001|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=0|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0|z=0",
+            "hash": "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=7|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.007|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=6|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.006|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=5|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.005|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=4|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.004|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=3|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.003|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=2|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.002|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=1|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.001|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=0|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0|z=0",
           },
           "texDisks": {
             "count": 8,

@@ -43,17 +43,17 @@ export const structureLayer = defineLayer({
         id: 'structureLabelsCosmo',
         slab: COSMO,
         label: 'structure',
-        produceLabels: produceStructureLabels(runtime.store, 'cosmic'),
+        produceLabels: produceStructureLabels(runtime, 'cosmic'),
       },
       {
         id: 'structureLabelsNear',
         slab: NEAR0,
         label: 'structure',
-        produceLabels: produceStructureLabels(runtime.store, 'milkyWay'),
+        produceLabels: produceStructureLabels(runtime, 'milkyWay'),
       },
     ],
   }),
-  selection: (runtime) => [structureSelectionRow(runtime.store)],
+  selection: (runtime) => [structureSelectionRow(runtime)],
   ui: [
     { slot: 'main', content: StructuresSectionContainer, title: 'Structures' },
     {

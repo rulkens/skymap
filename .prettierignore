@@ -15,10 +15,13 @@ package-lock.json
 # nothing from prettier and are where most of the repo-wide diff lives.
 docs
 public
-data
+/data
 .claude
 .design-sync
 tests/**/fixtures
 
 # MDX landing pages: text inside a JSX tag is Markdown, so prettier moving it onto its own line wraps it in a <p>.
 packages/website/src/content/pages
+
+# Generators own these files' layout.
+*.generated.ts

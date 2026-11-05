@@ -14,8 +14,8 @@
  * click only registers where the band's density is perceptible.
  */
 
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
-import type { ViewFrustum } from '../../../../@types/camera/ViewFrustum';
+import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
+import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { PickWindow } from '../../../../@types/engine/frame/PickWindow';
 import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';

@@ -30,7 +30,7 @@
 // discipline lib/starKnee.wesl states for the compression constant.
 
 // Reference star-dot size in px — the divisor for the user's 'sizePx' slider.
-// Its TS twin is STAR_SIZE_REF_PX in src/data/starCullSlack.ts (pinned by a
+// Its TS twin is STAR_SIZE_REF_PX in src/layers/starCatalog/photometry/data/starCullSlack.ts (pinned by a
 // parity test), NOT DEFAULT_STAR_SIZE_PX (src/data/defaults.ts) — that constant
 // only seeds the slider's starting value and is deliberately larger (4.7), so
 // the shipped default already draws at 1.88x this reference, the tuned look.

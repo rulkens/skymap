@@ -36,11 +36,11 @@
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
-import { frustumRayAxis } from '../../../../utils/camera/frustumRayAxis';
+import type { ImagePlaneBasis } from '../../../../@types/camera/pose/ImagePlaneBasis';
+import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitPose/orbitForwardOf';
+import { frustumRayAxis } from '../../../../utils/camera/frustum/frustumRayAxis';
 import vsCode from '../../../../services/gpu/shaders/horizonShell/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/horizonShell/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
@@ -49,8 +49,8 @@ import { HORIZON_RADIUS_GPC } from '../data/horizonRadiusGpc';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { HorizonShellRenderer } from '../@types/HorizonShellRenderer';
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
-import type { ViewFrustum } from '../../../../@types/camera/ViewFrustum';
+import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
+import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
 
 type Init = {
   device: GPUDevice;

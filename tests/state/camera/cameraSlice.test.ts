@@ -19,12 +19,12 @@ import reducer, {
   resolveClipStart,
   commitCameraPose,
 } from '../../../src/state/camera/cameraSlice';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import type { CameraTweenDescriptor } from '../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { EngineSubsystemHandles } from '../../../src/@types/engine/handles/EngineSubsystemHandles';
-import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../src/@types/camera/orientation/OrientationFrameId';
 
 // ── Compile-time freeze guards ──────────────────────────────────────────────
 // These never run; they fail at `tsc` time if the camera surface regrows a

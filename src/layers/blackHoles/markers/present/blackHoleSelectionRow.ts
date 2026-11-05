@@ -7,7 +7,6 @@
  * with the lens (P1).
  */
 
-import { Source } from '../../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
@@ -21,19 +20,19 @@ import type { SelectionKindRow } from '../../../../@types/engine/layer/Selection
 
 const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry);
 
-export function blackHoleSelectionRow(): SelectionKindRow<
-  Extract<SelectionRef, { type: 'blackHole' }>
-> {
+export function blackHoleSelectionRow(
+  pickCode: number,
+): SelectionKindRow<Extract<SelectionRef, { type: 'blackHole' }>> {
   return {
     type: 'blackHole',
-    pickSources: [Source.SgrAStar],
-    resolvePick: (_entry, pick) => {
+    pickSources: [pickCode],
+    resolvePick: (pick) => {
       const row = BLACK_HOLES[pick.localIdx];
       return row ? { type: 'blackHole', id: row.id } : null;
     },
     encodePick: (ref) => {
       const index = BLACK_HOLES.findIndex((hole) => hole.id === ref.id);
-      return index < 0 ? null : packSelection(Source.SgrAStar, index + PICK_SENTINEL_OFFSET);
+      return index < 0 ? null : packSelection(pickCode, index + PICK_SENTINEL_OFFSET);
     },
     extractRow: (ref, simDays) => {
       const row = BLACK_HOLES.find((hole) => hole.id === ref.id);

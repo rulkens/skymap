@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import sharp from 'sharp';
 
 import type { HeightTile } from '../../textures/@types/HeightTile';
-import { HEIGHT_TILE_CHUNK_FOURCC } from '../../../src/data/scene/heightTileFormat';
+import { HEIGHT_TILE_CHUNK_FOURCC } from '../../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
 import { readRiffChunk } from '../../../src/utils/image/readRiffChunk';
 import { decodeHeightTile } from './decodeHeightTile';
 

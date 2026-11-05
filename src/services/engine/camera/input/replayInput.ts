@@ -1,0 +1,305 @@
+/**
+ * replayInput — one frame's input steps folded over the camera runtime, pure:
+ * the new register/gesture/tilt/follow memories plus the actions the drain would
+ * have dispatched, in order. Each step reads the EFFECTIVE intent — the frame's
+ * store snapshot with the actions emitted so far folded through the real camera
+ * reducer — so a step sees the commit the step before it made, exactly as the
+ * incumbent's fresh `getState()` per step did. The store commits only at
+ * gesture end and per at-rest notch; a following camera's notch rides the
+ * return as `followDistanceTarget` instead.
+ */
+
+import type { UnknownAction } from '@reduxjs/toolkit';
+
+import { applyWheelZoom } from './applyWheelZoom';
+import { advanceEpoch, elapsedMs } from '../drivers/cameraEpochs';
+import { frameAlignedRoll } from '../arms/world/frameAlignedRoll';
+import { foldToWorld } from '../arms/foldToWorld';
+import { hostOf } from '../arms/hostOf';
+import { isWorldArm } from '../arms/world/isWorldArm';
+import { rowFor } from '../arms/rowFor';
+import { cameraArmKindOf } from '../arms/cameraArmKindOf';
+import { sameFrame } from '../arms/sameFrame';
+import { zoomedDistance } from './utils/zoomedDistance';
+import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
+import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
+import { selectFocusRow } from '../../../../state/selection/selectors';
+import cameraReducer, { commitCameraPose } from '../../../../state/camera/cameraSlice';
+
+import type { ClimbableKind } from '../@types/ClimbableKind';
+import type { DriverId } from '../../../../@types/engine/camera/DriverId';
+import type { Epoch } from '../../../../@types/engine/camera/Epoch';
+import type { FollowMemory } from '../../../../@types/engine/camera/FollowMemory';
+import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
+import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
+import type { InputStep } from '../../../../@types/camera/input/InputStep';
+import type { MemOf } from '../../../../@types/camera/arms/MemOf';
+import type { NavStep } from '../@types/NavStep';
+import type { CameraArmCtx } from '../../../../@types/camera/arms/CameraArmCtx';
+import type { CameraArmKind } from '../../../../@types/camera/arms/CameraArmKind';
+import type { TiltMemory } from '../../../../@types/camera/orientation/TiltMemory';
+import type { RootState } from '../../../../store/types';
+
+export function replayInput(
+  prev: {
+    readonly register: FramedCameraPose;
+    readonly gesture: MemOf[CameraArmKind];
+    readonly tilt: TiltMemory;
+    readonly follow: FollowMemory | null;
+  },
+  steps: readonly InputStep[],
+  args: {
+    readonly ctx: CameraArmCtx;
+    readonly rootState: RootState;
+    readonly nowMs: number;
+    readonly winnerLastFrame: DriverId;
+    /** That row's `ridesWheelTarget`. */
+    readonly lastWinnerRidesWheel: boolean;
+    readonly autoRotateEpoch: Epoch<FramedCameraPose>;
+    /** Last frame's winner was a navigator row: its register, not `base`, is the live pose. */
+    readonly navOwns: boolean;
+  },
+): {
+  readonly register: FramedCameraPose;
+  readonly gesture: MemOf[CameraArmKind];
+  readonly tilt: TiltMemory;
+  readonly follow: FollowMemory | null;
+  readonly followDistanceTarget: number | null;
+  readonly actions: readonly UnknownAction[];
+  /** The navigator's input, in order; a `gestureEnd` is also handled here. */
+  readonly navSteps: readonly NavStep[];
+} {
+  const { ctx, rootState, nowMs, winnerLastFrame, lastWinnerRidesWheel } = args;
+  const { bodies, poseBasis, upBasis, pivot, tuning } = ctx;
+  // Only camera actions are emitted mid-drain, so every other slice is the
+  // snapshot's; the focus row is read once.
+  const focus = selectFocusRow(rootState);
+
+  // The accumulator. EVERY step writes the register so a later step in the same
+  // drain chains from it — an at-rest notch left out of it would be folded over
+  // and silently discarded by a drag arriving in the same frame window.
+  let register = prev.register;
+  let gestureMemory = prev.gesture;
+  let tilt = prev.tilt;
+  let follow = prev.follow;
+  let followDistanceTarget: number | null = null;
+  // Advanced locally for this frame's elapsed read and DISCARDED: handing it to
+  // `advanceEpochs` would keep a fold-time reset when another driver wins.
+  let autoRotateEpoch = args.autoRotateEpoch;
+  let camera = rootState.camera;
+  const actions: UnknownAction[] = [];
+  const navSteps: NavStep[] = [];
+  let navAuthors = args.navOwns;
+  const emit = (action: UnknownAction): void => {
+    actions.push(action);
+    camera = cameraReducer(camera, action);
+  };
+
+  /**
+   * The table read, generic over the arm: a frame tag and its pose shape stay
+   * correlated only under one `K`. The arm's own memory and the host-keyed
+   * tilt ride out through the accumulator, which spans both arms.
+   */
+  const stepRow = <K extends CameraArmKind>(
+    framed: FramedPose<K>,
+    memory: MemOf[K],
+    input: InputStep,
+  ): FramedPose<K> => {
+    const stepped = rowFor<K>(framed.frame).step(memory, tilt, framed, input, ctx);
+    gestureMemory = stepped.memory;
+    tilt = stepped.tilt;
+    return { frame: framed.frame, pose: stepped.pose };
+  };
+
+  /**
+   * Which arm owns this step, and the arbitration around it. The GATE is the
+   * stored regime (`base.frame`); the POSE is the live register, because the
+   * fold commits on a regime EDGE only — mid-tween `base` holds the last
+   * crossing pose while the register tracks the animation (FW-G). `false` hands
+   * the step to the world arm's at-rest notch lanes below.
+   */
+  const stepRegister = (step: InputStep): boolean => {
+    const base = camera.base;
+    const worldArm = isWorldArm(base);
+    // At rest the world arm's zoom owner is the store `base`, not the register,
+    // so that notch is a lane below; in a body arm both owners route here (§7).
+    if (worldArm && step.kind === 'zoom' && !step.duringGesture) return false;
+    // A pose-moving step is swallowed while a clip owns the camera (the driver
+    // table's rule, both arms) or while a body arm's host is unresolved — the
+    // cell's `hostOrThrow` would throw. The pointer edges still reach the arm:
+    // the latch tracks the POINTER, and they re-tag nothing.
+    const moves = step.kind === 'drag' || step.kind === 'zoom';
+    if (moves && (camera.clip !== null || (!worldArm && hostOf(base.frame, ctx) === null))) {
+      return true;
+    }
+    // The two-finger drag is a surface handle (owner ruling 2026-11-03): only
+    // the body arm reads it, so space and a site's turntable stay put.
+    if (step.kind === 'drag' && step.mode === 'tilt' && cameraArmKindOf(base.frame) !== 'body') {
+      return true;
+    }
+    // Which pose to step is arbitration, not arm arithmetic: an edge moves none
+    // (and so never pays the fold), the world arm steps the live register folded
+    // down — AUTHORED, not displayed (R12b-1), so a drag composes below the tilt
+    // — and the body arm steps it only while it speaks the arm's own frame.
+    const from: FramedCameraPose = !moves
+      ? base
+      : worldArm
+        ? { frame: base.frame, pose: foldToWorld(register, ctx) }
+        : sameFrame(register.frame, base.frame)
+          ? register
+          : base;
+    let stepped: FramedCameraPose;
+    if (isWorldArm(from)) {
+      const next = stepRow<'absolute'>(from, null, step);
+      if (step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)) {
+        // Followed-body strafe: the pivot-pin owns the target (`bodyPosition +
+        // panOffset`), so the pan's own delta goes to the offset the pin reads.
+        // A driver memory, outliving the arm that produced the delta.
+        const off = follow?.panOffset ?? [0, 0, 0];
+        follow = {
+          from: follow?.from ?? null,
+          distanceTarget: follow?.distanceTarget ?? null,
+          durationMs: follow?.durationMs ?? null,
+          panOffset: [
+            off[0] + next.pose.target[0] - from.pose.target[0],
+            off[1] + next.pose.target[1] - from.pose.target[1],
+            off[2] + next.pose.target[2] - from.pose.target[2],
+          ],
+          saturated: follow?.saturated ?? false,
+        };
+      }
+      stepped = next;
+    } else {
+      // A memory taken on another arm is not this one's: it enters as its empty.
+      stepped = stepRow<ClimbableKind>(
+        from,
+        gestureMemory ?? rowFor<ClimbableKind>(from.frame).emptyMemory,
+        step,
+      );
+    }
+    if (!moves) return true;
+    register = stepped;
+    // An at-rest notch is its own atomic gesture, so its commit is its gesture
+    // end (the resting driver renders `base`, not the register). Identity, not
+    // equality: a declined step returns its input by reference.
+    if (step.kind === 'zoom' && !step.duringGesture && stepped.pose !== from.pose) {
+      emit(commitCameraPose(register));
+    }
+    return true;
+  };
+
+  for (const step of steps) {
+    switch (step.kind) {
+      case 'gestureStart':
+        // The latch itself is the arm's; the first drag step takes it, carrying
+        // the press pixel. The world arm keeps no gesture register at all.
+        stepRegister(step);
+        break;
+
+      case 'gestureEnd': {
+        // ONE commit site for both arms: bake the register into `base`. Skipped
+        // while a clip owns the camera and across an arm
+        // mismatch — the fold owns regime edges; a commit here must never flip one.
+        // Skipped while a navigator row authors the release: its edge commit bakes
+        // the nudged register, once.
+        if (camera.clip === null && !navAuthors && sameFrame(register.frame, camera.base.frame)) {
+          emit(commitCameraPose(register));
+        }
+        navAuthors = false;
+        navSteps.push(step);
+        stepRegister(step);
+        break;
+      }
+
+      case 'drag':
+        stepRegister(step);
+        break;
+
+      case 'navDrag':
+        navAuthors = true;
+        navSteps.push(step);
+        break;
+
+      case 'zoom': {
+        // The settles are priced per unit of zoom, not per step (user ruling
+        // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
+        const logZoom = Math.abs(Math.log(step.factor));
+        // A follow row re-asserts its own target every frame and would swallow
+        // a committed base, so its notch is resolved to a distance the driver
+        // adopts; a second notch in the same drain resolves off the first.
+        // Read ABOVE the arm's step, whichever arm: a notch handed to an arm the owed
+        // approach overwrites is simply lost (the world arm reached this lane
+        // through `stepRegister`'s own at-rest decline, so its order stands).
+        const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
+        const ridesTheFollow =
+          !step.duringGesture && lastWinnerRidesWheel && followTargetBefore !== null;
+        // While the navigator owns the camera, `base` is the last commit, not the
+        // view: an at-rest notch would zoom that stale pose and snap back to it.
+        // It rides the live register instead, as a held gesture's does.
+        const notch = args.navOwns && !step.duringGesture ? { ...step, duringGesture: true } : step;
+        if (!ridesTheFollow && stepRegister(notch)) break;
+        if (ridesTheFollow) {
+          followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);
+          // Ruling 8: the ride's authored altitude move IS that target change —
+          // the live pose twice gave a zero delta and froze the band roll. It
+          // lands on `base.roll`, the term the follow pose lerps toward. The
+          // world arm's own settle (R1 of the body-arm spec): below it the roll
+          // belongs to the arm, which has no such term to charge.
+          if (isWorldArm(camera.base)) {
+            const basePose = camera.base.pose;
+            const live = foldToWorld(register, ctx);
+            const roll = frameAlignedRoll(
+              { ...live, distance: followTargetBefore },
+              { ...live, distance: followDistanceTarget },
+              bodies,
+              poseBasis,
+              upBasis,
+              logZoom,
+              tuning,
+            );
+            if (roll !== (basePose.roll ?? 0))
+              emit(commitCameraPose(absoluteArm({ ...basePose, roll })));
+          }
+          break;
+        }
+        // The spin epoch as THIS frame's advance will see it (idempotent on an
+        // unchanged ref), not the stale row a switch-off between frames left.
+        const { active, rate } = camera.autoRotate;
+        autoRotateEpoch = advanceEpoch(autoRotateEpoch, active ? camera.base : null, nowMs);
+        const zoomed = applyWheelZoom({
+          base: camera.base,
+          factor: step.factor,
+          spin: { owns: winnerLastFrame === 'autoRotate', rate },
+          spinElapsedMs: elapsedMs(autoRotateEpoch, nowMs),
+          pivot,
+        });
+        if (zoomed !== null && isWorldArm(camera.base)) {
+          // `base` is centre-looking by wiring (R12-1), so the pre/post pair is
+          // self-consistent under an autoRotate-owned notch too.
+          const roll = frameAlignedRoll(
+            camera.base.pose,
+            zoomed,
+            bodies,
+            poseBasis,
+            upBasis,
+            logZoom,
+            tuning,
+          );
+          register = absoluteArm({ ...zoomed, roll });
+          emit(commitCameraPose(register));
+        }
+        break;
+      }
+    }
+  }
+
+  return {
+    register,
+    gesture: gestureMemory,
+    tilt,
+    follow,
+    followDistanceTarget,
+    actions,
+    navSteps,
+  };
+}

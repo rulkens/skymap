@@ -6,17 +6,18 @@
 import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
-import type { FamousStarsPayload } from './FamousStarsPayload';
-import type { StarCatalogRenderer } from './StarCatalogRenderer';
-import type { StarCatalogPickRenderer } from './StarCatalogPickRenderer';
-import type { StarRenderer } from './StarRenderer';
-import type { StarPointRenderer } from './StarPointRenderer';
-import type { StarAggregateUpsample } from './StarAggregateUpsample';
+import type { StarCatalogReq } from '../survey/@types/StarCatalogReq';
+import type { FamousStarsPayload } from '../card/@types/FamousStarsPayload';
+import type { StarCatalogRenderer } from '../survey/@types/StarCatalogRenderer';
+import type { StarCatalogPickRenderer } from '../survey/@types/StarCatalogPickRenderer';
+import type { StarRenderer } from '../resolvedStars/@types/StarRenderer';
+import type { StarPointRenderer } from '../seededStars/@types/StarPointRenderer';
+import type { StarAggregateUpsample } from '../survey/@types/StarAggregateUpsample';
 import type { StarCatalogFacts } from './StarCatalogFacts';
 import type { OctreeChunkStream } from '../../../@types/octree/OctreeChunkStream';
 import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
-import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../survey/@types/StarColumns';
+import type { CatalogPickCodes } from '../../../@types/engine/selection/CatalogPickCodes';
 
 export type StarCatalogRuntime = {
   /** One slot per survey source. */
@@ -27,6 +28,8 @@ export type StarCatalogRuntime = {
   /** A source's chunk stream while its committed index names chunks; the slot's commit fills it and release clears it. */
   readonly chunkStreams: Map<StarCatalogSourceType, OctreeChunkStream<StarColumns>>;
   readonly famousStarsMeta: AssetSlot<FamousStarsPayload, void>;
+  /** Catalog ↔ pick code; every pick word this Layer stamps or decodes goes through it. */
+  readonly pickCodes: CatalogPickCodes<StarCatalogSourceType>;
   readonly renderer: StarCatalogRenderer;
   readonly pickRenderer: StarCatalogPickRenderer;
   readonly starRenderer: StarRenderer; // spheres (starSpheresPass, fieldStarSpherePass)

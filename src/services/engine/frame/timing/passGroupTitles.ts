@@ -8,6 +8,7 @@
  * group rather than vanishing.
  */
 
+import { APP_SKY_CAPTURE_KEYS } from '../../../../compositions/appCubemapCaptures';
 import { slabName } from '../slabs';
 import { SLAB_ROW_CEILING } from './slabRowCeiling';
 
@@ -23,10 +24,12 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   // A sky capture's bake — one slot per capture, filed under its first step's
   // group, so its own group rather than folding into an existing title. Keyed
   // on the CAPTURE, not its render target.
-  'sgrAStar·COSMO': 'Sky capture',
-  'sgrAStar·NEAR0': 'Sky capture',
-  'solarSystem·COSMO': 'Sky capture',
-  'solarSystem·NEAR0': 'Sky capture',
+  ...Object.fromEntries(
+    APP_SKY_CAPTURE_KEYS.flatMap((key) => [
+      [`${key}·COSMO`, 'Sky capture'],
+      [`${key}·NEAR0`, 'Sky capture'],
+    ]),
+  ),
   // The probe's bake steps: the sky under it through COSMO, then its subject's
   // host through whichever body row that host holds this frame.
   'probe·COSMO': 'Probe capture',

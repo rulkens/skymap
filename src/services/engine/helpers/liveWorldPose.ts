@@ -3,10 +3,10 @@
  * projected pose back in re-creates the R12b-1 register walk; they resolve the
  * register themselves. Always at `outputs.simDays`: the epoch last frame DREW. */
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
-import { foldToWorld } from '../camera/rungs/foldToWorld';
+import { foldToWorld } from '../camera/arms/foldToWorld';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 export function liveWorldPose(state: EngineState): CameraPose {

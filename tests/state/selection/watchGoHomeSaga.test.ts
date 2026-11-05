@@ -17,11 +17,11 @@ import { watchGoHomeSaga } from '../../../src/state/selection/watchGoHomeSaga';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { goHome } from '../../../src/state/selection/goHome';
 import { startCameraTween } from '../../../src/state/camera/cameraSlice';
-import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
-import { bodyHomePose } from '../../../src/services/engine/camera/bodyHomePose';
+import { bodyHomePose } from '../../../src/services/engine/camera/framing/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
@@ -33,10 +33,11 @@ import {
 } from '../../../src/state/settings/core/focusMovesSlice';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute, selectionRoute, timeRoute } from '../../../src/store/constants';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import type { CameraTweenDescriptor } from '../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyPickCodes } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -70,7 +71,7 @@ describe('watchGoHomeSaga', () => {
     mw.setContext({
       cameraRuntime: () => cameraRuntime(),
       selection: composeSelectionRows(
-        () => [bodySelectionRow()],
+        () => [bodySelectionRow({ pickCodes: bodyPickCodes() })],
         () => ALL_KINDS_ENABLED,
       ),
     });

@@ -186,6 +186,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         does: 'Take this site’s pictures and its short films from a running app, and cut the flight on the home page from a recording.',
         manual: SITE_TOOLS,
       },
+      {
+        scripts: ['site:press-kit'],
+        does: 'Builds the press kit the About page offers: the logo, the app icon, pictures, a portrait, a film and a fact sheet, in one zip.',
+        manual: SITE_TOOLS,
+      },
     ],
   },
   {

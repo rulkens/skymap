@@ -36,7 +36,8 @@ export const FACTS: readonly Fact[] = [
     source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html',
     sourceLabel: 'NASA Moon fact sheet',
     checked: CHECKED,
-    short: 'We’ve reached the Moon’s orbit. Light from the Moon reaches Earth in about 1.3 seconds.',
+    short:
+      'We’ve reached the Moon’s orbit. Light from the Moon reaches Earth in about 1.3 seconds.',
   },
   {
     id: 'mars-distance',
@@ -75,13 +76,6 @@ export const FACTS: readonly Fact[] = [
     figure: { value: '550', measure: 'light-years away, by the best estimate' },
   },
   {
-    id: 'betelgeuse-estimates',
-    text: 'Other estimates of the distance to Betelgeuse run from about 500 light-years (152 parsecs, from Hipparcos) to about 720 (222 parsecs, from radio observations).',
-    source: 'https://arxiv.org/abs/1706.06020',
-    sourceLabel: 'Harper et al. 2017, Betelgeuse',
-    checked: CHECKED,
-  },
-  {
     id: 'sgr-a-distance',
     text: 'Sagittarius A* is about 26,700 light-years away (8,178 parsecs).',
     source: 'https://arxiv.org/abs/1904.05721',
@@ -116,14 +110,6 @@ export const FACTS: readonly Fact[] = [
     short: 'the supercluster we are in',
   },
   {
-    id: 'neptune-voyager2',
-    text: 'Voyager 2 is the only spacecraft to have visited Neptune: it launched on 20 August 1977 and flew past on 25 August 1989.',
-    source: 'https://science.nasa.gov/mission/voyager/voyager-2/',
-    sourceLabel: 'NASA, Voyager 2',
-    checked: CHECKED,
-    short: 'Only Voyager 2 has flown past Neptune: in 1989, twelve years after its launch.',
-  },
-  {
     id: 'proxima-distance',
     text: 'Proxima Centauri, the nearest star after the Sun, is 4.25 light-years away (Gaia parallax 768.07 milliarcseconds, plus or minus 0.05).',
     source: 'https://simbad.cds.unistra.fr/simbad/sim-id?Ident=Proxima+Cen',
@@ -145,15 +131,8 @@ export const FACTS: readonly Fact[] = [
     source: 'https://doi.org/10.1126/science.1172873',
     sourceLabel: 'Clark et al. 2009, last glacial maximum',
     checked: CHECKED,
-    short: 'Light from the centre of our galaxy left about 27,000 years ago, at the time of the ice ages.',
-  },
-  {
-    id: 'andromeda-light',
-    text: 'Fossils from Jebel Irhoud, Morocco, are among the oldest assigned to Homo sapiens: the heated flint tools found with them date to 315,000 years ago, plus or minus 34,000.',
-    source: 'https://doi.org/10.1038/nature22335',
-    sourceLabel: 'Richter et al. 2017, dating Jebel Irhoud',
-    checked: CHECKED,
-    short: 'Light from Andromeda left it 2.5 million years ago. The oldest fossils assigned to our species are about 300,000 years old.',
+    short:
+      'Light from the centre of our galaxy left about 27,000 years ago, at the time of the ice ages.',
   },
   {
     id: 'cosmic-web-map',
@@ -169,8 +148,12 @@ export const FACTS: readonly Fact[] = [
     source: 'https://www.sdss4.org/dr17/scope/',
     sourceLabel: 'SDSS DR17 scope',
     checked: CHECKED,
-    short: 'The map is dark where no survey observed, where our galaxy’s dust blocks the view, and where galaxies are too faint to record.',
-    figure: { value: '9,376', measure: 'square degrees of sky, a quarter of it, with SDSS spectra' },
+    short:
+      'The map is dark where no survey observed, where our galaxy’s dust blocks the view, and where galaxies are too faint to record.',
+    figure: {
+      value: '9,376',
+      measure: 'square degrees of sky, a quarter of it, with SDSS spectra',
+    },
   },
   {
     id: '2mrs-coverage',
@@ -185,7 +168,8 @@ export const FACTS: readonly Fact[] = [
     source: 'https://arxiv.org/abs/1807.06209',
     sourceLabel: 'Planck 2018, cosmological parameters',
     checked: CHECKED,
-    short: 'The sphere is drawn where a model puts the edge, about 46 billion (46 thousand million) light-years out. The catalogues fill little of it.',
+    short:
+      'The sphere is drawn where a model puts the edge, about 46 billion (46 thousand million) light-years out. The catalogues fill little of it.',
     figure: { value: '46', measure: 'billion light-years to the edge of the observable universe' },
   },
   {
@@ -203,7 +187,10 @@ export const FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/data/raw/geodanmark/README.md`,
     sourceLabel: 'the harvest record, in the Skymap repository',
     checked: CHECKED,
-    figure: { value: '10', measure: 'centimetres to a pixel in the aerial photographs of the park' },
+    figure: {
+      value: '10',
+      measure: 'centimetres to a pixel in the aerial photographs of the park',
+    },
   },
   {
     id: 'speed-of-light',
@@ -228,7 +215,8 @@ export const FACTS: readonly Fact[] = [
     source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html',
     sourceLabel: 'NASA Earth fact sheet',
     checked: CHECKED,
-    short: 'A 45-minute lesson ends about 80,000 km from where it began, measured along Earth’s orbit.',
+    short:
+      'A 45-minute lesson ends about 80,000 km from where it began, measured along Earth’s orbit.',
   },
   {
     id: 'astronomical-unit',
@@ -236,7 +224,8 @@ export const FACTS: readonly Fact[] = [
     source: 'https://www.iau.org/IAU/Iau/Publications/List-of-Resolutions.aspx',
     sourceLabel: 'IAU 2012 Resolution B2, in the IAU’s list of resolutions',
     checked: CHECKED,
-    short: 'Some numbers are none of the three. Since 2012 the astronomical unit has been exactly 149,597,870,700 metres, by a resolution of the International Astronomical Union.',
+    short:
+      'Some numbers are none of the three. Since 2012 the astronomical unit has been exactly 149,597,870,700 metres, by a resolution of the International Astronomical Union.',
   },
   {
     id: 'megaparsec-length',
@@ -272,7 +261,8 @@ export const FACTS: readonly Fact[] = [
     id: 'link-pose',
     about: 'app',
     text: 'An address can also carry the exact camera position (pose). The app reads it when the link opens and then takes it out of the address, and it never writes one by itself, so a link you copy from the address bar opens on the app’s standard view of the object.',
-    short: 'A copied link opens the app’s standard view of the object. An address can also carry an exact camera position (pose): the app reads it when the link opens, then removes it from the address, and never writes one itself.',
+    short:
+      'A copied link opens the app’s standard view of the object. An address can also carry an exact camera position (pose): the app reads it when the link opens, then removes it from the address, and never writes one itself.',
     source: `${REPO_BLOB}/src/state/url/watchHashWriteSaga.ts`,
     sourceLabel: 'how the app rewrites the address, in the Skymap repository',
     checked: CHECKED,
@@ -296,7 +286,8 @@ export const FACTS: readonly Fact[] = [
     id: 'app-browser-advice',
     about: 'app',
     text: 'The app’s own advice to a browser that cannot run it is a recent version of Chrome or Edge on a desktop computer.',
-    short: 'Where it does not run, the app itself advises a recent Chrome or Edge on a desktop computer.',
+    short:
+      'Where it does not run, the app itself advises a recent Chrome or Edge on a desktop computer.',
     source: `${REPO_BLOB}/src/unsupportedPage.ts`,
     sourceLabel: 'the page shown without WebGPU, in the Skymap repository',
     checked: CHECKED,
@@ -344,7 +335,8 @@ export const FACTS: readonly Fact[] = [
     id: 'exhibits',
     about: 'app',
     text: 'Skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe. Each is a prepared view with its own notes and sources, and each opens from its own address.',
-    short: 'Skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe.',
+    short:
+      'Skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe.',
     source: `${REPO_BLOB}/src/compositions/appExhibits.ts`,
     sourceLabel: 'the exhibits, in the Skymap repository',
     checked: CHECKED,
@@ -369,7 +361,8 @@ export const FACTS: readonly Fact[] = [
     id: 'date-entry-utc',
     about: 'app',
     text: 'The date field on the app’s clock is read in UTC, not in the computer’s local time.',
-    short: 'The date field on the app’s clock is read in UTC, the time at Greenwich without summer time, not in the computer’s local time.',
+    short:
+      'The date field on the app’s clock is read in UTC, the time at Greenwich without summer time, not in the computer’s local time.',
     source: `${REPO_BLOB}/src/components/TimeBar/DateEntryPopover/DateEntryPopover.tsx`,
     sourceLabel: 'the date field, in the Skymap repository',
     checked: CHECKED,
@@ -441,7 +434,8 @@ export const FACTS: readonly Fact[] = [
     id: 'grand-tour-steps',
     about: 'app',
     text: '“The Long Way Out” has 14 captioned steps, from the Milky Way to the edge of the observable universe and back.',
-    short: '“The Long Way Out” is a tour in 14 captioned steps, out to the edge of the observable universe and back.',
+    short:
+      '“The Long Way Out” is a tour in 14 captioned steps, out to the edge of the observable universe and back.',
     source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
     sourceLabel: 'the tour, in the Skymap repository',
     checked: CHECKED,
@@ -466,7 +460,8 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'everest-height',
     text: 'Mount Everest is 8,848.86 metres high, about 8,849, by the survey Nepal and China announced together in 2020.',
-    source: 'https://kathmandupost.com/national/2020/12/08/it-s-official-mount-everest-is-8-848-86-metres-tall',
+    source:
+      'https://kathmandupost.com/national/2020/12/08/it-s-official-mount-everest-is-8-848-86-metres-tall',
     sourceLabel: 'The Kathmandu Post, 8 December 2020',
     checked: '2026-10-30',
     figure: { value: '8,849', measure: 'metres above sea level' },
@@ -522,7 +517,8 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'laniakea-size',
     text: 'Laniakea, the supercluster that holds the Milky Way, is 500 million light-years across, mapped by where the flows of galaxies divide.',
-    source: 'https://www.hawaii.edu/news/2014/09/03/uh-scientist-maps-supercluster-of-galaxies-names-it-laniakea/',
+    source:
+      'https://www.hawaii.edu/news/2014/09/03/uh-scientist-maps-supercluster-of-galaxies-names-it-laniakea/',
     sourceLabel: 'University of Hawaiʻi, Laniakea',
     checked: '2026-10-30',
     figure: { value: '500', measure: 'million light-years across Laniakea, the basin we flow in' },

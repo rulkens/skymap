@@ -56,6 +56,8 @@ import { initialState as missionsInitialState } from '../../../src/layers/missio
 import { initialState as sStarTrailsInitialState } from '../../../src/layers/starCatalog/state/sStarTrails/initialState';
 import { initialState as missionTrailsInitialState } from '../../../src/layers/missions/state/missionTrails/initialState';
 import { initialState as orbitTrailsInitialState } from '../../../src/layers/body/state/orbitTrails/initialState';
+import { initialState as surfaceTileDebugInitialState } from '../../../src/layers/body/state/surfaceTileDebug/initialState';
+import { initialState as terrainPickMarkerInitialState } from '../../../src/layers/body/state/terrainPickMarker/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import { initialState as volumesInitialState } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
@@ -72,7 +74,6 @@ import { initialState as filamentsInitialState } from '../../../src/layers/cosmi
 import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
 import { initialState as satellitesInitialState } from '../../../src/layers/satellites/state/satellites/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
-import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 import { DEFAULT_CAMERA_CONTROLS } from '../../../src/data/camera/openSpaceNavigation';
 import { DEFAULT_FOCUS_MOVES } from '../../../src/data/camera/focusMoveDefaults';
@@ -80,11 +81,11 @@ import { DEFAULT_FOCUS_MOVES } from '../../../src/data/camera/focusMoveDefaults'
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
 import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
+import type { GalaxyCatalogItemSettings } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogItemSettings';
 import type { StarCatalogId } from '../../../src/layers/starCatalog/@types/StarCatalogId';
-import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
+import type { StarCatalogItemSettings } from '../../../src/layers/starCatalog/@types/StarCatalogItemSettings';
 import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
-import type { BodyItemSettings } from '../../../src/@types/settings/BodyItemSettings';
+import type { BodyItemSettings } from '../../../src/layers/body/@types/BodyItemSettings';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../src/@types/settings/StructureItemSettings';
 
@@ -131,6 +132,8 @@ export function makeSettingsFixture(
     satellites: { ...satellitesInitialState },
     constellations: { ...constellationsInitialState },
     orbitTrails: { ...orbitTrailsInitialState },
+    surfaceTileDebug: { overlays: { ...surfaceTileDebugInitialState.overlays } },
+    terrainPickMarker: { ...terrainPickMarkerInitialState },
     missions: { ...missionsInitialState },
     missionTrails: { ...missionTrailsInitialState },
     sStarTrails: { ...sStarTrailsInitialState },
@@ -155,7 +158,6 @@ export function makeSettingsFixture(
         DebugOverlayKey,
         boolean
       >,
-      terrainPickMarkerRadiusM: TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M,
       disabledPasses: {},
       matteWhite: false,
       meshAmbient: 0,

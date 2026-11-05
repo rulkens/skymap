@@ -11,7 +11,7 @@ import type { Task } from 'redux-saga';
 
 import { flyToPoseClip } from '../../../../data/animation/clips/makers/flyToPoseClip';
 import { ORIENTATION_FRAMES } from '../../../../data/orientation/orientationFrames';
-import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { missionCameraFrame } from '../../missionCamera/utils/missionCameraFrame';
 import { bodyPositionMpcAt } from '../../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { missionStops } from '../../missionCamera/utils/missionStops';
@@ -27,7 +27,7 @@ import { selectTimeState } from '../../../../state/time/selectors';
 import { pause, resume, setSimDays, stepToEvent } from '../../../../state/time/timeSlice';
 import { missionPlaySaga } from './missionPlaySaga';
 import { playMission } from '../../exhibits/timeline/playMission';
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import type { MissionCourse } from '../../missionCamera/@types/MissionCourse';
 import type { MissionTimeline } from '../@types/MissionTimeline';
 import type { Transition } from '../../../../@types/navigation/Transition';

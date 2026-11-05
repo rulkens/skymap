@@ -7,7 +7,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { ConstellationsRuntime } from '../../@types/ConstellationsRuntime';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { CONSTELLATION_LINE_HALFWIDTH_PX } from '../data/constellationLineHalfwidthPx';
 import { CONSTELLATION_LINE_COLOR } from '../data/constellationLineColor';

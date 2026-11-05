@@ -38,9 +38,7 @@ export const grandTour: Tour = {
       enterClip: openingTitle,
       caption: {
         title: 'The Long Way Out',
-        lines: [
-          'From home to the edge of the observable universe, and back.',
-        ],
+        lines: ['From home to the edge of the observable universe, and back.'],
       },
       dwellClip: dwellDrift(8, { cruiseRate: (Math.PI * 2) / 120 }),
     },
@@ -189,10 +187,7 @@ export const grandTour: Tour = {
       // tour ends on its settle (snapshot restore + UI chrome return).
       caption: {
         title: 'Home again',
-        lines: [
-          'Back to where we began.',
-          'Everything you just saw is out there to explore.',
-        ],
+        lines: ['Back to where we began.', 'Everything you just saw is out there to explore.'],
       },
       dwellClip: homeAgain,
     },

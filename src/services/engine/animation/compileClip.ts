@@ -62,7 +62,7 @@ import type { ClipData } from '../../../@types/animation/ClipData';
 import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { CHANNEL_SPACE } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';

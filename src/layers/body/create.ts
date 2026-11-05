@@ -9,22 +9,25 @@ import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { BodyRuntime } from './@types/BodyRuntime';
 import type { BodyFacts } from './@types/BodyFacts';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
-import { SURFACE_TILE_MESH_RESOLUTION } from '../../data/bodies/surfaceTileParams';
+import { SURFACE_TILE_MESH_RESOLUTION } from './surfaceTiles/format/data/surfaceTileParams';
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';
 import { createBodyGlintRenderer } from '../../services/gpu/renderers/bodies/bodyGlintRenderer';
-import { createEarthRenderer } from './render/earthRenderer';
-import { createSurfaceTileRenderer } from './render/surfaceTileRenderer';
-import { createTerrainPickMarkerRenderer } from './render/terrainPickMarkerRenderer';
-import { createTexturedBodyRenderer } from './render/texturedBodyRenderer';
-import { createPlanetRenderer } from './render/planetRenderer';
-import { createRingRenderer } from './render/ringRenderer';
-import { createCloudShellRenderer } from './render/cloudShellRenderer';
-import { createAtmosphereShellRenderer } from './render/atmosphereShellRenderer';
-import { ATMOSPHERE_PARAMS } from './present/atmosphereParams';
-import { createBodyTextureSlots } from './load/bodyTextureSlots';
-import { createBodyTextureAtlasSlot } from './load/bodyTextureAtlasSlot';
-import { createSurfaceTileStream } from './subsystems/surfaceTiles/surfaceTileStream';
-import { IDLE_SURFACE_TILE_PLAN } from './subsystems/surfaceTiles/idleSurfaceTilePlan';
+import { createEarthRenderer } from './earth/render/earthRenderer';
+import { createSurfaceTileRenderer } from './surfaceTiles/patch/render/surfaceTileRenderer';
+import { createTerrainPickMarkerRenderer } from './terrainPick/render/terrainPickMarkerRenderer';
+import { createTerrainPickCursor } from './terrainPick/subsystems/terrainPickCursor';
+import { createTexturedBodyRenderer } from './spheres/render/texturedBodyRenderer';
+import { createPlanetRenderer } from './spheres/render/planetRenderer';
+import { createRingRenderer } from './rings/render/ringRenderer';
+import { createCloudShellRenderer } from './clouds/render/cloudShellRenderer';
+import { createAtmosphereShellRenderer } from './atmosphere/render/atmosphereShellRenderer';
+import { ATMOSPHERE_PARAMS } from './atmosphere/data/atmosphereParams';
+import { createBodyTextureSlots } from './textures/load/bodyTextureSlots';
+import { createBodyTextureAtlasSlot } from './textures/load/bodyTextureAtlasSlot';
+import { createSurfaceTileStream } from './surfaceTiles/stream/subsystems/surfaceTileStream';
+import { IDLE_SURFACE_TILE_PLAN } from './surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
+import { catalogPickCodes } from '../../utils/picking/catalogPickCodes';
+import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
 import { throttleWithTrailingCall } from '../../utils/throttle/throttleWithTrailingCall';
 
 /** The rate every textual DebugPanel readout refreshes at. */
@@ -88,10 +91,16 @@ export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
       stream: createSurfaceTileStream({ device, requestRender: deps.requestRender }),
       plan: IDLE_SURFACE_TILE_PLAN,
     },
+    pickCodes: catalogPickCodes(BODY_SOURCE_ROWS, deps.pickCode),
     publish: deps.publish,
     // The trailing wake runs the frame that publishes a turned-away readout, so the
     // last state before the loop sleeps still reaches the panel.
     readoutGate: throttleWithTrailingCall(READOUT_INTERVAL_MS, deps.requestRender),
     debugPanelOpen: deps.debugPanelOpen,
+    terrainPickCursor: createTerrainPickCursor(
+      deps.ctx.canvas,
+      () => deps.settings().terrainPickMarker.enabled,
+      deps.requestRender,
+    ),
   };
 }

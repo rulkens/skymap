@@ -54,7 +54,8 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   },
   {
     heading: 'Flow tuning',
-    shows: 'The flow ribbons: how many, the length of their trails, speed, and how they are spread.',
+    shows:
+      'The flow ribbons: how many, the length of their trails, speed, and how they are spread.',
     file: 'src/layers/flow/streamlines/ui/FlowTuningSection.tsx',
   },
   {
@@ -82,30 +83,30 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     heading: 'Star catalog tuning',
     shows:
       'How far away stars are still drawn one by one (Detail), how wide the glow of a distant region spreads, the exposure at the near, middle and far camera distances, and a cap on how bright a glow may be. A picker sets the size of the pool of star chunks held in memory; a size the device cannot hold is refused and the reason is shown under it.',
-    file: 'src/layers/starCatalog/ui/StarCatalogTuningSection.tsx',
+    file: 'src/layers/starCatalog/controls/ui/StarCatalogTuningSection.tsx',
   },
   {
     heading: 'Surface Tiles',
     shows:
-      'Near Earth or Mars: how many ground tiles are held and at what depth. Ten buttons fly to test sites, from Søndermarken and Everest to the four Mars rover sites, and two switches flatten the terrain or drop the tiles’ skirts.',
-    file: 'src/layers/body/ui/SurfaceTileAtlasSection.tsx',
+      'Near Earth or Mars: how many ground tiles are held and at what depth. Ten buttons fly to test sites, from Søndermarken and Everest to the four Mars rover sites, and three switches tint each tile by its level of detail, flatten the terrain or drop the tiles’ skirts.',
+    file: 'src/layers/body/surfaceTiles/debug/ui/SurfaceTileAtlasSection.tsx',
   },
   {
     heading: 'Terrain pick marker',
     shows:
       'The size of the marker drawn where the pointer meets the ground, and the height of the terrain under it.',
-    file: 'src/layers/body/ui/TerrainPickMarkerTuningSection.tsx',
+    file: 'src/layers/body/terrainPick/ui/TerrainPickMarkerTuningSection.tsx',
   },
   {
     heading: 'Earth tuning',
     shows:
       'Three sliders for Earth: how bright its atmosphere is drawn, how much light the night side keeps, and how wide the Sun’s glint on the oceans is.',
-    file: 'src/layers/body/ui/EarthTuningSectionContainer.tsx',
+    file: 'src/layers/body/earth/ui/EarthTuningSectionContainer.tsx',
   },
   {
     heading: 'Debug Overlays',
     shows:
-      'Three pictures laid over the scene: the buffer a click is looked up in, the stand-in shapes of the orbit trails, and the level of detail of each ground tile.',
+      'Two pictures laid over the scene: the buffer a click is looked up in, and the stand-in shapes of the orbit trails.',
     file: `${PANEL}/DebugOverlaysSection.tsx`,
   },
   {
@@ -118,7 +119,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     heading: 'Galaxy Provenance',
     shows:
       'How many loaded galaxies have no measured orientation and no measured size, with switches to colour them or to draw only the measured or only the unmeasured ones.',
-    file: `${PANEL}/GalaxyProvenanceSection.tsx`,
+    file: 'src/layers/galaxyCatalog/provenance/ui/GalaxyProvenanceSection.tsx',
   },
   {
     heading: 'Clips & Tours',

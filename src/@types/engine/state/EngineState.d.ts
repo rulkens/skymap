@@ -29,8 +29,9 @@ import type { SlabRow } from '../frame/SlabRow';
 import type { VisibilityEntry } from '../layer/VisibilityEntry';
 import type { VisibilityGates } from './VisibilityGates';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
+import type { PickCodeAllocator } from '../selection/PickCodeAllocator';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
-import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
+import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { GatedOrbitTrailGroup } from '../frame/GatedOrbitTrailGroup';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
@@ -55,9 +56,11 @@ export type EngineState = {
   booted: boolean;
   /** Whether the last frame had a fade or label animation running; `settled()` polls it. */
   fadesAnimating: boolean;
+  /** Whether a Layer planner voted `settling` last frame; `isSceneSettled` reads it. */
+  layersSettling: boolean;
   /** Seeded with placeholders in `engine.ts`, filled by `wireInput`'s bootstrap seed. */
   cameraRuntime: CameraRuntime;
-  /** Per-`CUBEMAP_CAPTURES`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky row's `allocateWhen`. */
+  /** Per-`APP_CUBEMAP_CAPTURE_REGISTRY`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky row's `allocateWhen`. */
   cubemapCaptures: CubemapCaptureRuntimes;
   /** Bumped per galaxy-catalog commit (`wireGalaxyCatalogSourceSlot` is the sole writer); `scheduleSkyCaptures`' re-bake key. */
   contentVersion: number;
@@ -91,6 +94,8 @@ export type EngineState = {
   terrainHeightAt: TerrainHeightAtLookup;
   /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */
   selectionKindRows: readonly SelectionKindRow[];
+  /** The engine's pick-code allocator; `createLayers` builds it, the debug overlay reads `codeIfAsked`. */
+  pickCodes: PickCodeAllocator | null;
   /** Seeded by `createEngine` because the `renderTargets` GPU-handle row runs before `createLayers`. */
   readonly layerTargets: readonly (readonly RenderTargetSpec[])[];
 };

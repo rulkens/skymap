@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
-import { ALL_BODY_TEXTURE_KEYS } from '../../src/data/bodies/bodyTextureKeys';
+import { ALL_BODY_TEXTURE_KEYS } from '../../src/layers/body/textures/data/bodyTextureKeys';
 import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';

@@ -28,7 +28,7 @@ import { purgeCloudflareCache } from './r2/purgeCloudflareCache';
 import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv';
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
-import { SURFACE_TILE_REGISTRY } from '../../src/data/bodies/surfaceTileRegistry';
+import { SURFACE_TILE_REGISTRY } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
 import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
 
 const DATA_DIR = 'public/data';
@@ -104,6 +104,7 @@ function buildGroups(): R2SyncGroup[] {
         kind: 'bulk',
         localRoot: RAW_DATA['meshes.dir'].path,
         keyRoot: RAW_DATA['meshes.dir'].path,
+        refuseOverwrite: false,
       },
       cacheControl: NO_CACHE,
       purge: false,
@@ -115,7 +116,12 @@ function buildGroups(): R2SyncGroup[] {
       ({ manifestKey }): R2SyncGroup => ({
         label: `Surface tiles (${manifestKey})`,
         files: collectSurfaceTiles(IMAGES_DIR, manifestKey),
-        transport: { kind: 'bulk', localRoot: IMAGES_DIR, keyRoot: 'data/images' },
+        transport: {
+          kind: 'bulk',
+          localRoot: IMAGES_DIR,
+          keyRoot: 'data/images',
+          refuseOverwrite: true,
+        },
         cacheControl: IMMUTABLE,
         purge: false,
         gzipOnWire: false,
@@ -131,6 +137,7 @@ function buildGroups(): R2SyncGroup[] {
           kind: 'bulk',
           localRoot: `public/data/${OCTREE_FAMILIES[catalog.family].dataPrefix}`,
           keyRoot: `data/${OCTREE_FAMILIES[catalog.family].dataPrefix}`,
+          refuseOverwrite: false,
         },
         cacheControl: IMMUTABLE,
         purge: false,

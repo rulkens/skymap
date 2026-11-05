@@ -12,17 +12,19 @@ import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
+import { starSearch } from '../../../src/layers/starCatalog/selection/present/starSearch';
+import { encodeStarFocusId } from '../../../src/services/url/encodeStarFocusId';
+import type { LayerSearchEntry } from '../../../src/@types/engine/layer/LayerSearchEntry';
 import { Source } from '../../../src/data/source';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { StarRowFixture } from '../../support/selectionResolverOver';
+import { testPickCode } from '../../support/testPickCode';
 
 /** The seeded star arms read no store data, so an empty fixture suffices — the
  *  star row needs no survey catalog to resolve a seed. */
-const resolver = selectionResolverOver(
-  { byId: () => null, byCategory: () => [] },
-  undefined,
-  { renderer: { loadedCatalogs: () => [][Symbol.iterator]() } } as unknown as StarRowFixture,
-);
+const resolver = selectionResolverOver({ byId: () => null, byCategory: () => [] }, undefined, {
+  renderer: { loadedCatalogs: () => [][Symbol.iterator]() },
+} as unknown as StarRowFixture);
 
 describe('SCENE_S_STARS', () => {
   it('shares no id with the famous-star map', () => {
@@ -45,24 +47,32 @@ describe('SCENE_S_STARS', () => {
     const s2Index = SCENE_S_STARS.findIndex((star) => star.id === 's2');
     expect(s2Index).toBeGreaterThanOrEqual(0);
 
-    const ref = resolver.resolvePick({ sourceCode: Source.SStar, localIdx: s2Index });
+    const sourceCode = testPickCode('starCatalog')('sStar');
+    const ref = resolver.resolvePick({ sourceCode, localIdx: s2Index });
     expect(ref).toEqual({ type: 'starCatalog', source: Source.SStar, index: s2Index });
     expect(resolver.extractRow(ref, CONST_J2000)).toMatchObject({ id: 's2', label: 'S2' });
 
     expect(SCENE_BODIES.some((body) => body.id === 's2')).toBe(true);
   });
 
-  it('S2 is findable by name, and the other new rows do not swamp another query', () => {
+  it('S2 is findable by name, and the other new rows do not swamp another query', async () => {
     // Searchability is a free consequence of the seed table the palette scores
     // over, so this is the reachable end of the same registration. The second
     // half is the cost side: 40 short, digit-bearing labels are exactly the
     // shape that pollutes unrelated queries.
-    const s2Rows = rankPaletteMatches([], [], [], [], 'S2').filter(
-      (row) => row.kind === 'starCatalog' && row.star.id === 's2',
+    const starRows: LayerSearchEntry[] = [];
+    for await (const batch of starSearch()) starRows.push(...batch);
+    const s2Id = encodeStarFocusId({
+      type: 'starCatalog',
+      source: Source.SStar,
+      index: SCENE_S_STARS.findIndex((star) => star.id === 's2'),
+    });
+    const s2Rows = rankPaletteMatches([], [], [], starRows, 'S2').filter(
+      (row) => row.kind === 'layer' && row.entry.id === s2Id,
     );
     expect(s2Rows).toHaveLength(1);
 
-    const siriusRows = rankPaletteMatches([], [], [], [], 'Sirius');
-    expect(siriusRows[0]).toMatchObject({ kind: 'starCatalog', star: { id: 'sirius' } });
+    const siriusRows = rankPaletteMatches([], [], [], starRows, 'Sirius');
+    expect(siriusRows[0]).toMatchObject({ kind: 'layer', entry: { id: 'star-sirius' } });
   });
 });

@@ -10,16 +10,16 @@ src/services/camera src/services/engine/camera` reports one genuine
 intra-folder cycle (its finding #12):
 
 ```
-services/engine/camera/bodyLikeFraming.ts > services/engine/camera/focusFraming.ts
+services/engine/camera/framing/bodyLikeFraming.ts > services/engine/camera/framing/focusFraming.ts
 ```
 
 Neither file is touched by the camera-pivot branch's diff.
 
 ## Where the edges are
 
-- `src/services/engine/camera/bodyLikeFraming.ts:29` — `import type {
+- `src/services/engine/camera/framing/bodyLikeFraming.ts:29` — `import type {
 FocusFraming } from './focusFraming'` (type-only).
-- `src/services/engine/camera/focusFraming.ts:43` — `import { bodyLikeFraming
+- `src/services/engine/camera/framing/focusFraming.ts:43` — `import { bodyLikeFraming
 } from './bodyLikeFraming'` (value import).
 
 The cycle is a type-only back-edge from `bodyLikeFraming` into `focusFraming`

@@ -14,13 +14,8 @@
 }
 
 .value {
+  composes: figure-value from '../../../../styles/picture.module.css';
   color: var(--color-accent);
-  font-size: var(--text-h2);
-  font-weight: 300;
-  line-height: 0.9;
-  letter-spacing: -0.04em;
-  text-shadow: 0 0 2rem rgb(0 0 0 / 0.8);
-  white-space: nowrap;
 }
 
 .measure {
@@ -42,20 +37,13 @@
 }
 
 /* The render has no frame: its edges dissolve into the page, so the pieces stand in the same space as the galaxy. */
-.render {
+.render picture {
   display: block;
-
-  & picture {
-    display: block;
-    mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 58%, transparent 100%);
-  }
+  mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 58%, transparent 100%);
 }
 
 .navigation img,
 .card img {
-  display: block;
-  width: 100%;
-  height: auto;
   filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
 }
 
@@ -97,12 +85,17 @@
     width: 31%;
   }
 
+  /* The card, the nearest, leans furthest from the pointer and moves the most against the scroll. */
   .navigation {
+    --depth: 1.25rem;
+    --drift: 1.5rem;
     bottom: 2%;
     left: -15%;
   }
 
   .card {
+    --depth: 2.5rem;
+    --drift: 3rem;
     top: -10%;
     right: 3%;
   }
@@ -112,22 +105,6 @@
     right: 4%;
     bottom: 6%;
     justify-items: end;
-  }
-
-  /* The card, the nearest, leans furthest from the pointer. */
-  .navigation {
-    --depth: 1.25rem;
-  }
-
-  .card {
-    --depth: 2.5rem;
-  }
-}
-
-@media (--narrow) {
-  .reading {
-    grid-column: 1 / -1;
-    margin-top: var(--site-space-s);
   }
 }
 
@@ -153,23 +130,18 @@
     z-index: 1;
     margin-top: -3rem;
   }
+
+  .reading {
+    grid-column: 1 / -1;
+    margin-top: var(--site-space-s);
+  }
 }
 
-/* Wide, the pieces are nearer than the galaxy: as the page scrolls they move against it, the card the most. */
+/* Wide, the pieces are nearer than the galaxy: as the page scrolls they move against it. */
 .navigation {
   composes: drift lean from '../../../../styles/motion.module.css';
 }
 
 .card {
   composes: drift lean from '../../../../styles/motion.module.css';
-}
-
-@media (--wide) {
-  .navigation {
-    --drift: 1.5rem;
-  }
-
-  .card {
-    --drift: 3rem;
-  }
 }

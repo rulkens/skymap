@@ -22,7 +22,7 @@ import { redactSecret } from '../utils/io/redactSecret';
 import { skadiCellsForBounds } from '../utils/textures/skadiCellsForBounds';
 import { lonLatToUtm32 } from '../utils/geo/lonLatToUtm32';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
-import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
+import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 
 /** NGDC's 30″ surface-elevation GeoTIFF; the thredds path in the spec 404s. */
 const ETOPO_URL =

@@ -23,7 +23,7 @@ import { tiltOverBody } from '../../../helpers/camera/tiltOverBody';
 import { displayedEye } from '../../../helpers/camera/displayedEye';
 import { hrOverBody } from '../../../helpers/camera/hrOverBody';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
+import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';

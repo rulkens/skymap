@@ -22,8 +22,7 @@ import type { SelectionRef } from '../SelectionRef';
  * The points vertex shader re-derives `distance(p.position, center) <
  * radius` per-vertex, so this subsystem never computes a CPU member list
  * — it only supplies center, radius, and the smoothstep blend. (The pure
- * `structureMembership` fn stays available if a future feature needs an
- * explicit count/list.)
+ * `structureMembership` fn is the CPU count for the InfoCard row.)
  */
 export type StructureFocusSubsystem = {
   readonly id: 'structureFocus';

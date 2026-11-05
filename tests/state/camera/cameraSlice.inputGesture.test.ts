@@ -5,7 +5,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { startCameraTween } from '../../../src/state/camera/cameraSlice';
 import { inputGestureStarted } from '../../../src/state/input/inputSlice';
 import { cameraRoute } from '../../../src/store/constants';
-import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
+import type { CameraTweenDescriptor } from '../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 
 describe('cameraSlice answers input', () => {
   it('inputGestureStarted clears the tween', () => {

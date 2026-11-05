@@ -1,19 +1,17 @@
 /**
  * bodyCaption — the shared `ForegroundCaption` builder for a seeded scene
- * subject: position, size, tint, kind and pick id are the caller's own; font,
- * outline, size clamps and alignment are authored once here. `sceneBodyLabels`
- * (core), `produceStarCaptions` and `produceBlackHoleCaptions` call this rather
+ * subject: position, size, tint, priority and pick id are the caller's own; font,
+ * outline, size clamps and alignment are authored once here. `sceneBodyLabels`,
+ * `produceStarCaptions` and `produceBlackHoleCaptions` call this rather
  * than growing their own copy, so a caption reads the same regardless of producer.
  */
 
 import type { Label2D } from '../../@types/rendering/Label2D';
 import type { Vec3 } from '../../@types/math/Vec3';
-import type { CaptionKind } from '../../services/engine/presentation/captionPriority';
 import type { ForegroundCaption } from '../../services/engine/presentation/foregroundCaption';
 import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from '../../services/engine/presentation/famousLabelStyle';
-import { sceneBodyPickId } from '../picking/sceneBodyPickId';
 
 /**
  * Vertical stagger so captions of bodies sharing a sub-pixel screen spot
@@ -30,17 +28,16 @@ const BODY_ALIGN_Y: Readonly<Record<string, Label2D['alignY']>> = {
  * `position`/`tint` are parameters because no `SceneBody` arm carries either
  * (each seed table derives its own colour); `footprintRadiusM` sizes the em,
  * and is a parameter so a subject with no body record (a black hole) can
- * caption. `pickId` defaults through the shared body-pick registry; a star's
- * caller packs its own (source + seed index) instead, since only it knows
- * which seed table it walked.
+ * caption. `pickId` is the caller's: only it knows which seed table it walked and
+ * which pick code its Layer holds.
  */
 export function bodyCaption(
   body: { readonly id: string; readonly label: string },
   footprintRadiusM: number,
   positionMpc: Readonly<Vec3>,
   tint: Readonly<Vec3>,
-  kind: CaptionKind,
-  pickId: number | undefined = sceneBodyPickId(body.id) ?? undefined,
+  priority: number,
+  pickId: number | undefined,
 ): ForegroundCaption {
   const o = RENDER_ORIGIN_MPC;
   const p = positionMpc;
@@ -50,7 +47,7 @@ export function bodyCaption(
   // pick set (the −1 contract) rather than aliasing body 0.
   return {
     id: `sceneBody-${body.id}`,
-    kind,
+    priority,
     worldPos,
     pickId,
     text: body.label,

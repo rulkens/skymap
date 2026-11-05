@@ -46,10 +46,8 @@
 }
 
 .frame img {
-  display: block;
   width: calc(100% / 0.66);
   max-width: none;
-  height: auto;
 }
 
 .words p {

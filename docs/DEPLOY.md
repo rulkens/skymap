@@ -52,11 +52,15 @@ If a bulk group has files but the credentials below are missing, `syncR2.ts` fai
 
 #### Earth tile versioning
 
-Tile keys sit under a versioned prefix (currently `earth-tiles/v10`; the `TILE_PREFIX` constant in `tools/textures/surfaceBodies/earthSurfaceBake.ts` is the source of truth, written into `manifest.json` and read back from there by the runtime — `surfaceTileStream.ts` takes the prefix off the manifest, so a version switch needs no code deploy). The tiles are served `public, max-age=31536000, immutable` and never purged, so **re-baking changed bytes means bumping that version** — nothing in the code enforces this. Measured, not assumed: `.webp` is on Cloudflare's default cacheable-extension list, so these tiles really are edge-cached (`cf-cache-status: HIT`), unlike the `.bin` files in the note at the end of this file. Reusing a version leaves stale bytes in two caches: the edge can be purged, but a **browser** cache holding an immutable object cannot be, so a returning visitor is stuck mixing old and new tiles — for height tiles that means some patches displaced and some flat, with seams between them.
+Tile keys sit under a versioned prefix (currently `earth-tiles/v11`; the `TILE_PREFIX` constant in `tools/textures/surfaceBodies/earthSurfaceBake.ts` is the source of truth, written into `manifest.json` and read back from there by the runtime — `surfaceTileStream.ts` takes the prefix off the manifest, so a version switch needs no code deploy). The tiles are served `public, max-age=31536000, immutable` and never purged, so **re-baking changed bytes means bumping that version** — nothing in the code enforces this. Edge caching of the archives is recorded under "Edge caching of `.bin` and `.json`" at the end of this file. Reusing a version leaves stale bytes in two caches: the edge can be purged, but a **browser** cache holding an immutable object cannot be, so a returning visitor is stuck mixing old and new tiles — for height tiles that means some patches displaced and some flat, with seams between them.
+
+**Archives are immutable by enforcement.** The tiles under a prefix are per-level `.idx` + `.pack` archives (raw, not gzipped: `Content-Encoding` would break byte offsets), read with HTTP Range. One added tile shifts every later offset, so an archive can never change in place. The surface tile groups therefore set the bulk transport's `refuseOverwrite: true`, which passes rclone `--immutable`: a sync that would overwrite an existing remote object with different content fails and names the file. The flag is explicit on those groups only; the octree chunk groups are `immutable` too but gzipped, and a zlib upgrade changing the gzip output would trip a flag keyed on `immutable`. Before the code deploy, the only readers of a new prefix are the owner and agents, so a fix may replace the files: delete the objects on R2, re-sync, purge their URLs. After the deploy there is no exception, and any change (even one added site band) takes a new prefix and a full upload of that body (~600 MB for Earth).
 
 A manifest SHAPE change (not just pixels — e.g. `bands` growing a second band) is a sharper case: `fetchSurfaceTileManifest`'s runtime guard rejects any manifest shape it doesn't recognise, so between a merge that changes the shape and the next `npm run sync-r2-secure`, every client fetches the stale R2 manifest, gets rejected, and surface tiles are OFF in production entirely — the sync is a blocking merge step, not a follow-up.
 
 A height-only re-bake moves in this order, because only the height product's bytes changed: rename the local tree to the new prefix and rewrite `<manifestKey>/index.txt` and the `prefix` field in `<manifestKey>/manifest.json`; server-side copy `<old>/albedo` to `<new>/albedo` (same bytes, new prefix — no re-upload, `rclone copy r2:skymap-data/... r2:skymap-data/...` within the bucket); `bulk`-upload the new `<new>/height` tiles; sync the manifest last, which is the atomic switch since it is `no-cache` and purged. Height display is OFF in production for that whole window — the manifest still names the old prefix's height tiles, and the new decoder rejects them. That was the v8 → v9 move (raw f32 `.bin` → lossless Terrain-RGB `.webp`) and the v9 → v10 move (the `SHGT` header chunk grew the CPU post grid, so every height tile's bytes changed while its pixels did not). Prune the superseded prefix once the new one verifies.
+
+A new EOX region adds tiles to a few levels, and a level's archive changes as a whole, so it takes a new prefix and a full upload of that body (local steps in [DATA.md](DATA.md), "Adding an EOX region"). The old prefix stays valid throughout, so nothing goes dark; the manifest, synced last, switches the prefix. A server-side copy of `<old>` to `<new>` helps only for products whose levels are unchanged: their copied archives match the deterministic re-pack byte for byte, so rclone's checksum skips them, while any changed level's copied `.idx` and parts differ and `--immutable` fails the sync on them. The v10 → v11 move predates archives and went the loose-tile way.
 
 #### Credentials
 
@@ -68,7 +72,20 @@ security add-generic-password -a "$USER" -s skymap-r2-access-key-id     -w 'KEY_
 security add-generic-password -a "$USER" -s skymap-r2-secret-access-key -w 'SECRET'
 ```
 
-rclone is configured entirely through `RCLONE_CONFIG_R2_*` environment variables, so no secret is ever written to a config file on disk.
+rclone is configured entirely through `RCLONE_CONFIG_R2_*` environment variables, so no secret is ever written to a config file on disk. That means a bare `rclone … r2:…` fails with `didn't find section in config file ("r2")`: every hand-run command in this file, such as the server-side copies above, needs those variables set first. The subshell keeps the secrets out of your shell afterwards:
+
+```
+(
+  key() { security find-generic-password -a "$USER" -s "$1" -w; }
+  export RCLONE_CONFIG_R2_TYPE=s3
+  export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
+  export RCLONE_CONFIG_R2_ACCESS_KEY_ID="$(key skymap-r2-access-key-id)"
+  export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$(key skymap-r2-secret-access-key)"
+  export RCLONE_CONFIG_R2_ENDPOINT="https://$(key skymap-r2-account-id).r2.cloudflarestorage.com"
+  export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
+  rclone copy r2:skymap-data/<from> r2:skymap-data/<to> --checksum --transfers 32 --checkers 32 --progress
+)
+```
 
 ### Films (`films/` prefix)
 
@@ -88,6 +105,8 @@ rclone copyto public/data/site/earth-to-universe-v1.mp4 r2:skymap-data/data/site
 ```
 
 The name carries a version because the object is `immutable` and never purged: new bytes mean a new name, never an overwrite. Until the file is uploaded the page falls back to its poster. The data manifest's drift guard ignores `public/data/site/` (`allowDataFile` is an allow-list and names nothing there), so neither `build-data-manifest` nor `sync-r2` sees it.
+
+The press kit (`npm run site:press-kit`, see `tools/site/README.md`) goes up the same way, `bash tools/deploy/uploadSiteMedia.sh public/data/site/skymap-press-kit.zip`, to `data/site/skymap-press-kit.zip`. Its name is fixed, because the About page and anyone who copied the link point at it, so it is not `immutable`: the script gives a `.zip` `Cache-Control: public, max-age=3600` and `Content-Type: application/zip`, and a new kit reaches visitors within the hour with no purge. Upload it after each run, in the same change that commits the run's `packages/website/src/data/pressKit.json`, the size the page prints.
 
 ### Opening the contact form
 
@@ -109,7 +128,7 @@ Steps, in order (each is yours; nothing here has been done):
 
 5. **Three secrets** (never `[vars]`, never the repo): `npx wrangler secret put CONTACT_TO` (your inbox, the verified destination), `npx wrangler secret put CONTACT_FROM` (the sender address on the onboarded domain), `npx wrangler secret put TURNSTILE_SECRET_KEY`. Secrets survive deploys.
 6. **The two site values**, as build variables of the Cloudflare project (the same route as `SKYMAP_SITE_MODE`): `SKYMAP_CONTACT_ENDPOINT=/api/contact` and `SKYMAP_TURNSTILE_SITE_KEY=<the site key>`. Both are public, and the form is rendered only when both are set. They are read at build time, so push (or retrigger a build) after setting them. If the domes page still says "Contact opens soon" after that build, the values did not reach `process.env` of the build; `.gitignore` records a case where dashboard variables did not.
-7. **Update `/privacy/` the same day.** The "plan, not yet in effect" paragraph in `packages/website/src/pages/privacy.astro` and the fact row `privacy-form-closed` in `packages/website/src/data/privacyFacts.ts` describe a design; rewrite them as what happens, and change the date at the foot of the page. The widget is a third-party request (`challenges.cloudflare.com`, on the domes page only, once the form scrolls into view), so the "what the website loads" facts change too.
+7. **Check `/privacy/` after that build.** The same `CONTACT_ENDPOINT` adds the "Contact form" row (fact `privacy-contact-form` in `packages/website/src/data/privacyFacts.ts`: the Turnstile request to `challenges.cloudflare.com` and what the email carries). Read it against what the form now does, and add how long the emails are kept in your inbox, which the form's own note promises the page says.
 
 Test before step 6 with `npx wrangler dev` (default port 8787) and a git-ignored `.dev.vars` file holding `CONTACT_TO`, `CONTACT_FROM` and `TURNSTILE_SECRET_KEY`. `wrangler dev` simulates `send_email`: it prints the message and writes its text under `.wrangler/` instead of sending (add `remote = true` to the binding to send for real). Turnstile's documented test secrets work with any token: `1x0000000000000000000000000000000AA` always passes, `2x0000000000000000000000000000000AA` always fails (site key for the widget: `1x00000000000000000000AA`).
 
@@ -130,4 +149,4 @@ To close the form again, delete any one secret (`npx wrangler secret delete CONT
 
 Because the stored bytes for eligible files change (gzip compressed vs. raw), `tools/deploy/r2/localUploadHash.ts` hashes the same gzipped bytes for the ETag comparison `syncGroup.ts` uses to skip unchanged files — see its docblock. One consequence: **the first `sync-r2` run after this ships will re-upload every eligible file once** (its stored ETag was hashed from the old raw bytes, so every comparison mismatches). This is expected and one-time; subsequent runs skip normally again.
 
-**Manual step, not covered by this change:** production currently edge-caches nothing for `skymap-data.rulkens.com` (`cf-cache-status: DYNAMIC` on every request) even though R2 already sends `immutable` cache-control — Cloudflare's default cacheable-extension list doesn't include `.bin`/`.scfd`. Someone with dashboard access needs to add a Cache Rule for that host: **Cache eligible: everything, respect origin cache-control**. The star octree's chunks are `.bin` too, so until the rule lands every chunk fetch is an R2 origin hit.
+**Edge caching.** `skymap-data.rulkens.com` edge-caches data files: `.bin`, `.json`, `.idx` and `.pack` come back MISS on the first request and HIT (or REVALIDATED) after. A Range request on a raw object answers 206 from the cache. On a cold miss the edge streams the whole object in before it serves later offsets, at about 65 MB/s. That is why surface-tile parts are capped at 16 MiB: measured 2026-11-05, 8 concurrent cold reads into one part took up to 0.85 s, against 2.44 s with 64 MiB parts.

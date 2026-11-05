@@ -50,6 +50,11 @@ export const DOCS_TREE: readonly DocsGroup<DocsRow>[] = [
         status: 'live',
         up: '/domes/',
       },
+      {
+        path: '/docs/guide/dome-setup/',
+        status: 'live',
+        up: '/domes/',
+      },
     ],
   },
   {

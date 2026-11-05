@@ -40,7 +40,7 @@ Core keeps a closed union per concept (`SelectionRef`, `FocusableTarget`, `Capti
 `SELECTION_HALO_TABLE`, `TARGET_IDENTITY_KEY`, `focusFraming`, `mayHaveLabel`, `URL_HASH_FOR`, the
 palette row tables, `CAPTION_FADE_RULES`, `SCENE_ANCHORS`, `DEBUG_OVERLAY_ROWS`. The compiler
 catches a missing row, which is why they felt safe, but adding the satellites kind edited fourteen
-core files (`docs/backlog/2026-10-28-selection-kind-facts-in-the-layer.md`), and the fact about a
+core files (`docs/superpowers/specs/2026-11-05-selection-kind-facts-design.md`), and the fact about a
 satellite lives wherever the question is asked rather than with the satellite.
 
 ADR 0011 explicitly left the pick/selection tables out of its row scheme, and the September review
@@ -67,10 +67,10 @@ Concretely:
   cross-Layer exhibits) are assembly and content, never a per-kind table: `APP_EXHIBIT_REGISTRY` lists
   Layers' exhibit rows, it does not list kinds.
 - **Per-kind facts are fields on the Layer's row, and kind unions are derived.** The fact a
-  per-kind table answers (how a selection kind frames, what halo it draws, which caption tier it
+  per-kind table answers (how a selection kind frames, what halo it draws, which caption priority it
   has, how its id encodes into the URL) is a field on the declaration the Layer already
   contributes for that kind, and core reads the field off the composed row. The closed unions
-  core keys those tables on (`SelectionRef`, `FocusableTarget`, `CaptionKind`, `ExhibitId`,
+  core keys those tables on (`SelectionRef`, `FocusableTarget`, `ExhibitId`,
   `ClipId`, `TourId`) are derived from the composition's declarations, as `ShowKey` already is
   from `APP_VISIBILITY_REGISTRY` (ADR 0012); none stays hand-typed. Where no contract member carries the
   fact yet, the migration adds one, and that widening is sequenced and consented to per member,
@@ -150,5 +150,5 @@ but any per-kind row inside them falls under this rule like every other.
 - ADR 0011 — the row-registry direction for the engine families and the carve-out this narrows.
 - ADR 0012 — `ShowKey` as a core vocabulary derived from `APP_VISIBILITY_REGISTRY`.
 - `docs/research/engine/layer-composition-review-2026-09-09.md` §2 — the eighteen-table inventory.
-- `docs/backlog/2026-10-28-selection-kind-facts-in-the-layer.md` — the kind-B migration brief.
+- `docs/superpowers/specs/2026-11-05-selection-kind-facts-design.md` — the kind-B migration brief.
 - `docs/backlog/2026-10-11-layer-dependency-dag.md` — Layer-to-Layer reads, out of scope here.

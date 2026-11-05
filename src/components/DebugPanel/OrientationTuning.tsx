@@ -9,7 +9,7 @@
 
 import type { ReactNode } from 'react';
 
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
+import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
 import { CAMERA_TUNING_LIMITS } from '../../data/camera/cameraTuning';
 import { setCameraTuning } from '../../state/camera/cameraSlice';
 import { useAppDispatch } from '../../store/hooks';
@@ -90,7 +90,7 @@ function OrientationTuning({
         max={limits.siteEngageMax}
         step={1}
         readout={tuning.siteEngageR.toFixed(0)}
-        title="range, in the SITE body's bounding radii, at which the site rung takes over (disengage kept > this × 1.1)"
+        title="range, in the SITE body's bounding radii, at which the site arm takes over (disengage kept > this × 1.1)"
         onChange={(v) => dispatch(setCameraTuning({ siteEngageR: v }))}
       />
       <DebugSlider

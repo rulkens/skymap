@@ -11,8 +11,8 @@
  * so the silhouette is pixel-perfect and tracks the camera's orbit.
  */
 
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
-import type { ViewFrustum } from '../../../../@types/camera/ViewFrustum';
+import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
+import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
 
 export type HorizonShellRenderer = {
   /** Human-readable identifier (`'horizonShellRenderer'`). */

@@ -26,7 +26,7 @@ import package::lib::pbr::envSplitSum;
 // Normal-incidence reflectance of a non-metal (~4%), 'lib/pbr.wesl's rock value.
 const DIELECTRIC_F0: f32 = 0.04;
 
-// Mirrors 'EARTH_SURFACE_PARAMS.sunIrradiance' (data/bodies/earthSurfaceParams.ts).
+// Mirrors 'EARTH_SURFACE_PARAMS.sunIrradiance' (layers/body/surfaceTiles/format/data/earthSurfaceParams.ts).
 // The probe captures the planets in 'litShade' units, so the direct term must
 // share that one scale or a metal reflects its host at the wrong brightness.
 const SUN_IRRADIANCE: f32 = 3.0;

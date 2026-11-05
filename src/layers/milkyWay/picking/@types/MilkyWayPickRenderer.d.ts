@@ -1,7 +1,7 @@
 /**
  * Public handle returned by `createMilkyWayPickRenderer`: the visible cloud has no
  * pick pipeline, so this stamps one invisible billboard at the galactic centre into
- * the r32uint pick texture, identity `(Source.MilkyWay << 26) | PICK_SENTINEL_OFFSET`.
+ * the r32uint pick texture, identity `(pickCode << 26) | PICK_SENTINEL_OFFSET`.
  */
 
 import type { Vec2 } from '../../../../@types/math/Vec2';

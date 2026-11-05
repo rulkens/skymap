@@ -14,16 +14,16 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { createLabel2DDirector } from '../../../../src/services/engine/subsystems/label2DDirector';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
-import { produceStarCaptions } from '../../../../src/layers/starCatalog/present/produceStarCaptions';
+import { produceStarCaptions } from '../../../../src/layers/starCatalog/captions/present/produceStarCaptions';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { STAR_MAP_CAPTION_BAND } from '../../../../src/layers/starCatalog/data/starMapCaptionBand';
+import { STAR_MAP_CAPTION_BAND } from '../../../../src/layers/starCatalog/captions/data/starMapCaptionBand';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
-import { foregroundFrustum } from '../../../../src/utils/camera/foregroundFrustum';
-import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
+import { computeForegroundViewProj } from '../../../../src/utils/camera/projection/computeForegroundViewProj';
+import { foregroundFrustum } from '../../../../src/utils/camera/frustum/foregroundFrustum';
+import { rebaseViewProj } from '../../../../src/utils/camera/projection/rebaseViewProj';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
@@ -38,11 +38,18 @@ import type { MarkerLineRenderer } from '../../../../src/@types/rendering/Marker
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { catalogPickCodes } from '../../../../src/utils/picking/catalogPickCodes';
+import { STAR_CATALOG_SOURCE_ROWS } from '../../../../src/layers/starCatalog/sources/starCatalogSourceRows';
+import { testPickCode } from '../../../support/testPickCode';
+
+const STAR_PICK_CODES = {
+  pickCodes: catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, testPickCode('starCatalog')),
+};
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get(asSceneBodyId('earth'))!.positionMpc;
@@ -197,7 +204,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({
       id: 'starCaptions',
-      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+      produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
     });
     const state = makeState();
 
@@ -240,7 +247,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({
       id: 'starCaptions',
-      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+      produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
     });
     dir.runFrame(makeState(), makeCtx(eye, slab));
 
@@ -283,7 +290,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({
       id: 'starCaptions',
-      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+      produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
     });
     dir.runFrame(makeState(), makeCtx(eye, slab));
     const cap = emittedCaption(labelStub, star.id)!;

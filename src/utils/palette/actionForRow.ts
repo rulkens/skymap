@@ -6,8 +6,6 @@
  */
 
 import { encodeGalaxyId } from '../../services/url/encodeGalaxyId';
-import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
-import { encodeStarFocusId } from '../../services/url/encodeStarFocusId';
 import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 
@@ -38,14 +36,6 @@ const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteActio
         : '',
   }),
   structure: (row) => ({ kind: 'focus', focusId: row.kind === 'structure' ? row.entry.id : '' }),
-  milkyWay: () => ({ kind: 'focus', focusId: MILKY_WAY_FOCUS_ID }),
-  starCatalog: (row) => ({
-    kind: 'focus',
-    focusId:
-      row.kind === 'starCatalog'
-        ? encodeStarFocusId({ type: 'starCatalog', source: row.source, index: row.index })
-        : '',
-  }),
   exhibit: (row) =>
     row.kind === 'exhibit' ? { kind: 'exhibit', exhibitId: row.exhibit.id } : unreachableRow(),
   tour: (row) => (row.kind === 'tour' ? { kind: 'tour', tourId: row.tour.id } : unreachableRow()),

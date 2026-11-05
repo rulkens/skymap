@@ -18,7 +18,7 @@ import CameraStateSection from '../../../src/components/DebugPanel/CameraStateSe
 import { rootReducer } from '../../../src/store/rootReducer';
 import { setCameraTuning } from '../../../src/state/camera/cameraSlice';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
-import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
+import type { CameraDebugSnapshot } from '../../../src/@types/camera/debug/CameraDebugSnapshot';
 import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
 import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 

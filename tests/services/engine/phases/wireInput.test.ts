@@ -10,7 +10,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
+import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/drivers/cameraEpochs';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -27,7 +27,7 @@ const homePoseSpy = vi.fn(() => ({
     pitch: 0.0609,
   },
 }));
-vi.mock('../../../../src/services/engine/camera/homePose', () => ({
+vi.mock('../../../../src/services/engine/camera/framing/homePose', () => ({
   homePose: (...args: unknown[]) => homePoseSpy(...(args as Parameters<typeof homePoseSpy>)),
 }));
 
@@ -35,7 +35,7 @@ vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
   buildGalaxyInfo: vi.fn(),
 }));
 
-vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyPickRenderer', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/pointSprites/render/galaxyPickRenderer', () => ({
   createGalaxyPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
 }));
 
@@ -105,7 +105,7 @@ function makeState(): EngineState {
       },
     },
     bias: {} as never,
-    picking: { pickInFlight: false, cursorTexPx: null },
+    picking: { pickInFlight: false },
     data: {
       structures: { byCategory: () => [] },
       galaxies: { get: () => undefined, famousMeta: [] },

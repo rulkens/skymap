@@ -13,7 +13,7 @@ import RemoteDemo from '../../../components/shared/media/RemoteDemo/RemoteDemo.t
 import SearchSpread from '../../../components/pages/features/SearchSpread/SearchSpread.tsx';
 import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
-import { big, cosmicWeb, earth, milkyWay, missions, solarSystem, time } from './features.data';
+import { cosmicWeb, earth, milkyWay, missions, solarSystem, time } from './features.data';
 
 <FeaturesHero client:visible />
 
@@ -23,15 +23,15 @@ import { big, cosmicWeb, earth, milkyWay, missions, solarSystem, time } from './
   </SectionHead>
 </Section>
 
-<FeatureGallery id="earth" title="Earth in 3D" line="A globe with satellite imagery that you can fly down to, as far as aerial photographs of a park in Copenhagen." href="/docs/guide/moving/" label="Moving around" slides={earth} sizes={big} client:visible />
+<FeatureGallery id="earth" title="Earth in 3D" line="A globe with satellite imagery that you can fly down to, as far as aerial photographs of a park in Copenhagen." href="/docs/guide/moving/" label="Moving around" slides={earth} client:visible />
 
-<FeatureGallery side="left" frameless id="solar-system" title="The Solar System" line="Explore the planets, moons and other objects of interest in the solar system." href="/docs/start/scene/#planets-and-their-moons" label="Planets and their moons" slides={solarSystem} sizes={big} client:visible />
+<FeatureGallery side="left" frameless id="solar-system" title="The Solar System" line="Explore the planets, moons and other objects of interest in the solar system." href="/docs/start/scene/#planets-and-their-moons" label="Planets and their moons" slides={solarSystem} client:visible />
 
-<FeatureGallery id="missions" title="Missions" line="We have been exploring space for decades. Skymap shows several of the missions, as 3D models and in an exhibit on the Voyagers." href="/docs/start/scene/#spacecraft" label="Spacecraft" slides={missions} sizes={big} client:visible />
+<FeatureGallery id="missions" title="Missions" line="We have been exploring space for decades. Skymap shows several of the missions, as 3D models and in an exhibit on the Voyagers." href="/docs/start/scene/#spacecraft" label="Spacecraft" slides={missions} client:visible />
 
-<FeatureGallery side="left" id="milky-way" title="The Milky Way" line="Stars from the catalogues, the constellations, and a model of our galaxy seen from outside." href="/docs/start/scene/#the-milky-way" label="The Milky Way" slides={milkyWay} sizes={big} client:visible />
+<FeatureGallery side="left" id="milky-way" title="The Milky Way" line="Stars from the catalogues, the constellations, and a model of our galaxy seen from outside." href="/docs/start/scene/#the-milky-way" label="The Milky Way" slides={milkyWay} client:visible />
 
-<FeatureGallery id="cosmic-web" title="The cosmic web and deep space" line="Galaxies from the surveys, the filaments between them, and the flow of galaxies towards the Great Attractor." href="/docs/start/scene/#filaments-and-the-cosmic-web" label="Filaments and the cosmic web" slides={cosmicWeb} sizes={big} client:visible />
+<FeatureGallery id="cosmic-web" title="The cosmic web and deep space" line="Galaxies from the surveys, the filaments between them, and the flow of galaxies towards the Great Attractor." href="/docs/start/scene/#filaments-and-the-cosmic-web" label="Filaments and the cosmic web" slides={cosmicWeb} client:visible />
 
 <SearchSpread title="Find your way around" line="Search for a planet, a star, a galaxy or a place on Earth, and Skymap flies you there. The Home button brings you back to Earth." href="/docs/guide/finding/" label="Finding things" />
 
@@ -41,7 +41,7 @@ import { big, cosmicWeb, earth, milkyWay, missions, solarSystem, time } from './
   </SectionHead>
 </Section>
 
-<FeatureGallery side="left" title="Time" line="Planets and moons move along their orbits, Earth turns from day to night, and spacecraft move along their paths." href="/docs/guide/time/" label="Time" slides={time} under="orbits-jupiter-moons" sizes={big} client:visible />
+<FeatureGallery side="left" title="Time" line="Planets and moons move along their orbits, Earth turns from day to night, and spacecraft move along their paths." href="/docs/guide/time/" label="Time" slides={time} under="orbits-jupiter-moons" client:visible />
 
 <Section as="div">
   <SectionHead title="Screens of all sizes">

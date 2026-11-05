@@ -22,8 +22,17 @@ const SERVE_PORT = 4520;
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
 const MOBILE_DPR = 3;
 const FILMSTRIP_SECONDS: readonly number[] = [1, 2, 4, 8, 15, 30];
-const MILESTONES = ['fcp', 'mounted', 'firstFrame', 'ctaReady', 'loaded'] as const;
+const MILESTONES = [
+  'fcp',
+  'mounted',
+  'firstFrame',
+  'ctaReady',
+  'loaded',
+  'firstSurfaceTile',
+] as const;
 const KBPS_TO_BYTES_PER_SECOND = 1000 / 8;
+const SURFACE_REQUEST = /(earth|mars)-tiles\/v\d+\//;
+const SURFACE_ALBEDO_TILE = /-tiles\/v\d+\/albedo\/.+\.pack$/;
 
 // Runs in the page before any app script. A string, because tsx wraps a nested
 // named function in a `__name` helper that exists only in Node. It wraps
@@ -82,6 +91,19 @@ async function measure(
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: profile.cpuRate });
 
     const start = Date.now();
+    let firstSurfaceTile: number | undefined;
+    let surfaceRequests = 0;
+    page.on('request', (request) => {
+      if (SURFACE_REQUEST.test(request.url())) surfaceRequests++;
+    });
+    page.on('requestfinished', (request) => {
+      if (firstSurfaceTile !== undefined || !SURFACE_ALBEDO_TILE.test(request.url())) return;
+      void request.response().then((response) => {
+        if (response?.status() === 206 && firstSurfaceTile === undefined) {
+          firstSurfaceTile = Date.now() - start;
+        }
+      });
+    });
     const shots = (filmstripDir === undefined ? [] : FILMSTRIP_SECONDS).map(async (seconds) => {
       await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
       // A closed context (the run finished first) is the expected way out.
@@ -101,8 +123,11 @@ async function measure(
     });
     const remaining = Math.max(0, timeoutMs - (Date.now() - start));
     await Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, remaining))]);
+    // Frozen here: the filmstrip wait below must not count requests made after `loaded`.
+    const surfaceCount = surfaceRequests;
     await Promise.all(shots);
-    return await page.evaluate(() => (window as unknown as MarkedWindow).__loadMarks);
+    const marks = await page.evaluate(() => (window as unknown as MarkedWindow).__loadMarks);
+    return { ...marks, firstSurfaceTile, surfaceRequests: surfaceCount };
   } finally {
     await context.close();
   }
@@ -143,8 +168,8 @@ async function main(): Promise<void> {
   }
   const browser = await launchChromium();
   try {
-    log(`| profile | ${MILESTONES.join(' | ')} |`);
-    log(`|---|${MILESTONES.map(() => '---:').join('|')}|`);
+    log(`| profile | ${MILESTONES.join(' | ')} | surfaceRequests |`);
+    log(`|---|${[...MILESTONES, 'surfaceRequests'].map(() => '---:').join('|')}|`);
     for (const name of names) {
       const profile = NETWORK_PROFILES[name as keyof typeof NETWORK_PROFILES];
       if (profile === undefined) {
@@ -153,7 +178,8 @@ async function main(): Promise<void> {
       const dir = values.filmstrip === undefined ? undefined : `${values.filmstrip}/${name}`;
       if (dir !== undefined) mkdirSync(dir, { recursive: true });
       const marks = await measure(browser, `${server.url}/${values.link}`, profile, timeoutMs, dir);
-      log(`| ${name} | ${MILESTONES.map((m) => seconds(marks[m], timeoutMs)).join(' | ')} |`);
+      const cells = MILESTONES.map((m) => seconds(marks[m], timeoutMs));
+      log(`| ${name} | ${cells.join(' | ')} | ${marks.surfaceRequests} |`);
     }
   } finally {
     await browser.close();

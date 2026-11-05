@@ -5,8 +5,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
-import { FLY_TO_POSE_SEC, flyToPoseClip } from '../../../../../src/data/animation/clips/makers/flyToPoseClip';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
+import {
+  FLY_TO_POSE_SEC,
+  flyToPoseClip,
+} from '../../../../../src/data/animation/clips/makers/flyToPoseClip';
 
 describe('flyToPoseClip', () => {
   it('targets the pose, including its bearing, without a focus lookup', () => {

@@ -13,7 +13,7 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { deriveView } from '../../../../src/services/engine/frame/deriveView';
-import { faceViewSpec } from '../../../../src/utils/camera/faceViewSpec';
+import { faceViewSpec } from '../../../../src/utils/camera/viewRig/faceViewSpec';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
@@ -25,9 +25,9 @@ import { foregroundChainOrder } from '../../../../src/services/engine/frame/slab
 import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
-import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
-import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
-import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
+import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
+import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/disks/procedural/passes/proceduralDisksPass';
+import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/disks/textured/passes/texturedDisksPass';
 import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityUpsamplePass';
 import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/cloud/passes/milkyWayAggregatePass';
@@ -46,12 +46,15 @@ import { makeSlab } from '../../../fixtures/makeSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import { MILKY_WAY_FADE_FULL_PX } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import { galaxyRowRuntime } from '../../../support/layerPickCodes';
+import { testPickCode } from '../../../support/testPickCode';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 type CallLog = string[];
 
@@ -320,6 +323,11 @@ function makeInput(
   // The galaxy passes close over their Layer's runtime. Empty planner outputs make both disk
   // passes report `enabled: false`, keeping the fixtures on point + milky-way ordering.
   const galaxyRuntime = {
+    // An SDSS catalog, for the selected-highlight case.
+    ...galaxyRowRuntime({
+      catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]),
+      famousMeta: [],
+    }),
     pointRenderer: galaxyPointRenderer,
     proceduralDisks: { lastOutput: { instances: [] } },
     texturedDisks: { lastOutput: { disks: [] } },
@@ -411,7 +419,6 @@ function makeInput(
     meshBodies: [] as never[],
     sceneBodies: [] as never[],
     plans: createFramePlannerResultStore(),
-    cursorTexPx: null,
     nowMs: 0,
     simDays: 0,
     altitudeMpc: 0,
@@ -653,7 +660,7 @@ describe('renderFrame', () => {
     });
     renderFrame(fx2.input);
     const draw = fx2.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>;
-    const expected = packSelection(Source.SDSS, 42);
+    const expected = packSelection(testPickCode('galaxyCatalog')('sdss'), 42);
     const drawSettings = draw.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(expected);
   });

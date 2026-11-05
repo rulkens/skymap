@@ -10,25 +10,24 @@
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
-import { frustumRayAxis } from '../../../../utils/camera/frustumRayAxis';
+import type { ImagePlaneBasis } from '../../../../@types/camera/pose/ImagePlaneBasis';
+import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitPose/orbitForwardOf';
+import { frustumRayAxis } from '../../../../utils/camera/frustum/frustumRayAxis';
 import vsCode from '../../../../services/gpu/shaders/zoneOfAvoidance/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/zoneOfAvoidance/fragment.wesl?static';
 import fsPickCode from '../../../../services/gpu/shaders/zoneOfAvoidance/fragmentPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { Source } from '../../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { ZoneOfAvoidanceRenderer } from '../@types/ZoneOfAvoidanceRenderer';
 import type { ZoneOfAvoidanceShell } from '../@types/ZoneOfAvoidanceShell';
 import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
-import type { ViewFrustum } from '../../../../@types/camera/ViewFrustum';
+import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
+import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { PickWindow } from '../../../../@types/engine/frame/PickWindow';
 import type { PickWindowNdc } from '../../../../@types/engine/frame/PickWindowNdc';
@@ -43,6 +42,7 @@ const WHOLE_CANVAS_NDC: PickWindowNdc = { centre: [0, 0], halfExtent: [1, 1] };
 export function createZoneOfAvoidanceRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
+  pickCode: number,
 ): ZoneOfAvoidanceRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'zoneOfAvoidance.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'zoneOfAvoidance.fragment');
@@ -125,7 +125,7 @@ export function createZoneOfAvoidanceRenderer(
   // The band's pick identity never changes across its lifetime — write it
   // once directly into the shared uniform scratch below (see `packedId`'s
   // offset in io.wesl's byte table), rather than every `writeUniforms` call.
-  const packedId = packSelection(Source.ZoneOfAvoidance, 0) + PICK_SENTINEL_OFFSET;
+  const packedId = packSelection(pickCode, 0) + PICK_SENTINEL_OFFSET;
 
   // Per-frame scratch, allocated once to avoid GC churn.
   const uniforms = new ArrayBuffer(ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE);

@@ -50,12 +50,12 @@ import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
-import { starAggregatesPass } from '../../../../src/layers/starCatalog/passes/starAggregatesPass';
-import { starPointsPass } from '../../../../src/layers/starCatalog/passes/starPointsPass';
-import { starCatalogPass } from '../../../../src/layers/starCatalog/passes/starCatalogPass';
-import { starAggregateUpsamplePass } from '../../../../src/layers/starCatalog/passes/starAggregateUpsamplePass';
-import { starSpheresPass } from '../../../../src/layers/starCatalog/passes/starSpheresPass';
-import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
+import { starAggregatesPass } from '../../../../src/layers/starCatalog/survey/passes/starAggregatesPass';
+import { starPointsPass } from '../../../../src/layers/starCatalog/seededStars/passes/starPointsPass';
+import { starCatalogPass } from '../../../../src/layers/starCatalog/survey/passes/starCatalogPass';
+import { starAggregateUpsamplePass } from '../../../../src/layers/starCatalog/survey/passes/starAggregateUpsamplePass';
+import { starSpheresPass } from '../../../../src/layers/starCatalog/resolvedStars/passes/starSpheresPass';
+import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/resolvedStars/passes/fieldStarSpherePass';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
@@ -63,10 +63,9 @@ import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
-  ALL_CUBE_FACES,
-  CUBEMAP_CAPTURES,
-  SKY_CAPTURE_KEYS,
-} from '../../../../src/data/rendering/cubemapCaptures';
+  APP_CUBEMAP_CAPTURE_REGISTRY,
+  APP_SKY_CAPTURE_KEYS,
+} from '../../../../src/compositions/appCubemapCaptures';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import type { CaptureFace } from '../../../../src/@types/engine/frame/CaptureFace';
 import type { CaptureFaceContexts } from '../../../../src/@types/engine/frame/CaptureFaceContexts';
@@ -77,9 +76,12 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { SkyCaptureKey } from '../../../../src/@types/rendering/SkyCaptureKey';
+import { ALL_CUBE_FACES } from '../../../../src/data/rendering/cubemapCaptures';
 
 /** Every sky row's target id, so the mock serves whichever row bakes. */
-const CAPTURE_TARGET_IDS = SKY_CAPTURE_KEYS.map((key) => CUBEMAP_CAPTURES[key].target);
+const CAPTURE_TARGET_IDS: readonly string[] = APP_SKY_CAPTURE_KEYS.map(
+  (key) => APP_CUBEMAP_CAPTURE_REGISTRY[key].target,
+);
 
 // The starCatalog Layer's own passes join core's in the real program
 // (`createLayers`) — folded in here too, since the sky-capture roster names
@@ -251,7 +253,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
   it('derives one frame via cubemapCaptureFrame(eye=camera), then each face via deriveView(faceViewSpec(faceSizePx=row size)), and threads the map into executeFrame', () => {
     const faceCtxByFace = new Map<CubeFace, FrameView>();
     deriveViewMock.mockImplementation((_snapshot: unknown, _cam: unknown, spec: ViewSpec) => {
-      const face = (spec.slot - CUBEMAP_CAPTURES.sgrAStar.viewSlotBase) as CubeFace;
+      const face = (spec.slot - APP_CUBEMAP_CAPTURE_REGISTRY.sgrAStar.viewSlotBase) as CubeFace;
       const ctx = { __face: face } as unknown as FrameView;
       faceCtxByFace.set(face, ctx);
       return ctx;
@@ -272,7 +274,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     // second capture row would otherwise inherit the lens's.
     expect(cubemapCaptureFrameMock.mock.calls[0]![0]).toMatchObject({
       eyeMpc: camPos,
-      nearMpc: CUBEMAP_CAPTURES.sgrAStar.nearMpc,
+      nearMpc: APP_CUBEMAP_CAPTURE_REGISTRY.sgrAStar.nearMpc,
     });
 
     // Six faces off that one frame, each stamped with the row's slot base and size.
@@ -280,11 +282,13 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     for (const call of deriveViewMock.mock.calls) {
       const spec = call[2] as ViewSpec;
       expect(spec.sizePx).toEqual({ width: 256, height: 256 });
-      expect(spec.slot - CUBEMAP_CAPTURES.sgrAStar.viewSlotBase).toBeGreaterThanOrEqual(0);
+      expect(spec.slot - APP_CUBEMAP_CAPTURE_REGISTRY.sgrAStar.viewSlotBase).toBeGreaterThanOrEqual(
+        0,
+      );
     }
     expect(
       deriveViewMock.mock.calls
-        .map((c) => (c[2] as ViewSpec).slot - CUBEMAP_CAPTURES.sgrAStar.viewSlotBase)
+        .map((c) => (c[2] as ViewSpec).slot - APP_CUBEMAP_CAPTURE_REGISTRY.sgrAStar.viewSlotBase)
         .sort((a, b) => a - b),
     ).toEqual([...ALL_CUBE_FACES]);
 

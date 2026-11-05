@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { BODY_TEXTURE_REGISTRY } from '../../../src/data/bodies/bodyTextureRegistry';
+import { BODY_TEXTURE_REGISTRY } from '../../../src/layers/body/textures/data/bodyTextureRegistry';
 import { textureBuildEntries } from '../../../tools/textures/buildTextures';
 import { TEXTURE_SOURCES } from '../../../tools/utils/io/textureSources';
 

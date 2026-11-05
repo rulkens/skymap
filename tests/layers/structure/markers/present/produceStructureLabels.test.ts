@@ -2,7 +2,6 @@ import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/struct
 import { describe, expect, it } from 'vitest';
 import { produceStructureLabels } from '../../../../../src/layers/structure/markers/present/produceStructureLabels';
 import { createStructureStore } from '../../../../../src/layers/structure/catalog/load/createStructureStore';
-import { STRUCTURE_ID_CODES } from '../../../../../src/data/structure/structureIds';
 import { makeStructureFade } from '../../../../fixtures/makeStructureFade';
 import { MARKER_RADIUS_RETUNE } from '../../../../../src/layers/structure/markers/data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../../../src/layers/structure/markers/data/structureLabelAboveGapPx';
@@ -15,6 +14,11 @@ import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { StructureStore } from '../../../../../src/layers/structure/catalog/@types/StructureStore';
 import type { StructureId } from '../../../../../src/@types/data/structure/StructureId';
 import type { StructureScale } from '../../../../../src/@types/data/structure/StructureScale';
+import { structurePickCodes } from '../../../../support/layerPickCodes';
+import { fakePickCode } from '../../../../support/fakePickCode';
+
+// Codes from 40 up: a stamp that packs a catalog value fails the decode below.
+const PICK_CODES = structurePickCodes(fakePickCode());
 
 // produceStructureLabels reads its `store` argument for the records,
 // `state.selection.focus` for focusedOnly mode and `state.settings.labels`; the
@@ -46,7 +50,11 @@ function labelsOf(
   scale: StructureScale,
   fade: Readonly<Record<StructureId, number>> = makeStructureFade(),
 ) {
-  return produceStructureLabels(state.store, scale)(state, ctx, fade);
+  return produceStructureLabels({ store: state.store, pickCodes: PICK_CODES }, scale)(
+    state,
+    ctx,
+    fade,
+  );
 }
 
 // The fixture camera sits 5 Mpc from the heliocentric origin; every record's
@@ -120,10 +128,10 @@ describe('produceStructureLabels', () => {
     ).toEqual(['c1']);
   });
 
-  it('sets prominencePx to the ring apparent radius and never declutters', () => {
+  it('sets declutterPriority to the ring apparent radius and never declutters', () => {
     // Two featured structures at the same position → both labels emitted
     // (no internal declutter; the director de-collides later). Their
-    // prominencePx equals the ring apparent radius.
+    // declutterPriority equals the ring apparent radius.
     const state = makeState();
     state.store.setGroup('anchors', [rec('a'), rec('b')]);
     const out = labelsOf(state, makeCtx(), 'cosmic');
@@ -131,7 +139,7 @@ describe('produceStructureLabels', () => {
     // radius 5 Mpc / 10 Mpc distance × pxPerRad (= halfH/tan(fovY/2) = 540/tan(30°))
     const pxPerRad = 540 / Math.tan((30 * Math.PI) / 180);
     const expected = (5 / 10) * pxPerRad;
-    expect(out.labels[0]!.prominencePx).toBeCloseTo(expected, 3);
+    expect(out.labels[0]!.declutterPriority).toBeCloseTo(expected, 3);
   });
 
   it('fades the label out as the ring grows past the close-approach band', () => {
@@ -220,7 +228,7 @@ describe('produceStructureLabels', () => {
     for (const label of labels) {
       const record = state.store.byId(label.id)!;
       const pick = unpackPick(label.pickId!)!;
-      expect(pick.sourceCode).toBe(STRUCTURE_ID_CODES[record.category]);
+      expect(pick.sourceCode).toBe(PICK_CODES.pickCodeOf(record.category));
       expect(state.store.byCategory(record.category)[pick.localIdx]?.id).toBe(label.id);
     }
   });
@@ -249,6 +257,6 @@ describe('produceStructureLabels', () => {
     expect(byId(under, 'out').pickId).toBeUndefined();
     expect(byId(under, 'out').fadeAlpha).toBeGreaterThan(0);
     // Not clickable, still named: emphasis keys on the subject, not the pick.
-    expect(byId(under, 'out').subjectId).toBe(structurePickId('galaxy-cluster', 1));
+    expect(byId(under, 'out').subjectId).toBe(structurePickId('galaxy-cluster', 1, PICK_CODES));
   });
 });

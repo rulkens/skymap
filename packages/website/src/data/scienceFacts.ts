@@ -115,7 +115,10 @@ export const SCIENCE_FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/tools/filaments/buildFilaments.ts`,
     sourceLabel: `the filament build, ${IN_REPO}`,
     checked: CHECKED,
-    figure: { value: '5', measure: 'standard deviations clear of the noise, or a ridge is not kept' },
+    figure: {
+      value: '5',
+      measure: 'standard deviations clear of the noise, or a ridge is not kept',
+    },
   },
   {
     id: 'sci-flows',
@@ -171,7 +174,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-atmospheres',
     text: 'The atmospheres of 9 bodies are computed from a light-scattering model after Bruneton and Neyret and Hillaire, with a table of gases and hazes for each body.',
-    source: `${REPO_BLOB}/src/layers/body/present/atmosphereParams.ts`,
+    source: `${REPO_BLOB}/src/layers/body/atmosphere/data/atmosphereParams.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -192,7 +195,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-galaxy-discs',
     text: 'A galaxy smaller than about 8 pixels on screen is a point. Larger than that, it is drawn as a generated disc. From about 24 pixels it carries a picture: a photograph of our choosing for 81 named galaxies, and for the others a survey image the app fetches from the Sloan Digital Sky Survey or, failing that, from the Digitized Sky Survey through the CDS in Strasbourg.',
-    source: `${REPO_BLOB}/src/data/galaxyLodBands.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/lod/data/galaxyLodBands.ts`,
     sourceLabel: `the galaxy level-of-detail bands, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -334,7 +337,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sim-exposure',
     text: 'Brightness is adjusted for a screen. The exposure applied to stars rises nearly fivefold as the camera pulls back from 1 parsec to 10 kiloparsecs, because a monitor cannot adapt to the dark as an eye does.',
-    source: `${REPO_BLOB}/src/utils/star/starExposureRamp.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/photometry/utils/starExposureRamp.ts`,
     sourceLabel: `the star exposure ramp, ${IN_REPO}`,
     checked: CHECKED,
   },

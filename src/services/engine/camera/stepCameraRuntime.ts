@@ -11,40 +11,40 @@
 
 import type { UnknownAction } from '@reduxjs/toolkit';
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { CameraProjection } from '../../../@types/camera/CameraProjection';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../@types/camera/projection/CameraProjection';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
-import type { RungCtx } from '../../../@types/camera/RungCtx';
+import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
 import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
 
-import { replayInput } from './replayInput';
-import { pickWinner, elapsedForWinner, settledMemory } from './cameraDrivers';
-import { advanceEpochs, elapsedMs } from './cameraEpochs';
-import { commitOnEdge } from './commitOnEdge';
-import { pivotFraming } from './pivotRadiusMpc';
-import { coverShiftNdc } from '../../../utils/camera/coverShiftNdc';
-import { easedShiftNdc } from '../../../utils/camera/easedShiftNdc';
-import { shiftedFrustum } from '../../../utils/camera/shiftedFrustum';
-import { ridesWheelTarget } from './ridesWheelTarget';
-import { releasedWorldArm } from './releasedWorldArm';
-import { frameKey } from './rungs/frameKey';
-import { nudgeRung } from './rungs/nudgeRung';
-import { rowFor } from './rungs/rowFor';
-import { isWorldArm } from './rungs/isWorldArm';
-import { resolveFrameBasis } from './resolveFrameBasis';
-import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './cameraFraming';
+import { replayInput } from './input/replayInput';
+import { pickWinner, elapsedForWinner, settledMemory } from './drivers/cameraDrivers';
+import { advanceEpochs, elapsedMs } from './drivers/cameraEpochs';
+import { commitOnEdge } from './drivers/commitOnEdge';
+import { pivotFraming } from './framing/pivotRadiusMpc';
+import { coverShiftNdc } from './lens/utils/coverShiftNdc';
+import { easedShiftNdc } from './lens/utils/easedShiftNdc';
+import { shiftedFrustum } from './lens/utils/shiftedFrustum';
+import { ridesWheelTarget } from './input/ridesWheelTarget';
+import { releasedWorldArm } from './arms/world/releasedWorldArm';
+import { frameKey } from './arms/frameKey';
+import { nudgeCameraArm } from './arms/nudgeCameraArm';
+import { rowFor } from './arms/rowFor';
+import { isWorldArm } from './arms/world/isWorldArm';
+import { resolveFrameBasis } from './orientation/resolveFrameBasis';
+import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './framing/cameraFraming';
 import { projectFramePose } from '../frame/projectFramePose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
-import { stepNavigator } from '../../../utils/camera/stepNavigator';
-import { isNavigatorDriverId } from '../../../utils/camera/isNavigatorDriverId';
+import { stepNavigator } from './drivers/utils/stepNavigator';
+import { isNavigatorDriverId } from './drivers/utils/isNavigatorDriverId';
 import { NAV_AT_REST } from '../../../data/camera/openSpaceNavigation';
-import { reencodePose } from '../../../utils/camera/reencodePose';
-import { absoluteArm } from '../../../utils/camera/absoluteArm';
+import { reencodePose } from './drivers/utils/reencodePose';
+import { absoluteArm } from '../../../utils/camera/arms/absoluteArm';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
-import { focusMoveDurationMs } from './focusMoveDurationMs';
+import { focusMoveDurationMs } from './clips/focusMoveDurationMs';
 import { selectGestureHeld } from '../../../state/input/selectors';
 import cameraReducer, {
   cancelCameraTween,
@@ -140,10 +140,10 @@ export function stepCameraRuntime(
   // `stored`, not the post-replay snapshot: the replay runs before that exists,
   // and no action it emits writes `tuning`, so the two readings are identical.
   const tuning = stored.camera.tuning;
-  // Every rung field but the up-basis. The replay and the produce run BEFORE
+  // Every arm field but the up-basis. The replay and the produce run BEFORE
   // this frame's basis resolves, so they read the previous frame's; the fold
   // reads this frame's. One shared value would move the settle trace.
-  const rungFields = {
+  const armFields = {
     bodies,
     poseBasis,
     focusBodyId: selectionDriver(focus)?.poseId ?? null,
@@ -154,7 +154,7 @@ export function stepCameraRuntime(
     tuning,
     terrainHeightAt,
   };
-  const replayCtx: RungCtx = { ...rungFields, upBasis: prev.outputs.upBasis };
+  const replayCtx: CameraArmCtx = { ...armFields, upBasis: prev.outputs.upBasis };
 
   const drained = replayInput(
     {
@@ -199,7 +199,7 @@ export function stepCameraRuntime(
   const { pose: register, tilt } =
     Object.keys(nav.delta).length === 0
       ? { pose: drained.register, tilt: drained.tilt }
-      : nudgeRung(drained.register, drained.tilt, nav.delta, replayCtx);
+      : nudgeCameraArm(drained.register, drained.tilt, nav.delta, replayCtx);
   const actions: UnknownAction[] = [...orientationActions, ...drained.actions];
   // Where `next.base`'s fold picks up below — everything before this index is
   // already folded into `rootState.camera`.
@@ -305,7 +305,7 @@ export function stepCameraRuntime(
   }
 
   actions.push(...edge.actions);
-  const foldCtx: RungCtx = { ...rungFields, upBasis };
+  const foldCtx: CameraArmCtx = { ...armFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.
   const projected = projectFramePose({

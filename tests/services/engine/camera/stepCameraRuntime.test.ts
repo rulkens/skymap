@@ -18,21 +18,24 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 import { stepCameraRuntime } from '../../../../src/services/engine/camera/stepCameraRuntime';
 import { projectFramePose } from '../../../../src/services/engine/frame/projectFramePose';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
-import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../../src/services/engine/camera/cameraFraming';
-import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
-import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import {
+  NEAR_CLIP_MPC,
+  FAR_CLIP_MPC,
+} from '../../../../src/services/engine/camera/framing/cameraFraming';
+import { EMPTY_TILT_MEMORY } from '../../../../src/services/engine/camera/data/emptyTiltMemory';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
-import { isWorldArm } from '../../../../src/services/engine/camera/rungs/isWorldArm';
+import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
+import { isWorldArm } from '../../../../src/services/engine/camera/arms/world/isWorldArm';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../../src/state/time/selectors';
 import { selectPendingInput } from '../../../../src/state/input/selectors';
 import { inputConsumed } from '../../../../src/state/input/inputSlice';
 import { pendingToInputSteps } from '../../../../src/utils/input/pendingToInputSteps';
-import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadiusMpc';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { pivotFraming } from '../../../../src/services/engine/camera/framing/pivotRadiusMpc';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import {
   aimCamera,
   commitCameraPose,
@@ -63,8 +66,8 @@ import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
-import type { InputStep } from '../../../../src/@types/camera/InputStep';
-import type { NavVelocity } from '../../../../src/@types/camera/NavVelocity';
+import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
+import type { NavVelocity } from '../../../../src/@types/camera/input/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
@@ -74,7 +77,7 @@ import {
   toggleControlScheme,
 } from '../../../../src/state/settings/core/cameraControlsSlice';
 import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { NO_INSETS_PX } from '../../../../src/data/layout/noInsetsPx';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
@@ -156,7 +159,7 @@ describe('stepCameraRuntime', () => {
     expect(next.follow).toBe(prev.follow);
   });
 
-  it('the rung memory is wiped when the frame key changes and kept when it does not', () => {
+  it('the arm memory is wiped when the frame key changes and kept when it does not', () => {
     // The same-key half asserts IDENTITY: an envelope that re-wrapped the
     // memory every frame would hand the drain a fresh object each time and
     // silently break every `!==` the surface step decides a decline by.

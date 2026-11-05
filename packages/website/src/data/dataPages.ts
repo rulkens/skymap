@@ -16,7 +16,11 @@ const REGISTRY: Readonly<Record<string, RawDataEntry>> = RAW_DATA;
 const markdown = attributionsMarkdown();
 const records = parseAttributions(markdown);
 
-const slug = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const slug = (name: string): string =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 
 function familyOf(id: string, section: string, families: readonly DataFamily[]): DataFamily {
   return (
@@ -55,7 +59,9 @@ export const DATA_ENTRIES: readonly DataEntry[] = records.map((record) => {
     record,
     files: Object.entries(REGISTRY)
       .filter(([key]) =>
-        record.keys.some((pattern) => (pattern.endsWith('*') ? key.startsWith(pattern.slice(0, -1)) : pattern === key)),
+        record.keys.some((pattern) =>
+          pattern.endsWith('*') ? key.startsWith(pattern.slice(0, -1)) : pattern === key,
+        ),
       )
       .map(([key, file]) => ({ key, path: file.path, kept: file.source, fetcher: file.fetcher })),
   };
@@ -66,7 +72,10 @@ export const DATA_FAMILIES_USED: readonly DataFamily[] = [
   ...DATA_FAMILIES,
   ...records
     .map((record) => familyOf(record.id, record.section, DATA_FAMILIES))
-    .filter((family, i, all) => !DATA_FAMILIES.includes(family) && all.findIndex((f) => f.id === family.id) === i),
+    .filter(
+      (family, i, all) =>
+        !DATA_FAMILIES.includes(family) && all.findIndex((f) => f.id === family.id) === i,
+    ),
 ].filter((family) => DATA_ENTRIES.some((entry) => entry.family === family.id));
 
 export const DATA_PAGES: readonly DataPage[] = DATA_FAMILIES_USED.flatMap((family): DataPage[] => {

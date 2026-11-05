@@ -1,4 +1,4 @@
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { ExhibitId } from '../../../src/@types/exhibits/ExhibitId';
 import type { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 

@@ -1,25 +1,29 @@
-import type { EarthRenderer } from './EarthRenderer';
-import type { SurfaceTileRenderer } from './SurfaceTileRenderer';
-import type { TerrainPickMarkerRenderer } from './TerrainPickMarkerRenderer';
-import type { TexturedBodyRenderer } from './TexturedBodyRenderer';
-import type { PlanetRenderer } from './PlanetRenderer';
-import type { RingRenderer } from './RingRenderer';
-import type { CloudShellRenderer } from './CloudShellRenderer';
-import type { AtmosphereShellRenderer } from './AtmosphereShellRenderer';
+import type { EarthRenderer } from '../earth/@types/EarthRenderer';
+import type { SurfaceTileRenderer } from '../surfaceTiles/patch/@types/SurfaceTileRenderer';
+import type { TerrainPickCursor } from '../terrainPick/@types/TerrainPickCursor';
+import type { TerrainPickMarkerRenderer } from '../terrainPick/@types/TerrainPickMarkerRenderer';
+import type { TexturedBodyRenderer } from '../spheres/@types/TexturedBodyRenderer';
+import type { PlanetRenderer } from '../spheres/@types/PlanetRenderer';
+import type { RingRenderer } from '../rings/@types/RingRenderer';
+import type { CloudShellRenderer } from '../clouds/@types/CloudShellRenderer';
+import type { AtmosphereShellRenderer } from '../atmosphere/@types/AtmosphereShellRenderer';
 import type { BodyGlintRenderer } from '../../../@types/rendering/BodyGlintRenderer';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
+import type { BodyTextureReq } from '../textures/@types/BodyTextureReq';
 import type { BodyTextureSlotKey } from '../../../@types/data/BodyTextureSlotKey';
-import type { SurfaceTileStream } from './SurfaceTileStream';
-import type { SurfaceTilePlan } from './SurfaceTilePlan';
+import type { SurfaceTileStream } from '../surfaceTiles/stream/@types/SurfaceTileStream';
+import type { SurfaceTilePlan } from '../surfaceTiles/plan/@types/SurfaceTilePlan';
 import type { BodyFacts } from './BodyFacts';
 import type { TrailingThrottle } from '../../../@types/utils/TrailingThrottle';
+import type { CatalogPickCodes } from '../../../@types/engine/selection/CatalogPickCodes';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 /** The Layer's whole runtime. Non-null: `create` builds it before returning. */
 export type BodyRuntime = {
   readonly earthRenderer: EarthRenderer;
   readonly surfaceTileRenderer: SurfaceTileRenderer;
   readonly terrainPickMarkerRenderer: TerrainPickMarkerRenderer;
+  readonly terrainPickCursor: TerrainPickCursor;
   readonly texturedBodyRenderer: TexturedBodyRenderer;
   readonly planetRenderer: PlanetRenderer;
   readonly ringRenderer: RingRenderer;
@@ -34,6 +38,8 @@ export type BodyRuntime = {
   /** The stream owns residency; `plan` is the last planned frame's, written only by
    * `surfaceTilePlanner` and read by the passes, capture faces and the terrain seam. */
   readonly surfaceTiles: { readonly stream: SurfaceTileStream; plan: SurfaceTilePlan };
+  /** Row ↔ pick code; every pick word this Layer stamps or decodes goes through it. */
+  readonly pickCodes: CatalogPickCodes<SourceType>;
   readonly publish: (patch: Partial<BodyFacts>) => void;
   readonly debugPanelOpen: () => boolean;
   readonly readoutGate: TrailingThrottle;

@@ -11,12 +11,13 @@
 
 import { createAppStore, type PreloadedState } from '../../src/store/createAppStore';
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
-import { bodySelectionRow } from '../../src/layers/body/present/bodySelectionRow';
+import { bodySelectionRow } from '../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../src/layers/structure/picking/present/structureSelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import type { ReconcileEffects } from '../../src/store/effects/ReconcileEffects';
 import type { SagaContext } from '../../src/store/types';
 import type { StructureRowFixture } from './selectionResolverOver';
+import { bodyPickCodes, structureRowRuntime } from './layerPickCodes';
 
 export const NOOP_RECONCILE: ReconcileEffects = {
   requestRender: () => {},
@@ -37,10 +38,14 @@ export const NOOP_SAGA_CONTEXT: SagaContext = {
   nextFrame: () => Promise.resolve(),
   reconcile: NOOP_RECONCILE,
   selection: composeSelectionRows(
-    () => [bodySelectionRow(), structureSelectionRow(EMPTY_STRUCTURES)],
+    () => [
+      bodySelectionRow({ pickCodes: bodyPickCodes() }),
+      structureSelectionRow(structureRowRuntime(EMPTY_STRUCTURES)),
+    ],
     () => ALL_KINDS_ENABLED,
   ),
   cameraRuntime: () => null,
+  sceneSettled: () => true,
   // Resolves immediately so the tour saga advances rather than awaiting a promise nothing settles.
   playClip: () => Promise.resolve(),
   clipPathInspect: {

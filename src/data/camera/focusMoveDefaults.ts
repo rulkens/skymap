@@ -5,7 +5,7 @@
  * docs/superpowers/specs/completed/2026-10-27-geodesic-focus-moves-design.md
  */
 
-import type { GeodesicTuning } from '../../@types/camera/GeodesicTuning';
+import type { GeodesicTuning } from '../../@types/camera/focusMotion/GeodesicTuning';
 import type { FocusMoveSettings } from '../../@types/settings/FocusMoveSettings';
 import type { Ease } from '../../@types/animation/Ease';
 

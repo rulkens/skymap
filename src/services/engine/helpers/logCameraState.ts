@@ -6,14 +6,14 @@
  * `JSON.stringify` precision, not `toFixed`, or a metre-scale altitude rounds away.
  */
 
-import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
+import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
-import { frameKey } from '../camera/rungs/frameKey';
-import { isBodyArm } from '../camera/rungs/isBodyArm';
-import { isSiteArm } from '../camera/rungs/isSiteArm';
-import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
+import { pivotRadiusMpc } from '../camera/framing/pivotRadiusMpc';
+import { frameKey } from '../camera/arms/frameKey';
+import { isBodyArm } from '../camera/arms/body/isBodyArm';
+import { isSiteArm } from '../camera/arms/site/isSiteArm';
+import { bodyFixedEyeM } from '../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 

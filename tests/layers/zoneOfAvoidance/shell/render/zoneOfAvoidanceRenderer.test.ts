@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createZoneOfAvoidanceRenderer } from '../../../../../src/layers/zoneOfAvoidance/shell/render/zoneOfAvoidanceRenderer';
 import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../../src/layers/zoneOfAvoidance/shell/data/zoneOfAvoidanceShell';
-import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { ZoneOfAvoidanceTuning } from '../../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceTuning';
-import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 
 // Minimal mock GPUDevice — Vitest runs in Node without a WebGPU surface.
 // Mirrors labelRenderer.test.ts's pattern:
@@ -34,7 +34,7 @@ describe('createZoneOfAvoidanceRenderer', () => {
     // error, and a missing depthStencil breaks occlusion against other
     // COSMO pick draws.
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createZoneOfAvoidanceRenderer(mockDevice(renderPipelines), 'rgba16float');
+    createZoneOfAvoidanceRenderer(mockDevice(renderPipelines), 'rgba16float', 37);
     const pick = renderPipelines.find((p) => p.label === 'zoneOfAvoidance-pick-pipeline');
     expect(pick).toBeDefined();
     const target = Array.from(pick!.fragment!.targets!)[0]!;
@@ -73,7 +73,7 @@ describe('zoneOfAvoidanceRenderer window rect', () => {
     vi.mocked(device.queue.writeBuffer).mockImplementation((_buf, _off, data) => {
       writes.push(new Float32Array(data as ArrayBuffer).slice());
     });
-    const renderer = createZoneOfAvoidanceRenderer(device, 'rgba16float');
+    const renderer = createZoneOfAvoidanceRenderer(device, 'rgba16float', 37);
     const windowRect = () => Array.from(writes.at(-1)!.subarray(28, 32));
     return { renderer, windowRect };
   }

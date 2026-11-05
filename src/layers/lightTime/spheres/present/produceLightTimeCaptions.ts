@@ -6,18 +6,16 @@
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
+import type { ImagePlaneBasis } from '../../../../@types/camera/pose/ImagePlaneBasis';
 import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
+import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitPose/orbitForwardOf';
 import { sphereSilhouetteTop } from '../../../../utils/math/sphereSilhouetteTop';
-import {
-  CAPTION_PRIORITY,
-  CAPTION_TIER_SCALE,
-} from '../../../../services/engine/presentation/captionPriority';
+import { CAPTION_PRIORITY_SCALE } from '../../../../data/labels/captionPriorityScale';
+import { LIGHT_TIME_CAPTION_PRIORITY } from '../data/lightTimeCaptionPriority';
 import { deriveLightTimeLiveness } from './deriveLightTimeLiveness';
 
 /** Both clamps, so every sphere's caption is the same size on screen. */
@@ -61,7 +59,7 @@ export const produceLightTimeCaptions: LayerScreenLabel<'lightTime'>['produceLab
       alignX: 'center',
       alignY: 'bottom',
       fadeAlpha: opacity,
-      prominencePx: CAPTION_PRIORITY.meshBody * CAPTION_TIER_SCALE,
+      declutterPriority: LIGHT_TIME_CAPTION_PRIORITY * CAPTION_PRIORITY_SCALE,
     });
   });
   return { labels, awake: false };

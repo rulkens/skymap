@@ -30,7 +30,7 @@ one — hence doubles rather than a clean brightness ramp.
 
 ## Pointers
 
-- Band definition: `SCALE_FADE_BANDS.sgrAStarLensing`; per-frame alpha:
+- Band definition: `SGR_A_STAR_LENSING_BAND`; per-frame alpha:
   `src/services/engine/frame/skyCaptureBandAlpha.ts`.
 - Lens pass reading it: `src/layers/blackHoles/lensing/passes/blackHoleLensingPass.ts:53`.
 - Lens quad edge fade: `src/services/gpu/shaders/bodies/blackHoleLensing/fragment.wesl` (`edgeFadeEndRs`).

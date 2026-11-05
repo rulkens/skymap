@@ -4,7 +4,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import type { DriverCtx } from '../../../../../src/@types/engine/camera/DriverCtx';
 import type { MissionCameraMemory } from '../../../../../src/layers/missions/missionCamera/@types/MissionCameraMemory';
 import type { MissionOffsets } from '../../../../../src/layers/missions/missionCamera/@types/MissionOffsets';
-import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { FollowMemory } from '../../../../../src/@types/engine/camera/FollowMemory';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
 import type { MissionEvent } from '../../../../../src/@types/missions/MissionEvent';
@@ -20,15 +20,15 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { aimCamera } from '../../../../../src/state/camera/cameraSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../../src/state/input/inputSlice';
 import { setMissionCraft } from '../../../../../src/layers/missions/state/missions/slice';
-import { absoluteArm } from '../../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
 import { rootReducer } from '../../../../../src/store/rootReducer';
-import { eyeMpcOf } from '../../../../../src/utils/camera/eyeMpcOf';
+import { eyeMpcOf } from '../../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { bodyRelativeState } from '../../../../../src/layers/missions/missionCamera/utils/bodyRelativeState';
-import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { missionStops } from '../../../../../src/layers/missions/missionCamera/utils/missionStops';
 import { voyagerTimeline } from '../../../../helpers/missions/voyagerTimeline';
 import { missionEventMs } from '../../../../../src/layers/missions/events/utils/missionEventMs';
-import { bodyRadiusMpc } from '../../../../../src/utils/camera/bodyRadiusMpc';
+import { bodyRadiusMpc } from '../../../../../src/utils/camera/surfaceFrame/bodyRadiusMpc';
 import { dot3 } from '../../../../../src/utils/math/dot3';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { unixMsToJulianDays } from '../../../../../src/utils/time/unixMsToJulianDays';
@@ -346,7 +346,7 @@ describe('missionPose', () => {
     let out = 0;
     const frame = (f: number) => {
       const simDays = interpolateClockProfile(profile, w0 + f * FRAME_MS);
-      // The drag rung steps last frame's pose; here a steady yaw per frame.
+      // The drag arm steps last frame's pose; here a steady yaw per frame.
       const register = shown && { ...shown, yaw: shown.yaw + 0.003 };
       const r = missionPose(
         makeDriverCtx({

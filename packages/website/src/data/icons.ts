@@ -12,15 +12,18 @@ export const ICONS: Record<IconName, string | readonly string[]> = {
   // A star as the eye sees it, with its four rays: somebody looking up.
   visitor: 'M12 3c.6 4.8 4.2 8.4 9 9-4.8.6-8.4 4.2-9 9-.6-4.8-4.2-8.4-9-9 4.8-.6 8.4-4.2 9-9z',
   // A classroom globe: the sphere, its tilted mount and a foot.
-  classroom: 'M6 10.5a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0-11 0M14.8 2.7A8.5 8.5 0 0 1 8.2 18.3M11.5 19v2.5M7.5 21.5h8',
+  classroom:
+    'M6 10.5a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0-11 0M14.8 2.7A8.5 8.5 0 0 1 8.2 18.3M11.5 19v2.5M7.5 21.5h8',
   // A planetarium dome on its floor, with the arc a star is projected along.
   dome: 'M2.5 17a9.5 9.5 0 0 1 19 0M1.5 17h21M6.5 17a6 6 0 0 1 8.5-5.45',
   // A redshift survey wedge: us at the point, one shell of distance, the edge of the survey beyond.
-  science: 'M12 20.5L4.5 6.4M12 20.5l7.5-14.1M6.85 10.8A11 11 0 0 1 17.15 10.8M3.2 4A19 19 0 0 1 20.8 4',
+  science:
+    'M12 20.5L4.5 6.4M12 20.5l7.5-14.1M6.85 10.8A11 11 0 0 1 17.15 10.8M3.2 4A19 19 0 0 1 20.8 4',
   // An open book.
   docs: 'M12 7v13M12 7C9.8 5.4 6.6 4.8 3 5.2v13c3.6-.4 6.8.2 9 1.8M12 7c2.2-1.6 5.4-2.2 9-1.8v13c-3.6-.4-6.8.2-9 1.8',
   // Four tiles: the things Skymap can do, side by side.
-  features: 'M5 3.5h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5zM15.5 3.5h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5zM5 14h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5zM15.5 14h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5z',
+  features:
+    'M5 3.5h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5zM15.5 3.5h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5zM5 14h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5zM15.5 14h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5z',
   // The app: the ring it draws about what you select, around a star. Two strokes, ring then star, so the
   // button can draw the one and lift the other (OpenApp).
   app: [
@@ -30,14 +33,16 @@ export const ICONS: Record<IconName, string | readonly string[]> = {
   // One exact view: a viewfinder's corners about the point it is aimed at. Drawn to be shown at 16px.
   view: VIEW,
   // A link that leaves the site: an arrow out of a frame.
-  outbound: 'M10.5 5.5h-4A1.5 1.5 0 0 0 5 7v10.5A1.5 1.5 0 0 0 6.5 19H17a1.5 1.5 0 0 0 1.5-1.5v-4M14.5 4H20v5.5M20 4l-8.5 8.5',
+  outbound:
+    'M10.5 5.5h-4A1.5 1.5 0 0 0 5 7v10.5A1.5 1.5 0 0 0 6.5 19H17a1.5 1.5 0 0 0 1.5-1.5v-4M14.5 4H20v5.5M20 4l-8.5 8.5',
   // A picture and the credit line under it.
   credits:
     'M4.5 3.5h15a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1zM3.5 13L8 8.5l4 4 3-3 5.5 5.5M11 20h9.5',
   // A reference mark, as in the text of a paper.
   cite: 'M8 5H5v14h3M16 5h3v14h-3M10.75 9.5l1.75-1.25v7.5',
   // The person who makes it.
-  about: 'M8.25 7.75a3.75 3.75 0 1 0 7.5 0a3.75 3.75 0 1 0-7.5 0M4.5 20.5c.3-4.2 3.3-6.5 7.5-6.5s7.2 2.3 7.5 6.5',
+  about:
+    'M8.25 7.75a3.75 3.75 0 1 0 7.5 0a3.75 3.75 0 1 0-7.5 0M4.5 20.5c.3-4.2 3.3-6.5 7.5-6.5s7.2 2.3 7.5 6.5',
   // A closed eye: the site does not watch.
   privacy: 'M3 7.5c2.4 4 5.4 6 9 6s6.6-2 9-6M12 13.5V17M7 12.2l-1.8 2.8M17 12.2l1.8 2.8',
   // A branch of the source tree.
@@ -45,7 +50,8 @@ export const ICONS: Record<IconName, string | readonly string[]> = {
   // Catalogues laid one over another: what the map is made of.
   sources: 'M12 3.5l8.5 4.25L12 12 3.5 7.75zM3.5 12l8.5 4.25L20.5 12M3.5 16.25l8.5 4.25 8.5-4.25',
   // A pair of compasses, the tool that both measures and draws.
-  method: 'M12 2.5v2M10.5 6a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M11.4 7.4L6.5 20.5M12.6 7.4l4.9 13.1M8.4 15.5a9 9 0 0 0 7.2 0',
+  method:
+    'M12 2.5v2M10.5 6a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M11.4 7.4L6.5 20.5M12.6 7.4l4.9 13.1M8.4 15.5a9 9 0 0 0 7.2 0',
   // A measured curve and the straight line we draw in its place.
   simplified: 'M3 9c2-5 4-5 6 0s4 5 6 0s4-5 6 0M3 18.5h18',
   // A list: a point and its line, three times.
@@ -61,4 +67,7 @@ export const ICONS: Record<IconName, string | readonly string[]> = {
   // Stop and start a film.
   pause: 'M9 6v12M15 6v12',
   play: 'M8.5 5.5v13l10-6.5z',
+  // A file coming down into the tray it lands in.
+  download:
+    'M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5M4 15.5v3A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5v-3',
 };

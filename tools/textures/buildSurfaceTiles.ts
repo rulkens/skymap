@@ -27,13 +27,14 @@
  *
  * Lands on disk under the body's own `tileRoot`, e.g. `earth-tiles/v9/albedo/
  * <z>/<x>/<y>.webp` and, for a band declaring a height source, `earth-tiles/
- * v9/height/<z>/<x>/<y>.webp` (`surfaceTilePath`, shared with the runtime
- * fetcher's own URL builder — drift 404s quietly, degrading to the base
- * texture); `<tileRoot>/manifest.json` (tile edge, baked band list, source);
- * `<tileRoot>/index.txt` (one path per line, walked by the deploy collector
- * instead of the filesystem, so a half-finished bake can't upload a partial
- * pyramid as complete). `public/data/` is gitignored — nothing here is
- * committed.
+ * v9/height/<z>/<x>/<y>.webp` (`surfaceTilePath`, which the pack step
+ * parses back into archive keys); `<tileRoot>/manifest.json` (tile edge, baked band list, source);
+ * `<tileRoot>/index.txt` (one path per line: the loose tiles' manifest, and
+ * the pack step's input); `<prefix>/<product>/z<z>.idx` + `.p<k>.pack` per
+ * level, which are what the deploy collector uploads and the runtime
+ * range-reads (the loose tiles stay local). `--pack-only` re-packs the
+ * existing `index.txt` without opening any source. `public/data/` is
+ * gitignored — nothing here is committed.
  */
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -42,21 +43,23 @@ import { fileURLToPath } from 'node:url';
 
 import sharp, { type Sharp } from 'sharp';
 
-import type { SurfaceTileProduct } from '../../src/@types/data/SurfaceTileProduct';
-import type { SurfaceTileBodyId } from '../../src/@types/data/SurfaceTileBodyId';
-import type { SurfaceTileManifest } from '../../src/@types/scene/SurfaceTileManifest';
-import type { SurfaceTileManifestBand } from '../../src/@types/scene/SurfaceTileManifestBand';
-import type { SurfaceTileBand } from '../../src/@types/scene/SurfaceTileBand';
-import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
-import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
-import { surfaceTilePath } from '../../src/utils/surfaceTiles/surfaceTilePath';
-import { surfaceTileBandFromBounds } from '../../src/utils/surfaceTiles/surfaceTileBandFromBounds';
-import { surfaceTileColumns } from '../../src/utils/surfaceTiles/surfaceTileColumns';
-import { surfaceTileInBand } from '../../src/utils/surfaceTiles/surfaceTileInBand';
+import type { SurfaceTileProduct } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
+import type { SurfaceTileBodyId } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBodyId';
+import type { SurfaceTileManifest } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
+import type { SurfaceTileManifestBand } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifestBand';
+import type { SurfaceTileBand } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBand';
+import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
+import { HEIGHT_POSTS_PER_TILE } from '../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
+import { surfaceTilePath } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
+import { surfaceTileBandFromBounds } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileBandFromBounds';
+import { surfaceTileColumns } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
+import { surfaceTileInBand } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileInBand';
 import { parseFlags } from '../utils/cli/args';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { mergeSurfaceTileManifest } from '../utils/textures/mergeSurfaceTileManifest';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
+import { packSurfaceTileLevels } from '../utils/textures/packSurfaceTileLevels';
+import { repackSurfaceTiles } from '../utils/textures/repackSurfaceTiles';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { bakeHeightLevel } from './bakeHeightLevel';
@@ -550,6 +553,9 @@ export async function bakeAll(
   // resumed sync diff one against the other.
   const sorted = [...finalPaths].sort();
   writeFileSync(join(outDir, `${tileRoot}/index.txt`), `${sorted.join('\n')}\n`);
+  process.stderr.write(
+    `  ${packSurfaceTileLevels(outDir, tilePrefix, sorted)} archive files packed\n`,
+  );
 
   // Written LAST, after the index it implies and after the completeness
   // check above: an interrupted or now-incomplete bake then leaves the
@@ -598,11 +604,18 @@ function bodyFlag(argv: readonly string[]): SurfaceTileBodyId {
 async function main(): Promise<void> {
   const outDir = resolve('public/data/images');
   const argv = process.argv.slice(2);
-  const { '--dev': dev } = parseFlags(argv, { '--dev': 'bool' });
+  const { '--dev': dev, '--pack-only': packOnly } = parseFlags(argv, {
+    '--dev': 'bool',
+    '--pack-only': 'bool',
+  });
   const product = productFlag(argv);
   const products = new Set<SurfaceTileProduct>(product ? [product] : ['albedo', 'height']);
   const bodyId = bodyFlag(argv);
   const body = SURFACE_BODY_BAKES[bodyId];
+  if (packOnly) {
+    process.stderr.write(`  ${repackSurfaceTiles(outDir, body.tileRoot)} archive files packed\n`);
+    return;
+  }
 
   process.stderr.write(`buildSurfaceTiles: -> ${join(outDir, body.tileRoot)}\n`);
   const bands = await body.bands({ dev });

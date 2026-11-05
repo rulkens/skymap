@@ -9,15 +9,15 @@
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
-import type { ViewFrustum } from '../../../../@types/camera/ViewFrustum';
-import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
+import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
+import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
+import type { ImagePlaneBasis } from '../../../../@types/camera/pose/ImagePlaneBasis';
 import type { LightTimeSpheresRenderer } from '../@types/LightTimeSpheresRenderer';
 import type { LightTimeLiveness } from '../@types/LightTimeLiveness';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
-import { frustumRayAxis } from '../../../../utils/camera/frustumRayAxis';
+import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitPose/orbitForwardOf';
+import { frustumRayAxis } from '../../../../utils/camera/frustum/frustumRayAxis';
 import { sphereNdcBounds } from '../../../../utils/math/sphereNdcBounds';
 import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
 import vsCode from '../../../../services/gpu/shaders/lightTime/vertex.wesl?static';

@@ -22,7 +22,7 @@ import {
 } from '../../../../support/selectionResolverOver';
 import { localGroupDwell } from '../../../../../src/data/animation/tours/grandTour/localGroup';
 import { neighbourhoodReveal } from '../../../../../src/data/animation/tours/grandTour/neighbourhoodReveal';
-import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitAnglesLookingAlong';
+import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitPose/orbitAnglesLookingAlong';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
@@ -57,7 +57,11 @@ const M81_GROUP: StructureInfo = {
 
 const STRUCTURES: StructureRowFixture = {
   byId: (id) =>
-    id === 'galaxy-group-local-group' ? LOCAL_GROUP : id === 'galaxy-group-m81-group' ? M81_GROUP : null,
+    id === 'galaxy-group-local-group'
+      ? LOCAL_GROUP
+      : id === 'galaxy-group-m81-group'
+        ? M81_GROUP
+        : null,
   byCategory: () => [],
 };
 const RESOLVER = selectionResolverOver(STRUCTURES);

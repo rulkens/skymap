@@ -18,5 +18,7 @@ export function elementsById(id: string): OrbitalElements {
 export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   // The 39 S-stars; verbatim Gillessen lines in `sStarElements.ts`.
   ...S_STAR_ORBITAL_ELEMENTS,
-  ...APP_BODY_REGISTRY.flatMap((row) => (row.position.kind === 'orbit' ? [row.position.elements] : [])),
+  ...APP_BODY_REGISTRY.flatMap((row) =>
+    row.position.kind === 'orbit' ? [row.position.elements] : [],
+  ),
 ];

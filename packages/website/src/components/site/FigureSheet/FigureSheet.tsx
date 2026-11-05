@@ -1,13 +1,10 @@
 /*
- * FigureSheet — the sheet a docs picture opens in when it is clicked: the
- * whole window, the picture's name and Close in a bar, and under it the
- * picture as large as the window shows whole. A window narrower than the app
- * drew it shows it at the app's size, starting at its middle, and scrolls;
- * a touch screen may pinch. One per page, filled from the picture clicked:
- * a picture on the page is a link to its largest file (DocFigure), so before
- * this island runs the browser shows that file. One listener serves every
- * `a[data-enlarge]`; the dialog gives Esc, the focus trap and the return of
- * focus, as the search sheet's does (DocsSearch).
+ * FigureSheet — the sheet a docs picture opens in when it is clicked: the whole window, the picture's name and
+ * Close in a bar, and under it the picture as large as the window shows whole. A window narrower than the app drew
+ * it shows it at the app's size, starting at its middle, and scrolls; a touch screen may pinch. One per page,
+ * filled from the picture clicked: a picture on the page is a link to its largest file (DocFigure), so before this
+ * island runs the browser shows that file. One listener serves every `a[data-enlarge]`; the dialog gives Esc, the
+ * focus trap and the return of focus, as the search sheet's does (DocsSearch).
  */
 import { useEffect, useRef } from 'react';
 

@@ -5,7 +5,9 @@ export const APP_BASE = '/';
 export const OPEN_APP_LABEL = 'Open app';
 
 // The site's dev server has no app beside it, so there its links open the live app; builds and tests stay root-absolute.
-const APP_ORIGIN = import.meta.env.MODE === 'development' ? String(import.meta.env.SITE).replace(/\/$/, '') : '';
+// A tool run under tsx (the press kit) has no `import.meta.env`.
+const APP_ORIGIN =
+  import.meta.env?.MODE === 'development' ? String(import.meta.env.SITE).replace(/\/$/, '') : '';
 
 /**
  * Root-absolute URL of the app (absolute to the live site on the dev server), with an optional

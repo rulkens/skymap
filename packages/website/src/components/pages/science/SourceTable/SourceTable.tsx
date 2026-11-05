@@ -19,7 +19,7 @@ import styles from './SourceTable.module.css';
 import { groups, COLUMNS } from './SourceTable.constants.ts';
 import { narrowSizes } from '../../../../utils/narrowSizes.ts';
 
-type SourceTableProps = { children?: ReactNode; figure?: string };
+type SourceTableProps = { children: ReactNode; figure: string };
 
 function SourceTable({ children, figure }: SourceTableProps) {
   return (
@@ -117,21 +117,17 @@ function SourceTable({ children, figure }: SourceTableProps) {
           </section>
         ))}
       </div>
-      {children && (
-        <div className={styles.notes}>
-          <div className={styles.text}>{children}</div>
-          {figure && (
-            <figure className={styles.figure}>
-              <div className={styles.drift}>
-                <Shot id={figure} sizes={narrowSizes('100vw', '36rem')} />
-              </div>
-              <figcaption>
-                <ShotCaption id={figure} />
-              </figcaption>
-            </figure>
-          )}
-        </div>
-      )}
+      <div className={styles.notes}>
+        <div className={styles.text}>{children}</div>
+        <figure className={styles.figure}>
+          <div className={styles.drift}>
+            <Shot id={figure} sizes={narrowSizes('100vw', '36rem')} />
+          </div>
+          <figcaption>
+            <ShotCaption id={figure} />
+          </figcaption>
+        </figure>
+      </div>
     </>
   );
 }

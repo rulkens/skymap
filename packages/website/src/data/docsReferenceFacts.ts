@@ -261,7 +261,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'ref-focus-pos-famous',
     about: 'app',
     text: 'Link to a named galaxy by its own id, such as m31, and not by its position.',
-    source: `${REPO_BLOB}/src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow.ts`,
     sourceLabel: `how a galaxy’s id is read, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -375,7 +375,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'ref-settings-counts',
     about: 'app',
     text: 'The number beside a catalogue or a kind of structure is how many of its objects are loaded. It changes with the data size, and a catalogue that has not been fetched shows none.',
-    source: `${REPO_BLOB}/src/layers/galaxyCatalog/ui/GalaxiesSection.tsx`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/controls/ui/GalaxiesSection.tsx`,
     sourceLabel: `the Galaxies section, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -431,7 +431,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'ref-settings-earth',
     about: 'app',
     text: 'The three sliders under Earth change Earth alone. The other planets and the moons keep fixed values for the same three things.',
-    source: `${REPO_BLOB}/src/@types/settings/EarthSettings.d.ts`,
+    source: `${REPO_BLOB}/src/layers/body/@types/EarthSettings.d.ts`,
     sourceLabel: `Earth’s settings, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -456,7 +456,8 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'gloss-light-units',
     text: 'At 299,792.458 kilometres a second, light covers about 18 million kilometres in a minute and about 25.9 thousand million in a day, which is 173 astronomical units. It crosses one astronomical unit, the distance from the Sun to Earth, in 499 seconds, or 8.3 minutes. A light-year of 365.25 days is 63,241 astronomical units, and a parsec is 3.26 light-years, or 206,265 astronomical units, or about 30.9 million million kilometres.',
     source: 'https://www.bipm.org/en/publications/si-brochure',
-    sourceLabel: 'BIPM, the SI brochure, for the speed of light; the lengths are worked out from it',
+    sourceLabel:
+      'BIPM, the SI brochure, for the speed of light; the lengths are worked out from it',
     checked: CHECKED,
   },
   {
@@ -585,7 +586,8 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'gloss-abell',
     text: 'The catalogue of Abell, Corwin and Olowin, 1989, lists 4,073 rich clusters of galaxies over the whole sky, each with at least 30 members in a set range of brightness and a nominal redshift below 0.2.',
     source: 'https://cdsarc.cds.unistra.fr/viz-bin/ReadMe/VII/110A?format=html&tex=true',
-    sourceLabel: 'CDS, catalogue VII/110A: A Catalogue of Rich Clusters of Galaxies (Abell et al. 1989)',
+    sourceLabel:
+      'CDS, catalogue VII/110A: A Catalogue of Rich Clusters of Galaxies (Abell et al. 1989)',
     checked: CHECKED,
   },
 

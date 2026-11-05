@@ -1,7 +1,7 @@
 # Constants files carry a `.constants.ts` suffix, grouped by the thing they describe
 
 **Readiness:** `ready`. Ruled 2026-11-03. Runs as its own PRs after Layer M1
-(`docs/superpowers/plans/2026-11-02-layer-m1-moves.md`) lands, so the renames don't collide with the
+(`docs/superpowers/plans/completed/2026-11-02-layer-m1-moves.md`) lands, so the renames don't collide with the
 batch moves.
 
 ## Rulings

@@ -15,7 +15,7 @@ import type { StructureRuntime } from './@types/StructureRuntime';
 import { produceStructureMarkers } from './markers/present/produceStructureMarkers';
 
 export function structureMarkersPlanner(
-  runtime: Pick<StructureRuntime, 'store'>,
+  runtime: Pick<StructureRuntime, 'store' | 'pickCodes'>,
 ): Extract<
   FrameContentPlanner<readonly StructureMarkerDescriptor[], 'structureRing'>,
   { scope: 'perView' }
@@ -25,7 +25,7 @@ export function structureMarkersPlanner(
     scope: 'perView',
     fade: 'structureRing',
     plan: (view, state, fade) => ({
-      value: produceStructureMarkers(runtime.store, state, view, fade),
+      value: produceStructureMarkers(runtime, state, view, fade),
       awake: false,
       settling: false,
     }),

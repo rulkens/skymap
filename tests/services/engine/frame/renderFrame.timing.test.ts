@@ -29,7 +29,7 @@ import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/Mil
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
-import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
+import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
@@ -37,12 +37,13 @@ import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapC
 import { MILKY_WAY_FADE_FULL_PX } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
+import { galaxyRowRuntime } from '../../../support/layerPickCodes';
 
 // `descriptorFor` returns a DISTINCT descriptor per slot, with the stub querySet tagged
 // `{ _stub: slot }`, so assertions can tell which slot's descriptor landed on which pass.
@@ -381,6 +382,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       passes: [
         ...CONTENT_PASSES,
         galaxyPointSpritesPass({
+          ...galaxyRowRuntime({ catalogs: new Map(), famousMeta: [] }),
           pointRenderer: galaxyPointRenderer,
         } as unknown as GalaxyCatalogRuntime),
         cosmicWebDensityPass(densityRuntime),

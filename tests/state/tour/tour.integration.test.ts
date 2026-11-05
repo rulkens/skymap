@@ -14,12 +14,12 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
-import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
+import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/drivers/cameraEpochs';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { cosmicFlows } from '../../../src/compositions/clips/cosmicFlows';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
+import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
 import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/cloud/present/milkyWayCloudLiveness';
 import { Source } from '../../../src/data/source';
 import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
@@ -33,6 +33,8 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
+import { galaxyRowRuntime } from '../../support/layerPickCodes';
+import { milkyWayPickCode } from '../../support/layerPickCodes';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
@@ -200,7 +202,10 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     // The pass closes over its Layer's runtime, so the spy rides a stub runtime
     // rather than `state.gpu`.
-    const runtime = { pointRenderer: { draw: drawSpy } } as never;
+    const runtime = {
+      ...galaxyRowRuntime({ catalogs: new Map(), famousMeta: [] }),
+      pointRenderer: { draw: drawSpy },
+    } as never;
     const ctx = makeDrawCtx(nowMs, SURVEY_CAM_POS);
     const view = {
       vp: new Float32Array(16),
@@ -252,7 +257,11 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const alphaWith = (clipFactor: number): number | null => {
       const state = makeDrawState(fades, makeClipStub(clipFactor));
       const ctx = makeDrawCtx(0, MW_CAM_POS);
-      return deriveMilkyWayCloudAlpha(ctx, resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'));
+      return deriveMilkyWayCloudAlpha(
+        ctx,
+        resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'),
+        milkyWayPickCode(),
+      );
     };
     const unmasked = alphaWith(1);
     expect(unmasked).toBe(1);

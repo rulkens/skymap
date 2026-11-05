@@ -16,15 +16,8 @@ import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import type { ConstellationsRuntime } from '../../@types/ConstellationsRuntime';
 import { constellationCaptions } from './constellationCaptions';
-import {
-  CAPTION_PRIORITY,
-  CAPTION_TIER_SCALE,
-} from '../../../../services/engine/presentation/captionPriority';
-
-// Below every scene-body caption: a figure name always yields to a body
-// caption in a screen-space collision. One constant for every figure — their
-// anchors carry no apparent size, so there is no within-tier tiebreak term.
-const CONSTELLATION_PROMINENCE_PX = CAPTION_PRIORITY.constellation * CAPTION_TIER_SCALE;
+import { CAPTION_PRIORITY_SCALE } from '../../../../data/labels/captionPriorityScale';
+import { CONSTELLATION_CAPTION_PRIORITY } from '../data/constellationCaptionPriority';
 
 export function produceConstellationCaptions(
   runtime: ConstellationsRuntime,
@@ -68,7 +61,8 @@ export function produceConstellationCaptions(
         ...label,
         worldPos: anchor,
         fadeAlpha: fade,
-        prominencePx: CONSTELLATION_PROMINENCE_PX,
+        // No size term: an anchor at a figure centroid has no apparent size.
+        declutterPriority: CONSTELLATION_CAPTION_PRIORITY * CAPTION_PRIORITY_SCALE,
       };
     });
 

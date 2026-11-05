@@ -25,20 +25,22 @@ import {
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute, selectionRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
-import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/picking/present/structureSelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
-import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/present/starCatalogSelectionRow';
+import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/source';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StarRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
+import { starRowRuntime } from '../../support/layerPickCodes';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -100,10 +102,10 @@ describe('watchFocusTweenSaga', () => {
     mw.setContext({
       selection: composeSelectionRows(
         () => [
-          bodySelectionRow(),
-          structureSelectionRow(structures),
-          milkyWaySelectionRow(),
-          starCatalogSelectionRow(NO_SURVEY_STARS),
+          bodySelectionRow({ pickCodes: bodyPickCodes() }),
+          structureSelectionRow(structureRowRuntime(structures)),
+          milkyWaySelectionRow(milkyWayPickCode()),
+          starCatalogSelectionRow(starRowRuntime(NO_SURVEY_STARS)),
         ],
         () => ALL_KINDS_ENABLED,
       ),

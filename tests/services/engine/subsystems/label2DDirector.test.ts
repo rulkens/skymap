@@ -7,10 +7,7 @@ import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroun
 import { cosmoLabelProjection } from '../../../../src/services/engine/frame/cosmoLabelProjection';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import {
-  CAPTION_PRIORITY,
-  CAPTION_TIER_SCALE,
-} from '../../../../src/services/engine/presentation/captionPriority';
+import { CAPTION_PRIORITY_SCALE } from '../../../../src/data/labels/captionPriorityScale';
 import type { Label2DProducer } from '../../../../src/@types/engine/subsystems/Label2DProducer';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Label2DLeader } from '../../../../src/@types/rendering/Label2DLeader';
@@ -492,16 +489,16 @@ describe('label2DDirector', () => {
     expect(labelStub.setLabels).toHaveBeenCalledWith([]);
   });
 
-  it('declutters colliding on-screen labels across producers, keeping higher prominence', () => {
+  it('declutters colliding on-screen labels across producers, keeping higher declutter priority', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
 
     // Two labels at the same world point (both project to screen centre, so
-    // within the 48 px margin). The higher-prominence one wins.
-    const big: Label2D = { ...SAMPLE_LABEL, id: 'big', prominencePx: 100 };
-    const small: Label2D = { ...SAMPLE_LABEL, id: 'small', prominencePx: 10 };
+    // within the 48 px margin). The higher declutter priority wins.
+    const big: Label2D = { ...SAMPLE_LABEL, id: 'big', declutterPriority: 100 };
+    const small: Label2D = { ...SAMPLE_LABEL, id: 'small', declutterPriority: 10 };
     dir.registerProducer(makeProducer('pbig', [big]));
     dir.registerProducer(makeProducer('psmall', [small]));
 
@@ -521,11 +518,16 @@ describe('label2DDirector', () => {
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
 
-    const big: Label2D = { ...SAMPLE_LABEL, id: 'big', prominencePx: 100, leader: SAMPLE_LEADER };
+    const big: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'big',
+      declutterPriority: 100,
+      leader: SAMPLE_LEADER,
+    };
     const small: Label2D = {
       ...SAMPLE_LABEL,
       id: 'small',
-      prominencePx: 10,
+      declutterPriority: 10,
       leader: SAMPLE_LEADER,
     };
     dir.registerProducer(makeProducer('pbig', [big]));
@@ -567,8 +569,8 @@ describe('label2DDirector', () => {
       // B sits 40 screen px BELOW A (screen y 500 → 540). Anchor distance is
       // inside the old 48 px point margin, but A's text occupies y∈[470,500]
       // and B's y∈[510,540] — visually clear. Neither may be culled.
-      const a: Label2D = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], prominencePx: 100 };
-      const b: Label2D = { ...RECT_LABEL, id: 'b', worldPos: [0, -0.08, 0], prominencePx: 10 };
+      const a: Label2D = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], declutterPriority: 100 };
+      const b: Label2D = { ...RECT_LABEL, id: 'b', worldPos: [0, -0.08, 0], declutterPriority: 10 };
       dir.registerProducer(makeProducer('p', [a, b]));
 
       dir.runFrame(makeState(), makeCtx(0));
@@ -576,7 +578,7 @@ describe('label2DDirector', () => {
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([a, b]);
     });
 
-    it('culls the lower-prominence label when wide text rects overlap despite distant anchors', () => {
+    it('culls the lower-priority label when wide text rects overlap despite distant anchors', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
@@ -586,8 +588,8 @@ describe('label2DDirector', () => {
 
       // B sits 100 screen px RIGHT of A (screen x 500 → 600) — outside the
       // old 48 px point margin, but the 300 px-wide rects overlap by 200 px.
-      const a: Label2D = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], prominencePx: 100 };
-      const b: Label2D = { ...RECT_LABEL, id: 'b', worldPos: [0.2, 0, 0], prominencePx: 10 };
+      const a: Label2D = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], declutterPriority: 100 };
+      const b: Label2D = { ...RECT_LABEL, id: 'b', worldPos: [0.2, 0, 0], declutterPriority: 10 };
       dir.registerProducer(makeProducer('p', [a, b]));
 
       dir.runFrame(makeState(), makeCtx(0));
@@ -602,13 +604,18 @@ describe('label2DDirector', () => {
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
 
-    // On-screen low-prominence label + an off-screen label (|x| > 1 → outside
+    // On-screen low-priority label + an off-screen label (|x| > 1 → outside
     // NDC). The off-screen one is accepted unconditionally and never blocks.
-    const onScreen: Label2D = { ...SAMPLE_LABEL, id: 'on', prominencePx: 1, worldPos: [0, 0, 0] };
+    const onScreen: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'on',
+      declutterPriority: 1,
+      worldPos: [0, 0, 0],
+    };
     const offScreen: Label2D = {
       ...SAMPLE_LABEL,
       id: 'off',
-      prominencePx: 999,
+      declutterPriority: 999,
       worldPos: [5, 0, 0],
     };
     dir.registerProducer(makeProducer('p', [onScreen, offScreen]));
@@ -803,16 +810,16 @@ describe('label2DDirector', () => {
   });
 
   describe('the projection stage', () => {
-    it('sorts by prominencePx descending with a stable input-order tiebreak', () => {
+    it('sorts by declutterPriority descending with a stable input-order tiebreak', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
 
-      // Same world point, same prominence — the padded rects fully overlap,
+      // Same world point, same declutter priority — the padded rects fully overlap,
       // so exactly one survives. Only registration order can break the tie.
-      const first: Label2D = { ...SAMPLE_LABEL, id: 'first', prominencePx: 50 };
-      const second: Label2D = { ...SAMPLE_LABEL, id: 'second', prominencePx: 50 };
+      const first: Label2D = { ...SAMPLE_LABEL, id: 'first', declutterPriority: 50 };
+      const second: Label2D = { ...SAMPLE_LABEL, id: 'second', declutterPriority: 50 };
       dir.registerProducer(makeProducer('p', [first, second]));
 
       dir.runFrame(makeState(), makeCtx(0));
@@ -842,7 +849,7 @@ describe('label2DDirector', () => {
     it('a zero-target caption does not occupy declutter space and cannot suppress a real caption', () => {
       // Mirrors `labelsNearPass.ts:269`'s candidate filter
       // (`baseTarget === 0 || screenPx === null` never enters the cull).
-      // Without it, `zeroTarget`'s huge prominence would win the
+      // Without it, `zeroTarget`'s huge declutter priority would win the
       // screenSeparation contest and cull `visible` — which would then
       // never show, even though it has a real, positive target.
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
@@ -853,13 +860,13 @@ describe('label2DDirector', () => {
       const zeroTarget: Label2D = {
         ...SAMPLE_LABEL,
         id: 'zero-target',
-        prominencePx: 1000,
+        declutterPriority: 1000,
         fadeAlpha: 0,
       };
       const visible: Label2D = {
         ...SAMPLE_LABEL,
         id: 'visible',
-        prominencePx: 1,
+        declutterPriority: 1,
         fadeAlpha: 1,
       };
       dir.registerProducer(makeProducer('p', [zeroTarget, visible]));
@@ -909,7 +916,7 @@ describe('label2DDirector', () => {
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
 
-      // `big` always wins a collision (higher prominence); its worldPos
+      // `big` always wins a collision (higher declutter priority); its worldPos
       // toggles between far-from-`small` (no contest) and on top of it
       // (contest, `small` loses). `small` itself never moves and is always
       // emitted — declutter alone decides whether it's this frame's survivor.
@@ -918,8 +925,14 @@ describe('label2DDirector', () => {
         id: 'p',
         produceLabels: () => ({
           labels: [
-            { ...SAMPLE_LABEL, id: 'big', worldPos: bigPos, prominencePx: 100, fadeAlpha: 1 },
-            { ...SAMPLE_LABEL, id: 'small', worldPos: [0, 0, 0], prominencePx: 10, fadeAlpha: 1 },
+            { ...SAMPLE_LABEL, id: 'big', worldPos: bigPos, declutterPriority: 100, fadeAlpha: 1 },
+            {
+              ...SAMPLE_LABEL,
+              id: 'small',
+              worldPos: [0, 0, 0],
+              declutterPriority: 10,
+              fadeAlpha: 1,
+            },
           ],
           awake: false,
         }),
@@ -1010,13 +1023,10 @@ describe('label2DDirector', () => {
       expect(lastAlphaOf()).toBeUndefined();
     });
 
-    it('the higher CAPTION_PRIORITY tier survives a screenSeparation collision', () => {
-      // Moved from `labelsNearPass.ts`'s declutter, now exercised at
-      // the director directly: `prominencePx` composed exactly as
-      // `produceSceneBodyCaptions`/`produceConstellationCaptions` do —
-      // `CAPTION_PRIORITY[kind] * CAPTION_TIER_SCALE` — so the tier ordering
-      // dominates the collision regardless of any within-tier size term
-      // (`captionPriority.ts`'s whole reason to exist).
+    it('the higher caption priority survives a screenSeparation collision', () => {
+      // `declutterPriority` composed exactly as `produceConstellationCaptions` and
+      // `produceLightTimeCaptions` do — `priority * CAPTION_PRIORITY_SCALE` — so the
+      // authored priority dominates the collision regardless of any size term.
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
@@ -1025,16 +1035,16 @@ describe('label2DDirector', () => {
       const bodyLabel: Label2D = {
         ...SAMPLE_LABEL,
         id: 'planet',
-        prominencePx: CAPTION_PRIORITY.planet * CAPTION_TIER_SCALE,
+        declutterPriority: 20 * CAPTION_PRIORITY_SCALE,
         fadeAlpha: 1,
       };
       const constellationLabel: Label2D = {
         ...SAMPLE_LABEL,
         id: 'orion',
-        prominencePx: CAPTION_PRIORITY.constellation * CAPTION_TIER_SCALE,
+        declutterPriority: 5 * CAPTION_PRIORITY_SCALE,
         fadeAlpha: 1,
       };
-      // Same anchor — guarantees the collision the tier ordering must resolve.
+      // Same anchor — guarantees the collision the priority must resolve.
       dir.registerProducer(makeProducer('p', [bodyLabel, constellationLabel]));
 
       dir.runFrame(makeState(), makeNear0Ctx(0));
@@ -1056,7 +1066,7 @@ describe('label2DDirector', () => {
       const planet: Label2D = {
         ...SAMPLE_LABEL,
         id: 'mars',
-        prominencePx: CAPTION_PRIORITY.planet * CAPTION_TIER_SCALE,
+        declutterPriority: 20 * CAPTION_PRIORITY_SCALE,
         fadeAlpha: 1,
         lift: { subjectSizePx: 400, lineBottomLiftPx: 204 },
       };
@@ -1064,7 +1074,7 @@ describe('label2DDirector', () => {
         ...SAMPLE_LABEL,
         id: 'curiosity',
         worldPos: [0, -0.002, 0],
-        prominencePx: CAPTION_PRIORITY.meshBody * CAPTION_TIER_SCALE,
+        declutterPriority: 12 * CAPTION_PRIORITY_SCALE,
         fadeAlpha: 1,
         lift: { subjectSizePx: 0, lineBottomLiftPx: 4 },
       };
@@ -1123,14 +1133,14 @@ describe('label2DDirector', () => {
       const big: Label2D = {
         ...SAMPLE_LABEL,
         id: 'big',
-        prominencePx: 100,
+        declutterPriority: 100,
         fadeAlpha: 1,
         lift: { subjectSizePx: 10 },
       };
       const small: Label2D = {
         ...SAMPLE_LABEL,
         id: 'small',
-        prominencePx: 10,
+        declutterPriority: 10,
         fadeAlpha: 1,
         lift: { subjectSizePx: 10 },
       };

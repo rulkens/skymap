@@ -1,4 +1,5 @@
 import { bodyLayer } from '../../../src/layers/body/layer';
+import { bodyPickCodes } from '../../support/layerPickCodes';
 import type { Layer } from '../../../src/@types/engine/layer/Layer';
 import type { BodyRuntime } from '../../../src/layers/body/@types/BodyRuntime';
 
@@ -8,6 +9,11 @@ import type { BodyRuntime } from '../../../src/layers/body/@types/BodyRuntime';
  */
 export const bodyLayerWithoutGpu = {
   ...bodyLayer,
-  create: () => ({ textureSlots: new Map(), atlasSlot: {} }) as unknown as BodyRuntime,
+  create: () =>
+    ({
+      textureSlots: new Map(),
+      atlasSlot: {},
+      pickCodes: bodyPickCodes(),
+    }) as unknown as BodyRuntime,
   destroy: () => {},
 } as unknown as Layer<string, unknown>;

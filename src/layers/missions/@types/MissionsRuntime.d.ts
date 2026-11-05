@@ -6,4 +6,6 @@ export type MissionsRuntime = {
   readonly trailRenderer: MissionTrailRenderer;
   /** The craft's own glint instance, so core's glint batch never carries them. */
   readonly glintRenderer: BodyGlintRenderer;
+  /** The craft's pick code; the mesh, caption and selection row all stamp it. */
+  readonly pickCode: number;
 };

@@ -29,8 +29,8 @@ import { selectStructureBulk } from '../engine/selectors';
 import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { resolveFocusMotion } from '../../utils/camera/resolveFocusMotion';
-import { focusMotionRowOf } from '../../services/engine/camera/focusMotionRowOf';
+import { resolveFocusMotion } from '../../utils/camera/focusMotion/resolveFocusMotion';
+import { focusMotionRowOf } from '../../services/engine/camera/clips/focusMotionRowOf';
 import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {

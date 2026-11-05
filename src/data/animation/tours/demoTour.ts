@@ -36,9 +36,7 @@ export const demoTour: Tour = {
       enterClip: flyAndFocusOnClip(focusId('milkyWay')),
       caption: {
         title: 'The Milky Way',
-        lines: [
-          'Home — one barred spiral among the millions mapped here.',
-        ],
+        lines: ['Home — one barred spiral among the millions mapped here.'],
       },
       dwellClip: dwellDrift(8),
     },
@@ -46,9 +44,7 @@ export const demoTour: Tour = {
       enterClip: flyAndFocusOnClip(focusId('galaxy-cluster-virgo-m87')),
       caption: {
         title: 'The Virgo Cluster',
-        lines: [
-          'Two thousand galaxies, bound by gravity 54 million light-years away.',
-        ],
+        lines: ['Two thousand galaxies, bound by gravity 54 million light-years away.'],
       },
       dwellClip: dwellDrift(8),
     },

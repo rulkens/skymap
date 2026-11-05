@@ -104,7 +104,7 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
 import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetRows';
-import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
+import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { structureCatalogFetcher } from '../../../../src/layers/structure/catalog/load/structureCatalogFetcher';
@@ -116,10 +116,10 @@ import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWeb
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/filaments/load/filamentFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 
 /** A fake `AssetSlot` whose lifecycle the test drives: `fire(state)` notifies every subscriber
  *  synchronously. wireSlots only consumes `subscribe` (all-arrivals gate) and `load`, so no fuller

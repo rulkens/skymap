@@ -75,7 +75,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { Mat3 } from '../../../../@types/math/Mat3';
-import type { ViewFrustum } from '../../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
 import {
   CAMERA_UNIFORM_BYTES,
   writeCameraPrefix,

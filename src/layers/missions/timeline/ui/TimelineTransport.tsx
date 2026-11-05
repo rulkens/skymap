@@ -7,6 +7,13 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 
+import MinusIcon from '../../../../components/icons/MinusIcon/MinusIcon';
+import NextIcon from '../../../../components/icons/NextIcon/NextIcon';
+import PauseIcon from '../../../../components/icons/PauseIcon/PauseIcon';
+import PlayIcon from '../../../../components/icons/PlayIcon/PlayIcon';
+import PlusIcon from '../../../../components/icons/PlusIcon/PlusIcon';
+import PrevIcon from '../../../../components/icons/PrevIcon/PrevIcon';
+
 import { formatClockDate } from '../utils/formatClockDate';
 import { formatClockTime } from '../utils/formatClockTime';
 import type { ExhibitTimelineClock } from '../@types/ExhibitTimelineClock';
@@ -40,15 +47,7 @@ function TimelineTransport({
         disabled={!onPrev}
         onClick={onPrev ?? undefined}
       >
-        <svg viewBox="0 0 16 16" aria-hidden="true">
-          <path
-            d="M3 2v12M14 2 6 8l8 6z"
-            fill="currentColor"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <PrevIcon size={18} />
       </button>
       <button
         type="button"
@@ -56,13 +55,7 @@ function TimelineTransport({
         aria-label={clock.paused ? 'Run the clock' : 'Pause the clock'}
         onClick={onPlayPause}
       >
-        <svg viewBox="0 0 16 16" aria-hidden="true">
-          {clock.paused ? (
-            <path d="M4 2.5v11L13.5 8z" fill="currentColor" />
-          ) : (
-            <path d="M4 2.5h3v11H4zM9 2.5h3v11H9z" fill="currentColor" />
-          )}
-        </svg>
+        {clock.paused ? <PlayIcon size={14} /> : <PauseIcon size={14} />}
       </button>
       <div className={styles.when}>
         <span className={styles.whenDate}>{formatClockDate(simMs)}</span>
@@ -76,9 +69,7 @@ function TimelineTransport({
           disabled={clock.atSlowest}
           onClick={onSlower}
         >
-          <svg viewBox="0 0 10 10" aria-hidden="true">
-            <path d="M1.5 5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
+          <MinusIcon size={14} />
         </button>
         <b className={styles.rateLabel}>
           {clock.profiled ? <i className={styles.pulse} /> : null}
@@ -91,14 +82,7 @@ function TimelineTransport({
           disabled={clock.atFastest}
           onClick={onFaster}
         >
-          <svg viewBox="0 0 10 10" aria-hidden="true">
-            <path
-              d="M1.5 5h7M5 1.5v7"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
+          <PlusIcon size={14} />
         </button>
       </div>
       <button
@@ -108,15 +92,7 @@ function TimelineTransport({
         disabled={!onNext}
         onClick={onNext ?? undefined}
       >
-        <svg viewBox="0 0 16 16" aria-hidden="true">
-          <path
-            d="M13 2v12M2 2l8 6-8 6z"
-            fill="currentColor"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <NextIcon size={18} />
       </button>
     </div>
   );

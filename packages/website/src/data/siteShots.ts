@@ -8,13 +8,37 @@ const THUMB = { width: 400, height: 400 };
 const THUMB_WIDTHS = [480, 240, 160];
 const SUBJECT: SiteShotSettings = { hideLabels: true, hideOrbitTrails: true, hideStructures: true };
 // A cut-out's ground left out with the sky: the planet behind a craft, the terrain under a rover.
-const HIDE_EARTH = ['earth', 'surface-tiles', 'cloud-shell', 'atmosphere-shell', 'aerial-perspective'];
-const HIDE_MARS = ['planets', 'textured-bodies', 'surface-tiles', 'atmosphere-shell', 'aerial-perspective', 'contact-shadows'];
-const ONE_GALAXY: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true };
+const HIDE_EARTH = [
+  'earth',
+  'surface-tiles',
+  'cloud-shell',
+  'atmosphere-shell',
+  'aerial-perspective',
+];
+const HIDE_MARS = [
+  'planets',
+  'textured-bodies',
+  'surface-tiles',
+  'atmosphere-shell',
+  'aerial-perspective',
+  'contact-shadows',
+];
+const ONE_GALAXY: SiteShotSettings = {
+  ...SUBJECT,
+  hideGalaxyField: true,
+  hideCosmicWeb: true,
+  hideZoneOfAvoidance: true,
+};
 // A data page's picture stands in the text column, 552 px at most: 1280 covers it at 2x.
 const DATA_WIDTHS = [1280, 640];
 const NOON = 't=2026-10-05T12:00:00Z';
-const SUBJECT_ALONE: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true, hideStars: true };
+const SUBJECT_ALONE: SiteShotSettings = {
+  ...SUBJECT,
+  hideGalaxyField: true,
+  hideCosmicWeb: true,
+  hideZoneOfAvoidance: true,
+  hideStars: true,
+};
 // A cutout: the subject alone on transparency, for a page to lay over its own ground.
 const CUTOUT: SiteShotSettings = { ...SUBJECT_ALONE, matte: 'occluding' };
 const CUT_WIDTHS = [1920, 1280];
@@ -47,8 +71,16 @@ const FEATURE = { width: 1200, height: 750 };
 const FEATURE_WIDTHS = [1600, 960];
 // The Features page lays a piece of the app's interface beside each view, alone on a transparent ground,
 // taken at the view's own link and settings so its figures and switches are that picture's.
-const INFO_CARD: SiteShotSettings = { ui: true, element: '[role="status"][aria-live="polite"]', settleMs: 6000 };
-const SETTINGS_PANEL: SiteShotSettings = { ui: true, element: '[aria-label="Renderer settings"]', settleMs: 6000 };
+const INFO_CARD: SiteShotSettings = {
+  ui: true,
+  element: '[role="status"][aria-live="polite"]',
+  settleMs: 6000,
+};
+const SETTINGS_PANEL: SiteShotSettings = {
+  ui: true,
+  element: '[aria-label="Renderer settings"]',
+  settleMs: 6000,
+};
 const PIECE_WIDTHS = [800, 400];
 // A docs page sets a whole-window interface shot nine columns wide (852 px) and opens it larger on a click:
 // 2400 is the shot as taken, which covers both on a 2x screen.
@@ -56,12 +88,19 @@ const DOCS_WIDTHS = [2400, ...FEATURE_WIDTHS];
 const PHONE = { width: 400, height: 560 };
 const PHONE_WIDTHS = [800];
 const DOME = { width: 1024, height: 1024 };
-// The Science page's two-up comparison: one camera, two layers, so the frames must share a size.
+// Two layers seen by one camera, so the frames must share a size: the Science page's compare frame, the Settings page's pairs.
 const PAIR = { width: 800, height: 800 };
 const PAIR_WIDTHS = [1120, 640];
+// The compare frame spans the column (72rem), which a 2x screen fills from 2240: its rows are shot at 3x for it.
+const COMPARE_WIDTHS = [2240, 1120, 640];
 // Aimed 250 Mpc out towards Coma, inside the volume the density map covers, so both layers fill the frame.
 const WEB_POSE = 'pose=a,-211,-56,116,2.1,0.35,420,0';
-const POINTS_ONLY: SiteShotSettings = { hideLabels: true, hideStructures: true, hideCosmicWeb: true, hideZoneOfAvoidance: true };
+const POINTS_ONLY: SiteShotSettings = {
+  hideLabels: true,
+  hideStructures: true,
+  hideCosmicWeb: true,
+  hideZoneOfAvoidance: true,
+};
 // The Settings page's pairs: 60 Mpc out, where the spokes the density correction dims are plain, and 900 Mpc out, where the SDSS fans show.
 const NEAR_WEB_POSE = 'pose=a,0,0,0,2.1,0.35,60,0';
 const FAR_POSE = 'pose=a,0,0,0,2.1,0.35,900,0';
@@ -96,7 +135,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     caption: 'Looking north.',
     drawn: 'The park is a 3D model built from aerial photographs and a laser scan.',
     alt: 'A lawn with a round bed of sand-coloured gravel, between two tall walls of dark green trees, under a deep blue sky.',
-    credit: 'Ortofoto © GeoDanmark / Klimadatastyrelsen (CC BY 4.0). Skråfoto © Klimadatastyrelsen (CC BY 4.0)',
+    credit:
+      'Ortofoto © GeoDanmark / Klimadatastyrelsen (CC BY 4.0). Skråfoto © Klimadatastyrelsen (CC BY 4.0)',
   },
   {
     id: 'hubble',
@@ -119,7 +159,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [1920, 1280, 800],
     title: 'The cosmic web around us',
-    drawn: 'The purple field is density computed from SDSS galaxy positions; the discs mark named superclusters.',
+    drawn:
+      'The purple field is density computed from SDSS galaxy positions; the discs mark named superclusters.',
     alt: 'A purple web of threads with gold knots, ending at a straight edge, with pale discs marking superclusters.',
   },
   {
@@ -132,7 +173,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     // About's DomeSky draws it up to 44rem wide: 1408 device px on a 2x screen.
     widths: [1600, 1200, 720],
     title: 'A fisheye frame from the app’s dome mode',
-    caption: 'The whole sky in one disc. Saturn is near the front edge, its rings wide open in October 2017.',
+    caption:
+      'The whole sky in one disc. Saturn is near the front edge, its rings wide open in October 2017.',
     alt: 'A circular all-sky picture: stars and the band of the Milky Way, with Saturn and its open rings near the lower edge.',
     credit: 'Saturn: Solar System Scope',
   },
@@ -175,7 +217,13 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'filaments-derived',
     link: 'pose=a,0,0,0,2.1,0.35,260,0',
-    settings: { hideLabels: true, hideStructures: true, hideCosmicWeb: true, filaments: true, settleMs: 4000 },
+    settings: {
+      hideLabels: true,
+      hideStructures: true,
+      hideCosmicWeb: true,
+      filaments: true,
+      settleMs: 4000,
+    },
     size: WIDE,
     widths: [1920, 1280, 800, 640],
     title: 'The filaments of the cosmic web',
@@ -231,7 +279,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     // A phone's band across the window, about 560px wide: 960 covers it at 2x, and fine points cost bytes above that.
     widths: [960, 640],
     title: 'The DESI survey wedge',
-    drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
+    drawn:
+      'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
     alt: 'A broad fan of points opening from a tip at the left, orange near the tip and blue-white far out.',
   },
   // The same fan upright for a wide window's margin, run down two lists of the Science page: seen lower, so it opens
@@ -259,7 +308,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [686, 343],
     denseQuality: 24,
     title: 'The DESI survey wedge',
-    drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
+    drawn:
+      'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
     alt: 'A long fan of points running down from a tip at the top, white and orange near the tip, blue and thinning far out.',
   },
   // The traced filaments upright for the same margin, beside the Science page's claims on the large-scale structure:
@@ -323,8 +373,24 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     caption: 'For the link-preview card.',
     alt: 'Earth against a dense field of stars, with the word skymap and the line: the mapped universe at true scale.',
   },
-  { id: 'place-earth', link: `focus=body-earth&${NOON}`, settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
-  { id: 'place-moon', link: `focus=body-moon&${NOON}`, settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
+  {
+    id: 'place-earth',
+    link: `focus=body-earth&${NOON}`,
+    settings: SUBJECT,
+    size: THUMB,
+    widths: THUMB_WIDTHS,
+    title: '',
+    alt: '',
+  },
+  {
+    id: 'place-moon',
+    link: `focus=body-moon&${NOON}`,
+    settings: SUBJECT,
+    size: THUMB,
+    widths: THUMB_WIDTHS,
+    title: '',
+    alt: '',
+  },
   {
     id: 'place-perseverance',
     link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z',
@@ -334,7 +400,15 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: '',
     alt: '',
   },
-  { id: 'place-saturn', link: `focus=body-saturn&${NOON}`, settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
+  {
+    id: 'place-saturn',
+    link: `focus=body-saturn&${NOON}`,
+    settings: SUBJECT,
+    size: THUMB,
+    widths: THUMB_WIDTHS,
+    title: '',
+    alt: '',
+  },
   {
     id: 'place-voyager1',
     link: 'focus=body-voyager1&t=2026-09-18T12:56:32Z&pose=a,0,0,0,3.8408163993487223,-0.6565563346622649,2.6e-22,0',
@@ -344,7 +418,15 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: '',
     alt: '',
   },
-  { id: 'place-betelgeuse', link: `focus=star-betelgeuse&${NOON}`, settings: { ...SUBJECT, exposure: 2.2 }, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
+  {
+    id: 'place-betelgeuse',
+    link: `focus=star-betelgeuse&${NOON}`,
+    settings: { ...SUBJECT, exposure: 2.2 },
+    size: THUMB,
+    widths: THUMB_WIDTHS,
+    title: '',
+    alt: '',
+  },
   {
     id: 'place-sgr-a',
     link: 'focus=blackhole-sgr-a-star',
@@ -363,7 +445,15 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: '',
     alt: '',
   },
-  { id: 'place-virgo', link: 'focus=galaxy-cluster-virgo-m87', settings: { ...SUBJECT, exposure: 5 }, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
+  {
+    id: 'place-virgo',
+    link: 'focus=galaxy-cluster-virgo-m87',
+    settings: { ...SUBJECT, exposure: 5 },
+    size: THUMB,
+    widths: THUMB_WIDTHS,
+    title: '',
+    alt: '',
+  },
   // The Features page. The camera sits at the Sun, looking at Orion on a December evening.
   {
     id: 'features-constellations',
@@ -400,12 +490,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     id: 'features-remote',
     link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,4.6e-16,0`,
     query: 'dome',
-    settings: { ...SUBJECT, remote: true, searchFor: 'Earth', settleMs: 4000 },
+    settings: { ...SUBJECT, remote: true, settleMs: 4000 },
     size: { width: 390, height: 844 },
     dpr: 3,
     widths: [780],
     title: 'The remote on a phone',
-    alt: 'The remote page on a phone: it reads Connected with Earth as the focused object, above a drag pad, buttons, search and tour lists.',
+    alt: 'The remote page on a phone: it reads Connected with Earth as the focused object, above a drag pad, a Home button with two buttons for the camera controls, and tiles for Search, Tours, Exhibits, Clips, Time, Layers, Labels and Setup.',
   },
   {
     id: 'features-time-jupiter',
@@ -475,7 +565,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1920, 1280, 640],
     title: 'The Pacific Ocean from 540 kilometres up',
     caption: 'About Hubble’s height, looking towards a low Sun.',
-    drawn: 'The Sun’s glint on the water is computed; the surface and the clouds are satellite photography.',
+    drawn:
+      'The Sun’s glint on the water is computed; the surface and the clouds are satellite photography.',
     alt: 'The curve of Earth against stars, a bright reflection of the Sun on dark blue ocean and a thin blue haze along the horizon.',
     credit: 'Earth: NASA Blue Marble',
   },
@@ -489,7 +580,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1920, 1280],
     title: 'The Sun’s glint off the Caribbean',
     caption: 'About 3,700 kilometres up, with night coming over the ocean to the east.',
-    drawn: 'The Sun’s glint on the water is computed; the surface and the clouds are satellite photography.',
+    drawn:
+      'The Sun’s glint on the water is computed; the surface and the clouds are satellite photography.',
     alt: 'Earth filling the right of the picture against stars: a bright reflection of the Sun off the Caribbean by the coast of South America, clouds, and the dark night side beyond.',
     credit: 'Earth: NASA Blue Marble',
   },
@@ -513,7 +605,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1920, 1280],
     title: 'Perseverance on Mars',
     caption: 'Where it stood on 7 October 2026.',
-    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
+    drawn:
+      'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
     alt: 'A six-wheeled rover with a camera mast, seen from above and behind on smooth brown ground that rises to the left.',
     credit: 'Model: Brian Kumanchik, NASA/JPL-Caltech',
   },
@@ -552,11 +645,18 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'features-s-stars',
     link: 'focus=blackhole-sgr-a-star&t=2026-06-01T00:00:00Z&pose=a,-0.0004469860712306233,-0.007138118108456056,-0.0039657480154262886,-1.7092355667054722,0.8862619633921914,1.5e-7,0',
-    settings: { hideLabels: true, hideStructures: true, hideZoneOfAvoidance: true, fovDeg: 40, settleMs: 6000 },
+    settings: {
+      hideLabels: true,
+      hideStructures: true,
+      hideZoneOfAvoidance: true,
+      fovDeg: 40,
+      settleMs: 6000,
+    },
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'The S-stars orbiting Sagittarius A*',
-    drawn: 'The orbits are computed from the stars’ published orbital elements. The paths drawn along them are ours.',
+    drawn:
+      'The orbits are computed from the stars’ published orbital elements. The paths drawn along them are ours.',
     alt: 'Many thin elliptical orbits in blue and orange, crossing round a tight knot of bright stars at the centre of the frame, on a field of fainter stars.',
   },
   {
@@ -585,7 +685,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'The DESI survey wedge',
-    drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
+    drawn:
+      'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
     alt: 'A broad fan of points opening from a tip at the left, orange near the tip and blue-white far out, on a black background.',
   },
   {
@@ -598,7 +699,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     caption: 'Looking north from Nepal across the Himalaya to the Tibetan plateau.',
     drawn: 'Satellite photography laid over measured terrain heights.',
     alt: 'Snow-covered Himalayan peaks and glaciers in the foreground, a hazy plateau at the horizon and a dark blue sky above.',
-    credit: 'Earth: EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)',
+    credit:
+      'Earth: EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)',
   },
   {
     id: 'features-grand-canyon',
@@ -610,7 +712,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     caption: 'Looking west along the Colorado River.',
     drawn: 'Satellite photography laid over measured terrain heights.',
     alt: 'Red and ochre canyon walls and ridges receding to a hazy horizon, with the green Colorado River winding through the lower part of the frame.',
-    credit: 'Earth: EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)',
+    credit:
+      'Earth: EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)',
   },
   {
     id: 'classroom-hero',
@@ -619,7 +722,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [1920, 1280],
     title: 'Jupiter on 14 March 2033 at 21:00 UTC',
-    drawn: 'Jupiter’s position and lit side are computed for the date in the address. The cloud tops are a fixed map.',
+    drawn:
+      'Jupiter’s position and lit side are computed for the date in the address. The cloud tops are a fixed map.',
     alt: 'Jupiter, three quarters lit, with its cloud bands and storms, against a field of stars.',
     credit: 'Jupiter: Solar System Scope',
   },
@@ -631,7 +735,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: TALL_WIDTHS,
     denseQuality: TALL_DENSE_QUALITY,
     title: 'Jupiter on 14 March 2033 at 21:00 UTC',
-    drawn: 'Jupiter’s position and lit side are computed for the date in the address. The cloud tops are a fixed map.',
+    drawn:
+      'Jupiter’s position and lit side are computed for the date in the address. The cloud tops are a fixed map.',
     alt: 'Jupiter, three quarters lit, with its cloud bands and storms, against a field of stars.',
     credit: 'Jupiter: Solar System Scope',
   },
@@ -642,7 +747,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: CARD,
     widths: CARD_WIDTHS,
     title: 'The Solar System exhibit',
-    drawn: 'The orbits are computed and drawn as lines. The planets are too small to see at this distance, so the labels stand in for them.',
+    drawn:
+      'The orbits are computed and drawn as lines. The planets are too small to see at this distance, so the labels stand in for them.',
     alt: 'Nested ellipses around a labelled Sun, with the names of the planets beside them and named stars behind.',
   },
   {
@@ -665,7 +771,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: CARD_WIDTHS,
     title: 'Earth on 21 June 2026',
     caption: 'From its sunlit side.',
-    drawn: 'Earth’s place on its orbit is computed for the date; its axis keeps the same tilt and direction all year. The clouds are a fixed composite.',
+    drawn:
+      'Earth’s place on its orbit is computed for the date; its axis keeps the same tilt and direction all year. The clouds are a fixed composite.',
     alt: 'Earth fully lit, with the Sahara in the middle and Europe and the Arctic towards the top.',
     credit: 'Earth: NASA Blue Marble',
   },
@@ -677,7 +784,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: CARD_WIDTHS,
     title: 'Earth on 21 December 2026',
     caption: 'From its sunlit side.',
-    drawn: 'Earth’s place on its orbit is computed for the date; its axis keeps the same tilt and direction all year. The clouds are a fixed composite.',
+    drawn:
+      'Earth’s place on its orbit is computed for the date; its axis keeps the same tilt and direction all year. The clouds are a fixed composite.',
     alt: 'Earth fully lit, mostly ocean, with southern Africa to the right and Antarctica at the lower edge.',
     credit: 'Earth: NASA Blue Marble',
   },
@@ -698,7 +806,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: CARD,
     widths: CARD_WIDTHS,
     title: 'Andromeda at its catalogued position',
-    drawn: 'The disc is a photograph placed in the scene, with the survey points switched off for this picture.',
+    drawn:
+      'The disc is a photograph placed in the scene, with the survey points switched off for this picture.',
     alt: 'A tilted orange and blue spiral galaxy with a bright core, on black.',
     credit: 'Photograph: Brody Wesner, CC0',
   },
@@ -709,7 +818,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: CARD,
     widths: CARD_WIDTHS,
     title: 'The Cosmic Web exhibit',
-    drawn: 'The purple field is density computed from SDSS galaxy positions. The discs and names mark clusters and superclusters; the discs are drawn.',
+    drawn:
+      'The purple field is density computed from SDSS galaxy positions. The discs and names mark clusters and superclusters; the discs are drawn.',
     alt: 'A purple web of threads with gold knots, with pale labelled discs on some of the knots.',
   },
   {
@@ -720,7 +830,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     // Also the footer's ground, 1024 to 1280 px wide on every page: the whole shot.
     widths: [1600, ...CARD_WIDTHS],
     title: 'The Observable Universe exhibit',
-    drawn: 'The sphere is drawn from a cosmological model. The pale cloud inside it is every galaxy and quasar in the catalogues.',
+    drawn:
+      'The sphere is drawn from a cosmological model. The pale cloud inside it is every galaxy and quasar in the catalogues.',
     alt: 'A thin blue sphere on black with a small pale cloud of points in two fans at its centre.',
   },
   {
@@ -731,7 +842,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1920, 1280, 640],
     title: 'Every galaxy and quasar in the catalogues',
     caption: 'From far outside them.',
-    drawn: 'Each point is one catalogued object. The two fans are the sky SDSS covered; the dark gaps are directions it did not cover.',
+    drawn:
+      'Each point is one catalogued object. The two fans are the sky SDSS covered; the dark gaps are directions it did not cover.',
     alt: 'A glowing cloud of points shaped like two fans joined at a bright centre, with dark gaps between them.',
   },
   {
@@ -742,7 +854,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1600, 960],
     title: 'The Zone of Avoidance exhibit',
     caption: 'From 1.2 megaparsecs out.',
-    drawn: 'The thinning of galaxies along the band is in the catalogues; the blue band, its lettering and the cluster rings are drawn by us.',
+    drawn:
+      'The thinning of galaxies along the band is in the catalogues; the blue band, its lettering and the cluster rings are drawn by us.',
     alt: 'A field of galaxies crossed by a wide blue band labelled Zone of Avoidance, with fewer points inside the band.',
   },
   {
@@ -750,7 +863,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: WEB_POSE,
     settings: { ...POINTS_ONLY, settleMs: 4000 },
     size: PAIR,
-    widths: PAIR_WIDTHS,
+    dpr: 3,
+    widths: COMPARE_WIDTHS,
     title: 'Catalogued galaxies, one point each',
     caption: 'Around a spot 250 megaparsecs away.',
     drawn: 'Direction is observed; distance is computed from redshift.',
@@ -759,12 +873,20 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'science-web-density',
     link: WEB_POSE,
-    settings: { hideLabels: true, hideStructures: true, hideZoneOfAvoidance: true, hideGalaxyField: true, settleMs: 6000 },
+    settings: {
+      hideLabels: true,
+      hideStructures: true,
+      hideZoneOfAvoidance: true,
+      hideGalaxyField: true,
+      settleMs: 6000,
+    },
     size: PAIR,
-    widths: PAIR_WIDTHS,
+    dpr: 3,
+    widths: COMPARE_WIDTHS,
     title: 'The same view as the glow of the cosmic web',
     caption: 'Its gold knots sit where the points crowd.',
-    drawn: 'The map exists only inside the volume its SDSS galaxies fill, which is why it stops at the lower left.',
+    drawn:
+      'The map exists only inside the volume its SDSS galaxies fill, which is why it stops at the lower left.',
     alt: 'A purple web of threads across the frame, with gold knots towards the lower left where it ends.',
   },
   // The About page's opening: the Milky Way model at a slant, alone as light, so the page's own black is its sky.
@@ -839,12 +961,19 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     id: 'dome-web',
     link: 'pose=a,0,0,0,2.1,0.35,260,0',
     query: 'dome',
-    settings: { hideLabels: true, hideStructures: true, hideCosmicWeb: true, filaments: true, settleMs: 4000 },
+    settings: {
+      hideLabels: true,
+      hideStructures: true,
+      hideCosmicWeb: true,
+      filaments: true,
+      settleMs: 4000,
+    },
     size: DOME,
     widths: [1200, 720],
     title: 'Galaxies and filaments in dome mode',
     caption: 'About 850 million light-years out.',
-    drawn: 'Each point is a catalogued galaxy; the bright threads are filaments traced through them by an algorithm.',
+    drawn:
+      'Each point is a catalogued galaxy; the bright threads are filaments traced through them by an algorithm.',
     alt: 'A circular all-sky picture: a haze of points with bright branching violet threads near the lower edge.',
   },
   // The Domes page's film: three fisheye frames of the tour in dome mode, fanned with the newest in front.
@@ -867,7 +996,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: DOME,
     widths: [1200, 720],
     title: 'The cosmic web, a frame of the tour in dome mode',
-    drawn: 'The purple field is density computed from SDSS galaxy positions; the discs mark named superclusters.',
+    drawn:
+      'The purple field is density computed from SDSS galaxy positions; the discs mark named superclusters.',
     alt: 'A circular all-sky picture with a purple web of threads and gold discs in its lower half.',
   },
   {
@@ -924,7 +1054,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: FEATURE_WIDTHS,
     title: 'The Solar System exhibit as it opens',
-    drawn: 'The orbits are computed and drawn as lines; at this distance the planets are too small to see, so their names stand in for them.',
+    drawn:
+      'The orbits are computed and drawn as lines; at this distance the planets are too small to see, so their names stand in for them.',
     alt: 'Nested orbit rings around a labelled Sun, a title reading Solar System, and a panel of notes headed What you’re seeing.',
   },
   {
@@ -945,7 +1076,14 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     // 20 s into the step the caption is fully in and the camera has pulled back over the web's near edge.
     id: 'stories-web',
     link: 'tour=grandTour',
-    settings: { tourStep: 8, settleMs: 20000, matte: 'emissive', keepPasses: ['cosmic-web-density', 'cosmic-web-density-upsample'], hideLabels: true, hideStructures: true },
+    settings: {
+      tourStep: 8,
+      settleMs: 20000,
+      matte: 'emissive',
+      keepPasses: ['cosmic-web-density', 'cosmic-web-density-upsample'],
+      hideLabels: true,
+      hideStructures: true,
+    },
     size: { width: 1600, height: 1000 },
     widths: [1920, 1280, 800],
     title: 'The cosmic web in the tour',
@@ -1001,7 +1139,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: { width: 1000, height: 1000 },
     widths: [1600, 800],
     title: 'Jupiter on 14 March 2033',
-    drawn: 'Jupiter’s position and lit side are computed for the date. The cloud tops are a fixed map.',
+    drawn:
+      'Jupiter’s position and lit side are computed for the date. The cloud tops are a fixed map.',
     alt: 'Jupiter, its cream and rust cloud bands and storms, on black.',
     credit: 'Jupiter: Solar System Scope',
   },
@@ -1013,7 +1152,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: FEATURE_WIDTHS,
     title: 'Jupiter and its four large moons',
     caption: 'Each on its orbit.',
-    drawn: 'The positions are computed for the instant on the clock; the rings are the orbits, drawn as lines.',
+    drawn:
+      'The positions are computed for the instant on the clock; the rings are the orbits, drawn as lines.',
     alt: 'A small Jupiter inside four rings, with the moons Io, Europa, Ganymede and Callisto labelled, and a clock reading 2033-03-14 21:00 UTC.',
   },
   {
@@ -1023,7 +1163,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: PHONE,
     widths: PHONE_WIDTHS,
     title: 'Jupiter and its four large moons on a phone',
-    drawn: 'The positions are computed for the instant on the clock at the bottom; the rings are the orbits, drawn as lines.',
+    drawn:
+      'The positions are computed for the instant on the clock at the bottom; the rings are the orbits, drawn as lines.',
     alt: 'A small Jupiter inside four rings, with the moons Io, Europa, Ganymede and Callisto labelled, above a clock with a play button.',
   },
   {
@@ -1040,7 +1181,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'ui-search',
     link: 'pose=a,0,0,0,6.14,0.2,5.5e-16,0',
-    settings: { ui: true, searchFor: '', element: '[role="dialog"][aria-label^="Search"]', settleMs: 3000 },
+    settings: {
+      ui: true,
+      searchFor: '',
+      element: '[role="dialog"][aria-label^="Search"]',
+      settleMs: 3000,
+    },
     size: FEATURE,
     widths: [1200, 800],
     title: 'The app’s search',
@@ -1065,7 +1211,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: FEATURE_WIDTHS,
     title: 'Saturn',
-    drawn: 'The planet’s position and ring tilt are computed for 15 October 2017; the figures on the card are textbook values typed into the app.',
+    drawn:
+      'The planet’s position and ring tilt are computed for 15 October 2017; the figures on the card are textbook values typed into the app.',
     alt: 'Saturn and its rings inside a selection ring, beside a card listing radius, mass, gravity, day length and more.',
     credit: 'Saturn: Solar System Scope',
   },
@@ -1080,7 +1227,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DOCS_WIDTHS,
     title: 'The app once the welcome screen has closed',
     caption: 'Earth is selected, so its card is open on the right.',
-    drawn: 'The white ring is the app’s selection marker. Earth is lit as it is at the moment the link is opened.',
+    drawn:
+      'The white ring is the app’s selection marker. Earth is lit as it is at the moment the link is opened.',
     alt: 'Earth inside a white ring among labelled stars, with a search box above, two panels on the left, a card headed Earth on the right, and a scale bar and a clock at the lower right.',
     credit: 'Earth: NASA Blue Marble',
   },
@@ -1106,7 +1254,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'first-flight-search',
     link: 'focus=body-earth',
-    settings: { ui: true, searchFor: 'Saturn', element: '[role="dialog"][aria-label^="Search"]', settleMs: 4000 },
+    settings: {
+      ui: true,
+      searchFor: 'Saturn',
+      element: '[role="dialog"][aria-label^="Search"]',
+      settleMs: 4000,
+    },
     size: FEATURE,
     widths: [1220, 610],
     title: 'The search with “Saturn” typed in',
@@ -1119,7 +1272,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: DOCS_WIDTHS,
     title: 'Saturn, with its card open',
-    drawn: 'The planet’s position, its lit side and the tilt of its rings are computed for the moment the link is opened; the figures on the card are textbook values typed into the app.',
+    drawn:
+      'The planet’s position, its lit side and the tilt of its rings are computed for the moment the link is opened; the figures on the card are textbook values typed into the app.',
     alt: 'Saturn and its rings inside a white ring, the search box and three round buttons above, and on the right a card headed Saturn with its radius, mass, day length and more.',
     credit: 'Saturn: Solar System Scope',
   },
@@ -1131,7 +1285,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DOCS_WIDTHS,
     title: 'Saturn, as a link to it opens',
     caption: 'Its card has replaced Earth’s.',
-    drawn: 'The planet’s position, its lit side and the tilt of its rings are computed for the moment the link is opened.',
+    drawn:
+      'The planet’s position, its lit side and the tilt of its rings are computed for the moment the link is opened.',
     alt: 'Saturn and its rings inside a white selection ring, with a card headed Saturn on the right.',
     credit: 'Saturn: Solar System Scope',
   },
@@ -1139,7 +1294,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     // A link opens the clock stopped at real speed; five presses of ] step it to 6 hr/s and leave it stopped.
     id: 'first-flight-clock',
     link: 'focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,1.3e-13,0',
-    settings: { ui: true, keys: [']', ']', ']', ']', ']'], element: '[aria-label="Time controls"] > div', settleMs: 4000 },
+    settings: {
+      ui: true,
+      keys: [']', ']', ']', ']', ']'],
+      element: '[aria-label="Time controls"] > div',
+      settleMs: 4000,
+    },
     size: FEATURE,
     widths: [862, 431],
     title: 'The clock at 6 hr/s, stopped',
@@ -1152,14 +1312,19 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: { width: 1600, height: 1000 },
     widths: [1600, 960],
     title: 'Saturn’s moons on their orbits',
-    drawn: 'The positions are computed for 7 October 2026 at 12:00 UTC; the lines round the planet are the moons’ orbits.',
+    drawn:
+      'The positions are computed for 7 October 2026 at 12:00 UTC; the lines round the planet are the moons’ orbits.',
     alt: 'Saturn in a white ring inside the orbits of its moons, with Tethys, Enceladus, Dione, Rhea and Titan labelled.',
   },
   {
     // The Home button's tooltip wrapper stands between the bar and the button.
     id: 'first-flight-topbar',
     link: 'focus=body-earth',
-    settings: { ui: true, element: 'div:has(> * > [aria-label="Fly camera home"])', settleMs: 4000 },
+    settings: {
+      ui: true,
+      element: 'div:has(> * > [aria-label="Fly camera home"])',
+      settleMs: 4000,
+    },
     size: FEATURE,
     widths: [932, 466],
     title: 'The top bar',
@@ -1168,7 +1333,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'first-flight-tour-nav',
     link: 'tour=grandTour',
-    settings: { ui: true, tourStep: 0, settleMs: 9000, element: 'div:has(> [aria-label="Exit tour"])' },
+    settings: {
+      ui: true,
+      tourStep: 0,
+      settleMs: 9000,
+      element: 'div:has(> [aria-label="Exit tour"])',
+    },
     size: FEATURE,
     widths: [420, 210],
     title: 'The tour’s buttons',
@@ -1194,7 +1364,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: FEATURE_WIDTHS,
     title: 'The top bar and the Navigation panel',
-    caption: 'From the left, the bar holds the search box and the Home, Auto-rotate and About buttons.',
+    caption:
+      'From the left, the bar holds the search box and the Home, Auto-rotate and About buttons.',
     drawn: 'The white ring marks the selected object, here Earth.',
     alt: 'A search box and three round buttons above Earth, and on the left a panel headed Navigation that lists drag, wheel, H, F, Esc and the search keys.',
     credit: 'Earth: NASA Blue Marble',
@@ -1208,7 +1379,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: 'The Grand Canyon from a few kilometres up, tilted towards the horizon',
     drawn: 'Satellite photography laid over measured terrain heights.',
     alt: 'Red and ochre canyon walls receding towards the top of the frame, with a dark forested plateau and a few roads in the foreground.',
-    credit: 'Earth: EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)',
+    credit:
+      'Earth: EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)',
   },
   {
     id: 'guide-far',
@@ -1218,17 +1390,24 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DOCS_WIDTHS,
     title: 'As far back as the camera goes',
     caption: 'The scale bar at the lower right reads 10 gigaparsecs.',
-    drawn: 'The bright patch is every galaxy in the catalogues. The sphere around it is drawn where a model puts the edge of the observable universe.',
+    drawn:
+      'The bright patch is every galaxy in the catalogues. The sphere around it is drawn where a model puts the edge of the observable universe.',
     alt: 'A small bright patch in two fans inside a faint blue sphere on black, with the app’s panels around it and a scale bar reading 10.0 Gpc.',
   },
   {
     id: 'guide-search-typed',
     link: `focus=body-earth&${NOON}`,
-    settings: { ui: true, searchFor: 'coma', settleMs: 9000, crop: { left: 290, top: 40, width: 620, height: 500 } },
+    settings: {
+      ui: true,
+      searchFor: 'coma',
+      settleMs: 9000,
+      crop: { left: 290, top: 40, width: 620, height: 500 },
+    },
     size: FEATURE,
     widths: [1200, 800],
     title: 'The search with “coma” typed in',
-    caption: 'Galaxies come first, then clusters; the Leo Cluster is listed because its description mentions Coma.',
+    caption:
+      'Galaxies come first, then clusters; the Leo Cluster is listed because its description mentions Coma.',
     drawn: 'Each row’s tag says what kind of thing it is.',
     alt: 'A search box holding the word coma above a list of results: several galaxies with NGC numbers, then Coma tagged Cluster, Coma Supercluster tagged Supercluster and Leo Cluster tagged Cluster.',
   },
@@ -1239,7 +1418,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: [1280, 800],
     title: 'The clock with its controls open',
-    caption: 'From the left: Now, the speed, slower, play, faster and the date. The scale bar sits above it.',
+    caption:
+      'From the left: Now, the speed, slower, play, faster and the date. The scale bar sits above it.',
     drawn: 'The curved lines are the orbits of Jupiter’s moons, computed and drawn as lines.',
     alt: 'A bar at the lower right of the app reading Now, 1 s/s, a left arrow, a play triangle, a right arrow and 2033-03-14 21:00 UTC, under a scale bar.',
   },
@@ -1251,7 +1431,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: FEATURE_WIDTHS,
     title: 'The Solar System exhibit on 21 December 2020',
     caption: 'Jupiter and Saturn lie in almost the same direction from the Sun.',
-    drawn: 'The positions are computed for 18:00 UTC on that day; the rings are the orbits, drawn as lines, and the names stand in for planets too small to see.',
+    drawn:
+      'The positions are computed for 18:00 UTC on that day; the rings are the orbits, drawn as lines, and the names stand in for planets too small to see.',
     alt: 'Nested orbit rings around a labelled Sun with the names Jupiter and Saturn close together on one side, a title reading Solar System and a panel of notes.',
   },
   {
@@ -1262,7 +1443,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: FEATURE_WIDTHS,
     title: 'The second step of “Named Cosmic Web”',
-    caption: 'The caption counts the steps, the four buttons are at the foot and the three dots at the right edge mark the place.',
+    caption:
+      'The caption counts the steps, the four buttons are at the foot and the three dots at the right edge mark the place.',
     drawn: 'Each point is a catalogued galaxy; the rings mark named clusters.',
     alt: 'A field of points with ringed clusters, a caption headed The Virgo Cluster under the line Named Cosmic Web 02 / 03, four round buttons and three dots at the right edge.',
   },
@@ -1275,7 +1457,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: FEATURE_WIDTHS,
     title: 'The Cosmic Web exhibit with its notes',
     caption: 'The key carries the switch that brings the galaxies back.',
-    drawn: 'The purple field is density computed from SDSS galaxy positions; the rings mark named clusters and superclusters.',
+    drawn:
+      'The purple field is density computed from SDSS galaxy positions; the rings mark named clusters and superclusters.',
     alt: 'A purple web of threads with ringed, named clusters, a title reading Cosmic Web, and on the right notes headed What you’re seeing, How it was made, Key and Sources, with an Exit view button at the foot.',
   },
   {
@@ -1285,8 +1468,10 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: DOCS_WIDTHS,
     title: 'Saturn through a link that holds the camera',
-    caption: 'The same planet as a plain link opens, from a distance and a direction that were chosen. The clock is stopped on the link’s date.',
-    drawn: 'The planet’s position, its lit side and the tilt of its rings are computed for 7 October 2026 at 12:00 UTC; the ellipses are the moons’ orbits, drawn as lines.',
+    caption:
+      'The same planet as a plain link opens, from a distance and a direction that were chosen. The clock is stopped on the link’s date.',
+    drawn:
+      'The planet’s position, its lit side and the tilt of its rings are computed for 7 October 2026 at 12:00 UTC; the ellipses are the moons’ orbits, drawn as lines.',
     alt: 'Saturn inside a selection ring with the orbits of its moons drawn round it, a card headed Saturn on the right and a clock reading 2026-10-07 12:00 UTC.',
     credit: 'Saturn: Solar System Scope',
   },
@@ -1299,7 +1484,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [880, 560],
     title: 'The Moon’s card',
     caption: 'A moon’s card gives its orbital period and its distance from its planet.',
-    drawn: 'The radius is the one the Moon is drawn with; the other figures are textbook values typed into the app.',
+    drawn:
+      'The radius is the one the Moon is drawn with; the other figures are textbook values typed into the app.',
     alt: 'A card headed Moon with a small picture, then radius, distance, mass and gravity, and rows for day length, orbital period, distance from Earth, mean temperature, axial tilt and atmosphere.',
     credit: 'Moon: Solar System Scope',
   },
@@ -1321,10 +1507,13 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: [880, 560],
     title: 'The card of PGC 2, a galaxy from the 2MRS catalogue',
-    caption: 'The redshift is the catalogue’s. The distance, the light-travel time and the speed are computed from it.',
-    drawn: 'The small picture is a cutout of the Digitized Sky Survey, fetched from the CDS in Strasbourg.',
+    caption:
+      'The redshift is the catalogue’s. The distance, the light-travel time and the speed are computed from it.',
+    drawn:
+      'The small picture is a cutout of the Digitized Sky Survey, fetched from the CDS in Strasbourg.',
     alt: 'A card headed PGC 2 and tagged 2MRS, with a small photograph beside four lines, a link to NED, a redshift of 0.0167 and a diameter of 46.0 kiloparsecs marked 2MRS Riso.',
-    credit: 'Photograph: Digitized Sky Survey - STScI/NASA, Colored & Healpixed by CDS. Copyrighted; commercial use needs the holders’ written permission',
+    credit:
+      'Photograph: Digitized Sky Survey - STScI/NASA, Colored & Healpixed by CDS. Copyrighted; commercial use needs the holders’ written permission',
   },
   {
     id: 'guide-card-structure',
@@ -1341,18 +1530,29 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'guide-settings-panel',
     link: `${NEAR_WEB_POSE}&${NOON}`,
-    settings: { ui: true, open: ['Galaxies'], settleMs: 4000, crop: { left: 0, top: 0, width: 860, height: 750 } },
+    settings: {
+      ui: true,
+      open: ['Galaxies'],
+      settleMs: 4000,
+      crop: { left: 0, top: 0, width: 860, height: 750 },
+    },
     size: FEATURE,
     widths: [1720, 960],
     title: 'The Settings panel with Galaxies opened',
     caption: 'The number beside a catalogue is how many of its galaxies are loaded.',
-    drawn: 'The points are catalogued galaxies; the rings and names mark clusters, superclusters and voids.',
+    drawn:
+      'The points are catalogued galaxies; the rings and names mark clusters, superclusters and voids.',
     alt: 'Two panels at the left of the app’s window, Navigation and under it Settings. Under the heading Galaxies are eight catalogues, each with a switch: Famous, 2MRS, SDSS, GLADE and Milliquas on, the three DESI regions off.',
   },
   {
     id: 'guide-settings-panel-phone',
     link: `${NEAR_WEB_POSE}&${NOON}`,
-    settings: { ui: true, open: ['Galaxies'], settleMs: 4000, crop: { left: 0, top: 212, width: 400, height: 538 } },
+    settings: {
+      ui: true,
+      open: ['Galaxies'],
+      settleMs: 4000,
+      crop: { left: 0, top: 212, width: 400, height: 538 },
+    },
     size: FEATURE,
     widths: PHONE_WIDTHS,
     title: 'The Settings panel with Galaxies opened',
@@ -1366,7 +1566,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: PAIR_WIDTHS,
     title: 'Galaxies out to about 200 million light-years, as the app opens',
     caption: 'Density correction is on Angular re-weight.',
-    drawn: 'Every point is a catalogued galaxy, in its measured direction at its derived distance. Its brightness has been turned down where its catalogue is crowded.',
+    drawn:
+      'Every point is a catalogued galaxy, in its measured direction at its derived distance. Its brightness has been turned down where its catalogue is crowded.',
     alt: 'A field of points with the Milky Way’s place at the centre and faint spokes running out from it.',
   },
   {
@@ -1376,8 +1577,10 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: PAIR,
     widths: PAIR_WIDTHS,
     title: 'The same view with Density correction on None',
-    caption: 'The spokes that point at the centre are directions a catalogue recorded more galaxies in.',
-    drawn: 'Every point is a catalogued galaxy, in its measured direction at its derived distance, at the brightness the app gives it without the correction.',
+    caption:
+      'The spokes that point at the centre are directions a catalogue recorded more galaxies in.',
+    drawn:
+      'Every point is a catalogued galaxy, in its measured direction at its derived distance, at the brightness the app gives it without the correction.',
     alt: 'The same field of points, brighter at the centre, with bright spokes running out from it.',
   },
   {
@@ -1409,21 +1612,47 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [780],
     title: 'The app in a window the size of a phone, with the Settings panel opened',
     caption: 'The data size reads Small.',
-    drawn: 'The points are catalogued galaxies; the rings and names mark clusters, superclusters and voids.',
+    drawn:
+      'The points are catalogued galaxies; the rings and names mark clusters, superclusters and voids.',
     alt: 'A field of galaxies in an upright window. A search box and three round buttons are at the top; at the foot a folded Navigation panel and an open Settings panel with eight headings cover the lower half.',
   },
   {
     id: 'guide-dome-window',
     link: 'focus=body-saturn&t=2017-10-15T12:00:00Z',
     query: 'dome',
-    settings: { ui: true, settleMs: 4000 },
+    settings: { ui: true, keys: ['Tab'], settleMs: 4000 },
     size: FEATURE,
     widths: DOCS_WIDTHS,
     title: 'Dome mode in an ordinary window',
-    caption: 'The disc is as wide as the window is high. The panels and the card lie flat over it until Tab hides them.',
+    caption:
+      'The disc is as wide as the window is high. Tab has shown the panels and the card, flat over the disc.',
     drawn: 'Saturn’s position and ring tilt are computed for 15 October 2017.',
     alt: 'A round all-sky picture in the middle of a black window, Saturn low in it, with the app’s panels at the left and Saturn’s card at the right.',
     credit: 'Saturn: Solar System Scope',
+  },
+  {
+    id: 'guide-dome-pairing',
+    link: 'focus=body-saturn&t=2017-10-15T12:00:00Z',
+    query: 'dome',
+    settings: { ...SUBJECT, ui: true, pairing: true, settleMs: 4000 },
+    size: FEATURE,
+    widths: DOCS_WIDTHS,
+    title: 'Dome mode waiting for a phone',
+    caption:
+      'The card at the front of the dome is bent to the fisheye; the QR code in the corner of the window is flat.',
+    alt: 'A round all-sky picture in a black window. Low in the disc, over Saturn, a light card reads Pair a remote above a QR code and an eight-character room code; a flat copy of the QR code sits in the top left corner of the window.',
+    credit: 'Saturn: Solar System Scope',
+  },
+  {
+    id: 'guide-remote',
+    link: 'tour=grandTour',
+    query: 'dome',
+    settings: { ...SUBJECT, remote: true, settleMs: 4000 },
+    size: { width: 390, height: 844 },
+    dpr: 3,
+    widths: [780, 520],
+    title: 'The remote on a phone during a tour',
+    alt: 'The remote page on a phone: a line reading Connected with the Milky Way as the focused object, a drag pad, a Home button beside two buttons for the camera controls, a card for the running tour The Long Way Out at beat 1 of 14 with Stop, Previous, Pause and Next, then tiles for Search, Tours, Exhibits, Clips, Time, Layers, Labels and Setup.',
   },
   // The docs' Reference pages.
   {
@@ -1451,11 +1680,18 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'render-lod',
     link: 'focus=galaxy-cluster-virgo-m87',
-    settings: { ...SUBJECT, hideCosmicWeb: true, hideZoneOfAvoidance: true, fovDeg: 30, settleMs: 8000 },
+    settings: {
+      ...SUBJECT,
+      hideCosmicWeb: true,
+      hideZoneOfAvoidance: true,
+      fovDeg: 30,
+      settleMs: 8000,
+    },
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'The Virgo cluster, drawn three ways at once',
-    caption: 'The far galaxies are points, the nearer ones generated discs, and the largest carry photographs.',
+    caption:
+      'The far galaxies are points, the nearer ones generated discs, and the largest carry photographs.',
     drawn: 'Positions and tilts are catalogue values; the disc shapes are generated.',
     alt: 'A loose group of soft bright ovals of different sizes and tilts in front of a fine dust of points on black.',
     credit: 'Galaxy pictures: SDSS, and the Digitized Sky Survey through CDS',
@@ -1478,7 +1714,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'The stars around the Sun from 1 kiloparsec out',
-    caption: 'Catalogued stars in front of the glow of the Milky Way model, with a lane of its dust across the lower left.',
+    caption:
+      'Catalogued stars in front of the glow of the Milky Way model, with a lane of its dust across the lower left.',
     drawn: 'The stars are Gaia’s. The glow and the dust are the model’s.',
     alt: 'Sharp white and orange points scattered over a soft grey-white haze, with a bright warm patch at the left edge and a band of brown blotches running from it towards the bottom of the frame.',
   },
@@ -1489,7 +1726,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'The Milky Way model and its dust',
-    caption: 'The brown patches round the bar are dust, dimming and reddening the light behind them.',
+    caption:
+      'The brown patches round the bar are dust, dimming and reddening the light behind them.',
     drawn: 'A model. Every camera we have is inside it.',
     alt: 'A spiral galaxy seen at a slant, right of the middle of the frame: a bright yellow-white bar ringed by brown blotches, grey-white arms winding out from it, and a few soft orange dots around.',
   },
@@ -1500,7 +1738,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'Titan',
-    caption: 'The app has no map of Titan. The ball is one colour, and everything else in the picture of it is computed haze.',
+    caption:
+      'The app has no map of Titan. The ball is one colour, and everything else in the picture of it is computed haze.',
     drawn: 'The haze is a scattering model with a table of gases for Titan.',
     alt: 'An orange-brown ball lit from the lower right, darkening to the upper left, with a thin blue-grey rim of haze, on a field of stars.',
   },
@@ -1512,7 +1751,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1920, 1280, 640],
     title: 'Sagittarius A*',
     caption: 'The stars behind are smeared into arcs around the dark disc.',
-    drawn: 'The bending of light is computed for a black hole that does not rotate. The glowing ring of gas is invented.',
+    drawn:
+      'The bending of light is computed for a black hole that does not rotate. The glowing ring of gas is invented.',
     alt: 'A black disc inside a tilted warm ring that seems to wrap over its top, with nearby stars drawn out into thin arcs around it.',
   },
   {
@@ -1522,8 +1762,10 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'Andromeda from 12 kiloparsecs off its centre',
-    caption: 'The straight edge is the near limit of the galaxies’ range of depth, 10 kiloparsecs in front of the camera. Zoom out and the edge moves off the galaxy.',
-    drawn: 'The cut is made by the renderer. The blue band is the Zone of Avoidance guide, far behind.',
+    caption:
+      'The straight edge is the near limit of the galaxies’ range of depth, 10 kiloparsecs in front of the camera. Zoom out and the edge moves off the galaxy.',
+    drawn:
+      'The cut is made by the renderer. The blue band is the Zone of Avoidance guide, far behind.',
     alt: 'A bright orange-white sheet crossing the frame from upper left to lower right and ending along a ruler-straight edge, with a field of points beyond it.',
     credit: 'Photograph: Brody Wesner, CC0',
   },
@@ -1531,11 +1773,17 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     id: 'dev-debug-panel',
     link: 'pose=a,0,0,0,2.1,0.35,260,0',
     query: 'gpuTimings',
-    settings: { ui: true, debugPanel: true, settleMs: 6000, crop: { left: 760, top: 0, width: 440, height: 450 } },
+    settings: {
+      ui: true,
+      debugPanel: true,
+      settleMs: 6000,
+      crop: { left: 760, top: 0, width: 440, height: 450 },
+    },
     size: FEATURE,
     widths: [880, 440],
     title: 'The debug panel, 260 megaparsecs from the Sun',
-    caption: 'Opened with the D key, with the gpuTimings flag in the address. Cut from a wider window.',
+    caption:
+      'Opened with the D key, with the gpuTimings flag in the address. Cut from a wider window.',
     drawn: 'The times are measured on the machine that took the picture and differ on every other.',
     alt: 'A column of green text on black over a field of galaxies: asset loading, a frame rate, a list of drawing steps with a time in milliseconds beside each, then a list of folded headings.',
   },
@@ -1549,7 +1797,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DATA_WIDTHS,
     title: 'Io',
     caption: 'Jupiter’s innermost large moon on 1 June 2022.',
-    drawn: 'The map is assembled from spacecraft images and wrapped on a sphere; the light is computed for the date.',
+    drawn:
+      'The map is assembled from spacecraft images and wrapped on a sphere; the light is computed for the date.',
     alt: 'A yellow and ochre globe mottled with white and dark spots, nearly full, against a dense field of stars.',
     credit: 'Io: NASA / USGS',
   },
@@ -1561,7 +1810,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DATA_WIDTHS,
     title: 'Enceladus',
     caption: 'Saturn’s moon on 7 October 2026.',
-    drawn: 'The map is assembled from Cassini images and wrapped on a sphere; the light is computed for the date.',
+    drawn:
+      'The map is assembled from Cassini images and wrapped on a sphere; the light is computed for the date.',
     alt: 'A white globe with a band of craters across its middle and its upper left in shadow, against a dense field of stars.',
     credit: 'Enceladus: NASA/JPL/Space Science Institute',
   },
@@ -1573,7 +1823,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DATA_WIDTHS,
     title: 'Iapetus',
     caption: 'Saturn’s moon on 7 October 2026.',
-    drawn: 'The map is assembled from Cassini images and wrapped on a sphere; the light is computed for the date.',
+    drawn:
+      'The map is assembled from Cassini images and wrapped on a sphere; the light is computed for the date.',
     alt: 'A pale grey cratered globe with darker patches along its lower left edge, against a dense field of stars.',
     credit: 'Iapetus: NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute',
   },
@@ -1585,7 +1836,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DATA_WIDTHS,
     title: 'Pluto',
     caption: 'On 7 October 2026, lit from the lower left.',
-    drawn: 'The map is assembled from New Horizons images and wrapped on a sphere; the light is computed for the date.',
+    drawn:
+      'The map is assembled from New Horizons images and wrapped on a sphere; the light is computed for the date.',
     alt: 'A grey cratered globe lit from the lower left, its upper right in darkness, against a dense field of stars.',
     credit: 'Pluto: NASA / New Horizons Team, USGS',
   },
@@ -1597,9 +1849,11 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DATA_WIDTHS,
     title: 'Triton',
     caption: 'Neptune’s largest moon on 7 October 2026.',
-    drawn: 'The map is assembled from Voyager 2 images and wrapped on a sphere; the light is computed for the date.',
+    drawn:
+      'The map is assembled from Voyager 2 images and wrapped on a sphere; the light is computed for the date.',
     alt: 'A pale green globe, rough and mottled at the lower left and smooth towards the upper right, against a dense field of stars.',
-    credit: 'Triton: NASA, Jet Propulsion Laboratory, Dr. Paul Schenk / Lunar and Planetary Institute',
+    credit:
+      'Triton: NASA, Jet Propulsion Laboratory, Dr. Paul Schenk / Lunar and Planetary Institute',
   },
   {
     id: 'data-soendermarken',
@@ -1620,7 +1874,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DATA_WIDTHS,
     title: 'Spirit on Mars',
     caption: 'Where its mission ended.',
-    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
+    drawn:
+      'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
     alt: 'A six-wheeled rover with flat solar panels and a camera mast on smooth orange ground, with a low hill behind it.',
     credit: 'Model: NASA/JPL-Caltech',
   },
@@ -1632,7 +1887,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DATA_WIDTHS,
     title: 'Perseverance on Mars',
     caption: 'Where it stood on 7 October 2026.',
-    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
+    drawn:
+      'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
     alt: 'A six-wheeled rover with a camera mast, seen from above and behind on smooth brown ground that rises to the left.',
     credit: 'Model: Brian Kumanchik, NASA/JPL-Caltech',
   },
@@ -1656,7 +1912,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: 'The bowl of petunias in orbit around Earth',
     drawn: 'A 3D model. No petunias are in orbit.',
     alt: 'A cluster of green leaves and white flowers against the edge of a blue Earth with white clouds, and stars to the right.',
-    credit: 'Model: “Flowers Petunia White” by Marianne Goudriaan, CC BY 4.0. Earth: NASA Blue Marble',
+    credit:
+      'Model: “Flowers Petunia White” by Marianne Goudriaan, CC BY 4.0. Earth: NASA Blue Marble',
   },
   // The Features page's pieces of the app's interface; the rest of them close the list.
   {
@@ -1696,7 +1953,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'The Andromeda Galaxy',
-    drawn: 'The galaxy stands at its catalogued position; its picture is a photograph placed in the scene.',
+    drawn:
+      'The galaxy stands at its catalogued position; its picture is a photograph placed in the scene.',
     alt: 'A tilted spiral galaxy, orange at its core, on a dense field of stars.',
     credit: 'Photograph: Brody Wesner, CC0',
   },
@@ -1714,7 +1972,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'features-search-orion',
     link: 'focus=body-earth',
-    settings: { ui: true, searchFor: 'Orion', element: '[role="dialog"][aria-label^="Search"]', settleMs: 4000 },
+    settings: {
+      ui: true,
+      searchFor: 'Orion',
+      element: '[role="dialog"][aria-label^="Search"]',
+      settleMs: 4000,
+    },
     size: FEATURE,
     widths: [1220, 610],
     title: 'The search with “Orion” typed in',
@@ -1746,7 +2009,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'Saturn and the orbits of its moons',
-    drawn: 'The planet’s position, its lit side and the tilt of its rings are computed for 7 October 2026 at 12:00 UTC; the ellipses are the moons’ orbits, drawn as lines.',
+    drawn:
+      'The planet’s position, its lit side and the tilt of its rings are computed for 7 October 2026 at 12:00 UTC; the ellipses are the moons’ orbits, drawn as lines.',
     alt: 'Saturn with its rings nearly edge-on, inside the nested ellipses of its moons’ orbits, on black.',
     credit: 'Saturn: Solar System Scope',
   },
@@ -1757,7 +2021,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: PIECE_WIDTHS,
     title: 'Saturn’s card',
-    drawn: 'The distance is the camera’s, set by the link; the other figures are textbook values typed into the app.',
+    drawn:
+      'The distance is the camera’s, set by the link; the other figures are textbook values typed into the app.',
     alt: 'The app’s card for Saturn, pinned: radius, distance, mass, gravity, day and year length, moons and a few lines about its rings.',
   },
   {
@@ -1812,7 +2077,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'mars-horizon',
     link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z&pose=s,perseverance,1.6,0.03,2000',
-    settings: { ...SUBJECT_ALONE, fovDeg: 60, hidePasses: ['mission-meshes', 'contact-shadows'], settleMs: 9000 },
+    settings: {
+      ...SUBJECT_ALONE,
+      fovDeg: 60,
+      hidePasses: ['mission-meshes', 'contact-shadows'],
+      settleMs: 9000,
+    },
     size: { width: 1440, height: 420 },
     widths: [2880, 1440],
     title: 'Jezero crater from a rover’s height',
@@ -1823,7 +2093,14 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'lessons-perseverance',
     link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z&pose=s,perseverance,1.6,0.03,2000',
-    settings: { ...CUTOUT, fovDeg: 60, shadow: true, hidePasses: HIDE_MARS, ambient: 0.1, settleMs: 9000 },
+    settings: {
+      ...CUTOUT,
+      fovDeg: 60,
+      shadow: true,
+      hidePasses: HIDE_MARS,
+      ambient: 0.1,
+      settleMs: 9000,
+    },
     size: { width: 1440, height: 420 },
     widths: [2880, 1440],
     title: 'Perseverance',
@@ -1870,7 +2147,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: CUT_WIDTHS,
     title: 'The S-stars orbiting Sagittarius A*',
-    drawn: 'The orbits are computed from the stars’ published orbital elements. The paths drawn along them are ours.',
+    drawn:
+      'The orbits are computed from the stars’ published orbital elements. The paths drawn along them are ours.',
     alt: 'Many thin elliptical orbits in blue and orange crossing round a bright knot at the centre, on black.',
   },
   // The Classroom page's opening question: Earth and the Moon at true scale, seen across the line between them near first quarter.
@@ -1881,7 +2159,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: { width: 1600, height: 600 },
     widths: [2880, 1440, 720],
     title: 'Earth and the Moon at true scale',
-    drawn: 'Both sizes and the distance between them are to scale; the positions and lit sides are computed for 18 October 2026.',
+    drawn:
+      'Both sizes and the distance between them are to scale; the positions and lit sides are computed for 18 October 2026.',
     alt: 'A small blue Earth on the left and a much smaller grey Moon far to the right, with black between them.',
     credit: 'Earth: NASA Blue Marble. Moon: Solar System Scope',
   },
@@ -1892,7 +2171,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: { width: 500, height: 1000 },
     widths: [1000, 500],
     title: 'Earth and the Moon at true scale',
-    drawn: 'Both sizes and the distance between them are to scale; the positions and lit sides are computed for 18 October 2026.',
+    drawn:
+      'Both sizes and the distance between them are to scale; the positions and lit sides are computed for 18 October 2026.',
     alt: 'A small blue Earth at the bottom and a much smaller grey Moon far above it, with black between them.',
     credit: 'Earth: NASA Blue Marble. Moon: Solar System Scope',
   },
@@ -2003,7 +2283,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'ui-search-everest',
     link: 't=2026-10-05T04:30:00Z&pose=b,earth,0,0,0,302785.014,5636306.94,2977231.53,-0.998560172,0.0536431140,-3.46944695e-18,0.0455859563,0.848577142,0.527104122,-0.0282755065,-0.526345182,0.849800709',
-    settings: { ui: true, searchFor: 'Everest', element: '[role="dialog"][aria-label^="Search"]', settleMs: 8000 },
+    settings: {
+      ui: true,
+      searchFor: 'Everest',
+      element: '[role="dialog"][aria-label^="Search"]',
+      settleMs: 8000,
+    },
     size: FEATURE,
     widths: PIECE_WIDTHS,
     title: 'The app’s search, finding Everest',
@@ -2012,7 +2297,12 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'ui-search-canyon',
     link: 't=2026-10-05T17:00:00Z&pose=b,earth,0,0,0,-1916657.68,-4782300.70,3754210.75,0.0877692427,0.593100439,0.800330200,-0.491541787,-0.673018786,0.552659375,-0.866419778,0.441902231,-0.232463300',
-    settings: { ui: true, searchFor: 'Grand Canyon', element: '[role="dialog"][aria-label^="Search"]', settleMs: 8000 },
+    settings: {
+      ui: true,
+      searchFor: 'Grand Canyon',
+      element: '[role="dialog"][aria-label^="Search"]',
+      settleMs: 8000,
+    },
     size: FEATURE,
     widths: PIECE_WIDTHS,
     title: 'The app’s search, finding the Grand Canyon',
@@ -2036,7 +2326,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: CUT_WIDTHS,
     title: 'Jupiter on 14 March 2033',
-    drawn: 'Jupiter’s position and lit side are computed for the date. The cloud tops are a fixed map.',
+    drawn:
+      'Jupiter’s position and lit side are computed for the date. The cloud tops are a fixed map.',
     alt: 'Jupiter, with its cloud bands and storms, on black.',
     credit: 'Jupiter: Solar System Scope',
   },
@@ -2101,7 +2392,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: CUT_WIDTHS,
     title: 'Io',
     caption: 'Jupiter’s innermost large moon on 1 June 2022, with Jupiter behind it.',
-    drawn: 'The map is assembled from spacecraft images and wrapped on a sphere; the light is computed for the date.',
+    drawn:
+      'The map is assembled from spacecraft images and wrapped on a sphere; the light is computed for the date.',
     alt: 'Io, a yellow and ochre globe mottled with white and dark spots, in front of the edge of Jupiter, on black.',
     credit: 'Io: NASA / USGS. Jupiter: Solar System Scope',
   },
@@ -2124,7 +2416,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: CUT_WIDTHS,
     title: 'Pluto',
     caption: 'On 7 October 2026.',
-    drawn: 'The map is assembled from New Horizons images and wrapped on a sphere; the light is computed for the date.',
+    drawn:
+      'The map is assembled from New Horizons images and wrapped on a sphere; the light is computed for the date.',
     alt: 'Pluto, a pale cratered globe with its right side in shadow, on black.',
     credit: 'Pluto: NASA / New Horizons Team, USGS',
   },
@@ -2158,7 +2451,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1920, 1280, 640],
     title: 'Perseverance on Mars',
     caption: 'Where it stood on 7 October 2026.',
-    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
+    drawn:
+      'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
     alt: 'A six-wheeled rover with a camera mast, seen from the side on a slope of smooth brown ground under a dark brown sky.',
     credit: 'Model: Brian Kumanchik, NASA/JPL-Caltech',
   },
@@ -2179,7 +2473,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1920, 1280, 640],
     title: 'Spirit on Mars',
     caption: 'Where its mission ended.',
-    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
+    drawn:
+      'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
     alt: 'A six-wheeled rover with flat solar panels and a camera mast on smooth orange ground under a dark brown sky.',
     credit: 'Model: NASA/JPL-Caltech',
   },
@@ -2257,7 +2552,13 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'ui-settings-filaments',
     link: 'pose=a,0,0,0,2.1,0.35,260,0',
-    settings: { ...SETTINGS_PANEL, hideLabels: true, hideStructures: true, hideCosmicWeb: true, filaments: true },
+    settings: {
+      ...SETTINGS_PANEL,
+      hideLabels: true,
+      hideStructures: true,
+      hideCosmicWeb: true,
+      filaments: true,
+    },
     size: FEATURE,
     widths: PIECE_WIDTHS,
     title: 'The app’s layer switches',
@@ -2267,11 +2568,18 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'ui-settings-galaxies',
     link: 'pose=a,0,0,0,0.9,0.55,1500,0',
-    settings: { ...SETTINGS_PANEL, hideLabels: true, hideStructures: true, hideCosmicWeb: true, open: ['Galaxies'] },
+    settings: {
+      ...SETTINGS_PANEL,
+      hideLabels: true,
+      hideStructures: true,
+      hideCosmicWeb: true,
+      open: ['Galaxies'],
+    },
     size: FEATURE,
     widths: PIECE_WIDTHS,
     title: 'The app’s galaxy catalogues',
-    drawn: 'The switches and counts are the app’s own, set as they were for the picture of every galaxy.',
+    drawn:
+      'The switches and counts are the app’s own, set as they were for the picture of every galaxy.',
     alt: 'The app’s Settings panel with Galaxies open: a switch and a count for each catalogue, with 2MRS, SDSS, GLADE and Milliquas switched on.',
   },
   {

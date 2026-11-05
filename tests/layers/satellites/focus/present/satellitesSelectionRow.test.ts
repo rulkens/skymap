@@ -8,7 +8,6 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { unixMsToJulianDays } from '../../../../../src/utils/time/unixMsToJulianDays';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../src/data/source';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import type { SatellitesRuntime } from '../../../../../src/layers/satellites/@types/SatellitesRuntime';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
@@ -18,7 +17,12 @@ const { catalog } = buildSatelliteCatalog(
   [{ group: { group: 'active', class: 'active' }, records: [GOES_18, ISS] }],
   0,
 );
-const runtime = { propagator: { catalog: () => catalog } } as unknown as SatellitesRuntime;
+// Not a catalog value: the row must pack the code its runtime holds.
+const PICK_CODE = 37;
+const runtime = {
+  propagator: { catalog: () => catalog },
+  pickCode: PICK_CODE,
+} as unknown as SatellitesRuntime;
 const row = satellitesSelectionRow(runtime);
 const AT_MS = Date.parse('2026-10-28T12:00:00Z');
 const AT = unixMsToJulianDays(AT_MS);
@@ -35,8 +39,8 @@ describe('satellitesSelectionRow', () => {
   it('encodes a pick word that resolves back to the same satellite', () => {
     const word = row.encodePick(ISS_REF)!;
     const pick = unpackPick(word)!;
-    expect(pick.sourceCode).toBe(Source.Satellite);
-    expect(row.resolvePick(undefined as never, pick)).toEqual(ISS_REF);
+    expect(pick.sourceCode).toBe(PICK_CODE);
+    expect(row.resolvePick(pick)).toEqual(ISS_REF);
   });
 
   it('puts the ISS about 400 km up, posed from the id the camera follows', () => {
@@ -71,6 +75,7 @@ describe('satellitesSelectionRow', () => {
   it('has no row before the catalog has loaded', () => {
     const none = satellitesSelectionRow({
       propagator: { catalog: () => null },
+      pickCode: PICK_CODE,
     } as unknown as SatellitesRuntime);
     expect(none.extractRow(ISS_REF, AT)).toBeNull();
   });

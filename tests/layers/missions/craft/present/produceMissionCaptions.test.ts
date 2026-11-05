@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
-import { produceMissionCaptions } from '../../../../../src/layers/missions/craft/present/produceMissionCaptions';
+import { produceMissionCaptions as produceMissionCaptionsFor } from '../../../../../src/layers/missions/craft/present/produceMissionCaptions';
 import { MISSION_CRAFT_IDS } from '../../../../../src/layers/missions/craft/present/missionCraftIds';
-import { produceSceneBodyCaptions } from '../../../../../src/layers/body/present/produceSceneBodyCaptions';
+import { produceSceneBodyCaptions as produceSceneBodyCaptionsFor } from '../../../../../src/layers/body/labels/present/produceSceneBodyCaptions';
+import { bodyPickCodes, missionsPickCode } from '../../../../support/layerPickCodes';
 import { APP_VISIBILITY_REGISTRY } from '../../../../../src/compositions/appVisibility';
 import { SAMPLED_BODY_IDS } from '../../../../../src/data/bodies/sampledBodyIds';
 import { MISSION_EMPHASIS_DIM } from '../../../../../src/layers/missions/trails/data/missionTrailStyle';
@@ -23,6 +24,9 @@ import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+
+const produceMissionCaptions = produceMissionCaptionsFor(missionsPickCode());
+const produceSceneBodyCaptions = produceSceneBodyCaptionsFor(bodyPickCodes());
 
 // 720-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));

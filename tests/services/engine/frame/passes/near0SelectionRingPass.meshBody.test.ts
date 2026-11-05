@@ -13,15 +13,15 @@ import { missionMeshesPass } from '../../../../../src/layers/missions/craft/pass
 import { near0SelectionRingPass } from '../../../../../src/services/engine/frame/passes/near0SelectionRingPass';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { deriveSlabs, slabViewOf, NEAR0 } from '../../../../../src/services/engine/frame/slabs';
-import { createOrbitCamera } from '../../../../../src/utils/camera/createOrbitCamera';
-import { computeViewProj } from '../../../../../src/utils/camera/computeViewProj';
-import { imagePlaneBasis } from '../../../../../src/utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../../src/utils/camera/frameUp';
+import { createOrbitCamera } from '../../../../../src/utils/camera/orbitCamera/createOrbitCamera';
+import { computeViewProj } from '../../../../../src/utils/camera/projection/computeViewProj';
+import { imagePlaneBasis } from '../../../../../src/utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../../src/utils/camera/orbitPose/frameUp';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
-import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
+import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyFrame/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
-import { bodyLayerSlabRow } from '../../../../../src/layers/body/present/bodyLayerSlabRow';
+import { bodyLayerSlabRow } from '../../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
 import { meshBodyCaption } from '../../../../../src/layers/missions/craft/utils/meshBodyCaption';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
@@ -34,9 +34,10 @@ import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { missionsPickCode } from '../../../../support/layerPickCodes';
 
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;
@@ -140,7 +141,12 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   } as unknown as EngineState;
 
   const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.hostId === 'earth');
-  missionMeshesPass.draw({} as never, slabViewOf(ctx, hostRow), ctx, state);
+  missionMeshesPass({ pickCode: missionsPickCode() }).draw(
+    {} as never,
+    slabViewOf(ctx, hostRow),
+    ctx,
+    state,
+  );
   near0SelectionRingPass.draw({} as never, slabViewOf(ctx, NEAR0), ctx, state);
 
   const meshCall = meshDraw.mock.calls.find((c) => c[1] === bodyId)!;

@@ -52,20 +52,20 @@ Three kinds of content share the scene; this section says which is which.
 - **Accumulate then tone-map**: every layer draws into one `rgba16float` HDR target; a single composite pass applies a selectable curve, Linear, Reinhard, Asinh, Gamma 2.0, or ACES ([toneMapCurve.ts](../src/data/toneMapCurve.ts)).
 - **Bloom**: a five-level mip pyramid: soft-threshold prefilter, downsample chain, additive tent-filter upsample ([bloomPyramid.ts](../src/services/gpu/passes/bloomPyramid.ts)).
 - **Depth precision**: reversed-Z for the near-Earth pass, whose extreme near/far ratio would exhaust a classic depth buffer ([slabs.ts](../src/services/engine/frame/slabs.ts)).
-- **Floating origin**: camera matrices compose in float64 relative to a render origin and narrow to float32 only at upload ([computeForegroundViewProj.ts](../src/utils/camera/computeForegroundViewProj.ts)).
+- **Floating origin**: camera matrices compose in float64 relative to a render origin and narrow to float32 only at upload ([computeForegroundViewProj.ts](../src/utils/camera/projection/computeForegroundViewProj.ts)).
 - **HDR displays**: the swap chain switches to extended dynamic range when the display supports it ([applySwapFormat.ts](../src/services/engine/phases/applySwapFormat.ts)).
 
 ### Galaxies
 
-- **Brightness**: catalogue magnitude and diameter bake into a physical surface-brightness amplitude, spreading light over the actual apparent disk ([galaxySbAmp.ts](../src/utils/galaxy/galaxySbAmp.ts)); Settings knobs add a gain, a bloom ceiling, and a `pow(resolvedFraction, k)` falloff against the additive glow near the origin.
-- **Colour**: each survey's most informative photometric pair on a blue→white→red ramp with a first-order K-correction: SDSS u−g, GLADE B−J, 2MRS J−K ([colourIndex.ts](../src/data/galaxyCatalog/colourIndex.ts)).
-- **Four LOD tiers** ([galaxyLodBands.ts](../src/data/galaxyLodBands.ts)): point sprite below 8 px; procedural disk impostor from 8–14 px, oriented by axis ratio and position angle; real SDSS/DSS thumbnail from a 256-slot LRU atlas at 24–40 px; high-resolution texture from 120 px, famous galaxies only.
+- **Brightness**: catalogue magnitude and diameter bake into a physical surface-brightness amplitude, spreading light over the actual apparent disk ([galaxySbAmp.ts](../src/layers/galaxyCatalog/appearance/utils/galaxySbAmp.ts)); Settings knobs add a gain, a bloom ceiling, and a `pow(resolvedFraction, k)` falloff against the additive glow near the origin.
+- **Colour**: each survey's most informative photometric pair on a blue→white→red ramp with a first-order K-correction: SDSS u−g, GLADE B−J, 2MRS J−K ([colourIndex.ts](../src/layers/galaxyCatalog/appearance/data/colourIndex.ts)).
+- **Four LOD tiers** ([galaxyLodBands.ts](../src/layers/galaxyCatalog/lod/data/galaxyLodBands.ts)): point sprite below 8 px; procedural disk impostor from 8–14 px, oriented by axis ratio and position angle; real SDSS/DSS thumbnail from a 256-slot LRU atlas at 24–40 px; high-resolution texture from 120 px, famous galaxies only.
 - **Crossfades**: every handoff is a smoothstep whose sides sum to one, so brightness holds steady.
 
 ### Stars and the Sun
 
 - **Octree cut**: subtrees too small on screen collapse into flux-weighted aggregate points on a half-resolution glow target; resolved leaves draw as full-resolution additive sprites. The cut runs on the GPU: a node is in the cut when its parent refines and it does not ([cut.wesl](../src/services/gpu/shaders/octree/cut.wesl)).
-- **Photometry**: Pogson flux `10^(−0.4·M)` anchored at 10 pc, inverse-square dimming, and a camera-distance exposure ramp ([starPhotometry.wesl](../src/services/gpu/shaders/lib/starPhotometry.wesl), [starExposureRamp.ts](../src/utils/star/starExposureRamp.ts)).
+- **Photometry**: Pogson flux `10^(−0.4·M)` anchored at 10 pc, inverse-square dimming, and a camera-distance exposure ramp ([starPhotometry.wesl](../src/services/gpu/shaders/lib/starPhotometry.wesl), [starExposureRamp.ts](../src/layers/starCatalog/photometry/utils/starExposureRamp.ts)).
 - **True-scale spheres**: past 4 px of apparent disc a star becomes an emissive sphere ([starResolvePx.ts](../src/data/bodies/starResolvePx.ts), applied in [partitionBodiesByPresentation.ts](../src/services/engine/frame/partitionBodiesByPresentation.ts)); the Sun is simply the nearest such star, with the bloom threshold calibrated so its disc blooms.
 - **Tint**: BP−RP through spectral-class anchors for points ([starTintFromBpRp.ts](../src/utils/color/starTintFromBpRp.ts)); a blackbody-locus polynomial in temperature for resolved spheres ([temperatureToLinearRgb.ts](../src/utils/color/temperatureToLinearRgb.ts)).
 
@@ -79,8 +79,8 @@ Three kinds of content share the scene; this section says which is which.
 
 - **Bodies**: ray-traced analytic spheres, flat-lit until their surface texture streams in ([planet](../src/services/gpu/shaders/bodies/planet/fragment.wesl), [texturedBody](../src/services/gpu/shaders/bodies/texturedBody/fragment.wesl)).
 - **Earth**: a cubesphere with PBR albedo, roughness, ocean mask and normal relief; night lights as emission; a cloud shell that shadows the ground.
-- **Surface tiles**: streamed by screen density from a quadtree cut over an equirectangular pyramid, a Blue Marble base to z7 with Sentinel-2 insets to z13 in selected regions ([cutSurfaceTiles.ts](../src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles.ts), [surfaceTileParams.ts](../src/data/bodies/surfaceTileParams.ts)).
-- **Atmospheres**: nine bodies carry constituent tables, per-channel scattering and absorption with Rayleigh or Henyey-Greenstein phase, drawn as a multiply-then-add shell over precomputed transmittance, multiple-scattering, and sky-view LUTs in the style of [Bruneton & Neyret 2008](https://github.com/ebruneton/precomputed_atmospheric_scattering) and [Hillaire 2020](https://sebh.github.io/publications/egsr2020.pdf) ([atmosphereParams.ts](../src/layers/body/present/atmosphereParams.ts)).
+- **Surface tiles**: streamed by screen density from a quadtree cut over an equirectangular pyramid, a Blue Marble base to z7 with Sentinel-2 insets to z13 in selected regions ([cutSurfaceTiles.ts](../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles.ts), [surfaceTileParams.ts](../src/layers/body/surfaceTiles/format/data/surfaceTileParams.ts)).
+- **Atmospheres**: nine bodies carry constituent tables, per-channel scattering and absorption with Rayleigh or Henyey-Greenstein phase, drawn as a multiply-then-add shell over precomputed transmittance, multiple-scattering, and sky-view LUTs in the style of [Bruneton & Neyret 2008](https://github.com/ebruneton/precomputed_atmospheric_scattering) and [Hillaire 2020](https://sebh.github.io/publications/egsr2020.pdf) ([atmosphereParams.ts](../src/layers/body/atmosphere/data/atmosphereParams.ts)).
 - **Saturn's rings**: a single-scattering Chandrasekhar slab with backscatter phase and an analytic planet shadow ([ring](../src/services/gpu/shaders/bodies/ring/fragment.wesl)).
 - **Glints**: moons too small to resolve draw as points scaled by apparent size, albedo, and illuminated phase.
 - **Orbit trails**: screen-space ribbons whose fragments evaluate the orbit's conic analytically, with a brightness lobe trailing the body's live position ([orbitTrail](../src/services/gpu/shaders/bodies/orbitTrail/fragment.wesl)).
