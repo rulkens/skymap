@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { surfaceTileArchivePath } from '../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileArchivePath';
+import { surfaceTileArchivePath } from '../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 import { collectSurfaceTiles } from '../../../../tools/deploy/r2/collectSurfaceTiles';
 import { encodeSurfaceTileArchiveIndex } from '../../../../tools/utils/textures/encodeSurfaceTileArchiveIndex';
 

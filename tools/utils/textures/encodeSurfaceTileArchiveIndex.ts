@@ -1,10 +1,10 @@
-import type { SurfaceTileArchiveEntry } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileArchiveEntry';
+import type { SurfaceTileArchiveEntry } from '../../../src/layers/body/surfaceTiles/archive/@types/SurfaceTileArchiveEntry';
 import {
   SURFACE_TILE_ARCHIVE_ENTRY_BYTES,
   SURFACE_TILE_ARCHIVE_HEADER_BYTES,
   SURFACE_TILE_ARCHIVE_MAGIC,
   SURFACE_TILE_ARCHIVE_VERSION,
-} from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileArchiveFormat';
+} from '../../../src/layers/body/surfaceTiles/archive/data/surfaceTileArchiveFormat';
 
 /** encodeSurfaceTileArchiveIndex — the `.idx` bytes for entries already sorted by key
  *  (the layout is in `surfaceTileArchiveFormat.ts` and the spec). */

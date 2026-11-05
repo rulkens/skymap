@@ -2,9 +2,9 @@ import { existsSync, readFileSync, renameSync, rmSync, statSync, writeFileSync }
 import { join } from 'node:path';
 
 import type { SurfaceTileProduct } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
-import { SURFACE_TILE_ARCHIVE_MAX_PART_BYTES } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileArchiveFormat';
-import { surfaceTileArchivePath } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTileArchivePath';
-import { surfaceTileMortonKey } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTileMortonKey';
+import { SURFACE_TILE_ARCHIVE_MAX_PART_BYTES } from '../../../src/layers/body/surfaceTiles/archive/data/surfaceTileArchiveFormat';
+import { surfaceTileArchivePath } from '../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
+import { surfaceTileMortonKey } from '../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
 import { encodeSurfaceTileArchiveIndex } from './encodeSurfaceTileArchiveIndex';
 import { planSurfaceTileParts } from './planSurfaceTileParts';
 

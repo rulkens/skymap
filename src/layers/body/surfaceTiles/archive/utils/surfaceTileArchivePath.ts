@@ -1,4 +1,4 @@
-import type { SurfaceTileProduct } from '../@types/SurfaceTileProduct';
+import type { SurfaceTileProduct } from '../../format/@types/SurfaceTileProduct';
 
 /**
  * surfaceTileArchivePath — the single home for an archive file's path, shared

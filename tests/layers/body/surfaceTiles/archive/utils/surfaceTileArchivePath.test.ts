@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { surfaceTileArchivePath } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileArchivePath';
+import { surfaceTileArchivePath } from '../../../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 
 describe('surfaceTileArchivePath', () => {
   it('names index and parts', () => {

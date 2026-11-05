@@ -1,10 +1,10 @@
 import type { SurfaceTileId } from '../../format/@types/SurfaceTileId';
-import type { SurfaceTileArchiveIndex } from '../../format/@types/SurfaceTileArchiveIndex';
+import type { SurfaceTileArchiveIndex } from '../../archive/@types/SurfaceTileArchiveIndex';
 import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
-import { decodeSurfaceTileArchiveIndex } from '../../format/utils/decodeSurfaceTileArchiveIndex';
-import { findSurfaceTileArchiveEntry } from '../../format/utils/findSurfaceTileArchiveEntry';
-import { surfaceTileArchivePath } from '../../format/utils/surfaceTileArchivePath';
-import { surfaceTileMortonKey } from '../../format/utils/surfaceTileMortonKey';
+import { decodeSurfaceTileArchiveIndex } from '../../archive/utils/decodeSurfaceTileArchiveIndex';
+import { findSurfaceTileArchiveEntry } from '../../archive/utils/findSurfaceTileArchiveEntry';
+import { surfaceTileArchivePath } from '../../archive/utils/surfaceTileArchivePath';
+import { surfaceTileMortonKey } from '../../archive/utils/surfaceTileMortonKey';
 import { dataUrl } from '../../../../../services/loading/fetchWithProgress';
 
 // An in-flight fetch pins a queue pipe and keeps the render-on-demand loop
