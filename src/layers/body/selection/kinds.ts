@@ -4,4 +4,4 @@ import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 
 export const bodySelectionKinds: readonly SelectionKindFacts<
   Extract<SelectionRef, { type: 'body' }>
->[] = [{ type: 'body', focus: BODY_FOCUS }];
+>[] = [{ type: 'body', focus: BODY_FOCUS, mayHaveLabel: () => true }];

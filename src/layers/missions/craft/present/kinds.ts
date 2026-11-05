@@ -4,4 +4,4 @@ import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 
 export const missionsSelectionKinds: readonly SelectionKindFacts<
   Extract<SelectionRef, { type: 'craft' }>
->[] = [{ type: 'craft', focus: BODY_FOCUS }];
+>[] = [{ type: 'craft', focus: BODY_FOCUS, mayHaveLabel: () => true }];

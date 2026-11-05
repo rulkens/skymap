@@ -1,3 +1,4 @@
+import { Source } from '../../../data/source';
 import type { SelectionKindFacts } from '../../../@types/engine/layer/SelectionKindFacts';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 
@@ -15,5 +16,7 @@ export const galaxyCatalogSelectionKinds: readonly SelectionKindFacts<
       // Twice the diameter, so the ring clears the disc.
       ring: { radii: 4, slab: 'cosmo' },
     },
+    // Only famous galaxies carry captions; a survey galaxy is InfoCard text only.
+    mayHaveLabel: (ref) => ref.source === Source.FamousGalaxy,
   },
 ];

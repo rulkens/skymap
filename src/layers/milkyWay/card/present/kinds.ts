@@ -15,5 +15,6 @@ export const milkyWaySelectionKinds: readonly SelectionKindFacts<
       flyInto: true,
       ring: { radii: 1, slab: 'cosmo' },
     },
+    mayHaveLabel: () => true,
   },
 ];

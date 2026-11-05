@@ -214,11 +214,11 @@ placement (`positionMpc`, `radiusMpc`). Core and the store type against a base r
   `(ref) => SEEDED_STAR_CATALOGS_BY_SOURCE.has(ref.source)`.
 - The saga reads `selectionKindOf(ref.type).mayHaveLabel(ref)`; a null ref is `false` as today.
 
-- [ ] Test `a famous galaxy may carry a label, a survey galaxy may not`.
-- [ ] Test `a seeded star may carry a label, a Gaia star may not`.
-- [ ] Implement; delete the util and its test.
-- [ ] Targeted tests and `typecheck:fast` → pass.
-- [ ] Commit `Each kind says whether its hover may carry a label`.
+- [x] Test `a famous galaxy may carry a label, a survey galaxy may not`.
+- [x] Test `a seeded star may carry a label, a Gaia star may not`.
+- [x] Implement; delete the util and its test.
+- [x] Targeted tests and `typecheck:fast` → pass.
+- [x] Commit `Each kind says whether its hover may carry a label`.
 
 ### Task 5: `toFocusable`, `displayName`, the generic identity key; `refOf` goes
 

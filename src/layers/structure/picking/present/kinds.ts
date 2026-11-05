@@ -16,5 +16,7 @@ export const structureSelectionKinds: readonly SelectionKindFacts<
       // Its ring is the cluster marker pass's, not a selection halo.
       ring: null,
     },
+    // Its ring brightens on hover, captioned or not.
+    mayHaveLabel: () => true,
   },
 ];

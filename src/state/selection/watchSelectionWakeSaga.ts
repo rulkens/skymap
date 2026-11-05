@@ -7,7 +7,7 @@
  * is forked.
  *
  * Hover wakes only when the previous or the new hover is of a kind that may
- * carry a label or ring (`mayHaveLabel`): the label whitens, the ring
+ * carry a label or ring (its kind's `mayHaveLabel`): the label whitens, the ring
  * brightens. Hover lands at pointer-pick rate, so sweeping survey stars and
  * galaxies (InfoCard text only) must not start frames. The previous hover is
  * tracked here because the reducer has already overwritten it.
@@ -30,7 +30,7 @@ import {
   clearSelection,
 } from './selectionSlice';
 import { shallowEqualRef } from '../../utils/object/shallowEqualRef';
-import { mayHaveLabel } from '../../utils/selection/mayHaveLabel';
+import { selectionKindOf } from '../../compositions/selectionKindOf';
 import type { ReconcileEffects } from '../../store/effects/ReconcileEffects';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
 
@@ -45,7 +45,10 @@ export function* watchSelectionWakeSaga() {
     const previous = hovered;
     hovered = action.payload;
     if (shallowEqualRef(previous, hovered)) return;
-    if (!mayHaveLabel(previous) && !mayHaveLabel(hovered)) return;
+    const labelled = [previous, hovered].some(
+      (ref) => ref !== null && selectionKindOf(ref.type).mayHaveLabel(ref),
+    );
+    if (!labelled) return;
     const fx = yield* getContext<ReconcileEffects>('reconcile');
     fx.requestRender();
   });

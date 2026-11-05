@@ -10,4 +10,11 @@ export type SelectionKindFacts<Ref extends SelectionRefBase = SelectionRefBase> 
   readonly type: Ref['type'];
   /** Null: not focusable, so its rows carry no placement and core never frames or rings them. */
   readonly focus: SelectionFocus | null;
+  /**
+   * Whether a hover onto or off `ref` may change pixels (a caption whitens, a ring brightens),
+   * so `watchSelectionWakeSaga` draws a frame. Coarse on purpose: a needless frame is harmless,
+   * a pointer sweeping survey objects must not start any. Method syntax keeps each Layer's
+   * narrower `Ref` assignable to the base-typed `kinds` list.
+   */
+  mayHaveLabel(ref: Ref): boolean;
 };

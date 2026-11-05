@@ -14,5 +14,6 @@ export const blackHolesSelectionKinds: readonly SelectionKindFacts<
       // The footprint is r_s, so the ring hugs the horizon.
       ring: { radii: 1, slab: 'near0' },
     },
+    mayHaveLabel: () => true,
   },
 ];
