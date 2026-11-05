@@ -6,12 +6,7 @@ import {
 } from '../../format/data/heightTileFormat';
 import { readRiffChunk } from '../../../../../utils/image/readRiffChunk';
 import { decodeHeightTileHeader } from '../../format/utils/decodeHeightTileHeader';
-import { surfaceTilePath } from '../../format/utils/surfaceTilePath';
-import { dataUrl } from '../../../../../services/loading/fetchWithProgress';
-
-// An in-flight fetch pins a queue pipe and keeps the render-on-demand loop
-// ticking, so a promise that never settles leaks more than a socket.
-const FETCH_DEADLINE_MS = 10_000;
+import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 
 /**
  * fetchHeightTile — one Terrain-RGB WebP height tile as header + still-encoded
@@ -21,17 +16,11 @@ const FETCH_DEADLINE_MS = 10_000;
  */
 export async function fetchHeightTile(
   tile: SurfaceTileId,
-  prefix: string,
+  source: SurfaceTileSource,
 ): Promise<HeightTileImage | null> {
-  const url = dataUrl(`images/${surfaceTilePath(tile, prefix)}`);
   try {
-    const res = await fetch(url, {
-      mode: 'cors',
-      signal: AbortSignal.timeout(FETCH_DEADLINE_MS),
-    });
-    if (!res.ok) return null;
-
-    const bytes = new Uint8Array(await res.arrayBuffer());
+    const bytes = await source.readTile(tile);
+    if (bytes === null) return null;
     const chunk = readRiffChunk(bytes, HEIGHT_TILE_CHUNK_FOURCC);
     if (chunk === null) return null;
     const header = decodeHeightTileHeader(chunk);
