@@ -21,6 +21,11 @@ import { SKY_EYE_HEIGHT_M } from '../../../../../../src/services/engine/camera/a
 import { ORIENTATION_FRAMES } from '../../../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../../../src/data/time/constJ2000';
+import { LENS_MAX_DEG } from '../../../../../../src/data/camera/lensMaxDeg';
+import { LENS_MIN_DEG } from '../../../../../../src/data/camera/lensMinDeg';
+import { degToRad } from '../../../../../../src/utils/math/degToRad';
+import type { InputStep } from '../../../../../../src/@types/camera/input/InputStep';
+import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
 import type { FrameOf } from '../../../../../../src/@types/camera/arms/FrameOf';
 import type { FramedPose } from '../../../../../../src/@types/camera/pose/FramedPose';
 import type { CameraArmCtx } from '../../../../../../src/@types/camera/arms/CameraArmCtx';
@@ -69,6 +74,22 @@ function ctxFor(focusBodyId: SceneBodyId | null, calls: unknown[][] = []): Camer
 const framed = (azimuthRad: number, altitudeRad: number, frame = FRAME): FramedPose<'sky'> => ({
   frame,
   pose: { azimuthRad, altitudeRad },
+});
+
+const withLens = (fovYRad: number): CameraArmCtx => ({ ...ctxFor(EARTH), fovYRad });
+
+const drag = (dx: number, dy: number): InputStep => ({
+  kind: 'drag',
+  mode: 'orbit',
+  startPx: [50, 50],
+  endPx: [50 + dx, 50 + dy],
+});
+
+const wheel = (factor: number): InputStep => ({
+  kind: 'zoom',
+  factor,
+  duringGesture: false,
+  cursorPx: null,
 });
 
 const roundTrip = (start: FramedPose<'sky'>) => {
@@ -127,12 +148,106 @@ describe('the sky arm', () => {
     expect(frameKey(spotAt(0.2, 0.9))).not.toBe(frameKey(spotAt(0.21, 0.9)));
   });
 
-  it('step and nudge decline by reference', () => {
-    const ctx = ctxFor(EARTH);
+  it('drag turns the view at fovY / heightPx and the sky follows the pointer', () => {
+    for (const deg of [1, 60, 120]) {
+      const ctx = withLens(degToRad(deg));
+      const start = framed(AZ, 0);
+      const perPx = ctx.fovYRad / ctx.viewportPx[1];
+      const right = ROW.step(null, EMPTY_TILT_MEMORY, start, drag(40, 0), ctx).pose;
+      expect(right.azimuthRad).toBeCloseTo(AZ - 40 * perPx, 12);
+      expect(right.altitudeRad).toBe(0);
+      const down = ROW.step(null, EMPTY_TILT_MEMORY, start, drag(0, 40), ctx).pose;
+      expect(down.altitudeRad).toBeCloseTo(40 * perPx, 12);
+      expect(down.azimuthRad).toBe(AZ);
+    }
+  });
+
+  it('altitude clamps at ±90° and azimuth stays free at the zenith', () => {
+    const ctx = withLens(degToRad(60));
+    const up = ROW.step(null, EMPTY_TILT_MEMORY, framed(AZ, 0.3), drag(0, 1e4), ctx).pose;
+    expect(up.altitudeRad).toBe(Math.PI / 2);
+    const turned = ROW.step(
+      null,
+      EMPTY_TILT_MEMORY,
+      framed(up.azimuthRad, up.altitudeRad),
+      drag(30, 0),
+      ctx,
+    );
+    expect(turned.pose.azimuthRad).not.toBe(up.azimuthRad);
+    expect(turned.pose.altitudeRad).toBe(Math.PI / 2);
+    const down = ROW.step(null, EMPTY_TILT_MEMORY, framed(AZ, 0.3), drag(0, -1e4), ctx).pose;
+    expect(down.altitudeRad).toBe(-Math.PI / 2);
+  });
+
+  it('the horizon stays level after any drag sequence', () => {
+    const ctx = withLens(degToRad(60));
+    const up = radialOf(FRAME.sky);
+    let at = framed(AZ, 0.2);
+    for (const [dx, dy] of [
+      [130, -40],
+      [-500, 900],
+      [77, 3],
+      [-20, -1500],
+      [640, 210],
+    ] as const) {
+      at = { frame: at.frame, pose: ROW.step(null, EMPTY_TILT_MEMORY, at, drag(dx, dy), ctx).pose };
+      const m = ROW.toParent(at, ctx).pose.basisLocal;
+      expect(Math.abs(m[0] * up[0] + m[1] * up[1] + m[2] * up[2])).toBeLessThan(1e-12);
+    }
+  });
+
+  it('wheel scales the lens multiplicatively inside [LENS_MIN_DEG, LENS_MAX_DEG]', () => {
     const start = framed(AZ, 0.3);
-    const input = { kind: 'zoom', factor: 2, duringGesture: false, cursorPx: null } as const;
-    expect(ROW.step(null, EMPTY_TILT_MEMORY, start, input, ctx).pose).toBe(start.pose);
-    expect(ROW.nudge(EMPTY_TILT_MEMORY, start, { look: [0.1, 0.1] }, ctx).pose).toBe(start.pose);
+    const wider = ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(1.25), withLens(degToRad(60)));
+    expect(wider.pose).toBe(start.pose);
+    expect(wider.lens).toBeCloseTo(degToRad(75), 12);
+    const settle = (factor: number): number => {
+      let lens = degToRad(60);
+      for (let i = 0; i < 40; i++) {
+        lens = ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(factor), withLens(lens)).lens ?? lens;
+      }
+      return lens;
+    };
+    expect(settle(2)).toBe(degToRad(LENS_MAX_DEG));
+    expect(settle(0.5)).toBe(degToRad(LENS_MIN_DEG));
+  });
+
+  it('a notch the lens clamp eats whole is declined by reference', () => {
+    const start = framed(AZ, 0.3);
+    const out = ROW.step(
+      null,
+      EMPTY_TILT_MEMORY,
+      start,
+      wheel(1.25),
+      withLens(degToRad(LENS_MAX_DEG)),
+    );
+    expect(out.pose).toBe(start.pose);
+    expect(out.lens).toBeUndefined();
+    const edge = ROW.step(null, EMPTY_TILT_MEMORY, start, { kind: 'gestureEnd' }, withLens(1));
+    expect(edge.pose).toBe(start.pose);
+    expect(edge.lens).toBeUndefined();
+  });
+
+  it("nudge look and zoom move the view and the lens at the drag's rate", () => {
+    const ctx = withLens(degToRad(60));
+    const start = framed(AZ, 0.3);
+    const look: Vec2 = [0.1, 0.05];
+    const pxPerRad = ctx.viewportPx[1] / ctx.fovYRad;
+    const nudged = ROW.nudge(EMPTY_TILT_MEMORY, start, { look, zoom: Math.log(1.25) }, ctx);
+    const dragged = ROW.step(
+      null,
+      EMPTY_TILT_MEMORY,
+      start,
+      drag(look[0] * pxPerRad, look[1] * pxPerRad),
+      ctx,
+    );
+    expect(nudged.pose.azimuthRad).toBeCloseTo(dragged.pose.azimuthRad, 12);
+    expect(nudged.pose.altitudeRad).toBeCloseTo(dragged.pose.altitudeRad, 12);
+    expect(nudged.lens).toBeCloseTo(degToRad(75), 12);
+    // The sky arm has no orbit and no roll: those axes leave everything by reference.
+    const ignored = ROW.nudge(EMPTY_TILT_MEMORY, start, { orbit: [0.1, 0.1], roll: 0.2 }, ctx);
+    expect(ignored.pose).toBe(start.pose);
+    expect(ignored.lens).toBeUndefined();
   });
 
   it('release is true once the focus leaves the host', () => {

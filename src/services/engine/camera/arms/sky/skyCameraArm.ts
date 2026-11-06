@@ -1,11 +1,12 @@
 /**
  * The sky arm's row (spec §4): a person standing SKY_EYE_HEIGHT_M above the
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
- * enters it (`engage` is null), and this slice authors no input: `step` and
- * `nudge` decline by reference until sky mode fills them.
+ * enters it (`engage` is null). Every drag looks and the wheel changes the
+ * lens, which the arm hands back as `lens` beside an unmoved pose.
  */
 
 import type { ClimbRow } from '../@types/ClimbRow';
+import type { Vec2 } from '../../../../../@types/math/Vec2';
 import { focusInSubtree } from '../../../../../utils/camera/arms/focusInSubtree';
 import { skyPoseFromBodyArm } from './utils/skyPoseFromBodyArm';
 import { skyPoseToBodyArm } from './utils/skyPoseToBodyArm';
@@ -14,6 +15,8 @@ import { hostOf } from '../hostOf';
 import { hostOrThrow } from '../hostOrThrow';
 import { isSkyArm } from './isSkyArm';
 import { refoldTo } from '../refoldTo';
+import { skyLookedPose } from './utils/skyLookedPose';
+import { skyZoomedLens } from './utils/skyZoomedLens';
 
 export const skyCameraArm: ClimbRow<'sky'> = {
   kind: 'sky',
@@ -42,9 +45,36 @@ export const skyCameraArm: ClimbRow<'sky'> = {
 
   host: (frame, ctx) => hostOf({ body: frame.sky.body }, ctx),
 
-  step: (memory, tilt, framed) => ({ pose: framed.pose, memory, tilt }),
+  step(memory, tilt, framed, input, ctx) {
+    if (input.kind === 'drag') {
+      const dragPx: Vec2 = [input.endPx[0] - input.startPx[0], input.endPx[1] - input.startPx[1]];
+      const pose = skyLookedPose(framed.pose, dragPx, ctx.fovYRad, ctx.viewportPx[1]);
+      return { pose, memory, tilt };
+    }
+    if (input.kind === 'zoom') {
+      const lens = skyZoomedLens(ctx.fovYRad, input.factor);
+      // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
+      return lens === ctx.fovYRad
+        ? { pose: framed.pose, memory, tilt }
+        : { pose: framed.pose, memory, tilt, lens };
+    }
+    return { pose: framed.pose, memory, tilt };
+  },
 
-  nudge: (tilt, framed) => ({ pose: framed.pose, tilt }),
+  nudge(tilt, framed, { look, zoom }, ctx) {
+    const pxPerRad = ctx.viewportPx[1] / ctx.fovYRad;
+    const pose =
+      look === undefined
+        ? framed.pose
+        : skyLookedPose(
+            framed.pose,
+            [look[0] * pxPerRad, look[1] * pxPerRad],
+            ctx.fovYRad,
+            ctx.viewportPx[1],
+          );
+    const lens = zoom === undefined ? ctx.fovYRad : skyZoomedLens(ctx.fovYRad, Math.exp(zoom));
+    return lens === ctx.fovYRad ? { pose, tilt } : { pose, tilt, lens };
+  },
 
   toParent(framed, ctx) {
     const host = hostOrThrow(framed.frame, ctx);
