@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { linearToSrgbByte } from '../../../../tools/utils/image/linearToSrgbByte';
+import { linearToSrgbByte } from '../../../src/utils/color/linearToSrgbByte';
 
 describe('linearToSrgbByte', () => {
   it('encodes the sRGB transfer curve and clamps out-of-range input', () => {
