@@ -56,7 +56,8 @@ export type AssetDemand =
 
 // src/@types/loading/NearGate.d.ts — one band edge of `shown`'s entry, measured from `band.from`.
 // 'out': load within out[1]·lead, release beyond out[1]·release. 'in': load beyond in[0]/lead, release below in[0]/release.
-export type NearGate = { readonly band: string; readonly edge: 'in' | 'out'; readonly lead: number; readonly release: number };
+// 'both' (PR B): both tests at once — load only inside both load limits, release past either release limit.
+export type NearGate = { readonly band: string; readonly edge: 'in' | 'out' | 'both'; readonly lead: number; readonly release: number };
 
 // src/@types/loading/SizeGate.d.ts — gates PR. Apparent diameter on the largest drawing view.
 export type SizeGate = { readonly body: SceneBodyId; readonly loadPx: number; readonly releasePx: number };
@@ -67,8 +68,9 @@ input to the one evaluator, `src/services/engine/wiring/evaluateAssetDemand.ts` 
 `reevaluateDemand` calls once per row per pass (replacing its three `row.demand(ctx)` reads and one `row.release`).
 
 > [!DECISION] `edge` is explicit, not inferred
-> localBubble's band has both edges (`in: [0.4, 1] kpc, out: [4, 10] kpc`) but only the out edge gates its file
-> today; loading from inside the bubble is wanted. Inferring both edges would change that.
+> PR A keeps localBubble on its out edge only, as main had it. The owner's smoke check found the bubble loaded at Earth,
+> where its `in: [0.4, 1] kpc` edge draws nothing, so PR B moves it to `edge: 'both'` (ruling zdEa #1): load beyond 0.2 kpc
+> and within 20 kpc, release below 0.1 kpc or beyond 40 kpc. Rows that declare one edge keep their meaning.
 
 ### Evaluation rules (core, one place)
 
@@ -134,6 +136,9 @@ satellites' search and selection lifts, and the tier exclusion.
 - **Band approach on the survey rows.** galaxyCatalog points, cosmicWebDensity and cosmicWebFilaments declare
   `near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 }`. Flow declares the same against its
   `FLOW_DEEP_ZOOM` band. Constellations declare `{ edge: 'out', lead: 10, release: 100 }`.
+- **localBubble at Earth.** `edge: 'both'` joins `NearGate`, and localBubble declares
+  `{ band: 'shell', edge: 'both', lead: 2, release: 4 }`. That leaves the bubble unloaded at Earth, loaded from 0.2 to
+  20 kpc, and released below 0.1 or beyond 40 kpc.
 - **Survey galaxy lifts.** `alsoWhen: ['searching', 'selected']`. `selected` needs `selects` on the survey entry;
   the plan must check what `watchSelectionRevealSaga` does with a new `selects` before adding it. A selected famous
   galaxy pins the survey catalogs too, because the selection kind does not split famous from survey. That is
