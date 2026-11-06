@@ -25,6 +25,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **`appSettingsSlices` drift is untested** `ready` — a Layer's `settings` missing from `src/compositions/appSettingsSlices.ts` passes every test, and `sourceRegistryCoverage.test.ts:4-5` claims `appSettingsSlices.test.ts` closes that hole; add the identity test `appVisibility.test.ts:78` has.
+- [ ] **Asset priority rungs are hand-picked** `ready` — each row picks the "next free rung" by reading comments (`satellitesAssetRows.ts:51`); `AssetWiringRow.d.ts:26-31` says ranks must be distinct, no test checks it.
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
 - [ ] **Empty the Layer type-ownership allow-list (move-only PR)** `ready` — 27 `src/@types/` files only one Layer reaches, each cleared by a move, listed in `layerImportBoundary.test.ts`. → [details](backlog/2026-11-06-layer-type-ownership-allow-list.md)
@@ -254,6 +256,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Docs & process
 
+- [ ] **Website docs rows per Layer UI entry are hand-copied** `needs-design` — a new debug section, settings leaf, script or toggle needs a hand row in `packages/website/src/data/` (tests catch the omission); the `ui` entries carry no docs metadata to derive them from.
+- [ ] **`matteHiddenPasses` has no coverage test** `ready` — `tools/site/matteHiddenPasses.ts` is a hand list; its test only checks listed names exist, so a new sky pass silently stays in matte shots. Classify every FRAME_ORDER pass, or give `ContentPass` a sky/subject role.
 - [ ] **Commercial build that cannot ship non-commercial data** `needs-design` — Gaia, Hipparcos, DSS2, EOX 2025 and others forbid commercial use or need permission; a build flag leaves them out, and a guard keyed on `ATTRIBUTIONS.md` markers fails any build that would ship them. → [details](backlog/2026-10-12-commercial-build.md)
 
 - [ ] **Website docs pages into folders with structure files** `ready` — the 27 docs pages get a folder and a `.structure.yaml` each like the landing pages (job moves out of front matter), and `components/docs/` is sub-grouped by kind.
