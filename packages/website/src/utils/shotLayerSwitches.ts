@@ -1,9 +1,8 @@
 import type { LayerSwitch } from '../../../../src/@types/url/LayerSwitch';
 import type { SiteShotSettings } from '../@types/SiteShotSettings';
 
-type Address = LayerSwitch['address'];
-const on = (address: Address): LayerSwitch => ({ address, on: true });
-const off = (address: Address): LayerSwitch => ({ address, on: false });
+const on = (address: LayerSwitch['address']): LayerSwitch => ({ address, on: true });
+const off = (address: LayerSwitch['address']): LayerSwitch => ({ address, on: false });
 
 /**
  * The `layers=` switches a shot's settings stand for, in the order the runner used to dispatch them (hides
