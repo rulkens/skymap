@@ -72,6 +72,14 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     gzipOnWire: false,
   },
   {
+    label: 'stellar-streams',
+    dir: null,
+    fileName: /^(?:stellar-streams\.bin|stellar_streams_meta\.json)$/,
+    transport: 'wrangler',
+    // Measured: bin 5.1 → 4.0 MB, meta 42 → 8 KB.
+    gzipOnWire: true,
+  },
+  {
     // Voyager 1/2 Horizons tracks (tools/bodies/buildSpacecraftTracks.ts).
     label: 'spacecraft-tracks',
     dir: null,

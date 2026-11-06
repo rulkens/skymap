@@ -97,6 +97,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
+        scripts: ['build-stellar-streams'],
+        does: 'Write the particles of the stellar streams around the Milky Way: Sagittarius from an N-body model, the others from the galstreams tracks that fetch-vasiliev2021 and fetch-galstreams downloaded.',
+        manual: 'tools/streams/README.md',
+      },
+      {
         scripts: ['build-ephemeris-corrections', 'build-planet-facts'],
         does: 'Fit the corrections to the planets’ and moons’ orbits against JPL Horizons, and compile the facts an info card shows. Both write source files that are committed.',
         manual: 'data/raw/horizons/README.md',

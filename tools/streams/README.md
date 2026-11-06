@@ -1,24 +1,33 @@
-# Stellar streams — PROTOTYPE particle builder
+# Stellar streams — particle builder
 
-Builds `public/data/stellar_streams.bin`, read by `src/layers/stellarStreams/`
-(a spike, not a shipped Layer: no settings, no fade row, no AssetSlot).
+Writes `public/data/stellar-streams/v1/stellar-streams.bin` (STRM, layout in
+[`stellarStreamsFormat.constants.ts`](../../src/layers/stellarStreams/catalog/data/stellarStreamsFormat.constants.ts))
+and `stellar_streams_meta.json` (one entry per stream, array position = stream index), read by
+`src/layers/stellarStreams/`.
 
 ```bash
-pip download --no-deps galstreams -d /tmp/gs && tar xzf /tmp/gs/galstreams-*.tar.gz -C /tmp/gs
-python3 -I tools/streams/buildStellarStreams.py /tmp/gs/galstreams-1.2.1/galstreams public/data/stellar_streams.bin
+npm run fetch-vasiliev2021   # data/raw/vasiliev2021/stars.txt (43.6 MB zip, two files kept)
+npm run fetch-galstreams     # data/raw/galstreams/ tracks + master log, pinned commit
+npm run build-stellar-streams
 ```
 
-- **Tracks**: galstreams (Mateu 2023), one track per stream, skipping
-  sky-only tracks whose distance column is a placeholder 1.0. Each track is
-  resampled into particles with Gaussian cross-track scatter (master-log
-  `width_phi2`) and along-track clumping.
-- **Sagittarius**: galstreams only covers its Gaia-local arc, so it is a
-  Fardal+2015 particle spray instead: progenitor orbit integrated back 3.5 Gyr
-  in a Bovy-2015 potential (no LMC, no dynamical friction), two Lagrange-point
-  releases per Myr, integrated forward to today. Leading and trailing arms
-  wrap the disc on a polar orbit; apocentres are not tuned against observed ones.
-- **Frame**: heliocentric ICRS in Mpc, R₀ = 8.178 kpc to match
-  `GALACTIC_CENTRE_ANCHOR`.
+The build reads only the raw files, seeds every random draw (`splitmix64Rng`), and is byte-identical
+across reruns over the same inputs. On 2026-11-06 it wrote 128,419 particles in 83 streams, 5.14 MB.
 
-Record: 10 × f32 — position xyz (Mpc), unit tangent xyz, size (Mpc), luminosity,
-colour t (0 = BHB blue, 1 = giant amber), stream id (0 = Sagittarius).
+- **Sagittarius** (stream 0): the present-day snapshot of the Vasiliev, Belokurov & Erkal 2021 N-body
+  model (with LMC). 60,000 of its 200,000 star particles, picked uniformly at random; positions from
+  the catalogue's own RA, Dec and distance, tangents from the galactocentric velocity rotated into the
+  equatorial frame (`galToEq`). Colour follows stripping time (bound and recent debris amber, old debris
+  blue); brightness does not. Its meta anchor is the bound particles' mean position, and its
+  `lengthKpc` is twice the debris' farthest reach from it: an N-body cloud has no track to measure.
+- **The rest** (sorted by slug): galstreams (Mateu 2023), one `st` track per stream, the master log's
+  `On` track when it has distances, else the first that does. Sky-only tracks (every distance 1.0) and
+  galstreams' own Sagittarius are skipped. A track listed against its stars' motion (proper motion,
+  radial velocity where given, plus the solar reflex) is flipped first. It is resampled into
+  `clip(L·60·max(1, w/0.3), 300, 30000)` particles evenly along its length, scattered across it by a
+  Gaussian of the master-log width `width_phi2` (0.3° when unset) at the median distance, and dimmed
+  only over the end eighths. The meta anchor is the track's midpoint by length.
+- **Frame**: heliocentric J2000 equatorial, Mpc, as everywhere in skymap.
+
+Tunables (particle budget, sizes, luminosities, seeds) live in
+[`data/streamsBuild.constants.ts`](data/streamsBuild.constants.ts).
