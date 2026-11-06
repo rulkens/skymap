@@ -19,6 +19,8 @@ import { galaxyCatalogIdOf } from '../../../../../src/utils/galaxyCatalogIdOf';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect } from 'vitest';
+import { mat4 } from 'wgpu-matrix';
+import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustum/frustumPlanesFromViewProj';
 import { Source } from '../../../../../src/data/source';
 import {
   createDiskPlannerWalk,
@@ -87,6 +89,7 @@ function makeInput(
     records: galaxyRecordsOver(catalogs),
     visibleCatalogs,
     pxPerRad: PX_PER_RAD,
+    viewPlanes: new Float32Array(0),
     sourceOpacity: () => 1,
   };
 }
@@ -227,5 +230,30 @@ describe('createDiskPlannerWalk', () => {
     walk.runFrame(makeInput(catalogs), recordingVisitor(events), noopDiskRowVisitor());
     const onRowCount = events.filter((e) => e[0] === 'onRow').length;
     expect(onRowCount).toBe(DISK_ROW_ACCEPT_BUDGET);
+  });
+
+  it('hands only rows inside a view to onRow, so off-screen rows cannot spend the budget at narrow FOV', () => {
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    // A budget's worth of rows behind the camera, then one row dead ahead.
+    const behind = Array.from({ length: DISK_ROW_ACCEPT_BUDGET }, () => ({
+      distMpc: -1,
+      diameterKpc: 50,
+    }));
+    const rows = [...behind, { distMpc: 1, diameterKpc: 50 }];
+    const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCatalog(rows)]]);
+    // A 0.5° view along +x from the origin, where the camera sits.
+    const vp = mat4.multiply(
+      mat4.perspective((0.5 * Math.PI) / 180, 1, 0.01, 1e5),
+      mat4.lookAt([0, 0, 0], [1, 0, 0], [0, 0, 1]),
+    );
+    const events: WalkEvent[] = [];
+    walk.runFrame(
+      { ...makeInput(catalogs), viewPlanes: frustumPlanesFromViewProj(vp) },
+      recordingVisitor(events),
+      noopDiskRowVisitor(),
+    );
+    expect(events.filter((e) => e[0] === 'onRow')).toEqual([
+      ['onRow', Source.SDSS, rows.length - 1],
+    ]);
   });
 });
