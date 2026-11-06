@@ -251,6 +251,7 @@ function makeState(
   // fixture provides no slot for).
   const state = {
     tier: 'medium',
+    ui: { paletteOpen: false } as never,
     settings: {
       galaxyCatalogs: {
         enabled: true,
