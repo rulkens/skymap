@@ -13,6 +13,7 @@ import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../../../src/layers/galaxyCa
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { FAMOUS_GALAXY_NAMES } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
 import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 
 const sourceOver = (source: GalaxyCatalogSourceType, catalog: GalaxyCatalog) =>
@@ -56,12 +57,12 @@ describe('flatGalaxyRecordSource', () => {
       Source.FamousGalaxy,
       makeGalaxyCatalog(FAMOUS_GALAXY_NAMES.length + 1),
     );
-    expect(drifted.loadRow(0)?.famous).toBeUndefined();
-    expect(drifted.loadRow(1)?.famous).toBeUndefined();
+    expect((drifted.loadRow(0) as GalaxyRow | null)?.famous).toBeUndefined();
+    expect((drifted.loadRow(1) as GalaxyRow | null)?.famous).toBeUndefined();
     expect(warn).toHaveBeenCalledTimes(1);
     warn.mockRestore();
     const matched = sourceOver(Source.FamousGalaxy, makeGalaxyCatalog(FAMOUS_GALAXY_NAMES.length));
-    expect(matched.loadRow(1)?.famous).toEqual(FAMOUS_GALAXY_NAMES[1]);
+    expect((matched.loadRow(1) as GalaxyRow | null)?.famous).toEqual(FAMOUS_GALAXY_NAMES[1]);
   });
 
   it('resolvePosition with a distance finds the record and without one keeps the 30 arcsec search', () => {
