@@ -101,8 +101,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Earth's noon sky renders dark at ground level** `needs-design` — Sun ~19° up over Copenhagen, the sky reads navy with stars at 1.7 m and 46 m; the tour's noon-to-night opening needs daylight. → [details](backlog/2026-11-04-earth-noon-sky-dark-at-ground.md)
-- [ ] **Earth's ground draws grey-white at night up close** `needs-debug` — lawn to a few km over Søndermarken at full night; the park scan keeps day colours. → [details](backlog/2026-11-06-earth-night-ground-haze.md)
+- [ ] **Earth's ground draws grey-white at night up close** `needs-design` — diagnosed: the surface tiles' Black Marble emissive, painted flat at street level from ~8.6° of Sun altitude down. → [details](backlog/2026-11-06-earth-night-ground-haze.md)
+- [ ] **The swap chain gets linear values with no sRGB encode** `needs-design` — `bgra8unorm` plus no OETF crushes mid-tones ~3×; every look is tuned to it, so fixing it needs its own spec and a re-tune. → [details](backlog/2026-11-06-swap-chain-no-srgb-encode.md)
 - [ ] **A tree crown floats without a trunk in the Søndermarken scan** `ready` — beside the Sun for ~6 s of the tour's opening pan; a mesh cleanup. → [details](backlog/2026-11-06-soendermarken-floating-crown.md)
 - [ ] **A focused Earth draws no label at whole-Earth range** `needs-debug` — tour beat 01 and the home view alike; likely a focused-body label rule. → [details](backlog/2026-11-06-focused-earth-has-no-label.md)
 - [ ] **Dark stair-steps off EOX coastlines** `needs-debug` — blocky rims in the water around regions, strongest at Tanegashima; cause not diagnosed. → [details](backlog/2026-11-05-eox-coast-stair-steps.md)

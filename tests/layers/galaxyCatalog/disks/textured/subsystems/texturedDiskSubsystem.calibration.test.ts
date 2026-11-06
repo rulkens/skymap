@@ -107,6 +107,7 @@ function makeInput(
     records: galaxyRecordsOver(catalogs),
     visibleCatalogs,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
+    viewPlanes: new Float32Array(0),
     famousGalaxiesMeta,
     nowMs: 0,
     // Live surface-brightness sliders, needed by the procedural body's

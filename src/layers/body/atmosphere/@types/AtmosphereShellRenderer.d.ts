@@ -1,7 +1,7 @@
 /**
  * AtmosphereShellRenderer: Earth's in-scatter atmosphere, a translucent shell just
  * outside the cloud shell. Three `rgba16float` LUTs: transmittance then
- * multi-scatter baked once in one encoder, sky-view baked every frame.
+ * multi-scatter baked once in one encoder, sky-view re-baked when its record moves.
  * The shell draws BOTH walls (`cullMode: 'none'`); the fragment splits duty by
  * `@builtin(front_facing)` and classifies rays by SAMPLED `foreground:0` depth, so
  * the pipeline declares no depth state. One bundle (LUTs, uniform buffers, bind
@@ -18,7 +18,10 @@ export type AtmosphereShellRenderer = Renderer & {
    * one dispatch into the CALLER's open compute pass (`encodeAtmosphereSkyView`
    * opens it in the frame's prelude, before the foreground render pass). Writes
    * `skyViewUniforms` to that body's `SkyViewParams` buffer first, then
-   * dispatches. THROWS on an unknown `bodyId` (a programming error — callers
+   * dispatches, UNLESS the record matches the one this body's current LUT texture
+   * was baked from (sun zenith within a small tolerance, the rest exactly): then the
+   * dispatch is skipped (the buffer write is not). A texture `reconcile` recreates has no bake yet, so its first dispatch
+   * always bakes. THROWS on an unknown `bodyId` (a programming error — callers
    * only pass `atmosphereDrawList` ids, which come from the same table this
    * renderer bundles).
    *
@@ -77,6 +80,14 @@ export type AtmosphereShellRenderer = Renderer & {
     pass: GPURenderPassEncoder,
     bodyId: string,
     depthView: GPUTextureView,
+  ): void;
+
+  /** The sky into a mesh probe's capture face (`AerialPerspectiveRenderer.drawSky`). */
+  drawProbeSky(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    farDepthView: GPUTextureView,
   ): void;
 
   /**

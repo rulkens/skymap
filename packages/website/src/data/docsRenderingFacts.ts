@@ -126,7 +126,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-atmosphere-tables',
     about: 'app',
-    text: 'For each atmosphere the app keeps three small lookup tables. Two are computed once, as the app starts: how much sunlight survives a path through the air (256 by 64 values) and how much light has scattered more than once (32 by 32). The third, the brightness of the sky in every direction from where the camera is, is recomputed every frame at 192 by 108, or 64 by 36 at the small data size.',
+    text: 'For each atmosphere the app keeps three small lookup tables. Two are computed once, as the app starts: how much sunlight survives a path through the air (256 by 64 values) and how much light has scattered more than once (32 by 32). The third, the brightness of the sky in every direction from where the camera is, is recomputed in any frame where the camera or the Sun has moved, at 192 by 108, or 64 by 36 at the small data size.',
     source: `${REPO_BLOB}/src/layers/body/atmosphere/render/atmosphereShellRenderer.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
