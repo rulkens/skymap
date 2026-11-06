@@ -978,13 +978,14 @@ describe('runFrame — the planner keep-ticking fold', () => {
     const wakingPlanner: FrameContentPlanner<void> = {
       name: 'test-awake',
       scope: 'once',
-      plan: () => ({ value: undefined, awake: true, settling: false }),
+      plan: () => ({ value: undefined, awake: true, settling: false, loading: false }),
     };
     vi.mocked(renderFrame).mockImplementationOnce((input) => {
       input.canvas.snapshot.plans.put(wakingPlanner, undefined, {
         value: undefined,
         awake: true,
         settling: false,
+        loading: false,
       });
     });
 

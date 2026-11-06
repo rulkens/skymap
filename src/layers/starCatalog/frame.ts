@@ -123,7 +123,7 @@ export function starCatalogPlanner(
       recutLast = recut;
       runtime.renderer.setFrameCut(inputs, recut);
       const awake = inputs !== null && (nowMs - changedAtMs < NODE_FADE_MS || inFlight > 0);
-      return { value: undefined, awake, settling: false };
+      return { value: undefined, awake, settling: false, loading: false };
     },
   };
 }
