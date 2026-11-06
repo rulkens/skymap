@@ -4,8 +4,9 @@
 > **On screen** = shown / inferable at this framing? **New feature** = what the
 > renderer would need to ground a fact it can't show.
 >
-> **This stage shows:** the Milky Way impostor again — back at the start, ~0.05 Mpc.
-> Same visual vocabulary as stage 05 (whole galaxy, no interior detail). Facts
+> **This stage shows:** the rush home through the Milky Way's disc, then the
+> night side of Earth from 2,000 km over Copenhagen, where the tour began. These
+> candidates were gathered when the stage landed on the Milky Way. Facts
 > needing a sub-galactic scale tier (e.g. the Sun's vertical bobbing) were
 > dropped — we're not building that tier. The MW–Andromeda collision and the
 > ~630 km/s CMB motion live at their proper stages (06 and 13).

@@ -31,6 +31,7 @@ import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbi
 import { skySpotRadial } from '../../../../utils/geo/skySpotRadial';
 import { EARTH_DATUM_RADIUS_M } from '../../../bodies/earthDatumRadiusM';
 import { SCALE_UNITS } from '../../../scaleUnits';
+import { DENMARK_VIEW_HEIGHT_M } from './denmarkViewHeightM';
 import { OPENING_HIDDEN_LAYERS } from './openingHiddenLayers';
 import { PARK_VIEW } from './parkView';
 import { SONDERMARKEN_SPOT } from './sondermarkenSpot';
@@ -92,8 +93,6 @@ const REVEAL_SEC = 2;
 const DWELL_SEC = 7;
 
 const LIFT_TOP_M = 3_000;
-// Where the body leg hands over: Denmark small, the planet's curve at the edge.
-const RISE_TOP_M = 2_000_000;
 // Every `distance` here runs from the ground below, the end height included: a
 // world leg opened from a body leg keeps its target where the sightline meets
 // the ground (`toWorldArm`).
@@ -124,7 +123,12 @@ export const youAreHereEarth: ClipData = {
       turnBetween(DOWN_STOPS, 'linear', 'easeOutSine'),
       seq([
         tween('distance', { to: LIFT_TOP_M, over: LIFT_SEC, ease: 'easeInQuad', frame: HOST }),
-        tween('distance', { to: RISE_TOP_M, over: CLIMB_SEC, ease: 'linear', frame: HOST }),
+        tween('distance', {
+          to: DENMARK_VIEW_HEIGHT_M,
+          over: CLIMB_SEC,
+          ease: 'linear',
+          frame: HOST,
+        }),
       ]),
     ]),
     all([

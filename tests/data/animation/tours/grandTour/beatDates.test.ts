@@ -1,8 +1,8 @@
 /**
  * Every Earth beat owns its date: a skip, a Prev or a windowed take can enter
- * any of them without playing the beat before, so each enter clip must snap the
- * clock itself before anything else moves it. Later Earth beats join the list
- * as they land.
+ * any of them without playing the beat before, so each must snap the clock
+ * itself before anything else moves it. Home again lands on Earth, so it owns
+ * the date too.
  */
 import { describe, it, expect } from 'vitest';
 
@@ -12,16 +12,18 @@ import { youAreHereEarth } from '../../../../../src/data/animation/tours/grandTo
 import { earthAndMoon } from '../../../../../src/data/animation/tours/grandTour/earthAndMoon';
 import { solarSystem } from '../../../../../src/data/animation/tours/grandTour/solarSystem';
 import { stellarNeighbourhood } from '../../../../../src/data/animation/tours/grandTour/stellarNeighbourhood';
+import { homeAgain } from '../../../../../src/data/animation/tours/grandTour/homeAgain';
 import { clockTo } from '../../../../../src/state/tour/clockTo';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
 
-const EARTH_BEAT_ENTER_CLIPS: readonly ClipData[] = [
+const EARTH_BEAT_CLIPS: readonly ClipData[] = [
   parkOpening,
   youAreHereEarth,
   earthAndMoon,
   solarSystem,
   stellarNeighbourhood,
+  homeAgain,
 ];
 
 function firstClockTo(effects: readonly Effect[]): ReturnType<typeof clockTo>['payload'] | null {
@@ -41,8 +43,8 @@ function firstClockTo(effects: readonly Effect[]): ReturnType<typeof clockTo>['p
 
 describe('grand tour beat dates', () => {
   it('every Earth beat snaps its own date on entry', () => {
-    for (const clip of EARTH_BEAT_ENTER_CLIPS) {
-      expect(grandTour.beats.some((b) => b.enterClip === clip)).toBe(true);
+    for (const clip of EARTH_BEAT_CLIPS) {
+      expect(grandTour.beats.some((b) => (b.enterClip ?? b.dwellClip) === clip)).toBe(true);
       expect(firstClockTo(clip.timeline)?.overSec).toBe(0);
     }
   });

@@ -96,10 +96,10 @@ export const grandTour: Tour = {
     {
       enterClip: youAreHere,
       caption: {
-        title: 'You are here',
+        title: 'The Milky Way',
         lines: [
-          'The Milky Way, our home galaxy.',
-          'A hundred billion stars, and the Sun is one of them.',
+          'Hundreds of billions of stars, and the Sun is one of them.',
+          'Light takes a hundred thousand years to cross our galaxy.',
         ],
       },
       dwellClip: youAreHereDwell,

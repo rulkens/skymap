@@ -1,5 +1,5 @@
 /**
- * You are here — the Milky Way, approached from far out on its disc bearing.
+ * The Milky Way — our galaxy, approached from far out on its disc bearing.
  * The snap is zero-duration cues on separate channels (target, distance,
  * yaw/pitch, roll), so one `all` is legal; `aimAlong` takes a fixed WORLD sightline,
  * not a `lookAtId` bearing, so every run lands the same view whatever pose the

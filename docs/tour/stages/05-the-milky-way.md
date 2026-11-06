@@ -29,6 +29,12 @@ decades), then a short, slow orbit around the disk on the dwell, a few degrees
 of approach angle, just enough parallax to give the disk depth. This beat was
 stage 01 before the Earth opening; its orbit is unchanged, the travel in is new.
 
+As built: the travel in is still the old cold open, a cut from the stellar
+neighbourhood to 100 Mpc out on the disc bearing and a log dolly in on the
+Milky Way; the beat states the galactic pole and level roll on entry. It also
+shows the names beat 00 hid that no earlier beat has claimed (small bodies,
+missions, the black hole) and the mission trails, as a placeholder.
+
 ## On screen
 
 `The Milky Way` + narration. The engine's "You are here" marker and connector

@@ -60,8 +60,9 @@ in scale space (uniform speed); (4) evaluates per frame → camera.
 | arrival-settle | ease-in at end of travel into a stop | `ease-in-out` |
 | look-ahead (opt) | offset look from `focus` toward travel direction | `look-offset` |
 
-The closing return is just an inward `log-dolly` back to the opening
-keyframe — no new primitive.
+The closing return is an inward `log-dolly` back to Earth, then a
+`frame-handover` into a `{ body: 'earth' }` leg that sinks to the rise's
+handover over Copenhagen — no new primitive.
 
 ## Easing
 

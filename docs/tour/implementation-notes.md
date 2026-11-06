@@ -14,6 +14,23 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **The clock and the sky arm** (the Earth opening, Tasks 1–10): the clock
+  is frozen for the whole run (`tourBodySaga` pauses once, inside the takeover
+  bracket, whose snapshot puts the viewer's clock back on exit, mid-tour exits
+  included); a beat moves it only with `scene(clockTo({ simDays, overSec,
+  ease? }))`, and every beat that depends on the date (00–04, Home again) snaps
+  it on entry, so a skip or Prev lands on the right date with no fold
+  (`beatDates.test.ts`). A clock that stops dead while the sky wheels reads as
+  a break between beats: ease it to rest (`easeOutQuad` over the last stretch).
+  The tour's Pause holds the clock like the camera. The sky arm pins the eye,
+  so a pose produced in another frame is never folded back into it: once the
+  eye leaves the spot it releases to the body arm (`pinsEye`). The body arm
+  releases to the world above 0.9 radii, so a landing meant to ride a body
+  when the clock jumps (Home again) must sit below that height
+  (`homeAgain.test.ts`). A body leg has no roll and levels north up, so a world
+  leg handing over to one arrives rolled north up (`northUpRoll`), or the image
+  turns at the handover. On exit the restore re-applies the pre-tour focus, and
+  a focus change flies the camera to frame it.
 - **Naming one star means naming the star map** (beat 04, `stellarNeighbourhood`):
   star captions switch per catalog (`label:starCatalog:famousStar`), not per
   star, and focus does not gate them, so every star-map star in frame is named

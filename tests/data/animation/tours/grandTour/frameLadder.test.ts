@@ -150,9 +150,10 @@ describe('grand tour frame ladder — effective orientation per beat', () => {
     orientationPerBeat.forEach((pole, i) => expect(pole).toBe(ladderPole(i)));
   });
 
-  it('runs each beat up to the M31 approach under its pole when entered cold (a skip or Prev)', () => {
+  it('runs each beat up to the M31 approach, and Home again, under its pole when entered cold (a skip or Prev)', () => {
     const m31 = grandTour.beats.findIndex((b) => b.enterClip === approachM31);
-    for (let i = 0; i <= m31; i++) {
+    const coldEntries = [...Array(m31 + 1).keys(), grandTour.beats.length - 1];
+    for (const i of coldEntries) {
       for (const before of POLES) {
         const store = makeStore();
         const snapshot = captureScene(store.getState() as RootState, 0);

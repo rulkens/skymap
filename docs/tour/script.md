@@ -28,7 +28,7 @@ stage shows on-screen text.
 | 02  | Earth and Moon | [`02-earth-and-moon.md`](stages/02-earth-and-moon.md) | Earth–Moon, ~800,000 km | log dolly + orbit | 8+7 s |
 | 03  | The Solar System | [`03-the-solar-system.md`](stages/03-the-solar-system.md) | Sun, ~50 au | turn + log dolly + lean | 10+8 s |
 | 04  | Our stellar neighbourhood | [`04-stellar-neighbourhood.md`](stages/04-stellar-neighbourhood.md) | α Centauri side, ~0.5 pc | turn + log dolly + lean | 12+7 s |
-| 05  | The Milky Way | [`05-the-milky-way.md`](stages/05-the-milky-way.md) | Milky Way, ~0.05 Mpc | log dolly + local orbit | 8+7 s |
+| 05  | The Milky Way | [`05-the-milky-way.md`](stages/05-the-milky-way.md) | Milky Way, ~0.05 Mpc | snap far + log dolly + push-in | 7+7 s |
 | 06  | Nearest neighbour      | [`06-nearest-neighbour.md`](stages/06-nearest-neighbour.md)           | M31, ~0.8 Mpc            | log dolly + lean          | 7+7 s        |
 | 07  | The Local Group        | [`07-local-group.md`](stages/07-local-group.md)                       | Local Group, ~2.5 Mpc    | pull-back + orbit         | 9+14 s       |
 | 08  | Our neighbourhood      | [`08-our-neighbourhood.md`](stages/08-our-neighbourhood.md)           | local groups, ~4.5 Mpc   | pull-back + drift         | 0+12 s       |
@@ -40,9 +40,9 @@ stage shows on-screen text.
 | 14  | The emptiness          | [`14-emptiness.md`](stages/14-emptiness.md)                           | Boötes void, hold scale  | lateral drift             | 6+5 s        |
 | 15  | The deep field         | [`15-deep-field.md`](stages/15-deep-field.md)                         | quasar shell, ~2,000 Mpc | big log dolly             | 8+4 s        |
 | 16  | The edge               | [`16-the-edge.md`](stages/16-the-edge.md)                             | horizon, ~6,000+ Mpc     | log dolly to max          | 9+8 s        |
-| 17  | Home again             | [`17-home-again.md`](stages/17-home-again.md)                         | Milky Way, ~0.05 Mpc     | inward log dolly to start | 8+5 s        |
+| 17  | Home again             | [`17-home-again.md`](stages/17-home-again.md)                         | Copenhagen, 2,000 km     | inward log dolly + descent | 0+27 s       |
 
-**Total ≈ 5 min.** Tune timings per file; this table is regenerated from them.
+**Total ≈ 7 min.** Tune timings per file; this table is regenerated from them.
 
 ## Stage front-matter schema
 
