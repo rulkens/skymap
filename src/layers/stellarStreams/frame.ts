@@ -1,7 +1,7 @@
 /**
  * stellarStreamsPlanner — keeps the render loop ticking while visible streams drift (the
- * scheduler sleeps on a still camera, which would freeze the flow), and holds the cold-load
- * gate only while the streams would show. A hidden or still Layer votes nothing.
+ * scheduler sleeps on a still camera, which would freeze the flow). A hidden or still Layer
+ * votes nothing.
  */
 
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
@@ -22,7 +22,9 @@ export function stellarStreamsPlanner(
         value: undefined,
         awake: fade > 0 && loaded && (streak.flow > 0 || haze.flow > 0),
         settling: false,
-        loading: fade > 0 && !loaded,
+        // The asset row's `gates` holds the fade at 0 until the bin commits; a vote here could
+        // only fire while a released bin fades out, forcing a wake.
+        loading: false,
       };
     },
   };
