@@ -83,9 +83,9 @@ function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactN
         <h2 className={chrome.heading}>Shortcut</h2>
         <p className={chrome.text}>
           {key}, or Skymap, Settings, brings this window back, also when the sky fills the only
-          screen; closing it hides it. Escape on the sky turns it into a window you move by its top edge;
-          its close button quits Skymap. Its full-screen button, F11 (Control+Command+F on a Mac) or
-          View, Full screen fills the screen again.
+          screen; closing it hides it. Escape on the sky turns it into a window you move by its top
+          edge; its close button quits Skymap. Its full-screen button, F11 (Control+Command+F on a
+          Mac) or View, Full screen fills the screen again.
         </p>
       </section>
 
