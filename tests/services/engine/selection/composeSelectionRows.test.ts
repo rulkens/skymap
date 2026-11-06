@@ -656,7 +656,7 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
   });
 });
 
-// ─── kindsEnabled gate (resolvePick only) ───────────────────────────────────
+// ─── picking off list (resolvePick only) ───────────────────────────────────
 
 describe('composeSelectionRows — picking gate', () => {
   const STUB_CODE = 7;
@@ -673,68 +673,24 @@ describe('composeSelectionRows — picking gate', () => {
     },
   };
 
-  it('resolvePick returns null for a disabled kind and the ref for an enabled one', () => {
+  it('a kind in the off list resolves no pick but still extracts its row and decodes its focus id', () => {
     const pick = { sourceCode: STUB_CODE, localIdx: 0 };
-    const allEnabled = composeSelectionRows(
+    const noneOff = composeSelectionRows(
       () => [structureRow],
-      () => ({
-        galaxyCatalog: true,
-        structure: true,
-        milkyWay: true,
-        zoneOfAvoidance: true,
-        body: true,
-        craft: true,
-        earthScene: true,
-        starCatalog: true,
-        blackHole: true,
-        satellite: true,
-      }),
+      () => [],
     );
-    expect(allEnabled.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
+    expect(noneOff.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
 
-    const structureDisabled = composeSelectionRows(
+    const structureOff = composeSelectionRows(
       () => [structureRow],
-      () => ({
-        galaxyCatalog: true,
-        structure: false,
-        milkyWay: true,
-        zoneOfAvoidance: true,
-        body: true,
-        craft: true,
-        earthScene: true,
-        starCatalog: true,
-        blackHole: true,
-        satellite: true,
-      }),
+      () => ['structure'],
     );
-    expect(structureDisabled.resolvePick(pick)).toBeNull();
-  });
-
-  it('extractRow and resolveFocusId ignore the gate — a disabled kind still resolves', () => {
-    const structureDisabled = composeSelectionRows(
-      () => [structureRow],
-      () => ({
-        galaxyCatalog: true,
-        structure: false,
-        milkyWay: true,
-        zoneOfAvoidance: true,
-        body: true,
-        craft: true,
-        earthScene: true,
-        starCatalog: true,
-        blackHole: true,
-        satellite: true,
-      }),
-    );
-    expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(
-      VIRGO_ROW,
-    );
-    expect(structureDisabled.resolveFocusId('galaxy-cluster-virgo')).toEqual({
+    expect(structureOff.resolvePick(pick)).toBeNull();
+    expect(structureOff.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(VIRGO_ROW);
+    expect(structureOff.resolveFocusId('galaxy-cluster-virgo')).toEqual({
       type: 'structure',
       id: 'virgo',
     });
-    expect(structureDisabled.focusIdOf({ type: 'structure', id: 'virgo' })).toBe(
-      'galaxy-cluster-virgo',
-    );
+    expect(structureOff.focusIdOf({ type: 'structure', id: 'virgo' })).toBe('galaxy-cluster-virgo');
   });
 });

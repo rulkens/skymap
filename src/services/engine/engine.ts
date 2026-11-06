@@ -281,7 +281,7 @@ export function createEngine(
   // (resolveFocusRefDeferringSaga, watchSelectionRowsSaga's gap-fill).
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
-    () => state.settings.picking.kinds,
+    () => state.settings.picking.off,
   );
   const bootstrapDeps: BootstrapDeps = {
     canvas,
