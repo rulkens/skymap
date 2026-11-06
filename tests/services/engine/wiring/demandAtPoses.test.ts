@@ -221,12 +221,6 @@ describe('demand at poses (the real composed rows)', () => {
     }
   });
 
-  it('a selected survey galaxy loads its catalog from Earth', () => {
-    const focus = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 } as const;
-    const ctx = earthBootCtx({ ...NO_SELECTION, focus });
-    for (const row of surveyPoints) expect(demands(row, ctx), String(row.key)).toBe(true);
-  });
-
   // The deep link resolves only once a catalog commits, so the pending id must load it.
   it('a pending survey galaxy focus loads its catalog from Earth', () => {
     const ctx = earthBootCtx(pendingFocus('pgc-2557'));

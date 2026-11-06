@@ -5,12 +5,9 @@ import { Source } from '../../../data/source';
  * Survey-wide Gaia stellar catalog — the bulk near-field stars, streamed as
  * one octree index plus chunk objects and drawn by the star renderer.
  *
- * The wide-field twin of the curated `famousStar` neighbourhood (FAMOUS_STAR_ENTRY):
- * that row seeds a hand-picked map from the body store; this one loads millions
- * of Gaia stars from disk. Like the volume rows (MCPM_ENTRY), it keeps its
- * presentation defaults in-row rather than in a separate settings table, so the
- * draw budget sits next to the `binBaseName` it governs. The 8–25 kpc handoff to
- * the procedural Milky-Way cloud is the Layer's `survey` band (`visibility.ts`).
+ * The wide-field twin of the curated `famousStar` neighbourhood (FAMOUS_STAR_ENTRY).
+ * The 8–25 kpc handoff to the procedural Milky-Way cloud is the Layer's `survey`
+ * band (`visibility.ts`).
  */
 export const GAIA_STARS_ENTRY = {
   type: 'starCatalog',

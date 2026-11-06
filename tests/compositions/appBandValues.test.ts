@@ -94,8 +94,7 @@ describe('seeded star sets dissolve from their own region', () => {
   });
 });
 
-// The literals are the deleted `starCrossfadeOpacity({ inner: 8_000, outer: 25_000 }, pc)`
-// at each distance: the band must keep the look it replaced, with no pop at either edge.
+// The literals are the old registry crossfade's values at each distance: the band must keep the look it replaced, with no pop at either edge.
 describe('Gaia survey stars', () => {
   it.each([
     [5, 1],

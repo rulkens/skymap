@@ -2,9 +2,8 @@
  * composeSelectionRows — the one `SelectionResolver` the saga context and the
  * pick path both read (D5, Ruling 4). `rowsOf` is called per resolution, not
  * cached, so a Layer row `createLayers` appends after this resolver is built
- * is visible immediately. Focus ids resolve by claim-then-decode: the one
- * claiming row is authoritative even when its `decode` returns null; two or
- * more claims is a boot-shape bug and throws rather than picking a winner.
+ * is visible immediately. Focus ids resolve by claim-then-decode
+ * (see `claimingSelectionRow`).
  *
  * `pickingOff` gates `resolvePick` ONLY — a deep link, a command-palette
  * row, or a restored URL selection must still resolve a kind a scene click
