@@ -48,9 +48,9 @@ a transitional `{ fn, release? }` variant, which PR B deletes.
 origin `hypot`. For a region id it returns `regionRelativeDistanceMpc`. For a body it returns the distance to
 that body, or Infinity when the body is missing. `bandValueOf` calls it.
 
-- [ ] Move the logic; `bandValueOf` keeps its signature. No new test: `tests/services/engine/presentation/bandValueOf*.test.ts` already covers every branch.
-- [ ] `npm test -- bandValueOf` passes.
-- [ ] Commit `refactor(visibility): bandDistanceMpc shared by fade and demand`.
+- [x] Move the logic; `bandValueOf` keeps its signature. No new test: `tests/services/engine/presentation/bandValueOf*.test.ts` already covers every branch.
+- [x] `npm test -- bandValueOf` passes.
+- [x] Commit `refactor(visibility): bandDistanceMpc shared by fade and demand`.
 
 ### Task 2: `AssetDemand` types, the evaluator and the build-time check
 
@@ -131,19 +131,19 @@ assertAssetDemands(rows: readonly AssetWiringRow[], entries: readonly Visibility
 Tests, using a small hand-built `entries` fixture with one `out` band, one `in` band, one `from`-body band and
 one label entry:
 
-- [ ] `'always' demands and never releases`
-- [ ] `'whenSearching' follows the palette and never releases`
-- [ ] `companionOf demands once the parent leaves idle and never releases`
-- [ ] `an object row releases when its switch is off`: switch off → `{ demand: false, release: true }`
-- [ ] `tiers excludes and releases outside the listed tiers`
-- [ ] `out edge loads within e·lead and releases beyond e·release`: assert at `e·lead·0.99` (demand), `e·lead·1.01` (neither), `e·release·1.01` (release)
-- [ ] `in edge loads beyond e/lead and releases below e/release`: the mirror values
-- [ ] `a from-body band measures from the body's live position`: a stub `deriveBodyStates` (or a real `simDays` where the body sits off-origin) gives a distance the origin `hypot` would get wrong
-- [ ] `alsoWhen lifts the scale gate but never the switch or tier`: far + palette open + `'searching'` → demand, no release; same with the switch off → release
-- [ ] `labelsCount: a label switch alone demands`
-- [ ] `assertAssetDemands` cases: one test per throw above
-- [ ] `npm test -- evaluateAssetDemand assertAssetDemands` passes.
-- [ ] Commit.
+- [x] `'always' demands and never releases`
+- [x] `'whenSearching' follows the palette and never releases`
+- [x] `companionOf demands once the parent leaves idle and never releases`
+- [x] `an object row releases when its switch is off`: switch off → `{ demand: false, release: true }`
+- [x] `tiers excludes and releases outside the listed tiers`
+- [x] `out edge loads within e·lead and releases beyond e·release`: assert at `e·lead·0.99` (demand), `e·lead·1.01` (neither), `e·release·1.01` (release)
+- [x] `in edge loads beyond e/lead and releases below e/release`: the mirror values
+- [x] `a from-body band measures from the body's live position`: a stub `deriveBodyStates` (or a real `simDays` where the body sits off-origin) gives a distance the origin `hypot` would get wrong
+- [x] `alsoWhen lifts the scale gate but never the switch or tier`: far + palette open + `'searching'` → demand, no release; same with the switch off → release
+- [x] `labelsCount: a label switch alone demands`
+- [x] `assertAssetDemands` cases: one test per throw above
+- [x] `npm test -- evaluateAssetDemand assertAssetDemands` passes.
+- [x] Commit.
 
 ### Task 3: The loop reads the evaluator; every row wrapped as `fn` (no behaviour change)
 
@@ -171,13 +171,13 @@ one label entry:
 +  demand: AssetDemand;
 ```
 
-- [ ] `reevaluateDemand.ts`: compute `const verdict = evaluateAssetDemand(row, ctx, state.visibilityEntries)` once per row. Use `verdict.demand` at `:36` and `:70`, and `verdict.release` at `:62`. The fetch-time re-check at `:45` re-evaluates with a fresh `buildDemandCtx(state)`. Keep every other guard as it is.
-- [ ] `expandCompanionRows` emits `demand: { companionOf: row.companionOf }`.
-- [ ] Every row: `demand: { fn: <its current demand>, release: <its current release> }`. This is mechanical, with no value changes.
-- [ ] Rewrite the `DemandCtx` header (`DemandCtx.d.ts:1-75`) from "what predicates read" to "the evaluator's input". Keep the per-surface why, cut the rest.
-- [ ] Tests: replace each `row.demand(ctx)` / `row.release?.(ctx)` call with `evaluateAssetDemand(row, ctx, entries).demand` / `.release`. Write no new tests; the existing assertions are the behaviour-identity proof.
-- [ ] `npm run typecheck && npm test` passes.
-- [ ] Commit `refactor(loading): rows declare AssetDemand; loop reads one evaluator`.
+- [x] `reevaluateDemand.ts`: compute `const verdict = evaluateAssetDemand(row, ctx, state.visibilityEntries)` once per row. Use `verdict.demand` at `:36` and `:70`, and `verdict.release` at `:62`. The fetch-time re-check at `:45` re-evaluates with a fresh `buildDemandCtx(state)`. Keep every other guard as it is.
+- [x] `expandCompanionRows` emits `demand: { companionOf: row.companionOf }`.
+- [x] Every row: `demand: { fn: <its current demand>, release: <its current release> }`. This is mechanical, with no value changes.
+- [x] Rewrite the `DemandCtx` header (`DemandCtx.d.ts:1-75`) from "what predicates read" to "the evaluator's input". Keep the per-surface why, cut the rest.
+- [x] Tests: replace each `row.demand(ctx)` / `row.release?.(ctx)` call with `evaluateAssetDemand(row, ctx, entries).demand` / `.release`. Write no new tests; the existing assertions are the behaviour-identity proof.
+- [x] `npm run typecheck && npm test` passes.
+- [x] Commit `refactor(loading): rows declare AssetDemand; loop reads one evaluator`.
 
 ### Task 4: Switch-only, constant and search rows as data
 
@@ -197,9 +197,9 @@ one label entry:
 - Galaxy points → `{ tiers: TIER_LADDER.filter((t) => tierTarget(source, t) !== 0) }`. Delete the `excluded` closure.
 - famousStarsMeta → `'always'`.
 
-- [ ] Add one test to each touched row file only where the declaration can be wrong: `galaxy points: SDSS lists no 'small' tier` (assert `tiers` excludes `small` for SDSS and includes it for 2MRS).
-- [ ] Update the existing switch tests in those files to also assert the switched-off release (`{ demand: false, release: true }`), which is the flagged change.
-- [ ] `npm test` passes. Commit.
+- [x] Add one test to each touched row file only where the declaration can be wrong: `galaxy points: SDSS lists no 'small' tier` (assert `tiers` excludes `small` for SDSS and includes it for 2MRS).
+- [x] Update the existing switch tests in those files to also assert the switched-off release (`{ demand: false, release: true }`), which is the flagged change.
+- [x] `npm test` passes. Commit.
 
 ### Task 5: Structure catalog as data
 
@@ -207,9 +207,9 @@ one label entry:
 
 **Value:** `{ shown: { address: 'structureRing', items: BULK_CATALOG_CATEGORIES }, labelsCount: true }`.
 
-- [ ] Check `hasSectionSwitch(settings, 'structures')`. If it is true, the section rule now applies (the flagged change), so add the test `section off stops the structure catalog demand`. If it is false, note in the commit body that nothing changed.
-- [ ] Keep or adapt `ring on`, `label only on` and `galaxy-group alone does not demand` (the last is the reason `BULK_CATALOG_CATEGORIES` exists).
-- [ ] `npm test -- structureAssetRows` passes. Commit.
+- [x] Check `hasSectionSwitch(settings, 'structures')`. If it is true, the section rule now applies (the flagged change), so add the test `section off stops the structure catalog demand`. If it is false, note in the commit body that nothing changed.
+- [x] Keep or adapt `ring on`, `label only on` and `galaxy-group alone does not demand` (the last is the reason `BULK_CATALOG_CATEGORIES` exists).
+- [x] `npm test -- structureAssetRows` passes. Commit.
 
 ### Task 6: localBubble as data
 
@@ -217,12 +217,12 @@ one label entry:
 
 **Value:** `{ near: { band: 'shell', edge: 'out', lead: 2, release: 4 } }`. With out[1] = `NEIGHBOURHOOD_RECEDE_KPC` = 10 kpc, load stays at < 20 kpc and release at > 40 kpc. Delete `DEMAND_DISTANCE_MPC` and `RELEASE_DISTANCE_MPC`.
 
-- [ ] Tests:
+- [x] Tests:
   - `loads inside 20 kpc`: demand at 19.9 kpc;
   - `holds between 20 and 40 kpc`: neither demand nor release at 30 kpc;
   - `releases beyond 40 kpc`: release at 40.1 kpc;
   - `releases when switched off at Earth`: the flagged change.
-- [ ] `npm test -- localBubbleAssetRows` passes. Commit.
+- [x] `npm test -- localBubbleAssetRows` passes. Commit.
 
 ### Task 7: Satellites as data
 
@@ -235,7 +235,7 @@ With `goneBeyondKm` = 600,000, that keeps load at < 900,000 km and release at > 
 `loadWithinKm` / `releaseBeyondKm` from `SATELLITE_FADES`, and delete `cameraEarthKm` / `anyClassShown`. Keep
 the module header's explanation of the selection arm.
 
-- [ ] Tests:
+- [x] Tests:
   - `loads within 900,000 km of Earth`;
   - `holds at 1,200,000 km`;
   - `releases beyond 1,500,000 km`.
@@ -243,7 +243,7 @@ the module header's explanation of the selection arm.
   - `palette open loads from anywhere and never releases`;
   - `a selected satellite loads from anywhere and never releases`;
   - `every class off releases even with the palette open`.
-- [ ] `npm test -- satellites` passes. Commit.
+- [x] `npm test -- satellites` passes. Commit.
 
 ## Definition of Done
 
