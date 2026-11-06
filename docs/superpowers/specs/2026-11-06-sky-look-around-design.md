@@ -56,9 +56,7 @@ LENS_MIN_DEG = 0.5; LENS_MAX_DEG = 120              // src/data/camera/
 // exit A — the climb is pose
 type SkyPose = { azimuthRad; altitudeRad; eyeHeightM }   // eyeHeightM ≥ SKY_EYE_HEIGHT_M
 
-// exit B — the push is memory, the lift is a framed clip
-MemOf.sky = SkyExitPush = { pushLn: number; lastPushMs: number }
-CameraArmCtx.nowMs: number
+// exit B — stateless: the lift is a framed clip, triggered off the stored lens alone
 step(…) → { …; clip?: ClipData }                          // the arm may start a clip
 body-arm clip channels carry `roll`                     // a body leg keeps its heading
 ```
@@ -72,7 +70,7 @@ body-arm clip channels carry `roll`                     // a body leg keeps its 
 | Sky row `step`/`nudge` cells | **Growth** | They decline today by design. |
 | `SkyPose` (A) | **Growth** | A field; readers are the row's channels, its two pose utils and the URL codec. Main writes no sky frame (only the decoder names one), so the `k` row breaks no link. |
 | Sky `release` (A) | **Growth** | The site arm's pattern: a pose-carried band (`siteCameraArm.ts` `release`). |
-| `MemOf.sky`, `CameraArmCtx.nowMs`, step `clip`, body-leg `roll` (B) | **Growth** | Additions. The body channels' `roll` makes a body leg lossless in the basis, which the row's doc already claimed; no production clip has a body leg. B needs no `release` change: the clip's end commit leaves the arm (§6.3). |
+| Step `clip`, body-leg `roll` (B) | **Growth** | Additions. The body channels' `roll` makes a body leg lossless in the basis, which the row's doc already claimed; no production clip has a body leg. B needs no `release` change: the clip's end commit leaves the arm (§6.3). |
 | `applyWheelZoom`, the world arm's at-rest lane | **Not touched** | A non-world wheel already routes to the arm's step. |
 | `replayInput`'s `tilt` swallow (`replayInput.ts:137`) | **Not touched** | The two-finger drag stays body-only. |
 
@@ -145,13 +143,11 @@ confirms it.
 
 ## 6. Exit B: the push and the lift (branch `sky-exit-push`)
 
-1. **Memory.** `MemOf.sky = SkyExitPush { pushLn, lastPushMs }`, empty `{ 0, −∞ }`. Wheel-out at
-   `LENS_MAX` adds `ln f` to `pushLn` if `ctx.nowMs − lastPushMs < SKY_EXIT_PUSH_DECAY_MS`, else
-   starts over from `ln f`. Wheel-in or a drag clears it.
-2. **Clock.** `CameraArmCtx.nowMs`, filled where the context is built (`stepCameraRuntime`), the
-   drain's own `nowMs`.
-3. **Lift (owner ruling 2026-11-06: no roll).** When `pushLn ≥ SKY_EXIT_PUSH_LN`, the step returns
-   `clip` (`skyExitLift`) and `replayInput` emits `clipStarted`; while it plays, the clip driver
+1. **Lift (owner ruling 2026-11-06: no roll; as little state as possible).** A wheel-out notch
+   (`spentZoomFactor(factor) > 1`) arriving while the lens is already at `LENS_MAX` (the notch the
+   clamp would eat whole) makes the step return `clip` (`skyExitLift`); the notch that only reaches
+   120° just widens the lens. The stored lens is the only state the trigger reads; the arm keeps no
+   memory (`MemOf.sky` is `null`). `replayInput` emits `clipStarted`; while it plays, the clip driver
    owns the display and every pose-moving step is swallowed. Two framed legs, so no leg lerps world
    angles (an eased world tween rolled through the nadir's gimbal point):
    - **Pitch**, `SKY_EXIT_PITCH_MS`, in the `{ sky }` frame: azimuth authored at its standing
@@ -162,15 +158,14 @@ confirms it.
      so the eye climbs the spot's radial. The lens eases `LENS_MAX → DEFAULT_FOV_Y_RAD` here.
    The arm does not release, and nothing commits at the start: the climb leg is a third frame the
    fold leaves alone, and the clip's end commit (a body-arm pose) leaves the sky regime.
-4. **Lens over the lift (R4).** The prep's `fov` channel (P2) carries it; the lens tween is
+2. **Lens over the lift (R4).** The prep's `fov` channel (P2) carries it; the lens tween is
    frame-free, so it opens no leg.
 
-5. **The navigator.** `nudge` carries no memory, so a navigator zoom stops at `LENS_MAX` in B;
-   only the wheel and pinch exit.
+3. **The navigator.** A navigator zoom stops at `LENS_MAX` in B (`nudge` returns no clip); only
+   the wheel and pinch exit.
 
-**Expected feel.** Out to 120°; a few more notches show nothing; then the look tips down to your
-feet and the eye climbs, ending straight down on the park at 60°. A pause longer than the decay
-starts the count over.
+**Expected feel.** Out to 120°; one more notch and the look tips down to your feet and the eye
+climbs, ending straight down on the park at 60°.
 
 ## 7. Tests (acceptance)
 
@@ -192,8 +187,7 @@ Test names are the contract.
   - `toParent keeps the climbed eye` — the body-arm eye sits at ground + `eyeHeightM`.
   - codec: `sky frame with eyeHeightM round-trips`; a 6-field `k` row or `eyeHeightM < 1.7` decodes null.
 - B, `skyCameraArm.test.ts`:
-  - `wheel-out at the widest lens releases only once SKY_EXIT_PUSH_LN accumulates`
-  - `any wheel-in, drag or rest clears the exit push`
+  - `wheel-out at the widest lens starts the lift; the notch that reaches it only widens`
   - `the exit lift ends above the spot looking down at the default lens`
 - B, `stepCameraRuntime.test.ts` (`the sky exit lift`):
   - `keeps the horizon level the whole way, pitching down at a fixed azimuth first`
@@ -220,6 +214,6 @@ perf pass at 0.5° (sky-mode §7). The sky-mode spec must take this spec's arm s
 
 ## 10. Left to the builder
 
-- B's `SKY_EXIT_PUSH_LN`, `SKY_EXIT_PUSH_DECAY_MS`, `SKY_EXIT_ALTITUDE_M` and the two phase durations,
+- B's `SKY_EXIT_ALTITUDE_M` and the two phase durations,
   eye-checked.
 - Where the lens constants live under `src/data/camera/` (one symbol per file).

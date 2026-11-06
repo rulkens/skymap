@@ -449,9 +449,7 @@ export function createEngine(
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: register.winner,
-          // Only the body arm's memory is a surface gesture.
-          gesture:
-            gesture.value !== null && 'gesture' in gesture.value ? gesture.value.gesture : null,
+          gesture: gesture.value?.gesture ?? null,
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),

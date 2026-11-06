@@ -234,7 +234,6 @@ describe('stepCameraRuntime', () => {
           frustum: symmetricFrustum(Math.PI / 3, 1),
           fovYRad: Math.PI / 3,
           tuning: intent.tuning,
-          nowMs: 0,
         },
       });
 
@@ -981,7 +980,7 @@ describe('the sky exit lift', () => {
     );
     h.store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
     h.frame(2);
-    for (let i = 0; i < 40 && h.store.getState().camera.clip === null; i++) h.wheel(300);
+    h.wheel(300);
     const clip = h.store.getState().camera.clip;
     const shown: FramedCameraPose[] = [];
     for (let i = 0; i < 400 && h.store.getState().camera.clip !== null; i++) {

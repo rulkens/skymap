@@ -24,8 +24,6 @@ import { CONST_J2000 } from '../../../../../../src/data/time/constJ2000';
 import { LENS_MAX_DEG } from '../../../../../../src/data/camera/lensMaxDeg';
 import { LENS_MIN_DEG } from '../../../../../../src/data/camera/lensMinDeg';
 import { degToRad } from '../../../../../../src/utils/math/degToRad';
-import { SKY_EXIT_PUSH_LN } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitPushLn';
-import { SKY_EXIT_PUSH_DECAY_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitPushDecayMs';
 import { SKY_EXIT_ALTITUDE_M } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitAltitudeM';
 import { DEFAULT_FOV_Y_RAD } from '../../../../../../src/services/engine/camera/framing/cameraFraming';
 import { evaluateFramedClip } from '../../../../../../src/services/engine/camera/clips/evaluateClip';
@@ -33,7 +31,6 @@ import { decodeBodyFixedChannels } from '../../../../../../src/services/engine/c
 import { SKY_EXIT_PITCH_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitPitchMs';
 import { SKY_EXIT_CLIMB_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitClimbMs';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
-import type { SkyExitPush } from '../../../../../../src/@types/camera/arms/SkyExitPush';
 import type { InputStep } from '../../../../../../src/@types/camera/input/InputStep';
 import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
 import type { FrameOf } from '../../../../../../src/@types/camera/arms/FrameOf';
@@ -80,7 +77,6 @@ function ctxFor(focusBodyId: SceneBodyId | null, calls: unknown[][] = []): Camer
     frustum: symmetricFrustum(Math.PI / 3, 1),
     fovYRad: Math.PI / 3,
     tuning: DEFAULT_CAMERA_TUNING,
-    nowMs: 0,
   };
 }
 
@@ -304,11 +300,12 @@ describe('the sky arm', () => {
       ROW.emptyMemory,
       EMPTY_TILT_MEMORY,
       start,
-      wheel(1.25),
-      withLens(degToRad(LENS_MAX_DEG)),
+      wheel(0.8),
+      withLens(degToRad(LENS_MIN_DEG)),
     );
     expect(out.pose).toBe(start.pose);
     expect(out.fovYRad).toBeUndefined();
+    expect(out.clip).toBeUndefined();
     const edge = ROW.step(
       ROW.emptyMemory,
       EMPTY_TILT_MEMORY,
@@ -350,77 +347,28 @@ describe('the sky arm', () => {
   });
 });
 
-describe('the sky exit push', () => {
+describe('the sky exit lift', () => {
   const LENS_MAX = degToRad(LENS_MAX_DEG);
-  // A quarter-and-a-bit of the push per notch, so the counts hold whatever it is tuned to.
-  const F = Math.exp(SKY_EXIT_PUSH_LN / 3.5);
-  const atMax = (nowMs: number): CameraArmCtx => ({ ...withLens(LENS_MAX), nowMs });
   const start = framed(AZ, 0.3);
-  /** Notches of F every `gapMs`, from an empty push, until the arm hands back the lift. */
-  const notchesToLift = (gapMs: number, max = 100): number => {
-    let memory: SkyExitPush = ROW.emptyMemory;
-    for (let i = 1; i <= max; i++) {
-      const out = ROW.step(memory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(i * gapMs));
-      expect(out.pose).toBe(start.pose);
-      expect(out.fovYRad).toBeUndefined();
-      if (out.clip !== undefined) {
-        expect(out.memory).toBe(ROW.emptyMemory);
-        return i;
-      }
-      memory = out.memory;
-    }
-    return Infinity;
-  };
+  const atMax = withLens(LENS_MAX);
 
-  it('wheel-out at the widest lens releases only once SKY_EXIT_PUSH_LN accumulates', () => {
-    expect(notchesToLift(SKY_EXIT_PUSH_DECAY_MS / 4)).toBe(
-      Math.ceil(SKY_EXIT_PUSH_LN / Math.log(F)),
-    );
-    // Below the widest lens the notch widens the lens and pushes nothing.
-    const wider = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(0));
-    const below = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(F), {
-      ...withLens(degToRad(119)),
-      nowMs: 0,
-    });
-    expect(wider.memory.pushLn).toBeCloseTo(Math.log(F), 12);
-    expect(below.fovYRad).toBe(LENS_MAX);
-    expect(below.memory).toBe(ROW.emptyMemory);
-    expect(below.clip).toBeUndefined();
-  });
-
-  it('any wheel-in, drag or rest clears the exit push', () => {
-    const one = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(1000)).memory;
-    expect(one.pushLn).toBeGreaterThan(0);
-    const after = (input: InputStep, nowMs: number) =>
-      ROW.step(one, EMPTY_TILT_MEMORY, start, input, atMax(nowMs)).memory;
-    expect(after(wheel(1 / F), 1100)).toBe(ROW.emptyMemory);
-    expect(after(drag(5, 5), 1100)).toBe(ROW.emptyMemory);
-    // A notch inside the decay adds to the push; one after a longer rest starts it over.
-    expect(after(wheel(F), 1000 + SKY_EXIT_PUSH_DECAY_MS - 1).pushLn).toBeCloseTo(
-      2 * Math.log(F),
-      12,
-    );
-    expect(after(wheel(F), 1000 + SKY_EXIT_PUSH_DECAY_MS).pushLn).toBeCloseTo(Math.log(F), 12);
-    // Spaced past the decay, the push never fills.
-    expect(notchesToLift(SKY_EXIT_PUSH_DECAY_MS, 20)).toBe(
-      SKY_EXIT_PUSH_LN <= Math.log(F) ? 1 : Infinity,
-    );
+  it('wheel-out at the widest lens starts the lift; the notch that reaches it only widens', () => {
+    const reaching = ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(1.1), withLens(degToRad(119)));
+    expect(reaching.fovYRad).toBe(LENS_MAX);
+    expect(reaching.clip).toBeUndefined();
+    const out = ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(1.1), atMax);
+    expect(out.pose).toBe(start.pose);
+    expect(out.fovYRad).toBeUndefined();
+    expect(out.clip).toBeDefined();
   });
 
   it('the exit lift ends above the spot looking down at the default lens', () => {
-    let memory: SkyExitPush = ROW.emptyMemory;
-    let lift: ClipData | undefined;
-    for (let i = 1; lift === undefined; i++) {
-      const out = ROW.step(memory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(i));
-      memory = out.memory;
-      lift = out.clip;
-    }
-    const ctx = atMax(0);
+    const lift = ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(1.1), atMax).clip!;
     const end = evaluateFramedClip(lift, (SKY_EXIT_PITCH_MS + SKY_EXIT_CLIMB_MS) / 1000, {
-      bodies: ctx.bodies,
+      bodies: atMax.bodies,
       frameBasis: B,
       playback: {},
-      terrainHeightAt: ctx.terrainHeightAt,
+      terrainHeightAt: atMax.terrainHeightAt,
     });
     expect(end.frame).toEqual({ body: EARTH });
     expect(end.channels.fov).toBeCloseTo(DEFAULT_FOV_Y_RAD, 12);
@@ -437,7 +385,7 @@ describe('the sky exit push', () => {
     for (let i = 0; i < 3; i++) expect(m[6 + i]).toBeCloseTo(-up[i]!, 7);
     // The map's heading is the sky azimuth: screen-up is the standing basis's horizontal
     // forward, to the precision of the leg's crossing through world Mpc.
-    const standing = ROW.toParent(framed(AZ, 0), ctx).pose.basisLocal;
+    const standing = ROW.toParent(framed(AZ, 0), atMax).pose.basisLocal;
     for (let i = 0; i < 3; i++) expect(m[3 + i]).toBeCloseTo(standing[6 + i]!, 6);
   });
 });
