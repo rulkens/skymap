@@ -137,10 +137,10 @@ A small hand-curated catalog of well-known galaxies (Messier + NGC greatest-hits
 ```bash
 npm run build-tiers            # the survey .bin files (build-famous's own docblock requires this order)
 npm run fetch-famous-images    # downloads + processes thumbnails; idempotent, --force to re-fetch
-npm run build-famous           # public/data/galaxy-catalog/v10/famous.bin + famous_galaxies_meta.json
+npm run build-famous           # public/data/galaxy-catalog/v10/famous.bin + famous_galaxies_meta.json + famousGalaxyNames.generated.ts
 ```
 
-To add a galaxy, edit `data/seeds/famous_galaxies.seed.json` (`id`, `names`, `ra`/`dec`, `distanceMpc`, `diameterKpc`, `type`, `description`) and re-run the last two steps. Skip this section entirely for survey-only data; the renderer works without `famous.bin`.
+To add a galaxy, edit `data/seeds/famous_galaxies.seed.json` (`id`, `names`, `ra`/`dec`, `distanceMpc`, `diameterKpc`, `type`, `description`) and re-run the last two steps, then commit the regenerated `src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated.ts`. That table compiles each galaxy's id and names into the bundle in `famous.bin` record order, so cards, labels and `famous-<id>` links name a galaxy before the sidecar loads; the sidecar keeps the description, type and calibration. Skip this section entirely for survey-only data; the renderer works without `famous.bin`.
 
 A parallel curated list of well-known stars follows the same seed → build shape: `data/seeds/famous_stars.seed.json` and `data/seeds/sun.seed.json` (one schema, one catalog each) drive `npm run build-famous-stars`, which emits a generated render table per seed (`famousStars.generated.ts`, `sun.generated.ts`) plus, over both seeds together, the Gaia/Hipparcos dedup ids and the shared `famous_stars_meta.json` sidecar.
 
