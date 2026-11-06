@@ -74,9 +74,6 @@ caption: {
 
 ## Tweaks
 
-- Earth's noon sky renders dark navy at ground level (backlog
-  `2026-11-04-earth-noon-sky-dark-at-ground.md`); until that is fixed, noon →
-  night reads as dusk → night.
 - From about 4° of solar altitude before sunset the terrain tiles draw blank
   grey-white (backlog `2026-11-06-earth-night-ground-haze.md`), so the sunset
   pitch keeps the ground to a thin strip.
