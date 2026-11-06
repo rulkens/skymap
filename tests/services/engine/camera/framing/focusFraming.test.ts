@@ -35,6 +35,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../../fixtures/starRowDriver';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { blackHolePickCode } from '../../../../support/layerPickCodes';
 
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 
@@ -164,7 +165,10 @@ describe('focusFraming', () => {
   });
 
   const sgrAStarRow = () =>
-    blackHoleSelectionRow().extractRow({ type: 'blackHole', id: 'sgr-a-star' }, 0)!;
+    blackHoleSelectionRow(blackHolePickCode()).extractRow(
+      { type: 'blackHole', id: 'sgr-a-star' },
+      0,
+    )!;
 
   it('blackHole arm — focusDistanceRadii override lands at a fixed radius multiple, bypassing screen-fill', () => {
     // Sgr A*'s arrival distance is an r_s count the user framed live, not a

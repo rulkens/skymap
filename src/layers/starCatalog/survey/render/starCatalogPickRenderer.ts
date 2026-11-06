@@ -1,7 +1,7 @@
 /**
  * starCatalogPickRenderer — the r32uint pick twin of `starCatalogRenderer`. It
  * draws the frame cut's LEAF list (an aggregate has no single star to name),
- * stamping `(SOURCE_GAIA_STARS << 26) | recordIdx`; a leaf is listed only while
+ * stamping `(pickCode << 26) | recordIdx`; a leaf is listed only while
  * on screen with fade above zero, so what clicks is what drew. Layouts, records
  * and lists are the visual renderer's (`pickResources`); it owns only its
  * `StarUniforms` (`pickPass = 1`), since a pick draw writing the visual camera
@@ -23,6 +23,7 @@ import {
   BRIGHTNESS_FLOAT_INDEX,
   GLOW_OVERLAP_FLOAT_INDEX,
   PICK_PASS_U32_INDEX,
+  PICK_CODE_U32_INDEX,
   writeStarFocus,
 } from './starCatalogLayout';
 
@@ -31,6 +32,8 @@ export function createStarCatalogPickRenderer(
   resources: StarCatalogPickResources,
   /** The NEAR0 slab's depth convention (`SLAB_REVERSED_Z`). */
   reversedZ: boolean,
+  /** The survey's pick code; one survey source, so it is written once here. */
+  pickCode: number,
 ): StarCatalogPickRenderer {
   const { cameraBgl, drawBgl, recordsBgl } = resources;
 
@@ -72,7 +75,9 @@ export function createStarCatalogPickRenderer(
   // `pickPass`, which must be the integer 1, not a float's bit pattern.
   const uniformScratch = new ArrayBuffer(STAR_UNIFORM_BYTES);
   const uniformF32 = new Float32Array(uniformScratch);
-  new Uint32Array(uniformScratch)[PICK_PASS_U32_INDEX] = 1;
+  const uniformU32 = new Uint32Array(uniformScratch);
+  uniformU32[PICK_PASS_U32_INDEX] = 1;
+  uniformU32[PICK_CODE_U32_INDEX] = pickCode;
   // The pick fragment ignores intensity; 1.0 keeps the shared vertex math finite.
   uniformF32[BRIGHTNESS_FLOAT_INDEX] = 1.0;
   uniformF32[GLOW_OVERLAP_FLOAT_INDEX] = 1.0;

@@ -45,12 +45,12 @@ function fakePlanner(name: string, scope: SectionScope = 'once'): FrameContentPl
     ? {
         name,
         scope: 'once',
-        plan: vi.fn(() => ({ value: undefined, awake: false, settling: false })),
+        plan: vi.fn(() => ({ value: undefined, awake: false, settling: false, loading: false })),
       }
     : {
         name,
         scope: 'perView',
-        plan: vi.fn(() => ({ value: undefined, awake: false, settling: false })),
+        plan: vi.fn(() => ({ value: undefined, awake: false, settling: false, loading: false })),
       };
 }
 

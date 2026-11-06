@@ -52,6 +52,9 @@ import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetric
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import { galaxyRowRuntime } from '../../../support/layerPickCodes';
+import { testPickCode } from '../../../support/testPickCode';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 type CallLog = string[];
 
@@ -302,7 +305,7 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',
-    plan: () => ({ value: [], awake: false, settling: false }),
+    plan: () => ({ value: [], awake: false, settling: false, loading: false }),
   },
   ...stubPlannersFor(PRELUDE),
 ];
@@ -320,6 +323,11 @@ function makeInput(
   // The galaxy passes close over their Layer's runtime. Empty planner outputs make both disk
   // passes report `enabled: false`, keeping the fixtures on point + milky-way ordering.
   const galaxyRuntime = {
+    // An SDSS catalog, for the selected-highlight case.
+    ...galaxyRowRuntime({
+      catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]),
+      famousMeta: [],
+    }),
     pointRenderer: galaxyPointRenderer,
     proceduralDisks: { lastOutput: { instances: [] } },
     texturedDisks: { lastOutput: { disks: [] } },
@@ -652,7 +660,7 @@ describe('renderFrame', () => {
     });
     renderFrame(fx2.input);
     const draw = fx2.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>;
-    const expected = packSelection(Source.SDSS, 42);
+    const expected = packSelection(testPickCode('galaxyCatalog')('sdss'), 42);
     const drawSettings = draw.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(expected);
   });

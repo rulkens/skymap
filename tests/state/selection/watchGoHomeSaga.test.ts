@@ -37,6 +37,7 @@ import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyPickCodes } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -70,7 +71,7 @@ describe('watchGoHomeSaga', () => {
     mw.setContext({
       cameraRuntime: () => cameraRuntime(),
       selection: composeSelectionRows(
-        () => [bodySelectionRow()],
+        () => [bodySelectionRow({ pickCodes: bodyPickCodes() })],
         () => ALL_KINDS_ENABLED,
       ),
     });

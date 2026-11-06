@@ -30,10 +30,11 @@ import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
-import { galaxyRowRuntime } from '../../support/selectionResolverOver';
+import { galaxyRowRuntime } from '../../support/layerPickCodes';
 import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import { bodyPickCodes } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -77,7 +78,10 @@ describe('watchTierSaga', () => {
     sagaMiddleware.run(watchTierSaga);
     sagaMiddleware.setContext({
       selection: composeSelectionRows(
-        () => [bodySelectionRow(), galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))],
+        () => [
+          bodySelectionRow({ pickCodes: bodyPickCodes() }),
+          galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies)),
+        ],
         () => ALL_KINDS_ENABLED,
       ),
     });

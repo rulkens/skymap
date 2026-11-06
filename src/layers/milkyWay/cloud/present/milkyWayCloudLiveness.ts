@@ -16,16 +16,20 @@ import { milkyWayFadeAlpha } from './milkyWayFadeAlpha';
 import { visibilityEntryOf } from '../../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../../../../services/engine/presentation/emphasisOf';
 import { milkyWayVisibility } from '../../visibility';
-import { MILKY_WAY_PICK_ID } from '../../picking/present/milkyWayPickId';
+import { milkyWayPickId } from '../../picking/present/milkyWayPickId';
 
 const DISK_ENTRY = visibilityEntryOf(milkyWayVisibility, 'milkyWayDisk');
 
-export function deriveMilkyWayCloudAlpha(ctx: FrameView, fade: number): number | null {
+export function deriveMilkyWayCloudAlpha(
+  ctx: FrameView,
+  fade: number,
+  pickCode: number,
+): number | null {
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   const alpha =
     milkyWayFadeAlpha(camDistMpc, ctx.drawPxPerRad) *
     fade *
-    emphasisOf(DISK_ENTRY, ctx.snapshot, MILKY_WAY_PICK_ID);
+    emphasisOf(DISK_ENTRY, ctx.snapshot, milkyWayPickId(pickCode));
 
   return alpha > 0 ? alpha : null;
 }

@@ -121,5 +121,5 @@ surface tiles, and its `heightAt` is the ground core's camera reads. It declares
 Solar System exhibit. `missions` draws its craft: the rows live in
 `missions/bodies/`, and its own mesh, contact-shadow and glint passes draw
 through core's one mesh renderer handle. `earthScenes` declares the Earth scene rows (they
-fold into the tables), its own `earthScene` selection kind and palette row, and draws Søndermarken: its mesh through core's one mesh handle, its
+join the tables), its own `earthScene` selection kind and palette row, and draws Søndermarken: its mesh through core's one mesh handle, its
 glint through its own renderer.

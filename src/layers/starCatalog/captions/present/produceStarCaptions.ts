@@ -9,6 +9,7 @@
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import type { CaptionSourceRow } from '../@types/CaptionSourceRow';
+import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { ForegroundCaption } from '../../../../services/engine/presentation/foregroundCaption';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
@@ -29,36 +30,39 @@ const CAPTION_SOURCE_ROWS: readonly CaptionSourceRow[] = [
     : [],
 );
 
-// `sceneBodyStates` returns the SAME Map by reference while `simDays` is
-// unchanged and nothing moving is selected (`placeLiveSelection`), so this
-// identity check is a free change-detector — the same
-// contract `produceSceneBodyCaptions.ts`'s `baseLabelsFor` keeps. One caption
-// list per `CAPTION_SOURCE_ROWS` row, index-aligned, so a caption finds its item.
-let cachedStates: ReadonlyMap<string, BodyState> | undefined;
-let cachedCaptions: readonly (readonly ForegroundCaption[])[] = [];
+export function produceStarCaptions(
+  runtime: Pick<StarCatalogRuntime, 'pickCodes'>,
+): LayerScreenLabel<'starCatalog'>['produceLabels'] {
+  // `sceneBodyStates` returns the SAME Map by reference while `simDays` is
+  // unchanged and nothing moving is selected (`placeLiveSelection`), so this
+  // identity check is a free change-detector — the same
+  // contract `produceSceneBodyCaptions.ts`'s `baseLabelsFor` keeps. One caption
+  // list per `CAPTION_SOURCE_ROWS` row, index-aligned, so a caption finds its item.
+  let cachedStates: ReadonlyMap<string, BodyState> | undefined;
+  let cachedCaptions: readonly (readonly ForegroundCaption[])[] = [];
 
-function baseCaptionsFor(
-  bodyStates: ReadonlyMap<string, BodyState>,
-): readonly (readonly ForegroundCaption[])[] {
-  if (bodyStates === cachedStates) return cachedCaptions;
-  cachedCaptions = CAPTION_SOURCE_ROWS.map((row) =>
-    row.stars.map((star, seedIndex) => ({
-      ...bodyCaption(
-        star,
-        bodyFootprintRadiusM(star),
-        bodyStates.get(star.id)!.positionMpc,
-        star.color,
-        row.priority,
-        packSelection(row.source, seedIndex + PICK_SENTINEL_OFFSET),
-      ),
-      revealBand: row.revealBand,
-    })),
-  );
-  cachedStates = bodyStates;
-  return cachedCaptions;
-}
+  function baseCaptionsFor(
+    bodyStates: ReadonlyMap<string, BodyState>,
+  ): readonly (readonly ForegroundCaption[])[] {
+    if (bodyStates === cachedStates) return cachedCaptions;
+    cachedCaptions = CAPTION_SOURCE_ROWS.map((row) => {
+      const code = runtime.pickCodes.pickCodeOf(row.source);
+      return row.stars.map((star, seedIndex) => ({
+        ...bodyCaption(
+          star,
+          bodyFootprintRadiusM(star),
+          bodyStates.get(star.id)!.positionMpc,
+          star.color,
+          row.priority,
+          packSelection(code, seedIndex + PICK_SENTINEL_OFFSET),
+        ),
+        revealBand: row.revealBand,
+      }));
+    });
+    cachedStates = bodyStates;
+    return cachedCaptions;
+  }
 
-export function produceStarCaptions(): LayerScreenLabel<'starCatalog'>['produceLabels'] {
   return (state, ctx, fade) => {
     const composeCtx = captionComposeContextOf(state, ctx);
 

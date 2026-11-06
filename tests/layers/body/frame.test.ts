@@ -26,10 +26,12 @@ function snapshotAt(nowMs: number): ReadyFrameContext {
 }
 
 describe('surfaceTilePlanner', () => {
-  it("the planner's wake and settling votes hold while the manifest is in flight", () => {
+  it("the planner's wake and loading votes hold while the manifest is in flight, never settling", () => {
     // Bug caught: the plan's wake vote never reaching the loop, or the cold-load gate
     // (sceneSettled) reading a streaming surface as settled. A landing tile wakes the
     // loop itself; a landing manifest does not, so only this vote carries it through the fetch.
+    // A `settling` vote re-baked the solar-system sky cubemap every frame a tile was in
+    // flight (+36 ms GPU), and tiles draw in no sky capture.
     const apply = vi.fn();
     const residency = {
       manifest: () => ({ status: 'pending', value: null }),
@@ -58,7 +60,8 @@ describe('surfaceTilePlanner', () => {
     const result = surfaceTilePlanner(runtime).plan(snapshotAt(0), [view], STATE);
 
     expect(result.awake).toBe(true);
-    expect(result.settling).toBe(true);
+    expect(result.loading).toBe(true);
+    expect(result.settling).toBe(false);
     expect(runtime.surfaceTiles.plan.awake).toBe(true);
     expect(apply).toHaveBeenCalledWith(runtime.surfaceTiles.plan);
   });

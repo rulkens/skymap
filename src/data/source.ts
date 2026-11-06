@@ -1,9 +1,9 @@
 /**
- * Stable numeric tag for every data source: a `.bin` byte for galaxy catalog rows,
- * the upper 6 bits of the pick word (63 is the all-ones sentinel, `selectionEncoding.ts`),
- * and a registry key. Wire-format contract, so it runs over the comment budget.
+ * Stable numeric tag for every data source: a `.bin` byte for galaxy catalog rows and a
+ * registry key. Never a pick code: the pick word's 6-bit codes come from the runtime
+ * allocator (`createPickCodeAllocator`). Wire-format contract, so it runs over the comment budget.
  *
- * Append, never renumber: values are baked into every `.bin` and saved selection URL.
+ * Append, never renumber: values are baked into every `.bin`.
  * Retired and unassigned: 0, 10, 12-14. Insertion order here is cosmetic; the VALUE is the contract.
  */
 export const Source = {
@@ -40,8 +40,7 @@ export const Source = {
   /** DESI DR1 Sloan Great Wall: depth-bounded ellipsoid union (`makeEllipsoidUnionFilter`), pure BGS; own `.bin`. */
   DesiSgw: 20,
   /**
-   * Curated nearby-star map. Not persisted (identity is the seed id) but pickable:
-   * star layers stamp it via `drawPick`, including the Sun's dot, since they share one seed table.
+   * Curated nearby-star map; identity is the seed id, including the Sun's dot, since the star layers share one seed table.
    */
   FamousStar: 21,
   /** True-scale Solar-System bodies; pickable via `drawPick`, not persisted. */
@@ -52,14 +51,11 @@ export const Source = {
   GaiaStars: 24,
   /** True-3D constellation figures (`constellations.json`); registry key only. */
   Constellations: 25,
-  /** The Sun, its own row so the star map's gate stays a membership test; its pick carries FamousStar (21), nothing stamps 26. */
+  /** The Sun, its own row so the star map's gate stays a membership test. */
   Sun: 26,
-  /** Sagittarius A\*: draws nothing, never stamped into the pick texture. */
+  /** Sagittarius A\*: draws nothing. */
   SgrAStar: 27,
-  /**
-   * The 39 bound S-stars. Own code because the pick id indexes a seed table:
-   * sharing FamousStar's would renumber every famous star.
-   */
+  /** The 39 bound S-stars; their own seed table. */
   SStar: 28,
   /** Zone-of-avoidance band; pickable. */
   ZoneOfAvoidance: 29,
@@ -69,13 +65,13 @@ export const Source = {
   McpmWorkbench: 31,
   /** All missions-Layer craft under one code; the pick index runs over `MISSION_CRAFT_IDS`. */
   Craft: 32,
-  /** Milky Way structure markers drawn by the NEAR0 marker pass; same encoding as GalaxyCluster, seed-only. Codes 39..62 remain. */
+  /** Milky Way structure markers drawn by the NEAR0 marker pass; same encoding as GalaxyCluster, seed-only. */
   OpenCluster: 33,
   GlobularCluster: 34,
   Nebula: 35,
   GcCluster: 36,
   /** The satellites Layer's points; the pick index runs over the day's catalog. */
   Satellite: 37,
-  /** Vesta, Ceres and Bennu's label checkbox; they pick as `Planet` rows, nothing stamps 38. */
+  /** Vesta, Ceres and Bennu's label checkbox; they pick as `Planet` rows. */
   SmallBody: 38,
 } as const;

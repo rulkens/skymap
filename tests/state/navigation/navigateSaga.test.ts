@@ -57,6 +57,7 @@ import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { Transition } from '../../../src/@types/navigation/Transition';
+import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -86,7 +87,11 @@ function build() {
   });
   mw.setContext({
     selection: composeSelectionRows(
-      () => [bodySelectionRow(), structureSelectionRow(EMPTY_STRUCTURES), milkyWaySelectionRow()],
+      () => [
+        bodySelectionRow({ pickCodes: bodyPickCodes() }),
+        structureSelectionRow(structureRowRuntime(EMPTY_STRUCTURES)),
+        milkyWaySelectionRow(milkyWayPickCode()),
+      ],
       () => ALL_KINDS_ENABLED,
     ),
     cameraRuntime: () => ({

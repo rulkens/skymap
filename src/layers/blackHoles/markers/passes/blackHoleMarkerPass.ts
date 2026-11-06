@@ -14,7 +14,6 @@ import type { BodyPointPick } from '../../../../@types/rendering/bodyPickRendere
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BlackHolesRuntime } from '../../@types/BlackHolesRuntime';
 import { BLACK_HOLES } from '../data/blackHoles';
-import { Source } from '../../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { GLINT_MIN_BRIGHTNESS } from '../../../../data/rendering/glintMinBrightness';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
@@ -90,7 +89,7 @@ export function blackHoleMarkerPass(runtime: BlackHolesRuntime): ContentPass {
             positionMpc[2] - camPos[2],
           ] as Vec3,
           // The code + row index `blackHoleSelectionRow` resolves.
-          packedId: packSelection(Source.SgrAStar, rowIndex + PICK_SENTINEL_OFFSET),
+          packedId: packSelection(runtime.pickCode, rowIndex + PICK_SENTINEL_OFFSET),
         });
       });
       if (points.length === 0) return;

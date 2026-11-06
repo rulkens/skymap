@@ -1178,7 +1178,8 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     about: 'app',
     text: 'Measured on 7 October 2026 as our server sent them, compressed, the catalogues and the density grid that the app fetches as it opens above Earth came to about 25 megabytes at the small size, 70 at the medium and 220 at the large. The pictures the app opens with, most of them Earth’s and the Moon’s, load with them: about 6 megabytes at the small size and 18 at the medium, and a switch from medium to large fetched 37 more. Other planets and moons load as you visit them.',
     source: 'https://skymap-data.rulkens.com/data/manifest.json',
-    sourceLabel: 'the published data manifest, which names the files; their sizes are the lengths our server gave for each on 7 October 2026',
+    sourceLabel:
+      'the published data manifest, which names the files; their sizes are the lengths our server gave for each on 7 October 2026',
     checked: CHECKED,
   },
 ];

@@ -6,6 +6,9 @@ import { MILKY_WAY_PICK_MIN_SIZE_PX } from '../../../../../src/layers/milkyWay/p
 import { Source } from '../../../../../src/data/source';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
 
+// Not a catalog value: the uniform must carry what the caller passes.
+const PICK_CODE = 37;
+
 // Null-device pattern, mirrors structureMarkerRenderer.test.ts.  The GPU-
 // backed pick round-trip (a click at the galactic centre decodes to
 // Source.MilkyWay) is covered by the DoD manual smoke test — the existing
@@ -19,7 +22,7 @@ const newRenderer = () => {
     canvas: null as unknown as HTMLCanvasElement,
     hdrCapable: false,
   };
-  return createMilkyWayPickRenderer(ctx, null as unknown as FadeUniformsBgl, false);
+  return createMilkyWayPickRenderer(ctx, null as unknown as FadeUniformsBgl, false, PICK_CODE);
 };
 
 // Stub device with a tracked writeBuffer — lets the construction test
@@ -95,7 +98,7 @@ describe('milkyWayPickRenderer (stub device)', () => {
       canvas: null as unknown as HTMLCanvasElement,
       hdrCapable: false,
     };
-    createMilkyWayPickRenderer(ctx, {} as FadeUniformsBgl, false);
+    createMilkyWayPickRenderer(ctx, {} as FadeUniformsBgl, false, PICK_CODE);
 
     expect(writeBufferCalls).toHaveLength(1);
     const { offset, data } = writeBufferCalls[0]!;
@@ -109,8 +112,8 @@ describe('milkyWayPickRenderer (stub device)', () => {
     expect(f32[0]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[0]);
     expect(f32[1]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[1]);
     expect(f32[2]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[2]);
-    // u32 source code at byte 12.
-    expect(u32[3]).toBe(Source.MilkyWay);
+    // u32 pick code at byte 12.
+    expect(u32[3]).toBe(PICK_CODE);
     // f32 disc world radius at byte 16 — the value the vertex shader
     // projects to apparent pixels.
     expect(f32[4]).toBeCloseTo(MILKY_WAY_RADIUS_MPC);
@@ -132,7 +135,7 @@ describe('milkyWayPickRenderer (stub device)', () => {
       canvas: null as unknown as HTMLCanvasElement,
       hdrCapable: false,
     };
-    const r = createMilkyWayPickRenderer(ctx, {} as FadeUniformsBgl, false);
+    const r = createMilkyWayPickRenderer(ctx, {} as FadeUniformsBgl, false, PICK_CODE);
 
     writeBufferCalls.length = 0; // discard the construction write
     const pass = makeStubPass();

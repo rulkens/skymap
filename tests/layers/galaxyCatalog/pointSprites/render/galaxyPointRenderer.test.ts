@@ -50,6 +50,7 @@ function idOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
 // same pure function the worker would call — bit-identical behaviour without a
 // structured-clone round-trip.
 const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(input);
+const PICK_CODE_OF = (source: GalaxyCatalogSourceType): number => source + 40;
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
@@ -189,6 +190,7 @@ describe('GalaxyPointRenderer.destroy', () => {
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
@@ -222,6 +224,7 @@ describe('GalaxyPointRenderer.destroy', () => {
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
@@ -246,6 +249,7 @@ describe('GalaxyPointRenderer.draw — GalaxyPointDrawSettings shape', () => {
       targetFormat: 'bgra8unorm',
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
@@ -299,6 +303,7 @@ describe('GalaxyPointRenderer.draw — viewSlot (Task 13b)', () => {
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });

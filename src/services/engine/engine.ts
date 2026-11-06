@@ -226,7 +226,7 @@ export function createEngine(
     },
     booted: false,
     fadesAnimating: false,
-    layersSettling: false,
+    layersLoading: false,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
@@ -238,6 +238,7 @@ export function createEngine(
     layers: [],
     layerSagaTasks: [],
     selectionKindRows: [],
+    pickCodes: null,
     // Static per Layer; the `renderTargets` row reads it and constructs BEFORE `createLayers`.
     layerTargets: composition.layers.map((layer) => layer.targets ?? []),
     // Empty until `createLayers` composes core's rows with every Layer's.

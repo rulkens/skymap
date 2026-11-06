@@ -43,7 +43,8 @@ function eyeAndView(pose: CameraPose) {
   // World to body-fixed is the transpose of the body's orientation.
   const o = earth.orientation;
   const eyeLocalM = [0, 1, 2].map(
-    (c) => o[c * 3]! * eyeWorldM[0]! + o[c * 3 + 1]! * eyeWorldM[1]! + o[c * 3 + 2]! * eyeWorldM[2]!,
+    (c) =>
+      o[c * 3]! * eyeWorldM[0]! + o[c * 3 + 1]! * eyeWorldM[1]! + o[c * 3 + 2]! * eyeWorldM[2]!,
   );
   const view: Vec3 = [-toEye[0], -toEye[1], -toEye[2]];
   return { eyeLocalM, view, earth };

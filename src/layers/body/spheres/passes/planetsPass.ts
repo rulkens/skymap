@@ -102,7 +102,10 @@ export function planetsPass(runtime: BodyRuntime): ContentPass {
       pickRenderer.drawSphere(pass, {
         mvp,
         camPosLocal,
-        packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
+        packedId: packSelection(
+          runtime.pickCodes.pickCodeOf(Source.Planet),
+          seedIndex + PICK_SENTINEL_OFFSET,
+        ),
       });
     },
   };

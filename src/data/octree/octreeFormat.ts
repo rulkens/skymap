@@ -51,6 +51,8 @@ export const OCTANT_BITS = 3;
 export const LEVEL_KEY_STRIDE = 2 ** 32;
 
 /** A chunk object's file name: the bake writes it, the reader, collector and `fetch-data` resolve it. */
-export function octreeChunkFileName(ref: Pick<OctreeChunkRef, 'level' | 'morton' | 'hash'>): string {
+export function octreeChunkFileName(
+  ref: Pick<OctreeChunkRef, 'level' | 'morton' | 'hash'>,
+): string {
   return `${ref.level}-${ref.morton}.${ref.hash}.bin`;
 }

@@ -17,7 +17,7 @@ export type GalaxyPointDrawSettings = {
   pointSizePx: number;
   /** Global brightness multiplier in [0, 1]. */
   brightness: number;
-  /** Selected galaxy as `(source << 26) | localIdx`, or `0xFFFFFFFF` for "no selection". */
+  /** Selected galaxy as `(pickCode << 26) | localIdx`, or `0xFFFFFFFF` for "no selection". */
   selectedPacked: number;
   /** Camera position in world Mpc (`orbitCamera.position`), used by the vertex shader for apparent-size sizing. */
   camPosWorld: Readonly<Vec3>;

@@ -50,13 +50,13 @@ export type Layer<
    * throws at boot. */
   readonly targets?: readonly RenderTargetSpec[];
   /** Each runs as its own root task via `createLayers`, cancelled at teardown — not
-   * folded into `rootSaga`. Factories, not running sagas. */
+   * merged into `rootSaga`. Factories, not running sagas. */
   readonly sagas?: readonly SagaFactory[];
   /** Candidate `body-m` slab rows, composed across Layers into `state.slabRows`.
    * `anchorId`s are globally unique and the composed total must fit
    * `LAYER_SLAB_ROW_HEADROOM` — both throw at boot. */
   readonly slabs?: readonly SlabRow[];
-  /** Exhibit rows, folded after core's into `APP_EXHIBIT_REGISTRY` by import (`appExhibits`); the
+  /** Exhibit rows, collected after core's into `APP_EXHIBIT_REGISTRY` by import (`appExhibits`); the
    * engine reads them here for their sections' camera rows. Ids unique, asserted at import. */
   readonly exhibits?: readonly Exhibit[];
   /** Typing only: `compositions/appSources.ts` collects the same rows into `APP_SOURCE_REGISTRY` by import. */

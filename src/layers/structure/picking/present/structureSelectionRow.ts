@@ -6,35 +6,34 @@
  * call time, so records that land after boot resolve without rebuilding the row.
  */
 
-import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
 import { STRUCTURE_IDS } from '../../../../data/structure/structureIds';
 import { structurePickId } from '../utils/structurePickId';
 import { resolveStructureFromPick } from './resolveStructureFromPick';
+import type { StructureRuntime } from '../../@types/StructureRuntime';
 import type { StructureStore } from '../../catalog/@types/StructureStore';
 import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
-import type { SourceType } from '../../../../@types/data/SourceType';
-import type { StructureId } from '../../../../@types/data/structure/StructureId';
 
 type StructureRef = Extract<SelectionRef, { type: 'structure' }>;
-
-const STRUCTURE_SOURCE_CODES: readonly SourceType[] = SOURCE_ENTRIES.filter(
-  (e) => e.type === 'structure',
-).map((e) => e.code as SourceType);
 
 /** A bare token must satisfy this character class to be a structure seed id. */
 const SAFE_ID_RE = /^[a-z0-9_-]+$/i;
 
 export function structureSelectionRow(
-  store: Pick<StructureStore, 'byId' | 'byCategory'>,
+  runtime: { readonly store: Pick<StructureStore, 'byId' | 'byCategory'> } & Pick<
+    StructureRuntime,
+    'pickCodes'
+  >,
 ): SelectionKindRow<StructureRef> {
+  const { store, pickCodes } = runtime;
   return {
     type: 'structure',
-    pickSources: STRUCTURE_SOURCE_CODES,
-    resolvePick: (entry, pick) => {
-      if (entry.type !== 'structure') return null;
+    pickSources: STRUCTURE_IDS.map(pickCodes.pickCodeOf),
+    resolvePick: (pick) => {
+      const category = pickCodes.catalogOfPickCode(pick.sourceCode);
+      if (category === null) return null;
       const record = resolveStructureFromPick(store, {
-        category: entry.id as StructureId,
+        category,
         structureIndex: pick.localIdx,
       });
       return record ? { type: 'structure', id: record.id } : null;
@@ -43,7 +42,7 @@ export function structureSelectionRow(
       const record = store.byId(ref.id);
       if (!record) return null;
       const index = store.byCategory(record.category).findIndex((r) => r.id === ref.id);
-      return index < 0 ? null : structurePickId(record.category, index);
+      return index < 0 ? null : structurePickId(record.category, index, pickCodes);
     },
     extractRow: (ref) => store.byId(ref.id),
     focusId: {

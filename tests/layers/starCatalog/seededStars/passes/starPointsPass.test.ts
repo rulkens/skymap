@@ -50,6 +50,12 @@ import type { PositionedStar } from '../../../../../src/layers/starCatalog/seede
 import type { PositionedSceneBody } from '../../../../../src/@types/engine/frame/PositionedSceneBody';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCodes';
+import { STAR_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/starCatalog/sources/starCatalogSourceRows';
+import { fakePickCode } from '../../../../support/fakePickCode';
+
+/** Codes from 40 up: a stamp that packs the catalog value instead fails. */
+const PICK_CODES = catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, fakePickCode());
 
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
 
@@ -77,7 +83,7 @@ const ALL_STARS = positionedSeededStars(sceneBodiesOf(EVERY_SEEDED));
 const positioned = (id: string): PositionedStar => ALL_STARS.find((s) => s.id === id)!;
 
 const packedIdOf = (star: PositionedStar): number =>
-  packSelection(star.source, star.seedIndex + PICK_SENTINEL_OFFSET);
+  packSelection(PICK_CODES.pickCodeOf(star.source), star.seedIndex + PICK_SENTINEL_OFFSET);
 
 const SUN = positioned('sun');
 const PROXIMA = positioned('proxima-centauri');
@@ -174,7 +180,7 @@ function makeState(): EngineState {
 }
 
 function makeRuntime(starPointRenderer: unknown): StarCatalogRuntime {
-  return { starPointRenderer } as unknown as StarCatalogRuntime;
+  return { starPointRenderer, pickCodes: PICK_CODES } as unknown as StarCatalogRuntime;
 }
 
 // `enabled` never reads `view` — an arbitrary NEAR0 view satisfies the 3-arg
@@ -478,7 +484,9 @@ describe('the Galactic Centre footprint exclusion', () => {
 
   const sStarIdsIn = (stamped: readonly number[]): string[] =>
     SCENE_S_STARS.filter((star, seedIndex) =>
-      stamped.includes(packSelection(Source.SStar, seedIndex + PICK_SENTINEL_OFFSET)),
+      stamped.includes(
+        packSelection(PICK_CODES.pickCodeOf(Source.SStar), seedIndex + PICK_SENTINEL_OFFSET),
+      ),
     ).map((star) => star.id);
 
   it('an S-star inside the galactic-centre footprint is not stamped', () => {

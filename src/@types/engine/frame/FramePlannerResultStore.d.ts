@@ -4,8 +4,8 @@
  * view with `get(planner, view)`. A `'once'` result is filed by planner name;
  * a `'perView'` result also by the `FrameView` it was planned for. Reading
  * something never planned THROWS by design: there is no canvas-shaped
- * fallback a dome face could silently read as its own. `awake` and
- * `settling` OR every result put this frame.
+ * fallback a dome face could silently read as its own. `awake`, `settling`
+ * and `loading` OR every result put this frame.
  */
 
 import type { FrameContentPlanner } from './FrameContentPlanner';
@@ -24,4 +24,6 @@ export type FramePlannerResultStore = {
   readonly awake: boolean;
   /** OR-fold of every `put` result's `settling` so far this frame. */
   readonly settling: boolean;
+  /** OR-fold of every `put` result's `loading` (or `settling`) so far this frame. */
+  readonly loading: boolean;
 };

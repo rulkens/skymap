@@ -1,6 +1,6 @@
 /**
- * The zone-of-avoidance Layer's whole runtime: the band renderer and its
- * additive upsample. Non-null throughout — `create` builds both before
+ * The zone-of-avoidance Layer's whole runtime: the band renderer, its
+ * additive upsample and its pick code. Non-null throughout — `create` builds them before
  * returning, which is what lets the passes read them without a null check.
  */
 
@@ -10,4 +10,6 @@ import type { ZoneOfAvoidanceRenderer } from '../shell/@types/ZoneOfAvoidanceRen
 export type ZoneOfAvoidanceRuntime = {
   readonly renderer: ZoneOfAvoidanceRenderer;
   readonly upsample: AdditiveUpsample;
+  /** The band's pick code; the pick stamp and the selection row both pack it. */
+  readonly pickCode: number;
 };

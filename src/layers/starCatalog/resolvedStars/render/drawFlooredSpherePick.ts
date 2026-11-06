@@ -21,7 +21,7 @@
  * ### What stays at the call site
  *
  * The body IDENTITY does not: each caller composes its own `packedId`
- * (`packSelection(source, seedIndex + PICK_SENTINEL_OFFSET)`) from its own source
+ * (`packSelection(pickCode, seedIndex + PICK_SENTINEL_OFFSET)`) from its own pick
  * code and stable seed index, and passes the finished value in. Identity stays
  * layer-owned; only the geometry/floor/draw is shared. `orientation` and
  * `oblateness` are parameters too — Earth and the planets carry a baked
@@ -89,7 +89,7 @@ export function drawFlooredSpherePick(
     readonly orientation: Readonly<Mat3>;
     /** Polar flattening `(a−c)/a`; defaults to 0 (a true sphere). */
     readonly oblateness?: number;
-    /** Fully-packed pick id (`packSelection(source, seedIndex + PICK_SENTINEL_OFFSET)`). */
+    /** Fully-packed pick id (`packSelection(pickCode, seedIndex + PICK_SENTINEL_OFFSET)`). */
     readonly packedId: number;
   },
 ): void {

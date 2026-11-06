@@ -57,7 +57,11 @@ const M81_GROUP: StructureInfo = {
 
 const STRUCTURES: StructureRowFixture = {
   byId: (id) =>
-    id === 'galaxy-group-local-group' ? LOCAL_GROUP : id === 'galaxy-group-m81-group' ? M81_GROUP : null,
+    id === 'galaxy-group-local-group'
+      ? LOCAL_GROUP
+      : id === 'galaxy-group-m81-group'
+        ? M81_GROUP
+        : null,
   byCategory: () => [],
 };
 const RESOLVER = selectionResolverOver(STRUCTURES);
