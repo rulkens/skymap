@@ -1,8 +1,8 @@
 /**
  * shareUrlFor — the composer both the `l`-key log and the DebugPanel's
  * copy-URL button call. Covers: `t` comes from the rendered simDays (not the
- * clock anchor), `pose` is appended, and an existing hash row (`orientation`)
- * survives the override.
+ * clock anchor), `pose` is appended, an existing hash row (`orientation`)
+ * survives the override, and `layers` carries the switches set since boot.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -11,6 +11,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { shareUrlFor } from '../../../src/state/url/shareUrlFor';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { enterManualPausedAt } from '../../../src/state/time/enterManualPausedAt';
 import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
@@ -47,6 +48,19 @@ describe('shareUrlFor', () => {
     expect(params.get('orientation')).toBe('galactic');
     expect(params.get('t')).toBe(new Date(julianDaysToUnixMs(SIM_DAYS)).toISOString());
     expect(params.get('pose')).toBe(encodeFramedPose(FRAMED));
+  });
+
+  it('share URL carries the switches that differ from boot, and none on a default view', () => {
+    const store = configureStore({ reducer: rootReducer });
+    const bare = shareUrlFor(store.getState(), FRAMED, SIM_DAYS, BASE);
+    expect(parseHashParams(bare.slice(bare.indexOf('#') + 1)).has('layers')).toBe(false);
+
+    store.dispatch(setVisibility({ cluster: 'cosmicWebFilaments', field: 'enabled', on: true }));
+    store.dispatch(setVisibility({ cluster: 'starCatalogs', field: 'enabled', on: false }));
+    const url = shareUrlFor(store.getState(), FRAMED, SIM_DAYS, BASE);
+
+    // The section switch, not one token per star catalogue; registry order, not click order.
+    expect(url).toContain('layers=-starCatalog,cosmicWebFilaments');
   });
 
   it('keeps the `?` gates (?tour, ?perf, …) alive, as writeHashBody does', () => {

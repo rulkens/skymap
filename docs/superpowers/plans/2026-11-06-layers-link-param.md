@@ -143,12 +143,12 @@ Tests:
 
 **Files:** `src/state/url/shareUrlFor.ts`, `tests/state/url/shareUrlFor.test.ts`.
 
-- [ ] `shareUrlFor` sets `layers` from `encodeLayerSwitches(layerSwitchesFrom(state.settings, INITIAL_SETTINGS))`
+- [x] `shareUrlFor` sets `layers` from `encodeLayerSwitches(layerSwitchesFrom(state.settings, INITIAL_SETTINGS))`
       when non-empty; header gains one clause.
-- [ ] Test `share URL carries the switches that differ from boot, and none on a default view` — default state → no
+- [x] Test `share URL carries the switches that differ from boot, and none on a default view` — default state → no
       `layers` param; with filaments on and the star catalogue off → `layers=-starCatalog,cosmicWebFilaments`
       (registry order: `starCatalog` precedes `cosmicWebFilaments` in `APP_VISIBILITY_REGISTRY`).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6: the site checks and documents `layers`
 
