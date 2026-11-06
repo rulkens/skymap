@@ -3,7 +3,7 @@
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
  * enters it (`engage` is null). Every drag looks and the wheel changes the
  * lens, which the arm hands back as `fovYRad` beside an unmoved pose; wheel-out
- * past the widest lens fills the exit push, which lifts the eye out by a tween.
+ * past the widest lens fills the exit push, which lifts the eye out by a clip.
  */
 
 import type { ClimbRow } from '../@types/ClimbRow';
@@ -19,7 +19,7 @@ import { refoldTo } from '../refoldTo';
 import { skyLookedPose } from './utils/skyLookedPose';
 import { skyZoomedLens } from './utils/skyZoomedLens';
 import { skyExitPushStep } from './utils/skyExitPushStep';
-import { skyExitTween } from './utils/skyExitTween';
+import { skyExitLift } from './utils/skyExitLift';
 import { EMPTY_SKY_EXIT_PUSH } from './data/emptySkyExitPush';
 import { SKY_EXIT_PUSH_LN } from './data/skyExitPushLn';
 
@@ -65,15 +65,15 @@ export const skyCameraArm: ClimbRow<'sky'> = {
     if (input.factor <= 1) return { pose: framed.pose, memory: EMPTY_SKY_EXIT_PUSH, tilt };
     // Wheel-out the widest lens declined: it fills the exit push instead (spec §6).
     const push = skyExitPushStep(memory, input.factor, ctx.nowMs);
-    // No release: the tween owns the display, and its end commit (a world pose)
-    // leaves the sky regime for the band to re-engage the body arm.
+    // No release: the clip owns the display, and its end commit (a body-arm
+    // pose from its last leg) leaves the sky regime.
     return push.pushLn < SKY_EXIT_PUSH_LN
       ? { pose: framed.pose, memory: push, tilt }
       : {
           pose: framed.pose,
           memory: EMPTY_SKY_EXIT_PUSH,
           tilt,
-          tween: skyExitTween(framed, ctx),
+          clip: skyExitLift(framed, ctx),
         };
   },
 

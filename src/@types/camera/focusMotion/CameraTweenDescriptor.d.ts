@@ -11,9 +11,6 @@
  * setting live at build time), so a mid-tween orientation switch re-expresses
  * the pose instead of reinterpreting its yaw/pitch against a new pole — same
  * contract as `camera.clip.frame` (see CameraState.d.ts).
- *
- * `fovYRad` (radians) eases the drawn lens over the move, on its duration and
- * ease; absent, the move leaves the lens alone.
  */
 
 import type { CameraPose } from '../pose/CameraPose';
@@ -25,5 +22,4 @@ export type CameraTweenDescriptor = {
   to: CameraPose;
   motion: FocusMotion;
   frame: OrientationFrameId;
-  fovYRad?: { readonly from: number; readonly to: number };
 };

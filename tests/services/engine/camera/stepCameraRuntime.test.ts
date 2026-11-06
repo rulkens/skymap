@@ -57,6 +57,14 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { refoldTo } from '../../../../src/services/engine/camera/arms/refoldTo';
+import { skySpotRadial } from '../../../../src/utils/geo/skySpotRadial';
+import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
+import { SKY_EXIT_ALTITUDE_M } from '../../../../src/services/engine/camera/arms/sky/data/skyExitAltitudeM';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
+import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
+import type { SkyPose } from '../../../../src/@types/camera/pose/SkyPose';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { liveClipStartPose } from '../../../../src/services/engine/helpers/liveClipStartPose';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
@@ -915,31 +923,6 @@ describe('a fov channel drives the drawn lens', () => {
     expect(drawn).toBeGreaterThan(0.45);
   });
 
-  it('a tween with a lens draws it from → to and commits to on hand-off', () => {
-    const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
-    h.frame(2);
-    h.store.dispatch(
-      startCameraTween({
-        from: START,
-        to: { ...START, distance: 50 },
-        motion: { style: 'eased', durationMs: 500, ease: 'linear' },
-        frame: DEFAULT_ORIENTATION,
-        fovYRad: { from: 1, to: 0.25 },
-      }),
-    );
-    const drawn: number[] = [];
-    for (let i = 0; i < 60; i += 1) {
-      h.frame(1);
-      drawn.push(h.state.cameraRuntime.outputs.projection.fovYRad);
-    }
-
-    expect(h.store.getState().camera.tween).toBeNull();
-    expect(drawn[0]).toBeLessThanOrEqual(1);
-    expect(drawn[0]).toBeGreaterThan(0.9);
-    expect(drawn.every((fov, i) => i === 0 || fov <= drawn[i - 1]!)).toBe(true);
-    expect(h.store.getState().camera.fovYRad).toBeCloseTo(0.25, 12);
-  });
-
   const midDolly = () => {
     const h = playing({
       start: { ...START, fov: 1 },
@@ -973,29 +956,69 @@ describe('a fov channel drives the drawn lens', () => {
 });
 
 describe('the sky exit lift', () => {
-  it('a push past the widest lens flies out of the sky arm once, to the default lens', () => {
-    const h = makeCameraSimHarness({ focusBody: 'earth' });
+  const SKY = { body: asSceneBodyId('earth'), lonRad: 0.21857, latRad: 0.97158 };
+  const UP = skySpotRadial(SKY);
+  const AZIMUTH = 1;
+  const ARM_CTX = {
+    bodies: BODIES,
+    poseBasis: B,
+    upBasis: B,
+    terrainHeightAt: datumOnlyTerrainHeight,
+  };
+  const asBodyArm = (framed: FramedCameraPose) =>
+    refoldTo(framed, { body: SKY.body }, ARM_CTX).pose as BodyFixedPose;
+  const along = (v: Readonly<Vec3>, w: Readonly<Vec3>): number =>
+    v[0] * w[0] + v[1] * w[1] + v[2] * w[2];
+
+  /** Every displayed pose from the lift's start to its hand-off, and the clip it ran. */
+  const lift = () => {
+    const h = makeCameraSimHarness({ focusBody: 'earth', realClipPlayer: true });
     h.frame(2);
-    const sky = { body: asSceneBodyId('earth'), lonRad: 0.21857, latRad: 0.97158 };
     h.store.dispatch(
-      commitCameraPose({ frame: { sky }, pose: { azimuthRad: 1, altitudeRad: 0.4 } }),
+      commitCameraPose({ frame: { sky: SKY }, pose: { azimuthRad: AZIMUTH, altitudeRad: 0.4 } }),
     );
     h.store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
     h.frame(2);
-    for (let i = 0; i < 40 && h.store.getState().camera.tween === null; i++) h.wheel(300);
-    const lift = h.store.getState().camera.tween;
-    expect(lift).not.toBeNull();
-    // Notches mid-lift do not restart it from the ground.
-    for (let i = 0; i < 10; i++) h.wheel(300);
-    expect(h.store.getState().camera.tween).toBe(lift);
-    // Mid-flight the eye has left the ground (the arm a world pose folds into decides).
-    h.frame(60);
-    expect(cameraArmKindOf(h.state.cameraRuntime.register.pose.frame)).not.toBe('sky');
-    h.frame(140);
+    for (let i = 0; i < 40 && h.store.getState().camera.clip === null; i++) h.wheel(300);
+    const clip = h.store.getState().camera.clip;
+    const shown: FramedCameraPose[] = [];
+    for (let i = 0; i < 400 && h.store.getState().camera.clip !== null; i++) {
+      // Notches mid-lift must not restart it from the ground.
+      if (i === 5) h.notch(300);
+      h.frame(1);
+      if (h.store.getState().camera.clip !== null)
+        expect(h.store.getState().camera.clip).toBe(clip);
+      shown.push(h.state.cameraRuntime.outputs.displayed);
+    }
+    return { h, clip, shown };
+  };
 
+  it('keeps the horizon level the whole way, pitching down at a fixed azimuth first', () => {
+    const { clip, shown } = lift();
+    expect(clip).not.toBeNull();
+
+    // Screen-right stays horizontal at the spot: the drawn view never rolls.
+    for (const p of shown) {
+      const m = asBodyArm(p).basisLocal;
+      expect(Math.abs(along([m[0], m[1], m[2]], UP))).toBeLessThan(1e-6);
+    }
+    const pitching = shown.filter((p) => cameraArmKindOf(p.frame) === 'sky');
+    expect(pitching.length).toBeGreaterThan(10);
+    expect(shown.length - pitching.length).toBeGreaterThan(10);
+    for (const p of pitching) expect((p.pose as SkyPose).azimuthRad).toBeCloseTo(AZIMUTH, 9);
+  });
+
+  it('hands off 300 m above the spot looking straight down at the default lens', () => {
+    const { h } = lift();
     const camera = h.store.getState().camera;
-    expect(camera.tween).toBeNull();
-    expect(cameraArmKindOf(camera.base.frame)).not.toBe('sky');
+
+    expect(camera.clip).toBeNull();
+    expect(camera.base.frame).toEqual({ body: SKY.body });
+    const arm = asBodyArm(camera.base);
+    const height = along(bodyFixedEyeM(arm), UP) - SCENE_EARTH.surface.datumRadiusM;
+    expect(height).toBeCloseTo(SKY_EXIT_ALTITUDE_M, 3);
+    const m = arm.basisLocal;
+    expect(along([m[6], m[7], m[8]], UP)).toBeCloseTo(-1, 9);
     expect(camera.fovYRad).toBeCloseTo(DEFAULT_FOV_Y_RAD, 12);
   });
 });

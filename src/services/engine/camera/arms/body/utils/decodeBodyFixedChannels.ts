@@ -1,12 +1,12 @@
 /**
- * decodeBodyFixedChannels — the four animation channels read in one body's FIXED
+ * decodeBodyFixedChannels — the animation channels read in one body's FIXED
  * axes. `target` is a body-fixed point in METRES, `distance` a range in metres,
  * `yaw`/`pitch` the orbit convention about the body's own axes: `yawPitchToDir`
  * points from the target TOWARD the eye, so the aim is its negation (the sign
  * flip `reencodePose` documents).
  *
- * DECODED, never accumulated (spec §8). A body-framed keyframe cannot express
- * roll — there is no fifth channel to carry it.
+ * DECODED, never accumulated (spec §8). `roll` turns screen-up about the aim
+ * from the body's pole, so a leg keeps the heading its start carried in.
  */
 
 import type { SceneBodyId } from '../../../../../../@types/scene/SceneBodyId';
@@ -27,9 +27,7 @@ export function decodeBodyFixedChannels(channels: CameraPose, bodyId: SceneBodyI
     target[2] + arm[2] * distance,
   ];
   const forward: Vec3 = [-arm[0], -arm[1], -arm[2]];
-  // Roll 0: the four channels carry no screen-up residual, so the basis is
-  // levelled against the body's pole.
-  const { right, up } = imagePlaneBasis(forward, 0, BODY_LOCAL_FRAME.pole);
+  const { right, up } = imagePlaneBasis(forward, channels.roll ?? 0, BODY_LOCAL_FRAME.pole);
 
   return {
     bodyId,

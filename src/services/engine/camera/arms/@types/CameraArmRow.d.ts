@@ -8,7 +8,7 @@ import type { PoseOf } from '../../../../../@types/camera/arms/PoseOf';
 import type { CameraArmBasisCtx } from '../../../../../@types/camera/arms/CameraArmBasisCtx';
 import type { CameraArmChannels } from './CameraArmChannels';
 import type { CameraArmCtx } from '../../../../../@types/camera/arms/CameraArmCtx';
-import type { CameraTweenDescriptor } from '../../../../../@types/camera/focusMotion/CameraTweenDescriptor';
+import type { ClipData } from '../../../../../@types/animation/ClipData';
 import type { HostBody } from './HostBody';
 import type { TiltMemory } from '../../../../../@types/camera/orientation/TiltMemory';
 
@@ -30,9 +30,9 @@ export type CameraArmRow<K extends CameraArmKind> = {
    * rather than inside it: it is keyed by HOST, not by frame (spec §3-P4), so a
    * frame change must not wipe it, and only a tilt-authoring drag writes it.
    * `fovYRad` is present only when the step changes the lens (radians); the drain
-   * dispatches it, and later steps read it back as `ctx.fovYRad`. `tween` is a
-   * flight the step starts (the sky exit); the drain stamps the orientation it
-   * was captured under as its `frame` and dispatches it.
+   * dispatches it, and later steps read it back as `ctx.fovYRad`. `clip` is a
+   * flight the step starts (the sky exit); the drain plays it under the
+   * orientation its absolute start was captured in.
    */
   step(
     memory: MemOf[K],
@@ -45,7 +45,7 @@ export type CameraArmRow<K extends CameraArmKind> = {
     readonly memory: MemOf[K];
     readonly tilt: TiltMemory;
     readonly fovYRad?: number;
-    readonly tween?: Omit<CameraTweenDescriptor, 'frame'>;
+    readonly clip?: ClipData;
   };
   /**
    * One frame's pixel-free motion in this arm's own frame, at the equivalent

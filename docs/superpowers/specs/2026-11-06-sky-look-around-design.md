@@ -28,8 +28,8 @@ picker, grids, the takeover, Esc, the readout. §9 backlogs them.
 | -- | ------ |
 | R1 | Look-around is built properly, not as a handover workaround (2026-11-05). |
 | R2 | The wheel is the spec's: a lens zoom 0.5°–120° with an exit past 120° (sky-mode R6), not a pure climb. |
-| R3 | Both exit shapes (A climb, B push + tween) are built at full quality on sibling branches; the owner picks by eye. |
-| R4 | The lens after the exit eases back to 60° (`DEFAULT_FOV_DEG`) over the climb (A) or the tween (B). |
+| R3 | Both exit shapes (A climb, B push + lift) are built at full quality on sibling branches; the owner picks by eye. |
+| R4 | The lens after the exit eases back to 60° (`DEFAULT_FOV_DEG`) over the climb (A) or the lift's climb (B). |
 | R5 | The lens moves into camera state as prep (sky-mode R12/D1), ported from `origin/sky-mode` `d37207970`. |
 | R6 | The prep ships as its own PR, ahead of the feature. |
 | R7 | A's climb field is `SkyPose.eyeHeightM` (≥ `SKY_EYE_HEIGHT_M`). |
@@ -56,11 +56,11 @@ LENS_MIN_DEG = 0.5; LENS_MAX_DEG = 120              // src/data/camera/
 // exit A — the climb is pose
 type SkyPose = { azimuthRad; altitudeRad; eyeHeightM }   // eyeHeightM ≥ SKY_EYE_HEIGHT_M
 
-// exit B — the push is memory, the lift is a tween
+// exit B — the push is memory, the lift is a framed clip
 MemOf.sky = SkyExitPush = { pushLn: number; lastPushMs: number }
 CameraArmCtx.nowMs: number
-step(…) → { …; tween?: CameraTweenDescriptor }           // the arm may start a tween
-CameraTweenDescriptor.fovYRad?: { from: number; to: number }
+step(…) → { …; clip?: ClipData }                          // the arm may start a clip
+body-arm clip channels carry `roll`                     // a body leg keeps its heading
 ```
 
 ### 3.2 Verdicts
@@ -72,7 +72,7 @@ CameraTweenDescriptor.fovYRad?: { from: number; to: number }
 | Sky row `step`/`nudge` cells | **Growth** | They decline today by design. |
 | `SkyPose` (A) | **Growth** | A field; readers are the row's channels, its two pose utils and the URL codec. Main writes no sky frame (only the decoder names one), so the `k` row breaks no link. |
 | Sky `release` (A) | **Growth** | The site arm's pattern: a pose-carried band (`siteCameraArm.ts` `release`). |
-| `MemOf.sky`, `CameraArmCtx.nowMs`, step `tween`, tween lens (B) | **Growth** | Additions; no existing reader changes meaning. B needs no `release` change: the tween's end commit leaves the arm (§6.3). |
+| `MemOf.sky`, `CameraArmCtx.nowMs`, step `clip`, body-leg `roll` (B) | **Growth** | Additions. The body channels' `roll` makes a body leg lossless in the basis, which the row's doc already claimed; no production clip has a body leg. B needs no `release` change: the clip's end commit leaves the arm (§6.3). |
 | `applyWheelZoom`, the world arm's at-rest lane | **Not touched** | A non-world wheel already routes to the arm's step. |
 | `replayInput`'s `tilt` swallow (`replayInput.ts:137`) | **Not touched** | The two-finger drag stays body-only. |
 
@@ -150,19 +150,27 @@ confirms it.
    starts over from `ln f`. Wheel-in or a drag clears it.
 2. **Clock.** `CameraArmCtx.nowMs`, filled where the context is built (`stepCameraRuntime`), the
    drain's own `nowMs`.
-3. **Lift.** When `pushLn ≥ SKY_EXIT_PUSH_LN`, the step returns `tween`: from the live world pose
-   to a pose `SKY_EXIT_ALTITUDE_M` above the spot's ground point, looking straight down, the sky
-   azimuth as the map heading, with `lens: { from: LENS_MAX, to: DEFAULT_FOV_Y_RAD }`.
-   `replayInput` emits `startCameraTween`. The arm does not release: the tween owns the display,
-   and its end commit (an absolute pose) leaves the sky regime; the body arm engages by its band.
-4. **Lens over the tween (R4).** The prep's `fov` channel (P2) carries it: `focusMoveClip` adds an
-   `fov` track when the descriptor carries `lens`.
+3. **Lift (owner ruling 2026-11-06: no roll).** When `pushLn ≥ SKY_EXIT_PUSH_LN`, the step returns
+   `clip` (`skyExitLift`) and `replayInput` emits `clipStarted`; while it plays, the clip driver
+   owns the display and every pose-moving step is swallowed. Two framed legs, so no leg lerps world
+   angles (an eased world tween rolled through the nadir's gimbal point):
+   - **Pitch**, `SKY_EXIT_PITCH_MS`, in the `{ sky }` frame: azimuth authored at its standing
+     value, altitude to −π/2. The sky arm has no roll, so the horizon stays level by construction.
+   - **Climb**, `SKY_EXIT_CLIMB_MS`, in the `{ body }` frame: orientation held from the leg start
+     (the body channels carry `roll`, so the azimuth stays the map's heading); only the LookAt's
+     target (to the spot's ground point) and range (to `SKY_EXIT_ALTITUDE_M`) move, both linear,
+     so the eye climbs the spot's radial. The lens eases `LENS_MAX → DEFAULT_FOV_Y_RAD` here.
+   The arm does not release, and nothing commits at the start: the climb leg is a third frame the
+   fold leaves alone, and the clip's end commit (a body-arm pose) leaves the sky regime.
+4. **Lens over the lift (R4).** The prep's `fov` channel (P2) carries it; the lens tween is
+   frame-free, so it opens no leg.
 
 5. **The navigator.** `nudge` carries no memory, so a navigator zoom stops at `LENS_MAX` in B;
    only the wheel and pinch exit.
 
-**Expected feel.** Out to 120°; a few more notches show nothing; then a flight up and over, ending
-straight down on the park at 60°. A pause longer than the decay starts the count over.
+**Expected feel.** Out to 120°; a few more notches show nothing; then the look tips down to your
+feet and the eye climbs, ending straight down on the park at 60°. A pause longer than the decay
+starts the count over.
 
 ## 7. Tests (acceptance)
 
@@ -186,7 +194,10 @@ Test names are the contract.
 - B, `skyCameraArm.test.ts`:
   - `wheel-out at the widest lens releases only once SKY_EXIT_PUSH_LN accumulates`
   - `any wheel-in, drag or rest clears the exit push`
-  - `the exit tween ends above the spot looking down at the default lens`
+  - `the exit lift ends above the spot looking down at the default lens`
+- B, `stepCameraRuntime.test.ts` (`the sky exit lift`):
+  - `keeps the horizon level the whole way, pitching down at a fixed azimuth first`
+  - `hands off 300 m above the spot looking straight down at the default lens`
 - Prep P2: the ported `fov` channel tests (`evaluateClip`, `stepCameraRuntime`).
 
 ## 8. Eye checks
@@ -209,6 +220,6 @@ perf pass at 0.5° (sky-mode §7). The sky-mode spec must take this spec's arm s
 
 ## 10. Left to the builder
 
-- B's `SKY_EXIT_PUSH_LN`, `SKY_EXIT_PUSH_DECAY_MS`, `SKY_EXIT_ALTITUDE_M` and the tween duration,
+- B's `SKY_EXIT_PUSH_LN`, `SKY_EXIT_PUSH_DECAY_MS`, `SKY_EXIT_ALTITUDE_M` and the two phase durations,
   eye-checked.
 - Where the lens constants live under `src/data/camera/` (one symbol per file).

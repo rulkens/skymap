@@ -28,7 +28,11 @@ import { SKY_EXIT_PUSH_LN } from '../../../../../../src/services/engine/camera/a
 import { SKY_EXIT_PUSH_DECAY_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitPushDecayMs';
 import { SKY_EXIT_ALTITUDE_M } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitAltitudeM';
 import { DEFAULT_FOV_Y_RAD } from '../../../../../../src/services/engine/camera/framing/cameraFraming';
-import { foldToWorld } from '../../../../../../src/services/engine/camera/arms/foldToWorld';
+import { evaluateFramedClip } from '../../../../../../src/services/engine/camera/clips/evaluateClip';
+import { decodeBodyFixedChannels } from '../../../../../../src/services/engine/camera/arms/body/utils/decodeBodyFixedChannels';
+import { SKY_EXIT_PITCH_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitPitchMs';
+import { SKY_EXIT_CLIMB_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitClimbMs';
+import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
 import type { SkyExitPush } from '../../../../../../src/@types/camera/arms/SkyExitPush';
 import type { InputStep } from '../../../../../../src/@types/camera/input/InputStep';
 import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
@@ -352,14 +356,14 @@ describe('the sky exit push', () => {
   const F = Math.exp(SKY_EXIT_PUSH_LN / 3.5);
   const atMax = (nowMs: number): CameraArmCtx => ({ ...withLens(LENS_MAX), nowMs });
   const start = framed(AZ, 0.3);
-  /** Notches of F every `gapMs`, from an empty push, until the arm hands back a tween. */
+  /** Notches of F every `gapMs`, from an empty push, until the arm hands back the lift. */
   const notchesToLift = (gapMs: number, max = 100): number => {
     let memory: SkyExitPush = ROW.emptyMemory;
     for (let i = 1; i <= max; i++) {
       const out = ROW.step(memory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(i * gapMs));
       expect(out.pose).toBe(start.pose);
       expect(out.fovYRad).toBeUndefined();
-      if (out.tween !== undefined) {
+      if (out.clip !== undefined) {
         expect(out.memory).toBe(ROW.emptyMemory);
         return i;
       }
@@ -381,7 +385,7 @@ describe('the sky exit push', () => {
     expect(wider.memory.pushLn).toBeCloseTo(Math.log(F), 12);
     expect(below.fovYRad).toBe(LENS_MAX);
     expect(below.memory).toBe(ROW.emptyMemory);
-    expect(below.tween).toBeUndefined();
+    expect(below.clip).toBeUndefined();
   });
 
   it('any wheel-in, drag or rest clears the exit push', () => {
@@ -403,22 +407,24 @@ describe('the sky exit push', () => {
     );
   });
 
-  it('the exit tween ends above the spot looking down at the default lens', () => {
+  it('the exit lift ends above the spot looking down at the default lens', () => {
     let memory: SkyExitPush = ROW.emptyMemory;
-    let tween;
-    for (let i = 1; tween === undefined; i++) {
+    let lift: ClipData | undefined;
+    for (let i = 1; lift === undefined; i++) {
       const out = ROW.step(memory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(i));
       memory = out.memory;
-      tween = out.tween;
+      lift = out.clip;
     }
     const ctx = atMax(0);
-    expect(tween.fovYRad).toEqual({ from: LENS_MAX, to: DEFAULT_FOV_Y_RAD });
-    expect(tween.from).toEqual(foldToWorld(start, ctx));
-    const arm = CAMERA_ARMS.body.fromParent(
-      { frame: 'absolute', pose: tween.to },
-      { body: EARTH },
-      ctx,
-    ).pose;
+    const end = evaluateFramedClip(lift, (SKY_EXIT_PITCH_MS + SKY_EXIT_CLIMB_MS) / 1000, {
+      bodies: ctx.bodies,
+      frameBasis: B,
+      playback: {},
+      terrainHeightAt: ctx.terrainHeightAt,
+    });
+    expect(end.frame).toEqual({ body: EARTH });
+    expect(end.channels.fov).toBeCloseTo(DEFAULT_FOV_Y_RAD, 12);
+    const arm = decodeBodyFixedChannels(end.channels, EARTH);
     const eye = bodyFixedEyeM(arm);
     const up = radialOf(FRAME.sky);
     const ground = R_EARTH_M + TERRAIN_M;
@@ -429,8 +435,9 @@ describe('the sky exit push', () => {
     expect(off / SKY_EXIT_ALTITUDE_M).toBeLessThan(1e-6);
     const m = arm.basisLocal;
     for (let i = 0; i < 3; i++) expect(m[6 + i]).toBeCloseTo(-up[i]!, 7);
-    // The map's heading is the sky azimuth: screen-up is the standing basis's horizontal forward.
+    // The map's heading is the sky azimuth: screen-up is the standing basis's horizontal
+    // forward, to the precision of the leg's crossing through world Mpc.
     const standing = ROW.toParent(framed(AZ, 0), ctx).pose.basisLocal;
-    for (let i = 0; i < 3; i++) expect(m[3 + i]).toBeCloseTo(standing[6 + i]!, 7);
+    for (let i = 0; i < 3; i++) expect(m[3 + i]).toBeCloseTo(standing[6 + i]!, 6);
   });
 });

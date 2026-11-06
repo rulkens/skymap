@@ -344,11 +344,9 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         ctx.bodies,
         ctx.terrainHeightAt,
       );
-      const { fov } = evaluated.channels;
-      const lens = fov === undefined ? {} : { fovYRad: fov };
       const offset = tween.from.lookOffset;
       if (offset === undefined || !isWorldArm(framed))
-        return { pose: framed, memory: settledMemory(mem), ...lens };
+        return { pose: framed, memory: settledMemory(mem) };
       // Clips author no offset channel, so the start pose's eases out here, on
       // the same ease the clip gives every other term.
       const keep =
@@ -360,7 +358,6 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
       return {
         pose: absoluteArm({ ...framed.pose, lookOffset }),
         memory: settledMemory(mem),
-        ...lens,
       };
     },
   },
