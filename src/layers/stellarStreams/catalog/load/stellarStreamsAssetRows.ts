@@ -1,7 +1,7 @@
 /**
  * The Layer's two asset rows. The meta is tiny and read before the bin arrives (search, labels,
- * deep links), so it is always wanted; the bin loads while the switch is on and is released when
- * it goes off.
+ * deep links), so it is always wanted; the bin loads a little beyond the streams band's out edge
+ * and is released at twice it, so the ~5 MB file stays off the boot path.
  */
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
@@ -16,15 +16,14 @@ export function stellarStreamsAssetRows(
       key: 'stellarStreamsMeta',
       slot: runtime.metaSlot,
       req: () => undefined,
-      demand: () => true,
+      demand: 'always',
       priority: 32, // a small JSON wanted early, right behind the constellations (31)
     },
     {
       key: 'stellarStreams',
       slot: runtime.slot,
       req: () => undefined,
-      demand: (ctx) => ctx.settings.stellarStreams.enabled,
-      release: (ctx) => !ctx.settings.stellarStreams.enabled,
+      demand: { near: { band: 'streams', edge: 'out', lead: 1.2, release: 2 } },
       priority: 85, // next free rung after satellites (84)
       gates: 'stellarStreams',
     },
