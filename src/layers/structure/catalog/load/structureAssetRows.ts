@@ -22,12 +22,8 @@ export function structureAssetRows(
       req: () => ({}),
       // Loads when ANY bulk category has its ring OR its label on.
       demand: {
-        fn: (ctx) =>
-          BULK_CATALOG_CATEGORIES.some(
-            (cat) =>
-              ctx.settings.structures.items[cat].enabled ||
-              ctx.settings.structures.items[cat].labelEnabled,
-          ),
+        shown: { address: 'structureRing', items: BULK_CATALOG_CATEGORIES },
+        labelsCount: true,
       },
       priority: 30, // a small .ccat that draws across many rungs at once — high value per byte
     },
