@@ -144,7 +144,7 @@ export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
 }
 
 /**
- * The size gate: a ~1.2 GB pull is not something to start by accident
+ * The size gate: a ~1.4 GB pull is not something to start by accident
  * (feedback_announce_big_downloads), so the full set REFUSES without an explicit
  * `--confirm`; the ~7 MB `--dev` subset is always allowed. Pure so the gate is
  * testable without spawning the CLI.

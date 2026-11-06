@@ -3,8 +3,8 @@
  * `cutSurfaceTiles` inputs, or null for a bake this build cannot address:
  * every rejection degrades to base-only, cheaper to reason about than
  * silently adapting to wrong pixels. `tilePx` is a validated assertion: the
- * atlas's `slotsPerRow` is `SURFACE_TILE_ATLAS_SIDE / tilePx`, an identity
- * that holds only at the shipped 512 px edge.
+ * atlas slot edges are fixed in `SURFACE_TILE_LANE_SPECS`, so a bake at any
+ * other edge than `SURFACE_TILE_PX` would not fit its slots.
  */
 
 import type { SurfaceTileManifest } from '../../format/@types/SurfaceTileManifest';

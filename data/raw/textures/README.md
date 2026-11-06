@@ -16,14 +16,14 @@ command rather than by hand.
 | Field      | Value                                                                             |
 | ---------- | --------------------------------------------------------------------------------- |
 | Fetch date | _(pending — filled by the maintainer's first full pull from `main`)_              |
-| Full size  | ~1.1 GB (~700 MB of native body tiers + the ~421 MB BMNG quadrant set)            |
+| Full size  | ~1.4 GB (~700 MB body tiers, ~421 MB BMNG, ~216 MB Black Marble, ~87 MB chroma)   |
 | Dev subset | ~7 MB (`--dev`: 2k SSS variants + 5400×2700 BMNG)                                 |
 | Checksums  | `textures.sha256` — one `<hex>  <filename>` line per file, written on first fetch |
 
 ## How to obtain
 
 ```
-npm run fetch-textures -- --confirm   # full ~1.1 GB pull (size-gated)
+npm run fetch-textures -- --confirm   # full ~1.4 GB pull (size-gated)
 npm run fetch-textures -- --dev        # ~7 MB visual-check subset, no confirm
 ```
 
