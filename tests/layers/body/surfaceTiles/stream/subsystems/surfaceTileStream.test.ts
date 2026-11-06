@@ -112,7 +112,7 @@ const plan = (over: Partial<SurfaceTilePlan>): SurfaceTilePlan => ({
   ...IDLE_SURFACE_TILE_PLAN,
   ...over,
 });
-const ENGAGE_EARTH = { engage: EARTH, tilePx: SURFACE_TILE_PX } as const;
+const ENGAGE_EARTH = { engage: EARTH } as const;
 const requesting = (
   tiles: readonly SurfaceTileId[],
   verdict: SurfaceTilePlan['verdict'] = 'keep',
@@ -193,10 +193,10 @@ describe('surfaceTileStream manifests', () => {
     const { device, touched } = watchedDevice();
     const stream = await streamWithManifest(device);
     for (let frame = 0; frame < 3; frame++) stream.apply(IDLE_SURFACE_TILE_PLAN);
-    stream.apply(requesting([albedo(0)], { engage: MARS, tilePx: SURFACE_TILE_PX }));
+    stream.apply(requesting([albedo(0)], { engage: MARS }));
 
     expect(touched()).toBe(false);
-    expect(stream.getAtlasView()).toBeNull();
+    expect(stream.getAtlasView('albedo')).toBeNull();
     expect(stream.residency.engagedBodyId()).toBeNull();
   });
 });
@@ -221,8 +221,8 @@ describe('surfaceTileStream verdicts', () => {
     await tick();
 
     expect(stream.residency.engagedBodyId()).toBeNull();
-    expect(stream.getAtlasView()).toBeNull();
-    expect(stream.getHeightAtlasView()).toBeNull();
+    expect(stream.getAtlasView('albedo')).toBeNull();
+    expect(stream.getAtlasView('height')).toBeNull();
     expect(stream.residency.residentSlot(albedo(0))).toBeNull();
     expect(stream.residency.inFlightCount()).toBe(0);
     expect(closeAlbedo).toHaveBeenCalled();
@@ -241,7 +241,7 @@ describe('surfaceTileStream verdicts', () => {
     stream.apply(plan({ wantManifest: MARS }));
     await tick();
 
-    stream.apply(requesting([], { engage: MARS, tilePx: SURFACE_TILE_PX }));
+    stream.apply(requesting([], { engage: MARS }));
     expect(stream.residency.engagedBodyId()).toBe('mars');
     expect(stream.debugStats().used).toBe(0);
 

@@ -10,5 +10,5 @@ import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
 
 export type SurfaceTileVerdict =
   | 'keep'
-  | { readonly engage: SceneBodyId & SurfaceTileBodyId; readonly tilePx: number }
+  | { readonly engage: SceneBodyId & SurfaceTileBodyId }
   | 'release';
