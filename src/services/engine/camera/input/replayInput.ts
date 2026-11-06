@@ -24,7 +24,7 @@ import { zoomedDistance } from './utils/zoomedDistance';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
-import cameraReducer, { commitCameraPose } from '../../../../state/camera/cameraSlice';
+import cameraReducer, { commitCameraPose, setLens } from '../../../../state/camera/cameraSlice';
 
 import type { ClimbableKind } from '../@types/ClimbableKind';
 import type { DriverId } from '../../../../@types/engine/camera/DriverId';
@@ -105,9 +105,12 @@ export function replayInput(
     memory: MemOf[K],
     input: InputStep,
   ): FramedPose<K> => {
-    const stepped = rowFor<K>(framed.frame).step(memory, tilt, framed, input, ctx);
+    // The lens is read from the fold, so a second notch in the drain compounds on the first.
+    const stepCtx = { ...ctx, fovYRad: camera.lens };
+    const stepped = rowFor<K>(framed.frame).step(memory, tilt, framed, input, stepCtx);
     gestureMemory = stepped.memory;
     tilt = stepped.tilt;
+    if (stepped.lens !== undefined) emit(setLens(stepped.lens));
     return { frame: framed.frame, pose: stepped.pose };
   };
 

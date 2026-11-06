@@ -50,6 +50,7 @@ import cameraReducer, {
   cancelCameraTween,
   clearFrameTween,
   commitCameraPose,
+  setLens,
 } from '../../../state/camera/cameraSlice';
 
 export function stepCameraRuntime(
@@ -196,14 +197,22 @@ export function stepCameraRuntime(
     projection.fovYRad / canvasPx[1],
   );
   // Everything below reads the nudged register, so a held or coasting frame moves exactly once.
-  const { pose: register, tilt } =
-    Object.keys(nav.delta).length === 0
-      ? { pose: drained.register, tilt: drained.tilt }
-      : nudgeCameraArm(drained.register, drained.tilt, nav.delta, replayCtx);
+  // The lens as the drain left it, so a notch and a nudge in one frame compound.
+  const {
+    pose: register,
+    tilt,
+    lens,
+  } = Object.keys(nav.delta).length === 0
+    ? { pose: drained.register, tilt: drained.tilt, lens: undefined }
+    : nudgeCameraArm(drained.register, drained.tilt, nav.delta, {
+        ...replayCtx,
+        fovYRad: rootState.camera.lens,
+      });
   const actions: UnknownAction[] = [...orientationActions, ...drained.actions];
   // Where `next.base`'s fold picks up below — everything before this index is
   // already folded into `rootState.camera`.
   const tailStart = actions.length;
+  if (lens !== undefined) actions.push(setLens(lens));
 
   // The approach hands off on a frame it SATURATED, never on a clock the pick
   // reads independently: a fresh focus row starts a new approach whatever the

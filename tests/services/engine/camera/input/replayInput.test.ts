@@ -19,6 +19,7 @@ import {
   clipStarted,
   commitCameraPose,
   setAutoRotate,
+  setLens,
 } from '../../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../../src/state/selectionRows/selectionRowsSlice';
 import { pivotFraming } from '../../../../../src/services/engine/camera/framing/pivotRadiusMpc';
@@ -285,6 +286,30 @@ describe('replayInput', () => {
 
     expect(next.actions).toEqual([]);
     expect(next.register.pose).toBe(arm.pose);
+  });
+
+  it('two lens notches in one drain compound', () => {
+    // The second notch must read the lens the first emitted, not the drain-start
+    // ctx's; and a lens notch moves no pose, so it commits none.
+    const store = makeStore();
+    const sky: FramedCameraPose = {
+      frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
+      pose: { azimuthRad: 1, altitudeRad: 0.3 },
+    };
+    store.dispatch(commitCameraPose(sky));
+    const lens = store.getState().camera.lens;
+
+    const next = replayInput(
+      { register: sky, gesture: null, tilt: EMPTY_TILT_MEMORY, follow: null },
+      [atRestZoom(1.25), atRestZoom(1.25)],
+      ctxOf(store),
+    );
+
+    expect(next.actions).toHaveLength(2);
+    const lenses = next.actions.map((a) => (setLens.match(a) ? a.payload : null));
+    expect(lenses[0]).toBeCloseTo(lens * 1.25, 12);
+    expect(lenses[1]).toBeCloseTo(lens * 1.5625, 12);
+    expect(next.register.pose).toBe(sky.pose);
   });
 
   it('carries the notch’s cursor pixel to the body arm’s zoom anchor', () => {
