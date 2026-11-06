@@ -7,6 +7,7 @@ import type { R2Upload } from './R2Upload';
  * normal. `purge: false` is only for content immutable by construction; for
  * anything else it serves stale bytes for the whole `cacheControl` window.
  * `gzipOnWire` picks the bytes R2 stores, so the ETag diff hashes the same.
+ * `offline` marks what a desktop mirror must hold (see `buildOfflineInventory`).
  */
 export type R2SyncGroup = {
   readonly label: string;
@@ -15,4 +16,5 @@ export type R2SyncGroup = {
   readonly cacheControl: string;
   readonly purge: boolean;
   readonly gzipOnWire: boolean;
+  readonly offline: boolean;
 };

@@ -81,6 +81,16 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     skipsWelcome: true,
   },
   {
+    name: 'layers',
+    part: 'hash',
+    value: 'A list of layer names, with commas between them; a minus sign switches one off',
+    example: 'layers=cosmicWebFilaments,-starCatalog',
+    does: 'Switches layers and captions on or off as the view opens, in the order written.',
+    unknown:
+      'The name is ignored, with a warning in the browser’s console; the others still apply. The parameter is taken out of the address.',
+    skipsWelcome: false,
+  },
+  {
     name: 'dome',
     part: 'query',
     value: 'None',

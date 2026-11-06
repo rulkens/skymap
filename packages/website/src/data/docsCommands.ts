@@ -271,6 +271,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'flow-workbench',
           'scene-workbench',
           'curate-famous',
+          'albedo-bench',
         ],
         does: 'Each serves one workbench from the source, on a port of its own.',
         manual: 'tools/utils/io/devPorts.ts',

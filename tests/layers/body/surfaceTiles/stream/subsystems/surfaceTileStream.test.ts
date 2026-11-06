@@ -25,6 +25,7 @@ vi.mock('../../../../../../src/layers/body/surfaceTiles/stream/load/fetchHeightT
 
 import type { SurfaceTileManifest } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
 import type { SurfaceTilePlan } from '../../../../../../src/layers/body/surfaceTiles/plan/@types/SurfaceTilePlan';
+import type { SurfaceTileProduct } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
 import type { SurfaceTileId } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileId';
 import type { HeightTileImage } from '../../../../../../src/layers/body/surfaceTiles/stream/@types/HeightTileImage';
 import { createSurfaceTileStream } from '../../../../../../src/layers/body/surfaceTiles/stream/subsystems/surfaceTileStream';
@@ -61,7 +62,10 @@ const PREFIX = 'earth-tiles/v8';
 const SLOT_COUNT = (SURFACE_TILE_ATLAS_SIDE / SURFACE_TILE_PX) ** 2;
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function manifestOf(prefix: string): SurfaceTileManifest {
+function manifestOf(
+  prefix: string,
+  products: readonly SurfaceTileProduct[] = ['albedo', 'height'],
+): SurfaceTileManifest {
   const provenance = { sourceId: 'test', attribution: 'test', vintage: 'test' };
   return {
     prefix,
@@ -71,7 +75,7 @@ function manifestOf(prefix: string): SurfaceTileManifest {
         bounds: { west: -180, south: -90, east: 180, north: 90 },
         min: MIN_TILE_LEVEL,
         max: MIN_TILE_LEVEL + 1,
-        builtFrom: { albedo: provenance, height: provenance },
+        builtFrom: Object.fromEntries(products.map((product) => [product, provenance])),
       },
     ],
   };
@@ -112,11 +116,18 @@ const plan = (over: Partial<SurfaceTilePlan>): SurfaceTilePlan => ({
   ...IDLE_SURFACE_TILE_PLAN,
   ...over,
 });
-const ENGAGE_EARTH = { engage: EARTH, tilePx: SURFACE_TILE_PX } as const;
+const ENGAGE_EARTH = { engage: EARTH } as const;
+// The planner engages only with params in hand; the stream sizes its lanes from them.
+const PARAMS = derivePlannerParams(manifestOf(PREFIX), BASE_LEVEL);
 const requesting = (
   tiles: readonly SurfaceTileId[],
   verdict: SurfaceTilePlan['verdict'] = 'keep',
-) => plan({ verdict, requests: tiles.map((tile, i) => ({ tile, screenPx: 1000 - i })) });
+) =>
+  plan({
+    verdict,
+    params: PARAMS,
+    requests: tiles.map((tile, i) => ({ tile, screenPx: 1000 - i })),
+  });
 
 function bitmap(close: () => void = () => {}): ImageBitmap {
   return { close } as unknown as ImageBitmap;
@@ -193,10 +204,10 @@ describe('surfaceTileStream manifests', () => {
     const { device, touched } = watchedDevice();
     const stream = await streamWithManifest(device);
     for (let frame = 0; frame < 3; frame++) stream.apply(IDLE_SURFACE_TILE_PLAN);
-    stream.apply(requesting([albedo(0)], { engage: MARS, tilePx: SURFACE_TILE_PX }));
+    stream.apply(requesting([albedo(0)], { engage: MARS }));
 
     expect(touched()).toBe(false);
-    expect(stream.getAtlasView()).toBeNull();
+    expect(stream.getAtlasView('albedo')).toBeNull();
     expect(stream.residency.engagedBodyId()).toBeNull();
   });
 });
@@ -221,8 +232,8 @@ describe('surfaceTileStream verdicts', () => {
     await tick();
 
     expect(stream.residency.engagedBodyId()).toBeNull();
-    expect(stream.getAtlasView()).toBeNull();
-    expect(stream.getHeightAtlasView()).toBeNull();
+    expect(stream.getAtlasView('albedo')).toBeNull();
+    expect(stream.getAtlasView('height')).toBeNull();
     expect(stream.residency.residentSlot(albedo(0))).toBeNull();
     expect(stream.residency.inFlightCount()).toBe(0);
     expect(closeAlbedo).toHaveBeenCalled();
@@ -241,7 +252,7 @@ describe('surfaceTileStream verdicts', () => {
     stream.apply(plan({ wantManifest: MARS }));
     await tick();
 
-    stream.apply(requesting([], { engage: MARS, tilePx: SURFACE_TILE_PX }));
+    stream.apply(requesting([], { engage: MARS }));
     expect(stream.residency.engagedBodyId()).toBe('mars');
     expect(stream.debugStats().used).toBe(0);
 
@@ -262,6 +273,44 @@ describe('surfaceTileStream verdicts', () => {
     stream.apply(requesting([albedo(0)], ENGAGE_EARTH));
     expect(stream.residency.engagedBodyId()).toBe('earth');
     expect(vi.mocked(fetchSurfaceTileBitmap).mock.calls.length).toBe(fetches + 1);
+  });
+});
+
+describe('surfaceTileStream lanes', () => {
+  async function engagedOn(manifest: SurfaceTileManifest) {
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(manifest);
+    const stream = createSurfaceTileStream({ device: stubDevice(), requestRender: () => {} });
+    stream.apply(plan({ wantManifest: EARTH }));
+    await tick();
+    stream.apply(
+      plan({ verdict: ENGAGE_EARTH, params: derivePlannerParams(manifest, BASE_LEVEL) }),
+    );
+    return stream;
+  }
+
+  it('builds no night atlas when the manifest names no night product', async () => {
+    // Bug caught: 64 MB of night atlas on Mars, or on a bake from before night.
+    const stream = await engagedOn(manifestOf(PREFIX));
+    expect(stream.getAtlasView('albedo')).not.toBeNull();
+    expect(stream.getAtlasView('night')).toBeNull();
+
+    const withNight = await engagedOn(manifestOf(PREFIX, ['albedo', 'height', 'night']));
+    expect(withNight.getAtlasView('night')).not.toBeNull();
+  });
+
+  it('builds no night atlas when every night band is clamped out by the base level', async () => {
+    // Bug caught: lanes read from `builtFrom` rather than the planner's request
+    // bands, so a night band too shallow to ever be requested still costs 64 MB.
+    const manifest = manifestOf(PREFIX);
+    const shallowNight = {
+      ...manifest.bands[0]!,
+      min: BASE_LEVEL - 1,
+      max: BASE_LEVEL,
+      builtFrom: { night: manifest.bands[0]!.builtFrom.albedo! },
+    };
+    const stream = await engagedOn({ ...manifest, bands: [...manifest.bands, shallowNight] });
+    expect(stream.getAtlasView('albedo')).not.toBeNull();
+    expect(stream.getAtlasView('night')).toBeNull();
   });
 });
 

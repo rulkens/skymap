@@ -6,7 +6,11 @@
  */
 export type SurfaceEffectInputs = {
   readonly materialMap?: { readonly view: GPUTextureView; readonly oceanRoughness: number };
-  readonly nightLights?: { readonly view: GPUTextureView };
+  readonly nightLights?: {
+    /** The whole-globe night texture, for every leaf with no night tile. */
+    readonly view: GPUTextureView;
+    readonly atlasView: GPUTextureView;
+  };
   readonly cloudShadows?: {
     readonly view: GPUTextureView;
     readonly strength: number;

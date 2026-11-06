@@ -22,6 +22,7 @@ export function milkyWayPlanner(
         value: undefined,
         awake: false,
         settling: false,
+        loading: false,
       };
     },
   };

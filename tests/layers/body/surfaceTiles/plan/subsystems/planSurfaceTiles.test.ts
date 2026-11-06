@@ -239,7 +239,7 @@ describe('planSurfaceTiles', () => {
       LARGE,
     );
 
-    expect(plan.verdict).toEqual({ engage: 'mars', tilePx: 512 });
+    expect(plan.verdict).toEqual({ engage: 'mars' });
     expect(plan.touched).toEqual([]);
     expect(plan.requests).toHaveLength(2);
   });
@@ -251,7 +251,7 @@ describe('planSurfaceTiles', () => {
     const fresh = residency({ engagedBodyId: () => null });
 
     const medium = planSurfaceTiles([SEES_EARTH], overBody(EARTH), fresh, () => 'medium');
-    expect(medium.verdict).toEqual({ engage: 'earth', tilePx: 512 });
+    expect(medium.verdict).toEqual({ engage: 'earth' });
     expect(medium.lastPlan).not.toBeNull();
 
     const large = planSurfaceTiles([SEES_EARTH], overBody(EARTH), fresh, LARGE);

@@ -305,7 +305,7 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',
-    plan: () => ({ value: [], awake: false, settling: false }),
+    plan: () => ({ value: [], awake: false, settling: false, loading: false }),
   },
   ...stubPlannersFor(PRELUDE),
 ];

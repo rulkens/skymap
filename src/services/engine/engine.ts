@@ -226,7 +226,7 @@ export function createEngine(
     },
     booted: false,
     fadesAnimating: false,
-    layersSettling: false,
+    layersLoading: false,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,

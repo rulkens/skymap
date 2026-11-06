@@ -1,6 +1,7 @@
 import type { ChromaCalibration } from '../../../src/@types/scene/ChromaCalibration';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
-import { linearToSrgbByte } from './linearToSrgbByte';
+import { linearToSrgbByte } from '../../../src/utils/color/linearToSrgbByte';
+import { srgbToLinear } from '../../../src/utils/color/srgbToLinear';
 
 /** Rec.709 luminance weights — the `Y` every chroma quantity below divides by. */
 const LUM: Vec3 = [0.2126, 0.7152, 0.0722];
@@ -34,10 +35,7 @@ const [E1, E2] = chromaBasis();
 
 /** sRGB EOTF, one entry per encoded byte (the decode runs 4x per pixel). */
 const DECODE = new Float64Array(256);
-for (let i = 0; i < 256; i++) {
-  const v = i / 255;
-  DECODE[i] = v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-}
+for (let i = 0; i < 256; i++) DECODE[i] = srgbToLinear(i / 255);
 
 /**
  * panSharpenRgb — luminance from a panchromatic source (one byte per pixel),

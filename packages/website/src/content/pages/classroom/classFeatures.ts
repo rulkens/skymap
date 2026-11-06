@@ -1,8 +1,8 @@
 import type { ClassFeature } from '../../../@types/ClassFeature';
-import { requireShotLink } from '../../../utils/requireShotLink';
+import { shotLink } from '../../../utils/shotLink';
 
 // A part's control opens where its picture was taken, so the link is read from the picture's manifest row.
-const at = (shot: string, tall: string) => ({ shot, tall, hash: requireShotLink(shot) });
+const at = (shot: string, tall: string) => ({ shot, tall, hash: shotLink(shot) });
 
 /**
  * A 45-minute lesson in four parts, in the order they are taught. Each part is a routine from

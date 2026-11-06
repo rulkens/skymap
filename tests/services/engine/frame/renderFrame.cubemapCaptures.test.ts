@@ -105,7 +105,7 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',
-    plan: () => ({ value: [], awake: false, settling: false }),
+    plan: () => ({ value: [], awake: false, settling: false, loading: false }),
   },
   ...stubPlannersFor(PRELUDE),
 ];
@@ -188,12 +188,13 @@ function makeCtx(
   const layerVotePlanner: FrameContentPlanner<void> = {
     name: '__test-layer-vote',
     scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
+    plan: () => ({ value: undefined, awake: false, settling: false, loading: false }),
   };
   plans.put(layerVotePlanner, undefined, {
     value: undefined,
     awake: layers.awake ?? false,
     settling: layers.settling ?? false,
+    loading: false,
   });
   return {
     snapshot: {
@@ -500,7 +501,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     const state = makeState({
       subsystems: { fades: { isAnyAnimating: () => false } },
     } as unknown as Partial<EngineState>);
-    const settling = { settling: true };
+    const settling = { settling: true, loading: false };
     renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc, 256, settling), state)); // band entry ⇒ bakes.
     deriveViewMock.mockClear();
 

@@ -9,6 +9,12 @@ describe('shownLink', () => {
     );
   });
 
+  it('leaves out the layer switches behind the same single ellipsis', () => {
+    expect(shownLink('focus=body-saturn&pose=a,0,0,0,3.75&layers=flow,-starCatalog')).toBe(
+      'focus=body-saturn&…',
+    );
+  });
+
   it('prints a link without a pose as it is', () => {
     expect(shownLink('focus=body-saturn')).toBe('focus=body-saturn');
   });
