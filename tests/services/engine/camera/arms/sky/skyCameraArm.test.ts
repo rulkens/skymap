@@ -62,14 +62,18 @@ const radialOf = ({ lonRad, latRad }: SkySpot): Vec3 => [
   Math.sin(latRad),
 ];
 
-function ctxFor(focusBodyId: SceneBodyId | null, calls: unknown[][] = []): CameraArmCtx {
+function ctxFor(
+  focusBodyId: SceneBodyId | null,
+  calls: unknown[][] = [],
+  terrainM = TERRAIN_M,
+): CameraArmCtx {
   return {
     bodies: deriveBodyStates(CONST_J2000),
     poseBasis: B,
     upBasis: B,
     terrainHeightAt: (...args) => {
       calls.push(args);
-      return args[0] === 'earth' ? TERRAIN_M : 0;
+      return args[0] === 'earth' ? terrainM : 0;
     },
     focusBodyId,
     pivot: pivotFraming(null),
@@ -85,7 +89,10 @@ const framed = (azimuthRad: number, altitudeRad: number, frame = FRAME): FramedP
   pose: { azimuthRad, altitudeRad },
 });
 
-const withLens = (fovYRad: number): CameraArmCtx => ({ ...ctxFor(EARTH), fovYRad });
+const withLens = (fovYRad: number, terrainM = TERRAIN_M): CameraArmCtx => ({
+  ...ctxFor(EARTH, [], terrainM),
+  fovYRad,
+});
 
 const drag = (
   dx: number,
@@ -362,30 +369,45 @@ describe('the sky exit lift', () => {
     expect(out.clip).toBeDefined();
   });
 
-  it('the exit lift ends above the spot looking down at the default lens', () => {
-    const lift = ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(1.1), atMax).clip!;
-    const end = evaluateFramedClip(lift, (SKY_EXIT_PITCH_MS + SKY_EXIT_CLIMB_MS) / 1000, {
-      bodies: atMax.bodies,
-      frameBasis: B,
-      playback: {},
-      terrainHeightAt: atMax.terrainHeightAt,
-    });
-    expect(end.frame).toEqual({ body: EARTH });
-    expect(end.channels.fov).toBeCloseTo(DEFAULT_FOV_Y_RAD, 12);
-    const arm = decodeBodyFixedChannels(end.channels, EARTH);
-    const eye = bodyFixedEyeM(arm);
-    const up = radialOf(FRAME.sky);
-    const ground = R_EARTH_M + TERRAIN_M;
-    const along = eye[0] * up[0] + eye[1] * up[1] + eye[2] * up[2];
-    expect(Math.abs(along - ground - SKY_EXIT_ALTITUDE_M) / SKY_EXIT_ALTITUDE_M).toBeLessThan(1e-6);
-    // On the radial: no horizontal offset beyond the same tolerance.
-    const off = Math.hypot(eye[0] - along * up[0], eye[1] - along * up[1], eye[2] - along * up[2]);
-    expect(off / SKY_EXIT_ALTITUDE_M).toBeLessThan(1e-6);
-    const m = arm.basisLocal;
-    for (let i = 0; i < 3; i++) expect(m[6 + i]).toBeCloseTo(-up[i]!, 7);
-    // The map's heading is the sky azimuth: screen-up is the standing basis's horizontal
-    // forward, to the precision of the leg's crossing through world Mpc.
-    const standing = ROW.toParent(framed(AZ, 0), atMax).pose.basisLocal;
-    for (let i = 0; i < 3; i++) expect(m[3 + i]).toBeCloseTo(standing[6 + i]!, 6);
-  });
+  // −430 m is the Dead Sea: an eye standing there is inside the datum sphere.
+  it.each([TERRAIN_M, -430])(
+    'the exit lift ends above the spot looking down at the default lens — terrain %d m',
+    (terrainM) => {
+      const ctx = withLens(LENS_MAX, terrainM);
+      const lift = ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(1.1), ctx).clip!;
+      const at = (sec: number) =>
+        evaluateFramedClip(lift, sec, {
+          bodies: ctx.bodies,
+          frameBasis: B,
+          playback: {},
+          terrainHeightAt: ctx.terrainHeightAt,
+        });
+      // The lift opens on the standing view, not its mirror below the horizon.
+      expect(at(0).channels.pitch).toBeCloseTo(start.pose.altitudeRad, 6);
+      const end = at((SKY_EXIT_PITCH_MS + SKY_EXIT_CLIMB_MS) / 1000);
+      expect(end.frame).toEqual({ body: EARTH });
+      expect(end.channels.fov).toBeCloseTo(DEFAULT_FOV_Y_RAD, 12);
+      const arm = decodeBodyFixedChannels(end.channels, EARTH);
+      const eye = bodyFixedEyeM(arm);
+      const up = radialOf(FRAME.sky);
+      const ground = R_EARTH_M + terrainM;
+      const along = eye[0] * up[0] + eye[1] * up[1] + eye[2] * up[2];
+      expect(Math.abs(along - ground - SKY_EXIT_ALTITUDE_M) / SKY_EXIT_ALTITUDE_M).toBeLessThan(
+        1e-6,
+      );
+      // On the radial: no horizontal offset beyond the same tolerance.
+      const off = Math.hypot(
+        eye[0] - along * up[0],
+        eye[1] - along * up[1],
+        eye[2] - along * up[2],
+      );
+      expect(off / SKY_EXIT_ALTITUDE_M).toBeLessThan(1e-6);
+      const m = arm.basisLocal;
+      for (let i = 0; i < 3; i++) expect(m[6 + i]).toBeCloseTo(-up[i]!, 7);
+      // The map's heading is the sky azimuth: screen-up is the standing basis's horizontal
+      // forward, to the precision of the leg's crossing through world Mpc.
+      const standing = ROW.toParent(framed(AZ, 0), ctx).pose.basisLocal;
+      for (let i = 0; i < 3; i++) expect(m[3 + i]).toBeCloseTo(standing[6 + i]!, 6);
+    },
+  );
 });
