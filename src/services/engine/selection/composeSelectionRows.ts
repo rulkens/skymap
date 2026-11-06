@@ -16,22 +16,14 @@
 
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SelectionResolver } from '../../../@types/engine/selection/SelectionResolver';
+import { claimingSelectionRow } from '../../../utils/selection/claimingSelectionRow';
 
 export function composeSelectionRows(
   rowsOf: () => readonly SelectionKindRow[],
   pickingOff: () => readonly string[],
 ): SelectionResolver {
-  const claimingRow = (focusId: string): SelectionKindRow | null => {
-    const claiming = rowsOf().filter((r) => r.focusId?.claims(focusId));
-    if (claiming.length > 1) {
-      throw new Error(
-        `composeSelectionRows: focus id "${focusId}" is claimed by more than one row (${claiming
-          .map((r) => r.type)
-          .join(', ')})`,
-      );
-    }
-    return claiming[0] ?? null;
-  };
+  const claimingRow = (focusId: string): SelectionKindRow | null =>
+    claimingSelectionRow(rowsOf(), focusId);
   return {
     resolvePick(pick) {
       if (pick === null) return null;

@@ -6,6 +6,7 @@
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { liveWorldPose } from '../helpers/liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { claimingSelectionRow } from '../../../utils/selection/claimingSelectionRow';
 
 import type { DemandCtx } from '../../../@types/loading/DemandCtx';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -16,10 +17,10 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
   const { select, focus, pending } = state.selection;
   // A pending id's kind counts before its data loads, or a deep link to a catalog that only
   // loads when selected would wait on itself forever.
-  const claimedKinds = (id: string | null) =>
-    id === null
-      ? []
-      : state.selectionKindRows.filter((r) => r.focusId?.claims(id)).map((r) => r.type);
+  const claimedKinds = (id: string | null) => {
+    const row = id === null ? null : claimingSelectionRow(state.selectionKindRows, id);
+    return row === null ? [] : [row.type];
+  };
   return {
     settings: state.settings,
     ui: state.ui,
