@@ -11,11 +11,10 @@ function subscribe<A extends unknown[]>(channel: string) {
     return () => void ipcRenderer.off(channel, handler);
   };
 }
-// Main answers every request; a command's answer carries nothing the page waits for.
-const command =
-  (channel: string) =>
-  (...args: unknown[]): void =>
-    void ipcRenderer.invoke(channel, ...args);
+// Main answers every request; a command's answer carries nothing the page waits for. A command sends
+// only its channel: the page wires buttons straight to it (onClick={bridge.quit}), and React's click
+// event, forwarded, cannot be cloned over IPC, so every such button failed without a word.
+const command = (channel: string) => (): void => void ipcRenderer.invoke(channel);
 
 const bridge: ControlBridge = {
   getState: () => ipcRenderer.invoke(C.getState),
@@ -25,7 +24,7 @@ const bridge: ControlBridge = {
   updateNow: command(C.updateNow),
   pauseSync: command(C.pauseSync),
   restartSky: command(C.restartSky),
-  showTestGrid: command(C.showTestGrid),
+  showTestGrid: (on) => void ipcRenderer.invoke(C.showTestGrid, on === true),
   rotateCode: () => ipcRenderer.invoke(C.rotateCode),
   hide: command(C.hide),
   quit: command(C.quit),
