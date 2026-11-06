@@ -28,6 +28,7 @@ const EXPOSURE = 0.625;
 const RING_INNER = 1.203125; // ring inner / atmosphere top (> 1: outside the shell)
 const RING_OUTER = 2.28125; // ring outer / atmosphere top
 const FROXEL_SLICE_KM = 3.5625; // aerial froxel slice depth, km
+const DAYLIGHT = 0.4375; // daylight weight, 0..1
 
 describe('AtmosphereUniforms byte offsets', () => {
   it('packs a 176-byte / 44-f32 record with invMvp at offset 112', () => {
@@ -41,6 +42,7 @@ describe('AtmosphereUniforms byte offsets', () => {
       RING_INNER,
       RING_OUTER,
       FROXEL_SLICE_KM,
+      DAYLIGHT,
     );
     expect(rec.length).toBe(ATMOSPHERE_UNIFORM_FLOATS);
     expect(rec.length).toBe(44); // 176 bytes
@@ -62,8 +64,8 @@ describe('AtmosphereUniforms byte offsets', () => {
     expect(rec[21]).toBe(CAM_POS[1]); // byte 84
     expect(rec[22]).toBe(CAM_POS[2]); // byte 88
 
-    // the vec3 tail pad (structural, not content)
-    expect(rec[23]).toBe(0); // byte 92
+    // daylight — the camPosLocal vec3's tail slot, a real field.
+    expect(rec[23]).toBe(DAYLIGHT); // byte 92
     expect(rec[24]).toBe(EXPOSURE); // byte 96
 
     // Ring ratios in atmosphere-top units (0 = no ring), for the shell's ring-in-front occlusion.

@@ -58,14 +58,23 @@ export const PRELUDE: FrameSection = {
     // own probe); `star-spheres` / `field-star-sphere` (the Sun stays analytic, a
     // sub-pixel Sun would smear into a false highlight); glints and `orbit-trails`
     // (not environment); `atmosphere-shell` (classifies rays by a sampled scene depth a
-    // capture face never resolves, and its pipeline has no depth state). NEAR0 is empty
-    // because the blit rides COSMO.
+    // capture face never resolves, and its pipeline has no depth state) — inside an
+    // atmosphere `atmosphere-probe-sky` draws the sky instead, FIRST, so the ground
+    // passes overdraw it. NEAR0 is empty because the blit rides COSMO.
     {
       kind: 'capture',
       captures: ['probe'],
       cosmoPasses: ['sky-cubemap-blit'],
       near0Passes: [],
-      bodyPasses: ['earth', 'surface-tiles', 'cloud-shell', 'planets', 'textured-bodies', 'rings'],
+      bodyPasses: [
+        'atmosphere-probe-sky',
+        'earth',
+        'surface-tiles',
+        'cloud-shell',
+        'planets',
+        'textured-bodies',
+        'rings',
+      ],
     },
   ],
 };

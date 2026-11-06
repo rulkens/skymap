@@ -431,6 +431,7 @@ function makeInput(
     },
     renderTargets,
     renderedTargets,
+    skyCapturesInBand: new Set<never>(),
   };
   const ctx = {
     id: 'canvas',

@@ -20,7 +20,6 @@ import {
 import { faceViewSpec } from '../../../utils/camera/viewRig/faceViewSpec';
 import { cubemapCaptureFrame } from './cubemapCaptureFrame';
 import { deriveView } from './deriveView';
-import { fadeBand } from '../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { sceneBodyStates } from './sceneBodyStates';
 import { ALL_CUBE_FACES } from '../../../data/rendering/cubemapCaptures';
@@ -46,7 +45,7 @@ export function scheduleSkyCaptures(input: {
     const anchorDistanceMpc = regionRelativeDistanceMpc(ctx.drawCamPos, row.anchor, bodyStates);
     runtime.lastAnchorDistanceMpc = anchorDistanceMpc;
 
-    const bandActive = fadeBand(row.band, anchorDistanceMpc) > 0;
+    const bandActive = ctx.snapshot.skyCapturesInBand.has(key);
     // `runFrame`'s reconcile runs BEFORE this frame's pose exists and cannot
     // see the band open; the edge reconciles here so the row's texture exists
     // for the sweep. `bakedSettings` is null while shut, so entry always bakes.
