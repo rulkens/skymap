@@ -1,4 +1,4 @@
-// surfaceTile/vertex.wesl — every patch's geometry from an 80-byte
+// surfaceTile/vertex.wesl — every patch's geometry from a 96-byte
 // 'PatchInstance' and the height atlas. The record is 'inst' -- 'patch' is a
 // WGSL RESERVED WORD. 'originRelEyeM' was differenced CPU-side from the SAME
 // f32-rounded anchor rebuilt here, so s = t = 0 lands on it exactly: no cracks.
