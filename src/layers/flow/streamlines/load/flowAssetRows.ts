@@ -12,7 +12,7 @@ export function flowAssetRows(
       key: 'flow',
       slot: runtime.slot,
       req: () => undefined,
-      demand: (ctx) => ctx.settings.flow.enabled,
+      demand: {},
       priority: 81, // same rung as filaments, behind them by size
       gates: 'flow',
     },

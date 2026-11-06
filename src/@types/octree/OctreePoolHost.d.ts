@@ -14,6 +14,7 @@ export type OctreePoolHost<C extends { readonly count: number }> = {
       hostSlot: number | null,
     ): void;
     evictChunk(source: SourceType, slot: number, hostSlot: number | null): void;
+    release(source: SourceType): void;
   };
   readonly chunkStreams: Map<SourceType, OctreeChunkStream<C>>;
   readonly requestRender: () => void;

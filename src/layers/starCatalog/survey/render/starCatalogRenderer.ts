@@ -169,6 +169,12 @@ export function createStarCatalogRenderer(
     return poolSlots;
   }
 
+  function release(source: StarCatalogSourceType): void {
+    sources.get(source)?.recordsBuffer.destroy();
+    sources.delete(source);
+    cut.release(source);
+  }
+
   function hostOf(
     { octree, slotChunks }: LoadedStarSource,
     hostSlot: number | null,
@@ -309,6 +315,7 @@ export function createStarCatalogRenderer(
   const renderer: StarCatalogRenderer = {
     label: 'starCatalogRenderer',
     upload,
+    release,
     uploadChunk,
     evictChunk,
     snapshotPickSlots,

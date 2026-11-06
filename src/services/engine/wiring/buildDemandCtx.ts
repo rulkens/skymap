@@ -1,6 +1,6 @@
 /**
- * buildDemandCtx — snapshots the read surfaces a demand predicate may consult
- * into a single `DemandCtx` (per-surface rationale: `@types/loading/DemandCtx.d.ts`).
+ * buildDemandCtx — snapshots what `evaluateAssetDemand` reads into one `DemandCtx`
+ * per pass (per-surface rationale: `@types/loading/DemandCtx.d.ts`).
  */
 
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
