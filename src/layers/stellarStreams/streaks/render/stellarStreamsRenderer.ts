@@ -1,5 +1,5 @@
 /**
- * StellarStreamsRenderer — PROTOTYPE. Instanced streak billboards, one per
+ * StellarStreamsRenderer — instanced streak billboards, one per
  * stream particle (40-byte records: pos xyz Mpc, unit tangent xyz, size Mpc,
  * luminosity, colour t, stream id), drawn twice per frame — sharp streaks, then
  * a wide low haze — each with its own 128-byte uniform block, since two
@@ -11,10 +11,21 @@ import type { StellarStreamsRenderer } from '../@types/StellarStreamsRenderer';
 import streamsCode from '../../../../services/gpu/shaders/stellarStreams/streams.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
-import { writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
+import {
+  CAMERA_UNIFORM_BYTES,
+  writeCameraPrefix,
+} from '../../../../services/gpu/lib/cameraUniforms';
+import { STELLAR_STREAMS_RECORD_F32 } from '../../catalog/data/stellarStreamsFormat.constants';
 
 const UNIFORMS_BYTES = 128;
-const RECORD_F32 = 10;
+// f32 slots after the camera prefix; `Uniforms` in streams.wesl must agree.
+const EYE = CAMERA_UNIFORM_BYTES / 4;
+const INTENSITY = EYE + 3;
+const SIZE_SCALE = INTENSITY + 1;
+const STRETCH = INTENSITY + 2;
+const MIN_PX = INTENSITY + 3;
+const TIME_SEC = INTENSITY + 4;
+const FLOW = INTENSITY + 5;
 
 export function createStellarStreamsRenderer(
   device: GPUDevice,
@@ -54,7 +65,7 @@ export function createStellarStreamsRenderer(
       entryPoint: 'vs',
       buffers: [
         {
-          arrayStride: RECORD_F32 * 4,
+          arrayStride: STELLAR_STREAMS_RECORD_F32 * 4,
           stepMode: 'instance',
           attributes: [
             { shaderLocation: 0, offset: 0, format: 'float32x3' },
@@ -91,7 +102,7 @@ export function createStellarStreamsRenderer(
       instances?.destroy();
       instances = null;
     },
-    draw(pass, rebasedVp, viewportPx, pxPerRad, eye, timeSec, looks) {
+    draw(pass, rebasedVp, viewportPx, pxPerRad, eye, timeSec, looks, opacity) {
       if (instances === null) return;
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, instances);
@@ -99,13 +110,13 @@ export function createStellarStreamsRenderer(
         const slot = slots[i]!;
         scratch.fill(0);
         writeCameraPrefix(scratch, rebasedVp, viewportPx, pxPerRad);
-        scratch.set(eye, 20);
-        scratch[23] = look.intensity;
-        scratch[24] = look.sizeScale;
-        scratch[25] = look.stretch;
-        scratch[26] = look.minPx;
-        scratch[27] = timeSec;
-        scratch[28] = look.flow;
+        scratch.set(eye, EYE);
+        scratch[INTENSITY] = look.intensity * opacity;
+        scratch[SIZE_SCALE] = look.sizeScale;
+        scratch[STRETCH] = look.stretch;
+        scratch[MIN_PX] = look.minPx;
+        scratch[TIME_SEC] = timeSec;
+        scratch[FLOW] = look.flow;
         device.queue.writeBuffer(slot.buffer, 0, scratch);
         pass.setBindGroup(0, slot.bindGroup);
         pass.draw(4, count);

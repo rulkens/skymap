@@ -16,6 +16,8 @@ export type StellarStreamsRenderer = {
     eye: Readonly<Vec3>,
     timeSec: number,
     looks: readonly [StellarStreamsLook, StellarStreamsLook],
+    /** Multiplies each look's intensity: the handed fade. */
+    opacity: number,
   ): void;
   destroy(): void;
 };

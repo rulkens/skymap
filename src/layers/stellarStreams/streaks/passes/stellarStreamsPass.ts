@@ -1,24 +1,25 @@
 /**
- * stellarStreamsPass — PROTOTYPE. Additive stream debris on NEAR0, right after
- * `local-bubble`: like the shell, it lands after the Milky Way's dust multiply,
- * so halo streams in front of the disc are not darkened by it.
+ * stellarStreamsPass — additive stream debris on NEAR0, right after `local-bubble`: like the
+ * shell, it lands after the Milky Way's dust multiply, so halo streams in front of the disc are
+ * not darkened by it. Core hands the fade; both looks come from settings.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { StellarStreamsRuntime } from '../../@types/StellarStreamsRuntime';
 import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { STELLAR_STREAMS_LOOKS } from '../data/stellarStreamsLooks';
 
-export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass {
+export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass<'stellarStreams'> {
   return {
     name: 'stellar-streams',
+    fade: 'stellarStreams',
 
     enabled() {
       return runtime.renderer.hasData();
     },
 
-    draw(pass, view, ctx) {
+    draw(pass, view, ctx, state, fade) {
+      const { streak, haze } = state.settings.stellarStreams;
       runtime.renderer.draw(
         pass,
         narrowMat4(rebaseViewProj(view.slab.vp, view.camPos)),
@@ -27,7 +28,8 @@ export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass 
         view.camPos,
         // Wrapped on a multiple of the shader's 8 s loop, so f32 never loses the phase.
         (ctx.snapshot.nowMs / 1000) % 200,
-        [STELLAR_STREAMS_LOOKS.streak, STELLAR_STREAMS_LOOKS.haze],
+        [streak, haze],
+        fade,
       );
     },
   };
