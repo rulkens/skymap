@@ -23,16 +23,15 @@ const files = ROOTS.flatMap((root) => walkFiles(root, ['.ts', '.tsx', '.cts', '.
   (file) => !SKIP.some((skip) => file.includes(skip)),
 );
 
+expect(files.length).toBeGreaterThan(0);
+
+// One test per file, as in noInlineTypes: one test parsing the whole tree outgrew the 5 s timeout.
 describe('no relative import names a .js file', () => {
-  it('every relative specifier is extensionless or a non-JS asset', () => {
-    expect(files.length).toBeGreaterThan(0);
-    const offenders = files.flatMap((file) => {
-      const sourceFile = parseOnlyProject.addSourceFileAtPath(file);
-      return [...sourceFile.getImportDeclarations(), ...sourceFile.getExportDeclarations()]
-        .map((decl) => decl.getModuleSpecifierValue())
-        .filter((spec): spec is string => spec?.startsWith('.') === true && JS_SUFFIX.test(spec))
-        .map((spec) => `${file}: '${spec}'`);
-    });
-    expect(offenders, `${offenders.join('\n')}\nDrop the suffix.`).toEqual([]);
+  it.each(files)('%s', (file) => {
+    const sourceFile = parseOnlyProject.addSourceFileAtPath(file);
+    const offenders = [...sourceFile.getImportDeclarations(), ...sourceFile.getExportDeclarations()]
+      .map((decl) => decl.getModuleSpecifierValue())
+      .filter((spec): spec is string => spec?.startsWith('.') === true && JS_SUFFIX.test(spec));
+    expect(offenders, 'Drop the suffix.').toEqual([]);
   });
 });
