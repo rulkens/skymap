@@ -17,9 +17,9 @@ import { watchGoHomeSaga } from '../../../src/state/selection/watchGoHomeSaga';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { goHome } from '../../../src/state/selection/goHome';
 import { startCameraTween } from '../../../src/state/camera/cameraSlice';
-import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { bodyHomePose } from '../../../src/services/engine/camera/framing/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
@@ -37,6 +37,7 @@ import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyPickCodes } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -70,8 +71,8 @@ describe('watchGoHomeSaga', () => {
     mw.setContext({
       cameraRuntime: () => cameraRuntime(),
       selection: composeSelectionRows(
-        () => [bodySelectionRow()],
-        () => ALL_KINDS_ENABLED,
+        () => [bodySelectionRow({ pickCodes: bodyPickCodes() })],
+        () => NO_KINDS_OFF,
       ),
     });
     return s;

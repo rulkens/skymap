@@ -25,7 +25,7 @@ import type { LayerGuides } from './LayerGuides';
 import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { LayerUiEntry } from './LayerUiEntry';
 import type { SagaFactory } from './SagaFactory';
-import type { SelectionKindRow } from './SelectionKindRow';
+import type { LayerSelection } from './LayerSelection';
 import type { SourceCountReport } from './SourceCountReport';
 import type { VisibilityEntry } from './VisibilityEntry';
 
@@ -50,13 +50,13 @@ export type Layer<
    * throws at boot. */
   readonly targets?: readonly RenderTargetSpec[];
   /** Each runs as its own root task via `createLayers`, cancelled at teardown — not
-   * folded into `rootSaga`. Factories, not running sagas. */
+   * merged into `rootSaga`. Factories, not running sagas. */
   readonly sagas?: readonly SagaFactory[];
   /** Candidate `body-m` slab rows, composed across Layers into `state.slabRows`.
    * `anchorId`s are globally unique and the composed total must fit
    * `LAYER_SLAB_ROW_HEADROOM` — both throw at boot. */
   readonly slabs?: readonly SlabRow[];
-  /** Exhibit rows, folded after core's into `APP_EXHIBIT_REGISTRY` by import (`appExhibits`); the
+  /** Exhibit rows, collected after core's into `APP_EXHIBIT_REGISTRY` by import (`appExhibits`); the
    * engine reads them here for their sections' camera rows. Ids unique, asserted at import. */
   readonly exhibits?: readonly Exhibit[];
   /** Typing only: `compositions/appSources.ts` collects the same rows into `APP_SOURCE_REGISTRY` by import. */
@@ -98,9 +98,9 @@ export type Layer<
    * joins `state.orbitTrailGroups`, walked by `orbitTrailsPass`. Each label `id`
    * must be stable across frames. */
   guides?(runtime: Runtime): LayerGuides;
-  /** Folded by `composeSelectionRows`; `pickSources` are disjoint across Layers,
-   * asserted at boot. */
-  selection?(runtime: Runtime): readonly SelectionKindRow[];
+  /** The kinds this Layer owns: static facts (`selectionKindOf`) and runtime rows. Every row's
+   * type must have facts and no kind may be declared twice, both asserted at boot. */
+  readonly selection?: LayerSelection<Runtime>;
   /** Palette rows. Each yield REPLACES this Layer's previous snapshot; a static
    * Layer yields once. Core runs it as a saga beside `sagas`, cancelled at teardown. */
   search?(runtime: Runtime): AsyncIterable<readonly LayerSearchEntry[]>;

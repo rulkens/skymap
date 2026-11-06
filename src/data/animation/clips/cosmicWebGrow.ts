@@ -20,12 +20,7 @@ export const cosmicWebGrow: Clip = {
       // Every survey, not SDSS alone: at this distance SDSS by itself is sub-pixel.
       hide(['cosmicWebDensity', 'labels', 'structureRing', 'zoneOfAvoidance'], 0),
       all([
-        seq([
-          wait(5),
-          show(['cosmicWebDensity'], 6),
-          wait(8),
-          hide(['survey'], 4),
-        ]),
+        seq([wait(5), show(['cosmicWebDensity'], 6), wait(8), hide(['survey'], 4)]),
         spin('yaw', { by: 1.1, over: DURATION_SEC, ease: 'linear' }),
       ]),
     ],

@@ -5,6 +5,7 @@
  * `.computes` / `.assetRows` / `.slotsByKey` / `.visibilityEntries` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
  * `.label3DProducers` and `.orbitTrailGroups` are unkeyed concatenations instead.
+ * Last, it installs the composition's selection kinds for `selectionKindOf`.
  */
 
 import { put } from 'typed-redux-saga';
@@ -16,6 +17,7 @@ import type { SourceCountReport } from '../../../@types/engine/layer/SourceCount
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
+import { createPickCodeAllocator } from '../selection/createPickCodeAllocator';
 import { composeTerrainHeightAt } from '../layer/composeTerrainHeightAt';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
@@ -28,6 +30,9 @@ import {
   engineStatusChanged,
 } from '../../../state/engine/engineSlice';
 import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSelectionRowsDisjoint';
+import { assertSelectionKindsComplete } from '../../../utils/selection/assertSelectionKindsComplete';
+import { installSelectionKinds } from '../selection/selectionKindOf';
+import { layerSelectionKinds } from '../../../utils/layer/layerSelectionKinds';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
@@ -60,6 +65,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   const uiCtx = state.gpu.uiCtx;
   if (uiCtx === null) throw new Error('createLayers: state.gpu.uiCtx is null');
 
+  const pickCodes = createPickCodeAllocator();
+  state.pickCodes = pickCodes;
   const requestRender = (): void => state.subsystems.scheduler.requestRender();
   // Core's "a source's catalog landed" pulse. The running total equals
   // `galaxyPointRenderer.totalCount()` by construction (per-source last count, summed,
@@ -96,6 +103,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       settings: () => deps.cb.store.getState().settings,
       debugPanelOpen: () => deps.cb.store.getState().ui.debugPanelOpen,
       requestRender,
+      pickCode: (pickSourceId: string) => pickCodes.codeOf(layer.name, pickSourceId),
     };
     // Facts is erased to `undefined` at this boundary (`Layer<string, unknown>`), so
     // `publish` cannot appear in `LayerCoreDeps<undefined>`; the cast below bridges it.
@@ -215,4 +223,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
 
   state.selectionKindRows = instances.flatMap((instance) => instance.selection);
   assertSelectionRowsDisjoint(state.selectionKindRows);
+  const kinds = layerSelectionKinds(deps.composition.layers);
+  assertSelectionKindsComplete(
+    kinds,
+    state.selectionKindRows.map((row) => row.type),
+  );
+  installSelectionKinds(kinds);
 }

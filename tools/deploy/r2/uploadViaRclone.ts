@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import type { R2SyncGroup } from '../@types/R2SyncGroup';
+import type { R2Transport } from '../@types/R2Transport';
 import { RCLONE_REMOTE, rcloneEnv, type RcloneCredentials } from './rcloneEnv';
 
 /** Parallel transfers. R2 has no documented per-connection cap; 32 saturates a home uplink. */
@@ -23,18 +24,18 @@ const TRANSFERS = 32;
  * `--checksum` compares size and MD5 against the ETag the bucket listing already carries
  * (MD5 for every single-part upload, which is anything under rclone's 200 MiB cutoff). The
  * default size+mtime check reads each object's mtime metadata with one HEAD per file:
- * minutes for ~40k tiles where nothing changed.
+ * minutes for tens of thousands of files where nothing changed.
  *
  * `copy` never deletes, so a stale remote object outlives a shrinking local
  * tree. That is the right default for immutable content and the reason a
  * re-bake should write a new key prefix rather than overwrite this one.
  */
 export function uploadViaRclone(
-  group: R2SyncGroup & { transport: { kind: 'bulk'; localRoot: string; keyRoot: string } },
+  group: R2SyncGroup & { transport: Extract<R2Transport, { kind: 'bulk' }> },
   bucket: string,
   creds: RcloneCredentials,
 ): void {
-  const { localRoot, keyRoot } = group.transport;
+  const { localRoot, keyRoot, refuseOverwrite } = group.transport;
   const listDir = mkdtempSync(join(tmpdir(), 'skymap-rclone-'));
   const listPath = join(listDir, 'files-from.txt');
   try {
@@ -52,6 +53,7 @@ export function uploadViaRclone(
         sourceRoot,
         `${RCLONE_REMOTE}:${bucket}/${keyRoot}`,
         '--checksum',
+        ...(refuseOverwrite ? ['--immutable'] : []),
         '--files-from',
         listPath,
         '--header-upload',

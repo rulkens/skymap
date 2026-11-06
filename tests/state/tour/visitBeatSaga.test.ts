@@ -39,10 +39,12 @@ import { CANCEL } from '@redux-saga/core';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
+import { SCENE_SETTLE_TIMEOUT_MS } from '../../../src/state/tour/sceneSettleTimeoutMs';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { Source } from '../../../src/data/source';
+import { FAMOUS_GALAXY_NAMES } from '../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -51,6 +53,9 @@ import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { focusId } from '../../../src/utils/animation/focusId';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the drift Promise stub.
@@ -183,18 +188,20 @@ describe('visitBeatSaga', () => {
 
     let cloudLoaded = false;
 
-    const FAMOUS_ID = 'm87';
-    const CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
-      positions: new Float32Array([1, 0, 0]),
-      spectroscopicZ: new Float32Array([0.01]),
-      magU: new Float32Array([18]),
-      magG: new Float32Array([17]),
-      magR: new Float32Array([16]),
-      magI: new Float32Array([16]),
-      magZ: new Float32Array([16]),
-      objIDs: new BigUint64Array([1n]),
-      diameterKpc: new Float32Array([30]),
-      axisRatio: new Float32Array([1]),
+    // A famous cloud names its rows only at the compiled-in table's length; every row is row 0.
+    const FAMOUS_ID = FAMOUS_GALAXY_NAMES[0]!.id;
+    const ROWS = FAMOUS_GALAXY_NAMES.length;
+    const filled = (value: number) => new Float32Array(ROWS).fill(value);
+    const CLOUD: GalaxyCatalog = makeGalaxyCatalog(ROWS, {
+      positions: Float32Array.from({ length: ROWS * 3 }, (_, i) => (i % 3 === 0 ? 1 : 0)),
+      spectroscopicZ: filled(0.01),
+      magU: filled(18),
+      magG: filled(17),
+      magR: filled(16),
+      magI: filled(16),
+      magZ: filled(16),
+      diameterKpc: filled(30),
+      axisRatio: filled(1),
     });
 
     const lazyStructures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
@@ -203,7 +210,6 @@ describe('visitBeatSaga', () => {
       get catalogs() {
         return cloudLoaded ? new Map([[Source.FamousGalaxy, CLOUD]]) : new Map();
       },
-      famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 }],
     } as unknown as GalaxyRowFixture;
 
     const famousBeat: BeatData = {
@@ -463,5 +469,51 @@ describe('visitBeatSaga', () => {
       kind: 'focus',
       ref: { type: 'structure', id: 'galaxy-cluster-virgo' },
     });
+  });
+
+  // ── (11) the cold-load gate: after the fly lands, before caption + dwell ──
+
+  it('awaitSettled holds the dwell after the fly lands until the scene has settled', async () => {
+    vi.useFakeTimers();
+    let settled = false;
+    const playClipMock = flyThenBlockingDrift(true);
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+    sagaMiddleware.setContext({ sceneSettled: () => settled });
+
+    sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0, { awaitSettled: true });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(playClipMock).toHaveBeenCalledTimes(1);
+    expect(store.getState().tour.dwellNonce).toBe(0);
+
+    settled = true;
+    await vi.advanceTimersByTimeAsync(200);
+    expect(store.getState().tour.dwellNonce).toBe(1);
+  });
+
+  it('the gate gives up after SCENE_SETTLE_TIMEOUT_MS, so a tile that never lands cannot hang the tour', async () => {
+    vi.useFakeTimers();
+    const playClipMock = flyThenBlockingDrift(true);
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+    sagaMiddleware.setContext({ sceneSettled: () => false });
+
+    sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0, { awaitSettled: true });
+    await vi.advanceTimersByTimeAsync(SCENE_SETTLE_TIMEOUT_MS - 200);
+    expect(store.getState().tour.dwellNonce).toBe(0);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(store.getState().tour.dwellNonce).toBe(1);
+  });
+
+  it("advanceTour during the gate returns 'next' without starting the dwell", async () => {
+    vi.useFakeTimers();
+    const playClipMock = flyThenBlockingDrift(true);
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+    sagaMiddleware.setContext({ sceneSettled: () => false });
+
+    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0, { awaitSettled: true });
+    await vi.advanceTimersByTimeAsync(300);
+    store.dispatch(advanceTour());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await task.toPromise()).toBe('next');
+    expect(store.getState().tour.dwellNonce).toBe(0);
   });
 });

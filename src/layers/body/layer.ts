@@ -31,14 +31,15 @@ import { aerialPerspectiveCompute } from './atmosphere/computes/aerialPerspectiv
 import { bodyAssetRows } from './textures/load/bodyAssetRows';
 import { BODY_BODY_ROWS } from './bodies/bodyBodyRows';
 import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
-import { bodySelectionRow } from './selection/present/bodySelectionRow';
+import { bodySelectionRow } from './selection/bodySelectionRow';
+import { bodySelectionKinds } from './selection/kinds';
 import { bodySearch } from './selection/present/bodySearch';
 import { BODY_TRAIL_ELEMENTS } from './orbitTrails/data/bodyTrailElements';
 import { SMALL_BODY_TRAIL_IDS } from './orbitTrails/data/smallBodyTrailIds';
 import { produceSceneBodyCaptions } from './labels/present/produceSceneBodyCaptions';
 import { bodyLayerExhibits } from './exhibits/exhibits';
 import { NEAR0 } from '../../services/engine/frame/slabs';
-import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
+import BodyDetailCardContainer from './card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 import { surfaceTilePlanner } from './frame';
 import { watchDebugPanelWakeSaga } from './surfaceTiles/debug/sagas/watchDebugPanelWakeSaga';
@@ -75,20 +76,20 @@ export const bodyLayer = defineLayer({
     bodyGlintsPass(runtime),
     atmosphereShellPass(runtime),
     aerialPerspectivePass(runtime),
-    bodyMeshesPass,
+    bodyMeshesPass(runtime),
   ],
   computes: (runtime) => [skyViewCompute(runtime), aerialPerspectiveCompute(runtime)],
   assets: bodyAssetRows,
   planners: (runtime) => [surfaceTilePlanner(runtime)],
   sagas: [watchDebugPanelWakeSaga],
   heightAt,
-  guides: () => ({
+  guides: (runtime) => ({
     screenLabels: [
       {
         slab: NEAR0,
         id: 'sceneBodyCaptions',
         label: 'body',
-        produceLabels: produceSceneBodyCaptions,
+        produceLabels: produceSceneBodyCaptions(runtime.pickCodes),
       },
     ],
     orbitTrails: {
@@ -97,7 +98,7 @@ export const bodyLayer = defineLayer({
       selectedOnly: SMALL_BODY_TRAIL_IDS,
     },
   }),
-  selection: () => [bodySelectionRow()],
+  selection: { kinds: bodySelectionKinds, rows: (runtime) => [bodySelectionRow(runtime)] },
   search: () => bodySearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'orbitTrails', label: 'Orbit trails' } },

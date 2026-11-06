@@ -17,17 +17,18 @@ import { SCENE_SUN } from '../../src/data/bodies/sceneSun';
 import { SCENE_STARS } from '../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../src/data/bodies/sceneSStars';
 import { isBodyKindId } from '../../src/layers/body/selection/present/isBodyKindId';
-import { ALL_KINDS_ENABLED } from '../support/allKindsEnabled';
+import { bodyPickCodes, missionsPickCode } from '../support/layerPickCodes';
+import { NO_KINDS_OFF } from '../support/noKindsOff';
 
 const STAR_IDS = new Set<string>([...SCENE_SUN, ...SCENE_STARS, ...SCENE_S_STARS].map((s) => s.id));
 
 const resolver = composeSelectionRows(
   () => [
-    ...bodyLayer.selection!(undefined as never),
-    ...missionsLayer.selection!(undefined as never),
-    ...earthScenesLayer.selection!(undefined as never),
+    ...bodyLayer.selection!.rows({ pickCodes: bodyPickCodes() } as never),
+    ...missionsLayer.selection!.rows({ pickCode: missionsPickCode() } as never),
+    ...earthScenesLayer.selection!.rows(undefined as never),
   ],
-  () => ALL_KINDS_ENABLED,
+  () => NO_KINDS_OFF,
 );
 
 describe('body-<id> focus claims', () => {

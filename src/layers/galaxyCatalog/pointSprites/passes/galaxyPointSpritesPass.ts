@@ -9,15 +9,19 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
-import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
+import { PICK_SENTINEL_OFFSET, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
+import { galaxyCatalogSelectionRow } from '../../selection/galaxyCatalogSelectionRow';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { pickUniformBytesOf } from '../render/pickUniformBytesOf';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../lod/data/galaxyLodBands';
+import { isKind } from '../../../../utils/selection/isKind';
+import type { GalaxyCatalogRef } from '../../selection/@types/GalaxyCatalogRef';
 
 export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPass<'survey'> {
+  const row = galaxyCatalogSelectionRow(runtime);
   return {
     name: 'point-sprites',
     fade: 'survey',
@@ -28,13 +32,14 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
     draw(pass, view, ctx, state, fade) {
       const { drawPxPerRad } = ctx;
 
-      // The shader compares a packed `(sourceCode << 26u) | instance_index` per
-      // vertex; structure targets light no galaxy halo, so they take the sentinel.
+      // The shader compares the pick word without its `+ PICK_SENTINEL_OFFSET`;
+      // a non-galaxy selection, or one with no drawn point, takes the sentinel.
       const selected = state.selection.select;
+      const encoded = isKind<GalaxyCatalogRef>(selected, 'galaxyCatalog')
+        ? row.encodePick(selected)
+        : null;
       const selectedPacked =
-        selected !== null && selected.type === 'galaxyCatalog'
-          ? packSelection(selected.source, selected.index)
-          : SELECTION_NONE_SENTINEL;
+        encoded === null ? SELECTION_NONE_SENTINEL : encoded - PICK_SENTINEL_OFFSET;
 
       runtime.pointRenderer.draw(pass, view.vp, view.viewportPx, {
         viewSlot: ctx.viewSlot,

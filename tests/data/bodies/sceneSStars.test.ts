@@ -13,19 +13,18 @@ import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
 import { starSearch } from '../../../src/layers/starCatalog/selection/present/starSearch';
-import { encodeStarFocusId } from '../../../src/services/url/encodeStarFocusId';
+import { encodeStarFocusId } from '../../../src/layers/starCatalog/selection/utils/encodeStarFocusId';
 import type { LayerSearchEntry } from '../../../src/@types/engine/layer/LayerSearchEntry';
 import { Source } from '../../../src/data/source';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { StarRowFixture } from '../../support/selectionResolverOver';
+import { testPickCode } from '../../support/testPickCode';
 
 /** The seeded star arms read no store data, so an empty fixture suffices — the
  *  star row needs no survey catalog to resolve a seed. */
-const resolver = selectionResolverOver(
-  { byId: () => null, byCategory: () => [] },
-  undefined,
-  { renderer: { loadedCatalogs: () => [][Symbol.iterator]() } } as unknown as StarRowFixture,
-);
+const resolver = selectionResolverOver({ byId: () => null, byCategory: () => [] }, undefined, {
+  renderer: { loadedCatalogs: () => [][Symbol.iterator]() },
+} as unknown as StarRowFixture);
 
 describe('SCENE_S_STARS', () => {
   it('shares no id with the famous-star map', () => {
@@ -48,7 +47,8 @@ describe('SCENE_S_STARS', () => {
     const s2Index = SCENE_S_STARS.findIndex((star) => star.id === 's2');
     expect(s2Index).toBeGreaterThanOrEqual(0);
 
-    const ref = resolver.resolvePick({ sourceCode: Source.SStar, localIdx: s2Index });
+    const sourceCode = testPickCode('starCatalog')('sStar');
+    const ref = resolver.resolvePick({ sourceCode, localIdx: s2Index });
     expect(ref).toEqual({ type: 'starCatalog', source: Source.SStar, index: s2Index });
     expect(resolver.extractRow(ref, CONST_J2000)).toMatchObject({ id: 's2', label: 'S2' });
 

@@ -48,6 +48,7 @@ function planMarkers(ctx: FrameView, count: number): FrameView {
     value: Array.from({ length: count }, () => ({}) as StructureMarkerDescriptor),
     awake: false,
     settling: false,
+    loading: false,
   });
   return ctx;
 }

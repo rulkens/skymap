@@ -29,9 +29,11 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
-import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
+import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
+import type { SelectionRowBase } from '../../../src/@types/engine/selection/SelectionRowBase';
 
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
@@ -42,7 +44,7 @@ const poseSource = HASH_PARAM_SOURCES.find((source) => source.key === 'pose')!;
 const J2000_ISO = '2000-01-01T12:00:00.000Z';
 const J2000_UNIX_MS = Date.UTC(2000, 0, 1, 12, 0, 0);
 
-const virgoRow: StructureInfo = {
+const virgoRow = placedStructureRow({
   type: 'structure',
   id: 'cluster-virgo-m87',
   name: 'Virgo Cluster',
@@ -50,17 +52,11 @@ const virgoRow: StructureInfo = {
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
-};
+});
 
-const earthRow: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('earth'),
-  label: 'Earth',
-  positionMpc: [0, 0, 0],
-  driver: bodyDriverGeometry('earth'),
-};
+const earthRow: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
-function focusedOn(row: SelectionRow, focusId: string): RootState {
+function focusedOn(row: SelectionRowBase, focusId: string): RootState {
   return stateAfter(setSelectionRow({ slot: 'focus', row, focusId }));
 }
 

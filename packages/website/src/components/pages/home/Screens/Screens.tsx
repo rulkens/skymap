@@ -9,7 +9,7 @@
  */
 import type { ReactNode } from 'react';
 
-import { requireShotLink } from '../../../../utils/requireShotLink.ts';
+import { shotLink } from '../../../../utils/shotLink.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { revealDelay } from '../../../../utils/revealDelay.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
@@ -41,7 +41,7 @@ function Screens({ title, action, devices, children }: ScreensProps) {
       <div className={styles.head}>
         <h2>{title}</h2>
         {children}
-        <ViewLink view={requireShotLink('start-saturn')}>{action}</ViewLink>
+        <ViewLink view={shotLink('start-saturn')}>{action}</ViewLink>
       </div>
       <div className={styles.row}>
         {KINDS.map((kind, at) => {

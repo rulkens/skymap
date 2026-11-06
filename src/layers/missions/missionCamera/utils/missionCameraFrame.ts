@@ -40,8 +40,8 @@ export function missionCameraFrame(
   if (frame === null) return null;
   // `yawPitchToDir` points from the target toward the eye; the camera looks the other way.
   const back = rotateVec3ByTightMat3(
-    yawPitchToDir(mission.cruise.yaw, mission.cruise.pitch),
     poseBasis,
+    yawPitchToDir(mission.cruise.yaw, mission.cruise.pitch),
   );
   const cruiseDir: Vec3 = [-back[0], -back[1], -back[2]];
   const cruise = frame.radiusMpc > (wasCruise ? NEAR_BELOW_MPC : CRUISE_ABOVE_MPC);
@@ -51,7 +51,7 @@ export function missionCameraFrame(
   let viewDirection = cruiseDir;
   if (outside) {
     const { yaw } = orbitAnglesLookingAlong([-outside[0], -outside[1], -outside[2]], ECLIPTIC);
-    const eyeward = rotateVec3ByTightMat3(yawPitchToDir(yaw, mission.cruise.pitch), ECLIPTIC);
+    const eyeward = rotateVec3ByTightMat3(ECLIPTIC, yawPitchToDir(yaw, mission.cruise.pitch));
     viewDirection = [-eyeward[0], -eyeward[1], -eyeward[2]];
   }
   // The orbit camera's own up, so the visitor's yaw turns about screen-up; its sideways axis

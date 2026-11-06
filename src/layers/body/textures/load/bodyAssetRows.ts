@@ -16,6 +16,7 @@ import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodySt
 import { loadRadiusMpc } from './bodyTextureLoadRadius';
 import { pastTextureReleaseRadius } from './pastTextureReleaseRadius';
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
+import type { BodyAssetKey } from '../../@types/BodyAssetKey';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../../@types/data/RingTextureId';
 import type { BodyTextureKey } from '../../../../@types/data/BodyTextureKey';
@@ -41,7 +42,10 @@ function ceilingOf(id: BodyTextureId | RingTextureId, kind: TextureKind): Tier {
 }
 
 /** Demanded inside the load radius X, released past 2X; `release` is deliberately not `!demand` (see `pastTextureReleaseRadius`). */
-function bodyTextureRow(runtime: BodyRuntime, entry: BodyTextureKey): AssetWiringRow {
+function bodyTextureRow(
+  runtime: BodyRuntime,
+  entry: BodyTextureKey,
+): AssetWiringRow<unknown, unknown, BodyAssetKey> {
   const key = bodyTextureSlotKey(entry.bodyId, entry.kind);
   return {
     key,
@@ -64,7 +68,9 @@ function bodyTextureRow(runtime: BodyRuntime, entry: BodyTextureKey): AssetWirin
   };
 }
 
-export function bodyAssetRows(runtime: BodyRuntime): readonly AssetWiringRow[] {
+export function bodyAssetRows(
+  runtime: BodyRuntime,
+): readonly AssetWiringRow<unknown, unknown, BodyAssetKey>[] {
   return [
     {
       key: 'bodyTextureAtlas',

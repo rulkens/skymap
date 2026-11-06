@@ -127,7 +127,10 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass<'starC
 
       const spheres = positionedSeededStars(sceneBodyPresentation(ctx).resolved);
       for (const star of spheres) {
-        const packedId = packSelection(star.source, star.seedIndex + PICK_SENTINEL_OFFSET);
+        const packedId = packSelection(
+          runtime.pickCodes.pickCodeOf(star.source),
+          star.seedIndex + PICK_SENTINEL_OFFSET,
+        );
         // Floor the PICK radius to the shared min footprint (visual sphere
         // untouched) via the shared `drawFlooredSpherePick` recipe: a just-resolved
         // star near its `resolvePx` is only a few pixels across. A resolved star is

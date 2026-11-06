@@ -41,7 +41,10 @@ export const whirlpoolPushIn: Clip = {
         dollyToId(M51, 22, { ease: 'easeOutSine', scale: 0.45 }),
         // Once the image resolves, the survey points behind it fall away: the
         // dot among thousands has become the one subject.
-        seq([wait(13), hide(['survey:sdss', 'survey:2mrs', 'survey:glade', 'survey:milliquas'], 5)]),
+        seq([
+          wait(13),
+          hide(['survey:sdss', 'survey:2mrs', 'survey:glade', 'survey:milliquas'], 5),
+        ]),
       ]),
       hold(3),
     ],

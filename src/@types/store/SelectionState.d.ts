@@ -1,8 +1,8 @@
-import type { SelectionRef } from '../engine/SelectionRef';
+import type { SelectionRefBase } from '../engine/selection/SelectionRefBase';
 
 /**
  * SelectionState — the three identity-Intent slots. Hover precedes select
- * precedes focus; each holds a SelectionRef or null. This is the durable,
+ * precedes focus; each holds a SelectionRefBase or null. This is the durable,
  * persistable/restorable Intent layer (sibling to the volatile SelectionRowsState).
  *
  * `pending` carries the IN-FLIGHT half of that Intent: the durable focus id a
@@ -16,8 +16,8 @@ import type { SelectionRef } from '../engine/SelectionRef';
  * stay independent, matching the one-command-one-slot split they already have.
  */
 export type SelectionState = {
-  readonly hover: SelectionRef | null;
-  readonly select: SelectionRef | null;
-  readonly focus: SelectionRef | null;
+  readonly hover: SelectionRefBase | null;
+  readonly select: SelectionRefBase | null;
+  readonly focus: SelectionRefBase | null;
   readonly pending: { readonly select: string | null; readonly focus: string | null };
 };

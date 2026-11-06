@@ -39,6 +39,9 @@ import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the seam Promise stub.

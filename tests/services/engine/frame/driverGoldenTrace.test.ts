@@ -42,6 +42,9 @@ import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EpochCell } from '../../../helpers/camera/readCameraEpochs';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const FIXTURE_PATH = fileURLToPath(
   new URL('../../../fixtures/camera/driverGoldenTrace.json', import.meta.url),

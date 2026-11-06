@@ -1,25 +1,25 @@
 /**
  * produceFamousGalaxyLabels — per-frame text labels for the curated famous galaxies,
  * derived from the famous `.bin` catalog in the galaxy store joined with the
- * famous-galaxies meta sidecar the same store holds.
+ * compiled-in `FAMOUS_GALAXY_NAMES`, so captions need no sidecar.
  *
  * Famous galaxies are galaxy data, not structures — their anchor is the galaxy
  * point itself, they emit no ring/halo marker, and their label visibility lives
  * on `settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` (famous is a galaxy catalog
- * source), which core reads. The two-asset join (catalog positions/diameters ⋈ meta names) happens
+ * source), which core reads. The join (catalog positions/diameters ⋈ compiled-in names) happens
  * here, on the galaxy side, and emits the famous labels plus their anchor lines.
  *
  * ### Fades out, doesn't pop
  *
  * Core keeps calling this while the label's fade-out tail is non-zero, with the
- * declining handed value as `layerAlpha`. The early returns here (meta/catalog
+ * declining handed value as `layerAlpha`. The early returns here (catalog
  * absent — nothing to fade) stay hard.
  *
- * ### Meta ⋈ catalog alignment
+ * ### Names ⋈ catalog alignment
  *
- * `famous.bin` is built in lock-step with `famous_galaxies_meta.json` (same ordering),
- * so meta entry at index `i` maps to catalog row `i`. The Milky Way is a
- * first-class FocusableTarget, not a famous-galaxies-meta row, so it never appears here;
+ * `build-famous` writes `famous.bin` and the names table from one seed in one order,
+ * so name row `i` maps to catalog row `i`. The Milky Way is a
+ * first-class card target, not a famous-galaxy row, so it never appears here;
  * `produceMilkyWayLabel` labels the user's own position separately.
  *
  * ### Handed value × distance fade bakes into fadeAlpha
@@ -48,9 +48,10 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import type { Label2DProducerOutput } from '../../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
-import type { FamousGalaxyMetaEntry } from '../../../../@types/loading/FamousGalaxyMetaEntry';
+import type { FamousGalaxyName } from '../@types/FamousGalaxyName';
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../../data/source';
+import { famousGalaxyNamesFor } from '../utils/famousGalaxyNamesFor';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { focusedFamousIndex } from '../utils/focusedFamousIndex';
@@ -105,7 +106,7 @@ function famousLabelMaxPx(distanceMpc: number): number {
 
 /**
  * The famous-galaxy fields the label math needs, derived per frame from the
- * catalog ⋈ meta join. A transient local shape rather than stored data.
+ * catalog ⋈ names join. A transient local shape rather than stored data.
  */
 type FamousLabelInput = {
   readonly id: string;
@@ -117,22 +118,19 @@ type FamousLabelInput = {
 };
 
 /**
- * Zip the meta sidecar with the famous catalog rows into label inputs. The
- * meta array is loaded from `famous_galaxies_meta.json` in lock-step with `famous.bin`,
- * so row `i` of the meta maps to row `i` of the catalog.
+ * Zip the compiled-in names with the famous catalog rows into label inputs:
+ * row `i` of the table names row `i` of the catalog.
  */
 function deriveFamousLabelInputs(
-  meta: readonly FamousGalaxyMetaEntry[],
+  names: readonly FamousGalaxyName[],
   catalog: Pick<GalaxyCatalog, 'count' | 'positions' | 'diameterKpc'>,
 ): FamousLabelInput[] {
   const out: FamousLabelInput[] = [];
-  let catalogIdx = 0;
-  for (const e of meta) {
-    if (catalogIdx >= catalog.count) break; // ran past the catalog; defensive
-    const x = catalog.positions[catalogIdx * 3 + 0]!;
-    const y = catalog.positions[catalogIdx * 3 + 1]!;
-    const z = catalog.positions[catalogIdx * 3 + 2]!;
-    const diameterKpc = catalog.diameterKpc[catalogIdx]!;
+  for (const [i, e] of names.entries()) {
+    const x = catalog.positions[i * 3 + 0]!;
+    const y = catalog.positions[i * 3 + 1]!;
+    const z = catalog.positions[i * 3 + 2]!;
+    const diameterKpc = catalog.diameterKpc[i]!;
     out.push({
       id: `famous-${e.id}`,
       name: famousDisplayName(e),
@@ -141,20 +139,19 @@ function deriveFamousLabelInputs(
       minApparentSizePx: FAMOUS_MIN_APPARENT_PX,
       labelWorldEmMpc: famousLabelWorldEmMpc(diameterKpc),
     });
-    catalogIdx += 1;
   }
   return out;
 }
 
 export function produceFamousGalaxyLabels(
-  runtime: Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>,
+  runtime: Pick<GalaxyCatalogRuntime, 'catalogs' | 'pickCodes'>,
 ): LayerScreenLabel<'famousGalaxy'>['produceLabels'] {
   return (state, ctx, fade) => {
     const empty: Label2DProducerOutput = { labels: [], awake: false };
 
-    const meta = runtime.famousMeta;
     const catalog = runtime.catalogs.get(Source.FamousGalaxy);
-    if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
+    if (catalog === undefined || catalog.count === 0) return empty;
+    const famousCode = runtime.pickCodes.pickCodeOf(Source.FamousGalaxy);
 
     // focusedOnly mode: only the focused subject's label draws. A famous focus
     // is a positional catalog ref; anything else focused (a structure, the
@@ -164,7 +161,7 @@ export function produceFamousGalaxyLabels(
       : null;
     if (state.settings.labels.focusedOnly && focusedIdx === null) return empty;
 
-    const inputs = deriveFamousLabelInputs(meta, catalog);
+    const inputs = deriveFamousLabelInputs(famousGalaxyNamesFor(catalog.count) ?? [], catalog);
     if (inputs.length === 0) return empty;
 
     const labels: Label2D[] = [];
@@ -186,7 +183,7 @@ export function produceFamousGalaxyLabels(
 
     for (let i = 0; i < inputs.length; i += 1) {
       const p = inputs[i]!;
-      // Input i maps to catalog row i (the meta ⋈ catalog join is index-aligned),
+      // Input i maps to catalog row i (the names ⋈ catalog join is index-aligned),
       // so the positional focus ref selects by loop index.
       if (focusedIdx !== null && i !== focusedIdx) continue;
       const dx = p.worldPos[0] - cx;
@@ -222,9 +219,9 @@ export function produceFamousGalaxyLabels(
       const labelAlpha = fadeAlpha * layerAlpha;
 
       // Byte-identical to what the famous point batch's pick fragment writes:
-      // the meta ⋈ catalog join is index-aligned, so this loop index IS the
+      // the names ⋈ catalog join is index-aligned, so this loop index IS the
       // catalog row the GPU stamps as `@builtin(instance_index)`.
-      const subjectId = packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET);
+      const subjectId = packSelection(famousCode, i + PICK_SENTINEL_OFFSET);
 
       // Build the label BEFORE its geometry so `measure` reads the same font /
       // text / alignment fields the final label carries — the measured ink

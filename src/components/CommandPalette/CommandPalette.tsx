@@ -22,7 +22,7 @@
  *   - Click outside the panel closes.
  *
  * A third, always-present row is the Milky Way — a first-class
- * FocusableTarget rather than a catalog object, so it carries no id or
+ * card target rather than a catalog object, so it carries no id or
  * alias tuple and renders a glyph instead of an atlas thumbnail.
  *
  * Selection: every row maps to a `PaletteAction` via `utils/palette/actionForRow`; a

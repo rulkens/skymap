@@ -38,6 +38,8 @@ describe('trackBody', () => {
       kind: 'seq';
       children: { kind: string; children: { kind: string }[] }[];
     };
-    expect(track.children.every((leg) => leg.kind === 'all' && leg.children.length === 2)).toBe(true);
+    expect(track.children.every((leg) => leg.kind === 'all' && leg.children.length === 2)).toBe(
+      true,
+    );
   });
 });

@@ -38,8 +38,8 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
       // Every vertex position reads the height atlas, so a cut without it is garbage.
       return (
         tiles.plan.cut.length > 0 &&
-        tiles.stream.getAtlasView() !== null &&
-        tiles.stream.getHeightAtlasView() !== null
+        tiles.stream.getAtlasView('albedo') !== null &&
+        tiles.stream.getAtlasView('height') !== null
       );
     },
 
@@ -64,7 +64,14 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
             oceanRoughness: state.settings.earth.oceanRoughness,
           },
         }),
-        ...(has('nightLights') && { nightLights: { view: earthRenderer.getMapView('night') } }),
+        ...(has('nightLights') && {
+          nightLights: {
+            view: earthRenderer.getMapView('night'),
+            // No night lane leaves every rect zero-scale, so the stand-in is bound but never read.
+            atlasView:
+              surfaceTiles.stream.getAtlasView('night') ?? earthRenderer.getMapView('night'),
+          },
+        }),
         ...(has('cloudShadows') && {
           cloudShadows: {
             view: earthRenderer.getMapView('clouds'),
@@ -98,8 +105,8 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         debugLodOverlay: state.settings.surfaceTileDebug.overlays['surface-lod-overlay'],
         noDisplacement: state.settings.surfaceTileDebug.overlays['terrain-no-displacement'],
         noSkirts: state.settings.surfaceTileDebug.overlays['terrain-no-skirts'],
-        surfaceAtlasView: surfaceTiles.stream.getAtlasView()!,
-        heightAtlasView: surfaceTiles.stream.getHeightAtlasView()!,
+        surfaceAtlasView: surfaceTiles.stream.getAtlasView('albedo')!,
+        heightAtlasView: surfaceTiles.stream.getAtlasView('height')!,
       });
     },
   };

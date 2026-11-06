@@ -20,12 +20,13 @@ import { contactShadowsPass } from './contactShadows/passes/contactShadowsPass';
 import { glintsPassOver } from '../../services/engine/frame/glintsPassOver';
 import { MISSION_CRAFT_IDS } from './craft/present/missionCraftIds';
 import { produceMissionCaptions } from './craft/present/produceMissionCaptions';
-import { craftSelectionRow } from './craft/present/craftSelectionRow';
+import { craftSelectionRow } from './selection/craftSelectionRow';
+import { missionsSelectionKinds } from './selection/kinds';
 import { craftSearch } from './craft/present/craftSearch';
 import { missionsLayerExhibits } from './exhibits/exhibits';
 import { MISSIONS_BODY_ROWS } from './bodies/missionsBodyRows';
 import { MISSIONS_SOURCE_ROWS } from './sources/missionsSourceRows';
-import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
+import BodyDetailCardContainer from '../body/card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 
 export const missionsLayer = defineLayer({
@@ -40,21 +41,24 @@ export const missionsLayer = defineLayer({
   destroy,
   passes: (runtime) => [
     missionTrailsPass(runtime),
-    missionMeshesPass,
+    missionMeshesPass(runtime),
     contactShadowsPass,
     glintsPassOver('mission-glints', MISSION_CRAFT_IDS, runtime.glintRenderer),
   ],
-  guides: () => ({
+  guides: (runtime) => ({
     screenLabels: [
       {
         slab: NEAR0,
         id: 'missionCaptions',
         label: 'missions',
-        produceLabels: produceMissionCaptions,
+        produceLabels: produceMissionCaptions(runtime.pickCode),
       },
     ],
   }),
-  selection: () => [craftSelectionRow()],
+  selection: {
+    kinds: missionsSelectionKinds,
+    rows: (runtime) => [craftSelectionRow(runtime.pickCode)],
+  },
   search: () => craftSearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'missionTrails', label: 'Mission trails' } },

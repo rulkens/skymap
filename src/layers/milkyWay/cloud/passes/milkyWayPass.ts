@@ -50,18 +50,19 @@ export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDis
     name: 'milky-way',
     fade: 'milkyWayDisk',
 
-    enabled: (_state, ctx, _view, fade) => deriveMilkyWayCloudAlpha(ctx, fade) !== null,
+    enabled: (_state, ctx, _view, fade) =>
+      deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode) !== null,
 
     // Narrower than `enabled` — composed over it so pick stays a strict
     // subset of draw; see `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above.
     pickEnabled(_state, ctx, view, fade) {
-      if (deriveMilkyWayCloudAlpha(ctx, fade) === null) return false;
+      if (deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode) === null) return false;
       const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
       return camDistMpc >= MILKY_WAY_PICK_MIN_DISTANCE_MPC;
     },
 
     draw(pass, view, ctx, state, fade) {
-      const fadeAlpha = deriveMilkyWayCloudAlpha(ctx, fade);
+      const fadeAlpha = deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode);
       if (fadeAlpha === null) return;
 
       runtime.cloudRenderer.drawDust(pass, {

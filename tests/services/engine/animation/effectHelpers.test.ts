@@ -99,7 +99,7 @@ describe('flyPath', () => {
 
   it('stamps the default pass-by (4 radii, outsideBend) when none is authored', () => {
     // The authoring default flies the eye BESIDE each galaxy subject. Structures
-    // opt out by resolving to radius 0 (focusFraming), so this is safe to stamp
+    // opt out by resolving to radius 0 (arrivalFraming), so this is safe to stamp
     // on every flyPath — a group cloud flies through-centre regardless.
     const e = flyPath(wps, { over: 20 });
     expect(e.passBy).toEqual({ offset: 4, dir: 'outsideBend' });

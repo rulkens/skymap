@@ -6,7 +6,15 @@
  */
 
 import type { Clip } from '../../../@types/animation/Clip';
-import { all, dollyTo, hide, show, hold, seq, spin } from '../../../services/engine/animation/effectHelpers';
+import {
+  all,
+  dollyTo,
+  hide,
+  show,
+  hold,
+  seq,
+  spin,
+} from '../../../services/engine/animation/effectHelpers';
 import { SCALE_UNITS } from '../../scaleUnits';
 
 const PC = SCALE_UNITS.PC_TO_MPC;

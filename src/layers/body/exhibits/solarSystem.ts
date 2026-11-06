@@ -28,20 +28,7 @@ export const solarSystem: Exhibit = {
   settings: {
     orbitTrails: { ...orbitTrailsInitialState, enabled: true },
     starCatalogs: { ...starCatalogsInitialState, brightness: STARFIELD_BRIGHTNESS },
-    picking: {
-      kinds: {
-        body: true,
-        craft: true,
-        earthScene: true,
-        starCatalog: true,
-        galaxyCatalog: false,
-        structure: false,
-        milkyWay: false,
-        zoneOfAvoidance: false,
-        blackHole: true,
-        satellite: false,
-      },
-    },
+    picking: { off: ['galaxyCatalog', 'structure', 'milkyWay', 'zoneOfAvoidance', 'satellite'] },
   },
   pose: {
     target: [0, 0, 0],

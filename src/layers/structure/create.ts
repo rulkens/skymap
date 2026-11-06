@@ -15,17 +15,24 @@ import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
 import { createStructureStore } from './catalog/load/createStructureStore';
 import { createStructureMarkerRenderer } from './markers/render/structureMarkerRenderer';
+import { catalogPickCodes } from '../../utils/picking/catalogPickCodes';
+import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import { createStructureCatalogSlot } from './catalog/load/structureCatalogSlot';
 import { wireStructureProjection } from './catalog/load/wireStructureProjection';
 
 export function create(deps: LayerCoreDeps<StructureFacts>): StructureRuntime {
   const store = createStructureStore();
+  const pickCodes = catalogPickCodes(
+    STRUCTURE_IDS.map((id) => [id, { id }] as const),
+    deps.pickCode,
+  );
   const cosmoRenderer = createStructureMarkerRenderer(
     deps.ctx,
     HDR_TARGET_FORMAT,
     deps.fadeBgl,
     COSMO,
     STRUCTURE_IDS_BY_SCALE.cosmic,
+    pickCodes.pickCodeOf,
   );
   // Its own uniform + instance buffers: both marker passes record into one
   // encoder, so a shared uniform would hand both draws the last-written matrix.
@@ -35,8 +42,9 @@ export function create(deps: LayerCoreDeps<StructureFacts>): StructureRuntime {
     deps.fadeBgl,
     NEAR0,
     STRUCTURE_IDS_BY_SCALE.milkyWay,
+    pickCodes.pickCodeOf,
   );
   const slot = createStructureCatalogSlot();
   wireStructureProjection({ store, slot }, deps.publish);
-  return { store, cosmoRenderer, nearRenderer, slot };
+  return { store, cosmoRenderer, nearRenderer, pickCodes, slot };
 }

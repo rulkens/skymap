@@ -26,6 +26,9 @@ import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitPo
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const FOV_Y = 0.8;
 // Arbitrary — this chain resolves only structure refs, never a body.
@@ -57,7 +60,11 @@ const M81_GROUP: StructureInfo = {
 
 const STRUCTURES: StructureRowFixture = {
   byId: (id) =>
-    id === 'galaxy-group-local-group' ? LOCAL_GROUP : id === 'galaxy-group-m81-group' ? M81_GROUP : null,
+    id === 'galaxy-group-local-group'
+      ? LOCAL_GROUP
+      : id === 'galaxy-group-m81-group'
+        ? M81_GROUP
+        : null,
   byCategory: () => [],
 };
 const RESOLVER = selectionResolverOver(STRUCTURES);

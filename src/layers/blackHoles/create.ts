@@ -10,11 +10,13 @@ import type { BlackHolesRuntime } from './@types/BlackHolesRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createBlackHoleLensingRenderer } from './lensing/render/blackHoleLensingRenderer';
+import { SGR_A_STAR_ENTRY } from './sources/sgrAStar';
 import { createBodyGlintRenderer } from '../../services/gpu/renderers/bodies/bodyGlintRenderer';
 
 export function create(deps: LayerCoreDeps): BlackHolesRuntime {
   return {
     lensRenderer: createBlackHoleLensingRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
     markerRenderer: createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
+    pickCode: deps.pickCode(SGR_A_STAR_ENTRY.id),
   };
 }

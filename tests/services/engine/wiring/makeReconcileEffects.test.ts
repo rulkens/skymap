@@ -29,24 +29,29 @@ vi.mock('../../../../src/services/engine/helpers/logCameraState', () => ({
   logCameraState: vi.fn(),
 }));
 
-// Mock the live-assembly helpers so the forwarding test only asserts THIS
-// factory calls them and forwards their results — the helpers' own logic
-// (pose assembly, position swap) is covered by liveRenderCamera.test.ts and
-// liveFocusRow.test.ts.
+// Mock the pose assembly so the forwarding test only asserts THIS factory calls it and
+// forwards its result; liveRenderCamera.test.ts covers the assembly itself.
 vi.mock('../../../../src/services/engine/helpers/liveRenderCamera', () => ({
   liveRenderCamera: vi.fn(() => 'LIVE_CAM'),
-}));
-vi.mock('../../../../src/services/engine/helpers/liveFocusRow', () => ({
-  liveFocusRow: vi.fn(() => 'LIVE_FOCUS_ROW'),
 }));
 
 import { syncVisibilityTargets } from '../../../../src/services/engine/wiring/syncVisibilityTargets';
 import { applySwapFormat } from '../../../../src/services/engine/phases/applySwapFormat';
 import { logCameraState } from '../../../../src/services/engine/helpers/logCameraState';
 import { liveRenderCamera } from '../../../../src/services/engine/helpers/liveRenderCamera';
-import { liveFocusRow } from '../../../../src/services/engine/helpers/liveFocusRow';
+import { bodySelectionRow } from '../../../../src/layers/body/selection/bodySelectionRow';
+import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
+import { bodyPickCodes } from '../../../support/layerPickCodes';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const CANVAS = {} as HTMLCanvasElement;
+const BODY_ROWS = bodySelectionRow({ pickCodes: bodyPickCodes() });
+const SELECTION = composeSelectionRows(
+  () => [BODY_ROWS],
+  () => [],
+);
+const MARS_REF = { type: 'body', id: asSceneBodyId('mars') } as const;
 
 // ── Fake EngineState builder ──────────────────────────────────────────────────
 //
@@ -65,7 +70,14 @@ function makeState(): {
       scheduler: { requestRender },
     },
     booted: false,
-    selectionRows: { hover: null, select: null, focus: null },
+    selection: { hover: null, select: null, focus: MARS_REF },
+    selectionKindRows: [BODY_ROWS],
+    // Stored at J2000: the instant the live clock has long left.
+    selectionRows: {
+      hover: null,
+      select: null,
+      focus: BODY_ROWS.extractRow(MARS_REF, CONST_J2000),
+    },
     cameraRuntime: { outputs: { simDays: 2461272.948547558, displayed: 'DISPLAYED_ARM' } },
   } as unknown as EngineState;
 
@@ -81,7 +93,7 @@ describe('makeReconcileEffects', () => {
 
   it('syncFades() recomputes every visibility target', () => {
     const { state } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
+    const effects = makeReconcileEffects(state, CANVAS, SELECTION);
     effects.syncFades();
     expect(syncVisibilityTargets).toHaveBeenCalledTimes(1);
     expect(syncVisibilityTargets).toHaveBeenCalledWith(state, undefined);
@@ -89,29 +101,23 @@ describe('makeReconcileEffects', () => {
 
   it("applySwapFormat('rgba16float') forwards to the applySwapFormat phase with state", () => {
     const { state } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
+    const effects = makeReconcileEffects(state, CANVAS, SELECTION);
     effects.applySwapFormat('rgba16float');
     expect(applySwapFormat).toHaveBeenCalledTimes(1);
     expect(applySwapFormat).toHaveBeenCalledWith(state, 'rgba16float');
   });
 
-  it('logCameraState forwards the LIVE camera/focus (via the live-* helpers) + canvas + simDays', () => {
+  it('the logged focus row is re-extracted at the live simDays', () => {
     const { state } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
+    const effects = makeReconcileEffects(state, CANVAS, SELECTION);
     effects.logCameraState();
 
+    const { simDays } = state.cameraRuntime.outputs;
+    const live = BODY_ROWS.extractRow(MARS_REF, simDays);
     expect(liveRenderCamera).toHaveBeenCalledWith(state);
-    expect(liveFocusRow).toHaveBeenCalledWith(
-      state.selectionRows.focus,
-      state.cameraRuntime.outputs.simDays,
-    );
     expect(logCameraState).toHaveBeenCalledTimes(1);
-    expect(logCameraState).toHaveBeenCalledWith(
-      'LIVE_CAM',
-      CANVAS,
-      'LIVE_FOCUS_ROW',
-      state.cameraRuntime.outputs.simDays,
-      'DISPLAYED_ARM',
-    );
+    expect(logCameraState).toHaveBeenCalledWith('LIVE_CAM', CANVAS, live, simDays, 'DISPLAYED_ARM');
+    // Mars has moved since the stored row's instant, so a pass-through would fail above.
+    expect(live).not.toEqual(state.selectionRows.focus);
   });
 });

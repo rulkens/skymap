@@ -13,31 +13,20 @@
  * it back with `BigInt(...)` where it needs the numeric identity.
  */
 import { Source } from '../../../../data/source';
+import { famousGalaxyNamesFor } from '../../famousGalaxies/utils/famousGalaxyNamesFor';
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
-import type { FamousGalaxyMetaEntry } from '../../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyRow } from '../../../../@types/engine/GalaxyRow';
 
 export function extractGalaxyRow(
   cloud: GalaxyCatalog | undefined,
   idx: number,
   source: GalaxyCatalogSourceType,
-  famousGalaxiesMeta?: readonly FamousGalaxyMetaEntry[],
 ): GalaxyRow | null {
   if (!cloud) return null;
   if (idx < 0 || idx >= cloud.count) return null;
-
-  const famousEntry =
-    source === Source.FamousGalaxy && famousGalaxiesMeta ? famousGalaxiesMeta[idx] : undefined;
-  const famous = famousEntry
-    ? {
-        id: famousEntry.id,
-        ...(famousEntry.commonName !== undefined ? { commonName: famousEntry.commonName } : {}),
-        names: famousEntry.names,
-        description: famousEntry.description,
-        type: famousEntry.type,
-      }
-    : undefined;
+  const famous =
+    source === Source.FamousGalaxy ? famousGalaxyNamesFor(cloud.count)?.[idx] : undefined;
 
   return {
     type: 'galaxyCatalog',

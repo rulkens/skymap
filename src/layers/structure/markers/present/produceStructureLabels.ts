@@ -13,7 +13,7 @@
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
-import type { StructureStore } from '../../catalog/@types/StructureStore';
+import type { StructureRuntime } from '../../@types/StructureRuntime';
 import { structurePickId } from '../../picking/utils/structurePickId';
 import { MARKER_RADIUS_RETUNE } from '../data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../data/structureLabelAboveGapPx';
@@ -30,7 +30,7 @@ import type { StructureScale } from '../../../../@types/data/structure/Structure
 import { STRUCTURE_IDS_BY_SCALE } from '../../../../data/structure/structureIdsByScale';
 
 export function produceStructureLabels(
-  store: StructureStore,
+  runtime: Pick<StructureRuntime, 'store' | 'pickCodes'>,
   scale: StructureScale,
 ): LayerScreenLabel<'structure'>['produceLabels'] {
   return (state, ctx, fade) => {
@@ -56,7 +56,7 @@ export function produceStructureLabels(
       scale === 'milkyWay'
         ? imagePlaneBasis(orbitForwardOf(ctx.cam), ctx.cam.roll ?? 0, frameUp(ctx.cam.upBasis)).up
         : null;
-    for (const p of store.all()) {
+    for (const p of runtime.store.all()) {
       if (!scaleIds.includes(p.category)) continue;
       if (focusedOnly && p.id !== focusedStructureId) continue;
       // The category's handed value carries its label switch, its ring's switch, the
@@ -116,9 +116,13 @@ export function produceStructureLabels(
       }
 
       // Byte-identical to what `ringPick.wesl` writes for this structure's own
-      // marker ring — the category's source code over the per-category index,
+      // marker ring — the category's pick code over the per-category index,
       // both read from the store's single-sourced `categoryIndexOf`.
-      const subjectId = structurePickId(p.category, store.categoryIndexOf(p.category, p.id));
+      const subjectId = structurePickId(
+        p.category,
+        runtime.store.categoryIndexOf(p.category, p.id),
+        runtime.pickCodes,
+      );
 
       labels.push({
         id: p.id,

@@ -42,7 +42,16 @@ export function phobosOrbit(simDays: number): Clip {
       start: { target, distance: CLOSE_MPC, yaw: yaw + SWEEP_RAD, pitch: pitch + ELEVATION_RAD },
       timeline: [
         // Only Mars, Phobos and the rovers keep their names: star names crowd a close-up.
-        hide(['label:starCatalog', 'label:famousGalaxy', 'label:structure', 'structureRing', 'missionTrails'], 0),
+        hide(
+          [
+            'label:starCatalog',
+            'label:famousGalaxy',
+            'label:structure',
+            'structureRing',
+            'missionTrails',
+          ],
+          0,
+        ),
         wait(2), // the shape model streams in behind the lead-in
         spin('yaw', { by: -SWEEP_RAD, over: 16 }),
         dollyTo(FAR_MPC, 10, 'easeInOutSine'),

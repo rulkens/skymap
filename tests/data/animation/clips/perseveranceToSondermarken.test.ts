@@ -40,7 +40,8 @@ const END_SEC = 97;
 const OVERHEAD_PARK_SEC = 68;
 
 const sub = (a: Readonly<Vec3>, b: Readonly<Vec3>): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const dot = (a: Readonly<Vec3>, b: Readonly<Vec3>): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const dot = (a: Readonly<Vec3>, b: Readonly<Vec3>): number =>
+  a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Vec3, b: Vec3): Vec3 => [
   a[1] * b[2] - a[2] * b[1],
   a[2] * b[0] - a[0] * b[2],
@@ -48,7 +49,7 @@ const cross = (a: Vec3, b: Vec3): Vec3 => [
 ];
 
 function eyeMpc(pose: CameraPose): Vec3 {
-  const toEye = rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), BASIS);
+  const toEye = rotateVec3ByTightMat3(BASIS, yawPitchToDir(pose.yaw, pose.pitch));
   return [0, 1, 2].map((i) => pose.target[i]! + pose.distance * toEye[i]!) as Vec3;
 }
 
@@ -124,9 +125,19 @@ describe('perseveranceToSondermarken', () => {
     (offsetDays) => {
       const simDays = SIM_DAYS + offsetDays;
       const c = perseveranceToSondermarken(simDays);
-      const data = resolveClipFoci(c.data, NO_SELECTION, 1, c.data.start as CameraPose, simDays, BASIS);
+      const data = resolveClipFoci(
+        c.data,
+        NO_SELECTION,
+        1,
+        c.data.start as CameraPose,
+        simDays,
+        BASIS,
+      );
       const b = deriveBodyStates(simDays);
-      const [m, e] = [b.get(asSceneBodyId('mars'))!.positionMpc, b.get(asSceneBodyId('earth'))!.positionMpc];
+      const [m, e] = [
+        b.get(asSceneBodyId('mars'))!.positionMpc,
+        b.get(asSceneBodyId('earth'))!.positionMpc,
+      ];
       // The opening eye is ~1.3 m above the rover's radius, the tightest moment by design.
       const grounds: [Vec3, number][] = [
         [m, Math.hypot(...sub(b.get(asSceneBodyId('perseverance'))!.positionMpc, m))],

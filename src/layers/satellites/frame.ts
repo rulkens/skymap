@@ -12,7 +12,7 @@ import { satelliteLayerOpacity } from './points/subsystems/satelliteLayerOpacity
 import { sweepDue } from './sweep/subsystems/sweepDue';
 import { SATELLITE_CLASSES } from '../../data/satellites/satelliteClasses';
 
-const IDLE = { value: undefined, awake: false, settling: false } as const;
+const IDLE = { value: undefined, awake: false, settling: false, loading: false } as const;
 
 export function satellitesPlanner(
   runtime: SatellitesRuntime,

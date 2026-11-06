@@ -1,11 +1,11 @@
 /*
  * DeliveryColumn — one way to get Skymap onto a dome: its picture with the picture's title, its one
  * figure set large, its name, a sentence or two (the children), its line of every row of the
- * specification (domes.data.ts) and one link, to the picture's view where a link can open it as shown
- * (shotLink). The picture is a fisheye disc: live, one that turns under a drag (domeTurn.client.ts), as
- * someone steers it; a film, its frame in front of the `earlier` frames, fanned out behind it to the
- * right, oldest furthest back. Its parts are rows of Delivery's grid (thirteen, the count `grid-row`
- * spans in the module), so they line up with the column beside it.
+ * specification (domes.data.ts) and one link, to the picture's view. The picture is a fisheye disc:
+ * live, one that turns under a drag (domeTurn.client.ts), as someone steers it; a film, its frame in
+ * front of the `earlier` frames, fanned out behind it to the right, oldest furthest back. Its parts are
+ * rows of Delivery's grid (thirteen, the count `grid-row` spans in the module), so they line up with
+ * the column beside it.
  */
 import type { CSSProperties, ReactNode } from 'react';
 
@@ -37,7 +37,7 @@ type DeliveryColumnProps = {
 
 function DeliveryColumn(props: DeliveryColumnProps) {
   const { kind, title, shot, figure, measure, accent, action, earlier = [], children } = props;
-  const link = shotLink(shot);
+  const { query } = siteShot(shot);
   const turns = kind === 'live';
   return (
     <article className={styles.root} style={{ '--column-accent': accent } as CSSProperties}>
@@ -82,11 +82,9 @@ function DeliveryColumn(props: DeliveryColumnProps) {
           </div>
         ))}
       </dl>
-      {link && (
-        <ViewLink className={styles.link} hang view={link} query={siteShot(shot).query}>
-          {action}
-        </ViewLink>
-      )}
+      <ViewLink className={styles.link} hang view={shotLink(shot)} query={query}>
+        {action}
+      </ViewLink>
     </article>
   );
 }

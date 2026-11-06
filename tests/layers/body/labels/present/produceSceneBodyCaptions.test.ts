@@ -9,11 +9,17 @@
 import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, it, expect } from 'vitest';
 
-import { produceSceneBodyCaptions } from '../../../../../src/layers/body/labels/present/produceSceneBodyCaptions';
+import { produceSceneBodyCaptions as produceSceneBodyCaptionsFor } from '../../../../../src/layers/body/labels/present/produceSceneBodyCaptions';
+import { bodyCodeOf } from '../../../../../src/layers/body/selection/present/bodyCodeOf';
+import {
+  blackHolePickCode,
+  bodyPickCodes,
+  missionsPickCode,
+} from '../../../../support/layerPickCodes';
 import { produceBlackHoleCaptions } from '../../../../../src/layers/blackHoles/markers/present/produceBlackHoleCaptions';
 import { produceConstellationCaptions } from '../../../../../src/layers/constellations/figures/present/produceConstellationCaptions';
 import { sceneBodyLabels } from '../../../../../src/layers/body/labels/present/sceneBodyLabels';
-import { produceMissionCaptions } from '../../../../../src/layers/missions/craft/present/produceMissionCaptions';
+import { produceMissionCaptions as produceMissionCaptionsFor } from '../../../../../src/layers/missions/craft/present/produceMissionCaptions';
 import { meshBodyCaption } from '../../../../../src/layers/missions/craft/utils/meshBodyCaption';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
@@ -31,10 +37,13 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
 
+const produceSceneBodyCaptions = produceSceneBodyCaptionsFor(bodyPickCodes());
+const produceMissionCaptions = produceMissionCaptionsFor(missionsPickCode());
+
 // Pinned at J2000 so anchors match the producer's `sceneBodyStates` read at `ctx.simDays`.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const BASE = [
-  ...sceneBodyLabels(J2000_STATES),
+  ...sceneBodyLabels(J2000_STATES, bodyCodeOf(bodyPickCodes())),
   ...SCENE_MESH_BODIES.map((b) => meshBodyCaption(b, J2000_STATES.get(b.id)!.positionMpc, 0)),
 ];
 
@@ -122,7 +131,7 @@ function captionsAt(ctx: FrameView): readonly Label2D[] {
 
 function sgrAStarAlpha(state: EngineState, ctx: FrameView): number | undefined {
   return fadeAlphaOf(
-    produceBlackHoleCaptions()(state, ctx, { [SGR_A_STAR_ENTRY.id]: 1 }).labels,
+    produceBlackHoleCaptions(blackHolePickCode())(state, ctx, { [SGR_A_STAR_ENTRY.id]: 1 }).labels,
     SGR_A_STAR_LABEL_ID,
   );
 }

@@ -14,12 +14,16 @@ import { inputSourceSaga } from '../../../src/state/input/inputSourceSaga';
 import { watchFocusSelectedSaga } from '../../../src/state/selection/watchFocusSelectedSaga';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
-import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
-import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
+import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { cameraRoute } from '../../../src/store/constants';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
+import { bodyPickCodes, milkyWayPickCode } from '../../support/layerPickCodes';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
 const NO_MODS = { shift: false, ctrl: false, alt: false, meta: false };
@@ -31,8 +35,11 @@ describe('double-tap focus', () => {
     const store = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.setContext({
       selection: composeSelectionRows(
-        () => [bodySelectionRow(), milkyWaySelectionRow()],
-        () => ALL_KINDS_ENABLED,
+        () => [
+          bodySelectionRow({ pickCodes: bodyPickCodes() }),
+          milkyWaySelectionRow(milkyWayPickCode()),
+        ],
+        () => NO_KINDS_OFF,
       ),
       cameraRuntime: () => ({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 9 },

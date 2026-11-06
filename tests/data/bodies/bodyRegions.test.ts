@@ -89,9 +89,7 @@ describe('BODY_REGIONS', () => {
     // Fresh modules, so the track is in the registry when BODY_REGIONS snapshots J2000
     // and nothing leaks into this file's other tests.
     vi.resetModules();
-    const { trajectoryRegistry } = await import(
-      '../../../src/services/bodies/trajectoryRegistry'
-    );
+    const { trajectoryRegistry } = await import('../../../src/services/bodies/trajectoryRegistry');
     const au150Km = 150 * 1.495978707e8;
     trajectoryRegistry.set({
       id: 'voyager1',

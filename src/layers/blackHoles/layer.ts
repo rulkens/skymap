@@ -18,7 +18,8 @@ import { destroy } from './destroy';
 import { blackHoleLensingPass } from './lensing/passes/blackHoleLensingPass';
 import { blackHoleMarkerPass } from './markers/passes/blackHoleMarkerPass';
 import { blackHoleSlabRow } from './markers/present/blackHoleSlabRow';
-import { blackHoleSelectionRow } from './markers/present/blackHoleSelectionRow';
+import { blackHoleSelectionRow } from './selection/blackHoleSelectionRow';
+import { blackHolesSelectionKinds } from './selection/kinds';
 import { blackHoleSearch } from './markers/present/blackHoleSearch';
 import { produceBlackHoleCaptions } from './markers/present/produceBlackHoleCaptions';
 import { BLACK_HOLE_SKY_CAPTURES } from './lensing/data/blackHoleSkyCaptures';
@@ -38,17 +39,20 @@ export const blackHolesLayer = defineLayer({
   create,
   destroy,
   passes: (runtime) => [blackHoleLensingPass(runtime), blackHoleMarkerPass(runtime)],
-  guides: () => ({
+  guides: (runtime) => ({
     screenLabels: [
       {
         slab: NEAR0,
         id: 'blackHoleCaptions',
         label: 'blackHole',
-        produceLabels: produceBlackHoleCaptions(),
+        produceLabels: produceBlackHoleCaptions(runtime.pickCode),
       },
     ],
   }),
-  selection: () => [blackHoleSelectionRow()],
+  selection: {
+    kinds: blackHolesSelectionKinds,
+    rows: (runtime) => [blackHoleSelectionRow(runtime.pickCode)],
+  },
   search: () => blackHoleSearch(),
   ui: [
     { slot: 'debug', content: BlackHoleLensingTuningSectionContainer },

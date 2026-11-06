@@ -9,7 +9,7 @@ import type { Action } from '@reduxjs/toolkit';
 
 import { arrivalPending, arrived, arrivalFailed } from './arrivalSlice';
 import { navigateSaga } from '../navigation/navigateSaga';
-import { applyLinkClockAndFrameSaga } from '../navigation/applyLinkClockAndFrameSaga';
+import { applyLinkSettingsSaga } from '../navigation/applyLinkSettingsSaga';
 import { liveCameraRuntimeSaga } from '../navigation/liveCameraRuntimeSaga';
 import { clearSelection } from '../selection/selectionSlice';
 import { engineStatusChanged } from '../engine/engineSlice';
@@ -31,7 +31,7 @@ export function* arrivalSaga() {
   // the store's orientation, and one seeded in another frame re-encodes the
   // arrival's commit on frame 1.
   if (intent.t === undefined) yield* put(goLiveNowAction());
-  yield* call(applyLinkClockAndFrameSaga, intent);
+  yield* call(applyLinkSettingsSaga, intent);
   // The backstop measures reaching the subject, not booting the engine.
   const { error } = yield* race({
     runtime: call(liveCameraRuntimeSaga),

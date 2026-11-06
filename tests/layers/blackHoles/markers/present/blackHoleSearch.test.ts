@@ -7,7 +7,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { blackHoleSearch } from '../../../../../src/layers/blackHoles/markers/present/blackHoleSearch';
-import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
+import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
+import { blackHolePickCode } from '../../../../support/layerPickCodes';
 
 describe('blackHoleSearch', () => {
   it('the search row id decodes to the hole', async () => {
@@ -16,7 +17,7 @@ describe('blackHoleSearch', () => {
     expect(snapshots).toHaveLength(1);
     const [row] = snapshots[0]!;
 
-    const focusId = blackHoleSelectionRow().focusId!;
+    const focusId = blackHoleSelectionRow(blackHolePickCode()).focusId!;
     expect(focusId.claims(row!.id)).toBe(true);
     expect(focusId.decode(row!.id)).toEqual({ type: 'blackHole', id: 'sgr-a-star' });
     expect(row!.names).toEqual(expect.arrayContaining(['Sgr A*', 'Galactic Center']));

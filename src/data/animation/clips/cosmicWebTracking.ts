@@ -32,7 +32,10 @@ export const cosmicWebTracking: Clip = {
     start: {
       target: along(-100),
       distance: 160,
-      ...orbitAnglesLookingAlong(normalize3([OUTWARD[0], OUTWARD[1], OUTWARD[2] - 0.3]), ORIENTATION_FRAMES.ecliptic),
+      ...orbitAnglesLookingAlong(
+        normalize3([OUTWARD[0], OUTWARD[1], OUTWARD[2] - 0.3]),
+        ORIENTATION_FRAMES.ecliptic,
+      ),
     },
     timeline: [
       hide(['survey', 'labels', 'structureRing', 'zoneOfAvoidance'], 0),

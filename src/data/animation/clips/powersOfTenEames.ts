@@ -9,7 +9,14 @@
 
 import type { Clip } from '../../../@types/animation/Clip';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { aimAlong, all, dollyTo, hide, hold, tween } from '../../../services/engine/animation/effectHelpers';
+import {
+  aimAlong,
+  all,
+  dollyTo,
+  hide,
+  hold,
+  tween,
+} from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { linkedPoseToWorld } from '../../../services/engine/camera/arms/utils/linkedPoseToWorld';
 import { normalize3 } from '../../../utils/math/normalize3';
@@ -40,7 +47,10 @@ export function powersOfTenEames(simDays: number): Clip {
       timeline: [
         // The film has no labels or guides; the rhythm is the narration.
         hide(['labels', 'structureRing', 'zoneOfAvoidance', 'orbitTrails', 'missionTrails'], 0),
-        all([aimAlong(nadir, 0), tween('roll', { to: northUpRoll(nadir, earthState.orientation, basis), over: 0 })]),
+        all([
+          aimAlong(nadir, 0),
+          tween('roll', { to: northUpRoll(nadir, earthState.orientation, basis), over: 0 }),
+        ]),
         hold(3),
         dollyTo(HORIZON_MPC, decades * SEC_PER_DECADE, 'linear'),
         hold(3),

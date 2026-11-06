@@ -27,13 +27,14 @@ import {
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
-import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
-import { galaxyRowRuntime } from '../../support/selectionResolverOver';
+import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
+import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
+import { galaxyRowRuntime } from '../../support/layerPickCodes';
 import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import { bodyPickCodes } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -41,7 +42,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 // dereferencing this — the default for tests that never seed a galaxy ref.
 /** The galaxyCatalog Layer's slice with nothing loaded — the default for the
  * cases that never seed a galaxy ref. */
-const NO_GALAXIES = { catalogs: new Map(), famousMeta: [] } as unknown as GalaxyRowFixture;
+const NO_GALAXIES = { catalogs: new Map() } as unknown as GalaxyRowFixture;
 
 // ─── Cloud fixture ─────────────────────────────────────────────────────────────
 
@@ -77,8 +78,11 @@ describe('watchTierSaga', () => {
     sagaMiddleware.run(watchTierSaga);
     sagaMiddleware.setContext({
       selection: composeSelectionRows(
-        () => [bodySelectionRow(), galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))],
-        () => ALL_KINDS_ENABLED,
+        () => [
+          bodySelectionRow({ pickCodes: bodyPickCodes() }),
+          galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies)),
+        ],
+        () => NO_KINDS_OFF,
       ),
     });
     return built;
@@ -125,7 +129,6 @@ describe('watchTierSaga', () => {
       get catalogs() {
         return new Map([[Source.SDSS, currentCloud]]);
       },
-      famousMeta: [],
     } as unknown as GalaxyRowFixture;
 
     store = buildStore(galaxies);
@@ -174,7 +177,6 @@ describe('watchTierSaga', () => {
       get catalogs() {
         return new Map([[Source.SDSS, currentCloud]]);
       },
-      famousMeta: [],
     } as unknown as GalaxyRowFixture;
 
     store = buildStore(galaxies);

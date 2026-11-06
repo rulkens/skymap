@@ -21,7 +21,10 @@ import { normalize3 } from '../../../utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 
 const WALL_CENTRE_MPC: Vec3 = [-300, 60, 3];
-const FROM_EARTH = orbitAnglesLookingAlong(normalize3(WALL_CENTRE_MPC), ORIENTATION_FRAMES.ecliptic);
+const FROM_EARTH = orbitAnglesLookingAlong(
+  normalize3(WALL_CENTRE_MPC),
+  ORIENTATION_FRAMES.ecliptic,
+);
 const DURATION_SEC = 24;
 
 export const greatWallContext: Clip = {
@@ -44,7 +47,16 @@ export const greatWallContext: Clip = {
         spin('yaw', { by: 0.7, over: DURATION_SEC }),
         seq([
           wait(9),
-          hide(['survey:sdss', 'survey:2mrs', 'survey:glade', 'survey:milliquas', 'survey:famousGalaxy'], 6),
+          hide(
+            [
+              'survey:sdss',
+              'survey:2mrs',
+              'survey:glade',
+              'survey:milliquas',
+              'survey:famousGalaxy',
+            ],
+            6,
+          ),
         ]),
       ]),
       hold(2),

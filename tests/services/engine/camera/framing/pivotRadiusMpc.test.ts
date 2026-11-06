@@ -25,22 +25,19 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../../fixtures/starRowDriver';
-import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
+import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
 import { schwarzschildRadiusM } from '../../../../../src/utils/physics/schwarzschildRadiusM';
 import { SGR_A_STAR_MASS_SOLAR } from '../../../../../src/data/bodies/sgrAStarMassSolar';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
-import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { blackHolePickCode } from '../../../../support/layerPickCodes';
+import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
+import type { SelectionRowBase } from '../../../../../src/@types/engine/selection/SelectionRowBase';
+import type { StarCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/@types/StarCatalogSelectionRow';
 
-const EARTH_ROW: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('earth'),
-  label: 'Earth',
-  positionMpc: [0, 0, 0],
-  driver: bodyDriverGeometry('earth'),
-};
+const EARTH_ROW: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
 const SUN_RADIUS_M = 696340000;
 
@@ -50,7 +47,7 @@ describe('pivotRadiusMpc', () => {
   });
 
   it('gives a star row its stamped radius too — same near-field discrete case', () => {
-    const star: SelectionRow = {
+    const star: StarCatalogSelectionRow = {
       type: 'starCatalog',
       source: Source.GaiaStars,
       index: 7,
@@ -58,6 +55,7 @@ describe('pivotRadiusMpc', () => {
       label: 'Field star',
       positionMpc: [1, 2, 3],
       radiusM: SUN_RADIUS_M,
+      radiusMpc: SUN_RADIUS_M * SCALE_UNITS.M_TO_MPC,
       driver: starRowDriver(null, SUN_RADIUS_M),
     };
     expect(pivotRadiusMpc(star)).toBeCloseTo(696340 * SCALE_UNITS.KM_TO_MPC, 30);
@@ -81,7 +79,10 @@ describe('pivotFraming', () => {
   it('floors a black hole at its own override — Sgr A’s Q10 descent floor (2 r_s)', () => {
     // Far outside the Earth-tuned global ratio, so the hole must be floored at
     // ITS OWN multiple, not the shared constant.
-    const sgrAStar = blackHoleSelectionRow().extractRow({ type: 'blackHole', id: 'sgr-a-star' }, 0);
+    const sgrAStar = blackHoleSelectionRow(blackHolePickCode()).extractRow(
+      { type: 'blackHole', id: 'sgr-a-star' },
+      0,
+    );
     const radiusMpc = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR) * SCALE_UNITS.M_TO_MPC;
     expect(pivotFraming(sgrAStar)).toEqual({ radiusMpc, floorMpc: radiusMpc * 2 });
   });
@@ -92,13 +93,7 @@ describe('pivotFraming', () => {
     // measure an altitude over. The floor is the wheel-zoom snap regression:
     // the whale must keep the standoff the fly-to landed against instead of
     // being flung out to the backstop.
-    const whale: SelectionRow = {
-      type: 'body',
-      id: asSceneBodyId('whale'),
-      label: 'Whale',
-      positionMpc: [0, 0, 0],
-      driver: bodyDriverGeometry('whale'),
-    };
+    const whale: SelectionRowBase = bodyRowAt('whale', [0, 0, 0]);
     const seed = findByIdOrThrow(SCENE_MESH_BODIES, 'whale', 'test');
     expect(pivotFraming(whale).radiusMpc).toBeNull();
     expect(pivotFraming(whale).floorMpc).toBeCloseTo(
@@ -109,7 +104,7 @@ describe('pivotFraming', () => {
   });
 
   it('falls through to the global ratio for a star, and to the absolute floor for a galaxy / no focus', () => {
-    const star: SelectionRow = {
+    const star: StarCatalogSelectionRow = {
       type: 'starCatalog',
       source: Source.GaiaStars,
       index: 7,
@@ -117,6 +112,7 @@ describe('pivotFraming', () => {
       label: 'Field star',
       positionMpc: [1, 2, 3],
       radiusM: SUN_RADIUS_M,
+      radiusMpc: SUN_RADIUS_M * SCALE_UNITS.M_TO_MPC,
       driver: starRowDriver(null, SUN_RADIUS_M),
     };
     expect(pivotFraming(star).floorMpc).toBeCloseTo(

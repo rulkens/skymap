@@ -1,7 +1,7 @@
 import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
-import { produceMilkyWayLabel } from '../../../../../src/layers/milkyWay/card/present/produceMilkyWayLabel';
+import { produceMilkyWayLabel as produceMilkyWayLabelFor } from '../../../../../src/layers/milkyWay/card/present/produceMilkyWayLabel';
 import { MILKY_WAY_LABEL_STYLE } from '../../../../../src/layers/milkyWay/card/present/milkyWayLabelStyle';
 import {
   LEADER_LINE_PADDING_PX,
@@ -13,6 +13,9 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { LabelBBox } from '../../../../../src/@types/rendering/LabelBBox';
+
+// Not a catalog value: the label must pack the code its Layer passes.
+const PICK_CODE = 37;
 
 // The producers only read the ink bbox; real glyph metrics would pin the
 // fixtures to a font file, so the layout is mocked to report a chosen box.
@@ -106,7 +109,8 @@ describe('produceMilkyWayLabel', () => {
           focus: { center, apparentRadiusMpc: 0.1, physicalRadiusMpc: 0.05, blend: 1 },
         },
       }) as FrameView;
-    const pickOf = (c: FrameView) => produceMilkyWayLabel(makeState(), c, 1).labels[0]!.pickId;
+    const pickOf = (c: FrameView) =>
+      produceMilkyWayLabelFor(PICK_CODE)(makeState(), c, 1).labels[0]!.pickId;
 
     expect(pickOf(ctx)).toBeDefined();
     expect(pickOf(at([0, 0, 0]))).toBeDefined();
@@ -114,7 +118,7 @@ describe('produceMilkyWayLabel', () => {
   });
 
   it('emits one label carrying a leader when enabled', () => {
-    const out = produceMilkyWayLabel(makeState(), makeCtx(0.5), 1);
+    const out = produceMilkyWayLabelFor(PICK_CODE)(makeState(), makeCtx(0.5), 1);
     expect(out.labels).toHaveLength(1);
     expect(out.labels[0]!.id).toBe('milkyWay'); // id = source id; text stays below
     expect(out.labels[0]!.text).toBe('You are here');
@@ -125,23 +129,30 @@ describe('produceMilkyWayLabel', () => {
   });
 
   it('uses the handed value as fadeAlpha', () => {
-    const out = produceMilkyWayLabel(makeState(), makeCtx(0.5), 0.5);
+    const out = produceMilkyWayLabelFor(PICK_CODE)(makeState(), makeCtx(0.5), 0.5);
     expect(out.labels[0]!.fadeAlpha).toBe(0.5);
   });
 
   it('focusedOnly mode: emits nothing when something else (or nothing) is focused', () => {
     const elsewhere = { type: 'structure', id: 'cluster-virgo' };
     expect(
-      produceMilkyWayLabel(makeState({ focusedOnly: true, focus: elsewhere }), makeCtx(0.5), 1)
-        .labels,
+      produceMilkyWayLabelFor(PICK_CODE)(
+        makeState({ focusedOnly: true, focus: elsewhere }),
+        makeCtx(0.5),
+        1,
+      ).labels,
     ).toEqual([]);
     expect(
-      produceMilkyWayLabel(makeState({ focusedOnly: true, focus: null }), makeCtx(0.5), 1).labels,
+      produceMilkyWayLabelFor(PICK_CODE)(
+        makeState({ focusedOnly: true, focus: null }),
+        makeCtx(0.5),
+        1,
+      ).labels,
     ).toEqual([]);
   });
 
   it('focusedOnly mode: emits the label when the Milky Way is the focused subject', () => {
-    const out = produceMilkyWayLabel(
+    const out = produceMilkyWayLabelFor(PICK_CODE)(
       makeState({ focusedOnly: true, focus: { type: 'milkyWay' } }),
       makeCtx(0.5),
       1,
@@ -158,7 +169,7 @@ describe('produceMilkyWayLabel', () => {
     // padding below the text's measured bottom.
     // Precision 2 (±0.005 px) absorbs the f32 project→un-project round trip.
     const ctx = makeCtx(0.5, { up: [Math.sin(0.6), Math.cos(0.6), 0] });
-    const out = produceMilkyWayLabel(makeState(), ctx, 1);
+    const out = produceMilkyWayLabelFor(PICK_CODE)(makeState(), ctx, 1);
 
     const liftPx = expectedLiftPx(0.5, 1080);
     const dot = screenOf(ctx, [0, 0, 0]);
@@ -184,7 +195,7 @@ describe('produceMilkyWayLabel', () => {
     // present with the exact padding gap.
     const inkDropPx = 60 * (MILKY_WAY_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
     const ctx = makeCtx(1.5, { width: 320, height: 200 });
-    const out = produceMilkyWayLabel(
+    const out = produceMilkyWayLabelFor(PICK_CODE)(
       makeState({ bbox: { minX: -60, minY: -40, maxX: 60, maxY: 60 } }),
       ctx,
       1,

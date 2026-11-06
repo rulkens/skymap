@@ -47,11 +47,7 @@ export const zoneOfAvoidanceSurveys: Clip = {
       frameTo('galactic', { over: 0 }),
       aimAlong(GALACTIC_EDGE_ON, 0),
       all([
-        seq([
-          wait(7),
-          show(['survey:glade', 'survey:sdss'], 3),
-          wait(DURATION_SEC - 7),
-        ]),
+        seq([wait(7), show(['survey:glade', 'survey:sdss'], 3), wait(DURATION_SEC - 7)]),
         dollyTo(300, DURATION_SEC, 'easeInOutSine'),
       ]),
     ],

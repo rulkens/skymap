@@ -50,6 +50,9 @@ function idOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
 // structured-clone round-trip.
 const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(input);
 
+/** Far from every `Source` value, so a store that writes the catalog value instead fails. */
+const PICK_CODE_OF = (source: GalaxyCatalogSourceType): number => source + 40;
+
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
 /**
@@ -109,6 +112,7 @@ describe('catalogStore.totalCount', () => {
       device: makeStubDevice(),
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
       buildRunner: testRunner,
     });
     await store.upload(idOf(Source.SDSS), makeCloud(100), STATS);
@@ -131,6 +135,7 @@ describe('catalogStore.unload', () => {
       device,
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
       buildRunner: testRunner,
     });
     await store.upload(idOf(Source.SDSS), makeCloud(10), STATS);
@@ -147,6 +152,7 @@ describe('catalogStore.unload', () => {
       device: makeStubDevice(),
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
       buildRunner: testRunner,
     });
     await store.upload(idOf(Source.SDSS), makeCloud(1000), STATS);
@@ -163,6 +169,7 @@ describe('catalogStore.loadedSources', () => {
       device: makeStubDevice(),
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
       buildRunner: testRunner,
     });
     // Upload in non-iteration order on purpose — the store must re-sort.
@@ -198,6 +205,7 @@ describe('catalogStore.upload — regression: replace, not append', () => {
       device: makeStubDevice(),
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
       buildRunner: testRunner,
     });
     const cloudA = makeCloud(1000);
@@ -265,6 +273,7 @@ describe('catalogStore.upload — regression: parallel-upload rebake race', () =
       device: makeStubDevice(),
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
       buildRunner: delayedRunner,
     });
 
@@ -289,5 +298,28 @@ describe('catalogStore.upload — regression: parallel-upload rebake race', () =
     // the old large cloud.  The fix keeps GLADE on the new medium cloud the
     // user actually requested.
     expect(glade?.count).toBe(400);
+  });
+});
+
+describe('catalogStore SourceUniforms', () => {
+  it('writes the pick code, not the catalog value, into sourceCode', async () => {
+    const writes: Uint32Array[] = [];
+    const device = makeStubDevice();
+    (device.queue as unknown as { writeBuffer: unknown }).writeBuffer = (
+      _buffer: GPUBuffer,
+      _offset: number,
+      data: ArrayBuffer | ArrayBufferView,
+    ) => {
+      if (data instanceof ArrayBuffer && data.byteLength === 16) writes.push(new Uint32Array(data));
+    };
+    const store = createCatalogStore({
+      device,
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      pickCodeOf: PICK_CODE_OF,
+      buildRunner: testRunner,
+    });
+    await store.upload(idOf(Source.SDSS), makeCloud(4), STATS);
+    expect(writes.map((u32) => u32[0])).toEqual([PICK_CODE_OF(Source.SDSS)]);
   });
 });

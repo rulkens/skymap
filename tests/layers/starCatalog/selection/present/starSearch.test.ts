@@ -7,10 +7,11 @@
 import { describe, it, expect } from 'vitest';
 
 import { starSearch } from '../../../../../src/layers/starCatalog/selection/present/starSearch';
-import { starCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
+import { starCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/starCatalogSelectionRow';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../../src/data/bodies/seededStarCatalogsBySource';
 import type { LayerSearchEntry } from '../../../../../src/@types/engine/layer/LayerSearchEntry';
-import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
+import { type StarRowFixture } from '../../../../support/selectionResolverOver';
+import { starRowRuntime } from '../../../../support/layerPickCodes';
 
 async function rows(): Promise<readonly LayerSearchEntry[]> {
   const snapshots = [];
@@ -32,7 +33,9 @@ describe('starSearch', () => {
 
   it('every id decodes to its own star', async () => {
     // Seed ids never look like bin indices, so decode needs no loaded survey.
-    const runtime = { renderer: { loadedCatalogs: () => [] } } as unknown as StarCatalogRuntime;
+    const runtime = starRowRuntime({
+      renderer: { loadedCatalogs: () => [] },
+    } as unknown as StarRowFixture);
     const focusId = starCatalogSelectionRow(runtime).focusId!;
     const all = await rows();
     SEEDED.forEach(({ source, index }, i) => {

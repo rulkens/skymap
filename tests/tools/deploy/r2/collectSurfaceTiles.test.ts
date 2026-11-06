@@ -1,78 +1,94 @@
 /**
- * Contract tests for the surface-tile R2 inventory helper.
- *
- * Three contracts pinned:
- *
- *   1. Absent-index behaviour: an interrupted bake (or a fresh checkout that
- *      hasn't baked tiles at all) leaves no `index.txt`, and the collector
- *      must produce zero uploads rather than fail or walk the tree.
- *   2. Path containment: every `localPath` stays inside `imagesDir`. The
- *      bulk transport runs `relative(localRoot, localPath)` and hands the
- *      result to rclone, which rejects a `../` escape — a malformed index
- *      line must not slip past this collector unnoticed.
- *   3. `manifestKey` selects the folder read: a `mars-tiles` index must not
- *      be read off `earth-tiles/index.txt`, or vice versa.
+ * The surface-tile R2 inventory walks manifest -> band levels -> index -> parts.
+ * Pinned: no manifest means nothing uploads (interrupted bake); levels without an
+ * index are skipped; an index naming a missing part throws; loose tiles are never
+ * listed; both products are walked.
  */
-import { describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { dirname, join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { surfaceTileArchivePath } from '../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 import { collectSurfaceTiles } from '../../../../tools/deploy/r2/collectSurfaceTiles';
+import { encodeSurfaceTileArchiveIndex } from '../../../../tools/utils/textures/encodeSurfaceTileArchiveIndex';
 
-function fixtureDir(manifestKey: string, indexContents: string): string {
+const KEY = 'earth-tiles';
+const PREFIX = 'earth-tiles/v11';
+const BOX = { west: 0, south: 0, east: 1, north: 1 };
+
+function write(root: string, rel: string, bytes: string | Uint8Array): void {
+  mkdirSync(dirname(join(root, rel)), { recursive: true });
+  writeFileSync(join(root, rel), bytes);
+}
+
+/** Manifest with an albedo band z2..z4 and a height band z3..z3. */
+function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), 'syncr2-surface-tiles-'));
-  const tilesDir = join(root, manifestKey);
-  mkdirSync(tilesDir, { recursive: true });
-  writeFileSync(join(tilesDir, 'index.txt'), indexContents);
+  const provenance = { sourceId: 's', attribution: 'a', vintage: 'v' };
+  write(
+    root,
+    `${KEY}/manifest.json`,
+    JSON.stringify({
+      prefix: PREFIX,
+      tilePx: 256,
+      bands: [
+        { bounds: BOX, min: 2, max: 4, builtFrom: { albedo: provenance } },
+        { bounds: BOX, min: 3, max: 3, builtFrom: { height: provenance } },
+      ],
+    }),
+  );
   return root;
 }
 
+const writeLevel = (root: string, product: 'albedo' | 'height', z: number, parts: number): void => {
+  write(root, surfaceTileArchivePath(PREFIX, product, z), encodeSurfaceTileArchiveIndex([], parts));
+  for (let k = 0; k < parts; k++) write(root, surfaceTileArchivePath(PREFIX, product, z, k), 'x');
+};
+
 describe('collectSurfaceTiles', () => {
-  it('returns [] when index.txt is absent (interrupted bake)', () => {
+  it('returns [] when the manifest is missing', () => {
     const root = mkdtempSync(join(tmpdir(), 'syncr2-surface-tiles-absent-'));
-    expect(collectSurfaceTiles(join(root, 'images'), 'earth-tiles')).toEqual([]);
+    expect(collectSurfaceTiles(root, KEY)).toEqual([]);
   });
 
-  it('maps an index line to the matching localPath/r2Key pair', () => {
-    const imagesDir = fixtureDir('earth-tiles', 'earth-tiles/v1/surface/3/0/0.webp\n');
-    const inventory = collectSurfaceTiles(imagesDir, 'earth-tiles');
-    expect(inventory).toEqual([
-      {
-        localPath: join(imagesDir, 'earth-tiles/v1/surface/3/0/0.webp'),
-        r2Key: 'data/images/earth-tiles/v1/surface/3/0/0.webp',
-      },
+  it('lists each level index and every part it names, across both products', () => {
+    const root = fixture();
+    writeLevel(root, 'albedo', 3, 2);
+    writeLevel(root, 'height', 3, 1);
+    const keys = collectSurfaceTiles(root, KEY).map((u) => u.r2Key);
+    expect(keys.sort()).toEqual(
+      [
+        `data/images/${PREFIX}/albedo/z3.idx`,
+        `data/images/${PREFIX}/albedo/z3.p0.pack`,
+        `data/images/${PREFIX}/albedo/z3.p1.pack`,
+        `data/images/${PREFIX}/height/z3.idx`,
+        `data/images/${PREFIX}/height/z3.p0.pack`,
+      ].sort(),
+    );
+    expect(collectSurfaceTiles(root, KEY)[0]!.localPath).toBe(
+      join(root, `${PREFIX}/albedo/z3.idx`),
+    );
+  });
+
+  it('skips levels inside the band range that have no index', () => {
+    const root = fixture();
+    writeLevel(root, 'albedo', 4, 1);
+    expect(collectSurfaceTiles(root, KEY).map((u) => u.r2Key)).toEqual([
+      `data/images/${PREFIX}/albedo/z4.idx`,
+      `data/images/${PREFIX}/albedo/z4.p0.pack`,
     ]);
   });
 
-  it('ignores blank lines and a trailing newline', () => {
-    const imagesDir = fixtureDir(
-      'earth-tiles',
-      'earth-tiles/v1/surface/3/0/0.webp\n\nearth-tiles/v1/surface/3/0/1.webp\n',
-    );
-    expect(collectSurfaceTiles(imagesDir, 'earth-tiles')).toHaveLength(2);
+  it('throws when an index names a part that is not on disk', () => {
+    const root = fixture();
+    write(root, surfaceTileArchivePath(PREFIX, 'albedo', 2), encodeSurfaceTileArchiveIndex([], 1));
+    expect(() => collectSurfaceTiles(root, KEY)).toThrow(/part 0/);
   });
 
-  it('keeps every localPath inside imagesDir', () => {
-    const imagesDir = fixtureDir(
-      'earth-tiles',
-      'earth-tiles/v1/surface/3/0/0.webp\nearth-tiles/v1/surface/3/0/1.webp\n',
-    );
-    const inventory = collectSurfaceTiles(imagesDir, 'earth-tiles');
-    for (const { localPath } of inventory) {
-      expect(relative(imagesDir, localPath).startsWith('..')).toBe(false);
-    }
-  });
-
-  it('reads <manifestKey>/index.txt, not a hardcoded earth-tiles folder', () => {
-    const imagesDir = fixtureDir('mars-tiles', 'mars-tiles/v1/albedo/3/0/0.webp\n');
-    expect(collectSurfaceTiles(imagesDir, 'mars-tiles')).toEqual([
-      {
-        localPath: join(imagesDir, 'mars-tiles/v1/albedo/3/0/0.webp'),
-        r2Key: 'data/images/mars-tiles/v1/albedo/3/0/0.webp',
-      },
-    ]);
-    // A different manifestKey over the same imagesDir sees nothing: the
-    // fixture never wrote an earth-tiles/index.txt.
-    expect(collectSurfaceTiles(imagesDir, 'earth-tiles')).toEqual([]);
+  it('never lists loose tiles', () => {
+    const root = fixture();
+    writeLevel(root, 'albedo', 3, 1);
+    write(root, `${PREFIX}/albedo/3/0/0.webp`, 'tile');
+    expect(collectSurfaceTiles(root, KEY).some((u) => u.r2Key.endsWith('.webp'))).toBe(false);
   });
 });

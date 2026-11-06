@@ -24,6 +24,7 @@ import {
 } from '../../../../../src/data/selectionEncoding';
 import { Source } from '../../../../../src/data/source';
 import { selectionResolverOver } from '../../../../support/selectionResolverOver';
+import { starRowRuntime } from '../../../../support/layerPickCodes';
 import type { StarRowFixture } from '../../../../support/selectionResolverOver';
 
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -53,6 +54,9 @@ const PROXIMA_INDEX = SCENE_STARS.findIndex((star) => star.id === 'proxima-centa
 const NO_STARS_LOADED: StarRowFixture = {
   renderer: { loadedCatalogs: () => [][Symbol.iterator]() },
 } as unknown as StarRowFixture;
+
+/** The pick codes `selectionResolverOver` resolves against, so a caption's pick round-trips. */
+const STAR_RT = starRowRuntime(NO_STARS_LOADED);
 
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
@@ -107,7 +111,7 @@ describe('produceStarCaptions', () => {
     // its own would land below 0.25.
     const alphaOf = (value: number, blend: number) =>
       fadeAlphaOf(
-        produceStarCaptions()(makeState(), makeCtx(EARTH_POS, blend), handed(value)).labels,
+        produceStarCaptions(STAR_RT)(makeState(), makeCtx(EARTH_POS, blend), handed(value)).labels,
         PROXIMA_ID,
       );
     const full = alphaOf(1, 0)!;
@@ -119,7 +123,7 @@ describe('produceStarCaptions', () => {
     // `Label2DProducerOutput` types its labels as the base `Label2D`, but
     // every one this producer emits is built by `bodyCaption` and so carries
     // `priority` at runtime — the cast states that once, for every case below.
-    const out = produceStarCaptions()(makeState(), makeCtx(EARTH_POS), handed(1))
+    const out = produceStarCaptions(STAR_RT)(makeState(), makeCtx(EARTH_POS), handed(1))
       .labels as readonly ForegroundCaption[];
 
     // No S-star ever enters: SCENE_S_STARS is 39 rows, so a count this size
@@ -132,12 +136,17 @@ describe('produceStarCaptions', () => {
     const proxima = out.find((l) => l.id === PROXIMA_ID)!;
     expect(proxima.priority).toBe(famousStar.priority);
     expect(proxima.pickId).toBe(
-      packSelection(Source.FamousStar, PROXIMA_INDEX + PICK_SENTINEL_OFFSET),
+      packSelection(
+        STAR_RT.pickCodes.pickCodeOf(Source.FamousStar),
+        PROXIMA_INDEX + PICK_SENTINEL_OFFSET,
+      ),
     );
 
     const sun = out.find((l) => l.id === SUN_ID)!;
     expect(sun.priority).toBe(sunStyle.priority);
-    expect(sun.pickId).toBe(packSelection(Source.Sun, PICK_SENTINEL_OFFSET));
+    expect(sun.pickId).toBe(
+      packSelection(STAR_RT.pickCodes.pickCodeOf(Source.Sun), PICK_SENTINEL_OFFSET),
+    );
   });
 
   it("a star caption's pickId decodes and resolves to that star's starCatalog ref", () => {
@@ -149,7 +158,7 @@ describe('produceStarCaptions', () => {
       undefined,
       NO_STARS_LOADED,
     );
-    const out = produceStarCaptions()(makeState(), makeCtx(EARTH_POS), handed(1));
+    const out = produceStarCaptions(STAR_RT)(makeState(), makeCtx(EARTH_POS), handed(1));
 
     const proxima = out.labels.find((l) => l.id === PROXIMA_ID)!;
     const proximaPick = unpackPick(proxima.pickId!)!;
@@ -170,7 +179,7 @@ describe('produceStarCaptions', () => {
 
   it('each caption reads its own item: the star map and the Sun fade independently', () => {
     const at = (famousStar: number, sun: number) =>
-      produceStarCaptions()(makeState(), makeCtx(EARTH_POS), handed(famousStar, sun)).labels;
+      produceStarCaptions(STAR_RT)(makeState(), makeCtx(EARTH_POS), handed(famousStar, sun)).labels;
 
     const famousOff = at(0, 1);
     expect(fadeAlphaOf(famousOff, PROXIMA_ID)).toBe(0);
@@ -199,7 +208,7 @@ describe('produceStarCaptions', () => {
         proxima[1] + away[1] * d,
         proxima[2] + away[2] * d,
       ];
-      const labels = produceStarCaptions()(makeState(), makeCtx(eye), handed(1)).labels;
+      const labels = produceStarCaptions(STAR_RT)(makeState(), makeCtx(eye), handed(1)).labels;
       return { proxima: fadeAlphaOf(labels, PROXIMA_ID)!, sun: fadeAlphaOf(labels, SUN_ID)! };
     };
 

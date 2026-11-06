@@ -82,6 +82,10 @@ keeps its tight render/pick + on-disk meaning; "Source" (identity) and "Asset"
 (fetchable file) are different sets. This registry replaces
 `GALAXY_CATALOG_SOURCE_REGISTRY` and absorbs the `wireSlots` hand-wiring.
 
+> Amended 2026-11-06: core no longer lists the keys. `AssetKey` is the base
+> (`string | number`) core handles generically; each Layer owns the keys its rows
+> author in its own `@types/` (`GalaxyCatalogAssetKey`, …), and core authors only `mesh:<id>`.
+
 ### 3. Demand-driven loading
 
 Each wiring row declares `demand: (ctx: DemandCtx) => boolean`. An asset loads

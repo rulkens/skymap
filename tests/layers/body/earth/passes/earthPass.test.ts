@@ -59,6 +59,12 @@ import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodyCompose/bo
 import { prepareBodySurfaceFrame } from '../../../../../src/layers/body/slabs/present/prepareBodySurfaceFrame';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
+import { bodyPickCodes } from '../../../../support/layerPickCodes';
+import { fakePickCode } from '../../../../support/fakePickCode';
+import type { SurfaceTileProduct } from '../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
+
+// Codes from 40 up: a stamp that packs a catalog value fails every id match below.
+const PICK_CODES = bodyPickCodes(fakePickCode());
 
 // Stub the snapshot to the fixtures below, reusing each one's own positionMpc/orientation refs so
 // toBe(...) holds. Mars is seeded too, for the second-bodyId memo test.
@@ -167,6 +173,7 @@ function makeRuntime(
   parts: { earthRenderer?: unknown; surfaceTileRenderer?: unknown; surfaceTiles?: unknown } = {},
 ): BodyRuntime {
   return {
+    pickCodes: PICK_CODES,
     earthRenderer: parts.earthRenderer ?? {
       draw: vi.fn(),
       getMapView: vi.fn(() => ({}) as GPUTextureView),
@@ -193,7 +200,7 @@ function makeState(): EngineState {
 const HEIGHT_ATLAS_VIEW = {} as GPUTextureView;
 
 /** A runtime `surfaceTiles` stub with caller-controlled cut and atlas views: the
- * instanced-draw gate's three inputs (`getAtlasView()`, `getHeightAtlasView()`, `plan.cut`). */
+ * instanced-draw gate's three inputs (`getAtlasView('albedo' | 'height')`, `plan.cut`). */
 function makeTiles(input: {
   readonly cut: readonly unknown[];
   readonly atlasView: GPUTextureView | null;
@@ -203,9 +210,10 @@ function makeTiles(input: {
   return {
     plan: { cut: input.cut },
     stream: {
-      getAtlasView: () => input.atlasView,
-      getHeightAtlasView: () =>
-        input.heightAtlasView === undefined ? HEIGHT_ATLAS_VIEW : input.heightAtlasView,
+      getAtlasView: (product: SurfaceTileProduct) => {
+        if (product === 'albedo') return input.atlasView;
+        return input.heightAtlasView === undefined ? HEIGHT_ATLAS_VIEW : input.heightAtlasView;
+      },
     },
   } as unknown as BodyRuntime['surfaceTiles'];
 }
@@ -580,7 +588,9 @@ describe('earthPass.drawPick', () => {
       { mvp: Float32Array; camPosLocal: Vec3; packedId: number },
     ];
     expect(pass).toBe(PASS_STUB);
-    expect(args.packedId).toBe(packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET));
+    expect(args.packedId).toBe(
+      packSelection(PICK_CODES.pickCodeOf(Source.Earth), 0 + PICK_SENTINEL_OFFSET),
+    );
 
     // The mvp and camLocal MUST share one floored radius (drawFlooredSpherePick's invariant).
     expect(mvpMock).toHaveBeenCalledTimes(1);

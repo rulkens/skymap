@@ -29,6 +29,7 @@ import type { SlabRow } from '../frame/SlabRow';
 import type { VisibilityEntry } from '../layer/VisibilityEntry';
 import type { VisibilityGates } from './VisibilityGates';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
+import type { PickCodeAllocator } from '../selection/PickCodeAllocator';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { GatedOrbitTrailGroup } from '../frame/GatedOrbitTrailGroup';
@@ -55,6 +56,8 @@ export type EngineState = {
   booted: boolean;
   /** Whether the last frame had a fade or label animation running; `settled()` polls it. */
   fadesAnimating: boolean;
+  /** Whether a Layer planner voted `loading` last frame; `isSceneSettled` reads it. */
+  layersLoading: boolean;
   /** Seeded with placeholders in `engine.ts`, filled by `wireInput`'s bootstrap seed. */
   cameraRuntime: CameraRuntime;
   /** Per-`APP_CUBEMAP_CAPTURE_REGISTRY`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky row's `allocateWhen`. */
@@ -91,6 +94,8 @@ export type EngineState = {
   terrainHeightAt: TerrainHeightAtLookup;
   /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */
   selectionKindRows: readonly SelectionKindRow[];
+  /** The engine's pick-code allocator; `createLayers` builds it, the debug overlay reads `codeIfAsked`. */
+  pickCodes: PickCodeAllocator | null;
   /** Seeded by `createEngine` because the `renderTargets` GPU-handle row runs before `createLayers`. */
   readonly layerTargets: readonly (readonly RenderTargetSpec[])[];
 };

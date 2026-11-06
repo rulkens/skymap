@@ -47,7 +47,7 @@ describe('StarCatalogTuningSectionContainer', () => {
 
   it('shows a refused pool size under the picker and drops it once a valid size lands', () => {
     const { store } = createAppStore();
-    const facts = { famousStarsMeta: [], chunkSlotsError: null };
+    const facts = { chunkSlotsError: null };
     store.dispatch(layerFactsSeeded({ layer: 'starCatalog', facts }));
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });

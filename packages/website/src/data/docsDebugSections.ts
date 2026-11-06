@@ -54,7 +54,8 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   },
   {
     heading: 'Flow tuning',
-    shows: 'The flow ribbons: how many, the length of their trails, speed, and how they are spread.',
+    shows:
+      'The flow ribbons: how many, the length of their trails, speed, and how they are spread.',
     file: 'src/layers/flow/streamlines/ui/FlowTuningSection.tsx',
   },
   {

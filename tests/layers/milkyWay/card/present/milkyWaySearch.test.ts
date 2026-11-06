@@ -6,8 +6,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { milkyWaySearch } from '../../../../../src/layers/milkyWay/card/present/milkyWaySearch';
-import { milkyWaySelectionRow } from '../../../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
+import { milkyWaySelectionRow } from '../../../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
 import { MILKY_WAY_NAMES } from '../../../../../src/layers/milkyWay/card/data/milkyWayNames';
+import { milkyWayPickCode } from '../../../../support/layerPickCodes';
 
 describe('milkyWaySearch', () => {
   it('yields one primary row whose id the selection row decodes, named as before', async () => {
@@ -19,7 +20,7 @@ describe('milkyWaySearch', () => {
 
     expect(row!.class).toBe('primary');
     expect(row!.names).toEqual(MILKY_WAY_NAMES);
-    const focusId = milkyWaySelectionRow().focusId!;
+    const focusId = milkyWaySelectionRow(milkyWayPickCode()).focusId!;
     expect(focusId.claims(row!.id)).toBe(true);
     expect(focusId.decode(row!.id)).toEqual({ type: 'milkyWay' });
   });

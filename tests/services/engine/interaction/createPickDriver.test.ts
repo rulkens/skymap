@@ -17,7 +17,7 @@ import {
 import { createTestStore } from '../../../support/createTestStore';
 import type { PickDriverDeps } from '../../../../src/@types/engine/interaction/PickDriverDeps';
 import type { PickResult } from '../../../../src/@types/data/PickResult';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
 type Pending = {
   x: number;
@@ -28,7 +28,7 @@ type Pending = {
 
 const hitAt = (localIdx: number): PickResult =>
   ({ sourceCode: 'galaxy', localIdx }) as unknown as PickResult;
-const refOf = (localIdx: number): SelectionRef => ({ type: 'structure', id: String(localIdx) });
+const refOf = (localIdx: number): SelectionRefBase => ({ type: 'structure', id: String(localIdx) });
 
 let store: ReturnType<typeof createTestStore>['store'];
 let picks: Pending[];

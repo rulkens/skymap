@@ -16,7 +16,6 @@ import {
   clock,
   dollyTo,
   hide,
-
   seq,
   spin,
   wait,
@@ -83,7 +82,9 @@ export function makeSStarsClip(opts: {
               'structureRing',
               'labels',
               ...(opts.keepBulge ? [] : (['milkyWayDisk'] as const)),
-              ...(opts.hideField ? (['starCatalog:gaiaStars', 'starCatalog:famousStar'] as const) : []),
+              ...(opts.hideField
+                ? (['starCatalog:gaiaStars', 'starCatalog:famousStar'] as const)
+                : []),
             ],
             0,
           ),

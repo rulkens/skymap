@@ -13,6 +13,7 @@ import { surfaceTileBandFromBounds } from '../../../../../../src/layers/body/sur
 import { composeBodySlabMvp } from '../../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
 import { frustumPerspectiveF64 } from '../../../../../../src/utils/camera/frustum/frustumPerspectiveF64';
 import { frustumCornerMagnification } from '../../../../../../src/utils/camera/frustum/frustumCornerMagnification';
+import { requestBandsOf } from '../../../../../support/requestBandsOf';
 import {
   SURFACE_TILE_LOD_BIAS,
   SURFACE_TILE_PX,
@@ -21,6 +22,9 @@ import {
 const R = 6.371e6;
 /** The small tier's base level: the farthest-engaging one. */
 const BASE = 2;
+const GLOBE_BANDS = [
+  surfaceTileBandFromBounds({ west: -180, south: -90, east: 180, north: 90 }, 3, 19),
+];
 const pxPerRadOf = (fovDeg: number, px: number) => px / (2 * Math.tan((fovDeg * Math.PI) / 360));
 
 /** A `w`×`h` view of vertical `fovDeg`, the body at `ndc` on screen, the eye
@@ -59,7 +63,8 @@ function engages(
     radiusM: R,
     reliefM: [0, 0],
     baseLevel: BASE,
-    bands: [surfaceTileBandFromBounds({ west: -180, south: -90, east: 180, north: 90 }, 3, 19)],
+    bands: GLOBE_BANDS,
+    requestBands: requestBandsOf(GLOBE_BANDS),
     tilePx: SURFACE_TILE_PX,
     lodBias: SURFACE_TILE_LOD_BIAS,
     residentSlot: () => null,

@@ -23,18 +23,7 @@ const MILKY_WAY_WITH_MARKER = { ...milkyWayInitialState, enabled: true, labelEna
 
 // Only the band and the galaxies take clicks; any other hit opens a card the copy never mentions.
 const PICK_BAND_AND_GALAXIES = {
-  kinds: {
-    zoneOfAvoidance: true,
-    galaxyCatalog: true,
-    body: false,
-    craft: false,
-    earthScene: false,
-    starCatalog: false,
-    structure: false,
-    milkyWay: false,
-    blackHole: false,
-    satellite: false,
-  },
+  off: ['structure', 'milkyWay', 'body', 'craft', 'starCatalog', 'blackHole', 'satellite'],
 };
 
 export const zoneOfAvoidance: Exhibit = {

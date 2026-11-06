@@ -18,8 +18,11 @@ import {
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalogRuntime } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCodes';
+import { GALAXY_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
+import { fakePickCode } from '../../../../support/fakePickCode';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { FamousGalaxyMetaEntry } from '../../../../../src/@types/loading/FamousGalaxyMetaEntry';
+import type { FamousGalaxyName } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/@types/FamousGalaxyName';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../../../src/@types/rendering/LabelBBox';
 
@@ -29,6 +32,12 @@ const layout = vi.hoisted(() => ({ bbox: null as LabelBBox | null }));
 vi.mock('../../../../../src/services/gpu/labelLayout/textLayoutOf', () => ({
   textLayoutOf: () => ({ quads: [], bbox: layout.bbox }),
 }));
+// Each case seeds its own famous rows; the table is mutated in place under the producer.
+const famousNames = vi.hoisted((): FamousGalaxyName[] => []);
+vi.mock(
+  '../../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated',
+  () => ({ FAMOUS_GALAXY_NAMES: famousNames }),
+);
 
 const handed = (famousGalaxy: number) => ({ famousGalaxy });
 const ONE = handed(1);
@@ -89,10 +98,10 @@ const PX_PER_RAD = 1080 / (2 * Math.tan((30 * Math.PI) / 180));
 const sizePxAt = (diameterKpc: number, distanceMpc: number) =>
   (diameterKpc / (distanceMpc * 1000)) * PX_PER_RAD;
 
-const meta = (...entries: Partial<FamousGalaxyMetaEntry>[]): FamousGalaxyMetaEntry[] =>
-  entries.map(
-    (e) => ({ id: 'x', names: [], description: '', type: '', ...e }) as FamousGalaxyMetaEntry,
-  );
+/** Replaces the mocked names table with these rows. */
+const seedNames = (...entries: Partial<FamousGalaxyName>[]): void => {
+  famousNames.splice(0, famousNames.length, ...entries.map((e) => ({ id: 'x', names: [], ...e })));
+};
 
 const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog =>
   ({
@@ -101,15 +110,20 @@ const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog 
     diameterKpc: new Float32Array(diameters),
   }) as unknown as GalaxyCatalog;
 
+type FamousRuntime = Pick<GalaxyCatalogRuntime, 'catalogs' | 'pickCodes'>;
+
+const PICK_CODES = catalogPickCodes(GALAXY_CATALOG_SOURCE_ROWS, fakePickCode());
+
 function seed(
-  entries: Partial<FamousGalaxyMetaEntry>[],
+  entries: Partial<FamousGalaxyName>[],
   positions: number[],
   diameters: number[],
-): Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'> {
+): FamousRuntime {
+  seedNames(...entries);
   return {
     catalogs: new Map([[Source.FamousGalaxy, famousCatalog(positions, diameters)]]),
-    famousMeta: meta(...entries),
-  } as Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
+    pickCodes: PICK_CODES,
+  };
 }
 
 describe('produceFamousGalaxyLabels', () => {
@@ -222,22 +236,12 @@ describe('produceFamousGalaxyLabels', () => {
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.5, 6);
   });
 
-  it('emits nothing when the famous catalog is absent or meta is empty', () => {
-    const noCatalog = makeState();
-    const noCatalogRuntime = {
-      catalogs: new Map(),
-      famousMeta: meta({ id: 'm31', names: ['M31'] }),
-    } as Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
-    expect(produceFamousGalaxyLabels(noCatalogRuntime)(noCatalog, makeCtx(), ONE).labels).toEqual(
+  it('emits nothing when the famous catalog is absent', () => {
+    seedNames({ id: 'm31', names: ['M31'] });
+    const noCatalogRuntime: FamousRuntime = { catalogs: new Map(), pickCodes: PICK_CODES };
+    expect(produceFamousGalaxyLabels(noCatalogRuntime)(makeState(), makeCtx(), ONE).labels).toEqual(
       [],
     );
-
-    const noMeta = makeState();
-    const noMetaRuntime = {
-      catalogs: new Map([[Source.FamousGalaxy, famousCatalog([10, 0, 0], [120])]]),
-      famousMeta: [],
-    } as Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
-    expect(produceFamousGalaxyLabels(noMetaRuntime)(noMeta, makeCtx(), ONE).labels).toEqual([]);
   });
 
   it('scales worldEmMpc with diameter (40 kpc anchors the category default)', () => {
@@ -323,8 +327,8 @@ describe('produceFamousGalaxyLabels', () => {
     expect(labels.map((l) => l.id)).toEqual(['famous-a', 'famous-c']);
     for (const label of labels) {
       const pick = unpackPick(label.pickId!)!;
-      expect(pick.sourceCode).toBe(Source.FamousGalaxy);
-      expect(runtime.famousMeta[pick.localIdx]!.id).toBe(label.id.replace('famous-', ''));
+      expect(pick.sourceCode).toBe(PICK_CODES.pickCodeOf(Source.FamousGalaxy));
+      expect(famousNames[pick.localIdx]!.id).toBe(label.id.replace('famous-', ''));
     }
   });
 
@@ -357,6 +361,8 @@ describe('produceFamousGalaxyLabels', () => {
     expect(pickOf(under, 'famous-out')).toBeUndefined();
     const out = under.find((l) => l.id === 'famous-out')!;
     expect(out.fadeAlpha).toBeGreaterThan(0);
-    expect(out.subjectId).toBe(packSelection(Source.FamousGalaxy, 1 + PICK_SENTINEL_OFFSET));
+    expect(out.subjectId).toBe(
+      packSelection(PICK_CODES.pickCodeOf(Source.FamousGalaxy), 1 + PICK_SENTINEL_OFFSET),
+    );
   });
 });

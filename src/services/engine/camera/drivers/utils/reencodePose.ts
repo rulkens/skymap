@@ -26,7 +26,7 @@ export function reencodePose(
   if (from === to) return pose;
 
   const local = yawPitchToDir(pose.yaw, pose.pitch);
-  const world = rotateVec3ByTightMat3(local, from, local); // reuse `local`'s scratch
+  const world = rotateVec3ByTightMat3(from, local, local); // reuse `local`'s scratch
   const aim: Vec3 = [-world[0], -world[1], -world[2]];
   const { yaw, pitch } = orbitAnglesLookingAlong(aim, to);
 

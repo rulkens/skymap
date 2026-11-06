@@ -33,21 +33,23 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 
 **Every other contract member and all runtime machinery live in a concern module,** `<concern>/<role>/`. The members that are collections (`sagas?`, `ui?`, `passes`, `computes?`, `assets?`, `search?`, `sourceCounts?`, `slabs?`, `skyCaptures?`, `guides?`, `selection?`) are still declared in `layer.ts`; each imports its leaves from the module that owns the concern. A module uses only the role folders it needs:
 
-| Role folder   | Holds                                                                                                                                                                                        |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `render/`     | GPU pipeline objects: renderers, vertex layouts, uniform packers                                                                                                                             |
-| `subsystems/` | Stateful per-frame machinery that decides what to draw (see below)                                                                                                                           |
-| `passes/`     | One `ContentPass` factory per file                                                                                                                                                           |
-| `load/`       | Fetchers, `AssetSlot`s and the `assets` / `sourceCounts` declarations, beside their slots                                                                                                    |
-| `present/`    | `guides`, `selection`, `search`, `slabs` rows (`search` is an async iterable; each yield replaces the Layer's previous snapshot; `slabs` is a static `readonly SlabRow[]`, data not closure) |
-| `ui/`         | SettingsPanel/DebugPanel sections, a `labelsAndGuides` row, a `detailCard` InfoCard arm — hand-written; store-reaching components live here                                                  |
-| `sagas/`      | One saga per file; store-reaching, so the store-boundary sweep exempts it                                                                                                                    |
-| `@types/`     | The module's own types, one per file                                                                                                                                                         |
-| `utils/`      | The module's helpers, one function per file; a helper with a second Layer or core user stays in `src/utils/`                                                                                 |
-| `data/`       | The module's constants and tables, one per file; a constant with a second Layer or core user stays in `src/data/`                                                                            |
-| `computes/`   | Compute passes                                                                                                                                                                               |
+| Role folder   | Holds                                                                                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `render/`     | GPU pipeline objects: renderers, vertex layouts, uniform packers                                                                                                                |
+| `subsystems/` | Stateful per-frame machinery that decides what to draw (see below)                                                                                                              |
+| `passes/`     | One `ContentPass` factory per file                                                                                                                                              |
+| `load/`       | Fetchers, `AssetSlot`s and the `assets` / `sourceCounts` declarations, beside their slots                                                                                       |
+| `present/`    | `guides`, `search`, `slabs` rows (`search` is an async iterable; each yield replaces the Layer's previous snapshot; `slabs` is a static `readonly SlabRow[]`, data not closure) |
+| `ui/`         | SettingsPanel/DebugPanel sections, a `labelsAndGuides` row, a `detailCard` InfoCard arm — hand-written; store-reaching components live here                                     |
+| `sagas/`      | One saga per file; store-reaching, so the store-boundary sweep exempts it                                                                                                       |
+| `@types/`     | The module's own types, one per file                                                                                                                                            |
+| `utils/`      | The module's helpers, one function per file; a helper with a second Layer or core user stays in `src/utils/`                                                                    |
+| `data/`       | The module's constants and tables, one per file; a constant with a second Layer or core user stays in `src/data/`                                                               |
+| `computes/`   | Compute passes                                                                                                                                                                  |
 
 A module's `utils/` is flat: one function per file, no `<area>` subfolders unless it passes the cap. A non-contract type lives in the `@types/` of the module that produces its values; sibling modules import it from there, and it never sits in the root `@types/`. A module whose role folder outgrows 15 files splits into sub-modules, each with its own role folders. A root folder over the cap (`bodies/`, `sources/`, `exhibits/`) groups its leaves in subfolders (`bodies/planets/`, `bodies/moons/`), still imported by the composition root leaf by leaf. Module names say what the thing is for; `helpers`, `misc`, `common`, `shared`, `other` and `utils` are refused as module names.
+
+**`selection/` is the one module with files at its root.** Every selectable Layer has `<layer>/selection/`, and its `kinds.ts` (the Layer's `SelectionKindFacts[]`) and `<x>SelectionRow.ts` (its `SelectionKindRow`) sit directly in it, not in a role folder. That is the one exception to `<concern>/<role>/`, so a Layer's kinds are always in one place. The module's other files use role folders as usual: `present/` for its search and id helpers, `utils/`, `ui/`, and `@types/` for the selection arm types (`<X>Ref`, `<X>SelectionRow`, `<X>Target`), which sibling modules and other Layers import from there. No `selection/` folder sits anywhere else (`tests/conventions/concernFolderShape.test.ts`).
 
 galaxyCatalog's shipped modules, as an example of the layout:
 
@@ -62,6 +64,7 @@ galaxyCatalog/
   disks/{load, quad/, procedural/, textured/}   (sub-modules, each with its own role folders)
   hiResFamous/{subsystems,load,data,utils,@types}/
   aliases/{load,sagas,utils,@types}/
+  selection/                   kinds.ts  galaxyCatalogSelectionRow.ts  {present,utils,@types}/
   card/ui/  provenance/{ui,utils,data}/  controls/ui/
 ```
 
@@ -77,7 +80,7 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 
 **`subsystems/` vs `render/`.** Both stay, inside a module. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A module with no per-frame decision state has no `subsystems/` folder.
 
-**Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row: `assets` and `sourceCounts` sit in `load/`, `guides`, `selection`, `search` and `slabs` in `present/`.
+**Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row: `assets` and `sourceCounts` sit in `load/`, `guides`, `search` and `slabs` in `present/`; `selection` rows are the exception, at the root of the `selection/` module.
 
 ## Rules
 
@@ -121,5 +124,5 @@ surface tiles, and its `heightAt` is the ground core's camera reads. It declares
 Solar System exhibit. `missions` draws its craft: the rows live in
 `missions/bodies/`, and its own mesh, contact-shadow and glint passes draw
 through core's one mesh renderer handle. `earthScenes` declares the Earth scene rows (they
-fold into the tables), its own `earthScene` selection kind and palette row, and draws Søndermarken: its mesh through core's one mesh handle, its
+join the tables), its own `earthScene` selection kind and palette row, and draws Søndermarken: its mesh through core's one mesh handle, its
 glint through its own renderer.

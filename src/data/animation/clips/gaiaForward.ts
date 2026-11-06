@@ -14,7 +14,11 @@ import { SCALE_UNITS } from '../../scaleUnits';
 
 const PC = SCALE_UNITS.PC_TO_MPC;
 const TRAVEL_PC = 600;
-const END: Vec3 = [GAL_X_EQ[0] * TRAVEL_PC * PC, GAL_X_EQ[1] * TRAVEL_PC * PC, GAL_X_EQ[2] * TRAVEL_PC * PC];
+const END: Vec3 = [
+  GAL_X_EQ[0] * TRAVEL_PC * PC,
+  GAL_X_EQ[1] * TRAVEL_PC * PC,
+  GAL_X_EQ[2] * TRAVEL_PC * PC,
+];
 
 export const gaiaForward: Clip = {
   id: 'gaiaForward',

@@ -3,13 +3,14 @@ import type { SurfaceTileProduct } from '../@types/SurfaceTileProduct';
 
 /** On-disk extension per product: `albedo` is a lossy WebP (alpha doubles as
  *  the land mask, so JPEG can't carry it); `height` is a lossless Terrain-RGB
- *  WebP with an `SHGT` header chunk (`heightTileFormat.ts`). */
-const EXT: Record<SurfaceTileProduct, string> = { albedo: 'webp', height: 'webp' };
+ *  WebP with an `SHGT` header chunk (`heightTileFormat.ts`); `night` is a
+ *  lossy WebP of city lights. */
+const EXT: Record<SurfaceTileProduct, string> = { albedo: 'webp', height: 'webp', night: 'webp' };
 
 /**
- * surfaceTilePath — the single home for a virtual-texture tile's path, called
- * by BOTH the build tool and the runtime fetcher: a name constructed twice is
- * a name that eventually 404s.
+ * surfaceTilePath — the single home for a virtual-texture tile's loose path:
+ * the build tool's file name and `index.txt` line, and the runtime's residency
+ * key (the runtime reads archives, see `surfaceTileArchivePath`).
  *
  * `prefix` comes from the manifest rather than a constant here, so a re-bake
  * under a new version is a data change on both sides at once.

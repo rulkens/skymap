@@ -18,6 +18,7 @@ import type { EngineState } from '../../@types/engine/state/EngineState';
 import { seedCameraRuntime } from './camera/seedCameraRuntime';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/framing/cameraFraming';
 import { liveUpBasisQuat } from './camera/orientation/liveUpBasisQuat';
+import { isSceneSettled } from './helpers/isSceneSettled';
 import type { CubemapCaptureRuntimes } from '../../@types/engine/state/CubemapCaptureRuntimes';
 import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../compositions/appCubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
@@ -225,6 +226,7 @@ export function createEngine(
     },
     booted: false,
     fadesAnimating: false,
+    layersLoading: false,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
@@ -236,6 +238,7 @@ export function createEngine(
     layers: [],
     layerSagaTasks: [],
     selectionKindRows: [],
+    pickCodes: null,
     // Static per Layer; the `renderTargets` row reads it and constructs BEFORE `createLayers`.
     layerTargets: composition.layers.map((layer) => layer.targets ?? []),
     // Empty until `createLayers` composes core's rows with every Layer's.
@@ -278,7 +281,7 @@ export function createEngine(
   // (resolveFocusRefDeferringSaga, watchSelectionRowsSaga's gap-fill).
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
-    () => state.settings.picking.kinds,
+    () => state.settings.picking.off,
   );
   const bootstrapDeps: BootstrapDeps = {
     canvas,
@@ -308,7 +311,7 @@ export function createEngine(
 
   cb.setSagaContext({
     nextFrame: () => state.subsystems.scheduler.nextFrame(),
-    reconcile: makeReconcileEffects(state, canvas),
+    reconcile: makeReconcileEffects(state, canvas, selection),
     selection,
     // The up-basis quaternion is resolved THIS frame, so a mid-slerp re-switch
     // captures the live pole rather than snapping to the committed frame. Null
@@ -322,6 +325,7 @@ export function createEngine(
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
           }
         : null,
+    sceneSettled: () => isSceneSettled(state),
     playClip,
     clipPathInspect,
     home: composition.home,

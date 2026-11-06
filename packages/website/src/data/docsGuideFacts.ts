@@ -271,8 +271,8 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'band-no-flight',
     about: 'app',
     text: 'The Zone of Avoidance band can be selected, but it is a direction on the sky, so the camera cannot fly to it.',
-    source: `${REPO_BLOB}/src/services/engine/helpers/rowFocusable.ts`,
-    sourceLabel: `which selections the camera can fly to, ${IN_REPO}`,
+    source: `${REPO_BLOB}/src/layers/zoneOfAvoidance/selection/kinds.ts`,
+    sourceLabel: `why the camera cannot fly to the band, ${IN_REPO}`,
     checked: CHECKED,
   },
   // Time. The angle of `conjunction-in-app` and the dates of `probe-one-orbit` were computed in the running app from its own positions.
@@ -729,7 +729,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'card-moon-rows',
     about: 'app',
     text: 'A moon’s card renames two rows: Orbital period, for one trip round its planet, and Distance from the planet by name, in kilometres. A moon’s mass is in kilograms and a planet’s in Earth masses. A row the sheet has nothing for is left out: Pluto has no Axial tilt, and Phobos no Mean temperature.',
-    source: `${REPO_BLOB}/src/components/InfoCard/BodyDetailCard/BodyDetailCard.tsx`,
+    source: `${REPO_BLOB}/src/layers/body/card/ui/BodyDetailCard/BodyDetailCard.tsx`,
     sourceLabel: `the card of a planet or a moon, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -1178,7 +1178,8 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     about: 'app',
     text: 'Measured on 7 October 2026 as our server sent them, compressed, the catalogues and the density grid that the app fetches as it opens above Earth came to about 25 megabytes at the small size, 70 at the medium and 220 at the large. The pictures the app opens with, most of them Earth’s and the Moon’s, load with them: about 6 megabytes at the small size and 18 at the medium, and a switch from medium to large fetched 37 more. Other planets and moons load as you visit them.',
     source: 'https://skymap-data.rulkens.com/data/manifest.json',
-    sourceLabel: 'the published data manifest, which names the files; their sizes are the lengths our server gave for each on 7 October 2026',
+    sourceLabel:
+      'the published data manifest, which names the files; their sizes are the lengths our server gave for each on 7 October 2026',
     checked: CHECKED,
   },
 ];

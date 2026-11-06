@@ -33,15 +33,21 @@
 // The vertex stage already floored the billboard to a ~3 px clickable footprint
 // in the pick pass (STAR_PICK_MIN_RADIUS_PX). A plain unit-circle test here
 // keeps the pick shape identical to the visual dot -- round, not the square
-// quad -- so the clickable area matches what the eye sees. No bindings are
-// touched: the fragment reads only VSOut fields ('in.uv' + 'in.recordIdx'); the
-// SHARED vertex stage declares the @group(0)/@group(1)/@group(2) bindings that
-// actually read storage, and the pick pipeline's explicit layout mirrors them.
+// quad -- so the clickable area matches what the eye sees.
+//
+// ## Why the fragment binds @group(0)
+//
+// The pick code is the root's runtime allocation, not a constant, so it rides
+// 'StarUniforms.pickCode' (written once by starCatalogPickRenderer). The camera
+// layout grants FRAGMENT visibility for this one read; the visual fragment
+// never declares the binding.
 
 import package::starCatalog::io::VSOut;
+import package::starCatalog::io::StarUniforms;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
-import package::lib::selectionEncoding::SOURCE_GAIA_STARS;
+
+@group(0) @binding(0) var<uniform> u: StarUniforms;
 
 @fragment
 fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
@@ -49,11 +55,11 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   // shape matches the round visual dot rather than the circumscribing triangle.
   if (dot(in.uv, in.uv) > 1.0) { discard; }
 
-  // Pack '(SOURCE_GAIA_STARS << 26) | (recordIdx + 1)'. The '+ 1' keeps 0 as the
+  // Pack '(pickCode << 26) | (recordIdx + 1)'. The '+ 1' keeps 0 as the
   // unambiguous 'no hit' sentinel (cleared-texture value); 'unpackPick' reverses
   // it and the selection row maps the pool index to a catalog ordinal. The g/b/a
   // channels are unused -- only the r channel is read back on the JS side -- so
   // they are filled with 0 to keep the output well-defined.
-  let packed = packSelection(SOURCE_GAIA_STARS, in.recordIdx + PICK_SENTINEL_OFFSET);
+  let packed = packSelection(u.pickCode, in.recordIdx + PICK_SENTINEL_OFFSET);
   return vec4<u32>(packed, 0u, 0u, 0u);
 }

@@ -48,7 +48,11 @@ export function trackBody(
     legs.push(
       all([
         moveTarget(to, stepSec, 'linear'),
-        aimAt({ yaw: bearing.yaw, pitch: bearing.pitch + faceToward.elevationRad }, stepSec, 'linear'),
+        aimAt(
+          { yaw: bearing.yaw, pitch: bearing.pitch + faceToward.elevationRad },
+          stepSec,
+          'linear',
+        ),
       ]),
     );
   }

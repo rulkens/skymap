@@ -24,21 +24,27 @@ import {
 } from '../../../src/state/engine/engineSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute, selectionRoute } from '../../../src/store/constants';
-import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
-import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
-import { structureSelectionRow } from '../../../src/layers/structure/picking/present/structureSelectionRow';
-import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
-import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
+import { framingPose } from '../../../src/services/engine/camera/framing/framingPose';
+import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
+import { structureSelectionRow } from '../../../src/layers/structure/selection/structureSelectionRow';
+import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
+import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/selection/starCatalogSelectionRow';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/source';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StarRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
+import { starRowRuntime } from '../../support/layerPickCodes';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -86,7 +92,7 @@ describe('watchFocusTweenSaga', () => {
   // Captures any error the saga worker throws uncaught. redux-saga swallows an
   // unhandled worker error (no visible test failure, no console output) unless
   // something observes it — `onError` is that observation point, so a
-  // regression that removes the ROW_FOCUSABLE filter shows up as a non-empty
+  // regression that removes the focus-facts filter shows up as a non-empty
   // array here rather than as a silently-still-null tween (see the
   // zoneOfAvoidance test below).
   let sagaErrors: unknown[];
@@ -100,12 +106,12 @@ describe('watchFocusTweenSaga', () => {
     mw.setContext({
       selection: composeSelectionRows(
         () => [
-          bodySelectionRow(),
-          structureSelectionRow(structures),
-          milkyWaySelectionRow(),
-          starCatalogSelectionRow(NO_SURVEY_STARS),
+          bodySelectionRow({ pickCodes: bodyPickCodes() }),
+          structureSelectionRow(structureRowRuntime(structures)),
+          milkyWaySelectionRow(milkyWayPickCode()),
+          starCatalogSelectionRow(starRowRuntime(NO_SURVEY_STARS)),
         ],
-        () => ALL_KINDS_ENABLED,
+        () => NO_KINDS_OFF,
       ),
       cameraRuntime: () => cameraRuntime(),
     });
@@ -124,7 +130,7 @@ describe('watchFocusTweenSaga', () => {
     const tween = store.getState()[cameraRoute].tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
-    expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(tween!.to.distance).toBe(framingPose(MILKY_WAY_ROW, 0.8, FROM).distance);
     expect(tween!.to.yaw).toBe(FROM.yaw);
   });
 
@@ -170,7 +176,7 @@ describe('watchFocusTweenSaga', () => {
     const tween = store.getState()[cameraRoute].tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
-    expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(tween!.to.distance).toBe(framingPose(MILKY_WAY_ROW, 0.8, FROM).distance);
   });
 
   // A survey star's row needs its bin; with none committed the ref extracts to
@@ -307,8 +313,8 @@ describe('watchFocusTweenSaga', () => {
   });
 
   // Regression: the zone-of-avoidance band has no x/y/z (a line-of-sight
-  // effect, not a point), so `focusFraming`'s zoneOfAvoidance arm throws —
-  // ROW_FOCUSABLE filters it out here, the ONE place every updateSelectionFocus
+  // effect, not a point), so `framingPose` throws on it — its kind's null
+  // `focus` filters it out here, the ONE place every updateSelectionFocus
   // dispatch (including a future band double-click) funnels through. If this
   // filter is ever removed, this test fails against that throw instead of the
   // crash surfacing only once band picking makes the ref reachable.
@@ -342,7 +348,7 @@ describe('watchFocusTweenSaga', () => {
     const tween = store.getState()[cameraRoute].tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
-    expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(tween!.to.distance).toBe(framingPose(MILKY_WAY_ROW, 0.8, FROM).distance);
     expect(tween!.to.yaw).toBe(FROM.yaw);
   });
 

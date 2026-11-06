@@ -49,11 +49,11 @@ export function* watchTakeoverSaga() {
       source = { kind: 'tour', id: tour.id };
       body = () => withSceneSnapshotSaga(() => tourBodySaga(tour, action.payload.beats));
     } else if (openExhibit.match(action)) {
-      const { id, entry, atLinkedTime = false, fromLink = false } = action.payload;
+      const { id, entry, atLinkedTime = false, fromLink = false, layers } = action.payload;
       const exhibit = APP_EXHIBIT_REGISTRY[id];
       source = { kind: 'exhibit', id: exhibit.id, entry };
       body = () =>
-        withSceneSnapshotSaga(() => exhibitBodySaga(exhibit, entry, atLinkedTime), {
+        withSceneSnapshotSaga(() => exhibitBodySaga(exhibit, entry, atLinkedTime, layers), {
           exitsLive: fromLink,
         });
     } else if (startClip.match(action)) {

@@ -95,6 +95,7 @@ function uploadedCameraImage(): Float32Array {
     },
     {} as FadeUniformsBgl,
     false,
+    37,
   );
   uploads.length = 0; // discard the static @group(2) write
 

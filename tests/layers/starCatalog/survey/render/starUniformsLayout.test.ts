@@ -19,6 +19,7 @@ import {
   FOCUS_APPARENT_FLOAT_INDEX,
   FOCUS_PHYSICAL_FLOAT_INDEX,
   FOCUS_BLEND_FLOAT_INDEX,
+  PICK_CODE_U32_INDEX,
 } from '../../../../../src/layers/starCatalog/survey/render/starCatalogLayout';
 
 const WORD = 4;
@@ -69,6 +70,7 @@ describe('StarUniforms CPU/WESL layout parity', () => {
     expect(FOCUS_APPARENT_FLOAT_INDEX).toBe(at('focusApparentRadiusMpc'));
     expect(FOCUS_PHYSICAL_FLOAT_INDEX).toBe(at('focusPhysicalRadiusMpc'));
     expect(FOCUS_BLEND_FLOAT_INDEX).toBe(at('focusBlend'));
+    expect(PICK_CODE_U32_INDEX).toBe(at('pickCode'));
   });
 
   it('the buffer size is the struct size', () => {

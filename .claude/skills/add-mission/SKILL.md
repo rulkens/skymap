@@ -180,7 +180,7 @@ raw: 'meshes.<key>' } }`, licence, the attribution string, and `bodyFromSource` 
    somewhere means putting the pole PERPENDICULAR to it and phasing with W₀ —
    `rotationFromIau` composes `Rz(90 + α₀)·Rx(90 − δ₀)·Rz(W₀)`. A surface site
    uses `{ kind: 'surfaceLocked', id, headingDeg }`.
-10. **Names + facts** — `layers/missions/present/craftSearch.ts` `ALIASES`
+10. **Names + facts** — `layers/missions/craft/present/craftSearch.ts` `ALIASES`
     (designations and nicknames a reader types; the label is added for you), `data/seeds/planet_facts.seed.json` (id,
     `wikiTitle`, `description`; `yearLength`/`distance`/`dayLength` as the
     neighbours do), then `npm run build-planet-facts`. A figure on the card must

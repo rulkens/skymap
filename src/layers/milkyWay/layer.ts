@@ -19,7 +19,8 @@ import { milkyWayAggregatePass } from './cloud/passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from './cloud/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from './cloud/passes/milkyWayPass';
 import { produceMilkyWayLabel } from './card/present/produceMilkyWayLabel';
-import { milkyWaySelectionRow } from './card/present/milkyWaySelectionRow';
+import { milkyWaySelectionRow } from './selection/milkyWaySelectionRow';
+import { milkyWaySelectionKinds } from './selection/kinds';
 import { milkyWaySearch } from './card/present/milkyWaySearch';
 import { reseedMilkyWayStarCountSaga } from './tuning/sagas/reseedMilkyWayStarCountSaga';
 import MilkyWayTuningSectionContainer from './tuning/ui/MilkyWayTuningSectionContainer';
@@ -40,12 +41,20 @@ export const milkyWayLayer = defineLayer({
     milkyWayUpsamplePass(runtime),
     milkyWayPass(runtime),
   ],
-  guides: () => ({
+  guides: (runtime) => ({
     screenLabels: [
-      { slab: COSMO, id: 'milkyWayLabel', label: 'milkyWay', produceLabels: produceMilkyWayLabel },
+      {
+        slab: COSMO,
+        id: 'milkyWayLabel',
+        label: 'milkyWay',
+        produceLabels: produceMilkyWayLabel(runtime.pickCode),
+      },
     ],
   }),
-  selection: () => [milkyWaySelectionRow()],
+  selection: {
+    kinds: milkyWaySelectionKinds,
+    rows: (runtime) => [milkyWaySelectionRow(runtime.pickCode)],
+  },
   search: () => milkyWaySearch(),
   sagas: [reseedMilkyWayStarCountSaga],
   ui: [
