@@ -3,7 +3,7 @@
 `packages/desktop/` is an Electron app that runs Skymap on one computer with no internet after a
 first download. Two installs use it: a kiosk (flat screen) and a dome (fisheye disc for a
 planetarium projector). Phones and tablets drive the sky over the local network. The design is in
-[`superpowers/specs/2026-09-19-desktop-offline-app-design.md`](superpowers/specs/2026-09-19-desktop-offline-app-design.md)
+[`superpowers/specs/completed/2026-09-19-desktop-offline-app-design.md`](superpowers/specs/completed/2026-09-19-desktop-offline-app-design.md)
 (§10 lists what the owner added later); the venue install guide is
 [`packages/desktop/README.md`](../packages/desktop/README.md). This file is the map for changing it.
 

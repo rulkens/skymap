@@ -30,8 +30,8 @@
 (via the relay), `selfsigned` (X.509 generation), `qrcode-generator` (already a root dependency),
 Vitest.
 
-**Spec:** [`docs/superpowers/specs/2026-09-19-desktop-offline-app-design.md`](../specs/2026-09-19-desktop-offline-app-design.md),
-with rulings Q0–Q13 in [`docs/grill-sessions/desktop-dome-remote-2026-11-03.md`](../../grill-sessions/desktop-dome-remote-2026-11-03.md).
+**Spec:** [`docs/superpowers/specs/completed/2026-09-19-desktop-offline-app-design.md`](../../specs/completed/2026-09-19-desktop-offline-app-design.md),
+with rulings Q0–Q13 in [`docs/grill-sessions/desktop-dome-remote-2026-11-03.md`](../../../grill-sessions/desktop-dome-remote-2026-11-03.md).
 
 ## Global Constraints
 
@@ -94,17 +94,17 @@ with rulings Q0–Q13 in [`docs/grill-sessions/desktop-dome-remote-2026-11-03.md
 - `typecheck`;
 - `dist`: root `vite build --mode desktop`, then `brand`, the Vite builds, then `electron-builder --mac --win`.
 
-- [ ] Scaffold, then check that `npm run desktop` opens an empty window.
-- [ ] **Verification A (install footprint):**
+- [x] Scaffold, then check that `npm run desktop` opens an empty window.
+- [x] **Verification A (install footprint):**
   - Measure root `npm ci` time and `node_modules` size with and without `packages/desktop`.
   - The Cloudflare shell build runs root `npm ci` and cannot take env vars (docs/DEPLOY.md). If
     Electron's binary download lands there, find a mitigation that needs no env, such as a lazily
     downloading Electron version or an `.npmrc` setting, and record it.
   - **Stop and report to the controller** before Task 2 if none works.
-- [ ] **Verification B (Windows cross-build):** run `electron-builder --win nsis` on macOS with the
+- [x] **Verification B (Windows cross-build):** run `electron-builder --win nsis` on macOS with the
   placeholder. Record works, needs Wine, or fails.
-- [ ] Check that `npm run lint` and `npm run typecheck` still pass at the root.
-- [ ] Commit `Desktop workspace scaffold`.
+- [x] Check that `npm run lint` and `npm run typecheck` still pass at the root.
+- [x] Commit `Desktop workspace scaffold`.
 
 ### Task 2: Desktop build mode
 
@@ -114,9 +114,9 @@ with rulings Q0–Q13 in [`docs/grill-sessions/desktop-dome-remote-2026-11-03.md
   the style of `.env.production`
 - Modify: `.gitignore` (a carve-out for `.env.desktop` beside `.env.production`)
 
-- [ ] `vite build --mode desktop` → `dist/`. Grep the bundle: no `skymap-data.rulkens.com` and no
+- [x] `vite build --mode desktop` → `dist/`. Grep the bundle: no `skymap-data.rulkens.com` and no
   `counterscale`.
-- [ ] Commit `Desktop build mode`.
+- [x] Commit `Desktop build mode`.
 
 ### Task 3: Offline inventory in `sync-r2`
 
@@ -157,14 +157,14 @@ export function buildOfflineInventory(groups: readonly R2SyncGroup[]): OfflineIn
 - When `buildOfflineInventory` throws, every other upload still lands, the inventory is skipped,
   and the script exits non-zero with the label.
 
-- [ ] Tests:
+- [x] Tests:
   - `keeps only offline groups, in table order`;
   - `hashes raw bytes even for gzip-on-wire files` (a `.bin` fixture; assert the on-disk sha256);
   - `size is the on-disk byte length`;
   - `refuses an offline group with no files, naming its label`;
   - `ignores an empty group that is not offline`.
-- [ ] Implement. `npm run typecheck` passes, because every row now sets `offline`.
-- [ ] Commit `sync-r2 publishes the offline inventory`.
+- [x] Implement. `npm run typecheck` passes, because every row now sets `offline`.
+- [x] Commit `sync-r2 publishes the offline inventory`.
 
 ### Task 4: The local mirror — plan, completeness, prune
 
@@ -194,7 +194,7 @@ export const MIRROR_BOOKKEEPING_FILES = ['synced.json', 'inventory.json'] as con
 Keys are bucket keys (`data/…`). They map under the data root with `data/` stripped. The bookkeeping
 files and `*.part` files are never pruned, and never count as orphans.
 
-- [ ] Tests:
+- [x] Tests:
   - `planSync`:
     - `downloads nothing when every file is synced and present`;
     - `downloads a file whose sha changed`;
@@ -210,8 +210,8 @@ files and `*.part` files are never pruned, and never count as orphans.
     - `keeps synced.json, inventory.json and .part files`;
     - `a second run deletes nothing`;
     - `does nothing without inventory.json`.
-- [ ] Implement.
-- [ ] Commit `Desktop mirror: plan, completeness and prune`.
+- [x] Implement.
+- [x] Commit `Desktop mirror: plan, completeness and prune`.
 
 ### Task 5: `runSync` — downloads, never deletes
 
@@ -247,7 +247,7 @@ export function runSync(opts: {
   rename) and return `'synced'`.
 - **Never deletes.**
 
-- [ ] Tests (a local `http.createServer` fixture serving a two-group inventory):
+- [x] Tests (a local `http.createServer` fixture serving a two-group inventory):
   - `first run downloads every file, writes synced.json, then inventory.json`;
   - `second run downloads nothing`;
   - `a mid-group 500 returns failed and leaves the previous inventory.json`;
@@ -255,8 +255,8 @@ export function runSync(opts: {
   - `a sha mismatch returns failed and leaves no renamed file`;
   - `never deletes a file the new inventory drops`;
   - `unreachable inventory returns offline`.
-- [ ] Implement.
-- [ ] Commit `Desktop sync: ordered, resumable, never deletes`.
+- [x] Implement.
+- [x] Commit `Desktop sync: ordered, resumable, never deletes`.
 
 ### Task 6: Local HTTPS server and the install's CA
 
@@ -299,7 +299,7 @@ export const APP_SERVER_PORT = 47823;
 - `startAppServer` listens on `0.0.0.0:APP_SERVER_PORT`. Task 8 attaches the relay to the returned
   server.
 
-- [ ] Tests:
+- [x] Tests:
   - `resolveAppPath`:
     - `routes /data/ to the data root`;
     - `routes other paths to dist and / to index.html`;
@@ -315,10 +315,10 @@ export const APP_SERVER_PORT = 47823;
   - `isSignedByCa`:
     - `true for a leaf the install's CA issued`;
     - `false for a leaf another CA issued`.
-- [ ] Implement, then smoke: `SKYMAP_DATA_DIR=<main checkout>/public/data npm run desktop` renders
+- [x] Implement, then smoke: `SKYMAP_DATA_DIR=<main checkout>/public/data npm run desktop` renders
   the sky from `https://localhost:47823/` with no certificate warning. A phone on the same Wi-Fi
   opens `/ca.crt`.
-- [ ] Commit `Desktop app serves itself over HTTPS with a per-install CA`.
+- [x] Commit `Desktop app serves itself over HTTPS with a per-install CA`.
 
 ### Task 7: Windows — placement, supervision, test grid
 
@@ -369,7 +369,7 @@ export function showTestGrid(sky: BrowserWindow, mode: InstallSetup['mode'], on:
   cross. FRONT is at the bottom of the disc, with LEFT, RIGHT and BACK at the other edges. It is
   generated once by a throwaway script; commit only the PNG.
 
-- [ ] Tests:
+- [x] Tests:
   - `placeWindows`:
     - `sky takes the stored display by id`;
     - `sky takes the display of the stored size when the id changed`;
@@ -380,11 +380,11 @@ export function showTestGrid(sky: BrowserWindow, mode: InstallSetup['mode'], on:
   - `isAppUrl`:
     - `accepts https://localhost:47823 paths`;
     - `rejects other ports, http, file and remote hosts`.
-- [ ] Implement, then smoke with `--windowed`:
+- [x] Implement, then smoke with `--windowed`:
   - `process.crash()` reloads the sky;
   - an InfoCard NED link does nothing;
   - the dome grid lands front-down on a second display.
-- [ ] Commit `Desktop windows: placement, supervision and the test grid`.
+- [x] Commit `Desktop windows: placement, supervision and the test grid`.
 
 ### Task 8: Desktop relay — stored code, loopback host, network pick
 
@@ -425,7 +425,7 @@ export function attachDesktopRelay(server: https.Server, opts: { code: RoomCode;
 
 `rotateRoomCode` writes a new code, then calls `relay.rotate(old, next)`.
 
-- [ ] Tests:
+- [x] Tests:
   - `isLoopbackRequest`:
     - `accepts 127.0.0.1, ::1 and ::ffff:127.0.0.1`;
     - `rejects a LAN address, including this machine's own`.
@@ -440,9 +440,9 @@ export function attachDesktopRelay(server: https.Server, opts: { code: RoomCode;
     - `a loopback host receives the stored code with onSky false`;
     - `a join to another code is refused with 1008`;
     - `rotateRoomCode kicks remotes with 4001 and the host hears the new code`.
-- [ ] Implement, then smoke: open the sky with `npm run desktop`. A phone scans the control window's
-  QR, trusts `/ca.crt` and drives the sky. Rotating the code kicks the phone.
-- [ ] Commit `Desktop relay: stored code, loopback host, picked network`.
+- [x] Implement, then smoke: open the sky with `npm run desktop`. A phone scans the control window's
+  QR, trusts `/ca.crt` and drives the sky. Rotating the code kicks the phone. *(Owner paired a real phone, 2026-11-06; the setup page's steps were verified on an iOS 26.1 simulator and an Android 14 emulator.)*
+- [x] Commit `Desktop relay: stored code, loopback host, picked network`.
 
 ### Task 9: Control window, setup and lifecycle
 
@@ -502,7 +502,7 @@ export const CONTROL_SHORTCUT = 'CommandOrControl+Alt+K';
 - **Preload:** CommonJS (`.cts` → `.cjs`, because it runs sandboxed). It exposes `ControlBridge`
   through `contextBridge` only.
 
-- [ ] Tests:
+- [x] Tests:
   - `parseInstallSetup`:
     - `returns defaults for garbage`;
     - `keeps valid fields and defaults the rest`;
@@ -511,8 +511,8 @@ export const CONTROL_SHORTCUT = 'CommandOrControl+Alt+K';
     - `today when the time is still ahead`;
     - `tomorrow when it has passed`;
     - `tomorrow when it is exactly now`.
-- [ ] Implement.
-- [ ] Smoke on macOS with a fresh `userData`:
+- [x] Implement.
+- [x] Smoke on macOS with a fresh `userData`:
   - first launch: progress in the control window, then the sky;
   - relaunch offline: the sky;
   - delete the data and relaunch offline: "needs internet once";
@@ -520,7 +520,7 @@ export const CONTROL_SHORTCUT = 'CommandOrControl+Alt+K';
   - a two-display setup: the control window lands on the free display; unplug and re-plug the sky
     display;
   - toggle autostart.
-- [ ] Commit `Desktop control window, setup and lifecycle`.
+- [x] Commit `Desktop control window, setup and lifecycle`.
 
 ### Task 10: CI, docs, package
 
@@ -533,7 +533,7 @@ export const CONTROL_SHORTCUT = 'CommandOrControl+Alt+K';
   invariant (spec §4), the Verification B result, the port, the shortcut, the `/ca.crt` tablet trust
   steps for iOS and Android, and the DHCP-reservation advice.
 
-- [ ] `npm run dist --workspace packages/desktop` produces a dmg, and a Windows installer per
+- [x] `npm run dist --workspace packages/desktop` produces a dmg, and a Windows installer per
   Verification B.
 - [x] Manual on Windows — *deferred by owner ruling 2026-11-06: no Windows machine, so the installer
   ships marked untried and these checks moved to the backlog item "Windows hardware smoke":*
@@ -541,7 +541,7 @@ export const CONTROL_SHORTCUT = 'CommandOrControl+Alt+K';
   - a tablet pairs over HTTPS after trusting `/ca.crt`;
   - a projector switched on after boot takes the sky;
   - the dome grid lands front-down.
-- [ ] Commit `Desktop app: CI step, README and packaging`.
+- [x] Commit `Desktop app: CI step, README and packaging`.
 
 ## Definition of Done
 
@@ -556,10 +556,10 @@ export const CONTROL_SHORTCUT = 'CommandOrControl+Alt+K';
 **Observable behaviours (manual smoke, mac; Windows deferred to the backlog, see Task 10):** every
 smoke step in Tasks 6–10, plus:
 
-- [ ] After a new `sync-r2`, an online launch downloads only the changed files, and the next sky load
-  prunes the superseded ones.
-- [ ] The sky window never shows a pairing card in the desktop app. The QR shows only in the control
-  window.
+- [x] After a new `sync-r2`, an online launch downloads only the changed files, and the next sky load
+  prunes the superseded ones. *(Not checked by hand in a session; landed on the owner's word 2026-11-06.)*
+- [x] The sky window never shows a pairing card in the desktop app. The QR shows only in the control
+  window. *(Not checked by hand in a session; landed on the owner's word 2026-11-06.)*
 
 **Deferred (don't chase):**
 

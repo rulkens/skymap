@@ -2,9 +2,9 @@
 
 **Status:** agreed in brainstorming 2026-09-19; parked 2026-09-20; **revised 2026-11-03** to add
 domes and the phone remote (grill session:
-[`desktop-dome-remote-2026-11-03.md`](../../grill-sessions/desktop-dome-remote-2026-11-03.md),
+[`desktop-dome-remote-2026-11-03.md`](../../../grill-sessions/desktop-dome-remote-2026-11-03.md),
 Q-numbers below refer to it). Picks up the "offline install build" half of the
-[Museum kiosk mode](../../backlog/2026-08-31-museum-kiosk-mode.md) backlog item.
+[Museum kiosk mode](../../../backlog/2026-08-31-museum-kiosk-mode.md) backlog item.
 
 ## 1. Purpose
 
@@ -56,7 +56,7 @@ update the local copy incrementally.
 ### 3.1 Ideal shape
 
 > The pre-build sketch, kept as history. The shipped layout is in
-> [`docs/DESKTOP.md`](../../DESKTOP.md) (Layout), and the types live in the files it names.
+> [`docs/DESKTOP.md`](../../../DESKTOP.md) (Layout), and the types live in the files it names.
 
 ```ts
 // tools/deploy/@types/R2SyncGroup.ts — one field, set on every row of buildGroups()
@@ -446,7 +446,7 @@ It has four panels:
 Added at the owner's request after §1–§9 were built. The design brief is
 `.superpowers/sdd/2026-09-19-desktop-offline-app/first-run-brief.md` (a local workspace file, not
 tracked); its headings are named below. The shipped state is described in
-[`docs/DESKTOP.md`](../../DESKTOP.md).
+[`docs/DESKTOP.md`](../../../DESKTOP.md).
 
 - **First-run flow** (brief: the opening sections and "Steps"). The control window opens on first
   launch, when `setup.json` does not exist, with a five-step stepper (Welcome, Where it shows,
