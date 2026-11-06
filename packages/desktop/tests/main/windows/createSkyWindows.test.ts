@@ -69,6 +69,8 @@ function skyWindows(setup: InstallSetup) {
     setup: () => setup,
     onClosed: () => {},
     onFullScreen,
+    left: { full: true, bounds: null },
+    remember: vi.fn(),
   });
 }
 const onFullScreen = vi.fn();

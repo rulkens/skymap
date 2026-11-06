@@ -12,6 +12,7 @@ import { openSkyWindow } from './openSkyWindow';
 import { placeWindows } from './utils/placeWindows';
 import { setFullScreen as setFull } from './utils/setFullScreen';
 import { showWindowButtons } from './utils/showWindowButtons';
+import { windowBounds } from './utils/windowBounds';
 import { showTestGrid } from '../sky/showTestGrid';
 
 /**
@@ -20,9 +21,18 @@ import { showTestGrid } from '../sky/showTestGrid';
  * out of full screen stays a window until put back: display changes leave it where it is.
  */
 export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
-  const { control, windowed, mayClose, setup, onClosed, onFullScreen } = deps;
+  const { control, windowed, mayClose, setup, onClosed, onFullScreen, left, remember } = deps;
   let sky: BrowserWindow | null = null;
-  let full = !windowed;
+  // A launch, and a sky reopened after a crash, come back as the sky was left (owner ruling).
+  let full = !windowed && left.full;
+  let lastBounds = left.bounds;
+  let saving: ReturnType<typeof setTimeout> | undefined;
+  // Moves and resizes come in bursts (a drag polls every 16 ms); the file is written once it settles.
+  const save = (): void => {
+    clearTimeout(saving);
+    saving = setTimeout(() => remember({ full, bounds: lastBounds }), 500);
+  };
+  const workAreas = (): Rectangle[] => screen.getAllDisplays().map((d) => d.workArea);
   let grid: Overlay | null = null;
   const current = (): BrowserWindow | null => (sky !== null && !sky.isDestroyed() ? sky : null);
   // The list can change between two reads, so the primary stands in for a display just removed.
@@ -58,8 +68,18 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     const existing = current();
     if (existing) return existing;
     const at = placeWindows(setup().display, listDisplays())?.sky;
-    const win = openSkyWindow(at ? displayOf(at) : screen.getPrimaryDisplay(), windowed);
+    const display = at ? displayOf(at) : screen.getPrimaryDisplay();
+    const asWindow =
+      windowed || full ? null : windowBounds(lastBounds, workAreas(), display.workArea);
+    const win = openSkyWindow(display, windowed, asWindow);
     win.on('closed', onClosed);
+    const track = (): void => {
+      if (full || windowed || win.isDestroyed()) return;
+      lastBounds = win.getBounds();
+      save();
+    };
+    win.on('move', track);
+    win.on('resize', track);
     win.webContents.on('before-input-event', (event, input) => {
       if (windowed || !isFullScreenKey(input, process.platform)) return;
       event.preventDefault();
@@ -79,11 +99,9 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
         setFullScreen(true);
       });
     }
-    full = !windowed;
     showWindowButtons(win, !full);
     // Every page the sky loads gets a fresh preload, which starts with the strip hidden.
     win.webContents.on('dom-ready', () => tellSky(win));
-    // A new sky starts full screen, whatever the last one was left as.
     onFullScreen(full);
     return (sky = win);
   };
@@ -97,16 +115,12 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     // Back in: place() fills the sky's display, as for any sky not filling it.
     if (!on) {
       setFull(win, false);
-      const { x, y, width, height } = screen.getDisplayMatching(win.getBounds()).workArea;
-      win.setBounds({
-        x: Math.round(x + width * 0.125),
-        y: Math.round(y + height * 0.125),
-        width: Math.round(width * 0.75),
-        height: Math.round(height * 0.75),
-      });
+      const home = screen.getDisplayMatching(win.getBounds()).workArea;
+      win.setBounds(windowBounds(lastBounds, workAreas(), home));
     }
     place();
     onFullScreen(full);
+    save();
     return full;
   };
 

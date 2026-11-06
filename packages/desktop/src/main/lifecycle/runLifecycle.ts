@@ -14,7 +14,6 @@ import {
   shell,
 } from 'electron';
 import type { BrowserWindow, WebContents } from 'electron';
-import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { AboutInfo } from '../../@types/AboutInfo';
@@ -25,7 +24,6 @@ import { APP_SERVER_PORT } from '../../data/appServerPort';
 import { CONTROL_CHANNELS } from '../../data/controlChannels';
 import { CONTROL_SHORTCUT } from '../../data/controlShortcut';
 import { INVENTORY_FILE } from '../sync/data/inventoryFile';
-import { SETUP_FILE } from '../setup/data/setupFile';
 import { attachDesktopRelay } from '../relay/attachDesktopRelay';
 import { bootPlan } from './utils/bootPlan';
 import { createDailySchedule } from './createDailySchedule';
@@ -35,6 +33,8 @@ import { createSkyWindows } from '../windows/createSkyWindows';
 import { createSyncThenLoad } from './createSyncThenLoad';
 import { hasCompleteLocalSet } from '../sync/hasCompleteLocalSet';
 import { installAppMenu } from '../menu/installAppMenu';
+import { parseSkyWindowState } from '../windows/utils/parseSkyWindowState';
+import { openSettings } from '../settings/openSettings';
 import { isNewerBuild } from './utils/isNewerBuild';
 import { lanOriginFor } from '../lan/utils/lanOriginFor';
 import { listDisplays } from '../windows/utils/listDisplays';
@@ -78,8 +78,9 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     app.getAppPath(),
     userData,
   );
-  const firstRun = !existsSync(join(userData, SETUP_FILE));
-  let code = await readRoomCode(userData);
+  const settings = openSettings(userData);
+  const firstRun = !settings.has('setup');
+  let code = readRoomCode(settings);
   const secure = await startSecureServer(userData, dataRoot);
   await startTabletSetupServer(secure.caPem);
   // Syncs, prunes and sky loads one at a time: a prune never meets a download, two loads never overlap.
@@ -90,7 +91,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   // A sky Escape made a window belongs to the operator, so it carries the menu (installAppMenu).
   let skyFull = !windowed;
 
-  const setup = createSetupStore(userData, await readSetup(userData), {
+  const setup = createSetupStore(settings, readSetup(settings), {
     placeWindows: () => placeAll(),
     rearmUpdates: () => rearm(),
     modeChanged: () => {
@@ -150,6 +151,14 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     onFullScreen: (full) => {
       skyFull = full;
       tick('fullScreen', full);
+    },
+    left: parseSkyWindowState(settings.get('skyWindow')),
+    remember: (left) => {
+      try {
+        settings.set('skyWindow', left);
+      } catch (error) {
+        console.error('sky window state:', error);
+      }
     },
   });
   const update = (patch: Partial<ControlState>): void => {
@@ -238,7 +247,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     // Queued: a second click must rotate from the first one's new code, not the old one.
     rotateCode: () =>
       rotations(async () => {
-        code = await rotateRoomCode(userData, relay, code);
+        code = rotateRoomCode(settings, relay, code);
         // With no sky hosting, the relay announces nothing.
         update({ room: { ...state.room, code } });
       }),

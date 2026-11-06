@@ -294,6 +294,10 @@ dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string /* 'HH:MM' local
 - **Tablet setup (owner ruling 2026-11-06):** the pairing QR opens a plain-HTTP setup page on port
   47824 that walks the tablet through installing the CA, checks trust live, then opens the remote;
   replaces typing `/ca.crt` by hand and clicking past a warning.
+- **Settings and the sky window (owner rulings 2026-11-06):** the setup, the room code and how the
+  sky window was left live in `<userData>/settings.json` through electron-store, replacing
+  `setup.json` and `remote-room.json`; a launch puts the sky back full screen or as a window at its
+  last bounds, where earlier it always started full screen.
 - **Test grid (Q8):** `showTestGrid` adds a `WebContentsView` inside the sky window, so its bounds
   move with the window.
   - **Dome mode:** it shows `assets/dome-grid.png` at `object-fit: contain`. The image is an

@@ -15,12 +15,14 @@ import { readRoomCode } from '../../../src/main/relay/readRoomCode';
 import { rotateRoomCode } from '../../../src/main/relay/rotateRoomCode';
 import { startAppServer } from '../../../src/main/server/startAppServer';
 import { listLanInterfaces } from '../../../src/main/lan/utils/listLanInterfaces';
+import { memorySettings } from '../settings/memorySettings';
 
 // The real app server (HTTPS on every interface) with the relay on it, as main.ts wires them.
 let userData: string;
 let server: Server;
 let relay: RelayHandle;
 let code: string;
+const { settings } = memorySettings();
 let ca: string;
 const sockets: WebSocket[] = [];
 
@@ -33,7 +35,7 @@ beforeAll(async () => {
   });
   ca = tls.ca;
   server = await startAppServer({ dist: userData, data: userData, caPem: ca }, tls, 0);
-  code = await readRoomCode(userData);
+  code = readRoomCode(settings);
   relay = attachDesktopRelay(server, { code: () => code, network: () => null });
 });
 afterEach(() => sockets.splice(0).forEach((socket) => socket.terminate()));
@@ -117,11 +119,11 @@ describe('attachDesktopRelay', () => {
     const remote = open(code);
     await remote.opened;
     const old = code;
-    code = await rotateRoomCode(userData, relay, old);
+    code = rotateRoomCode(settings, relay, old);
     expect(code).not.toBe(old);
     expect(await remote.closed).toBe(4001);
     expect(await host.nextFrame(2)).toMatchObject({ relay: 'room', code, onSky: false });
-    expect(await readRoomCode(userData)).toBe(code);
+    expect(readRoomCode(settings)).toBe(code);
     await open(code).opened;
     expect(await open('host').nextFrame(1)).toMatchObject({ code });
   });

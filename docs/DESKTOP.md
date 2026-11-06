@@ -40,7 +40,7 @@ and the newcomer, still asking for the lock (`takeInstanceLock`), starts in its 
 and the decisions sit in pieces with their own tests: `bootPlan` (what a launch does first),
 `createSyncThenLoad` (a sync and what follows it, through `syncOutcomeAction`, spec §5's outcome
 table; it never rejects and always ends the syncing status), `createDailySchedule` (the one daily timer),
-`registerControlIpc` (the page's requests), `createSetupStore` (`setup.json`) and
+`registerControlIpc` (the page's requests), `createSetupStore` (the setup in `settings.json`) and
 `createSkyWindows` (`main/windows/`: the sky window, its placement and the test grid).
 
 | Window            | File                                        | What it is                                                                                                                                                                                       |
@@ -67,8 +67,12 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
   loaded or loading), `ready` (new data waits for Restart sky), `offline`, `failed`, `diskFull`.
   Whether data is on disk is `ControlState.hasData`, not part of the status. The page reads each
   kind's words from one table, `control/sync/data/statusView.ts`.
-- **Setup saves** go through `createSetupStore`, `setup.json`'s one writer (the first-run write
-  too): saves run one at a time, the app follows a change only once it is stored, and a refused
+- **Settings** live in `<userData>/settings.json` through electron-store (`main/settings/openSettings.ts`,
+  owner ruling 2026-11-06): the setup, the room code and how the sky window was left, each read
+  through its own parser so a damaged value falls back to its default. Certificates and the
+  mirror's lists stay files of their own; they are data, not settings.
+- **Setup saves** go through `createSetupStore`, the setup's one writer (the first-run write
+  too): the settings write is synchronous, so saves land in the order asked; the app follows a change only once it is stored, and a refused
   save leaves the stored setup. The page shows Saving, Saved, or an alert, and drops its draft.
 - **Rotate code** is a two-step button: "Rotate code", then "Disconnect tablets and rotate"
   (Escape or leaving the button cancels). It stays busy until main has stored the new code.
@@ -95,7 +99,9 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
   cursor (`utils/dragWithCursor.ts`; `-webkit-app-region` stops taking
   presses once the curtain's view has been laid over and lifted). F11 (Ctrl+Cmd+F on
   macOS, `utils/isFullScreenKey.ts`, read off the sky since Windows hangs the menu elsewhere) or
-  View › Full screen puts it back; a launch always starts full screen.
+  View › Full screen puts it back. A launch puts the sky back as it was left, full screen or a
+  window at its last bounds (`skyWindow` in the settings; `utils/windowBounds.ts` falls back to
+  three quarters of the screen when the top edge would be out of reach).
 
 ## Data mirror
 
@@ -190,7 +196,7 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 
 `main/relay/attachDesktopRelay.ts` attaches `tools/utils/remote/attachRemoteRelay` to the same server.
 
-- **Stored room code.** `<userData>/remote-room.json` (`main/relay/readRoomCode.ts`). It lasts across
+- **Stored room code.** `roomCode` in the settings (`main/relay/readRoomCode.ts`). It lasts across
   launches so a tablet bookmark keeps working. `codeFor` returns it for every host.
 - **Who may host.** `mayHost` needs a loopback socket (`main/relay/utils/isLoopbackRequest.ts`, the peer
   address, never a header) and `Origin` equal to `https://localhost:47823` (`main/server/data/appOrigin.ts`).
@@ -286,7 +292,7 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 - `--windowed` gives the sky a normal 1280 x 720 window with DevTools and the full menu.
 - In a worktree without `public/data`, point `SKYMAP_DATA_DIR` at a checkout that has it.
 - A dev run uses the installed app's `userData` (`Skymap`): on a machine with both, they share
-  `setup.json`, the CA and the room code, though a dev run never touches the mirror. For a clean
+  the settings, the CA and the room code, though a dev run never touches the mirror. For a clean
   slate, pass `--user-data-dir=<scratch dir>` after `electron .`.
 - Manual checks that no test covers: install on Windows (firewall rule, uninstaller box, "Launch
   Skymap"), boot with networking off, WebGPU on D3D12, a tablet pairing after trusting `/ca.crt`,
@@ -311,7 +317,7 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 
 ## Landmines
 
-- **First run ends at the first launch.** `setup.json` is written (through the setup store) as
+- **First run ends at the first launch.** The setup is written (through the setup store) as
   soon as the app starts, so quitting mid-setup skips the steps next time; "Run setup again" brings
   them back. That is the spec's rule (§10).
 
