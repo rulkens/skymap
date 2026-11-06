@@ -54,6 +54,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { liveClipStartPose } from '../../../../src/services/engine/helpers/liveClipStartPose';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import { MISSION_EVENTS } from '../../../../src/layers/missions/events/data/missionEvents.generated';
@@ -73,7 +74,13 @@ import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDr
 import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
 import type { NavVelocity } from '../../../../src/@types/camera/input/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
-import { clipStarted, setLens, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import {
+  clipEnded,
+  clipStarted,
+  resolveClipStart,
+  setLens,
+  startCameraTween,
+} from '../../../../src/state/camera/cameraSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import {
   setControlScheme,
@@ -852,5 +859,57 @@ describe('a clip fov channel drives the drawn lens', () => {
 
     expect(h.store.getState().camera.clip).not.toBeNull();
     expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(0.5);
+  });
+
+  it("a 'live' clip opens its fov track from the drawn lens", () => {
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
+    h.store.dispatch(setLens(0.5));
+    h.frame(2);
+    const data: ClipData = {
+      start: 'live',
+      timeline: [tween('fov', { to: 0.25, over: 5, ease: 'linear' })],
+    };
+    h.store.dispatch(
+      clipStarted({
+        data: resolveClipStart(data, liveClipStartPose(h.state)),
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+    h.frame(1);
+
+    const drawn = h.state.cameraRuntime.outputs.projection.fovYRad;
+    expect(drawn).toBeLessThanOrEqual(0.5);
+    expect(drawn).toBeGreaterThan(0.45);
+  });
+
+  const midDolly = () => {
+    const h = playing({
+      start: { ...START, fov: 1 },
+      timeline: [tween('fov', { to: 0.25, over: 5, ease: 'linear' })],
+    });
+    h.frame(5);
+    expect(h.state.cameraRuntime.drivenLens).not.toBeNull();
+    return h;
+  };
+
+  // The takeover exit's shape: the clip is cancelled and the viewer's lens restored together.
+  it('a lens written in the hand-off tick wins over the commit', () => {
+    const h = midDolly();
+    h.store.dispatch(clipEnded());
+    h.store.dispatch(setLens(0.7));
+    h.frame(1);
+
+    expect(h.store.getState().camera.lens).toBe(0.7);
+    expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(0.7);
+  });
+
+  it('commits the driven lens exactly once', () => {
+    const h = midDolly();
+    h.store.dispatch(clipEnded());
+    h.frame(2);
+    h.store.dispatch(setLens(0.7));
+    h.frame(1);
+
+    expect(h.store.getState().camera.lens).toBe(0.7);
   });
 });

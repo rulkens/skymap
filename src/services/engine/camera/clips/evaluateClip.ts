@@ -690,6 +690,9 @@ function lensAt(compiled: CompiledClip, t: number): number | undefined {
     compiled.velTracks.some((r) => r.channel === 'fov') ||
     compiled.oscTracks.some((o) => o.channel === 'fov');
   if (!animates) return undefined;
+  // Only a `'live'` start carries the viewer's lens (`liveClipStartPose`): a
+  // concrete start without `fov` is authored, so it opens at the default, not
+  // at whatever the viewer had dialled in.
   const start = compiled.start.fov ?? DEFAULT_FOV_Y_RAD;
   const base = evaluateBaseScalar(compiled.baseTracks['fov'], start, 'fov', t, WHOLE_CLIP);
   return base + velDisplacement(compiled, 'fov', t) + oscOffset(compiled, 'fov', t);

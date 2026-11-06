@@ -309,8 +309,14 @@ export function stepCameraRuntime(
   // A driven lens outlives its row the way the pose does: the hand-off frame
   // still draws it while the commit lands, so a dolly zoom never snaps back.
   // The arms above read the committed lens; only the drawn frustum follows it.
-  const drawnLens = lens ?? prev.drivenLens ?? projection.fovYRad;
-  if (lens === undefined && prev.drivenLens !== null) actions.push(setLens(prev.drivenLens));
+  // A lens written since the drive last saw it (a takeover's restore, a tour
+  // re-pin, the slider) wins, as an outside `base` does (`external` above).
+  const handOff =
+    lens === undefined && prev.drivenLens?.over === rootState.camera.lens
+      ? prev.drivenLens.drawn
+      : undefined;
+  if (handOff !== undefined) actions.push(setLens(handOff));
+  const drawnLens = lens ?? handOff ?? projection.fovYRad;
   const drawnByLens = drawnLens !== projection.fovYRad;
   const foldCtx: CameraArmCtx = { ...armFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
@@ -365,7 +371,7 @@ export function stepCameraRuntime(
       scheme: controls.scheme,
       own: own === undefined ? prev.own : { ...prev.own, [winnerId]: own },
       pivotBody: pivotBody ?? null,
-      drivenLens: lens ?? null,
+      drivenLens: lens === undefined ? null : { drawn: lens, over: rootState.camera.lens },
       shiftNdc,
       outputs: {
         displayed: projected.displayed,
