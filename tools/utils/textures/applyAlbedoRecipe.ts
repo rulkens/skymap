@@ -6,8 +6,8 @@
  * step per spec. `Y = 0` skips straight to `q = 1` — dividing a true black
  * pixel by itself would otherwise read back as `NaN`, not "unchanged".
  */
-import { srgbToLinear } from '../color/srgbToLinear';
-import { linearToSrgbByte } from '../image/linearToSrgbByte';
+import { srgbToLinear } from '../../../src/utils/color/srgbToLinear';
+import { linearToSrgbByte } from '../../../src/utils/color/linearToSrgbByte';
 import { gradeRgbaInPlace } from '../image/gradeRgbaInPlace';
 import type { AlbedoApply } from '../../textures/@types/AlbedoApply';
 import { iceKeepWeight } from './iceKeepWeight';

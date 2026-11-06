@@ -7,7 +7,7 @@
  */
 import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
 import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
-import { linearToSrgbByte } from '../../../tools/utils/image/linearToSrgbByte';
+import { linearToSrgbByte } from '../../../src/utils/color/linearToSrgbByte';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
 import { sampleSlope } from '../../../tools/utils/textures/sampleSlope';
 import { readSlopeLattice } from '../../../tools/textures/readSlopeLattice';

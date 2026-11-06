@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { applyAlbedoRecipe } from '../../../../tools/utils/textures/applyAlbedoRecipe';
-import { linearToSrgbByte } from '../../../../tools/utils/image/linearToSrgbByte';
+import { linearToSrgbByte } from '../../../../src/utils/color/linearToSrgbByte';
 import type { AlbedoApply } from '../../../../tools/textures/@types/AlbedoApply';
 
 const NEUTRAL_APPLY: AlbedoApply = {

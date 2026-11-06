@@ -13,8 +13,8 @@ import { albedoRecipeImagerySource } from '../../../textures/albedoRecipeImagery
 import { readSlopeLattice } from '../../../textures/readSlopeLattice.ts';
 import { constantSunField } from '../../../utils/textures/constantSunField.ts';
 import { sampleSlope } from '../../../utils/textures/sampleSlope.ts';
-import { srgbToLinear } from '../../../utils/color/srgbToLinear.ts';
-import { linearToSrgbByte } from '../../../utils/image/linearToSrgbByte.ts';
+import { srgbToLinear } from '../../../../src/utils/color/srgbToLinear.ts';
+import { linearToSrgbByte } from '../../../../src/utils/color/linearToSrgbByte.ts';
 import { orenNayarPreview } from '../orenNayarPreview.ts';
 import { previewSunFit } from '../previewSunFit.ts';
 import type { RenderLight } from '../../@types/RenderLight';

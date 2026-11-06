@@ -9,7 +9,7 @@ import type { HeightSource } from './@types/HeightSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import type { AlbedoRecipe } from './@types/AlbedoRecipe';
 import { SURFACE_EQUIRECT_BASE_WIDTH_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
-import { srgbToLinear } from '../utils/color/srgbToLinear';
+import { srgbToLinear } from '../../src/utils/color/srgbToLinear';
 import { gaussianBlurFloat32 } from '../utils/image/gaussianBlurFloat32';
 import { fitShadingGradient } from '../utils/textures/fitShadingGradient';
 import { sampleSlope } from '../utils/textures/sampleSlope';
