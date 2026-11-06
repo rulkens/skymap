@@ -182,6 +182,17 @@ describe('hash history integrity', () => {
     expect(selectSettings(store.getState()).flow.enabled).toBe(true);
   });
 
+  it("an exhibit link's layers win over the exhibit's own settings", async () => {
+    // solarSystem's settings replace the whole `starCatalogs` cluster, captions included.
+    seedHash('exhibit=solarSystem&layers=-label:starCatalog');
+    const { store } = await boot();
+    await flush();
+
+    // The two label-bearing sets; Gaia and the S-stars draw no names.
+    const { famousStar, sun } = selectSettings(store.getState()).starCatalogs.items;
+    expect([famousStar.labelEnabled, sun.labelEnabled]).toEqual([false, false]);
+  });
+
   it("keeps a takeover navigation's key without pushing", async () => {
     seedHash('');
     await boot();

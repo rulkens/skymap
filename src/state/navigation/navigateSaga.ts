@@ -162,6 +162,7 @@ export function* navigateSaga(
           entry: transition,
           atLinkedTime: intent.t !== undefined,
           fromLink: true,
+          layers: intent.layers,
         }),
       );
       return OK;
