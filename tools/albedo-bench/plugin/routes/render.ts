@@ -8,11 +8,11 @@
  * the two routes' calls land on the same cached fit.
  */
 import type { AlbedoRecipe } from '../../../textures/AlbedoRecipe.ts';
-import type { HeightSource } from '../../../textures/HeightSource.ts';
+import type { HeightSource } from '../../../textures/@types/HeightSource.ts';
 import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds.ts';
 import type { SlopeLattice } from '../../../textures/SlopeLattice.ts';
 import type { SunField } from '../../../textures/SunField.ts';
-import type { SurfaceImagerySource } from '../../../textures/SurfaceImagerySource.ts';
+import type { SurfaceImagerySource } from '../../../textures/@types/SurfaceImagerySource.ts';
 import { albedoRecipeImagerySource } from '../../../textures/albedoRecipeImagerySource.ts';
 import { readSlopeLattice } from '../../../textures/readSlopeLattice.ts';
 import { clamp } from '../../../utils/textures/clamp.ts';
@@ -22,29 +22,9 @@ import { srgbToLinear } from '../../../utils/color/srgbToLinear.ts';
 import { linearToSrgb } from '../../../utils/color/linearToSrgb.ts';
 import { orenNayarPreview } from '../orenNayarPreview.ts';
 import { previewSunFit } from '../previewSunFit.ts';
-
-export type RenderLight = {
-  readonly azDeg: number;
-  readonly elDeg: number;
-  readonly roughness: number;
-  readonly ambient: number;
-};
-
-export type RenderBody = {
-  readonly box: LonLatBounds;
-  readonly px: number;
-  readonly recipe: AlbedoRecipe;
-  readonly variant: 'original' | 'adjusted';
-  readonly light?: RenderLight;
-  readonly manualG?: readonly [number, number];
-};
-
-export type RenderDeps = {
-  readonly imagery: SurfaceImagerySource;
-  readonly height: HeightSource;
-  readonly radiusM: number;
-  readonly getField: (region: LonLatBounds, sunFit: AlbedoRecipe['sunFit']) => Promise<SunField>;
-};
+import type { RenderLight } from '../../@types/RenderLight';
+import type { RenderBody } from '../../@types/RenderBody';
+import type { RenderDeps } from '../../@types/RenderDeps';
 
 function relight(
   rgba: Uint8Array,

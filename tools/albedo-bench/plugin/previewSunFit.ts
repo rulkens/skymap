@@ -7,6 +7,7 @@
  */
 import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { PreviewSunFit } from '../@types/PreviewSunFit';
 
 const DEG_TO_RAD = Math.PI / 180;
 
@@ -14,11 +15,6 @@ const DEG_TO_RAD = Math.PI / 180;
 // count (proportional to the same box-area/stride² quantity), so this is
 // the one knob that keeps both the fit's cost and the overlay's density sane.
 export const PREVIEW_MAX_ARROWS = 300;
-
-export type PreviewSunFit = {
-  readonly sunFit: AlbedoRecipe['sunFit'];
-  readonly coarsened: boolean;
-};
 
 function spanKm(box: LonLatBounds, kmPerDegAtEquator: number): { lat: number; lon: number } {
   const latCenter = (box.north + box.south) / 2;

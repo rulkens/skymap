@@ -9,8 +9,8 @@ import { fitSunField } from '../../../tools/textures/fitSunField';
 import { sampleSunField } from '../../../tools/utils/textures/sampleSunField';
 import { constantHeightSource } from '../../../tools/textures/constantHeightSource';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
-import type { HeightSource } from '../../../tools/textures/HeightSource';
-import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
+import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
+import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
 import { analyticHeightSource, analyticImagerySource } from '../../fixtures/textures/albedoFakes';
 
 const SUN_FIT = {

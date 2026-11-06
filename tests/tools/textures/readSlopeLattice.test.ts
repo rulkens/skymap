@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { readSlopeLattice, SLOPE_LEVEL } from '../../../tools/textures/readSlopeLattice';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
-import type { HeightSource } from '../../../tools/textures/HeightSource';
+import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
 
 const STEP = heightLatticeStepDeg(SLOPE_LEVEL);
 const DEG_TO_RAD = Math.PI / 180;

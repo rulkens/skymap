@@ -7,14 +7,14 @@
  * box outside it throws rather than silently clamping to a mis-sized fit.
  */
 import type { AlbedoApply } from './AlbedoApply';
-import type { HeightSource } from './HeightSource';
+import type { HeightSource } from './@types/HeightSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { applyAlbedoRecipe } from '../utils/textures/applyAlbedoRecipe';
 import { sampleSlope } from '../utils/textures/sampleSlope';
 import { sampleSunField } from '../utils/textures/sampleSunField';
 import { readSlopeLattice } from './readSlopeLattice';
 import type { SunField } from './SunField';
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 
 // Inclusive with a small tolerance, so a box edge that lands a ULP outside
 // `field.bounds` — the same edge, computed a different way by the caller —

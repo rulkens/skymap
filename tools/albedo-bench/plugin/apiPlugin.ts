@@ -12,7 +12,7 @@ import { resolve } from 'node:path';
 import { readJsonBody } from '../../utils/http/readJsonBody.ts';
 import { sendJson } from '../../utils/http/sendJson.ts';
 import { statusForError } from '../../utils/http/statusForError.ts';
-import type { ErrorStatusRule } from '../../utils/http/ErrorStatusRule.ts';
+import type { ErrorStatusRule } from '../../@types/http/ErrorStatusRule.ts';
 import type { AlbedoRecipe } from '../../textures/AlbedoRecipe.ts';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds.ts';
 import type { SunField } from '../../textures/SunField.ts';
@@ -21,9 +21,11 @@ import { geoTiffImagerySource } from '../../textures/geoTiffImagerySource.ts';
 import { geoTiffHeightSource } from '../../textures/geoTiffHeightSource.ts';
 import { VIKING_MDIM21_GRID, MOLA_DEM463 } from '../../textures/surfaceBodies/marsGlobalRasters.ts';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets.ts';
-import { handleRender, type RenderBody } from './routes/render.ts';
-import { handleField, type FieldBody } from './routes/field.ts';
+import { handleRender } from './routes/render.ts';
+import { handleField } from './routes/field.ts';
 import { handleGetRecipe, handleSetRecipe } from './routes/recipe.ts';
+import type { FieldBody } from '../@types/FieldBody';
+import type { RenderBody } from '../@types/RenderBody';
 
 /** The pyramid level both Viking and MOLA currently resolve to as tile
  *  sources (data/raw READMEs); inert for the bench, which only ever calls

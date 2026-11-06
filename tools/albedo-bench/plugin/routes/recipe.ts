@@ -8,14 +8,11 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { AlbedoRecipe } from '../../../textures/AlbedoRecipe.ts';
 import { parseAlbedoRecipe } from '../../../textures/parseAlbedoRecipe.ts';
+import type { SetRecipeResult } from '../../@types/SetRecipeResult';
 
 export function handleGetRecipe(opts: { readonly recipePath: string }): AlbedoRecipe {
   return parseAlbedoRecipe(readFileSync(opts.recipePath, 'utf8'));
 }
-
-export type SetRecipeResult =
-  | { readonly status: 200; readonly recipe: AlbedoRecipe }
-  | { readonly status: 400; readonly error: string };
 
 export function handleSetRecipe(opts: {
   readonly body: unknown;

@@ -4,7 +4,7 @@
  * `g` field means the same thing at every zoom. Reads one post of margin
  * beyond `box` so its own edge posts get a true central difference.
  */
-import type { HeightSource } from './HeightSource';
+import type { HeightSource } from './@types/HeightSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { slopeLatticeFromPosts } from '../utils/textures/slopeLatticeFromPosts';

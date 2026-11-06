@@ -5,10 +5,8 @@
  * `boxFromView` is the one place that turns it into a box.
  */
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-
-export type ViewState = { readonly lon: number; readonly lat: number; readonly spanDeg: number };
-
-export type ViewPreset = ViewState & { readonly label: string };
+import type { ViewState } from '../@types/ViewState';
+import type { ViewPreset } from '../@types/ViewPreset';
 
 // 360 recentred at lon 0 clamps to exactly the full globe (see boxFromView);
 // off-centre it under-covers longitude by the wrap this plain box can't

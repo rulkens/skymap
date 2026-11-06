@@ -10,21 +10,9 @@ import type { AlbedoRecipe } from '../../../textures/AlbedoRecipe.ts';
 import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds.ts';
 import type { SunField } from '../../../textures/SunField.ts';
 import { previewSunFit } from '../previewSunFit.ts';
-
-export type FieldBody = {
-  readonly box: LonLatBounds;
-  readonly sunFit: AlbedoRecipe['sunFit'];
-};
-
-export type FieldArrow = {
-  readonly lon: number;
-  readonly lat: number;
-  readonly gx: number;
-  readonly gy: number;
-  readonly confidence: number;
-};
-
-export type FieldResult = { readonly arrows: readonly FieldArrow[]; readonly coarsened: boolean };
+import type { FieldBody } from '../../@types/FieldBody';
+import type { FieldArrow } from '../../@types/FieldArrow';
+import type { FieldResult } from '../../@types/FieldResult';
 
 export async function handleField(opts: {
   readonly body: FieldBody;

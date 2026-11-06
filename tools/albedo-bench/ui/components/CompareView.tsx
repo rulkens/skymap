@@ -11,9 +11,11 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds';
-import type { FieldArrow } from '../api';
-import { MAX_SPAN_DEG, MIN_SPAN_DEG, clampLat, wrapLon, type ViewState } from '../viewPresets';
-import type { ViewMode } from './Navigator';
+import type { FieldArrow } from '../../@types/FieldArrow';
+import { MAX_SPAN_DEG, MIN_SPAN_DEG, clampLat, wrapLon } from '../viewPresets';
+import type { ViewMode } from '../../@types/ViewMode';
+import type { ViewState } from '../../@types/ViewState';
+import type { DragAnchor } from '../../@types/DragAnchor';
 
 // Arbitrary visualisation scale — g's physical units (per unit slope) don't
 // map to screen pixels; this just keeps typical arrows legible.
@@ -121,15 +123,6 @@ const HINT: Record<ViewMode, string> = {
 export function hintFor(mode: ViewMode): string {
   return HINT[mode];
 }
-
-type DragAnchor = {
-  pointerId: number;
-  startClientX: number;
-  startClientY: number;
-  startLon: number;
-  startLat: number;
-  movedPx: number;
-};
 
 export function CompareView(props: CompareViewProps) {
   const [wipePct, setWipePct] = useState(50);

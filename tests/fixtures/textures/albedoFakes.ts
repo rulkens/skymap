@@ -5,8 +5,8 @@
  * isolates `fitSunField`'s own windowing and regression rather than also
  * absorbing the central difference's own discretisation error as fit noise.
  */
-import type { HeightSource } from '../../../tools/textures/HeightSource';
-import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
+import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
+import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
 import { linearToSrgb } from '../../../tools/utils/color/linearToSrgb';
 import { clamp } from '../../../tools/utils/textures/clamp';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';

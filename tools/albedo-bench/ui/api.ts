@@ -4,22 +4,10 @@
  * production callers use `defaultApi`, closing over the real `window.fetch`.
  */
 import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-import type { RenderBody, RenderLight } from '../plugin/routes/render';
-import type { FieldArrow } from '../plugin/routes/field';
-
-export type { RenderLight, FieldArrow };
-export type RenderParams = RenderBody;
-
-export type Api = {
-  getRecipe: () => Promise<AlbedoRecipe>;
-  saveRecipe: (recipe: AlbedoRecipe) => Promise<AlbedoRecipe>;
-  renderPng: (params: RenderParams) => Promise<Blob>;
-  getField: (
-    box: LonLatBounds,
-    sunFit: AlbedoRecipe['sunFit'],
-  ) => Promise<{ arrows: FieldArrow[]; coarsened: boolean }>;
-};
+import type { RenderBody } from '../@types/RenderBody';
+import type { FieldArrow } from '../@types/FieldArrow';
+import type { RenderLight } from '../@types/RenderLight';
+import type { Api } from '../@types/Api';
 
 async function messageOf(res: Response): Promise<string> {
   try {

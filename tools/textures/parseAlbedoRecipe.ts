@@ -4,10 +4,8 @@
  * right there instead of propagating a stray NaN into a baked pixel.
  */
 import type { AlbedoRecipe } from './AlbedoRecipe';
-
-type Schema = 'number' | 'tuple3' | { readonly [key: string]: Schema };
-
-const RECIPE_SCHEMA: Schema = {
+import type { RecipeSchema } from './@types/RecipeSchema';
+const RECIPE_SCHEMA: RecipeSchema = {
   version: 'number',
   sunFit: {
     windowKm: 'number',
@@ -34,7 +32,7 @@ const RECIPE_SCHEMA: Schema = {
   },
 };
 
-function validate(value: unknown, schema: Schema, path: string): void {
+function validate(value: unknown, schema: RecipeSchema, path: string): void {
   if (schema === 'number') {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
       throw new Error(

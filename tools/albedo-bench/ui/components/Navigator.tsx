@@ -3,9 +3,10 @@
  * lon/lat/span coordinate fields; rendered inline in the viewer's toolbar
  * row (App owns the wrapping `.toolbar` div).
  */
-import { MAX_SPAN_DEG, MIN_SPAN_DEG, VIEW_PRESETS, type ViewState } from '../viewPresets';
+import { MAX_SPAN_DEG, MIN_SPAN_DEG, VIEW_PRESETS } from '../viewPresets';
+import type { ViewMode } from '../../@types/ViewMode';
+import type { ViewState } from '../../@types/ViewState';
 
-export type ViewMode = 'wipe' | 'side-by-side' | 'flip';
 const VIEW_MODES: readonly ViewMode[] = ['wipe', 'side-by-side', 'flip'];
 const VIEW_MODE_LABEL: Record<ViewMode, string> = {
   wipe: 'Wipe',

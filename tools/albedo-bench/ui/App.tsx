@@ -8,12 +8,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-import { defaultApi, type FieldArrow, type RenderLight } from './api';
-import { boxFromView, type ViewState } from './viewPresets';
-import { Navigator, type ViewMode } from './components/Navigator';
+import { defaultApi } from './api';
+import type { FieldArrow } from '../@types/FieldArrow';
+import type { RenderLight } from '../@types/RenderLight';
+import { boxFromView } from './viewPresets';
+import { Navigator } from './components/Navigator';
 import { CompareView, hintFor } from './components/CompareView';
-import { SunPanel, type SunMode } from './components/SunPanel';
+import { SunPanel } from './components/SunPanel';
 import { RecipeSliders } from './components/RecipeSliders';
+import type { SunMode } from '../@types/SunMode';
+import type { ViewMode } from '../@types/ViewMode';
+import type { ViewState } from '../@types/ViewState';
 
 const PX = 512;
 const DEBOUNCE_MS = 150;

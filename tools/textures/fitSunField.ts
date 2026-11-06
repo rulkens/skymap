@@ -5,17 +5,18 @@
  * grown by that same margin so a cell near its edge still sees every window
  * a larger region's fit over the same area would also see.
  */
-import type { HeightSource } from './HeightSource';
+import type { HeightSource } from './@types/HeightSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import type { AlbedoRecipe } from './AlbedoRecipe';
-import { SURFACE_EQUIRECT_BASE_WIDTH_PX } from '../../src/data/bodies/surfaceTileParams';
+import { SURFACE_EQUIRECT_BASE_WIDTH_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import { srgbToLinear } from '../utils/color/srgbToLinear';
 import { gaussianBlurFloat32 } from '../utils/image/gaussianBlurFloat32';
 import { fitShadingGradient } from '../utils/textures/fitShadingGradient';
 import { sampleSlope } from '../utils/textures/sampleSlope';
 import { readSlopeLattice } from './readSlopeLattice';
 import type { SunField } from './SunField';
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
+import { FittedWindow } from './@types/FittedWindow';
 
 export const FIT_CANVAS_LEVEL = 5;
 
@@ -60,14 +61,6 @@ function growRegion(region: LonLatBounds, marginKm: number, radiusM: number): Lo
     north,
   };
 }
-
-type FittedWindow = {
-  readonly lon: number;
-  readonly lat: number;
-  readonly gx: number;
-  readonly gy: number;
-  readonly confidence: number;
-};
 
 export async function fitSunField(opts: {
   readonly imagery: SurfaceImagerySource;

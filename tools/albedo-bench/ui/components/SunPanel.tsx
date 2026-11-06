@@ -3,9 +3,8 @@
  * bench-only comparison, never saved — design §2 R6), plus the
  * lighting-preview lightbox card that relights both textures.
  */
-import type { RenderLight } from '../api';
-
-export type SunMode = 'fitted' | 'manual';
+import type { RenderLight } from '../../@types/RenderLight';
+import type { SunMode } from '../../@types/SunMode';
 
 export type SunPanelProps = {
   sunMode: SunMode;
