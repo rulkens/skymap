@@ -4,6 +4,8 @@ import { serveTabletSetupRequest } from '../../../../src/main/server/utils/serve
 
 const PAGE = Buffer.from('<p>setup</p>');
 const CA = '-----BEGIN CERTIFICATE-----';
+const PICTURE = Buffer.from('RIFF');
+const GUIDE = new Map([['/guide/ios-1-allow.webp', PICTURE]]);
 
 function serve(method: string, url: string) {
   const sent: { status?: number; headers?: Record<string, unknown>; body?: unknown } = {};
@@ -19,6 +21,7 @@ function serve(method: string, url: string) {
     response as never as ServerResponse,
     PAGE,
     CA,
+    GUIDE,
   );
   return sent;
 }
@@ -40,8 +43,22 @@ describe('serveTabletSetupRequest', () => {
     expect(serve('HEAD', '/ca.crt')).toMatchObject({ status: 200, body: undefined });
   });
 
+  it('serves the guide pictures it was given', () => {
+    const sent = serve('GET', '/guide/ios-1-allow.webp');
+    expect(sent).toMatchObject({ status: 200, body: PICTURE });
+    expect(sent.headers).toMatchObject({ 'Content-Type': 'image/webp' });
+  });
+
   it('has nothing else: the app, the data and the remote stay on HTTPS', () => {
-    for (const url of ['/index.html', '/data/manifest.json', '/remote.html', '/../ca.crt']) {
+    for (const url of [
+      '/index.html',
+      '/data/manifest.json',
+      '/remote.html',
+      '/../ca.crt',
+      '/guide/',
+      '/guide/../ca.crt',
+      '/guide/ios-9.webp',
+    ]) {
       expect(serve('GET', url).status).toBe(404);
     }
     expect(serve('POST', '/').status).toBe(405);

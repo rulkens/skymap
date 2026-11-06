@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src https:"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self'; connect-src https:"
     />
     <title>Connect to Skymap</title>
     <!--
@@ -174,6 +174,15 @@
       .note a {
         color: var(--accent);
       }
+      /* A step's screenshot, cropped to what it is about, from assets/tablet-guide (dark mode). */
+      .shot {
+        display: block;
+        width: min(100%, 300px);
+        height: auto;
+        margin: 10px 0 4px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
       [hidden] {
         display: none !important;
       }
@@ -233,20 +242,44 @@
         <li>
           Tap <b>Download the certificate</b>, then <b>Allow</b>. When it says
           <b>Profile Downloaded</b>, tap <b>Close</b>.
+          <img
+            class="shot"
+            src="/guide/ios-1-allow.webp"
+            alt="Safari asks whether to allow the download: Ignore or Allow"
+            loading="lazy"
+          />
         </li>
         <li>
           Open the <b>Settings</b> app. Near the top, below <b>Apple Account</b> (on an iPad, in the
           list on the left), tap <b>Profile Downloaded</b>. Do it within a few minutes: iOS deletes
           a downloaded profile that is not installed after 8 minutes.
+          <img
+            class="shot"
+            src="/guide/ios-2-profile-downloaded.webp"
+            alt="Settings, with Profile Downloaded below Apple Account"
+            loading="lazy"
+          />
         </li>
         <li>
           Tap <b>Install</b> in the top right, <b>Install</b> again on the Warning screen, then
           <b>Install</b> in the box that pops up. Enter your passcode if asked, then tap
           <b>Done</b>.
+          <img
+            class="shot"
+            src="/guide/ios-3-install.webp"
+            alt="The Warning screen, with Install in the top right"
+            loading="lazy"
+          />
         </li>
         <li>
           Go back to <b>General</b>, tap <b>About</b>, then <b>Certificate Trust Settings</b> at the
           bottom. Turn on <b>Skymap local CA …</b> and tap <b>Continue</b>.
+          <img
+            class="shot"
+            src="/guide/ios-4-trust.webp"
+            alt="Certificate Trust Settings, with the switch for Skymap local CA"
+            loading="lazy"
+          />
         </li>
         <li>Switch back to Safari. This page sees the change by itself.</li>
       </ol>
@@ -257,18 +290,42 @@
         <li>
           Tap <b>Download the certificate</b>. In Brave, tap <b>Download</b>, and when it says the
           file can't be downloaded securely, tap <b>Keep</b> (not Discard).
+          <img
+            class="shot"
+            src="/guide/android-1-keep.webp"
+            alt="Brave says the file can't be downloaded securely: Discard or Keep"
+            loading="lazy"
+          />
         </li>
         <li>
           Your phone says CA certificates must be installed in Settings: tap <b>Close</b>. The file
           is saved as <b>ca.crt</b> in Downloads.
+          <img
+            class="shot"
+            src="/guide/android-2-close.webp"
+            alt="Install CA certificates in Settings, with a Close button"
+            loading="lazy"
+          />
         </li>
         <li>
           Open the <b>Settings</b> app, tap <b>Search settings</b> and type <b>CA certificate</b>.
           Tap the <b>CA certificate</b> result, then <b>CA certificate</b> again on the next screen.
+          <img
+            class="shot"
+            src="/guide/android-3-ca-certificate.webp"
+            alt="Install a certificate, with CA certificate at the top"
+            loading="lazy"
+          />
         </li>
         <li>
           On <b>Your data won't be private</b>, tap <b>Install anyway</b>. Pick <b>ca.crt</b>: it is
           under Recent, or tap ☰ and then <b>Downloads</b>. Enter your screen lock if asked.
+          <img
+            class="shot"
+            src="/guide/android-4-pick-file.webp"
+            alt="The file picker on Recent, with ca.crt listed"
+            loading="lazy"
+          />
         </li>
         <li>Switch back to this page. It sees the change by itself.</li>
       </ol>
