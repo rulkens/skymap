@@ -14,6 +14,7 @@ import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } fr
 import { NOOP_SAGA_CONTEXT } from '../../support/createTestStore';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { selectArrivalPending } from '../../../src/state/arrival/selectors';
+import { selectSettings } from '../../../src/state/settings/selectSettings';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
@@ -130,6 +131,35 @@ describe('hash history integrity', () => {
 
     expect(pushedHashes()).toEqual([]);
     expect(window.location.hash).not.toContain('pose=');
+  });
+
+  it("a cold link's layers land before the reveal and leave the address", async () => {
+    seedHash('focus=body-saturn&layers=cosmicWebFilaments,-starCatalog');
+    const replaceState = vi.spyOn(window.history, 'replaceState');
+
+    const { store } = await boot();
+    await flush();
+
+    const settings = selectSettings(store.getState());
+    expect(settings.cosmicWebFilaments.enabled).toBe(true);
+    expect(settings.starCatalogs.enabled).toBe(false);
+    // `layers` writes nothing, so a push would re-apply it and push again on every Back.
+    expect(pushedHashes()).toEqual([]);
+    expect(replaceState).toHaveBeenCalled();
+    expect(window.location.hash).toBe('#focus=body-saturn');
+  });
+
+  it('a hash change without layers leaves the switches alone', async () => {
+    seedHash('focus=body-saturn&layers=cosmicWebFilaments,-starCatalog');
+    const { store } = await boot();
+    await flush();
+
+    navigate('focus=body-mars');
+    await flush();
+
+    const settings = selectSettings(store.getState());
+    expect(settings.cosmicWebFilaments.enabled).toBe(true);
+    expect(settings.starCatalogs.enabled).toBe(false);
   });
 
   it("keeps a takeover navigation's key without pushing", async () => {

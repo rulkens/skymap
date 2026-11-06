@@ -131,13 +131,13 @@ through the arrival).
 
 Tests:
 
-- [ ] `hashParamSources`: `layers read contributes its switches and nothing for an all-unknown value`.
-- [ ] Integration: `a cold link's layers land before the reveal and leave the address` — boot
+- [x] `hashParamSources`: `layers read contributes its switches and nothing for an all-unknown value`.
+- [x] Integration: `a cold link's layers land before the reveal and leave the address` — boot
       `#focus=body-saturn&layers=cosmicWebFilaments,-starCatalog`: filaments on, star catalogue section off, and the
       settled address is `#focus=body-saturn` written by replace (no push).
-- [ ] Integration: `a hash change without layers leaves the switches alone` — then navigate to `#focus=body-mars`:
+- [x] Integration: `a hash change without layers leaves the switches alone` — then navigate to `#focus=body-mars`:
       filaments still on, stars still off.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: the share URL writes `layers`
 

@@ -37,6 +37,7 @@ const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
 const orientationSource = HASH_PARAM_SOURCES.find((source) => source.key === 'orientation')!;
 const poseSource = HASH_PARAM_SOURCES.find((source) => source.key === 'pose')!;
+const layersSource = HASH_PARAM_SOURCES.find((source) => source.key === 'layers')!;
 
 /** JD 2451545.0 — the J2000.0 epoch, and the instant it names. */
 const J2000_ISO = '2000-01-01T12:00:00.000Z';
@@ -192,5 +193,21 @@ describe('takeover rows', () => {
     // A miss here leaves the key stale until some other row's trigger fires.
     expect(row.writesOn.some((matches) => matches(started))).toBe(true);
     expect(row.writesOn.some((matches) => matches(ended))).toBe(true);
+  });
+});
+
+describe('layers row', () => {
+  it('layers read contributes its switches and nothing for an all-unknown value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(layersSource.read('cosmicWebFilaments,-starCatalog')).toEqual({
+      layers: [
+        { address: 'cosmicWebFilaments', on: true },
+        { address: 'starCatalog', on: false },
+      ],
+    });
+    expect(layersSource.read('nope,-label:nope')).toEqual({});
+    expect(warn).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
   });
 });
