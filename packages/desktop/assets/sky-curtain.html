@@ -4,10 +4,15 @@
     <meta charset="utf-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src data:"
     />
     <title>Skymap</title>
-    <!-- Black over the sky while it (re)loads; loadSkyPage passes both fade times and sets opacity 0 to leave. -->
+    <!--
+      Black over the sky while it (re)loads; loadSkyPage passes both fade times and sets opacity 0 to
+      leave. It speaks the app Splash's language (src/components/Splash, src/styles/tokens.css): the
+      colours and type below repeat those tokens, because this page loads from file:// with no bundle.
+      Everything sits centred in the short side, so a dome's fisheye disc shows all of it.
+    -->
     <script>
       const params = new URLSearchParams(location.search);
       for (const fade of ['fadeIn', 'fadeOut']) {
@@ -15,6 +20,23 @@
       }
     </script>
     <style>
+      /* The title's glyphs only, from public/fonts/CormorantGaramond-SemiBold.woff2. Regenerate when
+         the title changes: pyftsubset <that file> --text="Loading the universe" --flavor=woff2
+         --layout-features=kern,liga */
+      @font-face {
+        font-family: 'Cormorant Curtain';
+        font-weight: 600;
+        src: url('data:font/woff2;base64,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')
+          format('woff2');
+      }
+      :root {
+        --fg: #e8eeff;
+        --fg-muted: rgba(200, 220, 255, 0.85);
+        --fg-tertiary: rgba(200, 220, 255, 0.7);
+        --accent: #a8d0ff;
+        --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+        --unit: min(1vw, 1vh);
+      }
       html {
         height: 100%;
         background: #000;
@@ -22,90 +44,173 @@
         animation: appear var(--fadeIn) ease-in;
         transition: opacity var(--fadeOut) ease-out;
       }
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+      }
       @keyframes appear {
         from {
           opacity: 0;
         }
       }
-      /* Held back, so a quick reload stays plain black and only a real wait says it is loading. */
-      main {
-        position: absolute;
+      /* Held back, so a quick reload stays plain black and only a real wait shows anything. */
+      canvas,
+      .glow {
+        position: fixed;
         inset: 0;
-        margin: auto;
-        height: fit-content;
-        display: grid;
-        justify-items: center;
-        gap: 2.4vmin;
-        font-family: system-ui, sans-serif;
-        color: #fff;
-        text-align: center;
         opacity: 0;
-        animation: show 600ms ease-out 600ms forwards;
+        animation: rise 2.4s ease-out 600ms forwards;
       }
-      /* A star with a planet on its orbit. */
-      .orbit {
-        position: relative;
-        width: 12vmin;
-        height: 12vmin;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 50%;
-        animation: spin 2.4s linear infinite;
+      canvas {
+        width: 100%;
+        height: 100%;
       }
-      .orbit::before,
-      .orbit::after {
-        content: '';
-        position: absolute;
-        border-radius: 50%;
+      /* A faint blue breath behind the title, the colour of the panels' starlight edge. */
+      .glow {
+        background: radial-gradient(
+          circle at 50% 50%,
+          rgba(70, 110, 200, 0.16) 0%,
+          rgba(40, 70, 150, 0.06) calc(var(--unit) * 22),
+          transparent calc(var(--unit) * 42)
+        );
       }
-      .orbit::before {
+      main {
+        position: fixed;
         inset: 0;
-        margin: auto;
-        width: 2.4vmin;
-        height: 2.4vmin;
-        background: #ffd98a;
-        box-shadow: 0 0 2.4vmin #ffb84d;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        text-align: center;
       }
-      .orbit::after {
-        top: -0.8vmin;
-        left: calc(50% - 0.8vmin);
-        width: 1.6vmin;
-        height: 1.6vmin;
-        background: #8ec5ff;
-        box-shadow: 0 0 1vmin #8ec5ff;
+      main > * {
+        opacity: 0;
+        transform: translateY(calc(var(--unit) * 0.8));
+        animation: reveal 0.5s ease-out forwards;
+      }
+      main > :nth-child(1) {
+        animation-delay: 700ms;
+      }
+      main > :nth-child(2) {
+        animation-delay: 800ms;
+      }
+      main > :nth-child(3) {
+        animation-delay: 1000ms;
+      }
+      main > :nth-child(4) {
+        animation-delay: 1200ms;
+      }
+      .label {
+        display: flex;
+        gap: calc(var(--unit) * 1.6);
+        align-items: center;
+        font: max(10px, calc(var(--unit) * 1.05)) var(--mono);
+        letter-spacing: 0.32em;
+        text-indent: 0.32em;
+        color: var(--fg-muted);
+      }
+      .label::before,
+      .label::after {
+        content: '';
+        width: calc(var(--unit) * 3.2);
+        height: 1px;
+        background: var(--accent);
       }
       h1 {
-        margin: 1.2vmin 0 0;
-        font-size: 3.2vmin;
-        font-weight: 500;
-        letter-spacing: 0.04em;
+        position: relative;
+        margin: calc(var(--unit) * 2.4) 0 0;
+        padding-bottom: calc(var(--unit) * 2.2);
+        color: #fff;
+        font:
+          600 max(34px, calc(var(--unit) * 6.4)) / 1.04 'Cormorant Curtain',
+          'Cormorant Garamond',
+          ui-serif,
+          Georgia,
+          serif;
+        letter-spacing: 0.005em;
+        text-shadow: 0 0 calc(var(--unit) * 4) rgba(120, 170, 255, 0.25);
+      }
+      /* The Splash's draw beat, from the centre out: the camera focusing. */
+      h1::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        width: 0;
+        height: 1px;
+        background: var(--accent);
+        transform: translateX(-50%);
+        animation: draw 1.2s ease-out 1.4s forwards;
       }
       p {
-        margin: 0;
-        min-height: 1.4em;
-        font-size: 2.2vmin;
-        color: rgba(255, 255, 255, 0.6);
-        transition: opacity 400ms ease;
+        margin: calc(var(--unit) * 2.4) 0 0;
+        min-height: 1.6em;
+        font: max(11px, calc(var(--unit) * 1.3)) / 1.6 var(--mono);
+        letter-spacing: 0.1em;
+        color: var(--fg-tertiary);
+        transition:
+          opacity 450ms ease,
+          transform 450ms ease;
       }
       p.out {
-        opacity: 0;
+        opacity: 0 !important;
+        transform: translateY(calc(var(--unit) * -0.6)) !important;
       }
-      @keyframes spin {
-        to {
-          transform: rotate(1turn);
-        }
+      /* SplashProgress's hairline, short and under the words instead of along the screen's edge. */
+      .line {
+        position: relative;
+        overflow: hidden;
+        width: calc(var(--unit) * 26);
+        height: 1px;
+        margin-top: calc(var(--unit) * 3.2);
+        background: rgba(255, 255, 255, 0.06);
       }
-      @keyframes show {
+      .line::after {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 30%;
+        background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        animation: sweep 1.6s ease-in-out infinite;
+      }
+      @keyframes rise {
         to {
           opacity: 1;
+        }
+      }
+      @keyframes reveal {
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @keyframes draw {
+        to {
+          width: calc(var(--unit) * 8);
+        }
+      }
+      @keyframes sweep {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(340%);
         }
       }
       @media (prefers-reduced-motion: reduce) {
         html,
-        main,
-        .orbit {
+        canvas,
+        .glow,
+        main > *,
+        .line::after {
           animation: none;
           transition: none;
           opacity: 1;
+          transform: none;
+        }
+        h1::after {
+          animation: none;
+          width: calc(var(--unit) * 8);
         }
         p {
           transition: none;
@@ -114,12 +219,17 @@
     </style>
   </head>
   <body>
+    <canvas aria-hidden="true"></canvas>
+    <div class="glow" aria-hidden="true"></div>
     <main>
-      <div class="orbit" aria-hidden="true"></div>
+      <div class="label">SKYMAP</div>
       <h1>Loading the universe</h1>
       <p role="status"></p>
+      <div class="line" aria-hidden="true"></div>
     </main>
     <script>
+      const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
       // A joke every few seconds, so a long wait visibly moves; the start is random so a restart
       // does not repeat the same line.
       const LINES = [
@@ -141,16 +251,88 @@
       const line = document.querySelector('p');
       let at = Math.floor(Math.random() * LINES.length);
       line.textContent = `${LINES[at]}…`;
-      const fades = !matchMedia('(prefers-reduced-motion: reduce)').matches;
       setInterval(() => {
         at = (at + 1) % LINES.length;
-        if (!fades) return void (line.textContent = `${LINES[at]}…`);
+        if (still) return void (line.textContent = `${LINES[at]}…`);
         line.classList.add('out');
         setTimeout(() => {
           line.textContent = `${LINES[at]}…`;
           line.classList.remove('out');
-        }, 400);
-      }, 2600);
+        }, 450);
+      }, 3200);
+
+      // Stars on a sky that turns about the centre, once in about ten minutes: on a dome, the zenith.
+      // Sizes follow a steep power law, so a few bright stars stand out of many faint ones.
+      const canvas = document.querySelector('canvas');
+      const ctx = canvas.getContext('2d');
+      const TINTS = [
+        '232, 238, 255',
+        '232, 238, 255',
+        '232, 238, 255',
+        '168, 208, 255',
+        '255, 226, 190',
+      ];
+      let stars = [];
+      let scale = 1;
+      const seed = () => {
+        scale = Math.min(devicePixelRatio, 2);
+        canvas.width = innerWidth * scale;
+        canvas.height = innerHeight * scale;
+        // Out to the corners' radius, so the turning field never shows an empty edge.
+        const reach = Math.hypot(innerWidth, innerHeight) / 2;
+        const count = Math.min(1400, Math.round((Math.PI * reach * reach) / 2600));
+        stars = Array.from({ length: count }, () => {
+          const r = reach * Math.sqrt(Math.random());
+          const size = 0.35 + 1.5 * Math.random() ** 7;
+          return {
+            r,
+            a: Math.random() * Math.PI * 2,
+            size,
+            alpha: size > 0.9 ? 0.75 + 0.25 * Math.random() : 0.18 + 0.7 * Math.random() ** 2.2,
+            twinkle: size > 0.9 ? 0.35 : 0.15,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.6 + Math.random() * 1.6,
+            tint: TINTS[Math.floor(Math.random() * TINTS.length)],
+          };
+        });
+      };
+      const draw = (t) => {
+        const s = t / 1000;
+        const turn = still ? 0 : s * ((Math.PI * 2) / 600);
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (const star of stars) {
+          const a = star.a + turn;
+          const x = cx + Math.cos(a) * star.r * scale;
+          const y = cy + Math.sin(a) * star.r * scale;
+          const flicker = still
+            ? 1
+            : 1 - star.twinkle * (0.5 + 0.5 * Math.sin(s * star.speed + star.phase));
+          const radius = star.size * scale;
+          ctx.fillStyle = `rgba(${star.tint}, ${star.alpha * flicker})`;
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.fill();
+          // The brightest few get a soft halo, as the app's own point sprites do.
+          if (star.size > 1.1) {
+            const halo = ctx.createRadialGradient(x, y, 0, x, y, radius * 6);
+            halo.addColorStop(0, `rgba(${star.tint}, ${0.22 * flicker})`);
+            halo.addColorStop(1, `rgba(${star.tint}, 0)`);
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(x, y, radius * 6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        if (!still) requestAnimationFrame(draw);
+      };
+      seed();
+      addEventListener('resize', () => {
+        seed();
+        if (still) draw(0);
+      });
+      requestAnimationFrame(draw);
     </script>
   </body>
 </html>

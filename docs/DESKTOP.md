@@ -47,7 +47,7 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
 | Control           | `main/windows/openControlWindow.ts`, `src/control/` | 960 x 760 React page from `file://`, sandboxed, talks to main only through the preload bridge. Close hides it.                                                                                   |
 | Test grid         | `main/sky/showTestGrid.ts`, `assets/test-grid.html` | Not a window: a child view laid over the sky window (dome grid with FRONT at the bottom; on a kiosk a frame, 10% grid, circle and centre cross with the display number and pixel size). `createSkyWindows` holds it; its on/off state is in `ControlState`, so the menu tick and the page agree, and a mode change drops it in main. |
 | About             | `main/windows/openAboutWindow.ts`           | 560 x 500 child of the control window, loading `?view=about` from the same page and preload. One branded window on both platforms.                                                               |
-| Sky curtain       | `main/sky/addOverlay.ts`, `assets/sky-curtain.html` | A black child view (after 0.6 s an orbiting planet, "Loading the universe" and a rotating joke line) that fades in over every sky load and out once `window.__skymap.ready` resolves, or after 10 s.                                                                           |
+| Sky curtain       | `main/sky/addOverlay.ts`, `assets/sky-curtain.html` | A black child view (after 0.6 s a slowly turning starfield, "Loading the universe" in the Splash's type and a rotating joke line) that fades in over every sky load and out once `window.__skymap.ready` resolves, or after 10 s.                                                                           |
 
 - The control page is shown only when a person is needed: first run, no complete data, a stored
   display that is missing, or the shortcut. It is never shown before its first paint.
@@ -216,8 +216,9 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   close never emits it. A Windows shutdown or logoff ends the app without it, which costs nothing:
   every file write is atomic.
 - `main/menu/installAppMenu.ts` with `buildMenuTemplate`: macOS has one menu bar, and it carries the
-  menu only while the control window or About has focus, so a visitor's keyboard on the sky has no
-  Cmd+Q, Cmd+H or Cmd+W. Windows hangs it on the control window, hidden until Alt. In `--windowed`
+  menu only while the control window, About, or a sky Escape turned into a window has focus, so a
+  visitor's keyboard on a full-screen sky has no Cmd+Q, Cmd+H or Cmd+W. Skymap › Settings…
+  (Cmd+, or Ctrl+,) opens the control window. Windows hangs it on the control window, hidden until Alt. In `--windowed`
   the menu is always there with Reload and Toggle DevTools. The test grid item is ticked by its id,
   not by rebuilding the menu.
 - The sky window hides scrollbars, text selection and, after 3 s still, the cursor
