@@ -16,7 +16,7 @@
  * ### The id-bearing arms and their concrete replacements
  *
  *   - `moveTargetId(id, over, ease)` → `moveTarget(target, over, ease)`
- *     The target Vec3 comes from `arrivalFraming`'s target over the row's focus facts.
+ *     The target Vec3 comes from `arrivalFor`'s target over the row's focus facts.
  *
  *   - `dollyToId(id, over, ease)`   → `dollyTo(distance, over, ease)`
  *     The distance in Mpc comes from the same framing's distance.
@@ -80,13 +80,11 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { FocusFraming } from '../../../@types/camera/pose/FocusFraming';
 import { moveTarget, dollyTo, aimAt, spin } from './effectHelpers';
-import { arrivalFraming } from '../camera/framing/arrivalFraming';
-import { selectionKindOf } from '../selection/selectionKindOf';
+import { arrivalFor } from '../camera/framing/arrivalFor';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { imagePlaneBasis } from '../../../utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
-import type { PlacedRow } from '../../../@types/engine/selection/PlacedRow';
 
 /**
  * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
@@ -315,7 +313,7 @@ function walkEffect(
 /**
  * Resolve a `FocusId` to a `{ target, distance }` framing pose.
  *
- * The chain is: `resolve.resolveFocusId` → `resolve.extractRow` → `arrivalFraming`.
+ * The chain is: `resolve.resolveFocusId` → `resolve.extractRow` → `arrivalFor`.
  * Each step can return null only if the id is unknown or the catalog isn't
  * loaded; the readiness gate guarantees neither happens at call time, so a
  * null here is a programming error — we throw with a descriptive message.
@@ -340,10 +338,5 @@ function resolveFraming(
         `The catalog row may have unloaded between the readiness check and resolution.`,
     );
   }
-  const { focus } = selectionKindOf(row.type);
-  if (focus === null) {
-    throw new Error(`resolveClipFoci: id '${id}' names a ${row.type}, which has no focus target.`);
-  }
-  // A kind with a focus places its rows (`SelectionKindFacts.focus`).
-  return arrivalFraming(row as PlacedRow, focus, fovYRad);
+  return arrivalFor(row, fovYRad);
 }

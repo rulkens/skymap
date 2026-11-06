@@ -8,9 +8,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { arrivalFraming } from '../../../../../src/services/engine/camera/framing/arrivalFraming';
+import { arrivalFor } from '../../../../../src/services/engine/camera/framing/arrivalFor';
 import { selectionHaloOf } from '../../../../../src/services/engine/helpers/selectionHaloOf';
-import { selectionKindOf } from '../../../../../src/services/engine/selection/selectionKindOf';
 import { galaxyCatalogSelectionRow } from '../../../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
 import { structureSelectionRow } from '../../../../../src/layers/structure/selection/structureSelectionRow';
 import { Source } from '../../../../../src/data/source';
@@ -94,20 +93,10 @@ const ROWS: Readonly<Record<string, () => PlacedRow>> = {
     structures.extractRow({ type: 'structure', id: 'galaxy-cluster-degenerate' }, 0),
   ),
   'Milky Way': placed('milkyWay', GALACTIC_CENTRE, 0.0175),
+  // Craft, Earth scenes, stars and satellites share Earth's BODY_FOCUS; their radii are pinned
+  // by each Layer's extractRow test.
   Earth: placed('body', BODY_POS, 2.067568250898234e-16),
-  'Voyager 1': placed('craft', BODY_POS, 4.713666063029354e-22),
-  Søndermarken: placed('earthScene', BODY_POS, 5.268590196210728e-21),
-  'Alpha Centauri': placed(
-    'starCatalog',
-    [-5.006001220857776e-7, -4.1859784742606946e-7, -1.169228959570351e-6],
-    2.7531547855022603e-14,
-  ),
   'Sgr A*': placed('blackHole', GALACTIC_CENTRE, 4.1136414639818914e-13),
-  ISS: placed(
-    'satellite',
-    [3.959622253338562e-12, 2.5166252367332133e-12, 1.0908589143290826e-12],
-    1.6203896447221824e-18,
-  ),
 };
 
 /** Today's outputs, printed once from `focusFraming` and `selectionHalo`. */
@@ -159,33 +148,6 @@ const GOLDEN: Readonly<
     at30: { target: BODY_POS, distance: 1.9290674401171313e-15, radius: 2.067568250898234e-16 },
     halo: { radiusMpc: 2.067568250898234e-16, worldPos: BODY_POS, slab: NEAR0 },
   },
-  'Voyager 1': {
-    at60: { target: BODY_POS, distance: 2.041077277770001e-21, radius: 4.713666063029354e-22 },
-    at30: { target: BODY_POS, distance: 4.397910309284678e-21, radius: 4.713666063029354e-22 },
-    halo: { radiusMpc: 4.713666063029354e-22, worldPos: BODY_POS, slab: NEAR0 },
-  },
-  Søndermarken: {
-    at60: { target: BODY_POS, distance: 2.2813664760240654e-20, radius: 5.268590196210728e-21 },
-    at30: { target: BODY_POS, distance: 4.9156615741294296e-20, radius: 5.268590196210728e-21 },
-    halo: { radiusMpc: 5.268590196210728e-21, worldPos: BODY_POS, slab: NEAR0 },
-  },
-  'Alpha Centauri': {
-    at60: {
-      target: [-5.006001220857776e-7, -4.1859784742606946e-7, -1.169228959570351e-6],
-      distance: 1.1921509923978274e-13,
-      radius: 2.7531547855022603e-14,
-    },
-    at30: {
-      target: [-5.006001220857776e-7, -4.1859784742606946e-7, -1.169228959570351e-6],
-      distance: 2.5687283851489575e-13,
-      radius: 2.7531547855022603e-14,
-    },
-    halo: {
-      radiusMpc: 2.7531547855022603e-14,
-      worldPos: [-5.006001220857776e-7, -4.1859784742606946e-7, -1.169228959570351e-6],
-      slab: NEAR0,
-    },
-  },
   'Sgr A*': {
     at60: {
       target: GALACTIC_CENTRE,
@@ -199,23 +161,6 @@ const GOLDEN: Readonly<
       radius: 4.1136414639818914e-13,
     },
     halo: { radiusMpc: 4.1136414639818914e-13, worldPos: GALACTIC_CENTRE, slab: NEAR0 },
-  },
-  ISS: {
-    at60: {
-      target: [3.959622253338562e-12, 2.5166252367332133e-12, 1.0908589143290826e-12],
-      distance: 7.016492981793255e-18,
-      radius: 1.6203896447221824e-18,
-    },
-    at30: {
-      target: [3.959622253338562e-12, 2.5166252367332133e-12, 1.0908589143290826e-12],
-      distance: 1.5118441205404168e-17,
-      radius: 1.6203896447221824e-18,
-    },
-    halo: {
-      radiusMpc: 1.6203896447221824e-18,
-      worldPos: [3.959622253338562e-12, 2.5166252367332133e-12, 1.0908589143290826e-12],
-      slab: NEAR0,
-    },
   },
 };
 
@@ -242,7 +187,7 @@ describe('arrival framing and halo, per kind (golden)', () => {
       [60, golden.at60],
       [30, golden.at30],
     ] as const)('frames at %i degrees as recorded', (fovDeg, expected) => {
-      const framing = arrivalFraming(row, selectionKindOf(row.type).focus!, fovDeg * DEG);
+      const framing = arrivalFor(row, fovDeg * DEG);
       expectVecNear(framing.target, expected.target);
       expectNear(framing.distance, expected.distance);
       expectNear(framing.radius, expected.radius);
