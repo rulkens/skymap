@@ -16,6 +16,7 @@ const at = (a: string) => a as VisibilityAddress;
 const ENTRIES: readonly VisibilityEntry[] = [
   { key: 'bubble', bands: { shell: { out: [4, 10] } } },
   { key: 'sats', items: ['a'], selects: ['satellite'], bands: { near: { out: [1, 2] } } },
+  { label: 'bubble', cluster: 'bubbleLabels', of: 'bubble', items: ['x'] },
 ];
 
 const check = (demand: AssetDemand, gates?: AssetWiringRow['gates']) => () =>
@@ -35,6 +36,16 @@ describe('assertAssetDemands', () => {
 
   it('throws on an address with no entry', () => {
     expect(check({ shown: at('nowhere') })).toThrow(/'row1'/);
+  });
+
+  it('throws on an item the entry lacks', () => {
+    expect(check({ shown: { address: at('sats'), items: ['clustr'] } })).toThrow(
+      /'row1'.*no item 'clustr'/,
+    );
+  });
+
+  it('throws on an itemed label over an itemless entry', () => {
+    expect(check({ labelsCount: true }, at('bubble'))).toThrow(/'row1'.*label:bubble/);
   });
 
   it('throws on a band the entry lacks', () => {

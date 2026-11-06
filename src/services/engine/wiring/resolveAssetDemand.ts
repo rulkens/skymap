@@ -14,6 +14,17 @@ import type { VisibilityEntry } from '../../../@types/engine/layer/VisibilityEnt
 
 const OWN_SWITCH: readonly undefined[] = [undefined];
 
+function assertItemsIn(
+  items: readonly (string | undefined)[],
+  entry: VisibilityEntry,
+  address: string,
+): void {
+  for (const item of items) {
+    const known = item === undefined ? entry.items === undefined : entry.items?.includes(item);
+    if (!known) throw new Error(`'${address}' has no item '${String(item)}'`);
+  }
+}
+
 export function resolveAssetDemand(
   demand: DeclaredDemand,
   gates: AssetWiringRow['gates'],
@@ -28,11 +39,14 @@ export function resolveAssetDemand(
   const address = typeof shown === 'string' ? shown : shown.address;
   const entry = visibilityEntryOf(entries, address);
   const items = typeof shown === 'string' ? (entry.items ?? OWN_SWITCH) : shown.items;
+  assertItemsIn(items, entry, address);
 
   let label: LabelEntry | undefined;
   if (demand.labelsCount) {
     label = entries.find((e): e is LabelEntry => 'of' in e && e.of === address);
     if (label === undefined) throw new Error(`no label entry is \`of\` '${address}'`);
+    // An itemed label over an itemless entry has no item to read its switch by.
+    if (label.items !== undefined) assertItemsIn(items, label, `label:${label.label}`);
   }
 
   const near = demand.near;

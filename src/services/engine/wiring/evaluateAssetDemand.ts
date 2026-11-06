@@ -1,8 +1,9 @@
 /**
  * The one reader of `AssetDemand`: a row's demand and release edges this pass. Object form:
  * demand = shown ∧ tier ∧ (near-load ∨ lifted); release = ¬tier ∨ ¬shown ∨ (¬lifted ∧
- * near-release). It runs every frame over every row, so a declaration resolves once per
- * entries list and the verdicts are shared constants.
+ * near-release). A throw here is caught by the loop's per-row guard and skips that row's
+ * enqueue and drop edges too, so a declaration must never throw: `assertAssetDemands`
+ * resolves every one at table build.
  */
 
 import { deriveBodyStates } from '../frame/deriveBodyStates';
@@ -16,33 +17,7 @@ import type { DemandCtx } from '../../../@types/loading/DemandCtx';
 import type { DemandResolution } from '../../../@types/loading/DemandResolution';
 import type { VisibilityEntry } from '../../../@types/engine/layer/VisibilityEntry';
 
-const LOAD: AssetDemandVerdict = { demand: true, release: false };
-const HOLD: AssetDemandVerdict = { demand: false, release: false };
-const RELEASE: AssetDemandVerdict = { demand: false, release: true };
-const BOTH: AssetDemandVerdict = { demand: true, release: true };
-
 const NONE: readonly never[] = [];
-
-const resolutions = new WeakMap<readonly VisibilityEntry[], WeakMap<object, DemandResolution>>();
-
-function verdictOf(demand: boolean, release: boolean): AssetDemandVerdict {
-  if (demand) return release ? BOTH : LOAD;
-  return release ? RELEASE : HOLD;
-}
-
-function resolutionOf(
-  row: Pick<AssetWiringRow, 'gates'>,
-  demand: DeclaredDemand,
-  entries: readonly VisibilityEntry[],
-): DemandResolution {
-  let byRow = resolutions.get(entries);
-  if (byRow === undefined) resolutions.set(entries, (byRow = new WeakMap()));
-  let resolution = byRow.get(row);
-  if (resolution === undefined) {
-    byRow.set(row, (resolution = resolveAssetDemand(demand, row.gates, entries)));
-  }
-  return resolution;
-}
 
 function isShown(ctx: DemandCtx, r: DemandResolution): boolean {
   for (const item of r.items) if (visibilitySwitchOf(ctx.settings, r.entry, item)) return true;
@@ -66,21 +41,22 @@ export function evaluateAssetDemand(
   entries: readonly VisibilityEntry[],
 ): AssetDemandVerdict {
   const demand = row.demand;
-  if (demand === 'always') return LOAD;
-  if (demand === 'whenSearching') return verdictOf(ctx.ui.paletteOpen, false);
-  if ('companionOf' in demand)
-    return verdictOf(ctx.slotState(demand.companionOf) !== 'idle', false);
-  if ('fn' in demand) return verdictOf(demand.fn(ctx), demand.release?.(ctx) ?? false);
+  if (demand === 'always') return { demand: true, release: false };
+  if (demand === 'whenSearching') return { demand: ctx.ui.paletteOpen, release: false };
+  if ('companionOf' in demand) {
+    return { demand: ctx.slotState(demand.companionOf) !== 'idle', release: false };
+  }
+  if ('fn' in demand) return { demand: demand.fn(ctx), release: demand.release?.(ctx) ?? false };
 
-  const r = resolutionOf(row, demand, entries);
+  const r = resolveAssetDemand(demand, row.gates, entries);
   const tierOk = demand.tiers === undefined || demand.tiers.includes(ctx.tier);
-  if (!tierOk || !isShown(ctx, r)) return RELEASE;
+  if (!tierOk || !isShown(ctx, r)) return { demand: false, release: true };
   const near = demand.near;
-  if (near === undefined) return LOAD;
+  if (near === undefined) return { demand: true, release: false };
   const d = bandDistanceMpc(r.band!, ctx.cameraPosMpc, deriveBodyStates(ctx.simDays));
   const e = r.edgeMpc;
   const nearLoad = near.edge === 'out' ? d <= e * near.lead : d >= e / near.lead;
   const nearRelease = near.edge === 'out' ? d > e * near.release : d < e / near.release;
   const lifted = isLifted(ctx, demand, r);
-  return verdictOf(nearLoad || lifted, !lifted && nearRelease);
+  return { demand: nearLoad || lifted, release: !lifted && nearRelease };
 }

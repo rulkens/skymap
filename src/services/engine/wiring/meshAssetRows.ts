@@ -2,8 +2,8 @@
  * meshAssetRows — core's asset rows: one per mesh body, each carrying the slot it
  * mints (the mesh slots stay core's, beside the one mesh renderer every
  * body-bearing Layer draws through). `createLayers` folds these with every Layer's
- * rows into `state.assetRows`. Each `demand(ctx)` is a pure predicate over
- * `DemandCtx`, re-run whole on any state change, so no edge can be missed.
+ * rows into `state.assetRows`. `evaluateAssetDemand` re-reads every row's demand whole
+ * each pass, so no edge can be missed.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
