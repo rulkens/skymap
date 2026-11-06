@@ -5,7 +5,6 @@ job: "How do I connect a phone or tablet to Skymap’s desktop app, so it can st
 ---
 
 import PhoneShot from '../../../components/docs/PhoneShot/PhoneShot.tsx';
-import androidKeep from '../../../assets/docs/tablet-guide/android-1-keep.webp';
 import androidClose from '../../../assets/docs/tablet-guide/android-2-close.webp';
 import androidCaCertificate from '../../../assets/docs/tablet-guide/android-3-ca-certificate.webp';
 import androidPickFile from '../../../assets/docs/tablet-guide/android-4-pick-file.webp';
@@ -43,9 +42,8 @@ These steps were checked on an iOS 26.1 simulator and an Android 14 emulator. Ot
 
 1. Use Chrome or Brave: Firefox ignores certificates installed on Android.
 2. Tap Download the certificate. In Brave, tap Download, and when it says the file can’t be downloaded securely, tap Keep.
-   <PhoneShot image={androidKeep} alt="Brave says the file can’t be downloaded securely: Discard or Keep" caption="Brave, on the Android 14 emulator" />
 3. The phone says CA certificates must be installed in Settings: tap Close. The file is saved as `ca.crt` in Downloads.
-   <PhoneShot image={androidClose} alt="Install CA certificates in Settings, with a Close button" caption="Brave, on the Android 14 emulator" />
+   <PhoneShot image={androidClose} alt="Install CA certificates in Settings, with a Close button" caption="Chrome, on the Android 14 emulator" />
 4. Open the Settings app, tap Search settings and type CA certificate. Tap the CA certificate result, then CA certificate again on the next screen.
    <PhoneShot image={androidCaCertificate} alt="Install a certificate, with CA certificate at the top" caption="Settings, on the Android 14 emulator" />
 5. On Your data won’t be private, tap Install anyway. Pick `ca.crt`: it is under Recent, or tap ☰ and then Downloads. Enter your screen lock if asked.
