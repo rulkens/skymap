@@ -6,13 +6,13 @@ import { buildMenuTemplate } from './buildMenuTemplate';
  * Hangs the menu where only the person running the show reaches it, so a visitor's keyboard on the
  * sky has no Cmd+Q, Cmd+H or Cmd+W. macOS has one menu bar for the app: it carries the menu while
  * the control window or its About has focus, and nothing while a show's sky does. Windows hangs it
- * on the control window alone, hidden until Alt. Returns a setter for the test grid's tick.
+ * on the control window alone, hidden until Alt. Returns a setter for a checkbox item's tick.
  */
 export function installAppMenu(
   control: BrowserWindow,
   windowed: boolean,
   actions: MenuActions,
-): (testGrid: boolean) => void {
+): (id: 'testGrid' | 'fullScreen', checked: boolean) => void {
   const menu = Menu.buildFromTemplate(buildMenuTemplate(process.platform, windowed, actions));
   const operatorHas = (win: BrowserWindow | null): boolean =>
     windowed || win === control || win?.getParentWindow() === control;
@@ -23,8 +23,8 @@ export function installAppMenu(
   Menu.setApplicationMenu(null);
   apply();
   app.on('browser-window-focus', apply);
-  return (testGrid) => {
-    const item = menu.getMenuItemById('testGrid');
-    if (item) item.checked = testGrid;
+  return (id, checked) => {
+    const item = menu.getMenuItemById(id);
+    if (item) item.checked = checked;
   };
 }

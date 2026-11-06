@@ -42,6 +42,7 @@ import { resolveDataRoot } from '../sync/utils/resolveDataRoot';
 import { rotateRoomCode } from '../relay/rotateRoomCode';
 import { runSync } from '../sync/runSync';
 import { serially } from './utils/serially';
+import { SKY_ESCAPE_CHANNEL } from '../../data/skyEscapeChannel';
 import { skyUrlFor } from '../sky/utils/skyUrlFor';
 import { startSecureServer } from '../server/startSecureServer';
 import { watchLan } from '../lan/watchLan';
@@ -128,6 +129,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     mayClose,
     setup: () => setup.current(),
     onClosed: () => update({ skyRunning: false }),
+    onFullScreen: (full) => tick('fullScreen', full),
   });
   const update = (patch: Partial<ControlState>): void => {
     state = { ...state, ...patch };
@@ -183,16 +185,17 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   // Main holds the grid's state, so the page's checkbox and the View menu's tick agree.
   const setTestGrid = (on: boolean): void => {
     update({ testGrid: sky.setTestGrid(on) });
-    tickTestGrid(state.testGrid);
+    tick('testGrid', state.testGrid);
   };
   // Without a complete set the sky has nothing to show; the page disables the button for the same reason.
   const restartSky = (): void => void (state.hasData && loadSky());
-  const tickTestGrid = installAppMenu(control, windowed, {
+  const tick = installAppMenu(control, windowed, {
     about: showAbout,
     showControl,
     showSky: () => sky.current()?.focus(),
     restartSky,
     testGrid: setTestGrid,
+    fullScreen: (on) => sky.setFullScreen(on),
     help: (section) => {
       showControl();
       if (!control.isDestroyed()) control.webContents.send(CONTROL_CHANNELS.help, section);
@@ -224,6 +227,10 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   const isAllowed = (sender: WebContents, request: keyof ControlIpcHandlers): boolean =>
     sender === control.webContents || (sender === about?.webContents && request === 'getState');
   registerControlIpc(ipcMain, isAllowed, handlers);
+  // Only the sky's own preload may drop it out of full screen.
+  ipcMain.on(SKY_ESCAPE_CHANNEL, (event) => {
+    if (event.sender === sky.current()?.webContents) sky.setFullScreen(false);
+  });
 
   screen.on('display-added', placeAll);
   screen.on('display-removed', placeAll);

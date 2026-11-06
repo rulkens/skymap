@@ -9,6 +9,7 @@ const actions = (): MenuActions => ({
   showSky: vi.fn(),
   restartSky: vi.fn(),
   testGrid: vi.fn(),
+  fullScreen: vi.fn(),
   help: vi.fn(),
 });
 
@@ -35,6 +36,19 @@ describe('buildMenuTemplate', () => {
       names(items(buildMenuTemplate('darwin', windowed, actions()), 'View'));
     expect(view(false)).not.toContain('toggleDevTools');
     expect(view(true)).toEqual(expect.arrayContaining(['reload', 'toggleDevTools']));
+  });
+
+  // A --windowed dev run has no full screen to leave or return to.
+  it('offers Full screen with the platform key, outside --windowed dev runs', () => {
+    const a = actions();
+    const item = find(items(buildMenuTemplate('darwin', false, a), 'View'), 'Full screen');
+    expect(item.accelerator).toBe('Ctrl+Cmd+F');
+    click(item, false);
+    expect(a.fullScreen).toHaveBeenCalledWith(false);
+    expect(
+      find(items(buildMenuTemplate('win32', false, a), 'View'), 'Full screen').accelerator,
+    ).toBe('F11');
+    expect(names(items(buildMenuTemplate('win32', true, a), 'View'))).not.toContain('Full screen');
   });
 
   it('sends the test grid tick it was toggled to', () => {

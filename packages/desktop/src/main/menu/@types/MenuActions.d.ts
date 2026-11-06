@@ -7,5 +7,6 @@ export type MenuActions = {
   showSky: () => void;
   restartSky: () => void;
   testGrid: (on: boolean) => void;
+  fullScreen: (on: boolean) => void;
   help: (section?: HelpSection) => void;
 };

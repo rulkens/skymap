@@ -81,7 +81,9 @@ function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactN
       <section className={styles.section}>
         <h2 className={chrome.heading}>Shortcut</h2>
         <p className={chrome.text}>
-          {key} shows or hides this window, also when the sky fills the only screen.
+          {key} shows or hides this window, also when the sky fills the only screen. Escape on the
+          sky turns it into a window you can move; F11 (Control+Command+F on a Mac) or View, Full
+          screen fills the screen again.
         </p>
       </section>
 

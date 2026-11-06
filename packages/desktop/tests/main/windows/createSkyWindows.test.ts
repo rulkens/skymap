@@ -24,12 +24,20 @@ vi.mock('electron', () => ({
 }));
 vi.mock('../../../src/main/windows/openSkyWindow', () => ({
   openSkyWindow: vi.fn((display: { bounds: { x: number } }) => {
-    const win = { isDestroyed: () => false, on: vi.fn(), getBounds: () => display.bounds };
+    let bounds = display.bounds;
+    const win = {
+      isDestroyed: () => false,
+      on: vi.fn(),
+      getBounds: () => bounds,
+      setBounds: vi.fn((next: typeof bounds) => (bounds = next)),
+      webContents: { on: vi.fn() },
+    };
     fake.windows.push(win);
     return win;
   }),
 }));
 vi.mock('../../../src/main/windows/fillDisplay', () => ({ fillDisplay: vi.fn() }));
+vi.mock('../../../src/main/windows/utils/setFullScreen', () => ({ setFullScreen: vi.fn() }));
 vi.mock('../../../src/main/sky/showTestGrid', () => ({
   showTestGrid: vi.fn(() => ({ loaded: Promise.resolve(), close: () => Promise.resolve() })),
 }));
@@ -37,6 +45,7 @@ vi.mock('../../../src/main/sky/showTestGrid', () => ({
 const { createSkyWindows } = await import('../../../src/main/windows/createSkyWindows');
 const { fillDisplay } = await import('../../../src/main/windows/fillDisplay');
 const { showTestGrid } = await import('../../../src/main/sky/showTestGrid');
+const { setFullScreen } = await import('../../../src/main/windows/utils/setFullScreen');
 
 const laptop = fake.display(1, 1440, 0);
 const projector = fake.display(7, 4096, 2000);
@@ -54,8 +63,10 @@ function skyWindows(setup: InstallSetup) {
     mayClose: () => false,
     setup: () => setup,
     onClosed: () => {},
+    onFullScreen,
   });
 }
+const onFullScreen = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -85,6 +96,28 @@ describe('createSkyWindows', () => {
     windows.open();
     windows.place();
     expect(fillDisplay).not.toHaveBeenCalled();
+  });
+
+  // Escape drops the sky to a window; a taskbar or a projector waking must not throw it back.
+  it('a sky taken out of full screen stays a window on a display change', () => {
+    fake.displays = [laptop, projector];
+    const windows = skyWindows({
+      ...DEFAULT_INSTALL_SETUP,
+      display: { id: 7, width: 4096, height: 1000 },
+    });
+    const win = windows.open();
+    expect(windows.setFullScreen(false)).toBe(false);
+    expect(setFullScreen).toHaveBeenLastCalledWith(win, false);
+    expect(onFullScreen).toHaveBeenLastCalledWith(false);
+
+    fake.displays = [projector, laptop];
+    windows.place();
+    expect(fillDisplay).not.toHaveBeenCalled();
+    expect(control.setAlwaysOnTop).toHaveBeenLastCalledWith(false, 'screen-saver');
+
+    expect(windows.setFullScreen(true)).toBe(true);
+    expect(fillDisplay).toHaveBeenLastCalledWith(win, projector.bounds);
+    expect(onFullScreen).toHaveBeenLastCalledWith(true);
   });
 
   it('moves the control window only when it is not on its own display', () => {

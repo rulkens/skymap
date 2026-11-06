@@ -9,4 +9,6 @@ export type SkyWindowsDeps = {
   mayClose: () => boolean;
   setup: () => InstallSetup;
   onClosed: () => void;
+  /** Each change of full screen, from the keys or setFullScreen, so the menu's tick follows. */
+  onFullScreen: (full: boolean) => void;
 };

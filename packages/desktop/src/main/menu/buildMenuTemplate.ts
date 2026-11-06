@@ -1,11 +1,13 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import type { MenuActions } from './@types/MenuActions';
 import { CONTROL_SHORTCUT } from '../../data/controlShortcut';
+import { fullScreenAccelerator } from '../windows/utils/fullScreenAccelerator';
 
 /**
  * The application menu, the same on both platforms bar macOS's Hide items. Reload and DevTools are
- * for `--windowed` dev runs only. The control-window item shows the global shortcut without
- * registering it again.
+ * for `--windowed` dev runs only, which have no full screen. The control-window and Full screen items
+ * show their keys without registering them: the shortcut is global, the full screen key is read off
+ * the sky (createSkyWindows).
  */
 export function buildMenuTemplate(
   platform: NodeJS.Platform,
@@ -23,7 +25,17 @@ export function buildMenuTemplate(
       : [];
   const dev: MenuItemConstructorOptions[] = windowed
     ? [{ type: 'separator' }, { role: 'reload' }, { role: 'toggleDevTools' }]
-    : [];
+    : [
+        {
+          id: 'fullScreen',
+          label: 'Full screen',
+          type: 'checkbox',
+          checked: true,
+          accelerator: fullScreenAccelerator(platform),
+          registerAccelerator: false,
+          click: (item) => actions.fullScreen(item.checked),
+        },
+      ];
   return [
     {
       label: 'Skymap',
