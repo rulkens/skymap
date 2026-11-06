@@ -25,6 +25,7 @@ import { strideWindow } from '../utils/strideWindow';
 import { maxVisibleCamDistSq } from '../utils/maxVisibleCamDistSq';
 import { apparentSizePxAtDistance } from '../utils/apparentSizePxAtDistance';
 import { PROCEDURAL_DISK_FADE_START_PX } from '../data/galaxyLodBands';
+import { DISK_WALK_DECIMATION } from '../data/diskWalkDecimation';
 import { sphereInAnyFrustum } from '../../../../utils/camera/frustum/sphereInAnyFrustum';
 import { diskQuadExtentMpc } from '../utils/diskQuadExtentMpc';
 import type { Destroyable } from '../../../../@types/rendering/Destroyable';
@@ -49,7 +50,7 @@ export const DISK_ROW_ACCEPT_BUDGET = 2048;
 const VIEW_CULL_RADIUS_PER_EXTENT = 2;
 
 export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlannerWalk {
-  const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
+  const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? DISK_WALK_DECIMATION));
 
   // The shared stride cursors: which row each block's decimated window resumes
   // from next frame, by source then ordinal base. One map for BOTH bodies.

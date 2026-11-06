@@ -134,4 +134,51 @@ describe('SlotPool slot state machine', () => {
       expect(onEvict).toHaveBeenCalledWith('tile-0');
     });
   });
+
+  // A decimated consumer revisits each key only once per cycle, so "claimed this frame" would
+  // let every frame's window evict the last one's: the galaxy atlas refetched forever.
+  describe('liveSince: a liveness window wider than one frame', () => {
+    const CYCLE = 4;
+    const newSmallPool = () => new SlotPool(4);
+
+    it('refuses a new key while every slot was touched inside the window', () => {
+      const a = newSmallPool();
+      const onEvict = vi.fn();
+      a.setEvictHandler(onEvict);
+      ['a', 'b', 'c', 'd'].forEach((key, frame) => a.allocate(key, frame + 1));
+
+      expect(a.allocate('late', 4, 4 - CYCLE + 1)).toBeNull();
+      expect(onEvict).not.toHaveBeenCalled();
+    });
+
+    it('evicts a slot once it falls out of the window', () => {
+      const a = newSmallPool();
+      const onEvict = vi.fn();
+      a.setEvictHandler(onEvict);
+      ['a', 'b', 'c', 'd'].forEach((key, frame) => a.allocate(key, frame + 1));
+
+      expect(a.allocate('late', 5, 5 - CYCLE + 1)).toBe(0);
+      expect(onEvict).toHaveBeenCalledWith('a');
+    });
+
+    it('a touch after a refusal still lets the next stale slot go', () => {
+      const a = newSmallPool();
+      ['a', 'b', 'c', 'd'].forEach((key, frame) => a.allocate(key, frame + 1));
+      expect(a.allocate('late', 4, 1)).toBeNull();
+
+      // 'a' (frame 1) is refreshed; at frame 6 with window [3, 6] only 'b' (frame 2) is stale.
+      a.touch('a', 5);
+      expect(a.allocate('later', 6, 3)).toBe(1);
+      expect(a.slotOf('a')).toBe(0);
+    });
+
+    it('a freed slot is reused after a refusal', () => {
+      const a = newSmallPool();
+      ['a', 'b', 'c', 'd'].forEach((key) => a.allocate(key, 1));
+      expect(a.allocate('late', 1)).toBeNull();
+
+      a.evict('c');
+      expect(a.allocate('late', 1)).toBe(2);
+    });
+  });
 });

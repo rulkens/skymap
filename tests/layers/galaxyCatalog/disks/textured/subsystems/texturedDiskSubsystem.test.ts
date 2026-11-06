@@ -27,6 +27,8 @@ import { makeGalaxyCatalog } from '../../../../../fixtures/makeGalaxyCatalog';
 import type { HiResFamousPerGalaxyState } from '../../../../../../src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousPerGalaxyState';
 import type { HiResFamousFrameOutput } from '../../../../../../src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousFrameOutput';
 import { galaxyRecordsOver } from '../../../../../support/galaxyRecordsOver';
+import { galaxyCacheKey } from '../../../../../../src/layers/galaxyCatalog/lod/utils/galaxyCacheKey';
+import { cartesianToRaDec } from '../../../../../../src/utils/math/index';
 
 const ALL_CATALOGS: ReadonlySet<GalaxyCatalogId> = new Set(GALAXY_CATALOG_IDS);
 
@@ -45,11 +47,11 @@ function makeFakeBitmap(): ImageBitmap {
   return { width: 128, height: 128, close: () => {} } as unknown as ImageBitmap;
 }
 
-function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
+function makeDenseCloud(count: number, ar = 0.7, pa = 45, spacing = 0.001): GalaxyCatalog {
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     positions[i * 3 + 0] = 10;
-    positions[i * 3 + 1] = 0.001 * i;
+    positions[i * 3 + 1] = spacing * i;
     positions[i * 3 + 2] = 0;
   }
   const fill = (v: number): Float32Array => {
@@ -166,6 +168,24 @@ describe('createTexturedDiskSubsystem', () => {
 
     expect(fullOpacity).toBeGreaterThan(0);
     expect(quarterOpacity).toBeCloseTo(fullOpacity * 0.25, 5);
+  });
+
+  // The walk revisits a row once per stride cycle, so a slot claimed in one window must
+  // survive the next windows' requests, or every frame evicts the last one's thumbnails.
+  it('keeps a slot through the stride cycle instead of handing it to the next window', () => {
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({});
+    const sys = createTexturedDiskSubsystem({ device, atlas, fetcher: () => new Promise(() => {}) });
+    const ATLAS_SLOTS = 256;
+    const SPACING = 0.00001;
+    const clouds = new Map([[Source.SDSS, makeDenseCloud(ATLAS_SLOTS * 8, 0.7, 45, SPACING)]]);
+    const firstRowKey = galaxyCacheKey(...cartesianToRaDec(10, 0, 0));
+
+    runTexturedSolo(walk, sys, makeInput(clouds));
+    expect(atlas.slots.slotOf(firstRowKey)).toBeDefined();
+    runTexturedSolo(walk, sys, makeInput(clouds));
+
+    expect(atlas.slots.slotOf(firstRowKey)).toBeDefined();
   });
 
   // The planner's only work vote, so what it EXCLUDES is the point: an
