@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { assertAssetDemands } from '../../../../src/services/engine/wiring/assertAssetDemands';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { AssetDemand } from '../../../../src/@types/loading/AssetDemand';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
 import type { VisibilityAddress } from '../../../../src/@types/animation/VisibilityAddress';
@@ -76,6 +77,20 @@ describe('assertAssetDemands', () => {
     expect(
       check({ near: { band: 'shell', edge: 'out', lead: 2, release: 1.5 } }, at('bubble')),
     ).toThrow(/'row1'/);
+  });
+
+  it('throws on a size body the scene lacks', () => {
+    const size = { body: asSceneBodyId('nowhere'), loadPx: 3, releasePx: 1.5 };
+    expect(check({ size }, at('bubble'))).toThrow(/'row1'.*no scene body 'nowhere'/);
+  });
+
+  it('throws on a size gate without loadPx > releasePx > 0', () => {
+    const size = (loadPx: number, releasePx: number) => ({
+      size: { body: asSceneBodyId('earth'), loadPx, releasePx },
+    });
+    expect(check(size(16, 8), at('bubble'))).not.toThrow();
+    expect(check(size(8, 8), at('bubble'))).toThrow(/'row1'.*loadPx > releasePx/);
+    expect(check(size(3, 0), at('bubble'))).toThrow(/'row1'.*loadPx > releasePx/);
   });
 
   it("throws on 'selected' over an entry with no selects", () => {

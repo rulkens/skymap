@@ -1,11 +1,17 @@
 /**
- * Resolves a declared demand against the composed entries: which switches count, which label
- * entry joins them, and `near`'s band edge. Every way a declaration can name nothing throws
- * here, so `assertAssetDemands` catches it at table build instead of the per-row guard
- * swallowing it every frame.
+ * Resolves a declared demand against the composed entries and the scene: which switches count,
+ * which label entry joins them, `near`'s band edges, `size`'s body and a site's host. Every way
+ * a declaration can name nothing throws here, so `assertAssetDemands` catches it at table build
+ * instead of the per-row guard swallowing it every frame.
  */
 
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
+import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { positionDriverOrNull } from '../../../data/bodies/positionDrivers';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { DeclaredDemand } from '../../../@types/loading/DeclaredDemand';
 import type { DemandResolution } from '../../../@types/loading/DemandResolution';
@@ -13,6 +19,8 @@ import type { LabelEntry } from '../../../@types/engine/layer/LabelEntry';
 import type { VisibilityEntry } from '../../../@types/engine/layer/VisibilityEntry';
 
 const OWN_SWITCH: readonly undefined[] = [undefined];
+// Indexed: every size-gated row resolves its body each demand pass.
+const SCENE_BODY_BY_ID = new Map(SCENE_BODIES.map((body) => [body.id as string, body]));
 
 function assertItemsIn(
   items: readonly (string | undefined)[],
@@ -70,6 +78,16 @@ export function resolveAssetDemand(
     band?.items === undefined ||
     items.every((item) => item !== undefined && band.items!.includes(item));
 
+  const sizeBody = demand.size === undefined ? undefined : SCENE_BODY_BY_ID.get(demand.size.body);
+  if (demand.size !== undefined && sizeBody === undefined) {
+    throw new Error(`size names no scene body '${demand.size.body}'`);
+  }
+  const driver = sizeBody === undefined ? null : positionDriverOrNull(sizeBody.id);
+  const host =
+    driver?.kind === 'surfaceFixed'
+      ? findByIdOrThrow(SCENE_CELESTIAL_BODIES, driver.hostId, 'size host')
+      : undefined;
+
   return {
     entry,
     items,
@@ -78,6 +96,8 @@ export function resolveAssetDemand(
     band: applies ? band : undefined,
     inMpc: applies && wantsIn ? (inEdge ?? 0) : 0,
     outMpc: applies && wantsOut ? (outEdge ?? Infinity) : Infinity,
+    sizeRadiusM: sizeBody === undefined ? 0 : bodyFootprintRadiusM(sizeBody),
+    siteHost: host && { id: host.id, radiusM: innerBoundRadiusM(host.surface) },
     selects: 'selects' in entry ? entry.selects : undefined,
   };
 }

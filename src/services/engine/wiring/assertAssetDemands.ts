@@ -23,6 +23,12 @@ export function assertAssetDemands(
           `near needs release ≥ lead ≥ 1, got lead ${near.lead}, release ${near.release}`,
         );
       }
+      const size = demand.size;
+      if (size !== undefined && !(size.loadPx > size.releasePx && size.releasePx > 0)) {
+        throw new Error(
+          `size needs loadPx > releasePx > 0, got ${size.loadPx} and ${size.releasePx}`,
+        );
+      }
       if (demand.alsoWhen?.includes('selected') && selects === undefined) {
         throw new Error("lifts on 'selected' but its entry has no `selects`");
       }
