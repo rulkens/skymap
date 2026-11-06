@@ -51,6 +51,11 @@
  * beat's enter clip spins up to the same rate with `dwellLeadIn`, so the camera
  * never stops where the enter clip lands.
  *
+ * `coastMpcPerSec` does the same for the zoom: the dwell enters still moving
+ * out at that speed and eases to rest over the whole dwell, which adds
+ * `coastMpcPerSec × durationSec / 2` to the range. The enter clip lands short of
+ * the beat's view by that much, so the dwell ends on the view.
+ *
  * ### Finite, and that's fine
  *
  * The clip ends (at `durationSec`) rather than looping forever. The dwell saga
@@ -87,6 +92,7 @@ export function dwellDrift(
     spinTo?: FocusId;
     turns?: number;
     flowIn?: boolean;
+    coastMpcPerSec?: number;
   },
 ): ClipData {
   if (opts?.spinTo !== undefined && opts?.cruiseRate !== undefined) {
@@ -134,6 +140,14 @@ export function dwellDrift(
         // Pitch: eased oscillation — a bob whose amplitude fades in/out over the
         // window, zero-mean and cycle-fitted so it returns to centre on the cut.
         oscillate('pitch', { amp: PITCH_AMP, period, over: durationSec, fade }),
+        ...(opts?.coastMpcPerSec !== undefined
+          ? [
+              seq([
+                rate('distance', { to: opts.coastMpcPerSec, over: 0 }),
+                rate('distance', { to: 0, over: durationSec, ease: 'easeInOutSine' }),
+              ]),
+            ]
+          : []),
       ]),
     ],
   };
