@@ -165,7 +165,32 @@ NPP VIIRS (Black Marble 2016). NASA media guidelines: generally not subject to c
 (HTTP 200, `image/jpeg`, 8,106,233 bytes).
 
 ```
-https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg
+https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg
+```
+
+### Quadrants at 500 m (the surface tile pyramid's night source)
+
+The same A-D / 1-2 layout as the BMNG quadrants above: eight 21600×21600 JPGs
+compositing to 86400×43200 (about 464 m per texel), read by the night product of
+`build-surface-tiles` (levels z3-z7). Full pull only. Credit: **NASA Earth
+Observatory / NASA Goddard Space Flight Center**, Suomi NPP VIIRS. Verified live
+2026-11-06; sha256 per file is in `textures.sha256`.
+
+| File | Extent (lon × lat) | Size |
+| ---- | ------------------ | ---- |
+| `BlackMarble_2016_A1.jpg` | -180..-90 × 0..90 | 30,825,698 bytes |
+| `BlackMarble_2016_A2.jpg` | -180..-90 × -90..0 | 7,830,664 bytes |
+| `BlackMarble_2016_B1.jpg` | -90..0 × 0..90 | 29,472,401 bytes |
+| `BlackMarble_2016_B2.jpg` | -90..0 × -90..0 | 21,337,236 bytes |
+| `BlackMarble_2016_C1.jpg` | 0..90 × 0..90 | 59,097,456 bytes |
+| `BlackMarble_2016_C2.jpg` | 0..90 × -90..0 | 13,553,256 bytes |
+| `BlackMarble_2016_D1.jpg` | 90..180 × 0..90 | 39,122,860 bytes |
+| `BlackMarble_2016_D2.jpg` | 90..180 × -90..0 | 14,400,257 bytes |
+
+Quadrant total: 215,639,828 bytes (~216 MB). Same upstream directory as the 3 km file:
+
+```
+https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_<Q>.jpg
 ```
 
 ## Earth elevation map — NASA Visible Earth "Topography" (GEBCO_08)

@@ -1487,7 +1487,7 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
 
 ### NASA Blue Marble and Black Marble
 
-<!-- attribution: id=nasa-blue-marble; keys=textures.nasaBmng*,textures.earthWaterMask,textures.earthNight,textures.earthElevation,textures.earthClouds; hosts=visibleearth.nasa.gov -->
+<!-- attribution: id=nasa-blue-marble; keys=textures.nasaBmng*,textures.earthWaterMask,textures.earthNight,textures.blackMarbleQuadrant*,textures.earthElevation,textures.earthClouds; hosts=visibleearth.nasa.gov -->
 
 - **What:** Earth's surface (Blue Marble Next Generation, August 2004,
   topography and bathymetry: one whole-globe image and eight quadrants), night
