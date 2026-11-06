@@ -22,5 +22,6 @@ export function createCosmicWebDensitySlot(
     commit: async (cube) => {
       renderer.upload(id, cube, entry);
     },
+    onRelease: () => renderer.unload(id),
   });
 }
