@@ -432,6 +432,7 @@ function makeInput(
     renderTargets,
     renderedTargets,
     skyCapturesInBand: new Set<never>(),
+    skyCapturesBaking: new Set<never>(),
   };
   const ctx = {
     id: 'canvas',
