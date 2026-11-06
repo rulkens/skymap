@@ -12,6 +12,6 @@ export function stellarStreamsPlanner(
   return {
     name: 'stellar-streams',
     scope: 'once',
-    plan: () => ({ value: undefined, awake: runtime.renderer.hasData(), settling: false }),
+    plan: () => ({ value: undefined, awake: runtime.renderer.hasData(), settling: false, loading: false }),
   };
 }
