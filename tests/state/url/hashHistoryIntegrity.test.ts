@@ -20,6 +20,10 @@ import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
+import { selectTimeState } from '../../../src/state/time/selectors';
+import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
+import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 
 /** A valid `b`-tagged, 17-field arm for the `#pose=` arrival case below; the numbers are arbitrary. */
 const EARTH_ARM: FramedCameraPose = {
@@ -191,6 +195,27 @@ describe('hash history integrity', () => {
     // The two label-bearing sets; Gaia and the S-stars draw no names.
     const { famousStar, sun } = selectSettings(store.getState()).starCatalogs.items;
     expect([famousStar.labelEnabled, sun.labelEnabled]).toEqual([false, false]);
+  });
+
+  it("a navigation out of a running exhibit lands its t and layers after the exhibit's restore", async () => {
+    seedHash('exhibit=solarSystem');
+    const { store } = await boot();
+    await flush();
+    expect(selectTakeoverSource(store.getState())).not.toBeNull();
+
+    const linked = '2000-01-01T12:00:00.000Z';
+    navigate(`focus=body-mars&t=${linked}&layers=flow`);
+    await flush();
+
+    const state = store.getState();
+    expect(selectTakeoverSource(state)).toBeNull();
+    expect(selectSettings(state).flow.enabled).toBe(true);
+    // A linked exhibit's restore plays the live clock, which would replace the held instant.
+    expect(selectTimeState(state)).toMatchObject({ mode: 'manual', paused: true });
+    expect(deriveSimDays(selectTimeState(state), performance.now())).toBeCloseTo(
+      unixMsToJulianDays(Date.parse(linked)),
+      6,
+    );
   });
 
   it("keeps a takeover navigation's key without pushing", async () => {
