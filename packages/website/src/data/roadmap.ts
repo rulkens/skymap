@@ -125,13 +125,6 @@ export const ROADMAP: readonly RoadmapGroup[] = [
     title: 'Tours and domes',
     items: [
       {
-        id: 'tour-earth-start',
-        title: 'A tour that starts at Earth',
-        text: '“The Long Way Out” opening at Earth, with steps for the solar system and the nearby stars before the Milky Way.',
-        state: 'planned',
-        backlog: 'Grand tour: Earth start + scale rungs',
-      },
-      {
         id: 'kiosk',
         title: 'Kiosk mode',
         text: 'A tour that plays unattended and starts again, and perhaps a return to it when nobody has touched the screen for a while.',

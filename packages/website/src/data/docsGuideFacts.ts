@@ -579,14 +579,6 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     sourceLabel: `how the app opens what a link names, ${IN_REPO}`,
     checked: CHECKED,
   },
-  {
-    id: 'tour-earth-start-planned',
-    about: 'app',
-    text: 'A start at Earth for “The Long Way Out”, with steps for the solar system and the nearby stars before the Milky Way, is on the list of planned work. Today the tour begins at the Milky Way.',
-    source: `${REPO_BLOB}/docs/BACKLOG.md`,
-    sourceLabel: `the list of planned work, ${IN_REPO}`,
-    checked: CHECKED,
-  },
   // Sharing a view.
   {
     id: 'share-address',
