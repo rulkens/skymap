@@ -17,6 +17,8 @@ import CompactStellarStreamCard from './selection/ui/CompactStellarStreamCard/Co
 import { stellarStreamsSelectionRow } from './selection/stellarStreamsSelectionRow';
 import { stellarStreamsSelectionKinds } from './selection/kinds';
 import { stellarStreamsSearchRows } from './search/present/stellarStreamsSearchRows';
+import { produceStellarStreamLabels } from './labels/present/produceStellarStreamLabels';
+import { NEAR0 } from '../../services/engine/frame/slabs';
 
 export const stellarStreamsLayer = defineLayer({
   name: 'stellarStreams',
@@ -32,6 +34,16 @@ export const stellarStreamsLayer = defineLayer({
     rows: (runtime) => [stellarStreamsSelectionRow(runtime)],
   },
   search: (runtime) => stellarStreamsSearchRows(runtime),
+  guides: (runtime) => ({
+    screenLabels: [
+      {
+        slab: NEAR0,
+        id: 'stellarStreamLabels',
+        label: 'stellarStream',
+        produceLabels: produceStellarStreamLabels(runtime),
+      },
+    ],
+  }),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'stellarStreams', label: 'Stellar streams' } },
     { slot: 'debug', content: StellarStreamsTuningSectionContainer },
