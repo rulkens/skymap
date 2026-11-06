@@ -20,6 +20,10 @@ import { parkOpening, parkOpeningDwell } from '../tours/grandTour/parkOpening';
 import { youAreHereEarth, youAreHereEarthDwell } from '../tours/grandTour/youAreHereEarth';
 import { earthAndMoon, earthAndMoonDwell } from '../tours/grandTour/earthAndMoon';
 import { solarSystem, solarSystemDwell } from '../tours/grandTour/solarSystem';
+import {
+  stellarNeighbourhood,
+  stellarNeighbourhoodDwell,
+} from '../tours/grandTour/stellarNeighbourhood';
 import { youAreHere, youAreHereDwell } from '../tours/grandTour/youAreHere';
 import { approachM31 } from '../tours/grandTour/approachM31';
 import { localGroup } from '../tours/grandTour/localGroup';
@@ -88,6 +92,20 @@ export const tourSolarSystemDwell: Clip = {
   label: 'Grand tour 03 — the orbits dwell',
   dev: true,
   data: solarSystemDwell,
+};
+
+export const tourStellarNeighbourhood: Clip = {
+  id: 'tourStellarNeighbourhood',
+  label: 'Grand tour 04 — our stellar neighbourhood',
+  dev: true,
+  data: stellarNeighbourhood,
+};
+
+export const tourStellarNeighbourhoodDwell: Clip = {
+  id: 'tourStellarNeighbourhoodDwell',
+  label: 'Grand tour 04 — the near-stars dwell',
+  dev: true,
+  data: stellarNeighbourhoodDwell,
 };
 
 export const tourYouAreHere: Clip = {

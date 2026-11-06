@@ -42,4 +42,6 @@ export type ClipId =
   | 'tourEarthAndMoon'
   | 'tourEarthAndMoonDwell'
   | 'tourSolarSystem'
-  | 'tourSolarSystemDwell';
+  | 'tourSolarSystemDwell'
+  | 'tourStellarNeighbourhood'
+  | 'tourStellarNeighbourhoodDwell';

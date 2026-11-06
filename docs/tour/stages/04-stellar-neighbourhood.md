@@ -5,13 +5,13 @@ title: Our stellar neighbourhood
 narration: >
   Proxima Centauri, the nearest star after the Sun. Its light travels for
   more than four years to reach us.
-focus: body:sun
-distance_mpc: 1e-5 # ~30 light-years, the nearest stars in frame
-motion: log-dolly + orbit
-travel_s: 8
+focus: none # the stars are named by the star map's captions, not by focus
+distance_mpc: 5e-7 # 0.5 pc off a point near Alpha Centauri, looking back at the Sun
+motion: turn + log-dolly + lean
+travel_s: 12
 dwell_s: 7
 effects: [named stars on]
-requires: [log-dolly, clock-to, dwell-drift, caption]
+requires: [log-dolly, lateral-focus, clock-to, dwell-drift, caption]
 status: draft
 ---
 
@@ -28,11 +28,25 @@ Earth beat, so a skip into this beat lands on the tour date. Log-dolly out from
 the Solar System framing (~80 au → ~30 light-years, about four decades) on the
 Sun; a slow orbit on the dwell so the near stars parallax against the far ones.
 
+As built: the beat states the ecliptic pole, the date and level roll on entry,
+and restates beat 03's target and range so a skip or Prev pulls out from the
+orbits. From ~30 light-years Proxima's name lands on Alpha Centauri's, so the
+eye ends much closer: half a parsec off a point 80% of the way to Alpha
+Centauri, looking back at the Sun, 30° up across the ecliptic toward longitude
+110°. The pair sits lower left, the Sun upper right. The view swings under the
+ecliptic in the first six seconds, while the range is still small; the target
+leans toward Alpha Centauri only once the range passes ~0.05 pc, so the Sun
+drifts off the centre instead of leaping. The eye backs past Alpha Centauri,
+so the pair sweeps in from the lower left in the last two seconds of travel.
+
 ## On screen
 
-`Our stellar neighbourhood` + narration on dwell start. Proxima Centauri is in
-the famous-star seed, so its label can be the focused subject; the Sun's point
-stays visible as the anchor.
+`Our stellar neighbourhood` + narration on dwell start. Star captions are not
+focus-gated and switch per catalog, so the beat shows
+`label:starCatalog:famousStar`: Proxima and Alpha Centauri are named, and so is
+every other star-map star in frame (about a dozen: Wolf 359, Lalande 21185,
+Ross 128 among the near ones, Capella, Pollux, Procyon and the Plough behind).
+The Sun's caption stays on from beat 03.
 
 ## Caption
 

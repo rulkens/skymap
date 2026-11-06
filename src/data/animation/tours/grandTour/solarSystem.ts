@@ -8,7 +8,6 @@
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
-import type { Vec3 } from '../../../../@types/math/Vec3';
 import {
   aimAlong,
   all,
@@ -24,35 +23,10 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { clockTo } from '../../../../state/tour/clockTo';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
-import { bodyPositionMpcAt } from '../../../../utils/exhibits/mission/bodyPositionMpcAt';
-import { degToRad } from '../../../../utils/math/degToRad';
-import { ECLIPTIC_FRAME } from '../../../bodies/orbitPlaneFrames';
-import { SCALE_UNITS } from '../../../scaleUnits';
 import { EARTH_AND_MOON_VIEW } from './earthAndMoonView';
 import { FRAME_ROLL_SEC } from './frameRollSec';
+import { SOLAR_SYSTEM_VIEW } from './solarSystemView';
 import { TOUR_NIGHT_SIM_DAYS } from './tourNightSimDays';
-
-const { xAxis, yAxis, normal } = ECLIPTIC_FRAME;
-
-// Looking down 35° from ecliptic north toward longitude 125°: Pluto, at 304°,
-// lies on the eye's side of the Sun.
-const VIEW_LONGITUDE_RAD = degToRad(125);
-const VIEW_ELEVATION_RAD = degToRad(-35);
-const VIEW_FORWARD: Vec3 = [0, 1, 2].map(
-  (i) =>
-    Math.cos(VIEW_ELEVATION_RAD) *
-      (Math.cos(VIEW_LONGITUDE_RAD) * xAxis[i]! + Math.sin(VIEW_LONGITUDE_RAD) * yAxis[i]!) +
-    Math.sin(VIEW_ELEVATION_RAD) * normal[i]!,
-) as Vec3;
-// Perspective swells the near side of the orbits, so the aim drops below the Sun
-// on its ecliptic axis to centre Neptune's orbit; on that axis the dwell's yaw
-// circles the Sun.
-const AIM_BELOW_SUN_AU = 10;
-const SUN_MPC = bodyPositionMpcAt('sun', TOUR_NIGHT_SIM_DAYS);
-const AIM_MPC = [0, 1, 2].map(
-  (i) => SUN_MPC[i]! - normal[i]! * AIM_BELOW_SUN_AU * SCALE_UNITS.AU_TO_MPC,
-) as Vec3;
-const VIEW_DISTANCE_AU = 52;
 
 const PULL_OUT_SEC = 10;
 // The view turns about the gap while the range is small, so the eye does not
@@ -78,10 +52,13 @@ export const solarSystem: ClipData = {
       dollyTo(EARTH_AND_MOON_VIEW.distanceMpc, 0),
     ]),
     all([
-      dollyTo(VIEW_DISTANCE_AU * SCALE_UNITS.AU_TO_MPC, PULL_OUT_SEC),
-      aimAlong(VIEW_FORWARD, TURN_SEC, 'easeInOutSine'),
+      dollyTo(SOLAR_SYSTEM_VIEW.distanceMpc, PULL_OUT_SEC),
+      aimAlong(SOLAR_SYSTEM_VIEW.forward, TURN_SEC, 'easeInOutSine'),
       tween('roll', { to: 0, over: PULL_OUT_SEC, ease: 'easeInOutSine' }),
-      seq([wait(TURN_SEC), moveTarget(AIM_MPC, PULL_OUT_SEC - TURN_SEC, 'easeInOutSine')]),
+      seq([
+        wait(TURN_SEC),
+        moveTarget(SOLAR_SYSTEM_VIEW.targetMpc, PULL_OUT_SEC - TURN_SEC, 'easeInOutSine'),
+      ]),
       // The planets are named since beat 02; the Sun's name is the star layer's.
       seq([wait(LABEL_DELAY_SEC), show(['label:starCatalog:sun'], REVEAL_SEC)]),
     ]),

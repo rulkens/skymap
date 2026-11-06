@@ -11,6 +11,7 @@ import { parkOpening } from '../../../../../src/data/animation/tours/grandTour/p
 import { youAreHereEarth } from '../../../../../src/data/animation/tours/grandTour/youAreHereEarth';
 import { earthAndMoon } from '../../../../../src/data/animation/tours/grandTour/earthAndMoon';
 import { solarSystem } from '../../../../../src/data/animation/tours/grandTour/solarSystem';
+import { stellarNeighbourhood } from '../../../../../src/data/animation/tours/grandTour/stellarNeighbourhood';
 import { clockTo } from '../../../../../src/state/tour/clockTo';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
@@ -20,6 +21,7 @@ const EARTH_BEAT_ENTER_CLIPS: readonly ClipData[] = [
   youAreHereEarth,
   earthAndMoon,
   solarSystem,
+  stellarNeighbourhood,
 ];
 
 function firstClockTo(effects: readonly Effect[]): ReturnType<typeof clockTo>['payload'] | null {

@@ -19,6 +19,7 @@ import { parkOpening, parkOpeningDwell } from './grandTour/parkOpening';
 import { youAreHereEarth, youAreHereEarthDwell } from './grandTour/youAreHereEarth';
 import { earthAndMoon, earthAndMoonDwell } from './grandTour/earthAndMoon';
 import { solarSystem, solarSystemDwell } from './grandTour/solarSystem';
+import { stellarNeighbourhood, stellarNeighbourhoodDwell } from './grandTour/stellarNeighbourhood';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31, approachM31Dwell } from './grandTour/approachM31';
 import { localGroup, localGroupDwell } from './grandTour/localGroup';
@@ -80,6 +81,17 @@ export const grandTour: Tour = {
         ],
       },
       dwellClip: solarSystemDwell,
+    },
+    {
+      enterClip: stellarNeighbourhood,
+      caption: {
+        title: 'Our stellar neighbourhood',
+        lines: [
+          'Proxima Centauri, the nearest star after the Sun.',
+          'Its light travels for more than four years to reach us.',
+        ],
+      },
+      dwellClip: stellarNeighbourhoodDwell,
     },
     {
       enterClip: youAreHere,

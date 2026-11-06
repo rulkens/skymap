@@ -14,6 +14,16 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **Naming one star means naming the star map** (beat 04, `stellarNeighbourhood`):
+  star captions switch per catalog (`label:starCatalog:famousStar`), not per
+  star, and focus does not gate them, so every star-map star in frame is named
+  with Proxima; about a dozen in any view that frames the Sun and Alpha
+  Centauri. Proxima sits 0.06 pc off Alpha Centauri, so from more than about a
+  parsec its name lands on Alpha Centauri's and the declutter drops it (the
+  bigger star wins); the beat ends half a parsec off the pair. A target lean
+  of a parsec has to wait until the log dolly's range is a sizeable fraction of
+  it, or the subject leaps off the centre in one frame; no ease starts slowly
+  enough to track an exponential range.
 - **True sizes for two bodies** (beat 02, fix round 2): discs keep their true
   size ratio only from an eye as far from one body as from the other, so the
   aim slides off the gap's middle by the view's lean along the gap
