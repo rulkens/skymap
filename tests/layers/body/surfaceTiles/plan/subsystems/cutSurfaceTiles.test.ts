@@ -14,11 +14,12 @@
 import { describe, it, expect } from 'vitest';
 import { mat4, mat4d } from 'wgpu-matrix';
 
-import { cutSurfaceTiles } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
+import { cutSurfaceTiles as cutWithRequestBands } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { surfaceTileXyForUv } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileXyForUv';
 import { surfaceTileColumns } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
 import { surfaceTileInBand } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileInBand';
+import { SURFACE_TILE_PRODUCTS } from '../../../../../../src/layers/body/surfaceTiles/format/data/surfaceTileProducts';
 import { equirectUvToDirection } from '../../../../../../src/utils/math/equirectUvToDirection';
 import { IDENTITY_MAT3 } from '../../../../../../src/utils/math/identityMat3';
 import {
@@ -38,6 +39,13 @@ import type { SurfaceTileBand } from '../../../../../../src/layers/body/surfaceT
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../../src/utils/camera/frustum/symmetricFrustum';
 import { angleBetween } from '../../../../../helpers/math/angleBetween';
+import { requestBandsOf } from '../../../../../support/requestBandsOf';
+
+/** Every product requests over the fixture's `bands`, as `derivePlannerParams`
+ *  builds them while albedo and height share one rule. */
+function cutSurfaceTiles(input: Omit<Parameters<typeof cutWithRequestBands>[0], 'requestBands'>) {
+  return cutWithRequestBands({ ...input, requestBands: requestBandsOf(input.bands) });
+}
 
 const BASE_LEVEL = baseLevelForTier('earth', 'large');
 const MIN_TILE_LEVEL = BASE_LEVEL + 1;
@@ -639,7 +647,7 @@ describe('cutSurfaceTiles', () => {
       );
       const z = expectedLevel(1000);
       const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, SURFACE_TILE_PX);
-      for (const product of ['albedo', 'height'])
+      for (const product of SURFACE_TILE_PRODUCTS)
         expect(keys.has(`${product}/${z}/${x}/${y}`), `${product} at the required level`).toBe(
           true,
         );

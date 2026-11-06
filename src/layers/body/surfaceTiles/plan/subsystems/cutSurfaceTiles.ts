@@ -5,10 +5,12 @@ import type { SurfaceTileRequest } from '../@types/SurfaceTileRequest';
 import type { SurfaceCutTile } from '../@types/SurfaceCutTile';
 import type { ResolvedTileResidency } from '../../stream/@types/ResolvedTileResidency';
 import type { TileCamera } from '../@types/TileCamera';
+import type { SurfaceTilePlannerParams } from '../@types/SurfaceTilePlannerParams';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import { surfaceTileColumns } from '../../format/utils/surfaceTileColumns';
 import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
 import { surfaceTileInBand } from '../../format/utils/surfaceTileInBand';
+import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { equirectUvToDirection } from '../../../../../utils/math/equirectUvToDirection';
 import { surfacePatchAnchor } from '../../patch/subsystems/surfacePatchAnchor';
 import { balanceSurfaceCut } from './balanceSurfaceCut';
@@ -55,10 +57,11 @@ export function cutSurfaceTiles(input: {
   readonly reliefM: readonly [number, number];
   /** The level the whole-globe base texture already delivers — the walk's floor. */
   readonly baseLevel: number;
-  /** The manifest's geographic depth bands for the albedo product; a leaf
-   *  outside every overlapping band's `[min, max]` has no file and is not
-   *  requested. */
+  /** The manifest's geographic depth bands refinement reads. */
   readonly bands: readonly SurfaceTileBand[];
+  /** Per product, the bands its tiles are requested over; a tile outside
+   *  every overlapping band's `[min, max]` has no file and is not requested. */
+  readonly requestBands: SurfaceTilePlannerParams['requestBands'];
   readonly tilePx: number;
   /** Levels coarser than one texel per screen pixel to settle for; see
    *  `SURFACE_TILE_LOD_BIAS`. */
@@ -81,6 +84,7 @@ export function cutSurfaceTiles(input: {
     reliefM,
     baseLevel,
     bands,
+    requestBands,
     tilePx,
     lodBias,
     residentSlot,
@@ -293,11 +297,14 @@ export function cutSurfaceTiles(input: {
     return hit?.found.subtreeRangeM ?? DATUM_RANGE_M;
   }
 
-  /** Both products of one tile — height rides every albedo request (§6.1),
-   *  band-floor ancestors included: refinement needs posts, not pixels. */
+  /** Every product baked at one tile — height rides every albedo request
+   *  (§6.1), band-floor ancestors included: refinement needs posts, not pixels. */
   function request(z: number, x: number, y: number, screenPx: number): void {
-    requests.push({ tile: { product: 'albedo', z, x, y }, screenPx });
-    requests.push({ tile: { product: 'height', z, x, y }, screenPx });
+    for (const product of SURFACE_TILE_PRODUCTS) {
+      if (surfaceTileInBand(requestBands[product], tilePx, z, x, y)) {
+        requests.push({ tile: { product, z, x, y }, screenPx });
+      }
+    }
   }
 
   /** The lattice a leaf at `(z, x, y)` samples, `minLevelDelta` levels up or
@@ -357,7 +364,7 @@ export function cutSurfaceTiles(input: {
       if (visibleChildren > 0) {
         // The ancestor chain is fetched alongside the leaves: albedo inherits
         // from it, and a request is also the LRU touch that keeps it alive.
-        if (surfaceTileInBand(bands, tilePx, z, x, y)) request(z, x, y, screenPx);
+        request(z, x, y, screenPx);
         continue;
       }
       // Every child culled, so this node is the leaf after all. Demand, not
@@ -373,9 +380,9 @@ export function cutSurfaceTiles(input: {
     // Requestable and drawable are different questions: a leaf can sit past
     // every overlapping band's max (e.g. just outside a deep band's bbox,
     // under a shallower global band) with no file of its OWN to fetch, yet
-    // still have a resident ANCESTOR to draw — skip only the fetch, not the
-    // residency lookup below, or a band-edge ring never gets ancestor pixels.
-    if (surfaceTileInBand(bands, tilePx, z, x, y)) request(z, x, y, screenPx);
+    // still have a resident ANCESTOR to draw — `request` skips only the fetch,
+    // not the residency lookup below, or a band-edge ring never gets ancestor pixels.
+    request(z, x, y, screenPx);
 
     // Height inherits exactly as albedo does (R14); `balanceSurfaceCut` then
     // stitches the levels the two neighbours ended up on.
