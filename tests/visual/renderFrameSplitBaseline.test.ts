@@ -362,6 +362,7 @@ describe('renderFrame visual baseline', () => {
         renderTargets,
         renderedTargets,
         skyCapturesInBand: new Set(),
+        skyCapturesBaking: new Set(),
       },
       cam,
       vp: viewProj,
