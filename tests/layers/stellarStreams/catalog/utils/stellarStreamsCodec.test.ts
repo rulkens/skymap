@@ -11,10 +11,11 @@ const payload = {
 
 describe('stellar streams codec', () => {
   it('round-trips a payload byte for byte', () => {
-    const decoded = decodeStellarStreams(encodeStellarStreams(payload));
+    const buf = encodeStellarStreams(payload);
+    const decoded = decodeStellarStreams(buf);
     expect(decoded.particleCount).toBe(3);
     expect(decoded.streamCount).toBe(2);
-    expect(Array.from(decoded.records)).toEqual(Array.from(payload.records));
+    expect(new Uint8Array(encodeStellarStreams(decoded))).toEqual(new Uint8Array(buf));
   });
 
   it('rejects a wrong magic with a regenerate message', () => {

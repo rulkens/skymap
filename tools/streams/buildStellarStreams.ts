@@ -15,56 +15,24 @@ import {
   STELLAR_STREAMS_VERSION,
 } from '../../src/layers/stellarStreams/catalog/data/stellarStreamsFormat.constants';
 import { encodeStellarStreams } from '../../src/layers/stellarStreams/catalog/utils/encodeStellarStreams';
-import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { splitmix64Rng } from '../utils/random/splitmix64Rng';
 import type { GalstreamsTrack } from './@types/GalstreamsTrack';
 import type { StellarStreamMetaEntry } from './@types/StellarStreamMetaEntry';
-import type { StreamParticles } from './@types/StreamParticles';
 import type { VasilievStar } from './@types/VasilievStar';
 import { SGR_SEED, TRACK_SEED } from './data/streamsBuild.constants';
 import { orientTrackByMotion } from './utils/orientTrackByMotion';
 import { pickStreamTracks } from './utils/pickStreamTracks';
 import { readGalstreamsTracks } from './utils/readGalstreamsTracks';
 import { readVasilievStars } from './utils/readVasilievStars';
+import { sagittariusMeta } from './utils/sagittariusMeta';
 import { sagittariusParticles } from './utils/sagittariusParticles';
 import { streamMetaEntry } from './utils/streamMetaEntry';
 import { streamSlug } from './utils/streamSlug';
 import { trackParticles } from './utils/trackParticles';
 
 const OUT_DIR = resolve('public/data', `stellar-streams/v${STELLAR_STREAMS_VERSION}`);
-
-function sagittariusMeta(
-  stars: readonly VasilievStar[],
-  p: StreamParticles,
-): StellarStreamMetaEntry {
-  const bound = stars
-    .filter((s) => s.tStripGyr === 0)
-    .map((s) => raDecDistToEqCart({ raHours: s.ra / 15, decDeg: s.dec, distMpc: s.distanceKpc }));
-  const anchorKpc = [0, 1, 2].map((c) => bound.reduce((sum, v) => sum + v[c]!, 0) / bound.length);
-  // An N-body cloud has no track to measure: its "length" is the debris' extent around the remnant.
-  let farthest = 0;
-  const distances: number[] = [];
-  for (let i = 0; i < p.luminosity.length; i++) {
-    const v = [0, 1, 2].map((c) => p.positionsMpc[i * 3 + c]! * 1e3);
-    distances.push(Math.hypot(v[0]!, v[1]!, v[2]!));
-    farthest = Math.max(farthest, Math.hypot(...v.map((x, c) => x - anchorKpc[c]!)));
-  }
-  return {
-    id: 'sagittarius',
-    names: ['Sagittarius', 'Sagittarius stream'],
-    description:
-      'The tidal debris of the Sagittarius dwarf galaxy, from the N-body model of Vasiliev, Belokurov & Erkal 2021.',
-    source: 'vasiliev2021',
-    reference: 'Vasiliev, Belokurov & Erkal 2021',
-    lengthKpc: 2 * farthest,
-    distanceKpc: [Math.min(...distances), Math.max(...distances)],
-    widthDeg: null,
-    particleCount: p.luminosity.length,
-    anchorMpc: [anchorKpc[0]! * 1e-3, anchorKpc[1]! * 1e-3, anchorKpc[2]! * 1e-3],
-  };
-}
 
 export function buildStellarStreams(
   stars: readonly VasilievStar[],

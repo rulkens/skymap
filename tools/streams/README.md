@@ -19,7 +19,8 @@ across reruns over the same inputs. On 2026-11-06 it wrote 128,419 particles in 
   the catalogue's own RA, Dec and distance, tangents from the galactocentric velocity rotated into the
   equatorial frame (`galToEq`). Colour follows stripping time (bound and recent debris amber, old debris
   blue); brightness does not. Its meta anchor is the bound particles' mean position, and its
-  `lengthKpc` is twice the debris' farthest reach from it: an N-body cloud has no track to measure.
+  `lengthKpc` is an extent, not an arc length: twice the 99th-percentile distance of all 200,000
+  snapshot stars from it (275 kpc).
 - **The rest** (sorted by slug): galstreams (Mateu 2023), one `st` track per stream, the master log's
   `On` track when it has distances, else the first that does. Sky-only tracks (every distance 1.0) and
   galstreams' own Sagittarius are skipped. A track listed against its stars' motion (proper motion,

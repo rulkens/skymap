@@ -18,9 +18,10 @@ function readTrackColumns(path: string): Record<string, number[]> {
     .filter((line) => line.trim() !== '' && !line.startsWith('#'));
   const names = header!.split(',');
   const columns: Record<string, number[]> = Object.fromEntries(names.map((n) => [n, []]));
+  const position = ['ra', 'dec', 'distance'].map((n) => names.indexOf(n));
   for (const row of rows) {
     const cells = row.split(',').map(parseFloatOrNaN);
-    if (![0, 1, 2].every((i) => Number.isFinite(cells[i]))) continue;
+    if (!position.every((i) => Number.isFinite(cells[i]))) continue;
     names.forEach((n, i) => columns[n]!.push(cells[i]!));
   }
   return columns;
