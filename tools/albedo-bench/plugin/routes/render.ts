@@ -15,11 +15,10 @@ import type { SunField } from '../../../textures/SunField.ts';
 import type { SurfaceImagerySource } from '../../../textures/@types/SurfaceImagerySource.ts';
 import { albedoRecipeImagerySource } from '../../../textures/albedoRecipeImagerySource.ts';
 import { readSlopeLattice } from '../../../textures/readSlopeLattice.ts';
-import { clamp } from '../../../utils/textures/clamp.ts';
 import { constantSunField } from '../../../utils/textures/constantSunField.ts';
 import { sampleSlope } from '../../../utils/textures/sampleSlope.ts';
 import { srgbToLinear } from '../../../utils/color/srgbToLinear.ts';
-import { linearToSrgb } from '../../../utils/color/linearToSrgb.ts';
+import { linearToSrgbByte } from '../../../utils/image/linearToSrgbByte.ts';
 import { orenNayarPreview } from '../orenNayarPreview.ts';
 import { previewSunFit } from '../previewSunFit.ts';
 import type { RenderLight } from '../../@types/RenderLight';
@@ -49,17 +48,9 @@ function relight(
       const lon = box.west + ((px + 0.5) / widthPx) * (box.east - box.west);
       const [sx, sy] = sampleSlope(lattice, lon, lat);
       const factor = orenNayarPreview(sx, sy, light);
-      out[i] = clamp(Math.round(linearToSrgb(srgbToLinear(rgba[i]! / 255) * factor) * 255), 0, 255);
-      out[i + 1] = clamp(
-        Math.round(linearToSrgb(srgbToLinear(rgba[i + 1]! / 255) * factor) * 255),
-        0,
-        255,
-      );
-      out[i + 2] = clamp(
-        Math.round(linearToSrgb(srgbToLinear(rgba[i + 2]! / 255) * factor) * 255),
-        0,
-        255,
-      );
+      out[i] = linearToSrgbByte(srgbToLinear(rgba[i]! / 255) * factor);
+      out[i + 1] = linearToSrgbByte(srgbToLinear(rgba[i + 1]! / 255) * factor);
+      out[i + 2] = linearToSrgbByte(srgbToLinear(rgba[i + 2]! / 255) * factor);
     }
   }
   return out;

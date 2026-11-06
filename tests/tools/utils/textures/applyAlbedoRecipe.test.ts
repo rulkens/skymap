@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { applyAlbedoRecipe } from '../../../../tools/utils/textures/applyAlbedoRecipe';
-import { linearToSrgb } from '../../../../tools/utils/color/linearToSrgb';
+import { linearToSrgbByte } from '../../../../tools/utils/image/linearToSrgbByte';
 import type { AlbedoApply } from '../../../../tools/textures/AlbedoApply';
 
 const NEUTRAL_APPLY: AlbedoApply = {
@@ -57,6 +57,16 @@ describe('applyAlbedoRecipe', () => {
     expect(randomOut).toEqual(randomRgba);
   });
 
+  it('clips a channel the de-shade lifts past white instead of wrapping it', () => {
+    const rgba = new Uint8Array([200, 120, 80, 255]);
+    // g·s = −0.5 halves the shading divisor, so luminance doubles and red passes 1.0.
+    const shadedSample = () => ({ sx: -0.5, sy: 0, gx: 1, gy: 0, latDeg: 0 });
+    const apply = { ...NEUTRAL_APPLY, deshade: { strength: 1, minShading: 0.3 } };
+    const out = applyAlbedoRecipe(rgba, 1, 1, shadedSample, apply);
+    expect(out[0]).toBe(255);
+    expect(out[1]).toBeGreaterThan(120);
+  });
+
   it('copies alpha-0 pixels untouched', () => {
     const rgba = new Uint8Array([200, 100, 50, 0]);
     const out = applyAlbedoRecipe(rgba, 1, 1, FLAT_SAMPLE, {
@@ -78,7 +88,7 @@ describe('applyAlbedoRecipe', () => {
     for (let px = 0; px < width; px++) {
       const [sx, sy] = slopes[px]!;
       const shade = 1 + g[0] * sx + g[1] * sy;
-      const byte = Math.round(linearToSrgb(Math.min(1, Math.max(0, albedo * shade))) * 255);
+      const byte = linearToSrgbByte(albedo * shade);
       rgba[px * 4] = byte;
       rgba[px * 4 + 1] = byte;
       rgba[px * 4 + 2] = byte;
@@ -100,7 +110,7 @@ describe('applyAlbedoRecipe', () => {
       apply,
     );
 
-    const expectedByte = Math.round(linearToSrgb(albedo) * 255);
+    const expectedByte = linearToSrgbByte(albedo);
     for (let px = 0; px < width; px++) {
       expect(Math.abs(out[px * 4]! - expectedByte)).toBeLessThanOrEqual(1);
     }
@@ -110,7 +120,7 @@ describe('applyAlbedoRecipe', () => {
     // A shaded (darkened) white pixel, bright enough (0.7, comfortably past
     // minLuminance + ICE_SOFT) that the luminance gate is fully open: de-shade
     // would brighten it back toward white unless ice-keep intervenes.
-    const byte = Math.round(linearToSrgb(0.7) * 255);
+    const byte = linearToSrgbByte(0.7);
     const rgba = new Uint8Array([byte, byte, byte, 255]);
     const apply: AlbedoApply = {
       ...NEUTRAL_APPLY,

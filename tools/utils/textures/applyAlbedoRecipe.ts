@@ -7,7 +7,7 @@
  * pixel by itself would otherwise read back as `NaN`, not "unchanged".
  */
 import { srgbToLinear } from '../color/srgbToLinear';
-import { linearToSrgb } from '../color/linearToSrgb';
+import { linearToSrgbByte } from '../image/linearToSrgbByte';
 import { gradeRgbaInPlace } from '../image/gradeRgbaInPlace';
 import type { AlbedoApply } from '../../textures/AlbedoApply';
 import { iceKeepWeight } from './iceKeepWeight';
@@ -53,9 +53,9 @@ export function applyAlbedoRecipe(
         q = ratio + (1 - ratio) * w;
       }
 
-      out[i] = Math.round(linearToSrgb(r * q) * 255);
-      out[i + 1] = Math.round(linearToSrgb(g * q) * 255);
-      out[i + 2] = Math.round(linearToSrgb(b * q) * 255);
+      out[i] = linearToSrgbByte(r * q);
+      out[i + 1] = linearToSrgbByte(g * q);
+      out[i + 2] = linearToSrgbByte(b * q);
     }
   }
   gradeRgbaInPlace(out, apply.grade);

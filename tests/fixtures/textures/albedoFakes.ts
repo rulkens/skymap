@@ -7,8 +7,7 @@
  */
 import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
 import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
-import { linearToSrgb } from '../../../tools/utils/color/linearToSrgb';
-import { clamp } from '../../../tools/utils/textures/clamp';
+import { linearToSrgbByte } from '../../../tools/utils/image/linearToSrgbByte';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
 import { sampleSlope } from '../../../tools/utils/textures/sampleSlope';
 import { readSlopeLattice } from '../../../tools/textures/readSlopeLattice';
@@ -80,11 +79,9 @@ export function analyticImagerySource(
           const [sx, sy] = sampleSlope(lattice, lon, lat);
           const shade = Math.max(0, 1 + g[0] * sx + g[1] * sy);
           const i = (py * widthPx + px) * 4;
-          // Clamp to [0,1] before the gamma transfer: `linearToSrgb` doesn't,
-          // and an unclamped byte write above 255 wraps instead of clipping.
-          out[i] = Math.round(255 * linearToSrgb(clamp(albedo[0] * shade, 0, 1)));
-          out[i + 1] = Math.round(255 * linearToSrgb(clamp(albedo[1] * shade, 0, 1)));
-          out[i + 2] = Math.round(255 * linearToSrgb(clamp(albedo[2] * shade, 0, 1)));
+          out[i] = linearToSrgbByte(albedo[0] * shade);
+          out[i + 1] = linearToSrgbByte(albedo[1] * shade);
+          out[i + 2] = linearToSrgbByte(albedo[2] * shade);
           out[i + 3] = 255;
         }
       }
