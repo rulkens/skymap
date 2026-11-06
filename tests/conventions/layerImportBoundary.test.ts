@@ -286,79 +286,79 @@ function typesModulesOf(file: string): string[] {
   );
 }
 
-/** `src/layers/<name>/…` → `<name>`; any other importer outside `src/@types/` → `core`. */
+/** `src/layers/<name>/…` → `<name>`; any other importer → `core`. */
 function areaOf(file: string): string {
   return /^src\/layers\/([^/]+)\//.exec(file)?.[1] ?? 'core';
 }
 
-// Today's `src/@types/` files only one Layer imports. Exact: a new one fails, and so does a
-// row that stopped being one; a move-only PR empties it (docs/BACKLOG.md).
-const LAYER_OWNED_TYPES_ALLOWED: Readonly<Record<string, string>> = {
-  '@types/components/infoCard/DetailCardProps': 'structure',
-  '@types/data/BodyTextureKey': 'body',
-  '@types/data/BodyTextureSlotKey': 'body',
-  '@types/data/SourceEntryBase': 'starCatalog',
-  '@types/data/SurfaceEffect': 'body',
-  '@types/data/blackHole/BlackHoleId': 'blackHoles',
-  '@types/data/blackHole/BlackHoleSourceEntry': 'blackHoles',
-  '@types/data/constellations/ConstellationsSourceEntry': 'constellations',
-  '@types/data/craft/CraftSourceEntry': 'missions',
-  '@types/data/filament/CosmicWebFilamentsSourceEntry': 'cosmicWebFilaments',
-  '@types/data/filament/FilamentCloud': 'cosmicWebFilaments',
-  '@types/data/flow/FlowFieldDefaults': 'flow',
-  '@types/data/flow/FlowSourceEntry': 'flow',
-  '@types/data/galaxyCatalog/GalaxyCatalogColumn': 'galaxyCatalog',
-  '@types/data/galaxyCatalog/GalaxyCatalogFieldSpec': 'galaxyCatalog',
-  '@types/data/galaxyCatalog/GalaxyCatalogSourceEntry': 'galaxyCatalog',
-  '@types/data/galaxyCatalog/GalaxyDurableIdClaim': 'galaxyCatalog',
-  '@types/data/milkyWay/MilkyWaySourceEntry': 'milkyWay',
-  '@types/data/satellite/SatelliteSourceEntry': 'satellites',
-  '@types/data/shellMesh/ShellMesh': 'localBubble',
-  '@types/data/shellMesh/ShellMeshDtype': 'localBubble',
-  '@types/data/starCatalog/SeededStarCatalogSourceEntry': 'starCatalog',
-  '@types/data/starCatalog/SurveyStarCatalogSourceEntry': 'starCatalog',
-  '@types/data/structure/StructureSourceEntry': 'structure',
-  '@types/data/structure/structureCatalog/StructureCatalog': 'structure',
-  '@types/data/volume/CosmicWebDensityFieldId': 'cosmicWebDensity',
-  '@types/data/volume/CosmicWebDensitySourceEntry': 'cosmicWebDensity',
-  '@types/data/zoneOfAvoidance/ZoneOfAvoidanceSourceEntry': 'zoneOfAvoidance',
-  '@types/engine/BlackHoleInfo': 'blackHoles',
-  '@types/engine/SatelliteInfo': 'satellites',
-  '@types/engine/camera/DriverOutput': 'missions',
-  '@types/engine/subsystems/Label2DProducerOutput': 'galaxyCatalog',
-  '@types/loading/FamousCalibration': 'galaxyCatalog',
-  '@types/loading/FamousStarMetaEntry': 'starCatalog',
-  '@types/missions/MissionEvent': 'missions',
-  '@types/rendering/VolumeFieldLiveness': 'cosmicWebDensity',
-  '@types/rendering/bodyPickRenderer/BodyGlintPick': 'body',
-  '@types/satellites/SatelliteCatalog': 'satellites',
-  '@types/scene/BodyTextureSpec': 'body',
-  '@types/scene/ColourGrade': 'body',
-  '@types/scene/HeightTileHeader': 'body',
-  '@types/scene/LonLatBounds': 'body',
-  '@types/scene/TransientBodyId': 'satellites',
-  '@types/settings/FlowSettings': 'flow',
-  '@types/settings/ProvenanceAxisId': 'galaxyCatalog',
-  '@types/settings/ProvenanceAxisSettings': 'galaxyCatalog',
-  '@types/settings/ProvenanceFilter': 'galaxyCatalog',
-  '@types/settings/VolumeFieldSettings': 'cosmicWebDensity',
-};
+/** `src/@types/a/B.d.ts` → `@types/a/B`, the shape `typesModulesOf` yields. */
+function typeKeyOf(file: string): string {
+  return file.replace(/^src\//, '').replace(/(\.d)?\.tsx?$/, '');
+}
 
-describe("a src/@types file only one Layer imports lives in that Layer's @types/", () => {
-  it('matches its ALLOWED row exactly', () => {
+/**
+ * Every `src/@types/` module only one Layer reaches, with that Layer. A `src/@types/` importer
+ * counts as `core` (moving the type would make core import a Layer) unless it is itself Layer-
+ * owned, then as its owner, since the two move together. Iterated to a fixed point: ownership
+ * only grows, as a set without `core` never changes.
+ */
+function layerOwnedTypes(): Map<string, string> {
+  const edges = walk('src').flatMap((file) => typesModulesOf(file).map((key) => [file, key] as const));
+  let owners = new Map<string, string>();
+  for (;;) {
     const areasByType = new Map<string, Set<string>>();
-    for (const file of walk('src').filter((f) => !f.startsWith('src/@types/'))) {
-      for (const key of typesModulesOf(file)) {
-        const areas = areasByType.get(key) ?? new Set<string>();
-        areas.add(areaOf(file));
-        areasByType.set(key, areas);
-      }
+    for (const [file, key] of edges) {
+      const area = file.startsWith('src/@types/')
+        ? (owners.get(typeKeyOf(file)) ?? 'core')
+        : areaOf(file);
+      areasByType.set(key, (areasByType.get(key) ?? new Set<string>()).add(area));
     }
-    const owned = new Map(
+    const next = new Map(
       [...areasByType]
         .filter(([, areas]) => areas.size === 1 && !areas.has('core'))
         .map(([key, areas]) => [key, [...areas][0]!] as const),
     );
+    if (next.size === owners.size) return next;
+    owners = next;
+  }
+}
+
+// Today's `src/@types/` files only one Layer reaches. Exact: a new one fails, and so does a row
+// that stopped being one; each clears by a move (a row only another row imports moves with it),
+// so a move-only PR empties it (docs/BACKLOG.md).
+const LAYER_OWNED_TYPES_ALLOWED: Readonly<Record<string, string>> = {
+  '@types/data/BodyTextureKey': 'body',
+  '@types/data/BodyTextureSlotKey': 'body',
+  '@types/data/SurfaceEffect': 'body',
+  '@types/data/blackHole/BlackHoleId': 'blackHoles',
+  '@types/data/filament/FilamentCloud': 'cosmicWebFilaments',
+  '@types/data/flow/FlowFieldDefaults': 'flow',
+  '@types/data/flow/FlowMode': 'flow',
+  '@types/data/galaxyCatalog/GalaxyCatalogColumn': 'galaxyCatalog',
+  '@types/data/galaxyCatalog/GalaxyCatalogFieldSpec': 'galaxyCatalog',
+  '@types/data/shellMesh/ShellMesh': 'localBubble',
+  '@types/data/shellMesh/ShellMeshDtype': 'localBubble',
+  '@types/data/structure/structureCatalog/StructureCatalog': 'structure',
+  '@types/data/volume/CosmicWebDensityFieldId': 'cosmicWebDensity',
+  '@types/engine/BlackHoleInfo': 'blackHoles',
+  '@types/engine/SatelliteInfo': 'satellites',
+  '@types/loading/FamousStarMetaEntry': 'starCatalog',
+  '@types/missions/MissionEvent': 'missions',
+  '@types/satellites/SatelliteCatalog': 'satellites',
+  '@types/scene/BodyTextureSpec': 'body',
+  '@types/scene/ChromaCalibration': 'body',
+  '@types/scene/ColourGrade': 'body',
+  '@types/scene/ColourTreatment': 'body',
+  '@types/scene/HeightTileHeader': 'body',
+  '@types/scene/LonLatBounds': 'body',
+  '@types/settings/FlowSettings': 'flow',
+  '@types/settings/ProvenanceAxisSettings': 'galaxyCatalog',
+  '@types/settings/ProvenanceFilter': 'galaxyCatalog',
+};
+
+describe("a src/@types file only one Layer imports lives in that Layer's @types/", () => {
+  it('matches its ALLOWED row exactly', () => {
+    const owned = layerOwnedTypes();
     const offenders = [
       ...[...owned]
         .filter(([key, layer]) => LAYER_OWNED_TYPES_ALLOWED[key] !== layer)
