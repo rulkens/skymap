@@ -256,9 +256,11 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         playback: clip,
         terrainHeightAt: ctx.terrainHeightAt,
       });
+      const { fov } = evaluated.channels;
       return {
         pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies, ctx.terrainHeightAt),
         memory: settledMemory(mem),
+        ...(fov === undefined ? {} : { lens: fov }),
       };
     },
   },

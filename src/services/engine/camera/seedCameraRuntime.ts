@@ -45,6 +45,7 @@ export function seedCameraRuntime(args: {
     scheme: settings.cameraControls.scheme,
     own: {},
     pivotBody: null,
+    drivenLens: null,
     shiftNdc: [0, 0],
     outputs: {
       displayed: pose,

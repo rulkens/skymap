@@ -44,6 +44,8 @@ export type CameraRuntime = {
   readonly own: Readonly<Partial<Record<DriverId, unknown>>>;
   /** The last winner's `pivotBody`: the wheel's pivot over the focus while it frames a body. */
   readonly pivotBody: SceneBodyId | null;
+  /** Last frame's driver-drawn lens (a clip's `fov`), committed to `camera.lens` when that row hands off. */
+  readonly drivenLens: number | null;
   /** The lens shift drawn last frame, in NDC: eased toward the covers' target, so it is memory. */
   readonly shiftNdc: Readonly<Vec2>;
   readonly outputs: FrameOutputs;
