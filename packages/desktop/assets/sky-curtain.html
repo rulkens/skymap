@@ -28,36 +28,70 @@
         }
       }
       /* Held back, so a quick reload stays plain black and only a real wait says it is loading. */
-      p {
+      main {
         position: absolute;
         inset: 0;
         margin: auto;
-        width: 16em;
         height: fit-content;
+        display: grid;
+        justify-items: center;
+        gap: 2.4vmin;
+        font-family: system-ui, sans-serif;
+        color: #fff;
         text-align: center;
-        font:
-          400 2.4vmin/1.4 system-ui,
-          sans-serif;
-        letter-spacing: 0.04em;
-        color: rgba(255, 255, 255, 0.7);
         opacity: 0;
         animation: show 600ms ease-out 600ms forwards;
       }
-      p::after {
-        content: '';
-        display: block;
-        height: 2px;
-        margin-top: 1em;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent) 0 0 /
-          40% 100% no-repeat;
-        animation: sweep 1.6s ease-in-out infinite;
+      /* A star with a planet on its orbit. */
+      .orbit {
+        position: relative;
+        width: 12vmin;
+        height: 12vmin;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 50%;
+        animation: spin 2.4s linear infinite;
       }
-      @keyframes sweep {
-        from {
-          background-position: -60% 0;
-        }
+      .orbit::before,
+      .orbit::after {
+        content: '';
+        position: absolute;
+        border-radius: 50%;
+      }
+      .orbit::before {
+        inset: 0;
+        margin: auto;
+        width: 2.4vmin;
+        height: 2.4vmin;
+        background: #ffd98a;
+        box-shadow: 0 0 2.4vmin #ffb84d;
+      }
+      .orbit::after {
+        top: -0.8vmin;
+        left: calc(50% - 0.8vmin);
+        width: 1.6vmin;
+        height: 1.6vmin;
+        background: #8ec5ff;
+        box-shadow: 0 0 1vmin #8ec5ff;
+      }
+      h1 {
+        margin: 1.2vmin 0 0;
+        font-size: 3.2vmin;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+      }
+      p {
+        margin: 0;
+        min-height: 1.4em;
+        font-size: 2.2vmin;
+        color: rgba(255, 255, 255, 0.6);
+        transition: opacity 400ms ease;
+      }
+      p.out {
+        opacity: 0;
+      }
+      @keyframes spin {
         to {
-          background-position: 160% 0;
+          transform: rotate(1turn);
         }
       }
       @keyframes show {
@@ -66,19 +100,57 @@
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        html {
+        html,
+        main,
+        .orbit {
           animation: none;
           transition: none;
-        }
-        p,
-        p::after {
-          animation: none;
           opacity: 1;
+        }
+        p {
+          transition: none;
         }
       }
     </style>
   </head>
   <body>
-    <p>Loading the sky</p>
+    <main>
+      <div class="orbit" aria-hidden="true"></div>
+      <h1>Loading the universe</h1>
+      <p role="status"></p>
+    </main>
+    <script>
+      // A joke every few seconds, so a long wait visibly moves; the start is random so a restart
+      // does not repeat the same line.
+      const LINES = [
+        'Counting the galaxies, twice to be sure',
+        'Polishing the rings of Saturn',
+        'Untangling the cosmic web',
+        'Waiting for light from far away',
+        'Herding stray photons',
+        'Dusting off the Milky Way',
+        'Asking dark matter to show itself',
+        'Folding spacetime for delivery',
+        'Lighting a few hundred billion stars',
+        'Tuning the redshift',
+        'Putting the Moon in its phase',
+        'Reminding Pluto it is still loved',
+        'Sweeping up the asteroid belt',
+        'Untwisting the spiral arms',
+      ];
+      const line = document.querySelector('p');
+      let at = Math.floor(Math.random() * LINES.length);
+      line.textContent = `${LINES[at]}…`;
+      const fades = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      setInterval(() => {
+        at = (at + 1) % LINES.length;
+        if (!fades) return void (line.textContent = `${LINES[at]}…`);
+        line.classList.add('out');
+        setTimeout(() => {
+          line.textContent = `${LINES[at]}…`;
+          line.classList.remove('out');
+        }, 400);
+      }, 2600);
+    </script>
   </body>
 </html>
