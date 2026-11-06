@@ -642,6 +642,35 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     expect(h.state.cameraRuntime.navigator.velocity.zoom).toBe(-3);
   });
 
+  it('a wheel notch and a navigator zoom in one frame compound on the sky lens', () => {
+    // The nudge must read the lens the drain left, and its setLens must land
+    // after the drain's, or the notch is overwritten.
+    const h = makeCameraSimHarness();
+    h.store.dispatch(setControlScheme('openspace'));
+    h.store.dispatch(setFrictionOn({ group: 'zoom', on: false }));
+    h.frame(2);
+    const sky: StepInputs['rootState']['camera']['base'] = {
+      frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
+      pose: { azimuthRad: 1, altitudeRad: 0.3 },
+    };
+    h.store.dispatch(commitCameraPose(sky));
+    const lens = h.store.getState().camera.lens;
+    const dtS = 0.016;
+    const navZoom = Math.log(1.1);
+    h.state.cameraRuntime = {
+      ...h.state.cameraRuntime,
+      register: { ...h.state.cameraRuntime.register, pose: sky, winner: 'resting' },
+      navigator: {
+        velocity: { ...NAV_AT_REST.velocity, zoom: navZoom / dtS },
+        lastNowMs: nextNow(h) - dtS * 1000,
+      },
+    };
+    const out = stepWith(h, [{ kind: 'zoom', factor: 1.25, duringGesture: false, cursorPx: null }]);
+    const lenses = out.actions.filter((a) => setLens.match(a)).map((a) => a.payload as number);
+    expect(lenses).toHaveLength(2);
+    expect(lenses[1]).toBeCloseTo(lens * 1.25 * 1.1, 9);
+  });
+
   const worldOf = (pose: StepInputs['rootState']['camera']['base']) => {
     if (!isWorldArm(pose)) throw new Error('expected the world arm');
     return pose.pose;

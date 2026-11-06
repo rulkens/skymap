@@ -32,6 +32,8 @@ import type { CameraArmCtx } from '../../../../../../src/@types/camera/arms/Came
 import type { SceneBodyId } from '../../../../../../src/@types/scene/SceneBodyId';
 import type { SkySpot } from '../../../../../../src/@types/camera/pose/SkySpot';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
+import type { DragMode } from '../../../../../../src/@types/camera/input/DragMode';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const EARTH = asSceneBodyId('earth');
@@ -78,12 +80,31 @@ const framed = (azimuthRad: number, altitudeRad: number, frame = FRAME): FramedP
 
 const withLens = (fovYRad: number): CameraArmCtx => ({ ...ctxFor(EARTH), fovYRad });
 
-const drag = (dx: number, dy: number): InputStep => ({
+const drag = (
+  dx: number,
+  dy: number,
+  mode: DragMode = 'orbit',
+  from: Vec2 = [50, 50],
+): InputStep => ({
   kind: 'drag',
-  mode: 'orbit',
-  startPx: [50, 50],
-  endPx: [50 + dx, 50 + dy],
+  mode,
+  startPx: from,
+  endPx: [from[0] + dx, from[1] + dy],
 });
+
+/** The body-fixed direction under pixel `px` (y down) through a right | up | forward basis. */
+const rayAt = (m: Mat3, px: Readonly<Vec2>, f: number, centre: number): Vec3 => {
+  const x = (px[0] - centre) / f;
+  const y = (centre - px[1]) / f;
+  return [0, 1, 2].map((i) => m[6 + i]! + x * m[i]! + y * m[3 + i]!) as unknown as Vec3;
+};
+
+/** Where body-fixed direction `d` lands on screen through basis `m`. */
+const pixelOf = (m: Mat3, d: Vec3, f: number, centre: number): Vec2 => {
+  const along = (col: number): number => d[0] * m[col]! + d[1] * m[col + 1]! + d[2] * m[col + 2]!;
+  const z = along(6);
+  return [centre + (f * along(0)) / z, centre - (f * along(3)) / z];
+};
 
 const wheel = (factor: number): InputStep => ({
   kind: 'zoom',
@@ -159,7 +180,32 @@ describe('the sky arm', () => {
       const down = ROW.step(null, EMPTY_TILT_MEMORY, start, drag(0, 40), ctx).pose;
       expect(down.altitudeRad).toBeCloseTo(40 * perPx, 12);
       expect(down.azimuthRad).toBe(AZ);
+      // A right-drag (pan) looks exactly as a left-drag does.
+      expect(ROW.step(null, EMPTY_TILT_MEMORY, start, drag(40, 40, 'pan'), ctx).pose).toEqual(
+        ROW.step(null, EMPTY_TILT_MEMORY, start, drag(40, 40), ctx).pose,
+      );
     }
+    // The point of the sky under the pointer stays under it: a sign flip moves it
+    // twice the drag the wrong way, while the linear gain law is off only to
+    // second order in the drag's angle.
+    const ctx = withLens(degToRad(60));
+    const centre = ctx.viewportPx[1] / 2;
+    const f = centre / Math.tan(ctx.fovYRad / 2);
+    const start = framed(AZ, 0);
+    const p0: Vec2 = [52, 48];
+    const d: Vec2 = [20, 12];
+    const before = ROW.toParent(start, ctx).pose.basisLocal;
+    const after = ROW.toParent(
+      {
+        frame: FRAME,
+        pose: ROW.step(null, EMPTY_TILT_MEMORY, start, drag(d[0], d[1], 'orbit', p0), ctx).pose,
+      },
+      ctx,
+    ).pose.basisLocal;
+    const landed = pixelOf(after, rayAt(before, p0, f, centre), f, centre);
+    const tolerancePx = 0.15 * Math.hypot(d[0], d[1]);
+    expect(Math.abs(landed[0] - (p0[0] + d[0]))).toBeLessThan(tolerancePx);
+    expect(Math.abs(landed[1] - (p0[1] + d[1]))).toBeLessThan(tolerancePx);
   });
 
   it('altitude clamps at ±90° and azimuth stays free at the zenith', () => {

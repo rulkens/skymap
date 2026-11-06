@@ -1,8 +1,8 @@
 /**
  * The sky arm's wheel (spec §4.2): a notch scales the lens by the zoom factor the
  * body arm would spend (`f > 1` widens), inside [LENS_MIN_DEG, LENS_MAX_DEG].
- * A notch the clamp eats whole hands back `lensRad` itself, so the caller can
- * read "declined" off equality.
+ * A clamped notch returns the clamp bound, so a lens already at the bound comes
+ * back unchanged and the caller reads "declined" off equality.
  */
 
 import { LENS_MAX_DEG } from '../../../../../../data/camera/lensMaxDeg';
