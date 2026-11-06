@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
-// StarDetailCard — rendering tests for the one star panel, a case per
-// `detail.kind`. The card is the only place a star's rows are chosen, so a
+// StarDetailCard — rendering tests for the one star panel, a case per block
+// (each `detail.kind`, and a curated sidecar entry). The card is the only place a star's rows are chosen, so a
 // mis-wired arm shows up here rather than only in the browser. Asserting
 // rendered text keeps the contract stable against CSS-module class mangling.
 
@@ -63,7 +63,7 @@ const rigel: StarInfo = {
   y: 0,
   z: 0,
   distancePc: 264.6,
-  detail: { kind: 'curated', meta: rigelMeta },
+  detail: { kind: 'none' },
 };
 
 describe('StarDetailCard', () => {
@@ -98,7 +98,7 @@ describe('StarDetailCard', () => {
   });
 
   it('curated: the card shot, aliases, the sidecar rows, description and Wikipedia link', () => {
-    render(createElement(StarDetailCard, { target: rigel }));
+    render(createElement(StarDetailCard, { target: rigel, curated: rigelMeta }));
 
     // Rigel has a featured card, and its card id IS its focus id — so the shot
     // resolves off the star's own id, with the lead rows beside it.

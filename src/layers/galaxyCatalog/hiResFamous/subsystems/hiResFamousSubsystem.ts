@@ -35,6 +35,7 @@
  */
 
 import { Source } from '../../../../data/source';
+import { FAMOUS_GALAXY_NAMES } from '../../famousGalaxies/data/famousGalaxyNames.generated';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { cartesianToRaDec } from '../../../../utils/math/index';
 import { fetchGalaxyBitmap } from '../../thumbnailAtlas/utils/fetchGalaxyBitmap';
@@ -101,7 +102,7 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
   function runFrame(input: HiResFamousFrameInput): HiResFamousFrameOutput {
     if (destroyed) return lastOutput;
 
-    const { cam, catalogs, visibleCatalogs, pxPerRad, famousGalaxiesMeta } = input;
+    const { cam, catalogs, visibleCatalogs, pxPerRad } = input;
 
     byFamousIdx.clear();
 
@@ -159,7 +160,7 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
       // the curated 128 px tile.  Without this gate, LRU eviction would
       // wipe the texture-side `failed` flag and we'd re-fetch on every
       // subsequent frame the galaxy spent above the trigger band.
-      const famousId = famousGalaxiesMeta[i]?.id;
+      const famousId = FAMOUS_GALAXY_NAMES[i]?.id;
       if (famousId && failedFamousIds.has(famousId)) {
         byFamousIdx.set(i, { hiResLayerIdx: -1, hiResCrossfadeAlpha: 0 });
         continue;
@@ -192,9 +193,8 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
       // permanent failures don't get retried every frame.
       if (!loaded && !failed && !inFlight.has(key)) {
         const raDec = cartesianToRaDec(x, y, z);
-        // Defensive: if the meta is missing or the entry has no id, we
-        // can't construct a hi-res fetch URL.  Skip without marking
-        // failed — the meta may simply not be loaded yet.
+        // A row past the compiled-in table (a `famous.bin` newer than the
+        // bundle) has no id to build a fetch URL from; skip it, unmarked.
         if (!famousId) continue;
         inFlight.add(key);
         fetcher({

@@ -23,8 +23,9 @@ export type SelectionKindFacts<
    */
   mayHaveLabel(ref: Ref): boolean;
   /**
-   * The InfoCard's view-model for a stored row, carrying its `ref`. Pure, for memoised selectors:
-   * a kind's sidecar data rides the row (joined in its `extractRow`), never a second input.
+   * The InfoCard's view-model for a stored row, carrying its `ref`. Pure, for memoised selectors.
+   * A lazily loaded sidecar is no input here: the kind's card container reads it off its Layer's
+   * facts by id, so a sidecar landing after the row still reaches the card.
    */
   toFocusable(row: Row): Target;
   /** The name the target's card headlines; the dome remote shows it too. */

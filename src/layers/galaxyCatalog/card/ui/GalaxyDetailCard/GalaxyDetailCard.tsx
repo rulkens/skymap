@@ -1,7 +1,8 @@
 /**
  * GalaxyDetailCard — rich panel for a focused galaxy: name + galaxy catalog badge,
- * curated description (famous only), catalogue links, thumbnail + cosmology
- * summary, and an expandable block of reference figures.
+ * curated description and morphology (a famous galaxy's sidecar entry, joined by
+ * its container), catalogue links, thumbnail + cosmology summary, and an
+ * expandable block of reference figures.
  *
  * The outer wrapper's tag + className stays stable across galaxy hover ↔ pin
  * transitions so the native `<details>` "More details" open state survives
@@ -11,6 +12,8 @@
 import { Fragment, type ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyInfo } from '../../../../../@types/engine/GalaxyInfo';
+import type { FamousGalaxyMetaEntry } from '../../../../../@types/loading/FamousGalaxyMetaEntry';
+import { formatMorphology } from '../../../../../utils/format/formatMorphology';
 import { formatDistance } from '../../../../../utils/format/formatDistance';
 import { formatDiameterKpc } from '../../../../../utils/format/formatDiameterKpc';
 import { formatLookback } from '../../../../../utils/format/formatLookback';
@@ -27,6 +30,8 @@ import local from './GalaxyDetailCard.module.css';
 
 export type GalaxyDetailCardProps = {
   target: GalaxyInfo;
+  /** A famous galaxy's sidecar entry, once it has landed. */
+  curated?: FamousGalaxyMetaEntry;
   isPinned?: boolean;
   layout?: CardLayout;
   onFocus?: () => void;
@@ -35,6 +40,7 @@ export type GalaxyDetailCardProps = {
 
 function GalaxyDetailCard({
   target,
+  curated,
   isPinned = false,
   layout = 'panel',
   onFocus,
@@ -79,9 +85,9 @@ function GalaxyDetailCard({
         onClose={isPinned ? onClose : undefined}
       />
 
-      {target.famous?.description && (
+      {curated?.description && (
         <div className={styles.cardSection}>
-          <DescriptionBlock text={target.famous.description} />
+          <DescriptionBlock text={curated.description} />
         </div>
       )}
 
@@ -103,7 +109,7 @@ function GalaxyDetailCard({
             </InfoTip>
           </div>
           <div className={styles.cardTypeLine}>
-            {target.morphology ?? target.galaxyType.description}
+            {curated?.type ? formatMorphology(curated.type) : target.galaxyType.description}
           </div>
         </div>
       </div>

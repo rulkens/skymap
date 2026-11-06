@@ -11,7 +11,8 @@ import { quote } from '../utils/codegen/quote';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
 import type { FamousEntry } from '../parsers/famousSeed';
 
-const GENERATED_PATH = 'src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated.ts';
+const GENERATED_PATH =
+  'src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated.ts';
 
 export async function writeFamousGalaxyNames(entries: readonly FamousEntry[]): Promise<void> {
   const rows = entries

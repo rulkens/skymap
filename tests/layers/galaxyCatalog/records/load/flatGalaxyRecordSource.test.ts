@@ -15,7 +15,7 @@ import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog
 import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 
 const sourceOver = (source: GalaxyCatalogSourceType, catalog: GalaxyCatalog) =>
-  flatGalaxyRecordSource(GALAXY_CATALOG_SOURCE_RECORD[source], catalog, () => []);
+  flatGalaxyRecordSource(GALAXY_CATALOG_SOURCE_RECORD[source], catalog);
 
 describe('flatGalaxyRecordSource', () => {
   it('stats equal the per-tier values', () => {

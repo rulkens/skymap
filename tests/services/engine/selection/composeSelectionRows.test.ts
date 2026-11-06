@@ -28,6 +28,7 @@ import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types
 import { NO_KINDS_OFF } from '../../../support/noKindsOff';
 import { testPickCode } from '../../../support/testPickCode';
 import { Source } from '../../../../src/data/source';
+import { FAMOUS_GALAXY_NAMES } from '../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -103,10 +104,10 @@ const galaxies: GalaxyRowFixture = {
     [Source.TwoMRS, makeCloud(2789n, [0, 1, 0])],
     [Source.FamousGalaxy, makeCloud(0n, [1, 0, 0])],
   ]),
-  famousMeta: [
-    { id: 'm31', names: ['M31', 'Andromeda'], description: 'The Andromeda Galaxy', type: 'Sb' },
-  ],
 } as GalaxyRowFixture;
+
+/** Famous catalog row 0's compiled-in id: the one-row famous cloud above is that row. */
+const FAMOUS_ID = FAMOUS_GALAXY_NAMES[0]!.id;
 
 /** The same fixture with only the named sources loaded. */
 function galaxiesWith(...sources: readonly SourceType[]): GalaxyRowFixture {
@@ -403,7 +404,7 @@ describe('resolveFocusId, composed', () => {
   });
 
   it('famous id → galaxy ref; unknown famous id → null', () => {
-    expect(resolver.resolveFocusId('m31')).toEqual({
+    expect(resolver.resolveFocusId(FAMOUS_ID)).toEqual({
       type: 'galaxyCatalog',
       source: Source.FamousGalaxy,
       index: 0,
@@ -412,14 +413,13 @@ describe('resolveFocusId, composed', () => {
   });
 
   it('an unloaded famous id is unclaimed by the cloud, decoding to null (claimed, not resolved)', () => {
-    // Meta present but the FamousGalaxy cloud absent: claimed (matches the
-    // permissive id class + meta scan) but decode returns null — D6'2's
-    // deferral, not an unclaimed miss.
+    // A compiled-in id but the FamousGalaxy cloud absent: claimed but decode
+    // returns null — D6'2's deferral, not an unclaimed miss.
     const noCloud = selectionResolverOver(
       structures,
       galaxiesWith(Source.SDSS, Source.Glade, Source.TwoMRS),
     );
-    expect(noCloud.resolveFocusId('m31')).toBeNull();
+    expect(noCloud.resolveFocusId(FAMOUS_ID)).toBeNull();
   });
 
   it('galaxy-cluster-<seed> → structure ref with the durable id', () => {
@@ -533,7 +533,7 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
   it('FamousGalaxy ref → famous seed id → same ref', () => {
     const ref: SelectionRefBase = { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: 0 };
     const id = resolver.focusIdOf(ref);
-    expect(id).toBe('m31');
+    expect(id).toBe(FAMOUS_ID);
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
   });
 

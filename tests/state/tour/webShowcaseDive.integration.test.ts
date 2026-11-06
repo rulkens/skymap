@@ -27,7 +27,7 @@
  * which is simpler and faster than running the full saga: the resolved clip is
  * plain data whose structure we can inspect without any async machinery. The
  * deps stub is minimal — Virgo resolves via `structures.byId`, M87 resolves
- * via `famousMeta` + a one-row FamousGalaxy cloud.
+ * via its compiled-in id + a FamousGalaxy cloud.
  *
  * Assertion 3 wires `watchFocusTweenSaga` into a real Redux store via
  * `sagaMiddleware`, then uses `clipStarted` to activate a clip and
@@ -48,6 +48,7 @@ import { updateSelectionFocus } from '../../../src/state/selection/selectionSlic
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 
 import { Source } from '../../../src/data/source';
+import { FAMOUS_GALAXY_NAMES } from '../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
@@ -81,24 +82,26 @@ function collectNodes(effects: Effect[]): Effect[] {
 
 // ─── Stubs ───────────────────────────────────────────────────────────────────
 
-/** Minimal one-row FamousGalaxy cloud for resolving 'm87' via famousGalaxiesMeta. */
-const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
-  positions: new Float32Array([1, 0, 0]),
-  spectroscopicZ: new Float32Array([0.004]),
-  magU: new Float32Array([9]),
-  magG: new Float32Array([8.6]),
-  magR: new Float32Array([8.6]),
-  magI: new Float32Array([8.6]),
-  magZ: new Float32Array([8.6]),
-  objIDs: new BigUint64Array([41361n]),
-  diameterKpc: new Float32Array([40]),
-  axisRatio: new Float32Array([0.85]),
-  positionAngleDeg: new Float32Array([155]),
+/** A FamousGalaxy cloud long enough to hold 'm87' at its compiled-in row; every row is M87. */
+const M87_ROWS = FAMOUS_GALAXY_NAMES.findIndex((name) => name.id === 'm87') + 1;
+const filled = (value: number) => new Float32Array(M87_ROWS).fill(value);
+const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(M87_ROWS, {
+  positions: Float32Array.from({ length: M87_ROWS * 3 }, (_, i) => (i % 3 === 0 ? 1 : 0)),
+  spectroscopicZ: filled(0.004),
+  magU: filled(9),
+  magG: filled(8.6),
+  magR: filled(8.6),
+  magI: filled(8.6),
+  magZ: filled(8.6),
+  objIDs: new BigUint64Array(M87_ROWS).fill(41361n),
+  diameterKpc: filled(40),
+  axisRatio: filled(0.85),
+  positionAngleDeg: filled(155),
 });
 
 /**
- * Structure store stub: Virgo resolves via `byId`, M87 via `famousMeta` +
- * the one-row FamousGalaxy cloud. All other catalogs return undefined.
+ * Structure store stub: Virgo resolves via `byId`, M87 via its compiled-in id +
+ * the FamousGalaxy cloud. All other catalogs return undefined.
  */
 const DIVE_STRUCTURES: StructureRowFixture = {
   byId: (id) =>
@@ -115,18 +118,8 @@ const DIVE_STRUCTURES: StructureRowFixture = {
   byCategory: () => [],
 };
 
-/** The galaxyCatalog Layer's slice: the one-row M87 famous cloud + its sidecar. */
-const DIVE_GALAXIES = {
-  catalogs: new Map([[Source.FamousGalaxy, M87_CLOUD]]),
-  famousMeta: [
-    {
-      id: 'm87',
-      names: ['M87', 'Virgo A', 'NGC 4486'],
-      description: 'Giant elliptical',
-      type: 'galaxy',
-    },
-  ],
-} as unknown as GalaxyRowFixture;
+/** The galaxyCatalog Layer's slice: the famous cloud M87 resolves into. */
+const DIVE_GALAXIES: GalaxyRowFixture = { catalogs: new Map([[Source.FamousGalaxy, M87_CLOUD]]) };
 
 const DIVE_SELECTION = selectionResolverOver(DIVE_STRUCTURES, DIVE_GALAXIES);
 

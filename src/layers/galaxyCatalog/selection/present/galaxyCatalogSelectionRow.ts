@@ -12,12 +12,13 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { encodeGalaxyId } from '../../../../services/url/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../../utils/math/cartesianToRaDec';
 import { placedGalaxyRow } from '../utils/placedGalaxyRow';
+import { FAMOUS_GALAXY_NAMES } from '../../famousGalaxies/data/famousGalaxyNames.generated';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 import type { GalaxyCatalogRef } from '../../@types/GalaxyCatalogRef';
 
 /** The live reads every branch here makes; the runtime satisfies it. */
-type Records = Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'famousMeta' | 'pickCodes'>;
+type Records = Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'pickCodes'>;
 
 /** Strict pos@ form, anchored at both ends: `<ra>,<dec>` (legacy) or `<ra>,<dec>,<dMpc>`. */
 const POS_RE = /^pos@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,(\d+(?:\.\d+)?))?$/;
@@ -48,7 +49,7 @@ export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<Ga
         id.startsWith('pgc-') ||
         id.startsWith('sdss-') ||
         id.startsWith('pos@') ||
-        runtime.famousMeta.some((m) => m.id === id),
+        FAMOUS_GALAXY_NAMES.some((m) => m.id === id),
       decode: (id) => {
         if (id.startsWith('pgc-') || id.startsWith('sdss-')) {
           return runtime.recordBridge.resolveDurableId(id);
@@ -70,14 +71,11 @@ export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<Ga
   };
 }
 
+/** A compiled-in id resolves once `famous.bin` is resident; the meta sidecar is not waited on. */
 function resolveFamous(id: string, deps: Records): GalaxyCatalogRef | null {
-  for (let i = 0; i < deps.famousMeta.length; i++) {
-    if (deps.famousMeta[i]!.id === id) {
-      if (!deps.records.has(Source.FamousGalaxy)) return null;
-      return { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: i };
-    }
-  }
-  return null;
+  const index = FAMOUS_GALAXY_NAMES.findIndex((m) => m.id === id);
+  if (index < 0 || !deps.records.has(Source.FamousGalaxy)) return null;
+  return { type: 'galaxyCatalog', source: Source.FamousGalaxy, index };
 }
 
 function encodeGalaxy(ref: GalaxyCatalogRef, deps: Records): string | null {

@@ -42,7 +42,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 // dereferencing this — the default for tests that never seed a galaxy ref.
 /** The galaxyCatalog Layer's slice with nothing loaded — the default for the
  * cases that never seed a galaxy ref. */
-const NO_GALAXIES = { catalogs: new Map(), famousMeta: [] } as unknown as GalaxyRowFixture;
+const NO_GALAXIES = { catalogs: new Map() } as unknown as GalaxyRowFixture;
 
 // ─── Cloud fixture ─────────────────────────────────────────────────────────────
 
@@ -129,7 +129,6 @@ describe('watchTierSaga', () => {
       get catalogs() {
         return new Map([[Source.SDSS, currentCloud]]);
       },
-      famousMeta: [],
     } as unknown as GalaxyRowFixture;
 
     store = buildStore(galaxies);
@@ -178,7 +177,6 @@ describe('watchTierSaga', () => {
       get catalogs() {
         return new Map([[Source.SDSS, currentCloud]]);
       },
-      famousMeta: [],
     } as unknown as GalaxyRowFixture;
 
     store = buildStore(galaxies);

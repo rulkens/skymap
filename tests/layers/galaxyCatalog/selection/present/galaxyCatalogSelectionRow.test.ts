@@ -10,7 +10,7 @@ import { fakePickCode } from '../../../../support/fakePickCode';
 /** Every catalog loaded, under codes from 40 up: no code equals any `Source` value. */
 function rowOverAllCatalogs() {
   const catalogs = new Map(GALAXY_CATALOG_SOURCES.map((s) => [s, makeGalaxyCatalog(16)] as const));
-  return galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs, famousMeta: [] }, fakePickCode()));
+  return galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs }, fakePickCode()));
 }
 
 describe('galaxyCatalogSelectionRow pick codes', () => {

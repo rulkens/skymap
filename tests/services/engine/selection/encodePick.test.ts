@@ -79,7 +79,7 @@ describe('SelectionKindRow.encodePick', () => {
     ).toEqual(star);
     const galaxy = { type: 'galaxyCatalog', source: Source.SDSS, index: 12 } as const;
     const catalogs = new Map([[Source.SDSS, makeGalaxyCatalog(16)]]);
-    const row = galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs, famousMeta: [] }));
+    const row = galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs }));
     expect(roundTrip(row, galaxy)).toEqual(galaxy);
   });
 

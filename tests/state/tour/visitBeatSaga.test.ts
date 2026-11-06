@@ -44,6 +44,7 @@ import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tour
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { Source } from '../../../src/data/source';
+import { FAMOUS_GALAXY_NAMES } from '../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -187,7 +188,8 @@ describe('visitBeatSaga', () => {
 
     let cloudLoaded = false;
 
-    const FAMOUS_ID = 'm87';
+    // Row 0 of the one-row famous cloud below is the compiled-in table's row 0.
+    const FAMOUS_ID = FAMOUS_GALAXY_NAMES[0]!.id;
     const CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
       positions: new Float32Array([1, 0, 0]),
       spectroscopicZ: new Float32Array([0.01]),
@@ -207,7 +209,6 @@ describe('visitBeatSaga', () => {
       get catalogs() {
         return cloudLoaded ? new Map([[Source.FamousGalaxy, CLOUD]]) : new Map();
       },
-      famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 }],
     } as unknown as GalaxyRowFixture;
 
     const famousBeat: BeatData = {

@@ -71,7 +71,7 @@ function casesUnder(allocator: PickCodeAllocator) {
     kind(
       galaxyCatalogSelectionRow(
         galaxyRowRuntime(
-          { catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(16)]]), famousMeta: [] },
+          { catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(16)]]) },
           pickCode('galaxyCatalog'),
         ),
       ),

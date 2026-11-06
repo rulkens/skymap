@@ -113,7 +113,6 @@ describe('watchSelectionRowsSaga', () => {
       get catalogs() {
         return cloudPresent ? new Map([[Source.SDSS, makeCloud()]]) : new Map();
       },
-      famousMeta: [],
     } as unknown as GalaxyRowFixture;
     const structures: StructureRowFixture = { byId: () => structure, byCategory: () => [] };
     // The starCatalog Layer's slice of the composed resolver, read LIVE like

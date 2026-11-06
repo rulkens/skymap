@@ -15,7 +15,6 @@ import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { GalaxyRowFixture, StarRowFixture } from './selectionResolverOver';
 import type { StructureStore } from '../../src/layers/structure/catalog/@types/StructureStore';
-import type { FamousStarMetaEntry } from '../../src/@types/loading/FamousStarMetaEntry';
 
 /** The body Layer's `pickCodes`, as `create` builds them; pass `fakePickCode()` to catch a stamp that packs a catalog value. */
 export function bodyPickCodes(pickCode = testPickCode('body')) {
@@ -55,26 +54,19 @@ export const zoneOfAvoidancePickCode = (pickCode = testPickCode('zoneOfAvoidance
 export function galaxyRowRuntime(
   galaxies: GalaxyRowFixture,
   pickCode = testPickCode('galaxyCatalog'),
-): Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'famousMeta' | 'pickCodes'> {
-  const records = galaxyRecordsOver(galaxies.catalogs, () => galaxies.famousMeta);
+): Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'pickCodes'> {
+  const records = galaxyRecordsOver(galaxies.catalogs);
   return {
     records,
     recordBridge: galaxyRecordBridge(records),
-    famousMeta: galaxies.famousMeta,
     pickCodes: catalogPickCodes(GALAXY_CATALOG_SOURCE_ROWS, pickCode),
   };
 }
 
-/** The star selection row's reads over a fixture, the Layer's pick codes and a landed sidecar. */
+/** The star selection row's reads over a fixture, plus the Layer's pick codes. */
 export function starRowRuntime(
   stars: StarRowFixture,
   pickCode = testPickCode('starCatalog'),
-  famousStars: FamousStarMetaEntry[] = [],
-): Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams' | 'pickCodes' | 'famousStarsMeta'> {
-  const sidecar = { kind: 'ready', req: undefined, value: { meta: famousStars }, loadedAtMs: 0 };
-  return {
-    ...stars,
-    famousStarsMeta: { state: () => sidecar } as unknown as StarCatalogRuntime['famousStarsMeta'],
-    pickCodes: catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, pickCode),
-  };
+): Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams' | 'pickCodes'> {
+  return { ...stars, pickCodes: catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, pickCode) };
 }

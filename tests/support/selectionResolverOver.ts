@@ -21,7 +21,7 @@ import {
 export type StructureRowFixture = Pick<StructureStore, 'byId' | 'byCategory'>;
 
 /** The catalogs a galaxy fixture loads; `galaxyRowRuntime` builds the row's reads from them. */
-export type GalaxyRowFixture = Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
+export type GalaxyRowFixture = Pick<GalaxyCatalogRuntime, 'catalogs'>;
 
 /** What the starCatalog Layer's selection row reads; the real runtime satisfies it. */
 export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'>;

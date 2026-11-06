@@ -101,7 +101,6 @@ export function galaxyCatalogPlanner(
           catalogs: runtime.catalogs,
           visibleCatalogs,
           pxPerRad,
-          famousGalaxiesMeta: runtime.famousMeta,
         });
       }
 

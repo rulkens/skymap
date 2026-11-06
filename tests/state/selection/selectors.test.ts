@@ -184,7 +184,6 @@ const KIND_CASES = [
     galaxyCatalogSelectionRow(
       galaxyRowRuntime({
         catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(16)]]),
-        famousMeta: [],
       }),
     ),
     { type: 'galaxyCatalog', source: Source.SDSS, index: 12 },

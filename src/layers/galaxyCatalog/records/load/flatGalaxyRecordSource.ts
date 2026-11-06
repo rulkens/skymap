@@ -9,7 +9,6 @@ import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/Galaxy
 import type { GalaxyCatalogRegistryEntry } from '../../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogSourceEntry } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
 import type { GalaxyRecordSource } from '../@types/GalaxyRecordSource';
-import type { FamousGalaxyMetaEntry } from '../../../../@types/loading/FamousGalaxyMetaEntry';
 
 import { countEstimatedProvenance } from '../../provenance/utils/countEstimatedProvenance';
 import { galaxyMagOffset } from '../../appearance/utils/galaxyMagOffset';
@@ -21,7 +20,6 @@ import { extractGalaxyRow } from '../present/extractGalaxyRow';
 export function flatGalaxyRecordSource(
   entry: GalaxyCatalogRegistryEntry,
   catalog: GalaxyCatalog,
-  famousMeta: () => readonly FamousGalaxyMetaEntry[],
 ): GalaxyRecordSource {
   const source = entry.code;
   const count = catalog.count;
@@ -53,7 +51,7 @@ export function flatGalaxyRecordSource(
     pickOfOrdinal: resident,
     forEachResidentBlock: (visit) => visit(catalog, 0),
     hasDurableId: (id) => rowOfDurableId(id) >= 0,
-    loadRow: (ordinal) => extractGalaxyRow(catalog, ordinal, source, famousMeta()),
+    loadRow: (ordinal) => extractGalaxyRow(catalog, ordinal, source),
     resolveDurableId: (id) => resident(rowOfDurableId(id)),
     resolvePosition: (raDeg, decDeg, distMpc) =>
       resident(nearestRowByDirection(catalog.positions, count, raDeg, decDeg, distMpc)),

@@ -106,7 +106,7 @@ const SETTINGS_STUB = {
 
 // The selection row's reads: one SDSS catalog, codes far from every `Source` value.
 const ROW_RUNTIME = galaxyRowRuntime(
-  { catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]), famousMeta: [] },
+  { catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]) },
   fakePickCode(),
 );
 

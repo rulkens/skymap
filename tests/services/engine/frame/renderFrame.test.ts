@@ -326,7 +326,6 @@ function makeInput(
     // An SDSS catalog, for the selected-highlight case.
     ...galaxyRowRuntime({
       catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]),
-      famousMeta: [],
     }),
     pointRenderer: galaxyPointRenderer,
     proceduralDisks: { lastOutput: { instances: [] } },

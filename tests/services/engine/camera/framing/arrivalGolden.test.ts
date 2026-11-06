@@ -39,7 +39,6 @@ const galaxies = galaxyCatalogSelectionRow(
         }),
       ],
     ]),
-    famousMeta: [],
   }),
 );
 

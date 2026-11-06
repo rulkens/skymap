@@ -5,38 +5,11 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { apparentMagnitudeFromAbs } from '../../../../src/utils/star/apparentMagnitudeFromAbs';
 import { spectralClassFromBpRp } from '../../../../src/utils/star/spectralClassFromBpRp';
 import { starRowDriver } from '../../../fixtures/starRowDriver';
-import type { FamousStarMetaEntry } from '../../../../src/@types/loading/FamousStarMetaEntry';
 import type { StarCatalogSelectionRow } from '../../../../src/layers/starCatalog/@types/StarCatalogSelectionRow';
 
 const [kind] = starCatalogSelectionKinds;
 
 type StarRow = StarCatalogSelectionRow;
-
-const siriusMeta: FamousStarMetaEntry = {
-  id: 'sirius',
-  names: ['Sirius', 'Alpha Canis Majoris'],
-  constellation: 'Canis Major',
-  spectralType: 'A1V',
-  distancePc: 2.64,
-  magV: -1.46,
-  absMag: 1.42,
-  radiusSolar: 1.71,
-  temperatureK: 9940,
-  description: 'The brightest star in the night sky.',
-};
-
-const sunMeta: FamousStarMetaEntry = {
-  id: 'sun',
-  names: ['Sun', 'Sol'],
-  constellation: 'None',
-  spectralType: 'G2V',
-  distancePc: 0,
-  magV: -26.74,
-  absMag: 4.83,
-  radiusSolar: 1,
-  temperatureK: 5772,
-  description: 'The star at the heart of the Solar System.',
-};
 
 function starRow(
   source: StarRow['source'],
@@ -96,12 +69,10 @@ describe('starCatalog selection kind', () => {
   // carrying photometry, or a seeded star whose sidecar/orbit lookup broke, lands wrong here.
   it.each([
     ['survey photometry', gaiaRow, 'photometry'],
-    ['a curated sidecar entry', { ...siriusRow, famous: siriusMeta }, 'curated'],
     ['a compiled-in orbit', s2Row, 'orbit'],
-    // The Sun rides the same sidecar off its own seed file: curated, no arm of its own.
-    ['a curated entry from a second seed', { ...sunRow, famous: sunMeta }, 'curated'],
-    // Same star, extracted before the sidecar landed: the fail-soft path, not a loading state.
-    ['a curated star before its sidecar lands', siriusRow, 'none'],
+    // A seeded star's curated entry is the card container's join, never the target's.
+    ['a seeded star with no orbit', siriusRow, 'none'],
+    ['the Sun', sunRow, 'none'],
   ] as const)('star row with %s → detail.kind %s', (_label, row, detailKind) => {
     expect(kind!.toFocusable(row).detail.kind).toBe(detailKind);
   });

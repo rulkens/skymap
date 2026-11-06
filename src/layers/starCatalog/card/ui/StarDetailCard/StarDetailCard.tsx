@@ -1,15 +1,17 @@
 /**
  * StarDetailCard — rich panel for a selected star, from any catalog: the shared
- * detail layout, the rows every star has, then the one block its `detail`
- * carries. A featured star shows its card shot with the lead rows beside it; a
- * star with nothing to add renders its headline alone (one fail-soft path, no
- * loading branch). The outer wrapper's tag + className stay stable across
- * hover and pin so InfoCard keeps its DOM identity.
+ * detail layout, the rows every star has, then one block: the `curated` sidecar
+ * entry its container found, else the block its `detail` carries. A featured
+ * star shows its card shot with the lead rows beside it; a star with nothing to
+ * add renders its headline alone (one fail-soft path, no loading branch). The
+ * outer wrapper's tag + className stay stable across hover and pin so InfoCard
+ * keeps its DOM identity.
  */
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { StarInfo } from '../../../@types/StarInfo';
+import type { FamousStarMetaEntry } from '../../../../../@types/loading/FamousStarMetaEntry';
 import { SCALE_UNITS } from '../../../../../data/scaleUnits';
 import { deriveStarProperties } from '../../utils/deriveStarProperties';
 import { formatDistance } from '../../../../../utils/format/formatDistance';
@@ -31,8 +33,10 @@ import type { CardLayout } from '../../../../../@types/components/infoCard/CardL
 import styles from '../../../../../components/InfoCard/cardChrome.module.css';
 import local from './StarDetailCard.module.css';
 
-type StarDetailCardProps = {
+export type StarDetailCardProps = {
   target: StarInfo;
+  /** The seeded star's sidecar entry; outranks `target.detail` when present. */
+  curated?: FamousStarMetaEntry;
   isPinned?: boolean;
   layout?: CardLayout;
   onFocus?: () => void;
@@ -86,7 +90,7 @@ function photometryRows(detail: Extract<StarInfo['detail'], { kind: 'photometry'
  * because the shot's summary column already carries it.
  */
 function curatedRows(
-  meta: Extract<StarInfo['detail'], { kind: 'curated' }>['meta'],
+  meta: FamousStarMetaEntry,
   leadRows: readonly Extract<CardRowProps, { value: ReactNode }>[],
 ): ReactNode {
   return (
@@ -165,18 +169,15 @@ function orbitRows(orbit: Extract<StarInfo['detail'], { kind: 'orbit' }>['orbit'
   );
 }
 
-function detailBlock(
-  detail: StarInfo['detail'],
-  leadRows: readonly Extract<CardRowProps, { value: ReactNode }>[],
-): ReactNode {
+function detailBlock(detail: StarInfo['detail']): ReactNode {
   if (detail.kind === 'photometry') return photometryRows(detail);
-  if (detail.kind === 'curated') return curatedRows(detail.meta, leadRows);
   if (detail.kind === 'orbit') return orbitRows(detail.orbit);
   return null;
 }
 
 function StarDetailCard({
   target,
+  curated,
   isPinned = false,
   layout = 'panel',
   onFocus,
@@ -188,7 +189,7 @@ function StarDetailCard({
     layout === 'phone' && styles.chromeless,
   );
   const { detail } = target;
-  const aliases = detail.kind === 'curated' ? detail.meta.names.slice(1) : [];
+  const aliases = curated ? curated.names.slice(1) : [];
 
   // A card shot is keyed by the star's own focus id, so a seeded star finds it
   // without a lookup table. Gated on a curated entry: with no sidecar row there
@@ -196,7 +197,7 @@ function StarDetailCard({
   // column is worse than the headline-only fallback (a Gaia star has no id at
   // all, so it never has a shot).
   const shotId = target.id === null ? null : `${STAR_FOCUS_PREFIX}${target.id}`;
-  const hasShot = detail.kind === 'curated' && shotId !== null && SHOT_CARD_IDS.has(shotId);
+  const hasShot = curated !== undefined && shotId !== null && SHOT_CARD_IDS.has(shotId);
   // The phone sheet (chromeless) carries the shot in its header instead of beside the rows.
   const shotBeside = hasShot && layout === 'panel';
   const thumbnail = hasShot ? (
@@ -204,13 +205,13 @@ function StarDetailCard({
   ) : undefined;
 
   // The "where / how bright" rows: beside the shot as summary lines, or heading
-  // the curated block as CardRows. Distance is the star's own row for every
-  // other detail kind, below.
+  // the curated block as CardRows. A star with no curated entry gets its
+  // distance as a row of its own, below.
   const leadRows: Extract<CardRowProps, { value: ReactNode }>[] = [];
-  if (detail.kind === 'curated') {
+  if (curated) {
     leadRows.push({
       label: <InfoTip {...STAR_TIPS.constellation}>Constellation</InfoTip>,
-      value: detail.meta.constellation,
+      value: curated.constellation,
     });
     if (target.distancePc > 0) {
       leadRows.push({
@@ -221,11 +222,11 @@ function StarDetailCard({
     leadRows.push(
       {
         label: <InfoTip {...STAR_TIPS.starApparentMag}>Apparent mag (V)</InfoTip>,
-        value: detail.meta.magV.toFixed(2),
+        value: curated.magV.toFixed(2),
       },
       {
         label: <InfoTip {...STAR_TIPS.starAbsoluteMag}>Absolute mag</InfoTip>,
-        value: detail.meta.absMag.toFixed(2),
+        value: curated.absMag.toFixed(2),
       },
     );
   }
@@ -265,7 +266,7 @@ function StarDetailCard({
         />
       )}
 
-      {detail.kind !== 'curated' && target.distancePc > 0 && (
+      {!curated && target.distancePc > 0 && (
         <div className={styles.cardSection}>
           <CardRow
             label={<InfoTip {...STAR_TIPS.starDistance}>Distance</InfoTip>}
@@ -274,7 +275,7 @@ function StarDetailCard({
         </div>
       )}
 
-      {detailBlock(detail, shotBeside ? [] : leadRows)}
+      {curated ? curatedRows(curated, shotBeside ? [] : leadRows) : detailBlock(detail)}
     </div>
   );
 }

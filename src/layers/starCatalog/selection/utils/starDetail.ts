@@ -6,9 +6,8 @@ import type { StarCatalogSelectionRow } from '../../@types/StarCatalogSelectionR
 
 /**
  * Which block the star card renders, keyed on the row's own shape: catalogued photometry (the
- * survey bin quantises position + Gaia photometry and nothing else), a curated sidecar entry, a
- * compiled-in orbit, or nothing. A row extracted before the sidecar lands has no `famous`, so
- * "still loading" and "no entry" share the one fail-soft path.
+ * survey bin quantises position + Gaia photometry and nothing else), a compiled-in orbit, or
+ * nothing. A seeded star's curated sidecar entry is joined by the card's container instead.
  */
 export function starDetail(row: StarCatalogSelectionRow, distancePc: number): StarInfoDetail {
   if (row.absMag !== undefined && row.bpRp !== undefined) {
@@ -21,7 +20,6 @@ export function starDetail(row: StarCatalogSelectionRow, distancePc: number): St
     };
   }
   if (row.id === null) return { kind: 'none' };
-  if (row.famous) return { kind: 'curated', meta: row.famous };
   const orbit = sStarOrbitInfo(row.id);
   return orbit ? { kind: 'orbit', orbit } : { kind: 'none' };
 }
