@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { APP_SERVER_PORT } from '../src/data/appServerPort';
+import { TABLET_SETUP_PORT } from '../src/data/tabletSetupPort';
 
 const root = join(import.meta.dirname, '..');
 const config = parse(readFileSync(join(root, 'electron-builder.yml'), 'utf8'));
@@ -18,9 +19,11 @@ describe('electron-builder.yml', () => {
     expect(nsis).toContain('"$APPDATA\\${PRODUCT_NAME}\\data"');
   });
 
-  it('keeps the Windows installer per machine, with its firewall rule on the app port', () => {
+  it('keeps the Windows installer per machine, with its firewall rule on both ports', () => {
     expect(config.nsis).toMatchObject({ oneClick: false, perMachine: true });
-    expect(nsis).toContain(`localport=${APP_SERVER_PORT} profile=private,domain`);
+    expect(nsis).toContain(
+      `localport=${APP_SERVER_PORT},${TABLET_SETUP_PORT} profile=private,domain`,
+    );
   });
 
   // The installer name and About read this package's version; /release bumps the root's.

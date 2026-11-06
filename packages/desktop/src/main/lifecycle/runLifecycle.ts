@@ -45,6 +45,7 @@ import { serially } from './utils/serially';
 import { SKY_ESCAPE_CHANNEL } from '../../data/skyEscapeChannel';
 import { skyUrlFor } from '../sky/utils/skyUrlFor';
 import { startSecureServer } from '../server/startSecureServer';
+import { startTabletSetupServer } from '../server/startTabletSetupServer';
 import { watchLan } from '../lan/watchLan';
 import { watchQuitting } from '../windows/watchQuitting';
 
@@ -67,6 +68,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   const firstRun = !existsSync(join(userData, SETUP_FILE));
   let code = await readRoomCode(userData);
   const secure = await startSecureServer(userData, dataRoot);
+  await startTabletSetupServer(secure.caPem);
   // Syncs, prunes and sky loads one at a time: a prune never meets a download, two loads never overlap.
   const work = serially();
   const rotations = serially();

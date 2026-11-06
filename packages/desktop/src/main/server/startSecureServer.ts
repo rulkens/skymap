@@ -28,5 +28,5 @@ export async function startSecureServer(userData: string, dataRoot: string): Pro
   const renewCertificate = async (): Promise<void> => {
     tls = await renewServerCertificate(server, certDir, ca, currentLanNames(), tls);
   };
-  return { server, renewCertificate };
+  return { server, caPem: ca.cert, renewCertificate };
 }

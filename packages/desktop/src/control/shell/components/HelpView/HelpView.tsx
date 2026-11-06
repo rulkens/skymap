@@ -6,7 +6,7 @@
 import { useEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { HelpSection } from '../../../../@types/HelpSection';
-import { APP_SERVER_PORT } from '../../../../data/appServerPort';
+import { TABLET_SETUP_PORT } from '../../../../data/tabletSetupPort';
 import { controlShortcutText } from '../../utils/controlShortcutText';
 import chrome from '../../../controlChrome.module.css';
 import styles from './HelpView.module.css';
@@ -31,8 +31,10 @@ function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactN
       section === 'tablet' ? tablet : section === 'troubleshooting' ? troubleshooting : null;
     target?.current?.scrollIntoView({ block: 'start' });
   }, [section]);
-  const cert = (
-    <span className={chrome.mono}>{origin ?? `https://<address>:${APP_SERVER_PORT}`}/ca.crt</span>
+  const setupPage = (
+    <span className={chrome.mono}>
+      http://{origin === null ? '<address>' : new URL(origin).hostname}:{TABLET_SETUP_PORT}
+    </span>
   );
   const key = <kbd className={chrome.mono}>{controlShortcutText()}</kbd>;
   return (
@@ -52,16 +54,15 @@ function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactN
         </p>
         <ol className={styles.steps}>
           <li>
-            <strong>iPad or iPhone:</strong> open {cert} in Safari and allow the download. Install
-            it in Settings, General, VPN &amp; Device Management, then turn it on in Settings,
-            General, About, Certificate Trust Settings.
+            Scan the QR in the controls, under Tablets, with the tablet&apos;s camera. It opens a
+            setup page on the tablet. Without a camera, open {setupPage} and type the code.
           </li>
           <li>
-            <strong>Android:</strong> open {cert}, then install it from Settings, Security,
-            Encryption &amp; credentials, Install a certificate, CA certificate. Tapping through the
-            browser&apos;s warning also works; trusting the certificate stops it coming back.
+            The setup page shows the steps for that tablet: download the certificate, then install
+            it in the tablet&apos;s settings. On an iPad that is Profile Downloaded, Install, and
+            then General, About, Certificate Trust Settings; on Android, search the settings for CA
+            certificate. The page says when the tablet trusts this computer and opens the remote.
           </li>
-          <li>Scan the code in the controls, under Tablets, with the tablet&apos;s camera.</li>
           <li>
             If this computer asks to accept incoming network connections, choose Allow. On Windows
             the installer allows them on private networks.

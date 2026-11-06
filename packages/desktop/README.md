@@ -62,14 +62,18 @@ usually does not ask. Networks Windows marks as public stay closed.
 
 The tablet must be on the same network as the computer.
 
-1. The tablet trusts the computer once. Open `https://<address>:47823/ca.crt` in the tablet's
-   browser; the setup window and the Help view show the exact address.
-   - **iPad or iPhone:** use Safari and allow the profile download. Install it in Settings, General,
-     VPN & Device Management, then turn it on in Settings, General, About, Certificate Trust Settings.
-   - **Android:** install it from Settings, Security, Encryption & credentials, Install a
-     certificate, CA certificate. Tapping through the browser's warning also works; trusting the
-     certificate stops the warning coming back.
-2. Scan the QR in the controls with the tablet's camera.
+1. Scan the QR in the controls with the tablet's camera. It opens a setup page on the tablet,
+   `http://<address>:47824`. A tablet without a camera opens that address and types the code.
+2. The page shows the steps for that tablet and checks each one. It trusts the computer once, through
+   a certificate:
+   - **iPad or iPhone:** use Safari. Download the certificate and allow it, then in Settings tap
+     Profile Downloaded and Install. Turn it on in Settings, General, About, Certificate Trust
+     Settings.
+   - **Android:** download the certificate; the browser may say it cannot install it, which is fine.
+     In Settings, search for CA certificate, then Install a certificate, CA certificate, Install
+     anyway, and pick the Skymap file.
+3. Once the page says the tablet trusts the computer, open the remote from it. A tablet that already
+   trusts it goes straight to the remote.
 
 The QR holds a code that stays the same between launches, so a bookmark keeps working. Rotate code
 in the controls makes a new one and disconnects every tablet: the button asks once more as
@@ -124,5 +128,5 @@ data is kept.
   tablet.
 - **Skymap will not start, or says the port is in use.** Another copy is running, or one was left
   behind after a crash. Quit it (Task Manager or Activity Monitor) and start again. Skymap uses
-  port 47823.
+  ports 47823 and 47824.
 - **The sky is on the wrong screen.** See Move the sky to another screen.

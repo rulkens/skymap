@@ -291,6 +291,9 @@ dataUpdates: { kind: 'atLaunch' } | { kind: 'daily'; at: string /* 'HH:MM' local
   first run, no complete local set, or the stored display missing. A sync error raises it only when
   there is no complete local set; with data on disk the error shows in the Sync panel and the sky
   keeps running (a raised window would cover the sky on one screen mid-show).
+- **Tablet setup (owner ruling 2026-11-06):** the pairing QR opens a plain-HTTP setup page on port
+  47824 that walks the tablet through installing the CA, checks trust live, then opens the remote;
+  replaces typing `/ca.crt` by hand and clicking past a warning.
 - **Test grid (Q8):** `showTestGrid` adds a `WebContentsView` inside the sky window, so its bounds
   move with the window.
   - **Dome mode:** it shows `assets/dome-grid.png` at `object-fit: contain`. The image is an

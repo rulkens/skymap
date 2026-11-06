@@ -1,14 +1,15 @@
 /**
- * PairingDetails — how a tablet joins: the QR large enough to scan at arm's length, the code in fours,
- * and the three things a tablet needs once, in the order it needs them. The room is known before the
- * sky runs, so the certificate step can happen during the first download; joining waits for the sky.
+ * PairingDetails — how a tablet joins: one QR, large enough to scan at arm's length, opening the
+ * tablet setup page, which walks the tablet through its certificate and on to the remote. The code in
+ * fours is for a tablet without a camera. The room is known before the sky runs, so the certificate
+ * step can happen during the first download; joining waits for the sky.
  */
 
 import type { ReactNode } from 'react';
 import type { RelayRoom } from '../../../../../../../src/@types/remote/RelayRoom';
-import { pairingUrl } from '../../../../../../../src/utils/remote/pairingUrl';
 import AlertIcon from '../../../../../../../src/components/icons/AlertIcon/AlertIcon';
 import { groupedCode } from '../../utils/groupedCode';
+import { tabletSetupUrl } from '../../utils/tabletSetupUrl';
 import PairingQr from '../PairingQr/PairingQr';
 import UrlText from '../UrlText/UrlText';
 import chrome from '../../../controlChrome.module.css';
@@ -39,7 +40,8 @@ function PairingDetails({
       </p>
     );
   }
-  const url = pairingUrl(room.origin, room.code);
+  const url = tabletSetupUrl(room.origin, room.code);
+  const typed = url.slice(0, url.indexOf('#'));
   return (
     <div className={styles.root}>
       <div className={styles.code}>
@@ -52,15 +54,15 @@ function PairingDetails({
       <div className={styles.how}>
         <ol className={styles.steps}>
           <li>
-            On the tablet, open <UrlText url={`${room.origin}/ca.crt`} /> and install it: a
-            certificate, the file that lets the tablet trust this computer. Go past the warning this
-            once.{' '}
-            <button type="button" className={chrome.link} onClick={onHelp}>
-              Steps for iPad and Android
-            </button>
+            Scan the QR with the tablet&apos;s camera. No camera? Open <UrlText url={typed} /> and
+            type the code.
           </li>
           <li>
-            Scan the code with the tablet&apos;s camera, or open <UrlText url={url} />.
+            Follow the steps on the tablet: it installs a certificate once, so it trusts this
+            computer, then opens the remote.{' '}
+            <button type="button" className={chrome.link} onClick={onHelp}>
+              Help with tablets
+            </button>
           </li>
           <li>If this computer asks to accept incoming network connections, choose Allow.</li>
         </ol>

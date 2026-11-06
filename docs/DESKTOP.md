@@ -168,7 +168,15 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 - The app's own windows accept the leaf through `setCertificateVerifyProc` only if the CA signed
   it; everything else goes back to Chromium's verdict. `setPermissionRequestHandler` refuses every
   browser permission.
-- Tablets fetch `/ca.crt` and install it once (steps in the README and the Help view).
+- **Tablet setup page.** `main/server/startTabletSetupServer.ts`: plain HTTP on `0.0.0.0:47824`
+  (`data/tabletSetupPort.ts`) serving only `assets/tablet-setup.html` at `/` and the CA at `/ca.crt`,
+  so a tablet meets no warning before it trusts the CA. The pairing QR opens it with the room code
+  after `#`, which never goes over the wire. The page shows the steps for its OS, checks trust by a
+  `no-cors` fetch of the HTTPS server's `/ca.crt` every 2 s (it only succeeds once the CA is trusted),
+  then links to the remote, or goes straight there when already trusted. `fillTabletSetupPage` fills
+  in the app port and the remote's path from `pairingUrl`. The page is as trustworthy as the LAN: a
+  machine that spoofs it can hand out its own CA, the same risk as clicking past the HTTPS warning
+  it replaces. The Windows firewall rule opens both ports. A failed listen is logged, not fatal.
 
 ## Relay wiring
 

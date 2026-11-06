@@ -35,7 +35,7 @@
 ; Inbound rule so phones and tablets on a private or domain network can reach the app server.
 ; Public networks stay closed. The installer runs elevated (perMachine in electron-builder.yml).
 !macro customInstall
-  nsExec::ExecToLog 'netsh advfirewall firewall add rule name="${PRODUCT_NAME}" dir=in action=allow program="$INSTDIR\${PRODUCT_FILENAME}.exe" protocol=TCP localport=47823 profile=private,domain'
+  nsExec::ExecToLog 'netsh advfirewall firewall add rule name="${PRODUCT_NAME}" dir=in action=allow program="$INSTDIR\${PRODUCT_FILENAME}.exe" protocol=TCP localport=47823,47824 profile=private,domain'
 !macroend
 
 !macro customUnInstall
