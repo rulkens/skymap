@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { sceneBodyPickId as pickIdOf } from '../../../src/utils/picking/sceneBodyPickId';
 import { bodyCodeOf } from '../../../src/layers/body/selection/present/bodyCodeOf';
-import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { fakePickCode } from '../../support/fakePickCode';

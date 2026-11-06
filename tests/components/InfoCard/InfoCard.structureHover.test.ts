@@ -25,7 +25,7 @@ import { Provider } from 'react-redux';
 import InfoCard from '../../../src/components/InfoCard/InfoCard';
 import { createAppStore } from '../../../src/store/createAppStore';
 import type { FocusableTargetBase } from '../../../src/@types/engine/selection/FocusableTargetBase';
-import type { StructureTarget } from '../../../src/layers/structure/@types/StructureTarget';
+import type { StructureTarget } from '../../../src/layers/structure/selection/@types/StructureTarget';
 
 // A pinned structure renders its Detail through StructureDetailCardContainer
 // (the member-count fact is a store read), so every render below needs a

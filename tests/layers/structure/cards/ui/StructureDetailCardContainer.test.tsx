@@ -17,7 +17,7 @@ import { Provider } from 'react-redux';
 import StructureDetailCardContainer from '../../../../../src/layers/structure/cards/ui/StructureDetailCardContainer';
 import { createAppStore } from '../../../../../src/store/createAppStore';
 import { layerFactsSeeded, factsReported } from '../../../../../src/state/engine/engineSlice';
-import type { StructureTarget } from '../../../../../src/layers/structure/@types/StructureTarget';
+import type { StructureTarget } from '../../../../../src/layers/structure/selection/@types/StructureTarget';
 
 // Render probe: wrap the real StructureDetailCard so we can count how many
 // times the container actually renders it. A same-count fact patch must leave

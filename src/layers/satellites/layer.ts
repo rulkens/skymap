@@ -18,8 +18,8 @@ import SatellitesSectionContainer from './controls/ui/SatellitesSectionContainer
 import SatelliteDetailCard from './focus/ui/SatelliteDetailCard/SatelliteDetailCard';
 import CompactSatelliteCard from './focus/ui/CompactSatelliteCard/CompactSatelliteCard';
 import { SATELLITES_SOURCE_ROWS } from './sources/satellitesSourceRows';
-import { satellitesSelectionRow } from './focus/present/satellitesSelectionRow';
-import { satellitesSelectionKinds } from './focus/present/kinds';
+import { satellitesSelectionRow } from './selection/satellitesSelectionRow';
+import { satellitesSelectionKinds } from './selection/kinds';
 import { satellitesSearch } from './focus/present/satellitesSearch';
 
 export const satellitesLayer = defineLayer({

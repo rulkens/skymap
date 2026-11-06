@@ -5,7 +5,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { apparentMagnitudeFromAbs } from '../../../../src/utils/star/apparentMagnitudeFromAbs';
 import { spectralClassFromBpRp } from '../../../../src/utils/star/spectralClassFromBpRp';
 import { starRowDriver } from '../../../fixtures/starRowDriver';
-import type { StarCatalogSelectionRow } from '../../../../src/layers/starCatalog/@types/StarCatalogSelectionRow';
+import type { StarCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/@types/StarCatalogSelectionRow';
 
 const [kind] = starCatalogSelectionKinds;
 

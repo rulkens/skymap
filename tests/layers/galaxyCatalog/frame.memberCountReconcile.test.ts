@@ -20,7 +20,7 @@ import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFr
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
 import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
-import { placedStructureRow } from '../../../src/layers/structure/picking/utils/placedStructureRow';
+import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
 import type { SelectionRowBase } from '../../../src/@types/engine/selection/SelectionRowBase';
 
 /** A cluster at the origin with a 10 Mpc core radius — mirrors structureMemberCount.test.ts. */

@@ -1,9 +1,9 @@
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
-import { bodySelectionRow } from '../../src/layers/body/selection/present/bodySelectionRow';
-import { structureSelectionRow } from '../../src/layers/structure/picking/present/structureSelectionRow';
-import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
-import { starCatalogSelectionRow } from '../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
-import { milkyWaySelectionRow } from '../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
+import { bodySelectionRow } from '../../src/layers/body/selection/bodySelectionRow';
+import { structureSelectionRow } from '../../src/layers/structure/selection/structureSelectionRow';
+import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
+import { starCatalogSelectionRow } from '../../src/layers/starCatalog/selection/starCatalogSelectionRow';
+import { milkyWaySelectionRow } from '../../src/layers/milkyWay/selection/milkyWaySelectionRow';
 import { NO_KINDS_OFF } from './noKindsOff';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';

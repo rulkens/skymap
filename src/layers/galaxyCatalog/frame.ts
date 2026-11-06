@@ -26,7 +26,7 @@ import { visibleCatalogsOf } from './records/utils/visibleCatalogsOf';
 import { setsEqual } from '../../utils/set/setsEqual';
 import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
 import { isKind } from '../../utils/selection/isKind';
-import type { StructureSelectionRow } from '../structure/@types/StructureSelectionRow';
+import type { StructureSelectionRow } from '../structure/selection/@types/StructureSelectionRow';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,

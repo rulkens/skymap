@@ -11,7 +11,7 @@ import { STAR_FOCUS_PREFIX } from '../../../../services/url/starFocusId';
 import { Source } from '../../../../data/source';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
 import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
-import type { StarCatalogRef } from '../../@types/StarCatalogRef';
+import type { StarCatalogRef } from '../@types/StarCatalogRef';
 
 export function decodeStarFocusId(id: string, surveyLoaded: boolean): StarCatalogRef | null {
   const rest = id.slice(STAR_FOCUS_PREFIX.length);

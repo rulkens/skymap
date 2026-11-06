@@ -16,11 +16,11 @@ import type {
   StructureRowFixture,
 } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
-import { craftSelectionRow } from '../../../../src/layers/missions/craft/present/craftSelectionRow';
-import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/scenes/present/earthSceneSelectionRow';
-import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow';
-import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
-import { satellitesSelectionRow } from '../../../../src/layers/satellites/focus/present/satellitesSelectionRow';
+import { craftSelectionRow } from '../../../../src/layers/missions/selection/craftSelectionRow';
+import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/selection/earthSceneSelectionRow';
+import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/zoneOfAvoidanceSelectionRow';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
+import { satellitesSelectionRow } from '../../../../src/layers/satellites/selection/satellitesSelectionRow';
 import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
@@ -61,7 +61,7 @@ import {
   satellitesPickCode,
   zoneOfAvoidancePickCode,
 } from '../../../support/layerPickCodes';
-import { placedStructureRow } from '../../../../src/layers/structure/picking/utils/placedStructureRow';
+import { placedStructureRow } from '../../../../src/layers/structure/selection/utils/placedStructureRow';
 import { MILKY_WAY_ROW } from '../../../fixtures/milkyWayRow';
 import { footprintRadiusMpc } from '../../../../src/utils/selection/footprintRadiusMpc';
 import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';

@@ -1,7 +1,7 @@
 import { ZONE_OF_AVOIDANCE_INFO } from '../../../data/zoneOfAvoidance/zoneOfAvoidanceInfo';
 import type { SelectionKindFacts } from '../../../@types/engine/layer/SelectionKindFacts';
-import type { ZoneOfAvoidanceRef } from '../@types/ZoneOfAvoidanceRef';
-import type { ZoneOfAvoidanceTarget } from '../@types/ZoneOfAvoidanceTarget';
+import type { ZoneOfAvoidanceRef } from './@types/ZoneOfAvoidanceRef';
+import type { ZoneOfAvoidanceTarget } from './@types/ZoneOfAvoidanceTarget';
 
 export const zoneOfAvoidanceSelectionKinds: readonly SelectionKindFacts<
   ZoneOfAvoidanceRef,

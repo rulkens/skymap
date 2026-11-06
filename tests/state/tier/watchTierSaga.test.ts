@@ -27,9 +27,9 @@ import {
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
 import { NO_KINDS_OFF } from '../../support/noKindsOff';
-import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
+import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
 import { galaxyRowRuntime } from '../../support/layerPickCodes';
 import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';

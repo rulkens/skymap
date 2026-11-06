@@ -1,6 +1,6 @@
 import type { SelectionRefBase } from '../../../../@types/engine/selection/SelectionRefBase';
 import { isKind } from '../../../../utils/selection/isKind';
-import type { StructureRef } from '../../@types/StructureRef';
+import type { StructureRef } from '../../selection/@types/StructureRef';
 
 /**
  * structureIdOf — a ref's structure id, or null for nothing / a galaxy / the

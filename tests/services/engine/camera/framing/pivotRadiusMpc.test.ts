@@ -25,7 +25,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../../fixtures/starRowDriver';
-import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
+import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
 import { schwarzschildRadiusM } from '../../../../../src/utils/physics/schwarzschildRadiusM';
 import { SGR_A_STAR_MASS_SOLAR } from '../../../../../src/data/bodies/sgrAStarMassSolar';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
@@ -35,7 +35,7 @@ import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { blackHolePickCode } from '../../../../support/layerPickCodes';
 import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
 import type { SelectionRowBase } from '../../../../../src/@types/engine/selection/SelectionRowBase';
-import type { StarCatalogSelectionRow } from '../../../../../src/layers/starCatalog/@types/StarCatalogSelectionRow';
+import type { StarCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/@types/StarCatalogSelectionRow';
 
 const EARTH_ROW: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 

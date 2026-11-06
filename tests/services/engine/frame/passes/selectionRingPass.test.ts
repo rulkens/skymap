@@ -20,7 +20,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { MILKY_WAY_ROW } from '../../../../fixtures/milkyWayRow';
 import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
 import type { SelectionRowBase } from '../../../../../src/@types/engine/selection/SelectionRowBase';
-import type { StarCatalogSelectionRow } from '../../../../../src/layers/starCatalog/@types/StarCatalogSelectionRow';
+import type { StarCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/@types/StarCatalogSelectionRow';
 
 installAppSelectionKinds();
 

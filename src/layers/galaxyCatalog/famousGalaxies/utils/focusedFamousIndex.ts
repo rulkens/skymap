@@ -1,7 +1,7 @@
 import { Source } from '../../../../data/source';
 import type { SelectionRefBase } from '../../../../@types/engine/selection/SelectionRefBase';
 import { isKind } from '../../../../utils/selection/isKind';
-import type { GalaxyCatalogRef } from '../../@types/GalaxyCatalogRef';
+import type { GalaxyCatalogRef } from '../../selection/@types/GalaxyCatalogRef';
 
 /**
  * focusedFamousIndex — a ref's famous-catalog row index, or null for nothing /

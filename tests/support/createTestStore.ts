@@ -11,8 +11,8 @@
 
 import { createAppStore, type PreloadedState } from '../../src/store/createAppStore';
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
-import { bodySelectionRow } from '../../src/layers/body/selection/present/bodySelectionRow';
-import { structureSelectionRow } from '../../src/layers/structure/picking/present/structureSelectionRow';
+import { bodySelectionRow } from '../../src/layers/body/selection/bodySelectionRow';
+import { structureSelectionRow } from '../../src/layers/structure/selection/structureSelectionRow';
 import { NO_KINDS_OFF } from './noKindsOff';
 import type { ReconcileEffects } from '../../src/store/effects/ReconcileEffects';
 import type { SagaContext } from '../../src/store/types';

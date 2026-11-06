@@ -39,7 +39,7 @@ import { syncVisibilityTargets } from '../../../../src/services/engine/wiring/sy
 import { applySwapFormat } from '../../../../src/services/engine/phases/applySwapFormat';
 import { logCameraState } from '../../../../src/services/engine/helpers/logCameraState';
 import { liveRenderCamera } from '../../../../src/services/engine/helpers/liveRenderCamera';
-import { bodySelectionRow } from '../../../../src/layers/body/selection/present/bodySelectionRow';
+import { bodySelectionRow } from '../../../../src/layers/body/selection/bodySelectionRow';
 import { bodyPickCodes } from '../../../support/layerPickCodes';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';

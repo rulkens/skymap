@@ -1,6 +1,6 @@
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import type { GalaxyRow } from '../../../../@types/engine/GalaxyRow';
-import type { GalaxyCatalogSelectionRow } from '../../@types/GalaxyCatalogSelectionRow';
+import type { GalaxyCatalogSelectionRow } from '../@types/GalaxyCatalogSelectionRow';
 
 /** The diameter a galaxy with no usable measurement frames and rings at. */
 const FALLBACK_DIAMETER_KPC = 30;

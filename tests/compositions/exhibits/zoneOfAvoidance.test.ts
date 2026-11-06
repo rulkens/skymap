@@ -10,7 +10,7 @@ import { zoneOfAvoidance } from '../../../src/compositions/exhibits/zoneOfAvoida
 import { APP_COMPOSITION } from '../../../src/compositions/app';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { layerSelectionKinds } from '../../../src/utils/layer/layerSelectionKinds';
-import { earthSceneSelectionRow } from '../../../src/layers/earthScenes/scenes/present/earthSceneSelectionRow';
+import { earthSceneSelectionRow } from '../../../src/layers/earthScenes/selection/earthSceneSelectionRow';
 import type { SelectionKindRow } from '../../../src/@types/engine/layer/SelectionKindRow';
 
 const types = layerSelectionKinds(APP_COMPOSITION.layers).map((kind) => kind.type);

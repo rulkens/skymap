@@ -13,7 +13,7 @@ import { factsReported, layerFactsSeeded } from '../../../../../src/state/engine
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import type { FamousStarMetaEntry } from '../../../../../src/@types/loading/FamousStarMetaEntry';
-import type { StarCatalogTarget } from '../../../../../src/layers/starCatalog/@types/StarCatalogTarget';
+import type { StarCatalogTarget } from '../../../../../src/layers/starCatalog/selection/@types/StarCatalogTarget';
 
 const siriusMeta: FamousStarMetaEntry = {
   id: 'sirius',

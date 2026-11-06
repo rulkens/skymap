@@ -10,7 +10,7 @@ import type { FocusMotion } from '../../../src/@types/camera/focusMotion/FocusMo
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
-import { placedStructureRow } from '../../../src/layers/structure/picking/utils/placedStructureRow';
+import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
 import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
 
 installAppSelectionKinds();

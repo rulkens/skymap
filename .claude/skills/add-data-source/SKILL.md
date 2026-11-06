@@ -226,7 +226,7 @@ Colour, size and fade fields as for any structure; the one that carries a decisi
 
 Tuning: a higher `markerMinApparentRadiusPx` makes the marker fade out at a
 _nearer_ distance. Focus framing is uniform (the structure kind's `focus` in
-`src/layers/structure/picking/present/kinds.ts`, applied to the row's
+`src/layers/structure/selection/kinds.ts`, applied to the row's
 `radiusMpc` by `arrivalFraming`); no per-category edit.
 
 ### Seed parser and seed rows (steps 8, 10)

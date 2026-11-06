@@ -13,7 +13,7 @@ import StructureDetailCard from './StructureDetailCard/StructureDetailCard';
 import { useAppSelector } from '../../../../store/hooks';
 import { selectStructureMemberCount } from '../../../../state/engine/selectors';
 import type { DetailCardProps } from '../../../../@types/components/infoCard/DetailCardProps';
-import type { StructureTarget } from '../../@types/StructureTarget';
+import type { StructureTarget } from '../../selection/@types/StructureTarget';
 
 function StructureDetailCardContainer(props: DetailCardProps<StructureTarget>): ReactNode {
   const memberCount = useAppSelector(selectStructureMemberCount);

@@ -23,7 +23,7 @@ import { starCatalogPass } from './survey/passes/starCatalogPass';
 import { starAggregateUpsamplePass } from './survey/passes/starAggregateUpsamplePass';
 import { starSpheresPass } from './resolvedStars/passes/starSpheresPass';
 import { fieldStarSpherePass } from './resolvedStars/passes/fieldStarSpherePass';
-import { starCatalogSelectionRow } from './selection/present/starCatalogSelectionRow';
+import { starCatalogSelectionRow } from './selection/starCatalogSelectionRow';
 import { starCatalogSelectionKinds } from './selection/kinds';
 import { starSearch } from './selection/present/starSearch';
 import { produceStarCaptions } from './captions/present/produceStarCaptions';

@@ -7,7 +7,7 @@
 
 import { STAR_FOCUS_PREFIX } from '../../../../services/url/starFocusId';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
-import type { StarCatalogRef } from '../../@types/StarCatalogRef';
+import type { StarCatalogRef } from '../@types/StarCatalogRef';
 
 export function encodeStarFocusId(ref: StarCatalogRef): string {
   // Falls back to `ref.index` when the seeded lookup misses — unreachable

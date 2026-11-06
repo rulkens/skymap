@@ -15,7 +15,7 @@ import { destroy } from './destroy';
 import { zoneOfAvoidancePass } from './shell/passes/zoneOfAvoidancePass';
 import { zoneOfAvoidanceUpsamplePass } from './shell/passes/zoneOfAvoidanceUpsamplePass';
 import { produceZoneOfAvoidanceLettering } from './lettering/present/produceZoneOfAvoidanceLettering';
-import { zoneOfAvoidanceSelectionRow } from './selection/present/zoneOfAvoidanceSelectionRow';
+import { zoneOfAvoidanceSelectionRow } from './selection/zoneOfAvoidanceSelectionRow';
 import { zoneOfAvoidanceSelectionKinds } from './selection/kinds';
 import ZoneOfAvoidanceTuningSectionContainer from './shell/ui/ZoneOfAvoidanceTuningSectionContainer';
 import ZoneOfAvoidanceDetailCard from './selection/ui/ZoneOfAvoidanceDetailCard/ZoneOfAvoidanceDetailCard';

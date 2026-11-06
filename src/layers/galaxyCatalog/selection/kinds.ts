@@ -1,9 +1,9 @@
 import { Source } from '../../../data/source';
 import { buildGalaxyInfo } from '../../../services/engine/helpers/buildGalaxyInfo';
 import type { SelectionKindFacts } from '../../../@types/engine/layer/SelectionKindFacts';
-import type { GalaxyCatalogRef } from '../@types/GalaxyCatalogRef';
-import type { GalaxyCatalogSelectionRow } from '../@types/GalaxyCatalogSelectionRow';
-import type { GalaxyCatalogTarget } from '../@types/GalaxyCatalogTarget';
+import type { GalaxyCatalogRef } from './@types/GalaxyCatalogRef';
+import type { GalaxyCatalogSelectionRow } from './@types/GalaxyCatalogSelectionRow';
+import type { GalaxyCatalogTarget } from './@types/GalaxyCatalogTarget';
 
 export const galaxyCatalogSelectionKinds: readonly SelectionKindFacts<
   GalaxyCatalogRef,

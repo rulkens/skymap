@@ -30,7 +30,7 @@ import type { SelectionKindRow } from '../../../../src/@types/engine/layer/Selec
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
 import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
-import type { StarCatalogSelectionRow } from '../../../../src/layers/starCatalog/@types/StarCatalogSelectionRow';
+import type { StarCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/@types/StarCatalogSelectionRow';
 
 installAppSelectionKinds();
 

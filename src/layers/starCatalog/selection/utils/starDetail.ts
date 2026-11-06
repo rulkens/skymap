@@ -2,7 +2,7 @@ import { apparentMagnitudeFromAbs } from '../../../../utils/star/apparentMagnitu
 import { spectralClassFromBpRp } from '../../../../utils/star/spectralClassFromBpRp';
 import { sStarOrbitInfo } from '../../../../data/bodies/sStarOrbitInfo';
 import type { StarInfoDetail } from '../../@types/StarInfoDetail';
-import type { StarCatalogSelectionRow } from '../../@types/StarCatalogSelectionRow';
+import type { StarCatalogSelectionRow } from '../@types/StarCatalogSelectionRow';
 
 /**
  * Which block the star card renders, keyed on the row's own shape: catalogued photometry (the

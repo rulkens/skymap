@@ -10,7 +10,7 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 import { PICK_SENTINEL_OFFSET, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
-import { galaxyCatalogSelectionRow } from '../../selection/present/galaxyCatalogSelectionRow';
+import { galaxyCatalogSelectionRow } from '../../selection/galaxyCatalogSelectionRow';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { pickUniformBytesOf } from '../render/pickUniformBytesOf';
 import {
@@ -18,7 +18,7 @@ import {
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../lod/data/galaxyLodBands';
 import { isKind } from '../../../../utils/selection/isKind';
-import type { GalaxyCatalogRef } from '../../@types/GalaxyCatalogRef';
+import type { GalaxyCatalogRef } from '../../selection/@types/GalaxyCatalogRef';
 
 export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPass<'survey'> {
   const row = galaxyCatalogSelectionRow(runtime);

@@ -19,7 +19,7 @@ import { galaxyCatalogSourceCounts } from './records/load/galaxyCatalogSourceCou
 import { galaxyPointSpritesPass } from './pointSprites/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from './disks/procedural/passes/proceduralDisksPass';
 import { texturedDisksPass } from './disks/textured/passes/texturedDisksPass';
-import { galaxyCatalogSelectionRow } from './selection/present/galaxyCatalogSelectionRow';
+import { galaxyCatalogSelectionRow } from './selection/galaxyCatalogSelectionRow';
 import { galaxyCatalogSelectionKinds } from './selection/kinds';
 import { produceFamousGalaxyLabels } from './famousGalaxies/present/produceFamousGalaxyLabels';
 import { watchPaletteWakeSaga } from './aliases/sagas/watchPaletteWakeSaga';

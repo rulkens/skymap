@@ -32,7 +32,7 @@ import type { StructureInfo } from '../../../src/@types/data/structure/Structure
 import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
-import { placedStructureRow } from '../../../src/layers/structure/picking/utils/placedStructureRow';
+import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
 import type { SelectionRowBase } from '../../../src/@types/engine/selection/SelectionRowBase';
 
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;

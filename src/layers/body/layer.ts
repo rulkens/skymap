@@ -31,7 +31,7 @@ import { aerialPerspectiveCompute } from './atmosphere/computes/aerialPerspectiv
 import { bodyAssetRows } from './textures/load/bodyAssetRows';
 import { BODY_BODY_ROWS } from './bodies/bodyBodyRows';
 import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
-import { bodySelectionRow } from './selection/present/bodySelectionRow';
+import { bodySelectionRow } from './selection/bodySelectionRow';
 import { bodySelectionKinds } from './selection/kinds';
 import { bodySearch } from './selection/present/bodySearch';
 import { BODY_TRAIL_ELEMENTS } from './orbitTrails/data/bodyTrailElements';

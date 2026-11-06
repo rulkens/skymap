@@ -261,7 +261,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'ref-focus-pos-famous',
     about: 'app',
     text: 'Link to a named galaxy by its own id, such as m31, and not by its position.',
-    source: `${REPO_BLOB}/src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow.ts`,
     sourceLabel: `how a galaxy’s id is read, ${IN_REPO}`,
     checked: CHECKED,
   },
