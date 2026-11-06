@@ -3,7 +3,7 @@
  * write it at the widths the pages use, AVIF and WebP, into the site's
  * committed public shots, each named with a hash of its bytes
  * (utils/shotFileName.ts). `npm run shot` cannot do this alone: a deep link
- * carries no settings, and most rows hide labels or switch a layer.
+ * carries only the layer and caption switches, not exposure, passes or the rest.
  *
  *   npm run site:shots -- --url http://localhost:5178 [--only id,id] [--from-masters]
  *   npm run site:shots -- --url <app> --try '<hash body>' [--settings '<json>'] [--size 1600x1000] [--query dome] [--name n] [--out dir]

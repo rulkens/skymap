@@ -44,7 +44,7 @@ export function siteShotActions({
     if (view.kind !== 'tour' || !(view.id in tourRegistry)) {
       throw new Error(`tourStep needs a link to a registered tour, got "${link}"`);
     }
-    // The runner boots a tour step on the bare address, which a visitor's first visit covers with the welcome screen.
+    // The runner boots a tour step on its `layers` alone, which a visitor's first visit covers with the welcome screen.
     // Last: the tour restores and rewrites settings itself, so it must own the scene from here.
     actions.push(
       dismissSplash(CURRENT_SPLASH_VERSION),

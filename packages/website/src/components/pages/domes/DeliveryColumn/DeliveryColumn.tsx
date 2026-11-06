@@ -1,10 +1,11 @@
 /*
  * DeliveryColumn — one way to get Skymap onto a dome: its picture with the picture's title, its one
  * figure set large, its name, a sentence or two (the children), its line of every row of the
- * specification (domes.data.ts) and one link, to the picture's view. The picture is a fisheye disc: live, one that turns under a drag (domeTurn.client.ts), as
- * someone steers it; a film, its frame in front of the `earlier` frames, fanned out behind it to the
- * right, oldest furthest back. Its parts are rows of Delivery's grid (thirteen, the count `grid-row`
- * spans in the module), so they line up with the column beside it.
+ * specification (domes.data.ts) and one link, to the picture's view. The picture is a fisheye disc:
+ * live, one that turns under a drag (domeTurn.client.ts), as someone steers it; a film, its frame in
+ * front of the `earlier` frames, fanned out behind it to the right, oldest furthest back. Its parts are
+ * rows of Delivery's grid (thirteen, the count `grid-row` spans in the module), so they line up with
+ * the column beside it.
  */
 import type { CSSProperties, ReactNode } from 'react';
 

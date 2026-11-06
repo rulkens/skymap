@@ -2,8 +2,8 @@
  * FeatureGallery — a FeatureSection whose large visual is a slideshow of app views and whose small slot is a row of
  * thumbnails that choose the view. The state is the gallery's (useGallery), so it moves on by itself every 9 s,
  * waits while the reader is at the thumbnails, and fetches a later view only once warmed. Each picture opens its
- * own view in the app; only the current one can be reached, as the others sit under
- * `visibility: hidden`. Before the page's script runs the first view and its label stand. Everything a slide brings (data/FeatureSlide) changes
+ * own view in the app; only the current one can be reached, as the others sit under `visibility: hidden`. Before
+ * the page's script runs the first view and its label stand. Everything a slide brings (data/FeatureSlide) changes
  * with it: its piece of the app's interface hangs across the picture's outer edge, its figure stands in the inner
  * top corner in its own colour, a film whose clock ran carries its clock (FilmClock) at its foot, and the section's
  * accent follows it. `frameless` lets cut-outs float on the page; `under` lays a render behind the whole stage.

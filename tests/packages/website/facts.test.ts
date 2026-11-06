@@ -51,7 +51,7 @@ describe('website facts', () => {
       'data/objectCatalogue.ts',
       'utils/heroVideoUrl.ts',
       'utils/pressKitUrl.ts',
-      // The link codec is pure and imports nothing of the app; the type is `LayerSwitch`.
+      // These import only the app's pure link codec.
       'utils/shotHash.ts',
       'utils/shotLayerSwitches.ts',
     ]);

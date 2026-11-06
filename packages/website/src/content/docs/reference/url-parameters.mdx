@@ -193,12 +193,16 @@ The value of `layers` is a list of names with commas between them, read from lef
 | --- | --- |
 | `flow` | Switches the layer on |
 | `-flow` | Switches it off |
-| `survey:desiWedge` | Switches one item of a layer, here one survey |
+| `survey:desiWedge` | Switches one item of a layer, here the patch of one survey |
 | `label:structure` | Switches a layer’s captions, here the names of structures |
 
-Later names win over earlier ones, so `-survey,survey:famousGalaxy` hides every survey but the famous galaxies. A name the app does not know is skipped and the rest apply.
+Later names win over earlier ones, so `-survey,survey:famousGalaxy` hides every galaxy catalogue but the famous galaxies’ photographs. A name the app does not know is skipped and the rest apply.
+
+An exhibit or a tour switches some layers itself as it opens, and where it and `layers` name the same layer, the exhibit or tour wins.
 
 The names are: <Codes of={APP_VISIBILITY_REGISTRY.map(visibilityAddressOf)} />.
+
+A name followed by `:` and an item switches that item alone. The items of each layer are: <Codes of={APP_VISIBILITY_REGISTRY.flatMap((entry) => (entry.items ?? []).map((item) => `${visibilityAddressOf(entry)}:${item}`))} />.
 
 ## How parameters combine
 
