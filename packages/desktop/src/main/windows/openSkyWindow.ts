@@ -1,29 +1,33 @@
 import { app, BrowserWindow } from 'electron';
 import { join } from 'node:path';
-import type { Display } from 'electron';
+import type { BrowserWindowConstructorOptions, Display } from 'electron';
 import { fillDisplay } from './fillDisplay';
 import { hideSkyChrome } from '../sky/hideSkyChrome';
 import { superviseWindow } from './superviseWindow';
 
 /**
  * Black and full screen on `display`, not yet holding the sky; `windowed` gives a normal window with
- * DevTools. A show's sky has no frame (owner ruling): its close button could only be refused, since
- * the sky closes with the app. Escape leaves a window that skyPreload's top-edge strip moves.
+ * DevTools. A show's sky has no title bar, only the window buttons over the page (createSkyWindows
+ * hides them in full screen and decides what they do); skyPreload's top-edge strip moves it. Not
+ * fullscreenable, so the green button zooms instead of starting macOS's own full screen.
  * It shows on its first paint of a blank black page, so no frame is ever white.
  */
-export function openSkyWindow(
-  display: Display,
-  windowed: boolean,
-  mayClose: () => boolean,
-): BrowserWindow {
+export function openSkyWindow(display: Display, windowed: boolean): BrowserWindow {
   const { x, y } = display.bounds;
+  const show: BrowserWindowConstructorOptions = {
+    ...display.bounds,
+    titleBarStyle: 'hidden',
+    fullscreenable: false,
+    ...(process.platform === 'win32'
+      ? { titleBarOverlay: { color: '#000000', symbolColor: '#e8eeff', height: 28 } }
+      : {}),
+  };
   const win = new BrowserWindow({
     show: false,
     title: 'Skymap',
     backgroundColor: '#000000',
-    frame: windowed,
     webPreferences: { preload: join(app.getAppPath(), 'build/control/skyPreload.cjs') },
-    ...(windowed ? { x: x + 40, y: y + 40, width: 1280, height: 720 } : display.bounds),
+    ...(windowed ? { x: x + 40, y: y + 40, width: 1280, height: 720 } : show),
   });
   win.on('page-title-updated', (event) => event.preventDefault());
   win.once('ready-to-show', () => {
@@ -31,10 +35,7 @@ export function openSkyWindow(
     if (!windowed) fillDisplay(win, display.bounds);
   });
   if (windowed) win.webContents.openDevTools({ mode: 'detach' });
-  else {
-    win.on('close', (event) => mayClose() || event.preventDefault());
-    hideSkyChrome(win);
-  }
+  else hideSkyChrome(win);
   superviseWindow(win);
   // Not about:blank: under the dark native theme Chromium paints that a dark grey, not black.
   win.loadURL('data:text/html,<html style="background:%23000"></html>').catch(() => {});

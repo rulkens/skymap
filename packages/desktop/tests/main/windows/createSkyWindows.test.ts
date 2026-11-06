@@ -15,6 +15,7 @@ const fake = vi.hoisted(() => {
 });
 
 vi.mock('electron', () => ({
+  app: { quit: vi.fn() },
   screen: {
     getAllDisplays: () => fake.displays,
     getPrimaryDisplay: () => fake.displays[0],
@@ -38,6 +39,9 @@ vi.mock('../../../src/main/windows/openSkyWindow', () => ({
 }));
 vi.mock('../../../src/main/windows/fillDisplay', () => ({ fillDisplay: vi.fn() }));
 vi.mock('../../../src/main/windows/utils/setFullScreen', () => ({ setFullScreen: vi.fn() }));
+vi.mock('../../../src/main/windows/utils/showWindowButtons', () => ({
+  showWindowButtons: vi.fn(),
+}));
 vi.mock('../../../src/main/sky/showTestGrid', () => ({
   showTestGrid: vi.fn(() => ({ loaded: Promise.resolve(), close: () => Promise.resolve() })),
 }));
@@ -46,6 +50,7 @@ const { createSkyWindows } = await import('../../../src/main/windows/createSkyWi
 const { fillDisplay } = await import('../../../src/main/windows/fillDisplay');
 const { showTestGrid } = await import('../../../src/main/sky/showTestGrid');
 const { setFullScreen } = await import('../../../src/main/windows/utils/setFullScreen');
+const { app } = await import('electron');
 
 const laptop = fake.display(1, 1440, 0);
 const projector = fake.display(7, 4096, 2000);
@@ -118,6 +123,22 @@ describe('createSkyWindows', () => {
     expect(windows.setFullScreen(true)).toBe(true);
     expect(fillDisplay).toHaveBeenLastCalledWith(win, projector.bounds);
     expect(onFullScreen).toHaveBeenLastCalledWith(true);
+  });
+
+  // A visitor's Alt+F4 or Cmd+W on the show must not end it; the operator's close on a window does.
+  it('close quits only from a window, never from full screen', () => {
+    fake.displays = [laptop];
+    const windows = skyWindows(DEFAULT_INSTALL_SETUP);
+    windows.open();
+    const { on } = fake.windows[0] as { on: ReturnType<typeof vi.fn> };
+    const close = on.mock.calls.find((call) => call[0] === 'close')![1] as (event: object) => void;
+    const event = { preventDefault: vi.fn() };
+    close(event);
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(app.quit).not.toHaveBeenCalled();
+    windows.setFullScreen(false);
+    close(event);
+    expect(app.quit).toHaveBeenCalledOnce();
   });
 
   it('moves the control window only when it is not on its own display', () => {

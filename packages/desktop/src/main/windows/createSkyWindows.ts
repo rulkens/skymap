@@ -1,4 +1,4 @@
-import { screen } from 'electron';
+import { app, screen } from 'electron';
 import type { BrowserWindow, Display, Rectangle } from 'electron';
 import type { DisplayInfo } from '../../@types/DisplayInfo';
 import type { Overlay } from '../sky/@types/Overlay';
@@ -10,6 +10,7 @@ import { listDisplays } from './utils/listDisplays';
 import { openSkyWindow } from './openSkyWindow';
 import { placeWindows } from './utils/placeWindows';
 import { setFullScreen as setFull } from './utils/setFullScreen';
+import { showWindowButtons } from './utils/showWindowButtons';
 import { showTestGrid } from '../sky/showTestGrid';
 
 /**
@@ -53,14 +54,29 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     const existing = current();
     if (existing) return existing;
     const at = placeWindows(setup().display, listDisplays())?.sky;
-    const win = openSkyWindow(at ? displayOf(at) : screen.getPrimaryDisplay(), windowed, mayClose);
+    const win = openSkyWindow(at ? displayOf(at) : screen.getPrimaryDisplay(), windowed);
     win.on('closed', onClosed);
     win.webContents.on('before-input-event', (event, input) => {
       if (windowed || !isFullScreenKey(input, process.platform)) return;
       event.preventDefault();
       setFullScreen(!full);
     });
+    if (!windowed) {
+      // Close quits only from a window the operator made (owner ruling): in full screen it is a
+      // visitor's Alt+F4 or Cmd+W, refused until the app quits by its own way.
+      win.on('close', (event) => {
+        if (mayClose()) return;
+        event.preventDefault();
+        if (!full) app.quit();
+      });
+      // The green button (a zoom, as the window is not fullscreenable) and Windows' maximize.
+      win.on('maximize', () => {
+        win.unmaximize();
+        setFullScreen(true);
+      });
+    }
     full = !windowed;
+    showWindowButtons(win, !full);
     // A new sky starts full screen, whatever the last one was left as.
     onFullScreen(full);
     return (sky = win);
@@ -70,6 +86,7 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     const win = current();
     if (windowed || win === null || on === full) return full;
     full = on;
+    showWindowButtons(win, !on);
     // Back in: place() fills the sky's display, as for any sky not filling it.
     if (!on) {
       setFull(win, false);

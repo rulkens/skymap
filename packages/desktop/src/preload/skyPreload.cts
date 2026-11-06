@@ -21,7 +21,7 @@ const DRAG_EDGE_CSS = `
   position: fixed;
   inset: 0 0 auto;
   z-index: 2147483647;
-  height: 16px;
+  height: 28px;
   cursor: grab;
   background: linear-gradient(90deg, transparent, rgba(120, 180, 255, 0.45) 30%,
     rgba(180, 220, 255, 0.7) 50%, rgba(120, 180, 255, 0.45) 70%, transparent) top / 100% 1px no-repeat;
