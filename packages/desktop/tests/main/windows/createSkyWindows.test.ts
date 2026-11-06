@@ -31,7 +31,7 @@ vi.mock('../../../src/main/windows/openSkyWindow', () => ({
       on: vi.fn(),
       getBounds: () => bounds,
       setBounds: vi.fn((next: typeof bounds) => (bounds = next)),
-      webContents: { on: vi.fn() },
+      webContents: { on: vi.fn(), send: vi.fn() },
     };
     fake.windows.push(win);
     return win;
@@ -114,6 +114,8 @@ describe('createSkyWindows', () => {
     expect(windows.setFullScreen(false)).toBe(false);
     expect(setFullScreen).toHaveBeenLastCalledWith(win, false);
     expect(onFullScreen).toHaveBeenLastCalledWith(false);
+    // The preload shows the drag strip only on main's word (its resize heuristic missed this).
+    expect(win.webContents.send).toHaveBeenLastCalledWith('sky:windowed', true);
 
     fake.displays = [projector, laptop];
     windows.place();
@@ -123,6 +125,7 @@ describe('createSkyWindows', () => {
     expect(windows.setFullScreen(true)).toBe(true);
     expect(fillDisplay).toHaveBeenLastCalledWith(win, projector.bounds);
     expect(onFullScreen).toHaveBeenLastCalledWith(true);
+    expect(win.webContents.send).toHaveBeenLastCalledWith('sky:windowed', false);
   });
 
   // A visitor's Alt+F4 or Cmd+W on the show must not end it; the operator's close on a window does.

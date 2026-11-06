@@ -4,6 +4,7 @@ import type { DisplayInfo } from '../../@types/DisplayInfo';
 import type { Overlay } from '../sky/@types/Overlay';
 import type { SkyWindows } from './@types/SkyWindows';
 import type { SkyWindowsDeps } from './@types/SkyWindowsDeps';
+import { SKY_WINDOWED_CHANNEL } from '../../data/skyWindowedChannel';
 import { fillDisplay } from './fillDisplay';
 import { isFullScreenKey } from './utils/isFullScreenKey';
 import { listDisplays } from './utils/listDisplays';
@@ -27,6 +28,9 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
   // The list can change between two reads, so the primary stands in for a display just removed.
   const displayOf = (info: DisplayInfo): Display =>
     screen.getAllDisplays().find((d) => d.id === info.id) ?? screen.getPrimaryDisplay();
+  // A --windowed dev run's sky has its frame; only a show's sky gets the drag strip.
+  const tellSky = (win: BrowserWindow): void =>
+    win.webContents.send(SKY_WINDOWED_CHANNEL, !windowed && !full);
   const fills = (win: BrowserWindow, b: Rectangle): boolean => {
     const a = win.getBounds();
     return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
@@ -77,6 +81,8 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     }
     full = !windowed;
     showWindowButtons(win, !full);
+    // Every page the sky loads gets a fresh preload, which starts with the strip hidden.
+    win.webContents.on('dom-ready', () => tellSky(win));
     // A new sky starts full screen, whatever the last one was left as.
     onFullScreen(full);
     return (sky = win);
@@ -87,6 +93,7 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     if (windowed || win === null || on === full) return full;
     full = on;
     showWindowButtons(win, !on);
+    tellSky(win);
     // Back in: place() fills the sky's display, as for any sky not filling it.
     if (!on) {
       setFull(win, false);

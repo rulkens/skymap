@@ -2,11 +2,12 @@
  * The sky window's preload: nothing for the page to call. It tells main about an Escape press the page
  * left unused, read once the press has run every handler, since the app's own (palette, popover,
  * splash) mark theirs with preventDefault. It also lays a strip along the top edge that moves the
- * frameless window, shown only while the window is smaller than its screen (Escape made it a window).
+ * window, shown only while main says the sky is a window (Escape made it one).
  */
 import { ipcRenderer } from 'electron';
 import { SKY_DRAG_CHANNEL } from '../data/skyDragChannel';
 import { SKY_ESCAPE_CHANNEL } from '../data/skyEscapeChannel';
+import { SKY_WINDOWED_CHANNEL } from '../data/skyWindowedChannel';
 
 window.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape' || event.repeat) return;
@@ -73,14 +74,17 @@ for (const type of ['mousedown', 'mousemove', 'mouseup', 'click'] as const) {
 }
 window.addEventListener('blur', end);
 
+// Main says when the sky is a window: the page's resize event does not reliably come after leaving
+// simple full screen, which left the strip hidden over a windowed sky.
+edge.hidden = true;
+ipcRenderer.on(SKY_WINDOWED_CHANNEL, (_event, windowed: unknown) => {
+  edge.hidden = windowed !== true;
+  if (edge.hidden) end();
+});
+
 window.addEventListener('DOMContentLoaded', () => {
   const style = document.createElement('style');
   style.textContent = DRAG_EDGE_CSS;
-  const fit = () => {
-    edge.hidden = outerWidth >= screen.width && outerHeight >= screen.height;
-  };
-  fit();
-  window.addEventListener('resize', fit);
   document.head.append(style);
   document.body.append(edge);
 });
