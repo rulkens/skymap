@@ -39,18 +39,12 @@ function createFieldCache(opts: {
   readonly height: ReturnType<typeof geoTiffHeightSource>;
   readonly radiusM: number;
 }): (region: LonLatBounds, sunFit: AlbedoRecipe['sunFit']) => Promise<SunField> {
-  // Plain Map, LRU by re-insertion order: a hit deletes+re-sets its entry so
-  // the oldest key is always the one `keys().next()` yields once the cache
-  // is over its cap.
+  // FIFO by insertion order: `keys().next()` is the oldest entry.
   const cache = new Map<string, Promise<SunField>>();
   return async (region, sunFit) => {
     const key = JSON.stringify({ box: region, sunFit });
     const hit = cache.get(key);
-    if (hit !== undefined) {
-      cache.delete(key);
-      cache.set(key, hit);
-      return hit;
-    }
+    if (hit !== undefined) return hit;
     const promise = fitSunField({
       imagery: opts.imagery,
       height: opts.height,
