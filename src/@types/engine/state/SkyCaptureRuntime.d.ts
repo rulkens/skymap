@@ -17,8 +17,8 @@ export type SkyCaptureRuntime = {
   lastAnchorDistanceMpc: number;
   /**
    * The settings slice reference the faces were baked under. `null` = nothing
-   * usable baked: never baked, the band just closed, or the roster was still
-   * settling at or after the last bake. A `rebakeOnSettings: false` row records the
+   * usable baked: never baked, the band just closed, or the last bake ran while
+   * the roster was still settling. A `rebakeOnSettings: false` row records the
    * reference too, but only its null-ness is consulted.
    */
   bakedSettings: EngineSettingsState | null;
