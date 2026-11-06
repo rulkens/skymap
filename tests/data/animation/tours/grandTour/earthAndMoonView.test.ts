@@ -46,8 +46,9 @@ describe('beat 02, Earth and Moon', () => {
   const moon = bodyPositionMpcAt('moon', TOUR_NIGHT_SIM_DAYS);
   const sun = bodyPositionMpcAt('sun', TOUR_NIGHT_SIM_DAYS);
 
+  // Within 2%: the dwell's orbit starts inside the pull-back and turns the landing ~1°.
   it('lands as far from Earth as from the Moon', () => {
-    expect(length(sub(earth, eye)) / length(sub(moon, eye))).toBeCloseTo(1, 6);
+    expect(Math.abs(length(sub(earth, eye)) / length(sub(moon, eye)) - 1)).toBeLessThan(0.02);
   });
 
   it.each([

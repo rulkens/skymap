@@ -23,6 +23,7 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { clockTo } from '../../../../state/tour/clockTo';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
+import { dwellLeadIn } from '../../../../state/tour/dwellLeadIn';
 import { bodyPositionMpcAt } from '../../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { EARTH_DATUM_RADIUS_M } from '../../../bodies/earthDatumRadiusM';
 import { SCALE_UNITS } from '../../../scaleUnits';
@@ -42,6 +43,9 @@ const LABEL_DELAY_SEC = 6;
 const REVEAL_SEC = 2;
 const DWELL_SEC = 7;
 const DWELL_YAW_RAD = 0.1;
+const DWELL_YAW_RATE = DWELL_YAW_RAD / DWELL_SEC;
+// The dwell's orbit starts inside the pull-back, so the camera never stops on the landing.
+const LEAD_IN_SEC = 3;
 
 export const earthAndMoon: ClipData = {
   start: 'live',
@@ -70,10 +74,12 @@ export const earthAndMoon: ClipData = {
       ]),
       // Planets and moons: the Moon is the first name a beat gives back.
       seq([wait(LABEL_DELAY_SEC), show(['label:body:planet'], REVEAL_SEC)]),
+      seq([wait(PULL_BACK_SEC - LEAD_IN_SEC), dwellLeadIn(DWELL_YAW_RATE, LEAD_IN_SEC)]),
     ]),
   ],
 };
 
 export const earthAndMoonDwell: ClipData = dwellDrift(DWELL_SEC, {
-  cruiseRate: DWELL_YAW_RAD / DWELL_SEC,
+  cruiseRate: DWELL_YAW_RATE,
+  flowIn: true,
 });
