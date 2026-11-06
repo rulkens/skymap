@@ -11,7 +11,7 @@ import type { Action } from '@reduxjs/toolkit';
 import type { SagaGenerator } from 'typed-redux-saga';
 
 import { liveCameraRuntimeSaga } from './liveCameraRuntimeSaga';
-import { applyLinkClockAndFrameSaga } from './applyLinkClockAndFrameSaga';
+import { applyLinkSettingsSaga } from './applyLinkSettingsSaga';
 import { requestFocus } from '../selection/requestFocus';
 import { requestSelect } from '../selection/requestSelect';
 import {
@@ -132,7 +132,7 @@ export function* navigateSaga(
   if (startsTakeover && (yield* select(selectTakeoverSource)) !== null) {
     yield* all([take(takeoverEnded), put(exitTakeover())]);
   }
-  yield* call(applyLinkClockAndFrameSaga, intent);
+  yield* call(applyLinkSettingsSaga, intent);
 
   switch (view.kind) {
     case 'home':

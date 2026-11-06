@@ -44,12 +44,12 @@ Rulings: no perf gate (no per-frame work); one plan, serial dispatches.
 **Files:** `src/state/navigation/applyLinkClockAndFrameSaga.ts` → `src/state/navigation/applyLinkSettingsSaga.ts`,
 `src/state/navigation/navigateSaga.ts`, `src/state/arrival/arrivalSaga.ts`, any test mirror.
 
-- [ ] `npm run move-files -- src/state/navigation/applyLinkClockAndFrameSaga.ts src/state/navigation/applyLinkSettingsSaga.ts`
+- [x] `npm run move-files -- src/state/navigation/applyLinkClockAndFrameSaga.ts src/state/navigation/applyLinkSettingsSaga.ts`
       (`--dry` first), then `npm run refactor -- rename` the function `applyLinkClockAndFrameSaga` →
       `applyLinkSettingsSaga` (see `.claude/skills/refactor/SKILL.md` for the exact CLI). No hand-edited imports.
-- [ ] Header: "lands what a link says besides the view" — today `t` and `orientation`. Grep for the old name
+- [x] Header: "lands what a link says besides the view" — today `t` and `orientation`. Grep for the old name
       (comments in `navigateSaga.ts`, `arrivalSaga.ts`, `watchHashSaga.ts`) and fix the prose.
-- [ ] No new test (a rename). Commit.
+- [x] No new test (a rename). Commit.
 
 ### Task 2 (prep): one function for a shot's app address
 
