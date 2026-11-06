@@ -998,15 +998,23 @@ describe('the sky exit lift', () => {
     const { clip, shown } = lift();
     expect(clip).not.toBeNull();
 
+    const pitching = shown.filter((p) => cameraArmKindOf(p.frame) === 'sky');
+    const climbing = shown.filter((p) => cameraArmKindOf(p.frame) !== 'sky');
+    expect(pitching.length).toBeGreaterThan(10);
+    expect(climbing.length).toBeGreaterThan(10);
     // Screen-right stays horizontal at the spot: the drawn view never rolls.
-    for (const p of shown) {
+    for (const p of pitching) {
       const m = asBodyArm(p).basisLocal;
       expect(Math.abs(along([m[0], m[1], m[2]], UP))).toBeLessThan(1e-6);
+      expect((p.pose as SkyPose).azimuthRad).toBeCloseTo(AZIMUTH, 9);
     }
-    const pitching = shown.filter((p) => cameraArmKindOf(p.frame) === 'sky');
-    expect(pitching.length).toBeGreaterThan(10);
-    expect(shown.length - pitching.length).toBeGreaterThan(10);
-    for (const p of pitching) expect((p.pose as SkyPose).azimuthRad).toBeCloseTo(AZIMUTH, 9);
+    // Looking straight down every heading has a horizontal right, so the climb
+    // holds screen-up itself: a heading spin would turn it.
+    const up0 = asBodyArm(climbing[0]!).basisLocal.slice(3, 6);
+    for (const p of climbing) {
+      const m = asBodyArm(p).basisLocal;
+      for (let i = 0; i < 3; i++) expect(m[3 + i]).toBeCloseTo(up0[i]!, 6);
+    }
   });
 
   it('hands off 100 m above the spot looking straight down at the default lens', () => {

@@ -1,10 +1,10 @@
 /**
- * The sky exit's lift (spec §6.3) as a clip in two framed legs, so neither leg
+ * The sky exit's lift (spec §6.1) as a clip in two framed legs, so neither leg
  * interpolates world angles (which roll at the nadir's gimbal point). The sky
  * leg pitches the standing look to the nadir and holds the azimuth; the body
  * leg holds that orientation and moves only the LookAt's target to the ground
- * point and its range to SKY_EXIT_ALTITUDE_M, both linear, so the eye climbs
- * the spot's radial while the lens eases back to the default.
+ * point and its range to SKY_EXIT_ALTITUDE_M, in linear space, on one ease, so
+ * the eye climbs the spot's radial while the lens eases back to the default.
  */
 
 import type { CameraArmCtx } from '../../../../../../@types/camera/arms/CameraArmCtx';

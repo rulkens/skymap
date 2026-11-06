@@ -36,6 +36,7 @@ picker, grids, the takeover, Esc, the readout. §9 backlogs them.
 | R8 | The clip `fov` channel lands in the prep PR, whichever exit wins (2026-11-06). |
 | R9 | The settings slider reads `LENS_MIN_DEG`/`LENS_MAX_DEG`: one range, 0.5°–120° (2026-11-06). |
 | R10 | The stored lens and every field carrying it are named `fovYRad` (radians), never `lens` (2026-11-06). |
+| R11 | B lands, A is rejected (2026-11-06): A's climb read as zooming in and drifted off the spot after the release. B keeps as little state and as much immutability as possible, and the lift lands at 100 m. |
 
 ## 3. Ground preparation
 
@@ -70,7 +71,7 @@ body-arm clip channels carry `roll`                     // a body leg keeps its 
 | Sky row `step`/`nudge` cells | **Growth** | They decline today by design. |
 | `SkyPose` (A) | **Growth** | A field; readers are the row's channels, its two pose utils and the URL codec. Main writes no sky frame (only the decoder names one), so the `k` row breaks no link. |
 | Sky `release` (A) | **Growth** | The site arm's pattern: a pose-carried band (`siteCameraArm.ts` `release`). |
-| Step `clip`, body-leg `roll` (B) | **Growth** | Additions. The body channels' `roll` makes a body leg lossless in the basis, which the row's doc already claimed; no production clip has a body leg. B needs no `release` change: the clip's end commit leaves the arm (§6.3). |
+| Step `clip`, body-leg `roll` (B) | **Growth** | Additions. The body channels' `roll` makes a body leg lossless in the basis, which the row's doc already claimed; no production clip has a body leg. B needs no `release` change: the clip's end commit leaves the arm (§6.1). |
 | `applyWheelZoom`, the world arm's at-rest lane | **Not touched** | A non-world wheel already routes to the arm's step. |
 | `replayInput`'s `tilt` swallow (`replayInput.ts:137`) | **Not touched** | The two-finger drag stays body-only. |
 
@@ -109,16 +110,17 @@ hand-off; a clip without an `fov` track leaves the lens alone. Its tests come wi
 
 `replayInput.stepRow` emits `setFovYRad(fovYRad)` whenever a step returns one, and every later step in the
 same drain reads `fovYRad` from the folded `camera.fovYRad`, so two notches in one frame compound.
-`nudgeCameraArm` passes `lens` through and `stepCameraRuntime` emits it the same way. The settings
+`nudgeCameraArm` passes `fovYRad` through and `stepCameraRuntime` emits it the same way. The settings
 slider takes its range from `LENS_MIN_DEG`/`LENS_MAX_DEG` (R9). The frustum is
-not re-derived mid-drain: only the sky arm writes the lens and it reads no frustum.
+not re-derived mid-drain: only the sky arm writes the lens and it reads no frustum. The drawn
+lens follows a notch one frame later, since the projection reads the lens stored before the drain.
 
 ### 4.4 Nudge (the OpenSpace navigator)
 
 `look` drives §4.1 at `pxPerRad = viewportPx[1] / fovYRad`; `zoom` drives §4.2 with
 `factor = exp(zoom)`; `orbit` and `roll` are ignored (sky-mode §4.1).
 
-## 5. Exit A: the climb (branch `sky-exit-climb`)
+## 5. Exit A: the climb (branch `sky-exit-climb`) (rejected)
 
 1. **Pose.** `SkyPose.eyeHeightM`, metres above the live ground at the spot, ≥ `SKY_EYE_HEIGHT_M`.
    Channels: `distance = eyeHeightM`; decode floors it at `SKY_EYE_HEIGHT_M`. `toParent` places the
@@ -154,8 +156,8 @@ confirms it.
      value, altitude to −π/2. The sky arm has no roll, so the horizon stays level by construction.
    - **Climb**, `SKY_EXIT_CLIMB_MS`, in the `{ body }` frame: orientation held from the leg start
      (the body channels carry `roll`, so the azimuth stays the map's heading); only the LookAt's
-     target (to the spot's ground point) and range (to `SKY_EXIT_ALTITUDE_M`) move, both linear,
-     so the eye climbs the spot's radial. The lens eases `LENS_MAX → DEFAULT_FOV_Y_RAD` here.
+     target (to the spot's ground point) and range (to `SKY_EXIT_ALTITUDE_M`) move, in linear
+     space, on one ease, so the eye climbs the spot's radial. The lens eases `LENS_MAX → DEFAULT_FOV_Y_RAD` here.
    The arm does not release, and nothing commits at the start: the climb leg is a third frame the
    fold leaves alone, and the clip's end commit (a body-arm pose) leaves the sky regime.
 2. **Lens over the lift (R4).** The prep's `fov` channel (P2) carries it; the lens tween is
@@ -180,7 +182,7 @@ Test names are the contract.
   - `a notch the lens clamp eats whole is declined by reference`
   - `nudge look and zoom move the view and the lens at the drag's rate`
 - `replayInput.test.ts`: `two lens notches in one drain compound`.
-- A, `skyCameraArm.test.ts`:
+- A, `skyCameraArm.test.ts` (rejected):
   - `wheel-out at the widest lens raises the eye and eases the lens toward the default`
   - `wheel-in descends to standing before it narrows the lens`
   - `the arm releases exactly at the body arm's floor, at the default lens`
@@ -203,7 +205,7 @@ On each exit branch, a deep link `#pose=k,earth,<Søndermarken lon>,<lat>,…` a
 2. Wheel in to 1° on a star, out to 120°.
 3. Keep scrolling out: the exit, mid-way and landed.
 
-The owner picks A or B. The winner's PR carries the trunk; the loser's branch is closed unmerged.
+The owner picked B (R11). Its PR carries the trunk; A's branches were closed unmerged.
 Acceptance after merge, on the tour branch: stop `#tour=grandTour` in beat 00, drag, scroll out.
 
 ## 9. Backlog (what remains of sky mode)
