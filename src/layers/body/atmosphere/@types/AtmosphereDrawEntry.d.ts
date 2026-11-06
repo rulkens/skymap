@@ -1,6 +1,6 @@
 /**
- * AtmosphereDrawEntry — one atmosphere body resolved for this frame by
- * `atmosphereDrawList` (see its header): the seeded body, its
+ * AtmosphereDrawEntry — one atmosphere body resolved from one view by
+ * `atmosphereEntry` (see its header): the seeded body, its
  * `AtmosphereParams` row, and the pose-dependent values the sky-view bake and
  * the shell draw share. An entry exists only where `ctx.bodyPose` resolved, so
  * consumers read these fields unguarded.

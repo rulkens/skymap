@@ -9,7 +9,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { atmosphereRosterPlans } from '../../../helpers/frame/atmosphereRosterPlans';
 
 import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
@@ -26,7 +25,7 @@ import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/markers/pres
 import { BLACK_HOLES } from '../../../../src/layers/blackHoles/markers/data/blackHoles';
 import { slabRowActive } from '../../../../src/utils/frame/slabRowActive';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { atmosphereDrawList } from '../../../../src/layers/body/atmosphere/present/atmosphereDrawList';
+import { atmosphereEntry } from '../../../../src/layers/body/atmosphere/present/atmosphereEntry';
 import { BODY_SLAB_ROWS } from '../../../../src/layers/body/slabs/present/bodySlabRows';
 import { atmosphereInsideBand } from '../../../../src/layers/body/atmosphere/present/atmosphereInsideBand';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
@@ -75,7 +74,7 @@ const EARTH_INSIDE_EDGE_MPC = atmosphereInsideBand(SCENE_EARTH.id)!.goneAt;
 const EARTH_STATE = {} as unknown as PassState;
 
 /** This view's eye `rMpc` from Earth's centre, Earth's own row in the slab table;
- *  `drawCamPos` and `cam.distance` keep Earth past the draw list's culls. */
+ *  `drawCamPos` and `cam.distance` keep Earth past the sub-pixel cull. */
 function earthCtxAt(rMpc: number): FrameView {
   const [x, y, z] = deriveBodyStates(SIM_DAYS).get(SCENE_EARTH.id)!.positionMpc;
   return {
@@ -83,7 +82,6 @@ function earthCtxAt(rMpc: number): FrameView {
       bodyStates: deriveBodyStates(SIM_DAYS),
       simDays: SIM_DAYS,
       slabBodyCandidates: BODY_SLAB_ROWS,
-      plans: atmosphereRosterPlans(),
     },
     slabs: [makeSlab(), EARTH_SLAB],
     bodyPose: (id: string) =>
@@ -159,9 +157,7 @@ describe('bodyRowSlabs', () => {
     // Disagreement draws the limb twice (both paths) or leaves a black sky (neither).
     const shellInside = [0.5, 1 - 1e-10, 1, 1 + 1e-10, 2].map((k) => {
       const ctx = earthCtxAt(k * EARTH_INSIDE_EDGE_MPC);
-      const inside = atmosphereDrawList(EARTH_STATE, ctx).find(
-        (entry) => entry.body.id === SCENE_EARTH.id,
-      )!.inside;
+      const inside = atmosphereEntry(SCENE_EARTH.id, ctx, EARTH_STATE)!.inside;
       expect(bodyRowSlabs(ctx).insideAtmosphere.includes(EARTH_SLAB_INDEX)).toBe(inside);
       return inside;
     });

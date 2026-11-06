@@ -228,7 +228,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         if (state.settings.debug.disabledPasses[slot] === true) break;
         // The claim is LAZY on purpose: `descriptorFor` marks the slot live for
         // this frame, and these rows carry their own gates (an empty atmosphere
-        // draw list, flow switched off) — claiming up front would leave a row
+        // roster, flow switched off) — claiming up front would leave a row
         // reporting the query set's stale ticks from when it last ran.
         const startMs = cpuSpans.on ? performance.now() : 0;
         compute.encode(encoder, ctx, state, () => timestampSpread(timing, slot));

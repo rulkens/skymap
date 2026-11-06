@@ -3,8 +3,7 @@
  * where `runPlanSteps` files each planner's result and where a pass reads
  * the data planned for its view. A `'once'` result is filed by planner name;
  * a `'perView'` result by planner name AND the `FrameView` it was planned
- * for (a `WeakMap` on view identity, the idiom `atmosphereDrawListCache`
- * and `earthPass` use), so no view can read another view's plan. `get`
+ * for (a `WeakMap` on view identity, the idiom `earthPass` uses), so no view can read another view's plan. `get`
  * on something never planned throws rather than hand back a canvas-shaped
  * default. `awake`, `settling` and `loading` OR every result put this frame,
  * with settling ⇒ loading ⇒ awake folded in here.

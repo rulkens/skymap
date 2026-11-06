@@ -507,7 +507,7 @@ export function createAtmosphereShellRenderer(
     bundles,
   );
 
-  /** An unknown id is a programming error: `atmosphereDrawList` ids come from the same `paramsById` table. */
+  /** An unknown id is a programming error: `ATMOSPHERE_BODIES` ids come from the same `paramsById` table. */
   function bundleFor(bodyId: string): AtmosphereBundle {
     const bundle = bundles.get(bodyId);
     if (bundle === undefined) {
