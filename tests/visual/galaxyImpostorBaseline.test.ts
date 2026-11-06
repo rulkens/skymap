@@ -139,6 +139,7 @@ describe('galaxy-impostor visual baseline', () => {
           visibleCatalogs: new Set(GALAXY_CATALOG_IDS),
           pxPerRad,
           viewPlanes: new Float32Array(0),
+          occluderCones: new Float64Array(0),
           // Live surface-brightness sliders — arbitrary plausible defaults;
           // this baseline is about emission/crossfade geometry, not brightness.
           sbScale: 5,

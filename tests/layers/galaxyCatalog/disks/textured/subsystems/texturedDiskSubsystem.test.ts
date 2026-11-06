@@ -111,6 +111,7 @@ function makeInput(
     visibleCatalogs,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     viewPlanes: new Float32Array(0),
+    occluderCones: new Float64Array(0),
     famousGalaxiesMeta,
     nowMs,
     sourceOpacity,
@@ -179,7 +180,8 @@ describe('createTexturedDiskSubsystem', () => {
     const ATLAS_SLOTS = 256;
     const SPACING = 0.00001;
     const clouds = new Map([[Source.SDSS, makeDenseCloud(ATLAS_SLOTS * 8, 0.7, 45, SPACING)]]);
-    const firstRowKey = galaxyCacheKey(...cartesianToRaDec(10, 0, 0));
+    const [ra, dec] = cartesianToRaDec(10, 0, 0);
+    const firstRowKey = galaxyCacheKey(ra, dec);
 
     runTexturedSolo(walk, sys, makeInput(clouds));
     expect(atlas.slots.slotOf(firstRowKey)).toBeDefined();

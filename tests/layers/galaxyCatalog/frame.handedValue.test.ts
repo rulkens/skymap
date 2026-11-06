@@ -13,18 +13,14 @@ import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import { FRUSTUM_FLOATS_PER_VIEW } from '../../../src/data/camera/frustumFloatsPerView';
 import type { DiskWalkInput } from '../../../src/layers/galaxyCatalog/lod/@types/DiskWalkInput';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import { galaxyPlannerViewOf } from '../../helpers/frame/galaxyPlannerViewOf';
+import { OCCLUDER_CONE_FLOATS } from '../../../src/data/occlusion/occluderConeFloats';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
 const SNAPSHOT = { nowMs: 0, skyCapturesInBand: new Set() } as unknown as ReadyFrameContext;
-const VIEWS = [
-  {
-    cam: { position: [0, 0, 0] },
-    drawPxPerRad: 100,
-    slabs: [null, { vp: new Float64Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]) }],
-  } as unknown as FrameView,
-];
+const VIEWS = [galaxyPlannerViewOf()];
 const STATE = {
   settings: {
     bias: { mode: 0, absMagLimit: -19 },
@@ -79,5 +75,15 @@ describe('galaxyCatalogPlanner — view cull', () => {
   it('culls nothing while a sky capture band is open: the capture replays the disks on all six faces', () => {
     const inBand = { ...SNAPSHOT, skyCapturesInBand: new Set(['sgrAStar']) } as ReadyFrameContext;
     expect(walkInputFor(makeGalaxyCatalogFade({}), inBand).viewPlanes).toHaveLength(0);
+  });
+
+  it('hands the walk the frame camera’s opaque bodies, and none while a sky capture band is open', () => {
+    // Earth five radii off: a disc tens of pixels across, so it occludes.
+    const nearEarth = [galaxyPlannerViewOf([1e-15, 0, 0])];
+    expect(walkInputFor(makeGalaxyCatalogFade({}), SNAPSHOT, nearEarth).occluderCones).toHaveLength(
+      OCCLUDER_CONE_FLOATS,
+    );
+    const inBand = { ...SNAPSHOT, skyCapturesInBand: new Set(['sgrAStar']) } as ReadyFrameContext;
+    expect(walkInputFor(makeGalaxyCatalogFade({}), inBand, nearEarth).occluderCones).toHaveLength(0);
   });
 });

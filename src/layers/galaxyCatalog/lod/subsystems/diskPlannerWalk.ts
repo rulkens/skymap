@@ -14,7 +14,7 @@
  *
  * The distance early-out uses the looser bound, PROCEDURAL_DISK_FADE_START_PX
  * (8 px), so it never skips a row EITHER body could use; a row outside every
- * view is skipped too. Apparent-size gating
+ * view, or behind an opaque body, is skipped too. Apparent-size gating
  * stays in each body's `onRow` (procedural drops px <= 8, textured applies its
  * 24-px gate, famous rows exempt); gating here would braid body policy into the
  * shared loop.
@@ -28,6 +28,8 @@ import { PROCEDURAL_DISK_FADE_START_PX } from '../data/galaxyLodBands';
 import { DISK_WALK_DECIMATION } from '../data/diskWalkDecimation';
 import { sphereInAnyFrustum } from '../../../../utils/camera/frustum/sphereInAnyFrustum';
 import { diskQuadExtentMpc } from '../utils/diskQuadExtentMpc';
+import { sphereBehindAnyCone } from '../../../../utils/occlusion/sphereBehindAnyCone';
+import { everyFrustumInsideACone } from '../../../../utils/camera/frustum/everyFrustumInsideACone';
 import type { Destroyable } from '../../../../@types/rendering/Destroyable';
 import type { DiskPlannerWalk } from '../@types/DiskPlannerWalk';
 import type { DiskRowVisitor } from '../@types/DiskRowVisitor';
@@ -61,7 +63,9 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     procedural: DiskRowVisitor,
     textured: DiskRowVisitor,
   ): void {
-    const { cam, records, visibleCatalogs, pxPerRad, viewPlanes } = input;
+    const { cam, records, visibleCatalogs, pxPerRad, viewPlanes, occluderCones } = input;
+    // Every view on one body's disc (a narrow view of Earth): no row can show, so none is scanned.
+    const rowsHidden = everyFrustumInsideACone(viewPlanes, occluderCones);
 
     // Looser (8-px) bound — see module header. Rows past it can't matter to
     // either body at any plausible galaxy diameter.
@@ -98,7 +102,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
         procedural.beginBlock(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
         textured.beginBlock(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
 
-        if (acceptedThisFrame < DISK_ROW_ACCEPT_BUDGET) {
+        if (!rowsHidden && acceptedThisFrame < DISK_ROW_ACCEPT_BUDGET) {
           for (let i = safeStart; i < end; i++) {
             const i3 = i * 3;
             const x = positions[i3 + 0]!;
@@ -115,6 +119,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
             if (!sphereInAnyFrustum(viewPlanes, -dx, -dy, -dz, cullRadius)) continue;
 
             const camDist = Math.sqrt(camDistSq);
+            if (sphereBehindAnyCone(occluderCones, -dx, -dy, -dz, camDist, cullRadius)) continue;
             const px = apparentSizePxAtDistance(diameterKpc, camDist, pxPerRad);
 
             procedural.onRow(source, block, i, x, y, z, camDist, px);
