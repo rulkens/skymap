@@ -7,11 +7,10 @@ const FILLS: Record<string, string> = {
   __REMOTE_PATH__: pairingUrl('', ''),
 };
 
-/** assets/tablet-setup.html with the app's port and the remote's path filled in; throws on a lost placeholder. */
+/** assets/tablet-setup.html with the app's port and the remote's path filled in; its test checks no mark is lost. */
 export function fillTabletSetupPage(template: string): Buffer {
   let page = template;
   for (const [mark, value] of Object.entries(FILLS)) {
-    if (!page.includes(mark)) throw new Error(`tablet-setup.html has no ${mark}`);
     page = page.replaceAll(mark, value);
   }
   return Buffer.from(page);

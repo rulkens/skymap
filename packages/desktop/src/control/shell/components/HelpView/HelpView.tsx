@@ -1,6 +1,6 @@
 /**
- * HelpView — short answers for the jobs a technician meets after setup, offline. packages/desktop/
- * README.md is the source: its certificate steps were tried on each tablet; change both together.
+ * HelpView — short answers for the jobs a technician meets after setup, offline. The certificate
+ * steps themselves live on the tablet setup page (assets/tablet-setup.html), not here (owner ruling).
  */
 
 import { useEffect, useId, useRef } from 'react';
@@ -58,10 +58,9 @@ function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactN
             setup page on the tablet. Without a camera, open {setupPage} and type the code.
           </li>
           <li>
-            The setup page shows the steps for that tablet: download the certificate, then install
-            it in the tablet&apos;s settings. On an iPad that is Profile Downloaded, Install, and
-            then General, About, Certificate Trust Settings; on Android, search the settings for CA
-            certificate. The page says when the tablet trusts this computer and opens the remote.
+            Follow the steps the setup page shows for that tablet, with a picture of each: it
+            downloads the certificate, which you then install in the tablet&apos;s settings. The
+            page says when the tablet trusts this computer and opens the remote.
           </li>
           <li>
             If this computer asks to accept incoming network connections, choose Allow. On Windows

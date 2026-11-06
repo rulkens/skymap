@@ -16,6 +16,9 @@ extraResources:
     filter:
       - '**/*'
       - '!data/**'
+  # The tablet guide's pictures, kept once in the website's assets; see tabletGuideDir.ts.
+  - from: ../website/src/assets/docs/tablet-guide
+    to: tablet-guide
 mac:
   target: dmg
 dmg:

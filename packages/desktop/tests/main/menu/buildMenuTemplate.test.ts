@@ -2,6 +2,7 @@ import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 import type { MenuActions } from '../../../src/main/menu/@types/MenuActions';
 import { buildMenuTemplate } from '../../../src/main/menu/buildMenuTemplate';
+import { DOCS_TREE } from '../../../../website/src/data/docsTree';
 
 const actions = (): MenuActions => ({
   about: vi.fn(),
@@ -74,10 +75,13 @@ describe('buildMenuTemplate', () => {
     const help = items(buildMenuTemplate('win32', false, a), 'Help');
     help.filter((item) => item.type !== 'separator').forEach((item) => click(item));
     expect(vi.mocked(a.help).mock.calls).toEqual([[], ['tablet'], ['troubleshooting']]);
-    expect(vi.mocked(a.openDocs).mock.calls).toEqual([
-      [''],
-      ['guide/dome-setup/'],
-      ['guide/screens-and-domes/'],
-    ]);
+    // Each docs link must be a live page of the website's own tree: a renamed page would open the
+    // app's catch-all, which answers every path with 200.
+    const live = DOCS_TREE.flatMap((group) => group.pages)
+      .filter((page) => page.status === 'live')
+      .map((page) => page.path);
+    const opened = vi.mocked(a.openDocs).mock.calls.map(([path]) => `/docs/${path}`);
+    expect(opened).toContain('/docs/');
+    expect(opened.filter((path) => path !== '/docs/' && !live.includes(path))).toEqual([]);
   });
 });

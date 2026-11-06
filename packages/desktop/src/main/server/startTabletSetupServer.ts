@@ -5,10 +5,11 @@ import { join } from 'node:path';
 import { TABLET_SETUP_PORT } from '../../data/tabletSetupPort';
 import { fillTabletSetupPage } from './utils/fillTabletSetupPage';
 import { serveTabletSetupRequest } from './utils/serveTabletSetupRequest';
+import { tabletGuideDir } from './tabletGuideDir';
 
 /**
  * The tablet setup page on plain HTTP, every interface, with the step pictures from
- * assets/tablet-guide. It never takes the app down: a missing page or a port in use is logged, and
+ * tabletGuideDir(). It never takes the app down: a missing page or a port in use is logged, and
  * tablets can still fetch /ca.crt from the HTTPS server past its warning; missing pictures only
  * leave the steps as text.
  */
@@ -19,7 +20,7 @@ export async function startTabletSetupServer(caPem: string): Promise<void> {
     .catch((error: unknown) => void console.error('tablet setup page:', error));
   if (page === undefined) return;
   const guide = new Map<string, Buffer>();
-  const dir = join(assets, 'tablet-guide');
+  const dir = tabletGuideDir();
   for (const name of await readdir(dir).catch(() => [])) {
     if (name.endsWith('.webp')) guide.set(`/guide/${name}`, await readFile(join(dir, name)));
   }

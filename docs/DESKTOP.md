@@ -185,7 +185,7 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   it; everything else goes back to Chromium's verdict. `setPermissionRequestHandler` refuses every
   browser permission.
 - **Tablet setup page.** `main/server/startTabletSetupServer.ts`: plain HTTP on `0.0.0.0:47824`
-  (`data/tabletSetupPort.ts`) serving only `assets/tablet-setup.html` at `/`, its `/guide/*.webp` screenshots and the CA at `/ca.crt`,
+  (`data/tabletSetupPort.ts`) serving only `assets/tablet-setup.html` at `/`, its `/guide/*.webp` screenshots (kept once in `packages/website/src/assets/docs/tablet-guide`, shipped as an extra resource, `server/tabletGuideDir.ts`) and the CA at `/ca.crt`,
   so a tablet meets no warning before it trusts the CA. The pairing QR opens it with the room code
   after `#`, which never goes over the wire. The page shows the steps for its OS, checks trust by a
   `no-cors` fetch of the HTTPS server's `/ca.crt` every 2 s (it only succeeds once the CA is trusted),

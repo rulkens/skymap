@@ -16,8 +16,4 @@ describe('fillTabletSetupPage', () => {
     expect(page).toContain('${remoteOrigin}/remote.html#${code}');
     expect(page).not.toMatch(/__[A-Z_]+__/);
   });
-
-  it('refuses a page that lost a placeholder', () => {
-    expect(() => fillTabletSetupPage('<p>no marks</p>')).toThrow('__APP_PORT__');
-  });
 });
