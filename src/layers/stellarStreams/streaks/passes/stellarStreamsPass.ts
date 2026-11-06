@@ -36,10 +36,6 @@ export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass<
       );
     },
 
-    pickEnabled(_state, _ctx, _view, fade) {
-      return runtime.renderer.hasData() && fade > 0;
-    },
-
     // The same windowed `vp`/`viewportPx` and clock as `draw`, so the stamp lands under the streak.
     drawPick(pass, view, ctx, state) {
       runtime.renderer.drawPick(

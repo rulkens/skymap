@@ -15,25 +15,17 @@ const VIEW = {
   viewportPx: [8, 8],
 } as unknown as SlabView;
 
-function runtimeOf(loaded: boolean) {
-  const renderer = { hasData: () => loaded, draw: vi.fn(), drawPick: vi.fn() };
+function runtimeOf() {
+  const renderer = { hasData: () => true, draw: vi.fn(), drawPick: vi.fn() };
   return { runtime: { renderer } as unknown as StellarStreamsRuntime, renderer };
 }
 
 describe('stellarStreamsPass picking', () => {
   it('drawPick draws the streak look only', () => {
-    const { runtime, renderer } = runtimeOf(true);
+    const { runtime, renderer } = runtimeOf();
     stellarStreamsPass(runtime).drawPick!({} as GPURenderPassEncoder, VIEW, CTX, STATE, 1);
     expect(renderer.drawPick).toHaveBeenCalledTimes(1);
     expect(renderer.drawPick.mock.calls[0]![6]).toBe(initialState.streak);
     expect(renderer.draw).not.toHaveBeenCalled();
-  });
-
-  it('pickEnabled is false when the pass is disabled or the fade is 0', () => {
-    const pickEnabled = (loaded: boolean, fade: number) =>
-      stellarStreamsPass(runtimeOf(loaded).runtime).pickEnabled!(STATE, CTX, VIEW, fade);
-    expect(pickEnabled(false, 1)).toBe(false);
-    expect(pickEnabled(true, 0)).toBe(false);
-    expect(pickEnabled(true, 0.5)).toBe(true);
   });
 });

@@ -167,7 +167,8 @@ export function createStellarStreamsRenderer(
       });
     },
     drawPick(pass, rebasedVp, viewportPx, pxPerRad, eye, timeSec, look) {
-      if (instances === null) return;
+      // An invisible look takes no clicks.
+      if (instances === null || look.intensity <= 0) return;
       pass.setPipeline(pickPipeline);
       pass.setVertexBuffer(0, instances);
       pass.setBindGroup(
