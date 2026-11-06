@@ -78,7 +78,7 @@ import {
   clipEnded,
   clipStarted,
   resolveClipStart,
-  setLens,
+  setFovYRad,
   startCameraTween,
 } from '../../../../src/state/camera/cameraSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
@@ -252,7 +252,7 @@ describe('stepCameraRuntime', () => {
     const stored = h.store.getState();
     const rootState = {
       ...stored,
-      camera: { ...stored.camera, lens: Math.PI / 2 },
+      camera: { ...stored.camera, fovYRad: Math.PI / 2 },
     };
 
     const { next } = stepCameraRuntime(prev, inputsFor(h, 16, { rootState, aspect: 2 }));
@@ -273,7 +273,7 @@ describe('stepCameraRuntime', () => {
     expect(h.state.cameraRuntime.register.winner).toBe('followHold');
     const before = h.store.getState().camera.base;
 
-    h.store.dispatch(setLens(Math.PI / 4));
+    h.store.dispatch(setFovYRad(Math.PI / 4));
     h.frame(1);
 
     expect(h.store.getState().camera.base).toBe(before);
@@ -830,7 +830,7 @@ describe('a clip fov channel drives the drawn lens', () => {
       symmetricFrustum(projection.fovYRad, projection.aspect).tanUp,
       12,
     );
-    expect(h.store.getState().camera.lens).toBe(DEFAULT_FOV_Y_RAD);
+    expect(h.store.getState().camera.fovYRad).toBe(DEFAULT_FOV_Y_RAD);
   });
 
   it('commits the driven lens when the clip hands off, with no frame snapping back', () => {
@@ -845,7 +845,7 @@ describe('a clip fov channel drives the drawn lens', () => {
     }
 
     expect(h.store.getState().camera.clip).toBeNull();
-    expect(h.store.getState().camera.lens).toBeCloseTo(0.25, 12);
+    expect(h.store.getState().camera.fovYRad).toBeCloseTo(0.25, 12);
     // The hand-off frame draws the driven lens, never the committed default.
     expect(drawn.every((fov, i) => i === 0 || fov <= drawn[i - 1]!)).toBe(true);
     expect(drawn.at(-1)).toBeCloseTo(0.25, 12);
@@ -854,7 +854,7 @@ describe('a clip fov channel drives the drawn lens', () => {
   it('a clip without a fov track leaves the slider lens live', () => {
     const h = playing({ start: START, timeline: [dollyTo(50, 5)] });
     h.frame(2);
-    h.store.dispatch(setLens(0.5));
+    h.store.dispatch(setFovYRad(0.5));
     h.frame(1);
 
     expect(h.store.getState().camera.clip).not.toBeNull();
@@ -863,7 +863,7 @@ describe('a clip fov channel drives the drawn lens', () => {
 
   it("a 'live' clip opens its fov track from the drawn lens", () => {
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
-    h.store.dispatch(setLens(0.5));
+    h.store.dispatch(setFovYRad(0.5));
     h.frame(2);
     const data: ClipData = {
       start: 'live',
@@ -888,7 +888,7 @@ describe('a clip fov channel drives the drawn lens', () => {
       timeline: [tween('fov', { to: 0.25, over: 5, ease: 'linear' })],
     });
     h.frame(5);
-    expect(h.state.cameraRuntime.drivenLens).not.toBeNull();
+    expect(h.state.cameraRuntime.drivenFovYRad).not.toBeNull();
     return h;
   };
 
@@ -896,10 +896,10 @@ describe('a clip fov channel drives the drawn lens', () => {
   it('a lens written in the hand-off tick wins over the commit', () => {
     const h = midDolly();
     h.store.dispatch(clipEnded());
-    h.store.dispatch(setLens(0.7));
+    h.store.dispatch(setFovYRad(0.7));
     h.frame(1);
 
-    expect(h.store.getState().camera.lens).toBe(0.7);
+    expect(h.store.getState().camera.fovYRad).toBe(0.7);
     expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(0.7);
   });
 
@@ -907,9 +907,9 @@ describe('a clip fov channel drives the drawn lens', () => {
     const h = midDolly();
     h.store.dispatch(clipEnded());
     h.frame(2);
-    h.store.dispatch(setLens(0.7));
+    h.store.dispatch(setFovYRad(0.7));
     h.frame(1);
 
-    expect(h.store.getState().camera.lens).toBe(0.7);
+    expect(h.store.getState().camera.fovYRad).toBe(0.7);
   });
 });

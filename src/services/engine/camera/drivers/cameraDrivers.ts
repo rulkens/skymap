@@ -260,7 +260,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
       return {
         pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies, ctx.terrainHeightAt),
         memory: settledMemory(mem),
-        ...(fov === undefined ? {} : { lens: fov }),
+        ...(fov === undefined ? {} : { fovYRad: fov }),
       };
     },
   },

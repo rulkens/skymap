@@ -68,7 +68,7 @@ function makeCameraState(overrides?: Partial<CameraState>): CameraState {
     clip: null,
     frameTween: null,
     aim: null,
-    lens: DEFAULT_FOV_Y_RAD,
+    fovYRad: DEFAULT_FOV_Y_RAD,
     tuning: DEFAULT_CAMERA_TUNING,
     ...overrides,
   };

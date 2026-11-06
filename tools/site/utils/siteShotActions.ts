@@ -16,7 +16,7 @@ import {
   setStructureLabelEnabled,
 } from '../../../src/layers/structure/state/structures/slice';
 import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/slice';
-import { setAutoRotate, setLens } from '../../../src/state/camera/cameraSlice';
+import { setAutoRotate, setFovYRad } from '../../../src/state/camera/cameraSlice';
 import { degToRad } from '../../../src/utils/math/degToRad';
 import { setExposure } from '../../../src/state/settings/core/tonemapSlice';
 import { setMeshAmbient, setPassDisabled } from '../../../src/state/settings/core/debugSlice';
@@ -72,7 +72,7 @@ export function siteShotActions({
   }
   if (settings.flow) actions.push(setFlowEnabled(true));
   if (settings.desiWedge) actions.push(setGalaxyCatalogVisible({ id: 'desiWedge', enabled: true }));
-  if (settings.fovDeg !== undefined) actions.push(setLens(degToRad(settings.fovDeg)));
+  if (settings.fovDeg !== undefined) actions.push(setFovYRad(degToRad(settings.fovDeg)));
   if (settings.exposure !== undefined) actions.push(setExposure(settings.exposure));
   if (settings.ambient !== undefined) actions.push(setMeshAmbient(settings.ambient));
   if (settings.rawDensity) actions.push(setBiasMode(BiasMode.None));

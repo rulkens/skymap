@@ -29,7 +29,7 @@ export type CameraPose = {
   lookOffset?: Vec2;
   /**
    * Vertical field of view, radians — the clip `fov` channel's field only. The
-   * live lens is `camera.lens`, beside `base`; absent ⇒ the lens holds.
+   * live lens is `camera.fovYRad`, beside `base`; absent ⇒ the lens holds.
    */
   fov?: number;
 };

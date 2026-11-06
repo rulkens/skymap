@@ -51,7 +51,7 @@ const MANUAL_PAUSED: TimeState = {
 };
 
 // Off the default, so a restore that skipped the lens would fail.
-const CAPTURED_LENS = DEFAULT_FOV_Y_RAD / 2;
+const CAPTURED_FOV_Y_RAD = DEFAULT_FOV_Y_RAD / 2;
 
 function makeSnapshot(
   focus: SelectionRef | null = FOCUS_REF,
@@ -89,7 +89,7 @@ function makeSnapshot(
       blackHoleLensingTuning: { ...f.blackHoleLensingTuning },
     },
     orientation: f.orientation,
-    lens: CAPTURED_LENS,
+    fovYRad: CAPTURED_FOV_Y_RAD,
     focus,
     time,
   };
@@ -119,7 +119,7 @@ describe('restoreSceneSaga', () => {
     sagaMiddleware.run(restoreSceneSaga, makeSnapshot());
     await flush();
 
-    expect(store.getState().camera.lens).toBe(CAPTURED_LENS);
+    expect(store.getState().camera.fovYRad).toBe(CAPTURED_FOV_Y_RAD);
   });
 
   it('reverts selection.focus onto the store', async () => {

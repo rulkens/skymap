@@ -41,7 +41,7 @@ const initialState: CameraState = {
   clip: null,
   frameTween: null,
   aim: null,
-  lens: DEFAULT_FOV_Y_RAD,
+  fovYRad: DEFAULT_FOV_Y_RAD,
   tuning: DEFAULT_CAMERA_TUNING,
 };
 
@@ -106,8 +106,8 @@ const cameraSlice = createSlice({
       camera.aim = { ...action.payload };
     },
 
-    setLens: (camera, action: PayloadAction<number>) => {
-      camera.lens = action.payload;
+    setFovYRad: (camera, action: PayloadAction<number>) => {
+      camera.fovYRad = action.payload;
     },
 
     // A WHOLE new record, never a leaf write: the panel's sliders read it back
@@ -131,7 +131,7 @@ export const {
   cancelCameraTween,
   setAutoRotate,
   setCameraTuning,
-  setLens,
+  setFovYRad,
   clipStarted,
   clipEnded,
   startFrameTween,

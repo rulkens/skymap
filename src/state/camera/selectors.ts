@@ -24,7 +24,7 @@ export const selectCameraBase = (state: RootState): FramedCameraPose =>
   selectCameraIntent(state).base;
 
 /** The committed lens in radians; a playing `fov` clip draws its own over it. */
-export const selectLens = (state: RootState): number => selectCameraIntent(state).lens;
+export const selectFovYRad = (state: RootState): number => selectCameraIntent(state).fovYRad;
 
 export const selectAutoRotate = (state: RootState): boolean =>
   selectCameraIntent(state).autoRotate.active;

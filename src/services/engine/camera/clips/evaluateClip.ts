@@ -636,7 +636,7 @@ function originOfLeg(
  * opening leg, so every segment counts and the walk is the pre-frames one.
  * `beforeSec` is only passed when seeding the NEXT leg (see `LegWindow`).
  * Clips author no `lookOffset`, so one starting from an offset pose snaps it to 0.
- * `fov` is not a base-layer pose field here: it is frame-independent (`lensAt`).
+ * `fov` is not a base-layer pose field here: it is frame-independent (`fovYRadAt`).
  */
 function evaluateBaseAt(
   compiled: CompiledClip,
@@ -680,11 +680,11 @@ function evaluateBaseAt(
 }
 
 /**
- * lensAt — the `fov` channel at `t`, or undefined when the clip never touches
+ * fovYRadAt — the `fov` channel at `t`, or undefined when the clip never touches
  * it, so a clip that does not animate the lens leaves the viewer's live. No leg
  * converts it, so every segment counts against the clip's own start lens.
  */
-function lensAt(compiled: CompiledClip, t: number): number | undefined {
+function fovYRadAt(compiled: CompiledClip, t: number): number | undefined {
   const animates =
     compiled.baseTracks['fov'].length > 0 ||
     compiled.velTracks.some((r) => r.channel === 'fov') ||
@@ -740,7 +740,7 @@ export function evaluateFramedClip(
   // A `target` osc track applies the same scalar offset to all three components
   // (the OscTrack model carries one amplitude, not per-axis amplitudes).
   const oscTarget = oscOffset(compiled, 'target', t);
-  const fov = lensAt(compiled, t);
+  const fov = fovYRadAt(compiled, t);
 
   return {
     frame: legs[index]!.frame,

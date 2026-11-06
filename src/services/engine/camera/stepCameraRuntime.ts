@@ -50,7 +50,7 @@ import cameraReducer, {
   cancelCameraTween,
   clearFrameTween,
   commitCameraPose,
-  setLens,
+  setFovYRad,
 } from '../../../state/camera/cameraSlice';
 
 export function stepCameraRuntime(
@@ -121,7 +121,7 @@ export function stepCameraRuntime(
   const lastWinnerRidesWheel = ridesWheelTarget(prevDrivers, winnerLastFrame);
   // Re-derived every frame: the FOV slider can change with no resize event.
   const projection: CameraProjection = {
-    fovYRad: stored.camera.lens,
+    fovYRad: stored.camera.fovYRad,
     aspect,
     near: NEAR_CLIP_MPC,
     far: FAR_CLIP_MPC,
@@ -249,7 +249,13 @@ export function stepCameraRuntime(
     edge.committed === null
       ? rootState
       : { ...rootState, camera: { ...rootState.camera, base: edge.committed } };
-  const { pose, memory, own, pivotBody, lens } = winner.pose(
+  const {
+    pose,
+    memory,
+    own,
+    pivotBody,
+    fovYRad: drivenFovYRad,
+  } = winner.pose(
     {
       state: produced,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),
@@ -312,12 +318,12 @@ export function stepCameraRuntime(
   // A lens written since the drive last saw it (a takeover's restore, a tour
   // re-pin, the slider) wins, as an outside `base` does (`external` above).
   const handOff =
-    lens === undefined && prev.drivenLens?.over === rootState.camera.lens
-      ? prev.drivenLens.drawn
+    drivenFovYRad === undefined && prev.drivenFovYRad?.over === rootState.camera.fovYRad
+      ? prev.drivenFovYRad.drawn
       : undefined;
-  if (handOff !== undefined) actions.push(setLens(handOff));
-  const drawnLens = lens ?? handOff ?? projection.fovYRad;
-  const drawnByLens = drawnLens !== projection.fovYRad;
+  if (handOff !== undefined) actions.push(setFovYRad(handOff));
+  const drawnFovYRad = drivenFovYRad ?? handOff ?? projection.fovYRad;
+  const drawnByLens = drawnFovYRad !== projection.fovYRad;
   const foldCtx: CameraArmCtx = { ...armFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.
@@ -371,14 +377,17 @@ export function stepCameraRuntime(
       scheme: controls.scheme,
       own: own === undefined ? prev.own : { ...prev.own, [winnerId]: own },
       pivotBody: pivotBody ?? null,
-      drivenLens: lens === undefined ? null : { drawn: lens, over: rootState.camera.lens },
+      drivenFovYRad:
+        drivenFovYRad === undefined
+          ? null
+          : { drawn: drivenFovYRad, over: rootState.camera.fovYRad },
       shiftNdc,
       outputs: {
         displayed: projected.displayed,
         simDays,
         upBasis,
-        projection: drawnByLens ? { ...projection, fovYRad: drawnLens } : projection,
-        frustum: drawnByLens ? shiftedFrustum(drawnLens, aspect, shiftNdc) : frustum,
+        projection: drawnByLens ? { ...projection, fovYRad: drawnFovYRad } : projection,
+        frustum: drawnByLens ? shiftedFrustum(drawnFovYRad, aspect, shiftNdc) : frustum,
       },
     },
     actions,
