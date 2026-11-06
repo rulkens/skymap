@@ -6,7 +6,7 @@
 ## State
 
 The `{ sky }` camera arm stands a person at a frame-tagged spot (#1032) and, since sky look-around
-(spec `specs/2026-11-06-sky-look-around-design.md`), answers drag (look), wheel (lens 0.5°–120°)
+(spec `specs/completed/2026-11-06-sky-look-around-design.md`), answers drag (look), wheel (lens 0.5°–120°)
 and an exit past 120°. The lens is camera state (`camera.fovYRad`, #1059). Only clips enter the arm.
 
 ## What remains (sky-mode spec sections)
