@@ -440,8 +440,8 @@ export function frameTo(
  * `null` to clear the selection focus.
  *
  * This is the UNRESOLVED form: it carries a `FocusId` string rather than a
- * concrete `SelectionRef`. `resolveClipFoci` rewrites it to the resolved
- * `kind:'focus'` arm (in `SceneEffect`) — which carries a `SelectionRef` — at
+ * concrete ref. `resolveClipFoci` rewrites it to the resolved
+ * `kind:'focus'` arm (in `SceneEffect`) — which carries a ref — at
  * play time, before `compileClip` runs. `compileClip` throws if it encounters a
  * `focusId` cue that was not resolved.
  *

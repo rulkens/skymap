@@ -78,20 +78,7 @@ export const voyagerMissions: Exhibit = {
         sStar: { enabled: true, labelEnabled: false },
       },
     },
-    picking: {
-      kinds: {
-        body: true,
-        craft: true,
-        earthScene: true,
-        starCatalog: true,
-        galaxyCatalog: false,
-        structure: false,
-        milkyWay: false,
-        zoneOfAvoidance: false,
-        blackHole: true,
-        satellite: false,
-      },
-    },
+    picking: { off: ['galaxyCatalog', 'structure', 'milkyWay', 'zoneOfAvoidance', 'satellite'] },
   },
   lede: 'Two spacecraft launched sixteen days apart in 1977. Between them they passed all four giant planets, and both still send data from beyond the edge of the solar wind.',
   body: [

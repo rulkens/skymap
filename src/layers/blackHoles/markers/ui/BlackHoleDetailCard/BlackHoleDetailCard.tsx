@@ -8,7 +8,6 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { BlackHoleInfo } from '../../../../../@types/engine/BlackHoleInfo';
-import type { FocusableTarget } from '../../../../../@types/engine/FocusableTarget';
 import { BODY_FACTS } from '../../../../../data/bodies/bodyFacts.generated';
 import { formatDistance } from '../../../../../utils/format/formatDistance';
 import { formatRadiusM } from '../../../../../utils/format/formatRadiusM';
@@ -27,7 +26,7 @@ export type BlackHoleDetailCardProps = {
   target: BlackHoleInfo;
   isPinned?: boolean;
   layout?: CardLayout;
-  onFocus?: (target: FocusableTarget) => void;
+  onFocus?: () => void;
   onClose?: () => void;
 };
 
@@ -58,7 +57,7 @@ function BlackHoleDetailCard({
             <Thumbnail url={shotUrl} alt={`${target.label} thumbnail`} />
           ) : undefined
         }
-        onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
+        onFocus={isPinned ? onFocus : undefined}
         focusAriaLabel={`Focus camera on ${target.label}`}
         onClose={isPinned ? onClose : undefined}
       />

@@ -3,7 +3,6 @@ import { flatGalaxyRecordSource } from '../../src/layers/galaxyCatalog/records/l
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../src/layers/galaxyCatalog/records/@types/GalaxyRecordSource';
-import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalaxyMetaEntry';
 
 /**
  * The flat record sources the galaxy slots would build over these catalogs, in
@@ -12,12 +11,11 @@ import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalax
  */
 export function galaxyRecordsOver(
   catalogs: ReadonlyMap<number, GalaxyCatalog>,
-  famousMeta: () => readonly FamousGalaxyMetaEntry[] = () => [],
 ): Map<GalaxyCatalogSourceType, GalaxyRecordSource> {
   const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
   for (const [source, catalog] of catalogs) {
     const entry = GALAXY_CATALOG_SOURCE_RECORD[source as GalaxyCatalogSourceType];
-    records.set(entry.code, flatGalaxyRecordSource(entry, catalog, famousMeta));
+    records.set(entry.code, flatGalaxyRecordSource(entry, catalog));
   }
   return records;
 }

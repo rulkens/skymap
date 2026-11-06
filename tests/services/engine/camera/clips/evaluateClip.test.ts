@@ -37,6 +37,9 @@ import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { SelectionResolver } from '../../../../../src/@types/engine/selection/SelectionResolver';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // ---------------------------------------------------------------------------
 // Shared starting pose for most tests.
@@ -569,10 +572,8 @@ describe('a move after a composite continues from where it ended', () => {
       resolveFocusId: (id: string) => ({ id }),
       extractRow: (ref: { id: string }) => ({
         type: 'galaxyCatalog',
-        x: coord(ref.id, 1),
-        y: coord(ref.id, 2),
-        z: coord(ref.id, 3),
-        diameterKpc: 30,
+        positionMpc: [coord(ref.id, 1), coord(ref.id, 2), coord(ref.id, 3)],
+        radiusMpc: 0.015,
       }),
     } as unknown as SelectionResolver;
     const data = resolveClipFoci(

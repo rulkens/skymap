@@ -11,7 +11,15 @@ import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { ToggleRow } from '../../../src/@types/settings/ToggleRow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
-import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { Source } from '../../../src/data/source';
+import { extractGalaxyRow } from '../../../src/layers/galaxyCatalog/records/present/extractGalaxyRow';
+import { placedGalaxyRow } from '../../../src/layers/galaxyCatalog/selection/utils/placedGalaxyRow';
+import { FAMOUS_GALAXY_NAMES } from '../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
+import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const NO_ROWS: readonly ToggleRow[] = [];
 
@@ -57,29 +65,19 @@ describe('selectDomeStatus', () => {
     const state = stateAfter(
       setSelectionRow({
         slot: 'focus',
-        row: {
-          type: 'body',
-          id: asSceneBodyId('earth'),
-          label: 'Earth',
-          positionMpc: [0, 0, 0],
-          driver: bodyDriverGeometry('earth'),
-        },
+        row: bodyRowAt('earth', [0, 0, 0]),
         focusId: 'body-earth',
       }),
     );
     expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).focus).toEqual({ name: 'Earth' });
   });
 
-  it('names a focused galaxy as its card does', () => {
-    const famous = {
-      id: 'm31',
-      commonName: 'Andromeda Galaxy',
-      names: ['M31', 'NGC 224'],
-      description: '',
-      type: 'Sb',
-    };
-    const row = makeGalaxyRow({ x: 0.5, y: 0.2, z: 0.6, famous });
-    const state = stateAfter(setSelectionRow({ slot: 'focus', row, focusId: 'famous-m31' }));
+  // The name is compiled in: no famous-galaxies sidecar (no `famousMeta` fact) has loaded here.
+  it('names a focused famous galaxy as its card does, before any sidecar lands', () => {
+    const m31 = FAMOUS_GALAXY_NAMES.findIndex((name) => name.id === 'm31');
+    const cloud = makeGalaxyCatalog(FAMOUS_GALAXY_NAMES.length);
+    const row = placedGalaxyRow(extractGalaxyRow(cloud, m31, Source.FamousGalaxy)!);
+    const state = stateAfter(setSelectionRow({ slot: 'focus', row, focusId: 'm31' }));
     expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).focus).toEqual({
       name: 'Andromeda Galaxy',
     });

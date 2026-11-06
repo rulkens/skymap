@@ -21,6 +21,8 @@ import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { sceneOccluderSpheres } from '../sceneOccluderSpheres';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
+import { isKind } from '../../../../utils/selection/isKind';
+import type { BodyRef } from '../../../../@types/engine/selection/BodyRef';
 
 // Reused across frames; grown on the first frame that needs more room (the roster is composed at boot).
 let staging = new Float32Array(0);
@@ -73,8 +75,8 @@ export const orbitTrailsPass: ContentPass = {
         const elements = rows[i]!;
         if (
           group.selectedOnly?.includes(elements.id) &&
-          !(select?.type === 'body' && select.id === elements.id) &&
-          !(focus?.type === 'body' && focus.id === elements.id)
+          !(isKind<BodyRef>(select, 'body') && select.id === elements.id) &&
+          !(isKind<BodyRef>(focus, 'body') && focus.id === elements.id)
         ) {
           continue;
         }

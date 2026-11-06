@@ -14,7 +14,6 @@ export const BLACK_HOLES: readonly BlackHoleRow[] = [
     massSolar: SGR_A_STAR_MASS_SOLAR,
     capture: 'sgrAStar',
     standoffRadii: 2.0,
-    focusDistanceRadii: 30.4,
     // Warm orange, tuned to read against the additive HDR field it shares with
     // the seeded-body glints.
     glintTint: [1, 0.55, 0.2],

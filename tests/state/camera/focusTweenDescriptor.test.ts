@@ -1,17 +1,19 @@
 import { describe, it, expect } from 'vitest';
 
 import { focusTweenDescriptor } from '../../../src/state/camera/focusTweenDescriptor';
-import { galaxyFocusDistance } from '../../../src/services/engine/camera/framing/galaxyFocusDistance';
-import { structureFocusDistance } from '../../../src/services/engine/camera/framing/structureFocusDistance';
-import {
-  MILKY_WAY_CENTER_WORLD,
-  MILKY_WAY_VIEW_DISTANCE_MPC,
-} from '../../../src/data/milkyWay/galacticCenter';
+import { arrivalFraming } from '../../../src/services/engine/camera/framing/arrivalFraming';
+import { selectionKindOf } from '../../../src/services/engine/selection/selectionKindOf';
+import { MILKY_WAY_CENTER_WORLD } from '../../../src/data/milkyWay/galacticCenter';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { FocusMotion } from '../../../src/@types/camera/focusMotion/FocusMotion';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
+import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
+import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // A representative live pose to seed `from`. yaw/pitch must survive into `to`
 // (focus keeps the user's orientation; only target + distance change).
@@ -19,6 +21,11 @@ const FROM: CameraPose = { target: [9, 9, 9], yaw: 1.23, pitch: -0.4, distance: 
 const FOVY = 0.8;
 const FRAME = 'galactic';
 const MOTION: FocusMotion = { style: 'eased', durationMs: 600, ease: 'easeOutCubic' };
+
+/** Where `type`'s arrival lands for an object of `radiusMpc`, at the test FOV. */
+const arrivalAt = (type: string, radiusMpc: number) =>
+  arrivalFraming({ type, positionMpc: [0, 0, 0], radiusMpc }, selectionKindOf(type).focus!, FOVY)
+    .distance;
 
 const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   makeGalaxyRow({
@@ -35,13 +42,13 @@ const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   });
 
 const structureRow = (over: Partial<StructureInfo> = {}) =>
-  ({
+  placedStructureRow({
     type: 'structure',
     worldPos: [10, -20, 30],
     physicalRadiusMpc: 2,
     apparentRadiusMpc: 5,
     ...over,
-  }) as StructureInfo;
+  } as StructureInfo);
 
 describe('focusTweenDescriptor', () => {
   it('carries the live from-pose, the caller-given motion, and the caller-stamped frame', () => {
@@ -60,7 +67,7 @@ describe('focusTweenDescriptor', () => {
       FRAME,
     );
     expect(d.to.target).toEqual([1, 2, 3]);
-    expect(d.to.distance).toBe(galaxyFocusDistance(40));
+    expect(d.to.distance).toBe(arrivalAt('galaxyCatalog', 0.02));
     expect(d.to.yaw).toBe(FROM.yaw);
     expect(d.to.pitch).toBe(FROM.pitch);
   });
@@ -74,7 +81,7 @@ describe('focusTweenDescriptor', () => {
       FRAME,
     );
     expect(d.to.target).toEqual([10, -20, 30]);
-    expect(d.to.distance).toBe(structureFocusDistance(5, FOVY));
+    expect(d.to.distance).toBe(arrivalAt('structure', 5));
   });
 
   it('a structure row falls back to its physical radius when no apparent radius', () => {
@@ -85,17 +92,17 @@ describe('focusTweenDescriptor', () => {
       MOTION,
       FRAME,
     );
-    expect(d.to.distance).toBe(structureFocusDistance(2, FOVY));
+    expect(d.to.distance).toBe(arrivalAt('structure', 2));
   });
 
-  it('the Milky Way arm targets the galactic centre at the fixed view distance', () => {
-    const d = focusTweenDescriptor({ type: 'milkyWay' }, FROM, FOVY, MOTION, FRAME);
+  it('the Milky Way arm targets the galactic centre, framing its disc', () => {
+    const d = focusTweenDescriptor(MILKY_WAY_ROW, FROM, FOVY, MOTION, FRAME);
     expect(d.to.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],
       MILKY_WAY_CENTER_WORLD[2],
     ]);
-    expect(d.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(d.to.distance).toBe(arrivalAt('milkyWay', 0.0175));
     expect(d.to.yaw).toBe(FROM.yaw);
   });
 

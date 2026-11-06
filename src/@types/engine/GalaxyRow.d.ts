@@ -7,8 +7,8 @@ import type { GalaxyCatalogSourceType } from '../../layers/galaxyCatalog/@types/
  *
  * It is exactly the raw inputs `buildGalaxyInfo` needs — positions, the stored
  * spectroscopic redshift, the five mag slots, diameter, orientation, the
- * per-record class/parent bytes, plus the optional famous-galaxies-meta block — and
- * nothing derived. Every derived field (sexagesimal, distance, colours, urls,
+ * per-record class/parent bytes, plus a famous galaxy's compiled-in identity —
+ * and nothing derived. Every derived field (sexagesimal, distance, colours, urls,
  * provenance) is a PURE function of these, so it computes React-side.
  *
  * `objId` is a STRING, not a bigint: this row is stored in the RTK
@@ -51,11 +51,11 @@ export type GalaxyRow = {
   readonly diameterIsFallback: boolean;
   readonly classByte: number;
   readonly parentSurveyByte: number;
+  /** The famous catalog's row from `FAMOUS_GALAXY_NAMES`, present from the first extract: the
+   * sidecar's prose is the card container's join (`famousMeta` fact), never the row's. */
   readonly famous?: {
     readonly id: string;
     readonly commonName?: string;
     readonly names: readonly string[];
-    readonly description: string;
-    readonly type: string;
   };
 };

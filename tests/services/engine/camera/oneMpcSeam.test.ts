@@ -103,12 +103,8 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     "world-position precedent — phase 1c folds a surface site's AUTHORED metre offset (host radius + altitude) into the host's world Mpc position, the metres-in/Mpc-out boundary the authored table demands; no slab, no pose, no MVP",
   ],
   [
-    'src/services/engine/camera/framing/bodyLikeFraming.ts',
-    'framing-bridge precedent — converts a body radius to Mpc so bodyFocusDistance and the returned FocusFraming.radius can compose with Mpc-shaped framing math (camera-pivot controller verification, spec §10), not a pose re-derivation',
-  ],
-  [
     'src/services/engine/camera/framing/pivotRadiusMpc.ts',
-    "framing-bridge precedent — the SelectionRow's radiusM to Mpc bridge feeding clampDistance's floor argument (zoom floor, pinch floor, follow driver's distance target all derive from it), not a pose re-derivation",
+    "framing-bridge precedent — the row's radiusM to Mpc bridge feeding clampDistance's floor argument (zoom floor, pinch floor, follow driver's distance target all derive from it), not a pose re-derivation",
   ],
   [
     'src/layers/blackHoles/lensing/present/blackHoleLensEnvelopeM.ts',

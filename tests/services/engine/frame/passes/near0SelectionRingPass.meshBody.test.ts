@@ -30,14 +30,18 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
-import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
+import { footprintRadiusMpc } from '../../../../../src/utils/selection/footprintRadiusMpc';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { missionsPickCode } from '../../../../support/layerPickCodes';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+import type { SelectionRowBase } from '../../../../../src/@types/engine/selection/SelectionRowBase';
+
+installAppSelectionKinds();
 
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;
@@ -127,8 +131,9 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     id: bodyId,
     label: body.label,
     positionMpc: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],
+    radiusMpc: footprintRadiusMpc(bodyDriverGeometry(bodyId)),
     driver: bodyDriverGeometry(bodyId),
-  } as SelectionRow;
+  } as SelectionRowBase;
   const meshDraw = vi.fn();
   const ringDraw = vi.fn();
   const state = {

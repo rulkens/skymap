@@ -7,7 +7,6 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { SatelliteInfo } from '../../../../../@types/engine/SatelliteInfo';
-import type { FocusableTarget } from '../../../../../@types/engine/FocusableTarget';
 import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
 import { SATELLITE_CLASS_EYEBROWS } from '../../data/satelliteClassEyebrows';
 import { formatSimClock } from '../../../../../utils/time/formatSimClock';
@@ -20,7 +19,7 @@ export type SatelliteDetailCardProps = {
   target: SatelliteInfo;
   isPinned?: boolean;
   layout?: CardLayout;
-  onFocus?: (target: FocusableTarget) => void;
+  onFocus?: () => void;
   onClose?: () => void;
 };
 
@@ -42,7 +41,7 @@ function SatelliteDetailCard({
         layout={layout}
         eyebrow={SATELLITE_CLASS_EYEBROWS[target.satelliteClass]}
         title={target.label}
-        onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
+        onFocus={isPinned ? onFocus : undefined}
         focusAriaLabel={`Follow ${target.label} with the camera`}
         onClose={isPinned ? onClose : undefined}
       />

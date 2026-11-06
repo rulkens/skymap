@@ -13,6 +13,9 @@ import {
 import { Source } from '../../../src/data/source';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 

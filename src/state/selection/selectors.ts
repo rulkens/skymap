@@ -19,18 +19,12 @@
  *    react-redux's reference-equality `useSelector` already bails out when the
  *    value is unchanged, so no `createSelector` wrapper is needed.
  *  - The derived `selectHoveredFocusable`, `selectSelectedFocusable` and
- *    `selectFocusedFocusable` are the heavy ones: they call `buildFocusable`,
- *    which builds a fresh `GalaxyInfo` from a `GalaxyRow`. These are memoized
- *    via `createSelector` so a write to an unrelated slice doesn't re-run
- *    `buildFocusable` for no reason.
+ *    `selectFocusedFocusable` are the heavy ones: each row's kind builds a fresh
+ *    view-model (`toFocusable`), so they are memoized via `createSelector` and a
+ *    write to an unrelated slice doesn't rebuild it.
  *  - `selectIsSelectionActive` is a cheap boolean derived from the two ref
  *    slots; memoized so the UI can react to "is anything selected" without
- *    building a full `FocusableTarget`.
- *
- * `buildFocusable` is imported from the engine helpers layer, but it is
- * intentionally pure: it touches no engine state, no react-redux, and no
- * mutable resources. The import is allowed here because `src/state/` selectors
- * must NOT import react-redux, and `buildFocusable` satisfies that constraint.
+ *    building a full card target.
  *
  * Every selector is `RootState`-scoped, so the same function works unchanged on
  * BOTH the React side (`useAppSelector(selectX)`) and the engine side
@@ -40,14 +34,13 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectionRoute, selectionRowsRoute } from '../../store/constants';
-import { buildFocusable } from '../../services/engine/helpers/buildFocusable';
-import { selectFamousStarsMeta } from '../engine/selectors';
+import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import type { RootState } from '../../store/types';
 import type { SelectionState } from '../../@types/store/SelectionState';
 import type { SelectionRowsState } from '../../@types/store/SelectionRowsState';
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
-import type { SelectionRow } from '../../@types/engine/SelectionRow';
-import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
+import type { FocusableTargetBase } from '../../@types/engine/selection/FocusableTargetBase';
+import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
+import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
 
 // --- base selectors -----------------------------------------------------------
 
@@ -56,10 +49,10 @@ const selectSelection = (state: RootState): SelectionState => state[selectionRou
 const selectSelectionRows = (state: RootState): SelectionRowsState => state[selectionRowsRoute];
 
 // --- selection ref slot reads (raw Intent) ------------------------------------
-export const selectSelectedRef = (state: RootState): SelectionRef | null =>
+export const selectSelectedRef = (state: RootState): SelectionRefBase | null =>
   selectSelection(state).select;
 
-export const selectFocusRef = (state: RootState): SelectionRef | null =>
+export const selectFocusRef = (state: RootState): SelectionRefBase | null =>
   selectSelection(state).focus;
 
 // --- pending request reads (in-flight Intent) ---------------------------------
@@ -78,12 +71,13 @@ export const selectPendingSelectId = (state: RootState): string | null =>
 
 // --- selectionRows slot reads (resolved display cache) ------------------------
 
-const selectHoverRow = (state: RootState): SelectionRow | null => selectSelectionRows(state).hover;
+const selectHoverRow = (state: RootState): SelectionRowBase | null =>
+  selectSelectionRows(state).hover;
 
-const selectSelectRow = (state: RootState): SelectionRow | null =>
+const selectSelectRow = (state: RootState): SelectionRowBase | null =>
   selectSelectionRows(state).select;
 
-export const selectFocusRow = (state: RootState): SelectionRow | null =>
+export const selectFocusRow = (state: RootState): SelectionRowBase | null =>
   selectSelectionRows(state).focus;
 
 /**
@@ -93,45 +87,24 @@ export const selectFocusRow = (state: RootState): SelectionRow | null =>
 export const selectFocusId = (state: RootState): string | null =>
   selectSelectionRows(state).focusId;
 
-// --- derived FocusableTarget selectors ----------------------------------------
+// --- derived FocusableTargetBase selectors ----------------------------------------
 
-/**
- * selectHoveredFocusable — builds a `FocusableTarget` from the hover
- * `SelectionRow`, or null when the hover slot is empty. Memoized on the hover
- * row reference and the famous-star sidecar: `buildFocusable` builds a fresh
- * `GalaxyInfo`/`StarInfo` object per call, so this selector gates that work
- * behind a `createSelector` stable-reference check. The sidecar is an input
- * rather than a card read, so a star's curated rows fill in the moment it lands.
- */
-export const selectHoveredFocusable = createSelector(
-  [selectHoverRow, selectFamousStarsMeta],
-  (row, famousStarsMeta): FocusableTarget | null => buildFocusable(row, famousStarsMeta),
-);
+const focusableOf = (row: SelectionRowBase | null): FocusableTargetBase | null =>
+  row === null ? null : (selectionKindOf(row.type).toFocusable(row) as FocusableTargetBase);
 
-/**
- * selectSelectedFocusable — builds a `FocusableTarget` from the select
- * `SelectionRow`, or null when the select slot is empty. Memoized on the
- * select row reference for the same reason as `selectHoveredFocusable`.
- */
-export const selectSelectedFocusable = createSelector(
-  [selectSelectRow, selectFamousStarsMeta],
-  (row, famousStarsMeta): FocusableTarget | null => buildFocusable(row, famousStarsMeta),
-);
+/** The hover row's card view-model, or null; memoized on the row reference. */
+export const selectHoveredFocusable = createSelector([selectHoverRow], focusableOf);
 
-/**
- * selectFocusedFocusable — builds a `FocusableTarget` from the focus
- * `SelectionRow`, or null when the focus slot is empty. Memoized on the
- * focus row reference for the same reason as `selectHoveredFocusable`.
- */
-export const selectFocusedFocusable = createSelector(
-  [selectFocusRow, selectFamousStarsMeta],
-  (row, famousStarsMeta): FocusableTarget | null => buildFocusable(row, famousStarsMeta),
-);
+/** The select row's card view-model, or null; memoized on the row reference. */
+export const selectSelectedFocusable = createSelector([selectSelectRow], focusableOf);
+
+/** The focus row's card view-model, or null; memoized on the row reference. */
+export const selectFocusedFocusable = createSelector([selectFocusRow], focusableOf);
 
 /**
  * selectIsSelectionActive — true when either the select or the focus ref slot
- * holds a SelectionRef. The cheap boolean the UI uses to know "is something
- * selected" without building a FocusableTarget. Memoized over the two ref
+ * holds a SelectionRefBase. The cheap boolean the UI uses to know "is something
+ * selected" without building a FocusableTargetBase. Memoized over the two ref
  * inputs so it only recomputes when a ref slot actually changes.
  */
 export const selectIsSelectionActive = createSelector(

@@ -26,7 +26,7 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { driveWheelEvents } from '../../../helpers/camera/driveWheelEvents';
 import { displayedEye } from '../../../helpers/camera/displayedEye';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
+import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
@@ -54,12 +54,15 @@ import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);
 const EARTH = BODIES.get(asSceneBodyId('earth'))! as BodyState;
 const MARS = BODIES.get(asSceneBodyId('mars'))! as BodyState;
-// The outer bound, matching cameraDrivers'/focusFraming's own read of
+// The outer bound, matching cameraDrivers'/the body row's own read of
 // bodyFootprintRadiusM — not the datum, which F2's Earth relief now diverges
 // from by 0.14%.
 const R_MPC = bodyFootprintRadiusM(SCENE_EARTH) * SCALE_UNITS.M_TO_MPC;
@@ -154,7 +157,7 @@ describe('focus release while engaged (round 10)', () => {
     const endDist = distTo(displayedEye(h.state), MARS);
     expect(endDist).toBeGreaterThan(startDist * 100); // gone — at Earth
     const dEarth = distTo(displayedEye(h.state), EARTH);
-    const earthFraming = bodyFocusDistance(R_MPC, Math.PI / 3);
+    const earthFraming = bodyArrivalDistanceMpc(R_MPC, Math.PI / 3);
     expect(Math.abs(dEarth - earthFraming) / earthFraming).toBeLessThan(1e-3);
   });
 
@@ -165,7 +168,7 @@ describe('focus release while engaged (round 10)', () => {
     // the approach owed on the exit frame would fly the eye straight back out
     // to h/R 3.3, which is why this runs well past the Eased duration.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
-    const start: CameraPose = { ...MARS_PARK, distance: bodyFocusDistance(MARS_R_MPC, FOV) };
+    const start: CameraPose = { ...MARS_PARK, distance: bodyArrivalDistanceMpc(MARS_R_MPC, FOV) };
     h.seedPose(absoluteArm(start));
     h.focus('mars');
     h.store.dispatch(
@@ -232,7 +235,7 @@ function roverMpc(bodies: ReadonlyMap<string, BodyState>): Vec3 {
 
 /** The framing distance the rover's own approach flies to, in metres. */
 const ROVER_FRAMING_M =
-  bodyFocusDistance(
+  bodyArrivalDistanceMpc(
     bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'curiosity', 'test')) * SCALE_UNITS.M_TO_MPC,
     FOV,
   ) / SCALE_UNITS.M_TO_MPC;
@@ -379,7 +382,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
     // Whole, in order: the length is half the property — a release without the
     // approach behind it lands `body:mars` and stops there.
     expect(out).toEqual(['site:curiosity', 'body:mars', 'absolute']);
-    const marsFraming = bodyFocusDistance(MARS_R_MPC, FOV);
+    const marsFraming = bodyArrivalDistanceMpc(MARS_R_MPC, FOV);
     expect(distTo(displayedEye(h.state), MARS) / marsFraming).toBeCloseTo(1, 6);
 
     h.focus('curiosity');

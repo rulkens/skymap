@@ -10,14 +10,13 @@ import { Source } from '../../../../src/data/source';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { structurePickId } from '../../../../src/layers/structure/picking/utils/structurePickId';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { milkyWaySelectionRow } from '../../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
-import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow';
-import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
-import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
-import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
-import { bodySelectionRow } from '../../../../src/layers/body/selection/present/bodySelectionRow';
-import { structureSelectionRow } from '../../../../src/layers/structure/picking/present/structureSelectionRow';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
+import { milkyWaySelectionRow } from '../../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
+import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/zoneOfAvoidanceSelectionRow';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
+import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/starCatalogSelectionRow';
+import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
+import { bodySelectionRow } from '../../../../src/layers/body/selection/bodySelectionRow';
+import { structureSelectionRow } from '../../../../src/layers/structure/selection/structureSelectionRow';
 import { galaxyRowRuntime, starRowRuntime } from '../../../support/layerPickCodes';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
@@ -31,8 +30,9 @@ import {
   structureRowRuntime,
   zoneOfAvoidancePickCode,
 } from '../../../support/layerPickCodes';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
-function roundTrip<Ref extends SelectionRef>(row: SelectionKindRow<Ref>, ref: Ref): Ref | null {
+function roundTrip<Ref extends SelectionRefBase>(row: SelectionKindRow<Ref>, ref: Ref): Ref | null {
   const word = row.encodePick(ref);
   const pick = unpackPick(word!)!;
   return row.resolvePick(pick);
@@ -79,7 +79,7 @@ describe('SelectionKindRow.encodePick', () => {
     ).toEqual(star);
     const galaxy = { type: 'galaxyCatalog', source: Source.SDSS, index: 12 } as const;
     const catalogs = new Map([[Source.SDSS, makeGalaxyCatalog(16)]]);
-    const row = galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs, famousMeta: [] }));
+    const row = galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs }));
     expect(roundTrip(row, galaxy)).toEqual(galaxy);
   });
 
