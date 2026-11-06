@@ -12,11 +12,12 @@ reaches uses, and the warning lists all ~35 of them on every boot.
 
 Spec: `docs/superpowers/specs/2026-09-17-albedo-bench-design.md`.
 
-The bench and the bake run one implementation: what is tuned here is what
-Mars is baked with (via `albedoRecipeImagerySource`, wired into
-`marsSurfaceBake` separately). Save writes the committed recipe straight to
-[`tools/textures/surfaceBodies/marsAlbedoRecipe.json`](../textures/surfaceBodies/marsAlbedoRecipe.json)
-— the file the bake reads.
+Save writes the recipe to
+[`tools/textures/surfaceBodies/marsAlbedoRecipe.json`](../textures/surfaceBodies/marsAlbedoRecipe.json).
+The Mars bake does not read it yet: `marsSurfaceBake` still de-shades with
+`delightedImagerySource` and the values in `marsAlbedoRecipe.ts` (a fixed
+photo sun). Pointing it at `albedoRecipeImagerySource` needs a full retune,
+because those values don't transfer to a fitted sun field.
 
 ## Using it
 

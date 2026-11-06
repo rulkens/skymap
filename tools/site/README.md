@@ -61,7 +61,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## Workbench pictures
 
-`npx tsx tools/site/shootWorkbench.ts <id> <address>` takes the picture of one row of `packages/website/src/data/workbenches.ts` from wherever that workbench is served and writes it to `packages/website/src/assets/workbenches/<id>-<width>.avif` and `.webp`, which are committed. A workbench has no deep link and no settings, so it is not in the shot manifest: what the runner does on the page is given as flags (the file's header lists them), and the commands the six pictures were taken with are these.
+`npx tsx tools/site/shootWorkbench.ts <id> <address>` takes the picture of one row of `packages/website/src/data/workbenches.ts` from wherever that workbench is served and writes it to `packages/website/src/assets/workbenches/<id>-<width>.avif` and `.webp`, which are committed. A workbench has no deep link and no settings, so it is not in the shot manifest: what the runner does on the page is given as flags (the file's header lists them), and the commands each picture was taken with are these.
 
 | Picture   | Command, after `npx tsx tools/site/shootWorkbench.ts`                                       |
 | --------- | ------------------------------------------------------------------------------------------- |
@@ -70,6 +70,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 | `flow`    | `flow http://localhost:<port>/ --fill intensity=0.8 --wheel=-4000 --settle 25000`           |
 | `scene`   | `scene http://localhost:<port>/ --settle 25000`                                             |
 | `curator` | `curator --from-master`, after the steps under the table                                    |
+| `albedo`  | `albedo http://localhost:5700/ --settle 15000`                                              |
 | `audit`   | `audit file://<repo>/tools/structure-audit/out/structureAudit.html --dark --click Layering` |
 
 - The flow workbench as it opens is a faint ball in a black window: the picture raises the intensity and zooms in. The audit page is light by default and would be the one bright rectangle on a dark page, so it is asked for its dark colours.
