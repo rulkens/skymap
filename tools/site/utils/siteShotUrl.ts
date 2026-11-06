@@ -1,4 +1,5 @@
 import type { SiteShot } from '../../../packages/website/src/@types/SiteShot';
+import { shotHash } from '../../../packages/website/src/utils/shotHash';
 
 /**
  * The address a shot is taken from. `cinema` hides the app's chrome and makes
@@ -17,6 +18,6 @@ export function siteShotUrl(
     ...(shot.query ? [shot.query] : []),
     ...(shot.settings?.remote || shot.settings?.pairing ? ['remote'] : []),
   ];
-  const hash = shot.settings?.tourStep === undefined ? `#${shot.link}` : '';
+  const hash = shot.settings?.tourStep === undefined ? `#${shotHash(shot)}` : '';
   return `${base.replace(/\/+$/, '')}/${flags.length > 0 ? `?${flags.join('&')}` : ''}${hash}`;
 }

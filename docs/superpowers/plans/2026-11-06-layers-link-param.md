@@ -59,10 +59,10 @@ Rulings: no perf gate (no per-frame work); one plan, serial dispatches.
 **Signature:** `shotHash(shot: Pick<SiteShot, 'link' | 'settings'>): string` — the hash body (no `#`) the app opens
 for this shot. In this task it returns `shot.link` unchanged.
 
-- [ ] `shotLink` returns `shotHash(...)` where it returned `link`; `siteShotUrl` builds `#${shotHash(shot)}` (the
+- [x] `shotLink` returns `shotHash(...)` where it returned `link`; `siteShotUrl` builds `#${shotHash(shot)}` (the
       `tourStep` bare-address rule stays for now); `pressCredits` passes `shotHash(shot)` to `appLink`.
-- [ ] `shotLinks.test.ts` "only the gate reads a shot's link": the gate becomes `utils/shotHash.ts`.
-- [ ] Behaviour unchanged, no new test. Commit.
+- [x] `shotLinks.test.ts` "only the gate reads a shot's link": the gate becomes `utils/shotHash.ts`.
+- [x] Behaviour unchanged, no new test. Commit.
 
 ### Task 3: the layer-switch codec — `review: yes`
 

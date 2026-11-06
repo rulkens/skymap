@@ -1,8 +1,8 @@
 /**
  * A shot's "Open this view" must open what the picture shows. A link can switch no layer on, so a shot
- * that has the runner switch one on gets no link (utils/shotLink.ts). What the runner switches on is read
+ * that has the runner switch one on gets no link (utils/shotLink.ts, reading through utils/shotHash.ts). What the runner switches on is read
  * from its own actions, so a new layer setting the gate does not know fails here; and the site reads a
- * shot's address only through the gate, so a new component cannot print the bare one.
+ * shot's address only through the gate (utils/shotHash.ts), so a new component cannot print the bare one.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -14,7 +14,7 @@ import { shotLink } from '../../../packages/website/src/utils/shotLink';
 import { siteShotActions } from '../../../tools/site/utils/siteShotActions';
 
 const SRC = resolve(import.meta.dirname, '../../../packages/website/src');
-const GATE = 'utils/shotLink.ts';
+const GATE = 'utils/shotHash.ts';
 
 // A layer switched on: a `set…Enabled` / `set…Visible` / setVisibility action whose value is on.
 const switchesOn = ({ type, payload }: UnknownAction & { payload?: unknown }) =>
