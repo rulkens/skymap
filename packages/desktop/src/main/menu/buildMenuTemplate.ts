@@ -42,6 +42,9 @@ export function buildMenuTemplate(
       submenu: [
         { label: 'About Skymap', click: actions.about },
         { type: 'separator' },
+        // Where both platforms look for settings; it opens the control window, which holds them.
+        { label: 'Settings…', accelerator: 'CommandOrControl+,', click: actions.showControl },
+        { type: 'separator' },
         ...hide,
         { label: 'Quit Skymap', accelerator: 'CommandOrControl+Q', role: 'quit' },
       ],

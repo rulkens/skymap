@@ -61,6 +61,8 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
       setFullScreen(!full);
     });
     full = !windowed;
+    // A new sky starts full screen, whatever the last one was left as.
+    onFullScreen(full);
     return (sky = win);
   };
 

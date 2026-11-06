@@ -74,6 +74,8 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   const rotations = serially();
   let about: BrowserWindow | null = null;
   let awake: number | null = null;
+  // A sky Escape made a window belongs to the operator, so it carries the menu (installAppMenu).
+  let skyFull = !windowed;
 
   const setup = createSetupStore(userData, await readSetup(userData), {
     placeWindows: () => placeAll(),
@@ -131,7 +133,10 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     mayClose,
     setup: () => setup.current(),
     onClosed: () => update({ skyRunning: false }),
-    onFullScreen: (full) => tick('fullScreen', full),
+    onFullScreen: (full) => {
+      skyFull = full;
+      tick('fullScreen', full);
+    },
   });
   const update = (patch: Partial<ControlState>): void => {
     state = { ...state, ...patch };
@@ -191,7 +196,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   };
   // Without a complete set the sky has nothing to show; the page disables the button for the same reason.
   const restartSky = (): void => void (state.hasData && loadSky());
-  const tick = installAppMenu(control, windowed, {
+  const tick = installAppMenu(control, windowed, (win) => !skyFull && win === sky.current(), {
     about: showAbout,
     showControl,
     showSky: () => sky.current()?.focus(),
