@@ -11,6 +11,7 @@ const actions = (): MenuActions => ({
   testGrid: vi.fn(),
   fullScreen: vi.fn(),
   help: vi.fn(),
+  openDocs: vi.fn(),
 });
 
 const items = (template: MenuItemConstructorOptions[], menu: string) =>
@@ -67,10 +68,15 @@ describe('buildMenuTemplate', () => {
     expect(item.registerAccelerator).toBe(false);
   });
 
-  it('opens Help at the section each item names', () => {
+  it('opens Help at the section each item names, and the website docs in the browser', () => {
     const a = actions();
     const help = items(buildMenuTemplate('win32', false, a), 'Help');
-    help.forEach((item) => click(item));
+    help.filter((item) => item.type !== 'separator').forEach((item) => click(item));
     expect(vi.mocked(a.help).mock.calls).toEqual([[], ['tablet'], ['troubleshooting']]);
+    expect(vi.mocked(a.openDocs).mock.calls).toEqual([
+      ['/docs/'],
+      ['/docs/guide/dome-setup/'],
+      ['/docs/guide/screens-and-domes/'],
+    ]);
   });
 });

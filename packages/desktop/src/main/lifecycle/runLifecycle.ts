@@ -4,7 +4,15 @@
  * createDailySchedule, createSetupStore, createSkyWindows); main owns one ControlState and pushes
  * it whole to the control page on every change.
  */
-import { app, globalShortcut, ipcMain, nativeTheme, powerSaveBlocker, screen } from 'electron';
+import {
+  app,
+  globalShortcut,
+  ipcMain,
+  nativeTheme,
+  powerSaveBlocker,
+  screen,
+  shell,
+} from 'electron';
 import type { BrowserWindow, WebContents } from 'electron';
 import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -42,6 +50,7 @@ import { resolveDataRoot } from '../sync/utils/resolveDataRoot';
 import { rotateRoomCode } from '../relay/rotateRoomCode';
 import { runSync } from '../sync/runSync';
 import { serially } from './utils/serially';
+import { SITE_ORIGIN } from '../menu/data/siteOrigin';
 import { SKY_ESCAPE_CHANNEL } from '../../data/skyEscapeChannel';
 import { skyUrlFor } from '../sky/utils/skyUrlFor';
 import { startSecureServer } from '../server/startSecureServer';
@@ -207,6 +216,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
       showControl();
       if (!control.isDestroyed()) control.webContents.send(CONTROL_CHANNELS.help, section);
     },
+    openDocs: (path) => void shell.openExternal(new URL(path, SITE_ORIGIN).href),
   });
 
   const handlers: ControlIpcHandlers = {

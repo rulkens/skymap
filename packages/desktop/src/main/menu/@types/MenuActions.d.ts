@@ -9,4 +9,6 @@ export type MenuActions = {
   testGrid: (on: boolean) => void;
   fullScreen: (on: boolean) => void;
   help: (section?: HelpSection) => void;
+  /** Opens a page of the website in the browser; `path` is site-relative, with its trailing slash. */
+  openDocs: (path: string) => void;
 };

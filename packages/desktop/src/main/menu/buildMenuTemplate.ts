@@ -82,6 +82,13 @@ export function buildMenuTemplate(
         { label: 'Skymap Help', click: () => actions.help() },
         { label: 'Connecting a tablet', click: () => actions.help('tablet') },
         { label: 'Troubleshooting', click: () => actions.help('troubleshooting') },
+        { type: 'separator' },
+        { label: 'Skymap documentation', click: () => actions.openDocs('/docs/') },
+        { label: 'Setting up a dome', click: () => actions.openDocs('/docs/guide/dome-setup/') },
+        {
+          label: 'Screens and domes',
+          click: () => actions.openDocs('/docs/guide/screens-and-domes/'),
+        },
       ],
     },
   ];
