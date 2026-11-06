@@ -43,7 +43,7 @@ export function deriveView(
 
   const viewBasisWorld = multiply3x3(snapshot.camBasisWorld, rotation);
   const viewForward: Vec3 = [viewBasisWorld[6], viewBasisWorld[7], viewBasisWorld[8]];
-  const eyeOffset = rotateVec3ByTightMat3(eyeOffsetMpc, viewBasisWorld);
+  const eyeOffset = rotateVec3ByTightMat3(viewBasisWorld, eyeOffsetMpc);
   const drawCamPos: Readonly<Vec3> = [
     cam.position[0]! + eyeOffset[0],
     cam.position[1]! + eyeOffset[1],

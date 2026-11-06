@@ -44,7 +44,7 @@ export const CAMERA_PROJECTIONS: {
     view(camera, viewportPx) {
       const { yaw, pitch, distanceM, targetM } = camera;
       const dirLocal = yawPitchToDir(yaw, pitch); // target → eye, Y-up frame-local
-      const dir = rotateVec3ByTightMat3(dirLocal, ENU_UP_BASIS); // → world (Z-up)
+      const dir = rotateVec3ByTightMat3(ENU_UP_BASIS, dirLocal); // → world (Z-up)
       const eyeM: Vec3 = [
         targetM[0] + distanceM * dir[0],
         targetM[1] + distanceM * dir[1],
@@ -63,7 +63,7 @@ export const CAMERA_PROJECTIONS: {
     // perspective view's at its target, so switching projection keeps the scale on screen.
     view(camera, viewportPx) {
       const { yaw, distanceM, targetM } = camera;
-      const level = rotateVec3ByTightMat3(yawPitchToDir(yaw, 0), ENU_UP_BASIS); // Z exactly 0
+      const level = rotateVec3ByTightMat3(ENU_UP_BASIS, yawPitchToDir(yaw, 0)); // Z exactly 0
       const upM: Vec3 = [-level[0], -level[1], 0];
       const eyeM: Vec3 = [targetM[0], targetM[1], targetM[2] + ORTHO_EYE_ABOVE_TARGET_M];
       return {

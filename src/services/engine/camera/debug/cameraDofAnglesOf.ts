@@ -34,7 +34,7 @@ import { mappedTiltRad } from '../orientation/utils/mappedTiltRad';
 import { refAzimuthOf } from '../../../../utils/camera/surfaceFrame/refAzimuthOf';
 import { tiltFromNadirRad } from '../../../../utils/camera/surfaceFrame/tiltFromNadirRad';
 import { normalize3 } from '../../../../utils/math/normalize3';
-import { rotateVec3ByTightMat3T } from '../../../../utils/math/rotateVec3ByTightMat3T';
+import { rotateByTranspose } from '../../../../utils/math/rotateByTranspose';
 import { wrapRad } from '../../../../utils/math/wrapRad';
 import type { PositionedId } from '../../../../@types/scene/PositionedId';
 
@@ -102,7 +102,7 @@ export function cameraDofAnglesOf(input: {
     // the window, misleading the capture: measure in the SAME band-blended
     // reference the engaged settle converges against, with the pose's own up as
     // the carry, exactly as `eyeFrameOf` passes it.
-    const sceneUpLocalBody = rotateVec3ByTightMat3T(upRef, bodyState.orientation);
+    const sceneUpLocalBody = rotateByTranspose(bodyState.orientation, upRef);
     const forwardLocal: Vec3 = [basisM[6], basisM[7], basisM[8]];
     const upLocal: Vec3 = [basisM[3], basisM[4], basisM[5]];
     const { east, north } = blendedEnuAt(

@@ -532,7 +532,7 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
     if (effE.kind !== 'spin' || effG.kind !== 'spin') throw new Error('expected spin effects');
 
     const decodeWorld = (yaw: number, pitch: number, basis: Mat3): Vec3 =>
-      rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), basis);
+      rotateVec3ByTightMat3(basis, yawPitchToDir(yaw, pitch));
 
     const dirE = decodeWorld(livePose.yaw + effE.by, livePose.pitch, ORIENTATION_FRAMES.ecliptic);
     const dirG = decodeWorld(livePose.yaw + effG.by, livePose.pitch, ORIENTATION_FRAMES.galactic);
@@ -640,7 +640,7 @@ describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
     const bearingOf = (outer: typeof effE, basis: Mat3) => {
       const yaw = (outer.children[0] as { to: number }).to;
       const pitch = (outer.children[1] as { to: number }).to;
-      return rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), basis);
+      return rotateVec3ByTightMat3(basis, yawPitchToDir(yaw, pitch));
     };
     const dirE = bearingOf(effE, ORIENTATION_FRAMES.ecliptic);
     const dirG = bearingOf(effG, ORIENTATION_FRAMES.galactic);
