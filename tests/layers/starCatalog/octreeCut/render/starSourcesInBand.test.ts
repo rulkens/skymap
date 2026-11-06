@@ -1,7 +1,7 @@
 /**
  * `starSourcesInBand` — the one home of the source gate (`starCutInputs`/`starCatalogVisible`
- * both delegate to it): a loaded survey catalog draws only while its handed value times its
- * crossfade at the camera's heliocentric distance is > 0.
+ * both delegate to it): a loaded survey catalog draws only while its handed value, which
+ * carries the entry's `survey` band, is > 0.
  */
 import { describe, it, expect, vi } from 'vitest';
 
@@ -9,7 +9,6 @@ import { starSourcesInBand } from '../../../../../src/layers/starCatalog/octreeC
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { Octree } from '../../../../../src/@types/octree/Octree';
 import { Source } from '../../../../../src/data/source';
-import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 type Runtime = Pick<StarCatalogRuntime, 'renderer'>;
@@ -32,33 +31,14 @@ function makeRuntime(catalog: Octree<StarColumns>): Runtime {
 const fadeOf = (gaiaStars: number) => ({ famousStar: 1, gaiaStars, sStar: 1, sun: 1 });
 
 describe('starSourcesInBand', () => {
-  it('holds a loaded catalog whose crossfade at camDistPc is > 0', () => {
-    const catalog = makeCatalog();
-    const result = starSourcesInBand(
-      makeRuntime(catalog),
-      fadeOf(1),
-      GAIA_STARS_ENTRY.crossfadePc.inner,
-    );
+  it('holds a loaded catalog at its handed value', () => {
+    const result = starSourcesInBand(makeRuntime(makeCatalog()), fadeOf(0.5));
     expect(result).toHaveLength(1);
     expect(result[0]!.source).toBe(Source.GaiaStars);
-    expect(result[0]!.crossfade).toBe(1);
+    expect(result[0]!.opacity).toBe(0.5);
   });
 
-  it('excludes a loaded catalog outside its crossfade band', () => {
-    const result = starSourcesInBand(
-      makeRuntime(makeCatalog()),
-      fadeOf(1),
-      GAIA_STARS_ENTRY.crossfadePc.outer + 1,
-    );
-    expect(result).toEqual([]);
-  });
-
-  it("is empty while the catalog's handed value is 0, whatever the distance", () => {
-    const result = starSourcesInBand(
-      makeRuntime(makeCatalog()),
-      fadeOf(0),
-      GAIA_STARS_ENTRY.crossfadePc.inner,
-    );
-    expect(result).toEqual([]);
+  it("is empty while the catalog's handed value is 0", () => {
+    expect(starSourcesInBand(makeRuntime(makeCatalog()), fadeOf(0))).toEqual([]);
   });
 });

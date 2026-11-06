@@ -51,6 +51,7 @@ export function starCatalogPlanner(
     name: 'star-catalog',
     scope: 'once',
     fade: 'starCatalog',
+    hasDistanceBand: true,
     plan(_snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState, fade) {
       const slotsOverride = state.settings.starCatalogs.chunkSlotsOverride;
       if (slotsOverride !== appliedSlots) {

@@ -11,12 +11,11 @@ import { THE_EDGE_MPC } from '../../src/data/animation/tours/grandTour/theEdge';
 import { deriveBodyStates } from '../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../src/data/time/constJ2000';
 import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';
-import { STAR_CATALOG_IDS } from '../../src/data/starCatalog/starCatalogIds';
-import { SEEDED_STAR_CATALOGS } from '../../src/data/bodies/seededStarCatalogs';
 import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/seededStars/data/starBackdropDissolve';
 import { FAMOUS_STAR_ENTRY } from '../../src/layers/starCatalog/sources/famous-star';
 import { SUN_ENTRY } from '../../src/layers/starCatalog/sources/sun';
 import { S_STAR_ENTRY } from '../../src/layers/starCatalog/sources/s-star';
+import { GAIA_STARS_ENTRY } from '../../src/layers/starCatalog/sources/gaia-stars';
 import { normalize3 } from '../../src/utils/math/normalize3';
 import { SCENE_EARTH } from '../../src/data/bodies/sceneEarth';
 import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
@@ -93,13 +92,21 @@ describe('seeded star sets dissolve from their own region', () => {
     expect(valueAtEye('starCatalog', along(gc, SCALE_UNITS.PC_TO_MPC), S_STAR_ENTRY.id)).toBe(1);
     expect(valueAtEye('starCatalog', along(gc, -goneAt), S_STAR_ENTRY.id)).toBe(0);
   });
+});
 
-  it.each(STAR_CATALOG_IDS.filter((id) => !(id in SEEDED_STAR_CATALOGS)))(
-    'the survey star item (%s) is unbanded',
-    (item) => {
-      expect(valueAt('starCatalog', 10 * FOREGROUND_MAX_DISTANCE_MPC, item)).toBe(1);
-    },
-  );
+// The literals are the deleted `starCrossfadeOpacity({ inner: 8_000, outer: 25_000 }, pc)`
+// at each distance: the band must keep the look it replaced, with no pop at either edge.
+describe('Gaia survey stars', () => {
+  it.each([
+    [5, 1],
+    [8, 1],
+    [16.5, 0.5],
+    [25, 0],
+    [30, 0],
+  ])('Gaia fades like the old crossfade (%s kpc)', (kpc, old) => {
+    const value = valueAt('starCatalog', kpc * SCALE_UNITS.KPC_TO_MPC, GAIA_STARS_ENTRY.id);
+    expect(value).toBeCloseTo(old, 12);
+  });
 });
 
 // One astronomical unit from the Sun: the home view's distance from the render origin.

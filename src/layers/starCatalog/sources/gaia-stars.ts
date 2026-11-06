@@ -9,8 +9,8 @@ import { Source } from '../../../data/source';
  * that row seeds a hand-picked map from the body store; this one loads millions
  * of Gaia stars from disk. Like the volume rows (MCPM_ENTRY), it keeps its
  * presentation defaults in-row rather than in a separate settings table, so the
- * draw budget and the crossfade band that hands off to the procedural Milky-Way
- * cloud sit next to the `binBaseName` they govern.
+ * draw budget sits next to the `binBaseName` it governs. The 8–25 kpc handoff to
+ * the procedural Milky-Way cloud is the Layer's `survey` band (`visibility.ts`).
  */
 export const GAIA_STARS_ENTRY = {
   type: 'starCatalog',
@@ -38,10 +38,4 @@ export const GAIA_STARS_ENTRY = {
     medium: { drawBudget: 1_500_000, slots: 128 },
     large: { drawBudget: 1_500_000, slots: 256 },
   },
-  // Camera-distance band (parsecs) over which the survey stars crossfade to
-  // the procedural Milky-Way cloud. Chosen so the stellar bubble starts
-  // fading in while the cloud still dominates the view, reaching full
-  // strength well inside the disk. First-pass eye-tuning from real-data
-  // bring-up — this is the knob the tuning task iterates.
-  crossfadePc: { inner: 8_000, outer: 25_000 },
 } as const satisfies SurveyStarCatalogSourceEntry;

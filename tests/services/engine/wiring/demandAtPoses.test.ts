@@ -21,6 +21,7 @@ import { flowAssetRows } from '../../../../src/layers/flow/streamlines/load/flow
 import { structureAssetRows } from '../../../../src/layers/structure/catalog/load/structureAssetRows';
 import { constellationsAssetRows } from '../../../../src/layers/constellations/figures/load/constellationsAssetRows';
 import { localBubbleAssetRows } from '../../../../src/layers/localBubble/shell/load/localBubbleAssetRows';
+import { starCatalogAssetRows } from '../../../../src/layers/starCatalog/survey/load/starCatalogAssetRows';
 import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
 import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
 import { cosmicWebFilamentsVisibility } from '../../../../src/layers/cosmicWebFilaments/visibility';
@@ -28,6 +29,7 @@ import { flowVisibility } from '../../../../src/layers/flow/visibility';
 import { structureVisibility } from '../../../../src/layers/structure/visibility';
 import { constellationsVisibility } from '../../../../src/layers/constellations/visibility';
 import { localBubbleVisibility } from '../../../../src/layers/localBubble/visibility';
+import { starCatalogVisibility } from '../../../../src/layers/starCatalog/visibility';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import { bodyHomePose } from '../../../../src/services/engine/camera/framing/bodyHomePose';
@@ -47,6 +49,7 @@ import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDe
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 import type { VisibilityEntry } from '../../../../src/@types/engine/layer/VisibilityEntry';
 
@@ -60,6 +63,7 @@ const ENTRIES: readonly VisibilityEntry[] = [
   ...structureVisibility,
   ...constellationsVisibility,
   ...localBubbleVisibility,
+  ...starCatalogVisibility,
 ];
 
 const galaxyRows = expandCompanionRows(
@@ -81,6 +85,10 @@ const flowRows = flowAssetRows({ slot: slot('flow') } as never);
 const structureRows = structureAssetRows({ slot: slot('structure') });
 const constellationRows = constellationsAssetRows({ slot: slot('constellations') } as never);
 const bubbleRows = localBubbleAssetRows({ slot: slot('bubble') } as never);
+const gaiaRow = starCatalogAssetRows({
+  catalogs: new Map([[Source.GaiaStars, slot('gaia')]]),
+  famousStarsMeta: slot('famousStarsMeta'),
+} as unknown as StarCatalogRuntime).find((r) => r.key === Source.GaiaStars)!;
 const bodyRows = bodyAssetRows({
   textureSlots: new Map(
     ALL_BODY_TEXTURE_KEYS.map((e) => [bodyTextureSlotKey(e.bodyId, e.kind), slot('texture')]),
@@ -95,6 +103,7 @@ const ALL_ROWS: readonly AssetWiringRow[] = [
   ...SURVEY_LAYERS,
   ...constellationRows,
   ...bubbleRows,
+  gaiaRow,
   ...bodyRows,
   ...meshRows,
 ];
@@ -194,5 +203,13 @@ describe('demand at poses (the real composed rows)', () => {
     const selectedKinds = new Set<SelectionRefBase['type']>(['galaxyCatalog']);
     const ctx = { ...earthBootCtx(), selectedKinds };
     for (const row of surveyPoints) expect(demands(row, ctx), String(row.key)).toBe(true);
+  });
+
+  // Gaia's `survey` band fades out by 25 kpc: the row loads within 10x that, releases past 100x.
+  it('the Gaia row releases beyond 2.5 Mpc and loads within 250 kpc', () => {
+    expect(demands(gaiaRow, earthBootCtx())).toBe(true);
+    expect(demands(gaiaRow, ctxAt(mpcPose(0.2)))).toBe(true);
+    expect(verdict(gaiaRow, ctxAt(mpcPose(1)))).toEqual({ demand: false, release: false });
+    expect(verdict(gaiaRow, ctxAt(mpcPose(3)))).toEqual({ demand: false, release: true });
   });
 });
