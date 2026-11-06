@@ -14,19 +14,13 @@ import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/Galax
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
-import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import { galaxyPlannerViewOf } from '../../helpers/frame/galaxyPlannerViewOf';
 import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 
-const SNAPSHOT = { nowMs: 0, skyCapturesInBand: new Set() } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const FADE = makeGalaxyCatalogFade();
-const VIEWS = [
-  {
-    cam: { position: [0, 0, 0] },
-    drawPxPerRad: 100,
-    slabs: [null, { vp: new Float64Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]) }],
-  } as unknown as FrameView,
-];
+const VIEWS = [galaxyPlannerViewOf()];
 
 const STATE = {
   settings: {

@@ -24,11 +24,12 @@ export type TileStreamSubsystem<T, S extends SlotStore> = Destroyable & {
    * every slot is in use AND none can be evicted.  Bumps the LRU clock
    * for an existing key.
    *
-   * "None can be evicted" means every slot was claimed earlier this same
-   * frame — taking one would undo work already done. Callers skip the
-   * refused key and carry on with the rest of the frame's requests.
+   * "None can be evicted" means every slot was claimed at or after
+   * `liveSince` (default: this same frame) — taking one would undo work
+   * already done. Callers skip the refused key and carry on with the rest
+   * of the frame's requests.
    */
-  allocate(key: string, atFrame: number): number | null;
+  allocate(key: string, atFrame: number, liveSince?: number): number | null;
 
   /**
    * Refresh a resident key's LRU stamp without allocating. Returns its slot,
