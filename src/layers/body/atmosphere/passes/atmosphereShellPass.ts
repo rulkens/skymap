@@ -8,7 +8,8 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
-import { atmosphereDrawList } from '../present/atmosphereDrawList';
+import { atmosphereEntry } from '../present/atmosphereEntry';
+import { drawsAtmosphere } from '../present/drawsAtmosphere';
 import { atmosphereShellUniforms } from '../present/atmosphereShellUniforms';
 import { sampledDepthBinding } from '../../../../services/engine/frame/sampledDepthBinding';
 
@@ -19,16 +20,16 @@ export function atmosphereShellPass(runtime: BodyRuntime): ContentPass {
     enabled(state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
       const bodyId = view.slab.frame.hostId;
-      return atmosphereDrawList(state, ctx).some(
-        (entry) => entry.body.id === bodyId && !entry.inside,
+      return (
+        drawsAtmosphere(bodyId, ctx, state) && atmosphereEntry(bodyId, ctx, state)?.inside === false
       );
     },
 
     draw(pass, view, ctx, state) {
       if (view.slab.frame.kind !== 'body-m') return;
       const bodyId = view.slab.frame.hostId;
-      const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
-      if (entry === undefined) return;
+      const entry = atmosphereEntry(bodyId, ctx, state);
+      if (entry === null) return;
       // Every ray the fragment classifies ends at the depth this row's opaque passes stamped.
       runtime.atmosphereShellRenderer.draw(
         pass,

@@ -21,7 +21,9 @@ export const PRELUDE: FrameSection = {
     { kind: 'plan', name: 'satellites' },
     // Once for every view: a dome's faces share one atlas, so one cut spans them all.
     { kind: 'plan', name: 'surface-tiles' },
-    // `sky-view` re-bakes its LUT every frame (camera altitude + sun direction), unlike
+    // Every view's body slabs, so the once `sky-view` bake covers exactly what any view draws.
+    { kind: 'plan', name: 'atmosphere-roster' },
+    // `sky-view` re-bakes its LUT whenever camera altitude or sun direction moves, unlike
     // the once-baked transmittance/multi-scatter LUTs; both computes sit ahead of
     // `foreground:0` so the atmosphere shell samples this frame's table. Each bills
     // `<name>-compute` (`computeTimingSlotName`), keeping `flow` apart from the ribbon
@@ -56,14 +58,23 @@ export const PRELUDE: FrameSection = {
     // own probe); `star-spheres` / `field-star-sphere` (the Sun stays analytic, a
     // sub-pixel Sun would smear into a false highlight); glints and `orbit-trails`
     // (not environment); `atmosphere-shell` (classifies rays by a sampled scene depth a
-    // capture face never resolves, and its pipeline has no depth state). NEAR0 is empty
-    // because the blit rides COSMO.
+    // capture face never resolves, and its pipeline has no depth state) — inside an
+    // atmosphere `atmosphere-probe-sky` draws the sky instead, FIRST, so the ground
+    // passes overdraw it. NEAR0 is empty because the blit rides COSMO.
     {
       kind: 'capture',
       captures: ['probe'],
       cosmoPasses: ['sky-cubemap-blit'],
       near0Passes: [],
-      bodyPasses: ['earth', 'surface-tiles', 'cloud-shell', 'planets', 'textured-bodies', 'rings'],
+      bodyPasses: [
+        'atmosphere-probe-sky',
+        'earth',
+        'surface-tiles',
+        'cloud-shell',
+        'planets',
+        'textured-bodies',
+        'rings',
+      ],
     },
   ],
 };

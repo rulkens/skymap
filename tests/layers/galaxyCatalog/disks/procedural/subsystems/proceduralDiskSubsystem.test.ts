@@ -86,6 +86,7 @@ function makeInput(
     records: galaxyRecordsOver(catalogs),
     visibleCatalogs,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
+    viewPlanes: new Float32Array(0),
     // Live surface-brightness sliders — arbitrary but plausible defaults;
     // these tests care about gating/sticky-map/crossfade behaviour, not
     // the exact brightness math (covered by galaxySbAmp.test.ts).

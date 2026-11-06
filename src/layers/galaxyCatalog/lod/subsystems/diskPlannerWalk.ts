@@ -13,7 +13,8 @@
  * allocated anywhere in the loop.
  *
  * The distance early-out uses the looser bound, PROCEDURAL_DISK_FADE_START_PX
- * (8 px), so it never skips a row EITHER body could use. Apparent-size gating
+ * (8 px), so it never skips a row EITHER body could use; a row outside every
+ * view is skipped too. Apparent-size gating
  * stays in each body's `onRow` (procedural drops px <= 8, textured applies its
  * 24-px gate, famous rows exempt); gating here would braid body policy into the
  * shared loop.
@@ -24,6 +25,8 @@ import { strideWindow } from '../utils/strideWindow';
 import { maxVisibleCamDistSq } from '../utils/maxVisibleCamDistSq';
 import { apparentSizePxAtDistance } from '../utils/apparentSizePxAtDistance';
 import { PROCEDURAL_DISK_FADE_START_PX } from '../data/galaxyLodBands';
+import { sphereInAnyFrustum } from '../../../../utils/camera/frustum/sphereInAnyFrustum';
+import { diskQuadExtentMpc } from '../utils/diskQuadExtentMpc';
 import type { Destroyable } from '../../../../@types/rendering/Destroyable';
 import type { DiskPlannerWalk } from '../@types/DiskPlannerWalk';
 import type { DiskRowVisitor } from '../@types/DiskRowVisitor';
@@ -33,15 +36,17 @@ import type { DiskPlannerWalkDeps } from '../@types/DiskPlannerWalkDeps';
 
 /**
  * Per-frame cap on rows admitted into the two onRow bodies. The distance
- * gate's radius grows with pxPerRad (∝ 1/tan(fovY/2)), which the FOV slider
- * can push arbitrarily high at narrow FOV — without a cap, a whole decimated
- * window clears the gate at once and floods colour lookup, RA/Dec
- * conversion, and the atlas's O(slotCount) LRU scan (~500× the 60° frame
- * cost, measured). 2048 = decimationFactor(8) × the galaxy atlas's slot
- * count (256, galaxyAtlasSubsystem.ts) — a full stride cycle's worth of
- * atlas capacity, well above the ~60 rows a 60° FOV admits in practice.
+ * gate's radius grows with pxPerRad (∝ 1/tan(fovY/2)); the view cull keeps a
+ * narrow FOV to its own cone, but a dense cone can still flood colour lookup,
+ * RA/Dec conversion, and the atlas's O(slotCount) LRU scan. 2048 =
+ * decimationFactor(8) × the galaxy atlas's slot count (256,
+ * galaxyAtlasSubsystem.ts) — a full stride cycle's worth of atlas capacity.
  */
 export const DISK_ROW_ACCEPT_BUDGET = 2048;
+
+// Cull sphere per quad extent: the quad's corner reaches √2 of its half-extent,
+// and a famous thumbnail's calibration can widen the quad past the catalog size.
+const VIEW_CULL_RADIUS_PER_EXTENT = 2;
 
 export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlannerWalk {
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
@@ -55,7 +60,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     procedural: DiskRowVisitor,
     textured: DiskRowVisitor,
   ): void {
-    const { cam, records, visibleCatalogs, pxPerRad } = input;
+    const { cam, records, visibleCatalogs, pxPerRad, viewPlanes } = input;
 
     // Looser (8-px) bound — see module header. Rows past it can't matter to
     // either body at any plausible galaxy diameter.
@@ -104,9 +109,12 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
             const dz = cz - z;
             const camDistSq = dx * dx + dy * dy + dz * dz;
             if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
+            const diameterKpc = block.diameterKpc[i]!;
+            const cullRadius = diskQuadExtentMpc(diameterKpc) * VIEW_CULL_RADIUS_PER_EXTENT;
+            if (!sphereInAnyFrustum(viewPlanes, -dx, -dy, -dz, cullRadius)) continue;
 
             const camDist = Math.sqrt(camDistSq);
-            const px = apparentSizePxAtDistance(block.diameterKpc[i]!, camDist, pxPerRad);
+            const px = apparentSizePxAtDistance(diameterKpc, camDist, pxPerRad);
 
             procedural.onRow(source, block, i, x, y, z, camDist, px);
             textured.onRow(source, block, i, x, y, z, camDist, px);

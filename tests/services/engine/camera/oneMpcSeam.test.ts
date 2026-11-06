@@ -83,7 +83,7 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'candidacy-math precedent — same shape as bodyTextureLoadRadius.ts: converts a mesh body radius to an Mpc load-distance threshold for the mesh-demand gate, no slab MVP involved',
   ],
   [
-    'src/layers/body/atmosphere/present/atmosphereDrawList.ts',
+    'src/layers/body/atmosphere/present/drawsAtmosphere.ts',
     'cull precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull, same shape as earthPass/cloudShellPass',
   ],
   [

@@ -1,7 +1,7 @@
 /**
  * atmosphereParams — authored scattering constants, one row per body with a visible
  * atmosphere; a body absent from the table draws no shell, and adding a row is necessary AND
- * sufficient (renderer and `atmosphereDrawList` are body-agnostic). Earth is the
+ * sufficient (renderer and `ATMOSPHERE_BODIES` are body-agnostic). Earth is the
  * Bruneton/Hillaire reference set; the rest are physically motivated but eye-tuned, hence
  * untested — so Pluto's row tags each value [M]easured / [D]erived / [L]ook. `planetRadiusKm`
  * and `groundAlbedo` derive from the body's seed, keeping the shell concentric with the sphere
@@ -64,6 +64,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     twilightSoftness: 0.05,
     twilightIntensity: 1.0,
     exposure: 2.35,
+    daylightGain: 2.55, // 6 / 2.35: a noon sky as bright as the sunlit grass beside it
   },
   venus: {
     // Altitude 0 is the tau = 1 CLOUD TOP (50 mbar, 68.8 km up), not the 92 bar surface: the
@@ -106,6 +107,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     twilightSoftness: 0.05,
     twilightIntensity: 1.0,
     exposure: 3.0,
+    daylightGain: 1,
   },
   mars: {
     // Altitude 0 is the drawn surface. Dust carries 98%+ of the extinction and both colour
@@ -148,6 +150,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     twilightSoftness: 0.07,
     twilightIntensity: 1.0,
     exposure: 1.5,
+    daylightGain: 4, // [L] Jezero at noon reads like a rover's frame: butterscotch, no stars
   },
   jupiter: {
     // Cloud-tops-as-ground: no solid surface, so `planetRadiusKm` is the cloud-top radius
@@ -176,6 +179,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
     exposure: 1.3,
+    daylightGain: 1,
   },
   saturn: {
     // Cloud-tops-as-ground like Jupiter; pale gold, with a taller and thinner rim.
@@ -218,6 +222,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
     exposure: 1.3,
+    daylightGain: 1,
   },
   titan: {
     // Cloud-tops-as-ground like Venus, except the offset is not free: altitude 0 is the nadir
@@ -280,6 +285,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     // [L] Between Mars's 1.5 and Venus's 3.0. Scales in-scatter only, so it is NOT the dial for a
     // composite that reads too bright or too red — that is the seed albedo above.
     exposure: 2.0,
+    daylightGain: 1,
   },
   uranus: {
     // Cloud-tops-as-ground. Methane, which reddens/blues these planets, is its own constituent
@@ -320,6 +326,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
     exposure: 1.8,
+    daylightGain: 1,
   },
   neptune: {
     // Cloud-tops-as-ground like Uranus. Uses all 4 constituent slots — MAX_CONSTITUENTS is
@@ -369,6 +376,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
     exposure: 1.8,
+    daylightGain: 1,
   },
   pluto: {
     // The blue haze ring — the only row whose Mie term is per-channel. New Horizons measured
@@ -425,5 +433,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     // ≳148° the ring must be at least as bright as the sunlit crescent (Cheng+17), at ~20°
     // barely detectable (I/F ~0.003, Gladstone+16). Obvious at both means this is too high.
     exposure: 2.35,
+    daylightGain: 1, // [L] no eye check from the surface yet
   },
 };

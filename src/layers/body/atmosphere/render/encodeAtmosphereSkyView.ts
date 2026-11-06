@@ -1,13 +1,14 @@
 /**
- * encodeAtmosphereSkyView: the per-frame sky-view LUT bake, a compute step in the
- * prelude of the frame's single encoder. The shell fragment SAMPLES this LUT; it
- * folds in camera altitude and sun direction, so it is re-baked every frame
- * (transmittance and multi-scatter are baked once). Prelude placement, ahead of the
- * `foreground:0` render step, is what orders the write before the read.
+ * encodeAtmosphereSkyView: the sky-view LUT bake, a compute step in the prelude of
+ * the frame's single encoder. The shell fragment SAMPLES this LUT; it folds in camera
+ * altitude and sun direction, so it is re-packed every frame and re-baked when that
+ * record moves (`dispatchSkyView` skips an unchanged one; the other LUTs bake once).
+ * Prelude placement, ahead of the `foreground:0` render step, is what orders the write
+ * before the read.
  *
- * ONE compute pass for the whole `atmosphereDrawList`: the step owns a single
+ * ONE compute pass for the whole `atmosphereRosterPlanner` roster: the step owns a single
  * GPU-timing slot, and per-body passes would each write that slot's two query
- * indices, the last body silently deciding the report. An empty list opens no pass,
+ * indices, the last body silently deciding the report. An empty roster opens no pass,
  * so the slot stays unwritten and the panel drops the row.
  */
 
@@ -15,7 +16,9 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { AtmosphereShellRenderer } from '../@types/AtmosphereShellRenderer';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
-import { atmosphereDrawList } from '../present/atmosphereDrawList';
+import { atmosphereEntry } from '../present/atmosphereEntry';
+import { atmosphereRosterPlanner } from '../present/atmosphereRosterPlanner';
+import { sunZenithCos } from '../utils/sunZenithCos';
 
 export function encodeAtmosphereSkyView(
   renderer: AtmosphereShellRenderer,
@@ -24,7 +27,10 @@ export function encodeAtmosphereSkyView(
   state: PassState,
   claimTimestampWrites?: ClaimTimestampWrites,
 ): void {
-  const entries = atmosphereDrawList(state, ctx);
+  // Resolved from the canvas view, for the bodies some rig view draws.
+  const entries = [...ctx.snapshot.plans.get(atmosphereRosterPlanner)].flatMap(
+    (bodyId) => atmosphereEntry(bodyId, ctx, state) ?? [],
+  );
   if (entries.length === 0) return;
 
   const pass = encoder.beginComputePass({
@@ -35,11 +41,6 @@ export function encodeAtmosphereSkyView(
   for (const { body, params, camLocal, sunLocal } of entries) {
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
     const viewHeightKm = radius * params.atmosphereTopKm;
-    const sunZenithCos =
-      radius > 0
-        ? (camLocal[0] * sunLocal[0] + camLocal[1] * sunLocal[1] + camLocal[2] * sunLocal[2]) /
-          radius
-        : 0;
 
     const twilight = params.twilightSoftness;
     const twilightIntensity = params.twilightIntensity;
@@ -48,7 +49,12 @@ export function encodeAtmosphereSkyView(
     renderer.dispatchSkyView(
       pass,
       body.id,
-      new Float32Array([viewHeightKm, sunZenithCos, twilight, twilightIntensity]),
+      new Float32Array([
+        viewHeightKm,
+        sunZenithCos(camLocal, sunLocal),
+        twilight,
+        twilightIntensity,
+      ]),
     );
   }
   pass.end();

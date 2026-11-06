@@ -849,7 +849,7 @@ describe('the lens shift', () => {
   });
 });
 
-describe('a fov channel drives the drawn lens', () => {
+describe('a clip fov channel drives the drawn lens', () => {
   const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
   const playing = (data: ClipData) => {
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
