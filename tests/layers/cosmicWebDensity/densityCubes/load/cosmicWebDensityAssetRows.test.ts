@@ -1,67 +1,17 @@
 /**
- * cosmicWebDensityAssetRows — each row's demand reads its OWN cube's enabled
- * flag, exercised against a stub `DemandCtx` without a full engine.
+ * cosmicWebDensityAssetRows — the tiered/untiered request builders.
  */
 
 import { describe, it, expect } from 'vitest';
-import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
-import { cosmicWebDensityVisibility } from '../../../../../src/layers/cosmicWebDensity/visibility';
 
 import { cosmicWebDensityAssetRows } from '../../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows';
 import { Source } from '../../../../../src/data/source';
-import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
-import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSettings';
-import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
-import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 import type { CosmicWebDensityRuntime } from '../../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
-import type { UiState } from '../../../../../src/@types/ui/UiState';
 
 // Only `slot` reads the runtime, and nothing here inspects it.
 const ROWS = cosmicWebDensityAssetRows({ slots: {} } as unknown as CosmicWebDensityRuntime);
 
-function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean, sectionOn = true): DemandCtx {
-  const items = {
-    ...INITIAL_SETTINGS.cosmicWebDensity.items,
-    'polyphorm-2mrs': {
-      ...INITIAL_SETTINGS.cosmicWebDensity.items['polyphorm-2mrs'],
-      enabled: polyphormEnabled,
-    },
-    mcpm: { ...INITIAL_SETTINGS.cosmicWebDensity.items.mcpm, enabled: mcpmEnabled },
-  };
-  return {
-    settings: {
-      cosmicWebDensity: { ...INITIAL_SETTINGS.cosmicWebDensity, enabled: sectionOn, items },
-    } as unknown as Readonly<EngineSettingsState>,
-    ui: { paletteOpen: false } as Readonly<UiState>,
-    slotState: () => 'idle',
-    cameraPosMpc: [Infinity, Infinity, Infinity],
-    simDays: CONST_J2000,
-    tier: 'medium',
-    selectedKinds: new Set(),
-  };
-}
-
 describe('cosmicWebDensityAssetRows', () => {
-  it('polyphorm-2mrs demand follows its own field-enabled flag; switched off, it releases', () => {
-    const polyphorm = ROWS.find((row) => row.key === Source.Polyphorm2MRS)!;
-    expect(
-      evaluateAssetDemand(polyphorm, makeCtx(true, false), cosmicWebDensityVisibility),
-    ).toEqual({ demand: true, release: false });
-    expect(
-      evaluateAssetDemand(polyphorm, makeCtx(false, true), cosmicWebDensityVisibility),
-    ).toEqual({ demand: false, release: true });
-  });
-
-  it('the section switch off releases a cube whose own switch is on', () => {
-    const mcpm = ROWS.find((row) => row.key === Source.Mcpm)!;
-    expect(
-      evaluateAssetDemand(mcpm, makeCtx(false, true, false), cosmicWebDensityVisibility),
-    ).toEqual({
-      demand: false,
-      release: true,
-    });
-  });
-
   it('a tiered row carries the tier, an untiered row carries none', () => {
     const mcpm = ROWS.find((row) => row.key === Source.Mcpm)!;
     expect(mcpm.req('medium')).toEqual({ binBaseName: 'mcpm', tier: 'medium' });

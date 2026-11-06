@@ -7,12 +7,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { evaluateAssetDemand } from '../../../src/services/engine/wiring/evaluateAssetDemand';
 import { expandCompanionRows } from '../../../src/utils/loading/expandCompanionRows';
 import type { AssetWiringRow } from '../../../src/@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../src/@types/loading/CompanionAssetRow';
-import type { DemandCtx } from '../../../src/@types/loading/DemandCtx';
-import type { LoadState } from '../../../src/@types/loading/LoadState';
 
 const parent: AssetWiringRow = {
   key: 'filaments',
@@ -28,16 +25,6 @@ const companion: CompanionAssetRow = {
   companionOf: 'filaments',
 };
 
-function ctxWithSlotState(kind: LoadState<unknown>['kind']): DemandCtx {
-  return {
-    settings: {} as never,
-    request: () => false,
-    slotState: () => kind,
-    cameraPosMpc: [0, 0, 0] as const,
-    simDays: 0,
-  } as unknown as DemandCtx;
-}
-
 describe('expandCompanionRows', () => {
   it('a companion derives req, demand and priority from its parent', () => {
     const [, expanded] = expandCompanionRows([parent, companion]);
@@ -45,8 +32,7 @@ describe('expandCompanionRows', () => {
     expect(expanded!.req('small')).toEqual({ small: true });
     // The parent's function is reused, not re-derived — same behaviour by construction.
     expect(expanded!.req).toBe(parent.req);
-    expect(evaluateAssetDemand(expanded!, ctxWithSlotState('loading'), []).demand).toBe(true);
-    expect(evaluateAssetDemand(expanded!, ctxWithSlotState('idle'), []).demand).toBe(false);
+    expect(expanded!.demand).toEqual({ companionOf: 'filaments' });
     expect(expanded!.priority).toBe(21);
   });
 

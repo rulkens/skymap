@@ -1,8 +1,6 @@
 /**
  * What makes a row's asset load and release, declared as data that one evaluator
- * (`evaluateAssetDemand`) reads. `'always'` and `'whenSearching'` never release; a companion
- * loads once its parent leaves `idle`; the object form releases when switched off, outside
- * its tiers, or past its `near` release edge.
+ * (`evaluateAssetDemand`) reads.
  */
 
 import type { AssetKey } from './AssetKey';

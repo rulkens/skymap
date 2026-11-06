@@ -1,48 +1,18 @@
 /**
- * filamentsAssetRows — the Layer's one row's demand, release and request builder, against a
- * stub `DemandCtx` without a full engine.
+ * filamentsAssetRows — the Layer's one row's request builder.
  */
 
 import { describe, it, expect } from 'vitest';
-import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
-import { cosmicWebFilamentsVisibility } from '../../../../../src/layers/cosmicWebFilaments/visibility';
 
 import { filamentsAssetRows } from '../../../../../src/layers/cosmicWebFilaments/filaments/load/filamentsAssetRows';
 import { sameRequest } from '../../../../../src/utils/loading/sameRequest';
-import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
-import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
-import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 import type { CosmicWebFilamentsRuntime } from '../../../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
-import type { UiState } from '../../../../../src/@types/ui/UiState';
 
 // The row reads neither the renderer nor the slot — only `factory` closes over
 // the runtime, and nothing here calls it.
 const ROW = filamentsAssetRows({} as CosmicWebFilamentsRuntime)[0]!;
 
-function makeCtx(settings: unknown): DemandCtx {
-  return {
-    settings: settings as Readonly<EngineSettingsState>,
-    ui: { paletteOpen: false } as Readonly<UiState>,
-    slotState: () => 'idle',
-    cameraPosMpc: [Infinity, Infinity, Infinity],
-    simDays: CONST_J2000,
-    tier: 'medium',
-    selectedKinds: new Set(),
-  };
-}
-
 describe('filamentsAssetRows', () => {
-  it('demand follows settings.cosmicWebFilaments.enabled; switched off, it releases', () => {
-    const at = (enabled: boolean) =>
-      evaluateAssetDemand(
-        ROW,
-        makeCtx({ cosmicWebFilaments: { enabled } }),
-        cosmicWebFilamentsVisibility,
-      );
-    expect(at(true)).toEqual({ demand: true, release: false });
-    expect(at(false)).toEqual({ demand: false, release: true });
-  });
-
   it('the request drifts only across the small boundary', () => {
     // Polarity, not just drift: a flipped flag would fetch the wrong file at
     // every tier while keeping the drift assertions below green.

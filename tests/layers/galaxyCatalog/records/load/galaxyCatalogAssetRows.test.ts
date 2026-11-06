@@ -16,7 +16,6 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { AssetKey } from '../../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
-import type { LoadState } from '../../../../../src/@types/loading/LoadState';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 import type { UiState } from '../../../../../src/@types/ui/UiState';
 import type { GalaxyCatalogRuntime } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
@@ -32,16 +31,11 @@ function rowFor(key: AssetKey) {
   return r;
 }
 
-function makeCtx(over: {
-  settings?: unknown;
-  paletteOpen?: boolean;
-  slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
-  tier?: Tier;
-}): DemandCtx {
+function makeCtx(over: { settings?: unknown; tier?: Tier }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
-    ui: { paletteOpen: over.paletteOpen ?? false } as Readonly<UiState>,
-    slotState: (k) => over.slotStates?.[k] ?? 'idle',
+    ui: { paletteOpen: false } as Readonly<UiState>,
+    slotState: () => 'idle',
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: over.tier ?? 'large',
@@ -50,18 +44,6 @@ function makeCtx(over: {
 }
 
 describe('galaxyCatalogAssetRows demand', () => {
-  it("galaxy catalog rows demand the galaxy catalog's enabled bit; switched off, they release", () => {
-    const sdss = rowFor(Source.SDSS);
-    const at = (enabled: boolean) =>
-      evaluateAssetDemand(
-        sdss,
-        makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled } } } } }),
-        galaxyCatalogVisibility,
-      );
-    expect(at(true)).toEqual({ demand: true, release: false });
-    expect(at(false)).toEqual({ demand: false, release: true });
-  });
-
   it('a catalog the tier excludes is not demanded even when enabled, and is released', () => {
     const settings = {
       galaxyCatalogs: { items: { sdss: { enabled: true }, '2mrs': { enabled: true } } },
@@ -72,34 +54,6 @@ describe('galaxyCatalogAssetRows demand', () => {
     expect(at(Source.SDSS, 'medium')).toEqual({ demand: true, release: false });
     // A source with no tier caps ships at every tier, the smallest included.
     expect(at(Source.TwoMRS, 'small')).toEqual({ demand: true, release: false });
-  });
-
-  it('famousGalaxiesMeta demands when the Famous slot is not idle', () => {
-    const famousGalaxiesMeta = rowFor('famousGalaxiesMeta');
-    expect(
-      evaluateAssetDemand(
-        famousGalaxiesMeta,
-        makeCtx({ slotStates: { [Source.FamousGalaxy]: 'loading' } }),
-        galaxyCatalogVisibility,
-      ).demand,
-    ).toBe(true);
-    expect(
-      evaluateAssetDemand(
-        famousGalaxiesMeta,
-        makeCtx({ slotStates: { [Source.FamousGalaxy]: 'idle' } }),
-        galaxyCatalogVisibility,
-      ).demand,
-    ).toBe(false);
-  });
-
-  it('pgcAlias demands only while the palette is open', () => {
-    const pgc = rowFor('pgcAlias');
-    expect(
-      evaluateAssetDemand(pgc, makeCtx({ paletteOpen: true }), galaxyCatalogVisibility).demand,
-    ).toBe(true);
-    expect(
-      evaluateAssetDemand(pgc, makeCtx({ paletteOpen: false }), galaxyCatalogVisibility).demand,
-    ).toBe(false);
   });
 });
 

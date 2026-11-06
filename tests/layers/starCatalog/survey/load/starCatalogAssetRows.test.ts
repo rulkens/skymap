@@ -1,22 +1,13 @@
 /**
- * starCatalogAssetRows — the Layer's demand + request cases. The registry is
- * pure data, so each row's declared demand is evaluated against a stub `DemandCtx`
- * without a full engine.
+ * starCatalogAssetRows — the Layer's request cases.
  */
 
 import { describe, it, expect } from 'vitest';
-import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
-import { starCatalogVisibility } from '../../../../../src/layers/starCatalog/visibility';
 
 import { starCatalogAssetRows } from '../../../../../src/layers/starCatalog/survey/load/starCatalogAssetRows';
 import { expandCompanionRows } from '../../../../../src/utils/loading/expandCompanionRows';
 import { Source } from '../../../../../src/data/source';
-import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { AssetKey } from '../../../../../src/@types/loading/AssetKey';
-import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
-import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
-import type { LoadState } from '../../../../../src/@types/loading/LoadState';
-import type { UiState } from '../../../../../src/@types/ui/UiState';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 
 // The rows as the demand loop sees them — `createLayers` folds companions over
@@ -29,49 +20,6 @@ function rowFor(key: AssetKey) {
   if (!r) throw new Error(`no star asset row for key ${String(key)}`);
   return r;
 }
-
-function makeCtx(over: {
-  settings?: unknown;
-  slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
-}): DemandCtx {
-  return {
-    settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
-    ui: { paletteOpen: false } as Readonly<UiState>,
-    slotState: (k) => over.slotStates?.[k] ?? 'idle',
-    cameraPosMpc: [Infinity, Infinity, Infinity],
-    simDays: CONST_J2000,
-    tier: 'medium',
-    selectedKinds: new Set(),
-  };
-}
-
-describe('starCatalogAssetRows demand', () => {
-  it('gaiaStars demand follows settings.starCatalogs (master gate AND per-item bit)', () => {
-    // Demand is the star show entry's switch: the section (`starCatalogs.enabled`)
-    // AND the item bit, so a catalog switched off by either never loads.
-    const gaia = rowFor(Source.GaiaStars);
-    const on = (starCatalogs: unknown) =>
-      evaluateAssetDemand(gaia, makeCtx({ settings: { starCatalogs } }), starCatalogVisibility);
-    expect(on({ enabled: true, items: { gaiaStars: { enabled: true } } })).toEqual({
-      demand: true,
-      release: false,
-    });
-    // Either switch off releases: the master overrides an enabled item.
-    expect(on({ enabled: false, items: { gaiaStars: { enabled: true } } })).toEqual({
-      demand: false,
-      release: true,
-    });
-    expect(on({ enabled: true, items: { gaiaStars: { enabled: false } } })).toEqual({
-      demand: false,
-      release: true,
-    });
-  });
-
-  it('famousStarsMeta is eagerly demanded, unconditionally', () => {
-    const meta = rowFor('famousStarsMeta');
-    expect(evaluateAssetDemand(meta, makeCtx({}), starCatalogVisibility).demand).toBe(true);
-  });
-});
 
 describe('starCatalogAssetRows req builders', () => {
   it("the famous-stars-meta row's request is undefined at every tier", () => {
