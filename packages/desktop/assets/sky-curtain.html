@@ -230,8 +230,7 @@
     <script>
       const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      // A joke every few seconds, so a long wait visibly moves; the start is random so a restart
-      // does not repeat the same line.
+      // A joke every few seconds, so a long wait visibly moves.
       const LINES = [
         'Counting the galaxies, twice to be sure',
         'Polishing the rings of Saturn',
@@ -249,7 +248,18 @@
         'Untwisting the spiral arms',
       ];
       const line = document.querySelector('p');
-      let at = Math.floor(Math.random() * LINES.length);
+      // A random first line, never the one the last load opened with: plain chance repeats one about
+      // every 14 loads. Storage can be refused; then it is only random.
+      const LAST = 'skymap-curtain-first-line';
+      let last = -1;
+      try {
+        last = Number(localStorage.getItem(LAST) ?? -1);
+      } catch {}
+      let at = Math.floor(Math.random() * (LINES.length - 1));
+      if (last >= 0 && at >= last) at += 1;
+      try {
+        localStorage.setItem(LAST, String(at));
+      } catch {}
       line.textContent = `${LINES[at]}…`;
       setInterval(() => {
         at = (at + 1) % LINES.length;
