@@ -70,14 +70,15 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
 
   // One lifecycle for the lanes, the body and its tile prefix: set by
   // `engage`, cleared by `standDown`.
-  let atlas: {
+  let engaged: {
     readonly lanes: Partial<Record<SurfaceTileProduct, SurfaceTileLane>>;
     readonly bodyId: SceneBodyId & SurfaceTileBodyId;
     readonly prefix: string;
     readonly source: SurfaceTileSource;
   } | null = null;
 
-  const engagedLanes = (): SurfaceTileLane[] => (atlas === null ? [] : Object.values(atlas.lanes));
+  const engagedLanes = (): SurfaceTileLane[] =>
+    engaged === null ? [] : Object.values(engaged.lanes);
   let droppedAllocations = 0;
   let frame = 0;
   let destroyed = false;
@@ -128,7 +129,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       if (params.requestBands[product].length === 0) continue;
       lanes[product] = createLane(SURFACE_TILE_LANE_SPECS[product]);
     }
-    atlas = {
+    engaged = {
       lanes,
       bodyId,
       prefix: manifest.prefix,
@@ -140,7 +141,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
    *  late landing never writes the old body's tiles into the new atlases. */
   function standDown(): void {
     for (const lane of engagedLanes()) lane.stream.destroy();
-    atlas = null;
+    engaged = null;
   }
 
   function apply(plan: SurfaceTilePlan): void {
@@ -153,8 +154,8 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       engage(verdict.engage, plan.params);
     }
     droppedAllocations = 0;
-    if (atlas === null) return;
-    const streams = atlas;
+    if (engaged === null) return;
+    const { lanes, prefix, source } = engaged;
     frame++;
 
     // Every key the plan holds is stamped before any allocation: a single
@@ -162,13 +163,13 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     // moments later (it still carried last frame's stamp), and losing its
     // pixels cascaded into evicting the next.
     for (const tile of plan.touched) {
-      streams.lanes[tile.product]?.stream.touch(surfaceTilePath(tile, streams.prefix), frame);
+      lanes[tile.product]?.stream.touch(surfaceTilePath(tile, prefix), frame);
     }
 
     for (const { tile, screenPx } of plan.requests) {
-      const lane = streams.lanes[tile.product];
+      const lane = lanes[tile.product];
       if (lane === undefined) continue;
-      const key = surfaceTilePath(tile, streams.prefix);
+      const key = surfaceTilePath(tile, prefix);
       // Null means the atlas is already full this frame.
       if (lane.stream.allocate(key, frame) === null) {
         droppedAllocations++;
@@ -179,7 +180,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       lane.stream.enqueueFetch({
         key,
         priority: screenPx,
-        fetcher: () => SURFACE_TILE_LANE_SPECS[tile.product].fetch(tile, streams.source),
+        fetcher: () => SURFACE_TILE_LANE_SPECS[tile.product].fetch(tile, source),
         onResult: (payload) => {
           lane.pendingLevelOf.delete(key);
           if (payload === null) return;
@@ -202,9 +203,9 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
   }
 
   function residentSlot(tile: SurfaceTileId): ResidentSlot | null {
-    if (atlas === null) return null;
-    const lane = atlas.lanes[tile.product];
-    const entry = lane?.resident.get(surfaceTilePath(tile, atlas.prefix));
+    if (engaged === null) return null;
+    const lane = engaged.lanes[tile.product];
+    const entry = lane?.resident.get(surfaceTilePath(tile, engaged.prefix));
     if (lane === undefined || entry === undefined) return null;
     const [u0, v0, u1, v1] = lane.stream.slots.slotUv(entry.slot);
     return {
@@ -220,15 +221,15 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     manifest: (bodyId) => manifests.get(bodyId) ?? ABSENT,
     residentSlot,
     isInFlight: (tile) => {
-      const lane = atlas?.lanes[tile.product];
-      if (atlas === null || lane === undefined) return false;
-      const key = surfaceTilePath(tile, atlas.prefix);
+      const lane = engaged?.lanes[tile.product];
+      if (engaged === null || lane === undefined) return false;
+      const key = surfaceTilePath(tile, engaged.prefix);
       return lane.stream.slots.slotOf(key) !== undefined && !lane.stream.isLoaded(key);
     },
     hasFailed: (tile) =>
-      atlas?.lanes[tile.product]?.stream.isFailed(surfaceTilePath(tile, atlas.prefix)) ?? false,
+      engaged?.lanes[tile.product]?.stream.isFailed(surfaceTilePath(tile, engaged.prefix)) ?? false,
     inFlightCount: () => engagedLanes().reduce((sum, lane) => sum + lane.stream.inFlightCount(), 0),
-    engagedBodyId: () => atlas?.bodyId ?? null,
+    engagedBodyId: () => engaged?.bodyId ?? null,
   };
 
   /** Everything `terrainHeightM` needs under one direction, or null for any
@@ -242,8 +243,8 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     readonly baseLevel: number;
     readonly resident: ResidentHeightLookup;
   } | null {
-    if (atlas === null || atlas.bodyId !== bodyId || params === null) return null;
-    const { prefix, lanes } = atlas;
+    if (engaged === null || engaged.bodyId !== bodyId || params === null) return null;
+    const { prefix, lanes } = engaged;
     const { baseLevel } = params;
     return {
       // No band covers this direction → nothing deeper than the whole-globe
@@ -292,8 +293,8 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
    *  while the panel is open), so an O(resident) scan is fine. The per-level
    *  rows are albedo's: imagery is what the walk visibly lacks. */
   function debugStats(): ReturnType<SurfaceTileStream['debugStats']> {
-    if (atlas === null) return EMPTY_STATS;
-    const { lanes } = atlas;
+    if (engaged === null) return EMPTY_STATS;
+    const { lanes } = engaged;
     const albedo = lanes.albedo;
     const byLevel = new Map<number, { resident: number; pending: number }>();
     const rowFor = (z: number) => {
@@ -325,7 +326,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     };
     return {
       engaged: true,
-      bodyId: atlas.bodyId,
+      bodyId: engaged.bodyId,
       ...occupancy('albedo'),
       height: occupancy('height'),
       levels,
@@ -339,7 +340,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     apply,
     heightAt,
     residentHeightLevelAt,
-    getAtlasView: (product) => atlas?.lanes[product]?.stream.slots.getTextureView() ?? null,
+    getAtlasView: (product) => engaged?.lanes[product]?.stream.slots.getTextureView() ?? null,
     debugStats,
     destroy() {
       destroyed = true;
