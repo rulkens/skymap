@@ -18,6 +18,7 @@ import {
   hide,
   hold,
   scene,
+  seq,
   tween,
   wait,
 } from '../../../../services/engine/animation/effectHelpers';
@@ -36,7 +37,28 @@ const OPEN_ALTITUDE_RAD = 0.35;
 
 const TITLE_SEC = 4;
 const NIGHTFALL_SEC = 22;
-const NIGHT_HOLD_SEC = 4;
+const NIGHT_HOLD_SEC = 1.5;
+
+// The clock runs ~1,400× here, so the sky wheels ~6°/s about the pole, and a
+// `clockTo` is linear: one cue would stop it dead. The last CLOCK_EASE_SEC
+// steps the rate down to rest instead, each step a straight `clockTo` landing
+// on the curve of a linear deceleration (rate falls by 1/CLOCK_EASE_STEPS).
+const CLOCK_EASE_SEC = 4;
+const CLOCK_EASE_STEPS = 8;
+const FULL_RATE = (TOUR_NIGHT_SIM_DAYS - TOUR_NOON_SIM_DAYS) / (NIGHTFALL_SEC - CLOCK_EASE_SEC / 2);
+const CLOCK_STEP_SEC = CLOCK_EASE_SEC / CLOCK_EASE_STEPS;
+const daysLeftAt = (easedSec: number) =>
+  (FULL_RATE * (CLOCK_EASE_SEC - easedSec) ** 2) / (2 * CLOCK_EASE_SEC);
+const clockCue = (easedSec: number, overSec: number) => [
+  scene(clockTo({ simDays: TOUR_NIGHT_SIM_DAYS - daysLeftAt(easedSec), overSec })),
+  wait(overSec),
+];
+const NIGHTFALL_CLOCK = seq([
+  ...clockCue(0, NIGHTFALL_SEC - CLOCK_EASE_SEC),
+  ...Array.from({ length: CLOCK_EASE_STEPS }, (_, k) =>
+    clockCue((k + 1) * CLOCK_STEP_SEC, CLOCK_STEP_SEC),
+  ).flat(),
+]);
 
 const standAt = (altitudeRad: number) =>
   all([
@@ -79,7 +101,7 @@ export const parkOpeningDwell: ClipData = {
     standAt(OPEN_ALTITUDE_RAD),
     wait(TITLE_SEC),
     all([
-      scene(clockTo({ simDays: TOUR_NIGHT_SIM_DAYS, overSec: NIGHTFALL_SEC })),
+      NIGHTFALL_CLOCK,
       tween('pitch', { to: PARK_VIEW.nightAltitudeRad, over: NIGHTFALL_SEC, frame: SKY }),
     ]),
     hold(NIGHT_HOLD_SEC),

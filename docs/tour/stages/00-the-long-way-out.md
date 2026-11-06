@@ -9,7 +9,7 @@ focus: sky:soendermarken
 distance_mpc: 5.5e-23 # eye height, 1.7 m above the park
 motion: held, then tilt up to the zenith
 travel_s: 0
-dwell_s: 30
+dwell_s: 27.5
 effects: [clock noon → night]
 requires: [sky-frame, clock-to, caption]
 status: draft
@@ -33,9 +33,11 @@ waits for the park mesh and terrain before the caption shows. North because it
 is the scan's one corridor with sky down to the horizon, front-lit at noon;
 south and south-east are backlit canopy. The dwell holds the title for 4 s,
 then tilts the pitch to 80° while `clockTo` runs the clock to 20:00 UTC
-(`TOUR_NIGHT_SIM_DAYS`) over 22 s, and holds the night for 4 s. Authored
-tweens, not `dwellDrift`: a frame-tagged base writer may not overlap a
-composite window on the same channel.
+(`TOUR_NIGHT_SIM_DAYS`) over 22 s, and holds the night for 1.5 s. The clock
+slows to rest over its last 4 s, in eight `clockTo` steps: one linear cue
+would stop the wheeling sky dead. Authored tweens, not `dwellDrift`: a
+frame-tagged base writer may not overlap a composite window on the same
+channel.
 
 ## On screen
 
