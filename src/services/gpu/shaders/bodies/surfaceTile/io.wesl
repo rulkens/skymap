@@ -11,12 +11,12 @@
 // cross-check: a field reorder on one side alone scrambles every drawn
 // patch with no compiler signal.
 //
-// The two vec4s must stay BEFORE 'heightSlotOrigin': a vec2<u32> declared
-// earlier pads the record past its 80-byte stride (spec section 7's
-// field-order note). Reordering the five scalars keeps the stride but
-// re-maps offsets 12..31 with no compiler signal -- the layout test's
-// per-field assertions are the only guard. 'heightCells' at 76 fills what
-// was the struct's trailing pad, so the stride is still 80.
+// The three vec4s (32..79) must stay BEFORE 'heightSlotOrigin': a
+// vec2<u32> declared earlier pads the record past its 96-byte stride (spec
+// section 7's field-order note). Reordering the five scalars keeps the
+// stride but re-maps offsets 12..31 with no compiler signal -- the layout
+// test's per-field assertions are the only guard. 'heightSlotOrigin' (80),
+// 'edgeCoarser' (88) and 'heightCells' (92) fill the last 16 bytes exactly.
 //
 // 'datumRadiusM' is deliberately absent: it is the per-draw uniform
 // 'SurfaceTileUniforms.radiusM' (offset 76), since one body is engaged per
@@ -48,6 +48,10 @@ struct PatchInstance {
   // 'SurfaceCutTile.albedo.fallback === null's CPU-side encoding, so the
   // fragment always has a valid second rect to sample.
   fallbackRect: vec4<f32>,
+  // The leaf's sub-rect of its deepest resident NIGHT tile ('SurfaceCutTile.
+  // night'), flattened the same way; all zero when none is resident, and the
+  // fragment reads the zero scale as 'use the whole-globe night map'.
+  nightRect: vec4<f32>,
   // Post origin of this leaf's SUB-RECT in the height atlas: its resident
   // height tile's slot origin plus 'SurfaceCutTile.height.originPosts', so a
   // leaf flattened into an ancestor's slot (R14) needs no second field. Posts
@@ -98,6 +102,8 @@ struct VSOut {
   // constants, so flat; a u32 cannot interpolate at all.
   @location(9) @interpolate(flat) heightLattice: vec3<u32>,
   @location(10) @interpolate(flat) patchSpanRad: vec2<f32>,
+  // PatchInstance's 'nightRect', forwarded whole: (origin.xy, scale.xy).
+  @location(11) @interpolate(flat) nightRect: vec4<f32>,
 };
 
 // SurfaceTileUniforms — one record per draw call, shared by every instance

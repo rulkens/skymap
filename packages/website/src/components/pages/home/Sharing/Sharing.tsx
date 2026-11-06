@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 
 import { appAddress } from '../../../../utils/appAddress.ts';
 import { cx } from '../../../../utils/cx.ts';
-import { requireShotLink } from '../../../../utils/requireShotLink.ts';
+import { shotLink } from '../../../../utils/shotLink.ts';
 import { shownLink } from '../../../../utils/shownLink.ts';
 import AddressText from '../../../shared/links/AddressText/AddressText.tsx';
 import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
@@ -39,7 +39,7 @@ function Sharing({ title, focus, clock, children }: SharingProps) {
   const { at, live, byReader, layers, warmed } = gallery;
   const marks = useGalleryMarks(gallery);
   const now = live ? at : 0;
-  const link = requireShotLink(VIEWS[now]!.id);
+  const link = shotLink(VIEWS[now]!.id);
   const typed = useTyped(shownLink(link));
 
   return (

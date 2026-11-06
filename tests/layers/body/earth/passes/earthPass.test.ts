@@ -61,6 +61,7 @@ import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { bodyPickCodes } from '../../../../support/layerPickCodes';
 import { fakePickCode } from '../../../../support/fakePickCode';
+import type { SurfaceTileProduct } from '../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
 
 // Codes from 40 up: a stamp that packs a catalog value fails every id match below.
 const PICK_CODES = bodyPickCodes(fakePickCode());
@@ -199,7 +200,7 @@ function makeState(): EngineState {
 const HEIGHT_ATLAS_VIEW = {} as GPUTextureView;
 
 /** A runtime `surfaceTiles` stub with caller-controlled cut and atlas views: the
- * instanced-draw gate's three inputs (`getAtlasView()`, `getHeightAtlasView()`, `plan.cut`). */
+ * instanced-draw gate's three inputs (`getAtlasView('albedo' | 'height')`, `plan.cut`). */
 function makeTiles(input: {
   readonly cut: readonly unknown[];
   readonly atlasView: GPUTextureView | null;
@@ -209,9 +210,10 @@ function makeTiles(input: {
   return {
     plan: { cut: input.cut },
     stream: {
-      getAtlasView: () => input.atlasView,
-      getHeightAtlasView: () =>
-        input.heightAtlasView === undefined ? HEIGHT_ATLAS_VIEW : input.heightAtlasView,
+      getAtlasView: (product: SurfaceTileProduct) => {
+        if (product === 'albedo') return input.atlasView;
+        return input.heightAtlasView === undefined ? HEIGHT_ATLAS_VIEW : input.heightAtlasView;
+      },
     },
   } as unknown as BodyRuntime['surfaceTiles'];
 }

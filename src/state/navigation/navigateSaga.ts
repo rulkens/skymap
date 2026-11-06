@@ -11,7 +11,7 @@ import type { Action } from '@reduxjs/toolkit';
 import type { SagaGenerator } from 'typed-redux-saga';
 
 import { liveCameraRuntimeSaga } from './liveCameraRuntimeSaga';
-import { applyLinkClockAndFrameSaga } from './applyLinkClockAndFrameSaga';
+import { applyLinkSettingsSaga } from './applyLinkSettingsSaga';
 import { requestFocus } from '../selection/requestFocus';
 import { requestSelect } from '../selection/requestSelect';
 import {
@@ -125,14 +125,15 @@ export function* navigateSaga(
   transition: Transition,
 ): SagaGenerator<NavigateOutcome> {
   const { view } = intent;
-  // A superseded takeover restores the clock it captured, inside the supersede,
-  // which would overwrite a link's `t`. Ending it first lets the link clock land
-  // after that restore; orientation rides the same call and benefits equally.
+  // A superseded takeover restores the scene and clock it captured, inside the
+  // supersede, which would overwrite the link's settings; ending it first lands
+  // them after that restore. A hash change has already ended it
+  // (`applyNavigation`); this serves an arrival during which a remote started one.
   const startsTakeover = view.kind === 'exhibit' || view.kind === 'tour' || view.kind === 'clip';
   if (startsTakeover && (yield* select(selectTakeoverSource)) !== null) {
     yield* all([take(takeoverEnded), put(exitTakeover())]);
   }
-  yield* call(applyLinkClockAndFrameSaga, intent);
+  yield* call(applyLinkSettingsSaga, intent);
 
   switch (view.kind) {
     case 'home':
@@ -162,6 +163,7 @@ export function* navigateSaga(
           entry: transition,
           atLinkedTime: intent.t !== undefined,
           fromLink: true,
+          layers: intent.layers,
         }),
       );
       return OK;
