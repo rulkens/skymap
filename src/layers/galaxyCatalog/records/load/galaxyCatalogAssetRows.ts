@@ -11,7 +11,7 @@ import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceR
 import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
 import { HI_RES_LAYER_SIDE_BY_TIER } from '../../hiResFamous/data/hiResLayerSideByTier';
 import { tierTarget } from '../data/tierTargets';
-import type { Tier } from '../../../../@types/data/Tier';
+import { TIER_LADDER } from '../../../../data/tierLadder';
 import { galaxyCatalogRequest } from '../../../../services/engine/wiring/galaxyCatalogRequest';
 
 function pointRow(
@@ -20,17 +20,13 @@ function pointRow(
 ): AssetWiringRow<unknown, unknown, GalaxyCatalogAssetKey> {
   const source = entry.code;
   const id = entry.id;
-  // Target 0 means the tier ships no file for this source (SDSS at `small`);
-  // a source with no caps has no target and is never excluded.
-  const excluded = (tier: Tier) => tierTarget(source, tier) === 0;
   return {
     key: source,
     slot: runtime.points.get(source)!,
     req: (tier) => galaxyCatalogRequest(source, tier),
-    demand: {
-      fn: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true && !excluded(ctx.tier),
-      release: (ctx) => excluded(ctx.tier),
-    },
+    // Target 0 means the tier ships no file for this source (SDSS at `small`); a source
+    // with no caps has no target and is listed at every tier.
+    demand: { tiers: TIER_LADDER.filter((tier) => tierTarget(source, tier) !== 0) },
     priority: entry.priority,
     gates: { address: 'survey', item: id },
   };
@@ -58,7 +54,7 @@ export function galaxyCatalogAssetRows(
       key: 'pgcAlias',
       slot: runtime.pgcAlias,
       req: () => undefined,
-      demand: { fn: (ctx) => ctx.ui.paletteOpen },
+      demand: 'whenSearching',
       priority: 90, // last: nothing renders from it, and it tolerates a wait
     },
 
@@ -68,7 +64,7 @@ export function galaxyCatalogAssetRows(
       key: 'hiResFamous',
       slot: runtime.hiResFamous,
       req: (tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] }),
-      demand: { fn: () => true },
+      demand: 'always',
       priority: 1,
     },
   ];

@@ -32,21 +32,15 @@ function makeCtx(settings: unknown): DemandCtx {
 }
 
 describe('filamentsAssetRows', () => {
-  it('demand follows settings.cosmicWebFilaments.enabled (bug-fix pin)', () => {
-    expect(
+  it('demand follows settings.cosmicWebFilaments.enabled; switched off, it releases', () => {
+    const at = (enabled: boolean) =>
       evaluateAssetDemand(
         ROW,
-        makeCtx({ cosmicWebFilaments: { enabled: true } }),
+        makeCtx({ cosmicWebFilaments: { enabled } }),
         cosmicWebFilamentsVisibility,
-      ).demand,
-    ).toBe(true);
-    expect(
-      evaluateAssetDemand(
-        ROW,
-        makeCtx({ cosmicWebFilaments: { enabled: false } }),
-        cosmicWebFilamentsVisibility,
-      ).demand,
-    ).toBe(false);
+      );
+    expect(at(true)).toEqual({ demand: true, release: false });
+    expect(at(false)).toEqual({ demand: false, release: true });
   });
 
   it('the request drifts only across the small boundary', () => {

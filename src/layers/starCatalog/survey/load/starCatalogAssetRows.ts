@@ -7,12 +7,6 @@ import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
 import type { StarCatalogAssetKey } from '../../@types/StarCatalogAssetKey';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import { STAR_CATALOG_SOURCE_ROWS } from '../../sources/starCatalogSourceRows';
-import { starCatalogVisibility } from '../../visibility';
-import { visibilityEntryOf } from '../../../../utils/visibility/visibilityEntryOf';
-import { visibilitySwitchOf } from '../../../../utils/visibility/visibilitySwitchOf';
-
-// The star show entry, by its key: its switch, section rule included, is what demands a catalog.
-const STAR_SHOW_ENTRY = visibilityEntryOf(starCatalogVisibility, 'starCatalog');
 
 export function starCatalogAssetRows(
   runtime: StarCatalogRuntime,
@@ -23,7 +17,7 @@ export function starCatalogAssetRows(
         key: source,
         slot: runtime.catalogs.get(source)!,
         req: (tier) => ({ source, tier }),
-        demand: { fn: (ctx) => visibilitySwitchOf(ctx.settings, STAR_SHOW_ENTRY, id) },
+        demand: {},
         priority: 50, // one rank for every star catalog: the Earth boot view's own scale rung
         gates: { address: 'starCatalog', item: id },
       };
@@ -37,7 +31,7 @@ export function starCatalogAssetRows(
       key: 'famousStarsMeta',
       slot: runtime.famousStarsMeta,
       req: () => undefined,
-      demand: { fn: () => true },
+      demand: 'always',
       priority: 22, // right behind famousGalaxiesMeta; both are tiny and wanted early
     },
   ];

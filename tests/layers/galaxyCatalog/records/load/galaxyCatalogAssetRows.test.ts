@@ -15,6 +15,7 @@ import { Source } from '../../../../../src/data/source';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { AssetKey } from '../../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
+import type { DeclaredDemand } from '../../../../../src/@types/loading/DeclaredDemand';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 import type { LoadState } from '../../../../../src/@types/loading/LoadState';
 import type { Tier } from '../../../../../src/@types/data/Tier';
@@ -50,23 +51,22 @@ function makeCtx(over: {
 }
 
 describe('galaxyCatalogAssetRows demand predicates', () => {
-  it("galaxy catalog rows demand the galaxy catalog's enabled settings bit", () => {
+  it("galaxy catalog rows demand the galaxy catalog's enabled bit; switched off, they release", () => {
     const sdss = rowFor(Source.SDSS);
-    expect(
+    const at = (enabled: boolean) =>
       evaluateAssetDemand(
         sdss,
-        makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } }),
+        makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled } } } } }),
         galaxyCatalogVisibility,
-      ).demand,
-    ).toBe(true);
-    // Absent items row (or disabled bit) ⇒ not demanded.
-    expect(
-      evaluateAssetDemand(
-        sdss,
-        makeCtx({ settings: { galaxyCatalogs: { items: {} } } }),
-        galaxyCatalogVisibility,
-      ).demand,
-    ).toBe(false);
+      );
+    expect(at(true)).toEqual({ demand: true, release: false });
+    expect(at(false)).toEqual({ demand: false, release: true });
+  });
+
+  it("galaxy points: SDSS lists no 'small' tier", () => {
+    const tiersOf = (source: AssetKey) => (rowFor(source).demand as DeclaredDemand).tiers;
+    expect(tiersOf(Source.SDSS)).not.toContain('small');
+    expect(tiersOf(Source.TwoMRS)).toContain('small');
   });
 
   it('a catalog the tier excludes is not demanded even when enabled, and is released', () => {

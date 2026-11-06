@@ -78,7 +78,7 @@ export function bodyAssetRows(
       key: 'bodyTextureAtlas',
       slot: runtime.atlasSlot,
       req: () => undefined,
-      demand: { fn: () => true },
+      demand: 'always',
       priority: 0,
     },
     ...ALL_BODY_TEXTURE_KEYS.map((entry) => bodyTextureRow(runtime, entry)),

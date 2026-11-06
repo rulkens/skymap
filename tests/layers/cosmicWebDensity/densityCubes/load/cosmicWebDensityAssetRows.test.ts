@@ -42,14 +42,14 @@ function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean): DemandCtx {
 }
 
 describe('cosmicWebDensityAssetRows', () => {
-  it('polyphorm-2mrs demand follows its own field-enabled flag', () => {
+  it('polyphorm-2mrs demand follows its own field-enabled flag; switched off, it releases', () => {
     const polyphorm = ROWS.find((row) => row.key === Source.Polyphorm2MRS)!;
     expect(
-      evaluateAssetDemand(polyphorm, makeCtx(true, false), cosmicWebDensityVisibility).demand,
-    ).toBe(true);
+      evaluateAssetDemand(polyphorm, makeCtx(true, false), cosmicWebDensityVisibility),
+    ).toEqual({ demand: true, release: false });
     expect(
-      evaluateAssetDemand(polyphorm, makeCtx(false, true), cosmicWebDensityVisibility).demand,
-    ).toBe(false);
+      evaluateAssetDemand(polyphorm, makeCtx(false, true), cosmicWebDensityVisibility),
+    ).toEqual({ demand: false, release: true });
   });
 
   it('a tiered row carries the tier, an untiered row carries none', () => {

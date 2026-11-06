@@ -30,20 +30,10 @@ function makeCtx(settings: unknown): DemandCtx {
 }
 
 describe('constellationsAssetRows', () => {
-  it('demand follows settings.constellations.enabled', () => {
-    expect(
-      evaluateAssetDemand(
-        ROW,
-        makeCtx({ constellations: { enabled: true } }),
-        constellationsVisibility,
-      ).demand,
-    ).toBe(true);
-    expect(
-      evaluateAssetDemand(
-        ROW,
-        makeCtx({ constellations: { enabled: false } }),
-        constellationsVisibility,
-      ).demand,
-    ).toBe(false);
+  it('demand follows settings.constellations.enabled; switched off, it releases', () => {
+    const at = (enabled: boolean) =>
+      evaluateAssetDemand(ROW, makeCtx({ constellations: { enabled } }), constellationsVisibility);
+    expect(at(true)).toEqual({ demand: true, release: false });
+    expect(at(false)).toEqual({ demand: false, release: true });
   });
 });

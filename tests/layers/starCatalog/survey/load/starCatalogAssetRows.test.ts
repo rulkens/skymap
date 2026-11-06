@@ -51,14 +51,20 @@ describe('starCatalogAssetRows demand predicates', () => {
     // AND the item bit, so a catalog switched off by either never loads.
     const gaia = rowFor(Source.GaiaStars);
     const on = (starCatalogs: unknown) =>
-      evaluateAssetDemand(gaia, makeCtx({ settings: { starCatalogs } }), starCatalogVisibility)
-        .demand;
-    // Master on + item on ⇒ demanded.
-    expect(on({ enabled: true, items: { gaiaStars: { enabled: true } } })).toBe(true);
-    // Master off overrides an enabled item ⇒ not demanded.
-    expect(on({ enabled: false, items: { gaiaStars: { enabled: true } } })).toBe(false);
-    // Item off under an on master ⇒ not demanded.
-    expect(on({ enabled: true, items: { gaiaStars: { enabled: false } } })).toBe(false);
+      evaluateAssetDemand(gaia, makeCtx({ settings: { starCatalogs } }), starCatalogVisibility);
+    expect(on({ enabled: true, items: { gaiaStars: { enabled: true } } })).toEqual({
+      demand: true,
+      release: false,
+    });
+    // Either switch off releases: the master overrides an enabled item.
+    expect(on({ enabled: false, items: { gaiaStars: { enabled: true } } })).toEqual({
+      demand: false,
+      release: true,
+    });
+    expect(on({ enabled: true, items: { gaiaStars: { enabled: false } } })).toEqual({
+      demand: false,
+      release: true,
+    });
   });
 
   it('famousStarsMeta is eagerly demanded, unconditionally', () => {
