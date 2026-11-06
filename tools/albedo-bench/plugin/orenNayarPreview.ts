@@ -1,10 +1,8 @@
 /**
  * orenNayarPreview — the bench's lighting-preview relight factor, eye
  * straight down, normalised so flat ground under an overhead sun reads 1
- * (matching the renderer's own tile shading). Ported verbatim from the F4
- * prototype's `shadeFactor` (mars-terrain-feature worktree,
- * `.superpowers/sdd/2026-09-17-terrain-f4-mars/albedo-bench-prototype/lightjs.txt:139`);
- * preview only — F4 points the real constants at `MARS_SURFACE_SHADING` later.
+ * (matching the renderer's own tile shading). Ported from the F4 prototype's
+ * `shadeFactor`; preview only.
  */
 const DEG_TO_RAD = Math.PI / 180;
 

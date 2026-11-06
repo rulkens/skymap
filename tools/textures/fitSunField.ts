@@ -18,7 +18,7 @@ import type { SunField } from './SunField';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import { FittedWindow } from './@types/FittedWindow';
 
-export const FIT_CANVAS_LEVEL = 5;
+const FIT_CANVAS_LEVEL = 5;
 
 const DEG_TO_RAD = Math.PI / 180;
 const CANVAS_WIDTH_PX = SURFACE_EQUIRECT_BASE_WIDTH_PX << FIT_CANVAS_LEVEL;
@@ -195,7 +195,7 @@ export async function fitSunField(opts: {
     }
   }
 
-  return fillOutputGrid(region, sunFit, windows, minConfidence, radiusM);
+  return fillOutputGrid(region, sunFit, windows, radiusM);
 }
 
 // A band is only windowKm+strideKm tall against a highPassKm-scaled kernel
@@ -234,7 +234,6 @@ function fillOutputGrid(
   region: LonLatBounds,
   sunFit: AlbedoRecipe['sunFit'],
   windows: readonly FittedWindow[],
-  minConfidence: number,
   radiusM: number,
 ): SunField {
   const stepDeg = kmToDeg(sunFit.strideKm / 2, radiusM);
@@ -251,7 +250,7 @@ function fillOutputGrid(
     south: 90 - jMax * stepDeg,
   };
 
-  const passing = windows.filter((w) => w.confidence >= minConfidence);
+  const passing = windows.filter((w) => w.confidence >= sunFit.minConfidence);
   const gx = new Float32Array(width * height);
   const gy = new Float32Array(width * height);
   const confidence = new Float32Array(width * height);

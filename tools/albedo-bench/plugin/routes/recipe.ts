@@ -20,8 +20,6 @@ export function handleSetRecipe(opts: {
 }): SetRecipeResult {
   let recipe: AlbedoRecipe;
   try {
-    // Reuses the one validator both the bench's Save and the bake's read go
-    // through, rather than re-implementing the schema check here.
     recipe = parseAlbedoRecipe(JSON.stringify(opts.body));
   } catch (err) {
     return { status: 400, error: (err as Error).message };

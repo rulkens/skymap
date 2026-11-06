@@ -186,11 +186,8 @@ export function geoTiffImagerySource(opts: {
 
       return sharp(await readWindow(levelLeft, levelTop, levelWinWidth, levelWinHeight, level), {
         raw: { width: levelWinWidth, height: levelWinHeight, channels: 4 },
-        // The window above is already downsampled at the file level, but a
-        // level-less (or not-yet-downsampled) file can still hand this a
-        // window past sharp's default ~268 Mpx guard — unlike the two
-        // decode helpers above, this constructs an image from a raw buffer
-        // rather than a file, so it needs the same opt-out spelled out again.
+        // A level-less file can still hand this a window past sharp's default
+        // ~268 Mpx guard, and a raw buffer needs the opt-out spelled out again.
         limitInputPixels: false,
       })
         .resize(widthPx, heightPx, { fit: 'fill' })

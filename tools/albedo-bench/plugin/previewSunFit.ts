@@ -24,10 +24,8 @@ function spanKm(box: LonLatBounds, kmPerDegAtEquator: number): { lat: number; lo
   };
 }
 
-// fitSunField's output grid posts sit stride/2 apart in both directions
-// (fillOutputGrid), each axis spanning its own km extent over that spacing
-// plus its own closing post — mirrored here to estimate the post count a
-// given stride would produce over `box`, without paying for the fit.
+// Mirrors fillOutputGrid's post count (stride/2 spacing plus a closing post
+// per axis), so the cap holds without paying for the fit.
 function arrowCount(lat: number, lon: number, strideKm: number): number {
   return ((2 * lon) / strideKm + 1) * ((2 * lat) / strideKm + 1);
 }
@@ -44,12 +42,8 @@ export function previewSunFit(opts: {
     return { sunFit, coarsened: false };
   }
 
-  // Solve for the stride factor that brings the count to exactly the cap,
-  // rather than approximating via a plain sqrt(area ratio): the grid's own
-  // "+1" closing post per axis makes count(f) = a·b/f² + (a+b)/f + 1 (a, b
-  // the per-axis post counts at today's stride), which isn't a clean square
-  // — a sqrt-of-area-ratio factor overshoots the cap once a, b are both
-  // large, exactly where a wide preview needs the cap to hold hardest.
+  // Exact root of count(f) = a·b/f² + (a+b)/f + 1 (a, b the per-axis post
+  // counts at today's stride); sqrt(area ratio) overshoots the cap at wide spans.
   const a = (2 * lon) / sunFit.strideKm;
   const b = (2 * lat) / sunFit.strideKm;
   const cap = PREVIEW_MAX_ARROWS;

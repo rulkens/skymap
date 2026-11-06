@@ -2,10 +2,7 @@
  * Albedo Bench — Vite dev server config.
  *
  * A sibling dev tool (like `tools/famous-curator`), not part of the skymap
- * runtime bundle: its own port (`../utils/io/devPorts.ts`), its own root
- * (this `tools/albedo-bench/` directory), and its own React entry
- * (`ui/main.tsx`). The `configureServer`-based API plugin lives in
- * `./plugin/apiPlugin.ts`, sharing one process with the dev server.
+ * runtime bundle; its API plugin shares the dev server's process.
  */
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';

@@ -8,12 +8,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-import { defaultApi } from './api';
+import { api } from './api';
 import type { FieldArrow } from '../@types/FieldArrow';
 import type { RenderLight } from '../@types/RenderLight';
 import { boxFromView } from './viewPresets';
 import { Navigator } from './components/Navigator';
-import { CompareView, hintFor } from './components/CompareView';
+import { CompareView, HINT } from './components/CompareView';
 import { SunPanel } from './components/SunPanel';
 import { RecipeSliders } from './components/RecipeSliders';
 import type { SunMode } from '../@types/SunMode';
@@ -79,7 +79,7 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    defaultApi
+    api
       .getRecipe()
       .then((r) => {
         if (!cancelled) setRecipe(r);
@@ -100,7 +100,7 @@ export function App() {
     if (currentRecipe === undefined) return;
     let cancelled = false;
     const handle = setTimeout(() => {
-      defaultApi
+      api
         .renderPng({ box, px: PX, recipe: currentRecipe, variant: 'original' })
         .then((blob) => {
           if (cancelled) return;
@@ -124,7 +124,7 @@ export function App() {
     if (recipe === undefined) return;
     let cancelled = false;
     const handle = setTimeout(() => {
-      defaultApi
+      api
         .renderPng({
           box,
           px: PX,
@@ -164,7 +164,7 @@ export function App() {
     }
     let cancelled = false;
     const handle = setTimeout(() => {
-      defaultApi
+      api
         .getField(box, sunFit)
         .then((r) => {
           if (!cancelled) {
@@ -186,7 +186,7 @@ export function App() {
     if (recipe === undefined) return;
     setSaveStatus('Saving…');
     try {
-      const saved = await defaultApi.saveRecipe(recipe);
+      const saved = await api.saveRecipe(recipe);
       setRecipe(saved);
       setSaveStatus('Saved.');
     } catch (err) {
@@ -254,7 +254,7 @@ export function App() {
               pending={pending}
             />
           </div>
-          <p className="hint">{hintFor(viewMode)}</p>
+          <p className="hint">{HINT[viewMode]}</p>
         </section>
         <aside className="panel" aria-label="Adjustments">
           <div className="body">

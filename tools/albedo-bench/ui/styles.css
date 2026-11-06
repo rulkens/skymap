@@ -348,21 +348,6 @@ img {
   }
 }
 
-/* Subtle — the CSS-transformed stale image is still fully visible under it. */
-.pending-badge {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  font: 500 11px var(--mono);
-  color: #fff;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 2px 8px;
-  border-radius: 3px;
-  pointer-events: none;
-  opacity: 0.85;
-}
-
 .bench-arrows {
   position: absolute;
   inset: 0;

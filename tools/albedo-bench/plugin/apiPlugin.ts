@@ -34,12 +34,6 @@ const TILE_MAX_LEVEL = 7;
 
 const MAX_FIELD_CACHE_ENTRIES = 8;
 
-function marsRadiusM(): number {
-  const mars = SCENE_PLANETS.find((p) => p.id === 'mars');
-  if (mars === undefined) throw new Error('apiPlugin: no mars entry in SCENE_PLANETS');
-  return mars.surface.datumRadiusM;
-}
-
 function createFieldCache(opts: {
   readonly imagery: ReturnType<typeof geoTiffImagerySource>;
   readonly height: ReturnType<typeof geoTiffHeightSource>;
@@ -89,14 +83,11 @@ const MESSAGE_STATUS_RULES: readonly ErrorStatusRule[] = [
   },
 ];
 
-function resolveRepoRoot(): string {
-  // tools/albedo-bench/plugin/apiPlugin.ts -> 3 levels up -> repo root.
-  return resolve(import.meta.dirname, '../../..');
-}
-
 export function apiPlugin(): Plugin {
-  const repoRoot = resolveRepoRoot();
-  const recipePath = resolve(repoRoot, 'tools/textures/surfaceBodies/marsAlbedoRecipe.json');
+  const recipePath = resolve(
+    import.meta.dirname,
+    '../../textures/surfaceBodies/marsAlbedoRecipe.json',
+  );
 
   const imagery = geoTiffImagerySource({
     id: 'viking-mdim21-232m',
@@ -127,7 +118,7 @@ export function apiPlugin(): Plugin {
     offsetM: 0,
     maxLevel: TILE_MAX_LEVEL,
   });
-  const radiusM = marsRadiusM();
+  const radiusM = SCENE_PLANETS.find((p) => p.id === 'mars')!.surface.datumRadiusM;
   const getField = createFieldCache({ imagery, height, radiusM });
 
   return {

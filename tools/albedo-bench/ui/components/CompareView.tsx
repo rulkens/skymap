@@ -6,8 +6,7 @@
  * While a gesture is live (or its render is still catching up), the
  * currently-loaded images are CSS-transformed to approximate the live box
  * for instant feedback — see `previewTransform`; the arrow overlay is left
- * showing its last fit (design says either is fine, and refitting live at
- * large spans is the expensive path this avoids).
+ * showing its last fit; refitting live at large spans is the expensive path.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds';
@@ -114,15 +113,11 @@ export type CompareViewProps = {
   pending: boolean;
 };
 
-const HINT: Record<ViewMode, string> = {
+export const HINT: Record<ViewMode, string> = {
   wipe: 'Drag to pan, wheel to zoom, drag the divider (or use ← →) to wipe.',
   'side-by-side': 'The two images side by side. Drag to pan, wheel to zoom.',
   flip: 'Click the image (or press space) to flip between them. Drag to pan, wheel to zoom.',
 };
-
-export function hintFor(mode: ViewMode): string {
-  return HINT[mode];
-}
 
 export function CompareView(props: CompareViewProps) {
   const [wipePct, setWipePct] = useState(50);

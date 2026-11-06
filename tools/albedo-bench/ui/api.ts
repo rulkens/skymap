@@ -1,13 +1,8 @@
-/**
- * api — typed fetch wrappers for the bench's /api/* routes. Built via a
- * factory (`makeApi`) so a component test could inject a stubbed `fetch`;
- * production callers use `defaultApi`, closing over the real `window.fetch`.
- */
+/** api — typed fetch wrappers for the bench's /api/* routes. */
 import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
+import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import type { RenderBody } from '../@types/RenderBody';
 import type { FieldArrow } from '../@types/FieldArrow';
-import type { RenderLight } from '../@types/RenderLight';
-import type { Api } from '../@types/Api';
 
 async function messageOf(res: Response): Promise<string> {
   try {
@@ -24,40 +19,33 @@ async function readJsonOrThrow<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function makeApi(deps: { fetch: typeof fetch }): Api {
-  const f = deps.fetch;
-  return {
-    async getRecipe() {
-      return readJsonOrThrow(await f('/api/recipe'));
-    },
-    async saveRecipe(recipe) {
-      const res = await f('/api/recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(recipe),
-      });
-      const out = await readJsonOrThrow<{ recipe: AlbedoRecipe }>(res);
-      return out.recipe;
-    },
-    async renderPng(params) {
-      const res = await f('/api/render', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      if (!res.ok) throw new Error(await messageOf(res));
-      return await res.blob();
-    },
-    async getField(box, sunFit) {
-      return readJsonOrThrow(
-        await f('/api/field', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ box, sunFit }),
-        }),
-      );
-    },
-  };
+function postJson(url: string, body: unknown): Promise<Response> {
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 
-export const defaultApi: Api = makeApi({ fetch: globalThis.fetch });
+export const api = {
+  async getRecipe(): Promise<AlbedoRecipe> {
+    return readJsonOrThrow(await fetch('/api/recipe'));
+  },
+  async saveRecipe(recipe: AlbedoRecipe): Promise<AlbedoRecipe> {
+    const out = await readJsonOrThrow<{ recipe: AlbedoRecipe }>(
+      await postJson('/api/recipe', recipe),
+    );
+    return out.recipe;
+  },
+  async renderPng(params: RenderBody): Promise<Blob> {
+    const res = await postJson('/api/render', params);
+    if (!res.ok) throw new Error(await messageOf(res));
+    return await res.blob();
+  },
+  async getField(
+    box: LonLatBounds,
+    sunFit: AlbedoRecipe['sunFit'],
+  ): Promise<{ arrows: FieldArrow[]; coarsened: boolean }> {
+    return readJsonOrThrow(await postJson('/api/field', { box, sunFit }));
+  },
+};

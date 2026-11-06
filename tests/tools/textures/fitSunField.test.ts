@@ -26,8 +26,8 @@ const SUN_FIT = {
 const RADIUS_M = 3_390_000;
 const DEG_TO_RAD = Math.PI / 180;
 
-// The committed Mars recipe's own numbers, minus its confidence gate: finding
-// 1's leak scores so low on confidence (~0.006) that the committed
+// The committed Mars recipe's own numbers, minus its confidence gate: the
+// high-pass DC leak scores so low on confidence (~0.006) that the committed
 // `minConfidence: 0.2` masks it via the fill's g=0 prior, hiding the bug the
 // regression below exists to catch.
 const COMMITTED_SUN_FIT = {

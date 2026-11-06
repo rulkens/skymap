@@ -5,42 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import { readSlopeLattice, SLOPE_LEVEL } from '../../../tools/textures/readSlopeLattice';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
-import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
+import { analyticHeightSource } from '../../fixtures/textures/albedoFakes';
 
 const STEP = heightLatticeStepDeg(SLOPE_LEVEL);
-const DEG_TO_RAD = Math.PI / 180;
 const RADIUS_M = 3_390_000; // a Mars-like literal; the function is body-agnostic
-
-// A bumpy, globally-defined surface: smooth enough that a central-difference
-// slope is well behaved everywhere, curved enough that a wrong index offset
-// would sample a visibly different value rather than a coincidental match.
-function heightAt(lon: number, lat: number): number {
-  return 500 * Math.sin(3 * lon * DEG_TO_RAD) * Math.cos(2 * lat * DEG_TO_RAD);
-}
-
-function analyticHeightSource(): HeightSource {
-  return {
-    id: 'analytic-test',
-    attribution: 'test',
-    maxLevel: SLOPE_LEVEL,
-    coverage: [{ west: -180, east: 180, south: -90, north: 90 }],
-    provenance: { sourceId: 'analytic-test', attribution: 'test', vintage: '2026' },
-    async readGrid(_z, i0, j0, nx, ny) {
-      const grid = new Float32Array(nx * ny);
-      for (let j = 0; j < ny; j++) {
-        const lat = 90 - (j0 + j) * STEP;
-        for (let i = 0; i < nx; i++) {
-          const lon = -180 + (i0 + i) * STEP;
-          grid[j * nx + i] = heightAt(lon, lat);
-        }
-      }
-      return grid;
-    },
-    async boundsInBox() {
-      return null;
-    },
-  };
-}
 
 describe('readSlopeLattice', () => {
   it('agrees across two adjacent boxes at the shared edge', async () => {
