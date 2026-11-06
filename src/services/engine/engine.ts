@@ -39,6 +39,8 @@ import { liveClipStartPose } from './helpers/liveClipStartPose';
 import { waitUntilSettled } from './helpers/waitUntilSettled';
 import { deriveBodyStates } from './frame/deriveBodyStates';
 import { cameraDebugSnapshotOf } from './camera/debug/cameraDebugSnapshotOf';
+import { cameraArmKindOf } from './camera/arms/cameraArmKindOf';
+import type { MemOf } from '../../@types/camera/arms/MemOf';
 import { readOrientDeltas } from './camera/orientation/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../state/time/selectors';
@@ -449,7 +451,11 @@ export function createEngine(
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: register.winner,
-          gesture: gesture.value?.gesture ?? null,
+          // The memory is keyed by the register's frame, so that frame's arm names its shape.
+          gesture:
+            cameraArmKindOf(register.pose.frame) === 'body'
+              ? (gesture.value as MemOf['body']).gesture
+              : null,
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),

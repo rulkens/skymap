@@ -45,8 +45,9 @@ export function seedRememberedTilt(
   options: { readonly targetRad?: number; readonly guard?: number; readonly pxStep?: number } = {},
 ): void {
   const { targetRad = 0.35, guard = 6, pxStep = 2 } = options;
+  const held = h.state.cameraRuntime.gesture.value;
   let mem: SurfaceGestureMemory =
-    h.state.cameraRuntime.gesture.value ?? EMPTY_SURFACE_GESTURE_MEMORY;
+    held !== null && 'gesture' in held ? held : EMPTY_SURFACE_GESTURE_MEMORY;
   let tilt: TiltMemory = h.state.cameraRuntime.tilt;
   let p: BodyFixedPose = {
     bodyId: asSceneBodyId('earth'),

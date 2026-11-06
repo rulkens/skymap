@@ -1,9 +1,10 @@
+import type { SkyWheelMemory } from './SkyWheelMemory';
 import type { SurfaceGestureMemory } from './SurfaceGestureMemory';
 
-/** Per-`CameraArmKind` arm-local memory shape; the world arm, the site turntable and the sky carry none. */
+/** Per-`CameraArmKind` arm-local memory shape; the world arm and the site turntable carry none. */
 export type MemOf = {
   readonly absolute: null;
   readonly body: SurfaceGestureMemory;
   readonly site: null;
-  readonly sky: null;
+  readonly sky: SkyWheelMemory;
 };

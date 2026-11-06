@@ -77,6 +77,7 @@ function ctxOf(
       frustum: symmetricFrustum(Math.PI / 3, 1),
       fovYRad: Math.PI / 3,
       tuning: store.getState().camera.tuning,
+      nowMs: overrides.nowMs ?? 0,
     },
     rootState: store.getState(),
     nowMs: overrides.nowMs ?? 0,
@@ -212,7 +213,7 @@ describe('replayInput', () => {
     ]);
     expect(body.actions[0]!.payload).not.toBe(arm);
     expect(body.actions[1]!.payload).toBe(body.register);
-    expect(body.gesture?.gesture).toBe(null);
+    expect(body.gesture).toEqual({ gesture: null });
 
     // The follow roll ride: the notch is resolved to a distance for the driver
     // to adopt and its commit carries only the ridden roll.

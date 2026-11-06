@@ -61,6 +61,7 @@ import { refoldTo } from '../../../../src/services/engine/camera/arms/refoldTo';
 import { skySpotRadial } from '../../../../src/utils/geo/skySpotRadial';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { SKY_EXIT_ALTITUDE_M } from '../../../../src/services/engine/camera/arms/sky/data/skyExitAltitudeM';
+import { SKY_EXIT_PAUSE_MS } from '../../../../src/services/engine/camera/arms/sky/data/skyExitPauseMs';
 import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
 import type { SkyPose } from '../../../../src/@types/camera/pose/SkyPose';
@@ -234,6 +235,7 @@ describe('stepCameraRuntime', () => {
           frustum: symmetricFrustum(Math.PI / 3, 1),
           fovYRad: Math.PI / 3,
           tuning: intent.tuning,
+          nowMs: 0,
         },
       });
 
@@ -1015,6 +1017,26 @@ describe('the sky exit lift', () => {
       const m = asBodyArm(p).basisLocal;
       for (let i = 0; i < 3; i++) expect(m[3 + i]).toBeCloseTo(up0[i]!, 6);
     }
+  });
+
+  it('carries the wheel quiet across frames: a streaming scroll stops at the widest lens', () => {
+    const h = makeCameraSimHarness({ focusBody: 'earth', realClipPlayer: true });
+    h.frame(2);
+    h.store.dispatch(
+      commitCameraPose({ frame: { sky: SKY }, pose: { azimuthRad: AZIMUTH, altitudeRad: 0.4 } }),
+    );
+    h.store.dispatch(setFovYRad(degToRad(100)));
+    h.frame(2);
+    // A notch a frame, through the stop and on: a trackpad's momentum tail.
+    for (let i = 0; i < 20; i++) {
+      h.notch(300);
+      h.frame(1);
+    }
+    expect(h.store.getState().camera.fovYRad).toBe(degToRad(LENS_MAX_DEG));
+    expect(h.store.getState().camera.clip).toBeNull();
+    h.frame(Math.ceil(SKY_EXIT_PAUSE_MS / 16));
+    h.wheel(300);
+    expect(h.store.getState().camera.clip).not.toBeNull();
   });
 
   it('hands off 100 m above the spot looking straight down at the default lens', () => {

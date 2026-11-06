@@ -37,6 +37,7 @@ picker, grids, the takeover, Esc, the readout. §9 backlogs them.
 | R9 | The settings slider reads `LENS_MIN_DEG`/`LENS_MAX_DEG`: one range, 0.5°–120° (2026-11-06). |
 | R10 | The stored lens and every field carrying it are named `fovYRad` (radians), never `lens` (2026-11-06). |
 | R11 | B lands, A is rejected (2026-11-06): A's climb read as zooming in and drifted off the spot after the release. B keeps as little state and as much immutability as possible, and the lift lands at 100 m. |
+| R12 | Trackpad guard: the lift needs a fresh scroll, after 250 ms of wheel quiet (owner, 2026-11-06). |
 
 ## 3. Ground preparation
 
@@ -147,9 +148,12 @@ confirms it.
 
 1. **Lift (owner ruling 2026-11-06: no roll; as little state as possible).** A wheel-out notch
    (`spentZoomFactor(factor) > 1`) arriving while the lens is already at `LENS_MAX` (the notch the
-   clamp would eat whole) makes the step return `clip` (`skyExitLift`); the notch that only reaches
-   120° just widens the lens. The stored lens is the only state the trigger reads; the arm keeps no
-   memory (`MemOf.sky` is `null`). `replayInput` emits `clipStarted`; while it plays, the clip driver
+   clamp would eat whole) makes the step return `clip` (`skyExitLift`), but only from a fresh scroll
+   (R12): no wheel step reached the arm in the last `SKY_EXIT_PAUSE_MS` (250 ms). A scroll still
+   streaming when it reaches 120°, a trackpad's momentum included, stops there; a mouse whose notches
+   come further apart lifts on the first notch past 120°. The notch that only reaches 120° just
+   widens the lens. The arm's one memory is `MemOf.sky = { lastWheelMs }` (empty `−∞`), which every
+   wheel step replaces with the drain's clock (`CameraArmCtx.nowMs`). `replayInput` emits `clipStarted`; while it plays, the clip driver
    owns the display and every pose-moving step is swallowed. Two framed legs, so no leg lerps world
    angles (an eased world tween rolled through the nadir's gimbal point):
    - **Pitch**, `SKY_EXIT_PITCH_MS`, in the `{ sky }` frame: azimuth authored at its standing
@@ -166,7 +170,7 @@ confirms it.
 3. **The navigator.** A navigator zoom stops at `LENS_MAX` in B (`nudge` returns no clip); only
    the wheel and pinch exit.
 
-**Expected feel.** Out to 120°; one more notch and the look tips down to your feet and the eye
+**Expected feel.** Out to 120°; pause, scroll once more, and the look tips down to your feet and the eye
 climbs, ending straight down on the park at 60°.
 
 ## 7. Tests (acceptance)
@@ -190,9 +194,11 @@ Test names are the contract.
   - codec: `sky frame with eyeHeightM round-trips`; a 6-field `k` row or `eyeHeightM < 1.7` decodes null.
 - B, `skyCameraArm.test.ts`:
   - `wheel-out at the widest lens starts the lift; the notch that reaches it only widens`
+  - `a streaming wheel-out stops at the widest lens; a fresh one after a pause lifts`
   - `the exit lift ends above the spot looking down at the default lens`
 - B, `stepCameraRuntime.test.ts` (`the sky exit lift`):
   - `keeps the horizon level the whole way, pitching down at a fixed azimuth first`
+  - `carries the wheel quiet across frames: a streaming scroll stops at the widest lens`
   - `hands off 100 m above the spot looking straight down at the default lens`
 - Prep P2: the ported `fov` channel tests (`evaluateClip`, `stepCameraRuntime`).
 
@@ -216,6 +222,6 @@ perf pass at 0.5° (sky-mode §7). The sky-mode spec must take this spec's arm s
 
 ## 10. Left to the builder
 
-- B's `SKY_EXIT_ALTITUDE_M` and the two phase durations,
+- B's `SKY_EXIT_ALTITUDE_M`, the two phase durations and `SKY_EXIT_PAUSE_MS`,
   eye-checked.
 - Where the lens constants live under `src/data/camera/` (one symbol per file).

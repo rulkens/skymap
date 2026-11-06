@@ -29,6 +29,7 @@ const CTX: CameraArmCtx = {
   frustum: symmetricFrustum(1, 1920 / 1080),
   fovYRad: 1,
   tuning: TUNING,
+  nowMs: 0,
 };
 
 // Inside Earth's tilt band with an off-target roll, so the zoom's roll ride has work to do.

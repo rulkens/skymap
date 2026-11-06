@@ -154,6 +154,7 @@ export function stepCameraRuntime(
     fovYRad: projection.fovYRad,
     tuning,
     terrainHeightAt,
+    nowMs,
   };
   const replayCtx: CameraArmCtx = { ...armFields, upBasis: prev.outputs.upBasis };
 
