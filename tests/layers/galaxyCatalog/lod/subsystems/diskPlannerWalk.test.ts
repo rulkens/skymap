@@ -288,7 +288,7 @@ describe('createDiskPlannerWalk', () => {
       expect(events.filter((e) => e[0] === 'onRow')).toEqual([]);
     });
 
-    it('still runs the block bookkeeping when every view is on the body', () => {
+    it('handles every source as hidden when every view is on the body', () => {
       const walk = createDiskPlannerWalk({ decimationFactor: 1 });
       const events: WalkEvent[] = [];
       walk.runFrame(
@@ -296,7 +296,7 @@ describe('createDiskPlannerWalk', () => {
         recordingVisitor(events),
         noopDiskRowVisitor(),
       );
-      expect(events.map((e) => e[0])).toEqual(['beginBlock', 'endSource', 'endFrame']);
+      expect(events.map((e) => e[0])).toEqual(['onSourceHidden', 'endFrame']);
     });
   });
 });

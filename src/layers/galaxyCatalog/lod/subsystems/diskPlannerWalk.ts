@@ -64,9 +64,9 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     textured: DiskRowVisitor,
   ): void {
     const { cam, records, visibleCatalogs, pxPerRad, viewPlanes, occluderCones } = input;
-    // Every view on one body's disc (a narrow view of Earth): no row can show, so none is scanned.
+    // Every view on one body's disc (a narrow view of Earth): no row can show, so every
+    // source is handled as hidden and no block is walked.
     const rowsHidden = everyFrustumInsideACone(viewPlanes, occluderCones);
-
     // Looser (8-px) bound — see module header. Rows past it can't matter to
     // either body at any plausible galaxy diameter.
     const maxCamDistSqUpper = maxVisibleCamDistSq(PROCEDURAL_DISK_FADE_START_PX, pxPerRad);
@@ -82,7 +82,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     let acceptedThisFrame = 0;
 
     for (const [source, record] of records) {
-      if (!visibleCatalogs.has(galaxyCatalogIdOf(source))) {
+      if (rowsHidden || !visibleCatalogs.has(galaxyCatalogIdOf(source))) {
         procedural.onSourceHidden(source);
         textured.onSourceHidden(source);
         continue;
@@ -102,7 +102,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
         procedural.beginBlock(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
         textured.beginBlock(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
 
-        if (!rowsHidden && acceptedThisFrame < DISK_ROW_ACCEPT_BUDGET) {
+        if (acceptedThisFrame < DISK_ROW_ACCEPT_BUDGET) {
           for (let i = safeStart; i < end; i++) {
             const i3 = i * 3;
             const x = positions[i3 + 0]!;
