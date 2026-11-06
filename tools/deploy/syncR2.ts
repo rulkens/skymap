@@ -11,6 +11,7 @@
 import { fileURLToPath } from 'node:url';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import type { R2SyncGroup } from './@types/R2SyncGroup';
+import { publishOfflineInventory } from './r2/publishOfflineInventory';
 import { collectDataFiles } from './r2/collectDataFiles';
 import { collectDataManifest } from './r2/collectDataManifest';
 import { collectSurfaceTileManifest } from './r2/collectSurfaceTileManifest';
@@ -67,6 +68,7 @@ function buildGroups(): R2SyncGroup[] {
           cacheControl: IMMUTABLE,
           purge: false,
           gzipOnWire: family.gzipOnWire,
+          offline: true,
         },
       ];
     }),
@@ -77,6 +79,7 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: DAY,
       purge: true,
       gzipOnWire: false,
+      offline: true,
     },
     {
       label: 'Planet-surface textures',
@@ -85,6 +88,7 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: DAY,
       purge: true,
       gzipOnWire: false,
+      offline: true,
     },
     {
       label: 'Extra files',
@@ -93,6 +97,7 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: DAY,
       purge: true,
       gzipOnWire: false,
+      offline: false,
     },
     // `no-cache`, not immutable: an edited `.blend` is re-saved under the same
     // key, so an immutable header would hand a restore the pre-edit bytes. `bulk`
@@ -109,6 +114,7 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: NO_CACHE,
       purge: false,
       gzipOnWire: false,
+      offline: false,
     },
     // One tiles group per `SURFACE_TILE_REGISTRY` row, all before every manifest
     // group below; a row whose bake never ran contributes `[]` from both collectors.
@@ -125,6 +131,7 @@ function buildGroups(): R2SyncGroup[] {
         cacheControl: IMMUTABLE,
         purge: false,
         gzipOnWire: false,
+        offline: true,
       }),
     ),
     // Content-hashed by the bake and named only by their index, which the data manifest
@@ -142,6 +149,7 @@ function buildGroups(): R2SyncGroup[] {
         cacheControl: IMMUTABLE,
         purge: false,
         gzipOnWire: true,
+        offline: true,
       }),
     ),
     // Each row's manifest is the pointer the runtime reads to discover that
@@ -156,6 +164,7 @@ function buildGroups(): R2SyncGroup[] {
         cacheControl: DAY,
         purge: true,
         gzipOnWire: true,
+        offline: true,
       }),
     ),
     // Must stay last of all: it's the pointer the runtime reads to resolve
@@ -170,6 +179,7 @@ function buildGroups(): R2SyncGroup[] {
       purge: true,
       // Manifests are JSON, which gzip shrinks.
       gzipOnWire: true,
+      offline: true,
     },
   ];
 }
@@ -213,6 +223,7 @@ async function main(): Promise<void> {
     uploaded += result.uploaded;
     delegated += result.delegated;
   }
+  const inventoryError = publishOfflineInventory(groups, touchedKeys, BUCKET, NO_CACHE);
 
   const missing = missingExtraFiles();
   if (missing.length > 0) {
@@ -235,6 +246,11 @@ async function main(): Promise<void> {
     console.log('  nothing changed — edge cache already current.');
   } else {
     await purgeCloudflareCache(touchedKeys, R2_PUBLIC_URL);
+  }
+
+  if (inventoryError !== null) {
+    console.error(`\n✗ Offline inventory not published: ${inventoryError}`);
+    process.exit(1);
   }
 }
 
