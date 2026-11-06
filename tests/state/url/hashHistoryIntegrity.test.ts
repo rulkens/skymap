@@ -13,7 +13,7 @@ import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } fr
 
 import { NOOP_SAGA_CONTEXT } from '../../support/createTestStore';
 import { createAppStore } from '../../../src/store/createAppStore';
-import { selectArrivalPending } from '../../../src/state/arrival/selectors';
+import { selectArrival, selectArrivalPending } from '../../../src/state/arrival/selectors';
 import { selectSettings } from '../../../src/state/settings/selectSettings';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
@@ -55,8 +55,9 @@ describe('hash history integrity', () => {
     pushState.mock.calls.map(([, , url]) => new URL(String(url), window.location.href).hash);
 
   /** Registering the context releases the hash bridge, so this call IS the arrival read; it waits for the arrival because until then every publish canonicalizes in place. */
-  const boot = async () => {
+  const boot = async (beforeArrival?: (handle: ReturnType<typeof createAppStore>) => void) => {
     const handle = createAppStore();
+    beforeArrival?.(handle);
     handle.setSagaContext({
       ...NOOP_SAGA_CONTEXT,
       cameraRuntime: () => ({
@@ -136,13 +137,21 @@ describe('hash history integrity', () => {
   it("a cold link's layers land before the reveal and leave the address", async () => {
     seedHash('focus=body-saturn&layers=cosmicWebFilaments,-starCatalog');
     const replaceState = vi.spyOn(window.history, 'replaceState');
+    // The settings the reveal shows: the first state whose arrival has settled.
+    let atReveal: ReturnType<typeof selectSettings> | undefined;
 
-    const { store } = await boot();
+    await boot(({ store }) => {
+      store.subscribe(() => {
+        const state = store.getState();
+        if (atReveal === undefined && selectArrival(state).status === 'arrived') {
+          atReveal = selectSettings(state);
+        }
+      });
+    });
     await flush();
 
-    const settings = selectSettings(store.getState());
-    expect(settings.cosmicWebFilaments.enabled).toBe(true);
-    expect(settings.starCatalogs.enabled).toBe(false);
+    expect(atReveal?.cosmicWebFilaments.enabled).toBe(true);
+    expect(atReveal?.starCatalogs.enabled).toBe(false);
     // `layers` writes nothing, so a push would re-apply it and push again on every Back.
     expect(pushedHashes()).toEqual([]);
     expect(replaceState).toHaveBeenCalled();
@@ -160,6 +169,17 @@ describe('hash history integrity', () => {
     const settings = selectSettings(store.getState());
     expect(settings.cosmicWebFilaments.enabled).toBe(true);
     expect(settings.starCatalogs.enabled).toBe(false);
+  });
+
+  it("a hash change's layers land with its view", async () => {
+    seedHash('');
+    const { store } = await boot();
+    await flush();
+
+    navigate('focus=body-mars&layers=flow');
+    await flush();
+
+    expect(selectSettings(store.getState()).flow.enabled).toBe(true);
   });
 
   it("keeps a takeover navigation's key without pushing", async () => {
