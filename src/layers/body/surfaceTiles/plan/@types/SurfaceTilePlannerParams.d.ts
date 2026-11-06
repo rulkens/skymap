@@ -2,13 +2,11 @@
  * SurfaceTilePlannerParams — the slice of `cutSurfaceTiles`'s input the tile
  * subsystem owns, rather than the camera (camera state is frame-owned;
  * tile edge/bake depth are subsystem-owned). `null` rather than defaults is
- * the honest pre-manifest answer: no known bands, nothing to plan. The
- * product `cutSurfaceTiles` requests against these bands is `'albedo'`,
- * fixed inside that walk (Task 11 makes it two products) — not a field
- * here, since every consumer of this type wants the same one today.
+ * the honest pre-manifest answer: no known bands, nothing to plan.
  */
 
 import type { SurfaceTileBand } from '../../format/@types/SurfaceTileBand';
+import type { SurfaceTileProduct } from '../../format/@types/SurfaceTileProduct';
 
 export type SurfaceTilePlannerParams = {
   /** Tile edge in pixels, from the manifest — also the atlas's slot edge. */
@@ -17,11 +15,14 @@ export type SurfaceTilePlannerParams = {
    *  delivers (`baseLevelForTier`) — the planner's walk floor and
    *  what the engage gate compares `zWin` against. */
   readonly baseLevel: number;
-  /** Geographic depth bands baked for the albedo product, each floored to
-   *  one level finer than `baseLevel`. Replaces a single scalar
-   *  `minTileLevel`/`maxTileLevel` range — several imagery sources can share
-   *  a footprint at different depths (EOX deep tiles over BMNG). */
+  /** Geographic depth bands baked for both albedo and height, each floored
+   *  to one level finer than `baseLevel`: what refinement reads. Several
+   *  imagery sources can share a footprint at different depths (EOX deep
+   *  tiles over BMNG). */
   readonly bands: readonly SurfaceTileBand[];
+  /** Per product, the bands its tiles are requested over, floored as
+   *  `bands` is: a tile outside its own product's bands has no file. */
+  readonly requestBands: Readonly<Record<SurfaceTileProduct, readonly SurfaceTileBand[]>>;
   /** Levels coarser than one texel per screen pixel the planner settles for;
    *  see `SURFACE_TILE_LOD_BIAS`. */
   readonly lodBias: number;

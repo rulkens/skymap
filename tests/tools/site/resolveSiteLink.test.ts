@@ -83,3 +83,10 @@ describe('resolveSiteLink', () => {
     expect(check('/home/docs/credits/')).toBe('stale-pending');
   });
 });
+
+describe('appViewProblem', () => {
+  it('appViewProblem names an unknown layer and passes a known list', () => {
+    expect(appViewProblem('layers=flow,-starCatalog,survey:desiWedge')).toBeNull();
+    expect(appViewProblem('layers=flow,nope')).toBe('the app reads no layer "nope"');
+  });
+});

@@ -1,11 +1,13 @@
+import type { Vec2 } from '../../../../../@types/math/Vec2';
+
 /**
  * ResidentSlot — one exact tile's place in its product's atlas, the answer
  * `cutSurfaceTiles`' ancestor-fallback walk resolves each candidate through.
  */
 export type ResidentSlot = {
   readonly slot: number;
-  readonly atlasUvOrigin: readonly [number, number];
-  readonly atlasUvScale: readonly [number, number];
+  readonly atlasUvOrigin: Readonly<Vec2>;
+  readonly atlasUvScale: Readonly<Vec2>;
   /** `performance.now()` (REAL time) stamped when this slot's bitmap
    *  uploaded — see `SurfaceCutTile.albedo.readyAtMs`. */
   readonly readyAtMs: number;

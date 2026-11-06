@@ -12,5 +12,8 @@ export const SURFACE_TILE_SHADER_VARIANTS: Readonly<
   Record<string, { readonly fragment: string; readonly bindings: readonly number[] }>
 > = {
   '': { fragment: fragmentBare, bindings: [5] },
-  'cloudShadows+materialMap+nightLights': { fragment: fragmentEarth, bindings: [3, 5, 6, 7, 9] },
+  'cloudShadows+materialMap+nightLights': {
+    fragment: fragmentEarth,
+    bindings: [3, 5, 6, 7, 9, 10],
+  },
 };

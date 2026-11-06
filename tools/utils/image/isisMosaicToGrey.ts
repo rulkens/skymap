@@ -11,7 +11,7 @@
 
 import type { GreyRaster } from '../../@types/image/GreyRaster';
 import type { IsisCubeRaster } from '../../@types/image/IsisCubeRaster';
-import { linearToSrgbByte } from './linearToSrgbByte';
+import { linearToSrgbByte } from '../../../src/utils/color/linearToSrgbByte';
 
 const LEFT_EDGE_TOLERANCE_DEG = 1;
 

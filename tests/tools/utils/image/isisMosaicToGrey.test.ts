@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { isisMosaicToGrey } from '../../../../tools/utils/image/isisMosaicToGrey';
-import { linearToSrgbByte } from '../../../../tools/utils/image/linearToSrgbByte';
+import { linearToSrgbByte } from '../../../../src/utils/color/linearToSrgbByte';
 
 const ALBEDO = 0.27;
 

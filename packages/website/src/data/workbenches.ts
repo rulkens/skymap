@@ -83,6 +83,19 @@ export const WORKBENCHES: readonly Workbench[] = [
     },
   },
   {
+    id: 'albedo',
+    name: 'Albedo bench',
+    script: 'albedo-bench',
+    port: 5700,
+    manual: 'tools/albedo-bench/README.md',
+    picture: {
+      title: 'The albedo bench at Gale crater',
+      caption:
+        'The left half has the sunlight taken out; the right half is the photograph as it is. The arrows show the direction of the light the bench found.',
+      alt: 'The same reddish ground of craters and ridges in two halves, the left one flat and the right one with dark shadows and bright slopes, under rows of blue arrows pointing down and to the left, with a tall panel of sliders on the right.',
+    },
+  },
+  {
     id: 'audit',
     name: 'Structure audit',
     script: 'structure-audit',

@@ -5,10 +5,13 @@ import type { SurfaceTileRequest } from '../@types/SurfaceTileRequest';
 import type { SurfaceCutTile } from '../@types/SurfaceCutTile';
 import type { ResolvedTileResidency } from '../../stream/@types/ResolvedTileResidency';
 import type { TileCamera } from '../@types/TileCamera';
+import type { SurfaceTilePlannerParams } from '../@types/SurfaceTilePlannerParams';
+import type { Vec2 } from '../../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import { surfaceTileColumns } from '../../format/utils/surfaceTileColumns';
 import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
 import { surfaceTileInBand } from '../../format/utils/surfaceTileInBand';
+import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { equirectUvToDirection } from '../../../../../utils/math/equirectUvToDirection';
 import { surfacePatchAnchor } from '../../patch/subsystems/surfacePatchAnchor';
 import { balanceSurfaceCut } from './balanceSurfaceCut';
@@ -17,8 +20,8 @@ import { deepestResidentAncestor } from './deepestResidentAncestor';
 
 type ResidentLookupResult = {
   readonly slot: number;
-  readonly atlasUvOrigin: readonly [number, number];
-  readonly atlasUvScale: readonly [number, number];
+  readonly atlasUvOrigin: Readonly<Vec2>;
+  readonly atlasUvScale: Readonly<Vec2>;
   readonly readyAtMs: number;
   /** HEIGHT only: the tile header's `subtreeMin/MaxM`, which bound every
    *  descendant of that tile. Absent or null is read as "no bound known",
@@ -32,7 +35,7 @@ const NO_COARSER_EDGES: SurfaceCutTile['edgeCoarser'] = [0, 0, 0, 0];
 const DATUM_RANGE_M: readonly [number, number] = [0, 0];
 
 /**
- * cutSurfaceTiles — one quadtree walk, two products: `requests` is what to
+ * cutSurfaceTiles — one quadtree walk, every product: `requests` is what to
  * fetch, `cut` what to draw. Refinement is residency-blind (R14) — screen
  * error and the bands alone — and a leaf whose own height has not landed
  * inherits the deepest resident ancestor's lattice, so nothing is ever a hole.
@@ -55,10 +58,11 @@ export function cutSurfaceTiles(input: {
   readonly reliefM: readonly [number, number];
   /** The level the whole-globe base texture already delivers — the walk's floor. */
   readonly baseLevel: number;
-  /** The manifest's geographic depth bands for the albedo product; a leaf
-   *  outside every overlapping band's `[min, max]` has no file and is not
-   *  requested. */
+  /** The manifest's geographic depth bands refinement reads. */
   readonly bands: readonly SurfaceTileBand[];
+  /** Per product, the bands its tiles are requested over; a tile outside
+   *  every overlapping band's `[min, max]` has no file and is not requested. */
+  readonly requestBands: SurfaceTilePlannerParams['requestBands'];
   readonly tilePx: number;
   /** Levels coarser than one texel per screen pixel to settle for; see
    *  `SURFACE_TILE_LOD_BIAS`. */
@@ -81,6 +85,7 @@ export function cutSurfaceTiles(input: {
     reliefM,
     baseLevel,
     bands,
+    requestBands,
     tilePx,
     lodBias,
     residentSlot,
@@ -105,6 +110,10 @@ export function cutSurfaceTiles(input: {
   // screen-space extent can't ask the walk to descend past every band's max.
   let maxTileLevel = baseLevel;
   for (const band of bands) if (band.max > maxTileLevel) maxTileLevel = band.max;
+  // Night bakes shallower than the cut (z7 against z13): a deeper leaf starts
+  // its climb at this level, and with no night bands no leaf climbs at all.
+  let nightMax = -1;
+  for (const band of requestBands.night) if (band.max > nightMax) nightMax = band.max;
 
   // Per view, hoisted out of the walk: the x/y/w rows of the vp (the z row is
   // never touched) and the four side planes of the frustum in the walk's own
@@ -293,11 +302,14 @@ export function cutSurfaceTiles(input: {
     return hit?.found.subtreeRangeM ?? DATUM_RANGE_M;
   }
 
-  /** Both products of one tile — height rides every albedo request (§6.1),
-   *  band-floor ancestors included: refinement needs posts, not pixels. */
+  /** Every product baked at one tile — height rides every albedo request
+   *  (§6.1), band-floor ancestors included: refinement needs posts, not pixels. */
   function request(z: number, x: number, y: number, screenPx: number): void {
-    requests.push({ tile: { product: 'albedo', z, x, y }, screenPx });
-    requests.push({ tile: { product: 'height', z, x, y }, screenPx });
+    for (const product of SURFACE_TILE_PRODUCTS) {
+      if (surfaceTileInBand(requestBands[product], tilePx, z, x, y)) {
+        requests.push({ tile: { product, z, x, y }, screenPx });
+      }
+    }
   }
 
   /** The lattice a leaf at `(z, x, y)` samples, `minLevelDelta` levels up or
@@ -309,6 +321,20 @@ export function cutSurfaceTiles(input: {
     minLevelDelta: number,
   ): SurfaceCutTile['height'] | null {
     return resolveHeightLattice({ z, x, y, baseLevel, minLevelDelta, residentSlot });
+  }
+
+  /** The leaf's share of its deepest resident night ancestor, or null: night
+   *  never gates the cut, the global night texture stands in for it. */
+  function nightOf(z: number, x: number, y: number): SurfaceCutTile['night'] {
+    if (nightMax < 0) return null;
+    const top = Math.min(z, nightMax);
+    const d0 = z - top;
+    const hit = deepestResidentAncestor(
+      { product: 'night', z: top, x: x >> d0, y: y >> d0 },
+      baseLevel,
+      residentSlot,
+    );
+    return hit === null ? null : flattenAtlasRect(hit.found, d0 + hit.levelDelta, x, y);
   }
 
   // Explicit stack, not recursion: allocation-free in a per-frame path. Five
@@ -357,7 +383,7 @@ export function cutSurfaceTiles(input: {
       if (visibleChildren > 0) {
         // The ancestor chain is fetched alongside the leaves: albedo inherits
         // from it, and a request is also the LRU touch that keeps it alive.
-        if (surfaceTileInBand(bands, tilePx, z, x, y)) request(z, x, y, screenPx);
+        request(z, x, y, screenPx);
         continue;
       }
       // Every child culled, so this node is the leaf after all. Demand, not
@@ -373,9 +399,9 @@ export function cutSurfaceTiles(input: {
     // Requestable and drawable are different questions: a leaf can sit past
     // every overlapping band's max (e.g. just outside a deep band's bbox,
     // under a shallower global band) with no file of its OWN to fetch, yet
-    // still have a resident ANCESTOR to draw — skip only the fetch, not the
-    // residency lookup below, or a band-edge ring never gets ancestor pixels.
-    if (surfaceTileInBand(bands, tilePx, z, x, y)) request(z, x, y, screenPx);
+    // still have a resident ANCESTOR to draw — `request` skips only the fetch,
+    // not the residency lookup below, or a band-edge ring never gets ancestor pixels.
+    request(z, x, y, screenPx);
 
     // Height inherits exactly as albedo does (R14); `balanceSurfaceCut` then
     // stitches the levels the two neighbours ended up on.
@@ -394,6 +420,7 @@ export function cutSurfaceTiles(input: {
         anchor: surfacePatchAnchor(u0, v0, u1, v1),
         albedo: resolved,
         height,
+        night: nightOf(z, x, y),
         edgeCoarser: NO_COARSER_EDGES,
       });
     }
