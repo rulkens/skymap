@@ -69,7 +69,7 @@ The per-kind core tables this item named (`BUILD_FOCUSABLE`, `REF_OF`, `focusFra
 - `data/bodies/sStarOrbitInfo` 44, which the star Layer's `selection/utils/starDetail` reads.
 - The galaxyCatalog fact selectors in `state/engine/selectors.ts`; the palette and the remote read `selectFamousGalaxiesMeta` too.
 
-**Joint.** Delivered by [the selection-kind-facts spec](../superpowers/specs/2026-11-05-selection-kind-facts-design.md) as each Layer's static `selection.kinds`; what remains is moving the files above.
+**Joint.** Delivered by [the selection-kind-facts spec](../superpowers/specs/completed/2026-11-05-selection-kind-facts-design.md) as each Layer's static `selection.kinds`; what remains is moving the files above.
 
 ### J3. Ephemeris corrections + barycentric pairs: 1,113
 `ephemerisCorrections.generated` 1,088 (26 bodies: the planets and their moons) and `barycentricPairs` 25 (earth/moon). Both are read only by the core solver, `utils/orbit/orbitRowPlacement.ts`, keyed by element id. They are body content. **Joint:** the row's `OrbitalElements` (or `LayerBody`) carries its correction and barycentre. This widens `LayerBody`, which needs consent. The generator (`build-ephemeris-corrections`) would then emit into `layers/body/`.

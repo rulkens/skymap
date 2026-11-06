@@ -1,7 +1,7 @@
 # Selection-kind-facts follow-ups
 
 Knots seen at the 2026-11-05 ground check for
-[the selection-kind-facts spec](../superpowers/specs/2026-11-05-selection-kind-facts-design.md) that its ideal
+[the selection-kind-facts spec](../superpowers/specs/completed/2026-11-05-selection-kind-facts-design.md) that its ideal
 diff does not need. Each is small and independent.
 
 ## A 64-bit pick target

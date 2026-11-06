@@ -15,7 +15,7 @@ placement (`positionMpc`, `radiusMpc`). Core and the store type against a base r
 
 **Tech Stack:** TypeScript, Redux Toolkit + Redux-Saga, WebGPU passes, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-11-05-selection-kind-facts-design.md` §4 (all), §5, §6.
+**Spec:** `docs/superpowers/specs/completed/2026-11-05-selection-kind-facts-design.md` §4 (all), §5, §6.
 **Depends on:** the prep PR, `docs/superpowers/plans/completed/2026-11-05-pick-codes-runtime.md`, merged as #1057.
 
 ## Global Constraints
@@ -293,13 +293,13 @@ placement (`positionMpc`, `radiusMpc`). Core and the store type against a base r
   - solar system and Voyager: `['galaxyCatalog', 'structure', 'milkyWay', 'zoneOfAvoidance', 'satellite']`.
   The dead `earthScene` key goes.
 
-- [ ] Modify `composeSelectionRows.test.ts`: `a kind in the off list resolves no pick but still extracts
+- [x] Modify `composeSelectionRows.test.ts`: `a kind in the off list resolves no pick but still extracts
       its row and decodes its focus id`.
-- [ ] Test `the zone-of-avoidance exhibit leaves only galaxies and the shell pickable`: apply the exhibit's
+- [x] Test `the zone-of-avoidance exhibit leaves only galaxies and the shell pickable`: apply the exhibit's
       settings and resolve one pick per kind.
-- [ ] Implement; rename the helper; sweep fixtures.
-- [ ] `npx vitest run tests/state tests/services/engine` → pass; `typecheck:fast` → clean.
-- [ ] Commit `Picking settings list the kinds a view turns off`.
+- [x] Implement; rename the helper; sweep fixtures.
+- [x] `npx vitest run tests/state tests/services/engine` → pass; `typecheck:fast` → clean.
+- [x] Commit `Picking settings list the kinds a view turns off`.
 
 ### Task 8: The core unions and kind list go; the boot checks take over
 
@@ -323,11 +323,11 @@ placement (`positionMpc`, `radiusMpc`). Core and the store type against a base r
   earthScenes) stays in `src/@types/`.
 - The store and engine reference refs and rows only as `SelectionRefBase` / the placed-row base.
 
-- [ ] Modify `detailCardTable.test.ts`: `throws naming a composed kind with no detail card`.
-- [ ] Implement.
-- [ ] `npm run typecheck` (tsc) → clean, no circular-alias error; `npm run build` → clean.
-- [ ] `grep -rn "SelectionKind\b\|SELECTION_KINDS\|FocusableTarget\b" src tests` → only intended hits.
-- [ ] Commit `Selection unions and the kind list leave core; boot checks replace them`.
+- [x] Modify `detailCardTable.test.ts`: `throws naming a composed kind with no detail card`.
+- [x] Implement.
+- [x] `npm run typecheck` (tsc) → clean, no circular-alias error; `npm run build` → clean.
+- [x] `grep -rn "SelectionKind\b\|SELECTION_KINDS\|FocusableTarget\b" src tests` → only intended hits.
+- [x] Commit `Selection unions and the kind list leave core; boot checks replace them`.
 
 ## Definition of Done
 
