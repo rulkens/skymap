@@ -1,11 +1,13 @@
 /**
  * The sky arm's row (spec §4): a person standing SKY_EYE_HEIGHT_M above the
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
- * enters it (`engage` is null), and this slice authors no input: `step` and
- * `nudge` decline by reference until sky mode fills them.
+ * enters it (`engage` is null). Every drag looks and the wheel changes the
+ * lens, which the arm hands back as `fovYRad` beside an unmoved pose; a fresh
+ * wheel-out at the widest lens lifts the eye out by a clip.
  */
 
 import type { ClimbRow } from '../@types/ClimbRow';
+import type { Vec2 } from '../../../../../@types/math/Vec2';
 import { focusInSubtree } from '../../../../../utils/camera/arms/focusInSubtree';
 import { skyPoseFromBodyArm } from './utils/skyPoseFromBodyArm';
 import { skyPoseToBodyArm } from './utils/skyPoseToBodyArm';
@@ -14,12 +16,17 @@ import { hostOf } from '../hostOf';
 import { hostOrThrow } from '../hostOrThrow';
 import { isSkyArm } from './isSkyArm';
 import { refoldTo } from '../refoldTo';
+import { skyLookedPose } from './utils/skyLookedPose';
+import { skyZoomedLens } from './utils/skyZoomedLens';
+import { skyExitLift } from './utils/skyExitLift';
+import { EMPTY_SKY_WHEEL_MEMORY } from './data/emptySkyWheelMemory';
+import { SKY_EXIT_PAUSE_MS } from './data/skyExitPauseMs';
 
 export const skyCameraArm: ClimbRow<'sky'> = {
   kind: 'sky',
   parent: 'body',
   pinsEye: true,
-  emptyMemory: null,
+  emptyMemory: EMPTY_SKY_WHEEL_MEMORY,
 
   channels: {
     // The tag names the spot, so `target` and `distance` carry nothing, as at a site.
@@ -43,9 +50,43 @@ export const skyCameraArm: ClimbRow<'sky'> = {
 
   host: (frame, ctx) => hostOf({ body: frame.sky.body }, ctx),
 
-  step: (memory, tilt, framed) => ({ pose: framed.pose, memory, tilt }),
+  step(memory, tilt, framed, input, ctx) {
+    if (input.kind === 'drag') {
+      const dragPx: Readonly<Vec2> = [
+        input.endPx[0] - input.startPx[0],
+        input.endPx[1] - input.startPx[1],
+      ];
+      const pose = skyLookedPose(framed.pose, dragPx, ctx.fovYRad, ctx.viewportPx[1]);
+      return { pose, memory, tilt };
+    }
+    if (input.kind !== 'zoom') return { pose: framed.pose, memory, tilt };
+    // Every wheel step restarts the quiet the lift waits for, widening or not.
+    const wheeled = { lastWheelMs: ctx.nowMs };
+    const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);
+    // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
+    if (fovYRad !== ctx.fovYRad) return { pose: framed.pose, memory: wheeled, tilt, fovYRad };
+    // A wheel-out the widest lens ate whole lifts the eye out (spec §6.1), but only from a
+    // fresh scroll: a trackpad's momentum tail reaching the stop stays. No release: the
+    // clip owns the display, and its end commit (a body-arm pose) leaves the sky.
+    return input.factor > 1 && ctx.nowMs - memory.lastWheelMs >= SKY_EXIT_PAUSE_MS
+      ? { pose: framed.pose, memory: wheeled, tilt, clip: skyExitLift(framed, ctx) }
+      : { pose: framed.pose, memory: wheeled, tilt };
+  },
 
-  nudge: (tilt, framed) => ({ pose: framed.pose, tilt }),
+  nudge(tilt, framed, { look, zoom }, ctx) {
+    const pxPerRad = ctx.viewportPx[1] / ctx.fovYRad;
+    const pose =
+      look === undefined
+        ? framed.pose
+        : skyLookedPose(
+            framed.pose,
+            [look[0] * pxPerRad, look[1] * pxPerRad],
+            ctx.fovYRad,
+            ctx.viewportPx[1],
+          );
+    const fovYRad = zoom === undefined ? ctx.fovYRad : skyZoomedLens(ctx.fovYRad, Math.exp(zoom));
+    return fovYRad === ctx.fovYRad ? { pose, tilt } : { pose, tilt, fovYRad };
+  },
 
   toParent(framed, ctx) {
     const host = hostOrThrow(framed.frame, ctx);

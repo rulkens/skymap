@@ -4,12 +4,14 @@
  * Drawn only from the probe capture's roster, ahead of the ground passes that overdraw it;
  * `atmosphere-shell` cannot serve a face (it classifies rays by a sampled depth a capture
  * never resolves). The sky-view LUT is the main view's: a probe eye far from the camera's
- * altitude reads a sky baked for another height.
+ * altitude reads a sky baked for another height. Probe faces are not rig views, so a host
+ * no rig view draws (`atmosphereRosterPlanner`) is not re-baked: its probe reads the last bake.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
-import { atmosphereDrawList } from '../present/atmosphereDrawList';
+import { atmosphereEntry } from '../present/atmosphereEntry';
+import { drawsAtmosphere } from '../present/drawsAtmosphere';
 import { atmosphereShellUniforms } from '../present/atmosphereShellUniforms';
 
 export function atmosphereProbeSkyPass(runtime: BodyRuntime): ContentPass {
@@ -19,16 +21,16 @@ export function atmosphereProbeSkyPass(runtime: BodyRuntime): ContentPass {
     enabled(state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
       const bodyId = view.slab.frame.hostId;
-      return atmosphereDrawList(state, ctx).some(
-        (entry) => entry.body.id === bodyId && entry.inside,
+      return (
+        drawsAtmosphere(bodyId, ctx, state) && atmosphereEntry(bodyId, ctx, state)?.inside === true
       );
     },
 
     draw(pass, view, ctx, state) {
       if (view.slab.frame.kind !== 'body-m') return;
       const bodyId = view.slab.frame.hostId;
-      const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
-      if (entry === undefined) return;
+      const entry = atmosphereEntry(bodyId, ctx, state);
+      if (entry === null) return;
       runtime.atmosphereShellRenderer.drawProbeSky(
         pass,
         entry.body.id,

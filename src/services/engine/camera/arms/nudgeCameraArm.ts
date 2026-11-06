@@ -12,7 +12,8 @@ export function nudgeCameraArm<K extends CameraArmKind>(
   tilt: TiltMemory,
   delta: ArmDelta,
   ctx: CameraArmCtx,
-): { readonly pose: FramedPose<K>; readonly tilt: TiltMemory } {
+): { readonly pose: FramedPose<K>; readonly tilt: TiltMemory; readonly fovYRad?: number } {
   const nudged = rowFor<K>(framed.frame).nudge(tilt, framed, delta, ctx);
-  return { pose: { frame: framed.frame, pose: nudged.pose } as FramedPose<K>, tilt: nudged.tilt };
+  const pose = { frame: framed.frame, pose: nudged.pose } as FramedPose<K>;
+  return { pose, tilt: nudged.tilt, fovYRad: nudged.fovYRad };
 }

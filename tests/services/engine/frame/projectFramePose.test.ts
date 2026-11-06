@@ -61,6 +61,7 @@ describe('projectFramePose over a sky regime', () => {
     frustum: symmetricFrustum(Math.PI / 3, 1),
     fovYRad: Math.PI / 3,
     tuning: intent.tuning,
+    nowMs: 0,
   };
   const project = (render: FramedCameraPose) =>
     projectFramePose({

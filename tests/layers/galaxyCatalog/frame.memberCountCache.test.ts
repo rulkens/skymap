@@ -8,19 +8,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
-import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import { galaxyPlannerViewOf } from '../../helpers/frame/galaxyPlannerViewOf';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
-const SNAPSHOT = { nowMs: 0, skyCapturesInBand: new Set() } as unknown as ReadyFrameContext;
-const VIEWS = [
-  {
-    cam: { position: [0, 0, 0] },
-    drawPxPerRad: 100,
-    slabs: [null, { vp: new Float64Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]) }],
-  } as unknown as FrameView,
-];
+const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
+const VIEWS = [galaxyPlannerViewOf()];
 const STATE = {
   settings: {
     bias: { mode: 0, absMagLimit: -19 },

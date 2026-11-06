@@ -22,7 +22,6 @@ import {
   selectOrientation,
   selectToneMapCurve,
   selectExposure,
-  selectFovDeg,
   selectHdrEnabled,
   selectHdrKnee,
   selectHdrHeadroom,
@@ -32,7 +31,9 @@ import {
 } from '../../state/settings/selectors';
 import { selectHdrCapable } from '../../state/engine/selectors';
 import { setToneMapCurve, setExposure } from '../../state/settings/core/tonemapSlice';
-import { setFovDeg } from '../../state/settings/core/cameraSettingsSlice';
+import { setFovYRad } from '../../state/camera/cameraSlice';
+import { selectFovYRad } from '../../state/camera/selectors';
+import { degToRad } from '../../utils/math/degToRad';
 import { setHdrEnabled, setHdrKnee, setHdrHeadroom } from '../../state/settings/core/hdrSlice';
 import {
   setBloomEnabled,
@@ -48,7 +49,9 @@ function DisplaySectionContainer(): React.ReactElement {
   const orientation = useAppSelector(selectOrientation);
   const toneMapCurve = useAppSelector(selectToneMapCurve);
   const exposure = useAppSelector(selectExposure);
-  const fovDeg = useAppSelector(selectFovDeg);
+  // Rounded: radians → degrees leaves float noise (60° reads 59.999…), which the
+  // pill's whole-degree format and the slider's step stops would show.
+  const fovDeg = Math.round(useAppSelector(selectFovYRad) * (180 / Math.PI) * 1e6) / 1e6;
   const hdrEnabled = useAppSelector(selectHdrEnabled);
   const hdrCapable = useAppSelector(selectHdrCapable);
   const hdrKnee = useAppSelector(selectHdrKnee);
@@ -69,7 +72,10 @@ function DisplaySectionContainer(): React.ReactElement {
     [dispatch],
   );
   const onExposureChange = useCallback((next: number) => dispatch(setExposure(next)), [dispatch]);
-  const onFovDegChange = useCallback((next: number) => dispatch(setFovDeg(next)), [dispatch]);
+  const onFovDegChange = useCallback(
+    (next: number) => dispatch(setFovYRad(degToRad(next))),
+    [dispatch],
+  );
   const onHdrEnabledChange = useCallback(
     (next: boolean) => dispatch(setHdrEnabled(next)),
     [dispatch],

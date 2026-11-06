@@ -6,9 +6,9 @@
  * Prelude placement, ahead of the `foreground:0` render step, is what orders the write
  * before the read.
  *
- * ONE compute pass for the whole `atmosphereDrawList`: the step owns a single
+ * ONE compute pass for the whole `atmosphereRosterPlanner` roster: the step owns a single
  * GPU-timing slot, and per-body passes would each write that slot's two query
- * indices, the last body silently deciding the report. An empty list opens no pass,
+ * indices, the last body silently deciding the report. An empty roster opens no pass,
  * so the slot stays unwritten and the panel drops the row.
  */
 
@@ -16,7 +16,8 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { AtmosphereShellRenderer } from '../@types/AtmosphereShellRenderer';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
-import { atmosphereDrawList } from '../present/atmosphereDrawList';
+import { atmosphereEntry } from '../present/atmosphereEntry';
+import { atmosphereRosterPlanner } from '../present/atmosphereRosterPlanner';
 import { sunZenithCos } from '../utils/sunZenithCos';
 
 export function encodeAtmosphereSkyView(
@@ -26,7 +27,10 @@ export function encodeAtmosphereSkyView(
   state: PassState,
   claimTimestampWrites?: ClaimTimestampWrites,
 ): void {
-  const entries = atmosphereDrawList(state, ctx);
+  // Resolved from the canvas view, for the bodies some rig view draws.
+  const entries = [...ctx.snapshot.plans.get(atmosphereRosterPlanner)].flatMap(
+    (bodyId) => atmosphereEntry(bodyId, ctx, state) ?? [],
+  );
   if (entries.length === 0) return;
 
   const pass = encoder.beginComputePass({

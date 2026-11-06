@@ -14,7 +14,7 @@
  *
  * The distance early-out uses the looser bound, PROCEDURAL_DISK_FADE_START_PX
  * (8 px), so it never skips a row EITHER body could use; a row outside every
- * view is skipped too. Apparent-size gating
+ * view, or behind an opaque body, is skipped too. Apparent-size gating
  * stays in each body's `onRow` (procedural drops px <= 8, textured applies its
  * 24-px gate, famous rows exempt); gating here would braid body policy into the
  * shared loop.
@@ -25,8 +25,11 @@ import { strideWindow } from '../utils/strideWindow';
 import { maxVisibleCamDistSq } from '../utils/maxVisibleCamDistSq';
 import { apparentSizePxAtDistance } from '../utils/apparentSizePxAtDistance';
 import { PROCEDURAL_DISK_FADE_START_PX } from '../data/galaxyLodBands';
+import { DISK_WALK_DECIMATION } from '../data/diskWalkDecimation';
 import { sphereInAnyFrustum } from '../../../../utils/camera/frustum/sphereInAnyFrustum';
 import { diskQuadExtentMpc } from '../utils/diskQuadExtentMpc';
+import { sphereBehindAnyCone } from '../../../../utils/occlusion/sphereBehindAnyCone';
+import { everyFrustumInsideACone } from '../../../../utils/camera/frustum/everyFrustumInsideACone';
 import type { Destroyable } from '../../../../@types/rendering/Destroyable';
 import type { DiskPlannerWalk } from '../@types/DiskPlannerWalk';
 import type { DiskRowVisitor } from '../@types/DiskRowVisitor';
@@ -49,7 +52,7 @@ export const DISK_ROW_ACCEPT_BUDGET = 2048;
 const VIEW_CULL_RADIUS_PER_EXTENT = 2;
 
 export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlannerWalk {
-  const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
+  const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? DISK_WALK_DECIMATION));
 
   // The shared stride cursors: which row each block's decimated window resumes
   // from next frame, by source then ordinal base. One map for BOTH bodies.
@@ -60,8 +63,10 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     procedural: DiskRowVisitor,
     textured: DiskRowVisitor,
   ): void {
-    const { cam, records, visibleCatalogs, pxPerRad, viewPlanes } = input;
-
+    const { cam, records, visibleCatalogs, pxPerRad, viewPlanes, occluderCones } = input;
+    // Every view on one body's disc (a narrow view of Earth): no row can show, so every
+    // source is handled as hidden and no block is walked.
+    const rowsHidden = everyFrustumInsideACone(viewPlanes, occluderCones);
     // Looser (8-px) bound — see module header. Rows past it can't matter to
     // either body at any plausible galaxy diameter.
     const maxCamDistSqUpper = maxVisibleCamDistSq(PROCEDURAL_DISK_FADE_START_PX, pxPerRad);
@@ -77,7 +82,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     let acceptedThisFrame = 0;
 
     for (const [source, record] of records) {
-      if (!visibleCatalogs.has(galaxyCatalogIdOf(source))) {
+      if (rowsHidden || !visibleCatalogs.has(galaxyCatalogIdOf(source))) {
         procedural.onSourceHidden(source);
         textured.onSourceHidden(source);
         continue;
@@ -114,6 +119,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
             if (!sphereInAnyFrustum(viewPlanes, -dx, -dy, -dz, cullRadius)) continue;
 
             const camDist = Math.sqrt(camDistSq);
+            if (sphereBehindAnyCone(occluderCones, -dx, -dy, -dz, camDist, cullRadius)) continue;
             const px = apparentSizePxAtDistance(diameterKpc, camDist, pxPerRad);
 
             procedural.onRow(source, block, i, x, y, z, camDist, px);

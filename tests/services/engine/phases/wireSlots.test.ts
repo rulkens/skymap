@@ -14,6 +14,7 @@ import { Source } from '../../../../src/data/source';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
 import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
+import { structureVisibility } from '../../../../src/layers/structure/visibility';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { BODY_SOURCE_IDS } from '../../../../src/data/bodies/bodySourceIds';
@@ -338,7 +339,11 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    visibilityEntries: [...galaxyCatalogVisibility, ...cosmicWebDensityVisibility],
+    visibilityEntries: [
+      ...galaxyCatalogVisibility,
+      ...cosmicWebDensityVisibility,
+      ...structureVisibility,
+    ],
     selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
   state.assetRows = expandCompanionRows([

@@ -39,6 +39,8 @@ import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { STAR_EMISSIVE } from '../../data/starRenderConstants';
 import { exposureToEv } from '../../utils/tonemap/exposureToEv';
 import { evToExposure } from '../../utils/tonemap/evToExposure';
+import { LENS_MIN_DEG } from '../../data/camera/lensMinDeg';
+import { LENS_MAX_DEG } from '../../data/camera/lensMaxDeg';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
@@ -195,8 +197,8 @@ function DisplaySection({
         <Slider
           label="Field of view"
           value={fovDeg}
-          min={0.5}
-          max={100}
+          min={LENS_MIN_DEG}
+          max={LENS_MAX_DEG}
           step={0.5}
           onChange={onFovDegChange}
           format={(v) => `${v % 1 === 0 ? v : v.toFixed(1)}°`}

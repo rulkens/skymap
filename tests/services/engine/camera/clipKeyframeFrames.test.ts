@@ -200,6 +200,18 @@ describe('frame-tagged keyframes', () => {
     expect(framed.channels.target).toEqual(expected.target);
   });
 
+  it('a lens tween beside a body leg opens no absolute leg', () => {
+    const data: ClipData = {
+      start: { ...START, fov: 1 },
+      timeline: [all([earthLeg(), tween('fov', { to: 0.5, over: 4 })])],
+    };
+
+    const framed = evaluateFramedClip(data, 2, opts());
+
+    expect(framed.frame).toEqual(EARTH);
+    expect(between(1, framed.channels.fov!, 0.5)).toBe(true);
+  });
+
   it('absolute → body → absolute keeps the eye and the aim', () => {
     const pose: CameraPose = {
       target: BODIES.get(asSceneBodyId('earth'))!.positionMpc,

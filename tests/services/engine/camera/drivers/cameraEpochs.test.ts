@@ -13,6 +13,7 @@ import {
   elapsedMs,
 } from '../../../../../src/services/engine/camera/drivers/cameraEpochs';
 import { DEFAULT_CAMERA_TUNING } from '../../../../../src/data/camera/cameraTuning';
+import { DEFAULT_FOV_Y_RAD } from '../../../../../src/services/engine/camera/framing/cameraFraming';
 import type { Epoch } from '../../../../../src/@types/engine/camera/Epoch';
 import type { CameraState } from '../../../../../src/@types/camera/orbitCamera/CameraState';
 import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
@@ -67,6 +68,7 @@ function makeCameraState(overrides?: Partial<CameraState>): CameraState {
     clip: null,
     frameTween: null,
     aim: null,
+    fovYRad: DEFAULT_FOV_Y_RAD,
     tuning: DEFAULT_CAMERA_TUNING,
     ...overrides,
   };

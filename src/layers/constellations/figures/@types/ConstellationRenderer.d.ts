@@ -23,6 +23,8 @@ export type ConstellationRenderer = {
   upload(artifact: ConstellationsArtifact): void;
   /** True once a drawable segment set is committed — the pass's draw gate. */
   hasData(): boolean;
+  /** Frees the instance buffer `upload` built; `hasData()` is false until the next upload. */
+  clear(): void;
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,

@@ -21,6 +21,8 @@ import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxy
 import { describe, it, expect } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustum/frustumPlanesFromViewProj';
+import { occluderConesFrom } from '../../../../../src/utils/occlusion/occluderConesFrom';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import {
   createDiskPlannerWalk,
@@ -90,6 +92,7 @@ function makeInput(
     visibleCatalogs,
     pxPerRad: PX_PER_RAD,
     viewPlanes: new Float32Array(0),
+    occluderCones: new Float64Array(0),
     sourceOpacity: () => 1,
   };
 }
@@ -255,5 +258,45 @@ describe('createDiskPlannerWalk', () => {
     expect(events.filter((e) => e[0] === 'onRow')).toEqual([
       ['onRow', Source.SDSS, rows.length - 1],
     ]);
+  });
+
+  describe('a body in front of the galaxies', () => {
+    // A body half a Mpc down +x with a 0.25 Mpc radius: a 30° disc seen from the origin.
+    const occluderCones = occluderConesFrom(
+      [{ positionMpc: [0.5, 0, 0], radiusM: 0.25 / SCALE_UNITS.M_TO_MPC, outerRadiusM: 0 }],
+      [0, 0, 0],
+    );
+    const viewAlong = (fovDeg: number, look: [number, number, number]) =>
+      frustumPlanesFromViewProj(
+        mat4.multiply(
+          mat4.perspective((fovDeg * Math.PI) / 180, 1, 0.01, 1e5),
+          mat4.lookAt([0, 0, 0], look, [0, 0, 1]),
+        ),
+      );
+    const catalogs = new Map<SourceType, GalaxyCatalog>([
+      [Source.SDSS, makeCatalog([{ distMpc: 2, diameterKpc: 50 }])],
+    ]);
+
+    it('hands no row behind the body to onRow', () => {
+      const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+      const events: WalkEvent[] = [];
+      walk.runFrame(
+        { ...makeInput(catalogs), viewPlanes: viewAlong(90, [1, 0, 0]), occluderCones },
+        recordingVisitor(events),
+        noopDiskRowVisitor(),
+      );
+      expect(events.filter((e) => e[0] === 'onRow')).toEqual([]);
+    });
+
+    it('handles every source as hidden when every view is on the body', () => {
+      const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+      const events: WalkEvent[] = [];
+      walk.runFrame(
+        { ...makeInput(catalogs), viewPlanes: viewAlong(0.5, [1, 0, 0]), occluderCones },
+        recordingVisitor(events),
+        noopDiskRowVisitor(),
+      );
+      expect(events.map((e) => e[0])).toEqual(['onSourceHidden', 'endFrame']);
+    });
   });
 });
