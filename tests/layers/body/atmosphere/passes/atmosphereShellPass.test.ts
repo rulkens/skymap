@@ -7,13 +7,13 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { atmosphereRosterPlans } from '../../../../helpers/frame/atmosphereRosterPlans';
 import { mat4d } from 'wgpu-matrix';
 
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { atmosphereShellPass } from '../../../../../src/layers/body/atmosphere/passes/atmosphereShellPass';
 import { ATMOSPHERE_PARAMS } from '../../../../../src/layers/body/atmosphere/data/atmosphereParams';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { BODY_SLAB_ROWS } from '../../../../../src/layers/body/slabs/present/bodySlabRows';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -101,7 +101,7 @@ function makeCtx(pose = STUB_POSE): FrameView {
     drawPxPerRad: FIXTURE_PX_PER_RAD,
     snapshot: {
       renderTargets: { farDepthView: () => FAR_DEPTH_VIEW },
-      slabBodyCandidates: BODY_SLAB_ROWS,
+      plans: atmosphereRosterPlans(),
     },
   } as unknown as FrameView;
 }

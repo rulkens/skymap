@@ -21,6 +21,8 @@ export const PRELUDE: FrameSection = {
     { kind: 'plan', name: 'satellites' },
     // Once for every view: a dome's faces share one atlas, so one cut spans them all.
     { kind: 'plan', name: 'surface-tiles' },
+    // Every view's body slabs, so the once `sky-view` bake covers exactly what any view draws.
+    { kind: 'plan', name: 'atmosphere-roster' },
     // `sky-view` re-bakes its LUT every frame (camera altitude + sun direction), unlike
     // the once-baked transmittance/multi-scatter LUTs; both computes sit ahead of
     // `foreground:0` so the atmosphere shell samples this frame's table. Each bills

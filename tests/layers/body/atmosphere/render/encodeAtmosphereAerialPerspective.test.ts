@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { atmosphereRosterPlans } from '../../../../helpers/frame/atmosphereRosterPlans';
 
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { ATMOSPHERE_PARAMS } from '../../../../../src/layers/body/atmosphere/data/atmosphereParams';
@@ -79,7 +80,7 @@ function makeCtx(withEarthSlab: boolean, drawPxPerRad = FIXTURE_PX_PER_RAD): Fra
     drawCamPos: [0, 0, 0],
     drawPxPerRad,
     slabs,
-    snapshot: { slabBodyCandidates: BODY_SLAB_ROWS },
+    snapshot: { slabBodyCandidates: BODY_SLAB_ROWS, plans: atmosphereRosterPlans() },
   } as unknown as FrameView;
 }
 

@@ -6,10 +6,10 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { atmosphereRosterPlans } from '../../../../helpers/frame/atmosphereRosterPlans';
 
 import { aerialPerspectivePass } from '../../../../../src/layers/body/atmosphere/passes/aerialPerspectivePass';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
-import { BODY_SLAB_ROWS } from '../../../../../src/layers/body/slabs/present/bodySlabRows';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SceneBodyId } from '../../../../../src/@types/scene/SceneBodyId';
 import type { BodyRuntime } from '../../../../../src/layers/body/@types/BodyRuntime';
@@ -49,7 +49,7 @@ function makeCtx(eyeRelBodyM: Vec3): FrameView {
     basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyRelativePose['basisM'],
   };
   return {
-    snapshot: { slabBodyCandidates: BODY_SLAB_ROWS },
+    snapshot: { plans: atmosphereRosterPlans() },
     drawCamPos: [0, 0, 0],
     bodyPose: (() => pose) as FrameView['bodyPose'],
     drawPxPerRad: FIXTURE_PX_PER_RAD,

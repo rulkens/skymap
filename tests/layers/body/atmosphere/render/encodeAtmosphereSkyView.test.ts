@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { atmosphereRosterPlans } from '../../../../helpers/frame/atmosphereRosterPlans';
 
 import { encodeAtmosphereSkyView } from '../../../../../src/layers/body/atmosphere/render/encodeAtmosphereSkyView';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
@@ -20,7 +21,6 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../../src/utils/camera/bodyCompose/sunDirLocal';
 import { IDENTITY_MAT3 } from '../../../../../src/utils/math/identityMat3';
-import { BODY_SLAB_ROWS } from '../../../../../src/layers/body/slabs/present/bodySlabRows';
 import type { SlabRow } from '../../../../../src/@types/engine/frame/SlabRow';
 import type { AtmosphereShellRenderer } from '../../../../../src/layers/body/atmosphere/@types/AtmosphereShellRenderer';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
@@ -72,19 +72,19 @@ const FIXTURE_PX_PER_RAD = 1080 / (2 * Math.tan(Math.PI / 4 / 2));
 
 /**
  * The minimal FrameView the encode reads: `bodyPose` (source of the camera altitude), `drawCamPos` +
- * the active slab rows + `drawPxPerRad` (for `atmosphereDrawList`'s own culls, decoupled from the
- * sky-view math). Every body row is active by default; `drawCamPos` is sized so Earth's disc
+ * the slab roster + `drawPxPerRad` (for `atmosphereDrawList`'s own culls, decoupled from the
+ * sky-view math). Every body row holds a slab by default; `drawCamPos` is sized so Earth's disc
  * resolves well above sub-pixel.
  */
 function makeCtx(input: {
   bodyPose: BodyPoseProvider;
   drawCamPos?: Vec3;
-  slabBodyCandidates?: readonly SlabRow[];
+  roster?: readonly SlabRow[];
 }): FrameView {
   return {
     bodyPose: input.bodyPose,
     drawCamPos: input.drawCamPos ?? DRAW_CAM_POS,
-    snapshot: { slabBodyCandidates: input.slabBodyCandidates ?? BODY_SLAB_ROWS },
+    snapshot: { plans: atmosphereRosterPlans(input.roster) },
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
@@ -137,7 +137,7 @@ describe('encodeAtmosphereSkyView', () => {
       encoder,
       makeCtx({
         bodyPose: makeBodyPose(EYE_REL_BODY_M),
-        slabBodyCandidates: [],
+        roster: [],
       }),
       makeState(),
       claim,
@@ -153,7 +153,7 @@ describe('encodeAtmosphereSkyView', () => {
       encoder,
       makeCtx({
         bodyPose: makeBodyPose(EYE_REL_BODY_M),
-        slabBodyCandidates: [],
+        roster: [],
       }),
       makeState(),
     );

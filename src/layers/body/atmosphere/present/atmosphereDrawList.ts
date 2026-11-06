@@ -3,8 +3,9 @@
  * atmosphere shell, with their `ATMOSPHERE_PARAMS` row and pose-dependent values.
  * `encodeAtmosphereSkyView`'s LUT bake and `atmosphereShellPass` both read this
  * memoised list, so neither works off a body the other skipped (a stale table
- * sampled silently). Its roster is the frame's active slab rows, so a body whose
- * row has yielded draws no shell. Memo keys on `ctx`; `state` is a live getter.
+ * sampled silently). Its roster is `atmosphereRosterPlanner`'s: bodies with a slab
+ * in some rig view, so an off-screen or yielded body bakes no LUT. Memo keys on
+ * `ctx`; `state` is a live getter.
  * The sub-pixel cull measures the SURFACE diameter, NOT the atmosphere-TOP one:
  * that would hold the limb past the disc's own vanishing.
  */
@@ -24,6 +25,7 @@ import { outerBoundRadiusM } from '../../../../utils/occlusion/outerBoundRadiusM
 import { SUB_PIXEL_BODY_CULL_PX } from '../../../../services/engine/frame/subPixelBodyCullPx';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
 import { atmosphereDrawListCache } from './atmosphereDrawListCache';
+import { atmosphereRosterPlanner } from './atmosphereRosterPlanner';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 
@@ -37,7 +39,7 @@ export function atmosphereDrawList(
   const entries: AtmosphereDrawEntry[] = [];
   atmosphereDrawListCache.set(ctx, entries);
 
-  const activeIds = new Set(ctx.snapshot.slabBodyCandidates.map((row) => row.anchorId));
+  const activeIds = ctx.snapshot.plans.get(atmosphereRosterPlanner);
   const candidates = [SCENE_EARTH, ...SCENE_PLANETS].filter((body) => activeIds.has(body.id));
 
   // Live position + orientation from the per-frame snapshot, not baked record fields.

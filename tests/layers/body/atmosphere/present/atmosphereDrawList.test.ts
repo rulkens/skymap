@@ -1,11 +1,12 @@
 /**
  * atmosphereDrawList — the ONE per-frame atmosphere draw-list derivation the sky-view bake and the
  * shell draw both consume: `[earth, ...planets]` filtered by an `ATMOSPHERE_PARAMS` row (data gate),
- * an active slab row this frame, and SURFACE disc at/above `SUB_PIXEL_BODY_CULL_PX`.
+ * a slab in some rig view (`atmosphereRosterPlanner`), and SURFACE disc at/above `SUB_PIXEL_BODY_CULL_PX`.
  * One test per gate so a regression lands as a distinct failure.
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { atmosphereRosterPlans } from '../../../../helpers/frame/atmosphereRosterPlans';
 
 import { atmosphereDrawList } from '../../../../../src/layers/body/atmosphere/present/atmosphereDrawList';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
@@ -45,17 +46,17 @@ const SEEDED_EARTH: SeededBody = {
 const FIXTURE_PX_PER_RAD = 1080 / (2 * Math.tan(1.0 / 2));
 
 /**
- * The minimal FrameView the derivation reads: `drawCamPos`, the frame's active slab rows,
- * `drawPxPerRad` and `bodyPose`. Every body row is active by default.
+ * The minimal FrameView the derivation reads: `drawCamPos`, the slab roster,
+ * `drawPxPerRad` and `bodyPose`. Every body row holds a slab by default.
  */
 function makeCtx(
   drawCamPos: Vec3,
   bodyPose: BodyPoseProvider = poseFrom(drawCamPos),
-  slabBodyCandidates: readonly SlabRow[] = BODY_SLAB_ROWS,
+  roster: readonly SlabRow[] = BODY_SLAB_ROWS,
 ): FrameView {
   return {
     drawCamPos,
-    snapshot: { slabBodyCandidates },
+    snapshot: { plans: atmosphereRosterPlans(roster) },
     drawPxPerRad: FIXTURE_PX_PER_RAD,
     bodyPose,
   } as unknown as FrameView;
@@ -93,9 +94,9 @@ describe('atmosphereDrawList', () => {
     expect(list[0]!.params).toBe(ATMOSPHERE_PARAMS['earth']);
   });
 
-  it('lists no body whose slab row is inactive', () => {
-    // Close enough to draw, but the frame yielded Earth's row: the sky-view bake and the
-    // shell must not work off a body that has no slab to draw on.
+  it('lists no body that no view gives a slab', () => {
+    // Close enough to draw, but yielded or off-screen in every view: the sky-view bake and
+    // the shell must not work off a body that has no slab to draw on.
     const eye = camRadiiOut(SEEDED_EARTH, 5);
     const withoutEarth = BODY_SLAB_ROWS.filter((row) => row.anchorId !== SCENE_EARTH.id);
     const list = atmosphereDrawList(STATE, makeCtx(eye, poseFrom(eye), withoutEarth));

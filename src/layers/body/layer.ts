@@ -27,6 +27,7 @@ import { atmosphereShellPass } from './atmosphere/passes/atmosphereShellPass';
 import { aerialPerspectivePass } from './atmosphere/passes/aerialPerspectivePass';
 import { bodyMeshesPass } from './meshes/passes/bodyMeshesPass';
 import { skyViewCompute } from './atmosphere/computes/skyViewCompute';
+import { atmosphereRosterPlanner } from './atmosphere/present/atmosphereRosterPlanner';
 import { aerialPerspectiveCompute } from './atmosphere/computes/aerialPerspectiveCompute';
 import { bodyAssetRows } from './textures/load/bodyAssetRows';
 import { BODY_BODY_ROWS } from './bodies/bodyBodyRows';
@@ -80,7 +81,7 @@ export const bodyLayer = defineLayer({
   ],
   computes: (runtime) => [skyViewCompute(runtime), aerialPerspectiveCompute(runtime)],
   assets: bodyAssetRows,
-  planners: (runtime) => [surfaceTilePlanner(runtime)],
+  planners: (runtime) => [surfaceTilePlanner(runtime), atmosphereRosterPlanner],
   sagas: [watchDebugPanelWakeSaga],
   heightAt,
   guides: (runtime) => ({

@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { atmosphereRosterPlans } from '../../../helpers/frame/atmosphereRosterPlans';
 
 import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
@@ -82,6 +83,7 @@ function earthCtxAt(rMpc: number): FrameView {
       bodyStates: deriveBodyStates(SIM_DAYS),
       simDays: SIM_DAYS,
       slabBodyCandidates: BODY_SLAB_ROWS,
+      plans: atmosphereRosterPlans(),
     },
     slabs: [makeSlab(), EARTH_SLAB],
     bodyPose: (id: string) =>
