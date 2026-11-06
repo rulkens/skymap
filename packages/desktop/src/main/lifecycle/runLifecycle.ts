@@ -51,7 +51,9 @@ import { rotateRoomCode } from '../relay/rotateRoomCode';
 import { runSync } from '../sync/runSync';
 import { serially } from './utils/serially';
 import { SITE_ORIGIN } from '../menu/data/siteOrigin';
+import { SKY_DRAG_CHANNEL } from '../../data/skyDragChannel';
 import { SKY_ESCAPE_CHANNEL } from '../../data/skyEscapeChannel';
+import { dragWithCursor } from '../windows/utils/dragWithCursor';
 import { skyUrlFor } from '../sky/utils/skyUrlFor';
 import { startSecureServer } from '../server/startSecureServer';
 import { startTabletSetupServer } from '../server/startTabletSetupServer';
@@ -245,9 +247,16 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   const isAllowed = (sender: WebContents, request: keyof ControlIpcHandlers): boolean =>
     sender === control.webContents || (sender === about?.webContents && request === 'getState');
   registerControlIpc(ipcMain, isAllowed, handlers);
-  // Only the sky's own preload may drop it out of full screen.
+  // Only the sky's own preload may drop it out of full screen, or move it.
   ipcMain.on(SKY_ESCAPE_CHANNEL, (event) => {
     if (event.sender === sky.current()?.webContents) sky.setFullScreen(false);
+  });
+  let stopDrag: (() => void) | null = null;
+  ipcMain.on(SKY_DRAG_CHANNEL, (event, on: unknown) => {
+    const win = sky.current();
+    if (win === null || event.sender !== win.webContents) return;
+    stopDrag?.();
+    stopDrag = on === true ? dragWithCursor(win, () => screen.getCursorScreenPoint()) : null;
   });
 
   screen.on('display-added', placeAll);
