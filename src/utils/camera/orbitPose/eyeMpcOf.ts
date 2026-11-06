@@ -21,7 +21,7 @@ export function eyeMpcOf(
   out?: Vec3,
 ): Vec3 {
   const dir = yawPitchToDir(pose.yaw, pose.pitch, scratchDir);
-  const world = rotateVec3ByTightMat3(dir, poseBasis, scratchWorld);
+  const world = rotateVec3ByTightMat3(poseBasis, dir, scratchWorld);
   const dst = out ?? ([0, 0, 0] as Vec3);
   dst[0] = pose.target[0] + world[0] * pose.distance;
   dst[1] = pose.target[1] + world[1] * pose.distance;

@@ -35,7 +35,7 @@ const SIM_DAYS = CONST_J2000 + 123.4;
 /** Eye in Earth's body-fixed metres, and the view direction in world. */
 function eyeAndView(pose: CameraPose) {
   const earth = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!;
-  const toEye = rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), BASIS);
+  const toEye = rotateVec3ByTightMat3(BASIS, yawPitchToDir(pose.yaw, pose.pitch));
   const eyeWorldM = [0, 1, 2].map(
     (i) =>
       (pose.target[i]! + pose.distance * toEye[i]! - earth.positionMpc[i]!) / SCALE_UNITS.M_TO_MPC,
@@ -58,10 +58,11 @@ describe('sondermarkenFlyout', () => {
     const pose = framed.pose as { eyeRelAnchorM: Vec3; basisLocal: number[] };
     const { eyeLocalM, view, earth } = eyeAndView(clip.data.start as CameraPose);
     for (let i = 0; i < 3; i++) expect(eyeLocalM[i]!).toBeCloseTo(pose.eyeRelAnchorM[i]!, -1);
-    const forward = rotateVec3ByTightMat3(
-      [pose.basisLocal[6]!, pose.basisLocal[7]!, pose.basisLocal[8]!],
-      earth.orientation,
-    );
+    const forward = rotateVec3ByTightMat3(earth.orientation, [
+      pose.basisLocal[6]!,
+      pose.basisLocal[7]!,
+      pose.basisLocal[8]!,
+    ]);
     for (let i = 0; i < 3; i++) expect(view[i]).toBeCloseTo(forward[i]!, 6);
   });
 
@@ -75,7 +76,7 @@ describe('sondermarkenFlyout', () => {
     const resolved = resolveClipFoci(clip.data, NO_SELECTION, 1, start, SIM_DAYS, BASIS);
     const pose = evaluateClip(resolved, 30, BASIS);
     const { view, earth } = eyeAndView(pose);
-    const pole = rotateVec3ByTightMat3([0, 0, 1], earth.orientation);
+    const pole = rotateVec3ByTightMat3(earth.orientation, [0, 0, 1]);
     const k = pole[0] * view[0] + pole[1] * view[1] + pole[2] * view[2];
     const north = normalize3([pole[0] - k * view[0], pole[1] - k * view[1], pole[2] - k * view[2]]);
     const { up } = imagePlaneBasis(view, pose.roll!, frameUp(BASIS));
@@ -89,10 +90,11 @@ describe('sondermarkenFlyout', () => {
     const pose = evaluateClip(resolved, 30, BASIS);
     const { eyeLocalM, view, earth } = eyeAndView(pose);
     const r = Math.hypot(...eyeLocalM);
-    const upWorld = rotateVec3ByTightMat3(
-      [eyeLocalM[0]! / r, eyeLocalM[1]! / r, eyeLocalM[2]! / r],
-      earth.orientation,
-    );
+    const upWorld = rotateVec3ByTightMat3(earth.orientation, [
+      eyeLocalM[0]! / r,
+      eyeLocalM[1]! / r,
+      eyeLocalM[2]! / r,
+    ]);
     expect(r).toBeGreaterThan(6_371_000 + 1000);
     for (let i = 0; i < 3; i++) expect(view[i]).toBeCloseTo(-upWorld[i]!, 3);
   });

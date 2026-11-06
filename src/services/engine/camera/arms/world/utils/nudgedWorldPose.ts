@@ -56,7 +56,7 @@ export function nudgedWorldPose(
   // `poseBasis` decode (it points target → eye), not `pose.pitch`. Only the
   // offset gives way (the orbit pitch is the drag law's), after an orbit too.
   if (next.lookOffset === undefined) return next;
-  const back = rotateVec3ByTightMat3(yawPitchToDir(next.yaw, next.pitch), poseBasis);
+  const back = rotateVec3ByTightMat3(poseBasis, yawPitchToDir(next.yaw, next.pitch));
   const e = Math.asin(Math.max(-1, Math.min(1, -dot3(back, frameUp(upBasis)))));
   const [offsetYaw, offsetPitch] = next.lookOffset;
   const clamped = Math.max(-PITCH_LIMIT - e, Math.min(PITCH_LIMIT - e, offsetPitch));

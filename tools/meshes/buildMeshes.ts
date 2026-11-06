@@ -562,11 +562,11 @@ function bakeContactDecal(
   bodyFromSource: Mat3 | undefined,
   centroidM: Vec3,
 ): ContactDecal {
-  const centre = rotateVec3ByTightMat3(stamp.centre, bodyFromSource);
+  const centre = rotateVec3ByTightMat3(bodyFromSource, stamp.centre);
   return {
     centre: [centre[0] - centroidM[0], centre[1] - centroidM[1], centre[2] - centroidM[2]],
-    halfU: rotateVec3ByTightMat3(stamp.u, bodyFromSource),
-    halfV: rotateVec3ByTightMat3(stamp.v, bodyFromSource),
+    halfU: rotateVec3ByTightMat3(bodyFromSource, stamp.u),
+    halfV: rotateVec3ByTightMat3(bodyFromSource, stamp.v),
   };
 }
 

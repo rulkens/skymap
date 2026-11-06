@@ -511,7 +511,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
           faceViewSpec('sgrAStar', face as CubeFace, 256, CAPTURE_VIEW_SLOT_BASE),
         );
 
-        const w = rotateVec3ByTightMat3(d as Vec3, axes);
+        const w = rotateVec3ByTightMat3(axes, d as Vec3);
         // World point 1 Mpc out along axes·d, through the face's cosmo vp
         // (column-major, clip = vp · [p, 1]).
         const p: Vec3 = [

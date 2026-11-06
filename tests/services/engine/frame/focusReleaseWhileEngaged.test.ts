@@ -222,7 +222,7 @@ function roverMpc(bodies: ReadonlyMap<string, BodyState>): Vec3 {
   if (driver.kind !== 'surfaceFixed') throw new Error('curiosity is not a site');
   const p = sitePointBodyFixed(driver, siteGroundRadiusM(driver, MARS_R));
   const mars = bodies.get('mars')!;
-  const local = rotateVec3ByTightMat3(p as Vec3, mars.orientation);
+  const local = rotateVec3ByTightMat3(mars.orientation, p as Vec3);
   return [
     local[0] * SCALE_UNITS.M_TO_MPC + mars.positionMpc[0]!,
     local[1] * SCALE_UNITS.M_TO_MPC + mars.positionMpc[1]!,

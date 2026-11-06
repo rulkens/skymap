@@ -49,7 +49,7 @@ const cross = (a: Vec3, b: Vec3): Vec3 => [
 ];
 
 function eyeMpc(pose: CameraPose): Vec3 {
-  const toEye = rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), BASIS);
+  const toEye = rotateVec3ByTightMat3(BASIS, yawPitchToDir(pose.yaw, pose.pitch));
   return [0, 1, 2].map((i) => pose.target[i]! + pose.distance * toEye[i]!) as Vec3;
 }
 
