@@ -2,7 +2,7 @@
  * atmosphereShellRenderer: the in-scatter atmosphere shell, one bundle per
  * `ATMOSPHERE_PARAMS` row over one shared program. Three `rgba16float` LUTs stand in
  * for the per-pixel march: transmittance (256x64) and multi-scatter (32x32) bake once
- * at construction, sky-view (192x108) re-bakes every frame. Each body owns its LUTs,
+ * at construction, sky-view (192x108) when its record moves. Each body owns its LUTs,
  * uniform buffers and bind groups (~300 KiB), because `queue.writeBuffer` interleaved
  * with `submit` does NOT preserve order: a shared per-frame buffer would let a later
  * body's write corrupt an earlier body's draw. The shell draws TWICE per body,
@@ -46,6 +46,9 @@ const LUT_FORMAT: GPUTextureFormat = 'rgba16float';
 
 /** `SkyViewParams`: 4 f32 (see `skyViewLut.wesl`). */
 const SKY_VIEW_PARAMS_BYTES = 16;
+/** Sun-zenith cosine change that still reuses the sky-view LUT: about 0.0006° of sun
+ *  motion, about 0.06% radiance at twilight. */
+const SKY_VIEW_SUN_ZENITH_EPSILON = 1e-5;
 /** Derived from the packer's f32 count. */
 const ATMOSPHERE_UNIFORM_BYTES = ATMOSPHERE_UNIFORM_FLOATS * 4;
 
@@ -81,6 +84,9 @@ type AtmosphereBundle = {
   transmittanceBindGroup: GPUBindGroup;
   multiScatterBindGroup: GPUBindGroup;
   skyViewBindGroup: GPUBindGroup;
+  /** The last sky-view bake: its target texture and its record. Keyed on
+   *  the texture, so a recreated `skyViewTex` invalidates it with no reset to remember. */
+  skyViewBaked: { readonly texture: GPUTexture; readonly record: Float32Array } | null;
   /** Built at first draw, nulled when invalidated: it binds a depth view only the draw knows. */
   shellBindGroup: GPUBindGroup | null;
   /** Identity, not size, keys the rebuild: it always changes on a reallocation. */
@@ -401,6 +407,7 @@ export function createAtmosphereShellRenderer(
       transmittanceBindGroup,
       multiScatterBindGroup,
       skyViewBindGroup,
+      skyViewBaked: null,
       shellBindGroup: null,
       shellDepthView: null,
     };
@@ -517,6 +524,21 @@ export function createAtmosphereShellRenderer(
     // Per-body params buffer and LUT make sharing the caller's pass hazard-free.
     const bundle = bundleFor(bodyId);
     device.queue.writeBuffer(bundle.skyViewParamsBuffer, 0, skyViewUniforms);
+    // The bake is a pure function of this record and the texture (its other inputs are
+    // baked once), so a matching record would redraw the same table. Only sun zenith gets
+    // a tolerance: the live clock drifts it every frame for a body-fixed camera. It is
+    // measured from the last BAKE, so slow drift still re-bakes.
+    const baked = bundle.skyViewBaked;
+    if (
+      baked?.texture === bundle.skyViewTex &&
+      skyViewUniforms[0] === baked.record[0] &&
+      Math.abs(skyViewUniforms[1]! - baked.record[1]!) < SKY_VIEW_SUN_ZENITH_EPSILON &&
+      skyViewUniforms[2] === baked.record[2] &&
+      skyViewUniforms[3] === baked.record[3]
+    ) {
+      return;
+    }
+    bundle.skyViewBaked = { texture: bundle.skyViewTex, record: skyViewUniforms.slice() };
     pass.setPipeline(skyViewPipeline);
     pass.setBindGroup(0, bundle.skyViewBindGroup);
     pass.dispatchWorkgroups(
