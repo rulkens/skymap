@@ -27,6 +27,9 @@ import { relErr } from '../../../../support/relErr';
 import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const FOV = Math.PI / 3;
 const ONE_DAY_PER_SEC = RATE_LADDER.findIndex((step) => step.label === '1 day/s');

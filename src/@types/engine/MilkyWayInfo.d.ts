@@ -1,6 +1,6 @@
 /**
  * MilkyWayInfo — the Milky Way as a resolved focusable target, parallel to
- * `GalaxyInfo` and `StructureInfo`.  All three are arms of the FocusableTarget
+ * `GalaxyInfo` and `StructureInfo`.  All three are card targets of the
  * union and flow through the same hover / select / focus slots; every table and
  * type-guard keys on the `type` discriminant.
  *
@@ -16,7 +16,7 @@
  */
 export type MilkyWayInfo = {
   /** Union tag — mirrors the APP_SOURCE_REGISTRY 'milkyWay' row type; what every
-   *  FocusableTarget table / guard keys on. */
+   *  card-target lookup keys on. */
   readonly type: 'milkyWay';
   /** Headline shown in the InfoCard / palette row. */
   readonly displayName: string;

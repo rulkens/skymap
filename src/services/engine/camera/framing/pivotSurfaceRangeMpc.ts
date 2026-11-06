@@ -12,12 +12,12 @@
 import { pivotRadiusMpc } from './pivotRadiusMpc';
 import { isWorldArm } from '../arms/world/isWorldArm';
 import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
+import type { SelectionRowBase } from '../../../../@types/engine/selection/SelectionRowBase';
 
 export function pivotSurfaceRangeMpc(
   arm: FramedCameraPose,
   worldDistanceMpc: number,
-  focus: SelectionRow | null,
+  focus: SelectionRowBase | null,
 ): number {
   return isWorldArm(arm) ? worldDistanceMpc - (pivotRadiusMpc(focus) ?? 0) : worldDistanceMpc;
 }

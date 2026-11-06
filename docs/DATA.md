@@ -56,6 +56,8 @@ Every tracked file carries the first 8 hex characters of its SHA-256 content has
 
 The manifest is written last, after every file it names, so a page load can never see a mixed-generation pairing (a stale `famous_galaxies_meta.json` against a fresh `famous.bin`).
 
+The manifest cannot cover the one pairing that crosses the bundle: `npm run build-famous` also compiles famous galaxy names, by record index, into [`famousGalaxyNames.generated.ts`](../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated.ts), so a deployed app can meet a `famous.bin` from another build. [`famousGalaxyNamesFor`](../src/layers/galaxyCatalog/famousGalaxies/utils/famousGalaxyNamesFor.ts) guards it: when the record count differs from the table's length, the Layer warns once at commit and names no famous galaxy, rather than naming each one after its neighbour.
+
 ## Runtime loading
 
 Boot fetches `<dataBaseUrl>/data/manifest.json` once with `cache: 'no-cache'` ([`dataManifest.ts`](../src/services/loading/dataManifest.ts)); every subsequent [`dataUrl(filename)`](../src/services/loading/fetchWithProgress.ts) call resolves the logical name through it, falling back to the identity path when the manifest doesn't name it (an unbuilt worktree, or the unhashed `images/` tree). [`dataBaseUrl()`](../src/utils/network/dataBaseUrl.ts) is empty in dev (Vite serves `public/data/*` at `/data/*`) and points at the R2 custom domain in production. See [docs/DEPLOY.md](DEPLOY.md) for how that env var is set.
@@ -137,10 +139,10 @@ A small hand-curated catalog of well-known galaxies (Messier + NGC greatest-hits
 ```bash
 npm run build-tiers            # the survey .bin files (build-famous's own docblock requires this order)
 npm run fetch-famous-images    # downloads + processes thumbnails; idempotent, --force to re-fetch
-npm run build-famous           # public/data/galaxy-catalog/v10/famous.bin + famous_galaxies_meta.json
+npm run build-famous           # public/data/galaxy-catalog/v10/famous.bin + famous_galaxies_meta.json + famousGalaxyNames.generated.ts
 ```
 
-To add a galaxy, edit `data/seeds/famous_galaxies.seed.json` (`id`, `names`, `ra`/`dec`, `distanceMpc`, `diameterKpc`, `type`, `description`) and re-run the last two steps. Skip this section entirely for survey-only data; the renderer works without `famous.bin`.
+To add a galaxy, edit `data/seeds/famous_galaxies.seed.json` (`id`, `names`, `ra`/`dec`, `distanceMpc`, `diameterKpc`, `type`, `description`) and re-run the last two steps, then commit the regenerated `src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated.ts`. That table compiles each galaxy's id and names into the bundle in `famous.bin` record order, so cards, labels and `famous-<id>` links name a galaxy before the sidecar loads; the sidecar keeps the description, type and calibration. Skip this section entirely for survey-only data; the renderer works without `famous.bin`.
 
 A parallel curated list of well-known stars follows the same seed → build shape: `data/seeds/famous_stars.seed.json` and `data/seeds/sun.seed.json` (one schema, one catalog each) drive `npm run build-famous-stars`, which emits a generated render table per seed (`famousStars.generated.ts`, `sun.generated.ts`) plus, over both seeds together, the Gaia/Hipparcos dedup ids and the shared `famous_stars_meta.json` sidecar.
 

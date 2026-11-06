@@ -1,4 +1,4 @@
-import type { SelectionRef } from './SelectionRef';
+import type { BodyRef } from './selection/BodyRef';
 
 /**
  * HomeFocusTarget — the home value seeded into the focus slot by an
@@ -7,5 +7,5 @@ import type { SelectionRef } from './SelectionRef';
  * The follow driver tracks the body, so seeding it as focus plants no camera tween.
  */
 export type HomeFocusTarget = {
-  readonly ref: Extract<SelectionRef, { readonly type: 'body' }>;
+  readonly ref: BodyRef;
 };

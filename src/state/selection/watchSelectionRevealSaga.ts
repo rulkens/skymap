@@ -19,15 +19,15 @@ import { settingsClusterOf } from '../../utils/visibility/settingsClusterOf';
 import { setVisibilityActionsFor } from '../../utils/visibility/setVisibilityActionsFor';
 import { visibilityAddressOf } from '../../utils/visibility/visibilityAddressOf';
 import { visibilityClusterOf } from '../../utils/visibility/visibilityClusterOf';
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
+import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
 
 const ENTRIES: readonly VisibilityEntry[] = APP_VISIBILITY_REGISTRY;
 
 export function* watchSelectionRevealSaga() {
   yield* takeEvery(
     [updateSelectionSelect, updateSelectionFocus],
-    suspendDuringClip(function* (action: PayloadAction<SelectionRef | null>) {
+    suspendDuringClip(function* (action: PayloadAction<SelectionRefBase | null>) {
       const ref = action.payload;
       const entry = ref && ENTRIES.find((e) => 'key' in e && e.selects?.includes(ref.type));
       if (!entry || (yield* select(selectTakeoverSource)) !== null) return;

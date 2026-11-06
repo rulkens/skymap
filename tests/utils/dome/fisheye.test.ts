@@ -14,7 +14,7 @@ import { domeFaceUv } from '../../../src/utils/dome/domeFaceUv';
 import { dot3 } from '../../../src/utils/math/dot3';
 import { cross3 } from '../../../src/utils/math/cross3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
-import { rotateVec3ByTightMat3T } from '../../../src/utils/math/rotateVec3ByTightMat3T';
+import { rotateByTranspose } from '../../../src/utils/math/rotateByTranspose';
 import { mat3Columns } from '../../../src/utils/math/mat3Columns';
 
 const DEG = Math.PI / 180;
@@ -64,7 +64,7 @@ describe('fisheyeDirection + domeFaceUv', () => {
   });
 
   it('the camera forward lands at 30 degree elevation on the front meridian', () => {
-    const camForwardInDome = rotateVec3ByTightMat3T([0, 0, 1], domeBasis(60));
+    const camForwardInDome = rotateByTranspose(domeBasis(60), [0, 0, 1]);
     const viaFisheye = fisheyeDirection(0, -2 / 3);
     expect(viaFisheye).not.toBeNull();
     expect(camForwardInDome[0]).toBeCloseTo(viaFisheye![0], 12);

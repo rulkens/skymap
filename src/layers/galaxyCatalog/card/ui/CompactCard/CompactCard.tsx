@@ -6,6 +6,8 @@
 
 import type { ReactNode } from 'react';
 import type { GalaxyInfo } from '../../../../../@types/engine/GalaxyInfo';
+import type { FamousGalaxyMetaEntry } from '../../../../../@types/loading/FamousGalaxyMetaEntry';
+import { formatMorphology } from '../../../../../utils/format/formatMorphology';
 import { formatDistance } from '../../../../../utils/format/formatDistance';
 import { formatLookback } from '../../../../../utils/format/formatLookback';
 import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
@@ -14,9 +16,11 @@ import local from './CompactCard.module.css';
 
 export type CompactCardProps = {
   target: GalaxyInfo;
+  /** A famous galaxy's sidecar entry, once it has landed. */
+  curated?: FamousGalaxyMetaEntry;
 };
 
-function CompactCard({ target }: CompactCardProps): ReactNode {
+function CompactCard({ target, curated }: CompactCardProps): ReactNode {
   return (
     <div className={local.root} role="status" aria-live="polite">
       <div className={styles.cardTitle}>
@@ -31,7 +35,7 @@ function CompactCard({ target }: CompactCardProps): ReactNode {
       <div className={styles.cardLookbackEra}>— {target.earthEra}</div>
       <div className={styles.cardDistLine}>
         {formatDistance(target.distanceMpc)} &middot;{' '}
-        {target.morphology ?? target.galaxyType.description}
+        {curated?.type ? formatMorphology(curated.type) : target.galaxyType.description}
       </div>
     </div>
   );

@@ -18,8 +18,8 @@
  * The saga-context types describe the engine capabilities that cross into
  * store-land: `ReconcileEffects` (see `./effects/ReconcileEffects`) is the bag of
  * render-wake / fade / reseed / bias closures the reconcile sagas invoke; `selection`
- * is the composed resolver the selection reconcilers use to turn a `SelectionRef`
- * into a `SelectionRow`; `cameraRuntime` is the
+ * is the composed resolver the selection reconcilers use to turn a ref
+ * into a row; `cameraRuntime` is the
  * live camera read `watchFocusTweenSaga` uses to build a focus tween — the visible
  * from-pose plus the lens FOV, or null when the camera is not ready; and
  * `playClip` is the engine's clip-player — the tour saga calls it with a

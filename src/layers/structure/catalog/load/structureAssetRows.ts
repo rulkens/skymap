@@ -1,6 +1,7 @@
 /** The Layer's one asset row: the bulk cluster/supercluster/void coverage. */
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
+import type { StructureAssetKey } from '../../@types/StructureAssetKey';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { StructureRuntime } from '../../@types/StructureRuntime';
 
@@ -13,7 +14,7 @@ const BULK_CATALOG_CATEGORIES: readonly StructureId[] = ['galaxy-cluster', 'supe
 
 export function structureAssetRows(
   runtime: Pick<StructureRuntime, 'slot'>,
-): readonly AssetWiringRow[] {
+): readonly AssetWiringRow<unknown, unknown, StructureAssetKey>[] {
   return [
     {
       key: 'structureCatalog',

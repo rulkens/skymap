@@ -116,10 +116,11 @@ function spotEyeMpc(bodies: ReadonlyMap<PositionedId, BodyState>): Vec3 {
   const earth = bodies.get(asSceneBodyId('earth'))!;
   const radial = skySpotRadial(SPOT.sky);
   const eyeM = (R_EARTH_M + SKY_EYE_HEIGHT_M) * SCALE_UNITS.M_TO_MPC;
-  const eye = rotateVec3ByTightMat3(
-    [radial[0] * eyeM, radial[1] * eyeM, radial[2] * eyeM],
-    earth.orientation,
-  );
+  const eye = rotateVec3ByTightMat3(earth.orientation, [
+    radial[0] * eyeM,
+    radial[1] * eyeM,
+    radial[2] * eyeM,
+  ]);
   return [
     earth.positionMpc[0] + eye[0],
     earth.positionMpc[1] + eye[1],
@@ -132,7 +133,7 @@ const distM = (a: Vec3, b: Vec3): number =>
 
 /** The world aim (target → eye is its negation) an absolute pose encodes. */
 function aimOf(pose: CameraPose): Vec3 {
-  const dir = rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), BASIS);
+  const dir = rotateVec3ByTightMat3(BASIS, yawPitchToDir(pose.yaw, pose.pitch));
   return [-dir[0], -dir[1], -dir[2]];
 }
 

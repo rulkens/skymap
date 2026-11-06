@@ -4,12 +4,12 @@
  * row claims the type or the row cannot resolve the ref right now.
  */
 
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../@types/engine/layer/SelectionKindRow';
+import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
 
 export function encodeSelectionPick(
   rows: readonly SelectionKindRow[],
-  ref: SelectionRef | null,
+  ref: SelectionRefBase | null,
 ): number | null {
   if (ref === null) return null;
   return rows.find((r) => r.type === ref.type)?.encodePick(ref) ?? null;

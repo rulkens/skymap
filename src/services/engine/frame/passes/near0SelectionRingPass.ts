@@ -5,7 +5,7 @@
  * ## Why a NEAR0 sibling to `selectionRingPass`, and why they partition by slab
  *
  * The COSMO `selectionRingPass` and this layer feed the SAME
- * `state.gpu.selectionRingRenderer` and read the SAME `selectionHalo` table —
+ * `state.gpu.selectionRingRenderer` and read the SAME `selectionHaloOf` —
  * the difference is the slab their ring projects through. A picked galaxy sits
  * at Mpc scale and rings cleanly in COSMO, whose fixed 10 kpc near plane a
  * parsec-scale star anchor would fall inside of; a picked star sits at
@@ -13,8 +13,8 @@
  * 100 Mpc galaxy falls outside of.
  *
  * Each layer therefore gates on its OWN slab: this one draws only halos tagged
- * `slab === NEAR0`, the COSMO sibling only `slab === COSMO`. The `selectionHalo`
- * table stamps that affiliation per kind (star → NEAR0; galaxy/Milky-Way →
+ * `slab === NEAR0`, the COSMO sibling only `slab === COSMO`. Each kind's
+ * `focus.ring.slab` stamps that affiliation (star → NEAR0; galaxy/Milky-Way →
  * COSMO). That partition is load-bearing, not cosmetic. Both layers share one
  * renderer whose `draw` calls `queue.writeBuffer` on a shared camera + selection
  * uniform buffer, and the whole frame records into ONE command encoder with ONE
@@ -28,8 +28,7 @@
  * with a shared buffer the last write wins for both draws, so it fails exactly
  * when a galaxy or the Milky Way is selected. Partitioning by slab makes exactly
  * one layer enabled per frame, so exactly one `writeBuffer` lands and the race
- * is gone by construction. A THIRD slab flavour would be the trigger to fold the
- * slab into the table (spec §10 "Adjacent").
+ * is gone by construction.
  *
  * ## The f64 rebase seam — why `view.slab.vp` + a camera-relative centre
  *
@@ -54,7 +53,7 @@
  *
  * ## Live-body centre — the ring tracks the animated body, not its pick pose
  *
- * A body's `selectionHalo` position is a SNAPSHOT stamped on the SelectionRow at
+ * A body's `selectionHaloOf` position is a SNAPSHOT stamped on the row at
  * selection time, but the sim clock keeps moving planets and moons along their
  * orbits every frame. Centring on the stale snapshot leaves the ring where the
  * body WAS when picked while the sphere drifts away. So a body row re-resolves
@@ -71,7 +70,7 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
-import { selectionHalo } from '../../helpers/selectionHaloTable';
+import { selectionHaloOf } from '../../helpers/selectionHaloOf';
 import { liveBodyPosition } from '../../camera/bodyFrame/liveBodyPosition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { sceneOccluderBodies } from '../sceneOccluderBodies';
@@ -92,17 +91,17 @@ export const near0SelectionRingPass: ContentPass = {
   enabled(state, _ctx, _view) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const row = state.selectionRows.select;
-    // A row drives THIS ring iff the table yields a NEAR0-slab descriptor for
-    // its kind. The slab test is the whole point (see the module header): it
-    // keeps this layer and the COSMO sibling from both writing the shared
-    // renderer's uniforms in one frame.
-    const halo = selectionHalo(row);
+    // A row drives THIS ring iff its kind's ring is in the NEAR0 slab. The slab
+    // test is the whole point (see the module header): it keeps this layer and
+    // the COSMO sibling from both writing the shared renderer's uniforms in one
+    // frame.
+    const halo = selectionHaloOf(row);
     return halo !== null && halo.slab === NEAR0;
   },
 
   draw(pass, view, ctx, state) {
     const row = state.selectionRows.select;
-    const halo = selectionHalo(row);
+    const halo = selectionHaloOf(row);
     if (halo === null) return;
     const { radiusMpc, worldPos } = halo;
 

@@ -103,6 +103,9 @@ import type { RootState } from '../../../../src/store/types';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { angleBetween } from '../../../helpers/math/angleBetween';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 function makeStore() {
   return configureStore({ reducer: rootReducer });

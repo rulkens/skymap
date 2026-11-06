@@ -4,7 +4,7 @@
  * The zone of avoidance has one instance (like the Milky Way), so its
  * focusable info is a const here rather than a catalog-row derivation. The
  * `type` discriminant keeps it on the same table-dispatch path as the other
- * FocusableTarget arms; see `data/milkyWay/milkyWayInfo.ts` for the sibling
+ * kinds' card targets; see `data/milkyWay/milkyWayInfo.ts` for the sibling
  * this mirrors.
  */
 

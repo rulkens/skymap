@@ -1389,9 +1389,9 @@ deletion — follow-up PRs, each mechanical.
 - Focusability/selectability consolidation: every focusable kind hand-adds rows to
   ~10 files (FocusableTarget, SelectionRow, selectionHaloTable, pick tables, URL
   hash…) — a surface as large as rendering; bundle contract deliberately excludes.
-  Detail file: [focusable-kind backlog](../../superpowers/specs/2026-11-05-selection-kind-facts-design.md).
+  Detail file: [focusable-kind backlog](../../superpowers/specs/completed/2026-11-05-selection-kind-facts-design.md).
   A second, related backlog item landed with the merge:
-  [focusability is declared twice on the same discriminant](../../backlog/2026-08-17-focusability-double-encoded.md)
+  focusability is declared twice on the same discriminant (resolved by selection-kind-facts: `focus: null`)
   (`ROW_FOCUSABLE` vs `focusFraming`'s throw, both hand-encoding "does this row
   carry a position?"). Zone-of-avoidance (#555) is fresh, first-party evidence
   for the surface's cost: adding ONE new kind — including declaring it

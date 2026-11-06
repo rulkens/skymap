@@ -18,7 +18,8 @@ import SatellitesSectionContainer from './controls/ui/SatellitesSectionContainer
 import SatelliteDetailCard from './focus/ui/SatelliteDetailCard/SatelliteDetailCard';
 import CompactSatelliteCard from './focus/ui/CompactSatelliteCard/CompactSatelliteCard';
 import { SATELLITES_SOURCE_ROWS } from './sources/satellitesSourceRows';
-import { satellitesSelectionRow } from './focus/present/satellitesSelectionRow';
+import { satellitesSelectionRow } from './selection/satellitesSelectionRow';
+import { satellitesSelectionKinds } from './selection/kinds';
 import { satellitesSearch } from './focus/present/satellitesSearch';
 
 export const satellitesLayer = defineLayer({
@@ -32,7 +33,10 @@ export const satellitesLayer = defineLayer({
   passes: (runtime) => [satellitesPass(runtime), satelliteOrbitsPass(runtime)],
   assets: satellitesAssetRows,
   sourceCounts: satellitesSourceCounts,
-  selection: (runtime) => [satellitesSelectionRow(runtime)],
+  selection: {
+    kinds: satellitesSelectionKinds,
+    rows: (runtime) => [satellitesSelectionRow(runtime)],
+  },
   search: (runtime) => satellitesSearch(runtime),
   ui: [
     { slot: 'main', content: SatellitesSectionContainer, title: 'Satellites' },

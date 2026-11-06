@@ -24,6 +24,9 @@ import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 /** A valid `b`-tagged, 17-field arm for the `#pose=` arrival case below; the numbers are arbitrary. */
 const EARTH_ARM: FramedCameraPose = {

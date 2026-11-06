@@ -32,13 +32,13 @@ import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import type { TimeState } from '../../../src/@types/time/TimeState';
 import { makeSettingsFixture } from '../settings/makeSettingsFixture';
-import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { SceneSnapshot } from '../../../src/@types/engine/settings/SceneSnapshot';
 import { DEFAULT_FOV_Y_RAD } from '../../../src/services/engine/camera/framing/cameraFraming';
+import type { SelectionRefBase } from '../../../src/@types/engine/selection/SelectionRefBase';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
+const FOCUS_REF: SelectionRefBase = { type: 'structure', id: 'virgo-cluster' };
 
 /** A scene snapshot whose clusters differ from the store's initial settings. */
 const MANUAL_PAUSED: TimeState = {
@@ -54,7 +54,7 @@ const MANUAL_PAUSED: TimeState = {
 const CAPTURED_FOV_Y_RAD = DEFAULT_FOV_Y_RAD / 2;
 
 function makeSnapshot(
-  focus: SelectionRef | null = FOCUS_REF,
+  focus: SelectionRefBase | null = FOCUS_REF,
   time: TimeState = MANUAL_PAUSED,
 ): SceneSnapshot {
   const f = makeSettingsFixture();

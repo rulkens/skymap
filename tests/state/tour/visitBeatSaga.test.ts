@@ -44,6 +44,7 @@ import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tour
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { Source } from '../../../src/data/source';
+import { FAMOUS_GALAXY_NAMES } from '../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -52,6 +53,9 @@ import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { focusId } from '../../../src/utils/animation/focusId';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the drift Promise stub.
@@ -184,18 +188,20 @@ describe('visitBeatSaga', () => {
 
     let cloudLoaded = false;
 
-    const FAMOUS_ID = 'm87';
-    const CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
-      positions: new Float32Array([1, 0, 0]),
-      spectroscopicZ: new Float32Array([0.01]),
-      magU: new Float32Array([18]),
-      magG: new Float32Array([17]),
-      magR: new Float32Array([16]),
-      magI: new Float32Array([16]),
-      magZ: new Float32Array([16]),
-      objIDs: new BigUint64Array([1n]),
-      diameterKpc: new Float32Array([30]),
-      axisRatio: new Float32Array([1]),
+    // A famous cloud names its rows only at the compiled-in table's length; every row is row 0.
+    const FAMOUS_ID = FAMOUS_GALAXY_NAMES[0]!.id;
+    const ROWS = FAMOUS_GALAXY_NAMES.length;
+    const filled = (value: number) => new Float32Array(ROWS).fill(value);
+    const CLOUD: GalaxyCatalog = makeGalaxyCatalog(ROWS, {
+      positions: Float32Array.from({ length: ROWS * 3 }, (_, i) => (i % 3 === 0 ? 1 : 0)),
+      spectroscopicZ: filled(0.01),
+      magU: filled(18),
+      magG: filled(17),
+      magR: filled(16),
+      magI: filled(16),
+      magZ: filled(16),
+      diameterKpc: filled(30),
+      axisRatio: filled(1),
     });
 
     const lazyStructures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
@@ -204,7 +210,6 @@ describe('visitBeatSaga', () => {
       get catalogs() {
         return cloudLoaded ? new Map([[Source.FamousGalaxy, CLOUD]]) : new Map();
       },
-      famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 }],
     } as unknown as GalaxyRowFixture;
 
     const famousBeat: BeatData = {

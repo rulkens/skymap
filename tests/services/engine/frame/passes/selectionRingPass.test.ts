@@ -8,7 +8,6 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { Mat4 } from 'wgpu-matrix';
 import { Source } from '../../../../../src/data/source';
 import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
-import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
@@ -16,6 +15,14 @@ import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import { starRowDriver } from '../../../../fixtures/starRowDriver';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { MILKY_WAY_ROW } from '../../../../fixtures/milkyWayRow';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+import type { SelectionRowBase } from '../../../../../src/@types/engine/selection/SelectionRowBase';
+import type { StarCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/@types/StarCatalogSelectionRow';
+
+installAppSelectionKinds();
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -55,7 +62,7 @@ function makeCtx(): FrameView {
   } as unknown as FrameView;
 }
 
-function makeStateWithSizePx(row: SelectionRow | null, sizePx: number): EngineState {
+function makeStateWithSizePx(row: SelectionRowBase | null, sizePx: number): EngineState {
   return {
     gpu: { selectionRingRenderer: makeRendererSpy() },
     selectionRows: { select: row, focus: null, hover: null },
@@ -78,8 +85,8 @@ function makeRendererSpy() {
   };
 }
 
-// A minimal GalaxyRow at a known world position + diameter. The layer reads
-// x/y/z and diameterKpc straight from the row via selectionHalo.
+// A minimal placed GalaxyRow at a known world position + diameter: the halo reads the
+// `positionMpc` and `radiusMpc` that placement derives from x/y/z and diameterKpc.
 function galaxyRow(overrides: Partial<GalaxyRow> = {}) {
   return makeGalaxyRow({
     source: Source.Glade,
@@ -103,23 +110,14 @@ function structureRow(): StructureInfo {
   };
 }
 
-// The milkyWay singleton row (bare tag — position resolved from the constant).
-const MILKY_WAY_ROW: SelectionRow = { type: 'milkyWay' };
-
 // A scene-body row (planet / famous star / Earth). Like a survey star its halo
 // is NEAR0-tagged (radiusMpc 0, floored to a pixel ring), so the COSMO layer
 // must ignore it and the NEAR0 sibling must own it.
-const BODY_ROW: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('jupiter'),
-  label: 'Jupiter',
-  positionMpc: [1e-9, 2e-9, -3e-9],
-  driver: bodyDriverGeometry('jupiter'),
-};
+const BODY_ROW: SelectionRowBase = bodyRowAt('jupiter', [1e-9, 2e-9, -3e-9]);
 
 // A survey-star row — its halo is NEAR0-tagged, so the COSMO layer must ignore
 // it and the NEAR0 sibling must own it.
-const STAR_ROW: SelectionRow = {
+const STAR_ROW: StarCatalogSelectionRow = {
   type: 'starCatalog',
   source: Source.GaiaStars,
   index: 7,
@@ -127,10 +125,11 @@ const STAR_ROW: SelectionRow = {
   label: 'Field star',
   positionMpc: [0.001, -0.002, 0.0005],
   radiusM: 696340000,
+  radiusMpc: 696340000 * SCALE_UNITS.M_TO_MPC,
   driver: starRowDriver(null, 696340000),
 };
 
-function makeStateWithSelection(row: SelectionRow | null): EngineState {
+function makeStateWithSelection(row: SelectionRowBase | null): EngineState {
   return {
     gpu: { selectionRingRenderer: makeRendererSpy() },
     selectionRows: { select: row, focus: null, hover: null },
@@ -159,7 +158,7 @@ describe('selectionRingPass.enabled', () => {
   });
 
   it('stays false for a structure row (marker pass owns that halo)', () => {
-    const state = makeStateWithSelection(structureRow() as SelectionRow);
+    const state = makeStateWithSelection(structureRow() as SelectionRowBase);
     const ctx = makeCtx();
     expect(selectionRingPass.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
@@ -183,7 +182,7 @@ describe('selection-ring slab exclusivity (COSMO vs NEAR0)', () => {
   const ctx = makeCtx();
   const cases: ReadonlyArray<{
     name: string;
-    row: SelectionRow | null;
+    row: SelectionRowBase | null;
     cosmo: boolean;
     near0: boolean;
   }> = [
@@ -192,7 +191,7 @@ describe('selection-ring slab exclusivity (COSMO vs NEAR0)', () => {
     { name: 'milkyWay', row: MILKY_WAY_ROW, cosmo: true, near0: false },
     { name: 'star', row: STAR_ROW, cosmo: false, near0: true },
     { name: 'body', row: BODY_ROW, cosmo: false, near0: true },
-    { name: 'structure', row: structureRow() as SelectionRow, cosmo: false, near0: false },
+    { name: 'structure', row: structureRow() as SelectionRowBase, cosmo: false, near0: false },
   ];
 
   for (const { name, row, cosmo, near0 } of cases) {

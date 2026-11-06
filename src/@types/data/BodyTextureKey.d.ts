@@ -10,7 +10,7 @@ import type { TextureKind } from './TextureKind';
  * through the wiring `req`, the commit dispatch, and the fetcher so `.bodyId` /
  * `.kind` are read directly — no parsing of a composite string. Its flat-string
  * twin `BodyTextureSlotKey` (`\`${bodyId}:${kind}\``) is the comparable value the
- * slot `Map` and `AssetKey` union key on; the two never drift because
+ * slot `Map` and `BodyAssetKey` key on; the two never drift because
  * `bodyTextureSlotKey` derives the string from this pair.
  */
 export type BodyTextureKey = {
