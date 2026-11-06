@@ -28,7 +28,7 @@ stage shows on-screen text.
 | 02  | Earth and Moon | [`02-earth-and-moon.md`](stages/02-earth-and-moon.md) | Earth–Moon, ~800,000 km | log dolly + orbit | 8+7 s |
 | 03  | The Solar System | [`03-the-solar-system.md`](stages/03-the-solar-system.md) | Sun, ~50 au | turn + log dolly + lean | 10+8 s |
 | 04  | Our stellar neighbourhood | [`04-stellar-neighbourhood.md`](stages/04-stellar-neighbourhood.md) | α Centauri side, ~0.5 pc | turn + log dolly + lean | 12+7 s |
-| 05  | The Milky Way | [`05-the-milky-way.md`](stages/05-the-milky-way.md) | Milky Way, ~0.05 Mpc | snap far + log dolly + push-in | 7+7 s |
+| 05  | The Milky Way | [`05-the-milky-way.md`](stages/05-the-milky-way.md) | Milky Way, ~0.05 Mpc | log pull-out from the Sun + push-in | 16+7 s |
 | 06  | Nearest neighbour      | [`06-nearest-neighbour.md`](stages/06-nearest-neighbour.md)           | M31, ~0.8 Mpc            | log dolly + lean          | 7+7 s        |
 | 07  | The Local Group        | [`07-local-group.md`](stages/07-local-group.md)                       | Local Group, ~2.5 Mpc    | pull-back + orbit         | 9+14 s       |
 | 08  | Our neighbourhood      | [`08-our-neighbourhood.md`](stages/08-our-neighbourhood.md)           | local groups, ~4.5 Mpc   | pull-back + drift         | 0+12 s       |

@@ -8,7 +8,7 @@ narration: >
 focus: milkyWay
 distance_mpc: 0.05
 motion: log-dolly + local-orbit
-travel_s: 8
+travel_s: 16
 dwell_s: 7
 effects: []
 requires: [log-dolly, dwell-drift, caption, auto-reveal]
@@ -29,11 +29,14 @@ decades), then a short, slow orbit around the disk on the dwell, a few degrees
 of approach angle, just enough parallax to give the disk depth. This beat was
 stage 01 before the Earth opening; its orbit is unchanged, the travel in is new.
 
-As built: the travel in is still the old cold open, a cut from the stellar
-neighbourhood to 100 Mpc out on the disc bearing and a log dolly in on the
-Milky Way; the beat states the galactic pole and level roll on entry. It also
-shows the names beat 00 hid that no earlier beat has claimed (small bodies,
-missions, the black hole) and the mission trails, as a placeholder.
+As built: one log pull-out from beat 04's view near Alpha Centauri to 0.05 Mpc,
+16 s, with the galactic pole and level roll stated on entry. The star-map names
+fade first; the view swings to look 35° down onto the disc toward the Galactic
+Centre; the Gaia field thins as the disc fades in (`milkyWayDisk`'s
+`approachSun` band, 0.2–2 kpc); the target leaves the Sun for the galaxy's
+centre past ~10 kpc. It also shows the names beat 00 hid that no earlier beat
+has claimed (small bodies, missions, the black hole) and the mission trails, as
+a placeholder.
 
 ## On screen
 
