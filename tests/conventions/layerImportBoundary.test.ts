@@ -303,7 +303,9 @@ function typeKeyOf(file: string): string {
  * only grows, as a set without `core` never changes.
  */
 function layerOwnedTypes(): Map<string, string> {
-  const edges = walk('src').flatMap((file) => typesModulesOf(file).map((key) => [file, key] as const));
+  const edges = walk('src').flatMap((file) =>
+    typesModulesOf(file).map((key) => [file, key] as const),
+  );
   let owners = new Map<string, string>();
   for (;;) {
     const areasByType = new Map<string, Set<string>>();
