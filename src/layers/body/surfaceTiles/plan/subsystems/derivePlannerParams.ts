@@ -49,7 +49,13 @@ export function derivePlannerParams(
     tilePx,
     baseLevel,
     bands,
-    requestBands: { albedo: bands, height: bands },
+    // Night stands alone: a leaf with no night tile still draws (the global
+    // night texture shows through), so nothing else gates its requests.
+    requestBands: {
+      albedo: bands,
+      height: bands,
+      night: bandsWhere((band) => band?.builtFrom?.night !== undefined),
+    },
     lodBias: SURFACE_TILE_LOD_BIAS,
   };
 }
