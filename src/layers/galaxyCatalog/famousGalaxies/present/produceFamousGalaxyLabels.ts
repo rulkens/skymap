@@ -51,7 +51,7 @@ import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 import type { FamousGalaxyName } from '../@types/FamousGalaxyName';
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../../data/source';
-import { FAMOUS_GALAXY_NAMES } from '../data/famousGalaxyNames.generated';
+import { famousGalaxyNamesFor } from '../utils/famousGalaxyNamesFor';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { focusedFamousIndex } from '../utils/focusedFamousIndex';
@@ -164,7 +164,7 @@ export function produceFamousGalaxyLabels(
       : null;
     if (state.settings.labels.focusedOnly && focusedIdx === null) return empty;
 
-    const inputs = deriveFamousLabelInputs(FAMOUS_GALAXY_NAMES, catalog);
+    const inputs = deriveFamousLabelInputs(famousGalaxyNamesFor(catalog.count) ?? [], catalog);
     if (inputs.length === 0) return empty;
 
     const labels: Label2D[] = [];

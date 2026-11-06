@@ -82,8 +82,8 @@ function collectNodes(effects: Effect[]): Effect[] {
 
 // ─── Stubs ───────────────────────────────────────────────────────────────────
 
-/** A FamousGalaxy cloud long enough to hold 'm87' at its compiled-in row; every row is M87. */
-const M87_ROWS = FAMOUS_GALAXY_NAMES.findIndex((name) => name.id === 'm87') + 1;
+/** A FamousGalaxy cloud as long as the compiled-in table, so it names 'm87'; every row is M87. */
+const M87_ROWS = FAMOUS_GALAXY_NAMES.length;
 const filled = (value: number) => new Float32Array(M87_ROWS).fill(value);
 const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(M87_ROWS, {
   positions: Float32Array.from({ length: M87_ROWS * 3 }, (_, i) => (i % 3 === 0 ? 1 : 0)),

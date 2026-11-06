@@ -16,6 +16,8 @@ import { galaxyMedianAbsMag } from '../../../../utils/galaxy/galaxyMedianAbsMag'
 import { buildObjIdLookup } from '../utils/buildObjIdLookup';
 import { nearestRowByDirection } from '../utils/nearestRowByDirection';
 import { extractGalaxyRow } from '../present/extractGalaxyRow';
+import { famousGalaxyNamesFor } from '../../famousGalaxies/utils/famousGalaxyNamesFor';
+import { Source } from '../../../../data/source';
 
 export function flatGalaxyRecordSource(
   entry: GalaxyCatalogRegistryEntry,
@@ -28,6 +30,12 @@ export function flatGalaxyRecordSource(
   // Built here, at catalog commit: the first ask comes from the frame planner's
   // alias-index rebuild, where a ~65 ms build would stall a frame.
   const lookup = prefix === null ? null : buildObjIdLookup(catalog.objIDs);
+  if (source === Source.FamousGalaxy && famousGalaxyNamesFor(count) === null) {
+    console.warn(
+      `[famous] famous.bin has ${count} rows but the bundle names a different count: ` +
+        'famous galaxies stay unnamed until bundle and data come from one build',
+    );
+  }
 
   function rowOfDurableId(id: string): number {
     if (prefix === null || lookup === null || !id.startsWith(prefix)) return -1;

@@ -81,18 +81,24 @@ const virgo: StructureInfo = {
 
 const VIRGO_ROW = placedStructureRow(virgo);
 
-function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): GalaxyCatalog {
-  return makeGalaxyCatalog(1, {
-    positions: new Float32Array(pos),
-    spectroscopicZ: new Float32Array([0.01]),
-    magU: new Float32Array([18]),
-    magG: new Float32Array([17]),
-    magR: new Float32Array([16]),
-    magI: new Float32Array([16]),
-    magZ: new Float32Array([16]),
-    objIDs: new BigUint64Array([objId]),
-    diameterKpc: new Float32Array([30]),
-    axisRatio: new Float32Array([1]),
+/** `rows` copies of one galaxy; a famous cloud needs the compiled-in table's length. */
+function makeCloud(
+  objId: bigint,
+  pos: [number, number, number] = [1, 0, 0],
+  rows = 1,
+): GalaxyCatalog {
+  const filled = (value: number) => new Float32Array(rows).fill(value);
+  return makeGalaxyCatalog(rows, {
+    positions: Float32Array.from({ length: rows * 3 }, (_, i) => pos[i % 3]!),
+    spectroscopicZ: filled(0.01),
+    magU: filled(18),
+    magG: filled(17),
+    magR: filled(16),
+    magI: filled(16),
+    magZ: filled(16),
+    objIDs: new BigUint64Array(rows).fill(objId),
+    diameterKpc: filled(30),
+    axisRatio: filled(1),
   });
 }
 
@@ -102,7 +108,7 @@ const galaxies: GalaxyRowFixture = {
     [Source.SDSS, makeCloud(1237668393006604288n, [1, 0, 0])],
     [Source.Glade, makeCloud(99n, [1, 0, 0])],
     [Source.TwoMRS, makeCloud(2789n, [0, 1, 0])],
-    [Source.FamousGalaxy, makeCloud(0n, [1, 0, 0])],
+    [Source.FamousGalaxy, makeCloud(0n, [1, 0, 0], FAMOUS_GALAXY_NAMES.length)],
   ]),
 } as GalaxyRowFixture;
 

@@ -56,6 +56,8 @@ Every tracked file carries the first 8 hex characters of its SHA-256 content has
 
 The manifest is written last, after every file it names, so a page load can never see a mixed-generation pairing (a stale `famous_galaxies_meta.json` against a fresh `famous.bin`).
 
+The manifest cannot cover the one pairing that crosses the bundle: `npm run build-famous` also compiles famous galaxy names, by record index, into [`famousGalaxyNames.generated.ts`](../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated.ts), so a deployed app can meet a `famous.bin` from another build. [`famousGalaxyNamesFor`](../src/layers/galaxyCatalog/famousGalaxies/utils/famousGalaxyNamesFor.ts) guards it: when the record count differs from the table's length, the Layer warns once at commit and names no famous galaxy, rather than naming each one after its neighbour.
+
 ## Runtime loading
 
 Boot fetches `<dataBaseUrl>/data/manifest.json` once with `cache: 'no-cache'` ([`dataManifest.ts`](../src/services/loading/dataManifest.ts)); every subsequent [`dataUrl(filename)`](../src/services/loading/fetchWithProgress.ts) call resolves the logical name through it, falling back to the identity path when the manifest doesn't name it (an unbuilt worktree, or the unhashed `images/` tree). [`dataBaseUrl()`](../src/utils/network/dataBaseUrl.ts) is empty in dev (Vite serves `public/data/*` at `/data/*`) and points at the R2 custom domain in production. See [docs/DEPLOY.md](DEPLOY.md) for how that env var is set.

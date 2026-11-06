@@ -25,7 +25,11 @@ const m31Meta: FamousGalaxyMetaEntry = {
   description: 'The nearest large spiral galaxy.',
   type: 'SBb',
 };
-const row = extractGalaxyRow(makeGalaxyCatalog(m31Index + 1), m31Index, Source.FamousGalaxy)!;
+const row = extractGalaxyRow(
+  makeGalaxyCatalog(FAMOUS_GALAXY_NAMES.length),
+  m31Index,
+  Source.FamousGalaxy,
+)!;
 const target = galaxyCatalogSelectionKinds[0]!.toFocusable(placedGalaxyRow(row));
 
 describe('GalaxyDetailCardContainer', () => {

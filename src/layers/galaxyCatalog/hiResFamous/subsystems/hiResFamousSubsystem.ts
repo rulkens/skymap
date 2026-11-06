@@ -35,7 +35,7 @@
  */
 
 import { Source } from '../../../../data/source';
-import { FAMOUS_GALAXY_NAMES } from '../../famousGalaxies/data/famousGalaxyNames.generated';
+import { famousGalaxyNamesFor } from '../../famousGalaxies/utils/famousGalaxyNamesFor';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { cartesianToRaDec } from '../../../../utils/math/index';
 import { fetchGalaxyBitmap } from '../../thumbnailAtlas/utils/fetchGalaxyBitmap';
@@ -131,6 +131,7 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
 
     const positions = cloud.positions;
     const count = cloud.count;
+    const famousNames = famousGalaxyNamesFor(count);
     const layerSide = texture.getLayerSide();
 
     for (let i = 0; i < count; i++) {
@@ -160,7 +161,7 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
       // the curated 128 px tile.  Without this gate, LRU eviction would
       // wipe the texture-side `failed` flag and we'd re-fetch on every
       // subsequent frame the galaxy spent above the trigger band.
-      const famousId = FAMOUS_GALAXY_NAMES[i]?.id;
+      const famousId = famousNames?.[i]?.id;
       if (famousId && failedFamousIds.has(famousId)) {
         byFamousIdx.set(i, { hiResLayerIdx: -1, hiResCrossfadeAlpha: 0 });
         continue;

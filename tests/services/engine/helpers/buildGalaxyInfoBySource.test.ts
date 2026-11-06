@@ -234,7 +234,7 @@ describe('buildGalaxyInfo — Famous source', () => {
     // Row `i` of the famous catalog is row `i` of FAMOUS_GALAXY_NAMES, so the
     // id, names, curated thumbnail and catalogue links need no fetch.
     const [first] = FAMOUS_GALAXY_NAMES;
-    const cloud = makeCloud(1);
+    const cloud = makeCloud(FAMOUS_GALAXY_NAMES.length);
     setPosition(cloud, 0, 1, 0, 0);
 
     const info = buildInfo(cloud, 0, Source.FamousGalaxy);
@@ -255,10 +255,9 @@ describe('buildGalaxyInfo — Famous source', () => {
     expect(info.catalogues.map((c) => c.label)).toEqual(['NED', 'Wikipedia']);
   });
 
-  it('omits the famous block for a row past the compiled-in table', () => {
-    // A `famous.bin` newer than the bundle: the card falls back to the generic layout.
-    const idx = FAMOUS_GALAXY_NAMES.length;
-    const info = buildInfo(makeCloud(idx + 1), idx, Source.FamousGalaxy);
+  it('omits the famous block when famous.bin is another generation than the bundle', () => {
+    // Names are by record index: naming row 0 here could name it after its neighbour.
+    const info = buildInfo(makeCloud(FAMOUS_GALAXY_NAMES.length + 1), 0, Source.FamousGalaxy);
     expect(info.famous).toBeUndefined();
   });
 });

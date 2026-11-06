@@ -75,7 +75,7 @@ describe('selectDomeStatus', () => {
   // The name is compiled in: no famous-galaxies sidecar (no `famousMeta` fact) has loaded here.
   it('names a focused famous galaxy as its card does, before any sidecar lands', () => {
     const m31 = FAMOUS_GALAXY_NAMES.findIndex((name) => name.id === 'm31');
-    const cloud = makeGalaxyCatalog(m31 + 1);
+    const cloud = makeGalaxyCatalog(FAMOUS_GALAXY_NAMES.length);
     const row = placedGalaxyRow(extractGalaxyRow(cloud, m31, Source.FamousGalaxy)!);
     const state = stateAfter(setSelectionRow({ slot: 'focus', row, focusId: 'm31' }));
     expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).focus).toEqual({

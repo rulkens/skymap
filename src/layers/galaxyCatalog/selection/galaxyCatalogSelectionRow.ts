@@ -13,6 +13,7 @@ import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
 import { placedGalaxyRow } from './utils/placedGalaxyRow';
 import { FAMOUS_GALAXY_NAMES } from '../famousGalaxies/data/famousGalaxyNames.generated';
+import { famousGalaxyNamesFor } from '../famousGalaxies/utils/famousGalaxyNamesFor';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 import type { GalaxyCatalogRef } from './@types/GalaxyCatalogRef';
@@ -73,8 +74,10 @@ export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<Ga
 
 /** A compiled-in id resolves once `famous.bin` is resident; the meta sidecar is not waited on. */
 function resolveFamous(id: string, deps: Records): GalaxyCatalogRef | null {
-  const index = FAMOUS_GALAXY_NAMES.findIndex((m) => m.id === id);
-  if (index < 0 || !deps.records.has(Source.FamousGalaxy)) return null;
+  const record = deps.records.get(Source.FamousGalaxy);
+  const names = record ? famousGalaxyNamesFor(record.recordCount) : null;
+  const index = names ? names.findIndex((m) => m.id === id) : -1;
+  if (index < 0) return null;
   return { type: 'galaxyCatalog', source: Source.FamousGalaxy, index };
 }
 
