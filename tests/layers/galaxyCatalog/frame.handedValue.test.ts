@@ -17,7 +17,7 @@ import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
-const SNAPSHOT = { nowMs: 0, skyCapturesBaking: new Set() } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0, skyCapturesInBand: new Set() } as unknown as ReadyFrameContext;
 const VIEWS = [
   {
     cam: { position: [0, 0, 0] },
@@ -76,8 +76,8 @@ describe('galaxyCatalogPlanner — view cull', () => {
     expect(input.viewPlanes).toHaveLength(domeFaces.length * FRUSTUM_FLOATS_PER_VIEW);
   });
 
-  it('culls nothing while a sky capture bakes: the capture replays the disks on all six faces', () => {
-    const baking = { ...SNAPSHOT, skyCapturesBaking: new Set(['sgrAStar']) } as ReadyFrameContext;
-    expect(walkInputFor(makeGalaxyCatalogFade({}), baking).viewPlanes).toHaveLength(0);
+  it('culls nothing while a sky capture band is open: the capture replays the disks on all six faces', () => {
+    const inBand = { ...SNAPSHOT, skyCapturesInBand: new Set(['sgrAStar']) } as ReadyFrameContext;
+    expect(walkInputFor(makeGalaxyCatalogFade({}), inBand).viewPlanes).toHaveLength(0);
   });
 });

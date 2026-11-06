@@ -18,7 +18,7 @@ import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 
-const SNAPSHOT = { nowMs: 0, skyCapturesBaking: new Set() } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0, skyCapturesInBand: new Set() } as unknown as ReadyFrameContext;
 const FADE = makeGalaxyCatalogFade();
 const VIEWS = [
   {
