@@ -115,13 +115,17 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     return { stream, resident, pendingLevelOf };
   }
 
-  /** A lane for each product some band bakes: an atlas no band fills is GPU memory for nothing. */
-  function engage(bodyId: SceneBodyId & SurfaceTileBodyId): void {
+  /** A lane for each product the plan requests over (`derivePlannerParams`
+   *  is the one rule): an atlas no request fills is GPU memory for nothing. */
+  function engage(
+    bodyId: SceneBodyId & SurfaceTileBodyId,
+    params: SurfaceTilePlannerParams | null,
+  ): void {
     const manifest = manifests.get(bodyId)?.value;
-    if (manifest === null || manifest === undefined) return;
+    if (manifest === null || manifest === undefined || params === null) return;
     const lanes: Partial<Record<SurfaceTileProduct, SurfaceTileLane>> = {};
     for (const product of SURFACE_TILE_PRODUCTS) {
-      if (!manifest.bands.some((band) => band.builtFrom[product] !== undefined)) continue;
+      if (params.requestBands[product].length === 0) continue;
       lanes[product] = createLane(SURFACE_TILE_LANE_SPECS[product]);
     }
     atlas = {
@@ -146,7 +150,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     if (verdict === 'release') standDown();
     else if (verdict !== 'keep') {
       standDown();
-      engage(verdict.engage);
+      engage(verdict.engage, plan.params);
     }
     droppedAllocations = 0;
     if (atlas === null) return;

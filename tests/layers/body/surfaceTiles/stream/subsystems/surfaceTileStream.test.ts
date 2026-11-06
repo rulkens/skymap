@@ -117,10 +117,17 @@ const plan = (over: Partial<SurfaceTilePlan>): SurfaceTilePlan => ({
   ...over,
 });
 const ENGAGE_EARTH = { engage: EARTH } as const;
+// The planner engages only with params in hand; the stream sizes its lanes from them.
+const PARAMS = derivePlannerParams(manifestOf(PREFIX), BASE_LEVEL);
 const requesting = (
   tiles: readonly SurfaceTileId[],
   verdict: SurfaceTilePlan['verdict'] = 'keep',
-) => plan({ verdict, requests: tiles.map((tile, i) => ({ tile, screenPx: 1000 - i })) });
+) =>
+  plan({
+    verdict,
+    params: PARAMS,
+    requests: tiles.map((tile, i) => ({ tile, screenPx: 1000 - i })),
+  });
 
 function bitmap(close: () => void = () => {}): ImageBitmap {
   return { close } as unknown as ImageBitmap;
@@ -275,7 +282,9 @@ describe('surfaceTileStream lanes', () => {
     const stream = createSurfaceTileStream({ device: stubDevice(), requestRender: () => {} });
     stream.apply(plan({ wantManifest: EARTH }));
     await tick();
-    stream.apply(requesting([], ENGAGE_EARTH));
+    stream.apply(
+      plan({ verdict: ENGAGE_EARTH, params: derivePlannerParams(manifest, BASE_LEVEL) }),
+    );
     return stream;
   }
 
@@ -287,6 +296,21 @@ describe('surfaceTileStream lanes', () => {
 
     const withNight = await engagedOn(manifestOf(PREFIX, ['albedo', 'height', 'night']));
     expect(withNight.getAtlasView('night')).not.toBeNull();
+  });
+
+  it('builds no night atlas when every night band is clamped out by the base level', async () => {
+    // Bug caught: lanes read from `builtFrom` rather than the planner's request
+    // bands, so a night band too shallow to ever be requested still costs 64 MB.
+    const manifest = manifestOf(PREFIX);
+    const shallowNight = {
+      ...manifest.bands[0]!,
+      min: BASE_LEVEL - 1,
+      max: BASE_LEVEL,
+      builtFrom: { night: manifest.bands[0]!.builtFrom.albedo! },
+    };
+    const stream = await engagedOn({ ...manifest, bands: [...manifest.bands, shallowNight] });
+    expect(stream.getAtlasView('albedo')).not.toBeNull();
+    expect(stream.getAtlasView('night')).toBeNull();
   });
 });
 
