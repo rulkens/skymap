@@ -12,6 +12,7 @@ import {
   powerSaveBlocker,
   screen,
   shell,
+  systemPreferences,
 } from 'electron';
 import type { BrowserWindow, WebContents } from 'electron';
 import { stat } from 'node:fs/promises';
@@ -68,6 +69,11 @@ import { watchQuitting } from '../windows/watchQuitting';
  */
 export async function runLifecycle(windowed: boolean): Promise<void> {
   if (!(await takeInstanceLock(DESKTOP_BUILT_AT))) return app.quit();
+  // macOS adds its own "Enter Full Screen" to a View menu; ours (View › Full screen) is the one that
+  // knows the sky's simple full screen, so the system's is switched off before the menu is built.
+  if (process.platform === 'darwin') {
+    systemPreferences.setUserDefault('NSFullScreenMenuItemEverywhere', 'boolean', false);
+  }
   await app.whenReady();
   nativeTheme.themeSource = 'dark';
   const mayClose = watchQuitting(app);
