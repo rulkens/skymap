@@ -122,10 +122,6 @@ function candidateTileIndices(
  *  that doubles as the land mask. */
 const WEBP_QUALITY = 82;
 
-/** The imagery product's own name — the height path is built from the literal
- *  `'height'` inside `bakeHeightLevel`, which owns that product end to end. */
-const PRODUCT: SurfaceTileProduct = 'albedo';
-
 /**
  * Encode a sharp pipeline to `outPath` atomically: write to `<outPath>.tmp`,
  * then rename over it. Without this, a bake killed mid-encode leaves a
@@ -170,6 +166,7 @@ async function writeTile(rgba: Uint8Array, tilePx: number, outPath: string): Pro
  */
 async function bakeDeepestLevel(
   source: SurfaceImagerySource,
+  product: SurfaceTileProduct,
   bands: readonly SurfaceTileBand[],
   z: number,
   tilePx: number,
@@ -179,7 +176,7 @@ async function bakeDeepestLevel(
   const written: string[] = [];
 
   for (const { x, y } of candidateTileIndices(bands, z, tilePx)) {
-    const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, tilePrefix);
+    const relPath = surfaceTilePath({ product, z, x, y }, tilePrefix);
     const outPath = join(outDir, relPath);
     if (existsSync(outPath)) {
       written.push(relPath);
@@ -224,6 +221,7 @@ async function bakeDeepestLevel(
  */
 export async function bakeCoarserLevel(
   z: number,
+  product: SurfaceTileProduct,
   tilePx: number,
   outDir: string,
   tilePrefix: string,
@@ -235,7 +233,7 @@ export async function bakeCoarserLevel(
   const written: string[] = [];
 
   for (const { x, y } of candidateTileIndices(bands, z, tilePx)) {
-    const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, tilePrefix);
+    const relPath = surfaceTilePath({ product, z, x, y }, tilePrefix);
     const outPath = join(outDir, relPath);
     if (existsSync(outPath)) {
       written.push(relPath);
@@ -251,7 +249,7 @@ export async function bakeCoarserLevel(
       .map(({ i, j }) => ({
         input: join(
           outDir,
-          surfaceTilePath({ product: PRODUCT, z: z + 1, x: 2 * x + i, y: 2 * y + j }, tilePrefix),
+          surfaceTilePath({ product, z: z + 1, x: 2 * x + i, y: 2 * y + j }, tilePrefix),
         ),
         left: i * halfPx,
         top: j * halfPx,
@@ -455,6 +453,7 @@ export async function bakeAll(
       const effective = underfill ? underfillImagerySource(source, underfill) : source;
       const deepest = await bakeDeepestLevel(
         effective,
+        'albedo',
         uvBands,
         maxLevel,
         tilePx,
@@ -471,6 +470,7 @@ export async function bakeAll(
         // halo tile's own source — same object `bakeDeepestLevel` just used.
         const levelPaths = await bakeCoarserLevel(
           z,
+          'albedo',
           tilePx,
           outDir,
           tilePrefix,
@@ -512,7 +512,7 @@ export async function bakeAll(
     // two boxes rather than one that wraps (see `LonLatBounds`). `builtFrom`
     // is the source's OWN provenance — never a module-level assumption, or a
     // second band's manifest entry would carry the first band's identity.
-    // Keyed by `PRODUCT`, not a bare value: a later product baking the SAME
+    // Keyed by product, not a bare value: a later product baking the SAME
     // box (Task 9's height) adds its own `builtFrom` entry to this band
     // rather than a second band row.
     for (const bounds of source.coverage) {
@@ -524,7 +524,7 @@ export async function bakeAll(
           // Gated on `products.has('albedo')`: a `--product height` run
           // still carries an imagery source (for coverage/levels) but bakes
           // none of its tiles, and must not restamp its provenance.
-          ...(products.has('albedo') ? { [PRODUCT]: source.provenance } : {}),
+          ...(products.has('albedo') ? { albedo: source.provenance } : {}),
           // Also gated on `products.has('height')`: a `--product albedo` run
           // still configures a height source but bakes none of its tiles.
           ...(height === undefined || !products.has('height') ? {} : { height: height.provenance }),

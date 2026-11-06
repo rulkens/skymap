@@ -102,7 +102,7 @@ describe('bakeCoarserLevel', () => {
     await writeChild(dir, 2, 0, 1, BLUE);
     await writeChild(dir, 2, 1, 1, WHITE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX);
+    await bakeCoarserLevel(1, 'albedo', TILE_PX, dir, TILE_PREFIX);
 
     const parentPath = join(
       dir,
@@ -132,7 +132,7 @@ describe('bakeCoarserLevel', () => {
     const dir = tmpDir();
     await writeChild(dir, 2, 1, 1, WHITE); // SE only
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX);
+    await bakeCoarserLevel(1, 'albedo', TILE_PX, dir, TILE_PREFIX);
 
     const parentPath = join(
       dir,
@@ -186,7 +186,7 @@ describe('bakeCoarserLevel', () => {
     await writeChild(dir, 2, 1, 1, WHITE); // SE only — NW/NE/SW absent
     const filler = stubFillerSource(ORANGE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX, filler);
+    await bakeCoarserLevel(1, 'albedo', TILE_PX, dir, TILE_PREFIX, filler);
 
     const parentPath = join(
       dir,
@@ -213,7 +213,7 @@ describe('bakeCoarserLevel', () => {
     await writeChild(dir, 2, 1, 1, WHITE);
     const filler = stubFillerSource(ORANGE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX, filler);
+    await bakeCoarserLevel(1, 'albedo', TILE_PX, dir, TILE_PREFIX, filler);
 
     expect(filler.readBoxCalls).toBe(0);
   });
@@ -228,7 +228,16 @@ describe('bakeCoarserLevel', () => {
     const PURPLE = [128, 0, 128, 255] as const;
     const deepSource = stubFillerSource(PURPLE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX, undefined, undefined, deepSource);
+    await bakeCoarserLevel(
+      1,
+      'albedo',
+      TILE_PX,
+      dir,
+      TILE_PREFIX,
+      undefined,
+      undefined,
+      deepSource,
+    );
 
     const parentPath = join(
       dir,
@@ -245,7 +254,7 @@ describe('bakeCoarserLevel', () => {
   it('leaves a childless tile unwritten when no deep source is given', async () => {
     const dir = tmpDir();
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX);
+    await bakeCoarserLevel(1, 'albedo', TILE_PX, dir, TILE_PREFIX);
 
     const parentPath = join(
       dir,
