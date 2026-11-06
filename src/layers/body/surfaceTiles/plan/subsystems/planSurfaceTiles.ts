@@ -95,7 +95,7 @@ export function planSurfaceTiles(
     touched,
     requests,
     wantManifest,
-    verdict: own ? 'keep' : { engage: bodyId, tilePx: params.tilePx },
+    verdict: own ? 'keep' : { engage: bodyId },
     lastPlan: { requestCount: demand.requests.length, zWin: demand.zWin, misses },
     params,
     // This plan's own requests count: `inFlight` was read before they existed,

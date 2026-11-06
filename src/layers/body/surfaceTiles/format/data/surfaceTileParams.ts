@@ -39,9 +39,13 @@ export const SURFACE_TILE_ATLAS_SIDE = 8192;
  *  256 and sizing this by that count was what starved it. (Spec §5.5.) */
 export const HEIGHT_TILE_ATLAS_SIDE = 32 * HEIGHT_POSTS_PER_TILE;
 
+/** Physical edge of the NIGHT atlas: 8 x 8 = 64 slots of 512 px, 64 MB. Night
+ *  bakes only to z7, so a z13 view needs a handful of z7 ancestors, not a cut.
+ *  Mirrored into `surfaceTile/surfaceLighting.wesl`, parity-tested. */
+export const NIGHT_TILE_ATLAS_SIDE = 4096;
+
 /** Slots per row of the height atlas, row-major like `TextureAtlas`'s own
- *  layout — the one derivation both the renderer's slot→texel packing and the
- *  subsystem's capacity math must share. */
+ *  layout: the renderer's slot→texel packing reads it. */
 export const HEIGHT_ATLAS_SLOTS_PER_ROW = HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_PER_TILE;
 
 /** Concurrent tile fetches. Matches the thumbnail queue's reasoning rather than

@@ -9,6 +9,7 @@ import package::bodies::surfaceTile::io::SurfaceTileUniforms;
 import package::bodies::surfaceTile::surfaceLighting::tileAlbedo;
 import package::bodies::surfaceTile::surfaceLighting::tileShadingNormal;
 import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
+import package::bodies::surfaceTile::surfaceLighting::tileNight;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::nightLights::nightLights;
@@ -27,6 +28,8 @@ import package::lib::math::TAU;
 @group(0) @binding(7) var nightTexture: texture_2d<f32>;
 // Binding 8 was the whole-globe normal map; it is the base globe's alone now.
 @group(0) @binding(9) var cloudTexture: texture_2d<f32>;
+// Night tiles (z7 and shallower), drawn like the albedo atlas through 'atlasSampler'.
+@group(0) @binding(10) var nightAtlas: texture_2d<f32>;
 
 // Inverse of 'equirectUvToDirection'. Duplicated from earth/fragment.wesl
 // rather than imported: it lives inline there, not in 'lib/'.
@@ -70,7 +73,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   let colour = direct * u.sunIrradiance + u.ambientLight * baseAlbedo;
 
-  let nightColour = textureSample(nightTexture, baseSampler, equirectUv).rgb;
+  // Both samples are unconditional: 'textureSample' needs uniform control
+  // flow, and a zero-scale rect (no night tile resident) picks the global one.
+  let globalNight = textureSample(nightTexture, baseSampler, equirectUv).rgb;
+  let tileNightColour = tileNight(nightAtlas, atlasSampler, in.uv, in.nightRect);
+  let nightColour = select(globalNight, tileNightColour, in.nightRect.z > 0.0);
   // Whether the sun is up is the DATUM's cosine, not the terrain's: keyed on
   // 'n', every slope facing away from the sun at noon read as night and lit up
   // with the city's Black Marble glow (Søndermarken's banks turned cream).

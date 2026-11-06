@@ -50,6 +50,24 @@ describe('derivePlannerParams', () => {
     expect(derivePlannerParams(manifest({ bands: [albedoOnly] }), BASE_LEVEL)).toBeNull();
   });
 
+  it('night request bands are the bands that built night, and refinement ignores them', () => {
+    // Bug caught: night requested past its z7 bake (a 404 per leaf), or the
+    // night band's depth steering the albedo/height cut.
+    const shallow = {
+      bounds: WORLD,
+      min: 3,
+      max: 7,
+      builtFrom: { albedo: PROVENANCE, height: PROVENANCE, night: PROVENANCE },
+    };
+    const deep = { ...BAND, min: 8, max: 13 };
+    const params = derivePlannerParams(manifest({ bands: [shallow, deep] }), BASE_LEVEL);
+    expect(params?.requestBands.night).toEqual([
+      expect.objectContaining({ min: Math.max(3, BASE_LEVEL + 1), max: 7 }),
+    ]);
+    expect(params?.bands).toHaveLength(2);
+    expect(params?.requestBands.albedo).toBe(params?.bands);
+  });
+
   it('floors every band one level finer than the base it is given', () => {
     // At or above the base the whole-globe texture already carries the detail:
     // a request there re-downloads it, and a tier swap must move the floor too.

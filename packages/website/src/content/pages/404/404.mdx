@@ -9,7 +9,7 @@ import PictureBand from '../../../components/shared/media/PictureBand/PictureBan
 import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
 import Sources from '../../../components/shared/text/Sources/Sources.tsx';
 import Section from '../../../components/shared/layout/Section/Section.tsx';
-import { requireShotLink } from '../../../utils/requireShotLink';
+import { shotLink } from '../../../utils/shotLink';
 import text from '../../../styles/type.module.css';
 import { sitePath } from '../../../utils/sitePath';
 
@@ -19,7 +19,7 @@ import { sitePath } from '../../../utils/sitePath';
   <h1>There is nothing here</h1>
   <p className={text.say}>This address is not on the map. The picture is the Boötes Void, reported in 1981 as “a million cubic megaparsec void”: the volume of a ball about 400 million light-years across, with very little in it. You are in suitable company.</p>
   <ObjLink hang size="big" href={sitePath('/')}>Skymap home page</ObjLink>
-  <ViewLink hang view={requireShotLink('void-bootes')}>The Boötes Void</ViewLink>
+  <ViewLink hang view={shotLink('void-bootes')}>The Boötes Void</ViewLink>
   <ShotCaption id="void-bootes" open={false} />
 </PictureBand>
 <Section as="div">
