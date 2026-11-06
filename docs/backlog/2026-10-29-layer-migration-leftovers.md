@@ -19,7 +19,7 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | # | Item | Layer | Class | LOC | Blocker / joint |
 |---|------|-------|-------|-----|-----------------|
 | J1 | Seeded stars: Sun, famous stars, S-stars, makers, anchors (§7 step 5) | starCatalog | NEEDS-JOINT | ~2,700 | `BodyPosition` has no `anchor` kind; `SCENE_ANCHORS` / `ORBIT_REACH_BY_REGION` read core tables |
-| J2 | Selection presentation: `buildGalaxyInfo` + galaxy math (via barrel), star arm of `buildFocusable`, galaxy/structure/MW framing | galaxyCatalog, starCatalog, structure, milkyWay | NEEDS-JOINT | ~1,480 | per-kind core tables (`BUILD_FOCUSABLE`, `REF_OF`, `focusFraming`, `mayHaveLabel`, `targetIdentityKey`, `selectionHaloTable`); needs `SelectionKindRow` members |
+| J2 | Selection presentation: `buildGalaxyInfo` + galaxy math (via barrel), star `starDetail`, galaxy/structure/MW framing | galaxyCatalog, starCatalog, structure, milkyWay | NEEDS-JOINT | ~1,480 | tables gone: each kind's `selection.kinds` facts (`toFocusable`, `focus`, `mayHaveLabel`) replaced them; the movable files remain |
 | J3 | `ephemerisCorrections.generated` + `barycentricPairs` | body | NEEDS-JOINT | 1,113 | core solver (`orbitRowPlacement`) keys them by id; `LayerBody`/`OrbitalElements` would carry them |
 | J4 | Content camera clips (flowOrbit, famousFlythrough, earth/Søndermarken/Perseverance flyouts) | flow, galaxyCatalog, body, earthScenes, missions | NEEDS-JOINT | ~480 | no `clips?` member; `ClipId` union + `clipRegistry` are core |
 | J5 | `bodyFacts.generated` (card facts incl. `sgr-a-star`) | body, missions, blackHoles | NEEDS-JOINT | 500 | shared `BodyDetailCard` reads one table; `LayerBody` has no `facts` |
@@ -63,14 +63,13 @@ Layer files, so precedent exists; the 2026-10-29 ruling says yes, and the Layer 
 **Joint.** `BodyPosition` is `site | orbit | sampled`, and a fixed star is an anchor (`AnchorBody`). Needed: a `{ kind: 'anchor' }` position, or a Layer-folded anchor list, so `SCENE_ANCHORS` becomes a fold. S-stars already fit `orbit`. `ORBIT_REACH_BY_REGION` then reads the composed rows, as the spec says. `SCENE_ANCHORS` already holds a non-body row (`GALACTIC_CENTRE_ANCHOR`, a `PlaceId`), so the fold is the place-anchor table and should be named and filed as one rather than under `data/bodies/`.
 
 ### J2. Selection presentation tables: ~1,480 movable behind them
-Core holds a row per selection kind in `BUILD_FOCUSABLE` (`helpers/buildFocusable.ts`), `REF_OF`, `focusFraming` (switch), `mayHaveLabel` (switch), `targetIdentityKey`, `selectionHaloTable` and `CORE_DETAIL_CARDS` (M2). That is the anti-goal shape of spec §2: a table keyed by kind gaining a row per Layer. What sits behind the galaxy, star, structure and MW rows:
+The per-kind core tables this item named (`BUILD_FOCUSABLE`, `REF_OF`, `focusFraming`, `mayHaveLabel`, `targetIdentityKey`, `selectionHaloTable`) are gone: each Layer's `selection.kinds` declares `toFocusable`, `focus` and `mayHaveLabel`, read through `selectionKindOf`. What still sits in core behind the galaxy, star, structure and MW kinds:
 - `helpers/buildGalaxyInfo` 264, plus `famousDisplayName` 36 and `utils/format/{formatMorphology,formatLookback,famousWikipediaTitle}` 82.
 - Galaxy math reached only through `buildGalaxyInfo`'s barrel import: `sdssName` 82, `galaxyType`+3 117+108, `iauName`+`iauRaDecSuffix` 120, `sdss{Explorer,Thumbnail,Navigate}Url` 97, `dssThumbnailUrl` 49, `aladinLiteUrl` 32, `ned*Url` 67, `galaxyThumbnailFovArcmin` 29, `lookbackTimeGyr` 40, `earthEraForLookback` 56, `hubbleVelocityKmS` 45, `cartesianToRaDecZ` 86, `format{Ra,Dec}Sexagesimal` 85. About 913 in all.
 - The star arm's `starDetail` plus `sStarOrbitInfo` 44, and the camera's `galaxyFocusDistance` 59 + `structureFocusDistance` 82.
 - The galaxyCatalog/starCatalog fact selectors in `state/engine/selectors.ts`.
 
-**Joint.** The `SelectionKindRow` presentation members: `toFocusable(row)`, `framing(row, fovY)`, `mayHaveLabel(ref)`, a halo row. Body-like arms already avoid the framing switch through `driver: DriverGeometry`. Galaxies and structures don't host the camera, so they can't reuse it.
-Consolidated into [the selection-kind-facts spec](../superpowers/specs/2026-11-05-selection-kind-facts-design.md), which carries J2 now.
+**Joint.** Delivered by [the selection-kind-facts spec](../superpowers/specs/2026-11-05-selection-kind-facts-design.md) as each Layer's static `selection.kinds`; what remains is moving the files above.
 
 ### J3. Ephemeris corrections + barycentric pairs: 1,113
 `ephemerisCorrections.generated` 1,088 (26 bodies: the planets and their moons) and `barycentricPairs` 25 (earth/moon). Both are read only by the core solver, `utils/orbit/orbitRowPlacement.ts`, keyed by element id. They are body content. **Joint:** the row's `OrbitalElements` (or `LayerBody`) carries its correction and barycentre. This widens `LayerBody`, which needs consent. The generator (`build-ephemeris-corrections`) would then emit into `layers/body/`.
