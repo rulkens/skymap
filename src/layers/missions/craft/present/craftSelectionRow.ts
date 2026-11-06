@@ -10,17 +10,15 @@ import { bodyRowAt } from '../../../../utils/scene/bodyRowAt';
 import { MISSION_CRAFT_IDS } from './missionCraftIds';
 import { CRAFT_ORDER } from './craftOrder';
 import { craftPickId } from './craftPickId';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import { isSceneBodyId } from '../../../../utils/scene/isSceneBodyId';
+import type { CraftRef } from '../../@types/CraftRef';
 
 const isCraftId = (id: string): id is SceneBodyId => isSceneBodyId(id) && MISSION_CRAFT_IDS.has(id);
 
-export function craftSelectionRow(
-  pickCode: number,
-): SelectionKindRow<Extract<SelectionRef, { type: 'craft' }>> {
-  const decode = (id: string): Extract<SelectionRef, { type: 'craft' }> | null => {
+export function craftSelectionRow(pickCode: number): SelectionKindRow<CraftRef> {
+  const decode = (id: string): CraftRef | null => {
     if (!id.startsWith(BODY_FOCUS_PREFIX)) return null;
     const craftId = id.slice(BODY_FOCUS_PREFIX.length);
     return isCraftId(craftId) ? { type: 'craft', id: craftId } : null;

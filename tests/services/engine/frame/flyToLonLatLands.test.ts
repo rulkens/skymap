@@ -42,9 +42,11 @@ import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { SimBodyId } from '../../../helpers/camera/SimBodyId';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
+import { isKind } from '../../../../src/utils/selection/isKind';
+import type { BodyRef } from '../../../../src/@types/engine/selection/BodyRef';
 
 installAppSelectionKinds();
 
@@ -78,8 +80,8 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
         upBasisQuat: liveUpBasisQuat(h.state.cameraRuntime),
       }),
       selection: {
-        extractRow: (ref: SelectionRef | null) => {
-          if (ref?.type !== 'body') return null;
+        extractRow: (ref: SelectionRefBase | null) => {
+          if (!isKind<BodyRef>(ref, 'body')) return null;
           const p = h.bodies.get(ref.id)!.positionMpc;
           return { type: 'body', id: ref.id, label: ref.id, positionMpc: [p[0]!, p[1]!, p[2]!] };
         },

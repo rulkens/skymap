@@ -1,12 +1,12 @@
 import type { SelectionKindFacts } from '../../../../@types/engine/layer/SelectionKindFacts';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
-import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
+import type { StructureRef } from '../../@types/StructureRef';
+import type { StructureSelectionRow } from '../../@types/StructureSelectionRow';
+import type { StructureTarget } from '../../@types/StructureTarget';
 
 export const structureSelectionKinds: readonly SelectionKindFacts<
-  Extract<SelectionRef, { type: 'structure' }>,
-  Extract<SelectionRow, { type: 'structure' }>,
-  Extract<FocusableTarget, { type: 'structure' }>
+  StructureRef,
+  StructureSelectionRow,
+  StructureTarget
 >[] = [
   {
     type: 'structure',

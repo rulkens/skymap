@@ -24,7 +24,7 @@
  *    write to an unrelated slice doesn't rebuild it.
  *  - `selectIsSelectionActive` is a cheap boolean derived from the two ref
  *    slots; memoized so the UI can react to "is anything selected" without
- *    building a full `FocusableTarget`.
+ *    building a full card target.
  *
  * Every selector is `RootState`-scoped, so the same function works unchanged on
  * BOTH the React side (`useAppSelector(selectX)`) and the engine side
@@ -38,9 +38,9 @@ import { selectionKindOf } from '../../services/engine/selection/selectionKindOf
 import type { RootState } from '../../store/types';
 import type { SelectionState } from '../../@types/store/SelectionState';
 import type { SelectionRowsState } from '../../@types/store/SelectionRowsState';
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
-import type { SelectionRow } from '../../@types/engine/SelectionRow';
-import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
+import type { FocusableTargetBase } from '../../@types/engine/selection/FocusableTargetBase';
+import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
+import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
 
 // --- base selectors -----------------------------------------------------------
 
@@ -49,10 +49,10 @@ const selectSelection = (state: RootState): SelectionState => state[selectionRou
 const selectSelectionRows = (state: RootState): SelectionRowsState => state[selectionRowsRoute];
 
 // --- selection ref slot reads (raw Intent) ------------------------------------
-export const selectSelectedRef = (state: RootState): SelectionRef | null =>
+export const selectSelectedRef = (state: RootState): SelectionRefBase | null =>
   selectSelection(state).select;
 
-export const selectFocusRef = (state: RootState): SelectionRef | null =>
+export const selectFocusRef = (state: RootState): SelectionRefBase | null =>
   selectSelection(state).focus;
 
 // --- pending request reads (in-flight Intent) ---------------------------------
@@ -71,12 +71,13 @@ export const selectPendingSelectId = (state: RootState): string | null =>
 
 // --- selectionRows slot reads (resolved display cache) ------------------------
 
-const selectHoverRow = (state: RootState): SelectionRow | null => selectSelectionRows(state).hover;
+const selectHoverRow = (state: RootState): SelectionRowBase | null =>
+  selectSelectionRows(state).hover;
 
-const selectSelectRow = (state: RootState): SelectionRow | null =>
+const selectSelectRow = (state: RootState): SelectionRowBase | null =>
   selectSelectionRows(state).select;
 
-export const selectFocusRow = (state: RootState): SelectionRow | null =>
+export const selectFocusRow = (state: RootState): SelectionRowBase | null =>
   selectSelectionRows(state).focus;
 
 /**
@@ -86,10 +87,10 @@ export const selectFocusRow = (state: RootState): SelectionRow | null =>
 export const selectFocusId = (state: RootState): string | null =>
   selectSelectionRows(state).focusId;
 
-// --- derived FocusableTarget selectors ----------------------------------------
+// --- derived FocusableTargetBase selectors ----------------------------------------
 
-const focusableOf = (row: SelectionRow | null): FocusableTarget | null =>
-  row === null ? null : (selectionKindOf(row.type).toFocusable(row) as FocusableTarget);
+const focusableOf = (row: SelectionRowBase | null): FocusableTargetBase | null =>
+  row === null ? null : (selectionKindOf(row.type).toFocusable(row) as FocusableTargetBase);
 
 /** The hover row's card view-model, or null; memoized on the row reference. */
 export const selectHoveredFocusable = createSelector([selectHoverRow], focusableOf);
@@ -102,8 +103,8 @@ export const selectFocusedFocusable = createSelector([selectFocusRow], focusable
 
 /**
  * selectIsSelectionActive — true when either the select or the focus ref slot
- * holds a SelectionRef. The cheap boolean the UI uses to know "is something
- * selected" without building a FocusableTarget. Memoized over the two ref
+ * holds a SelectionRefBase. The cheap boolean the UI uses to know "is something
+ * selected" without building a FocusableTargetBase. Memoized over the two ref
  * inputs so it only recomputes when a ref slot actually changes.
  */
 export const selectIsSelectionActive = createSelector(

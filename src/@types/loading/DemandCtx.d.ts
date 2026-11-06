@@ -87,7 +87,7 @@ import type { LoadState } from './LoadState';
 import type { UiState } from '../ui/UiState';
 import type { Tier } from '../data/Tier';
 import type { Vec3 } from '../math/Vec3';
-import type { SelectionRef } from '../engine/SelectionRef';
+import type { SelectionRefBase } from '../engine/selection/SelectionRefBase';
 
 export type DemandCtx = {
   /** Read-only view of the user-facing rendering settings. */
@@ -123,5 +123,5 @@ export type DemandCtx = {
   /** The live tier (`state.tier`). */
   tier: Tier;
   /** Kinds in the select and focus slots; hover never counts. */
-  selectedKinds: ReadonlySet<SelectionRef['type']>;
+  selectedKinds: ReadonlySet<SelectionRefBase['type']>;
 };

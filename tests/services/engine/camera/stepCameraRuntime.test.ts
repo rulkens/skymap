@@ -61,7 +61,6 @@ import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deepFreeze } from '../../../helpers/deepFreeze';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
-import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
@@ -81,13 +80,14 @@ import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetric
 import { NO_INSETS_PX } from '../../../../src/data/layout/noInsetsPx';
 import { bodyRowAt } from '../../../../src/utils/scene/bodyRowAt';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+import type { SelectionRowBase } from '../../../../src/@types/engine/selection/SelectionRowBase';
 
 installAppSelectionKinds();
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);
 const EARTH = BODIES.get(asSceneBodyId('earth'))!;
-const EARTH_ROW: SelectionRow = bodyRowAt('earth', [
+const EARTH_ROW: SelectionRowBase = bodyRowAt('earth', [
   EARTH.positionMpc[0]!,
   EARTH.positionMpc[1]!,
   EARTH.positionMpc[2]!,

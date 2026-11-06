@@ -33,7 +33,6 @@ import { manualPausedAtActions } from '../../../src/state/time/enterManualPaused
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { timeRoute } from '../../../src/store/constants';
-import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import { placedStructureRow } from '../../../src/layers/structure/picking/utils/placedStructureRow';
 
 const write = vi.mocked(writeHashBody);

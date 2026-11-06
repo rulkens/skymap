@@ -14,11 +14,11 @@ import { earthArm } from '../../../../fixtures/earthArm';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
-import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
+import type { SelectionRowBase } from '../../../../../src/@types/engine/selection/SelectionRowBase';
 
-const EARTH_FOCUS: SelectionRow = bodyRowAt('earth', [0, 0, 0]);
+const EARTH_FOCUS: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
 const POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const EARTH_RADIUS_MPC = pivotRadiusMpc(EARTH_FOCUS)!;

@@ -19,15 +19,13 @@ import { satelliteTransientId } from './satelliteTransientId';
 import { encodeSatelliteFocusId } from './encodeSatelliteFocusId';
 import { SATELLITE_FOCUS_PREFIX } from './satelliteFocusPrefix';
 import type { SatellitesRuntime } from '../../@types/SatellitesRuntime';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
+import type { SatelliteRef } from '../../@types/SatelliteRef';
 
 const FOCUS_ID = /^satellite-(\d+)$/;
 
-export function satellitesSelectionRow(
-  runtime: SatellitesRuntime,
-): SelectionKindRow<Extract<SelectionRef, { type: 'satellite' }>> {
-  const decode = (id: string): Extract<SelectionRef, { type: 'satellite' }> | null => {
+export function satellitesSelectionRow(runtime: SatellitesRuntime): SelectionKindRow<SatelliteRef> {
+  const decode = (id: string): SatelliteRef | null => {
     const match = FOCUS_ID.exec(id);
     return match ? { type: 'satellite', noradId: Number(match[1]) } : null;
   };

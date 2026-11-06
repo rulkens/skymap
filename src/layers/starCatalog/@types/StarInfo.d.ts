@@ -1,16 +1,14 @@
 /**
- * StarInfo — a selected star as a resolved focusable target, the one arm of
- * `FocusableTarget` every star reaches, survey or seeded; the star kind's
- * `toFocusable` derives it from the stored `SelectionRow` plus the famous-star
- * sidecar. Core, not the star Layer's `@types/`: core's `FocusableTarget`
- * names it, so shelving it under `layers/` would import a Layer.
+ * StarInfo — a selected star as its card's target, the one shape every star
+ * reaches, survey or seeded; the star kind's `toFocusable` derives it from the
+ * stored row, which carries the famous-star sidecar.
  */
 
-import type { StarCatalogSourceType } from '../../layers/starCatalog/@types/StarCatalogSourceType';
+import type { StarCatalogSourceType } from './StarCatalogSourceType';
 import type { StarInfoDetail } from './StarInfoDetail';
 
 export type StarInfo = {
-  /** Union tag — what every FocusableTarget table / guard keys on. */
+  /** Union tag — what every card-target lookup keys on. */
   readonly type: 'starCatalog';
   readonly source: StarCatalogSourceType;
   /** Seed-table index, or the bin-stable record index for a survey star. */

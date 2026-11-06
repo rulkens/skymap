@@ -93,6 +93,8 @@ import { EARTH_REF } from '../../data/selection/earthRef';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { isOrientationFrameId } from '../../utils/url/isOrientationFrameId';
 import { decodeFramedPose } from '../../utils/url/decodeFramedPose';
+import { isKind } from '../../utils/selection/isKind';
+import type { BodySelectionRow } from '../../@types/engine/selection/BodySelectionRow';
 
 /**
  * The `focus` row's third trigger: the derived-cache write, narrowed to the ONE
@@ -151,10 +153,8 @@ const focusSource: HashParamSource = {
     // against EARTH_REF (the one home declaration) rather than a literal so the
     // omit rule cannot drift from the seed. The read is unaffected, so an
     // explicit `body-earth` from an old shared link still resolves on arrival.
-    // The `EARTH_REF.type === 'body'` clause is a discriminant narrow (always
-    // true) that lets TS reach `.id` on both tagged unions.
     const focusRow = selectFocusRow(state);
-    if (focusRow?.type === 'body' && EARTH_REF.type === 'body' && focusRow.id === EARTH_REF.id) {
+    if (isKind<BodySelectionRow>(focusRow, 'body') && focusRow.id === EARTH_REF.id) {
       return null;
     }
 

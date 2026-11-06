@@ -12,11 +12,10 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { encodeGalaxyId } from '../../../../services/url/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../../utils/math/cartesianToRaDec';
 import { placedGalaxyRow } from '../utils/placedGalaxyRow';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRef } from '../../@types/GalaxyCatalogRef';
 
-type GalaxyCatalogRef = Extract<SelectionRef, { type: 'galaxyCatalog' }>;
 /** The live reads every branch here makes; the runtime satisfies it. */
 type Records = Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'famousMeta' | 'pickCodes'>;
 

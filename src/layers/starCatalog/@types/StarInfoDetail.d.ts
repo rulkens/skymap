@@ -3,12 +3,11 @@
  * keyed by its SHAPE rather than which catalog it came from, so a future
  * curated catalog reuses `curated` instead of growing a branch. `none` is
  * real: an unlanded famous-star sidecar renders its headline alone, and so
- * does `starDetail`'s non-S-star fallthrough. Core for the same
- * reason as `StarInfo`.
+ * does `starDetail`'s non-S-star fallthrough.
  */
 
-import type { FamousStarMetaEntry } from '../loading/FamousStarMetaEntry';
-import type { StarOrbitInfo } from './StarOrbitInfo';
+import type { FamousStarMetaEntry } from '../../../@types/loading/FamousStarMetaEntry';
+import type { StarOrbitInfo } from '../../../@types/engine/StarOrbitInfo';
 
 export type StarInfoDetail =
   | {

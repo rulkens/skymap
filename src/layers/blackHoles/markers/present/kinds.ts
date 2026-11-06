@@ -1,12 +1,12 @@
 import type { SelectionKindFacts } from '../../../../@types/engine/layer/SelectionKindFacts';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
-import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
+import type { BlackHoleRef } from '../../@types/BlackHoleRef';
+import type { BlackHoleSelectionRow } from '../../@types/BlackHoleSelectionRow';
+import type { BlackHoleTarget } from '../../@types/BlackHoleTarget';
 
 export const blackHolesSelectionKinds: readonly SelectionKindFacts<
-  Extract<SelectionRef, { type: 'blackHole' }>,
-  Extract<SelectionRow, { type: 'blackHole' }>,
-  Extract<FocusableTarget, { type: 'blackHole' }>
+  BlackHoleRef,
+  BlackHoleSelectionRow,
+  BlackHoleTarget
 >[] = [
   {
     type: 'blackHole',

@@ -14,7 +14,7 @@ import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { footprintRadiusMpc } from '../../../../utils/selection/footprintRadiusMpc';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
 import { STAR_FOCUS_PREFIX } from '../../../../services/url/starFocusId';
-import { encodeStarFocusId } from '../../../../services/url/encodeStarFocusId';
+import { encodeStarFocusId } from '../utils/encodeStarFocusId';
 import { decodeStarFocusId } from '../utils/decodeStarFocusId';
 import { resolveStarRecord } from '../utils/resolveStarRecord';
 import { octreeResidency } from '../../../../services/octree/octreeResidency';
@@ -22,13 +22,11 @@ import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodySt
 import { STAR_CATALOG_SOURCE_ROWS } from '../../sources/starCatalogSourceRows';
 import { SURFACE_STANDOFF_RADII } from '../../../../utils/camera/orbitCamera/clampDistance';
 import type { DriverGeometry } from '../../../../@types/engine/camera/DriverGeometry';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
-
-type StarCatalogRef = Extract<SelectionRef, { type: 'starCatalog' }>;
+import type { StarCatalogRef } from '../../@types/StarCatalogRef';
 
 /** The headline a survey star gets: the bin carries no identity of its own. */
 const FIELD_STAR_LABEL = 'Field star';

@@ -32,7 +32,7 @@ import {
 import { shallowEqualRef } from '../../utils/object/shallowEqualRef';
 import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import type { ReconcileEffects } from '../../store/effects/ReconcileEffects';
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
+import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
 
 export function* watchSelectionWakeSaga() {
   yield* takeEvery([updateSelectionSelect, updateSelectionFocus, clearSelection], function* () {
@@ -40,16 +40,19 @@ export function* watchSelectionWakeSaga() {
     fx.requestRender();
   });
 
-  let hovered: SelectionRef | null = null;
-  yield* takeEvery(updateSelectionHover, function* (action: PayloadAction<SelectionRef | null>) {
-    const previous = hovered;
-    hovered = action.payload;
-    if (shallowEqualRef(previous, hovered)) return;
-    const labelled = [previous, hovered].some(
-      (ref) => ref !== null && selectionKindOf(ref.type).mayHaveLabel(ref),
-    );
-    if (!labelled) return;
-    const fx = yield* getContext<ReconcileEffects>('reconcile');
-    fx.requestRender();
-  });
+  let hovered: SelectionRefBase | null = null;
+  yield* takeEvery(
+    updateSelectionHover,
+    function* (action: PayloadAction<SelectionRefBase | null>) {
+      const previous = hovered;
+      hovered = action.payload;
+      if (shallowEqualRef(previous, hovered)) return;
+      const labelled = [previous, hovered].some(
+        (ref) => ref !== null && selectionKindOf(ref.type).mayHaveLabel(ref),
+      );
+      if (!labelled) return;
+      const fx = yield* getContext<ReconcileEffects>('reconcile');
+      fx.requestRender();
+    },
+  );
 }

@@ -9,6 +9,6 @@ describe('detailCardFor', () => {
     const table = detailCardTable(APP_COMPOSITION.layers);
 
     const target = { ...MILKY_WAY_INFO, ref: { type: 'milkyWay' } } as const;
-    expect(detailCardFor(table, target)).toBe(table.milkyWay);
+    expect(detailCardFor(table, target)).toBe(table.get('milkyWay'));
   });
 });

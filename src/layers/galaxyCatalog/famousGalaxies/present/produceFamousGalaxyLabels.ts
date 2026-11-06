@@ -19,7 +19,7 @@
  *
  * `famous.bin` is built in lock-step with `famous_galaxies_meta.json` (same ordering),
  * so meta entry at index `i` maps to catalog row `i`. The Milky Way is a
- * first-class FocusableTarget, not a famous-galaxies-meta row, so it never appears here;
+ * first-class card target, not a famous-galaxies-meta row, so it never appears here;
  * `produceMilkyWayLabel` labels the user's own position separately.
  *
  * ### Handed value × distance fade bakes into fadeAlpha

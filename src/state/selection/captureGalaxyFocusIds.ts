@@ -16,8 +16,9 @@ import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { RootState } from '../../store/types';
 import type { SelectionResolver } from '../../@types/engine/selection/SelectionResolver';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
-import type { GalaxyCatalogSourceType } from '../../layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogRef } from '../../layers/galaxyCatalog/@types/GalaxyCatalogRef';
 import type { Tier } from '../../@types/data/Tier';
+import { isKind } from '../../utils/selection/isKind';
 
 /**
  * A captured galaxy ref that needs re-anchoring after the tier swap.
@@ -26,7 +27,7 @@ import type { Tier } from '../../@types/data/Tier';
  */
 type GalaxyReanchor = {
   readonly slot: SelectionSlot;
-  readonly source: GalaxyCatalogSourceType;
+  readonly source: GalaxyCatalogRef['source'];
   readonly focusId: string;
 };
 
@@ -42,7 +43,7 @@ export function captureGalaxyFocusIds(
   ];
   const out: GalaxyReanchor[] = [];
   for (const { slot, ref } of slots) {
-    if (!ref || ref.type !== 'galaxyCatalog') continue;
+    if (!isKind<GalaxyCatalogRef>(ref, 'galaxyCatalog')) continue;
     // Capture only when the demand loop will actually reload this source: its
     // request drifts across the swap, and the catalog is enabled (a disabled
     // source's slot is never demanded, so no count pulse fires for it).

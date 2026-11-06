@@ -13,7 +13,7 @@
  * same shape as a `Clip`.
  *
  * Plain serializable data: no functions, no class instances. A beat's `focus`
- * is a durable `SelectionRef`, resolved to a world pose at playback time by
+ * is a durable ref, resolved to a world pose at playback time by
  * `visitBeatSaga`, so a tour authored against structure ids stays valid across
  * tier swaps and catalog rebuilds.
  */

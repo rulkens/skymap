@@ -15,7 +15,6 @@ import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { PassState } from '../../@types/engine/frame/PassState';
 import type { GalaxyCatalogId } from './@types/GalaxyCatalogId';
 import type { GalaxyCatalogSourceType } from './@types/GalaxyCatalogSourceType';
-import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
@@ -25,6 +24,9 @@ import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale
 import { structureMemberCount } from './structureMembership/utils/structureMemberCount';
 import { visibleCatalogsOf } from './records/utils/visibleCatalogsOf';
 import { setsEqual } from '../../utils/set/setsEqual';
+import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
+import { isKind } from '../../utils/selection/isKind';
+import type { StructureSelectionRow } from '../structure/@types/StructureSelectionRow';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
@@ -36,7 +38,7 @@ export function galaxyCatalogPlanner(
   // The (selected row identity, visible catalogs, catalogsVersion) triple the
   // member count was last computed against. `-1` never equals a real
   // catalogsVersion, so the very first frame always computes.
-  let memberCountRow: SelectionRow | null = null;
+  let memberCountRow: SelectionRowBase | null = null;
   let memberCountCatalogs: ReadonlySet<GalaxyCatalogId> | null = null;
   let memberCountVersion = -1;
 
@@ -74,8 +76,7 @@ export function galaxyCatalogPlanner(
           // Narrowed on the row's own tag, never a structural sniff — only a
           // `structure` arm of a cosmic category (one with galaxy members) is countable.
           structureMemberCount:
-            selectRow !== null &&
-            selectRow.type === 'structure' &&
+            isKind<StructureSelectionRow>(selectRow, 'structure') &&
             STRUCTURE_IDS_BY_SCALE.cosmic.includes(selectRow.category)
               ? structureMemberCount(selectRow, runtime.records, visibleCatalogs)
               : null,

@@ -1,6 +1,6 @@
 /**
  * DriverGeometry — what the camera needs of whatever a focus drives it toward,
- * carried on the `SelectionRow` by the arm's own `extractRow`. It rides the row
+ * carried on the row by the arm's own `extractRow`. It rides the row
  * (not a resolver threaded through the call sites) so the focus-generic camera
  * readers — drivers, approach tilt, framing, halo, pivot — stay pure functions
  * of the row and never resolve a focus id against a body table.

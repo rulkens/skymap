@@ -2,7 +2,7 @@ import type { SelectionKindRow } from '../../@types/engine/layer/SelectionKindRo
 
 /**
  * Boot-time shape check for D5's composed selection rows: no two rows may claim
- * the same `SelectionRef['type']` or the same pick-source code, or the composed
+ * the same ref `type` or the same pick-source code, or the composed
  * resolver's dispatch would be order-dependent. Called once by `createLayers`
  * (Task 11), not per resolution.
  */
@@ -11,7 +11,7 @@ export function assertSelectionRowsDisjoint(rows: readonly SelectionKindRow[]): 
   const seenSources = new Set<number>();
   for (const row of rows) {
     if (seenTypes.has(row.type)) {
-      throw new Error(`assertSelectionRowsDisjoint: duplicate SelectionRef type "${row.type}"`);
+      throw new Error(`assertSelectionRowsDisjoint: duplicate selection kind type "${row.type}"`);
     }
     seenTypes.add(row.type);
     for (const source of row.pickSources) {

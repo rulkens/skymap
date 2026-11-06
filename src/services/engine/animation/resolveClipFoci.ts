@@ -44,7 +44,7 @@
  *
  *   - `focusId(id)` or `focusId(null)` → `{ kind: 'focus', ref }`
  *     `null` maps to `{ kind: 'focus', ref: null }`.  A non-null id resolves
- *     through `resolve.resolveFocusId` to a `SelectionRef`.  There is no `focus()`
+ *     through `resolve.resolveFocusId` to a ref.  There is no `focus()`
  *     helper that builds the resolved arm — `focus()` in `effectHelpers.ts`
  *     builds the UNRESOLVED `kind:'focusId'` arm.
  *
@@ -86,6 +86,7 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAn
 import { imagePlaneBasis } from '../../../utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
+import type { PlacedRow } from '../../../@types/engine/selection/PlacedRow';
 
 /**
  * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
@@ -328,7 +329,7 @@ function resolveFraming(
   const ref = resolve.resolveFocusId(id);
   if (ref === null) {
     throw new Error(
-      `resolveClipFoci: could not resolve id '${id}' to a SelectionRef. ` +
+      `resolveClipFoci: could not resolve id '${id}' to a selection ref. ` +
         `Ensure the readiness gate (clipFociReady) cleared before calling resolveClipFoci.`,
     );
   }
@@ -340,8 +341,9 @@ function resolveFraming(
     );
   }
   const { focus } = selectionKindOf(row.type);
-  if (focus === null || !('positionMpc' in row)) {
+  if (focus === null) {
     throw new Error(`resolveClipFoci: id '${id}' names a ${row.type}, which has no focus target.`);
   }
-  return arrivalFraming(row, focus, fovYRad);
+  // A kind with a focus places its rows (`SelectionKindFacts.focus`).
+  return arrivalFraming(row as PlacedRow, focus, fovYRad);
 }

@@ -57,6 +57,7 @@ import type { Octree } from '../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
 import type { StarColumns } from '../../../src/layers/starCatalog/survey/@types/StarColumns';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import type { PlacedRow } from '../../../src/@types/engine/selection/PlacedRow';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -288,6 +289,6 @@ describe('watchSelectionRowsSaga', () => {
     const expectedPos = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
     const j2000Pos = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
     expect(row).toMatchObject({ type: 'body', id: 'earth', positionMpc: [...expectedPos] });
-    expect((row as { positionMpc: number[] }).positionMpc).not.toEqual([...j2000Pos]);
+    expect((row as PlacedRow).positionMpc).not.toEqual([...j2000Pos]);
   });
 });

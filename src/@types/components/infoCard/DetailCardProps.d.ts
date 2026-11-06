@@ -1,11 +1,10 @@
-import type { FocusableTarget } from '../../engine/FocusableTarget';
+import type { FocusableTargetBase } from '../../engine/selection/FocusableTargetBase';
 import type { CardLayout } from './CardLayout';
-import type { SelectionKind } from '../../engine/SelectionKind';
 
-/** Props InfoCard passes to a detail-card variant, identical across arms.
- * `target` is narrowed to arm `K` by the table key, not by a runtime guard. */
-export type DetailCardProps<K extends SelectionKind = SelectionKind> = {
-  target: Extract<FocusableTarget, { type: K }>;
+/** Props InfoCard passes to a detail-card variant, identical across kinds. A Layer's card
+ * names its own `Target`; InfoCard's table lookup by `target.type` is the narrowing proof. */
+export type DetailCardProps<Target extends FocusableTargetBase = FocusableTargetBase> = {
+  target: Target;
   isPinned: boolean;
   /** `phone` drops the panel frame (the sheet owns the surface). Defaults to `panel`. */
   layout?: CardLayout;

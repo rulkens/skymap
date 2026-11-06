@@ -17,7 +17,6 @@ import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/sele
 import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
 import { bodySelectionRow } from '../../../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../../src/layers/structure/picking/present/structureSelectionRow';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { galaxyRowRuntime, starRowRuntime } from '../../../support/layerPickCodes';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
@@ -31,8 +30,9 @@ import {
   structureRowRuntime,
   zoneOfAvoidancePickCode,
 } from '../../../support/layerPickCodes';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
-function roundTrip<Ref extends SelectionRef>(row: SelectionKindRow<Ref>, ref: Ref): Ref | null {
+function roundTrip<Ref extends SelectionRefBase>(row: SelectionKindRow<Ref>, ref: Ref): Ref | null {
   const word = row.encodePick(ref);
   const pick = unpackPick(word!)!;
   return row.resolvePick(pick);

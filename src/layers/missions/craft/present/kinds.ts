@@ -1,13 +1,13 @@
 import { BODY_FOCUS } from '../../../../data/selection/bodyFocus';
 import type { SelectionKindFacts } from '../../../../@types/engine/layer/SelectionKindFacts';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
-import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
+import type { CraftRef } from '../../@types/CraftRef';
+import type { CraftSelectionRow } from '../../@types/CraftSelectionRow';
+import type { CraftTarget } from '../../@types/CraftTarget';
 
 export const missionsSelectionKinds: readonly SelectionKindFacts<
-  Extract<SelectionRef, { type: 'craft' }>,
-  Extract<SelectionRow, { type: 'craft' }>,
-  Extract<FocusableTarget, { type: 'craft' }>
+  CraftRef,
+  CraftSelectionRow,
+  CraftTarget
 >[] = [
   {
     type: 'craft',

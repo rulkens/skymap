@@ -5,11 +5,11 @@
  * the two back apart on the all-digits test a boot assert keeps unambiguous.
  */
 
-import { STAR_FOCUS_PREFIX } from './starFocusId';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../data/bodies/seededStarCatalogsBySource';
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
+import { STAR_FOCUS_PREFIX } from '../../../../services/url/starFocusId';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
+import type { StarCatalogRef } from '../../@types/StarCatalogRef';
 
-export function encodeStarFocusId(ref: Extract<SelectionRef, { type: 'starCatalog' }>): string {
+export function encodeStarFocusId(ref: StarCatalogRef): string {
   // Falls back to `ref.index` when the seeded lookup misses — unreachable
   // today (every ref reaching here came from a resolved row), but an
   // out-of-range seeded ref would silently encode (and later decode) as a

@@ -11,9 +11,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import InfoCard from '../../../../src/components/InfoCard/InfoCard';
 import { MILKY_WAY_INFO } from '../../../../src/data/milkyWay/milkyWayInfo';
-import type { FocusableTarget } from '../../../../src/@types/engine/FocusableTarget';
+import type { FocusableTargetBase } from '../../../../src/@types/engine/selection/FocusableTargetBase';
 
-const MILKY_WAY_TARGET: FocusableTarget = { ...MILKY_WAY_INFO, ref: { type: 'milkyWay' } };
+const MILKY_WAY_TARGET: FocusableTargetBase = { ...MILKY_WAY_INFO, ref: { type: 'milkyWay' } };
 
 describe('InfoCard Milky Way', () => {
   it('renders the Milky Way card for a milkyWay selection with its card-shot thumbnail', () => {
@@ -31,7 +31,7 @@ describe('InfoCard Milky Way', () => {
   });
 
   it("the Milky Way card's Focus button calls onFocus with the Milky Way target", () => {
-    const onFocus = vi.fn<(t: FocusableTarget) => void>();
+    const onFocus = vi.fn<(t: FocusableTargetBase) => void>();
     render(createElement(InfoCard, { hovered: null, selected: MILKY_WAY_TARGET, onFocus }));
     fireEvent.click(screen.getByText('Focus'));
     expect(onFocus).toHaveBeenCalledWith(MILKY_WAY_TARGET);

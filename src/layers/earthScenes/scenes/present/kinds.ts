@@ -1,13 +1,13 @@
 import { BODY_FOCUS } from '../../../../data/selection/bodyFocus';
 import type { SelectionKindFacts } from '../../../../@types/engine/layer/SelectionKindFacts';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
-import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
+import type { EarthSceneRef } from '../../@types/EarthSceneRef';
+import type { EarthSceneSelectionRow } from '../../@types/EarthSceneSelectionRow';
+import type { EarthSceneTarget } from '../../@types/EarthSceneTarget';
 
 export const earthScenesSelectionKinds: readonly SelectionKindFacts<
-  Extract<SelectionRef, { type: 'earthScene' }>,
-  Extract<SelectionRow, { type: 'earthScene' }>,
-  Extract<FocusableTarget, { type: 'earthScene' }>
+  EarthSceneRef,
+  EarthSceneSelectionRow,
+  EarthSceneTarget
 >[] = [
   {
     type: 'earthScene',

@@ -12,10 +12,8 @@ import { placedStructureRow } from '../utils/placedStructureRow';
 import { resolveStructureFromPick } from './resolveStructureFromPick';
 import type { StructureRuntime } from '../../@types/StructureRuntime';
 import type { StructureStore } from '../../catalog/@types/StructureStore';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
-
-type StructureRef = Extract<SelectionRef, { type: 'structure' }>;
+import type { StructureRef } from '../../@types/StructureRef';
 
 /** A bare token must satisfy this character class to be a structure seed id. */
 const SAFE_ID_RE = /^[a-z0-9_-]+$/i;

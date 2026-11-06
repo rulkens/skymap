@@ -4,7 +4,7 @@
 // structure hover preview branch and its suppression rule.
 //
 // InfoCard accepts a single `hovered` and a single `selected` prop — each
-// typed as `GalaxyInfo | StructureInfo | null` (the `FocusableTarget`
+// typed as `GalaxyInfo | StructureInfo | null` (the card target
 // union).  The component dispatches via the DETAIL_CARD table (keyed on
 // `type`) internally; there are no separate structure slots.
 //
@@ -24,7 +24,8 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import InfoCard from '../../../src/components/InfoCard/InfoCard';
 import { createAppStore } from '../../../src/store/createAppStore';
-import type { FocusableTarget } from '../../../src/@types/engine/FocusableTarget';
+import type { FocusableTargetBase } from '../../../src/@types/engine/selection/FocusableTargetBase';
+import type { StructureTarget } from '../../../src/layers/structure/@types/StructureTarget';
 
 // A pinned structure renders its Detail through StructureDetailCardContainer
 // (the member-count fact is a store read), so every render below needs a
@@ -34,7 +35,7 @@ function withStore(children: ReactNode) {
   return createElement(Provider, { store, children });
 }
 
-const virgo: Extract<FocusableTarget, { type: 'structure' }> = {
+const virgo: StructureTarget = {
   type: 'structure',
   ref: { type: 'structure', id: 'virgo-m87' },
   id: 'virgo-m87',
@@ -44,7 +45,7 @@ const virgo: Extract<FocusableTarget, { type: 'structure' }> = {
   featured: true,
   physicalRadiusMpc: 2.2,
 };
-const coma: Extract<FocusableTarget, { type: 'structure' }> = {
+const coma: StructureTarget = {
   type: 'structure',
   ref: { type: 'structure', id: 'coma' },
   id: 'coma',
@@ -96,7 +97,7 @@ const galaxyStub = {
   diameterProvenance: 'fallback (30 kpc)',
   orientation: { axisRatio: 1, positionAngleDeg: 0, provenance: 'fallback' },
   thumbnailUrl: '',
-} as unknown as FocusableTarget;
+} as unknown as FocusableTargetBase;
 
 describe('InfoCard hovered structure', () => {
   it('renders the structure hover preview when only a hovered structure is set', () => {

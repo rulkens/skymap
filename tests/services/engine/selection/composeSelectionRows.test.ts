@@ -47,7 +47,6 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { Octree } from '../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
@@ -64,6 +63,7 @@ import {
 import { placedStructureRow } from '../../../../src/layers/structure/picking/utils/placedStructureRow';
 import { MILKY_WAY_ROW } from '../../../fixtures/milkyWayRow';
 import { footprintRadiusMpc } from '../../../../src/utils/selection/footprintRadiusMpc';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
 const SIM_DAYS = CONST_J2000;
 const EARTH_POS = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
@@ -450,7 +450,7 @@ describe('resolveFocusId, composed', () => {
 
   it('round-trips a seeded star id from every seeded table', async () => {
     const siriusIdx = SCENE_STARS.findIndex((star) => star.id === 'sirius');
-    const cases: readonly (readonly [string, SelectionRef])[] = [
+    const cases: readonly (readonly [string, SelectionRefBase])[] = [
       ['star-sirius', { type: 'starCatalog', source: Source.FamousStar, index: siriusIdx }],
       ['star-sun', { type: 'starCatalog', source: Source.Sun, index: 0 }],
       [
@@ -480,7 +480,7 @@ describe('resolveFocusId, composed', () => {
       galaxies,
       starsFixture(await makeStarCatalog()),
     );
-    const ref: SelectionRef = { type: 'starCatalog', source: Source.GaiaStars, index: 42 };
+    const ref: SelectionRefBase = { type: 'starCatalog', source: Source.GaiaStars, index: 42 };
     expect(loaded.resolveFocusId('star-42')).toEqual(ref);
     expect(loaded.focusIdOf(ref)).toBe('star-42');
     expect(loaded.resolveFocusId('star-0')).toEqual({
@@ -508,7 +508,7 @@ describe('resolveFocusId, composed', () => {
 
 describe('focusIdOf ∘ resolveFocusId round-trip', () => {
   it('SDSS ref (large objId) → sdss-<objId> → same ref', () => {
-    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 };
+    const ref: SelectionRefBase = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 };
     const id = resolver.focusIdOf(ref);
     expect(id).toBe('sdss-1237668393006604288');
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
@@ -521,7 +521,7 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
       ...galaxies,
       catalogs: new Map([[Source.Glade, makeCloud(0n, [1, 0, 0])]]),
     } as GalaxyRowFixture);
-    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
+    const ref: SelectionRefBase = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
     const id = posDeps.focusIdOf(ref);
     expect(id).toBe('pos@0.0000,0.0000,1.00');
     expect(posDeps.resolveFocusId(id!)).toEqual(ref);
@@ -531,14 +531,14 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
   });
 
   it('FamousGalaxy ref → famous seed id → same ref', () => {
-    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: 0 };
+    const ref: SelectionRefBase = { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: 0 };
     const id = resolver.focusIdOf(ref);
     expect(id).toBe('m31');
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
   });
 
   it('GLADE ref with a catalog id → pgc-<objId> → same ref', () => {
-    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
+    const ref: SelectionRefBase = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
     const id = resolver.focusIdOf(ref);
     expect(id).toBe('pgc-99');
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
@@ -546,7 +546,7 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
 
   it('structure ref → its durable id → same ref', () => {
     const virgoId = 'galaxy-cluster-virgo';
-    const ref: SelectionRef = { type: 'structure', id: virgoId };
+    const ref: SelectionRefBase = { type: 'structure', id: virgoId };
     expect(resolver.focusIdOf(ref)).toBe(virgoId);
     expect(resolver.resolveFocusId(virgoId)).toEqual(ref);
   });
@@ -573,7 +573,7 @@ describe('focusIdOf over the Layers the shared resolver omits', () => {
     () => NO_KINDS_OFF,
   );
   const AT = unixMsToJulianDays(Date.parse('2026-10-28T12:00:00Z'));
-  const IDS: [string, SelectionRef, string | null][] = [
+  const IDS: [string, SelectionRefBase, string | null][] = [
     ['craft', { type: 'craft', id: 'hubble' as never }, 'body-hubble'],
     ['earth scene', { type: 'earthScene', id: 'soendermarken' as never }, 'body-soendermarken'],
     ['zone of avoidance', { type: 'zoneOfAvoidance' }, null],

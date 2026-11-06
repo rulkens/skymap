@@ -1,13 +1,13 @@
 import { BODY_FOCUS } from '../../../../data/selection/bodyFocus';
 import type { SelectionKindFacts } from '../../../../@types/engine/layer/SelectionKindFacts';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
-import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
+import type { SatelliteRef } from '../../@types/SatelliteRef';
+import type { SatelliteSelectionRow } from '../../@types/SatelliteSelectionRow';
+import type { SatelliteTarget } from '../../@types/SatelliteTarget';
 
 export const satellitesSelectionKinds: readonly SelectionKindFacts<
-  Extract<SelectionRef, { type: 'satellite' }>,
-  Extract<SelectionRow, { type: 'satellite' }>,
-  Extract<FocusableTarget, { type: 'satellite' }>
+  SatelliteRef,
+  SatelliteSelectionRow,
+  SatelliteTarget
 >[] = [
   {
     type: 'satellite',

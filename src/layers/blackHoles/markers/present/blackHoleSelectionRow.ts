@@ -16,14 +16,12 @@ import { BLACK_HOLE_SOURCE_ROWS } from '../../sources/blackHoleSourceRows';
 import { blackHoleAnchorId } from './blackHoleAnchorId';
 import { BLACK_HOLE_FOCUS_PREFIX } from './blackHoleFocusPrefix';
 import { encodeBlackHoleFocusId } from './encodeBlackHoleFocusId';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
+import type { BlackHoleRef } from '../../@types/BlackHoleRef';
 
 const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry);
 
-export function blackHoleSelectionRow(
-  pickCode: number,
-): SelectionKindRow<Extract<SelectionRef, { type: 'blackHole' }>> {
+export function blackHoleSelectionRow(pickCode: number): SelectionKindRow<BlackHoleRef> {
   return {
     type: 'blackHole',
     pickSources: [pickCode],

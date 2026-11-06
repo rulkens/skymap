@@ -2,14 +2,14 @@ import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../../data/milkyWay/galacticCen
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { MILKY_WAY_INFO } from '../../../../data/milkyWay/milkyWayInfo';
 import type { SelectionKindFacts } from '../../../../@types/engine/layer/SelectionKindFacts';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
-import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
+import type { MilkyWayRef } from '../../@types/MilkyWayRef';
+import type { MilkyWaySelectionRow } from '../../@types/MilkyWaySelectionRow';
+import type { MilkyWayTarget } from '../../@types/MilkyWayTarget';
 
 export const milkyWaySelectionKinds: readonly SelectionKindFacts<
-  Extract<SelectionRef, { type: 'milkyWay' }>,
-  Extract<SelectionRow, { type: 'milkyWay' }>,
-  Extract<FocusableTarget, { type: 'milkyWay' }>
+  MilkyWayRef,
+  MilkyWaySelectionRow,
+  MilkyWayTarget
 >[] = [
   {
     type: 'milkyWay',

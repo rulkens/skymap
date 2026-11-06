@@ -5,10 +5,8 @@
  */
 
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
-
-type ZoneOfAvoidanceRef = Extract<SelectionRef, { type: 'zoneOfAvoidance' }>;
+import type { ZoneOfAvoidanceRef } from '../../@types/ZoneOfAvoidanceRef';
 
 export function zoneOfAvoidanceSelectionRow(
   pickCode: number,

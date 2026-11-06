@@ -120,7 +120,7 @@ describe('clipFociReady', () => {
 
   it('clipFociReady is true for a structure id', () => {
     // Structure ids resolve by format alone — resolveFocusId returns a
-    // SelectionRef without consulting catalogs or famousMeta. The
+    // selection ref without consulting catalogs or famousMeta. The
     // readiness gate must return true regardless of what deps contains.
     const structureClip: ClipData = {
       start: 'live',

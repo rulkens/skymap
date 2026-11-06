@@ -12,24 +12,24 @@
 import { useCallback } from 'react';
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { targetEq } from '../../services/engine/helpers/targetEq';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { APP_COMPOSITION } from '../../compositions/app';
 import { detailCardTable } from './detailCardTable';
 import { detailCardFor } from '../../utils/infoCard/detailCardFor';
 import styles from './InfoCard.module.css';
+import type { FocusableTargetBase } from '../../@types/engine/selection/FocusableTargetBase';
 
 // Folded at module load so a missing arm throws at boot, not on the first hover.
 const DETAIL_CARD = detailCardTable(APP_COMPOSITION.layers);
 
 export type InfoCardProps = {
   /** The target under the cursor, or null on empty sky. */
-  hovered: FocusableTarget | null;
+  hovered: FocusableTargetBase | null;
   /** The pinned target, or null. Owns the detail slot; a different hovered target previews beneath. */
-  selected: FocusableTarget | null;
+  selected: FocusableTargetBase | null;
   /** The pinned card's "Focus" pill. */
-  onFocus?: (target: FocusableTarget) => void;
+  onFocus?: (target: FocusableTargetBase) => void;
   /** The pinned card's Close (×); same as Esc. */
   onClose?: () => void;
 };

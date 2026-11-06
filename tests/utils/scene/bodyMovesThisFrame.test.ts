@@ -11,11 +11,11 @@ import { describe, it, expect } from 'vitest';
 
 import { bodyMovesThisFrame } from '../../../src/utils/scene/bodyMovesThisFrame';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
-import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
+import type { SelectionRowBase } from '../../../src/@types/engine/selection/SelectionRowBase';
 
-function bodyRow(id: string): SelectionRow {
+function bodyRow(id: string): SelectionRowBase {
   return bodyRowAt(id, [0, 0, 0]);
 }
 

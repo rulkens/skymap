@@ -32,6 +32,8 @@ import { BODY_FOCUS } from '../../data/selection/bodyFocus';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import type { SagaContext } from '../../store/types';
 import { isSceneBodyId } from '../../utils/scene/isSceneBodyId';
+import { isKind } from '../../utils/selection/isKind';
+import type { BodyRef } from '../../@types/engine/selection/BodyRef';
 
 export function* watchFlyToLonLatSaga() {
   yield* takeLatest(flyToLonLat, function* (action) {
@@ -64,7 +66,7 @@ export function* watchFlyToLonLatSaga() {
     if (host === null) return;
 
     const focus = yield* select(selectFocusRef);
-    const sameBody = focus?.type === 'body' && focus.id === body;
+    const sameBody = isKind<BodyRef>(focus, 'body') && focus.id === body;
     // Read in the body's fixed metres: the live world pose's `distance` is a range
     // to whatever it aims at, not the eye's height.
     const here = toBodyArm(runtime.from, basis, basis, body, host.state);
@@ -97,7 +99,8 @@ export function* watchFlyToLonLatSaga() {
       world.roll ?? 0,
     );
 
-    if (!sameBody) yield* put(updateSelectionFocus({ type: 'body', id: body }));
+    const bodyRef: BodyRef = { type: 'body', id: body };
+    if (!sameBody) yield* put(updateSelectionFocus(bodyRef));
     yield* put(
       startCameraTween({
         from: runtime.from,

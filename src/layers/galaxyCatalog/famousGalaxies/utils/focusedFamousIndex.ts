@@ -1,5 +1,7 @@
 import { Source } from '../../../../data/source';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
+import type { SelectionRefBase } from '../../../../@types/engine/selection/SelectionRefBase';
+import { isKind } from '../../../../utils/selection/isKind';
+import type { GalaxyCatalogRef } from '../../@types/GalaxyCatalogRef';
 
 /**
  * focusedFamousIndex — a ref's famous-catalog row index, or null for nothing /
@@ -11,8 +13,8 @@ import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
  * meta ⋈ catalog label join is index-aligned, so the row index IS the label
  * identity.
  */
-export function focusedFamousIndex(ref: SelectionRef | null): number | null {
-  return ref !== null && ref.type === 'galaxyCatalog' && ref.source === Source.FamousGalaxy
+export function focusedFamousIndex(ref: SelectionRefBase | null): number | null {
+  return isKind<GalaxyCatalogRef>(ref, 'galaxyCatalog') && ref.source === Source.FamousGalaxy
     ? ref.index
     : null;
 }

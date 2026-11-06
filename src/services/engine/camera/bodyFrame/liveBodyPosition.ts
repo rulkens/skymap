@@ -11,11 +11,11 @@
 
 import { selectionDriver } from '../../../../utils/selection/selectionDriver';
 import type { BodyState } from '../../../../@types/scene/BodyState';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { SelectionRowBase } from '../../../../@types/engine/selection/SelectionRowBase';
 
 export function liveBodyPosition(
-  focusRow: SelectionRow | null,
+  focusRow: SelectionRowBase | null,
   bodies: ReadonlyMap<string, BodyState>,
 ): Vec3 | null {
   const id = selectionDriver(focusRow)?.poseId ?? null;

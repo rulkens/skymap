@@ -10,7 +10,7 @@
  * verify each kind's `toFocusable` round-trips correctly.
  *
  * The derived `selectHoveredFocusable` / `selectSelectedFocusable` selectors
- * each build a fresh `FocusableTarget` from their slot's `SelectionRow` — the memoization means the same row reference
+ * each build a fresh card target from their slot's row — the memoization means the same row reference
  * returns the same target reference, which is the core invariant tested here.
  */
 
@@ -33,7 +33,6 @@ import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants
 import { Source } from '../../../src/data/source';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { RootState } from '../../../src/store/types';
-import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
@@ -67,12 +66,13 @@ import {
 import type { SelectionKindRow } from '../../../src/@types/engine/layer/SelectionKindRow';
 import type { SatellitesRuntime } from '../../../src/layers/satellites/@types/SatellitesRuntime';
 import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+import type { SelectionRefBase } from '../../../src/@types/engine/selection/SelectionRefBase';
 
 installAppSelectionKinds();
 
 // --- fixtures -----------------------------------------------------------------
 
-const galaxyRef: SelectionRef = { type: 'galaxyCatalog', source: Source.SDSS, index: 7 };
+const galaxyRef: SelectionRefBase = { type: 'galaxyCatalog', source: Source.SDSS, index: 7 };
 
 const galaxyRow = makeGalaxyRow({
   index: 7,
@@ -117,7 +117,7 @@ describe('selectIsSelectionActive', () => {
   });
 });
 
-// --- derived FocusableTarget selectors via live store -------------------------
+// --- derived card-target selectors via live store -------------------------
 
 describe('selectHoveredFocusable', () => {
   it('returns null when hover row is null', () => {
@@ -175,8 +175,8 @@ const { catalog: satellites } = buildSatelliteCatalog(
 );
 
 /** Each kind's own row extractor and a ref it resolves. */
-function kindCase<Ref extends SelectionRef>(row: SelectionKindRow<Ref>, ref: Ref) {
-  return { row: row as unknown as SelectionKindRow, ref: ref as SelectionRef };
+function kindCase<Ref extends SelectionRefBase>(row: SelectionKindRow<Ref>, ref: Ref) {
+  return { row: row as unknown as SelectionKindRow, ref: ref as SelectionRefBase };
 }
 
 const KIND_CASES = [

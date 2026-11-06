@@ -7,10 +7,8 @@ import {
   MILKY_WAY_DISC_RADIUS_KPC,
 } from '../../../../data/milkyWay/galacticCenter';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
-
-type MilkyWayRef = Extract<SelectionRef, { type: 'milkyWay' }>;
+import type { MilkyWayRef } from '../../@types/MilkyWayRef';
 
 export function milkyWaySelectionRow(pickCode: number): SelectionKindRow<MilkyWayRef> {
   return {

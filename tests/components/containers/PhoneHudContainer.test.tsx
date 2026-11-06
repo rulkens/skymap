@@ -13,9 +13,9 @@ import stackStyles from '../../../src/components/BottomStack/BottomStack.module.
 import { viewCoverRoute } from '../../../src/store/constants';
 import { dismissSplash, setPaletteOpen, setUiHidden } from '../../../src/state/ui/uiSlice';
 import { selectSplashVisible } from '../../../src/state/ui/selectors';
-import type { FocusableTarget } from '../../../src/@types/engine/FocusableTarget';
+import type { FocusableTargetBase } from '../../../src/@types/engine/selection/FocusableTargetBase';
 
-let selected: FocusableTarget | null = null;
+let selected: FocusableTargetBase | null = null;
 let ticks = 0;
 
 vi.mock('../../../src/state/selection/selectors', async (importOriginal) => ({
@@ -38,13 +38,13 @@ vi.mock('../../../src/components/containers/ScaleBracketContainer', () => ({
   default: () => null,
 }));
 
-const structure = (id: string): FocusableTarget =>
+const structure = (id: string): FocusableTargetBase =>
   ({
     type: 'structure',
     ref: { type: 'structure', id },
     id,
     name: id,
-  }) as unknown as FocusableTarget;
+  }) as unknown as FocusableTargetBase;
 
 function setup() {
   const { store } = createTestStore();
@@ -55,7 +55,7 @@ function setup() {
   );
   // Select by changing the variable the stub reads, then write the store to the OPPOSITE
   // uiHidden: react-redux skips the selector when the state reference is unchanged.
-  const select = (next: FocusableTarget | null) =>
+  const select = (next: FocusableTargetBase | null) =>
     act(() => {
       selected = next;
       store.dispatch(setUiHidden((ticks += 1) % 2 === 1));

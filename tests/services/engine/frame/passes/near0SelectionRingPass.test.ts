@@ -3,7 +3,6 @@ import { near0SelectionRingPass } from '../../../../../src/services/engine/frame
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
-import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import { Source } from '../../../../../src/data/source';
 import { near0RingRadiusPx } from '../../../../../src/services/engine/helpers/near0RingRadiusPx';
@@ -16,6 +15,8 @@ import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeo
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
 import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+import type { SelectionRowBase } from '../../../../../src/@types/engine/selection/SelectionRowBase';
+import type { StarCatalogSelectionRow } from '../../../../../src/layers/starCatalog/@types/StarCatalogSelectionRow';
 
 installAppSelectionKinds();
 
@@ -29,7 +30,7 @@ function makeRendererSpy() {
 }
 
 // The star arm — a self-contained display projection of a picked survey star.
-const STAR_ROW: SelectionRow = {
+const STAR_ROW: StarCatalogSelectionRow = {
   type: 'starCatalog',
   source: Source.GaiaStars,
   index: 7,
@@ -43,7 +44,7 @@ const STAR_ROW: SelectionRow = {
 
 // A galaxy row — yields a NON-null halo, but tagged COSMO. It exercises the
 // distinction between "no halo" and "halo for the other slab".
-const GALAXY_ROW: SelectionRow = makeGalaxyRow({
+const GALAXY_ROW: SelectionRowBase = makeGalaxyRow({
   source: Source.Glade,
   z: 100,
   diameterKpc: 60,
@@ -61,7 +62,10 @@ const STRUCTURE_ROW: StructureInfo = {
   physicalRadiusMpc: 2,
 };
 
-function stateWith(row: SelectionRow | null, renderer: unknown = makeRendererSpy()): EngineState {
+function stateWith(
+  row: SelectionRowBase | null,
+  renderer: unknown = makeRendererSpy(),
+): EngineState {
   return {
     gpu: { selectionRingRenderer: renderer },
     selectionRows: { select: row, focus: null, hover: null },
@@ -80,7 +84,7 @@ describe('near0SelectionRingPass.enabled', () => {
 
   it('is false for a structure row (the marker pass owns that halo)', () => {
     expect(
-      near0SelectionRingPass.enabled(stateWith(STRUCTURE_ROW as SelectionRow), CTX, VIEW_STUB),
+      near0SelectionRingPass.enabled(stateWith(STRUCTURE_ROW as SelectionRowBase), CTX, VIEW_STUB),
     ).toBe(false);
   });
 
@@ -99,7 +103,7 @@ describe('near0SelectionRingPass.enabled', () => {
 // (foregroundFrustum's `orbit × 100`) drops below the pinned star's anchor
 // distance, and the un-clamped ring quad frustum-clips away while the star
 // sprite (which clamps clip-z) survives.
-const FAR_STAR_ROW: SelectionRow = {
+const FAR_STAR_ROW: StarCatalogSelectionRow = {
   type: 'starCatalog',
   source: Source.GaiaStars,
   index: 3,
@@ -171,7 +175,7 @@ describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
 });
 
 describe('near0SelectionRingPass.draw — live body position', () => {
-  // A body's SelectionRow snapshots its position at pick time, but the sim clock
+  // A body's SelectionRowBase snapshots its position at pick time, but the sim clock
   // keeps orbiting it. The ring must centre on the LIVE position this frame, not
   // the stale snapshot. This fails against the old code, which centred on
   // `halo.worldPos` (= the stale `row.positionMpc`).
@@ -184,7 +188,7 @@ describe('near0SelectionRingPass.draw — live body position', () => {
     // A deliberately-wrong snapshot: a magnitude/direction the live Earth never
     // has (Earth's heliocentric offset is ~1 AU ≈ 5e-12 Mpc). Both stay well
     // inside the far plane below, so neither is length-clamped.
-    const staleRow: SelectionRow = bodyRowAt('earth', [1e-6, 0, 0]);
+    const staleRow: SelectionRowBase = bodyRowAt('earth', [1e-6, 0, 0]);
 
     const renderer = makeRendererSpy();
     const state = stateWith(staleRow, renderer);

@@ -31,12 +31,13 @@ import { SGR_A_STAR_MASS_SOLAR } from '../../../../../src/data/bodies/sgrAStarMa
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
-import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { blackHolePickCode } from '../../../../support/layerPickCodes';
 import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
+import type { SelectionRowBase } from '../../../../../src/@types/engine/selection/SelectionRowBase';
+import type { StarCatalogSelectionRow } from '../../../../../src/layers/starCatalog/@types/StarCatalogSelectionRow';
 
-const EARTH_ROW: SelectionRow = bodyRowAt('earth', [0, 0, 0]);
+const EARTH_ROW: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
 const SUN_RADIUS_M = 696340000;
 
@@ -46,7 +47,7 @@ describe('pivotRadiusMpc', () => {
   });
 
   it('gives a star row its stamped radius too — same near-field discrete case', () => {
-    const star: SelectionRow = {
+    const star: StarCatalogSelectionRow = {
       type: 'starCatalog',
       source: Source.GaiaStars,
       index: 7,
@@ -92,7 +93,7 @@ describe('pivotFraming', () => {
     // measure an altitude over. The floor is the wheel-zoom snap regression:
     // the whale must keep the standoff the fly-to landed against instead of
     // being flung out to the backstop.
-    const whale: SelectionRow = bodyRowAt('whale', [0, 0, 0]);
+    const whale: SelectionRowBase = bodyRowAt('whale', [0, 0, 0]);
     const seed = findByIdOrThrow(SCENE_MESH_BODIES, 'whale', 'test');
     expect(pivotFraming(whale).radiusMpc).toBeNull();
     expect(pivotFraming(whale).floorMpc).toBeCloseTo(
@@ -103,7 +104,7 @@ describe('pivotFraming', () => {
   });
 
   it('falls through to the global ratio for a star, and to the absolute floor for a galaxy / no focus', () => {
-    const star: SelectionRow = {
+    const star: StarCatalogSelectionRow = {
       type: 'starCatalog',
       source: Source.GaiaStars,
       index: 7,

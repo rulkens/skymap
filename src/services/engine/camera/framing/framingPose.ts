@@ -7,15 +7,17 @@
 
 import { arrivalFraming } from './arrivalFraming';
 import { selectionKindOf } from '../../selection/selectionKindOf';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
+import type { SelectionRowBase } from '../../../../@types/engine/selection/SelectionRowBase';
+import type { PlacedRow } from '../../../../@types/engine/selection/PlacedRow';
 
-export function framingPose(row: SelectionRow, fovYRad: number, from: CameraPose): CameraPose {
+export function framingPose(row: SelectionRowBase, fovYRad: number, from: CameraPose): CameraPose {
   const { focus } = selectionKindOf(row.type);
   // Unreachable by construction: the focus tween and navigate sagas drop an unfocusable row.
-  if (focus === null || !('positionMpc' in row)) {
+  if (focus === null) {
     throw new Error(`framingPose: a ${row.type} row has no focus target`);
   }
-  const { target, distance } = arrivalFraming(row, focus, fovYRad);
+  // A kind with a focus places its rows (`SelectionKindFacts.focus`).
+  const { target, distance } = arrivalFraming(row as PlacedRow, focus, fovYRad);
   return { target, yaw: from.yaw, pitch: from.pitch, distance };
 }

@@ -1,14 +1,14 @@
 import { Source } from '../../../data/source';
 import { buildGalaxyInfo } from '../../../services/engine/helpers/buildGalaxyInfo';
 import type { SelectionKindFacts } from '../../../@types/engine/layer/SelectionKindFacts';
-import type { SelectionRef } from '../../../@types/engine/SelectionRef';
-import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
+import type { GalaxyCatalogRef } from '../@types/GalaxyCatalogRef';
+import type { GalaxyCatalogSelectionRow } from '../@types/GalaxyCatalogSelectionRow';
+import type { GalaxyCatalogTarget } from '../@types/GalaxyCatalogTarget';
 
 export const galaxyCatalogSelectionKinds: readonly SelectionKindFacts<
-  Extract<SelectionRef, { type: 'galaxyCatalog' }>,
-  Extract<SelectionRow, { type: 'galaxyCatalog' }>,
-  Extract<FocusableTarget, { type: 'galaxyCatalog' }>
+  GalaxyCatalogRef,
+  GalaxyCatalogSelectionRow,
+  GalaxyCatalogTarget
 >[] = [
   {
     type: 'galaxyCatalog',

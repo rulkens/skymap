@@ -15,18 +15,18 @@ import { sceneBodyPickId } from '../../../../utils/picking/sceneBodyPickId';
 import { bodyRowAt } from '../../../../utils/scene/bodyRowAt';
 import { isBodyKindId } from './isBodyKindId';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../@types/engine/layer/SelectionKindRow';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
 import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
+import type { BodyRef } from '../../../../@types/engine/selection/BodyRef';
 
 export function bodySelectionRow(
   runtime: Pick<BodyRuntime, 'pickCodes'>,
-): SelectionKindRow<Extract<SelectionRef, { type: 'body' }>> {
+): SelectionKindRow<BodyRef> {
   const { pickCodes } = runtime;
   const codeOf = bodyCodeOf(pickCodes);
   // Exact, not the whole prefix: a craft's or an Earth scene's `body-<id>` is its own kind's claim.
-  const decode = (id: string): Extract<SelectionRef, { type: 'body' }> | null => {
+  const decode = (id: string): BodyRef | null => {
     if (!id.startsWith(BODY_FOCUS_PREFIX)) return null;
     const bodyId = id.slice(BODY_FOCUS_PREFIX.length);
     return isBodyKindId(bodyId) ? { type: 'body', id: bodyId } : null;

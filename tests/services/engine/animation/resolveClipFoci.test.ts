@@ -189,7 +189,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
 // ---------------------------------------------------------------------------
 
 describe('resolveClipFoci rewrites a focusId cue to a focus ref cue', () => {
-  it('focusId(id) resolves to { kind:"focus", ref: SelectionRef }', () => {
+  it('focusId(id) resolves to { kind:"focus", ref }', () => {
     const id = focusId('galaxy-cluster-virgo');
     const clip: ClipData = {
       timeline: [focus(id)],

@@ -11,7 +11,7 @@ import InfoCard from '../InfoCard/InfoCard';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
 import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
-import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
+import type { FocusableTargetBase } from '../../@types/engine/selection/FocusableTargetBase';
 
 function InfoCardContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
@@ -19,7 +19,7 @@ function InfoCardContainer(): React.ReactElement {
   const selected = useAppSelector(selectSelectedFocusable);
 
   const onFocus = useCallback(
-    (target: FocusableTarget) => dispatch(updateSelectionFocus(target.ref)),
+    (target: FocusableTargetBase) => dispatch(updateSelectionFocus(target.ref)),
     [dispatch],
   );
   const onClose = useCallback(() => dispatch(clearSelection()), [dispatch]);

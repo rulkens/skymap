@@ -18,19 +18,19 @@
 
 import { describe, it, expect } from 'vitest';
 import type { RootState } from '../../../src/store/types';
-import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import { captureScene } from '../../../src/state/scene/captureScene';
 import { captureSettings } from '../../../src/state/scene/captureSettings';
 import { makeSettingsFixture } from '../settings/makeSettingsFixture';
+import type { SelectionRefBase } from '../../../src/@types/engine/selection/SelectionRefBase';
 
-const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
+const FOCUS_REF: SelectionRefBase = { type: 'structure', id: 'virgo-cluster' };
 
 /**
  * A minimal state carrying the full settings fixture plus a
  * non-null `selection.focus`. Cast through `unknown` because the fixture
  * omits slices `captureScene` never reads.
  */
-function makeState(focus: SelectionRef | null = FOCUS_REF) {
+function makeState(focus: SelectionRefBase | null = FOCUS_REF) {
   return {
     settings: { ...makeSettingsFixture(), orientation: 'galactic' },
     selection: { hover: null, select: null, focus },
@@ -83,11 +83,11 @@ describe('captureScene', () => {
     const snap = captureScene(state, 0);
 
     // Focus detachment: replacing state.selection.focus with a new ref must
-    // not change the captured value. SelectionRef is an immutable identity
+    // not change the captured value. SelectionRefBase is an immutable identity
     // value — the slice replaces the slot, never mutates in place, so copying
     // the reference at capture time is sufficient.
-    const laterRef: SelectionRef = { type: 'structure', id: 'coma-cluster' };
-    (state as { selection: { focus: SelectionRef | null } }).selection.focus = laterRef;
+    const laterRef: SelectionRefBase = { type: 'structure', id: 'coma-cluster' };
+    (state as { selection: { focus: SelectionRefBase | null } }).selection.focus = laterRef;
     expect(snap.focus).toEqual(FOCUS_REF);
   });
 });

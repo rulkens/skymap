@@ -16,7 +16,7 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import InfoCard from '../../../src/components/InfoCard/InfoCard';
 import { createAppStore } from '../../../src/store/createAppStore';
-import type { FocusableTarget } from '../../../src/@types/engine/FocusableTarget';
+import type { StructureTarget } from '../../../src/layers/structure/@types/StructureTarget';
 
 // A pinned structure renders its Detail through StructureDetailCardContainer
 // (the member-count fact is a store read), so every render below needs a
@@ -26,7 +26,7 @@ function withStore(children: ReactNode) {
   return createElement(Provider, { store, children });
 }
 
-const virgo: Extract<FocusableTarget, { type: 'structure' }> = {
+const virgo: StructureTarget = {
   type: 'structure',
   ref: { type: 'structure', id: 'virgo-m87' },
   id: 'virgo-m87',
@@ -36,7 +36,7 @@ const virgo: Extract<FocusableTarget, { type: 'structure' }> = {
   featured: true,
   physicalRadiusMpc: 2.2,
 };
-const coma: Extract<FocusableTarget, { type: 'structure' }> = {
+const coma: StructureTarget = {
   type: 'structure',
   ref: { type: 'structure', id: 'coma' },
   id: 'coma',

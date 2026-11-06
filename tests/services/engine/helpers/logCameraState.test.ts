@@ -11,11 +11,11 @@ import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/crea
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
-import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 import { bodyRowAt } from '../../../../src/utils/scene/bodyRowAt';
 import { MILKY_WAY_ROW } from '../../../fixtures/milkyWayRow';
+import type { SelectionRowBase } from '../../../../src/@types/engine/selection/SelectionRowBase';
 
 const EARTH_RADIUS_M = 6_371_000;
 const EARTH_RADIUS_MPC = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
@@ -56,7 +56,7 @@ describe('logCameraState', () => {
     // The camera's target sits at the pivot; a live focus row's positionMpc
     // is fed as the exact same point so cameraToBodyCenterMpc reduces to
     // cam.distance and the altitude assertion below stays simple.
-    const focus: SelectionRow = bodyRowAt('earth', cam.target);
+    const focus: SelectionRowBase = bodyRowAt('earth', cam.target);
 
     logCameraState(cam, fakeCanvas(1920, 1080), focus, SIM_DAYS);
 
@@ -95,7 +95,7 @@ describe('logCameraState', () => {
     });
     // Live body center offset from the orbit target (e.g. a stale/mismatched
     // pivot) — cam.distance (5) must NOT leak into the derived block.
-    const focus: SelectionRow = bodyRowAt('earth', [3, 4, 0]);
+    const focus: SelectionRowBase = bodyRowAt('earth', [3, 4, 0]);
 
     logCameraState(cam, fakeCanvas(800, 600), focus, SIM_DAYS);
 

@@ -17,6 +17,8 @@ import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../lod/data/galaxyLodBands';
+import { isKind } from '../../../../utils/selection/isKind';
+import type { GalaxyCatalogRef } from '../../@types/GalaxyCatalogRef';
 
 export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPass<'survey'> {
   const row = galaxyCatalogSelectionRow(runtime);
@@ -33,8 +35,9 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
       // The shader compares the pick word without its `+ PICK_SENTINEL_OFFSET`;
       // a non-galaxy selection, or one with no drawn point, takes the sentinel.
       const selected = state.selection.select;
-      const encoded =
-        selected !== null && selected.type === 'galaxyCatalog' ? row.encodePick(selected) : null;
+      const encoded = isKind<GalaxyCatalogRef>(selected, 'galaxyCatalog')
+        ? row.encodePick(selected)
+        : null;
       const selectedPacked =
         encoded === null ? SELECTION_NONE_SENTINEL : encoded - PICK_SENTINEL_OFFSET;
 

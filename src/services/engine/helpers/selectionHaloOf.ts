@@ -7,16 +7,17 @@
 import { selectionKindOf } from '../selection/selectionKindOf';
 import { NEAR0, COSMO } from '../frame/slabs';
 import type { PlacedRow } from '../../../@types/engine/selection/PlacedRow';
-import type { SelectionRefBase } from '../../../@types/engine/selection/SelectionRefBase';
+import type { SelectionRowBase } from '../../../@types/engine/selection/SelectionRowBase';
 import type { SelectionHalo } from '../../../@types/engine/selection/SelectionHalo';
 
-export function selectionHaloOf(row: PlacedRow | SelectionRefBase | null): SelectionHalo | null {
-  if (row === null || !('positionMpc' in row)) return null;
+export function selectionHaloOf(row: SelectionRowBase | null): SelectionHalo | null {
+  if (row === null) return null;
   const ring = selectionKindOf(row.type).focus?.ring ?? null;
   if (ring === null) return null;
-  const { positionMpc } = row;
+  // A kind with a focus places its rows (`SelectionKindFacts.focus`).
+  const { positionMpc, radiusMpc } = row as PlacedRow;
   return {
-    radiusMpc: ring.radii * row.radiusMpc,
+    radiusMpc: ring.radii * radiusMpc,
     worldPos: [positionMpc[0], positionMpc[1], positionMpc[2]],
     slab: ring.slab === 'near0' ? NEAR0 : COSMO,
   };

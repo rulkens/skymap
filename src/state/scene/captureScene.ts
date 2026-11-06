@@ -18,7 +18,7 @@
  *
  * The settings half is a `structuredClone` (see `captureSettings`).
  * `orientation` is a bare string union, so a plain read is already detached —
- * no clone needed. The focus half is a plain reference copy: `SelectionRef`
+ * no clone needed. The focus half is a plain reference copy: ref
  * values are immutable identity tokens — the slice replaces the slot on
  * write, never mutates in place — so holding the reference is sufficient to
  * restore back to the captured identity.

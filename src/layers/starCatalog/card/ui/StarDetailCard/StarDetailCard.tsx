@@ -9,7 +9,7 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { StarInfo } from '../../../../../@types/engine/StarInfo';
+import type { StarInfo } from '../../../@types/StarInfo';
 import { SCALE_UNITS } from '../../../../../data/scaleUnits';
 import { deriveStarProperties } from '../../utils/deriveStarProperties';
 import { formatDistance } from '../../../../../utils/format/formatDistance';

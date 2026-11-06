@@ -23,8 +23,8 @@ import { fakePickCode } from '../../../../support/fakePickCode';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
-import type { SelectionRef } from '../../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
+import type { SelectionRefBase } from '../../../../../src/@types/engine/selection/SelectionRefBase';
 
 function makeCam(): OrbitCamera {
   return {
@@ -146,7 +146,7 @@ describe('galaxyPointSpritesPass.draw', () => {
     // Selection is sourced from state.selection.select, not the settings stub.
     const { state, runtime, drawSpy } = makeStateWithRenderer({
       selection: {
-        select: { type: 'galaxyCatalog', source: Source.SDSS, index: 42 } as SelectionRef,
+        select: { type: 'galaxyCatalog', source: Source.SDSS, index: 42 } as SelectionRefBase,
         hover: null,
         focus: null,
       } as unknown as EngineState['selection'],

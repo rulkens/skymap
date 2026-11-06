@@ -1,5 +1,5 @@
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import { SCENE_EARTH } from '../bodies/sceneEarth';
+import type { BodyRef } from '../../@types/engine/selection/BodyRef';
 
 /**
  * EARTH_REF — the one shared identity for "home". Both the `goHome` saga (when a
@@ -9,4 +9,4 @@ import { SCENE_EARTH } from '../bodies/sceneEarth';
  * id: 'earth' }` literals drifting apart. It keys the static `SCENE_BODIES`
  * table the same way any body ref does.
  */
-export const EARTH_REF = { type: 'body', id: SCENE_EARTH.id } as const satisfies SelectionRef;
+export const EARTH_REF = { type: 'body', id: SCENE_EARTH.id } as const satisfies BodyRef;

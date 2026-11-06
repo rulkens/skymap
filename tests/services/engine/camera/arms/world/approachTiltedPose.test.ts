@@ -24,10 +24,10 @@ import { absoluteArm } from '../../../../../../src/utils/camera/arms/absoluteArm
 import { bodyDriverGeometry } from '../../../../../../src/utils/scene/bodyDriverGeometry';
 import type { BodyState } from '../../../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../../../src/@types/camera/pose/FramedCameraPose';
-import type { SelectionRow } from '../../../../../../src/@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../../../../src/utils/scene/bodyRowAt';
+import type { SelectionRowBase } from '../../../../../../src/@types/engine/selection/SelectionRowBase';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
@@ -35,7 +35,7 @@ const BODIES = deriveBodyStates(SIM);
 const EARTH = BODIES.get(asSceneBodyId('earth'))! as BodyState;
 const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 
-const FOCUS_EARTH: SelectionRow = bodyRowAt('earth', [0, 0, 0]);
+const FOCUS_EARTH: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
 function centredPoseAt(hr: number, roll = 0.2): FramedCameraPose {
   return absoluteArm({

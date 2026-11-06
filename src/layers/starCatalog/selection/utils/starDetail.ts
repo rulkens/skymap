@@ -1,8 +1,8 @@
 import { apparentMagnitudeFromAbs } from '../../../../utils/star/apparentMagnitudeFromAbs';
 import { spectralClassFromBpRp } from '../../../../utils/star/spectralClassFromBpRp';
 import { sStarOrbitInfo } from '../../../../data/bodies/sStarOrbitInfo';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
-import type { StarInfoDetail } from '../../../../@types/engine/StarInfoDetail';
+import type { StarInfoDetail } from '../../@types/StarInfoDetail';
+import type { StarCatalogSelectionRow } from '../../@types/StarCatalogSelectionRow';
 
 /**
  * Which block the star card renders, keyed on the row's own shape: catalogued photometry (the
@@ -10,10 +10,7 @@ import type { StarInfoDetail } from '../../../../@types/engine/StarInfoDetail';
  * compiled-in orbit, or nothing. A row extracted before the sidecar lands has no `famous`, so
  * "still loading" and "no entry" share the one fail-soft path.
  */
-export function starDetail(
-  row: Extract<SelectionRow, { type: 'starCatalog' }>,
-  distancePc: number,
-): StarInfoDetail {
+export function starDetail(row: StarCatalogSelectionRow, distancePc: number): StarInfoDetail {
   if (row.absMag !== undefined && row.bpRp !== undefined) {
     return {
       kind: 'photometry',

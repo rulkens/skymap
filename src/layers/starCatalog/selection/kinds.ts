@@ -3,14 +3,14 @@ import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarC
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { starDetail } from './utils/starDetail';
 import type { SelectionKindFacts } from '../../../@types/engine/layer/SelectionKindFacts';
-import type { SelectionRef } from '../../../@types/engine/SelectionRef';
-import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
+import type { StarCatalogRef } from '../@types/StarCatalogRef';
+import type { StarCatalogSelectionRow } from '../@types/StarCatalogSelectionRow';
+import type { StarCatalogTarget } from '../@types/StarCatalogTarget';
 
 export const starCatalogSelectionKinds: readonly SelectionKindFacts<
-  Extract<SelectionRef, { type: 'starCatalog' }>,
-  Extract<SelectionRow, { type: 'starCatalog' }>,
-  Extract<FocusableTarget, { type: 'starCatalog' }>
+  StarCatalogRef,
+  StarCatalogSelectionRow,
+  StarCatalogTarget
 >[] = [
   {
     type: 'starCatalog',

@@ -53,7 +53,7 @@
  *
  * ## Live-body centre — the ring tracks the animated body, not its pick pose
  *
- * A body's `selectionHaloOf` position is a SNAPSHOT stamped on the SelectionRow at
+ * A body's `selectionHaloOf` position is a SNAPSHOT stamped on the row at
  * selection time, but the sim clock keeps moving planets and moons along their
  * orbits every frame. Centring on the stale snapshot leaves the ring where the
  * body WAS when picked while the sphere drifts away. So a body row re-resolves

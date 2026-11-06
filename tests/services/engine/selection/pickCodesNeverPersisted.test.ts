@@ -46,9 +46,9 @@ import {
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { PickCodeAllocator } from '../../../../src/@types/engine/selection/PickCodeAllocator';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
 const virgo = { id: 'virgo', category: 'galaxy-cluster' } as StructureInfo;
 const structures = {
@@ -63,9 +63,9 @@ const { catalog: satellites } = buildSatelliteCatalog(
 /** One row and one ref per kind; the row's codes come from `allocator`. */
 function casesUnder(allocator: PickCodeAllocator) {
   const pickCode = (layer: string) => (id: string) => allocator.codeOf(layer, id);
-  const kind = <Ref extends SelectionRef>(row: SelectionKindRow<Ref>, ref: Ref) => ({
+  const kind = <Ref extends SelectionRefBase>(row: SelectionKindRow<Ref>, ref: Ref) => ({
     row: row as unknown as SelectionKindRow,
-    ref: ref as SelectionRef,
+    ref: ref as SelectionRefBase,
   });
   return [
     kind(

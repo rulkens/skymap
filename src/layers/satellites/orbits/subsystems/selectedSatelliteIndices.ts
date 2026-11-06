@@ -5,6 +5,8 @@
 import { catalogIndexOf } from '../../catalog/subsystems/catalogIndexOf';
 import type { SatelliteCatalog } from '../../../../@types/satellites/SatelliteCatalog';
 import type { SelectionState } from '../../../../@types/store/SelectionState';
+import { isKind } from '../../../../utils/selection/isKind';
+import type { SatelliteRef } from '../../@types/SatelliteRef';
 
 export function selectedSatelliteIndices(
   { select, focus }: SelectionState,
@@ -13,7 +15,7 @@ export function selectedSatelliteIndices(
   const ks: number[] = [];
   if (cat === null) return ks;
   for (const ref of [select, focus]) {
-    if (ref?.type !== 'satellite') continue;
+    if (!isKind<SatelliteRef>(ref, 'satellite')) continue;
     const k = catalogIndexOf(cat, ref.noradId);
     if (k >= 0 && !ks.includes(k)) ks.push(k);
   }

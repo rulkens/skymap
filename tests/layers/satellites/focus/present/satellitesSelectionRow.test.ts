@@ -10,9 +10,9 @@ import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import type { SatellitesRuntime } from '../../../../../src/layers/satellites/@types/SatellitesRuntime';
-import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import { ISS, GOES_18 } from '../../fixtures/celestrakRecords';
 import { relErr } from '../../../../support/relErr';
+import type { SatelliteSelectionRow } from '../../../../../src/layers/satellites/@types/SatelliteSelectionRow';
 
 const { catalog } = buildSatelliteCatalog(
   [{ group: { group: 'active', class: 'active' }, records: [GOES_18, ISS] }],
@@ -45,7 +45,7 @@ describe('satellitesSelectionRow', () => {
   });
 
   it('puts the ISS about 400 km up, posed from the id the camera follows', () => {
-    const extracted = row.extractRow(ISS_REF, AT) as Extract<SelectionRow, { type: 'satellite' }>;
+    const extracted = row.extractRow(ISS_REF, AT) as SatelliteSelectionRow;
     expect(extracted.label).toBe('ISS (ZARYA)');
     expect(extracted.altitudeKm).toBeGreaterThan(380);
     expect(extracted.altitudeKm).toBeLessThan(440);
@@ -56,7 +56,7 @@ describe('satellitesSelectionRow', () => {
   });
 
   it('follows the same point the dot is drawn at, to under a metre', () => {
-    const extracted = row.extractRow(ISS_REF, AT) as Extract<SelectionRow, { type: 'satellite' }>;
+    const extracted = row.extractRow(ISS_REF, AT) as SatelliteSelectionRow;
     const k = catalog.noradId.indexOf(25544);
     const { posKm } = createSatelliteSweeper(catalog).sweep(AT_MS);
     const earth = deriveBodyStates(AT).get(SCENE_EARTH.id)!;
@@ -82,7 +82,7 @@ describe('satellitesSelectionRow', () => {
   });
 
   it('places the ISS at its footprint radius, in Mpc', () => {
-    const extracted = row.extractRow(ISS_REF, AT) as Extract<SelectionRow, { type: 'satellite' }>;
+    const extracted = row.extractRow(ISS_REF, AT) as SatelliteSelectionRow;
     expect(relErr(extracted.radiusMpc, 1.6203896447221824e-18)).toBeLessThan(1e-12);
   });
 });
