@@ -4,7 +4,7 @@
  * ring passes share one `selectionRingRenderer` without racing: each draws only its own
  * slab's halos, so one writes the shared uniform buffers per frame (`near0SelectionRingPass`).
  */
-import { selectionKindOf } from '../../../compositions/selectionKindOf';
+import { selectionKindOf } from '../selection/selectionKindOf';
 import { NEAR0, COSMO } from '../frame/slabs';
 import type { PlacedRow } from '../../../@types/engine/selection/PlacedRow';
 import type { SelectionRefBase } from '../../../@types/engine/selection/SelectionRefBase';

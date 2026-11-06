@@ -30,7 +30,7 @@ import {
   clearSelection,
 } from './selectionSlice';
 import { shallowEqualRef } from '../../utils/object/shallowEqualRef';
-import { selectionKindOf } from '../../compositions/selectionKindOf';
+import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import type { ReconcileEffects } from '../../store/effects/ReconcileEffects';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
 

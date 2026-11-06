@@ -68,6 +68,9 @@ import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { MILKY_WAY_ROW } from '../../../../fixtures/milkyWayRow';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 /** A real-ish store so we can observe dispatches. */
 function makeStore() {

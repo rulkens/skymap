@@ -20,7 +20,7 @@ import ScaleBracketContainer from './ScaleBracketContainer';
 import LazyInfoCardContainer from './LazyInfoCardContainer';
 import LazyPhoneSettingsContainer from './LazyPhoneSettingsContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectSelectedFocusable } from '../../state/selection/focusableSelectors';
+import { selectSelectedFocusable } from '../../state/selection/selectors';
 import { selectPaletteOpen, selectUiStackHidden } from '../../state/ui/selectors';
 import { reopenSplash, setPaletteOpen } from '../../state/ui/uiSlice';
 import { goHome } from '../../state/selection/goHome';

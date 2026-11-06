@@ -17,12 +17,12 @@
 import { describe, it, expect } from 'vitest';
 
 import { createAppStore } from '../../../src/store/createAppStore';
-import { selectIsSelectionActive } from '../../../src/state/selection/selectors';
 import {
+  selectIsSelectionActive,
   selectHoveredFocusable,
   selectSelectedFocusable,
   selectFocusedFocusable,
-} from '../../../src/state/selection/focusableSelectors';
+} from '../../../src/state/selection/selectors';
 import {
   updateSelectionHover,
   updateSelectionSelect,
@@ -66,6 +66,9 @@ import {
 } from '../../support/layerPickCodes';
 import type { SelectionKindRow } from '../../../src/@types/engine/layer/SelectionKindRow';
 import type { SatellitesRuntime } from '../../../src/layers/satellites/@types/SatellitesRuntime';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // --- fixtures -----------------------------------------------------------------
 

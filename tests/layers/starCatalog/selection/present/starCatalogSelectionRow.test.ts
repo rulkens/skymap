@@ -65,7 +65,8 @@ describe('starCatalogSelectionRow', () => {
     const row = starCatalogSelectionRow(
       starRowRuntime({ renderer: null as never, chunkStreams: new Map() }, undefined, [entry]),
     );
-    const ref = (index: number) => ({ type: 'starCatalog', source: Source.FamousStar, index }) as const;
+    const ref = (index: number) =>
+      ({ type: 'starCatalog', source: Source.FamousStar, index }) as const;
     expect(row.extractRow(ref(0), 0)).toMatchObject({ id: curated!.id, famous: entry });
     const bare = row.extractRow(ref(1), 0)!;
     expect(bare).toMatchObject({ id: omitted!.id });

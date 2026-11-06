@@ -30,6 +30,9 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);

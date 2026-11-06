@@ -21,9 +21,12 @@ import { resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
 import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import { arrivalFraming } from '../../../../src/services/engine/camera/framing/arrivalFraming';
-import { selectionKindOf } from '../../../../src/compositions/selectionKindOf';
+import { selectionKindOf } from '../../../../src/services/engine/selection/selectionKindOf';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const FOV_Y = 0.8;
 const TEST_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };

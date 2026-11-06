@@ -15,6 +15,9 @@ import { starRowDriver } from '../../../../fixtures/starRowDriver';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // The enable gate never touches ctx or view — bare casts stand in for both.
 const CTX = { snapshot: { renderedTargets: new Set<string>() } } as unknown as FrameView;

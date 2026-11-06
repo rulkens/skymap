@@ -18,8 +18,10 @@
  *    are plain composed arrows. Each returns a stable reference or null;
  *    react-redux's reference-equality `useSelector` already bails out when the
  *    value is unchanged, so no `createSelector` wrapper is needed.
- *  - The derived `FocusableTarget` selectors live in `focusableSelectors.ts`:
- *    they reach the composition, which this widely imported file must not.
+ *  - The derived `selectHoveredFocusable`, `selectSelectedFocusable` and
+ *    `selectFocusedFocusable` are the heavy ones: each row's kind builds a fresh
+ *    view-model (`toFocusable`), so they are memoized via `createSelector` and a
+ *    write to an unrelated slice doesn't rebuild it.
  *  - `selectIsSelectionActive` is a cheap boolean derived from the two ref
  *    slots; memoized so the UI can react to "is anything selected" without
  *    building a full `FocusableTarget`.
@@ -32,11 +34,13 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectionRoute, selectionRowsRoute } from '../../store/constants';
+import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import type { RootState } from '../../store/types';
 import type { SelectionState } from '../../@types/store/SelectionState';
 import type { SelectionRowsState } from '../../@types/store/SelectionRowsState';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
+import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 
 // --- base selectors -----------------------------------------------------------
 
@@ -67,10 +71,9 @@ export const selectPendingSelectId = (state: RootState): string | null =>
 
 // --- selectionRows slot reads (resolved display cache) ------------------------
 
-export const selectHoverRow = (state: RootState): SelectionRow | null =>
-  selectSelectionRows(state).hover;
+const selectHoverRow = (state: RootState): SelectionRow | null => selectSelectionRows(state).hover;
 
-export const selectSelectRow = (state: RootState): SelectionRow | null =>
+const selectSelectRow = (state: RootState): SelectionRow | null =>
   selectSelectionRows(state).select;
 
 export const selectFocusRow = (state: RootState): SelectionRow | null =>
@@ -82,6 +85,20 @@ export const selectFocusRow = (state: RootState): SelectionRow | null =>
  */
 export const selectFocusId = (state: RootState): string | null =>
   selectSelectionRows(state).focusId;
+
+// --- derived FocusableTarget selectors ----------------------------------------
+
+const focusableOf = (row: SelectionRow | null): FocusableTarget | null =>
+  row === null ? null : (selectionKindOf(row.type).toFocusable(row) as FocusableTarget);
+
+/** The hover row's card view-model, or null; memoized on the row reference. */
+export const selectHoveredFocusable = createSelector([selectHoverRow], focusableOf);
+
+/** The select row's card view-model, or null; memoized on the row reference. */
+export const selectSelectedFocusable = createSelector([selectSelectRow], focusableOf);
+
+/** The focus row's card view-model, or null; memoized on the row reference. */
+export const selectFocusedFocusable = createSelector([selectFocusRow], focusableOf);
 
 /**
  * selectIsSelectionActive — true when either the select or the focus ref slot

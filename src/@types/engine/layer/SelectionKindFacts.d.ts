@@ -3,9 +3,10 @@ import type { SelectionFocus } from './SelectionFocus';
 
 /**
  * One selectable kind's static facts, declared by the Layer that owns the kind and read by core
- * through `selectionKindOf(type)`. Static because sagas, selectors and `detailCardTable` read them
- * before any Layer has run `create`; it imports no runtime. Method syntax throughout keeps each
- * Layer's narrower `Ref`/`Row`/`Target` assignable to the base-typed `kinds` list.
+ * through `selectionKindOf(type)`, which `createLayers` installs from the engine's composition.
+ * Static, importing no runtime, because `detailCardTable` folds them at module load, before any
+ * Layer has run `create`. Method syntax throughout keeps each Layer's narrower `Ref`/`Row`/`Target`
+ * assignable to the base-typed `kinds` list.
  */
 export type SelectionKindFacts<
   Ref extends SelectionRefBase = SelectionRefBase,

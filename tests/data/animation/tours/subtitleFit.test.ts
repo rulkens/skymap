@@ -13,6 +13,9 @@ import { resolveClipFoci } from '../../../../src/services/engine/animation/resol
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // Dwell durations don't depend on what an id resolves to, only that it does.
 const ANY_STRUCTURE = {

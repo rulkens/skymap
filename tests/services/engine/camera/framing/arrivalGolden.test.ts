@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import { arrivalFraming } from '../../../../../src/services/engine/camera/framing/arrivalFraming';
 import { selectionHaloOf } from '../../../../../src/services/engine/helpers/selectionHaloOf';
-import { selectionKindOf } from '../../../../../src/compositions/selectionKindOf';
+import { selectionKindOf } from '../../../../../src/services/engine/selection/selectionKindOf';
 import { galaxyCatalogSelectionRow } from '../../../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
 import { structureSelectionRow } from '../../../../../src/layers/structure/picking/present/structureSelectionRow';
 import { Source } from '../../../../../src/data/source';
@@ -22,6 +22,9 @@ import type { SelectionHalo } from '../../../../../src/@types/engine/selection/S
 import type { PlacedRow } from '../../../../../src/@types/engine/selection/PlacedRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const DEG = Math.PI / 180;
 

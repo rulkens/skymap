@@ -29,6 +29,9 @@ import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness'
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const SATURN = deriveBodyStates(CONST_J2000).get(asSceneBodyId('saturn'))! as BodyState;
 

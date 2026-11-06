@@ -72,6 +72,9 @@ import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { SatellitesRuntime } from '../../../src/layers/satellites/@types/SatellitesRuntime';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 

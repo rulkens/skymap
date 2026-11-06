@@ -81,7 +81,7 @@ import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { FocusFraming } from '../../../@types/camera/pose/FocusFraming';
 import { moveTarget, dollyTo, aimAt, spin } from './effectHelpers';
 import { arrivalFraming } from '../camera/framing/arrivalFraming';
-import { selectionKindOf } from '../../../compositions/selectionKindOf';
+import { selectionKindOf } from '../selection/selectionKindOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { imagePlaneBasis } from '../../../utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/orbitPose/frameUp';

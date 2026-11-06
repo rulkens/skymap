@@ -49,7 +49,7 @@ import {
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
 import { arrivalFraming } from '../../../../src/services/engine/camera/framing/arrivalFraming';
-import { selectionKindOf } from '../../../../src/compositions/selectionKindOf';
+import { selectionKindOf } from '../../../../src/services/engine/selection/selectionKindOf';
 import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -59,6 +59,9 @@ import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // ---------------------------------------------------------------------------
 // Test fixtures

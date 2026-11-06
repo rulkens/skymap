@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { focusTweenDescriptor } from '../../../src/state/camera/focusTweenDescriptor';
 import { arrivalFraming } from '../../../src/services/engine/camera/framing/arrivalFraming';
-import { selectionKindOf } from '../../../src/compositions/selectionKindOf';
+import { selectionKindOf } from '../../../src/services/engine/selection/selectionKindOf';
 import { MILKY_WAY_CENTER_WORLD } from '../../../src/data/milkyWay/galacticCenter';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
@@ -11,6 +11,9 @@ import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
 import { placedStructureRow } from '../../../src/layers/structure/picking/utils/placedStructureRow';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // A representative live pose to seed `from`. yaw/pitch must survive into `to`
 // (focus keeps the user's orientation; only target + distance change).

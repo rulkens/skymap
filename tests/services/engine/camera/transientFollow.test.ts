@@ -30,6 +30,9 @@ import type { SelectionKindRow } from '../../../../src/@types/engine/layer/Selec
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const ID: TransientBodyId = 'transient:test-orbiter';
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];

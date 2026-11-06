@@ -35,7 +35,7 @@ import { selectOrientation } from '../settings/selectors';
 import { framingPose } from '../../services/engine/camera/framing/framingPose';
 import { homePose } from '../../services/engine/camera/framing/homePose';
 import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
-import { selectionKindOf } from '../../compositions/selectionKindOf';
+import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';

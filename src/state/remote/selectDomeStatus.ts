@@ -6,12 +6,12 @@
  */
 
 import { selectCameraControls } from '../settings/selectors';
-import { selectFocusedFocusable } from '../selection/focusableSelectors';
+import { selectFocusedFocusable } from '../selection/selectors';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { selectTimeState } from '../time/selectors';
 import { selectTourBeatIndex, selectTourPaused, selectTourTotal } from '../tour/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { selectionKindOf } from '../../compositions/selectionKindOf';
+import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import type { DomeStatus } from '../../@types/remote/DomeStatus';
 import type { RemoteTakeover } from '../../@types/remote/RemoteTakeover';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';

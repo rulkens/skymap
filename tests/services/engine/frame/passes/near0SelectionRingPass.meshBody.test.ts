@@ -39,6 +39,9 @@ import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeo
 import { footprintRadiusMpc } from '../../../../../src/utils/selection/footprintRadiusMpc';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { missionsPickCode } from '../../../../support/layerPickCodes';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;

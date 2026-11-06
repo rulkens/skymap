@@ -80,6 +80,9 @@ import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { NO_INSETS_PX } from '../../../../src/data/layout/noInsetsPx';
 import { bodyRowAt } from '../../../../src/utils/scene/bodyRowAt';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);

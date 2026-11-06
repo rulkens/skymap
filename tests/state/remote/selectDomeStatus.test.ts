@@ -13,6 +13,9 @@ import type { ToggleRow } from '../../../src/@types/settings/ToggleRow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const NO_ROWS: readonly ToggleRow[] = [];
 

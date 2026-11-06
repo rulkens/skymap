@@ -21,6 +21,9 @@ import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { cameraRoute } from '../../../src/store/constants';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
 import { bodyPickCodes, milkyWayPickCode } from '../../support/layerPickCodes';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
 const NO_MODS = { shift: false, ctrl: false, alt: false, meta: false };

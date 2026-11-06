@@ -18,8 +18,8 @@ import type { FocusableTarget } from '../../../src/@types/engine/FocusableTarget
 let selected: FocusableTarget | null = null;
 let ticks = 0;
 
-vi.mock('../../../src/state/selection/focusableSelectors', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../src/state/selection/focusableSelectors')>()),
+vi.mock('../../../src/state/selection/selectors', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../src/state/selection/selectors')>()),
   selectSelectedFocusable: () => selected,
 }));
 vi.mock('../../../src/state/selection/goHome', () => ({

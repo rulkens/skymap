@@ -52,6 +52,9 @@ import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { focusId } from '../../../src/utils/animation/focusId';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the drift Promise stub.

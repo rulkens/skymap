@@ -23,6 +23,9 @@ import { displayedEye } from '../../../helpers/camera/displayedEye';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 /** Voyager 1's mission camera in 1990, then the exit with `home` back in focus. */
 function exitMission(home: 'earth' | null, successor: DriverId) {

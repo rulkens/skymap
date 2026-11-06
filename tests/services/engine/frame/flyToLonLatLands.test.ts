@@ -44,6 +44,9 @@ import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness'
 import type { SimBodyId } from '../../../helpers/camera/SimBodyId';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // Past the flight, then a further stretch the result must survive unchanged.
 const FLIGHT_FRAMES = Math.ceil(FLY_TO_LON_LAT_TWEEN_MS / 16) + 10;

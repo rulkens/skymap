@@ -37,6 +37,9 @@ import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { SelectionResolver } from '../../../../../src/@types/engine/selection/SelectionResolver';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // ---------------------------------------------------------------------------
 // Shared starting pose for most tests.

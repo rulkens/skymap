@@ -6,7 +6,7 @@
  */
 
 import { arrivalFraming } from './arrivalFraming';
-import { selectionKindOf } from '../../../../compositions/selectionKindOf';
+import { selectionKindOf } from '../../selection/selectionKindOf';
 import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 

@@ -9,10 +9,7 @@
 import { memo, useCallback } from 'react';
 import InfoCard from '../InfoCard/InfoCard';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import {
-  selectHoveredFocusable,
-  selectSelectedFocusable,
-} from '../../state/selection/focusableSelectors';
+import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
 import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 

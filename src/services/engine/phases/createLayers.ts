@@ -5,6 +5,7 @@
  * `.computes` / `.assetRows` / `.slotsByKey` / `.visibilityEntries` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
  * `.label3DProducers` and `.orbitTrailGroups` are unkeyed concatenations instead.
+ * Last, it installs the composition's selection kinds for `selectionKindOf`.
  */
 
 import { put } from 'typed-redux-saga';
@@ -29,7 +30,9 @@ import {
   engineStatusChanged,
 } from '../../../state/engine/engineSlice';
 import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSelectionRowsDisjoint';
-import { assertSelectionKindsComplete } from '../../../compositions/selectionKindOf';
+import { assertSelectionKindsComplete } from '../../../utils/selection/assertSelectionKindsComplete';
+import { installSelectionKinds } from '../selection/selectionKindOf';
+import { layerSelectionKinds } from '../../../utils/layer/layerSelectionKinds';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
@@ -220,5 +223,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
 
   state.selectionKindRows = instances.flatMap((instance) => instance.selection);
   assertSelectionRowsDisjoint(state.selectionKindRows);
-  assertSelectionKindsComplete(state.selectionKindRows.map((row) => row.type));
+  const kinds = layerSelectionKinds(deps.composition.layers);
+  assertSelectionKindsComplete(
+    kinds,
+    state.selectionKindRows.map((row) => row.type),
+  );
+  installSelectionKinds(kinds);
 }

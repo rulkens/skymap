@@ -3,6 +3,9 @@ import { describe, it, expect } from 'vitest';
 import { framingPose } from '../../../../../src/services/engine/camera/framing/framingPose';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { MILKY_WAY_ROW } from '../../../../fixtures/milkyWayRow';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 describe('framingPose', () => {
   it('drops the roll of from: a focus lands level', () => {
