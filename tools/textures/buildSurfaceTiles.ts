@@ -299,6 +299,48 @@ export async function bakeCoarserLevel(
   return written;
 }
 
+/**
+ * One imagery product's pyramid over a band: `source` read at `maxLevel`,
+ * then every coarser level down to `minLevel` as the 2x2 average of the one
+ * above. A parent's coverage box is the same as its children's (containment
+ * of bounds), so the band's own boxes clamp every coarser level too, and
+ * `source` is also the childless halo tile's own source.
+ */
+async function bakeImageryPyramid(
+  source: SurfaceImagerySource,
+  product: SurfaceTileProduct,
+  underfill: SurfaceImagerySource | undefined,
+  uvBands: readonly SurfaceTileBand[],
+  maxLevel: number,
+  minLevel: number,
+  tilePx: number,
+  outDir: string,
+  tilePrefix: string,
+): Promise<string[]> {
+  process.stderr.write(`  z${maxLevel}: baking ${product} from ${source.id}\n`);
+  const written = [
+    ...(await bakeDeepestLevel(source, product, uvBands, maxLevel, tilePx, outDir, tilePrefix)),
+  ];
+  process.stderr.write(`  z${maxLevel}: ${written.length} ${product} tiles\n`);
+  for (let z = maxLevel - 1; z >= minLevel; z--) {
+    const levelPaths = await bakeCoarserLevel(
+      z,
+      product,
+      tilePx,
+      outDir,
+      tilePrefix,
+      underfill,
+      uvBands,
+      source,
+    );
+    written.push(...levelPaths);
+    process.stderr.write(
+      `  z${z}: ${levelPaths.length} ${product} tiles (2x2 average of z${z + 1})\n`,
+    );
+  }
+  return written;
+}
+
 /** `index.txt`'s prior lines, or an empty set on a first bake into a fresh
  *  `outDir` — the floor `bakeAll`'s completeness check holds every run to,
  *  and the other half of the new index's union (see `bakeAll`). */
@@ -457,38 +499,20 @@ export async function bakeAll(
     }
 
     if (products.has('albedo')) {
-      process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
       const effective = underfill ? underfillImagerySource(source, underfill) : source;
-      const deepest = await bakeDeepestLevel(
-        effective,
-        'albedo',
-        uvBands,
-        maxLevel,
-        tilePx,
-        outDir,
-        tilePrefix,
-      );
-      written.push(...deepest);
-      process.stderr.write(`  z${maxLevel}: ${deepest.length} tiles\n`);
-
-      for (let z = maxLevel - 1; z >= minLevel; z--) {
-        // A parent's coverage box is the same as its children's (containment
-        // of bounds), so the band's own boxes clamp every coarser level too.
-        // `effective` (source blended with underfill) is also the childless
-        // halo tile's own source — same object `bakeDeepestLevel` just used.
-        const levelPaths = await bakeCoarserLevel(
-          z,
+      written.push(
+        ...(await bakeImageryPyramid(
+          effective,
           'albedo',
+          underfill,
+          uvBands,
+          maxLevel,
+          minLevel,
           tilePx,
           outDir,
           tilePrefix,
-          underfill,
-          uvBands,
-          effective,
-        );
-        written.push(...levelPaths);
-        process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
-      }
+        )),
+      );
     }
 
     if (height !== undefined && products.has('height')) {
@@ -525,34 +549,19 @@ export async function bakeAll(
           `bakeAll: night source '${night.id}' reaches z${night.maxLevel}, not the band's z${maxLevel}`,
         );
       }
-      process.stderr.write(`  z${maxLevel}: baking night tiles from ${night.id}\n`);
-      const deepest = await bakeDeepestLevel(
-        night,
-        'night',
-        uvBands,
-        maxLevel,
-        tilePx,
-        outDir,
-        tilePrefix,
-      );
-      written.push(...deepest);
-      process.stderr.write(`  z${maxLevel}: ${deepest.length} night tiles\n`);
-      for (let z = maxLevel - 1; z >= minLevel; z--) {
-        const levelPaths = await bakeCoarserLevel(
-          z,
+      written.push(
+        ...(await bakeImageryPyramid(
+          night,
           'night',
+          undefined,
+          uvBands,
+          maxLevel,
+          minLevel,
           tilePx,
           outDir,
           tilePrefix,
-          undefined,
-          uvBands,
-          night,
-        );
-        written.push(...levelPaths);
-        process.stderr.write(
-          `  z${z}: ${levelPaths.length} night tiles (2x2 average of z${z + 1})\n`,
-        );
-      }
+        )),
+      );
     }
 
     // One entry per coverage box: a source spanning the antimeridian declares
