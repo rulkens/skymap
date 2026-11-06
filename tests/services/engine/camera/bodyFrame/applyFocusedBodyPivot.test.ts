@@ -18,9 +18,11 @@ import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
-import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
+import { MILKY_WAY_ROW } from '../../../../fixtures/milkyWayRow';
+import type { SelectionRowBase } from '../../../../../src/@types/engine/selection/SelectionRowBase';
 
 // Two instants far enough apart that Earth has visibly moved along its orbit.
 const SIM_A = CONST_J2000 + 3652.5; // ~10 years past epoch
@@ -28,13 +30,7 @@ const SIM_B = SIM_A + 30; // one month later — the body has moved
 const BODIES_A = deriveBodyStates(SIM_A);
 const BODIES_B = deriveBodyStates(SIM_B);
 
-const EARTH_ROW: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('earth'),
-  label: 'Earth',
-  positionMpc: [0, 0, 0],
-  driver: bodyDriverGeometry('earth'),
-};
+const EARTH_ROW: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
 // A drag-style pose whose target is a FROZEN point (what orbitDrag produced from
 // the gesture-start cam.target) — the pin must overwrite it with the live body.
@@ -100,7 +96,7 @@ describe('applyFocusedBodyPivot', () => {
 
   it('is a pass-through when the focus is not a body', () => {
     expect(applyFocusedBodyPivot(DRAG_FRAMED, true, null, BODIES_A, NO_PAN)).toBe(DRAG_FRAMED);
-    expect(applyFocusedBodyPivot(DRAG_FRAMED, true, { type: 'milkyWay' }, BODIES_A, NO_PAN)).toBe(
+    expect(applyFocusedBodyPivot(DRAG_FRAMED, true, MILKY_WAY_ROW, BODIES_A, NO_PAN)).toBe(
       DRAG_FRAMED,
     );
   });

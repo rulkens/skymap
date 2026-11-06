@@ -31,7 +31,7 @@
  *
  * ### Why `focus` is a reference, not a deep clone
  *
- * `SelectionRef` values are flat, serializable, and immutable by convention —
+ * Selection refs are flat, serializable, and immutable by convention —
  * the slice replaces the slot on every write (Immer's `setIfChanged`), it does
  * not mutate in place. Copying the reference captures the identity the tour
  * must return to; there is no nested object a later write could reach through
@@ -53,13 +53,13 @@
  */
 
 import type { SettingsSnapshot } from './SettingsSnapshot';
-import type { SelectionRef } from '../SelectionRef';
 import type { OrientationFrameId } from '../../camera/orientation/OrientationFrameId';
 import type { TimeState } from '../../time/TimeState';
+import type { SelectionRefBase } from '../selection/SelectionRefBase';
 
 export type SceneSnapshot = Readonly<{
   settings: SettingsSnapshot;
   orientation: OrientationFrameId;
-  focus: SelectionRef | null;
+  focus: SelectionRefBase | null;
   time: TimeState;
 }>;

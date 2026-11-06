@@ -382,7 +382,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       passes: [
         ...CONTENT_PASSES,
         galaxyPointSpritesPass({
-          ...galaxyRowRuntime({ catalogs: new Map(), famousMeta: [] }),
+          ...galaxyRowRuntime({ catalogs: new Map() }),
           pointRenderer: galaxyPointRenderer,
         } as unknown as GalaxyCatalogRuntime),
         cosmicWebDensityPass(densityRuntime),

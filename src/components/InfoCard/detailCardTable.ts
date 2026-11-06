@@ -1,29 +1,27 @@
 /**
  * detailCardTable — folds every Layer's `detailCard` ui-slot contribution into the
- * `DetailCardTable` InfoCard dispatches on. Called once at module
- * load (`InfoCard.tsx`), so a missing arm throws at boot naming the unclaimed union member.
- * Every card's props type must already match `DetailCardProps<K>`/`CompactCardProps<K>`.
+ * `DetailCardTable` InfoCard dispatches on. Called once at module load (`InfoCard.tsx`), so a
+ * composed selection kind with no card throws at boot, naming the kind.
  */
 
 import type { Layer } from '../../@types/engine/layer/Layer';
-import type { SelectionKind } from '../../@types/engine/SelectionKind';
 import type { DetailCardTable } from '../../@types/components/infoCard/DetailCardTable';
 import type { DetailCardEntry } from '../../@types/components/infoCard/DetailCardEntry';
-import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
+import { layerSelectionKinds } from '../../utils/layer/layerSelectionKinds';
 
-/** Throws if the composition leaves any `SelectionKind` arm unclaimed. */
 export function detailCardTable(layers: readonly Layer<string, unknown>[]): DetailCardTable {
-  const table: Partial<DetailCardTable> = {};
+  const table = new Map<string, DetailCardEntry>();
   for (const { type, ...entry } of layerUiContents(layers, 'detailCard')) {
-    // TypeScript can't correlate a union-typed `type` with `entry`'s matching
-    // arm across the fold, so the write goes through the widened record once.
-    (table as Record<SelectionKind, DetailCardEntry>)[type] = entry as DetailCardEntry;
+    // A card is typed on its own Layer's target; the table holds it base-typed, and
+    // `detailCardFor` only ever hands it a target of the `type` it is keyed by.
+    table.set(type, entry as DetailCardEntry);
   }
-
-  const missing = SELECTION_KINDS.filter((type) => table[type] === undefined);
+  const missing = layerSelectionKinds(layers)
+    .map((kind) => kind.type)
+    .filter((type) => !table.has(type));
   if (missing.length > 0) {
-    throw new Error(`detailCardTable: no detailCard arm for "${missing.join(', ')}"`);
+    throw new Error(`detailCardTable: no detailCard for "${missing.join(', ')}"`);
   }
-  return table as DetailCardTable;
+  return table;
 }

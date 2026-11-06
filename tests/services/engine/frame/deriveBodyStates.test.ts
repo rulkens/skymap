@@ -183,8 +183,8 @@ describe('deriveBodyStates', () => {
       const snap = deriveBodyStates(t);
       const earth = snap.get(asSceneBodyId('earth'))!;
       const offsetM = rotateVec3ByTightMat3(
-        sitePointBodyFixed(site, siteGroundRadiusM(site, SCENE_EARTH.surface.datumRadiusM)),
         earth.orientation,
+        sitePointBodyFixed(site, siteGroundRadiusM(site, SCENE_EARTH.surface.datumRadiusM)),
       );
       const offsetMpc = offsetM.map((m) => m * SCALE_UNITS.M_TO_MPC);
       const actual = snap.get(site.id)!.positionMpc.map((v, i) => v - earth.positionMpc[i]!);

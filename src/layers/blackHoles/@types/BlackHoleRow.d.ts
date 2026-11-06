@@ -18,9 +18,6 @@ export type BlackHoleRow = {
   // The descent floor, in r_s: the camera may approach to 2 r_s, well inside
   // the Earth-tuned global SURFACE_STANDOFF_RADII (~1.0000024).
   readonly standoffRadii: number;
-  // Arrival distance, in r_s, the user framed live (2026-09-01): outside the
-  // descent floor and deep inside the lensing fade band.
-  readonly focusDistanceRadii: number;
   // A fixed marker tint, not a photometric measurement: a black hole has no
   // albedo to derive one from. Linear RGB.
   readonly glintTint: Readonly<Vec3>;

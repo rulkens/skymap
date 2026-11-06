@@ -23,7 +23,7 @@ import { hostedFocusOverHorizon } from './utils/hostedFocusOverHorizon';
 import { hostedFocusPivotM } from './utils/hostedFocusPivotM';
 import { nudgedSurfacePose } from './gesture/utils/nudgedSurfacePose';
 import { toBodyFixedChannels } from './toBodyFixedChannels';
-import { rotateVec3ByTightMat3T } from '../../../../../utils/math/rotateVec3ByTightMat3T';
+import { rotateByTranspose } from '../../../../../utils/math/rotateByTranspose';
 import { surfaceGestureEdge } from './gesture/utils/surfaceGestureEdge';
 import { innerBoundRadiusM } from '../../../../../utils/occlusion/innerBoundRadiusM';
 import { outerBoundRadiusM } from '../../../../../utils/occlusion/outerBoundRadiusM';
@@ -46,7 +46,7 @@ function surfaceStepCtxOf(host: HostBody, ctx: CameraArmCtx): SurfaceStepCtx {
     innerBoundRadiusM: host.innerBoundRadiusM,
     outerBoundRadiusM: host.outerBoundRadiusM,
     // The body rotates under the scene frame, so this is resampled per drain.
-    sceneUpLocal: rotateVec3ByTightMat3T(frameUp(ctx.upBasis), host.state.orientation),
+    sceneUpLocal: rotateByTranspose(host.state.orientation, frameUp(ctx.upBasis)),
     // Derived from the FOCUS every drain, never carried in the pose: a
     // carried anchor decouples from the rover as soon as a drag turns the arm.
     focusPivotM: hostedFocusPivotM(ctx.focusBodyId, host.id, host.radiusM),

@@ -37,16 +37,16 @@
  * committed basis so the round-trip is exact. Absent a basis the encode falls
  * back to identity (world-frame angles), matching an identity decode.
  *
- * ### Why the distance is `focusFraming`'s, not a bespoke home distance
+ * ### Why the distance is the focus arrival's, not a bespoke home distance
  *
  * This is forced by the follow mechanics, not taste. When home focus lands on
  * a body the follow driver takes over, and `runFrame` drops the follow memory
  * on every focus-row change; the driver then
  * re-seeds it to the body's framing distance (`framingPose`, via
- * `focusFraming`). Any other landing distance would be glided away from the
+ * `arrivalFraming`). Any other landing distance would be glided away from the
  * instant the tween ends — a visible lurch. Ending the pose at the framing
  * distance makes the tween→follow handoff seamless: the follow driver captures a
- * pose already at rest. So the pose reuses `focusFraming`'s target + distance
+ * pose already at rest. So the pose reuses `arrivalFraming`'s target + distance
  * verbatim (its `radius` field is a fly-past extent, irrelevant to a static
  * pose, and is dropped). The genuinely free tuning lever is the terminator
  * offset above.
@@ -57,7 +57,8 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import { deriveBodyStates } from '../../frame/deriveBodyStates';
 import { bodyRowAt } from '../../../../utils/scene/bodyRowAt';
-import { focusFraming } from './focusFraming';
+import { arrivalFraming } from './arrivalFraming';
+import { BODY_FOCUS } from '../../../../data/selection/bodyFocus';
 import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 
@@ -76,7 +77,7 @@ export function bodyHomePose(
   const state = deriveBodyStates(simDays).get(bodyId);
   if (!state) throw new Error(`bodyHomePose: no derived state for id '${bodyId}'`);
   const bodyPos = state.positionMpc;
-  const { target, distance } = focusFraming(bodyRowAt(bodyId, bodyPos), fovYRad);
+  const { target, distance } = arrivalFraming(bodyRowAt(bodyId, bodyPos), BODY_FOCUS, fovYRad);
 
   // `s` is the sun→body (pure-sunward) unit direction; `t` is perpendicular to
   // it and horizontal in the equatorial frame (never degenerate — the body never

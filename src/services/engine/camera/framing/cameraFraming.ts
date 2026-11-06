@@ -14,7 +14,7 @@
  *     pick pass uses depth32float, which handles the 0.01 : 80 000
  *     ratio fine.
  *   - `NEAR_CLIP_MPC = 0.01` (10 kpc) — well inside the focus-on tween's
- *     end distance (0.12 Mpc, see `galaxyFocusDistance.ts`).
+ *     end distance (≥ 0.15 Mpc, the galaxyCatalog kind's `focus.minDistanceMpc`).
  *   - `INITIAL_DISTANCE_MPC` — a Local-Group-scale distance the wheel-zoom
  *     envelope + the grand tour still reference; no longer the boot distance.
  *   - `GALACTIC_DISC_FORWARD` — the eye-tuned WORLD-space direction that faces

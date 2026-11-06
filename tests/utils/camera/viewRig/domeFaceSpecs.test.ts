@@ -82,7 +82,7 @@ describe('domeFaceSpecs — direction projected through a face view lands where 
 
   function checkDirection(dirDome: Readonly<Vec3>): void {
     const { face, u, v } = domeFaceUv(dirDome);
-    const dirWorld = rotateVec3ByTightMat3(normalize3([...dirDome]), domeWorldBasis);
+    const dirWorld = rotateVec3ByTightMat3(domeWorldBasis, normalize3([...dirDome]));
     const point: Vec3 = [
       cam.position[0] + dirWorld[0] * 100,
       cam.position[1] + dirWorld[1] * 100,

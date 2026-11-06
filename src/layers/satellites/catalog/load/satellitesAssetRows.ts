@@ -16,6 +16,7 @@ import { visibilitySwitchOf } from '../../../../utils/visibility/visibilitySwitc
 import { visibilityEntryOf } from '../../../../utils/visibility/visibilityEntryOf';
 import { satellitesVisibility } from '../../visibility';
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
+import type { SatellitesAssetKey } from '../../@types/SatellitesAssetKey';
 import type { DemandCtx } from '../../../../@types/loading/DemandCtx';
 import type { SatellitesRuntime } from '../../@types/SatellitesRuntime';
 
@@ -28,7 +29,9 @@ const cameraEarthKm = (ctx: DemandCtx): number =>
 const anyClassShown = (ctx: DemandCtx): boolean =>
   SATELLITE_CLASSES.some((cls) => visibilitySwitchOf(ctx.settings, SHOW_ENTRY, cls));
 
-export function satellitesAssetRows(runtime: SatellitesRuntime): readonly AssetWiringRow[] {
+export function satellitesAssetRows(
+  runtime: SatellitesRuntime,
+): readonly AssetWiringRow<unknown, unknown, SatellitesAssetKey>[] {
   return [
     {
       key: 'satellites',

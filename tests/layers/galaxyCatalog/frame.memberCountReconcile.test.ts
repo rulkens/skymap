@@ -18,11 +18,13 @@ import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@ty
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
-import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
+import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
+import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
+import type { SelectionRowBase } from '../../../src/@types/engine/selection/SelectionRowBase';
 
 /** A cluster at the origin with a 10 Mpc core radius — mirrors structureMemberCount.test.ts. */
-const CLUSTER: SelectionRow = {
+const CLUSTER = placedStructureRow({
   type: 'structure',
   id: 'test-cluster',
   name: 'Test Cluster',
@@ -30,7 +32,7 @@ const CLUSTER: SelectionRow = {
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 10,
-};
+});
 
 /** The two catalogs this file's fixtures populate. */
 const SDSS_AND_TWOMRS: readonly GalaxyCatalogSourceType[] = [Source.SDSS, Source.TwoMRS];
@@ -53,7 +55,7 @@ function fadeOf(visible: readonly GalaxyCatalogSourceType[] = SDSS_AND_TWOMRS) {
   );
 }
 
-function makeState(select: SelectionRow | null): PassState {
+function makeState(select: SelectionRowBase | null): PassState {
   return {
     settings: {
       bias: { mode: 0, absMagLimit: -19 },
@@ -114,7 +116,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
-    const milkyWay: SelectionRow = { type: 'milkyWay' };
+    const milkyWay: SelectionRowBase = MILKY_WAY_ROW;
     tick.plan(SNAPSHOT, VIEWS, makeState(milkyWay), fadeOf());
 
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });

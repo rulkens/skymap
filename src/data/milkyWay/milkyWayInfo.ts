@@ -4,7 +4,7 @@
  * The Milky Way has one instance, so its focusable info is a const here rather
  * than a catalog-row derivation (galaxies) or a parsed record (structures).
  * The `type` discriminant keeps it on the same table-dispatch path as those
- * other FocusableTarget arms.  World coords come straight from
+ * other kinds' card targets.  World coords come straight from
  * `MILKY_WAY_CENTER_WORLD` (the galactic centre / Sgr A*), the single source of
  * truth for where the Milky Way sits in the engine's frame.
  */

@@ -29,8 +29,7 @@
  * visible rather than hidden inside the helper.
  */
 
-/** Floor (kpc) for galaxies whose catalog diameter is missing or zero. */
-const FALLBACK_DIAMETER_KPC = 30;
+import { FALLBACK_DIAMETER_KPC } from '../data/fallbackDiameterKpc';
 
 /** Padding multiplier; matches the textured-thumbnail's world footprint. */
 const THUMBNAIL_FOOTPRINT_PADDING = 4;

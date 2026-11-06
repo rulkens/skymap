@@ -125,10 +125,13 @@ describe('createLayers', () => {
     const { store } = createAppStore();
     const state = makeState();
     const body = stubLayer('body', {
-      selection: () => [{ type: 'body', pickSources: [1] } as never],
+      selection: { kinds: [], rows: () => [{ type: 'body', pickSources: [1] } as never] },
     });
     const galaxy = stubLayer('galaxy', {
-      selection: () => [{ type: 'galaxy', pickSources: [1] } as never],
+      selection: {
+        kinds: [],
+        rows: () => [{ type: 'galaxyCatalog', pickSources: [1] } as never],
+      },
     });
 
     await expect(createLayers(state, makeDeps([body, galaxy], store))).rejects.toThrow();
