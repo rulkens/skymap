@@ -35,7 +35,7 @@ export type StructureDetailCardProps = {
    */
   memberCount?: number | null;
   layout?: CardLayout;
-  onFocus?: (target: StructureInfo) => void;
+  onFocus?: () => void;
   onClose?: () => void;
 };
 
@@ -102,7 +102,7 @@ function StructureDetailCard({
         thumbnail={
           shot !== undefined ? <Thumbnail url={shot} alt={`${target.name} thumbnail`} /> : undefined
         }
-        onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
+        onFocus={isPinned ? onFocus : undefined}
         focusAriaLabel={`Focus camera on ${target.name}`}
         onClose={isPinned ? onClose : undefined}
       />

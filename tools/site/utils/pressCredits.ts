@@ -5,6 +5,7 @@ import { CONTACT_EMAIL } from '../../../packages/website/src/data/contact';
 import { fact } from '../../../packages/website/src/data/fact';
 import { SITE_ORIGIN } from '../../../packages/website/src/data/site';
 import { siteShot } from '../../../packages/website/src/data/siteShot';
+import { shotHash } from '../../../packages/website/src/utils/shotHash';
 import { pressPicturePath } from './pressPicturePath';
 
 /**
@@ -28,7 +29,7 @@ export function pressCredits(
       ...(shot.drawn ? [`  Data and drawing: ${shot.drawn}`] : []),
       `  Credit to print: ${row.credit}.`,
       `  Terms: ${row.terms}`,
-      `  The same view in the app: ${new URL(appLink(shot.link, shot.query), SITE_ORIGIN).href}`,
+      `  The same view in the app: ${new URL(appLink(shotHash(shot), shot.query), SITE_ORIGIN).href}`,
     ].join('\n');
   });
   return [

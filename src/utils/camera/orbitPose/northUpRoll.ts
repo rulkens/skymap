@@ -17,6 +17,6 @@ export function northUpRoll(
   bodyOrientation: Readonly<Mat3>,
   basis: Readonly<Mat3>,
 ): number {
-  const pole = rotateVec3ByTightMat3(BODY_LOCAL_FRAME.pole, bodyOrientation as Mat3);
+  const pole = rotateVec3ByTightMat3(bodyOrientation as Mat3, BODY_LOCAL_FRAME.pole);
   return rollFromScreenUp(forward as Vec3, pole, frameUp(basis as Mat3));
 }

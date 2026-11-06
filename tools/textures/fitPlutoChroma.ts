@@ -20,6 +20,8 @@ import type { Vec3 } from '../../src/@types/math/Vec3';
 import { BODY_TEXTURE_REGISTRY } from '../../src/layers/body/textures/data/bodyTextureRegistry';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { linearToSrgbByte } from '../../src/utils/color/linearToSrgbByte';
+import { srgbToLinear } from '../../src/utils/color/srgbToLinear';
 
 const LUM: Vec3 = [0.2126, 0.7152, 0.0722];
 
@@ -66,17 +68,6 @@ const MIN_TILE_SAMPLES = 25;
 const TILE_DEG = 2;
 
 const D2R = Math.PI / 180;
-
-const toLinear = (u8: number): number => {
-  const c = u8 / 255;
-  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-};
-
-const toSrgbByte = (linear: number): number => {
-  const c =
-    linear <= 0.0031308 ? linear * 12.92 : 1.055 * Math.pow(Math.max(linear, 0), 1 / 2.4) - 0.055;
-  return Math.max(0, Math.min(255, Math.round(c * 255)));
-};
 
 /**
  * Orthonormal basis of the chroma plane, byte-for-byte the construction
@@ -279,11 +270,15 @@ function pairSamples(reference: Buffer, chroma: Buffer): Sample[] {
       const i = (y * s + x) * 3;
       const j = equirectIndex(lonLat[0], lonLat[1]) * 3;
       const t: Vec3 = [
-        toLinear(reference[i]!),
-        toLinear(reference[i + 1]!),
-        toLinear(reference[i + 2]!),
+        srgbToLinear(reference[i]! / 255),
+        srgbToLinear(reference[i + 1]! / 255),
+        srgbToLinear(reference[i + 2]! / 255),
       ];
-      const e: Vec3 = [toLinear(chroma[j]!), toLinear(chroma[j + 1]!), toLinear(chroma[j + 2]!)];
+      const e: Vec3 = [
+        srgbToLinear(chroma[j]! / 255),
+        srgbToLinear(chroma[j + 1]! / 255),
+        srgbToLinear(chroma[j + 2]! / 255),
+      ];
       const yTrue = LUM[0] * t[0] + LUM[1] * t[1] + LUM[2] * t[2];
       const yEnhanced = LUM[0] * e[0] + LUM[1] * e[1] + LUM[2] * e[2];
       if (yTrue <= 1e-4 || yEnhanced <= 1e-4) continue;
@@ -406,18 +401,18 @@ function crossCheckAgainstShippedCode(m: Matrix2, gain: number): number {
   let maxDelta = 0;
   for (let i = 0; i < hues.length; i++) {
     const e: Vec3 = [
-      toLinear(chroma[i * 3]!),
-      toLinear(chroma[i * 3 + 1]!),
-      toLinear(chroma[i * 3 + 2]!),
+      srgbToLinear(chroma[i * 3]! / 255),
+      srgbToLinear(chroma[i * 3 + 1]! / 255),
+      srgbToLinear(chroma[i * 3 + 2]! / 255),
     ];
     const y = LUM[0] * e[0] + LUM[1] * e[1] + LUM[2] * e[2];
     const c: Vec3 = y > 1e-5 ? [e[0] / y - 1, e[1] / y - 1, e[2] / y - 1] : [0, 0, 0];
     const q = applyMatrix(c, m);
-    const lum = toLinear(luminance[i]!);
+    const lum = srgbToLinear(luminance[i]! / 255);
     for (let k = 0; k < 3; k++) {
       maxDelta = Math.max(
         maxDelta,
-        Math.abs(toSrgbByte(lum * (1 + gain * q[k]!)) - shipped[i * 3 + k]!),
+        Math.abs(linearToSrgbByte(lum * (1 + gain * q[k]!)) - shipped[i * 3 + k]!),
       );
     }
   }
@@ -479,9 +474,9 @@ async function fitPlutoChroma(referenceOverride: string | null): Promise<boolean
     let sumB = 0;
     for (const p of anchorSet) {
       const c = colour(p);
-      sumR += toSrgbByte(c[0]);
-      sumG += toSrgbByte(c[1]);
-      sumB += toSrgbByte(c[2]);
+      sumR += linearToSrgbByte(c[0]);
+      sumG += linearToSrgbByte(c[1]);
+      sumB += linearToSrgbByte(c[2]);
     }
     return [sumG / sumR, sumB / sumR];
   };

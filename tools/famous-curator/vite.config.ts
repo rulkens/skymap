@@ -16,7 +16,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
 import { apiPlugin } from './plugin/apiPlugin.ts';
-import { restartOnPluginChange } from './plugin/restartOnPluginChange.ts';
+import { restartOnPluginChange } from '../utils/vite/restartOnPluginChange.ts';
 import { DEV_PORTS } from '../utils/io/devPorts.ts';
 
 export default defineConfig({
@@ -28,5 +28,9 @@ export default defineConfig({
   server: { port: DEV_PORTS.famousCurator },
   // restartOnPluginChange must come BEFORE apiPlugin so it has a chance
   // to register its watcher before any apiPlugin file is imported.
-  plugins: [restartOnPluginChange(), react(), apiPlugin()],
+  plugins: [
+    restartOnPluginChange(resolve(import.meta.dirname, 'plugin'), 'famous-curator'),
+    react(),
+    apiPlugin(),
+  ],
 });

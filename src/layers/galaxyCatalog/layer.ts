@@ -19,12 +19,13 @@ import { galaxyCatalogSourceCounts } from './records/load/galaxyCatalogSourceCou
 import { galaxyPointSpritesPass } from './pointSprites/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from './disks/procedural/passes/proceduralDisksPass';
 import { texturedDisksPass } from './disks/textured/passes/texturedDisksPass';
-import { galaxyCatalogSelectionRow } from './selection/present/galaxyCatalogSelectionRow';
+import { galaxyCatalogSelectionRow } from './selection/galaxyCatalogSelectionRow';
+import { galaxyCatalogSelectionKinds } from './selection/kinds';
 import { produceFamousGalaxyLabels } from './famousGalaxies/present/produceFamousGalaxyLabels';
 import { watchPaletteWakeSaga } from './aliases/sagas/watchPaletteWakeSaga';
 import GalaxiesSectionContainer from './controls/ui/GalaxiesSectionContainer';
-import GalaxyDetailCard from './card/ui/GalaxyDetailCard/GalaxyDetailCard';
-import CompactCard from './card/ui/CompactCard/CompactCard';
+import GalaxyDetailCardContainer from './card/ui/GalaxyDetailCardContainer';
+import CompactCardContainer from './card/ui/CompactCardContainer';
 import GalaxyProvenanceSectionContainer from './provenance/ui/GalaxyProvenanceSectionContainer';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 
@@ -59,14 +60,21 @@ export const galaxyCatalogLayer = defineLayer({
       },
     ],
   }),
-  selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
+  selection: {
+    kinds: galaxyCatalogSelectionKinds,
+    rows: (runtime) => [galaxyCatalogSelectionRow(runtime)],
+  },
   planners: (runtime) => [galaxyCatalogPlanner(runtime)],
   ui: [
     { slot: 'main', content: GalaxiesSectionContainer, title: 'Galaxies' },
     { slot: 'debug', content: GalaxyProvenanceSectionContainer },
     {
       slot: 'detailCard',
-      content: { type: 'galaxyCatalog', Detail: GalaxyDetailCard, Compact: CompactCard },
+      content: {
+        type: 'galaxyCatalog',
+        Detail: GalaxyDetailCardContainer,
+        Compact: CompactCardContainer,
+      },
     },
   ],
 });

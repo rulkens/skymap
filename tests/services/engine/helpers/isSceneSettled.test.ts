@@ -22,7 +22,7 @@ const LOADING: LoadState<unknown> = { kind: 'loading', req: null, loaded: 0, tot
 const settled = {
   booted: true,
   fadesAnimating: false,
-  layersSettling: false,
+  layersLoading: false,
   slotsByKey: slots([
     ['a', slotIn(READY)],
     ['b', slotIn({ kind: 'idle' })],
@@ -45,8 +45,8 @@ describe('isSceneSettled', () => {
     expect(isSceneSettled({ ...settled, slotsByKey: committing })).toBe(false);
   });
 
-  it('is false while a Layer voted settling last frame', () => {
-    expect(isSceneSettled({ ...settled, layersSettling: true })).toBe(false);
+  it('is false while a Layer voted loading last frame', () => {
+    expect(isSceneSettled({ ...settled, layersLoading: true })).toBe(false);
   });
 
   it('is false while a fade is running', () => {

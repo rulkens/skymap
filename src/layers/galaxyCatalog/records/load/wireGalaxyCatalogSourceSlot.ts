@@ -14,7 +14,6 @@ import type { SourceType } from '../../../../@types/data/SourceType';
 import type { ProvenanceCounts } from '../../../../@types/engine/ProvenanceCounts';
 import type { LayerCoreDeps } from '../../../../@types/engine/layer/LayerCoreDeps';
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
-import type { FamousGalaxyMetaEntry } from '../../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalogReq } from '../../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyPointRenderer } from '../../pointSprites/@types/GalaxyPointRenderer';
 import type { GalaxyCatalogFacts } from '../../@types/GalaxyCatalogFacts';
@@ -31,7 +30,6 @@ export function wireGalaxyCatalogSourceSlot(
     readonly pointRenderer: GalaxyPointRenderer;
     readonly catalogs: Map<SourceType, GalaxyCatalog>;
     readonly records: Map<GalaxyCatalogSourceType, GalaxyRecordSource>;
-    readonly famousMeta: () => readonly FamousGalaxyMetaEntry[];
     readonly bumpCatalogsVersion: () => void;
   },
 ): AssetSlot<GalaxyCatalog, GalaxyCatalogReq> {
@@ -45,7 +43,7 @@ export function wireGalaxyCatalogSourceSlot(
       const t0 = performance.now();
       console.log(`[engine] upload start ${id} count=${cloud.count}`);
       // Built first: the bake reads the source's stats instead of recomputing them.
-      const record = flatGalaxyRecordSource(entry, cloud, galaxy.famousMeta);
+      const record = flatGalaxyRecordSource(entry, cloud);
       // GalaxyPointRenderer keys its catalogs by the string id, not the source code.
       await galaxy.pointRenderer.upload(id, cloud, record.stats);
       galaxy.catalogs.set(source, cloud);

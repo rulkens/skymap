@@ -1,5 +1,5 @@
 import type { SelectionState } from '../store/SelectionState';
-import type { SelectionRef } from './SelectionRef';
+import type { SelectionRefBase } from './selection/SelectionRefBase';
 
 /**
  * SelectionSlot — the slot name shared by every selection surface: the
@@ -15,5 +15,5 @@ import type { SelectionRef } from './SelectionRef';
  * non-ref field.
  */
 export type SelectionSlot = {
-  [K in keyof SelectionState]: SelectionState[K] extends SelectionRef | null ? K : never;
+  [K in keyof SelectionState]: SelectionState[K] extends SelectionRefBase | null ? K : never;
 }[keyof SelectionState];

@@ -30,7 +30,7 @@
  *     knobs.
  *
  *   - `focus` — set the selection focus to `ref` (or `null` to clear). Drives the
- *     structure-isolation dim (`emphasisOf` recession). `SelectionRef` carries
+ *     structure-isolation dim (`emphasisOf` recession). A ref carries
  *     a galaxyCatalog/structure/milkyWay discriminant and the durable id.
  *
  *   - `frameTo` — cue-style orientation-frame reorientation. Fires
@@ -59,9 +59,9 @@
 import type { VisibilityAddress } from './VisibilityAddress';
 import type { ScopedVisibilityAddress } from './ScopedVisibilityAddress';
 import type { SettingsAction } from '../../compositions/@types/SettingsAction';
-import type { SelectionRef } from '../engine/SelectionRef';
 import type { OrientationFrameId } from '../camera/orientation/OrientationFrameId';
 import type { Ease } from './Ease';
+import type { SelectionRefBase } from '../engine/selection/SelectionRefBase';
 
 export type SceneEffect =
   | {
@@ -86,7 +86,7 @@ export type SceneEffect =
     }
   | {
       readonly kind: 'focus';
-      readonly ref: SelectionRef | null;
+      readonly ref: SelectionRefBase | null;
     }
   | {
       readonly kind: 'frameTo';

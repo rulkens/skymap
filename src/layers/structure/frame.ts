@@ -28,6 +28,7 @@ export function structureMarkersPlanner(
       value: produceStructureMarkers(runtime, state, view, fade),
       awake: false,
       settling: false,
+      loading: false,
     }),
   };
 }

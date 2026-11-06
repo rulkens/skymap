@@ -10,15 +10,14 @@
  * The renderer is renderer-type-agnostic: its uniform carries a
  * pre-computed `ringRadiusPx`, not a galaxy diameter.  The per-target
  * characteristic radius (Mpc) and the world position to centre on both come
- * from the `selectionHalo` dispatch function, keyed on the row's union tag —
- * a galaxy yields its catalog diameter, the Milky Way its disc radius, a
- * structure `null` (it renders its ring through the cluster marker pass).
+ * from `selectionHaloOf`, over the kind's `focus.ring` facts — a galaxy yields
+ * twice its diameter, the Milky Way its disc radius, a structure `null` (it
+ * renders its ring through the cluster marker pass).
  * This layer then defers the apparent-px math to the shared
  * `selectionRingRadiusPx` helper, passing `state.settings.galaxyCatalogs.sizePx`
- * as the minimum-radius floor.  Because a structure is already a table
- * row returning null, no per-kind branch is needed here: a new halo-bearing
- * kind is one table row, and the descriptor carries the position so the layer
- * never re-narrows the union to read coordinates.
+ * as the minimum-radius floor.  No per-kind branch is needed here: a new
+ * halo-bearing kind declares its ring, and the descriptor carries the position
+ * so the layer never re-narrows the union to read coordinates.
  *
  * ## Why one writeBuffer is fine
  *
@@ -27,7 +26,7 @@
  * `near0SelectionRingPass`.  A frame records both into one encoder with one
  * `queue.submit`, so if both drew, both draws would read the last-written
  * uniforms (the writeBuffer/submit race).  The two layers avoid that by
- * partitioning the `selectionHalo` table by slab: this layer is
+ * partitioning the halos by slab: this layer is
  * `enabled()`-true only for a COSMO-slab descriptor, the sibling only for
  * NEAR0.  Nothing selected, a star, or a structure leaves this layer disabled,
  * so its 16-byte selection + 80-byte camera upload fires only on frames where
@@ -37,7 +36,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
-import { selectionHalo } from '../../helpers/selectionHaloTable';
+import { selectionHaloOf } from '../../helpers/selectionHaloOf';
 import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 
@@ -47,11 +46,11 @@ export const selectionRingPass: ContentPass = {
   enabled(state, _ctx, _view) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const row = state.selectionRows.select;
-    // A row drives THIS ring iff the table yields a COSMO-slab descriptor for
-    // its kind. The slab test is what keeps this layer and the NEAR0 sibling
-    // from both firing on the same frame — they share one renderer, and only
-    // one may write its uniforms per frame (see `near0SelectionRingPass`).
-    const halo = selectionHalo(row);
+    // A row drives THIS ring iff its kind's ring is in the COSMO slab. The slab
+    // test keeps this layer and the NEAR0 sibling from both firing on the same
+    // frame — they share one renderer, and only one may write its uniforms per
+    // frame (see `near0SelectionRingPass`).
+    const halo = selectionHaloOf(row);
     return halo !== null && halo.slab === COSMO;
   },
 
@@ -59,9 +58,8 @@ export const selectionRingPass: ContentPass = {
     const row = state.selectionRows.select;
     // A null descriptor is the structure arm (it renders its ring through the
     // cluster marker pass).  The descriptor carries both the radius and the
-    // world position, so there's no union re-narrow and no catalog re-index —
-    // each kind's position is resolved in the table.
-    const halo = selectionHalo(row);
+    // world position, so there's no union re-narrow and no catalog re-index.
+    const halo = selectionHaloOf(row);
     if (halo === null) return;
     const { radiusMpc, worldPos } = halo;
 

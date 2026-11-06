@@ -19,10 +19,15 @@ import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 import { frameViewsAt } from '../../../../../helpers/frame/frameViewsAt';
 import type { TileCamera } from '../../../../../../src/layers/body/surfaceTiles/plan/@types/TileCamera';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { SurfaceTileBand } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBand';
+import { requestBandsOf } from '../../../../../support/requestBandsOf';
 
 const EARTH_ID = asSceneBodyId('earth');
 const RADIUS_M = SCENE_EARTH.surface.datumRadiusM;
 const BASE_LEVEL = baseLevelForTier('earth', 'large');
+const BANDS: readonly SurfaceTileBand[] = [
+  { uBounds: [0, 1], vBounds: [0, 1], min: BASE_LEVEL + 1, max: 16 },
+];
 const UP: Vec3 = normalize3([0.2, 0.9, -0.4]);
 
 function requestsFor(camPosLocalM: Readonly<Vec3>, camera: TileCamera) {
@@ -32,7 +37,8 @@ function requestsFor(camPosLocalM: Readonly<Vec3>, camera: TileCamera) {
     radiusM: RADIUS_M,
     reliefM: SCENE_EARTH.surface.reliefM,
     baseLevel: BASE_LEVEL,
-    bands: [{ uBounds: [0, 1], vBounds: [0, 1], min: BASE_LEVEL + 1, max: 16 }],
+    bands: BANDS,
+    requestBands: requestBandsOf(BANDS),
     tilePx: SURFACE_TILE_PX,
     lodBias: 0,
     residentSlot: () => null,

@@ -43,7 +43,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-pictures',
     about: 'app',
-    text: 'Every picture of the universe on this site is a render from the app. The stills are rows in a manifest that holds each one’s address and settings, and one command takes them all again from a running copy of the app. The frames of the flight on the home page are cut from a recording of the app. The six pictures on the Developer workbenches page are screenshots of those tools.',
+    text: 'Every picture of the universe on this site is a render from the app. The stills are rows in a manifest that holds each one’s address and settings, and one command takes them all again from a running copy of the app. The frames of the flight on the home page are cut from a recording of the app. The pictures on the Developer workbenches page are screenshots of those tools.',
     source: `${REPO_BLOB}/tools/site/README.md`,
     sourceLabel: `how the site’s pictures are made, ${IN_REPO}`,
     checked: CHECKED,

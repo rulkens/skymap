@@ -7,7 +7,7 @@
  */
 import type { CSSProperties, ReactNode } from 'react';
 
-import { requireShotLink } from '../../../../utils/requireShotLink.ts';
+import { shotLink } from '../../../../utils/shotLink.ts';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
@@ -55,7 +55,7 @@ function Exhibit({ id, title, lead, children }: ExhibitProps) {
             <li key={exhibit.shot} style={{ '--exhibit-accent': exhibit.accent } as CSSProperties}>
               <ViewLink
                 hang
-                view={requireShotLink(exhibit.shot)}
+                view={shotLink(exhibit.shot)}
                 data-exhibit={exhibit.shot}
                 aria-current={i === 0 ? 'true' : undefined}
               >

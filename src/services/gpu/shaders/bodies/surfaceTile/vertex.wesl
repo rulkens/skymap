@@ -1,4 +1,4 @@
-// surfaceTile/vertex.wesl — every patch's geometry from an 80-byte
+// surfaceTile/vertex.wesl — every patch's geometry from a 96-byte
 // 'PatchInstance' and the height atlas. The record is 'inst' -- 'patch' is a
 // WGSL RESERVED WORD. 'originRelEyeM' was differenced CPU-side from the SAME
 // f32-rounded anchor rebuilt here, so s = t = 0 lands on it exactly: no cracks.
@@ -165,6 +165,7 @@ fn vs(
   out.fallbackUvOrigin = inst.fallbackRect.xy;
   out.fallbackUvScale = inst.fallbackRect.zw;
   out.fadeWeight = inst.fadeWeight;
+  out.nightRect = inst.nightRect;
   out.heightLattice = vec3<u32>(inst.heightSlotOrigin, inst.heightCells);
   out.patchSpanRad = vec2<f32>(inst.dLonRad, inst.dLatRad);
   // Camera minus vertex, inverted through the same rotation and scaled into

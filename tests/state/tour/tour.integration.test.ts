@@ -203,7 +203,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     // The pass closes over its Layer's runtime, so the spy rides a stub runtime
     // rather than `state.gpu`.
     const runtime = {
-      ...galaxyRowRuntime({ catalogs: new Map(), famousMeta: [] }),
+      ...galaxyRowRuntime({ catalogs: new Map() }),
       pointRenderer: { draw: drawSpy },
     } as never;
     const ctx = makeDrawCtx(nowMs, SURVEY_CAM_POS);

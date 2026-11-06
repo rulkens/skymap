@@ -23,10 +23,10 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -42,7 +42,7 @@ function makeState(
     renderTargets?: unknown;
     galaxyPickRenderer?: unknown;
     lastFocus?: FocusUniformsValue;
-    lastFocusRef?: SelectionRef;
+    lastFocusRef?: SelectionRefBase;
     selectionKindRows?: unknown[];
     compositor?: unknown;
     texturedDisks?: unknown;

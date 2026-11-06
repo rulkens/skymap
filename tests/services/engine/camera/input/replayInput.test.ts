@@ -37,13 +37,16 @@ import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeo
 import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
 import type { InputStep } from '../../../../../src/@types/camera/input/InputStep';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
-import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { CAMERA_DRIVERS } from '../../../../../src/services/engine/camera/drivers/cameraDrivers';
 import { ridesWheelTarget } from '../../../../../src/services/engine/camera/input/ridesWheelTarget';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
+import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
+import type { SelectionRowBase } from '../../../../../src/@types/engine/selection/SelectionRowBase';
+import { isKind } from '../../../../../src/utils/selection/isKind';
+import type { BodySelectionRow } from '../../../../../src/@types/engine/selection/BodySelectionRow';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -53,13 +56,7 @@ function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-const EARTH_ROW: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('earth'),
-  label: 'Earth',
-  positionMpc: [0, 0, 0],
-  driver: bodyDriverGeometry('earth'),
-};
+const EARTH_ROW: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
 /** The replay's frame context with the store snapshot taken NOW. */
 function ctxOf(
@@ -73,7 +70,7 @@ function ctxOf(
       poseBasis: B,
       upBasis: B,
       terrainHeightAt: datumOnlyTerrainHeight,
-      focusBodyId: focus?.type === 'body' ? focus.id : null,
+      focusBodyId: isKind<BodySelectionRow>(focus, 'body') ? focus.id : null,
       pivot: pivotFraming(focus),
       viewportPx: [1000, 1000] as const,
       frustum: symmetricFrustum(Math.PI / 3, 1),

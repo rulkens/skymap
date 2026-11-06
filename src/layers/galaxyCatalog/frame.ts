@@ -15,7 +15,6 @@ import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { PassState } from '../../@types/engine/frame/PassState';
 import type { GalaxyCatalogId } from './@types/GalaxyCatalogId';
 import type { GalaxyCatalogSourceType } from './@types/GalaxyCatalogSourceType';
-import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
@@ -25,6 +24,14 @@ import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale
 import { structureMemberCount } from './structureMembership/utils/structureMemberCount';
 import { visibleCatalogsOf } from './records/utils/visibleCatalogsOf';
 import { setsEqual } from '../../utils/set/setsEqual';
+import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
+import { isKind } from '../../utils/selection/isKind';
+import { COSMO } from '../../services/engine/frame/slabs';
+import { FRUSTUM_FLOATS_PER_VIEW } from '../../data/camera/frustumFloatsPerView';
+import { rebaseViewProj } from '../../utils/camera/projection/rebaseViewProj';
+import { narrowMat4 } from '../../utils/math/narrowMat4';
+import { frustumPlanesFromViewProj } from '../../utils/camera/frustum/frustumPlanesFromViewProj';
+import type { StructureSelectionRow } from '../structure/selection/@types/StructureSelectionRow';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
@@ -36,7 +43,7 @@ export function galaxyCatalogPlanner(
   // The (selected row identity, visible catalogs, catalogsVersion) triple the
   // member count was last computed against. `-1` never equals a real
   // catalogsVersion, so the very first frame always computes.
-  let memberCountRow: SelectionRow | null = null;
+  let memberCountRow: SelectionRowBase | null = null;
   let memberCountCatalogs: ReadonlySet<GalaxyCatalogId> | null = null;
   let memberCountVersion = -1;
 
@@ -74,8 +81,7 @@ export function galaxyCatalogPlanner(
           // Narrowed on the row's own tag, never a structural sniff — only a
           // `structure` arm of a cosmic category (one with galaxy members) is countable.
           structureMemberCount:
-            selectRow !== null &&
-            selectRow.type === 'structure' &&
+            isKind<StructureSelectionRow>(selectRow, 'structure') &&
             STRUCTURE_IDS_BY_SCALE.cosmic.includes(selectRow.category)
               ? structureMemberCount(selectRow, runtime.records, visibleCatalogs)
               : null,
@@ -89,6 +95,16 @@ export function galaxyCatalogPlanner(
       // for a threshold nudge.
       const cam = views[0]!.cam;
       const pxPerRad = Math.max(...views.map((view) => view.drawPxPerRad));
+      // Galaxies draw in COSMO; the planes sit about the walk's origin, cam.position.
+      // A sky capture replays the disks on all six faces, so an open band culls nothing.
+      const cullViews = snapshot.skyCapturesInBand.size > 0 ? [] : views;
+      const viewPlanes = new Float32Array(cullViews.length * FRUSTUM_FLOATS_PER_VIEW);
+      cullViews.forEach((view, v) =>
+        frustumPlanesFromViewProj(
+          narrowMat4(rebaseViewProj(view.slabs[COSMO]!.vp, cam.position)),
+          viewPlanes.subarray(v * FRUSTUM_FLOATS_PER_VIEW, (v + 1) * FRUSTUM_FLOATS_PER_VIEW),
+        ),
+      );
 
       // hiResFamous must run BEFORE the shared disk walk: the textured-disk body
       // folds `hiResFamous.lastOutput.byFamousIdx` into the instances it emits;
@@ -100,7 +116,6 @@ export function galaxyCatalogPlanner(
           catalogs: runtime.catalogs,
           visibleCatalogs,
           pxPerRad,
-          famousGalaxiesMeta: runtime.famousMeta,
         });
       }
 
@@ -111,6 +126,7 @@ export function galaxyCatalogPlanner(
         records: runtime.records,
         visibleCatalogs,
         pxPerRad,
+        viewPlanes,
         // Both LOD disk bodies fold this into their emitted alpha/brightness so a
         // hidden catalog's disks fade out with the point sprites instead of
         // popping once the fade ends and the visible set drops the catalog. The handed
@@ -141,7 +157,7 @@ export function galaxyCatalogPlanner(
       // LANDED is real motion, and it is the same content a sky capture must
       // re-bake for, so both votes read it.
       const fading = runtime.texturedDisks.hasFadingContent();
-      return { value: undefined, awake: fading, settling: fading };
+      return { value: undefined, awake: fading, settling: fading, loading: fading };
     },
   };
 }

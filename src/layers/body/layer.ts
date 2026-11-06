@@ -25,20 +25,22 @@ import { ringsPass } from './rings/passes/ringsPass';
 import { bodyGlintsPass } from './glints/passes/bodyGlintsPass';
 import { atmosphereShellPass } from './atmosphere/passes/atmosphereShellPass';
 import { aerialPerspectivePass } from './atmosphere/passes/aerialPerspectivePass';
+import { atmosphereProbeSkyPass } from './atmosphere/passes/atmosphereProbeSkyPass';
 import { bodyMeshesPass } from './meshes/passes/bodyMeshesPass';
 import { skyViewCompute } from './atmosphere/computes/skyViewCompute';
 import { aerialPerspectiveCompute } from './atmosphere/computes/aerialPerspectiveCompute';
 import { bodyAssetRows } from './textures/load/bodyAssetRows';
 import { BODY_BODY_ROWS } from './bodies/bodyBodyRows';
 import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
-import { bodySelectionRow } from './selection/present/bodySelectionRow';
+import { bodySelectionRow } from './selection/bodySelectionRow';
+import { bodySelectionKinds } from './selection/kinds';
 import { bodySearch } from './selection/present/bodySearch';
 import { BODY_TRAIL_ELEMENTS } from './orbitTrails/data/bodyTrailElements';
 import { SMALL_BODY_TRAIL_IDS } from './orbitTrails/data/smallBodyTrailIds';
 import { produceSceneBodyCaptions } from './labels/present/produceSceneBodyCaptions';
 import { bodyLayerExhibits } from './exhibits/exhibits';
 import { NEAR0 } from '../../services/engine/frame/slabs';
-import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
+import BodyDetailCardContainer from './card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 import { surfaceTilePlanner } from './frame';
 import { watchDebugPanelWakeSaga } from './surfaceTiles/debug/sagas/watchDebugPanelWakeSaga';
@@ -75,6 +77,7 @@ export const bodyLayer = defineLayer({
     bodyGlintsPass(runtime),
     atmosphereShellPass(runtime),
     aerialPerspectivePass(runtime),
+    atmosphereProbeSkyPass(runtime),
     bodyMeshesPass(runtime),
   ],
   computes: (runtime) => [skyViewCompute(runtime), aerialPerspectiveCompute(runtime)],
@@ -97,7 +100,7 @@ export const bodyLayer = defineLayer({
       selectedOnly: SMALL_BODY_TRAIL_IDS,
     },
   }),
-  selection: (runtime) => [bodySelectionRow(runtime)],
+  selection: { kinds: bodySelectionKinds, rows: (runtime) => [bodySelectionRow(runtime)] },
   search: () => bodySearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'orbitTrails', label: 'Orbit trails' } },

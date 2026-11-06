@@ -1,7 +1,7 @@
 /**
  * resolveFocusRefDeferringSaga — the shared command->ref bridge both selection
  * command sagas (watchRequestFocusSaga, watchRequestSelectSaga) call. Resolves a
- * durable focus id to a SelectionRef via the composed resolver, DEFERRING while
+ * durable focus id to a selection ref via the composed resolver, DEFERRING while
  * it is unresolvable on two pulses: engineSourceCountReported (every source's
  * catalog-landed pulse) and engineStatusChanged (`wireSlots` fires 'loading'
  * right after `createLayers` appends each Layer's selection rows — a

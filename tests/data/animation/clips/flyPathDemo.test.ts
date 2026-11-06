@@ -20,9 +20,13 @@ import {
 import { resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
 import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
-import { structureFocusDistance } from '../../../../src/services/engine/camera/framing/structureFocusDistance';
+import { arrivalFraming } from '../../../../src/services/engine/camera/framing/arrivalFraming';
+import { selectionKindOf } from '../../../../src/services/engine/selection/selectionKindOf';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const FOV_Y = 0.8;
 const TEST_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };
@@ -100,7 +104,14 @@ describe('flyPathDemo clip', () => {
     expect(end.target[0]).toBeCloseTo(0, 2);
     expect(end.target[1]).toBeCloseTo(0, 2);
     expect(end.target[2]).toBeCloseTo(10, 2); // Sculptor worldPos
-    expect(end.distance).toBeCloseTo(structureFocusDistance(2, FOV_Y), 2);
+    expect(end.distance).toBeCloseTo(
+      arrivalFraming(
+        { type: 'structure', positionMpc: [0, 0, 0], radiusMpc: 2 },
+        selectionKindOf('structure').focus!,
+        FOV_Y,
+      ).distance,
+      2,
+    );
   });
 
   it('moves the camera continuously through the take (no freeze, no teleport)', () => {

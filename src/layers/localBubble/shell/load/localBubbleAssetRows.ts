@@ -4,12 +4,15 @@
  */
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
+import type { LocalBubbleAssetKey } from '../../@types/LocalBubbleAssetKey';
 import type { LocalBubbleRuntime } from '../../@types/LocalBubbleRuntime';
 
 const DEMAND_DISTANCE_MPC = 0.02; // 20 kpc
 const RELEASE_DISTANCE_MPC = 0.04; // 40 kpc
 
-export function localBubbleAssetRows(runtime: LocalBubbleRuntime): readonly AssetWiringRow[] {
+export function localBubbleAssetRows(
+  runtime: LocalBubbleRuntime,
+): readonly AssetWiringRow<unknown, unknown, LocalBubbleAssetKey>[] {
   return [
     {
       key: 'localBubble',

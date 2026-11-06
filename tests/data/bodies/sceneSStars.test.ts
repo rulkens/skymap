@@ -13,7 +13,7 @@ import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
 import { starSearch } from '../../../src/layers/starCatalog/selection/present/starSearch';
-import { encodeStarFocusId } from '../../../src/services/url/encodeStarFocusId';
+import { encodeStarFocusId } from '../../../src/layers/starCatalog/selection/utils/encodeStarFocusId';
 import type { LayerSearchEntry } from '../../../src/@types/engine/layer/LayerSearchEntry';
 import { Source } from '../../../src/data/source';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';

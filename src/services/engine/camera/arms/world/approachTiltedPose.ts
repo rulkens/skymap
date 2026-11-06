@@ -25,13 +25,13 @@ import type { BodyState } from '../../../../../@types/scene/BodyState';
 import type { CameraTuning } from '../../../../../@types/camera/orbitCamera/CameraTuning';
 import type { FramedCameraPose } from '../../../../../@types/camera/pose/FramedCameraPose';
 import type { Mat3 } from '../../../../../@types/math/Mat3';
-import type { SelectionRow } from '../../../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { SelectionRowBase } from '../../../../../@types/engine/selection/SelectionRowBase';
 
 export function approachTiltedPose(
   framed: FramedCameraPose,
   pivotsOnFocusedBody: boolean,
-  focusRow: SelectionRow | null,
+  focusRow: SelectionRowBase | null,
   bodies: ReadonlyMap<string, BodyState>,
   rememberedTiltRad: number,
   poseBasis: Readonly<Mat3>,

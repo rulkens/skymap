@@ -1,6 +1,6 @@
 /**
  * SurfaceTileStream — the sole owner of surface-tile residency, one body's
- * atlases at a time (`SURFACE_TILE_REGISTRY`): manifests, both atlases, LRU,
+ * atlases at a time (`SURFACE_TILE_REGISTRY`): manifests, one atlas per product, LRU,
  * key → slot, in-flight and failed keys. It decides nothing; it applies
  * `planSurfaceTiles`' plan, as `OctreeChunkStream` does `planOctreeChunks`'.
  * GPU memory allocates on the first `engage` verdict, so a session that never
@@ -15,6 +15,7 @@ import type { Destroyable } from '../../../../../@types/rendering/Destroyable';
 import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import type { SurfaceTilePlannerParams } from '../../plan/@types/SurfaceTilePlannerParams';
+import type { SurfaceTileProduct } from '../../format/@types/SurfaceTileProduct';
 
 export type SurfaceTileStream = Destroyable & {
   readonly residency: SurfaceTileResidency;
@@ -47,12 +48,10 @@ export type SurfaceTileStream = Destroyable & {
     params: SurfaceTilePlannerParams | null,
   ): number | null;
 
-  /** The albedo atlas's view, or `null` while nothing is engaged. */
-  getAtlasView(): GPUTextureView | null;
-
-  /** The HEIGHT atlas's view (Terrain-RGB `rgba8unorm`, 129-post slots,
-   *  decoded in the shader), or `null` while nothing is engaged. */
-  getHeightAtlasView(): GPUTextureView | null;
+  /** `product`'s atlas view (`SURFACE_TILE_LANE_SPECS` has its format and
+   *  slot geometry), or `null` while nothing is engaged or the engaged
+   *  manifest bakes no band of that product. */
+  getAtlasView(product: SurfaceTileProduct): GPUTextureView | null;
 
   /** Residency counts for the DebugPanel's throttled readout; the plan's half
    *  (`plan`) comes from the frame's `SurfaceTilePlan`. */

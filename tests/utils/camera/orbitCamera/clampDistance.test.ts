@@ -16,12 +16,12 @@ import {
   SURFACE_STANDOFF_RADII,
 } from '../../../../src/utils/camera/orbitCamera/clampDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
+import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc';
 
 /**
  * The galaxy-focus tween's minimum end distance (0.15 Mpc) is the lowest
- * distance `galaxyFocusDistance()` can return — see
- * `src/services/engine/camera/framing/galaxyFocusDistance.ts: MIN_FOCUS_DISTANCE_MPC`.
+ * distance a galaxy arrival can land at — the galaxyCatalog kind's
+ * `focus.minDistanceMpc` (`src/layers/galaxyCatalog/selection/kinds.ts`).
  * A sub-floor wheel-zoom input must not ratchet that distance outward;
  * `clampDistance(GALAXY_FOCUS_MIN_MPC, MIN_DISTANCE_MPC)` must return the
  * value unchanged.
@@ -61,7 +61,7 @@ describe('clampDistance — floored at a precomputed body surface', () => {
     // Cross-check between two constants that have to stay ordered: the standoff
     // must sit INSIDE the screen-fill framing distance, or every fresh body focus
     // would be clamped and land somewhere other than where the framing asked for.
-    const framing = bodyFocusDistance(EARTH_RADIUS_MPC, (Math.PI / 180) * 60);
+    const framing = bodyArrivalDistanceMpc(EARTH_RADIUS_MPC, (Math.PI / 180) * 60);
     expect(clampDistance(framing, EARTH_FLOOR_MPC)).toBe(framing);
   });
 });

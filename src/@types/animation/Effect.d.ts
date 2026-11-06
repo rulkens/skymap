@@ -16,7 +16,7 @@
  *
  * `FocusBoundEffect` arms (`moveTargetId`, `dollyToId`, `focusId`) are the
  * UNRESOLVED authoring forms — they carry a `FocusId` instead of a concrete
- * `Vec3`/`SelectionRef`. They are rewritten by `resolveClipFoci` before
+ * `Vec3`/selection ref. They are rewritten by `resolveClipFoci` before
  * `compileClip` runs; `compileClip` throws if it ever sees one unresolved.
  *
  * The four structural nodes (`hold`, `wait`, `seq`, `all`, `fork`) compose

@@ -8,6 +8,7 @@ describe('detailCardFor', () => {
   it('returns the table row matching the target arm', () => {
     const table = detailCardTable(APP_COMPOSITION.layers);
 
-    expect(detailCardFor(table, MILKY_WAY_INFO)).toBe(table.milkyWay);
+    const target = { ...MILKY_WAY_INFO, ref: { type: 'milkyWay' } } as const;
+    expect(detailCardFor(table, target)).toBe(table.get('milkyWay'));
   });
 });

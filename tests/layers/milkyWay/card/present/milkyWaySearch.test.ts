@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { milkyWaySearch } from '../../../../../src/layers/milkyWay/card/present/milkyWaySearch';
-import { milkyWaySelectionRow } from '../../../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
+import { milkyWaySelectionRow } from '../../../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
 import { MILKY_WAY_NAMES } from '../../../../../src/layers/milkyWay/card/data/milkyWayNames';
 import { milkyWayPickCode } from '../../../../support/layerPickCodes';
 

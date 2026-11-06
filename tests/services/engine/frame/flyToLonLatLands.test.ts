@@ -28,7 +28,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { liveUpBasisQuat } from '../../../../src/services/engine/camera/orientation/liveUpBasisQuat';
 import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
+import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { eyeFrameOf } from '../../../../src/utils/camera/surfaceFrame/eyeFrameOf';
 import { directionToLonLatDeg } from '../../../../src/utils/geo/directionToLonLatDeg';
@@ -42,8 +42,13 @@ import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { SimBodyId } from '../../../helpers/camera/SimBodyId';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
+import { isKind } from '../../../../src/utils/selection/isKind';
+import type { BodyRef } from '../../../../src/@types/engine/selection/BodyRef';
+
+installAppSelectionKinds();
 
 // Past the flight, then a further stretch the result must survive unchanged.
 const FLIGHT_FRAMES = Math.ceil(FLY_TO_LON_LAT_TWEEN_MS / 16) + 10;
@@ -75,8 +80,8 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
         upBasisQuat: liveUpBasisQuat(h.state.cameraRuntime),
       }),
       selection: {
-        extractRow: (ref: SelectionRef | null) => {
-          if (ref?.type !== 'body') return null;
+        extractRow: (ref: SelectionRefBase | null) => {
+          if (!isKind<BodyRef>(ref, 'body')) return null;
           const p = h.bodies.get(ref.id)!.positionMpc;
           return { type: 'body', id: ref.id, label: ref.id, positionMpc: [p[0]!, p[1]!, p[2]!] };
         },
@@ -171,7 +176,7 @@ describe('flyToLonLat through the frame loop', () => {
     // The distance the follow driver frames a focused Mars at (harness FOV 60°).
     const footprintM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'mars', 'test'));
     const framingM =
-      bodyFocusDistance(footprintM * SCALE_UNITS.M_TO_MPC, Math.PI / 3) / SCALE_UNITS.M_TO_MPC;
+      bodyArrivalDistanceMpc(footprintM * SCALE_UNITS.M_TO_MPC, Math.PI / 3) / SCALE_UNITS.M_TO_MPC;
     flyAndHold(h, () => fly({ body: asSceneBodyId('mars'), lonDeg: 137, latDeg: -5 }), 'mars', {
       lonDeg: 137,
       latDeg: -5,

@@ -16,7 +16,6 @@ import type { CameraState } from '../../../@types/camera/orbitCamera/CameraState
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
 import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
-import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { TiltMemory } from '../../../@types/camera/orientation/TiltMemory';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
@@ -40,6 +39,7 @@ import { releasedWorldRoll } from '../../../utils/camera/arms/releasedWorldRoll'
 import { eyeMpcOf } from '../../../utils/camera/orbitPose/eyeMpcOf';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
+import type { SelectionRowBase } from '../../../@types/engine/selection/SelectionRowBase';
 
 /** The pin's strafe while no follow memory exists. */
 const NO_PAN: Vec3 = [0, 0, 0];
@@ -48,7 +48,7 @@ export function projectFramePose(args: {
   readonly render: FramedCameraPose;
   readonly authoredOverride: FramedCameraPose | null;
   readonly pivotsOnFocusedBody: boolean;
-  readonly focus: SelectionRow | null;
+  readonly focus: SelectionRowBase | null;
   readonly follow: FollowMemory | null;
   readonly tilt: TiltMemory;
   /** The frame's effective camera intent: `base.frame` IS the regime. */

@@ -16,13 +16,13 @@ import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { isWorldArm } from '../arms/world/isWorldArm';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { SelectionRowBase } from '../../../../@types/engine/selection/SelectionRowBase';
 
 export function applyFocusedBodyPivot(
   framed: FramedCameraPose,
   pivotsOnFocusedBody: boolean,
-  focusRow: SelectionRow | null,
+  focusRow: SelectionRowBase | null,
   bodies: ReadonlyMap<string, BodyState>,
   panOffset: Vec3,
 ): FramedCameraPose {

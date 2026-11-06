@@ -228,7 +228,7 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',
-    plan: () => ({ value: [], awake: false, settling: false }),
+    plan: () => ({ value: [], awake: false, settling: false, loading: false }),
   },
   ...stubPlannersFor(PRELUDE),
 ];
@@ -339,7 +339,7 @@ describe('renderFrame visual baseline', () => {
     };
 
     const galaxyRuntime = {
-      ...galaxyRowRuntime({ catalogs: new Map(), famousMeta: [] }),
+      ...galaxyRowRuntime({ catalogs: new Map() }),
       focusBindGroup: {} as GPUBindGroup,
       pointRenderer: galaxyPointRenderer,
       proceduralDiskRenderer,
@@ -361,6 +361,7 @@ describe('renderFrame visual baseline', () => {
         bodyStates: new Map(),
         renderTargets,
         renderedTargets,
+        skyCapturesInBand: new Set(),
       },
       cam,
       vp: viewProj,

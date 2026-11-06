@@ -56,12 +56,11 @@ const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: ()
 function makeSdssGalaxies(objId: bigint): GalaxyRowFixture {
   return {
     catalogs: new Map([[Source.SDSS, makeCloud(objId)]]),
-    famousMeta: [],
   } as unknown as GalaxyRowFixture;
 }
 
 /** No cloud at all — every galaxy id resolves to null. */
-const NO_GALAXIES = { catalogs: new Map(), famousMeta: [] } as unknown as GalaxyRowFixture;
+const NO_GALAXIES = { catalogs: new Map() } as unknown as GalaxyRowFixture;
 
 function buildStore() {
   return configureStore({ reducer: rootReducer });
