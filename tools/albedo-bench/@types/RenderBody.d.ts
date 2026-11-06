@@ -1,12 +1,17 @@
 import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-import { RenderLight } from './RenderLight';
+import type { RenderLight } from './RenderLight';
 
+/** `original` is the raw imagery, so only `adjusted` carries a recipe. */
 export type RenderBody = {
   readonly box: LonLatBounds;
   readonly px: number;
-  readonly recipe: AlbedoRecipe;
-  readonly variant: 'original' | 'adjusted';
   readonly light?: RenderLight;
-  readonly manualG?: readonly [number, number];
-};
+} & (
+  | { readonly variant: 'original' }
+  | {
+      readonly variant: 'adjusted';
+      readonly recipe: AlbedoRecipe;
+      readonly manualG?: readonly [number, number];
+    }
+);

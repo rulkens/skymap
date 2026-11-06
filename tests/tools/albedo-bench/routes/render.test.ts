@@ -87,7 +87,7 @@ describe('handleRender', () => {
 
     const expected = await imagery.readBox(box, px, px);
     const actual = await handleRender({
-      body: { box, px, recipe: RECIPE, variant: 'original' },
+      body: { box, px, variant: 'original' },
       deps: {
         imagery,
         height,

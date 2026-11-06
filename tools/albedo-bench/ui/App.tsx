@@ -5,7 +5,7 @@
  * `sunFit` alone (a grade slider never refits). Save POSTs the recipe; Load
  * (on mount) restores every slider.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import { api } from './api';
@@ -37,8 +37,6 @@ function boxEquals(a: LonLatBounds, b: LonLatBounds): boolean {
 
 export function App() {
   const [recipe, setRecipe] = useState<AlbedoRecipe>();
-  const recipeRef = useRef(recipe);
-  recipeRef.current = recipe;
   const [loadError, setLoadError] = useState<string>();
   const [view, setView] = useState<ViewState>({ lon: 137.4, lat: -4.6, spanDeg: 2 });
   const [viewMode, setViewMode] = useState<ViewMode>('wipe');
@@ -66,7 +64,6 @@ export function App() {
     () => manualGFrom(manualAzDeg, manualStrength),
     [manualAzDeg, manualStrength],
   );
-  const recipeLoaded = recipe !== undefined;
   const sunFit = recipe?.sunFit;
   const pending =
     originalBox === undefined ||
@@ -92,16 +89,11 @@ export function App() {
     };
   }, []);
 
-  // `original` never depends on the recipe, only on the box — read the
-  // latest recipe through a ref so a grade-slider edit can't retrigger this.
   useEffect(() => {
-    if (!recipeLoaded) return;
-    const currentRecipe = recipeRef.current;
-    if (currentRecipe === undefined) return;
     let cancelled = false;
     const handle = setTimeout(() => {
       api
-        .renderPng({ box, px: PX, recipe: currentRecipe, variant: 'original' })
+        .renderPng({ box, px: PX, variant: 'original' })
         .then((blob) => {
           if (cancelled) return;
           setOriginalUrl((prev) => {
@@ -118,7 +110,7 @@ export function App() {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [box, recipeLoaded]);
+  }, [box]);
 
   useEffect(() => {
     if (recipe === undefined) return;

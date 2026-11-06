@@ -56,17 +56,18 @@ export async function handleRender(opts: {
   readonly body: RenderBody;
   readonly deps: RenderDeps;
 }): Promise<Uint8Array> {
-  const { box, px, recipe, variant, light, manualG } = opts.body;
+  const { body } = opts;
+  const { box, px, light } = body;
   const { imagery, height, radiusM, getField } = opts.deps;
 
   let raster: Uint8Array | null;
-  if (variant === 'original') {
+  if (body.variant === 'original') {
     raster = await imagery.readBox(box, px, px);
   } else {
-    const { sunFit, ...pixelApply } = recipe;
+    const { sunFit, ...pixelApply } = body.recipe;
     const field =
-      manualG !== undefined
-        ? constantSunField(box, manualG, radiusM)
+      body.manualG !== undefined
+        ? constantSunField(box, body.manualG, radiusM)
         : await getField(box, previewSunFit({ sunFit, box, radiusM }).sunFit);
     raster = await albedoRecipeImagerySource(imagery, height, field, pixelApply).readBox(
       box,
