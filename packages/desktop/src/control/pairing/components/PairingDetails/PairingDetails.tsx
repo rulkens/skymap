@@ -66,7 +66,7 @@ function PairingDetails({
           </li>
           <li>If this computer asks to accept incoming network connections, choose Allow.</li>
         </ol>
-        {!skyRunning && <p className={chrome.dim}>The tablet connects once the sky is running.</p>}
+        {!skyRunning && <p className={chrome.dim}>The tablet connects once Skymap is running.</p>}
       </div>
     </div>
   );

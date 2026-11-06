@@ -144,9 +144,9 @@ describe('ControlPage', () => {
     const tablets = screen.getByRole('region', { name: 'Tablets' });
     expect(within(tablets).getByText(/choose Allow/)).toBeVisible();
     expect(within(tablets).getByText('K7QM 3XRT')).toBeVisible();
-    expect(within(tablets).getByText('The tablet connects once the sky is running.')).toBeVisible();
+    expect(within(tablets).getByText('The tablet connects once Skymap is running.')).toBeVisible();
     set({ skyRunning: true });
-    expect(within(tablets).queryByText(/once the sky is running/)).not.toBeInTheDocument();
+    expect(within(tablets).queryByText(/once Skymap is running/)).not.toBeInTheDocument();
   });
 
   it('Run setup again brings the steps back', async () => {
