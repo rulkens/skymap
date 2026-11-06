@@ -29,7 +29,7 @@ function pointRow(
     demand: {
       tiers: TIER_LADDER.filter((tier) => tierTarget(source, tier) !== 0),
       near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 },
-      alsoWhen: ['searching', 'selected'],
+      alsoWhen: ['searching'],
     },
     priority: entry.priority,
     gates: { address: 'survey', item: id },

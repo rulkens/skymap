@@ -16,7 +16,7 @@ const at = (a: string) => a as VisibilityAddress;
 
 const ENTRIES: readonly VisibilityEntry[] = [
   { key: 'bubble', bands: { shell: { out: [4, 10] } } },
-  { key: 'sats', items: ['a'], selects: ['satellite'], bands: { near: { out: [1, 2] } } },
+  { key: 'sats', items: ['a'], bands: { near: { out: [1, 2] } } },
   { label: 'bubble', cluster: 'bubbleLabels', of: 'bubble', items: ['x'] },
 ];
 
@@ -29,7 +29,7 @@ const check = (demand: AssetDemand, gates?: AssetWiringRow['gates']) => () =>
 describe('assertAssetDemands', () => {
   it('accepts every well-formed declaration', () => {
     expect(check({}, at('bubble'))).not.toThrow();
-    expect(check({ shown: at('sats'), alsoWhen: ['selected'] })).not.toThrow();
+    expect(check({ shown: at('sats'), alsoWhen: ['searching'] })).not.toThrow();
     expect(
       check({ near: { band: 'shell', edge: 'out', lead: 1, release: 1 } }, at('bubble')),
     ).not.toThrow();
@@ -91,10 +91,6 @@ describe('assertAssetDemands', () => {
     expect(check(size(16, 8), at('bubble'))).not.toThrow();
     expect(check(size(8, 8), at('bubble'))).toThrow(/'row1'.*loadPx > releasePx/);
     expect(check(size(3, 0), at('bubble'))).toThrow(/'row1'.*loadPx > releasePx/);
-  });
-
-  it("throws on 'selected' over an entry with no selects", () => {
-    expect(check({ alsoWhen: ['selected'] }, at('bubble'))).toThrow(/'row1'.*selects/);
   });
 
   it('throws on an object form with neither shown nor gates', () => {

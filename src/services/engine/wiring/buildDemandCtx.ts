@@ -13,6 +13,13 @@ import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { LoadState } from '../../../@types/loading/LoadState';
 
 export function buildDemandCtx(state: EngineState): DemandCtx {
+  const { select, focus, pending } = state.selection;
+  // A pending id's kind counts before its data loads, or a deep link to a catalog that only
+  // loads when selected would wait on itself forever.
+  const claimedKinds = (id: string | null) =>
+    id === null
+      ? []
+      : state.selectionKindRows.filter((r) => r.focusId?.claims(id)).map((r) => r.type);
   return {
     settings: state.settings,
     ui: state.ui,
@@ -31,8 +38,10 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     simDays: state.cameraRuntime.outputs.simDays,
     drawPxPerRad: state.drawPxPerRad,
     tier: state.tier,
-    selectedKinds: new Set(
-      [state.selection.select, state.selection.focus].flatMap((ref) => (ref ? [ref.type] : [])),
-    ),
+    selectedKinds: new Set([
+      ...[select, focus].flatMap((ref) => (ref ? [ref.type] : [])),
+      ...claimedKinds(pending.focus),
+      ...claimedKinds(pending.select),
+    ]),
   };
 }

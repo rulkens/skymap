@@ -160,11 +160,11 @@ describe('evaluateAssetDemand', () => {
     expect(run(sats, ctx({ cameraPosMpc: nearEarth }))).toEqual(LOAD);
   });
 
-  it('alsoWhen lifts the scale gate but never the switch or tier', () => {
+  it('searching or a selected kind the entry selects lifts the scale gate, never the switch or tier', () => {
     const lifted: DeclaredDemand = {
       shown: at('sats'),
       near: { band: 'nearEarth', edge: 'out', lead: 1.5, release: 2.5 },
-      alsoWhen: ['searching', 'selected'],
+      alsoWhen: ['searching'],
     };
     const sats = row(lifted);
     const far = camX(1e-6);

@@ -16,10 +16,26 @@ import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { settingsRoute } from '../../../src/store/constants';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
+import { requestFocus } from '../../../src/state/selection/requestFocus';
+import { requestSelect } from '../../../src/state/selection/requestSelect';
+import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
+import { satellitesSelectionRow } from '../../../src/layers/satellites/selection/satellitesSelectionRow';
+import { satellitesPickCode } from '../../support/layerPickCodes';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
+import type { SatellitesRuntime } from '../../../src/layers/satellites/@types/SatellitesRuntime';
 import type { RootState } from '../../../src/store/types';
 
 const ISS = { type: 'satellite', noradId: 25544 } as const;
 const SATELLITES_ON = setVisibility({ cluster: 'satellites', field: 'enabled', on: true });
+// No catalog loaded: the id is claimed by prefix but cannot resolve to a ref yet.
+const UNLOADED_SATELLITES = {
+  pickCode: satellitesPickCode(),
+  propagator: { catalog: () => null },
+} as unknown as SatellitesRuntime;
+const selection = composeSelectionRows(
+  () => [satellitesSelectionRow(UNLOADED_SATELLITES)],
+  () => NO_KINDS_OFF,
+);
 
 function build(preloadedState?: RootState) {
   const writes: Action[] = [];
@@ -28,7 +44,7 @@ function build(preloadedState?: RootState) {
     if (setVisibility.match(action)) writes.push(action);
     return next(action);
   };
-  const mw = createSagaMiddleware({ onError: (e) => errors.push(e) });
+  const mw = createSagaMiddleware({ onError: (e) => errors.push(e), context: { selection } });
   const store = configureStore({
     reducer: rootReducer,
     preloadedState,
@@ -50,6 +66,15 @@ describe('watchSelectionRevealSaga', () => {
     const h = build();
     h.store.dispatch(updateSelectionSelect(ISS));
     expect(h.writes).toEqual([SATELLITES_ON]);
+  });
+
+  it('switches Satellites on for a pending request before its catalog loads', () => {
+    const focus = build();
+    focus.store.dispatch(requestFocus({ id: 'satellite-25544', transition: 'cut' }));
+    expect(focus.writes).toEqual([SATELLITES_ON]);
+    const sel = build();
+    sel.store.dispatch(requestSelect('satellite-25544'));
+    expect(sel.writes).toEqual([SATELLITES_ON]);
   });
 
   it('does nothing on hover', () => {

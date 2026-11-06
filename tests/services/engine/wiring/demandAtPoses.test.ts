@@ -42,6 +42,9 @@ import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/dat
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { Source } from '../../../../src/data/source';
+import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
+import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/starCatalogSelectionRow';
+import { galaxyRowRuntime, starRowRuntime } from '../../../support/layerPickCodes';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
@@ -50,7 +53,7 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
+import type { SelectionState } from '../../../../src/@types/store/SelectionState';
 import type { VisibilityEntry } from '../../../../src/@types/engine/layer/VisibilityEntry';
 
 const slot = (name: string) => ({ name }) as never;
@@ -96,6 +99,19 @@ const bodyRows = bodyAssetRows({
   atlasSlot: slot('atlas'),
 } as unknown as BodyRuntime);
 const meshRows = meshAssetRows({ gpu: { meshBodyRenderer: null } } as never);
+// The real selection rows with no catalog loaded: what claims a deep link's id at boot.
+const SELECTION_KIND_ROWS = [
+  galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs: new Map() })),
+  starCatalogSelectionRow(
+    starRowRuntime({ renderer: { loadedCatalogs: () => [] }, chunkStreams: new Map() } as never),
+  ),
+];
+const NO_SELECTION: SelectionState = {
+  hover: null,
+  select: null,
+  focus: null,
+  pending: { select: null, focus: null },
+};
 
 const SURVEY_LAYERS = [...densityRows, ...filamentsRows, ...flowRows, ...structureRows];
 const ALL_ROWS: readonly AssetWiringRow[] = [
@@ -126,7 +142,7 @@ function switchedOn(node: unknown): unknown {
   );
 }
 
-function ctxAt(pose: ReturnType<typeof absoluteArm>): DemandCtx {
+function ctxAt(pose: ReturnType<typeof absoluteArm>, selection = NO_SELECTION): DemandCtx {
   const settings = switchedOn(INITIAL_SETTINGS) as typeof INITIAL_SETTINGS;
   const state = {
     tier: 'medium',
@@ -144,16 +160,22 @@ function ctxAt(pose: ReturnType<typeof absoluteArm>): DemandCtx {
       },
     },
     slotsByKey: new Map(),
-    selection: { hover: null, select: null, focus: null },
+    selection,
+    selectionKindRows: SELECTION_KIND_ROWS,
   } as unknown as EngineState;
   return buildDemandCtx(state);
 }
 
-function earthBootCtx(): DemandCtx {
+function earthBootCtx(selection = NO_SELECTION): DemandCtx {
   const basis = ORIENTATION_FRAMES[INITIAL_SETTINGS.orientation];
   const home = bodyHomePose(asSceneBodyId('earth'), SIM_DAYS, DEFAULT_FOV_Y_RAD, basis);
-  return ctxAt(absoluteArm(home));
+  return ctxAt(absoluteArm(home), selection);
 }
+
+const pendingFocus = (id: string): SelectionState => ({
+  ...NO_SELECTION,
+  pending: { select: null, focus: id },
+});
 
 const mpcPose = (distance: number) =>
   absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance });
@@ -200,9 +222,19 @@ describe('demand at poses (the real composed rows)', () => {
   });
 
   it('a selected survey galaxy loads its catalog from Earth', () => {
-    const selectedKinds = new Set<SelectionRefBase['type']>(['galaxyCatalog']);
-    const ctx = { ...earthBootCtx(), selectedKinds };
+    const focus = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 } as const;
+    const ctx = earthBootCtx({ ...NO_SELECTION, focus });
     for (const row of surveyPoints) expect(demands(row, ctx), String(row.key)).toBe(true);
+  });
+
+  // The deep link resolves only once a catalog commits, so the pending id must load it.
+  it('a pending survey galaxy focus loads its catalog from Earth', () => {
+    const ctx = earthBootCtx(pendingFocus('pgc-2557'));
+    for (const row of surveyPoints) expect(demands(row, ctx), String(row.key)).toBe(true);
+  });
+
+  it('a pending survey star focus loads Gaia from 1 Mpc', () => {
+    expect(demands(gaiaRow, ctxAt(mpcPose(1), pendingFocus('star-42')))).toBe(true);
   });
 
   // Gaia's `survey` band fades out by 25 kpc: the row loads within 10x that, releases past 100x.

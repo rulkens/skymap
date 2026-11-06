@@ -1,9 +1,10 @@
 /**
  * The one reader of `AssetDemand`: a row's demand and release edges this pass. Object form:
  * demand = shown ∧ tier ∧ ((near-load ∧ size-load) ∨ lifted); release = ¬tier ∨ ¬shown ∨
- * (¬lifted ∧ (near-release ∨ size-release)). A throw here is caught by the loop's per-row
- * guard and skips that row's enqueue and drop edges too, so a declaration must never throw:
- * `assertAssetDemands` resolves every one at table build.
+ * (¬lifted ∧ (near-release ∨ size-release)). Lifted: a `searching` palette, or a selected or
+ * pending kind the shown entry `selects` (implicit: any deep link loads its layer). A throw here
+ * is caught by the loop's per-row guard and skips that row's enqueue and drop edges too, so a
+ * declaration must never throw: `assertAssetDemands` resolves every one at table build.
  */
 
 import { deriveBodyStates } from '../frame/deriveBodyStates';
@@ -36,11 +37,8 @@ function isShown(ctx: DemandCtx, r: DemandResolution): boolean {
 }
 
 function isLifted(ctx: DemandCtx, demand: DeclaredDemand, r: DemandResolution): boolean {
-  for (const lift of demand.alsoWhen ?? NONE) {
-    if (lift === 'searching' && ctx.ui.paletteOpen) return true;
-    if (lift === 'selected')
-      for (const kind of r.selects ?? NONE) if (ctx.selectedKinds.has(kind)) return true;
-  }
+  if (demand.alsoWhen?.includes('searching') && ctx.ui.paletteOpen) return true;
+  for (const kind of r.selects ?? NONE) if (ctx.selectedKinds.has(kind)) return true;
   return false;
 }
 

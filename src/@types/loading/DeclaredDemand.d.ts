@@ -16,6 +16,6 @@ export type DeclaredDemand = {
   readonly near?: NearGate;
   /** With `near` too, both must load and either one releases. */
   readonly size?: SizeGate;
-  /** Lift the scale gates (never the switch or tier). `selected` reads `shown`'s entry `selects`. */
-  readonly alsoWhen?: readonly ('searching' | 'selected')[];
+  /** Lift the scale gates (never the switch or tier); a selected kind `shown`'s entry `selects` always lifts. */
+  readonly alsoWhen?: readonly 'searching'[];
 };

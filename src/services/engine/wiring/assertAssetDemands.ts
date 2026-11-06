@@ -16,7 +16,7 @@ export function assertAssetDemands(
     const demand = row.demand;
     if (typeof demand === 'string' || 'companionOf' in demand) continue;
     try {
-      const { selects } = resolveAssetDemand(demand, row.gates, entries);
+      resolveAssetDemand(demand, row.gates, entries);
       const near = demand.near;
       if (near !== undefined && (near.lead < 1 || near.release < near.lead)) {
         throw new Error(
@@ -28,9 +28,6 @@ export function assertAssetDemands(
         throw new Error(
           `size needs loadPx > releasePx > 0, got ${size.loadPx} and ${size.releasePx}`,
         );
-      }
-      if (demand.alsoWhen?.includes('selected') && selects === undefined) {
-        throw new Error("lifts on 'selected' but its entry has no `selects`");
       }
     } catch (err) {
       throw new Error(`asset row '${String(row.key)}': ${(err as Error).message}`, { cause: err });

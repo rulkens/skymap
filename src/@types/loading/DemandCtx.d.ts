@@ -31,6 +31,6 @@ export type DemandCtx = {
   drawPxPerRad: number;
   /** The live tier (`state.tier`): a tier that ships no file never demands it. */
   tier: Tier;
-  /** Kinds in the select and focus slots; hover never counts, so a sweep loads nothing. */
+  /** Select, focus, or a pending request's claimed kind; hover never counts, so a sweep loads nothing. */
   selectedKinds: ReadonlySet<SelectionRefBase['type']>;
 };

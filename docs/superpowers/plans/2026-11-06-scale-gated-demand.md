@@ -170,7 +170,7 @@ Tests:
 
 | Row | Declaration |
 |---|---|
-| galaxy points (every source; famous is exempt via `band.items`) | `near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 }`, `alsoWhen: ['searching', 'selected']` |
+| galaxy points (every source; famous is exempt via `band.items`) | `near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 }`, `alsoWhen: ['searching']` (the selected lift is implicit, owner 2026-11-06) |
 | cosmicWebDensity, cosmicWebFilaments | `near: { band: <their SURVEY_DEEP_ZOOM band key>, edge: 'in', lead: 10, release: 100 }` |
 | flow | `near: { band: <its FLOW_DEEP_ZOOM band key>, edge: 'in', lead: 10, release: 100 }` |
 | structureCatalog | adds `near: { band: 'cosmic', edge: 'in', lead: 10, release: 100 }` |

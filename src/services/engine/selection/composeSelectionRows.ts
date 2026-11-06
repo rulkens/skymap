@@ -21,6 +21,17 @@ export function composeSelectionRows(
   rowsOf: () => readonly SelectionKindRow[],
   pickingOff: () => readonly string[],
 ): SelectionResolver {
+  const claimingRow = (focusId: string): SelectionKindRow | null => {
+    const claiming = rowsOf().filter((r) => r.focusId?.claims(focusId));
+    if (claiming.length > 1) {
+      throw new Error(
+        `composeSelectionRows: focus id "${focusId}" is claimed by more than one row (${claiming
+          .map((r) => r.type)
+          .join(', ')})`,
+      );
+    }
+    return claiming[0] ?? null;
+  };
   return {
     resolvePick(pick) {
       if (pick === null) return null;
@@ -41,16 +52,11 @@ export function composeSelectionRows(
 
     resolveFocusId(focusId) {
       if (!focusId) return null;
-      const claiming = rowsOf().filter((r) => r.focusId?.claims(focusId));
-      if (claiming.length === 0) return null;
-      if (claiming.length > 1) {
-        throw new Error(
-          `composeSelectionRows: focus id "${focusId}" is claimed by more than one row (${claiming
-            .map((r) => r.type)
-            .join(', ')})`,
-        );
-      }
-      return claiming[0]!.focusId!.decode(focusId);
+      return claimingRow(focusId)?.focusId!.decode(focusId) ?? null;
+    },
+
+    claimedKind(focusId) {
+      return claimingRow(focusId)?.type ?? null;
     },
 
     focusIdOf(ref) {

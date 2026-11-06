@@ -50,8 +50,8 @@ export type AssetDemand =
       tiers?: readonly Tier[];
       near?: NearGate;
       size?: SizeGate; // gates PR
-      /** Lift the scale gates (never the switch or tier). `selected` reads `shown`'s entry `selects`. */
-      alsoWhen?: readonly ('searching' | 'selected')[];
+      /** Lift the scale gates (never the switch or tier); a selected kind `shown`'s entry `selects` always lifts. */
+      alsoWhen?: readonly 'searching'[];
     };
 
 // src/@types/loading/NearGate.d.ts — one band edge of `shown`'s entry, measured from `band.from`.
@@ -79,7 +79,9 @@ input to the one evaluator, `src/services/engine/wiring/evaluateAssetDemand.ts` 
   - `shown` = `visibilitySwitchOf` over the resolved items (any), OR'd with their label switches when `labelsCount` is set.
   - `tierOk` = `tiers` is absent or holds `ctx.tier`.
   - `scaleIn` / `scaleOut` = the `near` and `size` load/release tests. An absent gate counts as in and never out.
-  - `lifted` = any `alsoWhen` holds.
+  - `lifted` = any `alsoWhen` holds, or `ctx.selectedKinds` (select, focus, or a pending request's claimed kind)
+    meets the shown entry's `selects`: implicit, with no opt-in, so any deep link loads its layer
+    (owner 2026-11-06: any deep link enables its layer).
   - **demand** = `shown && tierOk && (scaleIn || lifted)`.
   - **release** = `!tierOk || !shown || (!lifted && scaleOut)`.
 - Every object-form row releases when switched off (rulings kw33 #4, 6a7D #1). It's one rule with no asymmetry.
@@ -101,7 +103,7 @@ so after B no row carries a function.
 | galaxyCatalog points | switch && tier target > 0; release on excluded tier | `{ tiers }` (built from `tierTarget`) |
 | structureCatalog | any bulk category ring or label on | `{ shown: { address: 'structureRing', items: BULK }, labelsCount: true }` |
 | localBubble | switch && `|eye|` < 20 kpc; release > 40 kpc | `{ near: { band: 'shell', edge: 'out', lead: 2, release: 4 } }` (out[1] = 10 kpc) |
-| satellites | any class && (palette ∨ selected ∨ < 900k km); release mirror | `{ shown: 'satellites', near: { band: 'nearEarth', edge: 'out', lead: 1.5, release: 2.5 }, alsoWhen: ['searching', 'selected'] }` |
+| satellites | any class && (palette ∨ selected ∨ < 900k km); release mirror | `{ shown: 'satellites', near: { band: 'nearEarth', edge: 'out', lead: 1.5, release: 2.5 }, alsoWhen: ['searching'] }` |
 | bodyTextureAtlas, hiResFamous, famousStarsMeta | `() => true` | `'always'` |
 | pgcAlias | `ui.paletteOpen` | `'whenSearching'` |
 | body textures, mesh rows | distance radii | transitional `fn` |
@@ -140,8 +142,8 @@ satellites' search and selection lifts, and the tier exclusion.
 - **localBubble at Earth.** `edge: 'both'` joins `NearGate`, and localBubble declares
   `{ band: 'shell', edge: 'both', lead: 2, release: 4 }`. That leaves the bubble unloaded at Earth, loaded from 0.2 to
   20 kpc, and released below 0.1 or beyond 40 kpc.
-- **Survey galaxy lifts.** `alsoWhen: ['searching', 'selected']`, with `selects: ['galaxyCatalog']` added to the
-  survey entry.
+- **Survey galaxy lifts.** `alsoWhen: ['searching']`, with `selects: ['galaxyCatalog']` added to the
+  survey entry (the selected lift is implicit).
   - `watchSelectionRevealSaga` only writes when the cluster has a section switch that is off. `galaxyCatalogs` has
     none, so the new `selects` reveals nothing. (Checked 2026-11-06.)
   - A selected famous galaxy pins the survey catalogs too, because the selection kind doesn't split famous from
