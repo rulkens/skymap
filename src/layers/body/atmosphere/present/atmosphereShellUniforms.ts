@@ -25,7 +25,7 @@ export function atmosphereShellUniforms(
   state: PassState,
 ): Float32Array {
   const { body, params, atmosphereTopM, camLocal, sunLocal } = entry;
-  // An entry exists only where bodyPose resolved (atmosphereDrawList skips a body with no pose).
+  // An entry exists only where bodyPose resolved (atmosphereEntry is null for a body with no pose).
   const pose = ctx.bodyPose(body.id)!;
 
   const mvp = composeBodySlabMvp(slab.vp, pose.eyeRelBodyM, atmosphereTopM);
