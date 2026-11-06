@@ -79,6 +79,14 @@ export type AtmosphereShellRenderer = Renderer & {
     depthView: GPUTextureView,
   ): void;
 
+  /** The sky into a mesh probe's capture face (`AerialPerspectiveRenderer.drawSky`). */
+  drawProbeSky(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    farDepthView: GPUTextureView,
+  ): void;
+
   /**
    * Called once per frame with the live tier's sky-view LUT texel size. No-op when
    * unchanged; otherwise every bundle's `skyViewTex` is recreated, `shellBindGroup`
