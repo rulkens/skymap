@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { FOREGROUND_DEPTH_FORMAT } from '../../../../../src/data/renderTargetFormats';
 import { createAtmosphereShellRenderer } from '../../../../../src/layers/body/atmosphere/render/atmosphereShellRenderer';
 import { ATMOSPHERE_PARAMS } from '../../../../../src/layers/body/atmosphere/data/atmosphereParams';
 import { ATMOSPHERE_UNIFORM_FLOATS } from '../../../../../src/layers/body/atmosphere/render/packAtmosphereUniforms';
@@ -133,8 +134,25 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
   it('builds one multiplicative and one additive shell pipeline', () => {
     const { renderPipelines } = build();
     // The three LUT bakes go through createComputePipeline, so every render
-    // pipeline here is a shell pass: the outside pair, then the aerial pair.
-    expect(renderPipelines.map(blendRole)).toEqual(['multiply', 'add', 'multiply', 'add']);
+    // pipeline here is a shell pass: the outside pair, the aerial pair, the probe-sky pair.
+    expect(renderPipelines.map(blendRole)).toEqual([
+      'multiply',
+      'add',
+      'multiply',
+      'add',
+      'multiply',
+      'add',
+    ]);
+  });
+
+  it('gives the probe-sky pair the depth format a probe face attaches', () => {
+    // A probe face's body step attaches the probe depth; a pipeline naming no depth
+    // format is rejected there, and the sky that face should hold is silently missing.
+    const [, , , , multiply, add] = build().renderPipelines as GPURenderPipelineDescriptor[];
+    for (const desc of [multiply!, add!]) {
+      expect(desc.depthStencil?.format).toBe(FOREGROUND_DEPTH_FORMAT);
+      expect(desc.depthStencil?.depthWriteEnabled).toBe(false);
+    }
   });
 
   it('declares no depth state on either shell pass — the step attaches none', () => {

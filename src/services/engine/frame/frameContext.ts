@@ -28,6 +28,7 @@ import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { HOSTLESS_MESH_BODIES } from '../../../data/bodies/hostlessMeshBodies';
 import { poseFromBodyArm } from '../../../utils/camera/arms/poseFromBodyArm';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
+import { skyCapturesInBand } from './skyCapturesInBand';
 import { createFramePlannerResultStore } from './createFramePlannerResultStore';
 import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverageOf';
 import { fadeIdentityKey } from '../../../utils/visibility/fadeIdentityKey';
@@ -140,5 +141,7 @@ export function deriveFrameContext(
     plans: createFramePlannerResultStore(),
     // Empty: `renderFrame` unions into it as every view's program opens a pass.
     renderedTargets,
+    // The frame camera, like the slab rows: eye separation is metres against a band in AU.
+    skyCapturesInBand: skyCapturesInBand(cam.position, bodyStates),
   };
 }

@@ -43,9 +43,15 @@ function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>):
   return makeGalaxyCatalog(positions.length, { positions: flat });
 }
 
-const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0, skyCapturesInBand: new Set() } as unknown as ReadyFrameContext;
 
-const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
+const VIEWS = [
+  {
+    cam: { position: [0, 0, 0] },
+    drawPxPerRad: 100,
+    slabs: [null, { vp: new Float64Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]) }],
+  } as unknown as FrameView,
+];
 
 /** `visible` are the catalogs core hands a value above 0: they are the mask. */
 function fadeOf(visible: readonly GalaxyCatalogSourceType[] = SDSS_AND_TWOMRS) {
