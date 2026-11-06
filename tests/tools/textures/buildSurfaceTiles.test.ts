@@ -608,6 +608,59 @@ describe('bakeAll', () => {
     expect(manifest.bands?.[0]?.builtFrom.height).toEqual(heightSource('v2').provenance);
   });
 
+  it("a night-only run bakes night tiles and keeps the other products' provenance", async () => {
+    const dir = tmpDir();
+    const heightSource: HeightSource = {
+      id: 'stub-height',
+      attribution: 'stub-height attribution',
+      maxLevel: STUB_Z,
+      coverage: [BOX_WEST],
+      provenance: { sourceId: 'stub-height', attribution: 'stub-height attribution', vintage: 'v' },
+      async readGrid(_z, _i0, _j0, nx, ny) {
+        return new Float32Array(nx * ny).fill(100);
+      },
+      async boundsInBox() {
+        return [100, 100];
+      },
+    };
+    const albedo = stubSource('stub-albedo', BOX_WEST, [255, 0, 0, 255]);
+    const night = stubSource('stub-night', BOX_WEST, [0, 0, 255, 255]);
+    const albedoProducts = new Set<SurfaceTileProduct>(['albedo', 'height']);
+
+    await bakeAll(
+      TEST_BODY,
+      [{ source: albedo, minLevel: STUB_Z, height: heightSource }],
+      dir,
+      albedoProducts,
+    );
+    const albedoPath = join(
+      dir,
+      surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+    );
+    const albedoBefore = readFileSync(albedoPath);
+
+    await bakeAll(
+      TEST_BODY,
+      [{ source: albedo, minLevel: STUB_Z, height: heightSource, night }],
+      dir,
+      new Set<SurfaceTileProduct>(['night']),
+    );
+
+    expect(
+      existsSync(
+        join(dir, surfaceTilePath({ product: 'night', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX)),
+      ),
+    ).toBe(true);
+    const manifest = JSON.parse(
+      readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
+    ) as SurfaceTileManifest;
+    const builtFrom = manifest.bands?.[0]?.builtFrom;
+    expect(builtFrom?.albedo).toEqual(albedo.provenance);
+    expect(builtFrom?.height).toEqual(heightSource.provenance);
+    expect(builtFrom?.night).toEqual(night.provenance);
+    expect(readFileSync(albedoPath).equals(albedoBefore)).toBe(true);
+  });
+
   it('a second bakeAll over the same output skips existing tiles and leaves bytes identical', async () => {
     const dir = tmpDir();
     const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);

@@ -431,7 +431,15 @@ export async function bakeAll(
   // it — which only works if those are already on disk.
   const ordered = [...bands].sort((a, b) => b.source.maxLevel - a.source.maxLevel);
 
-  for (const { source, minLevel, underfill, height, heightUnderfill, flattenWater } of ordered) {
+  for (const {
+    source,
+    minLevel,
+    underfill,
+    height,
+    heightUnderfill,
+    flattenWater,
+    night,
+  } of ordered) {
     const maxLevel = source.maxLevel;
     // The band as the runtime sees it — one entry per coverage box, so the
     // bake's tile set and the walk's request gate are the same predicate.
@@ -508,6 +516,45 @@ export async function bakeAll(
       if (flattenWater === true) await printWaterDiagnostics(outDir, maxLevel, uvBands, tilePrefix);
     }
 
+    if (night !== undefined && products.has('night')) {
+      // Night rides the albedo band's boxes and levels like height does, but
+      // its source is read for pixels at every level, so it must reach the
+      // band's own ceiling: a shallower one would leave the deepest tiles unbaked.
+      if (night.maxLevel !== maxLevel) {
+        throw new Error(
+          `bakeAll: night source '${night.id}' reaches z${night.maxLevel}, not the band's z${maxLevel}`,
+        );
+      }
+      process.stderr.write(`  z${maxLevel}: baking night tiles from ${night.id}\n`);
+      const deepest = await bakeDeepestLevel(
+        night,
+        'night',
+        uvBands,
+        maxLevel,
+        tilePx,
+        outDir,
+        tilePrefix,
+      );
+      written.push(...deepest);
+      process.stderr.write(`  z${maxLevel}: ${deepest.length} night tiles\n`);
+      for (let z = maxLevel - 1; z >= minLevel; z--) {
+        const levelPaths = await bakeCoarserLevel(
+          z,
+          'night',
+          tilePx,
+          outDir,
+          tilePrefix,
+          undefined,
+          uvBands,
+          night,
+        );
+        written.push(...levelPaths);
+        process.stderr.write(
+          `  z${z}: ${levelPaths.length} night tiles (2x2 average of z${z + 1})\n`,
+        );
+      }
+    }
+
     // One entry per coverage box: a source spanning the antimeridian declares
     // two boxes rather than one that wraps (see `LonLatBounds`). `builtFrom`
     // is the source's OWN provenance — never a module-level assumption, or a
@@ -528,6 +575,7 @@ export async function bakeAll(
           // Also gated on `products.has('height')`: a `--product albedo` run
           // still configures a height source but bakes none of its tiles.
           ...(height === undefined || !products.has('height') ? {} : { height: height.provenance }),
+          ...(night === undefined || !products.has('night') ? {} : { night: night.provenance }),
         },
       });
     }
@@ -576,10 +624,10 @@ const SURFACE_BODY_BAKES: Record<SurfaceTileBodyId, SurfaceBodyBake> = {
   mars: marsSurfaceBake,
 };
 
-/** `--product albedo|height`: `parseFlags` stays bool-only by design (see its
+/** `--product albedo|height|night`: `parseFlags` stays bool-only by design (see its
  *  own docstring), so this is a bespoke scan beside the `parseFlags` call —
- *  same shape as `fetchFamousImages`'s `--source-preference`. Absent, both
- *  products bake. */
+ *  same shape as `fetchFamousImages`'s `--source-preference`. Absent, every
+ *  product bakes. */
 function productFlag(argv: readonly string[]): SurfaceTileProduct | undefined {
   const idx = argv.indexOf('--product');
   if (idx < 0) return undefined;

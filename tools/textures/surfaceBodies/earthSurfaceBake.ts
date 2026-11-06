@@ -7,6 +7,7 @@
 import { TIER_LADDER } from '../../../src/data/tierLadder';
 import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
 import { baseLevelForTier } from '../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
+import { BLACK_MARBLE_QUADRANT_KEYS } from '../../utils/io/blackMarbleQuadrantKeys';
 import { BMNG_QUADRANT_KEYS } from '../../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../utils/io/bmngVintage';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';
@@ -85,6 +86,22 @@ async function deepSource() {
   });
 }
 
+/** Black Marble 2016 at 500 m, the global band's night source (also reaches z7). */
+async function blackMarbleSource() {
+  return quadrantImagerySource({
+    id: 'nasa-black-marble-2016-quadrants',
+    attribution:
+      'NASA Black Marble 2016 night lights (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    vintage: '2016',
+    quadrantPaths: Object.fromEntries(
+      Object.entries(BLACK_MARBLE_QUADRANT_KEYS).map(([quadrant, key]) => [
+        quadrant,
+        rawDataPath(key),
+      ]),
+    ) as Record<ImageryQuadrant, string>,
+  });
+}
+
 /**
  * `--dev`: the whole-globe equirect, reaching z5 — built from what
  * `fetch-textures` already pulls (no 421 MB quadrant set). An explicit flag
@@ -146,6 +163,7 @@ async function bands({ dev }: { dev: boolean }): Promise<readonly SurfaceBakeBan
       source: bmng,
       minLevel: BAKE_MIN_LEVEL,
       height: etopo,
+      night: await blackMarbleSource(),
       // ETOPO's own NODATA maps to NaN (`etopoHeightSource`), so a rare
       // gap in a global 1.6 GB GeoTIFF would otherwise abort the bake.
       heightUnderfill: constantHeightSource(0),
