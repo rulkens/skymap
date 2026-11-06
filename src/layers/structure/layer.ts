@@ -18,7 +18,8 @@ import { structureAssetRows } from './catalog/load/structureAssetRows';
 import { structureMarkersCosmoPass } from './markers/passes/structureMarkersCosmoPass';
 import { structureMarkersNearPass } from './markers/passes/structureMarkersNearPass';
 import { produceStructureLabels } from './markers/present/produceStructureLabels';
-import { structureSelectionRow } from './picking/present/structureSelectionRow';
+import { structureSelectionRow } from './selection/structureSelectionRow';
+import { structureSelectionKinds } from './selection/kinds';
 import StructuresSectionContainer from './controls/ui/StructuresSectionContainer';
 import StructureDetailCardContainer from './cards/ui/StructureDetailCardContainer';
 import CompactStructureCard from './cards/ui/CompactStructureCard/CompactStructureCard';
@@ -53,7 +54,10 @@ export const structureLayer = defineLayer({
       },
     ],
   }),
-  selection: (runtime) => [structureSelectionRow(runtime)],
+  selection: {
+    kinds: structureSelectionKinds,
+    rows: (runtime) => [structureSelectionRow(runtime)],
+  },
   ui: [
     { slot: 'main', content: StructuresSectionContainer, title: 'Structures' },
     {

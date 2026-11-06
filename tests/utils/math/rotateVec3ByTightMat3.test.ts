@@ -18,19 +18,19 @@ describe('rotateVec3ByTightMat3', () => {
   const m = mat3FromColumns(c0, c1, c2);
 
   it('maps each standard basis vector to the matching COLUMN, not row', () => {
-    expect(rotateVec3ByTightMat3([1, 0, 0], m)).toEqual(c0);
-    expect(rotateVec3ByTightMat3([0, 1, 0], m)).toEqual(c1);
-    expect(rotateVec3ByTightMat3([0, 0, 1], m)).toEqual(c2);
+    expect(rotateVec3ByTightMat3(m, [1, 0, 0])).toEqual(c0);
+    expect(rotateVec3ByTightMat3(m, [0, 1, 0])).toEqual(c1);
+    expect(rotateVec3ByTightMat3(m, [0, 0, 1])).toEqual(c2);
   });
 
   it('passes the vector through unchanged when frameBasis is undefined (identity frame)', () => {
     const v: Vec3 = [3, -4, 5];
-    expect(rotateVec3ByTightMat3(v, undefined)).toEqual(v);
+    expect(rotateVec3ByTightMat3(undefined, v)).toEqual(v);
   });
 
   it('is safe to call in place (out === v)', () => {
     const v: Vec3 = [1, 0, 0];
-    const ret = rotateVec3ByTightMat3(v, m, v);
+    const ret = rotateVec3ByTightMat3(m, v, v);
     expect(ret).toBe(v);
     expect(v).toEqual(c0);
   });

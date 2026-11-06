@@ -19,7 +19,7 @@ import { DESI_TRACER_CLASS } from '../../../../src/data/galaxyCatalog/sourceClas
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import { cartesianToRaDecZ } from '../../../../src/utils/math/cartesianToRaDecZ';
-import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
+import { FAMOUS_GALAXY_NAMES } from '../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 // ─── Test helpers ───────────────────────────────────────────────────────────
@@ -44,9 +44,8 @@ function buildInfo(
   cloud: GalaxyCatalog,
   idx: number,
   source: Parameters<typeof extractGalaxyRow>[2],
-  famousGalaxiesMeta?: readonly FamousGalaxyMetaEntry[],
 ) {
-  return buildGalaxyInfo(extractGalaxyRow(cloud, idx, source, famousGalaxiesMeta)!);
+  return buildGalaxyInfo(extractGalaxyRow(cloud, idx, source)!);
 }
 
 // ─── buildGalaxyInfo — common helpers ────────────────────────────────────────
@@ -231,50 +230,34 @@ describe('buildGalaxyInfo — Glade source', () => {
 // ─── buildGalaxyInfo — Famous branch ─────────────────────────────────────────
 
 describe('buildGalaxyInfo — Famous source', () => {
-  it('attaches the famous metadata block when the sidecar supplies an entry', () => {
-    // Famous rows come from a curated catalogue.  When the sidecar has
-    // matching metadata for the local index, the returned GalaxyInfo carries
-    // a `famous` block with id/names/description pulled from the sidecar.
-    const cloud = makeCloud(1);
-    setPosition(cloud, 0, 1, 0, 0); // M31-like nearby position
-    const meta: FamousGalaxyMetaEntry[] = [
-      {
-        id: 'm31',
-        names: ['M31', 'Andromeda Galaxy'],
-        description: 'Nearest large spiral.',
-        type: 'SBb',
-      },
-    ];
+  it('names a famous row from the compiled-in table, with no sidecar loaded', () => {
+    // Row `i` of the famous catalog is row `i` of FAMOUS_GALAXY_NAMES, so the
+    // id, names, curated thumbnail and catalogue links need no fetch.
+    const [first] = FAMOUS_GALAXY_NAMES;
+    const cloud = makeCloud(FAMOUS_GALAXY_NAMES.length);
+    setPosition(cloud, 0, 1, 0, 0);
 
-    const info = buildInfo(cloud, 0, Source.FamousGalaxy, meta);
+    const info = buildInfo(cloud, 0, Source.FamousGalaxy);
 
     expect(info.source).toBe(Source.FamousGalaxy);
     expect(info.iauName.startsWith('Famous J')).toBe(true);
     // Famous rows prefer the curated, non-deprojected tile; the DSS sky cutout
     // becomes the fallback shown if the curated tile is missing.
-    expect(info.thumbnailUrl).toBe('/images/famous-thumb/m31.webp');
+    expect(info.thumbnailUrl).toBe(`/images/famous-thumb/${first!.id}.webp`);
     expect(info.thumbnailFallbackUrl).toContain('alasky.cds.unistra.fr');
-
-    // famous block is populated from the sidecar entry.
-    expect(info.famous).toBeDefined();
-    expect(info.famous!.id).toBe('m31');
-    expect(info.famous!.names).toEqual(['M31', 'Andromeda Galaxy']);
-    expect(info.famous!.description).toBe('Nearest large spiral.');
-
-    // The curated morphology is exposed on its own field (the colour
-    // classifier yields "Unknown galaxy type" for a row with no photometry).
-    expect(info.morphology).toBe('Barred spiral (SBb)');
-
+    expect(info.famous).toEqual({
+      id: first!.id,
+      ...(first!.commonName !== undefined && { commonName: first!.commonName }),
+      names: first!.names,
+    });
+    expect(info.displayName).toBe(first!.commonName ?? first!.names[0]);
     // Famous rows carry a NED + Wikipedia catalogue pair.
     expect(info.catalogues.map((c) => c.label)).toEqual(['NED', 'Wikipedia']);
   });
 
-  it('omits the famous block when the sidecar is undefined (graceful degradation)', () => {
-    // If the sidecar fetch hasn't resolved yet (or 404'd), buildGalaxyInfo must
-    // not crash — the InfoCard simply renders the generic layout for that hover.
-    const cloud = makeCloud(1);
-    setPosition(cloud, 0, 1, 0, 0);
-    const info = buildInfo(cloud, 0, Source.FamousGalaxy);
+  it('omits the famous block when famous.bin is another generation than the bundle', () => {
+    // Names are by record index: naming row 0 here could name it after its neighbour.
+    const info = buildInfo(makeCloud(FAMOUS_GALAXY_NAMES.length + 1), 0, Source.FamousGalaxy);
     expect(info.famous).toBeUndefined();
   });
 });

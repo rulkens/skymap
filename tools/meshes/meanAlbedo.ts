@@ -11,11 +11,7 @@
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { Geometry } from './@types/Geometry';
 import { triangleArea } from '../utils/meshes/triangleArea';
-
-/** Undo the sRGB gamma transfer for one [0,1] channel → linear light. */
-function srgbToLinear(c: number): number {
-  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-}
+import { srgbToLinear } from '../../src/utils/color/srgbToLinear';
 
 export function meanAlbedo(
   pixels: Uint8ClampedArray,

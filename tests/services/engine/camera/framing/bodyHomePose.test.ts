@@ -13,17 +13,18 @@ import {
   bodyHomePose,
   HOME_TERMINATOR_OFFSET_RAD,
 } from '../../../../../src/services/engine/camera/framing/bodyHomePose';
-import { bodyLikeFraming } from '../../../../../src/services/engine/camera/framing/bodyLikeFraming';
+import { framingPose } from '../../../../../src/services/engine/camera/framing/framingPose';
+import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { updatePosition } from '../../../../../src/utils/camera/orbitCamera/updatePosition';
-import { outerBoundRadiusM } from '../../../../../src/utils/occlusion/outerBoundRadiusM';
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
-import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
-import { SCENE_CELESTIAL_BODIES } from '../../../../../src/data/bodies/sceneCelestialBodies';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const FOV_Y_RAD = (Math.PI / 180) * 45;
 // An arbitrary live instant; deriveBodyStates is analytic, so no clock needed.
@@ -55,7 +56,7 @@ describe('bodyHomePose', () => {
   });
 
   it('targets and frames Earth exactly as body focus does', () => {
-    const framing = bodyLikeFraming(earthPos, outerBoundRadiusM(SCENE_EARTH.surface), FOV_Y_RAD);
+    const framing = framingPose(bodyRowAt('earth', earthPos), FOV_Y_RAD, pose);
     expect(pose.target).toEqual(framing.target);
     expect(pose.distance).toBe(framing.distance);
   });
@@ -113,11 +114,8 @@ describe('bodyHomePose', () => {
 
   it('frames the requested body, not Earth', () => {
     const marsPos = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('mars'))!.positionMpc;
-    const marsRadiusM = outerBoundRadiusM(
-      SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!.surface,
-    );
     const marsPose = bodyHomePose(asSceneBodyId('mars'), SIM_DAYS, FOV_Y_RAD);
-    const marsFraming = bodyLikeFraming(marsPos, marsRadiusM, FOV_Y_RAD);
+    const marsFraming = framingPose(bodyRowAt('mars', marsPos), FOV_Y_RAD, marsPose);
 
     expect(marsPose.target).not.toEqual(pose.target);
     expect(marsPose.target).toEqual(marsFraming.target);

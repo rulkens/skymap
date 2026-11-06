@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
-// StarDetailCard — rendering tests for the one star panel, a case per
-// `detail.kind`. The card is the only place a star's rows are chosen, so a
+// StarDetailCard — rendering tests for the one star panel, a case per block
+// (each `detail.kind`, and a curated sidecar entry). The card is the only place a star's rows are chosen, so a
 // mis-wired arm shows up here rather than only in the browser. Asserting
 // rendered text keeps the contract stable against CSS-module class mangling.
 
@@ -9,13 +9,13 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import StarDetailCard from '../../../../../../src/layers/starCatalog/card/ui/StarDetailCard/StarDetailCard';
-import { buildFocusable } from '../../../../../../src/services/engine/helpers/buildFocusable';
+import { starCatalogSelectionKinds } from '../../../../../../src/layers/starCatalog/selection/kinds';
 import { SGR_A_STAR_ENTRY } from '../../../../../../src/layers/blackHoles/sources/sgrAStar';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../../src/data/source';
 import { starRowDriver } from '../../../../../fixtures/starRowDriver';
 import type { FamousStarMetaEntry } from '../../../../../../src/@types/loading/FamousStarMetaEntry';
-import type { StarInfo } from '../../../../../../src/@types/engine/StarInfo';
+import type { StarInfo } from '../../../../../../src/layers/starCatalog/@types/StarInfo';
 
 // A Sun-like dwarf 12 pc out: absMag 4.67, BP−RP 0.82 (in range → no '~').
 const fieldStar: StarInfo = {
@@ -63,7 +63,7 @@ const rigel: StarInfo = {
   y: 0,
   z: 0,
   distancePc: 264.6,
-  detail: { kind: 'curated', meta: rigelMeta },
+  detail: { kind: 'none' },
 };
 
 describe('StarDetailCard', () => {
@@ -98,7 +98,7 @@ describe('StarDetailCard', () => {
   });
 
   it('curated: the card shot, aliases, the sidecar rows, description and Wikipedia link', () => {
-    render(createElement(StarDetailCard, { target: rigel }));
+    render(createElement(StarDetailCard, { target: rigel, curated: rigelMeta }));
 
     // Rigel has a featured card, and its card id IS its focus id — so the shot
     // resolves off the star's own id, with the lead rows beside it.
@@ -124,21 +124,19 @@ describe('StarDetailCard', () => {
 
   it("orbit: an S-star's period, eccentricity, pericentre and pericentre speed", () => {
     // End to end through the real seam: a stored star row for S2 goes through
-    // buildFocusable's static seed lookup and out as rendered rows, so a missing
+    // the star kind's static seed lookup and out as rendered rows, so a missing
     // lookup or an unwired card block fails here rather than only in the browser.
-    const target = buildFocusable(
-      {
-        type: 'starCatalog',
-        source: Source.SStar,
-        index: 0,
-        id: 's2',
-        label: 'S2',
-        positionMpc: [0.0025, 0, 0],
-        radiusM: 4.2e9,
-        driver: starRowDriver('s2', 4.2e9),
-      },
-      [],
-    ) as StarInfo;
+    const target = starCatalogSelectionKinds[0]!.toFocusable({
+      type: 'starCatalog',
+      source: Source.SStar,
+      index: 0,
+      id: 's2',
+      label: 'S2',
+      positionMpc: [0.0025, 0, 0],
+      radiusM: 4.2e9,
+      radiusMpc: 4.2e9 * SCALE_UNITS.M_TO_MPC,
+      driver: starRowDriver('s2', 4.2e9),
+    });
 
     const { container } = render(createElement(StarDetailCard, { target }));
 

@@ -20,6 +20,7 @@ import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import { ALL_BODY_TEXTURE_KEYS } from '../../src/layers/body/textures/data/bodyTextureKeys';
+import { BLACK_MARBLE_QUADRANT_KEYS } from '../utils/io/blackMarbleQuadrantKeys';
 import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
@@ -31,11 +32,17 @@ const BODY_SOURCES_APPROX_MB = 700;
 /** MB, real on-disk total of the eight BMNG quadrants. */
 const BMNG_QUADRANTS_APPROX_MB = 421;
 
+/** MB, real on-disk total of the eight Black Marble 2016 (500 m) quadrants. */
+const BLACK_MARBLE_QUADRANTS_APPROX_MB = 216;
+
 /** MB, real Content-Lengths: PIA11707 30 + the true-colour reference 57. */
 const CHROMA_SOURCES_APPROX_MB = 87;
 
 export const FULL_FETCH_APPROX_MB =
-  BODY_SOURCES_APPROX_MB + BMNG_QUADRANTS_APPROX_MB + CHROMA_SOURCES_APPROX_MB;
+  BODY_SOURCES_APPROX_MB +
+  BMNG_QUADRANTS_APPROX_MB +
+  BLACK_MARBLE_QUADRANTS_APPROX_MB +
+  CHROMA_SOURCES_APPROX_MB;
 
 /** MB: the 2k SSS variants + the 5400x2700 BMNG sibling. */
 export const DEV_FETCH_APPROX_MB = 7;
@@ -90,12 +97,15 @@ const TEXTURE_ENTRIES: readonly TextureSourceRow[] = ALL_BODY_TEXTURE_KEYS.map(
 );
 
 /**
- * The eight BMNG quadrants the Earth tile pyramid is baked from. No whole-globe
+ * The sixteen BMNG and Black Marble quadrants the Earth tile pyramid is baked from. No whole-globe
  * runtime texture is built from them, so they are not a `(body, kind)` source
  * and cannot ride `TEXTURE_SOURCES` — but they must stay obtainable by command,
- * hence this second list. `BMNG_QUADRANT_KEYS` is shared with the bake.
+ * hence this second list. Both key sets are shared with the bake.
  */
-const QUADRANT_SOURCES: readonly TextureSource[] = Object.values(BMNG_QUADRANT_KEYS).map((key) => ({
+const QUADRANT_SOURCES: readonly TextureSource[] = [
+  ...Object.values(BMNG_QUADRANT_KEYS),
+  ...Object.values(BLACK_MARBLE_QUADRANT_KEYS),
+].map((key) => ({
   url: RAW_DATA[key].upstream,
   destPath: rawDataPath(key),
 }));
@@ -134,7 +144,7 @@ export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
 }
 
 /**
- * The size gate: a ~1.2 GB pull is not something to start by accident
+ * The size gate: a ~1.4 GB pull is not something to start by accident
  * (feedback_announce_big_downloads), so the full set REFUSES without an explicit
  * `--confirm`; the ~7 MB `--dev` subset is always allowed. Pure so the gate is
  * testable without spawning the CLI.

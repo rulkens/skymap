@@ -1,6 +1,5 @@
-import type { SelectionKind } from '../../engine/SelectionKind';
 import type { DetailCardEntry } from './DetailCardEntry';
 
-/** The table `detailCardTable` builds and InfoCard dispatches on: one row per
- * `SelectionKind`, each typed to its own arm — the key is the narrowing proof. */
-export type DetailCardTable = { readonly [K in SelectionKind]: DetailCardEntry<K> };
+/** The table `detailCardTable` builds and InfoCard dispatches on: one entry per composed
+ * kind type. Entries are base-typed; `detailCardFor` is where a kind's own card meets it. */
+export type DetailCardTable = ReadonlyMap<string, DetailCardEntry>;

@@ -11,7 +11,7 @@ export type SurfaceTileDebugSnapshot = {
   /** The engaged body, or `null` while disengaged — what the panel titles
    *  itself with and what its fly-to control targets. */
   readonly bodyId: SurfaceTileBodyId | null;
-  /** Atlas slot count: `(SURFACE_TILE_ATLAS_SIDE / tilePx) ** 2`. */
+  /** Albedo atlas slot count: `(atlasSide / slotSide) ** 2` of its lane spec. */
   readonly capacity: number;
   /** Slots currently claimed by a key, loaded or still in flight. */
   readonly used: number;

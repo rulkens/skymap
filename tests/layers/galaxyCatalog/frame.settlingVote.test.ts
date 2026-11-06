@@ -57,6 +57,7 @@ describe('galaxyCatalog frame — work votes', () => {
       value: undefined,
       awake: true,
       settling: true,
+      loading: true,
     });
   });
 
@@ -69,6 +70,7 @@ describe('galaxyCatalog frame — work votes', () => {
       value: undefined,
       awake: false,
       settling: false,
+      loading: false,
     });
   });
 });

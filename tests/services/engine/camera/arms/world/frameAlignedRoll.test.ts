@@ -77,7 +77,7 @@ function screenUpOffset(pose: CameraPose, frame: Readonly<Mat3>, worldDir: Vec3)
   return Math.acos(Math.max(-1, Math.min(1, dot)));
 }
 
-const EARTH_POLE = rotateVec3ByTightMat3([0, 0, 1], EARTH.orientation);
+const EARTH_POLE = rotateVec3ByTightMat3(EARTH.orientation, [0, 0, 1]);
 
 describe('frameAlignedRoll', () => {
   it('aligns screen-up with the body pole at the band floor', () => {

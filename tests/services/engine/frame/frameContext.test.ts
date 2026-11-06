@@ -34,7 +34,6 @@ import { frameBodyStates } from '../../../../src/services/engine/frame/frameBody
 import { frameContextInputOf } from '../../../../src/services/engine/frame/frameContextInputOf';
 import { sceneBodyStates } from '../../../../src/services/engine/frame/sceneBodyStates';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
-import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
 import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyFrame/bodyRelativePose';
@@ -51,6 +50,7 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
+import type { SelectionRowBase } from '../../../../src/@types/engine/selection/SelectionRowBase';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -229,7 +229,7 @@ describe('deriveFrameContext — the placed selection', () => {
         boundingRadiusM: 50,
         groundRadiusM: null,
       },
-    } as unknown as SelectionRow;
+    } as unknown as SelectionRowBase;
     const state = {
       ...makeState(),
       selectionRows: { hover: null, select: null, focus: row },

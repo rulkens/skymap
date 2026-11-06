@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { blackHoleSearch } from '../../../../../src/layers/blackHoles/markers/present/blackHoleSearch';
-import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
+import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
 import { blackHolePickCode } from '../../../../support/layerPickCodes';
 
 describe('blackHoleSearch', () => {

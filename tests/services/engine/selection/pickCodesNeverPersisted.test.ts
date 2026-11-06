@@ -17,20 +17,20 @@ import { createAppStore } from '../../../../src/store/createAppStore';
 import { hashBodyFor } from '../../../../src/state/url/hashBodyFor';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { updateSelectionSelect } from '../../../../src/state/selection/selectionSlice';
-import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
-import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
-import { bodySelectionRow } from '../../../../src/layers/body/selection/present/bodySelectionRow';
-import { craftSelectionRow } from '../../../../src/layers/missions/craft/present/craftSelectionRow';
-import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/scenes/present/earthSceneSelectionRow';
-import { structureSelectionRow } from '../../../../src/layers/structure/picking/present/structureSelectionRow';
-import { milkyWaySelectionRow } from '../../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
-import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
-import { satellitesSelectionRow } from '../../../../src/layers/satellites/focus/present/satellitesSelectionRow';
-import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/present/zoneOfAvoidanceSelectionRow';
+import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
+import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/starCatalogSelectionRow';
+import { bodySelectionRow } from '../../../../src/layers/body/selection/bodySelectionRow';
+import { craftSelectionRow } from '../../../../src/layers/missions/selection/craftSelectionRow';
+import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/selection/earthSceneSelectionRow';
+import { structureSelectionRow } from '../../../../src/layers/structure/selection/structureSelectionRow';
+import { milkyWaySelectionRow } from '../../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
+import { satellitesSelectionRow } from '../../../../src/layers/satellites/selection/satellitesSelectionRow';
+import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/zoneOfAvoidanceSelectionRow';
 import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
-import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../../support/noKindsOff';
 import { NOOP_SAGA_CONTEXT } from '../../../support/createTestStore';
 import {
   blackHolePickCode,
@@ -46,9 +46,9 @@ import {
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { PickCodeAllocator } from '../../../../src/@types/engine/selection/PickCodeAllocator';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
 const virgo = { id: 'virgo', category: 'galaxy-cluster' } as StructureInfo;
 const structures = {
@@ -63,15 +63,15 @@ const { catalog: satellites } = buildSatelliteCatalog(
 /** One row and one ref per kind; the row's codes come from `allocator`. */
 function casesUnder(allocator: PickCodeAllocator) {
   const pickCode = (layer: string) => (id: string) => allocator.codeOf(layer, id);
-  const kind = <Ref extends SelectionRef>(row: SelectionKindRow<Ref>, ref: Ref) => ({
+  const kind = <Ref extends SelectionRefBase>(row: SelectionKindRow<Ref>, ref: Ref) => ({
     row: row as unknown as SelectionKindRow,
-    ref: ref as SelectionRef,
+    ref: ref as SelectionRefBase,
   });
   return [
     kind(
       galaxyCatalogSelectionRow(
         galaxyRowRuntime(
-          { catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(16)]]), famousMeta: [] },
+          { catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(16)]]) },
           pickCode('galaxyCatalog'),
         ),
       ),
@@ -123,7 +123,7 @@ function pickedUnder(allocator: PickCodeAllocator) {
   const cases = casesUnder(allocator);
   const resolver = composeSelectionRows(
     () => cases.map((c) => c.row),
-    () => ALL_KINDS_ENABLED,
+    () => NO_KINDS_OFF,
   );
   const words = cases.map((c) => c.row.encodePick(c.ref));
   const refs = cases.map((c, i) => {

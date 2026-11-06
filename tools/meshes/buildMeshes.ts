@@ -56,6 +56,7 @@ import { MESH_ASSET_ROW_FIELDS } from './meshAssetRowFields';
 import { generateTangents } from './generateTangents';
 import { meanAlbedo } from './meanAlbedo';
 import { writeMeshBinary } from './writeMeshBinary';
+import { linearToSrgbByte } from '../../src/utils/color/linearToSrgbByte';
 
 // The contact shadow is a soft blur under a few-metre footprint: 512^2 is
 // ~1 cm/texel there, and nothing sharper survives the blur.
@@ -561,11 +562,11 @@ function bakeContactDecal(
   bodyFromSource: Mat3 | undefined,
   centroidM: Vec3,
 ): ContactDecal {
-  const centre = rotateVec3ByTightMat3(stamp.centre, bodyFromSource);
+  const centre = rotateVec3ByTightMat3(bodyFromSource, stamp.centre);
   return {
     centre: [centre[0] - centroidM[0], centre[1] - centroidM[1], centre[2] - centroidM[2]],
-    halfU: rotateVec3ByTightMat3(stamp.u, bodyFromSource),
-    halfV: rotateVec3ByTightMat3(stamp.v, bodyFromSource),
+    halfU: rotateVec3ByTightMat3(bodyFromSource, stamp.u),
+    halfV: rotateVec3ByTightMat3(bodyFromSource, stamp.v),
   };
 }
 
@@ -779,9 +780,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
 
 /** Linear baseColour factor → the sRGB byte a 1x1 substitute PNG stores. */
 function srgbByte(r: number, g: number, b: number): { r: number; g: number; b: number } {
-  const encode = (c: number) =>
-    Math.round(255 * (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055));
-  return { r: encode(r), g: encode(g), b: encode(b) };
+  return { r: linearToSrgbByte(r), g: linearToSrgbByte(g), b: linearToSrgbByte(b) };
 }
 
 const GENERATED_BANNER =

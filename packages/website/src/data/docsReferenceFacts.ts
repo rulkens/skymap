@@ -172,7 +172,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-params-hash',
     about: 'app',
-    text: 'The app writes focus, t, orientation, exhibit, tour and clip into its address as the view changes, always in that order. It never writes pose.',
+    text: 'The app writes focus, t, orientation, exhibit, tour and clip into its address as the view changes, always in that order. It never writes pose or layers.',
     source: HASH,
     sourceLabel: HASH_LABEL,
     checked: CHECKED,
@@ -204,7 +204,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-params-welcome',
     about: 'app',
-    text: 'A link that carries focus, t, pose, exhibit, tour or clip opens without the welcome screen, even when the value is one the app does not know. A link with orientation alone, or with ?dome alone, shows the welcome screen to someone who has not seen it.',
+    text: 'A link that carries focus, t, pose, exhibit, tour or clip opens without the welcome screen, even when the value is one the app does not know. A link with orientation alone, with layers alone, or with ?dome alone, shows the welcome screen to someone who has not seen it.',
     source: `${REPO_BLOB}/src/utils/url/hasDeepLink.ts`,
     sourceLabel: `which links skip the welcome screen, ${IN_REPO}`,
     checked: CHECKED,
@@ -261,7 +261,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'ref-focus-pos-famous',
     about: 'app',
     text: 'Link to a named galaxy by its own id, such as m31, and not by its position.',
-    source: `${REPO_BLOB}/src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow.ts`,
     sourceLabel: `how a galaxy’s id is read, ${IN_REPO}`,
     checked: CHECKED,
   },

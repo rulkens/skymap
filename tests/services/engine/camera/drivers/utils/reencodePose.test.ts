@@ -19,7 +19,7 @@ import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 
 /** World-space target→eye direction for (yaw, pitch) decoded under `basis`. */
 function decodeWorld(yaw: number, pitch: number, basis: Mat3 | undefined): Vec3 {
-  return rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), basis);
+  return rotateVec3ByTightMat3(basis, yawPitchToDir(yaw, pitch));
 }
 
 describe('reencodePose', () => {

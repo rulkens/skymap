@@ -10,7 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { produceBlackHoleCaptions } from '../../../../../src/layers/blackHoles/markers/present/produceBlackHoleCaptions';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/markers/present/blackHoleSelectionRow';
+import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
 import { SGR_A_STAR_ENTRY } from '../../../../../src/layers/blackHoles/sources/sgrAStar';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';

@@ -787,6 +787,99 @@ export const RAW_DATA = {
     readme: 'textures.readme',
   },
 
+  // Black Marble 2016 at 500 m: eight 21600x21600 night-lights quadrants, same
+  // A-D / 1-2 layout as the BMNG set. Only `build-surface-tiles` (night product)
+  // reads their pixels; `BLACK_MARBLE_QUADRANT_KEYS` is the one enumeration.
+
+  'textures.blackMarbleQuadrantA1': {
+    path: 'data/raw/textures/BlackMarble_2016_A1.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant A1 - lon -180..-90, lat 0..90, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_A1.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantA2': {
+    path: 'data/raw/textures/BlackMarble_2016_A2.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant A2 - lon -180..-90, lat -90..0, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_A2.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantB1': {
+    path: 'data/raw/textures/BlackMarble_2016_B1.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant B1 - lon -90..0, lat 0..90, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_B1.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantB2': {
+    path: 'data/raw/textures/BlackMarble_2016_B2.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant B2 - lon -90..0, lat -90..0, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_B2.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantC1': {
+    path: 'data/raw/textures/BlackMarble_2016_C1.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant C1 - lon 0..90, lat 0..90, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_C1.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantC2': {
+    path: 'data/raw/textures/BlackMarble_2016_C2.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant C2 - lon 0..90, lat -90..0, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_C2.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantD1': {
+    path: 'data/raw/textures/BlackMarble_2016_D1.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant D1 - lon 90..180, lat 0..90, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_D1.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantD2': {
+    path: 'data/raw/textures/BlackMarble_2016_D2.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant D2 - lon 90..180, lat -90..0, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_D2.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+
   'textures.earthWaterMask': {
     path: 'data/raw/textures/world.watermask.21600x10800.png',
     kind: 'file',
@@ -805,7 +898,7 @@ export const RAW_DATA = {
     description:
       "NASA Black Marble 2016 night lights, 13500x6750 equirect JPG (NASA media guidelines, credit NASA Earth Observatory / NASA's Goddard Space Flight Center, Suomi NPP VIIRS). Earth night-lights source — full pull only, no dev variant. Verified live 2026-07-19 (8,106,233 bytes, image/jpeg).",
     upstream:
-      'https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg',
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },

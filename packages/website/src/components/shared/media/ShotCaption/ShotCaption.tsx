@@ -1,8 +1,7 @@
 /*
  * ShotCaption — a picture's label, the quietest words on the page: the title, then in one fainter line what
  * is data and what is drawn and the credit for third-party imagery in frame, then the address the picture was
- * taken at (every picture being an address is the site's honesty device), where a link can open it as shown
- * (shotLink). Use it where it adds something;
+ * taken at (every picture being an address is the site's honesty device). Use it where it adds something;
  * a picture whose words beside it already name it takes `showTitle={false}`, which keeps a credit and
  * renders nothing when there is none. `label` gives the words for a picture not in the manifest, with no
  * address to open; `showDrawn={false}` leaves out the data-and-drawing note; `foot` fills the height it is
@@ -56,7 +55,7 @@ function ShotCaption({
         ) : (
           <ViewLink className={styles.view} view={link} query={row?.query} />
         ))}
-      {open && !link && <div className={styles.room} />}
+      {!row && <div className={styles.room} />}
     </div>
   );
 }

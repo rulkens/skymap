@@ -10,10 +10,10 @@
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { MIN_DISTANCE_MPC } from '../../../../utils/camera/orbitCamera/clampDistance';
 import { selectionDriver } from '../../../../utils/selection/selectionDriver';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
 import type { PivotFraming } from '../../../../@types/camera/arms/PivotFraming';
+import type { SelectionRowBase } from '../../../../@types/engine/selection/SelectionRowBase';
 
-export function pivotRadiusMpc(row: SelectionRow | null): number | null {
+export function pivotRadiusMpc(row: SelectionRowBase | null): number | null {
   // A groundless driver (a mesh body's hull) has nothing to report here.
   const groundRadiusM = selectionDriver(row)?.groundRadiusM ?? null;
   return groundRadiusM === null ? null : groundRadiusM * SCALE_UNITS.M_TO_MPC;
@@ -27,7 +27,7 @@ export function pivotRadiusMpc(row: SelectionRow | null): number | null {
  */
 export const SURFACELESS_FLOOR_MPC = 1e-17;
 
-export function pivotFraming(row: SelectionRow | null): PivotFraming {
+export function pivotFraming(row: SelectionRowBase | null): PivotFraming {
   const driver = selectionDriver(row);
   if (driver === null) return { radiusMpc: null, floorMpc: SURFACELESS_FLOOR_MPC };
   // No ground to taper against (MeshBody.boundingRadiusM), but the hull is a

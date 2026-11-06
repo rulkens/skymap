@@ -12,7 +12,7 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
 import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
-import { rotateVec3ByTightMat3T } from '../../../src/utils/math/rotateVec3ByTightMat3T';
+import { rotateByTranspose } from '../../../src/utils/math/rotateByTranspose';
 import { MESH_SOURCES } from '../io/meshSources';
 
 const SEATED_IDS = new Set<string>(
@@ -32,5 +32,5 @@ export function meshGroundUpSource(meshKey: string): Vec3 | undefined {
   }
   if (seated.length === 0) return undefined;
   const bodyFromSource = MESH_SOURCES[meshKey]?.bodyFromSource ?? IDENTITY_MAT3;
-  return rotateVec3ByTightMat3T([0, 0, 1], bodyFromSource);
+  return rotateByTranspose(bodyFromSource, [0, 0, 1]);
 }

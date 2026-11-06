@@ -11,9 +11,11 @@ import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/crea
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
-import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
+import { bodyRowAt } from '../../../../src/utils/scene/bodyRowAt';
+import { MILKY_WAY_ROW } from '../../../fixtures/milkyWayRow';
+import type { SelectionRowBase } from '../../../../src/@types/engine/selection/SelectionRowBase';
 
 const EARTH_RADIUS_M = 6_371_000;
 const EARTH_RADIUS_MPC = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
@@ -54,13 +56,7 @@ describe('logCameraState', () => {
     // The camera's target sits at the pivot; a live focus row's positionMpc
     // is fed as the exact same point so cameraToBodyCenterMpc reduces to
     // cam.distance and the altitude assertion below stays simple.
-    const focus: SelectionRow = {
-      type: 'body',
-      id: asSceneBodyId('earth'),
-      label: 'Earth',
-      positionMpc: cam.target,
-      driver: bodyDriverGeometry('earth'),
-    };
+    const focus: SelectionRowBase = bodyRowAt('earth', cam.target);
 
     logCameraState(cam, fakeCanvas(1920, 1080), focus, SIM_DAYS);
 
@@ -99,13 +95,7 @@ describe('logCameraState', () => {
     });
     // Live body center offset from the orbit target (e.g. a stale/mismatched
     // pivot) — cam.distance (5) must NOT leak into the derived block.
-    const focus: SelectionRow = {
-      type: 'body',
-      id: asSceneBodyId('earth'),
-      label: 'Earth',
-      positionMpc: [3, 4, 0],
-      driver: bodyDriverGeometry('earth'),
-    };
+    const focus: SelectionRowBase = bodyRowAt('earth', [3, 4, 0]);
 
     logCameraState(cam, fakeCanvas(800, 600), focus, SIM_DAYS);
 
@@ -132,7 +122,7 @@ describe('logCameraState', () => {
       far: 100,
     });
 
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
+    logCameraState(cam, fakeCanvas(800, 600), MILKY_WAY_ROW, SIM_DAYS);
 
     const [, blob] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(blob);
@@ -163,7 +153,7 @@ describe('logCameraState', () => {
       },
     };
 
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, bodyArm);
+    logCameraState(cam, fakeCanvas(800, 600), MILKY_WAY_ROW, SIM_DAYS, bodyArm);
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
     expect(out.frame).toBe('body:earth');
@@ -173,7 +163,7 @@ describe('logCameraState', () => {
 
     // Untagged input (and every world-arm frame) reads as absolute.
     logSpy.mockClear();
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
+    logCameraState(cam, fakeCanvas(800, 600), MILKY_WAY_ROW, SIM_DAYS);
     const [, world] = logSpy.mock.calls[0] as [string, string];
     expect(JSON.parse(world).frame).toBe('absolute');
     expect(JSON.parse(world).eyeFromCentreM).toBeNull();
@@ -202,7 +192,7 @@ describe('logCameraState', () => {
       },
     };
 
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, siteArm);
+    logCameraState(cam, fakeCanvas(800, 600), MILKY_WAY_ROW, SIM_DAYS, siteArm);
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
     expect(out.frame).toBe('site:curiosity');

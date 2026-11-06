@@ -18,14 +18,11 @@ export function viewBodyPose(
   eyeOffsetMpc: Readonly<Vec3>,
 ): BodyRelativePose {
   const basisM = multiply3x3(pose.basisM, rotation);
-  const offsetM = rotateVec3ByTightMat3(
-    [
-      eyeOffsetMpc[0] * SCALE_UNITS.MPC_TO_M,
-      eyeOffsetMpc[1] * SCALE_UNITS.MPC_TO_M,
-      eyeOffsetMpc[2] * SCALE_UNITS.MPC_TO_M,
-    ],
-    basisM,
-  );
+  const offsetM = rotateVec3ByTightMat3(basisM, [
+    eyeOffsetMpc[0] * SCALE_UNITS.MPC_TO_M,
+    eyeOffsetMpc[1] * SCALE_UNITS.MPC_TO_M,
+    eyeOffsetMpc[2] * SCALE_UNITS.MPC_TO_M,
+  ]);
   const { eyeRelBodyM: e } = pose;
   return { eyeRelBodyM: [e[0] + offsetM[0], e[1] + offsetM[1], e[2] + offsetM[2]], basisM };
 }

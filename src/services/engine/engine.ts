@@ -226,7 +226,7 @@ export function createEngine(
     },
     booted: false,
     fadesAnimating: false,
-    layersSettling: false,
+    layersLoading: false,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
@@ -281,7 +281,7 @@ export function createEngine(
   // (resolveFocusRefDeferringSaga, watchSelectionRowsSaga's gap-fill).
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
-    () => state.settings.picking.kinds,
+    () => state.settings.picking.off,
   );
   const bootstrapDeps: BootstrapDeps = {
     canvas,
@@ -311,7 +311,7 @@ export function createEngine(
 
   cb.setSagaContext({
     nextFrame: () => state.subsystems.scheduler.nextFrame(),
-    reconcile: makeReconcileEffects(state, canvas),
+    reconcile: makeReconcileEffects(state, canvas, selection),
     selection,
     // The up-basis quaternion is resolved THIS frame, so a mid-slerp re-switch
     // captures the live pole rather than snapping to the committed frame. Null

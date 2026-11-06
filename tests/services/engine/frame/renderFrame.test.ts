@@ -50,11 +50,11 @@ import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/Orbi
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import type { Mat4 } from 'wgpu-matrix';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import { galaxyRowRuntime } from '../../../support/layerPickCodes';
 import { testPickCode } from '../../../support/testPickCode';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
 type CallLog = string[];
 
@@ -305,7 +305,7 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',
-    plan: () => ({ value: [], awake: false, settling: false }),
+    plan: () => ({ value: [], awake: false, settling: false, loading: false }),
   },
   ...stubPlannersFor(PRELUDE),
 ];
@@ -326,7 +326,6 @@ function makeInput(
     // An SDSS catalog, for the selected-highlight case.
     ...galaxyRowRuntime({
       catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]),
-      famousMeta: [],
     }),
     pointRenderer: galaxyPointRenderer,
     proceduralDisks: { lastOutput: { instances: [] } },
@@ -369,7 +368,7 @@ function makeInput(
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selected: null as SelectionRef | null,
+    selected: null as SelectionRefBase | null,
     provenance: {
       orientation: { highlight: true, filter: 'all' },
       size: { highlight: false, filter: 'all' },
@@ -655,7 +654,7 @@ describe('renderFrame', () => {
           type: 'galaxyCatalog',
           source: Source.SDSS,
           index: 42,
-        } as SelectionRef,
+        } as SelectionRefBase,
       },
     });
     renderFrame(fx2.input);

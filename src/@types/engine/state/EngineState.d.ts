@@ -56,8 +56,8 @@ export type EngineState = {
   booted: boolean;
   /** Whether the last frame had a fade or label animation running; `settled()` polls it. */
   fadesAnimating: boolean;
-  /** Whether a Layer planner voted `settling` last frame; `isSceneSettled` reads it. */
-  layersSettling: boolean;
+  /** Whether a Layer planner voted `loading` last frame; `isSceneSettled` reads it. */
+  layersLoading: boolean;
   /** Seeded with placeholders in `engine.ts`, filled by `wireInput`'s bootstrap seed. */
   cameraRuntime: CameraRuntime;
   /** Per-`APP_CUBEMAP_CAPTURE_REGISTRY`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky row's `allocateWhen`. */

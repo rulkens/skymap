@@ -39,6 +39,9 @@ import type { CameraTuning } from '../../../../src/@types/camera/orbitCamera/Cam
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const EARTH = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))! as BodyState;

@@ -43,6 +43,8 @@ import { selectPendingInput } from '../../../state/input/selectors';
 import { selectViewCoverPx } from '../../../state/viewCover/selectors';
 import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
+import { isKind } from '../../../utils/selection/isKind';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 
 /**
  * Scale-bar width, CSS px. Must stay under the ScaleBar panel's ~145 px content
@@ -199,7 +201,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // per frame, before every consumer of the blend (label director, markers,
   // render settings); all of them read the captured value, never a fresh call.
   const focusRow = state.selectionRows.focus;
-  const focusedStructure = focusRow !== null && focusRow.type === 'structure' ? focusRow : null;
+  const focusedStructure = isKind<StructureInfo>(focusRow, 'structure') ? focusRow : null;
   state.subsystems.structureFocus.update(focusedStructure, nowMs);
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   snapshot.focusBlend = focusUniforms.blend;
@@ -255,7 +257,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // without it awaited fade-outs (catalog visibility, tier swaps) hang forever.
   state.subsystems.fades.tick(nowMs);
   state.fadesAnimating = state.subsystems.fades.isAnyAnimating(nowMs) || labelsAnimating;
-  state.layersSettling = snapshot.plans.settling;
+  state.layersLoading = snapshot.plans.loading;
   const keepTicking = shouldKeepTicking(
     state,
     rootState,

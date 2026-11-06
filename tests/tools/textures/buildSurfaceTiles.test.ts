@@ -102,7 +102,7 @@ describe('bakeCoarserLevel', () => {
     await writeChild(dir, 2, 0, 1, BLUE);
     await writeChild(dir, 2, 1, 1, WHITE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX);
+    await bakeCoarserLevel(1, 'albedo', TILE_PX, dir, TILE_PREFIX);
 
     const parentPath = join(
       dir,
@@ -132,7 +132,7 @@ describe('bakeCoarserLevel', () => {
     const dir = tmpDir();
     await writeChild(dir, 2, 1, 1, WHITE); // SE only
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX);
+    await bakeCoarserLevel(1, 'albedo', TILE_PX, dir, TILE_PREFIX);
 
     const parentPath = join(
       dir,
@@ -186,7 +186,7 @@ describe('bakeCoarserLevel', () => {
     await writeChild(dir, 2, 1, 1, WHITE); // SE only — NW/NE/SW absent
     const filler = stubFillerSource(ORANGE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX, filler);
+    await bakeCoarserLevel(1, 'albedo', TILE_PX, dir, TILE_PREFIX, filler);
 
     const parentPath = join(
       dir,
@@ -213,7 +213,7 @@ describe('bakeCoarserLevel', () => {
     await writeChild(dir, 2, 1, 1, WHITE);
     const filler = stubFillerSource(ORANGE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX, filler);
+    await bakeCoarserLevel(1, 'albedo', TILE_PX, dir, TILE_PREFIX, filler);
 
     expect(filler.readBoxCalls).toBe(0);
   });
@@ -228,7 +228,16 @@ describe('bakeCoarserLevel', () => {
     const PURPLE = [128, 0, 128, 255] as const;
     const deepSource = stubFillerSource(PURPLE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX, undefined, undefined, deepSource);
+    await bakeCoarserLevel(
+      1,
+      'albedo',
+      TILE_PX,
+      dir,
+      TILE_PREFIX,
+      undefined,
+      undefined,
+      deepSource,
+    );
 
     const parentPath = join(
       dir,
@@ -245,7 +254,7 @@ describe('bakeCoarserLevel', () => {
   it('leaves a childless tile unwritten when no deep source is given', async () => {
     const dir = tmpDir();
 
-    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX);
+    await bakeCoarserLevel(1, 'albedo', TILE_PX, dir, TILE_PREFIX);
 
     const parentPath = join(
       dir,
@@ -597,6 +606,59 @@ describe('bakeAll', () => {
     ) as SurfaceTileManifest;
     expect(manifest.bands?.[0]?.builtFrom.albedo).toEqual(albedoV1.provenance);
     expect(manifest.bands?.[0]?.builtFrom.height).toEqual(heightSource('v2').provenance);
+  });
+
+  it("a night-only run bakes night tiles and keeps the other products' provenance", async () => {
+    const dir = tmpDir();
+    const heightSource: HeightSource = {
+      id: 'stub-height',
+      attribution: 'stub-height attribution',
+      maxLevel: STUB_Z,
+      coverage: [BOX_WEST],
+      provenance: { sourceId: 'stub-height', attribution: 'stub-height attribution', vintage: 'v' },
+      async readGrid(_z, _i0, _j0, nx, ny) {
+        return new Float32Array(nx * ny).fill(100);
+      },
+      async boundsInBox() {
+        return [100, 100];
+      },
+    };
+    const albedo = stubSource('stub-albedo', BOX_WEST, [255, 0, 0, 255]);
+    const night = stubSource('stub-night', BOX_WEST, [0, 0, 255, 255]);
+    const albedoProducts = new Set<SurfaceTileProduct>(['albedo', 'height']);
+
+    await bakeAll(
+      TEST_BODY,
+      [{ source: albedo, minLevel: STUB_Z, height: heightSource }],
+      dir,
+      albedoProducts,
+    );
+    const albedoPath = join(
+      dir,
+      surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+    );
+    const albedoBefore = readFileSync(albedoPath);
+
+    await bakeAll(
+      TEST_BODY,
+      [{ source: albedo, minLevel: STUB_Z, height: heightSource, night }],
+      dir,
+      new Set<SurfaceTileProduct>(['night']),
+    );
+
+    expect(
+      existsSync(
+        join(dir, surfaceTilePath({ product: 'night', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX)),
+      ),
+    ).toBe(true);
+    const manifest = JSON.parse(
+      readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
+    ) as SurfaceTileManifest;
+    const builtFrom = manifest.bands?.[0]?.builtFrom;
+    expect(builtFrom?.albedo).toEqual(albedo.provenance);
+    expect(builtFrom?.height).toEqual(heightSource.provenance);
+    expect(builtFrom?.night).toEqual(night.provenance);
+    expect(readFileSync(albedoPath).equals(albedoBefore)).toBe(true);
   });
 
   it('a second bakeAll over the same output skips existing tiles and leaves bytes identical', async () => {

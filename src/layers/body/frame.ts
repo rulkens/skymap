@@ -3,7 +3,7 @@
  * view, apply it to the stream, and keep the result on the runtime, where the passes,
  * capture faces and the terrain seam read it (a capture face's plans store is empty).
  * The value is unused; the wake vote carries a manifest or tile fetch through, and the
- * same fetch votes `settling`, so the cold-load gate (`sceneSettled`) waits for it. While
+ * same fetch votes `loading`, so the cold-load gate (`sceneSettled`) waits for it. While
  * the DebugPanel is open it publishes the tile readouts through the runtime's
  * `readoutGate`: a dispatch per frame would re-render the panel at the loop's rate.
  */
@@ -42,7 +42,12 @@ export function surfaceTilePlanner(
               : NO_TERRAIN_PICK_MARKER_READOUT,
         });
       }
-      return { value: undefined, awake: tiles.plan.awake, settling: tiles.plan.awake };
+      return {
+        value: undefined,
+        awake: tiles.plan.awake,
+        settling: false,
+        loading: tiles.plan.awake,
+      };
     },
   };
 }
