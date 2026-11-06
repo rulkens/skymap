@@ -109,6 +109,11 @@
     margin: var(--site-space-xl) var(--figure-out, 0) var(--site-space-xl) 0;
   }
 
+  /* A picture inside a step belongs to that step: close under its words, with the next step clear of its label. */
+  & li > figure {
+    margin-block: var(--site-space-xs) var(--site-space-m);
+  }
+
   /*
    * A view link standing by itself in the text (a link row sets its own gaps): a line of its own, as far from the
    * paragraph above as from the one below; its 44px for the thumb is more than a line of text, so the margins take

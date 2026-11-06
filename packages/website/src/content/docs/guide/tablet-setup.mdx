@@ -1,0 +1,68 @@
+---
+title: Connecting a tablet
+description: "Connect a phone or tablet to Skymap’s desktop app: scan the QR in the control window, trust the computer once through its certificate, open the remote."
+job: "How do I connect a phone or tablet to Skymap’s desktop app, so it can steer the sky?"
+---
+
+import PhoneShot from '../../../components/docs/PhoneShot/PhoneShot.tsx';
+import androidKeep from '../../../assets/docs/tablet-guide/android-1-keep.webp';
+import androidClose from '../../../assets/docs/tablet-guide/android-2-close.webp';
+import androidCaCertificate from '../../../assets/docs/tablet-guide/android-3-ca-certificate.webp';
+import androidPickFile from '../../../assets/docs/tablet-guide/android-4-pick-file.webp';
+import iosAllow from '../../../assets/docs/tablet-guide/ios-1-allow.webp';
+import iosProfileDownloaded from '../../../assets/docs/tablet-guide/ios-2-profile-downloaded.webp';
+import iosInstall from '../../../assets/docs/tablet-guide/ios-3-install.webp';
+import iosTrust from '../../../assets/docs/tablet-guide/ios-4-trust.webp';
+
+Skymap’s desktop app shows the sky on a computer in a kiosk or a dome. A phone or tablet on the same network steers it through the remote. Each tablet is set up once.
+
+## How a tablet connects
+
+1. In the desktop app’s control window, under Tablets, scan the QR with the tablet’s camera. It opens a setup page on the tablet, at `http://` and the computer’s address, port 47824. A tablet without a camera opens that address and types the code shown beside the QR.
+2. The setup page shows the steps for that kind of tablet, the ones below. They install the computer’s certificate, a file that proves the computer is the one it says, so the tablet trusts it.
+3. The page checks by itself whether the tablet trusts the computer yet. Once it does, it opens the remote, over HTTPS.
+
+The setup page is plain HTTP, so the tablet opens it without a warning. The remote is HTTPS, which the tablet accepts once it has the certificate. A tablet that already trusts the computer goes straight to the remote.
+
+These steps were checked on an iOS 26.1 simulator and an Android 14 emulator. Other versions, and Android phones of other makes, may name the menus differently.
+
+## iPad or iPhone
+
+1. Use Safari.
+2. Tap Download the certificate, then Allow. When it says Profile Downloaded, tap Close.
+   <PhoneShot image={iosAllow} alt="Safari asks whether to allow the download: Ignore or Allow" caption="Safari, on the iOS 26.1 simulator" />
+3. Open the Settings app. Near the top, below Apple Account (on an iPad, in the list on the left), tap Profile Downloaded. Do it within a few minutes: iOS deletes a downloaded profile that is not installed after 8 minutes.
+   <PhoneShot image={iosProfileDownloaded} alt="Settings, with Profile Downloaded below Apple Account" caption="Settings, on the iOS 26.1 simulator" />
+4. Tap Install in the top right, Install again on the Warning screen, then Install in the box that pops up. Enter your passcode if asked, then tap Done.
+   <PhoneShot image={iosInstall} alt="The Warning screen, with Install in the top right" caption="Settings, on the iOS 26.1 simulator" />
+5. Go back to General, tap About, then Certificate Trust Settings at the bottom. Turn on Skymap local CA … and tap Continue.
+   <PhoneShot image={iosTrust} alt="Certificate Trust Settings, with the switch for Skymap local CA" caption="Settings, on the iOS 26.1 simulator" />
+6. Switch back to Safari. The setup page sees the change by itself.
+
+## Android
+
+1. Use Chrome or Brave: Firefox ignores certificates installed on Android.
+2. Tap Download the certificate. In Brave, tap Download, and when it says the file can’t be downloaded securely, tap Keep.
+   <PhoneShot image={androidKeep} alt="Brave says the file can’t be downloaded securely: Discard or Keep" caption="Brave, on the Android 14 emulator" />
+3. The phone says CA certificates must be installed in Settings: tap Close. The file is saved as `ca.crt` in Downloads.
+   <PhoneShot image={androidClose} alt="Install CA certificates in Settings, with a Close button" caption="Brave, on the Android 14 emulator" />
+4. Open the Settings app, tap Search settings and type CA certificate. Tap the CA certificate result, then CA certificate again on the next screen.
+   <PhoneShot image={androidCaCertificate} alt="Install a certificate, with CA certificate at the top" caption="Settings, on the Android 14 emulator" />
+5. On Your data won’t be private, tap Install anyway. Pick `ca.crt`: it is under Recent, or tap ☰ and then Downloads. Enter your screen lock if asked.
+   <PhoneShot image={androidPickFile} alt="The file picker on Recent, with ca.crt listed" caption="The file picker, on the Android 14 emulator" />
+6. Switch back to the setup page. It sees the change by itself.
+
+## Open the remote
+
+Once the setup page reads This tablet trusts the computer, tap Open the remote. A page opened without the code asks first for the code shown on the computer. Add the remote to the Home Screen or your bookmarks to find it again.
+
+The code stays the same between launches, so a bookmark keeps working while the computer keeps its address. Give the computer a DHCP reservation on the venue’s router, so its address does not change after a restart. Rotate code in the control window makes a new code and disconnects every tablet.
+
+What the remote does is under [Fly from the phone](/docs/guide/dome-setup/#fly-from-the-phone).
+
+## If the tablet does not connect
+
+- **The certificate will not install.** On the setup page, tap Open the remote anyway and accept the browser’s warning. The warning comes back on each visit.
+- **The setup page does not open.** Check that the tablet is on the same network as the computer. On a computer with more than one network, check that Tablets names the one the tablet uses.
+- **The computer asked to accept incoming network connections.** Choose Allow. If it was refused, allow Skymap in the computer’s firewall settings.
+- **The remote does not join.** The tablet connects once Skymap is running: the sky starts after its first download.
