@@ -101,15 +101,16 @@ function structLayout(fields: Array<{ name: string; type: string }>): {
  * (`orientation[N]`) can't distinguish them without the index.
  */
 function fieldForExpr(expr: string): string {
-  if (/^originRelEyeM[XYZ]$/.test(expr)) return 'originRelEyeM';
+  if (/^originRelEyeM\[[012]\]$/.test(expr)) return 'originRelEyeM';
   if (/^fadeWeight$/.test(expr)) return 'fadeWeight';
-  if (/^lon0Rad$/.test(expr)) return 'lon0Rad';
-  if (/^lat0Rad$/.test(expr)) return 'lat0Rad';
-  if (/^dLonRad$/.test(expr)) return 'dLonRad';
-  if (/^dLatRad$/.test(expr)) return 'dLatRad';
-  if (/^albedoUv(Origin|Scale)[XY]$/.test(expr)) return 'albedoRect';
-  if (/^fallbackUv(Origin|Scale)[XY]$/.test(expr)) return 'fallbackRect';
-  if (/^heightSlotOrigin[XY]\b/.test(expr)) return 'heightSlotOrigin';
+  if (/^anchor\.lon0Rad$/.test(expr)) return 'lon0Rad';
+  if (/^anchor\.lat0Rad$/.test(expr)) return 'lat0Rad';
+  if (/^anchor\.dLonRad$/.test(expr)) return 'dLonRad';
+  if (/^anchor\.dLatRad$/.test(expr)) return 'dLatRad';
+  if (/^albedoRect\[[0-3]\]$/.test(expr)) return 'albedoRect';
+  if (/^fallbackRect\[[0-3]\]$/.test(expr)) return 'fallbackRect';
+  if (/^nightRect\[[0-3]\]$/.test(expr)) return 'nightRect';
+  if (/^heightSlotOrigin\[[01]\]/.test(expr)) return 'heightSlotOrigin';
   if (/^edgeCoarser\b/.test(expr)) return 'edgeCoarser';
   if (/^heightCells\b/.test(expr)) return 'heightCells';
   if (/^vp\[/.test(expr)) return 'vp';
@@ -180,15 +181,17 @@ describe('PatchInstance CPU/WESL layout parity', () => {
   });
 
   // Pinned as absolute numbers, not derived: a vec2<u32> declared BEFORE the
-  // two vec4s still parses and still packs, but pads the record past 80 bytes
+  // vec4s still parses and still packs, but pads the record past 96 bytes
   // (spec §7's field-order note), and the derived check above would follow it.
-  it('the height fields land at 64, 72 and 76 inside an 80-byte record', () => {
+  it('the record is 96 bytes with its scalar head pinned (the rects and height words are pinned lane by lane below)', () => {
     const { writes, structSize } = structLayout(structFields(ioWesl, 'PatchInstance'));
-    expect(PATCH_INSTANCE_BYTES).toBe(80);
-    expect(structSize).toBe(80);
-    expect(writes.find((w) => w.field === 'heightSlotOrigin')?.offset).toBe(64);
-    expect(writes.find((w) => w.field === 'edgeCoarser')?.offset).toBe(72);
-    expect(writes.find((w) => w.field === 'heightCells')?.offset).toBe(76);
+    expect(PATCH_INSTANCE_BYTES).toBe(96);
+    expect(structSize).toBe(96);
+    const firstOffset = (field: string) =>
+      Math.min(...writes.filter((w) => w.field === field).map((w) => w.offset));
+    expect(firstOffset('originRelEyeM')).toBe(0);
+    expect(firstOffset('fadeWeight')).toBe(12);
+    expect(firstOffset('lon0Rad')).toBe(16);
   });
 
   // fieldForExpr maps every lane of a multi-lane field to one field name, so
@@ -197,30 +200,17 @@ describe('PatchInstance CPU/WESL layout parity', () => {
   // other tile's posts) -- asymmetric fixture values per lane close that gap.
   it('multi-lane fields land lane by lane, in declaration order', () => {
     const view = new DataView(new ArrayBuffer(PATCH_INSTANCE_BYTES));
-    writePatchInstance(
-      view,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0.11,
-      0.22,
-      0.33,
-      0.44,
-      0.55,
-      0.66,
-      0.77,
-      0.88,
-      129,
-      258,
-      0b1011,
-      32,
-    );
+    writePatchInstance(view, 0, {
+      originRelEyeM: [0, 0, 0],
+      fadeWeight: 1,
+      anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0, dLatRad: 0 },
+      albedoRect: [0.11, 0.22, 0.33, 0.44],
+      fallbackRect: [0.55, 0.66, 0.77, 0.88],
+      nightRect: [0.12, 0.34, 0.56, 0.78],
+      heightSlotOrigin: [129, 258],
+      edgeCoarser: 0b1011,
+      heightCells: 32,
+    });
     expect(view.getFloat32(32, true)).toBeCloseTo(0.11); // albedoUvOriginX
     expect(view.getFloat32(36, true)).toBeCloseTo(0.22); // albedoUvOriginY
     expect(view.getFloat32(40, true)).toBeCloseTo(0.33); // albedoUvScaleX
@@ -229,10 +219,14 @@ describe('PatchInstance CPU/WESL layout parity', () => {
     expect(view.getFloat32(52, true)).toBeCloseTo(0.66); // fallbackUvOriginY
     expect(view.getFloat32(56, true)).toBeCloseTo(0.77); // fallbackUvScaleX
     expect(view.getFloat32(60, true)).toBeCloseTo(0.88); // fallbackUvScaleY
-    expect(view.getUint32(64, true)).toBe(129); // heightSlotOriginX
-    expect(view.getUint32(68, true)).toBe(258); // heightSlotOriginY
-    expect(view.getUint32(72, true)).toBe(0b1011); // edgeCoarser
-    expect(view.getUint32(76, true)).toBe(32); // heightCells
+    expect(view.getFloat32(64, true)).toBeCloseTo(0.12); // nightUvOriginX
+    expect(view.getFloat32(68, true)).toBeCloseTo(0.34); // nightUvOriginY
+    expect(view.getFloat32(72, true)).toBeCloseTo(0.56); // nightUvScaleX
+    expect(view.getFloat32(76, true)).toBeCloseTo(0.78); // nightUvScaleY
+    expect(view.getUint32(80, true)).toBe(129); // heightSlotOriginX
+    expect(view.getUint32(84, true)).toBe(258); // heightSlotOriginY
+    expect(view.getUint32(88, true)).toBe(0b1011); // edgeCoarser
+    expect(view.getUint32(92, true)).toBe(32); // heightCells
   });
 });
 

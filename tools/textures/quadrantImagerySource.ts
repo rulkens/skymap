@@ -1,5 +1,5 @@
 /**
- * bmngQuadrantSource — a `SurfaceImagerySource` over Blue Marble Next
+ * quadrantImagerySource — a `SurfaceImagerySource` over Blue Marble Next
  * Generation's eight-file quadrant tiling.
  *
  * NASA publishes each BMNG month twice: one 21600x10800 whole-globe equirect,
@@ -7,6 +7,7 @@
  * 464 m/texel, four ladder levels deeper than the whole-globe file (z7
  * against z5). Same imagery, projection and grading; reassembling the
  * eight-piece version on the fly is the whole of what this module does.
+ * Black Marble publishes the same eight-file layout, so it reads through here too.
  *
  * Column letters `A B C D` run west to east in 90-degree steps from longitude
  * -180; row digits `1`/`2` are the northern/southern hemispheres (`A1` = lon
@@ -36,29 +37,23 @@ import sharp from 'sharp';
 import { levelFittingWidth } from '../../src/layers/body/surfaceTiles/format/utils/levelFittingWidth';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import { QUADRANT_COLUMNS } from './data/quadrantColumns';
+import { QUADRANT_ROWS } from './data/quadrantRows';
+import type { ImageryQuadrant } from './@types/ImageryQuadrant';
 
 /** Longitude and latitude extent of one quadrant, in degrees. */
 const QUADRANT_SPAN_DEG = 90;
 
-/** Column letters, west to east from longitude -180. */
-const QUADRANT_COLUMNS = ['A', 'B', 'C', 'D'] as const;
-
-/** Row digits, north to south from latitude +90. */
-const QUADRANT_ROWS = ['1', '2'] as const;
-
-/** One of the eight quadrant names: column letter then row digit. */
-export type BmngQuadrant = `${(typeof QUADRANT_COLUMNS)[number]}${(typeof QUADRANT_ROWS)[number]}`;
-
 /** Every quadrant name, as the product of the two axes rather than a
  *  hand-written list, so the grid is stated exactly once. */
-const QUADRANT_NAMES: readonly BmngQuadrant[] = QUADRANT_COLUMNS.flatMap((column) =>
+const QUADRANT_NAMES: readonly ImageryQuadrant[] = QUADRANT_COLUMNS.flatMap((column) =>
   QUADRANT_ROWS.map((row) => `${column}${row}` as const),
 );
 
 /** Where a box landed: the quadrant, plus its own north-west corner in
  *  degrees — the origin every source-pixel offset is measured from. */
 type QuadrantPlacement = {
-  readonly name: BmngQuadrant;
+  readonly name: ImageryQuadrant;
   readonly westDeg: number;
   readonly northDeg: number;
 };
@@ -97,7 +92,7 @@ function quadrantForBox(box: LonLatBounds): QuadrantPlacement {
   const row = soleBandIndex(90 - box.north, 90 - box.south, QUADRANT_ROWS.length);
   if (column === null || row === null) {
     throw new Error(
-      `bmngQuadrantSource: box west ${box.west} east ${box.east} north ${box.north} south ${box.south} ` +
+      `quadrantImagerySource: box west ${box.west} east ${box.east} north ${box.north} south ${box.south} ` +
         'does not lie inside a single 90-degree quadrant — this source reads one file per box and cannot stitch across two',
     );
   }
@@ -108,7 +103,7 @@ function quadrantForBox(box: LonLatBounds): QuadrantPlacement {
   };
 }
 
-export async function bmngQuadrantSource(source: {
+export async function quadrantImagerySource(source: {
   /** Stable identifier recorded in the manifest's `builtFrom`, vintage included. */
   readonly id: string;
   /** Verbatim attribution the licence requires. */
@@ -119,15 +114,15 @@ export async function bmngQuadrantSource(source: {
    *  eight files are one raster whose VINTAGE is the caller's choice, same as
    *  `equirectFileSource`. Keying on the quadrant union makes a forgotten file
    *  a compile error rather than a hole in the globe. */
-  readonly quadrantPaths: Readonly<Record<BmngQuadrant, string>>;
+  readonly quadrantPaths: Readonly<Record<ImageryQuadrant, string>>;
   /** Called once per cache MISS — the band cache is the difference between a
    *  5-minute deepest level and a 2-hour one, worth being observable. */
-  readonly onBandDecode?: (quadrant: BmngQuadrant, topPx: number) => void;
+  readonly onBandDecode?: (quadrant: ImageryQuadrant, topPx: number) => void;
 }): Promise<SurfaceImagerySource> {
   const missing = QUADRANT_NAMES.filter((name) => !existsSync(source.quadrantPaths[name]));
   if (missing.length > 0) {
     throw new Error(
-      `bmngQuadrantSource: ${missing.length} of ${QUADRANT_NAMES.length} quadrant files are missing ` +
+      `quadrantImagerySource: ${missing.length} of ${QUADRANT_NAMES.length} quadrant files are missing ` +
         `(${missing.join(', ')}); the first absent path is ${source.quadrantPaths[missing[0]!]}`,
     );
   }
@@ -141,7 +136,7 @@ export async function bmngQuadrantSource(source: {
       // else isn't this tiling and would sample the wrong ground.
       if (width === 0 || width !== height) {
         throw new Error(
-          `bmngQuadrantSource: quadrant ${name} is ${width}x${height}, not a square 90-degree plate-carree quadrant`,
+          `quadrantImagerySource: quadrant ${name} is ${width}x${height}, not a square 90-degree plate-carree quadrant`,
         );
       }
       return width;
@@ -151,7 +146,7 @@ export async function bmngQuadrantSource(source: {
   const oddOne = edges.findIndex((edge) => edge !== quadrantEdgePx);
   if (oddOne >= 0) {
     throw new Error(
-      `bmngQuadrantSource: quadrant ${QUADRANT_NAMES[oddOne]!} is ${edges[oddOne]!} px where ` +
+      `quadrantImagerySource: quadrant ${QUADRANT_NAMES[oddOne]!} is ${edges[oddOne]!} px where ` +
         `${QUADRANT_NAMES[0]!} is ${quadrantEdgePx} px — the eight files have to be one grid`,
     );
   }
@@ -176,7 +171,7 @@ export async function bmngQuadrantSource(source: {
     // into a 2-channel raster below, breaking readBox's RGBA promise.
     if (info.channels !== 3 && info.channels !== 4) {
       throw new Error(
-        `bmngQuadrantSource: quadrant ${placement.name} decoded to ${info.channels} channels; this source expects RGB or RGBA imagery`,
+        `quadrantImagerySource: quadrant ${placement.name} decoded to ${info.channels} channels; this source expects RGB or RGBA imagery`,
       );
     }
     return { data, widthPx: info.width, heightPx: info.height, channels: info.channels };

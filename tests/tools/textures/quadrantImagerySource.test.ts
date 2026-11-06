@@ -1,5 +1,5 @@
 /**
- * bmngQuadrantSource — the arithmetic that decides WHICH of eight files a box
+ * quadrantImagerySource — the arithmetic that decides WHICH of eight files a box
  * comes out of, which way up the rows come back, and how many times a file is
  * decoded to serve a tile row.
  *
@@ -27,31 +27,32 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { bmngQuadrantSource, type BmngQuadrant } from '../../../tools/textures/bmngQuadrantSource';
+import { quadrantImagerySource } from '../../../tools/textures/quadrantImagerySource';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { ImageryQuadrant } from '../../../tools/textures/@types/ImageryQuadrant';
 
 const QUADRANT_EDGE_PX = 1024;
 
 /** Column-major so the index → red mapping is stated once. */
-const NAMES: readonly BmngQuadrant[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'D1', 'D2'];
+const NAMES: readonly ImageryQuadrant[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'D1', 'D2'];
 
 /** Red channel of quadrant `name` — its identity in every assertion below. */
-function redOf(name: BmngQuadrant): number {
+function redOf(name: ImageryQuadrant): number {
   return 20 + 30 * NAMES.indexOf(name);
 }
 
 /** Which quadrant a raster came from, read back off its red channel. */
-function quadrantOf(rgba: Uint8Array): BmngQuadrant | undefined {
+function quadrantOf(rgba: Uint8Array): ImageryQuadrant | undefined {
   return NAMES.find((name) => redOf(name) === rgba[0]);
 }
 
 let dir: string;
-let paths: Record<BmngQuadrant, string>;
+let paths: Record<ImageryQuadrant, string>;
 
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'bmng-quadrants-'));
   paths = Object.fromEntries(NAMES.map((name) => [name, join(dir, `${name}.png`)])) as Record<
-    BmngQuadrant,
+    ImageryQuadrant,
     string
   >;
   await Promise.all(
@@ -79,8 +80,8 @@ beforeAll(async () => {
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 /** A source over the synthetic grid, counting band decodes. */
-async function makeSource(decodes?: BmngQuadrant[]) {
-  return bmngQuadrantSource({
+async function makeSource(decodes?: ImageryQuadrant[]) {
+  return quadrantImagerySource({
     id: 'synthetic',
     attribution: 'synthetic',
     vintage: 'synthetic',
@@ -112,7 +113,7 @@ describe('quadrant selection', () => {
     // seam, boxes just north and just south of the equator, and — the case a
     // `floor`/`ceil` slip actually breaks — boxes whose edge sits exactly ON a
     // seam: a box ENDING at -90 belongs to A, one STARTING at -90 belongs to B.
-    const cases: readonly (readonly [LonLatBounds, BmngQuadrant])[] = [
+    const cases: readonly (readonly [LonLatBounds, ImageryQuadrant])[] = [
       [{ west: -90.5, east: -90.1, north: 60, south: 59 }, 'A1'],
       [{ west: -89.9, east: -89.5, north: 60, south: 59 }, 'B1'],
       [{ west: -135, east: -90, north: 90, south: 45 }, 'A1'],
@@ -196,7 +197,7 @@ describe('band cache', () => {
   }
 
   it('decodes one band per tile row of a quadrant, not one per tile', async () => {
-    const decodes: BmngQuadrant[] = [];
+    const decodes: ImageryQuadrant[] = [];
     const source = await makeSource(decodes);
     // The eight tiles of row 0 that fall in A1 share a source rect that differs
     // only in `left`, which is exactly what the key must ignore. Keyed too
@@ -213,7 +214,7 @@ describe('band cache', () => {
   });
 
   it('evicts the least recently used band, not the oldest', async () => {
-    const decodes: BmngQuadrant[] = [];
+    const decodes: ImageryQuadrant[] = [];
     const source = await makeSource(decodes);
     // Four bands is one sweep of a tile row across all four quadrant columns.
     for (const x of [0, 8, 16, 24]) await source.readBox(tile(x, 0), 4, 4);
@@ -236,7 +237,7 @@ describe('band cache', () => {
 describe('grid validation', () => {
   it('names the missing file rather than failing inside a decode', async () => {
     await expect(
-      bmngQuadrantSource({
+      quadrantImagerySource({
         id: 'synthetic',
         attribution: 'synthetic',
         vintage: 'synthetic',
@@ -256,7 +257,7 @@ describe('grid validation', () => {
       .png()
       .toFile(oddPath);
     await expect(
-      bmngQuadrantSource({
+      quadrantImagerySource({
         id: 'synthetic',
         attribution: 'synthetic',
         vintage: 'synthetic',
