@@ -181,8 +181,9 @@ The UI row: `{ slot: 'labelsAndGuides', content: { toggle: 'stellarStreams', lab
 ### 5.4 Frame
 
 - **Planner** (`frame.ts`): `fade: 'stellarStreams'`, `hasDistanceBand: true`;
-  `awake = fade > 0 && binLoaded && (streak.flow > 0 || haze.flow > 0)`; `loading = fade > 0 && !binLoaded`
-  (the cold-load gate waits for streams only when they would show).
+  `awake = fade > 0 && binLoaded && (streak.flow > 0 || haze.flow > 0)`; `loading = false`
+  (`gates` already fades the streams in on commit, so a cold load never needs the gate to wait, and a
+  `loading` vote could only fire in the release window, forcing a needless wake).
 - **Pass** (`streaks/passes/`): NEAR0 after `local-bubble` (existing roster line). Core hands `fade`; the draw
   multiplies it into both looks' intensity and reads the looks from settings. Time wraps on a multiple of the
   8 s drift loop, as in the spike.
