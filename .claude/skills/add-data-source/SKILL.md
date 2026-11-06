@@ -156,7 +156,8 @@ renderer/layer order the galaxy catalogs use:
   vertex-pulling billboards, BP−RP tint, additive HDR, an octree draw-cut walker
   and an f64 origin seam. `starCatalogPass` (in `frame/passes/`) draws it and
   owns the crossfade to the procedural Milky-Way cloud — whose fade band lives in
-  exactly one home, the registry row's `crossfadePc`, evaluated per source. Don't
+  exactly one home, the `survey` band on the `starCatalog` show entry
+  (`src/layers/starCatalog/visibility.ts`), which the row's load gate reads too. Don't
   reuse the galaxy point renderer or `galaxyCatalogFormat.ts` machinery for star
   data; both the encoding and the draw path diverge (see the Binary format
   bullet above).

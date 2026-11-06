@@ -2,7 +2,7 @@
  * `starCutInputs` — what the frame reduces to for the GPU cut: frustum planes
  * per view, the angular cull margin sized for the widest view, and each
  * source's budget at the tier its catalog was committed at and its opacity:
- * the crossfade times the handed value.
+ * the handed value.
  */
 import { describe, it, expect, vi } from 'vitest';
 
@@ -11,8 +11,6 @@ import { FLOATS_PER_VIEW } from '../../../../../src/services/gpu/octree/octreeCu
 import { STAR_PICK_MIN_RADIUS_PX } from '../../../../../src/layers/starCatalog/photometry/data/starCullSlack';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
-import { starCrossfadeOpacity } from '../../../../../src/layers/starCatalog/octreeCut/utils/starCrossfadeOpacity';
-import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
@@ -70,7 +68,6 @@ const SETTINGS = {
 const fadeOf = (gaiaStars: number) => ({ famousStar: 1, gaiaStars, sStar: 1, sun: 1 });
 const ALL_ON = fadeOf(1);
 
-// 1000 pc: inside Gaia's crossfade band.
 const EYE = [1000 * SCALE_UNITS.PC_TO_MPC, 0, 0] as const;
 
 function view(pxPerRad: number): FrameView {
@@ -101,11 +98,9 @@ describe('starCutInputs', () => {
     ]);
   });
 
-  it('the Gaia cut opacity is the crossfade times the handed value', () => {
-    const crossfade = starCrossfadeOpacity(GAIA_STARS_ENTRY.crossfadePc, 1000);
-    expect(crossfade).toBeGreaterThan(0);
+  it('the Gaia cut opacity is the handed value', () => {
     const half = starCutInputs(RUNTIME, SETTINGS, fadeOf(0.5), [view(600)]);
-    expect(half!.cut.sources[0]!.opacity).toBeCloseTo(0.5 * crossfade, 12);
+    expect(half!.cut.sources[0]!.opacity).toBe(0.5);
     // At 0 the source leaves the cut: with no other source in band, there is no cut.
     expect(starCutInputs(RUNTIME, SETTINGS, fadeOf(0), [view(600)])).toBeNull();
   });

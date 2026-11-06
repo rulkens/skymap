@@ -50,13 +50,14 @@ export type AssetDemand =
       tiers?: readonly Tier[];
       near?: NearGate;
       size?: SizeGate; // gates PR
-      /** Lift the scale gates (never the switch or tier). `selected` reads `shown`'s entry `selects`. */
-      alsoWhen?: readonly ('searching' | 'selected')[];
+      /** Lift the scale gates (never the switch or tier); a selected kind `shown`'s entry `selects` always lifts. */
+      alsoWhen?: readonly 'searching'[];
     };
 
 // src/@types/loading/NearGate.d.ts — one band edge of `shown`'s entry, measured from `band.from`.
 // 'out': load within out[1]·lead, release beyond out[1]·release. 'in': load beyond in[0]/lead, release below in[0]/release.
-export type NearGate = { readonly band: string; readonly edge: 'in' | 'out'; readonly lead: number; readonly release: number };
+// 'both' (PR B): both tests at once — load only inside both load limits, release past either release limit.
+export type NearGate = { readonly band: string; readonly edge: 'in' | 'out' | 'both'; readonly lead: number; readonly release: number };
 
 // src/@types/loading/SizeGate.d.ts — gates PR. Apparent diameter on the largest drawing view.
 export type SizeGate = { readonly body: SceneBodyId; readonly loadPx: number; readonly releasePx: number };
@@ -67,8 +68,9 @@ input to the one evaluator, `src/services/engine/wiring/evaluateAssetDemand.ts` 
 `reevaluateDemand` calls once per row per pass (replacing its three `row.demand(ctx)` reads and one `row.release`).
 
 > [!DECISION] `edge` is explicit, not inferred
-> localBubble's band has both edges (`in: [0.4, 1] kpc, out: [4, 10] kpc`) but only the out edge gates its file
-> today; loading from inside the bubble is wanted. Inferring both edges would change that.
+> PR A keeps localBubble on its out edge only, as main had it. The owner's smoke check found the bubble loaded at Earth,
+> where its `in: [0.4, 1] kpc` edge draws nothing, so PR B moves it to `edge: 'both'` (ruling zdEa #1): load beyond 0.2 kpc
+> and within 20 kpc, release below 0.1 kpc or beyond 40 kpc. Rows that declare one edge keep their meaning.
 
 ### Evaluation rules (core, one place)
 
@@ -77,7 +79,9 @@ input to the one evaluator, `src/services/engine/wiring/evaluateAssetDemand.ts` 
   - `shown` = `visibilitySwitchOf` over the resolved items (any), OR'd with their label switches when `labelsCount` is set.
   - `tierOk` = `tiers` is absent or holds `ctx.tier`.
   - `scaleIn` / `scaleOut` = the `near` and `size` load/release tests. An absent gate counts as in and never out.
-  - `lifted` = any `alsoWhen` holds.
+  - `lifted` = any `alsoWhen` holds, or `ctx.selectedKinds` (select, focus, or a pending request's claimed kind)
+    meets the shown entry's `selects`: implicit, with no opt-in, so any deep link loads its layer
+    (owner 2026-11-06: any deep link enables its layer).
   - **demand** = `shown && tierOk && (scaleIn || lifted)`.
   - **release** = `!tierOk || !shown || (!lifted && scaleOut)`.
 - Every object-form row releases when switched off (rulings kw33 #4, 6a7D #1). It's one rule with no asymmetry.
@@ -99,7 +103,7 @@ so after B no row carries a function.
 | galaxyCatalog points | switch && tier target > 0; release on excluded tier | `{ tiers }` (built from `tierTarget`) |
 | structureCatalog | any bulk category ring or label on | `{ shown: { address: 'structureRing', items: BULK }, labelsCount: true }` |
 | localBubble | switch && `|eye|` < 20 kpc; release > 40 kpc | `{ near: { band: 'shell', edge: 'out', lead: 2, release: 4 } }` (out[1] = 10 kpc) |
-| satellites | any class && (palette ∨ selected ∨ < 900k km); release mirror | `{ shown: 'satellites', near: { band: 'nearEarth', edge: 'out', lead: 1.5, release: 2.5 }, alsoWhen: ['searching', 'selected'] }` |
+| satellites | any class && (palette ∨ selected ∨ < 900k km); release mirror | `{ shown: 'satellites', near: { band: 'nearEarth', edge: 'out', lead: 1.5, release: 2.5 }, alsoWhen: ['searching'] }` |
 | bodyTextureAtlas, hiResFamous, famousStarsMeta | `() => true` | `'always'` |
 | pgcAlias | `ui.paletteOpen` | `'whenSearching'` |
 | body textures, mesh rows | distance radii | transitional `fn` |
@@ -119,8 +123,9 @@ satellites' search and selection lifts, and the tier exclusion.
 
 ## PR B — scale gates
 
-- **`drawPxPerRad` on `FrameOutputs`.** runFrame writes the max `drawPxPerRad` over the frame's drawing views
-  (captures excluded) after `runFrame.ts:194`. `buildDemandCtx` hands it on as `ctx.drawPxPerRad`. Before the
+- **`drawPxPerRad` on `EngineState`.** runFrame writes the max `drawPxPerRad` over the frame's views after
+  `runFrame.ts:194`, beside `fadesAnimating` and `layersLoading` (captures never reach those views).
+  `buildDemandCtx` hands it on as `ctx.drawPxPerRad`. Before the
   first frame it is 0, so nothing size-gated demands yet.
 - **`size`, evaluated through `bodyApparentDiameterPx`.**
   - Body textures: `{ body, loadPx: 16, releasePx: 8 }`.
@@ -134,10 +139,28 @@ satellites' search and selection lifts, and the tier exclusion.
 - **Band approach on the survey rows.** galaxyCatalog points, cosmicWebDensity and cosmicWebFilaments declare
   `near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 }`. Flow declares the same against its
   `FLOW_DEEP_ZOOM` band. Constellations declare `{ edge: 'out', lead: 10, release: 100 }`.
-- **Survey galaxy lifts.** `alsoWhen: ['searching', 'selected']`. `selected` needs `selects` on the survey entry;
-  the plan must check what `watchSelectionRevealSaga` does with a new `selects` before adding it. A selected famous
-  galaxy pins the survey catalogs too, because the selection kind does not split famous from survey. That is
-  accepted.
+- **localBubble at Earth.** `edge: 'both'` joins `NearGate`, and localBubble declares
+  `{ band: 'shell', edge: 'both', lead: 2, release: 4 }`. That leaves the bubble unloaded at Earth, loaded from 0.2 to
+  20 kpc, and released below 0.1 or beyond 40 kpc.
+- **Survey galaxy lifts.** `alsoWhen: ['searching']`, with `selects: ['galaxyCatalog']` added to the
+  survey entry (the selected lift is implicit).
+  - `watchSelectionRevealSaga` only writes when the cluster has a section switch that is off. `galaxyCatalogs` has
+    none, so the new `selects` reveals nothing. (Checked 2026-11-06.)
+  - A selected famous galaxy pins the survey catalogs too, because the selection kind doesn't split famous from
+    survey. That is accepted.
+- **A band gates only the items it lists** (ruling BuBQ #2). The resolver applies `near` only when the band has no
+  `items`, or when they include the row's item. The famous catalog stays exempt from `deepZoom` for fetching, as it
+  already is for fading. There is no per-row exception.
+- **Structure catalog** (ruling BuBQ #4): `near: { band: 'cosmic', edge: 'in', lead: 10, release: 100 }`.
+- **Gaia stars get a band as the single truth** (ruling BuBQ #1).
+  - The `starCatalog` show entry gains `survey: { out: [8 kpc, 25 kpc], items: ['gaiaStars'] }`. Today this is the
+    registry's `crossfadePc`, applied by hand.
+  - The Gaia row declares `near: { band: 'survey', edge: 'out', lead: 10, release: 100 }`: it loads within 250 kpc
+    and releases beyond 2.5 Mpc.
+  - The star passes read the band fade through their address. Deleted: `crossfadePc` (registry field and type),
+    `starCrossfadeOpacity.ts`, and the band maths in `starSourceDrawOpacity`, `starSourcesInBand` and
+    `starCatalogVisible`.
+  - Also fix the overstated comment at `starCatalog/visibility.ts:28`.
 - Backlog: delete "Scale-gated asset demand" (index line + detail file) in this PR.
 
 ## Risks

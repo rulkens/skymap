@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { assertAssetDemands } from '../../../../src/services/engine/wiring/assertAssetDemands';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { AssetDemand } from '../../../../src/@types/loading/AssetDemand';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
 import type { VisibilityAddress } from '../../../../src/@types/animation/VisibilityAddress';
@@ -15,7 +16,7 @@ const at = (a: string) => a as VisibilityAddress;
 
 const ENTRIES: readonly VisibilityEntry[] = [
   { key: 'bubble', bands: { shell: { out: [4, 10] } } },
-  { key: 'sats', items: ['a'], selects: ['satellite'], bands: { near: { out: [1, 2] } } },
+  { key: 'sats', items: ['a'], bands: { near: { out: [1, 2] } } },
   { label: 'bubble', cluster: 'bubbleLabels', of: 'bubble', items: ['x'] },
 ];
 
@@ -28,7 +29,7 @@ const check = (demand: AssetDemand, gates?: AssetWiringRow['gates']) => () =>
 describe('assertAssetDemands', () => {
   it('accepts every well-formed declaration', () => {
     expect(check({}, at('bubble'))).not.toThrow();
-    expect(check({ shown: at('sats'), alsoWhen: ['selected'] })).not.toThrow();
+    expect(check({ shown: at('sats'), alsoWhen: ['searching'] })).not.toThrow();
     expect(
       check({ near: { band: 'shell', edge: 'out', lead: 1, release: 1 } }, at('bubble')),
     ).not.toThrow();
@@ -60,6 +61,12 @@ describe('assertAssetDemands', () => {
     ).toThrow(/'row1'.*`in` edge/);
   });
 
+  it("throws on 'both' over a one-sided band", () => {
+    expect(
+      check({ near: { band: 'shell', edge: 'both', lead: 2, release: 4 } }, at('bubble')),
+    ).toThrow(/'row1'.*`in` edge/);
+  });
+
   it('throws on a lead below 1', () => {
     expect(
       check({ near: { band: 'shell', edge: 'out', lead: 0.5, release: 4 } }, at('bubble')),
@@ -72,8 +79,18 @@ describe('assertAssetDemands', () => {
     ).toThrow(/'row1'/);
   });
 
-  it("throws on 'selected' over an entry with no selects", () => {
-    expect(check({ alsoWhen: ['selected'] }, at('bubble'))).toThrow(/'row1'.*selects/);
+  it('throws on a size body the scene lacks', () => {
+    const size = { body: asSceneBodyId('nowhere'), loadPx: 3, releasePx: 1.5 };
+    expect(check({ size }, at('bubble'))).toThrow(/'row1'.*no scene body 'nowhere'/);
+  });
+
+  it('throws on a size gate without loadPx > releasePx > 0', () => {
+    const size = (loadPx: number, releasePx: number) => ({
+      size: { body: asSceneBodyId('earth'), loadPx, releasePx },
+    });
+    expect(check(size(16, 8), at('bubble'))).not.toThrow();
+    expect(check(size(8, 8), at('bubble'))).toThrow(/'row1'.*loadPx > releasePx/);
+    expect(check(size(3, 0), at('bubble'))).toThrow(/'row1'.*loadPx > releasePx/);
   });
 
   it('throws on an object form with neither shown nor gates', () => {

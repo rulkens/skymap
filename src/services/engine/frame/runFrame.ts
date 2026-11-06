@@ -196,6 +196,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     viewSpecs === null || viewSpecs.length === 0
       ? [canvas]
       : viewSpecs.map((spec) => deriveView(snapshot, cam, spec));
+  // Next pass's size gates measure against this frame's views.
+  state.drawPxPerRad = views.reduce((max, view) => Math.max(max, view.drawPxPerRad), 0);
 
   // `produceFocusUniforms(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
   // per frame, before every consumer of the blend (label director, markers,

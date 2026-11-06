@@ -34,6 +34,7 @@ function demandWith(on: Partial<Record<StructureId, StructureItemSettings>>) {
     slotState: () => 'idle',
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
+    drawPxPerRad: 0,
     tier: 'medium',
     selectedKinds: new Set(),
   };

@@ -17,7 +17,7 @@ export function starCatalogAssetRows(
         key: source,
         slot: runtime.catalogs.get(source)!,
         req: (tier) => ({ source, tier }),
-        demand: {},
+        demand: { near: { band: 'survey', edge: 'out', lead: 10, release: 100 } },
         priority: 50, // one rank for every star catalog: the Earth boot view's own scale rung
         gates: { address: 'starCatalog', item: id },
       };

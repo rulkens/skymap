@@ -72,9 +72,7 @@ function contributingLayer(tag: string, assetKey: string, slot: object): Layer<s
     create: () => ({}),
     destroy: () => {},
     passes: () => [{ name: `${tag}-pass`, enabled: () => false, draw: () => {} }],
-    assets: () => [
-      { key: assetKey, slot, req: () => undefined, demand: { fn: () => false }, priority: 1 },
-    ],
+    assets: () => [{ key: assetKey, slot, req: () => undefined, demand: 'always', priority: 1 }],
     guides: () => ({
       screenLabels: [{ id: `${tag}-labels`, slab: COSMO, produceLabels: () => ({}) }],
     }),
