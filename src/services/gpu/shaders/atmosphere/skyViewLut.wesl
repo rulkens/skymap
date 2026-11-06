@@ -1,10 +1,10 @@
-// atmosphere/skyViewLut.wesl — the sky-view LUT bake (compute, PER FRAME).
+// atmosphere/skyViewLut.wesl — the sky-view LUT bake (compute, when its record moves).
 //
 // Writes the ~192x108 view-DEPENDENT table: each texel stores the in-scattered
 // sky radiance looking in a (view-zenith, azimuth-relative-to-sun) direction
 // from the camera's CURRENT altitude. Unlike the transmittance + multi-scatter
-// LUTs (baked once at startup), this one is regenerated every frame — the
-// camera altitude and the sun direction change, and folding them into a small
+// LUTs (baked once at startup), this one is regenerated whenever the camera
+// altitude or the sun direction moves, and folding them into a small
 // 2D table means the shell fragment does a single texture sample instead of a
 // per-pixel march (spec §11 performance). Dispatched by 'encodeSkyView' before
 // the foreground render pass (Task 5/6), modeled on the flow compute dispatch.

@@ -18,9 +18,15 @@ import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 
-const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0, skyCapturesInBand: new Set() } as unknown as ReadyFrameContext;
 const FADE = makeGalaxyCatalogFade();
-const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
+const VIEWS = [
+  {
+    cam: { position: [0, 0, 0] },
+    drawPxPerRad: 100,
+    slabs: [null, { vp: new Float64Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]) }],
+  } as unknown as FrameView,
+];
 
 const STATE = {
   settings: {

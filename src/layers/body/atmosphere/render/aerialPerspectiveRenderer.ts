@@ -9,6 +9,8 @@
 import type { AerialBundleResources } from '../@types/AerialBundleResources';
 import type { AerialPerspectiveRenderer } from '../@types/AerialPerspectiveRenderer';
 import { FROXEL_DIMS } from '../data/froxelVolume';
+import { ATMOSPHERE_UNIFORM_FLOATS } from './packAtmosphereUniforms';
+import { FOREGROUND_DEPTH_FORMAT } from '../../../../data/renderTargetFormats';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import bakeCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/bake.wesl?static';
 import applyCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/fragment.wesl?static';
@@ -125,6 +127,7 @@ export function createAerialPerspectiveRenderer(
     label: string,
     entryPoint: string,
     blend: GPUBlendState,
+    depthStencil?: GPUDepthStencilState,
   ): GPURenderPipeline {
     return device.createRenderPipeline({
       label,
@@ -132,6 +135,7 @@ export function createAerialPerspectiveRenderer(
       vertex: { module: applyModule, entryPoint: 'vs' },
       fragment: { module: applyModule, entryPoint, targets: [{ format: targetFormat, blend }] },
       primitive: { topology: 'triangle-list' },
+      ...(depthStencil === undefined ? {} : { depthStencil }),
     });
   }
 
@@ -139,18 +143,43 @@ export function createAerialPerspectiveRenderer(
   // attenuate three wavelengths, so extinction rides a MULTIPLY draw
   // (`dstFactor: 'src'` takes the source's own component, i.e. `dst *= src`)
   // and the in-scatter an ADD draw over the same pixels.
+  const MULTIPLY_BLEND: GPUBlendState = {
+    color: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
+    alpha: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
+  };
   const applyMultiplyPipeline = createApplyPipeline(
     'atmosphere-aerial-multiply-pipeline',
     'fsAerialMultiply',
-    {
-      color: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
-      alpha: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
-    },
+    MULTIPLY_BLEND,
   );
-  const applyAddPipeline = createApplyPipeline('atmosphere-aerial-add-pipeline', 'fsAerialAdd', {
+  const ADD_BLEND: GPUBlendState = {
     color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
     alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-  });
+  };
+  const applyAddPipeline = createApplyPipeline(
+    'atmosphere-aerial-add-pipeline',
+    'fsAerialAdd',
+    ADD_BLEND,
+  );
+  // The probe face's body step attaches the probe depth, so its pipelines must name that
+  // format; they never test or write it, and the ground passes after them overdraw the sky.
+  const SKY_DEPTH: GPUDepthStencilState = {
+    format: FOREGROUND_DEPTH_FORMAT,
+    depthWriteEnabled: false,
+    depthCompare: 'always',
+  };
+  const skyMultiplyPipeline = createApplyPipeline(
+    'atmosphere-probe-sky-multiply-pipeline',
+    'fsAerialMultiply',
+    MULTIPLY_BLEND,
+    SKY_DEPTH,
+  );
+  const skyAddPipeline = createApplyPipeline(
+    'atmosphere-probe-sky-add-pipeline',
+    'fsAerialAdd',
+    ADD_BLEND,
+    SKY_DEPTH,
+  );
 
   type BodyBinding = {
     readonly shellUniformBuffer: GPUBuffer;
@@ -160,6 +189,9 @@ export function createAerialPerspectiveRenderer(
     applyEntries: readonly GPUBindGroupEntry[];
     /** Last built apply group, keyed on the depth view it was built over. */
     applyGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null;
+    /** The probe faces' own uniform record, so `bake`'s write stays the main view's alone. */
+    readonly probeSkyUniformBuffer: GPUBuffer;
+    probeSkyGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null;
   };
   const perBody = new Map<string, BodyBinding>();
 
@@ -206,6 +238,12 @@ export function createAerialPerspectiveRenderer(
       bakeGroup: bakeGroupFor(bodyId, bundle),
       applyEntries: applyEntriesFor(bundle),
       applyGroup: null,
+      probeSkyUniformBuffer: device.createBuffer({
+        label: `atmosphere-probe-sky-uniforms-${bodyId}`,
+        size: ATMOSPHERE_UNIFORM_FLOATS * 4,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      }),
+      probeSkyGroup: null,
     });
   }
 
@@ -228,6 +266,7 @@ export function createAerialPerspectiveRenderer(
     if (binding === undefined) return;
     binding.applyEntries = applyEntriesFor(bundle);
     binding.applyGroup = null;
+    binding.probeSkyGroup = null;
   }
 
   function bake(pass: GPUComputePassEncoder, bodyId: string, uniforms: Float32Array): void {
@@ -262,11 +301,43 @@ export function createAerialPerspectiveRenderer(
     pass.draw(3);
   }
 
+  // Every pixel takes the apply's sky branch: the far placeholder is the depth it reads, and
+  // a capture face is its own submit, so one buffer per body serves all six faces in turn.
+  function drawSky(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    farDepthView: GPUTextureView,
+  ): void {
+    const binding = bindingFor(bodyId);
+    device.queue.writeBuffer(binding.probeSkyUniformBuffer, 0, uniforms);
+    if (binding.probeSkyGroup === null || binding.probeSkyGroup.depthView !== farDepthView) {
+      binding.probeSkyGroup = {
+        depthView: farDepthView,
+        group: device.createBindGroup({
+          label: `atmosphere-probe-sky-bg-${bodyId}`,
+          layout: applyBgl,
+          entries: [
+            { binding: 0, resource: { buffer: binding.probeSkyUniformBuffer } },
+            ...binding.applyEntries.filter((entry) => entry.binding !== 0),
+            { binding: 8, resource: farDepthView },
+          ],
+        }),
+      };
+    }
+    pass.setBindGroup(0, binding.probeSkyGroup.group);
+    pass.setPipeline(skyMultiplyPipeline);
+    pass.draw(3);
+    pass.setPipeline(skyAddPipeline);
+    pass.draw(3);
+  }
+
   function destroy(): void {
+    for (const binding of perBody.values()) binding.probeSkyUniformBuffer.destroy();
     perBody.clear();
     froxelInScatterTex.destroy();
     froxelTransmittanceTex.destroy();
   }
 
-  return { label: 'aerialPerspectiveRenderer', bake, draw, rebind, destroy };
+  return { label: 'aerialPerspectiveRenderer', bake, draw, drawSky, rebind, destroy };
 }

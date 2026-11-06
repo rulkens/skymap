@@ -24,6 +24,18 @@ export type AerialPerspectiveRenderer = Renderer & {
   draw(pass: GPURenderPassEncoder, bodyId: string, depthView: GPUTextureView): void;
 
   /**
+   * The sky alone, for a mesh probe's capture face: the same MULTIPLY + ADD pair with every
+   * pixel on the sky branch, through the probe's own uniform record (written here, never
+   * `bake`'s) and pipelines that carry the capture's depth format. THROWS on an unknown `bodyId`.
+   */
+  drawSky(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    farDepthView: GPUTextureView,
+  ): void;
+
+  /**
    * Re-take a body's bundle views after the shell's tier `reconcile` recreated its
    * sky-view LUT; a bind group holds the view, so it would point at a destroyed
    * texture.

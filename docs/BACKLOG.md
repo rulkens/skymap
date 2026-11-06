@@ -99,7 +99,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Earth's noon sky renders dark at ground level** `needs-design` — Sun ~19° up over Copenhagen, the sky reads navy with stars at 1.7 m and 46 m; the tour's noon-to-night opening needs daylight. → [details](backlog/2026-11-04-earth-noon-sky-dark-at-ground.md)
+- [ ] **Earth's ground draws grey-white at night up close** `needs-design` — diagnosed: the surface tiles' Black Marble emissive, painted flat at street level from ~8.6° of Sun altitude down. → [details](backlog/2026-11-06-earth-night-ground-haze.md)
+- [ ] **The swap chain gets linear values with no sRGB encode** `needs-design` — `bgra8unorm` plus no OETF crushes mid-tones ~3×; every look is tuned to it, so fixing it needs its own spec and a re-tune. → [details](backlog/2026-11-06-swap-chain-no-srgb-encode.md)
 - [ ] **Dark stair-steps off EOX coastlines** `needs-debug` — blocky rims in the water around regions, strongest at Tanegashima; cause not diagnosed. → [details](backlog/2026-11-05-eox-coast-stair-steps.md)
 - [ ] **Satellite orbit rings for fast time** `ready` — step 4 of the satellites spec: past about a minute of sim time per sweep, points fade and each object draws its J2-turned mean-element ellipse. → [spec §5.4](superpowers/specs/completed/2026-10-28-earth-satellites-design.md)
 - [ ] **Real relief displacement for near-spherical bodies** `needs-design` — `texturedBody` ray-traces an analytic sphere, so nothing displaces; a sibling rasterised path opted into by a `height` texture kind. → [details](backlog/2026-10-03-body-relief-displacement.md)
