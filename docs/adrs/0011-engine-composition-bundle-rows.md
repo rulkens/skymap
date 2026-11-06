@@ -173,5 +173,5 @@ beyond declarative rows plus derived debug.
   registry shape this ADR generalizes to the other families.
 - [ADR 0005 — engine data layer and asset loading](0005-engine-data-layer-and-asset-loading.md)
   — the asset wiring rows, the second family already row-shaped.
-- [`docs/superpowers/specs/2026-11-05-selection-kind-facts-design.md`](../superpowers/specs/2026-11-05-selection-kind-facts-design.md)
+- [`docs/superpowers/specs/completed/2026-11-05-selection-kind-facts-design.md`](../superpowers/specs/completed/2026-11-05-selection-kind-facts-design.md)
   — the pick/selection surface deliberately excluded here.

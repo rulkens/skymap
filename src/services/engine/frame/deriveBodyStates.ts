@@ -93,8 +93,8 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<PositionedId, Bod
     // surface, which is exactly what a mesh body's hull is not.
     const { surface } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'deriveBodyStates');
     const offsetM = rotateVec3ByTightMat3(
-      sitePointBodyFixed(site, siteGroundRadiusM(site, surface.datumRadiusM)),
       orientationForBody(site.hostId, simDays, positions),
+      sitePointBodyFixed(site, siteGroundRadiusM(site, surface.datumRadiusM)),
     );
     // Metres → Mpc BEFORE the host's heliocentric position joins in: adding
     // first would round a few-thousand-km offset off an au-scale magnitude.

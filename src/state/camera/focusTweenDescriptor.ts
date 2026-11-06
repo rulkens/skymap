@@ -1,5 +1,5 @@
 /**
- * focusTweenDescriptor — the pure `SelectionRow → CameraTweenDescriptor` table.
+ * focusTweenDescriptor — the pure row → `CameraTweenDescriptor` table.
  *
  * A focus gesture writes the focus ref; the camera flying to that target is the
  * EFFECT of that Intent, and `watchFocusTweenSaga` is where that effect lives. This
@@ -28,11 +28,11 @@
  */
 
 import { framingPose } from '../../services/engine/camera/framing/framingPose';
-import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../@types/camera/pose/CameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/focusMotion/CameraTweenDescriptor';
 import type { FocusMotion } from '../../@types/camera/focusMotion/FocusMotion';
 import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
+import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
 
 /**
  * Build the focus tween's `from → to` descriptor.
@@ -47,7 +47,7 @@ import type { OrientationFrameId } from '../../@types/camera/orientation/Orienta
  * contract as `clipStarted`'s `frame`).
  */
 export function focusTweenDescriptor(
-  row: SelectionRow,
+  row: SelectionRowBase,
   from: CameraPose,
   fovYRad: number,
   motion: FocusMotion,

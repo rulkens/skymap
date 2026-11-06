@@ -5,7 +5,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { resolveFocusRefDeferringSaga } from '../../../src/state/selection/resolveFocusRefDeferringSaga';
 import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
-import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
+import type { SelectionRefBase } from '../../../src/@types/engine/selection/SelectionRefBase';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -14,7 +14,7 @@ describe('resolveFocusRefDeferringSaga', () => {
     // A Layer-only id (milkyWay) is unresolvable until createLayers appends its
     // row — this flag stands in for that, flipped once "createLayers" has run.
     let layerRowsLanded = false;
-    let result: SelectionRef | null | undefined;
+    let result: SelectionRefBase | null | undefined;
 
     const mw = createSagaMiddleware();
     const store = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });

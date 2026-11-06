@@ -3,9 +3,11 @@
  * trees or `packages/desktop/src/` holds more than 15 files directly, no folder is named for a bag, and a
  * regrouped Layer has no role folder (`render/`, `ui/`, ...) at its root. The three allow-lists are
  * shrink-only: an entry must go when its folder or Layer is fixed, so none can
- * go stale. A Layer's regroup PR deletes its rows from them.
+ * go stale. A Layer's regroup PR deletes its rows from them. Every Layer's selection
+ * kinds and row sit flat in `src/layers/<layer>/selection/`, the one exception to
+ * `<concern>/<role>/`, so they are found in one place.
  */
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -119,5 +121,50 @@ describe('Concern folder shape (ADRs 0014, 0015)', () => {
     expect(stale, `${stale.join(', ')}: regrouped or gone; delete from NOT_YET_REGROUPED.`).toEqual(
       [],
     );
+  });
+});
+
+const README = 'src/layers/README.md';
+const selectionFolder = (layer: string): string => `src/layers/${layer}/selection`;
+const isSelectionDeclaration = (name: string): boolean =>
+  name === 'kinds.ts' || name.endsWith('SelectionRow.ts');
+
+describe('selection/ module placement (src/layers/README.md)', () => {
+  it("every kinds.ts and *SelectionRow.ts sits at the root of its Layer's selection/", () => {
+    const misplaced = allDirs
+      .filter((dir) => dir.startsWith('src/layers/'))
+      .flatMap((dir) =>
+        readdirSync(dir, { withFileTypes: true })
+          .filter((entry) => entry.isFile() && isSelectionDeclaration(entry.name))
+          .map((entry) => join(dir, entry.name)),
+      )
+      .filter((file) => !/^src\/layers\/[^/]+\/selection\/[^/]+$/.test(file));
+    expect(
+      misplaced,
+      `${misplaced.join('\n')}\nMove it to src/layers/<layer>/selection/ (${README}).`,
+    ).toEqual([]);
+  });
+
+  it('no selection/ folder sits anywhere but a Layer root', () => {
+    const roots = new Set(layerNames.map(selectionFolder));
+    const stray = allDirs.filter(
+      (dir) => dir.startsWith('src/layers/') && dir.endsWith('/selection') && !roots.has(dir),
+    );
+    expect(
+      stray,
+      `${stray.join('\n')}\nSelection lives in src/layers/<layer>/selection/ only.`,
+    ).toEqual([]);
+  });
+
+  it('every Layer that declares selection has selection/kinds.ts', () => {
+    const missing = layerNames
+      .filter((layer) =>
+        /^\s*selection:/m.test(readFileSync(join('src/layers', layer, 'layer.ts'), 'utf8')),
+      )
+      .filter((layer) => !existsSync(join(selectionFolder(layer), 'kinds.ts')));
+    expect(
+      missing,
+      `${missing.join(', ')}: declare selection kinds in selection/kinds.ts.`,
+    ).toEqual([]);
   });
 });

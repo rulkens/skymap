@@ -93,7 +93,6 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
         pointRenderer,
         catalogs,
         records,
-        famousMeta: () => famousMeta,
         bumpCatalogsVersion: () => {
           catalogsVersion += 1;
         },

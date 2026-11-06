@@ -52,6 +52,7 @@ import type { RunFrameDeps } from '../../../src/@types/engine/frame/RunFrameDeps
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
 
 export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   const {
@@ -146,13 +147,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     store.dispatch(
       setSelectionRow({
         slot: 'focus',
-        row: {
-          type: 'body',
-          id: asSceneBodyId(id),
-          label: id[0]!.toUpperCase() + id.slice(1),
-          positionMpc: [body.positionMpc[0]!, body.positionMpc[1]!, body.positionMpc[2]!],
-          driver: bodyDriverGeometry(id),
-        },
+        row: bodyRowAt(id, [body.positionMpc[0]!, body.positionMpc[1]!, body.positionMpc[2]!]),
         focusId: null,
       }),
     );

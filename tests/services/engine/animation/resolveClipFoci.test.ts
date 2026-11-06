@@ -4,7 +4,7 @@
  * Every test exercises one contract:
  *
  *   - `moveTargetId` and `dollyToId` rewrite to concrete `setVec`/`set` actions
- *     whose `to` values come from `focusFraming`.
+ *     whose `to` values come from `arrivalFraming`.
  *   - `focusId(id)` rewrites to `{ kind: 'focus', ref }`.
  *   - `focusId(null)` rewrites to `{ kind: 'focus', ref: null }`.
  *   - Nesting under `seq`, `all`, `fork` is recursed into correctly.
@@ -14,9 +14,9 @@
  *
  * We build a minimal structure store that resolves a single structure id
  * ('galaxy-cluster-virgo') to a known `StructureInfo` record. That structure's
- * `worldPos` and `physicalRadiusMpc` are chosen so `focusFraming` returns
- * predictable values we can assert against using `structureFocusDistance`.
- * This avoids duplicating `focusFraming`'s framing math in the tests and
+ * `worldPos` and `physicalRadiusMpc` are chosen so `arrivalFraming` returns
+ * predictable values we can assert against using the structure kind's focus.
+ * This avoids duplicating the framing math in the tests and
  * makes the assertions self-documenting.
  *
  * `resolveFocusId` and `extractSelectionRow` are NOT mocked — we use their
@@ -48,7 +48,8 @@ import {
   atPoint,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
-import { structureFocusDistance } from '../../../../src/services/engine/camera/framing/structureFocusDistance';
+import { arrivalFraming } from '../../../../src/services/engine/camera/framing/arrivalFraming';
+import { selectionKindOf } from '../../../../src/services/engine/selection/selectionKindOf';
 import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -58,6 +59,9 @@ import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 // ---------------------------------------------------------------------------
 // Test fixtures
@@ -76,10 +80,10 @@ const ORIGIN: [number, number, number] = [0, 0, 0];
 const POSE: CameraPose = { target: ORIGIN, yaw: 0, pitch: 0, distance: 5 };
 
 /**
- * A minimal structure that `focusFraming` will resolve to a predictable pose.
+ * A minimal structure that `arrivalFraming` will resolve to a predictable pose.
  * Using `worldPos: [10, 0, 0]` makes the `target` assertion simple.
  * `physicalRadiusMpc` is used as the framing radius (no `apparentRadiusMpc`
- * field present so `focusFraming` falls back to `physicalRadiusMpc`).
+ * field present so its placement falls back to `physicalRadiusMpc`).
  */
 const VIRGO: StructureInfo = {
   type: 'structure',
@@ -102,9 +106,13 @@ const STRUCTURES: StructureRowFixture = {
 };
 const RESOLVER = selectionResolverOver(STRUCTURES);
 
-// Pre-computed expected framing values (mirrors what focusFraming returns for VIRGO):
+// Pre-computed expected framing values (mirrors what arrivalFraming returns for VIRGO):
 const EXPECTED_TARGET: [number, number, number] = [10, 0, 0];
-const EXPECTED_DISTANCE = structureFocusDistance(4, FOV_Y);
+const EXPECTED_DISTANCE = arrivalFraming(
+  { type: 'structure', positionMpc: [0, 0, 0], radiusMpc: 4 },
+  selectionKindOf('structure').focus!,
+  FOV_Y,
+).distance;
 
 // ---------------------------------------------------------------------------
 // Test 1 — rewrites moveTargetId / dollyToId to concrete camera actions
@@ -181,7 +189,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
 // ---------------------------------------------------------------------------
 
 describe('resolveClipFoci rewrites a focusId cue to a focus ref cue', () => {
-  it('focusId(id) resolves to { kind:"focus", ref: SelectionRef }', () => {
+  it('focusId(id) resolves to { kind:"focus", ref }', () => {
     const id = focusId('galaxy-cluster-virgo');
     const clip: ClipData = {
       timeline: [focus(id)],
@@ -327,7 +335,7 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
 describe('resolveClipFoci throws on unresolvable id', () => {
   it('throws when a non-null focusId does not resolve', () => {
     // 'no-such-object' passes the [a-z0-9_-]+ char-class gate and routes to
-    // resolveFamous, which scans famousMeta (none in RESOLVER) and returns null —
+    // resolveFamous, which finds no such compiled-in famous id and returns null —
     // the only id format for which resolveFocusId itself returns null against
     // this fixture. Structure-prefixed ids (cluster-*, etc.) return a non-null
     // phantom ref without any existence check, so they would not trigger the throw.
@@ -419,7 +427,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     expect(fp.passBy).toEqual({ offset: 4, dir: 'above' });
 
     // The per-waypoint linger survives onto the resolved at-form waypoint. VIRGO
-    // is a STRUCTURE, so its pass-by radius resolves to 0 (focusFraming) — a
+    // is a STRUCTURE, so its pass-by radius resolves to 0 (arrivalFraming) — a
     // flyPath flies into a cluster, never past it — and the offset loop skips it.
     const w0 = fp.waypoints[0]!;
     if (!('at' in w0)) throw new Error('waypoint 0 should be resolved to at-form');
@@ -524,7 +532,7 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
     if (effE.kind !== 'spin' || effG.kind !== 'spin') throw new Error('expected spin effects');
 
     const decodeWorld = (yaw: number, pitch: number, basis: Mat3): Vec3 =>
-      rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), basis);
+      rotateVec3ByTightMat3(basis, yawPitchToDir(yaw, pitch));
 
     const dirE = decodeWorld(livePose.yaw + effE.by, livePose.pitch, ORIENTATION_FRAMES.ecliptic);
     const dirG = decodeWorld(livePose.yaw + effG.by, livePose.pitch, ORIENTATION_FRAMES.galactic);
@@ -632,7 +640,7 @@ describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
     const bearingOf = (outer: typeof effE, basis: Mat3) => {
       const yaw = (outer.children[0] as { to: number }).to;
       const pitch = (outer.children[1] as { to: number }).to;
-      return rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), basis);
+      return rotateVec3ByTightMat3(basis, yawPitchToDir(yaw, pitch));
     };
     const dirE = bearingOf(effE, ORIENTATION_FRAMES.ecliptic);
     const dirG = bearingOf(effG, ORIENTATION_FRAMES.galactic);

@@ -1,10 +1,10 @@
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
-import { bodySelectionRow } from '../../src/layers/body/selection/present/bodySelectionRow';
-import { structureSelectionRow } from '../../src/layers/structure/picking/present/structureSelectionRow';
-import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
-import { starCatalogSelectionRow } from '../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
-import { milkyWaySelectionRow } from '../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
-import { ALL_KINDS_ENABLED } from './allKindsEnabled';
+import { bodySelectionRow } from '../../src/layers/body/selection/bodySelectionRow';
+import { structureSelectionRow } from '../../src/layers/structure/selection/structureSelectionRow';
+import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
+import { starCatalogSelectionRow } from '../../src/layers/starCatalog/selection/starCatalogSelectionRow';
+import { milkyWaySelectionRow } from '../../src/layers/milkyWay/selection/milkyWaySelectionRow';
+import { NO_KINDS_OFF } from './noKindsOff';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StructureStore } from '../../src/layers/structure/catalog/@types/StructureStore';
@@ -21,7 +21,7 @@ import {
 export type StructureRowFixture = Pick<StructureStore, 'byId' | 'byCategory'>;
 
 /** The catalogs a galaxy fixture loads; `galaxyRowRuntime` builds the row's reads from them. */
-export type GalaxyRowFixture = Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
+export type GalaxyRowFixture = Pick<GalaxyCatalogRuntime, 'catalogs'>;
 
 /** What the starCatalog Layer's selection row reads; the real runtime satisfies it. */
 export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'>;
@@ -47,6 +47,6 @@ export function selectionResolverOver(
       ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))]),
       ...(stars === undefined ? [] : [starCatalogSelectionRow(starRowRuntime(stars))]),
     ],
-    () => ALL_KINDS_ENABLED,
+    () => NO_KINDS_OFF,
   );
 }

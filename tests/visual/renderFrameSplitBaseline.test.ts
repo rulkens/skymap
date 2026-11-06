@@ -339,7 +339,7 @@ describe('renderFrame visual baseline', () => {
     };
 
     const galaxyRuntime = {
-      ...galaxyRowRuntime({ catalogs: new Map(), famousMeta: [] }),
+      ...galaxyRowRuntime({ catalogs: new Map() }),
       focusBindGroup: {} as GPUBindGroup,
       pointRenderer: galaxyPointRenderer,
       proceduralDiskRenderer,

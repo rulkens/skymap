@@ -32,6 +32,9 @@ import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/dat
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);

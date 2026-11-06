@@ -5,14 +5,14 @@
  * `data/zoneOfAvoidance/zoneOfAvoidanceInfo.ts`) rather than a per-row
  * derivation.
  *
- * Unlike every other FocusableTarget arm, this one carries no `x`/`y`/`z`: the
+ * Unlike every other kind's card target, this one carries no `x`/`y`/`z`: the
  * band is a line-of-sight extinction effect along the whole galactic plane,
  * not a point with a "there" — so there is no Focus/fly-here target for it
  * (the InfoCard never wires `CardHeader`'s `onFocus` for this arm).
  */
 export type ZoneOfAvoidanceInfo = {
   /** Union tag — mirrors the APP_SOURCE_REGISTRY 'zoneOfAvoidance' row type; what
-   *  every FocusableTarget table / guard keys on. */
+   *  every card-target lookup keys on. */
   readonly type: 'zoneOfAvoidance';
   /** Headline shown in the InfoCard / palette row. */
   readonly displayName: string;

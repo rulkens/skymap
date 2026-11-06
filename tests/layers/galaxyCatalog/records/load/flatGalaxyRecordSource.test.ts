@@ -5,17 +5,19 @@
  * synthetic objIDs 0..N-1 would otherwise answer `pgc-3`.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import { flatGalaxyRecordSource } from '../../../../../src/layers/galaxyCatalog/records/load/flatGalaxyRecordSource';
 import { Source } from '../../../../../src/data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
+import { FAMOUS_GALAXY_NAMES } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
 import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 
 const sourceOver = (source: GalaxyCatalogSourceType, catalog: GalaxyCatalog) =>
-  flatGalaxyRecordSource(GALAXY_CATALOG_SOURCE_RECORD[source], catalog, () => []);
+  flatGalaxyRecordSource(GALAXY_CATALOG_SOURCE_RECORD[source], catalog);
 
 describe('flatGalaxyRecordSource', () => {
   it('stats equal the per-tier values', () => {
@@ -47,6 +49,20 @@ describe('flatGalaxyRecordSource', () => {
       makeGalaxyCatalog(4, { objIDs: new BigUint64Array([0n, 1n, 2n, 3n]) }),
     );
     expect(famous.resolveDurableId('pgc-3')).toBeNull();
+  });
+
+  it('names no famous row, and warns once, when famous.bin is another generation than the bundle', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const drifted = sourceOver(
+      Source.FamousGalaxy,
+      makeGalaxyCatalog(FAMOUS_GALAXY_NAMES.length + 1),
+    );
+    expect((drifted.loadRow(0) as GalaxyRow | null)?.famous).toBeUndefined();
+    expect((drifted.loadRow(1) as GalaxyRow | null)?.famous).toBeUndefined();
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+    const matched = sourceOver(Source.FamousGalaxy, makeGalaxyCatalog(FAMOUS_GALAXY_NAMES.length));
+    expect((matched.loadRow(1) as GalaxyRow | null)?.famous).toEqual(FAMOUS_GALAXY_NAMES[1]);
   });
 
   it('resolvePosition with a distance finds the record and without one keeps the 30 arcsec search', () => {

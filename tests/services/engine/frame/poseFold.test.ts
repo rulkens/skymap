@@ -85,7 +85,7 @@ import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/pose
 import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { tiltFromNadirRad } from '../../../../src/utils/camera/surfaceFrame/tiltFromNadirRad';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/framing/bodyFocusDistance';
+import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
@@ -115,6 +115,9 @@ import type { FramedCameraPose } from '../../../../src/@types/camera/pose/Framed
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
@@ -886,7 +889,7 @@ describe('runFrame — the regime fold', () => {
         drawn.eye[2]! - rover.positionMpc[2]!,
       ) * SCALE_UNITS.MPC_TO_M;
     const framingM =
-      bodyFocusDistance(
+      bodyArrivalDistanceMpc(
         bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'curiosity', 'poseFold')) *
           SCALE_UNITS.M_TO_MPC,
         h.state.cameraRuntime.outputs.projection.fovYRad,
