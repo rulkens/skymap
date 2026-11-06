@@ -25,7 +25,7 @@ import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelli
 import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
-import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../../support/noKindsOff';
 import { testPickCode } from '../../../support/testPickCode';
 import { Source } from '../../../../src/data/source';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
@@ -570,7 +570,7 @@ describe('focusIdOf over the Layers the shared resolver omits', () => {
         pickCode: satellitesPickCode(),
       } as unknown as SatellitesRuntime),
     ],
-    () => ALL_KINDS_ENABLED,
+    () => NO_KINDS_OFF,
   );
   const AT = unixMsToJulianDays(Date.parse('2026-10-28T12:00:00Z'));
   const IDS: [string, SelectionRef, string | null][] = [
@@ -615,7 +615,7 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
     const rows = [stubRow('x', 'x-', () => null), stubRow('y', 'y-', decodeY)];
     const composed = composeSelectionRows(
       () => rows,
-      () => ALL_KINDS_ENABLED,
+      () => NO_KINDS_OFF,
     );
     expect(composed.resolveFocusId('x-1')).toBeNull();
     expect(decodeY).not.toHaveBeenCalled();
@@ -626,7 +626,7 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
     const rows = [stubRow('x', 'x-', decode)];
     const composed = composeSelectionRows(
       () => rows,
-      () => ALL_KINDS_ENABLED,
+      () => NO_KINDS_OFF,
     );
     expect(composed.resolveFocusId('z-1')).toBeNull();
     expect(decode).not.toHaveBeenCalled();
@@ -636,7 +636,7 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
     const rows = [stubRow('x', 'x-', () => null), stubRow('y', 'x-', () => null)];
     const composed = composeSelectionRows(
       () => rows,
-      () => ALL_KINDS_ENABLED,
+      () => NO_KINDS_OFF,
     );
     expect(() => composed.resolveFocusId('x-1')).toThrow(/x-1/);
   });
@@ -648,7 +648,7 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
         calls++;
         return calls === 1 ? [] : [stubRow('x', 'x-', () => ({ type: 'x' }))];
       },
-      () => ALL_KINDS_ENABLED,
+      () => NO_KINDS_OFF,
     );
     expect(composed.resolveFocusId('x-1')).toBeNull();
     expect(composed.resolveFocusId('x-1')).toEqual({ type: 'x' });

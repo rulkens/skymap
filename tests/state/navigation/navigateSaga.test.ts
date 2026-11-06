@@ -52,7 +52,7 @@ import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { sphereFitDistance } from '../../../src/utils/camera/orbitCamera/sphereFitDistance';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
@@ -95,7 +95,7 @@ function build() {
         structureSelectionRow(structureRowRuntime(EMPTY_STRUCTURES)),
         milkyWaySelectionRow(milkyWayPickCode()),
       ],
-      () => ALL_KINDS_ENABLED,
+      () => NO_KINDS_OFF,
     ),
     cameraRuntime: () => ({
       from: { target: [0, 0, 0], yaw: 0.5, pitch: -0.2, distance: 9 },

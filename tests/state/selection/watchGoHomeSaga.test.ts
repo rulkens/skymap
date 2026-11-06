@@ -19,7 +19,7 @@ import { goHome } from '../../../src/state/selection/goHome';
 import { startCameraTween } from '../../../src/state/camera/cameraSlice';
 import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { bodyHomePose } from '../../../src/services/engine/camera/framing/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
@@ -72,7 +72,7 @@ describe('watchGoHomeSaga', () => {
       cameraRuntime: () => cameraRuntime(),
       selection: composeSelectionRows(
         () => [bodySelectionRow({ pickCodes: bodyPickCodes() })],
-        () => ALL_KINDS_ENABLED,
+        () => NO_KINDS_OFF,
       ),
     });
     return s;

@@ -28,7 +28,7 @@ import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
 import { galaxyRowRuntime } from '../../support/layerPickCodes';
 import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
@@ -82,7 +82,7 @@ describe('watchTierSaga', () => {
           bodySelectionRow({ pickCodes: bodyPickCodes() }),
           galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies)),
         ],
-        () => ALL_KINDS_ENABLED,
+        () => NO_KINDS_OFF,
       ),
     });
     return built;

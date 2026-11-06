@@ -59,7 +59,7 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import { homePose } from '../../../src/services/engine/camera/framing/homePose';
 import { makeCameraSimHarness } from '../../helpers/camera/makeCameraSimHarness';
@@ -126,7 +126,7 @@ function build({
         ...(layerRows.landed ? [milkyWaySelectionRow(milkyWayPickCode())] : []),
         satellitesSelectionRow(satellites),
       ],
-      () => ALL_KINDS_ENABLED,
+      () => NO_KINDS_OFF,
     ),
     cameraRuntime: () => (booted ? LIVE : null),
     home,

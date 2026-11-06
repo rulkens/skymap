@@ -1,7 +1,7 @@
 import type { SelectionKind } from '../../src/@types/engine/SelectionKind';
 
 /** `composeSelectionRows` requires `kindsEnabled`; "pick everything" is a fixture here, never a default. */
-export const ALL_KINDS_ENABLED: Record<SelectionKind, boolean> = {
+export const NO_KINDS_OFF: Record<SelectionKind, boolean> = {
   galaxyCatalog: true,
   structure: true,
   milkyWay: true,

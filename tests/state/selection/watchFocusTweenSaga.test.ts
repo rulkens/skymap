@@ -32,7 +32,7 @@ import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/
 import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/source';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
@@ -111,7 +111,7 @@ describe('watchFocusTweenSaga', () => {
           milkyWaySelectionRow(milkyWayPickCode()),
           starCatalogSelectionRow(starRowRuntime(NO_SURVEY_STARS)),
         ],
-        () => ALL_KINDS_ENABLED,
+        () => NO_KINDS_OFF,
       ),
       cameraRuntime: () => cameraRuntime(),
     });

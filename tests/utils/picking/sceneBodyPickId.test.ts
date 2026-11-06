@@ -11,7 +11,7 @@ import { sceneBodyPickId as pickIdOf } from '../../../src/utils/picking/sceneBod
 import { bodyCodeOf } from '../../../src/layers/body/selection/present/bodyCodeOf';
 import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { fakePickCode } from '../../support/fakePickCode';
 import { bodyPickCodes } from '../../support/layerPickCodes';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
@@ -24,7 +24,7 @@ const pickCodes = bodyPickCodes(fakePickCode());
 const sceneBodyPickId = (id: string) => pickIdOf(id, bodyCodeOf(pickCodes));
 const resolver = composeSelectionRows(
   () => [bodySelectionRow({ pickCodes })],
-  () => ALL_KINDS_ENABLED,
+  () => NO_KINDS_OFF,
 );
 
 describe('sceneBodyPickId', () => {

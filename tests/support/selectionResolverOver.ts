@@ -4,7 +4,7 @@ import { structureSelectionRow } from '../../src/layers/structure/picking/presen
 import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow';
 import { starCatalogSelectionRow } from '../../src/layers/starCatalog/selection/present/starCatalogSelectionRow';
 import { milkyWaySelectionRow } from '../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
-import { ALL_KINDS_ENABLED } from './allKindsEnabled';
+import { NO_KINDS_OFF } from './noKindsOff';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StructureStore } from '../../src/layers/structure/catalog/@types/StructureStore';
@@ -47,6 +47,6 @@ export function selectionResolverOver(
       ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))]),
       ...(stars === undefined ? [] : [starCatalogSelectionRow(starRowRuntime(stars))]),
     ],
-    () => ALL_KINDS_ENABLED,
+    () => NO_KINDS_OFF,
   );
 }

@@ -12,7 +12,7 @@ import { craftSelectionRow } from '../../../../../src/layers/missions/craft/pres
 import { craftPickId } from '../../../../../src/layers/missions/craft/present/craftPickId';
 import { MISSION_CRAFT_IDS } from '../../../../../src/layers/missions/craft/present/missionCraftIds';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
-import { ALL_KINDS_ENABLED } from '../../../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../../../support/noKindsOff';
 import { bodyPickCodes, missionsPickCode } from '../../../../support/layerPickCodes';
 import { fakePickCode } from '../../../../support/fakePickCode';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
@@ -24,7 +24,7 @@ import type { PlacedRow } from '../../../../../src/@types/engine/selection/Place
 const missions = missionsPickCode(fakePickCode());
 const resolver = composeSelectionRows(
   () => [bodySelectionRow({ pickCodes: bodyPickCodes() }), craftSelectionRow(missions)],
-  () => ALL_KINDS_ENABLED,
+  () => NO_KINDS_OFF,
 );
 
 describe('craftSelectionRow', () => {

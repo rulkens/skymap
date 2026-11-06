@@ -17,7 +17,7 @@ import { updateSelectionSelect } from '../../../src/state/selection/selectionSli
 import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/card/present/milkyWaySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { cameraRoute } from '../../../src/store/constants';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
 import { bodyPickCodes, milkyWayPickCode } from '../../support/layerPickCodes';
@@ -39,7 +39,7 @@ describe('double-tap focus', () => {
           bodySelectionRow({ pickCodes: bodyPickCodes() }),
           milkyWaySelectionRow(milkyWayPickCode()),
         ],
-        () => ALL_KINDS_ENABLED,
+        () => NO_KINDS_OFF,
       ),
       cameraRuntime: () => ({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 9 },

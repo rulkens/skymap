@@ -30,7 +30,7 @@ import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoida
 import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
-import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../../support/noKindsOff';
 import { NOOP_SAGA_CONTEXT } from '../../../support/createTestStore';
 import {
   blackHolePickCode,
@@ -123,7 +123,7 @@ function pickedUnder(allocator: PickCodeAllocator) {
   const cases = casesUnder(allocator);
   const resolver = composeSelectionRows(
     () => cases.map((c) => c.row),
-    () => ALL_KINDS_ENABLED,
+    () => NO_KINDS_OFF,
   );
   const words = cases.map((c) => c.row.encodePick(c.ref));
   const refs = cases.map((c, i) => {
