@@ -1,20 +1,20 @@
 /**
- * create — PROTOTYPE: builds the renderer and fetches the particle bin straight
- * into it (no AssetSlot, no fade row yet).
+ * create — the renderer, then the two slots. Each slot's fetcher checks the pair against the
+ * other's committed value, so whichever lands second runs the check; core fades the streaks in
+ * on the bin's commit through the asset row's `gates`.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { StellarStreamsRuntime } from './@types/StellarStreamsRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
-import { dataUrl } from '../../services/loading/fetchWithProgress';
+import { createStellarStreamsMetaSlot } from './catalog/load/stellarStreamsMetaSlot';
+import { createStellarStreamsSlot } from './catalog/load/stellarStreamsSlot';
 import { createStellarStreamsRenderer } from './streaks/render/stellarStreamsRenderer';
 
 export function create(deps: LayerCoreDeps): StellarStreamsRuntime {
   const renderer = createStellarStreamsRenderer(deps.ctx.device, HDR_TARGET_FORMAT);
-  void fetch(dataUrl('stellar_streams.bin'))
-    .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(`HTTP ${r.status}`))))
-    .then((buf) => renderer.upload(new Float32Array(buf)))
-    .catch((err: unknown) => console.warn('[stellarStreams] bin failed to load:', err));
-  return { renderer };
+  const slot = createStellarStreamsSlot(renderer, () => metaSlot.current()?.length ?? null);
+  const metaSlot = createStellarStreamsMetaSlot(() => slot.current()?.streamCount ?? null);
+  return { renderer, slot, metaSlot, meta: () => metaSlot.current() };
 }

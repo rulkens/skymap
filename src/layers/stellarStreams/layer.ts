@@ -10,6 +10,7 @@ import { stellarStreamsVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
 import { stellarStreamsPlanner } from './frame';
+import { stellarStreamsAssetRows } from './catalog/load/stellarStreamsAssetRows';
 import { stellarStreamsPass } from './streaks/passes/stellarStreamsPass';
 
 export const stellarStreamsLayer = defineLayer({
@@ -20,6 +21,7 @@ export const stellarStreamsLayer = defineLayer({
   destroy,
   planners: (runtime) => [stellarStreamsPlanner(runtime)],
   passes: (runtime) => [stellarStreamsPass(runtime)],
+  assets: stellarStreamsAssetRows,
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'stellarStreams', label: 'Stellar streams' } },
   ],

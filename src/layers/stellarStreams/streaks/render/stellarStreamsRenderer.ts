@@ -24,7 +24,11 @@ export function createStellarStreamsRenderer(
   const bgl = device.createBindGroupLayout({
     label: 'stellar-streams-bgl',
     entries: [
-      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
     ],
   });
   const slots = [0, 1].map((i) => {
@@ -60,7 +64,11 @@ export function createStellarStreamsRenderer(
         },
       ],
     },
-    fragment: { module, entryPoint: 'fs', targets: [{ format: targetFormat, blend: ADDITIVE_BLEND }] },
+    fragment: {
+      module,
+      entryPoint: 'fs',
+      targets: [{ format: targetFormat, blend: ADDITIVE_BLEND }],
+    },
     primitive: { topology: 'triangle-strip' },
   });
 
@@ -69,7 +77,7 @@ export function createStellarStreamsRenderer(
 
   return {
     hasData: () => instances !== null,
-    upload(records) {
+    upload({ records, particleCount }) {
       instances?.destroy();
       instances = device.createBuffer({
         label: 'stellar-streams-instances',
@@ -77,7 +85,11 @@ export function createStellarStreamsRenderer(
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
       device.queue.writeBuffer(instances, 0, records);
-      count = records.length / RECORD_F32;
+      count = particleCount;
+    },
+    clear() {
+      instances?.destroy();
+      instances = null;
     },
     draw(pass, rebasedVp, viewportPx, pxPerRad, eye, timeSec, looks) {
       if (instances === null) return;
