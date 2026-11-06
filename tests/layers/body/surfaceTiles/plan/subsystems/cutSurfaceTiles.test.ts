@@ -718,6 +718,99 @@ describe('cutSurfaceTiles', () => {
     });
   });
 
+  /** Night bakes to z7 only, under a cut that reaches z13: each leaf draws a
+   *  shallow ancestor's sub-rect, and night never decides what is drawn. */
+  describe('night rect', () => {
+    const SUB_CAMERA_UV: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
+    const NIGHT_MAX = 7;
+    const NIGHT_BANDS: readonly SurfaceTileBand[] = [
+      { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: NIGHT_MAX },
+    ];
+    // 1000 km reaches z8; five halvings reach the bands' z13.
+    const LEAF_ALTITUDE_KM = 1000 / 32;
+
+    function cutWithNight(input: Omit<Parameters<typeof cutWithRequestBands>[0], 'requestBands'>) {
+      return cutWithRequestBands({
+        ...input,
+        requestBands: { ...requestBandsOf(input.bands), night: NIGHT_BANDS },
+      });
+    }
+    /** Albedo and height resident everywhere the bake has them; night per `night`. */
+    function residentWithNight(
+      night: Parameters<typeof cutWithRequestBands>[0]['residentSlot'],
+    ): Parameters<typeof cutWithRequestBands>[0]['residentSlot'] {
+      return (tile: SurfaceTileId) =>
+        tile.product === 'height'
+          ? HEIGHT_ONLY(tile)
+          : tile.product === 'albedo'
+            ? WHOLE_ATLAS
+            : night(tile);
+    }
+
+    it("a z13 leaf draws its z7 ancestor's night sub-rect", () => {
+      const z = expectedLevel(LEAF_ALTITUDE_KM);
+      expect(z).toBe(13);
+      const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, SURFACE_TILE_PX);
+      const d = z - NIGHT_MAX;
+      const ancestorScale = 1 / 16;
+      const residentSlot = residentWithNight((tile) =>
+        tile.z === NIGHT_MAX && tile.x === x >> d && tile.y === y >> d
+          ? {
+              slot: 1,
+              atlasUvOrigin: [0.25, 0.5] as const,
+              atlasUvScale: [ancestorScale, ancestorScale] as const,
+              readyAtMs: 0,
+            }
+          : null,
+      );
+
+      const result = cutWithNight({ ...nadirAt(LEAF_ALTITUDE_KM), residentSlot });
+      const leaf = result.cut.find((t) => t.id.z === z && t.id.x === x && t.id.y === y);
+      expect(leaf, `cut entry for ${z}/${x}/${y}`).toBeDefined();
+      const span = 1 << d;
+      const scale = ancestorScale / span;
+      expect(leaf!.night).not.toBeNull();
+      expect(leaf!.night!.atlasUvScale[0]).toBeCloseTo(scale, 12);
+      expect(leaf!.night!.atlasUvScale[1]).toBeCloseTo(scale, 12);
+      expect(leaf!.night!.atlasUvOrigin[0]).toBeCloseTo(0.25 + (x & (span - 1)) * scale, 12);
+      expect(leaf!.night!.atlasUvOrigin[1]).toBeCloseTo(0.5 + (y & (span - 1)) * scale, 12);
+    });
+
+    it('night never asks for a tile below the night bands', () => {
+      const result = cutWithNight({
+        ...nadirAt(LEAF_ALTITUDE_KM),
+        residentSlot: residentWithNight(() => null),
+      });
+      const { requests } = result.requests;
+      expect(requests.some((r) => r.tile.z > NIGHT_MAX)).toBe(true);
+      expect(requests.some((r) => r.tile.product === 'night' && r.tile.z > NIGHT_MAX)).toBe(false);
+
+      const nightKeys = new Set(
+        requests
+          .filter((r) => r.tile.product === 'night')
+          .map((r) => `${r.tile.z}/${r.tile.x}/${r.tile.y}`),
+      );
+      const shallowAlbedo = requests.filter(
+        (r) => r.tile.product === 'albedo' && r.tile.z <= NIGHT_MAX,
+      );
+      expect(shallowAlbedo.length).toBeGreaterThan(0);
+      for (const { tile } of shallowAlbedo)
+        expect(nightKeys.has(`${tile.z}/${tile.x}/${tile.y}`), `night at ${tile.z}`).toBe(true);
+    });
+
+    it('a leaf with no resident night is still drawn', () => {
+      const z = expectedLevel(1000);
+      const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, SURFACE_TILE_PX);
+      const result = cutWithNight({
+        ...nadirAt(1000),
+        residentSlot: residentWithNight(() => null),
+      });
+      const leaf = result.cut.find((t) => t.id.z === z && t.id.x === x && t.id.y === y);
+      expect(leaf, `cut entry for ${z}/${x}/${y}`).toBeDefined();
+      expect(leaf!.night).toBeNull();
+    });
+  });
+
   describe('requests (fetch-demand product, no window clip)', () => {
     it('drops the far hemisphere', () => {
       const z = BASE_LEVEL;
@@ -735,8 +828,8 @@ describe('cutSurfaceTiles', () => {
 
       expect(keys.has(`${z}/${subCamera[0]}/${subCamera[1]}`), 'sub-camera tile').toBe(true);
       expect(keys.has(`${z}/${antipode[0]}/${antipode[1]}`), 'antipodal tile').toBe(false);
-      // Distinct TILES, not request rows: every tile is requested in both
-      // products, so the row count is twice the footprint being asserted here.
+      // Distinct TILES, not request rows: every tile is requested in every
+      // product, so the row count is a multiple of the footprint asserted here.
       expect(keys.size).toBeLessThan(128 * 0.6);
     });
 

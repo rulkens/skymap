@@ -35,7 +35,7 @@ const NO_COARSER_EDGES: SurfaceCutTile['edgeCoarser'] = [0, 0, 0, 0];
 const DATUM_RANGE_M: readonly [number, number] = [0, 0];
 
 /**
- * cutSurfaceTiles — one quadtree walk, two products: `requests` is what to
+ * cutSurfaceTiles — one quadtree walk, every product: `requests` is what to
  * fetch, `cut` what to draw. Refinement is residency-blind (R14) — screen
  * error and the bands alone — and a leaf whose own height has not landed
  * inherits the deepest resident ancestor's lattice, so nothing is ever a hole.
@@ -110,6 +110,10 @@ export function cutSurfaceTiles(input: {
   // screen-space extent can't ask the walk to descend past every band's max.
   let maxTileLevel = baseLevel;
   for (const band of bands) if (band.max > maxTileLevel) maxTileLevel = band.max;
+  // Night bakes shallower than the cut (z7 against z13): a deeper leaf starts
+  // its climb at this level, and with no night bands no leaf climbs at all.
+  let nightMax = -1;
+  for (const band of requestBands.night) if (band.max > nightMax) nightMax = band.max;
 
   // Per view, hoisted out of the walk: the x/y/w rows of the vp (the z row is
   // never touched) and the four side planes of the frustum in the walk's own
@@ -319,6 +323,20 @@ export function cutSurfaceTiles(input: {
     return resolveHeightLattice({ z, x, y, baseLevel, minLevelDelta, residentSlot });
   }
 
+  /** The leaf's share of its deepest resident night ancestor, or null: night
+   *  never gates the cut, the global night texture stands in for it. */
+  function nightOf(z: number, x: number, y: number): SurfaceCutTile['night'] {
+    if (nightMax < 0) return null;
+    const top = Math.min(z, nightMax);
+    const d0 = z - top;
+    const hit = deepestResidentAncestor(
+      { product: 'night', z: top, x: x >> d0, y: y >> d0 },
+      baseLevel,
+      residentSlot,
+    );
+    return hit === null ? null : flattenAtlasRect(hit.found, d0 + hit.levelDelta, x, y);
+  }
+
   // Explicit stack, not recursion: allocation-free in a per-frame path. Five
   // numbers per node — its id plus `probe`'s two results, unpaid for twice.
   const stack: number[] = [];
@@ -402,6 +420,7 @@ export function cutSurfaceTiles(input: {
         anchor: surfacePatchAnchor(u0, v0, u1, v1),
         albedo: resolved,
         height,
+        night: nightOf(z, x, y),
         edgeCoarser: NO_COARSER_EDGES,
       });
     }

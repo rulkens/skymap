@@ -26,6 +26,9 @@ export type SurfaceCutTile = {
     readonly levelDelta: number;
     readonly originPosts: Readonly<Vec2>;
   };
+  /** The leaf's sub-rect of its deepest resident night tile, flattened like
+   *  `albedo`'s; null when none is resident, which never drops the leaf. */
+  readonly night: Pick<ResolvedTileResidency, 'atlasUvOrigin' | 'atlasUvScale'> | null;
   /** Per edge, in R9 order `[west, east, south, north]`: 1 when the
    *  neighbouring leaf's HEIGHT level is exactly one coarser, which F2 samples
    *  at doubled stride — that neighbour's own lattice. 0 otherwise, a step of
