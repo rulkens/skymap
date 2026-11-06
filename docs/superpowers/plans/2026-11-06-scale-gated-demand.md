@@ -67,23 +67,18 @@ rows declare `near`. Gaia's hand-coded crossfade becomes a declared band.
 **review: yes** (frame / camera)
 
 **Files:**
-- Create: `src/utils/camera/maxDrawPxPerRad.ts`, `tests/utils/camera/maxDrawPxPerRad.test.ts`
-- Modify: `src/@types/engine/state/FrameOutputs.d.ts`, `src/services/engine/frame/runFrame.ts`,
-  `src/@types/loading/DemandCtx.d.ts`, `src/services/engine/wiring/buildDemandCtx.ts`, plus whichever file seeds
-  `FrameOutputs` (`seedCameraRuntime.ts`, seeded at 0)
+- Modify: `src/@types/engine/state/EngineState.d.ts`, `src/services/engine/engine.ts` (initialised at 0),
+  `src/services/engine/frame/runFrame.ts`, `src/@types/loading/DemandCtx.d.ts`,
+  `src/services/engine/wiring/buildDemandCtx.ts`
 
 **Contract:**
-- `maxDrawPxPerRad(views: readonly Pick<FrameView, 'drawPxPerRad' | 'viewKind'>[]): number` returns the max over
-  views whose `viewKind !== 'capture'`, or 0 when there are none.
-- `FrameOutputs.drawPxPerRad: number` is written by runFrame right after the views are derived (`runFrame.ts:194-198`).
-  `DemandCtx.drawPxPerRad` reads it. Check `frameFilePurity.test.ts` before adding code to runFrame: the helper
-  lives in `utils/`, not in the frame file.
+- `EngineState.drawPxPerRad: number` sits beside `fadesAnimating` and `layersLoading`, the other last-frame facts
+  runFrame owns. runFrame writes the max `drawPxPerRad` over `views` right after deriving them
+  (`runFrame.ts:194-198`), inline: captures never reach those `views`, so there is no filter to extract.
+  `DemandCtx.drawPxPerRad` reads it. Check `frameFilePurity.test.ts`: the max is an expression, not a declared symbol.
 
-- [ ] Test `captures never set the max`: a 4096-px capture beside a 935 px/rad canvas gives 935.
-- [ ] Test `dome faces: the max of five`.
-- [ ] Test `no drawing view gives 0`.
 - [ ] Wire it through. Write no test for the plumbing.
-- [ ] `npm run typecheck:fast`, `npm test -- maxDrawPxPerRad buildDemandCtx runFrame` pass. Commit.
+- [ ] `npm run typecheck:fast`, `npm test -- buildDemandCtx runFrame frameFilePurity` pass. Commit.
 
 ### Task 3: The `size` gate
 
@@ -234,7 +229,7 @@ use; see how `localBubblePass.ts:28-33` reads its band). A pass's `enabled` is f
 ## Definition of Done
 
 - **Deliverables:**
-  - `SizeGate`, `NearGate` with `edge: 'both'`, the band-items rule, `maxDrawPxPerRad` and `FrameOutputs.drawPxPerRad`.
+  - `SizeGate`, `NearGate` with `edge: 'both'`, the band-items rule and `EngineState.drawPxPerRad`.
   - No `fn` demand anywhere.
   - Deleted: `DemandFn`, `bodyTextureLoadRadius`, `pastTextureReleaseRadius`, `meshBodyLoadRadius`, `crossfadePc`
     and `starCrossfadeOpacity`.

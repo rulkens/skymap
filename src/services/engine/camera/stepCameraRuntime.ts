@@ -388,7 +388,6 @@ export function stepCameraRuntime(
         upBasis,
         projection: drawnByLens ? { ...projection, fovYRad: drawnFovYRad } : projection,
         frustum: drawnByLens ? shiftedFrustum(drawnFovYRad, aspect, shiftNdc) : frustum,
-        drawPxPerRad: prev.outputs.drawPxPerRad,
       },
     },
     actions,

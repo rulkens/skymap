@@ -16,7 +16,6 @@ import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientation/o
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
 import { cameraDofAnglesOf } from '../camera/debug/cameraDofAnglesOf';
 import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
-import { maxDrawPxPerRad } from '../../../utils/camera/maxDrawPxPerRad';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
@@ -198,7 +197,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       ? [canvas]
       : viewSpecs.map((spec) => deriveView(snapshot, cam, spec));
   // Next pass's size gates measure against this frame's views.
-  next.outputs.drawPxPerRad = maxDrawPxPerRad(views);
+  state.drawPxPerRad = views.reduce((max, view) => Math.max(max, view.drawPxPerRad), 0);
 
   // `produceFocusUniforms(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
   // per frame, before every consumer of the blend (label director, markers,

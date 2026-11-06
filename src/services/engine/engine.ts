@@ -228,6 +228,7 @@ export function createEngine(
     booted: false,
     fadesAnimating: false,
     layersLoading: false,
+    drawPxPerRad: 0,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,

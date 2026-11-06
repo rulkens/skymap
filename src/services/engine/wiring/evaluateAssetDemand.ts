@@ -79,8 +79,9 @@ function sizeVerdict(
   if (px < size.loadPx) return px < size.releasePx ? RELEASE : HOLD;
   if (!spacecraftPresent(size.body, ctx.simDays)) return HOLD;
   const siteHost = r.siteHost;
-  const host = siteHost && states.get(siteHost.id);
-  if (siteHost === undefined || host === undefined) return LOAD;
+  if (siteHost === undefined) return LOAD;
+  const host = states.get(siteHost.id);
+  if (host === undefined) return RELEASE;
   const bodies = [{ positionMpc: host.positionMpc, radiusM: siteHost.radiusM }];
   return subjectOccludedByBodies({ subjectMpc: positionMpc, camPosMpc, bodies }) ? HOLD : LOAD;
 }

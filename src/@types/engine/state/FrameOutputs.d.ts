@@ -20,7 +20,4 @@ export type FrameOutputs = {
   readonly upBasis: Mat3;
   readonly projection: CameraProjection;
   readonly frustum: ViewFrustum;
-  /** `maxDrawPxPerRad` over the frame's views, which derive after the step: the step carries
-   *  last frame's value forward and runFrame overwrites it in place. 0 before the first view. */
-  drawPxPerRad: number;
 };

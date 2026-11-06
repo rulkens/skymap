@@ -14,7 +14,7 @@ export type DemandResolution = {
   readonly labelItems: readonly (string | undefined)[];
   /** `near`'s band; undefined when the band's `items` leave out one of `items`. */
   readonly band: EntryBand | undefined;
-  /** The gated edges in Mpc: `in[0]` (0 when ungated) and `out[1]` (Infinity when ungated). */
+  /** `near`'s edges in Mpc: `in[0]` (0 when `edge` skips it) and `out[1]` (Infinity likewise). */
   readonly inMpc: number;
   readonly outMpc: number;
   /** `size`'s body footprint radius, metres (0 without `size`). */

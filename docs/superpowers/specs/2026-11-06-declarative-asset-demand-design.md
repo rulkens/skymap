@@ -121,8 +121,9 @@ satellites' search and selection lifts, and the tier exclusion.
 
 ## PR B — scale gates
 
-- **`drawPxPerRad` on `FrameOutputs`.** runFrame writes the max `drawPxPerRad` over the frame's drawing views
-  (captures excluded) after `runFrame.ts:194`. `buildDemandCtx` hands it on as `ctx.drawPxPerRad`. Before the
+- **`drawPxPerRad` on `EngineState`.** runFrame writes the max `drawPxPerRad` over the frame's views after
+  `runFrame.ts:194`, beside `fadesAnimating` and `layersLoading` (captures never reach those views).
+  `buildDemandCtx` hands it on as `ctx.drawPxPerRad`. Before the
   first frame it is 0, so nothing size-gated demands yet.
 - **`size`, evaluated through `bodyApparentDiameterPx`.**
   - Body textures: `{ body, loadPx: 16, releasePx: 8 }`.

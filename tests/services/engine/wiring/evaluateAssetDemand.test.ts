@@ -15,6 +15,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { bodyApparentDiameterPx } from '../../../../src/utils/scene/bodyApparentDiameterPx';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import type { AssetDemand } from '../../../../src/@types/loading/AssetDemand';
 import type { DeclaredDemand } from '../../../../src/@types/loading/DeclaredDemand';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
@@ -141,6 +142,12 @@ describe('evaluateAssetDemand', () => {
     expect(run(row({ shown: { address: at('sats'), items: ['a'] }, near }), far)).toEqual(RELEASE);
   });
 
+  it('a band gates a mixed-item row only if it lists every item', () => {
+    const near = { band: 'onlyA', edge: 'out', lead: 1.5, release: 2.5 } as const;
+    // `sats` shown whole reads items a and b; the band lists only a, so b draws it unbanded.
+    expect(run(row({ shown: at('sats'), near }), ctx(camX(100)))).toEqual(LOAD);
+  });
+
   it("a from-body band measures from the body's live position", () => {
     const earth = deriveBodyStates(CONST_J2000).get(SCENE_EARTH.id)!.positionMpc;
     const nearEarth: Vec3 = [earth[0] + 1e-14, earth[1], earth[2]];
@@ -213,10 +220,11 @@ describe('evaluateAssetDemand', () => {
     });
 
     it('an absent craft never demands its mesh', () => {
-      // Perseverance landed in 2021; at J2000 it is parked, and the eye sits right on it.
-      const craft = sized('perseverance', 3, 1.5);
-      const parked = posOf('perseverance');
-      expect(run(craft, ctx({ drawPxPerRad: 1000, cameraPosMpc: parked }))).toEqual(HOLD);
+      // Before its 1990 release Hubble has a parked position but no presence; the eye sits on it.
+      const simDays = unixMsToJulianDays(Date.parse('1990-01-01T00:00:00Z'));
+      const parked = deriveBodyStates(simDays).get(asSceneBodyId('hubble'))!.positionMpc;
+      const craft = sized('hubble', 3, 1.5);
+      expect(run(craft, ctx({ simDays, drawPxPerRad: 1000, cameraPosMpc: parked }))).toEqual(HOLD);
     });
 
     it("a site below its host's horizon does not load", () => {
