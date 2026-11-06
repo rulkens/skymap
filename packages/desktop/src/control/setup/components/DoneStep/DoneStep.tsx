@@ -17,7 +17,7 @@ function DoneStep({ skyRunning, skyDisplay }: DoneStepProps): ReactNode {
   return skyRunning ? (
     <div className={styles.root}>
       <p className={chrome.text} role="status">
-        The sky is running {where}.
+        Skymap is running {where}.
       </p>
       <p className={chrome.text}>{key} shows or hides this window.</p>
     </div>

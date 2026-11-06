@@ -121,7 +121,7 @@ data is kept.
 - **The download needs internet.** The first start needs it once. Connect, then choose Retry.
 - **The disk is full.** The status names the space needed and the space free. Free the difference
   and choose Retry.
-- **A tablet cannot connect.** Check that the sky is running, that the tablet is on the same
+- **A tablet cannot connect.** Check that Skymap is running, that the tablet is on the same
   network and trusts the certificate, and, if the computer has more than one network, that the
   controls name the one the tablet uses. Check the firewall prompt was answered with Allow.
 - **The tablet warns about the certificate.** It does not trust the computer yet; see Connect a

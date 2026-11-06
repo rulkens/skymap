@@ -113,7 +113,7 @@ function HelpView({ origin, section, backLabel, onBack }: HelpViewProps): ReactN
           </dd>
           <dt>The tablet cannot connect</dt>
           <dd>
-            Check that the sky is running, that the tablet is on the same network and trusts the
+            Check that Skymap is running, that the tablet is on the same network and trusts the
             certificate, and, on a computer with more than one network, that Tablets names the one
             the tablet uses. If the computer blocked incoming connections, allow Skymap in its
             firewall settings.
