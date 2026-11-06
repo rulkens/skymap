@@ -48,6 +48,7 @@ import type { SurfaceTileBodyId } from '../../src/layers/body/surfaceTiles/forma
 import type { SurfaceTileManifest } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
 import type { SurfaceTileManifestBand } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifestBand';
 import type { SurfaceTileBand } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBand';
+import { SURFACE_TILE_PRODUCTS } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileProducts';
 import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
 import { surfaceTilePath } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
@@ -420,7 +421,7 @@ export async function bakeAll(
   body: Pick<SurfaceBodyBake, 'tileRoot' | 'tilePrefix'>,
   bands: readonly SurfaceBakeBand[],
   outDir: string,
-  products: ReadonlySet<SurfaceTileProduct> = new Set<SurfaceTileProduct>(['albedo', 'height']),
+  products: ReadonlySet<SurfaceTileProduct> = new Set<SurfaceTileProduct>(SURFACE_TILE_PRODUCTS),
 ): Promise<void> {
   const { tileRoot, tilePrefix } = body;
   const tilePx = SURFACE_TILE_PX;
@@ -583,10 +584,12 @@ function productFlag(argv: readonly string[]): SurfaceTileProduct | undefined {
   const idx = argv.indexOf('--product');
   if (idx < 0) return undefined;
   const value = argv[idx + 1];
-  if (value !== 'albedo' && value !== 'height') {
-    throw new Error(`buildSurfaceTiles: --product must be 'albedo' or 'height', got '${value}'`);
+  if (!(SURFACE_TILE_PRODUCTS as readonly (string | undefined)[]).includes(value)) {
+    throw new Error(
+      `buildSurfaceTiles: --product must be one of ${SURFACE_TILE_PRODUCTS.map((p) => `'${p}'`).join(', ')}, got '${value}'`,
+    );
   }
-  return value;
+  return value as SurfaceTileProduct;
 }
 
 /** `--body <id>` (default `earth`): same bespoke-scan shape as `productFlag`. */
@@ -609,7 +612,7 @@ async function main(): Promise<void> {
     '--pack-only': 'bool',
   });
   const product = productFlag(argv);
-  const products = new Set<SurfaceTileProduct>(product ? [product] : ['albedo', 'height']);
+  const products = new Set<SurfaceTileProduct>(product ? [product] : SURFACE_TILE_PRODUCTS);
   const bodyId = bodyFlag(argv);
   const body = SURFACE_BODY_BAKES[bodyId];
   if (packOnly) {
