@@ -7,7 +7,7 @@ import package::bodies::surfaceTile::lattice::latticePostGradient;
 
 // Mirrored from 'SURFACE_TILE_ATLAS_SIDE' (surfaceTileParams.ts), parity-tested
 // in constants.parity.test.ts. Half an ATLAS texel in atlas uv: the inset
-// that keeps a bilinear tap at a resolved rect's edge out of a DIFFERENT
+// that keeps a bilinear tap at a slot's edge out of a NEIGHBOURING
 // slot's pixels (the sampler's clamp-to-edge only guards the atlas's own edge).
 const SURFACE_TILE_ATLAS_SIDE: f32 = 8192.0;
 const SURFACE_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / SURFACE_TILE_ATLAS_SIDE;
@@ -36,28 +36,20 @@ fn tileLodOverlayColor(levelDelta: u32) -> vec3<f32> {
   return vec3<f32>(0.90, 0.10, 0.05); // red, 3+
 }
 
-// A deep ancestor fallback (levelDelta >= ~7) can flatten a rect to under one
-// atlas texel; the raw half-texel inset would then push min past max, which
-// clamp() leaves indeterminate -- so the inset is capped at half the rect.
-fn resolveTileAtlasUv(origin: vec2<f32>, scale: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
-  let raw = origin + uv * scale;
-  let inset = min(vec2<f32>(SURFACE_TILE_ATLAS_HALF_TEXEL), 0.5 * scale);
-  return clamp(raw, origin + inset, origin + scale - inset);
+// A leaf often draws an ancestor's tile through a sub-rect of that ancestor's
+// SLOT: clamped to the sub-rect, neighbouring leaves could not filter across
+// their shared edge (a texel step at every leaf border, and one flat tap under
+// a sub-texel rect). So the clamp is the slot, inset half an atlas texel, and
+// the slot is recovered from the rect's origin since slots tile the atlas on a
+// 'slotScale' grid from 0 (TextureAtlas.ts packs them with no gutter).
+fn slotClampedUv(origin: vec2<f32>, scale: vec2<f32>, uv: vec2<f32>, slotScale: f32, halfTexel: f32) -> vec2<f32> {
+  let slotOrigin = floor(origin / slotScale) * slotScale;
+  return clamp(origin + uv * scale, slotOrigin + halfTexel, slotOrigin + slotScale - halfTexel);
 }
 
-// A leaf almost always draws a z7-or-shallower ancestor's night tile, so its
-// rect is a sub-rect of that SLOT: clamped to the sub-rect, neighbouring leaves
-// could not filter across their shared edge (a texel step at every leaf border,
-// and one flat tap under a sub-texel rect). The slot is recovered from the
-// rect's origin, since slots tile the atlas on a 'NIGHT_TILE_SLOT_SCALE' grid.
 fn tileNight(atlas: texture_2d<f32>, atlasSampler: sampler, uv: vec2<f32>, rect: vec4<f32>) -> vec3<f32> {
-  let slotOrigin = floor(rect.xy / NIGHT_TILE_SLOT_SCALE) * NIGHT_TILE_SLOT_SCALE;
-  let slotUv = clamp(
-    rect.xy + uv * rect.zw,
-    slotOrigin + NIGHT_TILE_ATLAS_HALF_TEXEL,
-    slotOrigin + NIGHT_TILE_SLOT_SCALE - NIGHT_TILE_ATLAS_HALF_TEXEL,
-  );
-  return textureSampleLevel(atlas, atlasSampler, slotUv, 0.0).rgb;
+  let nightUv = slotClampedUv(rect.xy, rect.zw, uv, NIGHT_TILE_SLOT_SCALE, NIGHT_TILE_ATLAS_HALF_TEXEL);
+  return textureSampleLevel(atlas, atlasSampler, nightUv, 0.0).rgb;
 }
 
 // Crossfade the freshly-landed primary tile in over the coarser fallback. At
@@ -74,9 +66,9 @@ fn tileAlbedo(
   fallbackScale: vec2<f32>,
   fadeWeight: f32,
 ) -> vec3<f32> {
-  let primaryUv = resolveTileAtlasUv(primaryOrigin, primaryScale, uv);
+  let primaryUv = slotClampedUv(primaryOrigin, primaryScale, uv, TILE_SLOT_SCALE, SURFACE_TILE_ATLAS_HALF_TEXEL);
   let primaryAlbedo = textureSampleLevel(atlas, atlasSampler, primaryUv, 0.0).rgb;
-  let fallbackUv = resolveTileAtlasUv(fallbackOrigin, fallbackScale, uv);
+  let fallbackUv = slotClampedUv(fallbackOrigin, fallbackScale, uv, TILE_SLOT_SCALE, SURFACE_TILE_ATLAS_HALF_TEXEL);
   let fallbackAlbedo = textureSampleLevel(atlas, atlasSampler, fallbackUv, 0.0).rgb;
   return mix(fallbackAlbedo, primaryAlbedo, fadeWeight);
 }
