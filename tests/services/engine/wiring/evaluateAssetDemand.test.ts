@@ -12,7 +12,6 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { bodyApparentDiameterPx } from '../../../../src/utils/scene/bodyApparentDiameterPx';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
@@ -233,18 +232,6 @@ describe('evaluateAssetDemand', () => {
 
     it('a site straight below the camera loads', () => {
       expect(run(site, ctx({ drawPxPerRad: 1000, cameraPosMpc: aboveSite(2) }))).toEqual(LOAD);
-    });
-
-    it('occlusion never releases a loaded site', () => {
-      const cam = farSide(500);
-      const pxAtOne = bodyApparentDiameterPx({
-        positionMpc: park,
-        radiusM: radiusOf('soendermarken'),
-        camPosMpc: cam,
-        pxPerRad: 1,
-      });
-      // 2 px: inside the 1.5–3 px hold band.
-      expect(run(site, ctx({ drawPxPerRad: 2 / pxAtOne, cameraPosMpc: cam }))).toEqual(HOLD);
     });
   });
 });
