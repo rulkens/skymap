@@ -139,10 +139,25 @@ satellites' search and selection lifts, and the tier exclusion.
 - **localBubble at Earth.** `edge: 'both'` joins `NearGate`, and localBubble declares
   `{ band: 'shell', edge: 'both', lead: 2, release: 4 }`. That leaves the bubble unloaded at Earth, loaded from 0.2 to
   20 kpc, and released below 0.1 or beyond 40 kpc.
-- **Survey galaxy lifts.** `alsoWhen: ['searching', 'selected']`. `selected` needs `selects` on the survey entry;
-  the plan must check what `watchSelectionRevealSaga` does with a new `selects` before adding it. A selected famous
-  galaxy pins the survey catalogs too, because the selection kind does not split famous from survey. That is
-  accepted.
+- **Survey galaxy lifts.** `alsoWhen: ['searching', 'selected']`, with `selects: ['galaxyCatalog']` added to the
+  survey entry.
+  - `watchSelectionRevealSaga` only writes when the cluster has a section switch that is off. `galaxyCatalogs` has
+    none, so the new `selects` reveals nothing. (Checked 2026-11-06.)
+  - A selected famous galaxy pins the survey catalogs too, because the selection kind doesn't split famous from
+    survey. That is accepted.
+- **A band gates only the items it lists** (ruling BuBQ #2). The resolver applies `near` only when the band has no
+  `items`, or when they include the row's item. The famous catalog stays exempt from `deepZoom` for fetching, as it
+  already is for fading. There is no per-row exception.
+- **Structure catalog** (ruling BuBQ #4): `near: { band: 'cosmic', edge: 'in', lead: 10, release: 100 }`.
+- **Gaia stars get a band as the single truth** (ruling BuBQ #1).
+  - The `starCatalog` show entry gains `survey: { out: [8 kpc, 25 kpc], items: ['gaiaStars'] }`. Today this is the
+    registry's `crossfadePc`, applied by hand.
+  - The Gaia row declares `near: { band: 'survey', edge: 'out', lead: 10, release: 100 }`: it loads within 250 kpc
+    and releases beyond 2.5 Mpc.
+  - The star passes read the band fade through their address. Deleted: `crossfadePc` (registry field and type),
+    `starCrossfadeOpacity.ts`, and the band maths in `starSourceDrawOpacity`, `starSourcesInBand` and
+    `starCatalogVisible`.
+  - Also fix the overstated comment at `starCatalog/visibility.ts:28`.
 - Backlog: delete "Scale-gated asset demand" (index line + detail file) in this PR.
 
 ## Risks
