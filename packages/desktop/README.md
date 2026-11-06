@@ -96,8 +96,8 @@ the computer boots takes the sky.
 
 ## Open the control window
 
-Press **Ctrl+Alt+K** (Cmd+Option+K on a Mac). It shows or hides the control window, also when the
-sky fills the only screen. Closing the window only hides it. Quit is in the controls.
+Press **Ctrl+,** (Cmd+, on a Mac), or choose Skymap › Settings…. It brings back the control window,
+also when the sky fills the only screen. Closing the window only hides it. Quit is in the controls.
 
 On a Mac, the menu bar appears only while the control window has focus, so a visitor at the sky's
 keyboard cannot quit the show.

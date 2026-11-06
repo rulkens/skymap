@@ -6,7 +6,6 @@
  */
 import {
   app,
-  globalShortcut,
   ipcMain,
   nativeTheme,
   powerSaveBlocker,
@@ -23,7 +22,6 @@ import type { ControlState } from '../../@types/ControlState';
 import type { LanInterface } from '../../@types/LanInterface';
 import { APP_SERVER_PORT } from '../../data/appServerPort';
 import { CONTROL_CHANNELS } from '../../data/controlChannels';
-import { CONTROL_SHORTCUT } from '../../data/controlShortcut';
 import { INVENTORY_FILE } from '../sync/data/inventoryFile';
 import { attachDesktopRelay } from '../relay/attachDesktopRelay';
 import { bootPlan } from './utils/bootPlan';
@@ -52,7 +50,7 @@ import { resolveDataRoot } from '../sync/utils/resolveDataRoot';
 import { rotateRoomCode } from '../relay/rotateRoomCode';
 import { runSync } from '../sync/runSync';
 import { serially } from './utils/serially';
-import { SITE_ORIGIN } from '../menu/data/siteOrigin';
+import { DOCS_BASE } from '../menu/data/docsBase';
 import { SKY_DRAG_CHANNEL } from '../../data/skyDragChannel';
 import { SKY_ESCAPE_CHANNEL } from '../../data/skyEscapeChannel';
 import { dragWithCursor } from '../windows/utils/dragWithCursor';
@@ -159,6 +157,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
       tick('fullScreen', full);
     },
     left: parseSkyWindowState(settings.get('skyWindow')),
+    showControl: () => showControl(),
     remember: (left) => {
       try {
         settings.set('skyWindow', left);
@@ -236,7 +235,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
       showControl();
       if (!control.isDestroyed()) control.webContents.send(CONTROL_CHANNELS.help, section);
     },
-    openDocs: (path) => void shell.openExternal(new URL(path, SITE_ORIGIN).href),
+    openDocs: (path) => void shell.openExternal(new URL(path, DOCS_BASE).href),
   });
 
   const handlers: ControlIpcHandlers = {
@@ -285,11 +284,6 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
       .renewCertificate()
       .catch((error: unknown) => console.error('certificate renewal:', error));
   });
-  const toggleControl = (): void => (control.isVisible() ? control.hide() : showControl());
-  if (!globalShortcut.register(CONTROL_SHORTCUT, toggleControl)) {
-    console.error(`${CONTROL_SHORTCUT} is taken by another app`);
-  }
-  app.on('will-quit', () => globalShortcut.unregisterAll());
   // A newer build opened beside this one takes over: every installer says 0.5.0, so a running old
   // build would otherwise keep answering for the new one.
   app.on('second-instance', (_event, _argv, _cwd, data) =>

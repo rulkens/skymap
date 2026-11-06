@@ -59,13 +59,14 @@ describe('buildMenuTemplate', () => {
     expect(a.testGrid).toHaveBeenCalledWith(false);
   });
 
-  it('shows the global shortcut on the control-window item without taking it twice', () => {
-    const item = find(
-      items(buildMenuTemplate('darwin', false, actions()), 'Window'),
-      'Control window',
-    );
-    expect(item.accelerator).toBe('CommandOrControl+Alt+K');
-    expect(item.registerAccelerator).toBe(false);
+  it("opens the control window on the systems' settings key, from Settings… only", () => {
+    const a = actions();
+    const template = buildMenuTemplate('darwin', false, a);
+    const settings = find(items(template, 'Skymap'), 'Settings…');
+    expect(settings.accelerator).toBe('CommandOrControl+,');
+    click(settings);
+    expect(a.showControl).toHaveBeenCalledOnce();
+    expect(find(items(template, 'Window'), 'Control window').accelerator).toBeUndefined();
   });
 
   it('opens Help at the section each item names, and the website docs in the browser', () => {
@@ -74,9 +75,9 @@ describe('buildMenuTemplate', () => {
     help.filter((item) => item.type !== 'separator').forEach((item) => click(item));
     expect(vi.mocked(a.help).mock.calls).toEqual([[], ['tablet'], ['troubleshooting']]);
     expect(vi.mocked(a.openDocs).mock.calls).toEqual([
-      ['/docs/'],
-      ['/docs/guide/dome-setup/'],
-      ['/docs/guide/screens-and-domes/'],
+      [''],
+      ['guide/dome-setup/'],
+      ['guide/screens-and-domes/'],
     ]);
   });
 });

@@ -15,7 +15,7 @@ function QuitPanel({ onQuit }: QuitPanelProps): ReactNode {
           Quit Skymap
         </button>
         <p className={chrome.dim}>
-          Show or hide this window: <kbd className={chrome.mono}>{controlShortcutText()}</kbd>
+          Open this window again: <kbd className={chrome.mono}>{controlShortcutText()}</kbd>
         </p>
       </div>
     </section>

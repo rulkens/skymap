@@ -86,8 +86,10 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
   machine awake until the app quits: tablets steering over the relay are no local input, so the
   OS's idle timer would otherwise blank a dome and, at sleep, take the server and the tablets down.
 - With one screen the control window floats above the sky (`screen-saver` level) and
-  `CommandOrControl+Alt+K` (`data/controlShortcut.ts`; the page prints Cmd+Option+K on a Mac) shows
-  or hides it.
+  `CommandOrControl+,` (`data/controlShortcut.ts`, owner ruling 2026-11-06: the systems' settings
+  key) brings it back: Skymap › Settings… carries it, and the sky reads it itself
+  (`utils/isControlKey.ts`), since a full-screen sky has no menu. It is not a global shortcut, which
+  would take Cmd+, from every other app while Skymap runs.
 - **Leaving full screen.** `preload/skyPreload.cts` (no API for the page) sends `sky:escape` for an
   Escape press the page left unused: the app's own handlers (palette, popover, splash) call
   `preventDefault`, so a new Escape use in the app must too, or it also drops full screen. Main then

@@ -5,9 +5,9 @@ import { fullScreenAccelerator } from '../windows/utils/fullScreenAccelerator';
 
 /**
  * The application menu, the same on both platforms bar macOS's Hide items. Reload and DevTools are
- * for `--windowed` dev runs only, which have no full screen. The control-window and Full screen items
- * show their keys without registering them: the shortcut is global, the full screen key is read off
- * the sky (createSkyWindows).
+ * for `--windowed` dev runs only, which have no full screen. Settings… carries CONTROL_SHORTCUT; the
+ * Full screen item shows its key without registering it, since the sky reads that key itself
+ * (createSkyWindows), as it does the control key for a full-screen sky with no menu.
  */
 export function buildMenuTemplate(
   platform: NodeJS.Platform,
@@ -43,7 +43,7 @@ export function buildMenuTemplate(
         { label: 'About Skymap', click: actions.about },
         { type: 'separator' },
         // Where both platforms look for settings; it opens the control window, which holds them.
-        { label: 'Settings…', accelerator: 'CommandOrControl+,', click: actions.showControl },
+        { label: 'Settings…', accelerator: CONTROL_SHORTCUT, click: actions.showControl },
         { type: 'separator' },
         ...hide,
         { label: 'Quit Skymap', accelerator: 'CommandOrControl+Q', role: 'quit' },
@@ -68,8 +68,6 @@ export function buildMenuTemplate(
       submenu: [
         {
           label: 'Control window',
-          accelerator: CONTROL_SHORTCUT,
-          registerAccelerator: false,
           click: actions.showControl,
         },
         { label: 'Sky', click: actions.showSky },
@@ -83,11 +81,11 @@ export function buildMenuTemplate(
         { label: 'Connecting a tablet', click: () => actions.help('tablet') },
         { label: 'Troubleshooting', click: () => actions.help('troubleshooting') },
         { type: 'separator' },
-        { label: 'Skymap documentation', click: () => actions.openDocs('/docs/') },
-        { label: 'Setting up a dome', click: () => actions.openDocs('/docs/guide/dome-setup/') },
+        { label: 'Skymap documentation', click: () => actions.openDocs('') },
+        { label: 'Setting up a dome', click: () => actions.openDocs('guide/dome-setup/') },
         {
           label: 'Screens and domes',
-          click: () => actions.openDocs('/docs/guide/screens-and-domes/'),
+          click: () => actions.openDocs('guide/screens-and-domes/'),
         },
       ],
     },

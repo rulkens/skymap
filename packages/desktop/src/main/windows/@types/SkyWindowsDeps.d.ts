@@ -15,4 +15,6 @@ export type SkyWindowsDeps = {
   /** How the sky was left at the last run, and where to store each change of it. */
   left: SkyWindowState;
   remember: (state: SkyWindowState) => void;
+  /** CONTROL_SHORTCUT pressed on the sky, which has no menu in full screen to carry it. */
+  showControl: () => void;
 };

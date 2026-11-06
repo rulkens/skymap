@@ -6,6 +6,7 @@ import type { SkyWindows } from './@types/SkyWindows';
 import type { SkyWindowsDeps } from './@types/SkyWindowsDeps';
 import { SKY_WINDOWED_CHANNEL } from '../../data/skyWindowedChannel';
 import { fillDisplay } from './fillDisplay';
+import { isControlKey } from './utils/isControlKey';
 import { isFullScreenKey } from './utils/isFullScreenKey';
 import { listDisplays } from './utils/listDisplays';
 import { openSkyWindow } from './openSkyWindow';
@@ -21,7 +22,8 @@ import { showTestGrid } from '../sky/showTestGrid';
  * out of full screen stays a window until put back: display changes leave it where it is.
  */
 export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
-  const { control, windowed, mayClose, setup, onClosed, onFullScreen, left, remember } = deps;
+  const { control, windowed, mayClose, setup, onClosed, onFullScreen, left, remember, showControl } =
+    deps;
   let sky: BrowserWindow | null = null;
   // A launch, and a sky reopened after a crash, come back as the sky was left (owner ruling).
   let full = !windowed && left.full;
@@ -81,6 +83,11 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     win.on('move', track);
     win.on('resize', track);
     win.webContents.on('before-input-event', (event, input) => {
+      if (isControlKey(input, process.platform)) {
+        event.preventDefault();
+        showControl();
+        return;
+      }
       if (windowed || !isFullScreenKey(input, process.platform)) return;
       event.preventDefault();
       setFullScreen(!full);
