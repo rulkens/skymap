@@ -1,11 +1,11 @@
 /**
  * You are here — the rise from the park to the whole Earth, one clip in three
- * frame legs. `{ sky }`: from beat 00's night view, look down at your feet.
- * `{ body }`: only `distance` moves, so the eye climbs straight up the park's
- * radial: Copenhagen, then Denmark, then the curve of the planet. World: the
- * last of the pull-back, so the dwell drifts in the frame every later beat flies
- * in. Each leg's start is converted from the pose the last one left, so neither
- * handover moves the eye: one at rest (the nadir), one at speed.
+ * frame legs. `{ sky }`: from beat 00's night view the eye starts turning down.
+ * `{ body }`: it lifts off before the turn ends, orbiting up over the ground it
+ * was looking at until it looks straight down, then climbs: Copenhagen, Denmark,
+ * the curve of the planet. World: the last of the pull-back, Earth focused and
+ * named. Each leg starts from the pose the last one left, and both handovers
+ * happen in motion, at matched speeds.
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
@@ -13,8 +13,10 @@ import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
 import {
   all,
   dollyTo,
+  focus,
   moveTargetId,
   scene,
+  seq,
   show,
   tween,
 } from '../../../../services/engine/animation/effectHelpers';
@@ -22,6 +24,8 @@ import { BODY_FOCUS_PREFIX } from '../../../../services/url/bodyFocusId';
 import { clockTo } from '../../../../state/tour/clockTo';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 import { focusId } from '../../../../utils/animation/focusId';
+import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { skySpotRadial } from '../../../../utils/geo/skySpotRadial';
 import { EARTH_DATUM_RADIUS_M } from '../../../bodies/earthDatumRadiusM';
 import { SCALE_UNITS } from '../../../scaleUnits';
 import { OPENING_HIDDEN_LAYERS } from './openingHiddenLayers';
@@ -33,16 +37,34 @@ const SKY: PoseFrame = { sky: SONDERMARKEN_SPOT };
 const HOST: PoseFrame = { body: SONDERMARKEN_SPOT.body };
 const EARTH = focusId(`${BODY_FOCUS_PREFIX}${SONDERMARKEN_SPOT.body}`);
 
-const LOOK_DOWN_SEC = 4;
-const RISE_SEC = 8;
-// Picked so the world dolly opens at about the log speed the rise leaves at
-// (easeInSine out, easeOutCubic in): the handover carries on at pace.
-const PULL_BACK_SEC = 3;
+// The body arm's angles for looking straight down at the park. Body channels
+// are the orbit convention in the host's fixed axes, so the arm IS the radial.
+const UP = skySpotRadial(SONDERMARKEN_SPOT);
+const NADIR_ARM = orbitAnglesLookingAlong([-UP[0], -UP[1], -UP[2]]);
+
+// Due north, 23° down: the body leg's target lands where this sightline meets
+// the datum, ~80 m ahead, and the eye orbits up over it. North matters: there
+// the horizon-level and pole-level screen-ups coincide, and a body leg has no
+// roll channel, so any other azimuth would snap as a roll at the handover.
+const HANDOVER_ALTITUDE_RAD = -0.4;
+
+// Turn speeds match at the handover: the sky turn ends at speed (easeInSine),
+// the body turn starts at it (easeOutSine), each ∝ its angle over its time.
+// The eye itself starts at turn rate × that ~80 m (~45 m/s): a body arm turns
+// about its target, never the eye. Steeper or slower here softens it.
+const TURN_SKY_SEC = 5;
+const TURN_BODY_SEC = 3.2;
+// The climb, in log distance: lift-off accelerates (easeInSine) into a constant
+// ~1.3 per second (linear), so Copenhagen stays on screen for seconds; the
+// world dolly opens at that speed (easeOutSine) and settles on the whole Earth.
+const LIFT_SEC = 3.8;
+const CLIMB_SEC = 5;
+const PULL_BACK_SEC = 2.8;
 const REVEAL_SEC = 2;
 const DWELL_SEC = 7;
 
-// Height above the ground where the body leg hands over: Denmark small, the
-// planet's curve at the frame's edge.
+const LIFT_TOP_M = 3_000;
+// Where the body leg hands over: Denmark small, the planet's curve at the edge.
 const RISE_TOP_M = 2_000_000;
 // The end height. Every `distance` here runs from the ground below: a world leg
 // opened from a body leg keeps its target where the sightline meets the ground
@@ -58,17 +80,31 @@ export const youAreHereEarth: ClipData = {
       tween('yaw', { to: PARK_VIEW.azimuthRad, over: 0, frame: SKY }),
       tween('pitch', { to: PARK_VIEW.nightAltitudeRad, over: 0, frame: SKY }),
     ]),
-    // Due north at the nadir: a body leg levels screen-up on Earth's pole and has
-    // no roll channel, so any other azimuth would snap as a roll at the handover.
     all([
-      tween('yaw', { to: 0, over: LOOK_DOWN_SEC, frame: SKY }),
-      tween('pitch', { to: -Math.PI / 2, over: LOOK_DOWN_SEC, frame: SKY }),
+      tween('yaw', { to: 0, over: TURN_SKY_SEC, ease: 'easeInOutSine', frame: SKY }),
+      tween('pitch', {
+        to: HANDOVER_ALTITUDE_RAD,
+        over: TURN_SKY_SEC,
+        ease: 'easeInSine',
+        frame: SKY,
+      }),
     ]),
-    // The leg opens with the target on the ground below and `distance` the eye's
-    // height above it, so this one channel lifts the eye straight up.
-    tween('distance', { to: RISE_TOP_M, over: RISE_SEC, ease: 'easeInSine', frame: HOST }),
     all([
-      dollyTo(WHOLE_EARTH_HEIGHT_M * SCALE_UNITS.M_TO_MPC, PULL_BACK_SEC, 'easeOutCubic'),
+      tween('yaw', { to: NADIR_ARM.yaw, over: TURN_BODY_SEC, ease: 'easeOutSine', frame: HOST }),
+      tween('pitch', {
+        to: NADIR_ARM.pitch,
+        over: TURN_BODY_SEC,
+        ease: 'easeOutSine',
+        frame: HOST,
+      }),
+      seq([
+        tween('distance', { to: LIFT_TOP_M, over: LIFT_SEC, ease: 'easeInSine', frame: HOST }),
+        tween('distance', { to: RISE_TOP_M, over: CLIMB_SEC, ease: 'linear', frame: HOST }),
+      ]),
+    ]),
+    all([
+      focus(EARTH),
+      dollyTo(WHOLE_EARTH_HEIGHT_M * SCALE_UNITS.M_TO_MPC, PULL_BACK_SEC, 'easeOutSine'),
       // Beat 00 hid these over the park; from orbit they belong to every later beat.
       show(OPENING_HIDDEN_LAYERS, REVEAL_SEC),
     ]),
