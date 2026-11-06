@@ -21,7 +21,11 @@ import { composeControlSchemes } from '../../../../src/services/engine/camera/co
 import {
   NEAR_CLIP_MPC,
   FAR_CLIP_MPC,
+  DEFAULT_FOV_Y_RAD,
 } from '../../../../src/services/engine/camera/framing/cameraFraming';
+import { dollyTo, tween } from '../../../../src/services/engine/animation/effectHelpers';
+import type { ClipData } from '../../../../src/@types/animation/ClipData';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import { EMPTY_TILT_MEMORY } from '../../../../src/services/engine/camera/data/emptyTiltMemory';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -50,6 +54,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { liveClipStartPose } from '../../../../src/services/engine/helpers/liveClipStartPose';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import { MISSION_EVENTS } from '../../../../src/layers/missions/events/data/missionEvents.generated';
@@ -69,7 +74,13 @@ import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDr
 import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
 import type { NavVelocity } from '../../../../src/@types/camera/input/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
-import { setLens, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import {
+  clipEnded,
+  clipStarted,
+  resolveClipStart,
+  setFovYRad,
+  startCameraTween,
+} from '../../../../src/state/camera/cameraSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import {
   setControlScheme,
@@ -241,7 +252,7 @@ describe('stepCameraRuntime', () => {
     const stored = h.store.getState();
     const rootState = {
       ...stored,
-      camera: { ...stored.camera, lens: Math.PI / 2 },
+      camera: { ...stored.camera, fovYRad: Math.PI / 2 },
     };
 
     const { next } = stepCameraRuntime(prev, inputsFor(h, 16, { rootState, aspect: 2 }));
@@ -262,7 +273,7 @@ describe('stepCameraRuntime', () => {
     expect(h.state.cameraRuntime.register.winner).toBe('followHold');
     const before = h.store.getState().camera.base;
 
-    h.store.dispatch(setLens(Math.PI / 4));
+    h.store.dispatch(setFovYRad(Math.PI / 4));
     h.frame(1);
 
     expect(h.store.getState().camera.base).toBe(before);
@@ -643,7 +654,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
   });
 
   it('a wheel notch and a navigator zoom in one frame compound on the sky lens', () => {
-    // The nudge must read the lens the drain left, and its setLens must land
+    // The nudge must read the lens the drain left, and its setFovYRad must land
     // after the drain's, or the notch is overwritten.
     const h = makeCameraSimHarness();
     h.store.dispatch(setControlScheme('openspace'));
@@ -654,7 +665,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
       pose: { azimuthRad: 1, altitudeRad: 0.3 },
     };
     h.store.dispatch(commitCameraPose(sky));
-    const lens = h.store.getState().camera.lens;
+    const lens = h.store.getState().camera.fovYRad;
     const dtS = 0.016;
     const navZoom = Math.log(1.1);
     h.state.cameraRuntime = {
@@ -666,7 +677,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
       },
     };
     const out = stepWith(h, [{ kind: 'zoom', factor: 1.25, duringGesture: false, cursorPx: null }]);
-    const lenses = out.actions.filter((a) => setLens.match(a)).map((a) => a.payload as number);
+    const lenses = out.actions.filter((a) => setFovYRad.match(a)).map((a) => a.payload as number);
     expect(lenses).toHaveLength(2);
     expect(lenses[1]).toBeCloseTo(lens * 1.25 * 1.1, 9);
   });
@@ -821,5 +832,113 @@ describe('the lens shift', () => {
     // τ = 80 ms at 16 ms frames lands inside 1e-4 of 0.2 in about 38 frames.
     expect(frames).toBeGreaterThan(20);
     expect(frames).toBeLessThan(80);
+  });
+});
+
+describe('a clip fov channel drives the drawn lens', () => {
+  const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+  const playing = (data: ClipData) => {
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
+    h.frame(2);
+    h.store.dispatch(clipStarted({ data, frame: DEFAULT_ORIENTATION }));
+    return h;
+  };
+
+  it('draws the clip lens while it plays, leaving the committed lens alone', () => {
+    const h = playing({
+      start: { ...START, fov: 1 },
+      timeline: [tween('fov', { to: 0.25, over: 0.5, ease: 'linear' })],
+    });
+    h.frame(10);
+
+    const { projection, frustum } = h.state.cameraRuntime.outputs;
+    expect(projection.fovYRad).toBeLessThan(1);
+    expect(projection.fovYRad).toBeGreaterThan(0.25);
+    // The renderer draws `frustum`, not `projection`, so it must follow the lens too.
+    expect(frustum.tanUp).toBeCloseTo(
+      symmetricFrustum(projection.fovYRad, projection.aspect).tanUp,
+      12,
+    );
+    expect(h.store.getState().camera.fovYRad).toBe(DEFAULT_FOV_Y_RAD);
+  });
+
+  it('commits the driven lens when the clip hands off, with no frame snapping back', () => {
+    const h = playing({
+      start: { ...START, fov: 1 },
+      timeline: [tween('fov', { to: 0.25, over: 0.5, ease: 'linear' })],
+    });
+    const drawn: number[] = [];
+    for (let i = 0; i < 60; i += 1) {
+      h.frame(1);
+      drawn.push(h.state.cameraRuntime.outputs.projection.fovYRad);
+    }
+
+    expect(h.store.getState().camera.clip).toBeNull();
+    expect(h.store.getState().camera.fovYRad).toBeCloseTo(0.25, 12);
+    // The hand-off frame draws the driven lens, never the committed default.
+    expect(drawn.every((fov, i) => i === 0 || fov <= drawn[i - 1]!)).toBe(true);
+    expect(drawn.at(-1)).toBeCloseTo(0.25, 12);
+  });
+
+  it('a clip without a fov track leaves the slider lens live', () => {
+    const h = playing({ start: START, timeline: [dollyTo(50, 5)] });
+    h.frame(2);
+    h.store.dispatch(setFovYRad(0.5));
+    h.frame(1);
+
+    expect(h.store.getState().camera.clip).not.toBeNull();
+    expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(0.5);
+  });
+
+  it("a 'live' clip opens its fov track from the drawn lens", () => {
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
+    h.store.dispatch(setFovYRad(0.5));
+    h.frame(2);
+    const data: ClipData = {
+      start: 'live',
+      timeline: [tween('fov', { to: 0.25, over: 5, ease: 'linear' })],
+    };
+    h.store.dispatch(
+      clipStarted({
+        data: resolveClipStart(data, liveClipStartPose(h.state)),
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+    h.frame(1);
+
+    const drawn = h.state.cameraRuntime.outputs.projection.fovYRad;
+    expect(drawn).toBeLessThanOrEqual(0.5);
+    expect(drawn).toBeGreaterThan(0.45);
+  });
+
+  const midDolly = () => {
+    const h = playing({
+      start: { ...START, fov: 1 },
+      timeline: [tween('fov', { to: 0.25, over: 5, ease: 'linear' })],
+    });
+    h.frame(5);
+    expect(h.state.cameraRuntime.drivenFovYRad).not.toBeNull();
+    return h;
+  };
+
+  // The takeover exit's shape: the clip is cancelled and the viewer's lens restored together.
+  it('a lens written in the hand-off tick wins over the commit', () => {
+    const h = midDolly();
+    h.store.dispatch(clipEnded());
+    h.store.dispatch(setFovYRad(0.7));
+    h.frame(1);
+
+    expect(h.store.getState().camera.fovYRad).toBe(0.7);
+    expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(0.7);
+  });
+
+  it('commits the driven lens exactly once', () => {
+    const h = midDolly();
+    h.store.dispatch(clipEnded());
+    h.frame(2);
+    h.store.dispatch(setFovYRad(0.7));
+    h.frame(1);
+
+    expect(h.store.getState().camera.fovYRad).toBe(0.7);
   });
 });

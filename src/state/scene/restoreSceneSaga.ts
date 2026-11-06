@@ -26,7 +26,7 @@
  *      re-expresses `camera.base` into the frame the same way it does for
  *      any other orientation switch, rather than snapping only the setting.
  *
- *   3. `put(setLens(lens))` — the viewer's lens: camera state, so not a cluster.
+ *   3. `put(setFovYRad(fovYRad))` — the viewer's lens: camera state, so not a cluster.
  *
  *   4. `put(updateSelectionFocus(focus))` — focus reverts through the same
  *      production action a user interaction or a `focus()` beat uses. Routing
@@ -58,7 +58,7 @@ import { put } from 'typed-redux-saga';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../selection/selectionSlice';
 import { requestOrientationChange } from '../camera/orientationActions';
-import { setLens } from '../camera/cameraSlice';
+import { setFovYRad } from '../camera/cameraSlice';
 import { restoreTime } from '../time/timeSlice';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
@@ -66,7 +66,7 @@ import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
 export function* restoreSceneSaga(snapshot: SceneSnapshot): Generator {
   yield* put(mergeSnapshot(snapshot.settings));
   yield* put(requestOrientationChange(snapshot.orientation));
-  yield* put(setLens(snapshot.lens));
+  yield* put(setFovYRad(snapshot.fovYRad));
   yield* put(updateSelectionFocus(snapshot.focus));
   yield* put(restoreTime(resolveRestoredTime(snapshot)));
 }

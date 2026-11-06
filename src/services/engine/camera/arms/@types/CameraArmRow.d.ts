@@ -28,7 +28,7 @@ export type CameraArmRow<K extends CameraArmKind> = {
    * that identity as "nothing moved". `tilt` rides beside `memory`
    * rather than inside it: it is keyed by HOST, not by frame (spec §3-P4), so a
    * frame change must not wipe it, and only a tilt-authoring drag writes it.
-   * `lens` is present only when the step changes the lens (radians); the drain
+   * `fovYRad` is present only when the step changes the lens (radians); the drain
    * dispatches it, and later steps read it back as `ctx.fovYRad`.
    */
   step(
@@ -41,17 +41,17 @@ export type CameraArmRow<K extends CameraArmKind> = {
     readonly pose: PoseOf[K];
     readonly memory: MemOf[K];
     readonly tilt: TiltMemory;
-    readonly lens?: number;
+    readonly fovYRad?: number;
   };
   /**
    * One frame's pixel-free motion in this arm's own frame, at the equivalent
    * drag's rate. A delta the arm ignores entirely returns `framed.pose` BY
-   * REFERENCE, the same identity rule as `step`; `lens` likewise.
+   * REFERENCE, the same identity rule as `step`; `fovYRad` likewise.
    */
   nudge(
     tilt: TiltMemory,
     framed: FramedPose<K>,
     delta: ArmDelta,
     ctx: CameraArmCtx,
-  ): { readonly pose: PoseOf[K]; readonly tilt: TiltMemory; readonly lens?: number };
+  ): { readonly pose: PoseOf[K]; readonly tilt: TiltMemory; readonly fovYRad?: number };
 };

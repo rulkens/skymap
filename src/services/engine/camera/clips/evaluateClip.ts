@@ -112,6 +112,7 @@ import { foldToWorld } from '../arms/foldToWorld';
 import { rowFor } from '../arms/rowFor';
 import { sameFrame } from '../arms/sameFrame';
 import { datumOnlyTerrainHeight } from '../../../../utils/camera/terrain/datumOnlyTerrainHeight';
+import { DEFAULT_FOV_Y_RAD } from '../framing/cameraFraming';
 import type { BaseSegment } from '../../../../@types/animation/compiledClip/BaseSegment';
 import type { VelRamp } from '../../../../@types/animation/compiledClip/VelRamp';
 import type { CompositeTrack } from '../../../../@types/animation/compiledClip/CompositeTrack';
@@ -635,6 +636,7 @@ function originOfLeg(
  * opening leg, so every segment counts and the walk is the pre-frames one.
  * `beforeSec` is only passed when seeding the NEXT leg (see `LegWindow`).
  * Clips author no `lookOffset`, so one starting from an offset pose snaps it to 0.
+ * `fov` is not a base-layer pose field here: it is frame-independent (`fovYRadAt`).
  */
 function evaluateBaseAt(
   compiled: CompiledClip,
@@ -642,7 +644,7 @@ function evaluateBaseAt(
   origin: LegOrigin,
   beforeSec = Infinity,
   beforeLeg = Infinity,
-): Required<Omit<CameraPose, 'lookOffset'>> {
+): Required<Omit<CameraPose, 'lookOffset' | 'fov'>> {
   const { baseTracks } = compiled;
   const { atSec, leg, pose: start } = origin;
   const window: LegWindow =
@@ -675,6 +677,25 @@ function evaluateBaseAt(
       fromComposite('distance') ??
       evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t, window),
   };
+}
+
+/**
+ * fovYRadAt — the `fov` channel at `t`, or undefined when the clip never touches
+ * it, so a clip that does not animate the lens leaves the viewer's live. No leg
+ * converts it, so every segment counts against the clip's own start lens.
+ */
+function fovYRadAt(compiled: CompiledClip, t: number): number | undefined {
+  const animates =
+    compiled.baseTracks['fov'].length > 0 ||
+    compiled.velTracks.some((r) => r.channel === 'fov') ||
+    compiled.oscTracks.some((o) => o.channel === 'fov');
+  if (!animates) return undefined;
+  // Only a `'live'` start carries the viewer's lens (`liveClipStartPose`): a
+  // concrete start without `fov` is authored, so it opens at the default, not
+  // at whatever the viewer had dialled in.
+  const start = compiled.start.fov ?? DEFAULT_FOV_Y_RAD;
+  const base = evaluateBaseScalar(compiled.baseTracks['fov'], start, 'fov', t, WHOLE_CLIP);
+  return base + velDisplacement(compiled, 'fov', t) + oscOffset(compiled, 'fov', t);
 }
 
 // ---------------------------------------------------------------------------
@@ -719,6 +740,7 @@ export function evaluateFramedClip(
   // A `target` osc track applies the same scalar offset to all three components
   // (the OscTrack model carries one amplitude, not per-axis amplitudes).
   const oscTarget = oscOffset(compiled, 'target', t);
+  const fov = fovYRadAt(compiled, t);
 
   return {
     frame: legs[index]!.frame,
@@ -733,6 +755,8 @@ export function evaluateFramedClip(
       pitch: base.pitch + velPitch + oscPitch,
       distance: base.distance + velDist + oscDist,
       roll: base.roll + velDisplacement(compiled, 'roll', t) + oscOffset(compiled, 'roll', t),
+      // Omitted, never `undefined`: a clip that leaves the lens alone keeps its old shape.
+      ...(fov === undefined ? {} : { fov }),
     },
   };
 }

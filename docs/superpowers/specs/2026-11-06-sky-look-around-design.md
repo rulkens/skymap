@@ -35,6 +35,7 @@ picker, grids, the takeover, Esc, the readout. §9 backlogs them.
 | R7 | A's climb field is `SkyPose.eyeHeightM` (≥ `SKY_EYE_HEIGHT_M`). |
 | R8 | The clip `fov` channel lands in the prep PR, whichever exit wins (2026-11-06). |
 | R9 | The settings slider reads `LENS_MIN_DEG`/`LENS_MAX_DEG`: one range, 0.5°–120° (2026-11-06). |
+| R10 | The stored lens and every field carrying it are named `fovYRad` (radians), never `lens` (2026-11-06). |
 
 ## 3. Ground preparation
 
@@ -42,14 +43,14 @@ picker, grids, the takeover, Esc, the readout. §9 backlogs them.
 
 ```ts
 // prep — the lens is camera state (port of d37207970) and clips can drive it (port of 48f1a3341)
-type CameraState = { …; lens: number };            // radians, beside base; setLens(rad), selectLens
-type SceneSnapshot = { …; lens: number };          // the takeover pins and restores it
+type CameraState = { …; fovYRad: number };            // radians, beside base; setFovYRad(rad), selectFovYRad
+type SceneSnapshot = { …; fovYRad: number };          // the takeover pins and restores it
 // deleted: CameraSettings, cameraSettingsSlice, settings.camera, selectFovDeg
-type Channel = … | 'fov';                         // log space; DriverOutput.lens, committed on hand-off
+type Channel = … | 'fov';                         // log space; DriverOutput.fovYRad, committed on hand-off
 
 // trunk — an arm step may author the lens
-CameraArmRow<K>.step(…)  → { pose; memory; tilt; lens?: number }
-CameraArmRow<K>.nudge(…) → { pose; tilt; lens?: number }
+CameraArmRow<K>.step(…)  → { pose; memory; tilt; fovYRad?: number }
+CameraArmRow<K>.nudge(…) → { pose; tilt; fovYRad?: number }
 LENS_MIN_DEG = 0.5; LENS_MAX_DEG = 120              // src/data/camera/
 
 // exit A — the climb is pose
@@ -59,7 +60,7 @@ type SkyPose = { azimuthRad; altitudeRad; eyeHeightM }   // eyeHeightM ≥ SKY_E
 MemOf.sky = SkyExitPush = { pushLn: number; lastPushMs: number }
 CameraArmCtx.nowMs: number
 step(…) → { …; tween?: CameraTweenDescriptor }           // the arm may start a tween
-CameraTweenDescriptor.lens?: { from: number; to: number }
+CameraTweenDescriptor.fovYRad?: { from: number; to: number }
 ```
 
 ### 3.2 Verdicts
@@ -77,16 +78,16 @@ CameraTweenDescriptor.lens?: { from: number; to: number }
 
 ### 3.3 Prep (PR 1)
 
-**P1. The lens is camera state.** Port `d37207970` onto main: `camera.lens` (radians, seeded from
-`DEFAULT_FOV_Y_RAD`), `setLens`, `selectLens`; the slider, the takeover pin and site shots write
-`setLens`; `SceneSnapshot.lens` is captured and restored; `settings.camera` and its type, slice and
+**P1. The lens is camera state.** Port `d37207970` onto main: `camera.fovYRad` (radians, seeded from
+`DEFAULT_FOV_Y_RAD`), `setFovYRad`, `selectFovYRad`; the slider, the takeover pin and site shots write
+`setFovYRad`; `SceneSnapshot.fovYRad` is captured and restored; `settings.camera` and its type, slice and
 selector are deleted; `CORE_SNAPSHOT_CLUSTERS` drops `'camera'`. `stepCameraRuntime` reads
-`stored.camera.lens`. Paths moved since (`cameraFraming` is under `framing/`). Behaviour-preserving;
+`stored.camera.fovYRad`. Paths moved since (`cameraFraming` is under `framing/`). Behaviour-preserving;
 the ported tests (`stepCameraRuntime`, `captureScene`, `restoreSceneSaga`, `withSceneSnapshotSaga`)
 are its guard.
 
 **P2. Clips drive the lens.** Port `48f1a3341` (R8): a log-space `'fov'` channel evaluated against
-the clip's start lens, `DriverOutput.lens` drawn by the runtime and committed with `setLens` on
+the clip's start lens, `DriverOutput.fovYRad` drawn by the runtime and committed with `setFovYRad` on
 hand-off; a clip without an `fov` track leaves the lens alone. Its tests come with it.
 
 ## 4. Trunk: look and lens (both exits build on it)
@@ -102,14 +103,14 @@ hand-off; a clip without an `fov` track leaves the lens alone. Its tests come wi
 ### 4.2 Wheel
 
 - `f = spentZoomFactor(input.factor)`; `f > 1` widens. The lens is `ctx.fovYRad`; the step returns
-  `lens: clamp(lens · f, LENS_MIN, LENS_MAX)` and the pose by reference.
-- A notch the clamp eats whole returns no `lens` (declined).
+  `fovYRad: clamp(lens · f, LENS_MIN, LENS_MAX)` and the pose by reference.
+- A notch the clamp eats whole returns no `fovYRad` (declined).
 - Wheel-out at `LENS_MAX` is the exit's (§5, §6).
 
 ### 4.3 The loop writes the lens
 
-`replayInput.stepRow` emits `setLens(lens)` whenever a step returns one, and every later step in the
-same drain reads `fovYRad` from the folded `camera.lens`, so two notches in one frame compound.
+`replayInput.stepRow` emits `setFovYRad(fovYRad)` whenever a step returns one, and every later step in the
+same drain reads `fovYRad` from the folded `camera.fovYRad`, so two notches in one frame compound.
 `nudgeCameraArm` passes `lens` through and `stepCameraRuntime` emits it the same way. The settings
 slider takes its range from `LENS_MIN_DEG`/`LENS_MAX_DEG` (R9). The frustum is
 not re-derived mid-drain: only the sky arm writes the lens and it reads no frustum.

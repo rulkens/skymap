@@ -24,7 +24,7 @@ import { captureSettings } from '../../../src/state/scene/captureSettings';
 import { makeSettingsFixture } from '../settings/makeSettingsFixture';
 
 const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
-const CAPTURED_LENS = 0.4;
+const CAPTURED_FOV_Y_RAD = 0.4;
 
 /**
  * A minimal state carrying the full settings fixture plus a
@@ -35,7 +35,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
   return {
     settings: { ...makeSettingsFixture(), orientation: 'galactic' },
     selection: { hover: null, select: null, focus },
-    camera: { lens: CAPTURED_LENS },
+    camera: { fovYRad: CAPTURED_FOV_Y_RAD },
     time: {
       mode: 'manual',
       anchor: { simDays: 2460000, realMs: 1000 },
@@ -57,7 +57,7 @@ describe('captureScene', () => {
 
     // Orientation and the lens ride as siblings of settings.
     expect(snap.orientation).toBe('galactic');
-    expect(snap.lens).toBe(CAPTURED_LENS);
+    expect(snap.fovYRad).toBe(CAPTURED_FOV_Y_RAD);
 
     // Focus half carries the captured ref.
     expect(snap.focus).toEqual(FOCUS_REF);

@@ -2,7 +2,7 @@
  * The sky arm's row (spec §4): a person standing SKY_EYE_HEIGHT_M above the
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
  * enters it (`engage` is null). Every drag looks and the wheel changes the
- * lens, which the arm hands back as `lens` beside an unmoved pose.
+ * lens, which the arm hands back as `fovYRad` beside an unmoved pose.
  */
 
 import type { ClimbRow } from '../@types/ClimbRow';
@@ -52,11 +52,11 @@ export const skyCameraArm: ClimbRow<'sky'> = {
       return { pose, memory, tilt };
     }
     if (input.kind === 'zoom') {
-      const lens = skyZoomedLens(ctx.fovYRad, input.factor);
+      const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);
       // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
-      return lens === ctx.fovYRad
+      return fovYRad === ctx.fovYRad
         ? { pose: framed.pose, memory, tilt }
-        : { pose: framed.pose, memory, tilt, lens };
+        : { pose: framed.pose, memory, tilt, fovYRad };
     }
     return { pose: framed.pose, memory, tilt };
   },
@@ -72,8 +72,8 @@ export const skyCameraArm: ClimbRow<'sky'> = {
             ctx.fovYRad,
             ctx.viewportPx[1],
           );
-    const lens = zoom === undefined ? ctx.fovYRad : skyZoomedLens(ctx.fovYRad, Math.exp(zoom));
-    return lens === ctx.fovYRad ? { pose, tilt } : { pose, tilt, lens };
+    const fovYRad = zoom === undefined ? ctx.fovYRad : skyZoomedLens(ctx.fovYRad, Math.exp(zoom));
+    return fovYRad === ctx.fovYRad ? { pose, tilt } : { pose, tilt, fovYRad };
   },
 
   toParent(framed, ctx) {

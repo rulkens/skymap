@@ -36,12 +36,12 @@ Pure functions throughout: each new helper is one function per file under
       against current main. Drop its `docs/BACKLOG.md` hunk if the line it removes is gone; keep it
       (with its detail file) if present.
 - [ ] Contract after the port: `CameraState.lens: number` (radians, initial `DEFAULT_FOV_Y_RAD`),
-      `setLens(rad)`, `selectLens`, `SceneSnapshot.lens`, `CORE_SNAPSHOT_CLUSTERS = ['labels', 'picking']`,
-      `stepCameraRuntime` reads `stored.camera.lens`, `withSceneSnapshotSaga` puts
-      `setLens(DEFAULT_FOV_Y_RAD)`.
+      `setFovYRad(rad)`, `selectFovYRad`, `SceneSnapshot.fovYRad`, `CORE_SNAPSHOT_CLUSTERS = ['labels', 'picking']`,
+      `stepCameraRuntime` reads `stored.camera.fovYRad`, `withSceneSnapshotSaga` puts
+      `setFovYRad(DEFAULT_FOV_Y_RAD)`.
 - [ ] `grep -rn "fovDeg\|setFovDeg\|selectFovDeg\|CameraSettings\b" src tools packages/website/src`
       leaves only the unrelated DSS/Aladin/capture `fovDeg` and the site-shot `settings.fovDeg` field
-      (now mapped through `setLens(degToRad(…))`).
+      (now mapped through `setFovYRad(degToRad(…))`).
 - [ ] No new tests: the ported ones guard it.
 - [ ] Commit `refactor(camera): the field of view moves from settings into camera state`, push, open
       PR 1.
@@ -53,8 +53,8 @@ Pure functions throughout: each new helper is one function per file under
 **Files:** the 17 of `git show 48f1a3341 --stat`, at current paths
 
 - [ ] `git cherry-pick 48f1a3341`, resolve. Contract: `Channel` gains `'fov'` (log-space lerp),
-      `DriverOutput.lens?: number`, the projection draws a driver's lens over `camera.lens`, the clip's
-      last lens is committed with `setLens` on hand-off.
+      `DriverOutput.fovYRad?: number`, the projection draws a driver's lens over `camera.fovYRad`, the clip's
+      last lens is committed with `setFovYRad` on hand-off.
 - [ ] Its tests come with it.
 - [ ] Commit.
 
@@ -76,20 +76,20 @@ The trunk branch is rebased onto `sky-lens-prep` before Task 2.
 **Contract:**
 
 ```ts
-step(…): { readonly pose: PoseOf[K]; readonly memory: MemOf[K]; readonly tilt: TiltMemory; readonly lens?: number };
-nudge(…): { readonly pose: PoseOf[K]; readonly tilt: TiltMemory; readonly lens?: number };
+step(…): { readonly pose: PoseOf[K]; readonly memory: MemOf[K]; readonly tilt: TiltMemory; readonly fovYRad?: number };
+nudge(…): { readonly pose: PoseOf[K]; readonly tilt: TiltMemory; readonly fovYRad?: number };
 export const LENS_MIN_DEG = 0.5;
 export const LENS_MAX_DEG = 120;
 ```
 
-- [ ] `replayInput.stepRow` (`replayInput.ts:102-111`): when the step returns `lens`, `emit(setLens(lens))`;
-      every step reads `fovYRad` from the folded `camera.lens` (`{ ...ctx, fovYRad: camera.lens }`),
+- [ ] `replayInput.stepRow` (`replayInput.ts:102-111`): when the step returns `fovYRad`, `emit(setFovYRad(fovYRad))`;
+      every step reads `fovYRad` from the folded `camera.fovYRad` (`{ ...ctx, fovYRad: camera.fovYRad }`),
       not the drain-start `ctx`.
 - [ ] `nudgeCameraArm` returns `lens` when the row does; `stepCameraRuntime` (`:198-202`) appends
-      `setLens` to its actions when present.
+      `setFovYRad` to its actions when present.
 - [ ] Test `two lens notches in one drain compound`: a stub row (or the sky row once Task 3 lands —
       order the dispatch so the test uses the sky row) at a sky base, two at-rest zoom steps of
-      factor 1.25 → the emitted `setLens` actions read `lens·1.25` then `lens·1.5625`.
+      factor 1.25 → the emitted `setFovYRad` actions read `lens·1.25` then `lens·1.5625`.
 - [ ] Commit.
 
 ### Task 3: Sky trunk cells — look, lens, nudge
@@ -110,7 +110,7 @@ export function skyZoomedLens(lensRad: number, factor: number): number;
 ```
 
 - [ ] `step`: drag (`orbit`, `pan`) → `skyLookedPose(…, endPx − startPx, …)`; zoom →
-      `lens: skyZoomedLens(ctx.fovYRad, factor)` with the pose by reference, no `lens` when unchanged;
+      `fovYRad: skyZoomedLens(ctx.fovYRad, factor)` with the pose by reference, no `fovYRad` when unchanged;
       edges by reference. Header comment loses "this slice authors no input".
 - [ ] `nudge`: `look` → `skyLookedPose` at `pxPerRad = viewportPx[1] / fovYRad`; `zoom` →
       `skyZoomedLens(…, Math.exp(zoom))`; `orbit`/`roll` ignored; nothing to do → pose by reference.
@@ -216,7 +216,7 @@ export function skyClimbStep(pose: SkyPose, lensRad: number, factor: number, rel
 **Files:** `src/@types/camera/*/CameraTweenDescriptor.d.ts`,
 `src/services/engine/camera/clips/focusMoveClip.ts`, its test
 
-- [ ] `CameraTweenDescriptor.lens?: { readonly from: number; readonly to: number }` (radians);
+- [ ] `CameraTweenDescriptor.fovYRad?: { readonly from: number; readonly to: number }` (radians);
       `focusMoveClip` adds an `fov` tween track over the move's duration and ease when present.
 - [ ] Test `a tween with a lens draws it from → to and commits to on hand-off`.
 - [ ] Commit.
@@ -268,7 +268,7 @@ export function skyExitTween(framed: FramedPose<'sky'>, ctx: CameraArmCtx): Came
 
 ## Definition of Done
 
-- **Deliverables:** `camera.lens` + `setLens` (PR 1); `CameraArmRow` step/nudge `lens?`;
+- **Deliverables:** `camera.fovYRad` + `setFovYRad` (PR 1); `CameraArmRow` step/nudge `fovYRad?`;
   `LENS_MIN_DEG`/`LENS_MAX_DEG`; sky `step`/`nudge` filled; the winner's exit
   (A: `SkyPose.eyeHeightM`, `skyClimbStep`, release at the floor; B: `SkyExitPush`, `ctx.nowMs`,
   step `tween`, the `fov` channel, tween lens); `docs/backlog/2026-11-06-sky-mode-rest.md`.

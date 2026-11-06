@@ -54,6 +54,7 @@ export const CHANNEL_SPACE: Record<Channel, Space> = {
   pitch: 'add',
   roll: 'add',
   target: 'lin',
+  fov: 'log',
 };
 
 /**

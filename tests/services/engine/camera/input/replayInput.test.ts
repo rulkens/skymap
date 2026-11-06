@@ -19,7 +19,7 @@ import {
   clipStarted,
   commitCameraPose,
   setAutoRotate,
-  setLens,
+  setFovYRad,
 } from '../../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../../src/state/selectionRows/selectionRowsSlice';
 import { pivotFraming } from '../../../../../src/services/engine/camera/framing/pivotRadiusMpc';
@@ -297,7 +297,7 @@ describe('replayInput', () => {
       pose: { azimuthRad: 1, altitudeRad: 0.3 },
     };
     store.dispatch(commitCameraPose(sky));
-    const lens = store.getState().camera.lens;
+    const lens = store.getState().camera.fovYRad;
 
     const next = replayInput(
       { register: sky, gesture: null, tilt: EMPTY_TILT_MEMORY, follow: null },
@@ -306,7 +306,7 @@ describe('replayInput', () => {
     );
 
     expect(next.actions).toHaveLength(2);
-    const lenses = next.actions.map((a) => (setLens.match(a) ? a.payload : null));
+    const lenses = next.actions.map((a) => (setFovYRad.match(a) ? a.payload : null));
     expect(lenses[0]).toBeCloseTo(lens * 1.25, 12);
     expect(lenses[1]).toBeCloseTo(lens * 1.5625, 12);
     expect(next.register.pose).toBe(sky.pose);

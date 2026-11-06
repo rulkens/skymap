@@ -13,7 +13,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { withSceneSnapshotSaga } from '../../../src/state/takeover/withSceneSnapshotSaga';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
-import { setLens } from '../../../src/state/camera/cameraSlice';
+import { setFovYRad } from '../../../src/state/camera/cameraSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { DEFAULT_FOV_Y_RAD } from '../../../src/services/engine/camera/framing/cameraFraming';
@@ -40,17 +40,17 @@ describe('withSceneSnapshotSaga', () => {
   it('pins the lens to the default and gives the viewer theirs back on exit', async () => {
     const { store, sagaMiddleware } = buildStore();
     const narrowed = DEFAULT_FOV_Y_RAD / 3;
-    store.dispatch(setLens(narrowed));
+    store.dispatch(setFovYRad(narrowed));
 
     sagaMiddleware.run(function* () {
       yield* withSceneSnapshotSaga(waitingBody);
     });
     await flush();
-    expect(store.getState().camera.lens).toBe(DEFAULT_FOV_Y_RAD);
+    expect(store.getState().camera.fovYRad).toBe(DEFAULT_FOV_Y_RAD);
 
     store.dispatch(exitTakeover());
     await flush();
-    expect(store.getState().camera.lens).toBe(narrowed);
+    expect(store.getState().camera.fovYRad).toBe(narrowed);
   });
 
   it("restores the body's settings changes on exit", async () => {

@@ -60,8 +60,8 @@ import type { TimeState } from '../../time/TimeState';
 export type SceneSnapshot = Readonly<{
   settings: SettingsSnapshot;
   orientation: OrientationFrameId;
-  /** The viewer's lens, radians: camera state, so not inside `settings`. */
-  lens: number;
+  /** The viewer's lens: camera state, so not inside `settings`. */
+  fovYRad: number;
   focus: SelectionRef | null;
   time: TimeState;
 }>;

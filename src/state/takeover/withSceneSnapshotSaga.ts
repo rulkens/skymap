@@ -9,7 +9,7 @@ import { call, put, select } from 'typed-redux-saga';
 
 import { captureScene } from '../scene/captureScene';
 import { restoreSceneSaga } from '../scene/restoreSceneSaga';
-import { setLens } from '../camera/cameraSlice';
+import { setFovYRad } from '../camera/cameraSlice';
 import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFraming';
 
 export function* withSceneSnapshotSaga(
@@ -36,7 +36,7 @@ export function* withSceneSnapshotSaga(
   // Observable Universe shell overflows the frame below ~59°, barely under the
   // 60° default. So the lens is takeover-owned, not viewer-owned, and the
   // snapshot above carries the viewer's lens back out on exit.
-  yield* put(setLens(DEFAULT_FOV_Y_RAD));
+  yield* put(setFovYRad(DEFAULT_FOV_Y_RAD));
 
   try {
     yield* body();

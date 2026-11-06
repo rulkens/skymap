@@ -246,11 +246,12 @@ describe('the sky arm', () => {
     const start = framed(AZ, 0.3);
     const wider = ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(1.25), withLens(degToRad(60)));
     expect(wider.pose).toBe(start.pose);
-    expect(wider.lens).toBeCloseTo(degToRad(75), 12);
+    expect(wider.fovYRad).toBeCloseTo(degToRad(75), 12);
     const settle = (factor: number): number => {
       let lens = degToRad(60);
       for (let i = 0; i < 40; i++) {
-        lens = ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(factor), withLens(lens)).lens ?? lens;
+        lens =
+          ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(factor), withLens(lens)).fovYRad ?? lens;
       }
       return lens;
     };
@@ -268,10 +269,10 @@ describe('the sky arm', () => {
       withLens(degToRad(LENS_MAX_DEG)),
     );
     expect(out.pose).toBe(start.pose);
-    expect(out.lens).toBeUndefined();
+    expect(out.fovYRad).toBeUndefined();
     const edge = ROW.step(null, EMPTY_TILT_MEMORY, start, { kind: 'gestureEnd' }, withLens(1));
     expect(edge.pose).toBe(start.pose);
-    expect(edge.lens).toBeUndefined();
+    expect(edge.fovYRad).toBeUndefined();
   });
 
   it("nudge look and zoom move the view and the lens at the drag's rate", () => {
@@ -289,11 +290,11 @@ describe('the sky arm', () => {
     );
     expect(nudged.pose.azimuthRad).toBeCloseTo(dragged.pose.azimuthRad, 12);
     expect(nudged.pose.altitudeRad).toBeCloseTo(dragged.pose.altitudeRad, 12);
-    expect(nudged.lens).toBeCloseTo(degToRad(75), 12);
+    expect(nudged.fovYRad).toBeCloseTo(degToRad(75), 12);
     // The sky arm has no orbit and no roll: those axes leave everything by reference.
     const ignored = ROW.nudge(EMPTY_TILT_MEMORY, start, { orbit: [0.1, 0.1], roll: 0.2 }, ctx);
     expect(ignored.pose).toBe(start.pose);
-    expect(ignored.lens).toBeUndefined();
+    expect(ignored.fovYRad).toBeUndefined();
   });
 
   it('release is true once the focus leaves the host', () => {
