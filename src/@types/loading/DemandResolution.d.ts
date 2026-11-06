@@ -11,8 +11,10 @@ export type DemandResolution = {
   /** The label entry whose `of` is the shown address, when `labelsCount` is set. */
   readonly label: LabelEntry | undefined;
   readonly labelItems: readonly (string | undefined)[];
-  /** `near`'s band, and its edge in Mpc (`out[1]` or `in[0]`). */
+  /** `near`'s band; undefined when the band's `items` leave out one of `items`. */
   readonly band: EntryBand | undefined;
-  readonly edgeMpc: number;
+  /** The gated edges in Mpc: `in[0]` (0 when ungated) and `out[1]` (Infinity when ungated). */
+  readonly inMpc: number;
+  readonly outMpc: number;
   readonly selects: readonly SelectionRefBase['type'][] | undefined;
 };

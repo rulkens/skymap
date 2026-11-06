@@ -54,19 +54,30 @@ export function resolveAssetDemand(
   if (near !== undefined && band === undefined) {
     throw new Error(`'${address}' has no band '${near.band}'`);
   }
-  const edge =
-    near === undefined ? undefined : near.edge === 'out' ? band?.out?.[1] : band?.in?.[0];
-  if (near !== undefined && edge === undefined) {
-    throw new Error(`band '${near.band}' of '${address}' has no \`${near.edge}\` edge`);
+  const wantsIn = near !== undefined && near.edge !== 'out';
+  const wantsOut = near !== undefined && near.edge !== 'in';
+  const inEdge = band?.in?.[0];
+  const outEdge = band?.out?.[1];
+  if (wantsIn && inEdge === undefined) {
+    throw new Error(`band '${near!.band}' of '${address}' has no \`in\` edge`);
   }
+  if (wantsOut && outEdge === undefined) {
+    throw new Error(`band '${near!.band}' of '${address}' has no \`out\` edge`);
+  }
+  // Like the fade (`bandValueOf`), a band gates only the items it lists: one exempt item draws
+  // the asset outside the band, so the row loads as if it had no `near`.
+  const applies =
+    band?.items === undefined ||
+    items.every((item) => item !== undefined && band.items!.includes(item));
 
   return {
     entry,
     items,
     label,
     labelItems: label?.items === undefined ? OWN_SWITCH : items,
-    band,
-    edgeMpc: edge ?? 0,
+    band: applies ? band : undefined,
+    inMpc: applies && wantsIn ? (inEdge ?? 0) : 0,
+    outMpc: applies && wantsOut ? (outEdge ?? Infinity) : Infinity,
     selects: 'selects' in entry ? entry.selects : undefined,
   };
 }

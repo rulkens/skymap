@@ -52,11 +52,10 @@ export function evaluateAssetDemand(
   const tierOk = demand.tiers === undefined || demand.tiers.includes(ctx.tier);
   if (!tierOk || !isShown(ctx, r)) return { demand: false, release: true };
   const near = demand.near;
-  if (near === undefined) return { demand: true, release: false };
-  const d = bandDistanceMpc(r.band!, ctx.cameraPosMpc, deriveBodyStates(ctx.simDays));
-  const e = r.edgeMpc;
-  const nearLoad = near.edge === 'out' ? d <= e * near.lead : d >= e / near.lead;
-  const nearRelease = near.edge === 'out' ? d > e * near.release : d < e / near.release;
+  if (near === undefined || r.band === undefined) return { demand: true, release: false };
+  const d = bandDistanceMpc(r.band, ctx.cameraPosMpc, deriveBodyStates(ctx.simDays));
+  const nearLoad = d >= r.inMpc / near.lead && d <= r.outMpc * near.lead;
+  const nearRelease = d < r.inMpc / near.release || d > r.outMpc * near.release;
   const lifted = isLifted(ctx, demand, r);
   return { demand: nearLoad || lifted, release: !lifted && nearRelease };
 }

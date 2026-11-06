@@ -23,12 +23,18 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const at = (a: string) => a as VisibilityAddress;
 
 const ENTRIES: readonly VisibilityEntry[] = [
-  { key: 'bubble', bands: { shell: { out: [4, 10] }, hole: { in: [1, 2] } } },
+  {
+    key: 'bubble',
+    bands: { shell: { out: [4, 10] }, hole: { in: [1, 2] }, both: { in: [0.4, 1], out: [4, 10] } },
+  },
   {
     key: 'sats',
     items: ['a', 'b'],
     selects: ['satellite'],
-    bands: { nearEarth: { out: [1e-14, 2e-14], from: SCENE_EARTH.id } },
+    bands: {
+      nearEarth: { out: [1e-14, 2e-14], from: SCENE_EARTH.id },
+      onlyA: { out: [1, 2], items: ['a'] },
+    },
   },
   { label: 'sat', cluster: 'satLabels', of: 'sats', items: ['a', 'b'] },
 ];
@@ -104,6 +110,29 @@ describe('evaluateAssetDemand', () => {
     expect(run(hole, ctx(camX((e / 2) * 1.01)))).toEqual(LOAD);
     expect(run(hole, ctx(camX((e / 2) * 0.99)))).toEqual(HOLD);
     expect(run(hole, ctx(camX((e / 4) * 0.99)))).toEqual(RELEASE);
+  });
+
+  it('both edges: loads only between the two load limits', () => {
+    const both = row({ near: { band: 'both', edge: 'both', lead: 2, release: 4 } }, at('bubble'));
+    expect(run(both, ctx(camX(0.3)))).toEqual(LOAD);
+    expect(run(both, ctx(camX(19)))).toEqual(LOAD);
+    expect(run(both, ctx(camX(0.15)))).toEqual(HOLD);
+    expect(run(both, ctx(camX(21)))).toEqual(HOLD);
+  });
+
+  it('both edges: releases past either release limit', () => {
+    const both = row({ near: { band: 'both', edge: 'both', lead: 2, release: 4 } }, at('bubble'));
+    expect(run(both, ctx(camX(0.09)))).toEqual(RELEASE);
+    expect(run(both, ctx(camX(41)))).toEqual(RELEASE);
+    expect(run(both, ctx(camX(0.15))).release).toBe(false);
+    expect(run(both, ctx(camX(30))).release).toBe(false);
+  });
+
+  it("a band whose items exclude the row's item does not gate it", () => {
+    const near = { band: 'onlyA', edge: 'out', lead: 1.5, release: 2.5 } as const;
+    const far = ctx(camX(100));
+    expect(run(row({ shown: { address: at('sats'), items: ['b'] }, near }), far)).toEqual(LOAD);
+    expect(run(row({ shown: { address: at('sats'), items: ['a'] }, near }), far)).toEqual(RELEASE);
   });
 
   it("a from-body band measures from the body's live position", () => {

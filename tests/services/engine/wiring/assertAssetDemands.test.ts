@@ -60,6 +60,12 @@ describe('assertAssetDemands', () => {
     ).toThrow(/'row1'.*`in` edge/);
   });
 
+  it("throws on 'both' over a one-sided band", () => {
+    expect(
+      check({ near: { band: 'shell', edge: 'both', lead: 2, release: 4 } }, at('bubble')),
+    ).toThrow(/'row1'.*`in` edge/);
+  });
+
   it('throws on a lead below 1', () => {
     expect(
       check({ near: { band: 'shell', edge: 'out', lead: 0.5, release: 4 } }, at('bubble')),
