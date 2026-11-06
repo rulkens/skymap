@@ -29,7 +29,7 @@ export function cosmicWebDensityAssetRows(
         entry.tiered
           ? { binBaseName: entry.binBaseName, tier }
           : { binBaseName: entry.binBaseName },
-      demand: {},
+      demand: { near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 } },
       priority: PRIORITY[entry.id],
       gates: { address: 'cosmicWebDensity', item: entry.id },
     }),

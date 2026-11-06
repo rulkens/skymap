@@ -24,6 +24,7 @@ export function structureAssetRows(
       demand: {
         shown: { address: 'structureRing', items: BULK_CATALOG_CATEGORIES },
         labelsCount: true,
+        near: { band: 'cosmic', edge: 'in', lead: 10, release: 100 },
       },
       priority: 30, // a small .ccat that draws across many rungs at once — high value per byte
     },
