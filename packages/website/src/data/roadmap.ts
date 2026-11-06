@@ -275,13 +275,6 @@ export const ROADMAP: readonly RoadmapGroup[] = [
         state: 'planned',
         spec: `${SPECS}/2026-09-19-desktop-offline-app-design.md`,
       },
-      {
-        id: 'fetch-by-scale',
-        title: 'A lighter start',
-        text: 'A catalogue fetched only once the camera is far enough out to see it: about 68 MB of the 102 MB fetched at the start today, at the medium data size.',
-        state: 'planned',
-        backlog: 'Scale-gated asset demand',
-      },
     ],
   },
 ];
