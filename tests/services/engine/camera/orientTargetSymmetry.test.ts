@@ -22,7 +22,7 @@ import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
-import { rotateVec3ByTightMat3T } from '../../../../src/utils/math/rotateVec3ByTightMat3T';
+import { rotateByTranspose } from '../../../../src/utils/math/rotateByTranspose';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
@@ -84,8 +84,8 @@ describe.each(['log', 'lin'] as const)(
         // The engaged settle's reference north at the SAME standpoint/altitude,
         // built in body axes and rotated back to world.
         const luWorld = normalize3([-forward[0]!, -forward[1]!, -forward[2]!] as Vec3);
-        const luBody = rotateVec3ByTightMat3T(luWorld, EARTH.orientation);
-        const sceneUpBody = rotateVec3ByTightMat3T(UP_REF, EARTH.orientation);
+        const luBody = rotateByTranspose(EARTH.orientation, luWorld);
+        const sceneUpBody = rotateByTranspose(EARTH.orientation, UP_REF);
         const { north } = blendedEnuAt(luBody, bodyUpWeight(hr, tuning), sceneUpBody, null);
         const engagedUp = rotateVec3ByTightMat3(north, EARTH.orientation);
 
