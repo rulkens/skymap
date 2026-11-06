@@ -27,6 +27,8 @@ export type DemandCtx = {
   cameraPosMpc: Readonly<Vec3>;
   /** Julian days. */
   simDays: number;
+  /** The last frame's largest drawing-view px/rad (`FrameOutputs.drawPxPerRad`); 0 before it. */
+  drawPxPerRad: number;
   /** The live tier (`state.tier`): a tier that ships no file never demands it. */
   tier: Tier;
   /** Kinds in the select and focus slots; hover never counts, so a sweep loads nothing. */

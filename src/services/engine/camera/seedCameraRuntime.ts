@@ -54,6 +54,7 @@ export function seedCameraRuntime(args: {
       upBasis: [...ORIENTATION_FRAMES[settings.orientation]],
       projection: args.projection,
       frustum: symmetricFrustum(args.projection.fovYRad, args.projection.aspect),
+      drawPxPerRad: 0,
     },
   };
 }

@@ -2,7 +2,8 @@
  * CameraRuntime — the camera's live half: everything that depends on wall-clock
  * time or on the sequence of produced poses, which is why it is not in the
  * timeless Redux `camera` slice. `seedCameraRuntime` is the only constructor,
- * `runFrame` the only writer (once per frame, through `stepCameraRuntime`).
+ * `runFrame` the only writer (once per frame, through `stepCameraRuntime`, plus
+ * `outputs.drawPxPerRad` in place once the views derive).
  */
 
 import type { CameraEpochs } from '../camera/CameraEpochs';

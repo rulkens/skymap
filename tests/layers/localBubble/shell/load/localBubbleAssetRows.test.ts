@@ -28,6 +28,7 @@ function makeCtx(enabled: boolean, distanceMpc: number): DemandCtx {
     slotState: () => 'idle',
     cameraPosMpc: [distanceMpc, 0, 0],
     simDays: CONST_J2000,
+    drawPxPerRad: 0,
     tier: 'medium',
     selectedKinds: new Set(),
   };

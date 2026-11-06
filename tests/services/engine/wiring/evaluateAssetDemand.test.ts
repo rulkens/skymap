@@ -55,6 +55,7 @@ function ctx(
     slotState: () => 'idle',
     cameraPosMpc: [0, 0, 0],
     simDays: CONST_J2000,
+    drawPxPerRad: 0,
     tier: 'medium',
     selectedKinds: new Set(),
     ...over,

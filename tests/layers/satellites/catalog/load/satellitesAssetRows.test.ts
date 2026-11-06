@@ -56,6 +56,7 @@ function verdict(
     slotState: () => 'idle',
     cameraPosMpc,
     simDays: SIM_DAYS,
+    drawPxPerRad: 0,
     tier: 'medium',
     selectedKinds: new Set(selected ? ['satellite'] : []),
   };
