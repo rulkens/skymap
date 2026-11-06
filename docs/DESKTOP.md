@@ -48,7 +48,7 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
 | Sky               | `main/windows/openSkyWindow.ts`, `main/sky/loadSkyPage.ts` | Black, fills one display; after Escape a window with no title bar, moved by its top edge. Loads `https://localhost:47823/?remote` (kiosk) or `/?dome&remote` (dome) from the app's own server. Hosts the relay room.                                  |
 | Control           | `main/windows/openControlWindow.ts`, `src/control/` | 960 x 760 React page from `file://`, sandboxed, talks to main only through the preload bridge. Close hides it.                                                                                   |
 | Test grid         | `main/sky/showTestGrid.ts`, `assets/test-grid.html` | Not a window: a child view laid over the sky window (dome grid with FRONT at the bottom; on a kiosk a frame, 10% grid, circle and centre cross with the display number and pixel size). `createSkyWindows` holds it; its on/off state is in `ControlState`, so the menu tick and the page agree, and a mode change drops it in main. |
-| About             | `main/windows/openAboutWindow.ts`           | 560 x 500 child of the control window, loading `?view=about` from the same page and preload. One branded window on both platforms.                                                               |
+| About             | `main/windows/openAboutWindow.ts`           | 600 x 660 child of the control window, loading `?view=about` from the same page and preload. One branded window on both platforms.                                                               |
 | Sky curtain       | `main/sky/addOverlay.ts`, `assets/sky-curtain.html` | A black child view (after 0.6 s a slowly turning starfield, "Loading the universe" in the Splash's type and a rotating joke line) that fades in over every sky load and out once `window.__skymap.ready` resolves, or after 10 s.                                                                           |
 
 - The control page is shown only when a person is needed: first run, no complete data, a stored
@@ -64,7 +64,7 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
   any window but the control window is refused with a rejection (the About window may only call
   `getState`). Growing the bridge is a contract change.
 - **Status kinds** (`ControlStatus`): `idle`, `syncing`, `complete` (the last sync's data is
-  loaded or loading), `ready` (new data waits for Restart sky), `offline`, `failed`, `diskFull`.
+  loaded or loading), `ready` (new data waits for Restart sky), `offline`, `failed`, `diskFull`, `paused`.
   Whether data is on disk is `ControlState.hasData`, not part of the status. The page reads each
   kind's words from one table, `control/sync/data/statusView.ts`.
 - **Settings** live in `<userData>/settings.json` through electron-store (`main/settings/openSettings.ts`,
@@ -185,7 +185,7 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   it; everything else goes back to Chromium's verdict. `setPermissionRequestHandler` refuses every
   browser permission.
 - **Tablet setup page.** `main/server/startTabletSetupServer.ts`: plain HTTP on `0.0.0.0:47824`
-  (`data/tabletSetupPort.ts`) serving only `assets/tablet-setup.html` at `/` and the CA at `/ca.crt`,
+  (`data/tabletSetupPort.ts`) serving only `assets/tablet-setup.html` at `/`, its `/guide/*.webp` screenshots and the CA at `/ca.crt`,
   so a tablet meets no warning before it trusts the CA. The pairing QR opens it with the room code
   after `#`, which never goes over the wire. The page shows the steps for its OS, checks trust by a
   `no-cors` fetch of the HTTPS server's `/ca.crt` every 2 s (it only succeeds once the CA is trusted),
@@ -206,7 +206,7 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 - **`onSky: false`.** `pairingOnSky: false` keeps the pairing QR off the sky; the control page
   draws it from `RelayHandle.onRoom`.
 - **Rotation.** `main/relay/rotateRoomCode.ts` stores the new code, then calls `relay.rotate`, which
-  closes the old room's remotes with 4001. Clicks are queued (`main/lifecycle/utils/serially.ts`).
+  closes the old room's remotes with 4001.
 - **Network picker.** `setup.network` names an interface; `main/lan/utils/lanOriginFor.ts` builds the QR
   origin from it, else the first interface. `main/lan/utils/listLanInterfaces.ts` lists them. The
   room is in `ControlState` from launch, so the QR works during the first download.

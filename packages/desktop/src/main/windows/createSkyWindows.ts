@@ -22,8 +22,17 @@ import { showTestGrid } from '../sky/showTestGrid';
  * out of full screen stays a window until put back: display changes leave it where it is.
  */
 export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
-  const { control, windowed, mayClose, setup, onClosed, onFullScreen, left, remember, showControl } =
-    deps;
+  const {
+    control,
+    windowed,
+    mayClose,
+    setup,
+    onClosed,
+    onFullScreen,
+    left,
+    remember,
+    showControl,
+  } = deps;
   let sky: BrowserWindow | null = null;
   // A launch, and a sky reopened after a crash, come back as the sky was left (owner ruling).
   let full = !windowed && left.full;
@@ -113,9 +122,9 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     return (sky = win);
   };
 
-  const setFullScreen = (on: boolean): boolean => {
+  const setFullScreen = (on: boolean): void => {
     const win = current();
-    if (windowed || win === null || on === full) return full;
+    if (windowed || win === null || on === full) return;
     full = on;
     showWindowButtons(win, !on);
     tellSky(win);
@@ -128,7 +137,6 @@ export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
     place();
     onFullScreen(full);
     save();
-    return full;
   };
 
   const setTestGrid = (on: boolean): boolean => {

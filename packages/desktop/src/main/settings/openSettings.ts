@@ -11,6 +11,5 @@ export function openSettings(userData: string): Settings {
   return {
     get: (key) => store.get(key),
     set: (key, value) => store.set(key, value),
-    has: (key) => store.has(key),
   };
 }

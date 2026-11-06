@@ -2,7 +2,7 @@ import type { DataUpdates } from './DataUpdates';
 import type { DisplayInfo } from './DisplayInfo';
 import type { InstallMode } from './InstallMode';
 
-/** `<userData>/setup.json`. */
+/** The `setup` key of `<userData>/settings.json`. */
 export type InstallSetup = {
   mode: InstallMode;
   /** null → the primary display. */

@@ -6,7 +6,7 @@ import type { SkyWindowState } from './SkyWindowState';
 export type SkyWindowsDeps = {
   control: BrowserWindow;
   windowed: boolean;
-  /** True once the app is quitting; until then the sky window refuses to close. */
+  /** True once the app is quitting; until then a full-screen sky refuses to close. */
   mayClose: () => boolean;
   setup: () => InstallSetup;
   onClosed: () => void;

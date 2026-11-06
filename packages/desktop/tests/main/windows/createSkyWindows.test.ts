@@ -114,10 +114,10 @@ describe('createSkyWindows', () => {
       display: { id: 7, width: 4096, height: 1000 },
     });
     const win = windows.open();
-    expect(windows.setFullScreen(false)).toBe(false);
+    windows.setFullScreen(false);
     expect(setFullScreen).toHaveBeenLastCalledWith(win, false);
     expect(onFullScreen).toHaveBeenLastCalledWith(false);
-    // The preload shows the drag strip only on main's word (its resize heuristic missed this).
+    // The preload shows the drag strip only on main's word.
     expect(win.webContents.send).toHaveBeenLastCalledWith('sky:windowed', true);
 
     fake.displays = [projector, laptop];
@@ -125,7 +125,7 @@ describe('createSkyWindows', () => {
     expect(fillDisplay).not.toHaveBeenCalled();
     expect(control.setAlwaysOnTop).toHaveBeenLastCalledWith(false, 'screen-saver');
 
-    expect(windows.setFullScreen(true)).toBe(true);
+    windows.setFullScreen(true);
     expect(fillDisplay).toHaveBeenLastCalledWith(win, projector.bounds);
     expect(onFullScreen).toHaveBeenLastCalledWith(true);
     expect(win.webContents.send).toHaveBeenLastCalledWith('sky:windowed', false);

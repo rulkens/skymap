@@ -8,5 +8,4 @@ import type { SettingsKey } from './SettingsKey';
 export type Settings = {
   get: (key: SettingsKey) => unknown;
   set: (key: SettingsKey, value: unknown) => void;
-  has: (key: SettingsKey) => boolean;
 };

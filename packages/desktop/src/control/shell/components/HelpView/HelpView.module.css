@@ -1,5 +1,12 @@
+/* One column under the header. */
 .root {
-  composes: overlay from '../../../controlChrome.module.css';
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--space-12);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-12) calc(var(--space-12) * 2);
   max-width: 46rem;
 }
 

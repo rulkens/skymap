@@ -25,7 +25,7 @@ export type ControlState = {
   placement: WindowPlacement | null;
   networks: LanInterface[];
   setup: InstallSetup;
-  /** True on the launch that found no setup.json, until the page first saves the setup. */
+  /** True on the launch that found no stored setup, until the page first saves the setup. */
   firstRun: boolean;
   about: AboutInfo;
   /** When the last sync attempt ended (epoch ms); null until one has. */

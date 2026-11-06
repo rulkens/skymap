@@ -12,13 +12,13 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 describe('writeFileAtomically', () => {
   it('lands one whole write of two in flight, owner-only, with no temp left', async () => {
-    const path = join(dir, 'remote-room.json');
+    const path = join(dir, 'settings.json');
     await Promise.all([
       writeFileAtomically(path, '"AAAAAAAA"'),
       writeFileAtomically(path, '"BBBBBBBB"'),
     ]);
     expect(['"AAAAAAAA"', '"BBBBBBBB"']).toContain(readFileSync(path, 'utf8'));
     expect(statSync(path).mode & 0o777).toBe(0o600);
-    expect(readdirSync(dir)).toEqual(['remote-room.json']);
+    expect(readdirSync(dir)).toEqual(['settings.json']);
   });
 });

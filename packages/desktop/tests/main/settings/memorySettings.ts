@@ -7,7 +7,6 @@ export function memorySettings(initial: Partial<Record<SettingsKey, unknown>> = 
   const settings: Settings = {
     get: (key) => values.get(key),
     set: (key, value) => void values.set(key, value),
-    has: (key) => values.has(key),
   };
   return { settings, values };
 }

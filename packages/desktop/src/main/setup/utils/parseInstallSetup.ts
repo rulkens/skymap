@@ -25,7 +25,7 @@ function parseDataUpdates(value: unknown): InstallSetup['dataUpdates'] {
   return DEFAULT_INSTALL_SETUP.dataUpdates;
 }
 
-/** Whatever setup.json held (or didn't), field by field: a bad field costs only itself. */
+/** Whatever the settings file's `setup` key held (or didn't), field by field: a bad field costs only itself. */
 export function parseInstallSetup(raw: unknown): InstallSetup {
   const file = isRecord(raw) ? raw : {};
   return {

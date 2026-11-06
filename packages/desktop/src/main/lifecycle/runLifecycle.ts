@@ -83,13 +83,12 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     userData,
   );
   const settings = openSettings(userData);
-  const firstRun = !settings.has('setup');
+  const firstRun = settings.get('setup') === undefined;
   let code = readRoomCode(settings);
   const secure = await startSecureServer(userData, dataRoot);
   await startTabletSetupServer(secure.caPem);
   // Syncs, prunes and sky loads one at a time: a prune never meets a download, two loads never overlap.
   const work = serially();
-  const rotations = serially();
   let about: BrowserWindow | null = null;
   let awake: number | null = null;
   // A sky Escape made a window belongs to the operator, so it carries the menu (installAppMenu).
@@ -249,13 +248,11 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     pauseSync,
     restartSky,
     showTestGrid: (shown) => setTestGrid(shown === true),
-    // Queued: a second click must rotate from the first one's new code, not the old one.
-    rotateCode: () =>
-      rotations(async () => {
-        code = rotateRoomCode(settings, relay, code);
-        // With no sky hosting, the relay announces nothing.
-        update({ room: { ...state.room, code } });
-      }),
+    rotateCode: () => {
+      code = rotateRoomCode(settings, relay, code);
+      // With no sky hosting, the relay announces nothing.
+      update({ room: { ...state.room, code } });
+    },
     hide: () => control.hide(),
     quit: () => app.quit(),
   };

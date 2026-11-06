@@ -1,5 +1,2 @@
-/**
- * About's facts from main: the app version, when this build was made (ISO), and when the local data
- * set was last completed (ISO).
- */
+/** About's facts from main; both times ISO. */
 export type AboutInfo = { version: string; builtAt: string; dataDate: string | null };

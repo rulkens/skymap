@@ -10,6 +10,6 @@ export type SkyWindows = {
   current: () => BrowserWindow | null;
   /** Lays or lifts the test grid; true when it now lies on the sky. */
   setTestGrid: (on: boolean) => boolean;
-  /** Fills the sky's display, or leaves it a movable window on it; true when it now fills it. */
-  setFullScreen: (on: boolean) => boolean;
+  /** Fills the sky's display, or leaves it a movable window on it. */
+  setFullScreen: (on: boolean) => void;
 };

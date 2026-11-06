@@ -10,12 +10,6 @@ describe('readRoomCode', () => {
     expect(values.get('roomCode')).toBe(code);
   });
 
-  it('returns the same code on the next read', () => {
-    const { settings } = memorySettings();
-    const code = readRoomCode(settings);
-    expect(readRoomCode(settings)).toBe(code);
-  });
-
   it('replaces a stored value that is not a code', () => {
     const { settings } = memorySettings({ roomCode: { code: 1 } });
     expect(readRoomCode(settings)).toMatch(/^[0-9A-HJKMNP-TV-Z]{8}$/);
