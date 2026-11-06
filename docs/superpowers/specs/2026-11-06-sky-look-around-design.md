@@ -197,7 +197,7 @@ Test names are the contract.
   - `the exit lift ends above the spot looking down at the default lens`
 - B, `stepCameraRuntime.test.ts` (`the sky exit lift`):
   - `keeps the horizon level the whole way, pitching down at a fixed azimuth first`
-  - `hands off 300 m above the spot looking straight down at the default lens`
+  - `hands off 100 m above the spot looking straight down at the default lens`
 - Prep P2: the ported `fov` channel tests (`evaluateClip`, `stepCameraRuntime`).
 
 ## 8. Eye checks

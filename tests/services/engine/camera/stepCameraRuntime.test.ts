@@ -1010,7 +1010,7 @@ describe('the sky exit lift', () => {
     for (const p of pitching) expect((p.pose as SkyPose).azimuthRad).toBeCloseTo(AZIMUTH, 9);
   });
 
-  it('hands off 300 m above the spot looking straight down at the default lens', () => {
+  it('hands off 100 m above the spot looking straight down at the default lens', () => {
     const { h } = lift();
     const camera = h.store.getState().camera;
 
