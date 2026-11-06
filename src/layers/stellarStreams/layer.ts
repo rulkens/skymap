@@ -1,7 +1,6 @@
 /**
- * The Stellar Streams Layer — PROTOTYPE: tidal debris of disrupted satellites
- * and globulars (galstreams tracks + a particle-spray Sagittarius), as additive
- * streak particles around the Milky Way.
+ * The Stellar Streams Layer: tidal debris of disrupted satellites and globulars (galstreams
+ * tracks and an N-body Sagittarius), as additive streak particles around the Milky Way.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -12,6 +11,7 @@ import { destroy } from './destroy';
 import { stellarStreamsPlanner } from './frame';
 import { stellarStreamsAssetRows } from './catalog/load/stellarStreamsAssetRows';
 import { stellarStreamsPass } from './streaks/passes/stellarStreamsPass';
+import StellarStreamsTuningSectionContainer from './streaks/ui/StellarStreamsTuningSectionContainer';
 
 export const stellarStreamsLayer = defineLayer({
   name: 'stellarStreams',
@@ -24,5 +24,6 @@ export const stellarStreamsLayer = defineLayer({
   assets: stellarStreamsAssetRows,
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'stellarStreams', label: 'Stellar streams' } },
+    { slot: 'debug', content: StellarStreamsTuningSectionContainer },
   ],
 });
