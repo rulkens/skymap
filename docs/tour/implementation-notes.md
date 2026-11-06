@@ -14,6 +14,14 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **A `{ body }` turn from the ground** (beat 01, `youAreHereEarth`): body
+  yaw/pitch are Y-up orbit angles in the host's fixed axes, not local
+  azimuth/altitude, so one tween across a big turn leaves the meridian and
+  rolls the horizon (~4° over 2.4 rad); step the turn along the meridian
+  (`meridianArm`) at one rate. A sky → body handover needs the view due north
+  under the celestial pole: the body arm levels screen-up on the pole, so above
+  it the image flips. The body arm turns about its target, so ease the turn to
+  rest at the handover or the eye lurches.
 - **`fade` cannot black out a frame** (beat 00, `parkOpening`): it moves a
   layer's `clipOpacity`, and the planet, a scene mesh and the sky have no
   visibility address; the channel also resets to 1 when the clip ends, so a

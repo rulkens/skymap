@@ -23,6 +23,7 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { setLabelsFocusedOnly } from '../../../../state/settings/core/labelsSlice';
 import { clockTo } from '../../../../state/tour/clockTo';
+import { OPENING_HIDDEN_LABELS } from './openingHiddenLabels';
 import { OPENING_HIDDEN_LAYERS } from './openingHiddenLayers';
 import { PARK_VIEW } from './parkView';
 import { SONDERMARKEN_SPOT } from './sondermarkenSpot';
@@ -56,6 +57,7 @@ export const parkOpening: ClipData = {
         'label:milkyWay', // named by the Milky Way beat
         'survey', // catalogs revealed one at a time on the way out
         ...OPENING_HIDDEN_LAYERS, // beat 01 shows them again
+        ...OPENING_HIDDEN_LABELS, // named by later beats
       ],
       0,
     ),

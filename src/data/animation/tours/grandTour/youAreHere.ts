@@ -23,6 +23,7 @@ import {
 import { focusId } from '../../../../utils/animation/focusId';
 import { GALACTIC_DISC_FORWARD } from '../../../../services/engine/camera/framing/cameraFraming';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
+import { OPENING_HIDDEN_LABELS } from './openingHiddenLabels';
 
 const MW = focusId('milkyWay');
 
@@ -33,6 +34,8 @@ export const youAreHere: ClipData = {
   start: 'live',
   timeline: [
     all([moveTargetId(MW, 0), dollyTo(FAR_OPEN_MPC, 0), aimAlong(GALACTIC_DISC_FORWARD, 0)]),
+    // Placeholder: the beats between Earth and here are to claim these names.
+    show(OPENING_HIDDEN_LABELS, 0),
     focusOnId(MW, 7),
     show(['label:milkyWay'], 1),
   ],

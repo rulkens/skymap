@@ -8,7 +8,7 @@ narration: >
 focus: body:earth
 distance_mpc: 1e-15 # ~30,000 km, the whole Earth in frame
 motion: rise (sky → body → world legs)
-travel_s: 10
+travel_s: 23
 dwell_s: 7
 effects: []
 requires: [frame-handover, clock-to, dwell-drift, caption]

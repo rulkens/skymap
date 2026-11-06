@@ -1,14 +1,16 @@
 /**
  * You are here — the rise from the park to the whole Earth, one clip in three
- * frame legs. `{ sky }`: from beat 00's night view the eye starts turning down.
- * `{ body }`: it lifts off before the turn ends, orbiting up over the ground it
- * was looking at until it looks straight down, then climbs: Copenhagen, Denmark,
- * the curve of the planet. World: the last of the pull-back, Earth focused and
- * named. Each leg starts from the pose the last one left, and both handovers
- * happen in motion, at matched speeds.
+ * frame legs. `{ sky }`: a short look down from beat 00's zenith view, to rest.
+ * `{ body }`: the eye swings up and back over the lawn as the view keeps
+ * turning down, the climb takes over once the view is level, and the turn ends
+ * straight down over Copenhagen, Denmark, the curve of the planet. World: the
+ * last of the pull-back, Earth focused. Each leg starts from the pose the last
+ * one left; the turn rests at the sky → body handover so the eye's speed stays
+ * continuous (a body arm turns about its target, not the eye).
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
+import type { Ease } from '../../../../@types/animation/Ease';
 import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
 import {
   all,
@@ -37,27 +39,51 @@ const SKY: PoseFrame = { sky: SONDERMARKEN_SPOT };
 const HOST: PoseFrame = { body: SONDERMARKEN_SPOT.body };
 const EARTH = focusId(`${BODY_FOCUS_PREFIX}${SONDERMARKEN_SPOT.body}`);
 
-// The body arm's angles for looking straight down at the park. Body channels
-// are the orbit convention in the host's fixed axes, so the arm IS the radial.
-const UP = skySpotRadial(SONDERMARKEN_SPOT);
-const NADIR_ARM = orbitAnglesLookingAlong([-UP[0], -UP[1], -UP[2]]);
+// Due north, below the celestial pole (55.7° up here): a body leg has no roll
+// channel and levels screen-up on the pole, which matches the sky arm's level
+// horizon only looking north under the pole. The ray misses the ground, so the
+// body target lands as far ahead as the eye stands above the datum (~35 m, the
+// floor in `toWorldArm`), and the arm swings the eye up and back over it.
+const HANDOVER_ALTITUDE_RAD = 0.9;
+const TURN_SKY_SEC = 2;
 
-// Due north, 23° down: the body leg's target lands where this sightline meets
-// the datum, ~80 m ahead, and the eye orbits up over it. North matters: there
-// the horizon-level and pole-level screen-ups coincide, and a body leg has no
-// roll channel, so any other azimuth would snap as a roll at the handover.
-const HANDOVER_ALTITUDE_RAD = -0.4;
+// The body turn's view altitudes. Body yaw/pitch are the Y-up orbit angles in
+// the host's fixed axes, whose lerp leaves the meridian (a ~4° horizon roll in
+// one tween), so the turn steps along the meridian: eased in, linear at
+// TURN_RATE, eased out, every join at the same rate.
+const LEVEL_STOPS = [HANDOVER_ALTITUDE_RAD, HANDOVER_ALTITUDE_RAD / 2, 0] as const;
+const DOWN_STOPS = [0, -0.5, -1, -Math.PI / 2] as const;
+const TURN_RATE = 0.2;
 
-// Turn speeds match at the handover: the sky turn ends at speed (easeInSine),
-// the body turn starts at it (easeOutSine), each ∝ its angle over its time.
-// The eye itself starts at turn rate × that ~80 m (~45 m/s): a body arm turns
-// about its target, never the eye. Steeper or slower here softens it.
-const TURN_SKY_SEC = 5;
-const TURN_BODY_SEC = 3.2;
-// The climb, in log distance: lift-off accelerates (easeInSine) into a constant
-// ~1.3 per second (linear), so Copenhagen stays on screen for seconds; the
-// world dolly opens at that speed (easeOutSine) and settles on the whole Earth.
-const LIFT_SEC = 3.8;
+// Looking north at `altitudeRad` is the radial of the latitude π/2 − alt further on.
+const meridianArm = (altitudeRad: number) =>
+  orbitAnglesLookingAlong(
+    skySpotRadial({
+      ...SONDERMARKEN_SPOT,
+      latRad: SONDERMARKEN_SPOT.latRad + Math.PI / 2 - altitudeRad,
+    }),
+  );
+
+const turnBetween = (stops: readonly number[], firstEase: Ease, lastEase: Ease) =>
+  seq(
+    stops.slice(1).map((to, i) => {
+      const ease = i === 0 ? firstEase : i === stops.length - 2 ? lastEase : 'linear';
+      // An eased end's peak slope is π/2, so it runs that much longer to meet the rate.
+      const over = (Math.abs(to - stops[i]!) * (ease === 'linear' ? 1 : Math.PI / 2)) / TURN_RATE;
+      const arm = meridianArm(to);
+      return all([
+        tween('yaw', { to: arm.yaw, over, ease, frame: HOST }),
+        tween('pitch', { to: arm.pitch, over, ease, frame: HOST }),
+      ]);
+    }),
+  );
+
+// The climb, in log distance, starts at rest once the view is level: before
+// that the arm points down behind the target and a longer one lowers the eye.
+// Lift-off accelerates (easeInQuad, end slope 2) into a constant ~1.3 per
+// second (linear), so Copenhagen stays on screen for seconds; the world dolly
+// opens at that speed (easeOutSine) and settles on the whole Earth.
+const LIFT_SEC = 7;
 const CLIMB_SEC = 5;
 const PULL_BACK_SEC = 2.8;
 const REVEAL_SEC = 2;
@@ -85,27 +111,22 @@ export const youAreHereEarth: ClipData = {
       tween('pitch', {
         to: HANDOVER_ALTITUDE_RAD,
         over: TURN_SKY_SEC,
-        ease: 'easeInSine',
+        ease: 'easeInOutSine',
         frame: SKY,
       }),
     ]),
+    turnBetween(LEVEL_STOPS, 'easeInSine', 'linear'),
     all([
-      tween('yaw', { to: NADIR_ARM.yaw, over: TURN_BODY_SEC, ease: 'easeOutSine', frame: HOST }),
-      tween('pitch', {
-        to: NADIR_ARM.pitch,
-        over: TURN_BODY_SEC,
-        ease: 'easeOutSine',
-        frame: HOST,
-      }),
+      turnBetween(DOWN_STOPS, 'linear', 'easeOutSine'),
       seq([
-        tween('distance', { to: LIFT_TOP_M, over: LIFT_SEC, ease: 'easeInSine', frame: HOST }),
+        tween('distance', { to: LIFT_TOP_M, over: LIFT_SEC, ease: 'easeInQuad', frame: HOST }),
         tween('distance', { to: RISE_TOP_M, over: CLIMB_SEC, ease: 'linear', frame: HOST }),
       ]),
     ]),
     all([
       focus(EARTH),
       dollyTo(WHOLE_EARTH_HEIGHT_M * SCALE_UNITS.M_TO_MPC, PULL_BACK_SEC, 'easeOutSine'),
-      // Beat 00 hid these over the park; from orbit they belong to every later beat.
+      // Beat 00 hid these over the park; its labels stay hidden for later beats.
       show(OPENING_HIDDEN_LAYERS, REVEAL_SEC),
     ]),
   ],
