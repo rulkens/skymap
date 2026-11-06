@@ -11,8 +11,8 @@ export function openAboutWindow(parent: BrowserWindow): BrowserWindow {
     {
       parent,
       show: false,
-      width: 560,
-      height: 500,
+      width: 600,
+      height: 660,
       resizable: false,
       minimizable: false,
       maximizable: false,
