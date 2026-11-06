@@ -9,4 +9,6 @@ export type StellarStreamsRuntime = {
   readonly metaSlot: AssetSlot<readonly StellarStreamMeta[], void>;
   /** The committed meta, or null. */
   readonly meta: () => readonly StellarStreamMeta[] | null;
+  /** The streaks' pick code; the pick stamp and the selection row both pack it. */
+  readonly pickCode: number;
 };

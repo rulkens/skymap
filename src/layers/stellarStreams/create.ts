@@ -13,8 +13,9 @@ import { createStellarStreamsSlot } from './catalog/load/stellarStreamsSlot';
 import { createStellarStreamsRenderer } from './streaks/render/stellarStreamsRenderer';
 
 export function create(deps: LayerCoreDeps): StellarStreamsRuntime {
-  const renderer = createStellarStreamsRenderer(deps.ctx.device, HDR_TARGET_FORMAT);
+  const pickCode = deps.pickCode('stream');
+  const renderer = createStellarStreamsRenderer(deps.ctx.device, HDR_TARGET_FORMAT, pickCode);
   const slot = createStellarStreamsSlot(renderer, () => metaSlot.current()?.length ?? null);
   const metaSlot = createStellarStreamsMetaSlot(() => slot.current()?.streamCount ?? null);
-  return { renderer, slot, metaSlot, meta: () => metaSlot.current() };
+  return { renderer, slot, metaSlot, meta: () => metaSlot.current(), pickCode };
 }

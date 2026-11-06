@@ -19,5 +19,15 @@ export type StellarStreamsRenderer = {
     /** Multiplies each look's intensity: the handed fade. */
     opacity: number,
   ): void;
+  /** Stamps `look`'s quads (the streak look) into the NEAR0 pick target, each word naming its stream. */
+  drawPick(
+    pass: GPURenderPassEncoder,
+    rebasedVp: Float32Array,
+    viewportPx: Readonly<Vec2>,
+    pxPerRad: number,
+    eye: Readonly<Vec3>,
+    timeSec: number,
+    look: StellarStreamsLook,
+  ): void;
   destroy(): void;
 };
