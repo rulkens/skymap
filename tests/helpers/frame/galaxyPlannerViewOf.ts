@@ -15,6 +15,9 @@ export function galaxyPlannerViewOf(earthMpc: [number, number, number] = [1, 0, 
     drawCamPos: [0, 0, 0],
     drawPxPerRad: 100,
     slabs: [null, { vp: IDENTITY }],
-    snapshot: { sceneBodies: [], bodyStates: new Map([[SCENE_EARTH.id, { positionMpc: earthMpc }]]) },
+    snapshot: {
+      sceneBodies: [],
+      bodyStates: new Map([[SCENE_EARTH.id, { positionMpc: earthMpc }]]),
+    },
   } as unknown as FrameView;
 }

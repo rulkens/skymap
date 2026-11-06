@@ -23,7 +23,10 @@ export function occluderConesFrom(
     const radius = radiusM * SCALE_UNITS.M_TO_MPC;
     if (distance <= radius) continue;
     const sin = radius / distance;
-    cones.set([cx / distance, cy / distance, cz / distance, Math.sqrt(1 - sin * sin), sin, distance], n);
+    cones.set(
+      [cx / distance, cy / distance, cz / distance, Math.sqrt(1 - sin * sin), sin, distance],
+      n,
+    );
     n += OCCLUDER_CONE_FLOATS;
   }
   return cones.subarray(0, n);

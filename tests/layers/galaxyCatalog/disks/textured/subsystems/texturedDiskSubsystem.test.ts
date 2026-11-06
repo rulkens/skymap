@@ -176,7 +176,11 @@ describe('createTexturedDiskSubsystem', () => {
   it('keeps a slot through the stride cycle instead of handing it to the next window', () => {
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
     const walk = createDiskPlannerWalk({});
-    const sys = createTexturedDiskSubsystem({ device, atlas, fetcher: () => new Promise(() => {}) });
+    const sys = createTexturedDiskSubsystem({
+      device,
+      atlas,
+      fetcher: () => new Promise(() => {}),
+    });
     const ATLAS_SLOTS = 256;
     const SPACING = 0.00001;
     const clouds = new Map([[Source.SDSS, makeDenseCloud(ATLAS_SLOTS * 8, 0.7, 45, SPACING)]]);

@@ -48,8 +48,6 @@ describe('everyFrustumInsideACone', () => {
 
   it('no views or no cones hide nothing', () => {
     expect(everyFrustumInsideACone(new Float32Array(0), cones)).toBe(false);
-    expect(everyFrustumInsideACone(viewPlanes(0.5, 1, [1, 0, 0]), new Float64Array(0))).toBe(
-      false,
-    );
+    expect(everyFrustumInsideACone(viewPlanes(0.5, 1, [1, 0, 0]), new Float64Array(0))).toBe(false);
   });
 });

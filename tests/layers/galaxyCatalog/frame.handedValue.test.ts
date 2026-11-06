@@ -84,6 +84,8 @@ describe('galaxyCatalogPlanner — view cull', () => {
       OCCLUDER_CONE_FLOATS,
     );
     const baking = { ...SNAPSHOT, skyCapturesBaking: new Set(['sgrAStar']) } as ReadyFrameContext;
-    expect(walkInputFor(makeGalaxyCatalogFade({}), baking, nearEarth).occluderCones).toHaveLength(0);
+    expect(walkInputFor(makeGalaxyCatalogFade({}), baking, nearEarth).occluderCones).toHaveLength(
+      0,
+    );
   });
 });
