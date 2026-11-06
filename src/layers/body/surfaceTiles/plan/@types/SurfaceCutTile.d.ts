@@ -1,3 +1,4 @@
+import type { Vec2 } from '../../../../../@types/math/Vec2';
 import type { SurfacePatchAnchor } from '../../patch/@types/SurfacePatchAnchor';
 import type { ResolvedTileResidency } from '../../stream/@types/ResolvedTileResidency';
 
@@ -23,7 +24,7 @@ export type SurfaceCutTile = {
   readonly height: {
     readonly slot: number;
     readonly levelDelta: number;
-    readonly originPosts: readonly [number, number];
+    readonly originPosts: Readonly<Vec2>;
   };
   /** Per edge, in R9 order `[west, east, south, north]`: 1 when the
    *  neighbouring leaf's HEIGHT level is exactly one coarser, which F2 samples

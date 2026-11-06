@@ -240,37 +240,36 @@ export function createSurfaceTileRenderer(
           ? 1
           : Math.min(1, Math.max(0, (nowMs - tile.albedo.readyAtMs) / SURFACE_TILE_CROSSFADE_MS));
 
-      const origin = patchOriginRelEyeM(tile.anchor, radiusM, eyeRelBodyM);
       const slotOriginX = (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
       const slotOriginY =
         Math.floor(tile.height.slot / HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
-      writePatchInstance(
-        patchScratchView,
-        i * PATCH_INSTANCE_BYTES,
-        origin[0],
-        origin[1],
-        origin[2],
+      writePatchInstance(patchScratchView, i * PATCH_INSTANCE_BYTES, {
+        originRelEyeM: patchOriginRelEyeM(tile.anchor, radiusM, eyeRelBodyM),
         fadeWeight,
-        tile.anchor.lon0Rad,
-        tile.anchor.lat0Rad,
-        tile.anchor.dLonRad,
-        tile.anchor.dLatRad,
-        tile.albedo.atlasUvOrigin[0],
-        tile.albedo.atlasUvOrigin[1],
-        tile.albedo.atlasUvScale[0],
-        tile.albedo.atlasUvScale[1],
-        fallback.atlasUvOrigin[0],
-        fallback.atlasUvOrigin[1],
-        fallback.atlasUvScale[0],
-        fallback.atlasUvScale[1],
-        slotOriginX + tile.height.originPosts[0],
-        slotOriginY + tile.height.originPosts[1],
-        tile.edgeCoarser[0] |
+        anchor: tile.anchor,
+        albedoRect: [
+          tile.albedo.atlasUvOrigin[0],
+          tile.albedo.atlasUvOrigin[1],
+          tile.albedo.atlasUvScale[0],
+          tile.albedo.atlasUvScale[1],
+        ],
+        fallbackRect: [
+          fallback.atlasUvOrigin[0],
+          fallback.atlasUvOrigin[1],
+          fallback.atlasUvScale[0],
+          fallback.atlasUvScale[1],
+        ],
+        heightSlotOrigin: [
+          slotOriginX + tile.height.originPosts[0],
+          slotOriginY + tile.height.originPosts[1],
+        ],
+        edgeCoarser:
+          tile.edgeCoarser[0] |
           (tile.edgeCoarser[1] << 1) |
           (tile.edgeCoarser[2] << 2) |
           (tile.edgeCoarser[3] << 3),
-        (HEIGHT_POSTS_PER_TILE - 1) >> tile.height.levelDelta,
-      );
+        heightCells: (HEIGHT_POSTS_PER_TILE - 1) >> tile.height.levelDelta,
+      });
     }
 
     device.queue.writeBuffer(patchBuffer!, 0, patchScratch, 0, tileCount * PATCH_INSTANCE_BYTES);

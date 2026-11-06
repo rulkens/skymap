@@ -6,6 +6,7 @@ import type { SurfaceCutTile } from '../@types/SurfaceCutTile';
 import type { ResolvedTileResidency } from '../../stream/@types/ResolvedTileResidency';
 import type { TileCamera } from '../@types/TileCamera';
 import type { SurfaceTilePlannerParams } from '../@types/SurfaceTilePlannerParams';
+import type { Vec2 } from '../../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import { surfaceTileColumns } from '../../format/utils/surfaceTileColumns';
 import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
@@ -19,8 +20,8 @@ import { deepestResidentAncestor } from './deepestResidentAncestor';
 
 type ResidentLookupResult = {
   readonly slot: number;
-  readonly atlasUvOrigin: readonly [number, number];
-  readonly atlasUvScale: readonly [number, number];
+  readonly atlasUvOrigin: Readonly<Vec2>;
+  readonly atlasUvScale: Readonly<Vec2>;
   readonly readyAtMs: number;
   /** HEIGHT only: the tile header's `subtreeMin/MaxM`, which bound every
    *  descendant of that tile. Absent or null is read as "no bound known",

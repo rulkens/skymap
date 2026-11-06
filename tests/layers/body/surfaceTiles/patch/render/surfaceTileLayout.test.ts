@@ -101,15 +101,15 @@ function structLayout(fields: Array<{ name: string; type: string }>): {
  * (`orientation[N]`) can't distinguish them without the index.
  */
 function fieldForExpr(expr: string): string {
-  if (/^originRelEyeM[XYZ]$/.test(expr)) return 'originRelEyeM';
+  if (/^originRelEyeM\[[012]\]$/.test(expr)) return 'originRelEyeM';
   if (/^fadeWeight$/.test(expr)) return 'fadeWeight';
-  if (/^lon0Rad$/.test(expr)) return 'lon0Rad';
-  if (/^lat0Rad$/.test(expr)) return 'lat0Rad';
-  if (/^dLonRad$/.test(expr)) return 'dLonRad';
-  if (/^dLatRad$/.test(expr)) return 'dLatRad';
-  if (/^albedoUv(Origin|Scale)[XY]$/.test(expr)) return 'albedoRect';
-  if (/^fallbackUv(Origin|Scale)[XY]$/.test(expr)) return 'fallbackRect';
-  if (/^heightSlotOrigin[XY]\b/.test(expr)) return 'heightSlotOrigin';
+  if (/^anchor\.lon0Rad$/.test(expr)) return 'lon0Rad';
+  if (/^anchor\.lat0Rad$/.test(expr)) return 'lat0Rad';
+  if (/^anchor\.dLonRad$/.test(expr)) return 'dLonRad';
+  if (/^anchor\.dLatRad$/.test(expr)) return 'dLatRad';
+  if (/^albedoRect\[[0-3]\]$/.test(expr)) return 'albedoRect';
+  if (/^fallbackRect\[[0-3]\]$/.test(expr)) return 'fallbackRect';
+  if (/^heightSlotOrigin\[[01]\]/.test(expr)) return 'heightSlotOrigin';
   if (/^edgeCoarser\b/.test(expr)) return 'edgeCoarser';
   if (/^heightCells\b/.test(expr)) return 'heightCells';
   if (/^vp\[/.test(expr)) return 'vp';
@@ -197,30 +197,16 @@ describe('PatchInstance CPU/WESL layout parity', () => {
   // other tile's posts) -- asymmetric fixture values per lane close that gap.
   it('multi-lane fields land lane by lane, in declaration order', () => {
     const view = new DataView(new ArrayBuffer(PATCH_INSTANCE_BYTES));
-    writePatchInstance(
-      view,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0.11,
-      0.22,
-      0.33,
-      0.44,
-      0.55,
-      0.66,
-      0.77,
-      0.88,
-      129,
-      258,
-      0b1011,
-      32,
-    );
+    writePatchInstance(view, 0, {
+      originRelEyeM: [0, 0, 0],
+      fadeWeight: 1,
+      anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0, dLatRad: 0 },
+      albedoRect: [0.11, 0.22, 0.33, 0.44],
+      fallbackRect: [0.55, 0.66, 0.77, 0.88],
+      heightSlotOrigin: [129, 258],
+      edgeCoarser: 0b1011,
+      heightCells: 32,
+    });
     expect(view.getFloat32(32, true)).toBeCloseTo(0.11); // albedoUvOriginX
     expect(view.getFloat32(36, true)).toBeCloseTo(0.22); // albedoUvOriginY
     expect(view.getFloat32(40, true)).toBeCloseTo(0.33); // albedoUvScaleX

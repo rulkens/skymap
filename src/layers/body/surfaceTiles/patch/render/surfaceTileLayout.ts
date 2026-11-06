@@ -9,6 +9,7 @@
 
 import type { Mat3 } from '../../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { PatchInstanceWords } from '../@types/PatchInstanceWords';
 
 /**
  * Bytes of one `PatchInstance` element: `originRelEyeM` vec3 (0..11) +
@@ -23,58 +24,28 @@ import type { Vec3 } from '../../../../../@types/math/Vec3';
  */
 export const PATCH_INSTANCE_BYTES = 80;
 
-/**
- * Pack one `PatchInstance` block at byte `base` of `view`. `originRelEyeM` must come
- * from `patchOriginRelEyeM` — the shader rebuilds the patch frame from the
- * f32 words written here, so the origin has to be derived from the same
- * rounded anchor (spec §7.1) or every patch shifts by ~0.13 m of its own.
- */
-export function writePatchInstance(
-  view: DataView,
-  base: number,
-  originRelEyeMX: number,
-  originRelEyeMY: number,
-  originRelEyeMZ: number,
-  fadeWeight: number,
-  lon0Rad: number,
-  lat0Rad: number,
-  dLonRad: number,
-  dLatRad: number,
-  albedoUvOriginX: number,
-  albedoUvOriginY: number,
-  albedoUvScaleX: number,
-  albedoUvScaleY: number,
-  fallbackUvOriginX: number,
-  fallbackUvOriginY: number,
-  fallbackUvScaleX: number,
-  fallbackUvScaleY: number,
-  /** Post origin of the leaf's SUB-RECT: its height tile's slot origin plus
-   *  `SurfaceCutTile.height.originPosts`. */
-  heightSlotOriginX: number,
-  heightSlotOriginY: number,
-  /** Pre-packed one bit per edge — see `io.wesl`'s `edgeCoarser` comment. */
-  edgeCoarser: number,
-  /** Cells across that sub-rect: `128 >> levelDelta`. */
-  heightCells: number,
-): void {
-  view.setFloat32(base + 0, originRelEyeMX, true);
-  view.setFloat32(base + 4, originRelEyeMY, true);
-  view.setFloat32(base + 8, originRelEyeMZ, true);
+/** Pack one `PatchInstance` block at byte `base` of `view`. */
+export function writePatchInstance(view: DataView, base: number, words: PatchInstanceWords): void {
+  const { originRelEyeM, fadeWeight, anchor, albedoRect, fallbackRect, heightSlotOrigin } = words;
+  const { edgeCoarser, heightCells } = words;
+  view.setFloat32(base + 0, originRelEyeM[0], true);
+  view.setFloat32(base + 4, originRelEyeM[1], true);
+  view.setFloat32(base + 8, originRelEyeM[2], true);
   view.setFloat32(base + 12, fadeWeight, true);
-  view.setFloat32(base + 16, lon0Rad, true);
-  view.setFloat32(base + 20, lat0Rad, true);
-  view.setFloat32(base + 24, dLonRad, true);
-  view.setFloat32(base + 28, dLatRad, true);
-  view.setFloat32(base + 32, albedoUvOriginX, true);
-  view.setFloat32(base + 36, albedoUvOriginY, true);
-  view.setFloat32(base + 40, albedoUvScaleX, true);
-  view.setFloat32(base + 44, albedoUvScaleY, true);
-  view.setFloat32(base + 48, fallbackUvOriginX, true);
-  view.setFloat32(base + 52, fallbackUvOriginY, true);
-  view.setFloat32(base + 56, fallbackUvScaleX, true);
-  view.setFloat32(base + 60, fallbackUvScaleY, true);
-  view.setUint32(base + 64, heightSlotOriginX >>> 0, true);
-  view.setUint32(base + 68, heightSlotOriginY >>> 0, true);
+  view.setFloat32(base + 16, anchor.lon0Rad, true);
+  view.setFloat32(base + 20, anchor.lat0Rad, true);
+  view.setFloat32(base + 24, anchor.dLonRad, true);
+  view.setFloat32(base + 28, anchor.dLatRad, true);
+  view.setFloat32(base + 32, albedoRect[0], true);
+  view.setFloat32(base + 36, albedoRect[1], true);
+  view.setFloat32(base + 40, albedoRect[2], true);
+  view.setFloat32(base + 44, albedoRect[3], true);
+  view.setFloat32(base + 48, fallbackRect[0], true);
+  view.setFloat32(base + 52, fallbackRect[1], true);
+  view.setFloat32(base + 56, fallbackRect[2], true);
+  view.setFloat32(base + 60, fallbackRect[3], true);
+  view.setUint32(base + 64, heightSlotOrigin[0] >>> 0, true);
+  view.setUint32(base + 68, heightSlotOrigin[1] >>> 0, true);
   view.setUint32(base + 72, edgeCoarser >>> 0, true);
   view.setUint32(base + 76, heightCells >>> 0, true);
 }
