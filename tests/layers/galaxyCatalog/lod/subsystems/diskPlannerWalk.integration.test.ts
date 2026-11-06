@@ -135,6 +135,7 @@ function makeInput(
     visibleCatalogs,
     pxPerRad: pxPerRadFor(cam),
     viewPlanes: new Float32Array(0),
+    occluderCones: new Float64Array(0),
     // Live surface-brightness sliders — arbitrary plausible defaults; this
     // suite is about parity between merged/solo walks, not brightness math.
     sbScale: 5,

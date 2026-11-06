@@ -56,8 +56,8 @@ export function createTileStreamSubsystem<T, S extends SlotStore>(
 
   const subsystem: TileStreamSubsystem<T, S> = {
     slots,
-    allocate(key, atFrame) {
-      return slots.allocate(key, atFrame);
+    allocate(key, atFrame, liveSince) {
+      return slots.allocate(key, atFrame, liveSince);
     },
     touch(key, atFrame) {
       return slots.touch(key, atFrame);

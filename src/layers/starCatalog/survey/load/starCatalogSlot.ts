@@ -2,7 +2,7 @@
  * starCatalogSlot — factory for one survey star-catalog's asset slot, reused
  * across every `starCatalog` registry row (parameterized by `source`).
  * Commit installs the decoded `Octree`'s chunk pool (`installStarPool`);
- * release drops the stream. Its row `gates` the star entry's item, so core fades the
+ * release drops the stream and frees the catalog's GPU buffers. Its row `gates` the star entry's item, so core fades the
  * catalog in on the commit; the registry `crossfadePc` band rides on top of that value.
  */
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
@@ -36,6 +36,7 @@ export function createStarCatalogSlot(
     onRelease: () => {
       host.chunkStreams.get(source)?.destroy();
       host.chunkStreams.delete(source);
+      host.renderer.release(source);
     },
   });
   slot.subscribe((s) => {

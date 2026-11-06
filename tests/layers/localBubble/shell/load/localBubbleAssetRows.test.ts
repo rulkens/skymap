@@ -1,12 +1,15 @@
 /**
- * localBubbleAssetRows — the Layer's one demand/release predicate,
- * exercised against a stub `DemandCtx` without a full engine.
+ * localBubbleAssetRows — the shell file's load and release distances, each just inside and
+ * just outside its edge, and the release on switch-off.
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
+import { localBubbleVisibility } from '../../../../../src/layers/localBubble/visibility';
 
 import { localBubbleAssetRows } from '../../../../../src/layers/localBubble/shell/load/localBubbleAssetRows';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 import type { LocalBubbleRuntime } from '../../../../../src/layers/localBubble/@types/LocalBubbleRuntime';
@@ -30,15 +33,24 @@ function makeCtx(enabled: boolean, distanceMpc: number): DemandCtx {
   };
 }
 
+const KPC = SCALE_UNITS.KPC_TO_MPC;
+const at = (enabled: boolean, kpc: number) =>
+  evaluateAssetDemand(ROW, makeCtx(enabled, kpc * KPC), localBubbleVisibility);
+
 describe('localBubbleAssetRows', () => {
-  it('demands only when enabled and within 20 kpc', () => {
-    expect(ROW.demand(makeCtx(true, 0.01))).toBe(true);
-    expect(ROW.demand(makeCtx(false, 0.01))).toBe(false);
-    expect(ROW.demand(makeCtx(true, 0.03))).toBe(false);
+  it('loads inside 20 kpc', () => {
+    expect(at(true, 19.9)).toEqual({ demand: true, release: false });
   });
 
-  it('releases beyond 40 kpc, holds in between', () => {
-    expect(ROW.release!(makeCtx(true, 0.03))).toBe(false);
-    expect(ROW.release!(makeCtx(true, 0.05))).toBe(true);
+  it('holds between 20 and 40 kpc', () => {
+    expect(at(true, 30)).toEqual({ demand: false, release: false });
+  });
+
+  it('releases beyond 40 kpc', () => {
+    expect(at(true, 40.1)).toEqual({ demand: false, release: true });
+  });
+
+  it('releases when switched off at Earth', () => {
+    expect(at(false, 0)).toEqual({ demand: false, release: true });
   });
 });

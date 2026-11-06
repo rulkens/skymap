@@ -31,6 +31,8 @@ import { FRUSTUM_FLOATS_PER_VIEW } from '../../data/camera/frustumFloatsPerView'
 import { rebaseViewProj } from '../../utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../utils/camera/frustum/frustumPlanesFromViewProj';
+import { occluderConesFrom } from '../../utils/occlusion/occluderConesFrom';
+import { sceneOccluderBodies } from '../../services/engine/frame/sceneOccluderBodies';
 import type { StructureSelectionRow } from '../structure/selection/@types/StructureSelectionRow';
 
 export function galaxyCatalogPlanner(
@@ -95,9 +97,10 @@ export function galaxyCatalogPlanner(
       // for a threshold nudge.
       const cam = views[0]!.cam;
       const pxPerRad = Math.max(...views.map((view) => view.drawPxPerRad));
-      // Galaxies draw in COSMO; the planes sit about the walk's origin, cam.position.
-      // A sky capture replays the disks on all six faces, so an open band culls nothing.
-      const cullViews = snapshot.skyCapturesInBand.size > 0 ? [] : views;
+      // Galaxies draw in COSMO; the planes and occluder cones sit about the walk's origin,
+      // cam.position. Sky captures replay this list: the lens covers part of the view with
+      // its cubemap, so the disks it needs are the ones in view.
+      const cullViews = views;
       const viewPlanes = new Float32Array(cullViews.length * FRUSTUM_FLOATS_PER_VIEW);
       cullViews.forEach((view, v) =>
         frustumPlanesFromViewProj(
@@ -105,6 +108,7 @@ export function galaxyCatalogPlanner(
           viewPlanes.subarray(v * FRUSTUM_FLOATS_PER_VIEW, (v + 1) * FRUSTUM_FLOATS_PER_VIEW),
         ),
       );
+      const occluderCones = occluderConesFrom(sceneOccluderBodies(state, views[0]!), cam.position);
 
       // hiResFamous must run BEFORE the shared disk walk: the textured-disk body
       // folds `hiResFamous.lastOutput.byFamousIdx` into the instances it emits;
@@ -127,6 +131,7 @@ export function galaxyCatalogPlanner(
         visibleCatalogs,
         pxPerRad,
         viewPlanes,
+        occluderCones,
         // Both LOD disk bodies fold this into their emitted alpha/brightness so a
         // hidden catalog's disks fade out with the point sprites instead of
         // popping once the fade ends and the visible set drops the catalog. The handed

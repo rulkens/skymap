@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
 import { bodyAssetRows } from '../../../../../src/layers/body/textures/load/bodyAssetRows';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../../src/layers/body/textures/data/bodyTextureKeys';
 import { loadRadiusMpc } from '../../../../../src/layers/body/textures/load/bodyTextureLoadRadius';
@@ -70,16 +71,16 @@ describe('bodyAssetRows demand predicates', () => {
     const at = (d: number): Vec3 => [pos[0] + d, pos[1], pos[2]];
 
     const inside = makeCtx({ cameraPosMpc: at(0.5 * r) });
-    expect(earth.demand(inside)).toBe(true);
-    expect(earth.release!(inside)).toBe(false);
+    expect(evaluateAssetDemand(earth, inside, []).demand).toBe(true);
+    expect(evaluateAssetDemand(earth, inside, []).release).toBe(false);
 
     const band = makeCtx({ cameraPosMpc: at(1.5 * r) });
-    expect(earth.demand(band)).toBe(false);
-    expect(earth.release!(band)).toBe(false);
+    expect(evaluateAssetDemand(earth, band, []).demand).toBe(false);
+    expect(evaluateAssetDemand(earth, band, []).release).toBe(false);
 
     const beyond = makeCtx({ cameraPosMpc: at(2.5 * r) });
-    expect(earth.demand(beyond)).toBe(false);
-    expect(earth.release!(beyond)).toBe(true);
+    expect(evaluateAssetDemand(earth, beyond, []).demand).toBe(false);
+    expect(evaluateAssetDemand(earth, beyond, []).release).toBe(true);
   });
 
   it('body-texture proximity gate reflects the LIVE snapshot position, not J2000', () => {
@@ -93,7 +94,13 @@ describe('bodyAssetRows demand predicates', () => {
 
     expect(distanceMpc(livePos, j2000Pos)).toBeGreaterThan(r);
 
-    expect(earth.demand(makeCtx({ cameraPosMpc: [...livePos] as Vec3, simDays }))).toBe(true);
-    expect(earth.demand(makeCtx({ cameraPosMpc: [...j2000Pos] as Vec3, simDays }))).toBe(false);
+    expect(
+      evaluateAssetDemand(earth, makeCtx({ cameraPosMpc: [...livePos] as Vec3, simDays }), [])
+        .demand,
+    ).toBe(true);
+    expect(
+      evaluateAssetDemand(earth, makeCtx({ cameraPosMpc: [...j2000Pos] as Vec3, simDays }), [])
+        .demand,
+    ).toBe(false);
   });
 });

@@ -16,5 +16,6 @@ export function createFilamentSlot(
     commit: async (cloud) => {
       renderer.upload(cloud);
     },
+    onRelease: () => renderer.clear(),
   });
 }

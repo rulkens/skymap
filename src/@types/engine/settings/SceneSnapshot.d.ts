@@ -60,6 +60,8 @@ import type { SelectionRefBase } from '../selection/SelectionRefBase';
 export type SceneSnapshot = Readonly<{
   settings: SettingsSnapshot;
   orientation: OrientationFrameId;
+  /** The viewer's lens: camera state, so not inside `settings`. */
+  fovYRad: number;
   focus: SelectionRefBase | null;
   time: TimeState;
 }>;

@@ -1,80 +1,68 @@
 /**
- * structureAssetRows — the bulk catalog's demand predicate against a stub
- * `DemandCtx`: it loads when any bulk category has its ring
- * (`structures.items[cat].enabled`) OR its label (`.labelEnabled`) on.
+ * structureAssetRows — the bulk catalog loads when any bulk category has its ring OR its
+ * label on, and releases when every one is off. `galaxy-group` ships no `.ccat`, so it
+ * alone must not fetch the catalog.
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
+import { structureVisibility } from '../../../../../src/layers/structure/visibility';
 
 import { structureAssetRows } from '../../../../../src/layers/structure/catalog/load/structureAssetRows';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSettings';
 import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
-import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
+import type { StructureId } from '../../../../../src/@types/data/structure/StructureId';
+import type { StructureItemSettings } from '../../../../../src/@types/settings/StructureItemSettings';
 import type { StructureRuntime } from '../../../../../src/layers/structure/@types/StructureRuntime';
 import type { UiState } from '../../../../../src/@types/ui/UiState';
 
-// The row reads no runtime field — only `factory` closes over the slot, and
-// nothing here calls it.
-const cluster = structureAssetRows({} as StructureRuntime)[0]!;
+// The row reads no runtime field; `slot` is carried, never called here.
+const ROW = structureAssetRows({} as StructureRuntime)[0]!;
 
-function makeCtx(over: { settings: unknown }): DemandCtx {
-  return {
-    settings: over.settings as Readonly<EngineSettingsState>,
-    ui: { paletteOpen: false } as Readonly<UiState>,
+const ALL_OFF = Object.fromEntries(
+  Object.keys(INITIAL_SETTINGS.structures.items).map((id) => [
+    id,
+    { enabled: false, labelEnabled: false },
+  ]),
+) as Record<StructureId, StructureItemSettings>;
+
+function demandWith(on: Partial<Record<StructureId, StructureItemSettings>>) {
+  const ctx: DemandCtx = {
+    settings: { ...INITIAL_SETTINGS, structures: { items: { ...ALL_OFF, ...on } } },
+    ui: { paletteOpen: false } as UiState,
     slotState: () => 'idle',
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: 'medium',
     selectedKinds: new Set(),
   };
+  return evaluateAssetDemand(ROW, ctx, structureVisibility);
 }
 
 describe('structureAssetRows', () => {
-  it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {
-    // Every category's ring + label off — both axes read from the item rows.
-    const allHidden = {
-      structures: {
-        enabled: true,
-        items: {
-          'galaxy-cluster': { enabled: false, labelEnabled: false },
-          supercluster: { enabled: false, labelEnabled: false },
-          void: { enabled: false, labelEnabled: false },
-          'galaxy-group': { enabled: false, labelEnabled: false },
-        },
-      },
-    };
-    expect(cluster.demand(makeCtx({ settings: allHidden }))).toBe(false);
+  it('every category off releases the catalog', () => {
+    expect(demandWith({})).toEqual({ demand: false, release: true });
+  });
 
-    // Any single structure category visible in EITHER its ring or its label ⇒ true.
-    expect(
-      cluster.demand(
-        makeCtx({
-          settings: {
-            structures: {
-              enabled: true,
-              items: {
-                ...allHidden.structures.items,
-                'galaxy-cluster': { enabled: true, labelEnabled: false },
-              },
-            },
-          },
-        }),
-      ),
-    ).toBe(true);
-    expect(
-      cluster.demand(
-        makeCtx({
-          settings: {
-            structures: {
-              enabled: true,
-              items: {
-                ...allHidden.structures.items,
-                void: { enabled: false, labelEnabled: true },
-              },
-            },
-          },
-        }),
-      ),
-    ).toBe(true);
+  it('ring on demands the catalog', () => {
+    expect(demandWith({ 'galaxy-cluster': { enabled: true, labelEnabled: false } })).toEqual({
+      demand: true,
+      release: false,
+    });
+  });
+
+  it('label only on demands the catalog', () => {
+    expect(demandWith({ void: { enabled: false, labelEnabled: true } })).toEqual({
+      demand: true,
+      release: false,
+    });
+  });
+
+  it('galaxy-group alone does not demand', () => {
+    expect(demandWith({ 'galaxy-group': { enabled: true, labelEnabled: true } })).toEqual({
+      demand: false,
+      release: true,
+    });
   });
 });

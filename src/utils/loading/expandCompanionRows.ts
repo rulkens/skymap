@@ -30,7 +30,7 @@ export function expandCompanionRows(
       key: row.key,
       slot: row.slot,
       req: parent.req,
-      demand: (ctx) => ctx.slotState(row.companionOf) !== 'idle',
+      demand: { companionOf: row.companionOf },
       priority: parent.priority + 1,
     };
   });

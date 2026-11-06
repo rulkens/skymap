@@ -35,11 +35,13 @@ import type { RootState } from '../../store/types';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { captureSettings } from './captureSettings';
+import { selectFovYRad } from '../camera/selectors';
 
 export function captureScene(state: RootState, nowMs: number): SceneSnapshot {
   return {
     settings: captureSettings(state),
     orientation: state.settings.orientation,
+    fovYRad: selectFovYRad(state),
     focus: state.selection.focus,
     time: {
       ...state.time,
