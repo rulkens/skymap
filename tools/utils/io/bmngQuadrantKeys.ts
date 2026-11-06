@@ -5,13 +5,13 @@
  * rather than each naming the eight files separately (which is exactly how
  * they once went unfetched — the bake named keys, the fetcher named none).
  *
- * `satisfies Record<BmngQuadrant, RawDataKey>` makes a forgotten quadrant a
+ * `satisfies Record<ImageryQuadrant, RawDataKey>` makes a forgotten quadrant a
  * compile error rather than a hole in the globe (the import is TYPE-ONLY).
  * Keys are vintage-neutral (`…QuadrantA1`, not `…200408A1`) — the month lives
  * in `BMNG_VINTAGE` alone.
  */
 
-import type { BmngQuadrant } from '../../textures/bmngQuadrantSource';
+import type { ImageryQuadrant } from '../../textures/quadrantImagerySource';
 import type { RawDataKey } from './rawDataRegistry';
 
 export const BMNG_QUADRANT_KEYS = {
@@ -23,4 +23,4 @@ export const BMNG_QUADRANT_KEYS = {
   C2: 'textures.nasaBmngQuadrantC2',
   D1: 'textures.nasaBmngQuadrantD1',
   D2: 'textures.nasaBmngQuadrantD2',
-} as const satisfies Record<BmngQuadrant, RawDataKey>;
+} as const satisfies Record<ImageryQuadrant, RawDataKey>;

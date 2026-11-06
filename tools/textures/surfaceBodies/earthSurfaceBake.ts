@@ -10,7 +10,7 @@ import { baseLevelForTier } from '../../../src/layers/body/surfaceTiles/format/u
 import { BMNG_QUADRANT_KEYS } from '../../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../utils/io/bmngVintage';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';
-import { bmngQuadrantSource, type BmngQuadrant } from '../bmngQuadrantSource';
+import { quadrantImagerySource, type ImageryQuadrant } from '../quadrantImagerySource';
 import { colourMatchedImagerySource } from '../colourMatchedImagerySource';
 import { constantHeightSource } from '../constantHeightSource';
 import { dhmTerraenHeightSource } from '../dhmTerraenHeightSource';
@@ -75,13 +75,13 @@ const BMNG_ATTRIBUTION = `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label
 
 /** The shipped source: BMNG's eight-file quadrant set, reaching z7. */
 async function deepSource() {
-  return bmngQuadrantSource({
+  return quadrantImagerySource({
     id: `nasa-bmng-${BMNG_VINTAGE.stamp}-quadrants`,
     attribution: BMNG_ATTRIBUTION,
     vintage: BMNG_VINTAGE.label,
     quadrantPaths: Object.fromEntries(
       Object.entries(BMNG_QUADRANT_KEYS).map(([quadrant, key]) => [quadrant, rawDataPath(key)]),
-    ) as Record<BmngQuadrant, string>,
+    ) as Record<ImageryQuadrant, string>,
   });
 }
 
