@@ -8,7 +8,7 @@ import type { HeightSource } from './@types/HeightSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { slopeLatticeFromPosts } from '../utils/textures/slopeLatticeFromPosts';
-import type { SlopeLattice } from './SlopeLattice';
+import type { SlopeLattice } from './@types/SlopeLattice';
 
 export const SLOPE_LEVEL = 8;
 

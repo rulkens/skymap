@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { albedoRecipeImagerySource } from '../../../tools/textures/albedoRecipeImagerySource';
 import { constantSunField } from '../../../tools/utils/textures/constantSunField';
-import type { AlbedoApply } from '../../../tools/textures/AlbedoApply';
+import type { AlbedoApply } from '../../../tools/textures/@types/AlbedoApply';
 import { analyticHeightSource, analyticImagerySource } from '../../fixtures/textures/albedoFakes';
 
 // Matches albedoFakes' fixed radius: the field must agree with what baked

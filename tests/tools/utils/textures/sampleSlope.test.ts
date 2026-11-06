@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { sampleSlope } from '../../../../tools/utils/textures/sampleSlope';
-import type { SlopeLattice } from '../../../../tools/textures/SlopeLattice';
+import type { SlopeLattice } from '../../../../tools/textures/@types/SlopeLattice';
 
 function lattice(): SlopeLattice {
   // 2x2 posts, distinct sx/sy per post so a bilinear bug (wrong axis, wrong

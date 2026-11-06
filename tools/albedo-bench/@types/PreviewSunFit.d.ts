@@ -1,4 +1,4 @@
-import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
+import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe';
 
 export type PreviewSunFit = {
   readonly sunFit: AlbedoRecipe['sunFit'];

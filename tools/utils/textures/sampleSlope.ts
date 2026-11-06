@@ -1,6 +1,6 @@
 /** sampleSlope — bilinear (sx, sy) at an arbitrary lon/lat, clamped to the
  *  lattice's own extent rather than wrapping or extrapolating. */
-import type { SlopeLattice } from '../../textures/SlopeLattice';
+import type { SlopeLattice } from '../../textures/@types/SlopeLattice';
 
 export function sampleSlope(
   lattice: SlopeLattice,

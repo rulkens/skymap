@@ -3,7 +3,7 @@
  *  — polar, white, bright — since a shaded rock at the pole or a bright dust
  *  patch near the equator is not ice and should still get corrected. */
 import { smoothstep } from '../../../src/utils/math/smoothstep';
-import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
+import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe';
 
 const ICE_SOFT = 0.2;
 

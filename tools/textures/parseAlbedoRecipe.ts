@@ -3,7 +3,7 @@
  * bench's Save and the bake's read alike, so a malformed file fails loudly
  * right there instead of propagating a stray NaN into a baked pixel.
  */
-import type { AlbedoRecipe } from './AlbedoRecipe';
+import type { AlbedoRecipe } from './@types/AlbedoRecipe';
 import type { RecipeSchema } from './@types/RecipeSchema';
 const RECIPE_SCHEMA: RecipeSchema = {
   version: 'number',

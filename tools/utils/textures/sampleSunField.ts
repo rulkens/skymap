@@ -1,7 +1,7 @@
 /** sampleSunField — bilinear `(gx, gy)` at an arbitrary lon/lat, clamped to
  *  the field's own extent. Confidence is not sampled: a consumer applying the
  *  field to pixels only ever needs `g` itself (design §8). */
-import type { SunField } from '../../textures/SunField';
+import type { SunField } from '../../textures/@types/SunField';
 
 export function sampleSunField(
   field: SunField,

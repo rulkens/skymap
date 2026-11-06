@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { sampleSunField } from '../../../../tools/utils/textures/sampleSunField';
-import type { SunField } from '../../../../tools/textures/SunField';
+import type { SunField } from '../../../../tools/textures/@types/SunField';
 
 function field(): SunField {
   return {

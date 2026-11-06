@@ -6,9 +6,9 @@
  * (never the recipe's own `sunFit` unchanged) — `render.ts`'s `adjusted`
  * must scale the same way so the two share the cached fit.
  */
-import type { AlbedoRecipe } from '../../../textures/AlbedoRecipe.ts';
+import type { AlbedoRecipe } from '../../../textures/@types/AlbedoRecipe.ts';
 import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds.ts';
-import type { SunField } from '../../../textures/SunField.ts';
+import type { SunField } from '../../../textures/@types/SunField.ts';
 import { previewSunFit } from '../previewSunFit.ts';
 import type { FieldBody } from '../../@types/FieldBody';
 import type { FieldArrow } from '../../@types/FieldArrow';

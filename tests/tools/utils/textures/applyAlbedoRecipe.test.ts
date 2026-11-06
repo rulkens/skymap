@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { applyAlbedoRecipe } from '../../../../tools/utils/textures/applyAlbedoRecipe';
 import { linearToSrgbByte } from '../../../../tools/utils/image/linearToSrgbByte';
-import type { AlbedoApply } from '../../../../tools/textures/AlbedoApply';
+import type { AlbedoApply } from '../../../../tools/textures/@types/AlbedoApply';
 
 const NEUTRAL_APPLY: AlbedoApply = {
   deshade: { strength: 0, minShading: 0.3 },

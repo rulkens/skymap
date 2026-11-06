@@ -6,7 +6,7 @@
  * injected so a test writes to a temp file, never the real committed one.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import type { AlbedoRecipe } from '../../../textures/AlbedoRecipe.ts';
+import type { AlbedoRecipe } from '../../../textures/@types/AlbedoRecipe.ts';
 import { parseAlbedoRecipe } from '../../../textures/parseAlbedoRecipe.ts';
 import type { SetRecipeResult } from '../../@types/SetRecipeResult';
 

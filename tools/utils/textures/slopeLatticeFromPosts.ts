@@ -5,7 +5,7 @@
  * that needs true central differences at its region's own edge posts (not
  * one-sided ones) supplies a one-post margin — see `readSlopeLattice`.
  */
-import type { SlopeLattice } from '../../textures/SlopeLattice';
+import type { SlopeLattice } from '../../textures/@types/SlopeLattice';
 
 const DEG_TO_RAD = Math.PI / 180;
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { iceKeepWeight } from '../../../../tools/utils/textures/iceKeepWeight';
-import type { AlbedoRecipe } from '../../../../tools/textures/AlbedoRecipe';
+import type { AlbedoRecipe } from '../../../../tools/textures/@types/AlbedoRecipe';
 
 const ICE: AlbedoRecipe['ice'] = {
   minAbsLatDeg: 55,

@@ -5,7 +5,7 @@
  * identically to a manual `albedoRecipeImagerySource(...).readBox` call.
  */
 import { describe, expect, it } from 'vitest';
-import type { AlbedoRecipe } from '../../../../tools/textures/AlbedoRecipe';
+import type { AlbedoRecipe } from '../../../../tools/textures/@types/AlbedoRecipe';
 import { albedoRecipeImagerySource } from '../../../../tools/textures/albedoRecipeImagerySource';
 import { fitSunField } from '../../../../tools/textures/fitSunField';
 import { handleRender } from '../../../../tools/albedo-bench/plugin/routes/render';

@@ -1,4 +1,4 @@
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 
 /** A fitted (or manual) sun-direction field: `g`, a 2-vector per post, over a
  *  plain equirect raster — `width × height` posts spanning `bounds`, post

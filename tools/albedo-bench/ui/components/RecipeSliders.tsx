@@ -4,7 +4,7 @@
  * pipeline the values feed.
  */
 import type { ReactNode } from 'react';
-import type { AlbedoRecipe } from '../../../textures/AlbedoRecipe';
+import type { AlbedoRecipe } from '../../../textures/@types/AlbedoRecipe';
 
 export type RecipeSlidersProps = {
   recipe: AlbedoRecipe;

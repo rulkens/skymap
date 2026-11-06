@@ -4,7 +4,7 @@
  * in where it shouldn't (a detail-zoom box the user is actually tuning).
  */
 import { describe, expect, it } from 'vitest';
-import type { AlbedoRecipe } from '../../../../tools/textures/AlbedoRecipe';
+import type { AlbedoRecipe } from '../../../../tools/textures/@types/AlbedoRecipe';
 import {
   PREVIEW_MAX_ARROWS,
   previewSunFit,

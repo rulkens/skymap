@@ -6,7 +6,7 @@
  * (on mount) restores every slider.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
+import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import { api } from './api';
 import type { FieldArrow } from '../@types/FieldArrow';

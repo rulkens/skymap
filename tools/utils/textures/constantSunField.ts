@@ -2,7 +2,7 @@
  *  as the smallest `SunField` `sampleSunField` can bilinearly interpolate
  *  (a 2×2 grid, corners at `bounds`) without a degenerate single-post axis. */
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-import type { SunField } from '../../textures/SunField';
+import type { SunField } from '../../textures/@types/SunField';
 
 export function constantSunField(
   bounds: LonLatBounds,

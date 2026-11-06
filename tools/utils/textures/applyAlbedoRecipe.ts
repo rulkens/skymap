@@ -9,7 +9,7 @@
 import { srgbToLinear } from '../color/srgbToLinear';
 import { linearToSrgbByte } from '../image/linearToSrgbByte';
 import { gradeRgbaInPlace } from '../image/gradeRgbaInPlace';
-import type { AlbedoApply } from '../../textures/AlbedoApply';
+import type { AlbedoApply } from '../../textures/@types/AlbedoApply';
 import { iceKeepWeight } from './iceKeepWeight';
 import { kneeLuminance } from './kneeLuminance';
 

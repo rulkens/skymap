@@ -8,7 +8,7 @@
  * the two routes' calls land on the same cached fit.
  */
 import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds.ts';
-import type { SlopeLattice } from '../../../textures/SlopeLattice.ts';
+import type { SlopeLattice } from '../../../textures/@types/SlopeLattice.ts';
 import { albedoRecipeImagerySource } from '../../../textures/albedoRecipeImagerySource.ts';
 import { readSlopeLattice } from '../../../textures/readSlopeLattice.ts';
 import { constantSunField } from '../../../utils/textures/constantSunField.ts';
