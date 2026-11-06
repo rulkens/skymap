@@ -16,6 +16,7 @@ import type { CameraState } from '../../../@types/camera/orbitCamera/CameraState
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
 import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
+import type { PoseFrame } from '../../../@types/camera/pose/PoseFrame';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { TiltMemory } from '../../../@types/camera/orientation/TiltMemory';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -30,6 +31,7 @@ import { hostOrThrow } from '../camera/arms/hostOrThrow';
 import { isWorldArm } from '../camera/arms/world/isWorldArm';
 import { refoldTo } from '../camera/arms/refoldTo';
 import { cameraArmKindOf } from '../camera/arms/cameraArmKindOf';
+import { climbRowFor } from '../camera/arms/climbRowFor';
 import { sameFrame } from '../camera/arms/sameFrame';
 import { stepCameraArm } from '../camera/arms/stepCameraArm';
 import { centreLookingArm } from '../../../utils/camera/arms/centreLookingArm';
@@ -118,7 +120,17 @@ export function projectFramePose(args: {
   // winner authored: `tween`/`clip` are not arm-gated, so reading the produced
   // pose as the regime swaps §4's disengage test for the engage one
   // mid-animation. Free while the two agree — `refoldTo` answers by reference.
-  const target = gestureHeld ? regime : stepCameraArm(refoldTo(displayed, regime, ctx), ctx);
+  let target: PoseFrame = regime;
+  if (!gestureHeld) {
+    const judged = refoldTo(displayed, regime, ctx);
+    target = stepCameraArm(judged, ctx);
+    // An arm that pins the eye cannot judge a pose produced elsewhere: the refold
+    // put it back on the spot. That pose has left the spot, so the arm releases.
+    if (!isWorldArm(judged) && !sameFrame(displayed.frame, regime)) {
+      const row = climbRowFor(judged.frame);
+      if (row.pinsEye) target = row.toParent(judged, ctx).frame;
+    }
+  }
   // One whole skip, never a clamp or a latch, retried next frame: a live gesture
   // (ruled, Q6).
   if (!gestureHeld) {

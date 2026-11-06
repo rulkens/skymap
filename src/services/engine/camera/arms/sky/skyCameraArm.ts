@@ -18,6 +18,7 @@ import { refoldTo } from '../refoldTo';
 export const skyCameraArm: ClimbRow<'sky'> = {
   kind: 'sky',
   parent: 'body',
+  pinsEye: true,
   emptyMemory: null,
 
   channels: {
