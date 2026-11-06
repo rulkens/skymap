@@ -5,6 +5,7 @@
  */
 import type { RenderLight } from '../../@types/RenderLight';
 import type { SunMode } from '../../@types/SunMode';
+import { SliderRow } from './SliderRow';
 
 export type SunPanelProps = {
   sunMode: SunMode;
@@ -33,30 +34,22 @@ export function SunPanel(props: SunPanelProps) {
       </div>
       {props.sunMode === 'manual' ? (
         <div className="manual-sun">
-          <div className="ctl">
-            <label>Azimuth</label>
-            <input
-              type="range"
-              min="0"
-              max="360"
-              step="1"
-              value={props.manualAzDeg}
-              onChange={(e) => props.onManualAzDeg(Number(e.target.value))}
-            />
-            <output>{props.manualAzDeg.toFixed(0)}°</output>
-          </div>
-          <div className="ctl">
-            <label>Strength</label>
-            <input
-              type="range"
-              min="0"
-              max="2"
-              step="0.01"
-              value={props.manualStrength}
-              onChange={(e) => props.onManualStrength(Number(e.target.value))}
-            />
-            <output>{props.manualStrength.toFixed(2)}</output>
-          </div>
+          <SliderRow
+            label="Azimuth"
+            value={props.manualAzDeg}
+            min={0}
+            max={360}
+            step={1}
+            onChange={props.onManualAzDeg}
+          />
+          <SliderRow
+            label="Strength"
+            value={props.manualStrength}
+            min={0}
+            max={2}
+            step={0.01}
+            onChange={props.onManualStrength}
+          />
         </div>
       ) : null}
       <div className="lightbox" aria-label="Shading preview">
@@ -73,54 +66,38 @@ export function SunPanel(props: SunPanelProps) {
         </div>
         {props.lightOn ? (
           <div className="grid">
-            <div className="ctl">
-              <label>Sun azimuth</label>
-              <input
-                type="range"
-                min="0"
-                max="360"
-                step="1"
-                value={light.azDeg}
-                onChange={(e) => onLight({ ...light, azDeg: Number(e.target.value) })}
-              />
-              <output>{light.azDeg.toFixed(0)}°</output>
-            </div>
-            <div className="ctl">
-              <label>Sun elevation</label>
-              <input
-                type="range"
-                min="0"
-                max="90"
-                step="1"
-                value={light.elDeg}
-                onChange={(e) => onLight({ ...light, elDeg: Number(e.target.value) })}
-              />
-              <output>{light.elDeg.toFixed(0)}°</output>
-            </div>
-            <div className="ctl">
-              <label>Roughness</label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={light.roughness}
-                onChange={(e) => onLight({ ...light, roughness: Number(e.target.value) })}
-              />
-              <output>{light.roughness.toFixed(2)}</output>
-            </div>
-            <div className="ctl">
-              <label>Ambient</label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={light.ambient}
-                onChange={(e) => onLight({ ...light, ambient: Number(e.target.value) })}
-              />
-              <output>{light.ambient.toFixed(2)}</output>
-            </div>
+            <SliderRow
+              label="Sun azimuth"
+              value={light.azDeg}
+              min={0}
+              max={360}
+              step={1}
+              onChange={(v) => onLight({ ...light, azDeg: v })}
+            />
+            <SliderRow
+              label="Sun elevation"
+              value={light.elDeg}
+              min={0}
+              max={90}
+              step={1}
+              onChange={(v) => onLight({ ...light, elDeg: v })}
+            />
+            <SliderRow
+              label="Roughness"
+              value={light.roughness}
+              min={0}
+              max={1}
+              step={0.01}
+              onChange={(v) => onLight({ ...light, roughness: v })}
+            />
+            <SliderRow
+              label="Ambient"
+              value={light.ambient}
+              min={0}
+              max={1}
+              step={0.01}
+              onChange={(v) => onLight({ ...light, ambient: v })}
+            />
           </div>
         ) : null}
       </div>

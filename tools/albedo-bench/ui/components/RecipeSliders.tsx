@@ -5,6 +5,7 @@ import type { AlbedoRecipe } from '../../../textures/@types/AlbedoRecipe';
 import { recipeNumberAt } from '../utils/recipeNumberAt';
 import { withRecipeNumber } from '../utils/withRecipeNumber';
 import { RECIPE_SLIDER_ROWS } from './RecipeSliders.constants';
+import { SliderRow } from './SliderRow';
 
 export type RecipeSlidersProps = {
   recipe: AlbedoRecipe;
@@ -12,34 +13,6 @@ export type RecipeSlidersProps = {
   onSave: () => void;
   saveStatus: string;
 };
-
-const slugify = (label: string) => 'sl-' + label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-function SliderRow(props: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (v: number) => void;
-}) {
-  const id = slugify(props.label);
-  return (
-    <div className="ctl">
-      <label htmlFor={id}>{props.label}</label>
-      <input
-        id={id}
-        type="range"
-        min={props.min}
-        max={props.max}
-        step={props.step}
-        value={props.value}
-        onChange={(e) => props.onChange(Number(e.target.value))}
-      />
-      <output htmlFor={id}>{props.value.toFixed(3)}</output>
-    </div>
-  );
-}
 
 function Group(props: { title: string; children: ReactNode }) {
   return (
