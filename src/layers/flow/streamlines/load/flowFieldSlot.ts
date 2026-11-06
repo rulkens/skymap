@@ -18,6 +18,7 @@ export function createFlowFieldSlot(renderer: FlowFieldRenderer): AssetSlot<Scal
     commit: async (cube) => {
       renderer.upload(cube);
     },
+    onRelease: () => renderer.clear(),
   });
   slot.subscribe((s) => {
     if (s.kind === 'ready') {

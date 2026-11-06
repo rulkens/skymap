@@ -25,6 +25,7 @@ import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
 import { frameBodyStates } from './frameBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
+import { skyCapturesBaking } from './skyCapturesBaking';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -210,6 +211,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.selectionKindRows,
     state.subsystems.structureFocus.lastFocusRef(),
   );
+  // Ahead of every planner row: `scheduleSkyCaptures` bakes exactly this set later in the frame.
+  snapshot.skyCapturesBaking = skyCapturesBaking({
+    inBand: snapshot.skyCapturesInBand,
+    captures: state.cubemapCaptures,
+    settings: state.settings,
+    contentVersion: state.contentVersion,
+    fadesAnimating: state.subsystems.fades.isAnyAnimating(nowMs),
+  });
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this

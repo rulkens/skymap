@@ -58,15 +58,12 @@ export function scheduleSkyCaptures(input: {
       }
     }
     if (!bandActive) continue;
-    // A `rebakeOnSettings: false` row reads its bake as current whatever the
-    // settings (or catalog content) do; only a band re-entry (which nulls the
-    // record) re-bakes it — content bumps obey the same gate as settings writes.
-    const stale =
-      runtime.bakedSettings === null ||
-      (row.rebakeOnSettings &&
-        (runtime.bakedSettings !== state.settings ||
-          runtime.bakedContentVersion !== state.contentVersion));
-    if (!rosterSettling && !stale) continue;
+    if (!ctx.snapshot.skyCapturesBaking.has(key)) {
+      // The planners vote after the frame decided its bakes, so a Layer that starts
+      // settling over a settled bake re-bakes from the next frame.
+      if (ctx.snapshot.plans.settling) runtime.bakedSettings = null;
+      continue;
+    }
 
     // One bake covers the band: a 1024² face's texel is ~1.5 mrad, so content
     // at 8 kpc shifts by a texel only after ~12 pc of travel, against a 500 AU

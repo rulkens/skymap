@@ -43,7 +43,7 @@ function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>):
   return makeGalaxyCatalog(positions.length, { positions: flat });
 }
 
-const SNAPSHOT = { nowMs: 0, skyCapturesInBand: new Set() } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0, skyCapturesBaking: new Set() } as unknown as ReadyFrameContext;
 
 const VIEWS = [
   {

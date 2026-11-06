@@ -52,6 +52,8 @@ export type FlowFieldRenderer = {
    * field's texture if re-set.
    */
   upload(cube: ScalarCube): void;
+  /** Frees the velocity texture `upload` made; compute and draw are no-ops until the next upload. */
+  clear(): void;
   /**
    * Called once per frame with the live `mode`/`count` knobs (mirrors
    * `milkyWayCloud.reconcile(starCount)`). Arms a reseed when either differs
