@@ -7,10 +7,10 @@
 
 ```
 main
- └─ sky-lens-prep                 PR 1: Task 1
+ └─ sky-lens-prep                 PR 1: Tasks 1, 1b
      └─ worktree-sky-arm-look-around   trunk: Tasks 2–4 (no PR of its own)
          ├─ sky-exit-climb        Tasks A1–A3 → the PR if A wins
-         └─ sky-exit-push         Tasks B1–B4 → the PR if B wins
+         └─ sky-exit-push         Tasks B2–B4 → the PR if B wins
 ```
 
 The trunk worktree is `.claude/worktrees/sky-arm-look-around`; the exits get
@@ -45,6 +45,18 @@ Pure functions throughout: each new helper is one function per file under
 - [ ] No new tests: the ported ones guard it.
 - [ ] Commit `refactor(camera): the field of view moves from settings into camera state`, push, open
       PR 1.
+
+### Task 1b: Port the clip `fov` channel (R8: rides PR 1)
+
+**review: yes** (camera drivers)
+
+**Files:** the 17 of `git show 48f1a3341 --stat`, at current paths
+
+- [ ] `git cherry-pick 48f1a3341`, resolve. Contract: `Channel` gains `'fov'` (log-space lerp),
+      `DriverOutput.lens?: number`, the projection draws a driver's lens over `camera.lens`, the clip's
+      last lens is committed with `setLens` on hand-off.
+- [ ] Its tests come with it.
+- [ ] Commit.
 
 ---
 
@@ -115,6 +127,13 @@ export function skyZoomedLens(lensRad: number, factor: number): number;
     `pose === framed.pose` and no `lens`.
   - `nudge look and zoom move the view and the lens at the drag's rate`.
 - [ ] Commit.
+
+### Task 3b: The slider takes the lens range (R9)
+
+**Files:** `src/components/SettingsPanel/DisplaySection.tsx`
+
+- [ ] The Field of view slider's `min`/`max` read `LENS_MIN_DEG`/`LENS_MAX_DEG` (0.5°–120°). No test
+      (a UI constant). Commit.
 
 ### Task 4: Backlog what remains of sky mode
 
@@ -191,18 +210,6 @@ export function skyClimbStep(pose: SkyPose, lensRad: number, factor: number, rel
 ---
 
 ## Exit B — `sky-exit-push`
-
-### Task B1: Port the clip `fov` channel
-
-**review: yes** (camera drivers)
-
-**Files:** the 17 of `git show 48f1a3341 --stat`, at current paths
-
-- [ ] `git cherry-pick 48f1a3341`, resolve. Contract: `Channel` gains `'fov'` (log-space lerp),
-      `DriverOutput.lens?: number`, the projection draws a driver's lens over `camera.lens`, the clip's
-      last lens is committed with `setLens` on hand-off.
-- [ ] Its tests come with it.
-- [ ] Commit.
 
 ### Task B2: A tween may carry a lens
 

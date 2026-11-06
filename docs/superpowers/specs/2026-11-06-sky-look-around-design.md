@@ -33,16 +33,19 @@ picker, grids, the takeover, Esc, the readout. §9 backlogs them.
 | R5 | The lens moves into camera state as prep (sky-mode R12/D1), ported from `origin/sky-mode` `d37207970`. |
 | R6 | The prep ships as its own PR, ahead of the feature. |
 | R7 | A's climb field is `SkyPose.eyeHeightM` (≥ `SKY_EYE_HEIGHT_M`). |
+| R8 | The clip `fov` channel lands in the prep PR, whichever exit wins (2026-11-06). |
+| R9 | The settings slider reads `LENS_MIN_DEG`/`LENS_MAX_DEG`: one range, 0.5°–120° (2026-11-06). |
 
 ## 3. Ground preparation
 
 ### 3.1 Ideal shape
 
 ```ts
-// prep — the lens is camera state (port of d37207970, without the clip `fov` channel)
+// prep — the lens is camera state (port of d37207970) and clips can drive it (port of 48f1a3341)
 type CameraState = { …; lens: number };            // radians, beside base; setLens(rad), selectLens
 type SceneSnapshot = { …; lens: number };          // the takeover pins and restores it
 // deleted: CameraSettings, cameraSettingsSlice, settings.camera, selectFovDeg
+type Channel = … | 'fov';                         // log space; DriverOutput.lens, committed on hand-off
 
 // trunk — an arm step may author the lens
 CameraArmRow<K>.step(…)  → { pose; memory; tilt; lens?: number }
@@ -80,7 +83,11 @@ CameraTweenDescriptor.lens?: { from: number; to: number }
 selector are deleted; `CORE_SNAPSHOT_CLUSTERS` drops `'camera'`. `stepCameraRuntime` reads
 `stored.camera.lens`. Paths moved since (`cameraFraming` is under `framing/`). Behaviour-preserving;
 the ported tests (`stepCameraRuntime`, `captureScene`, `restoreSceneSaga`, `withSceneSnapshotSaga`)
-are its guard. The clip `fov` channel (`48f1a3341`) is not ported here (B ports it, §6.4).
+are its guard.
+
+**P2. Clips drive the lens.** Port `48f1a3341` (R8): a log-space `'fov'` channel evaluated against
+the clip's start lens, `DriverOutput.lens` drawn by the runtime and committed with `setLens` on
+hand-off; a clip without an `fov` track leaves the lens alone. Its tests come with it.
 
 ## 4. Trunk: look and lens (both exits build on it)
 
@@ -103,7 +110,8 @@ are its guard. The clip `fov` channel (`48f1a3341`) is not ported here (B ports 
 
 `replayInput.stepRow` emits `setLens(lens)` whenever a step returns one, and every later step in the
 same drain reads `fovYRad` from the folded `camera.lens`, so two notches in one frame compound.
-`nudgeCameraArm` passes `lens` through and `stepCameraRuntime` emits it the same way. The frustum is
+`nudgeCameraArm` passes `lens` through and `stepCameraRuntime` emits it the same way. The settings
+slider takes its range from `LENS_MIN_DEG`/`LENS_MAX_DEG` (R9). The frustum is
 not re-derived mid-drain: only the sky arm writes the lens and it reads no frustum.
 
 ### 4.4 Nudge (the OpenSpace navigator)
@@ -146,8 +154,7 @@ confirms it.
    azimuth as the map heading, with `lens: { from: LENS_MAX, to: DEFAULT_FOV_Y_RAD }`.
    `replayInput` emits `startCameraTween`. The arm does not release: the tween owns the display,
    and its end commit (an absolute pose) leaves the sky regime; the body arm engages by its band.
-4. **Lens over the tween (R4).** Port `48f1a3341` (the clip `fov` channel: a log-space `'fov'`
-   channel, `DriverOutput.lens`, committed to `camera.lens` on hand-off). `focusMoveClip` adds an
+4. **Lens over the tween (R4).** The prep's `fov` channel (P2) carries it: `focusMoveClip` adds an
    `fov` track when the descriptor carries `lens`.
 
 5. **The navigator.** `nudge` carries no memory, so a navigator zoom stops at `LENS_MAX` in B;
@@ -179,7 +186,7 @@ Test names are the contract.
   - `wheel-out at the widest lens releases only once SKY_EXIT_PUSH_LN accumulates`
   - `any wheel-in, drag or rest clears the exit push`
   - `the exit tween ends above the spot looking down at the default lens`
-- B, `evaluateClip.test.ts` / `stepCameraRuntime.test.ts`: the ported `fov` channel tests.
+- Prep P2: the ported `fov` channel tests (`evaluateClip`, `stepCameraRuntime`).
 
 ## 8. Eye checks
 
