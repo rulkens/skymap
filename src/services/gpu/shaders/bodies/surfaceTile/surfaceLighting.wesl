@@ -1,6 +1,6 @@
 // surfaceTile/surfaceLighting.wesl — what every tile fragment variant
-// shares: the crossfaded atlas albedo, the height-cell normal and the LOD
-// overlay. Bindings live in the entry files, so textures and uniform fields
+// shares: the crossfaded atlas albedo, the night tile, the height-cell normal
+// and the LOD overlay. Bindings live in the entry files, so textures and uniform fields
 // arrive as parameters (plain values, never a buffer struct by value).
 
 import package::bodies::surfaceTile::lattice::latticePostGradient;
@@ -11,16 +11,16 @@ import package::bodies::surfaceTile::lattice::latticePostGradient;
 // slot's pixels (the sampler's clamp-to-edge only guards the atlas's own edge).
 const SURFACE_TILE_ATLAS_SIDE: f32 = 8192.0;
 const SURFACE_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / SURFACE_TILE_ATLAS_SIDE;
-// Mirrored from 'NIGHT_TILE_ATLAS_SIDE' (surfaceTileParams.ts), parity-tested:
-// the night atlas's own half texel, the same inset against its own slots.
-const NIGHT_TILE_ATLAS_SIDE: f32 = 4096.0;
-const NIGHT_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / NIGHT_TILE_ATLAS_SIDE;
-
 // Mirrored from 'SURFACE_TILE_PX' (surfaceTileParams.ts), parity-tested. The
 // atlas-uv width of a tile drawn from ITS OWN slot; the LOD overlay divides a
 // resolved rect's width into it to recover how many levels the fallback walked.
 const SURFACE_TILE_PX: f32 = 512.0;
 const TILE_SLOT_SCALE: f32 = SURFACE_TILE_PX / SURFACE_TILE_ATLAS_SIDE;
+
+// Mirrored from 'NIGHT_TILE_ATLAS_SIDE' (surfaceTileParams.ts), parity-tested.
+const NIGHT_TILE_ATLAS_SIDE: f32 = 4096.0;
+const NIGHT_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / NIGHT_TILE_ATLAS_SIDE;
+const NIGHT_TILE_SLOT_SCALE: f32 = SURFACE_TILE_PX / NIGHT_TILE_ATLAS_SIDE;
 
 // The 'surface-lod-overlay' ladder: green = own leaf tile resident,
 // yellow/orange/red = 1/2/3+ levels coarser. Flat bands, not a ramp: the
@@ -39,15 +39,25 @@ fn tileLodOverlayColor(levelDelta: u32) -> vec3<f32> {
 // A deep ancestor fallback (levelDelta >= ~7) can flatten a rect to under one
 // atlas texel; the raw half-texel inset would then push min past max, which
 // clamp() leaves indeterminate -- so the inset is capped at half the rect.
-fn resolveTileAtlasUv(
-  origin: vec2<f32>,
-  scale: vec2<f32>,
-  uv: vec2<f32>,
-  halfTexel: f32,
-) -> vec2<f32> {
+fn resolveTileAtlasUv(origin: vec2<f32>, scale: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
   let raw = origin + uv * scale;
-  let inset = min(vec2<f32>(halfTexel), 0.5 * scale);
+  let inset = min(vec2<f32>(SURFACE_TILE_ATLAS_HALF_TEXEL), 0.5 * scale);
   return clamp(raw, origin + inset, origin + scale - inset);
+}
+
+// A leaf almost always draws a z7-or-shallower ancestor's night tile, so its
+// rect is a sub-rect of that SLOT: clamped to the sub-rect, neighbouring leaves
+// could not filter across their shared edge (a texel step at every leaf border,
+// and one flat tap under a sub-texel rect). The slot is recovered from the
+// rect's origin, since slots tile the atlas on a 'NIGHT_TILE_SLOT_SCALE' grid.
+fn tileNight(atlas: texture_2d<f32>, atlasSampler: sampler, uv: vec2<f32>, rect: vec4<f32>) -> vec3<f32> {
+  let slotOrigin = floor(rect.xy / NIGHT_TILE_SLOT_SCALE) * NIGHT_TILE_SLOT_SCALE;
+  let slotUv = clamp(
+    rect.xy + uv * rect.zw,
+    slotOrigin + NIGHT_TILE_ATLAS_HALF_TEXEL,
+    slotOrigin + NIGHT_TILE_SLOT_SCALE - NIGHT_TILE_ATLAS_HALF_TEXEL,
+  );
+  return textureSampleLevel(atlas, atlasSampler, slotUv, 0.0).rgb;
 }
 
 // Crossfade the freshly-landed primary tile in over the coarser fallback. At
@@ -64,9 +74,9 @@ fn tileAlbedo(
   fallbackScale: vec2<f32>,
   fadeWeight: f32,
 ) -> vec3<f32> {
-  let primaryUv = resolveTileAtlasUv(primaryOrigin, primaryScale, uv, SURFACE_TILE_ATLAS_HALF_TEXEL);
+  let primaryUv = resolveTileAtlasUv(primaryOrigin, primaryScale, uv);
   let primaryAlbedo = textureSampleLevel(atlas, atlasSampler, primaryUv, 0.0).rgb;
-  let fallbackUv = resolveTileAtlasUv(fallbackOrigin, fallbackScale, uv, SURFACE_TILE_ATLAS_HALF_TEXEL);
+  let fallbackUv = resolveTileAtlasUv(fallbackOrigin, fallbackScale, uv);
   let fallbackAlbedo = textureSampleLevel(atlas, atlasSampler, fallbackUv, 0.0).rgb;
   return mix(fallbackAlbedo, primaryAlbedo, fadeWeight);
 }

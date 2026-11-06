@@ -9,8 +9,7 @@ import package::bodies::surfaceTile::io::SurfaceTileUniforms;
 import package::bodies::surfaceTile::surfaceLighting::tileAlbedo;
 import package::bodies::surfaceTile::surfaceLighting::tileShadingNormal;
 import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
-import package::bodies::surfaceTile::surfaceLighting::resolveTileAtlasUv;
-import package::bodies::surfaceTile::surfaceLighting::NIGHT_TILE_ATLAS_HALF_TEXEL;
+import package::bodies::surfaceTile::surfaceLighting::tileNight;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::nightLights::nightLights;
@@ -77,9 +76,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Both samples are unconditional: 'textureSample' needs uniform control
   // flow, and a zero-scale rect (no night tile resident) picks the global one.
   let globalNight = textureSample(nightTexture, baseSampler, equirectUv).rgb;
-  let tileNight = textureSampleLevel(nightAtlas, atlasSampler,
-      resolveTileAtlasUv(in.nightRect.xy, in.nightRect.zw, in.uv, NIGHT_TILE_ATLAS_HALF_TEXEL), 0.0).rgb;
-  let nightColour = select(globalNight, tileNight, in.nightRect.z > 0.0);
+  let tileNightColour = tileNight(nightAtlas, atlasSampler, in.uv, in.nightRect);
+  let nightColour = select(globalNight, tileNightColour, in.nightRect.z > 0.0);
   // Whether the sun is up is the DATUM's cosine, not the terrain's: keyed on
   // 'n', every slope facing away from the sun at noon read as night and lit up
   // with the city's Black Marble glow (Søndermarken's banks turned cream).
