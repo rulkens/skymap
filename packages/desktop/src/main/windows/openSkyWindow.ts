@@ -22,6 +22,8 @@ export function openSkyWindow(
   const show: BrowserWindowConstructorOptions = {
     ...(asWindow ?? display.bounds),
     titleBarStyle: 'hidden',
+    // Inset as the control window's (openControlWindow), so the two windows' buttons sit alike.
+    trafficLightPosition: { x: 24, y: 14 },
     fullscreenable: false,
     ...(process.platform === 'win32'
       ? { titleBarOverlay: { color: '#000000', symbolColor: '#e8eeff', height: 28 } }
