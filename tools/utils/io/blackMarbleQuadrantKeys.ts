@@ -4,7 +4,7 @@
  * bake reads their pixels and `fetchTextures` downloads them from this one list.
  */
 
-import type { ImageryQuadrant } from '../../textures/quadrantImagerySource';
+import type { ImageryQuadrant } from '../../textures/@types/ImageryQuadrant';
 import type { RawDataKey } from './rawDataRegistry';
 
 export const BLACK_MARBLE_QUADRANT_KEYS = {

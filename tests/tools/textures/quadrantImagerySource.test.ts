@@ -27,11 +27,9 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import {
-  quadrantImagerySource,
-  type ImageryQuadrant,
-} from '../../../tools/textures/quadrantImagerySource';
+import { quadrantImagerySource } from '../../../tools/textures/quadrantImagerySource';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { ImageryQuadrant } from '../../../tools/textures/@types/ImageryQuadrant';
 
 const QUADRANT_EDGE_PX = 1024;
 

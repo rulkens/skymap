@@ -11,7 +11,7 @@ import { BLACK_MARBLE_QUADRANT_KEYS } from '../../utils/io/blackMarbleQuadrantKe
 import { BMNG_QUADRANT_KEYS } from '../../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../utils/io/bmngVintage';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';
-import { quadrantImagerySource, type ImageryQuadrant } from '../quadrantImagerySource';
+import { quadrantImagerySource } from '../quadrantImagerySource';
 import { colourMatchedImagerySource } from '../colourMatchedImagerySource';
 import { constantHeightSource } from '../constantHeightSource';
 import { dhmTerraenHeightSource } from '../dhmTerraenHeightSource';
@@ -24,6 +24,7 @@ import { skadiHeightSource } from '../skadiHeightSource';
 import type { SurfaceBakeBand } from '../@types/SurfaceBakeBand';
 import type { SurfaceBodyBake } from '../@types/SurfaceBodyBake';
 import { voidFilledHeightSource } from '../voidFilledHeightSource';
+import type { ImageryQuadrant } from '../@types/ImageryQuadrant';
 
 /** Stable location of the manifest and index — the pointer clients always
  *  fetch — so it reads `SURFACE_TILE_REGISTRY`'s own key rather than a

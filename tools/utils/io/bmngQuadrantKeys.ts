@@ -11,7 +11,7 @@
  * in `BMNG_VINTAGE` alone.
  */
 
-import type { ImageryQuadrant } from '../../textures/quadrantImagerySource';
+import type { ImageryQuadrant } from '../../textures/@types/ImageryQuadrant';
 import type { RawDataKey } from './rawDataRegistry';
 
 export const BMNG_QUADRANT_KEYS = {

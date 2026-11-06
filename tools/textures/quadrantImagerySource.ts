@@ -37,19 +37,12 @@ import sharp from 'sharp';
 import { levelFittingWidth } from '../../src/layers/body/surfaceTiles/format/utils/levelFittingWidth';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import { QUADRANT_COLUMNS } from './data/quadrantColumns';
+import { QUADRANT_ROWS } from './data/quadrantRows';
+import type { ImageryQuadrant } from './@types/ImageryQuadrant';
 
 /** Longitude and latitude extent of one quadrant, in degrees. */
 const QUADRANT_SPAN_DEG = 90;
-
-/** Column letters, west to east from longitude -180. */
-const QUADRANT_COLUMNS = ['A', 'B', 'C', 'D'] as const;
-
-/** Row digits, north to south from latitude +90. */
-const QUADRANT_ROWS = ['1', '2'] as const;
-
-/** One of the eight quadrant names: column letter then row digit. */
-export type ImageryQuadrant =
-  `${(typeof QUADRANT_COLUMNS)[number]}${(typeof QUADRANT_ROWS)[number]}`;
 
 /** Every quadrant name, as the product of the two axes rather than a
  *  hand-written list, so the grid is stated exactly once. */
