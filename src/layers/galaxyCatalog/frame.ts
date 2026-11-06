@@ -98,10 +98,9 @@ export function galaxyCatalogPlanner(
       const cam = views[0]!.cam;
       const pxPerRad = Math.max(...views.map((view) => view.drawPxPerRad));
       // Galaxies draw in COSMO; the planes and occluder cones sit about the walk's origin,
-      // cam.position. A sky capture replays the disks on all six faces, so a baking frame
-      // culls nothing.
-      const capturing = snapshot.skyCapturesBaking.size > 0;
-      const cullViews = capturing ? [] : views;
+      // cam.position. Sky captures replay this list: the lens covers part of the view with
+      // its cubemap, so the disks it needs are the ones in view.
+      const cullViews = views;
       const viewPlanes = new Float32Array(cullViews.length * FRUSTUM_FLOATS_PER_VIEW);
       cullViews.forEach((view, v) =>
         frustumPlanesFromViewProj(
@@ -109,9 +108,7 @@ export function galaxyCatalogPlanner(
           viewPlanes.subarray(v * FRUSTUM_FLOATS_PER_VIEW, (v + 1) * FRUSTUM_FLOATS_PER_VIEW),
         ),
       );
-      const occluderCones = capturing
-        ? new Float64Array(0)
-        : occluderConesFrom(sceneOccluderBodies(state, views[0]!), cam.position);
+      const occluderCones = occluderConesFrom(sceneOccluderBodies(state, views[0]!), cam.position);
 
       // hiResFamous must run BEFORE the shared disk walk: the textured-disk body
       // folds `hiResFamous.lastOutput.byFamousIdx` into the instances it emits;

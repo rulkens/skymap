@@ -18,7 +18,7 @@ import { galaxyPlannerViewOf } from '../../helpers/frame/galaxyPlannerViewOf';
 import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 
-const SNAPSHOT = { nowMs: 0, skyCapturesBaking: new Set() } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const FADE = makeGalaxyCatalogFade();
 const VIEWS = [galaxyPlannerViewOf()];
 

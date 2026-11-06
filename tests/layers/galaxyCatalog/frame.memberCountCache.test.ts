@@ -13,7 +13,7 @@ import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
-const SNAPSHOT = { nowMs: 0, skyCapturesBaking: new Set() } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const VIEWS = [galaxyPlannerViewOf()];
 const STATE = {
   settings: {

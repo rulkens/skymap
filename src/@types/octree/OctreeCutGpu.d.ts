@@ -20,6 +20,8 @@ export type OctreeCutGpu = {
    * an empty octree releases them. Throws, creating nothing, past a pool cap.
    */
   upload(source: SourceType, octree: Octree<{ readonly count: number }>, slots: number): void;
+  /** Destroy a source's buffers (live and capture); a later `upload` builds them afresh. */
+  release(source: SourceType): void;
   /** Write a landed chunk's rows into `slot`, zero its fades, then mark its roots resident. */
   uploadChunk(
     source: SourceType,

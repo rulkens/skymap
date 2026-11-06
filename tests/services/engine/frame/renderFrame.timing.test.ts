@@ -279,7 +279,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     renderTargets,
     renderedTargets,
     skyCapturesInBand: new Set(),
-    skyCapturesBaking: new Set(),
     plans: createFramePlannerResultStore(),
   };
   const ctx = {

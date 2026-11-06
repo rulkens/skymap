@@ -46,7 +46,7 @@ const STATE = {
   selectionRows: { select: null },
 } as unknown as PassState;
 
-const SNAPSHOT = { nowMs: 0, skyCapturesBaking: new Set() } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const FADE = makeGalaxyCatalogFade();
 const VIEWS = [galaxyPlannerViewOf()];
 
