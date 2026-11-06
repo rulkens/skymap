@@ -12,7 +12,7 @@ export function filamentsAssetRows(
       key: 'filaments',
       slot: runtime.slot,
       req: (tier) => ({ small: tier === 'small' }),
-      demand: (ctx) => ctx.settings.cosmicWebFilaments.enabled,
+      demand: { near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 } },
       priority: 80, // cosmic-web overlays sit behind the catalogs they are drawn over
       gates: 'cosmicWebFilaments',
     },

@@ -2,8 +2,8 @@
  * meshAssetRows — core's asset rows: one per mesh body, each carrying the slot it
  * mints (the mesh slots stay core's, beside the one mesh renderer every
  * body-bearing Layer draws through). `createLayers` folds these with every Layer's
- * rows into `state.assetRows`. Each `demand(ctx)` is a pure predicate over
- * `DemandCtx`, re-run whole on any state change, so no edge can be missed.
+ * rows into `state.assetRows`. `evaluateAssetDemand` re-reads every row's demand whole
+ * each pass, so no edge can be missed.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -14,30 +14,16 @@ import { createAssetSlot } from '../../loading/AssetSlot';
 import { meshFetcher } from '../../loading/fetchers/meshFetcher';
 import { MESH_PRESENTATIONS } from '../../../data/bodies/meshPresentations';
 import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { clampTier } from '../../../utils/math/clampTier';
-import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { closeMeshAssetBitmaps } from '../../../utils/meshBodies/closeMeshAssetBitmaps';
-import { deriveBodyStates } from '../frame/deriveBodyStates';
-import { loadRadiusMpc as meshBodyLoadRadiusMpc } from '../frame/meshBodyLoadRadius';
-import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { meshBodySlotKey } from '../../../utils/meshBodies/meshBodySlotKey';
-import type { Vec3 } from '../../../@types/math/Vec3';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 
-/**
- * One demand+release row per mesh body: demanded inside `loadRadiusMpc`, released
- * past twice it — the band between is the hysteresis that stops a camera dithering
- * at the boundary from thrashing a load/free cycle. A mesh body is in the body-state
- * snapshot whatever drives it, so its position comes straight off `deriveBodyStates`.
- */
+/** One row per mesh body: loads when it is `resolvePx` across (where its glint hands over), releases below half that. */
 function meshBodyRow(state: Pick<EngineState, 'gpu'>, body: MeshPresentation): AssetWiringRow {
-  const bodyPos = (simDays: number): Readonly<Vec3> => {
-    const bodyState = deriveBodyStates(simDays).get(body.id);
-    if (bodyState === undefined) {
-      throw new Error(`meshBodyRow: '${body.id}' has no derived body state`);
-    }
-    return bodyState.positionMpc;
-  };
+  const { resolvePx } = findByIdOrThrow(SCENE_BODIES, body.id, 'meshBodyRow');
   return {
     key: meshBodySlotKey(body.id),
     // `commit`/`onRelease` re-read `state.gpu.meshBodyRenderer` at call time, so the
@@ -57,12 +43,7 @@ function meshBodyRow(state: Pick<EngineState, 'gpu'>, body: MeshPresentation): A
       meshKey: body.meshKey,
       tier: clampTier(tier, MESH_ASSETS[body.meshKey]!.tierCeiling),
     }),
-    // An absent craft is parked on or in Earth, which must not demand its mesh.
-    demand: (ctx) =>
-      spacecraftPresent(body.id, ctx.simDays) &&
-      distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) < meshBodyLoadRadiusMpc(body.id),
-    release: (ctx) =>
-      distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) > 2 * meshBodyLoadRadiusMpc(body.id),
+    demand: { size: { body: body.id, loadPx: resolvePx, releasePx: resolvePx / 2 } },
     priority: 10, // same rank as body textures — rarely co-demanded with the planet family
   };
 }

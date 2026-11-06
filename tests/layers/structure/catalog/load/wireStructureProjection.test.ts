@@ -131,7 +131,29 @@ describe('wireStructureProjection', () => {
     void runtime.slot.load({});
     runtime.slot.cancel();
 
-    expect(published.at(-1)!.patch).toEqual({ bulk: 'idle' });
+    expect(published.at(-1)!.patch).toEqual({
+      counts: { ...NO_COUNTS, 'galaxy-cluster': 2 },
+      searchList: ANCHOR_IDS,
+      bulk: 'idle',
+    });
+  });
+
+  it('a release drops the bulk records, and a reload brings them back', async () => {
+    vi.mocked(structureCatalogFetcher).mockResolvedValue(threeClusters as never);
+    const { runtime, published } = wire();
+
+    await runtime.slot.load({});
+    runtime.slot.release();
+
+    expect(runtime.store.byCategory('galaxy-cluster').map((s) => s.id)).toEqual(ANCHOR_IDS);
+    expect(published.at(-1)!.patch).toEqual({
+      counts: { ...NO_COUNTS, 'galaxy-cluster': 2 },
+      searchList: ANCHOR_IDS,
+      bulk: 'idle',
+    });
+
+    await runtime.slot.load({});
+    expect(runtime.store.byCategory('galaxy-cluster')).toHaveLength(5);
   });
 
   it("publishes anchor-only counts and bulk 'error' when the slot rejects", async () => {

@@ -12,7 +12,9 @@ export type CameraArmCtx = CameraArmBasisCtx & {
   readonly viewportPx: Readonly<Vec2>;
   /** The main view's frustum: cursor rays map through it. */
   readonly frustum: ViewFrustum;
-  /** The lens, for rates (radians per pixel); never a ray. */
+  /** The lens: for rates (radians per pixel), and the sky wheel scales it; never a ray. */
   readonly fovYRad: number;
   readonly tuning: CameraTuning;
+  /** The drain's clock, ms: what a memory that waits for a pause measures it by. */
+  readonly nowMs: number;
 };

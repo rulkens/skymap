@@ -16,7 +16,7 @@ import type { GalaxyColumnBlock } from '../../records/@types/GalaxyColumnBlock';
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 
 export type DiskRowVisitor = {
-  /** Source bit is clear this frame → clear this body's sticky map for it. */
+  /** Source bit is clear this frame, or every view is occluded → clear this body's sticky map for it. */
   onSourceHidden(source: GalaxyCatalogSourceType): void;
   /**
    * Before a block's row loop → purgeStrideWindow(stickyMap, windowStart, windowEnd),

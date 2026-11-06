@@ -17,8 +17,8 @@ import { skySpotRadial } from '../../../../../../utils/geo/skySpotRadial';
 export function skyPoseFromBodyArm(arm: BodyFixedPose, spot: SkySpot): SkyPose {
   const { east, north, localUp } = siteEyeFrame(skySpotRadial(spot));
   const m = arm.basisLocal;
-  const up: Vec3 = [m[3], m[4], m[5]];
-  const forward: Vec3 = [m[6], m[7], m[8]];
+  const up: Readonly<Vec3> = [m[3], m[4], m[5]];
+  const forward: Readonly<Vec3> = [m[6], m[7], m[8]];
   const sinAlt = dot3(forward, localUp);
   const azimuthRad =
     sinAlt > Math.SQRT1_2

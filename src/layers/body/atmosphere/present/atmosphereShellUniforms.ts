@@ -14,6 +14,9 @@ import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { composeBodySlabMvp } from '../../../../utils/camera/bodyCompose/composeBodySlabMvp';
 import { packAtmosphereUniforms } from '../render/packAtmosphereUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { daylightWeight } from '../utils/daylightWeight';
+import { scatteringColumnAbove } from '../utils/scatteringColumnAbove';
+import { sunZenithCos } from '../utils/sunZenithCos';
 
 export function atmosphereShellUniforms(
   entry: AtmosphereDrawEntry,
@@ -22,7 +25,7 @@ export function atmosphereShellUniforms(
   state: PassState,
 ): Float32Array {
   const { body, params, atmosphereTopM, camLocal, sunLocal } = entry;
-  // An entry exists only where bodyPose resolved (atmosphereDrawList skips a body with no pose).
+  // An entry exists only where bodyPose resolved (atmosphereEntry is null for a body with no pose).
   const pose = ctx.bodyPose(body.id)!;
 
   const mvp = composeBodySlabMvp(slab.vp, pose.eyeRelBodyM, atmosphereTopM);
@@ -32,7 +35,15 @@ export function atmosphereShellUniforms(
   // atmosphere top is the unit sphere and the ground sphere has this radius.
   const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;
   // Earth alone has a live exposure slider.
-  const exposure = body.id === 'earth' ? state.settings.earth.atmosphereExposure : params.exposure;
+  const baseExposure =
+    body.id === 'earth' ? state.settings.earth.atmosphereExposure : params.exposure;
+  const camRadius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
+  const altitudeKm = (camRadius - bottomRadius) * params.atmosphereTopKm;
+  const daylight = daylightWeight(
+    scatteringColumnAbove(params.constituents, altitudeKm),
+    sunZenithCos(camLocal, sunLocal),
+  );
+  const exposure = baseExposure * (1 + (params.daylightGain - 1) * daylight);
   // Ring annulus in LOCAL units (atmosphere top = 1); no `SCENE_RINGS` row ⇒ both
   // ratios 0, the no-ring sentinel — keeps a ring in front of the shell unblended.
   const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
@@ -49,5 +60,6 @@ export function atmosphereShellUniforms(
     ringInnerRatio,
     ringOuterRatio,
     FROXEL_SLICE_KM,
+    daylight,
   );
 }

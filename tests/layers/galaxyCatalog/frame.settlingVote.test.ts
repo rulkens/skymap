@@ -15,7 +15,7 @@ import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
-import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import { galaxyPlannerViewOf } from '../../helpers/frame/galaxyPlannerViewOf';
 
 // Same inert fixture as the other `frame` reconcile tests: nothing committed,
 // a no-op planner walk, no selection row — only the disk-work predicate
@@ -48,7 +48,7 @@ const STATE = {
 
 const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const FADE = makeGalaxyCatalogFade();
-const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
+const VIEWS = [galaxyPlannerViewOf()];
 
 describe('galaxyCatalog frame — work votes', () => {
   it('votes both while a landed thumbnail is inside its load fade', () => {

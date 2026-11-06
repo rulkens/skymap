@@ -14,6 +14,7 @@ import { Source } from '../../../../src/data/source';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
 import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
+import { structureVisibility } from '../../../../src/layers/structure/visibility';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { BODY_SOURCE_IDS } from '../../../../src/data/bodies/bodySourceIds';
@@ -250,6 +251,7 @@ function makeState(
   // fixture provides no slot for).
   const state = {
     tier: 'medium',
+    ui: { paletteOpen: false } as never,
     settings: {
       galaxyCatalogs: {
         enabled: true,
@@ -338,8 +340,12 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    visibilityEntries: [...galaxyCatalogVisibility, ...cosmicWebDensityVisibility],
-    selection: { hover: null, select: null, focus: null },
+    visibilityEntries: [
+      ...galaxyCatalogVisibility,
+      ...cosmicWebDensityVisibility,
+      ...structureVisibility,
+    ],
+    selection: { hover: null, select: null, focus: null, pending: { select: null, focus: null } },
   } as unknown as EngineState;
   state.assetRows = expandCompanionRows([
     ...meshAssetRows(state),
@@ -368,6 +374,7 @@ function makeDeps(): BootstrapDeps {
       resolvePick: () => null,
       extractRow: () => null,
       resolveFocusId: () => null,
+      claimedKind: () => null,
       focusIdOf: () => null,
     },
     phaseLocals: {

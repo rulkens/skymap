@@ -13,8 +13,7 @@ import { focusMoveClip } from '../../../../../src/services/engine/camera/clips/f
 import { focusMoveDurationMs } from '../../../../../src/services/engine/camera/clips/focusMoveDurationMs';
 import { compileClip } from '../../../../../src/services/engine/animation/compileClip';
 import { evaluateClip } from '../../../../../src/services/engine/camera/clips/evaluateClip';
-import { startCameraTween } from '../../../../../src/state/camera/cameraSlice';
-import { setFovDeg } from '../../../../../src/state/settings/core/cameraSettingsSlice';
+import { setFovYRad, startCameraTween } from '../../../../../src/state/camera/cameraSlice';
 import { DEFAULT_GEODESIC_TUNING } from '../../../../../src/data/camera/focusMoveDefaults';
 import { DEFAULT_ORIENTATION } from '../../../../../src/data/defaults';
 import { framingPose } from '../../../../../src/services/engine/camera/framing/framingPose';
@@ -22,6 +21,7 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { resume, setRate } from '../../../../../src/state/time/timeSlice';
 import { RATE_LADDER } from '../../../../../src/data/time/rateLadder';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { degToRad } from '../../../../../src/utils/math/degToRad';
 import { makeCameraSimHarness } from '../../../../helpers/camera/makeCameraSimHarness';
 import { relErr } from '../../../../support/relErr';
 import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
@@ -91,7 +91,7 @@ describe('focusMotions', () => {
         ),
       );
       // Before the first frame, so the clip compiles (and memoises) under the new lens.
-      if (fovDeg !== null) h.store.dispatch(setFovDeg(fovDeg));
+      if (fovDeg !== null) h.store.dispatch(setFovYRad(degToRad(fovDeg)));
       // 1.6 s, past the ~0.83 s flight: the retirement frame is compared too.
       return Array.from({ length: 100 }, () => {
         h.frame();

@@ -35,6 +35,7 @@ import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
 import { liveWorldPose } from './helpers/liveWorldPose';
+import { liveClipStartPose } from './helpers/liveClipStartPose';
 import { waitUntilSettled } from './helpers/waitUntilSettled';
 import { deriveBodyStates } from './frame/deriveBodyStates';
 import { cameraDebugSnapshotOf } from './camera/debug/cameraDebugSnapshotOf';
@@ -227,6 +228,7 @@ export function createEngine(
     booted: false,
     fadesAnimating: false,
     layersLoading: false,
+    drawPxPerRad: 0,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
@@ -297,7 +299,7 @@ export function createEngine(
   const playClip = createPlayClip({
     store,
     clipPlayer: state.subsystems.clipPlayer,
-    getLivePose: () => liveWorldPose(state),
+    getLivePose: () => liveClipStartPose(state),
   });
 
   // `sampleCount` must cover the WAYPOINT-DENSEST clip: ~200 waypoints at 384 samples
@@ -448,7 +450,9 @@ export function createEngine(
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: register.winner,
-          gesture: gesture.value?.gesture ?? null,
+          // Only the body arm's memory is a surface gesture.
+          gesture:
+            gesture.value !== null && 'gesture' in gesture.value ? gesture.value.gesture : null,
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),

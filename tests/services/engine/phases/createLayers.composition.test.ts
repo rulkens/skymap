@@ -72,7 +72,7 @@ function contributingLayer(tag: string, assetKey: string, slot: object): Layer<s
     create: () => ({}),
     destroy: () => {},
     passes: () => [{ name: `${tag}-pass`, enabled: () => false, draw: () => {} }],
-    assets: () => [{ key: assetKey, slot, req: () => undefined, demand: () => false, priority: 1 }],
+    assets: () => [{ key: assetKey, slot, req: () => undefined, demand: 'always', priority: 1 }],
     guides: () => ({
       screenLabels: [{ id: `${tag}-labels`, slab: COSMO, produceLabels: () => ({}) }],
     }),
@@ -249,6 +249,32 @@ describe('createLayers composition', () => {
     ];
 
     await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-asset/);
+  });
+
+  it('throws at boot when an asset row declares a band its entry lacks', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const layer = {
+      name: 'bad',
+      create: () => ({}),
+      destroy: () => {},
+      passes: () => [],
+      visibility: [{ key: 'badShow' }],
+      assets: () => [
+        {
+          key: 'bad-asset',
+          slot: {},
+          req: () => undefined,
+          demand: { near: { band: 'nope', edge: 'out', lead: 2, release: 4 } },
+          priority: 1,
+          gates: 'badShow',
+        },
+      ],
+    } as unknown as Layer<string, unknown>;
+
+    await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow(
+      /asset row 'bad-asset'.*band 'nope'/,
+    );
   });
 
   it('throws at boot when heightAt is provided more than once', async () => {

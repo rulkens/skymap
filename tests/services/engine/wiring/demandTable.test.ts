@@ -35,6 +35,9 @@ import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/rec
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { structureAssetRows } from '../../../../src/layers/structure/catalog/load/structureAssetRows';
 import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
+import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
+import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
+import { structureVisibility } from '../../../../src/layers/structure/visibility';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 
 type StubSlot = AssetSlot<unknown, unknown> & { load: ReturnType<typeof vi.fn> };
@@ -187,7 +190,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // directly. Per state so no pending entry survives into the next case, and
     // at the production concurrency so `firedKeys` exercises the real bound.
     subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
-    selection: { hover: null, select: null, focus: null },
+    selection: { hover: null, select: null, focus: null, pending: { select: null, focus: null } },
   } as unknown as EngineState;
   // The composed lists `createLayers` would have written: core's mesh rows plus
   // the Layers', folded once, with every row's slot indexed by its key. The mesh
@@ -199,6 +202,11 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     ...structureAssetRows(structureRuntime),
   ]);
   state.slotsByKey = new Map(state.assetRows.map((row) => [row.key, row.slot]));
+  state.visibilityEntries = [
+    ...galaxyCatalogVisibility,
+    ...cosmicWebDensityVisibility,
+    ...structureVisibility,
+  ];
   return state;
 }
 

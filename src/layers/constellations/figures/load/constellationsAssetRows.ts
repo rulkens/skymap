@@ -12,7 +12,7 @@ export function constellationsAssetRows(
       key: 'constellations',
       slot: runtime.slot,
       req: () => undefined,
-      demand: (ctx) => ctx.settings.constellations.enabled,
+      demand: { near: { band: 'neighbourhood', edge: 'out', lead: 10, release: 100 } },
       priority: 31, // small JSON on the near-sky rung, right behind the marker catalog
       gates: 'constellations',
     },

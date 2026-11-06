@@ -241,6 +241,7 @@ function makeDeps(): BootstrapDeps {
       resolvePick: () => null,
       extractRow: () => null,
       resolveFocusId: () => null,
+      claimedKind: () => null,
       focusIdOf: () => null,
     },
   };

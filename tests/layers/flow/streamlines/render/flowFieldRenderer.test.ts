@@ -159,4 +159,48 @@ describe('createFlowFieldRenderer', () => {
     renderer.encodeCompute(encoder, flow, 1030);
     expect(beginComputePass).toHaveBeenCalledTimes(2); // seed + integrate
   });
+
+  it('clear frees the velocity texture once, idles compute + draw, and a re-upload runs again', () => {
+    const device = mockDevice();
+    const renderer = createFlowFieldRenderer({ device, targetFormat: 'rgba16float' });
+    const textures = () =>
+      (device.createTexture as ReturnType<typeof vi.fn>).mock.results.map(
+        (r) => r.value as { destroy: ReturnType<typeof vi.fn> },
+      );
+    const beginComputePass = vi.fn(() => ({
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      dispatchWorkgroups: vi.fn(),
+      end: vi.fn(),
+    }));
+    const encoder = { beginComputePass } as unknown as GPUCommandEncoder;
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+    const flow = { mode: 'advect', count: 1000, intensity: 1 } as FlowSettings;
+    const frame = () => {
+      renderer.encodeCompute(encoder, flow, 0);
+      renderer.draw(pass, new Float32Array(16), [1, 1], flow, 1);
+    };
+
+    renderer.upload(mockCube());
+    renderer.clear();
+    const [first] = textures();
+    expect(first!.destroy).toHaveBeenCalledTimes(1);
+    frame();
+    expect(beginComputePass).not.toHaveBeenCalled();
+    expect(pass.draw).not.toHaveBeenCalled();
+
+    renderer.upload(mockCube());
+    frame();
+    expect(beginComputePass).toHaveBeenCalled();
+    expect(pass.draw).toHaveBeenCalledTimes(1);
+
+    renderer.destroy();
+    const [, second] = textures();
+    expect(first!.destroy).toHaveBeenCalledTimes(1);
+    expect(second!.destroy).toHaveBeenCalledTimes(1);
+  });
 });

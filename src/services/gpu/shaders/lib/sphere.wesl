@@ -183,7 +183,7 @@ struct CloudShellUniforms {
 //   offset  64..75:  sunDirLocal    (vec3<f32>)
 //   offset  76..79:  bottomRadius   (f32)
 //   offset  80..91:  camPosLocal    (vec3<f32>)
-//   offset  92..95:  _pad1          (f32, zeroed)
+//   offset  92..95:  daylight       (f32, 0..1, 'daylightWeight')
 //   offset  96..99:  exposure       (f32, in-scatter intensity scale)
 //   offset 100..103: ringInnerRatio (f32)
 //   offset 104..107: ringOuterRatio (f32)
@@ -196,7 +196,7 @@ struct AtmosphereUniforms {
   sunDirLocal: vec3<f32>,
   bottomRadius: f32,
   camPosLocal: vec3<f32>,
-  _pad1: f32,
+  daylight: f32,
   exposure: f32,
   ringInnerRatio: f32,
   ringOuterRatio: f32,

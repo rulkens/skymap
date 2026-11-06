@@ -12,6 +12,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
 import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
+import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFraming';
 import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
 import { clampCameraTuning } from '../../utils/camera/orbitCamera/clampCameraTuning';
 import { inputGestureStarted } from '../input/inputSlice';
@@ -40,6 +41,7 @@ const initialState: CameraState = {
   clip: null,
   frameTween: null,
   aim: null,
+  fovYRad: DEFAULT_FOV_Y_RAD,
   tuning: DEFAULT_CAMERA_TUNING,
 };
 
@@ -104,6 +106,10 @@ const cameraSlice = createSlice({
       camera.aim = { ...action.payload };
     },
 
+    setFovYRad: (camera, action: PayloadAction<number>) => {
+      camera.fovYRad = action.payload;
+    },
+
     // A WHOLE new record, never a leaf write: the panel's sliders read it back
     // through a selector, and an in-place edit leaves that render stale.
     setCameraTuning: (camera, action: PayloadAction<Partial<CameraTuning>>) => {
@@ -125,6 +131,7 @@ export const {
   cancelCameraTween,
   setAutoRotate,
   setCameraTuning,
+  setFovYRad,
   clipStarted,
   clipEnded,
   startFrameTween,

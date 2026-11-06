@@ -95,11 +95,14 @@ export function toWorldArm(
   // a direction at all. It cannot reopen the crossing: `t* = √(d²−R²) ≥ d−R`
   // there. `eyeMagM`'s own floor guards only an eye at or below the surface,
   // which the surface arm's descent floor already stands off from.
+  const groundM = groundRadiusAtM(eyeLocalM);
   const rangeM = Math.max(
     roots === null ? grazingM : roots[0],
-    // Only the floor is per-direction: the datum stays the sphere the range is
-    // measured against, so it matches the roots above.
-    Math.max(eyeMagM, surfaceFloorM(groundRadiusAtM(eyeLocalM), standoffRadii)) - bodyRadiusM,
+    // Measured from the datum, as the roots are, unless the live ground lies
+    // below it (the Dead Sea, most of Mars): an eye there is inside the datum
+    // sphere, its near root is behind it, and a datum-relative floor goes
+    // negative and turns the pose round. From the ground it stays ≥ the standoff.
+    Math.max(eyeMagM, surfaceFloorM(groundM, standoffRadii)) - Math.min(bodyRadiusM, groundM),
   );
   const armLocalM: Vec3 = [
     forwardLocal[0] * rangeM,

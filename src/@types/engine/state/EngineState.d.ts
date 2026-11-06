@@ -58,6 +58,8 @@ export type EngineState = {
   fadesAnimating: boolean;
   /** Whether a Layer planner voted `loading` last frame; `isSceneSettled` reads it. */
   layersLoading: boolean;
+  /** The largest `drawPxPerRad` over last frame's views; size-gated demand reads it. 0 before the first view. */
+  drawPxPerRad: number;
   /** Seeded with placeholders in `engine.ts`, filled by `wireInput`'s bootstrap seed. */
   cameraRuntime: CameraRuntime;
   /** Per-`APP_CUBEMAP_CAPTURE_REGISTRY`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky row's `allocateWhen`. */
