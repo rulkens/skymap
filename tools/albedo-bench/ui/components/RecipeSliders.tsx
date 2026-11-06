@@ -1,18 +1,12 @@
 /** RecipeSliders — one control per `AlbedoRecipe` field (the rows live in
  *  `RecipeSliders.constants.ts`), plus Save. */
 import type { ReactNode } from 'react';
-import type { AlbedoRecipe } from '../../../textures/@types/AlbedoRecipe';
+import { api } from '../api';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { saveFailed, saveStarted, saveSucceeded, setRecipeNumber } from '../store/recipeSlice';
 import { recipeNumberAt } from '../utils/recipeNumberAt';
-import { withRecipeNumber } from '../utils/withRecipeNumber';
 import { RECIPE_SLIDER_ROWS } from './RecipeSliders.constants';
 import { SliderRow } from './SliderRow';
-
-export type RecipeSlidersProps = {
-  recipe: AlbedoRecipe;
-  onRecipe: (recipe: AlbedoRecipe) => void;
-  onSave: () => void;
-  saveStatus: string;
-};
 
 function Group(props: { title: string; children: ReactNode }) {
   return (
@@ -23,9 +17,21 @@ function Group(props: { title: string; children: ReactNode }) {
   );
 }
 
-export function RecipeSliders(props: RecipeSlidersProps) {
-  const { recipe, onRecipe } = props;
+export function RecipeSliders() {
+  const dispatch = useAppDispatch();
+  const { recipe, saveStatus } = useAppSelector((s) => s.recipe);
+  if (recipe === undefined) return null;
   const sections = [...new Set(RECIPE_SLIDER_ROWS.map((row) => row.section))];
+
+  const onSave = async (): Promise<void> => {
+    dispatch(saveStarted());
+    try {
+      dispatch(saveSucceeded(await api.saveRecipe(recipe)));
+    } catch (err) {
+      dispatch(saveFailed(String(err)));
+    }
+  };
+
   return (
     <>
       {sections.map((section) => (
@@ -38,16 +44,16 @@ export function RecipeSliders(props: RecipeSlidersProps) {
               min={row.min}
               max={row.max}
               step={row.step}
-              onChange={(v) => onRecipe(withRecipeNumber(recipe, row.path, v))}
+              onChange={(value) => dispatch(setRecipeNumber({ path: row.path, value }))}
             />
           ))}
         </Group>
       ))}
       <div className="foot">
-        <button className="btn primary" onClick={props.onSave}>
+        <button className="btn primary" onClick={() => void onSave()}>
           Save
         </button>
-        <span className="status">{props.saveStatus}</span>
+        <span className="status">{saveStatus}</span>
       </div>
     </>
   );

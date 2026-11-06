@@ -4,51 +4,47 @@
  * lighting-preview lightbox card that relights both textures.
  */
 import type { RenderLight } from '../../@types/RenderLight';
-import type { SunMode } from '../../@types/SunMode';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import {
+  setLight,
+  setLightOn,
+  setManualAzDeg,
+  setManualStrength,
+  setSunMode,
+} from '../store/sunSlice';
 import { SliderRow } from './SliderRow';
 
-export type SunPanelProps = {
-  sunMode: SunMode;
-  onSunMode: (mode: SunMode) => void;
-  manualAzDeg: number;
-  manualStrength: number;
-  onManualAzDeg: (v: number) => void;
-  onManualStrength: (v: number) => void;
-  lightOn: boolean;
-  onLightOn: (v: boolean) => void;
-  light: RenderLight;
-  onLight: (light: RenderLight) => void;
-};
-
-export function SunPanel(props: SunPanelProps) {
-  const { light, onLight } = props;
+export function SunPanel() {
+  const dispatch = useAppDispatch();
+  const { sunMode, manualAzDeg, manualStrength, lightOn, light } = useAppSelector((s) => s.sun);
+  const onLight = (next: RenderLight) => dispatch(setLight(next));
   return (
     <div className="sun-panel">
       <div className="seg" role="group" aria-label="Sun field">
-        <button aria-pressed={props.sunMode === 'fitted'} onClick={() => props.onSunMode('fitted')}>
+        <button aria-pressed={sunMode === 'fitted'} onClick={() => dispatch(setSunMode('fitted'))}>
           Fitted
         </button>
-        <button aria-pressed={props.sunMode === 'manual'} onClick={() => props.onSunMode('manual')}>
+        <button aria-pressed={sunMode === 'manual'} onClick={() => dispatch(setSunMode('manual'))}>
           Manual
         </button>
       </div>
-      {props.sunMode === 'manual' ? (
+      {sunMode === 'manual' ? (
         <div className="manual-sun">
           <SliderRow
             label="Azimuth"
-            value={props.manualAzDeg}
+            value={manualAzDeg}
             min={0}
             max={360}
             step={1}
-            onChange={props.onManualAzDeg}
+            onChange={(v) => dispatch(setManualAzDeg(v))}
           />
           <SliderRow
             label="Strength"
-            value={props.manualStrength}
+            value={manualStrength}
             min={0}
             max={2}
             step={0.01}
-            onChange={props.onManualStrength}
+            onChange={(v) => dispatch(setManualStrength(v))}
           />
         </div>
       ) : null}
@@ -58,13 +54,13 @@ export function SunPanel(props: SunPanelProps) {
           <label className="switch">
             <input
               type="checkbox"
-              checked={props.lightOn}
-              onChange={(e) => props.onLightOn(e.target.checked)}
+              checked={lightOn}
+              onChange={(e) => dispatch(setLightOn(e.target.checked))}
             />
             Light the render
           </label>
         </div>
-        {props.lightOn ? (
+        {lightOn ? (
           <div className="grid">
             <SliderRow
               label="Sun azimuth"

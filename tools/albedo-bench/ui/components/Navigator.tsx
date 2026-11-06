@@ -6,6 +6,8 @@
 import { MAX_SPAN_DEG, MIN_SPAN_DEG, VIEW_PRESETS } from '../viewPresets';
 import type { ViewMode } from '../../@types/ViewMode';
 import type { ViewState } from '../../@types/ViewState';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { setView, setViewMode } from '../store/navigationSlice';
 
 const VIEW_MODES: readonly ViewMode[] = ['wipe', 'side-by-side', 'flip'];
 const VIEW_MODE_LABEL: Record<ViewMode, string> = {
@@ -14,15 +16,10 @@ const VIEW_MODE_LABEL: Record<ViewMode, string> = {
   flip: 'Flip',
 };
 
-export type NavigatorProps = {
-  view: ViewState;
-  onView: (view: ViewState) => void;
-  viewMode: ViewMode;
-  onViewMode: (mode: ViewMode) => void;
-};
-
-export function Navigator(props: NavigatorProps) {
-  const { view, onView } = props;
+export function Navigator() {
+  const dispatch = useAppDispatch();
+  const { view, viewMode } = useAppSelector((s) => s.navigation);
+  const onView = (next: ViewState) => dispatch(setView(next));
   const isPreset = (p: ViewState) =>
     p.lon === view.lon && p.lat === view.lat && p.spanDeg === view.spanDeg;
   return (
@@ -31,8 +28,8 @@ export function Navigator(props: NavigatorProps) {
         {VIEW_MODES.map((mode) => (
           <button
             key={mode}
-            aria-pressed={props.viewMode === mode}
-            onClick={() => props.onViewMode(mode)}
+            aria-pressed={viewMode === mode}
+            onClick={() => dispatch(setViewMode(mode))}
           >
             {VIEW_MODE_LABEL[mode]}
           </button>

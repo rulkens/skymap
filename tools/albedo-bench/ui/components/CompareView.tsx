@@ -15,6 +15,10 @@ import { MAX_SPAN_DEG, MIN_SPAN_DEG, clampLat, wrapLon } from '../viewPresets';
 import type { ViewMode } from '../../@types/ViewMode';
 import type { ViewState } from '../../@types/ViewState';
 import type { DragAnchor } from '../../@types/DragAnchor';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { setView } from '../store/navigationSlice';
+import { selectBox } from '../store/selectBox';
+import { selectRenderLag } from '../store/selectRenderLag';
 
 // Arbitrary visualisation scale — g's physical units (per unit slope) don't
 // map to screen pixels; this just keeps typical arrows legible.
@@ -26,6 +30,7 @@ const WIPE_KEY_STEP = 2;
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 // Below this on-screen move, a flip-mode pointerup is a click, not a drag.
 const CLICK_DRAG_TOLERANCE_PX = 4;
+const NO_ARROWS: readonly FieldArrow[] = [];
 
 function ArrowOverlay(props: { arrows: readonly FieldArrow[]; box: LonLatBounds }) {
   const { arrows, box } = props;
@@ -97,29 +102,13 @@ function previewTransform(rendered: LonLatBounds, box: LonLatBounds): string {
   return `translate(${txPct}%, ${tyPct}%) scale(${scaleX}, ${scaleY})`;
 }
 
-export type CompareViewProps = {
-  originalUrl: string | undefined;
-  adjustedUrl: string | undefined;
-  viewMode: ViewMode;
-  arrows: readonly FieldArrow[];
-  // True when /api/field fit a coarser stride than the committed recipe's
-  // own (previewSunFit, wide boxes only) — the arrows are a preview, not
-  // what the bake would compute.
-  fitCoarsened: boolean;
-  box: LonLatBounds;
-  view: ViewState;
-  onView: (view: ViewState) => void;
-  renderedBox: LonLatBounds | undefined;
-  pending: boolean;
-};
-
 export const HINT: Record<ViewMode, string> = {
   wipe: 'Drag to pan, wheel to zoom, drag the divider (or use ← →) to wipe.',
   'side-by-side': 'The two images side by side. Drag to pan, wheel to zoom.',
   flip: 'Click the image (or press space) to flip between them. Drag to pan, wheel to zoom.',
 };
 
-export function CompareView(props: CompareViewProps) {
+export function CompareView() {
   const [wipePct, setWipePct] = useState(50);
   const [flipShowing, setFlipShowing] = useState<'original' | 'adjusted'>('adjusted');
   const dragRef = useRef<DragAnchor | null>(null);
@@ -128,18 +117,22 @@ export function CompareView(props: CompareViewProps) {
   // pointerup was the end of a drag, not a click" for the one tick it's needed.
   const suppressNextClickRef = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const dispatch = useAppDispatch();
   const {
     originalUrl,
     adjustedUrl,
-    viewMode,
-    arrows,
-    fitCoarsened,
-    box,
-    view,
-    onView,
-    renderedBox,
-    pending,
-  } = props;
+    arrows: fieldArrows,
+    fitCoarsened: fieldCoarsened,
+  } = useAppSelector((s) => s.render);
+  const viewMode = useAppSelector((s) => s.navigation.viewMode);
+  const view = useAppSelector((s) => s.navigation.view);
+  const fitted = useAppSelector((s) => s.sun.sunMode) === 'fitted';
+  const box = useAppSelector(selectBox);
+  const { pending, renderedBox } = useAppSelector(selectRenderLag);
+  // The arrows are the fitted field, so a manual sun hides them.
+  const arrows = fitted ? fieldArrows : NO_ARROWS;
+  const fitCoarsened = fitted && fieldCoarsened;
+  const onView = (next: ViewState) => dispatch(setView(next));
 
   // React's onWheel is attached passively (can't preventDefault, so the page
   // would scroll under the zoom); a native listener can opt out. The ref
