@@ -22,6 +22,16 @@ reads. Both already share the grade (`ColourGrade` + `gradeRgbaInPlace`).
 - Update the bench README, `docs/DATA.md` (Mars sources) and the website's Albedo bench
   section, which all say the bake does not read the bench's recipe yet.
 
+## Ruled to ride this PR (deletion audit at the bench landing)
+
+- The bench defines the Viking and MOLA sources a second time (`tools/albedo-bench/plugin/apiPlugin.ts`),
+  with a different id and attribution from `marsSurfaceBake` for the same rasters. Export shared
+  factories from `marsGlobalRasters.ts` and use them in both; the bake also re-inlines the grids
+  that file exports.
+- `sampleSlope` and `sampleSunField` each carry their own clamped bilinear sampling. Share one, or
+  express `SunField` as a `west/north/stepDeg` lattice (then `constantSunField` is 1×1), while the
+  bake becomes its first production consumer.
+
 ## Bench leftovers (same effort, optional)
 
 - Decode/lattice cache: about 44 % of a slider tick; needs `fitSunField` restructured.
