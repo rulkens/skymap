@@ -44,6 +44,8 @@ import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { mergeSettingsSnapshot } from '../settings/mergeSettingsSnapshot';
 import { captureSettings } from '../scene/captureSettings';
+import { setLens } from '../camera/cameraSlice';
+import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFraming';
 import type { RootState } from '../../store/types';
 import type { Tour } from '../../@types/animation/tour/Tour';
 import type { BeatRange } from '../../@types/animation/tour/BeatRange';
@@ -116,6 +118,9 @@ export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
           const live = yield* select((s: RootState) => s.settings);
           const baseline = mergeSettingsSnapshot(live, baselineSettings);
           yield* put(mergeSnapshot(computeSceneEntering(baseline, tour.beats, i)));
+          // Beats are authored at the default lens, which left the settings
+          // fold with the lens: each beat re-pins it, as the fold did.
+          yield* put(setLens(DEFAULT_FOV_Y_RAD));
 
           // A windowed take opening mid-tour (from > 0) has just re-created
           // the past in one dispatch — but the store change is not what the

@@ -116,9 +116,6 @@ const EARTH_RADIUS_KM = 6371;
 function makeState(): EngineState {
   return {
     settings: {
-      // Read unconditionally at the top of the resize block, before the
-      // renderer-null bail-out — see `runFrame`'s fovYRad write.
-      camera: { fovDeg: 60 },
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2,

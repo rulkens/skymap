@@ -114,8 +114,8 @@ export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
 // ── Camera lens ───────────────────────────────────────────────────────────────
 
 /**
- * Default vertical field of view, in degrees — seeds `settings.camera.fovDeg`
- * and, via `cameraFraming.ts`'s `DEFAULT_FOV_Y_RAD`, the bootstrap lens.
+ * Default vertical field of view, in degrees — seeds `camera.lens` via
+ * `cameraFraming.ts`'s `DEFAULT_FOV_Y_RAD`.
  */
 export const DEFAULT_FOV_DEG = 60;
 
