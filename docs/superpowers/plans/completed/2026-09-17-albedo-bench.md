@@ -39,10 +39,10 @@ missing key, an extra key, a non-finite number, a wrong tuple length, or `versio
 - `ice {minAbsLatDeg 55, fadeDeg 8, minWhiteness 0.6, minLuminance 0.35}`
 - `grade {exposureEv 0, gain [1,1,1], offset [0,0,0], contrast 1, saturation 1, gamma 1}`
 
-- [ ] Test `parses the committed Mars recipe` (reads the JSON file from disk).
-- [ ] Test `rejects a missing key, an extra key, NaN, and a 2-tuple gain`: four cases, and each
+- [x] Test `parses the committed Mars recipe` (reads the JSON file from disk).
+- [x] Test `rejects a missing key, an extra key, NaN, and a 2-tuple gain`: four cases, and each
       error message names the key path.
-- [ ] Implement, then commit.
+- [x] Implement, then commit.
 
 ### Task 2: Slopes from height posts
 
@@ -71,12 +71,12 @@ readSlopeLattice(height: HeightSource, box: LonLatBounds): Promise<SlopeLattice>
 - **Posts read**: `readSlopeLattice` reads `SLOPE_LEVEL = 8` posts covering `box` plus one post on
   every side through `height.readGrid`. It throws on a NaN post inside the box.
 
-- [ ] Test `a plane rising 1 m per 100 m east gives sx 0.01, sy 0 at 30°N` (checks the `cos(lat)`
+- [x] Test `a plane rising 1 m per 100 m east gives sx 0.01, sy 0 at 30°N` (checks the `cos(lat)`
       factor).
-- [ ] Test `sampleSlope interpolates between posts and matches a post exactly at the post`.
-- [ ] Test `readSlopeLattice slopes agree across two adjacent boxes at the shared edge`, using an
+- [x] Test `sampleSlope interpolates between posts and matches a post exactly at the post`.
+- [x] Test `readSlopeLattice slopes agree across two adjacent boxes at the shared edge`, using an
       in-memory `HeightSource` fake of an analytic surface.
-- [ ] Implement, then commit.
+- [x] Implement, then commit.
 
 ### Task 3: One window's shading gradient
 
@@ -90,10 +90,10 @@ done by the caller. The function runs a weighted least squares of `y` on `(sx, s
 confidence as `R² · min(1, var(s)/SLOPE_VARIANCE_REF)`, clamped to `[0, 1]`. A singular system gives
 confidence 0.
 
-- [ ] Test `recovers a planted g = (0.8, −0.3) from random slopes within 2%`.
-- [ ] Test `planted g with independent albedo noise (σ 0.1) still recovers within 10%, confidence > 0.3`.
-- [ ] Test `flat terrain (all slopes 0) returns confidence 0, not NaN`.
-- [ ] Implement, then commit.
+- [x] Test `recovers a planted g = (0.8, −0.3) from random slopes within 2%`.
+- [x] Test `planted g with independent albedo noise (σ 0.1) still recovers within 10%, confidence > 0.3`.
+- [x] Test `flat terrain (all slopes 0) returns confidence 0, not NaN`.
+- [x] Implement, then commit.
 
 ### Task 4: The field
 
@@ -122,10 +122,10 @@ confidence 0.
 - **Test fakes**: an in-memory `SurfaceImagerySource` and `HeightSource` rendering an analytic
   terrain lit by a known `g`.
 
-- [ ] Test `recovers the planted uniform g at the region centre within 10%`.
-- [ ] Test `regional field equals the field of a 3× larger region inside the smaller region (max |Δg| < 1e-4)`.
-- [ ] Test `a region of flat terrain yields g = 0 everywhere, not NaN`.
-- [ ] Implement, then commit.
+- [x] Test `recovers the planted uniform g at the region centre within 10%`.
+- [x] Test `regional field equals the field of a 3× larger region inside the smaller region (max |Δg| < 1e-4)`.
+- [x] Test `a region of flat terrain yields g = 0 everywhere, not NaN`.
+- [x] Implement, then commit.
 
 ### Task 5: The pixel pipeline
 
@@ -153,12 +153,12 @@ confidence 0.
 
 Alpha is copied, and alpha-0 pixels are copied untouched. `Y = 0` guards to ratio 1.
 
-- [ ] Test `neutral apply returns the input bytes exactly` (all 256 grey levels plus random RGB).
-- [ ] Test `a synthetic flat-albedo image shaded by (1 + g·s) de-shades to constant luminance within 1 DN`.
-- [ ] Test `a white bright pixel at 80°S is unchanged by the knee; the same pixel at 10°N is compressed`.
-- [ ] Test `knee leaves luminance below threshold untouched and is monotonic above it`.
-- [ ] Test `saturation 0 yields R = G = B`.
-- [ ] Implement, then commit.
+- [x] Test `neutral apply returns the input bytes exactly` (all 256 grey levels plus random RGB).
+- [x] Test `a synthetic flat-albedo image shaded by (1 + g·s) de-shades to constant luminance within 1 DN`.
+- [x] Test `a white bright pixel at 80°S is unchanged by the knee; the same pixel at 10°N is compressed`.
+- [x] Test `knee leaves luminance below threshold untouched and is monotonic above it`.
+- [x] Test `saturation 0 yields R = G = B`.
+- [x] Implement, then commit.
 
 ### Task 6: The decorator
 
@@ -176,10 +176,10 @@ Alpha is copied, and alpha-0 pixels are copied untouched. `Y = 0` guards to rati
     each pixel centre.
 - **Pattern to follow**: `colourMatchedImagerySource.ts`'s `readBox` pixel-centre lon/lat maths.
 
-- [ ] Test `reading a box equals reading its west and east halves side by side (≤ 1 DN)`, with the T4
+- [x] Test `reading a box equals reading its west and east halves side by side (≤ 1 DN)`, with the T4
       fakes.
-- [ ] Test `a box outside the field bounds throws`.
-- [ ] Implement, then commit.
+- [x] Test `a box outside the field bounds throws`.
+- [x] Implement, then commit.
 
 ### Task 7: Bench server
 
@@ -212,10 +212,10 @@ Alpha is copied, and alpha-0 pixels are copied untouched. `Y = 0` guards to rati
 - **Field cache** in the plugin process, keyed by `JSON.stringify({box, sunFit})`, holding the last 8
   entries.
 
-- [ ] Test `POST /api/recipe rejects an invalid body with 400 and leaves the file unchanged` (temp
+- [x] Test `POST /api/recipe rejects an invalid body with 400 and leaves the file unchanged` (temp
       recipe path injected).
-- [ ] Test `render 'adjusted' bytes equal the decorator's readBox with a field fitted over a 3× larger region, inside the box` (T4 fakes injected).
-- [ ] Implement, then commit.
+- [x] Test `render 'adjusted' bytes equal the decorator's readBox with a field fitted over a 3× larger region, inside the box` (T4 fakes injected).
+- [x] Implement, then commit.
 
 ### Task 8: Bench UI
 
@@ -236,7 +236,7 @@ Alpha is copied, and alpha-0 pixels are copied untouched. `Y = 0` guards to rati
 - **Request handling**: render requests are debounced at 150 ms, and a field refit happens only when
   `sunFit` or the view box changes.
 
-- [ ] Implement, then commit.
+- [x] Implement, then commit.
 
 ### Task 9: Docs
 
@@ -246,7 +246,7 @@ Alpha is copied, and alpha-0 pixels are copied untouched. `Y = 0` guards to rati
   known limit that sub-km craters keep their shading)
 - `docs/DATA.md` (one line under the Mars sources pointing at the recipe)
 
-- [ ] Write, then commit. No test.
+- [x] Write, then commit. No test.
 
 ---
 

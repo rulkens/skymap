@@ -10,7 +10,7 @@ http://localhost:5700 (see `tools/utils/io/devPorts.ts`). The script sets
 would reject this repo's extensionless imports, which every module the plugin
 reaches uses, and the warning lists all ~35 of them on every boot.
 
-Spec: `docs/superpowers/specs/2026-09-17-albedo-bench-design.md`.
+Spec: `docs/superpowers/specs/completed/2026-09-17-albedo-bench-design.md`.
 
 Save writes the recipe to
 [`tools/textures/surfaceBodies/marsAlbedoRecipe.json`](../textures/surfaceBodies/marsAlbedoRecipe.json).
