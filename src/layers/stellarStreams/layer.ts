@@ -12,6 +12,11 @@ import { stellarStreamsPlanner } from './frame';
 import { stellarStreamsAssetRows } from './catalog/load/stellarStreamsAssetRows';
 import { stellarStreamsPass } from './streaks/passes/stellarStreamsPass';
 import StellarStreamsTuningSectionContainer from './streaks/ui/StellarStreamsTuningSectionContainer';
+import StellarStreamDetailCard from './selection/ui/StellarStreamDetailCard/StellarStreamDetailCard';
+import CompactStellarStreamCard from './selection/ui/CompactStellarStreamCard/CompactStellarStreamCard';
+import { stellarStreamsSelectionRow } from './selection/stellarStreamsSelectionRow';
+import { stellarStreamsSelectionKinds } from './selection/kinds';
+import { stellarStreamsSearchRows } from './search/present/stellarStreamsSearchRows';
 
 export const stellarStreamsLayer = defineLayer({
   name: 'stellarStreams',
@@ -22,8 +27,21 @@ export const stellarStreamsLayer = defineLayer({
   planners: (runtime) => [stellarStreamsPlanner(runtime)],
   passes: (runtime) => [stellarStreamsPass(runtime)],
   assets: stellarStreamsAssetRows,
+  selection: {
+    kinds: stellarStreamsSelectionKinds,
+    rows: (runtime) => [stellarStreamsSelectionRow(runtime)],
+  },
+  search: (runtime) => stellarStreamsSearchRows(runtime),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'stellarStreams', label: 'Stellar streams' } },
     { slot: 'debug', content: StellarStreamsTuningSectionContainer },
+    {
+      slot: 'detailCard',
+      content: {
+        type: 'stellarStream',
+        Detail: StellarStreamDetailCard,
+        Compact: CompactStellarStreamCard,
+      },
+    },
   ],
 });
