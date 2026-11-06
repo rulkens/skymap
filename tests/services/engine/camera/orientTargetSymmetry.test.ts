@@ -87,7 +87,7 @@ describe.each(['log', 'lin'] as const)(
         const luBody = rotateByTranspose(EARTH.orientation, luWorld);
         const sceneUpBody = rotateByTranspose(EARTH.orientation, UP_REF);
         const { north } = blendedEnuAt(luBody, bodyUpWeight(hr, tuning), sceneUpBody, null);
-        const engagedUp = rotateVec3ByTightMat3(north, EARTH.orientation);
+        const engagedUp = rotateVec3ByTightMat3(EARTH.orientation, north);
 
         expect(angleBetween(worldUp, engagedUp)).toBeLessThan(1e-6);
       }

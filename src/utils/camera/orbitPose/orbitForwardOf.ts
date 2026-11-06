@@ -21,7 +21,7 @@ const scratchDir: Vec3 = [0, 0, 0];
 /** `out` is written in place and returned; omitted ⇒ a fresh `Vec3`. */
 export function orbitForwardOf(cam: OrbitCamera, out?: Vec3): Vec3 {
   const dir = yawPitchToDir(cam.yaw, cam.pitch, scratchDir);
-  const dst = rotateVec3ByTightMat3(dir, cam.poseBasis, out ?? ([0, 0, 0] as Vec3));
+  const dst = rotateVec3ByTightMat3(cam.poseBasis, dir, out ?? ([0, 0, 0] as Vec3));
   dst[0] = -dst[0];
   dst[1] = -dst[1];
   dst[2] = -dst[2];

@@ -38,7 +38,7 @@ function eyeOf(
   pitch: number,
   frameBasis: Mat3 | undefined,
 ): Vec3 {
-  const dir = rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), frameBasis);
+  const dir = rotateVec3ByTightMat3(frameBasis, yawPitchToDir(yaw, pitch));
   return [
     target[0] + distance * dir[0],
     target[1] + distance * dir[1],

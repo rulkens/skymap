@@ -196,7 +196,7 @@ describe('CAMERA_DRIVERS — clip pins the frame it started under', () => {
 
   /** World-space target→eye direction for (yaw, pitch) decoded under `frame`. */
   function worldAim(pose: CameraPose, frame: OrientationFrameId) {
-    return rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), ORIENTATION_FRAMES[frame]);
+    return rotateVec3ByTightMat3(ORIENTATION_FRAMES[frame], yawPitchToDir(pose.yaw, pose.pitch));
   }
 
   // A static held pose (empty timeline — no flyPath, no ramps) so the driver's
@@ -250,7 +250,7 @@ describe('CAMERA_DRIVERS — tween pins the frame it started under', () => {
 
   /** World-space target→eye direction for (yaw, pitch) decoded under `frame`. */
   function worldAim(pose: CameraPose, frame: OrientationFrameId) {
-    return rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), ORIENTATION_FRAMES[frame]);
+    return rotateVec3ByTightMat3(ORIENTATION_FRAMES[frame], yawPitchToDir(pose.yaw, pose.pitch));
   }
 
   // A held `to` pose (elapsed >= durationMs saturates the tween at `to`), so

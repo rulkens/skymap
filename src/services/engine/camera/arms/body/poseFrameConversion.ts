@@ -43,7 +43,7 @@ export function toBodyArm(
   // STEADY `poseBasis`), then the image-plane basis over the possibly
   // mid-slerp `upBasis`. Re-deriving either convention here would let a body
   // row's screen orientation drift from NEAR0's.
-  const dirWorld = rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), poseBasis);
+  const dirWorld = rotateVec3ByTightMat3(poseBasis, yawPitchToDir(pose.yaw, pose.pitch));
   const camPosMpc: Vec3 = [
     pose.target[0] + dirWorld[0] * pose.distance,
     pose.target[1] + dirWorld[1] * pose.distance,
@@ -108,10 +108,11 @@ export function toWorldArm(
   ];
 
   const { orientation, positionMpc } = bodyState;
-  const targetWorldM = rotateVec3ByTightMat3(
-    [eyeLocalM[0] + armLocalM[0], eyeLocalM[1] + armLocalM[1], eyeLocalM[2] + armLocalM[2]],
-    orientation,
-  );
+  const targetWorldM = rotateVec3ByTightMat3(orientation, [
+    eyeLocalM[0] + armLocalM[0],
+    eyeLocalM[1] + armLocalM[1],
+    eyeLocalM[2] + armLocalM[2],
+  ]);
   const target: Vec3 = [
     positionMpc[0] + targetWorldM[0] * SCALE_UNITS.M_TO_MPC,
     positionMpc[1] + targetWorldM[1] * SCALE_UNITS.M_TO_MPC,
@@ -123,11 +124,11 @@ export function toWorldArm(
 
   // The orbit convention aims the camera AT its target, so the reconstructed
   // view axis is the arm — `forwardLocal` in world, exactly, at every range.
-  const viewDirWorld = normalize3(rotateVec3ByTightMat3(armLocalM, orientation));
+  const viewDirWorld = normalize3(rotateVec3ByTightMat3(orientation, armLocalM));
   // `orbitAnglesLookingAlong` predates the readonly-basis convention and takes
   // a mutable `Mat3`; it only reads the nine cells.
   const { yaw, pitch } = orbitAnglesLookingAlong(viewDirWorld, poseBasis as Mat3);
-  const upWorld = rotateVec3ByTightMat3([basisLocal[3], basisLocal[4], basisLocal[5]], orientation);
+  const upWorld = rotateVec3ByTightMat3(orientation, [basisLocal[3], basisLocal[4], basisLocal[5]]);
 
   return {
     target,

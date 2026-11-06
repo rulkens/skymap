@@ -81,7 +81,7 @@ describe('bodyRelativePose', () => {
 
       // Undo by hand: rotate FORWARD by orientation (the inverse of the
       // transpose bodyRelativePose applies), scale to Mpc, add positionMpc back.
-      const worldDeltaM = rotateVec3ByTightMat3(eyeRelBodyM, NON_IDENTITY_ORIENTATION);
+      const worldDeltaM = rotateVec3ByTightMat3(NON_IDENTITY_ORIENTATION, eyeRelBodyM);
       const reconstructed: Vec3 = [
         worldDeltaM[0] * SCALE_UNITS.M_TO_MPC + positionMpc[0],
         worldDeltaM[1] * SCALE_UNITS.M_TO_MPC + positionMpc[1],

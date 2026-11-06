@@ -57,7 +57,7 @@ export function bandRollTarget(
   const upPlaneSq =
     upRef[0] * upRef[0] + upRef[1] * upRef[1] + upRef[2] * upRef[2] - upVert * upVert;
   if (upPlaneSq < 1e-18) return null; // forward ∥ frame pole: roll is undefined
-  const pole = rotateVec3ByTightMat3([0, 0, 1], nearest.bodyState.orientation);
+  const pole = rotateVec3ByTightMat3(nearest.bodyState.orientation, [0, 0, 1]);
   const carry = imagePlaneBasis(forward, pose.roll ?? 0, upRef).up;
   const dir = blendedUpDir(forward, pole, bodyUpWeight(nearest.hr, tuning), upRef, carry);
   if (dir === null) return null;
