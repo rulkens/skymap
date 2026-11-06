@@ -3,7 +3,7 @@
  * so the winner's adoption needs no branch. `own` replaces the row's private slot
  * (`CameraRuntime.own`; absent keeps it). `pivotBody` stands in as the wheel's pivot next frame
  * when the row frames a body no focus names. `fovYRad` is this frame's field of view when the row
- * animates it (a clip's `fov` channel); absent draws `camera.fovYRad`.
+ * animates it (a clip's or tween's `fov` channel); absent draws `camera.fovYRad`.
  */
 
 import type { FollowMemory } from './FollowMemory';

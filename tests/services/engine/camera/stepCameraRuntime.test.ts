@@ -835,7 +835,7 @@ describe('the lens shift', () => {
   });
 });
 
-describe('a clip fov channel drives the drawn lens', () => {
+describe('a fov channel drives the drawn lens', () => {
   const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
   const playing = (data: ClipData) => {
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
@@ -909,6 +909,31 @@ describe('a clip fov channel drives the drawn lens', () => {
     const drawn = h.state.cameraRuntime.outputs.projection.fovYRad;
     expect(drawn).toBeLessThanOrEqual(0.5);
     expect(drawn).toBeGreaterThan(0.45);
+  });
+
+  it('a tween with a lens draws it from → to and commits to on hand-off', () => {
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
+    h.frame(2);
+    h.store.dispatch(
+      startCameraTween({
+        from: START,
+        to: { ...START, distance: 50 },
+        motion: { style: 'eased', durationMs: 500, ease: 'linear' },
+        frame: DEFAULT_ORIENTATION,
+        fovYRad: { from: 1, to: 0.25 },
+      }),
+    );
+    const drawn: number[] = [];
+    for (let i = 0; i < 60; i += 1) {
+      h.frame(1);
+      drawn.push(h.state.cameraRuntime.outputs.projection.fovYRad);
+    }
+
+    expect(h.store.getState().camera.tween).toBeNull();
+    expect(drawn[0]).toBeLessThanOrEqual(1);
+    expect(drawn[0]).toBeGreaterThan(0.9);
+    expect(drawn.every((fov, i) => i === 0 || fov <= drawn[i - 1]!)).toBe(true);
+    expect(h.store.getState().camera.fovYRad).toBeCloseTo(0.25, 12);
   });
 
   const midDolly = () => {
