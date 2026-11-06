@@ -11,17 +11,9 @@ import type { Mat3 } from '../../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import type { PatchInstanceWords } from '../@types/PatchInstanceWords';
 
-/**
- * Bytes of one `PatchInstance` element: `originRelEyeM` vec3 (0..11) +
- * `fadeWeight` f32 (12..15, filling the vec3's alignment pad) + `lon0Rad`
- * / `lat0Rad` / `dLonRad` / `dLatRad` f32 (16..31) + `albedoRect`,
- * `fallbackRect`, `nightRect` vec4 (32..79) + `heightSlotOrigin` vec2u
- * (80..87) + `edgeCoarser` u32 (88..91) + `heightCells` u32 (92..95). The
- * vec4s must stay BEFORE `heightSlotOrigin` — a vec2u declared earlier pads
- * the record past 96. Reordering the five scalars keeps the stride but
- * re-maps offsets 12..31 with no compiler signal — the layout test's
- * per-field assertions are the only guard.
- */
+/** Bytes of one `PatchInstance` element. The field table and its ordering
+ *  landmine live in `io.wesl`'s header; the layout test's per-field
+ *  assertions are the only guard against a reorder on one side alone. */
 export const PATCH_INSTANCE_BYTES = 96;
 
 /** Pack one `PatchInstance` block at byte `base` of `view`. */

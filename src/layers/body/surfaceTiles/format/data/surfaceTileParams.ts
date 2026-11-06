@@ -45,8 +45,7 @@ export const HEIGHT_TILE_ATLAS_SIDE = 32 * HEIGHT_POSTS_PER_TILE;
 export const NIGHT_TILE_ATLAS_SIDE = 4096;
 
 /** Slots per row of the height atlas, row-major like `TextureAtlas`'s own
- *  layout — the one derivation both the renderer's slot→texel packing and the
- *  subsystem's capacity math must share. */
+ *  layout: the renderer's slot→texel packing reads it. */
 export const HEIGHT_ATLAS_SLOTS_PER_ROW = HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_PER_TILE;
 
 /** Concurrent tile fetches. Matches the thumbnail queue's reasoning rather than

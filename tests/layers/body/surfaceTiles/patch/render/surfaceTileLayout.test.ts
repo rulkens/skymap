@@ -183,7 +183,7 @@ describe('PatchInstance CPU/WESL layout parity', () => {
   // Pinned as absolute numbers, not derived: a vec2<u32> declared BEFORE the
   // vec4s still parses and still packs, but pads the record past 96 bytes
   // (spec §7's field-order note), and the derived check above would follow it.
-  it('every field lands at its pinned offset inside a 96-byte record', () => {
+  it('the record is 96 bytes with its scalar head pinned (the rects and height words are pinned lane by lane below)', () => {
     const { writes, structSize } = structLayout(structFields(ioWesl, 'PatchInstance'));
     expect(PATCH_INSTANCE_BYTES).toBe(96);
     expect(structSize).toBe(96);
@@ -192,12 +192,6 @@ describe('PatchInstance CPU/WESL layout parity', () => {
     expect(firstOffset('originRelEyeM')).toBe(0);
     expect(firstOffset('fadeWeight')).toBe(12);
     expect(firstOffset('lon0Rad')).toBe(16);
-    expect(firstOffset('albedoRect')).toBe(32);
-    expect(firstOffset('fallbackRect')).toBe(48);
-    expect(firstOffset('nightRect')).toBe(64);
-    expect(firstOffset('heightSlotOrigin')).toBe(80);
-    expect(firstOffset('edgeCoarser')).toBe(88);
-    expect(firstOffset('heightCells')).toBe(92);
   });
 
   // fieldForExpr maps every lane of a multi-lane field to one field name, so
