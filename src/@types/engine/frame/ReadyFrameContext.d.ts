@@ -117,10 +117,11 @@ export type ReadyFrameContext = {
    * header for both.
    */
   renderedTargets: ReadonlySet<string>;
-  /**
-   * Sky capture rows whose band is open at the frame camera (`skyCapturesInBand`):
-   * the rows `scheduleSkyCaptures` may bake, so a planner whose output a capture
-   * replays on every face knows to plan for every direction.
-   */
+  /** Sky capture rows whose band is open at the frame camera (`skyCapturesInBand`). */
   skyCapturesInBand: ReadonlySet<SkyCaptureKey>;
+  /**
+   * The in-band rows `scheduleSkyCaptures` bakes this frame (`skyCapturesBaking`), so a
+   * planner whose output a capture replays on every face plans for every direction then.
+   */
+  skyCapturesBaking: ReadonlySet<SkyCaptureKey>;
 };

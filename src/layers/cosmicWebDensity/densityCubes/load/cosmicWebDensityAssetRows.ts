@@ -1,7 +1,7 @@
 /**
  * The Layer's asset rows, one per source row, keyed by its `Source` code. Every
- * cube is load-once: no `release`, since freeing one needs an `onRelease` that
- * calls `renderer.unload(id)` or its GPU textures leak on evict.
+ * cube is load-once: no `release` predicate yet; the slot's `onRelease` already
+ * frees the cube's GPU textures for when one lands.
  */
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';

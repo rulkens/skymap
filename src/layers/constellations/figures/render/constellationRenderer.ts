@@ -33,8 +33,9 @@
  *
  * Public API:
  *   - createConstellationRenderer(device, targetFormat, fadeBgl)
- *   - upload(artifact)  → caches the absolute instance data + sizes the buffer (once)
+ *   - upload(artifact)  → caches the absolute instance data + sizes the buffer
  *   - hasData()         → whether a drawable segment set is committed
+ *   - clear()           → drops the instance buffer; draw is a no-op until the next upload
  *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensity, fadeOpacity, camPos, lineColor)
  *   - destroy()         → releases all GPU resources
  *
@@ -176,10 +177,10 @@ export function createConstellationRenderer(
 
   // ── Stateful per-artifact bookkeeping ─────────────────────────────
   //
-  // Null/zero means "no artifact uploaded yet"; `draw` early-returns. `upload`
-  // runs once (the slot commit guards on it), caching the ABSOLUTE-position
-  // instance data; `draw` subtracts the per-frame camera position from it into
-  // `relativeScratch` and re-uploads that camera-relative buffer.
+  // Null/zero means "no artifact uploaded" (or cleared); `draw` early-returns.
+  // `upload` caches the ABSOLUTE-position instance data; `draw` subtracts the
+  // per-frame camera position from it into `relativeScratch` and re-uploads that
+  // camera-relative buffer.
   let instanceBuffer: GPUBuffer | null = null;
   let segmentCount = 0;
   // The cached absolute-position instance data (world Mpc). Reused every frame:
@@ -235,6 +236,14 @@ export function createConstellationRenderer(
 
   function hasData(): boolean {
     return instanceBuffer !== null;
+  }
+
+  function clear(): void {
+    instanceBuffer?.destroy();
+    instanceBuffer = null;
+    segmentCount = 0;
+    absoluteData = null;
+    relativeScratch = null;
   }
 
   function draw(
@@ -319,6 +328,7 @@ export function createConstellationRenderer(
     label: 'constellationRenderer',
     upload,
     hasData,
+    clear,
     draw,
     destroy,
   };

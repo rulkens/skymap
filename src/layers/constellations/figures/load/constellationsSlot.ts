@@ -25,11 +25,11 @@ export function createConstellationsSlot(
     name: 'constellations',
     fetch: constellationsFetcher,
     commit: async (artifact) => {
-      // Build the per-instance buffer on the GPU (once — the segment set is a
-      // static, tier-agnostic artifact). This flips the fade guard's
+      // Build the per-instance buffer on the GPU. This flips the fade guard's
       // `hasData()` true, which is the arrival edge core fades on.
       renderer.upload(artifact);
     },
+    onRelease: () => renderer.clear(),
   });
   slot.subscribe((s) => {
     if (s.kind === 'error') {
