@@ -1,14 +1,11 @@
 /**
- * layerImportBoundary — the ratchet that keeps `src/layers/**` a leaf a Layer's
- * `create` composes INTO core, never a dependency core reaches back into (the
- * inbound sweep: all of `src/` outside `layers/` and `compositions/`, ADR 0013;
- * each CORE_ALLOWED file must be a row of `src/compositions/README.md`), and keeps a Layer module from importing the slice it will
- * itself mint actions against (the outbound sweep) — D1's module-init cycle
- * risk: a Layer's own `<cluster>Slice` → `appSettingsSlices` →
- * `combinedSettingsReducer` → a Layer that reads its own slice module at
- * module scope → that slice again, the second entry reading an uninitialised
- * `const`. `oneMpcSeam.test.ts` is the ts-morph import walk this copies;
- * `frameFilePurity.test.ts` is the exact-count ALLOWED idiom.
+ * layerImportBoundary — keeps `src/layers/**` a leaf core never reaches back into (inbound
+ * sweep, ADR 0013; each CORE_ALLOWED file is a row of `src/compositions/README.md`); keeps a
+ * Layer module off the slice it mints actions against (outbound sweep: D1's module-init
+ * cycle, own slice → `appSettingsSlices` → `combinedSettingsReducer` → that Layer → its
+ * slice again); and keeps a `src/@types/` file only one Layer imports in that Layer's own
+ * `@types/` (type-ownership sweep: core types never hand-write a Layer's). `oneMpcSeam.test.ts`
+ * is the import walk this copies; `frameFilePurity.test.ts` the exact-count ALLOWED idiom.
  */
 import { describe, it, expect } from 'vitest';
 import { Project } from 'ts-morph';
@@ -274,6 +271,107 @@ describe('no file under src/layers imports src/compositions', () => {
       {},
       'Read your own rows from <layer>/sources (<LAYER>_SOURCE_RECORD); only core and ' +
         'cross-Layer readers take the composed registry.',
+    );
+  });
+});
+
+/** The `src/@types/` modules `file` imports, keyed `@types/…` without extension. */
+function typesModulesOf(file: string): string[] {
+  const fromDir = dirname(file);
+  return specifiersMatching(file, (r) => r.startsWith('src/@types/')).map((specifier) =>
+    relative(process.cwd(), resolve(fromDir, specifier))
+      .replace(/\\/g, '/')
+      .replace(/^src\//, '')
+      .replace(/(\.d)?(\.ts)?$/, ''),
+  );
+}
+
+/** `src/layers/<name>/…` → `<name>`; any other importer outside `src/@types/` → `core`. */
+function areaOf(file: string): string {
+  return /^src\/layers\/([^/]+)\//.exec(file)?.[1] ?? 'core';
+}
+
+// Today's `src/@types/` files only one Layer imports. Exact: a new one fails, and so does a
+// row that stopped being one; a move-only PR empties it (docs/BACKLOG.md).
+const LAYER_OWNED_TYPES_ALLOWED: Readonly<Record<string, string>> = {
+  '@types/components/infoCard/DetailCardProps': 'structure',
+  '@types/data/BodyTextureKey': 'body',
+  '@types/data/BodyTextureSlotKey': 'body',
+  '@types/data/SourceEntryBase': 'starCatalog',
+  '@types/data/SurfaceEffect': 'body',
+  '@types/data/blackHole/BlackHoleId': 'blackHoles',
+  '@types/data/blackHole/BlackHoleSourceEntry': 'blackHoles',
+  '@types/data/constellations/ConstellationsSourceEntry': 'constellations',
+  '@types/data/craft/CraftSourceEntry': 'missions',
+  '@types/data/filament/CosmicWebFilamentsSourceEntry': 'cosmicWebFilaments',
+  '@types/data/filament/FilamentCloud': 'cosmicWebFilaments',
+  '@types/data/flow/FlowFieldDefaults': 'flow',
+  '@types/data/flow/FlowSourceEntry': 'flow',
+  '@types/data/galaxyCatalog/GalaxyCatalogColumn': 'galaxyCatalog',
+  '@types/data/galaxyCatalog/GalaxyCatalogFieldSpec': 'galaxyCatalog',
+  '@types/data/galaxyCatalog/GalaxyCatalogSourceEntry': 'galaxyCatalog',
+  '@types/data/galaxyCatalog/GalaxyDurableIdClaim': 'galaxyCatalog',
+  '@types/data/milkyWay/MilkyWaySourceEntry': 'milkyWay',
+  '@types/data/satellite/SatelliteSourceEntry': 'satellites',
+  '@types/data/shellMesh/ShellMesh': 'localBubble',
+  '@types/data/shellMesh/ShellMeshDtype': 'localBubble',
+  '@types/data/starCatalog/SeededStarCatalogSourceEntry': 'starCatalog',
+  '@types/data/starCatalog/SurveyStarCatalogSourceEntry': 'starCatalog',
+  '@types/data/structure/StructureSourceEntry': 'structure',
+  '@types/data/structure/structureCatalog/StructureCatalog': 'structure',
+  '@types/data/volume/CosmicWebDensityFieldId': 'cosmicWebDensity',
+  '@types/data/volume/CosmicWebDensitySourceEntry': 'cosmicWebDensity',
+  '@types/data/zoneOfAvoidance/ZoneOfAvoidanceSourceEntry': 'zoneOfAvoidance',
+  '@types/engine/BlackHoleInfo': 'blackHoles',
+  '@types/engine/SatelliteInfo': 'satellites',
+  '@types/engine/camera/DriverOutput': 'missions',
+  '@types/engine/subsystems/Label2DProducerOutput': 'galaxyCatalog',
+  '@types/loading/FamousCalibration': 'galaxyCatalog',
+  '@types/loading/FamousStarMetaEntry': 'starCatalog',
+  '@types/missions/MissionEvent': 'missions',
+  '@types/rendering/VolumeFieldLiveness': 'cosmicWebDensity',
+  '@types/rendering/bodyPickRenderer/BodyGlintPick': 'body',
+  '@types/satellites/SatelliteCatalog': 'satellites',
+  '@types/scene/BodyTextureSpec': 'body',
+  '@types/scene/ColourGrade': 'body',
+  '@types/scene/HeightTileHeader': 'body',
+  '@types/scene/LonLatBounds': 'body',
+  '@types/scene/TransientBodyId': 'satellites',
+  '@types/settings/FlowSettings': 'flow',
+  '@types/settings/ProvenanceAxisId': 'galaxyCatalog',
+  '@types/settings/ProvenanceAxisSettings': 'galaxyCatalog',
+  '@types/settings/ProvenanceFilter': 'galaxyCatalog',
+  '@types/settings/VolumeFieldSettings': 'cosmicWebDensity',
+};
+
+describe("a src/@types file only one Layer imports lives in that Layer's @types/", () => {
+  it('matches its ALLOWED row exactly', () => {
+    const areasByType = new Map<string, Set<string>>();
+    for (const file of walk('src').filter((f) => !f.startsWith('src/@types/'))) {
+      for (const key of typesModulesOf(file)) {
+        const areas = areasByType.get(key) ?? new Set<string>();
+        areas.add(areaOf(file));
+        areasByType.set(key, areas);
+      }
+    }
+    const owned = new Map(
+      [...areasByType]
+        .filter(([, areas]) => areas.size === 1 && !areas.has('core'))
+        .map(([key, areas]) => [key, [...areas][0]!] as const),
+    );
+    const offenders = [
+      ...[...owned]
+        .filter(([key, layer]) => LAYER_OWNED_TYPES_ALLOWED[key] !== layer)
+        .map(([key, layer]) => `'${key}': '${layer}',`),
+      ...Object.keys(LAYER_OWNED_TYPES_ALLOWED)
+        .filter((key) => !owned.has(key))
+        .map((key) => `stale ALLOWED row '${key}': delete it`),
+    ];
+    assertNoOffenders(
+      offenders,
+      'Only one Layer imports each of these: `npm run move-files -- src/<key>.d.ts ' +
+        'src/layers/<layer>/@types/<Name>.d.ts`. A union of Layer types is derived in ' +
+        'src/compositions/.',
     );
   });
 });
