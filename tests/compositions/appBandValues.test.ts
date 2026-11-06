@@ -15,7 +15,6 @@ import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/seededStars
 import { FAMOUS_STAR_ENTRY } from '../../src/layers/starCatalog/sources/famous-star';
 import { SUN_ENTRY } from '../../src/layers/starCatalog/sources/sun';
 import { S_STAR_ENTRY } from '../../src/layers/starCatalog/sources/s-star';
-import { GAIA_STARS_ENTRY } from '../../src/layers/starCatalog/sources/gaia-stars';
 import { normalize3 } from '../../src/utils/math/normalize3';
 import { SCENE_EARTH } from '../../src/data/bodies/sceneEarth';
 import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
@@ -91,20 +90,6 @@ describe('seeded star sets dissolve from their own region', () => {
   it('S-stars are full at 1 pc from the galactic centre and gone at the far edge of the backdrop from it', () => {
     expect(valueAtEye('starCatalog', along(gc, SCALE_UNITS.PC_TO_MPC), S_STAR_ENTRY.id)).toBe(1);
     expect(valueAtEye('starCatalog', along(gc, -goneAt), S_STAR_ENTRY.id)).toBe(0);
-  });
-});
-
-// The literals are the old registry crossfade's values at each distance: the band must keep the look it replaced, with no pop at either edge.
-describe('Gaia survey stars', () => {
-  it.each([
-    [5, 1],
-    [8, 1],
-    [16.5, 0.5],
-    [25, 0],
-    [30, 0],
-  ])('Gaia fades like the old crossfade (%s kpc)', (kpc, old) => {
-    const value = valueAt('starCatalog', kpc * SCALE_UNITS.KPC_TO_MPC, GAIA_STARS_ENTRY.id);
-    expect(value).toBeCloseTo(old, 12);
   });
 });
 

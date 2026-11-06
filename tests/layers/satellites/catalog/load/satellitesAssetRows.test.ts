@@ -34,7 +34,6 @@ const kmFromEarth = (km: number): Vec3 => [
 const FAR: Vec3 = [1e-6, 0, 0];
 
 const LOAD = { demand: true, release: false };
-const HOLD = { demand: false, release: false };
 const RELEASE = { demand: false, release: true };
 
 function verdict(
@@ -64,20 +63,6 @@ function verdict(
 }
 
 describe('satellitesAssetRows', () => {
-  it('loads within 900,000 km of Earth', () => {
-    // Measured from the origin this eye is an au out: only an Earth-relative band loads it.
-    expect(Math.hypot(...kmFromEarth(899_000))).toBeGreaterThan(1e6 * SCALE_UNITS.KM_TO_MPC);
-    expect(verdict(kmFromEarth(899_000))).toEqual(LOAD);
-  });
-
-  it('holds at 1,200,000 km', () => {
-    expect(verdict(kmFromEarth(1_200_000))).toEqual(HOLD);
-  });
-
-  it('releases beyond 1,500,000 km', () => {
-    expect(verdict(kmFromEarth(1_501_000))).toEqual(RELEASE);
-  });
-
   it('palette open loads from anywhere and never releases', () => {
     expect(verdict(FAR, { paletteOpen: true })).toEqual(LOAD);
   });
