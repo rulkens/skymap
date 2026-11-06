@@ -68,12 +68,15 @@ The tablet must be on the same network as the computer.
    `http://<address>:47824`. A tablet without a camera opens that address and types the code.
 2. The page shows the steps for that tablet and checks each one. It trusts the computer once, through
    a certificate:
-   - **iPad or iPhone:** use Safari. Download the certificate and allow it, then in Settings tap
-     Profile Downloaded and Install. Turn it on in Settings, General, About, Certificate Trust
-     Settings.
-   - **Android:** download the certificate; the browser may say it cannot install it, which is fine.
-     In Settings, search for CA certificate, then Install a certificate, CA certificate, Install
-     anyway, and pick the Skymap file.
+   - **iPad or iPhone:** use Safari. Download the certificate and allow it. In Settings tap Profile
+     Downloaded, then Install three times (top right, the Warning screen, the pop-up) and Done. Turn
+     on Skymap local CA under General, About, Certificate Trust Settings, and tap Continue.
+   - **Android:** use Chrome or Brave; Firefox ignores certificates installed on Android. Download
+     the certificate (Brave: Download, then Keep) and close the "install in Settings" notice. In
+     Settings, search for CA certificate, tap it, tap CA certificate again, Install anyway, and pick
+     `ca.crt` (Recent, or ☰ then Downloads).
+   - Checked on the iOS 26.1 simulator and an Android 14 emulator; menu names can differ on other
+     versions.
 3. Once the page says the tablet trusts the computer, open the remote from it. A tablet that already
    trusts it goes straight to the remote.
 

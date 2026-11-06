@@ -229,29 +229,48 @@
 
     <template id="ios">
       <ol>
-        <li>Use Safari: other browsers can't install it.</li>
-        <li>Tap <b>Download the certificate</b>, then <b>Allow</b>.</li>
+        <li>Use Safari.</li>
         <li>
-          Open <b>Settings</b>, tap <b>Profile Downloaded</b> near the top, then <b>Install</b>.
+          Tap <b>Download the certificate</b>, then <b>Allow</b>. When it says
+          <b>Profile Downloaded</b>, tap <b>Close</b>.
         </li>
         <li>
-          In Settings, go to <b>General › About › Certificate Trust Settings</b> and turn on
-          <b>Skymap local CA</b>.
+          Open the <b>Settings</b> app. Near the top, below <b>Apple Account</b> (on an iPad, in the
+          list on the left), tap <b>Profile Downloaded</b>. Do it within a few minutes: iOS deletes
+          a downloaded profile that is not installed after 8 minutes.
         </li>
-        <li>Come back to this page.</li>
+        <li>
+          Tap <b>Install</b> in the top right, <b>Install</b> again on the Warning screen, then
+          <b>Install</b> in the box that pops up. Enter your passcode if asked, then tap
+          <b>Done</b>.
+        </li>
+        <li>
+          Go back to <b>General</b>, tap <b>About</b>, then <b>Certificate Trust Settings</b> at the
+          bottom. Turn on <b>Skymap local CA …</b> and tap <b>Continue</b>.
+        </li>
+        <li>Switch back to Safari. This page sees the change by itself.</li>
       </ol>
     </template>
     <template id="android">
       <ol>
+        <li>Use Chrome or Brave: Firefox ignores certificates installed on Android.</li>
         <li>
-          Tap <b>Download the certificate</b>. If the browser says it can't install it there, that
-          is fine: the file is saved in Downloads.
+          Tap <b>Download the certificate</b>. In Brave, tap <b>Download</b>, and when it says the
+          file can't be downloaded securely, tap <b>Keep</b> (not Discard).
         </li>
         <li>
-          Open <b>Settings</b> and search for <b>CA certificate</b>. Choose
-          <b>Install a certificate › CA certificate › Install anyway</b>, then pick the Skymap file.
+          Your phone says CA certificates must be installed in Settings: tap <b>Close</b>. The file
+          is saved as <b>ca.crt</b> in Downloads.
         </li>
-        <li>Come back to this page.</li>
+        <li>
+          Open the <b>Settings</b> app, tap <b>Search settings</b> and type <b>CA certificate</b>.
+          Tap the <b>CA certificate</b> result, then <b>CA certificate</b> again on the next screen.
+        </li>
+        <li>
+          On <b>Your data won't be private</b>, tap <b>Install anyway</b>. Pick <b>ca.crt</b>: it is
+          under Recent, or tap ☰ and then <b>Downloads</b>. Enter your screen lock if asked.
+        </li>
+        <li>Switch back to this page. It sees the change by itself.</li>
       </ol>
     </template>
     <template id="desktop">
@@ -260,7 +279,7 @@
         <li>
           Open it and trust it as a root (CA) certificate in the system's certificate settings.
         </li>
-        <li>Come back to this page.</li>
+        <li>Switch back to this page. It sees the change by itself.</li>
       </ol>
     </template>
 
