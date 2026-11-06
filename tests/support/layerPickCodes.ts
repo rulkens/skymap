@@ -15,6 +15,7 @@ import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { GalaxyRowFixture, StarRowFixture } from './selectionResolverOver';
 import type { StructureStore } from '../../src/layers/structure/catalog/@types/StructureStore';
+import type { FamousStarMetaEntry } from '../../src/@types/loading/FamousStarMetaEntry';
 
 /** The body Layer's `pickCodes`, as `create` builds them; pass `fakePickCode()` to catch a stamp that packs a catalog value. */
 export function bodyPickCodes(pickCode = testPickCode('body')) {
@@ -64,10 +65,16 @@ export function galaxyRowRuntime(
   };
 }
 
-/** The star selection row's reads over a fixture, plus the Layer's pick codes. */
+/** The star selection row's reads over a fixture, the Layer's pick codes and a landed sidecar. */
 export function starRowRuntime(
   stars: StarRowFixture,
   pickCode = testPickCode('starCatalog'),
-): Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams' | 'pickCodes'> {
-  return { ...stars, pickCodes: catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, pickCode) };
+  famousStars: FamousStarMetaEntry[] = [],
+): Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams' | 'pickCodes' | 'famousStarsMeta'> {
+  const sidecar = { kind: 'ready', req: undefined, value: { meta: famousStars }, loadedAtMs: 0 };
+  return {
+    ...stars,
+    famousStarsMeta: { state: () => sidecar } as unknown as StarCatalogRuntime['famousStarsMeta'],
+    pickCodes: catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, pickCode),
+  };
 }

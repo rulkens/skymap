@@ -102,7 +102,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     ),
   );
 
-  const famousStarsMeta = createFamousStarsMetaSlot(deps);
+  const famousStarsMeta = createFamousStarsMetaSlot();
 
   return {
     catalogs,

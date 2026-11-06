@@ -11,6 +11,8 @@ import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { type StarRowFixture } from '../../../../support/selectionResolverOver';
 import { starRowRuntime } from '../../../../support/layerPickCodes';
 import { fakePickCode } from '../../../../support/fakePickCode';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../../src/data/bodies/seededStarCatalogsBySource';
+import type { FamousStarMetaEntry } from '../../../../../src/@types/loading/FamousStarMetaEntry';
 
 /**
  * Pool index 7 maps to ordinal 1007 while its chunk is resident; nothing else
@@ -55,5 +57,18 @@ describe('starCatalogSelectionRow', () => {
       expect(pick.sourceCode).toBeGreaterThanOrEqual(40);
       expect(row.resolvePick(pick)).toEqual(ref);
     }
+  });
+
+  it('a seeded star joins its curated sidecar entry; a star the sidecar omits carries none', () => {
+    const [curated, omitted] = SEEDED_STAR_CATALOGS_BY_SOURCE.get(Source.FamousStar)!.stars;
+    const entry = { id: curated!.id, names: ['Curated'] } as unknown as FamousStarMetaEntry;
+    const row = starCatalogSelectionRow(
+      starRowRuntime({ renderer: null as never, chunkStreams: new Map() }, undefined, [entry]),
+    );
+    const ref = (index: number) => ({ type: 'starCatalog', source: Source.FamousStar, index }) as const;
+    expect(row.extractRow(ref(0), 0)).toMatchObject({ id: curated!.id, famous: entry });
+    const bare = row.extractRow(ref(1), 0)!;
+    expect(bare).toMatchObject({ id: omitted!.id });
+    expect('famous' in bare).toBe(false);
   });
 });

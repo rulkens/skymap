@@ -56,8 +56,14 @@ function catalogOf(runtime: Pick<StarCatalogRuntime, 'renderer'>, source: Source
   return null;
 }
 
+/** The curated sidecar entry for seed `id`; undefined until the sidecar lands, or for a star it omits. */
+function famousEntryOf(runtime: Pick<StarCatalogRuntime, 'famousStarsMeta'>, id: string) {
+  const sidecar = runtime.famousStarsMeta.state();
+  return sidecar.kind === 'ready' ? sidecar.value.meta.find((entry) => entry.id === id) : undefined;
+}
+
 export function starCatalogSelectionRow(
-  runtime: Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams' | 'pickCodes'>,
+  runtime: Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams' | 'pickCodes' | 'famousStarsMeta'>,
 ): SelectionKindRow<StarCatalogRef> {
   return {
     type: 'starCatalog',
@@ -87,6 +93,7 @@ export function starCatalogSelectionRow(
         // never cached; the famous stars and the Sun are static anchors in it.
         const p = deriveBodyStates(simDays).get(star.id)!.positionMpc;
         const driver = starDriver(star.id, star.surface.datumRadiusM);
+        const famous = famousEntryOf(runtime, star.id);
         return {
           type: 'starCatalog',
           source: ref.source,
@@ -97,6 +104,7 @@ export function starCatalogSelectionRow(
           radiusM: star.surface.datumRadiusM,
           radiusMpc: footprintRadiusMpc(driver),
           driver,
+          ...(famous && { famous }),
         };
       }
       const catalog = catalogOf(runtime, ref.source);

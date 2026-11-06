@@ -126,20 +126,17 @@ describe('StarDetailCard', () => {
     // End to end through the real seam: a stored star row for S2 goes through
     // the star kind's static seed lookup and out as rendered rows, so a missing
     // lookup or an unwired card block fails here rather than only in the browser.
-    const target = starCatalogSelectionKinds[0]!.toFocusable(
-      {
-        type: 'starCatalog',
-        source: Source.SStar,
-        index: 0,
-        id: 's2',
-        label: 'S2',
-        positionMpc: [0.0025, 0, 0],
-        radiusM: 4.2e9,
-        radiusMpc: 4.2e9 * SCALE_UNITS.M_TO_MPC,
-        driver: starRowDriver('s2', 4.2e9),
-      },
-      [],
-    );
+    const target = starCatalogSelectionKinds[0]!.toFocusable({
+      type: 'starCatalog',
+      source: Source.SStar,
+      index: 0,
+      id: 's2',
+      label: 'S2',
+      positionMpc: [0.0025, 0, 0],
+      radiusM: 4.2e9,
+      radiusMpc: 4.2e9 * SCALE_UNITS.M_TO_MPC,
+      driver: starRowDriver('s2', 4.2e9),
+    });
 
     const { container } = render(createElement(StarDetailCard, { target }));
 

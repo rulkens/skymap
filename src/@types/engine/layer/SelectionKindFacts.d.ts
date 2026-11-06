@@ -1,6 +1,5 @@
 import type { SelectionRefBase } from '../selection/SelectionRefBase';
 import type { SelectionFocus } from './SelectionFocus';
-import type { FamousStarMetaEntry } from '../../loading/FamousStarMetaEntry';
 
 /**
  * One selectable kind's static facts, declared by the Layer that owns the kind and read by core
@@ -23,11 +22,10 @@ export type SelectionKindFacts<
    */
   mayHaveLabel(ref: Ref): boolean;
   /**
-   * The InfoCard's view-model for a stored row, carrying its `ref`. Pure, for memoised selectors.
-   * `famousStarsMeta` is the one store input a kind joins (a seeded star's curated block), passed
-   * in so the selector memoises on it rather than a kind reaching for the store.
+   * The InfoCard's view-model for a stored row, carrying its `ref`. Pure, for memoised selectors:
+   * a kind's sidecar data rides the row (joined in its `extractRow`), never a second input.
    */
-  toFocusable(row: Row, famousStarsMeta: readonly FamousStarMetaEntry[]): Target;
+  toFocusable(row: Row): Target;
   /** The name the target's card headlines; the dome remote shows it too. */
   displayName(target: Target): string;
 };

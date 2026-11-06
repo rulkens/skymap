@@ -18,7 +18,7 @@ export const starCatalogSelectionKinds: readonly SelectionKindFacts<
     // Only seeded stars carry captions; a Gaia survey star is InfoCard text only.
     mayHaveLabel: (ref) => SEEDED_STAR_CATALOGS_BY_SOURCE.has(ref.source),
     // One target serves every star; its `detail` follows what the star HAS, not its catalog.
-    toFocusable: (row, famousStarsMeta) => {
+    toFocusable: (row) => {
       const [x, y, z] = row.positionMpc;
       const distancePc = Math.hypot(x, y, z) / SCALE_UNITS.PC_TO_MPC;
       return {
@@ -32,7 +32,7 @@ export const starCatalogSelectionKinds: readonly SelectionKindFacts<
         y,
         z,
         distancePc,
-        detail: starDetail(row, distancePc, famousStarsMeta),
+        detail: starDetail(row, distancePc),
       };
     },
     displayName: (target) => target.displayName,

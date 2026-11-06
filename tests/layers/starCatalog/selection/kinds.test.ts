@@ -12,8 +12,6 @@ const [kind] = starCatalogSelectionKinds;
 
 type StarRow = Extract<SelectionRow, { type: 'starCatalog' }>;
 
-const NO_META: readonly FamousStarMetaEntry[] = [];
-
 const siriusMeta: FamousStarMetaEntry = {
   id: 'sirius',
   names: ['Sirius', 'Alpha Canis Majoris'],
@@ -97,19 +95,19 @@ describe('starCatalog selection kind', () => {
   // `detail` is chosen by what the row HAS, never by its catalog — so a source that stopped
   // carrying photometry, or a seeded star whose sidecar/orbit lookup broke, lands wrong here.
   it.each([
-    ['survey photometry', gaiaRow, [siriusMeta], 'photometry'],
-    ['a curated sidecar entry', siriusRow, [siriusMeta], 'curated'],
-    ['a compiled-in orbit', s2Row, [siriusMeta], 'orbit'],
+    ['survey photometry', gaiaRow, 'photometry'],
+    ['a curated sidecar entry', { ...siriusRow, famous: siriusMeta }, 'curated'],
+    ['a compiled-in orbit', s2Row, 'orbit'],
     // The Sun rides the same sidecar off its own seed file: curated, no arm of its own.
-    ['a curated entry from a second seed', sunRow, [sunMeta], 'curated'],
-    // Same star, sidecar not landed: the fail-soft path, not a loading state.
-    ['a curated star before its sidecar lands', siriusRow, NO_META, 'none'],
-  ] as const)('star row with %s → detail.kind %s', (_label, row, meta, detailKind) => {
-    expect(kind!.toFocusable(row, meta).detail.kind).toBe(detailKind);
+    ['a curated entry from a second seed', { ...sunRow, famous: sunMeta }, 'curated'],
+    // Same star, extracted before the sidecar landed: the fail-soft path, not a loading state.
+    ['a curated star before its sidecar lands', siriusRow, 'none'],
+  ] as const)('star row with %s → detail.kind %s', (_label, row, detailKind) => {
+    expect(kind!.toFocusable(row).detail.kind).toBe(detailKind);
   });
 
   it('survey-star row derives distance, apparent magnitude and spectral class', () => {
-    const info = kind!.toFocusable(gaiaRow, NO_META);
+    const info = kind!.toFocusable(gaiaRow);
     expect(info.detail.kind).toBe('photometry');
     if (info.detail.kind !== 'photometry') return;
     expect(info.distancePc).toBeCloseTo(10, 9);
@@ -121,7 +119,7 @@ describe('starCatalog selection kind', () => {
   it('star row carries its identity and ref through to the card view-model', () => {
     // `id` + `label` ride the row rather than the async sidecar, so a seeded star's
     // headline and its `star-<id>` link work before the JSON lands.
-    expect(kind!.toFocusable(siriusRow, NO_META)).toMatchObject({
+    expect(kind!.toFocusable(siriusRow)).toMatchObject({
       type: 'starCatalog',
       ref: { type: 'starCatalog', source: Source.FamousStar, index: 3 },
       id: 'sirius',

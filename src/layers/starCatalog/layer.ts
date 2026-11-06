@@ -40,7 +40,7 @@ export const starCatalogLayer = defineLayer({
   settings: starCatalogLayerSettings,
   visibility: starCatalogVisibility,
   sources: STAR_CATALOG_SOURCE_ROWS,
-  facts: { famousStarsMeta: [], chunkSlotsError: null } as StarCatalogFacts,
+  facts: { chunkSlotsError: null } as StarCatalogFacts,
   targets: [STAR_AGGREGATES_TARGET],
   create,
   destroy,

@@ -9,6 +9,7 @@ import type { BlackHoleInfo } from './BlackHoleInfo';
 import type { SatelliteInfo } from './SatelliteInfo';
 import type { Vec3 } from '../math/Vec3';
 import type { PlacedRow } from './selection/PlacedRow';
+import type { FamousStarMetaEntry } from '../loading/FamousStarMetaEntry';
 
 /**
  * SelectionRow — the serializable display projection of a selected thing, held in the
@@ -40,9 +41,12 @@ export type SelectionRow =
       readonly positionMpc: Vec3;
       // Photosphere radius; the nominal solar radius for a survey star (the bin carries no size).
       readonly radiusM: number;
-      // Survey-only; a seeded star's card reads its curated sidecar or orbit instead.
+      // Survey-only; a seeded star's card reads `famous` or its orbit instead.
       readonly absMag?: number;
       readonly bpRp?: number;
+      // A seeded star's curated sidecar entry, joined at extract time like `GalaxyRow.famous`;
+      // absent while the sidecar loads and for a star it omits.
+      readonly famous?: FamousStarMetaEntry;
       readonly driver: DriverGeometry;
     } & PlacedRow)
   // A black hole poses from its PLACE (`driver.poseId`), not a body table.
