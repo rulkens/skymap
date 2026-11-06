@@ -119,9 +119,6 @@ const EARTH_RADIUS_KM = 6371;
 function makeState(): EngineState {
   return {
     settings: {
-      // Read unconditionally at the top of the resize block, before the
-      // renderer-null bail-out — see `runFrame`'s fovYRad write.
-      camera: { fovDeg: 60 },
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2,
@@ -998,6 +995,31 @@ describe('runFrame — the planner keep-ticking fold', () => {
     runFrame(state, makeCamDeps(state), 0);
 
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
+  });
+
+  // The planners read this set to drop their view culls, so an in-band row that is not
+  // re-baking (a settled, once-baked capture) must not be in it.
+  it('hands the planners only the in-band captures that bake this frame', () => {
+    const state = makeReadyState();
+    const store = makeStore();
+    // Two AU from the Sun: inside the solar-system sky capture's band.
+    store.dispatch(
+      commitCameraPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e-11 })),
+    );
+    const snapshotOfFrame = () => {
+      runFrame(state, makeCamDeps(state, store), 0);
+      return vi.mocked(renderFrame).mock.calls.at(-1)![0].canvas.snapshot;
+    };
+
+    const first = snapshotOfFrame();
+    expect(first.skyCapturesInBand.size).toBeGreaterThan(0);
+    expect(first.skyCapturesBaking).toEqual(first.skyCapturesInBand);
+
+    for (const key of first.skyCapturesInBand) {
+      state.cubemapCaptures[key].bakedSettings = state.settings;
+      state.cubemapCaptures[key].bakedContentVersion = state.contentVersion;
+    }
+    expect(snapshotOfFrame().skyCapturesBaking.size).toBe(0);
   });
 });
 

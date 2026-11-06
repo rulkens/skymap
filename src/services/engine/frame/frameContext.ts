@@ -119,7 +119,7 @@ export function deriveFrameContext(
   for (const body of meshBodies) admit(body);
   for (const { body } of coverage.values()) admit(body);
 
-  // `focus`, `focusBlend` and `focusPickId` are at-rest placeholders that `runFrame`
+  // `focus`, `focusBlend`, `focusPickId` and `skyCapturesBaking` are at-rest placeholders that `runFrame`
   // overwrites the moment the ready gate passes, before any consumer reads them:
   // deriving them here would tick the structureFocus fade controller, a once-per-frame
   // side effect this (speculatively callable) function must not have.
@@ -143,5 +143,6 @@ export function deriveFrameContext(
     renderedTargets,
     // The frame camera, like the slab rows: eye separation is metres against a band in AU.
     skyCapturesInBand: skyCapturesInBand(cam.position, bodyStates),
+    skyCapturesBaking: new Set(),
   };
 }

@@ -19,7 +19,7 @@ import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
-const SNAPSHOT = { nowMs: 0, skyCapturesInBand: new Set() } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0, skyCapturesBaking: new Set() } as unknown as ReadyFrameContext;
 const VIEWS = [galaxyPlannerViewOf()];
 const STATE = {
   settings: {
@@ -72,18 +72,18 @@ describe('galaxyCatalogPlanner — view cull', () => {
     expect(input.viewPlanes).toHaveLength(domeFaces.length * FRUSTUM_FLOATS_PER_VIEW);
   });
 
-  it('culls nothing while a sky capture band is open: the capture replays the disks on all six faces', () => {
-    const inBand = { ...SNAPSHOT, skyCapturesInBand: new Set(['sgrAStar']) } as ReadyFrameContext;
-    expect(walkInputFor(makeGalaxyCatalogFade({}), inBand).viewPlanes).toHaveLength(0);
+  it('culls nothing while a sky capture bakes: the capture replays the disks on all six faces', () => {
+    const baking = { ...SNAPSHOT, skyCapturesBaking: new Set(['sgrAStar']) } as ReadyFrameContext;
+    expect(walkInputFor(makeGalaxyCatalogFade({}), baking).viewPlanes).toHaveLength(0);
   });
 
-  it('hands the walk the frame camera’s opaque bodies, and none while a sky capture band is open', () => {
+  it('hands the walk the frame camera’s opaque bodies, and none while a sky capture bakes', () => {
     // Earth five radii off: a disc tens of pixels across, so it occludes.
     const nearEarth = [galaxyPlannerViewOf([1e-15, 0, 0])];
     expect(walkInputFor(makeGalaxyCatalogFade({}), SNAPSHOT, nearEarth).occluderCones).toHaveLength(
       OCCLUDER_CONE_FLOATS,
     );
-    const inBand = { ...SNAPSHOT, skyCapturesInBand: new Set(['sgrAStar']) } as ReadyFrameContext;
-    expect(walkInputFor(makeGalaxyCatalogFade({}), inBand, nearEarth).occluderCones).toHaveLength(0);
+    const baking = { ...SNAPSHOT, skyCapturesBaking: new Set(['sgrAStar']) } as ReadyFrameContext;
+    expect(walkInputFor(makeGalaxyCatalogFade({}), baking, nearEarth).occluderCones).toHaveLength(0);
   });
 });

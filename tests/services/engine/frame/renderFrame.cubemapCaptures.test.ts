@@ -49,6 +49,7 @@ vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { skyCapturesInBand } from '../../../../src/services/engine/frame/skyCapturesInBand';
+import { skyCapturesBaking } from '../../../../src/services/engine/frame/skyCapturesBaking';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { starAggregatesPass } from '../../../../src/layers/starCatalog/survey/passes/starAggregatesPass';
@@ -223,6 +224,16 @@ function makeCtx(
 }
 
 function makeInput(ctx: FrameView, state: EngineState) {
+  // Decided from the state as it stands before the frame, as `deriveFrameContext` does.
+  Object.assign(ctx.snapshot, {
+    skyCapturesBaking: skyCapturesBaking({
+      inBand: ctx.snapshot.skyCapturesInBand,
+      captures: state.cubemapCaptures,
+      settings: state.settings,
+      contentVersion: state.contentVersion,
+      fadesAnimating: state.subsystems.fades.isAnyAnimating(ctx.snapshot.nowMs),
+    }),
+  });
   return {
     canvas: ctx,
     // Mono's own contract: the frame's one view is the canvas itself.
@@ -510,6 +521,25 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
     renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc, 256, settling), state));
 
+    expect(deriveViewMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('a Layer that starts settling over a settled bake re-bakes from the next frame', () => {
+    deriveViewMock.mockImplementation(
+      (_snapshot: unknown, _cam: unknown, spec: ViewSpec) =>
+        ({ __face: spec.slot }) as unknown as FrameView,
+    );
+    const state = makeState();
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state)); // band entry ⇒ settled bake.
+    deriveViewMock.mockClear();
+
+    // The vote lands after the frame decided its bakes, so this frame sweeps nothing…
+    const settling = { settling: true };
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc, 256, settling), state));
+    expect(deriveViewMock).not.toHaveBeenCalled();
+
+    // …and the next one does.
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state));
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
   });
 

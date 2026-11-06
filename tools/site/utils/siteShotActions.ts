@@ -3,8 +3,8 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 import type { SiteShot } from '../../../packages/website/src/@types/SiteShot';
 import { BiasMode } from '../../../src/data/galaxyCatalog/biasMode';
 import { setBiasMode } from '../../../src/layers/galaxyCatalog/state/bias/slice';
-import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
-import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
+import { setAutoRotate, setFovYRad } from '../../../src/state/camera/cameraSlice';
+import { degToRad } from '../../../src/utils/math/degToRad';
 import { setExposure } from '../../../src/state/settings/core/tonemapSlice';
 import { setMeshAmbient, setPassDisabled } from '../../../src/state/settings/core/debugSlice';
 import { requestTier } from '../../../src/state/tier/requestTier';
@@ -25,7 +25,7 @@ export function siteShotActions({
   settings = {},
 }: Pick<SiteShot, 'link' | 'settings'>): UnknownAction[] {
   const actions: UnknownAction[] = [setAutoRotate({ active: false, rate: 0 })];
-  if (settings.fovDeg !== undefined) actions.push(setFovDeg(settings.fovDeg));
+  if (settings.fovDeg !== undefined) actions.push(setFovYRad(degToRad(settings.fovDeg)));
   if (settings.exposure !== undefined) actions.push(setExposure(settings.exposure));
   if (settings.ambient !== undefined) actions.push(setMeshAmbient(settings.ambient));
   if (settings.rawDensity) actions.push(setBiasMode(BiasMode.None));

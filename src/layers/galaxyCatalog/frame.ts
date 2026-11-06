@@ -98,8 +98,9 @@ export function galaxyCatalogPlanner(
       const cam = views[0]!.cam;
       const pxPerRad = Math.max(...views.map((view) => view.drawPxPerRad));
       // Galaxies draw in COSMO; the planes and occluder cones sit about the walk's origin,
-      // cam.position. A sky capture replays the disks on all six faces, so an open band culls nothing.
-      const capturing = snapshot.skyCapturesInBand.size > 0;
+      // cam.position. A sky capture replays the disks on all six faces, so a baking frame
+      // culls nothing.
+      const capturing = snapshot.skyCapturesBaking.size > 0;
       const cullViews = capturing ? [] : views;
       const viewPlanes = new Float32Array(cullViews.length * FRUSTUM_FLOATS_PER_VIEW);
       cullViews.forEach((view, v) =>
