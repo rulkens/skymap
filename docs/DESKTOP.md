@@ -89,9 +89,10 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
   `preventDefault`, so a new Escape use in the app must too, or it also drops full screen. Main then
   makes the sky a 75% window on its display, which display changes leave alone. The window has no
   title bar, only its buttons over the page (hidden in full screen): close quits Skymap, the green
-  button (or Windows' maximize) fills the screen again (owner ruling). The same preload lays a
-  28 px strip with a hairline along the top edge; a press there never reaches the sky, and main
-  moves the window with the cursor (`utils/dragWithCursor.ts`; `-webkit-app-region` stops taking
+  button (or Windows' maximize) fills the screen again (owner ruling). The same preload draws a
+  hairline along the top edge, and a press in the top 28 px on bare sky (not on one of the page's
+  controls, the search bar or the buttons) never reaches the sky: main moves the window with the
+  cursor (`utils/dragWithCursor.ts`; `-webkit-app-region` stops taking
   presses once the curtain's view has been laid over and lifted). F11 (Ctrl+Cmd+F on
   macOS, `utils/isFullScreenKey.ts`, read off the sky since Windows hangs the menu elsewhere) or
   View › Full screen puts it back; a launch always starts full screen.
