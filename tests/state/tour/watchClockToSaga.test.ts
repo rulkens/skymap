@@ -52,6 +52,18 @@ describe('watchClockToSaga', () => {
     expect(at()).toBe(JD + 0.5);
   });
 
+  it('an eased clockTo follows its curve and lands exactly on simDays, then pauses there', async () => {
+    const { store, at } = pausedStore();
+    store.dispatch(clockTo({ simDays: JD + 0.5, overSec: 10, ease: 'easeOutQuad' }));
+
+    // easeOutQuad(0.5) = 1 − 0.5² = 0.75 of the way; a linear run would read 0.25 here.
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(at()).toBeCloseTo(JD + 0.375, 5);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(at()).toBe(JD + 0.5);
+    expect(store.getState().time.paused).toBe(true);
+  });
+
   it('a snap during a running profile replaces it', () => {
     const { store, at } = pausedStore();
     store.dispatch(clockTo({ simDays: JD + 0.5, overSec: 10 }));

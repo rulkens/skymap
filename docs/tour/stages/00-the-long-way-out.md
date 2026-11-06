@@ -34,8 +34,8 @@ is the scan's one corridor with sky down to the horizon, front-lit at noon;
 south and south-east are backlit canopy. The dwell holds the title for 4 s,
 then tilts the pitch to 80° while `clockTo` runs the clock to 20:00 UTC
 (`TOUR_NIGHT_SIM_DAYS`) over 22 s, and holds the night for 1.5 s. The clock
-slows to rest over its last 4 s, in eight `clockTo` steps: one linear cue
-would stop the wheeling sky dead. Authored tweens, not `dwellDrift`: a
+runs at full rate for 18 s, then an `easeOutQuad` `clockTo` slows it to rest
+over the last 4 s: one linear cue would stop the wheeling sky dead. Authored tweens, not `dwellDrift`: a
 frame-tagged base writer may not overlap a composite window on the same
 channel.
 

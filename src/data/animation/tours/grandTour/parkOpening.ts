@@ -39,25 +39,23 @@ const TITLE_SEC = 4;
 const NIGHTFALL_SEC = 22;
 const NIGHT_HOLD_SEC = 1.5;
 
-// The clock runs ~1,400× here, so the sky wheels ~6°/s about the pole, and a
-// `clockTo` is linear: one cue would stop it dead. The last CLOCK_EASE_SEC
-// steps the rate down to rest instead, each step a straight `clockTo` landing
-// on the curve of a linear deceleration (rate falls by 1/CLOCK_EASE_STEPS).
+// The clock runs ~1,400× here, so the sky wheels ~6°/s about the pole: it holds
+// that rate, then comes to rest over the last CLOCK_EASE_SEC. easeOutQuad starts
+// at twice its average rate, so handed half a full-rate stretch of days it takes
+// over the linear leg's rate without a seam and slows it linearly to zero. One
+// ease across all of NIGHTFALL_SEC would start slowing from the first second.
 const CLOCK_EASE_SEC = 4;
-const CLOCK_EASE_STEPS = 8;
 const FULL_RATE = (TOUR_NIGHT_SIM_DAYS - TOUR_NOON_SIM_DAYS) / (NIGHTFALL_SEC - CLOCK_EASE_SEC / 2);
-const CLOCK_STEP_SEC = CLOCK_EASE_SEC / CLOCK_EASE_STEPS;
-const daysLeftAt = (easedSec: number) =>
-  (FULL_RATE * (CLOCK_EASE_SEC - easedSec) ** 2) / (2 * CLOCK_EASE_SEC);
-const clockCue = (easedSec: number, overSec: number) => [
-  scene(clockTo({ simDays: TOUR_NIGHT_SIM_DAYS - daysLeftAt(easedSec), overSec })),
-  wait(overSec),
-];
 const NIGHTFALL_CLOCK = seq([
-  ...clockCue(0, NIGHTFALL_SEC - CLOCK_EASE_SEC),
-  ...Array.from({ length: CLOCK_EASE_STEPS }, (_, k) =>
-    clockCue((k + 1) * CLOCK_STEP_SEC, CLOCK_STEP_SEC),
-  ).flat(),
+  scene(
+    clockTo({
+      simDays: TOUR_NIGHT_SIM_DAYS - (FULL_RATE * CLOCK_EASE_SEC) / 2,
+      overSec: NIGHTFALL_SEC - CLOCK_EASE_SEC,
+    }),
+  ),
+  wait(NIGHTFALL_SEC - CLOCK_EASE_SEC),
+  scene(clockTo({ simDays: TOUR_NIGHT_SIM_DAYS, overSec: CLOCK_EASE_SEC, ease: 'easeOutQuad' })),
+  wait(CLOCK_EASE_SEC),
 ]);
 
 const standAt = (altitudeRad: number) =>
