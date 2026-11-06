@@ -35,6 +35,8 @@ pages from `assets/` (`test-grid.html`, `sky-curtain.html`).
 modal dialog over the sky), calls `runLifecycle` and, if it rejects, shows why in the README's words
 (`startErrorText`: a taken port, a full disk) and exits. `runLifecycle` (`main/lifecycle/`) is
 wiring: it takes the single-instance lock first, so a second launch only raises the control window,
+unless it is a newer build (`isNewerBuild`, from the build time it sends): then the running one quits
+and the newcomer, still asking for the lock (`takeInstanceLock`), starts in its place,
 and the decisions sit in pieces with their own tests: `bootPlan` (what a launch does first),
 `createSyncThenLoad` (a sync and what follows it, through `syncOutcomeAction`, spec §5's outcome
 table; it never rejects and always ends the syncing status), `createDailySchedule` (the one daily timer),
@@ -267,7 +269,9 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   what lets it add the rule.
 - Release: `npm run dist -w packages/desktop` (web build in desktop mode, brand, build,
   electron-builder for both targets, into `packages/desktop/release/`). Both installers are
-  unsigned, about 340 MB each. The Windows one is cross-built on macOS and has not yet run on a
+  unsigned, about 340 MB each. The script stamps each build: the bundle version (CFBundleVersion,
+  `yyyymmdd.HHMM`) and the dmg's volume name (`Skymap 06Nov-1954`), so macOS never mistakes one 0.5.0
+  build or mounted volume for another; main carries `DESKTOP_BUILT_AT`, which About shows. The Windows one is cross-built on macOS and has not yet run on a
   Windows computer (owner ruling 2026-11-06: ship it marked untried); the checks it still needs are
   in the backlog item "Windows hardware smoke".
 

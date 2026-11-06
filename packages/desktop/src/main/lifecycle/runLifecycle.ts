@@ -35,6 +35,7 @@ import { createSkyWindows } from '../windows/createSkyWindows';
 import { createSyncThenLoad } from './createSyncThenLoad';
 import { hasCompleteLocalSet } from '../sync/hasCompleteLocalSet';
 import { installAppMenu } from '../menu/installAppMenu';
+import { isNewerBuild } from './utils/isNewerBuild';
 import { lanOriginFor } from '../lan/utils/lanOriginFor';
 import { listDisplays } from '../windows/utils/listDisplays';
 import { listLanInterfaces } from '../lan/utils/listLanInterfaces';
@@ -57,6 +58,7 @@ import { dragWithCursor } from '../windows/utils/dragWithCursor';
 import { skyUrlFor } from '../sky/utils/skyUrlFor';
 import { startSecureServer } from '../server/startSecureServer';
 import { startTabletSetupServer } from '../server/startTabletSetupServer';
+import { takeInstanceLock } from './utils/takeInstanceLock';
 import { watchLan } from '../lan/watchLan';
 import { watchQuitting } from '../windows/watchQuitting';
 
@@ -65,7 +67,7 @@ import { watchQuitting } from '../windows/watchQuitting';
  * exits. Once it is open, a failure is logged and the person at the control window sees the status.
  */
 export async function runLifecycle(windowed: boolean): Promise<void> {
-  if (!app.requestSingleInstanceLock()) return app.quit();
+  if (!(await takeInstanceLock(DESKTOP_BUILT_AT))) return app.quit();
   await app.whenReady();
   nativeTheme.themeSource = 'dark';
   const mayClose = watchQuitting(app);
@@ -273,7 +275,11 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
     console.error(`${CONTROL_SHORTCUT} is taken by another app`);
   }
   app.on('will-quit', () => globalShortcut.unregisterAll());
-  app.on('second-instance', showControl);
+  // A newer build opened beside this one takes over: every installer says 0.5.0, so a running old
+  // build would otherwise keep answering for the new one.
+  app.on('second-instance', (_event, _argv, _cwd, data) =>
+    isNewerBuild(data, DESKTOP_BUILT_AT) ? app.quit() : showControl(),
+  );
   app.on('window-all-closed', () => app.quit());
 
   placeAll();

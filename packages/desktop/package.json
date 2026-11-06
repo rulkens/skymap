@@ -11,7 +11,7 @@
     "dev": "npm run build && tsx scripts/runDev.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "dist": "cd ../.. && vite build --mode desktop && cd packages/desktop && npm run brand && npm run build && electron-builder --mac --win"
+    "dist": "cd ../.. && vite build --mode desktop && cd packages/desktop && npm run brand && npm run build && electron-builder --mac --win -c.buildVersion=$(date +%Y%m%d.%H%M) -c.dmg.title=\"Skymap $(date +%d%b-%H%M)\""
   },
   "devDependencies": {
     "@fontsource-variable/jost": "5.3.0",
