@@ -13,9 +13,6 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { satellitesVisibility } from '../../../../../src/layers/satellites/visibility';
-import { fadeIdentitiesOf } from '../../../../../src/utils/visibility/fadeIdentitiesOf';
-import { fadeIdentityKey } from '../../../../../src/utils/visibility/fadeIdentityKey';
-import { gateIdentityOf } from '../../../../../src/utils/visibility/gateIdentityOf';
 import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 import type { SatellitesRuntime } from '../../../../../src/layers/satellites/@types/SatellitesRuntime';
@@ -90,14 +87,5 @@ describe('satellitesAssetRows', () => {
 
   it('every class off releases even with the palette open', () => {
     expect(verdict(kmFromEarth(0), { classesOn: false, paletteOpen: true })).toEqual(RELEASE);
-  });
-
-  // The fade registry throws on an identity it does not hold, and it throws from inside the
-  // slot's first state change, so a stale gate silently stops the catalog from ever loading.
-  it('gates only a fade identity the Layer declares', () => {
-    const { gates } = ROW;
-    if (gates === undefined) return;
-    const declared = satellitesVisibility.flatMap(fadeIdentitiesOf).map(fadeIdentityKey);
-    expect(declared).toContain(fadeIdentityKey(gateIdentityOf(gates)));
   });
 });

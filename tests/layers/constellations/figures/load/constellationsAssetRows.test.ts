@@ -1,6 +1,6 @@
 /**
- * constellationsAssetRows — the Layer's one demand predicate and factory,
- * exercised against a stub `DemandCtx` without a full engine.
+ * constellationsAssetRows — the Layer's one row's demand and release through the evaluator,
+ * against a stub `DemandCtx` without a full engine.
  */
 
 import { describe, it, expect } from 'vitest';

@@ -3,7 +3,7 @@ import type { LabelEntry } from '../engine/layer/LabelEntry';
 import type { VisibilityEntry } from '../engine/layer/VisibilityEntry';
 import type { SelectionRefBase } from '../engine/selection/SelectionRefBase';
 
-/** A `DeclaredDemand` resolved against the composed entries once, so a frame only reads switches. */
+/** A `DeclaredDemand` resolved against the composed entries: the switches, label and band it reads. */
 export type DemandResolution = {
   readonly entry: VisibilityEntry;
   /** The items whose switches count; `[undefined]` reads the entry's own switch. */

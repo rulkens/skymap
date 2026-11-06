@@ -1,6 +1,6 @@
 /**
- * filamentsAssetRows — the Layer's one demand predicate and request builder,
- * exercised against a stub `DemandCtx` without a full engine.
+ * filamentsAssetRows — the Layer's one row's demand, release and request builder, against a
+ * stub `DemandCtx` without a full engine.
  */
 
 import { describe, it, expect } from 'vitest';

@@ -2,8 +2,8 @@
  * expandCompanionRows — the fold from `CompanionAssetRow` to a full
  * `AssetWiringRow`, run once where `createLayers` composes the asset rows. Pins
  * the derivation arithmetic and the two failure modes a chained or missing
- * parent would otherwise surface as a swallowed `TypeError` inside a demand
- * predicate, starving one asset silently.
+ * parent would otherwise surface as a swallowed `TypeError` inside the demand
+ * loop, starving one asset silently.
  */
 
 import { describe, it, expect } from 'vitest';

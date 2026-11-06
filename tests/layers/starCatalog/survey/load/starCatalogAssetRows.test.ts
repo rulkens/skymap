@@ -1,6 +1,6 @@
 /**
  * starCatalogAssetRows — the Layer's demand + request cases. The registry is
- * pure data, so each row's predicate is exercised against a stub `DemandCtx`
+ * pure data, so each row's declared demand is evaluated against a stub `DemandCtx`
  * without a full engine.
  */
 
@@ -45,7 +45,7 @@ function makeCtx(over: {
   };
 }
 
-describe('starCatalogAssetRows demand predicates', () => {
+describe('starCatalogAssetRows demand', () => {
   it('gaiaStars demand follows settings.starCatalogs (master gate AND per-item bit)', () => {
     // Demand is the star show entry's switch: the section (`starCatalogs.enabled`)
     // AND the item bit, so a catalog switched off by either never loads.

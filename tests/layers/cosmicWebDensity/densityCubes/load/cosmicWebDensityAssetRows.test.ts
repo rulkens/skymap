@@ -19,7 +19,7 @@ import type { UiState } from '../../../../../src/@types/ui/UiState';
 // Only `slot` reads the runtime, and nothing here inspects it.
 const ROWS = cosmicWebDensityAssetRows({ slots: {} } as unknown as CosmicWebDensityRuntime);
 
-function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean): DemandCtx {
+function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean, sectionOn = true): DemandCtx {
   const items = {
     ...INITIAL_SETTINGS.cosmicWebDensity.items,
     'polyphorm-2mrs': {
@@ -30,7 +30,7 @@ function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean): DemandCtx {
   };
   return {
     settings: {
-      cosmicWebDensity: { ...INITIAL_SETTINGS.cosmicWebDensity, items },
+      cosmicWebDensity: { ...INITIAL_SETTINGS.cosmicWebDensity, enabled: sectionOn, items },
     } as unknown as Readonly<EngineSettingsState>,
     ui: { paletteOpen: false } as Readonly<UiState>,
     slotState: () => 'idle',
@@ -50,6 +50,16 @@ describe('cosmicWebDensityAssetRows', () => {
     expect(
       evaluateAssetDemand(polyphorm, makeCtx(false, true), cosmicWebDensityVisibility),
     ).toEqual({ demand: false, release: true });
+  });
+
+  it('the section switch off releases a cube whose own switch is on', () => {
+    const mcpm = ROWS.find((row) => row.key === Source.Mcpm)!;
+    expect(
+      evaluateAssetDemand(mcpm, makeCtx(false, true, false), cosmicWebDensityVisibility),
+    ).toEqual({
+      demand: false,
+      release: true,
+    });
   });
 
   it('a tiered row carries the tier, an untiered row carries none', () => {

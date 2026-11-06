@@ -1,6 +1,6 @@
 /**
  * galaxyCatalogAssetRows — the Layer's demand + request cases. The registry is
- * pure data, so each row's predicate is exercised against a stub `DemandCtx`
+ * pure data, so each row's declared demand is evaluated against a stub `DemandCtx`
  * without a full engine.
  */
 
@@ -15,7 +15,6 @@ import { Source } from '../../../../../src/data/source';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { AssetKey } from '../../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
-import type { DeclaredDemand } from '../../../../../src/@types/loading/DeclaredDemand';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 import type { LoadState } from '../../../../../src/@types/loading/LoadState';
 import type { Tier } from '../../../../../src/@types/data/Tier';
@@ -50,7 +49,7 @@ function makeCtx(over: {
   };
 }
 
-describe('galaxyCatalogAssetRows demand predicates', () => {
+describe('galaxyCatalogAssetRows demand', () => {
   it("galaxy catalog rows demand the galaxy catalog's enabled bit; switched off, they release", () => {
     const sdss = rowFor(Source.SDSS);
     const at = (enabled: boolean) =>
@@ -63,31 +62,16 @@ describe('galaxyCatalogAssetRows demand predicates', () => {
     expect(at(false)).toEqual({ demand: false, release: true });
   });
 
-  it("galaxy points: SDSS lists no 'small' tier", () => {
-    const tiersOf = (source: AssetKey) => (rowFor(source).demand as DeclaredDemand).tiers;
-    expect(tiersOf(Source.SDSS)).not.toContain('small');
-    expect(tiersOf(Source.TwoMRS)).toContain('small');
-  });
-
   it('a catalog the tier excludes is not demanded even when enabled, and is released', () => {
-    const sdss = rowFor(Source.SDSS);
-    const settings = { galaxyCatalogs: { items: { sdss: { enabled: true } } } };
-    expect(
-      evaluateAssetDemand(sdss, makeCtx({ settings, tier: 'small' }), galaxyCatalogVisibility)
-        .demand,
-    ).toBe(false);
-    expect(
-      evaluateAssetDemand(sdss, makeCtx({ settings, tier: 'small' }), galaxyCatalogVisibility)
-        .release,
-    ).toBe(true);
-    expect(
-      evaluateAssetDemand(sdss, makeCtx({ settings, tier: 'medium' }), galaxyCatalogVisibility)
-        .demand,
-    ).toBe(true);
-    expect(
-      evaluateAssetDemand(sdss, makeCtx({ settings, tier: 'medium' }), galaxyCatalogVisibility)
-        .release,
-    ).toBe(false);
+    const settings = {
+      galaxyCatalogs: { items: { sdss: { enabled: true }, '2mrs': { enabled: true } } },
+    };
+    const at = (source: AssetKey, tier: Tier) =>
+      evaluateAssetDemand(rowFor(source), makeCtx({ settings, tier }), galaxyCatalogVisibility);
+    expect(at(Source.SDSS, 'small')).toEqual({ demand: false, release: true });
+    expect(at(Source.SDSS, 'medium')).toEqual({ demand: true, release: false });
+    // A source with no tier caps ships at every tier, the smallest included.
+    expect(at(Source.TwoMRS, 'small')).toEqual({ demand: true, release: false });
   });
 
   it('famousGalaxiesMeta demands when the Famous slot is not idle', () => {

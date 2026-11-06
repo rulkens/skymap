@@ -2,8 +2,8 @@
  * reevaluateDemand — the guarded demand-evaluation loop, run once per frame
  * (`runFrame.ts`). Walks every `AssetWiringRow` and applies four edges:
  * enqueue, drop, evict, drift. The drift edge RELOADS in place; `release()` is
- * eviction only (distance or tier), so the resident payload keeps drawing until the new
- * one commits.
+ * eviction only (switched off, out of tier or out of range), so the resident payload
+ * keeps drawing until the new one commits.
  *
  * Rationale (four edges, queue, idle-guard):
  * `docs/superpowers/specs/2026-09-09-layer-composition-design.md` §9(d) "Demand-loop rationale".
@@ -79,7 +79,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
         void slot.load(row.req(state.tier));
       }
     } catch (err) {
-      // A bad predicate costs one asset, not the whole table.
+      // A throwing declaration costs one asset, not the whole table.
       console.warn(`reevaluateDemand: row '${String(row.key)}' threw during evaluation`, err);
     }
   }

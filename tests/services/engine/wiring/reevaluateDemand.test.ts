@@ -189,6 +189,19 @@ describe('evaluateRows', () => {
     expect(slot.release).toHaveBeenCalledTimes(1);
   });
 
+  it('leaves a loading slot whose row says release alone, and releases it once ready', () => {
+    // The evict edge fires on `ready`/`error` only: a fetch in flight finishes, then goes.
+    const slot = stubSlot('loading');
+    const state = makeState(new Map([[Source.SDSS, slot]]));
+    const rows = [row(slot, Source.SDSS, () => false, { release: () => true })];
+    evaluateRows(state, rows);
+    expect(slot.release).not.toHaveBeenCalled();
+    expect(slot.load).not.toHaveBeenCalled();
+    slot.setKind('ready');
+    evaluateRows(state, rows);
+    expect(slot.release).toHaveBeenCalledTimes(1);
+  });
+
   it('does not release a ready slot whose release predicate returns false', () => {
     const slot = stubSlot('ready');
     const state = makeState(new Map([[Source.SDSS, slot]]));
