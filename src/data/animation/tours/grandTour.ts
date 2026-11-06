@@ -17,6 +17,7 @@ import type { Tour } from '../../../@types/animation/tour/Tour';
 import { dwellDrift } from '../../../state/tour/dwellDrift';
 import { parkOpening, parkOpeningDwell } from './grandTour/parkOpening';
 import { youAreHereEarth, youAreHereEarthDwell } from './grandTour/youAreHereEarth';
+import { earthAndMoon, earthAndMoonDwell } from './grandTour/earthAndMoon';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31, approachM31Dwell } from './grandTour/approachM31';
 import { localGroup, localGroupDwell } from './grandTour/localGroup';
@@ -56,6 +57,17 @@ export const grandTour: Tour = {
         ],
       },
       dwellClip: youAreHereEarthDwell,
+    },
+    {
+      enterClip: earthAndMoon,
+      caption: {
+        title: 'Earth and Moon',
+        lines: [
+          'Thirty Earths would fit in the gap between us and the Moon.',
+          'Light crosses it in just over a second.',
+        ],
+      },
+      dwellClip: earthAndMoonDwell,
     },
     {
       enterClip: youAreHere,

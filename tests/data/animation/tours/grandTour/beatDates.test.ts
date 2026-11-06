@@ -9,11 +9,12 @@ import { describe, it, expect } from 'vitest';
 import { grandTour } from '../../../../../src/data/animation/tours/grandTour';
 import { parkOpening } from '../../../../../src/data/animation/tours/grandTour/parkOpening';
 import { youAreHereEarth } from '../../../../../src/data/animation/tours/grandTour/youAreHereEarth';
+import { earthAndMoon } from '../../../../../src/data/animation/tours/grandTour/earthAndMoon';
 import { clockTo } from '../../../../../src/state/tour/clockTo';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
 
-const EARTH_BEAT_ENTER_CLIPS: readonly ClipData[] = [parkOpening, youAreHereEarth];
+const EARTH_BEAT_ENTER_CLIPS: readonly ClipData[] = [parkOpening, youAreHereEarth, earthAndMoon];
 
 function firstClockTo(effects: readonly Effect[]): ReturnType<typeof clockTo>['payload'] | null {
   for (const e of effects) {

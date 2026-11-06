@@ -18,6 +18,7 @@
 import type { Clip } from '../../../@types/animation/Clip';
 import { parkOpening, parkOpeningDwell } from '../tours/grandTour/parkOpening';
 import { youAreHereEarth, youAreHereEarthDwell } from '../tours/grandTour/youAreHereEarth';
+import { earthAndMoon, earthAndMoonDwell } from '../tours/grandTour/earthAndMoon';
 import { youAreHere, youAreHereDwell } from '../tours/grandTour/youAreHere';
 import { approachM31 } from '../tours/grandTour/approachM31';
 import { localGroup } from '../tours/grandTour/localGroup';
@@ -58,6 +59,20 @@ export const tourYouAreHereEarthDwell: Clip = {
   label: 'Grand tour 01 — whole-Earth dwell',
   dev: true,
   data: youAreHereEarthDwell,
+};
+
+export const tourEarthAndMoon: Clip = {
+  id: 'tourEarthAndMoon',
+  label: 'Grand tour 02 — Earth and Moon',
+  dev: true,
+  data: earthAndMoon,
+};
+
+export const tourEarthAndMoonDwell: Clip = {
+  id: 'tourEarthAndMoonDwell',
+  label: 'Grand tour 02 — the gap dwell',
+  dev: true,
+  data: earthAndMoonDwell,
 };
 
 export const tourYouAreHere: Clip = {

@@ -38,4 +38,6 @@ export type ClipId =
   | 'tourParkOpening'
   | 'tourParkOpeningDwell'
   | 'tourYouAreHereEarth'
-  | 'tourYouAreHereEarthDwell';
+  | 'tourYouAreHereEarthDwell'
+  | 'tourEarthAndMoon'
+  | 'tourEarthAndMoonDwell';

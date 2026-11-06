@@ -14,6 +14,13 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **Framing two bodies at once** (beat 02, `earthAndMoon`): body captions are
+  not focus-gated, so focusing the Moon does not name it; `label:body:planet`
+  names every planet and moon in view, so pick the bearing with no other planet
+  in frame (Pluto sat behind the first try). A focused moving body pins the
+  orbit target to its centre whenever no clip runs (a tour pause), so a shot
+  aimed off a body clears the focus. The world leg that ends beat 01 carries the
+  body leg's roll (about −36°) into later beats: tween `roll` back to 0.
 - **A `{ body }` turn from the ground** (beat 01, `youAreHereEarth`): body
   yaw/pitch are Y-up orbit angles in the host's fixed axes, not local
   azimuth/altitude, so one tween across a big turn leaves the meridian and

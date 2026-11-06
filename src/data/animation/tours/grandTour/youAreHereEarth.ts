@@ -34,6 +34,7 @@ import { OPENING_HIDDEN_LAYERS } from './openingHiddenLayers';
 import { PARK_VIEW } from './parkView';
 import { SONDERMARKEN_SPOT } from './sondermarkenSpot';
 import { TOUR_NIGHT_SIM_DAYS } from './tourNightSimDays';
+import { WHOLE_EARTH_HEIGHT_M } from './wholeEarthHeightM';
 
 const SKY: PoseFrame = { sky: SONDERMARKEN_SPOT };
 const HOST: PoseFrame = { body: SONDERMARKEN_SPOT.body };
@@ -92,10 +93,9 @@ const DWELL_SEC = 7;
 const LIFT_TOP_M = 3_000;
 // Where the body leg hands over: Denmark small, the planet's curve at the edge.
 const RISE_TOP_M = 2_000_000;
-// The end height. Every `distance` here runs from the ground below: a world leg
-// opened from a body leg keeps its target where the sightline meets the ground
-// (`toWorldArm`).
-const WHOLE_EARTH_HEIGHT_M = 20_000_000;
+// Every `distance` here runs from the ground below, the end height included: a
+// world leg opened from a body leg keeps its target where the sightline meets
+// the ground (`toWorldArm`).
 
 export const youAreHereEarth: ClipData = {
   start: 'live',
