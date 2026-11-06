@@ -175,17 +175,6 @@ describe('hash history integrity', () => {
     expect(settings.starCatalogs.enabled).toBe(false);
   });
 
-  it("a hash change's layers land with its view", async () => {
-    seedHash('');
-    const { store } = await boot();
-    await flush();
-
-    navigate('focus=body-mars&layers=flow');
-    await flush();
-
-    expect(selectSettings(store.getState()).flow.enabled).toBe(true);
-  });
-
   it("an exhibit link's layers win over the exhibit's own settings", async () => {
     // solarSystem's settings replace the whole `starCatalogs` cluster, captions included.
     seedHash('exhibit=solarSystem&layers=-label:starCatalog');

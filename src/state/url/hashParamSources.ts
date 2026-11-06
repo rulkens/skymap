@@ -315,7 +315,7 @@ const layersSource: HashParamSource = {
     for (const token of unknown) {
       console.warn(`hashParamSources: unknown layer, ignoring: ${token}`);
     }
-    return switches.length > 0 ? { layers: switches } : {};
+    return { layers: switches };
   },
   readAbsent: () => [],
 };
