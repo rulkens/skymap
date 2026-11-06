@@ -169,7 +169,6 @@ export function stepCameraRuntime(
     {
       ctx: replayCtx,
       rootState: stored,
-      nowMs,
       winnerLastFrame,
       lastWinnerRidesWheel,
       autoRotateEpoch: prev.epochs.autoRotate,

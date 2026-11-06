@@ -18,7 +18,7 @@ export type CameraArmRow<K extends CameraArmKind> = {
   /** What the frame tag's value names, for `frameKey`: '' for the world arm, else the body or site id. */
   identity(frame: FrameOf[K]): string;
   host(frame: FrameOf[K], ctx: CameraArmBasisCtx): HostBody | null;
-  /** How a clip's four animation channels read in this arm's frame. */
+  /** How a clip's animation channels read in this arm's frame. */
   readonly channels: CameraArmChannels<K>;
   /** Arm-local gesture memory; the runtime wipes it when `frameKey` changes. */
   readonly emptyMemory: MemOf[K];

@@ -55,7 +55,6 @@ export function replayInput(
   args: {
     readonly ctx: CameraArmCtx;
     readonly rootState: RootState;
-    readonly nowMs: number;
     readonly winnerLastFrame: DriverId;
     /** That row's `ridesWheelTarget`. */
     readonly lastWinnerRidesWheel: boolean;
@@ -73,8 +72,8 @@ export function replayInput(
   /** The navigator's input, in order; a `gestureEnd` is also handled here. */
   readonly navSteps: readonly NavStep[];
 } {
-  const { ctx, rootState, nowMs, winnerLastFrame, lastWinnerRidesWheel } = args;
-  const { bodies, poseBasis, upBasis, pivot, tuning } = ctx;
+  const { ctx, rootState, winnerLastFrame, lastWinnerRidesWheel } = args;
+  const { bodies, poseBasis, upBasis, pivot, tuning, nowMs } = ctx;
   // Only camera actions are emitted mid-drain, so every other slice is the
   // snapshot's; the focus row is read once.
   const focus = selectFocusRow(rootState);

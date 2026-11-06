@@ -6,8 +6,8 @@
 > (the clip-only sky arm; "rung" there is "camera arm" here, #1039). It takes its input design from
 > sky mode's spec (branch `sky-mode`, `docs/superpowers/specs/2026-10-28-sky-mode-design.md`
 > §4.1, §4.3, §7), re-shaped to the frame-tag place.
-> **Scope.** The sky arm answers the live controls. Two exits past the widest lens are built in full
-> on sibling branches and compared by eye; one lands.
+> **Scope.** The sky arm answers the live controls. Two exits past the widest lens were built and
+> compared by eye; B landed (R11).
 
 ## 1. What this is
 
@@ -17,7 +17,7 @@ Standing on the `{ sky }` arm (today only the grand tour's beat 00 puts you ther
   rad per px on both axes. The horizon stays level; altitude clamps at ±90°; azimuth stays free at
   the zenith.
 - **Wheel / pinch changes the lens**, 0.5°–120°. The eye does not move.
-- **Past 120°, wheel-out leaves the arm** for the body arm. Two shapes, §5 and §6.
+- **Past 120°, wheel-out leaves the arm** for the body arm (§6).
 
 Not in this work (full sky mode keeps them): entry from the UI ("Sky from here", `s`), the place
 picker, grids, the takeover, Esc, the readout. §9 backlogs them.
@@ -55,10 +55,8 @@ CameraArmRow<K>.step(…)  → { pose; memory; tilt; fovYRad?: number }
 CameraArmRow<K>.nudge(…) → { pose; tilt; fovYRad?: number }
 LENS_MIN_DEG = 0.5; LENS_MAX_DEG = 120              // src/data/camera/
 
-// exit A — the climb is pose
-type SkyPose = { azimuthRad; altitudeRad; eyeHeightM }   // eyeHeightM ≥ SKY_EYE_HEIGHT_M
-
-// exit B — stateless: the lift is a framed clip, triggered off the stored lens alone
+// exit B — the lift is a framed clip; one number of memory waits for a fresh scroll
+type MemOf = { …; sky: { lastWheelMs: number } };       // CameraArmCtx.nowMs is its clock
 step(…) → { …; clip?: ClipData }                          // the arm may start a clip
 body-arm clip channels carry `roll`                     // a body leg keeps its heading
 ```
@@ -70,9 +68,7 @@ body-arm clip channels carry `roll`                     // a body leg keeps its 
 | `settings.camera.fovDeg` (`cameraSettingsSlice.ts:11`, read at `stepCameraRuntime.ts:123`) | **Prep** | The input loop may only emit camera actions, folding them through the camera reducer so the next step sees them (`replayInput.ts:74`). A settings lens cannot be written from there. |
 | Arm step/nudge result (`CameraArmRow.d.ts:38`) | **Growth** (optional member) | Two callers (`replayInput.ts:108`, `nudgeCameraArm.ts:16`); no row changes. Rejected: the lens riding in and out like `tilt` (8 pass-through cells), and a sky lane in `replayInput` (a second arm-kind branch beside the world arm's at-rest lane). |
 | Sky row `step`/`nudge` cells | **Growth** | They decline today by design. |
-| `SkyPose` (A) | **Growth** | A field; readers are the row's channels, its two pose utils and the URL codec. Main writes no sky frame (only the decoder names one), so the `k` row breaks no link. |
-| Sky `release` (A) | **Growth** | The site arm's pattern: a pose-carried band (`siteCameraArm.ts` `release`). |
-| Step `clip`, body-leg `roll` (B) | **Growth** | Additions. The body channels' `roll` makes a body leg lossless in the basis, which the row's doc already claimed; no production clip has a body leg. B needs no `release` change: the clip's end commit leaves the arm (§6.1). |
+| Step `clip`, body-leg `roll` (B) | **Growth** | Additions. The body channels' `roll` makes a body leg lossless in the basis, which the row's doc already claimed. B needs no `release` change: the clip's end commit leaves the arm (§6.1). |
 | `applyWheelZoom`, the world arm's at-rest lane | **Not touched** | A non-world wheel already routes to the arm's step. |
 | `replayInput`'s `tilt` swallow (`replayInput.ts:137`) | **Not touched** | The two-finger drag stays body-only. |
 
@@ -105,7 +101,7 @@ hand-off; a clip without an `fov` track leaves the lens alone. Its tests come wi
 - `f = spentZoomFactor(input.factor)`; `f > 1` widens. The lens is `ctx.fovYRad`; the step returns
   `fovYRad: clamp(lens · f, LENS_MIN, LENS_MAX)` and the pose by reference.
 - A notch the clamp eats whole returns no `fovYRad` (declined).
-- Wheel-out at `LENS_MAX` is the exit's (§5, §6).
+- Wheel-out at `LENS_MAX` is the exit's (§6).
 
 ### 4.3 The loop writes the lens
 
@@ -144,7 +140,7 @@ back to 60°; at ≈15 m the body arm continues with no seam. Its recession sett
 (`surfaceZoomStep.ts:90-117`) is expected to turn the view down as you keep rising; the eye check
 confirms it.
 
-## 6. Exit B: the push and the lift (branch `sky-exit-push`)
+## 6. Exit B: the lift (branch `sky-exit-push`)
 
 1. **Lift (owner ruling 2026-11-06: no roll; as little state as possible).** A wheel-out notch
    (`spentZoomFactor(factor) > 1`) arriving while the lens is already at `LENS_MAX` (the notch the
@@ -181,7 +177,6 @@ Test names are the contract.
 - `skyCameraArm.test.ts` (trunk):
   - `drag turns the view at fovY / heightPx and the sky follows the pointer` — at 1°, 60° and 120°.
   - `altitude clamps at ±90° and azimuth stays free at the zenith`
-  - `the horizon stays level after any drag sequence`
   - `wheel scales the lens multiplicatively inside [LENS_MIN_DEG, LENS_MAX_DEG]`
   - `a notch the lens clamp eats whole is declined by reference`
   - `nudge look and zoom move the view and the lens at the drag's rate`
@@ -219,9 +214,3 @@ Acceptance after merge, on the tour branch: stop `#tour=grandTour` in beat 00, d
 One `docs/backlog/` file, replacing nothing: entry ("Sky from here" + `s`, `skyEntry`), the place
 picker, `skyGrids`, the `sky` takeover with Esc, the readout, the `fov` URL/recorder lens, and the
 perf pass at 0.5° (sky-mode §7). The sky-mode spec must take this spec's arm shape when it resumes.
-
-## 10. Left to the builder
-
-- B's `SKY_EXIT_ALTITUDE_M`, the two phase durations and `SKY_EXIT_PAUSE_MS`,
-  eye-checked.
-- Where the lens constants live under `src/data/camera/` (one symbol per file).

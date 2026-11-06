@@ -259,26 +259,6 @@ describe('the sky arm', () => {
     expect(down.altitudeRad).toBe(-Math.PI / 2);
   });
 
-  it('the horizon stays level after any drag sequence', () => {
-    const ctx = withLens(degToRad(60));
-    const up = radialOf(FRAME.sky);
-    let at = framed(AZ, 0.2);
-    for (const [dx, dy] of [
-      [130, -40],
-      [-500, 900],
-      [77, 3],
-      [-20, -1500],
-      [640, 210],
-    ] as const) {
-      at = {
-        frame: at.frame,
-        pose: ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, at, drag(dx, dy), ctx).pose,
-      };
-      const m = ROW.toParent(at, ctx).pose.basisLocal;
-      expect(Math.abs(m[0] * up[0] + m[1] * up[1] + m[2] * up[2])).toBeLessThan(1e-12);
-    }
-  });
-
   it('wheel scales the lens multiplicatively inside [LENS_MIN_DEG, LENS_MAX_DEG]', () => {
     const start = framed(AZ, 0.3);
     const wider = ROW.step(

@@ -80,7 +80,6 @@ function ctxOf(
       nowMs: overrides.nowMs ?? 0,
     },
     rootState: store.getState(),
-    nowMs: overrides.nowMs ?? 0,
     winnerLastFrame: overrides.winnerLastFrame ?? 'resting',
     lastWinnerRidesWheel: ridesWheelTarget(CAMERA_DRIVERS, overrides.winnerLastFrame ?? 'resting'),
     autoRotateEpoch: { ref: null, startMs: null },
