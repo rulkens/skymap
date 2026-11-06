@@ -64,7 +64,14 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
             oceanRoughness: state.settings.earth.oceanRoughness,
           },
         }),
-        ...(has('nightLights') && { nightLights: { view: earthRenderer.getMapView('night') } }),
+        ...(has('nightLights') && {
+          nightLights: {
+            view: earthRenderer.getMapView('night'),
+            // No night lane leaves every rect zero-scale, so the stand-in is bound but never read.
+            atlasView:
+              surfaceTiles.stream.getAtlasView('night') ?? earthRenderer.getMapView('night'),
+          },
+        }),
         ...(has('cloudShadows') && {
           cloudShadows: {
             view: earthRenderer.getMapView('clouds'),

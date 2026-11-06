@@ -1,7 +1,7 @@
 /**
  * surfaceTileRenderer — one instanced indexed draw of the resident
  * virtual-texture surface patches (`cutSurfaceTiles`'s cut) over the base
- * globe: one shared template index buffer, one 80-byte `PatchInstance` per
+ * globe: one shared template index buffer, one 96-byte `PatchInstance` per
  * patch, all geometry derived in `vertex.wesl`.
  *
  * Depth compare is `'nearer-or-equal'`, not `'nearer'`: this pipeline shares
@@ -36,6 +36,10 @@ import {
 import { HEIGHT_POSTS_PER_TILE } from '../../format/data/heightTileFormat';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
+import type { Vec4 } from '../../../../../@types/math/Vec4';
+
+/** A leaf with no resident night tile: zero scale tells the fragment to read the global map. */
+const NO_NIGHT_RECT: Readonly<Vec4> = [0, 0, 0, 0];
 
 /**
  * @param resolution The template's `n`: it sizes the shared index buffer and
@@ -106,6 +110,7 @@ export function createSurfaceTileRenderer(
     6: { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
     7: { binding: 7, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
     9: { binding: 9, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+    10: { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
   };
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'surfaceTile.vertex');
@@ -259,6 +264,15 @@ export function createSurfaceTileRenderer(
           fallback.atlasUvScale[0],
           fallback.atlasUvScale[1],
         ],
+        nightRect:
+          tile.night === null
+            ? NO_NIGHT_RECT
+            : [
+                tile.night.atlasUvOrigin[0],
+                tile.night.atlasUvOrigin[1],
+                tile.night.atlasUvScale[0],
+                tile.night.atlasUvScale[1],
+              ],
         heightSlotOrigin: [
           slotOriginX + tile.height.originPosts[0],
           slotOriginY + tile.height.originPosts[1],
@@ -303,6 +317,7 @@ export function createSurfaceTileRenderer(
       6: materialMap?.view,
       7: nightLights?.view,
       9: cloudShadows?.view,
+      10: nightLights?.atlasView,
     };
     const bindGroup = device.createBindGroup({
       label: `surface-tile-bg[${key}]`,

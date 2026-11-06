@@ -29,6 +29,7 @@ import { EARTH_SURFACE_PARAMS } from '../../../../src/layers/body/surfaceTiles/f
 import {
   SURFACE_TILE_MESH_RESOLUTION,
   SURFACE_TILE_ATLAS_SIDE,
+  NIGHT_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,
   SURFACE_TILE_SKIRT_DEPTH_FRACTION,
 } from '../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
@@ -280,6 +281,20 @@ describe('SURFACE_TILE_ATLAS_SIDE parity (surfaceTileParams.ts ↔ surfaceTile/s
       weslValue,
       `${file}: WESL SURFACE_TILE_ATLAS_SIDE (${weslValue}) does not match TS SURFACE_TILE_ATLAS_SIDE (${SURFACE_TILE_ATLAS_SIDE})`,
     ).toBe(SURFACE_TILE_ATLAS_SIDE);
+  });
+});
+
+/**
+ * NIGHT_TILE_ATLAS_SIDE (surfaceTileParams.ts) is mirrored into
+ * surfaceTile/surfaceLighting.wesl for the night atlas's own half-texel
+ * inset; a drift lets a night tile's edge sample its neighbour slot.
+ */
+describe('NIGHT_TILE_ATLAS_SIDE parity (surfaceTileParams.ts ↔ surfaceTile/surfaceLighting.wesl)', () => {
+  it("surfaceLighting.wesl's NIGHT_TILE_ATLAS_SIDE equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/surfaceTile/surfaceLighting.wesl';
+    const weslValue = readWeslConst(file, 'NIGHT_TILE_ATLAS_SIDE');
+    expect(weslValue, `NIGHT_TILE_ATLAS_SIDE is missing from ${file}`).toBeDefined();
+    expect(weslValue).toBe(NIGHT_TILE_ATLAS_SIDE);
   });
 });
 

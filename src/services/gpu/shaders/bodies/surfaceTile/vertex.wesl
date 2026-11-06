@@ -165,6 +165,7 @@ fn vs(
   out.fallbackUvOrigin = inst.fallbackRect.xy;
   out.fallbackUvScale = inst.fallbackRect.zw;
   out.fadeWeight = inst.fadeWeight;
+  out.nightRect = inst.nightRect;
   out.heightLattice = vec3<u32>(inst.heightSlotOrigin, inst.heightCells);
   out.patchSpanRad = vec2<f32>(inst.dLonRad, inst.dLatRad);
   // Camera minus vertex, inverted through the same rotation and scaled into

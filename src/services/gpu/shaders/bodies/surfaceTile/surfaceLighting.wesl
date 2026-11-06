@@ -11,6 +11,10 @@ import package::bodies::surfaceTile::lattice::latticePostGradient;
 // slot's pixels (the sampler's clamp-to-edge only guards the atlas's own edge).
 const SURFACE_TILE_ATLAS_SIDE: f32 = 8192.0;
 const SURFACE_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / SURFACE_TILE_ATLAS_SIDE;
+// Mirrored from 'NIGHT_TILE_ATLAS_SIDE' (surfaceTileParams.ts), parity-tested:
+// the night atlas's own half texel, the same inset against its own slots.
+const NIGHT_TILE_ATLAS_SIDE: f32 = 4096.0;
+const NIGHT_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / NIGHT_TILE_ATLAS_SIDE;
 
 // Mirrored from 'SURFACE_TILE_PX' (surfaceTileParams.ts), parity-tested. The
 // atlas-uv width of a tile drawn from ITS OWN slot; the LOD overlay divides a
@@ -35,9 +39,14 @@ fn tileLodOverlayColor(levelDelta: u32) -> vec3<f32> {
 // A deep ancestor fallback (levelDelta >= ~7) can flatten a rect to under one
 // atlas texel; the raw half-texel inset would then push min past max, which
 // clamp() leaves indeterminate -- so the inset is capped at half the rect.
-fn resolveTileAtlasUv(origin: vec2<f32>, scale: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
+fn resolveTileAtlasUv(
+  origin: vec2<f32>,
+  scale: vec2<f32>,
+  uv: vec2<f32>,
+  halfTexel: f32,
+) -> vec2<f32> {
   let raw = origin + uv * scale;
-  let inset = min(vec2<f32>(SURFACE_TILE_ATLAS_HALF_TEXEL), 0.5 * scale);
+  let inset = min(vec2<f32>(halfTexel), 0.5 * scale);
   return clamp(raw, origin + inset, origin + scale - inset);
 }
 
@@ -55,9 +64,9 @@ fn tileAlbedo(
   fallbackScale: vec2<f32>,
   fadeWeight: f32,
 ) -> vec3<f32> {
-  let primaryUv = resolveTileAtlasUv(primaryOrigin, primaryScale, uv);
+  let primaryUv = resolveTileAtlasUv(primaryOrigin, primaryScale, uv, SURFACE_TILE_ATLAS_HALF_TEXEL);
   let primaryAlbedo = textureSampleLevel(atlas, atlasSampler, primaryUv, 0.0).rgb;
-  let fallbackUv = resolveTileAtlasUv(fallbackOrigin, fallbackScale, uv);
+  let fallbackUv = resolveTileAtlasUv(fallbackOrigin, fallbackScale, uv, SURFACE_TILE_ATLAS_HALF_TEXEL);
   let fallbackAlbedo = textureSampleLevel(atlas, atlasSampler, fallbackUv, 0.0).rgb;
   return mix(fallbackAlbedo, primaryAlbedo, fadeWeight);
 }

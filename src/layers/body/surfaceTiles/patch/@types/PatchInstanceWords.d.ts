@@ -17,6 +17,9 @@ export type PatchInstanceWords = {
   /** `(origin.x, origin.y, scale.x, scale.y)` in the albedo atlas. */
   readonly albedoRect: Readonly<Vec4>;
   readonly fallbackRect: Readonly<Vec4>;
+  /** The leaf's night-atlas rect, like `albedoRect`; all zero when no night
+   *  tile is resident, and the zero scale is what the fragment tests. */
+  readonly nightRect: Readonly<Vec4>;
   /** Post origin of the leaf's SUB-RECT: its height tile's slot origin plus
    *  `SurfaceCutTile.height.originPosts`. */
   readonly heightSlotOrigin: Readonly<Vec2>;

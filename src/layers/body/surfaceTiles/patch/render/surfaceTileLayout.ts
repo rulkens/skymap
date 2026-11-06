@@ -2,7 +2,7 @@
  * surfaceTileLayout — byte layout of the records `surfaceTileRenderer` writes:
  * the per-patch `PatchInstance` storage records and the per-draw
  * `SurfaceTileUniforms` block. The authoritative layout is each WESL struct in
- * `shaders/surfaceTile/io.wesl`; `surfaceTileLayout.test.ts` guards parity.
+ * `shaders/bodies/surfaceTile/io.wesl`; `surfaceTileLayout.test.ts` guards parity.
  *
  * @module
  */
@@ -14,20 +14,20 @@ import type { PatchInstanceWords } from '../@types/PatchInstanceWords';
 /**
  * Bytes of one `PatchInstance` element: `originRelEyeM` vec3 (0..11) +
  * `fadeWeight` f32 (12..15, filling the vec3's alignment pad) + `lon0Rad`
- * / `lat0Rad` / `dLonRad` / `dLatRad` f32 (16..31) + `albedoRect` vec4
- * (32..47) + `fallbackRect` vec4 (48..63) + `heightSlotOrigin` vec2u
- * (64..71) + `edgeCoarser` u32 (72..75) + `heightCells` u32 (76..79). The two vec4s must stay BEFORE
- * `heightSlotOrigin` — a vec2u declared earlier pads the record past 80.
- * Reordering the five scalars keeps the stride but re-maps offsets 12..31
- * with no compiler signal — the layout test's per-field assertions are the
- * only guard.
+ * / `lat0Rad` / `dLonRad` / `dLatRad` f32 (16..31) + `albedoRect`,
+ * `fallbackRect`, `nightRect` vec4 (32..79) + `heightSlotOrigin` vec2u
+ * (80..87) + `edgeCoarser` u32 (88..91) + `heightCells` u32 (92..95). The
+ * vec4s must stay BEFORE `heightSlotOrigin` — a vec2u declared earlier pads
+ * the record past 96. Reordering the five scalars keeps the stride but
+ * re-maps offsets 12..31 with no compiler signal — the layout test's
+ * per-field assertions are the only guard.
  */
-export const PATCH_INSTANCE_BYTES = 80;
+export const PATCH_INSTANCE_BYTES = 96;
 
 /** Pack one `PatchInstance` block at byte `base` of `view`. */
 export function writePatchInstance(view: DataView, base: number, words: PatchInstanceWords): void {
-  const { originRelEyeM, fadeWeight, anchor, albedoRect, fallbackRect, heightSlotOrigin } = words;
-  const { edgeCoarser, heightCells } = words;
+  const { originRelEyeM, fadeWeight, anchor, albedoRect, fallbackRect, nightRect } = words;
+  const { heightSlotOrigin, edgeCoarser, heightCells } = words;
   view.setFloat32(base + 0, originRelEyeM[0], true);
   view.setFloat32(base + 4, originRelEyeM[1], true);
   view.setFloat32(base + 8, originRelEyeM[2], true);
@@ -44,10 +44,14 @@ export function writePatchInstance(view: DataView, base: number, words: PatchIns
   view.setFloat32(base + 52, fallbackRect[1], true);
   view.setFloat32(base + 56, fallbackRect[2], true);
   view.setFloat32(base + 60, fallbackRect[3], true);
-  view.setUint32(base + 64, heightSlotOrigin[0] >>> 0, true);
-  view.setUint32(base + 68, heightSlotOrigin[1] >>> 0, true);
-  view.setUint32(base + 72, edgeCoarser >>> 0, true);
-  view.setUint32(base + 76, heightCells >>> 0, true);
+  view.setFloat32(base + 64, nightRect[0], true);
+  view.setFloat32(base + 68, nightRect[1], true);
+  view.setFloat32(base + 72, nightRect[2], true);
+  view.setFloat32(base + 76, nightRect[3], true);
+  view.setUint32(base + 80, heightSlotOrigin[0] >>> 0, true);
+  view.setUint32(base + 84, heightSlotOrigin[1] >>> 0, true);
+  view.setUint32(base + 88, edgeCoarser >>> 0, true);
+  view.setUint32(base + 92, heightCells >>> 0, true);
 }
 
 /**
