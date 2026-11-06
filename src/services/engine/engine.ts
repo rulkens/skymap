@@ -311,7 +311,7 @@ export function createEngine(
 
   cb.setSagaContext({
     nextFrame: () => state.subsystems.scheduler.nextFrame(),
-    reconcile: makeReconcileEffects(state, canvas),
+    reconcile: makeReconcileEffects(state, canvas, selection),
     selection,
     // The up-basis quaternion is resolved THIS frame, so a mid-slerp re-switch
     // captures the live pole rather than snapping to the committed frame. Null

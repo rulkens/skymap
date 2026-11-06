@@ -1,7 +1,7 @@
 /**
  * StarInfo — a selected star as its card's target, the one shape every star
  * reaches, survey or seeded; the star kind's `toFocusable` derives it from the
- * stored row, which carries the famous-star sidecar.
+ * stored row, and the card container joins the famous-star sidecar.
  */
 
 import type { StarCatalogSourceType } from './StarCatalogSourceType';

@@ -126,13 +126,11 @@ function deriveFamousLabelInputs(
   catalog: Pick<GalaxyCatalog, 'count' | 'positions' | 'diameterKpc'>,
 ): FamousLabelInput[] {
   const out: FamousLabelInput[] = [];
-  let catalogIdx = 0;
-  for (const e of names) {
-    if (catalogIdx >= catalog.count) break; // ran past the catalog; defensive
-    const x = catalog.positions[catalogIdx * 3 + 0]!;
-    const y = catalog.positions[catalogIdx * 3 + 1]!;
-    const z = catalog.positions[catalogIdx * 3 + 2]!;
-    const diameterKpc = catalog.diameterKpc[catalogIdx]!;
+  for (const [i, e] of names.entries()) {
+    const x = catalog.positions[i * 3 + 0]!;
+    const y = catalog.positions[i * 3 + 1]!;
+    const z = catalog.positions[i * 3 + 2]!;
+    const diameterKpc = catalog.diameterKpc[i]!;
     out.push({
       id: `famous-${e.id}`,
       name: famousDisplayName(e),
@@ -141,7 +139,6 @@ function deriveFamousLabelInputs(
       minApparentSizePx: FAMOUS_MIN_APPARENT_PX,
       labelWorldEmMpc: famousLabelWorldEmMpc(diameterKpc),
     });
-    catalogIdx += 1;
   }
   return out;
 }

@@ -194,8 +194,8 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
       // permanent failures don't get retried every frame.
       if (!loaded && !failed && !inFlight.has(key)) {
         const raDec = cartesianToRaDec(x, y, z);
-        // A row past the compiled-in table (a `famous.bin` newer than the
-        // bundle) has no id to build a fetch URL from; skip it, unmarked.
+        // A `famous.bin` whose count differs from the compiled-in table nulls the
+        // whole table, so no row has an id to build a fetch URL from; skip, unmarked.
         if (!famousId) continue;
         inFlight.add(key);
         fetcher({

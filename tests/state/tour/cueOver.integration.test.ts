@@ -38,7 +38,9 @@ function makeLive(boot: readonly Action[] = []) {
     visibilityGates: new Map(),
   } as unknown as EngineState;
   seedVisibilityFades(state);
-  sagaMiddleware.setContext({ reconcile: makeReconcileEffects(state, {} as HTMLCanvasElement) });
+  sagaMiddleware.setContext({
+    reconcile: makeReconcileEffects(state, {} as HTMLCanvasElement, { extractRow: () => null }),
+  });
   sagaMiddleware.run(watchFadesSaga);
   return { store, state, fades };
 }

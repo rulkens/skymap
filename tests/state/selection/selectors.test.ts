@@ -92,15 +92,16 @@ const galaxyRow = makeGalaxyRow({
   classByte: 3,
 });
 
-const structureInfo = placedStructureRow({
+const virgoEntry = {
   type: 'structure',
-  category: 'galaxy-cluster',
   id: 'virgo',
   name: 'Virgo Cluster',
+  category: 'galaxy-cluster',
   worldPos: [0.27, 0.22, 0.15],
   featured: true,
   physicalRadiusMpc: 1.7,
-});
+} as StructureInfo;
+const structureInfo = placedStructureRow(virgoEntry);
 
 // --- selectIsSelectionActive --------------------------------------------------
 
@@ -160,15 +161,6 @@ describe('selectSelectedFocusable', () => {
 
 // --- one real row per kind ----------------------------------------------------
 
-const virgoEntry = {
-  type: 'structure',
-  id: 'virgo',
-  name: 'Virgo Cluster',
-  category: 'galaxy-cluster',
-  worldPos: [0.27, 0.22, 0.15],
-  featured: true,
-  physicalRadiusMpc: 1.7,
-} as StructureInfo;
 const { catalog: satellites } = buildSatelliteCatalog(
   [{ group: { group: 'active', class: 'active' }, records: [ISS] }],
   0,

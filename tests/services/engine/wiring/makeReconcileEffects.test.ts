@@ -40,12 +40,17 @@ import { applySwapFormat } from '../../../../src/services/engine/phases/applySwa
 import { logCameraState } from '../../../../src/services/engine/helpers/logCameraState';
 import { liveRenderCamera } from '../../../../src/services/engine/helpers/liveRenderCamera';
 import { bodySelectionRow } from '../../../../src/layers/body/selection/bodySelectionRow';
+import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
 import { bodyPickCodes } from '../../../support/layerPickCodes';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const CANVAS = {} as HTMLCanvasElement;
 const BODY_ROWS = bodySelectionRow({ pickCodes: bodyPickCodes() });
+const SELECTION = composeSelectionRows(
+  () => [BODY_ROWS],
+  () => [],
+);
 const MARS_REF = { type: 'body', id: asSceneBodyId('mars') } as const;
 
 // ── Fake EngineState builder ──────────────────────────────────────────────────
@@ -88,7 +93,7 @@ describe('makeReconcileEffects', () => {
 
   it('syncFades() recomputes every visibility target', () => {
     const { state } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
+    const effects = makeReconcileEffects(state, CANVAS, SELECTION);
     effects.syncFades();
     expect(syncVisibilityTargets).toHaveBeenCalledTimes(1);
     expect(syncVisibilityTargets).toHaveBeenCalledWith(state, undefined);
@@ -96,7 +101,7 @@ describe('makeReconcileEffects', () => {
 
   it("applySwapFormat('rgba16float') forwards to the applySwapFormat phase with state", () => {
     const { state } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
+    const effects = makeReconcileEffects(state, CANVAS, SELECTION);
     effects.applySwapFormat('rgba16float');
     expect(applySwapFormat).toHaveBeenCalledTimes(1);
     expect(applySwapFormat).toHaveBeenCalledWith(state, 'rgba16float');
@@ -104,7 +109,7 @@ describe('makeReconcileEffects', () => {
 
   it('the logged focus row is re-extracted at the live simDays', () => {
     const { state } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
+    const effects = makeReconcileEffects(state, CANVAS, SELECTION);
     effects.logCameraState();
 
     const { simDays } = state.cameraRuntime.outputs;
