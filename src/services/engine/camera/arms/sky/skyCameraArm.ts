@@ -2,7 +2,8 @@
  * The sky arm's row (spec §4): a person standing SKY_EYE_HEIGHT_M above the
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
  * enters it (`engage` is null). Every drag looks and the wheel changes the
- * lens, which the arm hands back as `fovYRad` beside an unmoved pose.
+ * lens, which the arm hands back as `fovYRad` beside an unmoved pose; wheel-out
+ * past the widest lens fills the exit push, which lifts the eye out by a tween.
  */
 
 import type { ClimbRow } from '../@types/ClimbRow';
@@ -17,11 +18,15 @@ import { isSkyArm } from './isSkyArm';
 import { refoldTo } from '../refoldTo';
 import { skyLookedPose } from './utils/skyLookedPose';
 import { skyZoomedLens } from './utils/skyZoomedLens';
+import { skyExitPushStep } from './utils/skyExitPushStep';
+import { skyExitTween } from './utils/skyExitTween';
+import { EMPTY_SKY_EXIT_PUSH } from './data/emptySkyExitPush';
+import { SKY_EXIT_PUSH_LN } from './data/skyExitPushLn';
 
 export const skyCameraArm: ClimbRow<'sky'> = {
   kind: 'sky',
   parent: 'body',
-  emptyMemory: null,
+  emptyMemory: EMPTY_SKY_EXIT_PUSH,
 
   channels: {
     // The tag names the spot, so `target` and `distance` carry nothing, as at a site.
@@ -49,16 +54,27 @@ export const skyCameraArm: ClimbRow<'sky'> = {
     if (input.kind === 'drag') {
       const dragPx: Vec2 = [input.endPx[0] - input.startPx[0], input.endPx[1] - input.startPx[1]];
       const pose = skyLookedPose(framed.pose, dragPx, ctx.fovYRad, ctx.viewportPx[1]);
-      return { pose, memory, tilt };
+      return { pose, memory: EMPTY_SKY_EXIT_PUSH, tilt };
     }
-    if (input.kind === 'zoom') {
-      const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);
-      // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
-      return fovYRad === ctx.fovYRad
-        ? { pose: framed.pose, memory, tilt }
-        : { pose: framed.pose, memory, tilt, fovYRad };
+    if (input.kind !== 'zoom') return { pose: framed.pose, memory, tilt };
+    const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);
+    // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
+    if (fovYRad !== ctx.fovYRad) {
+      return { pose: framed.pose, memory: EMPTY_SKY_EXIT_PUSH, tilt, fovYRad };
     }
-    return { pose: framed.pose, memory, tilt };
+    if (input.factor <= 1) return { pose: framed.pose, memory: EMPTY_SKY_EXIT_PUSH, tilt };
+    // Wheel-out the widest lens declined: it fills the exit push instead (spec §6).
+    const push = skyExitPushStep(memory, input.factor, ctx.nowMs);
+    // No release: the tween owns the display, and its end commit (a world pose)
+    // leaves the sky regime for the band to re-engage the body arm.
+    return push.pushLn < SKY_EXIT_PUSH_LN
+      ? { pose: framed.pose, memory: push, tilt }
+      : {
+          pose: framed.pose,
+          memory: EMPTY_SKY_EXIT_PUSH,
+          tilt,
+          tween: skyExitTween(framed, ctx),
+        };
   },
 
   nudge(tilt, framed, { look, zoom }, ctx) {

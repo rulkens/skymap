@@ -15,4 +15,6 @@ export type CameraArmCtx = CameraArmBasisCtx & {
   /** The lens, for rates (radians per pixel); never a ray. */
   readonly fovYRad: number;
   readonly tuning: CameraTuning;
+  /** The drain's clock, ms: what a memory that decays at rest measures its pause by. */
+  readonly nowMs: number;
 };

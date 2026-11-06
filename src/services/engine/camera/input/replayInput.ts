@@ -24,7 +24,11 @@ import { zoomedDistance } from './utils/zoomedDistance';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
-import cameraReducer, { commitCameraPose, setFovYRad } from '../../../../state/camera/cameraSlice';
+import cameraReducer, {
+  commitCameraPose,
+  setFovYRad,
+  startCameraTween,
+} from '../../../../state/camera/cameraSlice';
 
 import type { ClimbableKind } from '../@types/ClimbableKind';
 import type { DriverId } from '../../../../@types/engine/camera/DriverId';
@@ -111,6 +115,11 @@ export function replayInput(
     gestureMemory = stepped.memory;
     tilt = stepped.tilt;
     if (stepped.fovYRad !== undefined) emit(setFovYRad(stepped.fovYRad));
+    // A flight already under way is not restarted: mid-lift the sky arm still
+    // steps the stored pose, so a fresh one would fly back from the ground.
+    if (stepped.tween !== undefined && camera.tween === null) {
+      emit(startCameraTween({ ...stepped.tween, frame: rootState.settings.orientation }));
+    }
     return { frame: framed.frame, pose: stepped.pose };
   };
 

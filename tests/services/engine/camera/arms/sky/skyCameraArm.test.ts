@@ -24,6 +24,12 @@ import { CONST_J2000 } from '../../../../../../src/data/time/constJ2000';
 import { LENS_MAX_DEG } from '../../../../../../src/data/camera/lensMaxDeg';
 import { LENS_MIN_DEG } from '../../../../../../src/data/camera/lensMinDeg';
 import { degToRad } from '../../../../../../src/utils/math/degToRad';
+import { SKY_EXIT_PUSH_LN } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitPushLn';
+import { SKY_EXIT_PUSH_DECAY_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitPushDecayMs';
+import { SKY_EXIT_ALTITUDE_M } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitAltitudeM';
+import { DEFAULT_FOV_Y_RAD } from '../../../../../../src/services/engine/camera/framing/cameraFraming';
+import { foldToWorld } from '../../../../../../src/services/engine/camera/arms/foldToWorld';
+import type { SkyExitPush } from '../../../../../../src/@types/camera/arms/SkyExitPush';
 import type { InputStep } from '../../../../../../src/@types/camera/input/InputStep';
 import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
 import type { FrameOf } from '../../../../../../src/@types/camera/arms/FrameOf';
@@ -70,6 +76,7 @@ function ctxFor(focusBodyId: SceneBodyId | null, calls: unknown[][] = []): Camer
     frustum: symmetricFrustum(Math.PI / 3, 1),
     fovYRad: Math.PI / 3,
     tuning: DEFAULT_CAMERA_TUNING,
+    nowMs: 0,
   };
 }
 
@@ -174,16 +181,16 @@ describe('the sky arm', () => {
       const ctx = withLens(degToRad(deg));
       const start = framed(AZ, 0);
       const perPx = ctx.fovYRad / ctx.viewportPx[1];
-      const right = ROW.step(null, EMPTY_TILT_MEMORY, start, drag(40, 0), ctx).pose;
+      const right = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, drag(40, 0), ctx).pose;
       expect(right.azimuthRad).toBeCloseTo(AZ - 40 * perPx, 12);
       expect(right.altitudeRad).toBe(0);
-      const down = ROW.step(null, EMPTY_TILT_MEMORY, start, drag(0, 40), ctx).pose;
+      const down = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, drag(0, 40), ctx).pose;
       expect(down.altitudeRad).toBeCloseTo(40 * perPx, 12);
       expect(down.azimuthRad).toBe(AZ);
       // A right-drag (pan) looks exactly as a left-drag does.
-      expect(ROW.step(null, EMPTY_TILT_MEMORY, start, drag(40, 40, 'pan'), ctx).pose).toEqual(
-        ROW.step(null, EMPTY_TILT_MEMORY, start, drag(40, 40), ctx).pose,
-      );
+      expect(
+        ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, drag(40, 40, 'pan'), ctx).pose,
+      ).toEqual(ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, drag(40, 40), ctx).pose);
     }
     // The point of the sky under the pointer stays under it: a sign flip moves it
     // twice the drag the wrong way, while the linear gain law is off only to
@@ -198,7 +205,13 @@ describe('the sky arm', () => {
     const after = ROW.toParent(
       {
         frame: FRAME,
-        pose: ROW.step(null, EMPTY_TILT_MEMORY, start, drag(d[0], d[1], 'orbit', p0), ctx).pose,
+        pose: ROW.step(
+          ROW.emptyMemory,
+          EMPTY_TILT_MEMORY,
+          start,
+          drag(d[0], d[1], 'orbit', p0),
+          ctx,
+        ).pose,
       },
       ctx,
     ).pose.basisLocal;
@@ -210,10 +223,16 @@ describe('the sky arm', () => {
 
   it('altitude clamps at ±90° and azimuth stays free at the zenith', () => {
     const ctx = withLens(degToRad(60));
-    const up = ROW.step(null, EMPTY_TILT_MEMORY, framed(AZ, 0.3), drag(0, 1e4), ctx).pose;
+    const up = ROW.step(
+      ROW.emptyMemory,
+      EMPTY_TILT_MEMORY,
+      framed(AZ, 0.3),
+      drag(0, 1e4),
+      ctx,
+    ).pose;
     expect(up.altitudeRad).toBe(Math.PI / 2);
     const turned = ROW.step(
-      null,
+      ROW.emptyMemory,
       EMPTY_TILT_MEMORY,
       framed(up.azimuthRad, up.altitudeRad),
       drag(30, 0),
@@ -221,7 +240,13 @@ describe('the sky arm', () => {
     );
     expect(turned.pose.azimuthRad).not.toBe(up.azimuthRad);
     expect(turned.pose.altitudeRad).toBe(Math.PI / 2);
-    const down = ROW.step(null, EMPTY_TILT_MEMORY, framed(AZ, 0.3), drag(0, -1e4), ctx).pose;
+    const down = ROW.step(
+      ROW.emptyMemory,
+      EMPTY_TILT_MEMORY,
+      framed(AZ, 0.3),
+      drag(0, -1e4),
+      ctx,
+    ).pose;
     expect(down.altitudeRad).toBe(-Math.PI / 2);
   });
 
@@ -236,7 +261,10 @@ describe('the sky arm', () => {
       [-20, -1500],
       [640, 210],
     ] as const) {
-      at = { frame: at.frame, pose: ROW.step(null, EMPTY_TILT_MEMORY, at, drag(dx, dy), ctx).pose };
+      at = {
+        frame: at.frame,
+        pose: ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, at, drag(dx, dy), ctx).pose,
+      };
       const m = ROW.toParent(at, ctx).pose.basisLocal;
       expect(Math.abs(m[0] * up[0] + m[1] * up[1] + m[2] * up[2])).toBeLessThan(1e-12);
     }
@@ -244,14 +272,21 @@ describe('the sky arm', () => {
 
   it('wheel scales the lens multiplicatively inside [LENS_MIN_DEG, LENS_MAX_DEG]', () => {
     const start = framed(AZ, 0.3);
-    const wider = ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(1.25), withLens(degToRad(60)));
+    const wider = ROW.step(
+      ROW.emptyMemory,
+      EMPTY_TILT_MEMORY,
+      start,
+      wheel(1.25),
+      withLens(degToRad(60)),
+    );
     expect(wider.pose).toBe(start.pose);
     expect(wider.fovYRad).toBeCloseTo(degToRad(75), 12);
     const settle = (factor: number): number => {
       let lens = degToRad(60);
       for (let i = 0; i < 40; i++) {
         lens =
-          ROW.step(null, EMPTY_TILT_MEMORY, start, wheel(factor), withLens(lens)).fovYRad ?? lens;
+          ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(factor), withLens(lens))
+            .fovYRad ?? lens;
       }
       return lens;
     };
@@ -262,7 +297,7 @@ describe('the sky arm', () => {
   it('a notch the lens clamp eats whole is declined by reference', () => {
     const start = framed(AZ, 0.3);
     const out = ROW.step(
-      null,
+      ROW.emptyMemory,
       EMPTY_TILT_MEMORY,
       start,
       wheel(1.25),
@@ -270,7 +305,13 @@ describe('the sky arm', () => {
     );
     expect(out.pose).toBe(start.pose);
     expect(out.fovYRad).toBeUndefined();
-    const edge = ROW.step(null, EMPTY_TILT_MEMORY, start, { kind: 'gestureEnd' }, withLens(1));
+    const edge = ROW.step(
+      ROW.emptyMemory,
+      EMPTY_TILT_MEMORY,
+      start,
+      { kind: 'gestureEnd' },
+      withLens(1),
+    );
     expect(edge.pose).toBe(start.pose);
     expect(edge.fovYRad).toBeUndefined();
   });
@@ -282,7 +323,7 @@ describe('the sky arm', () => {
     const pxPerRad = ctx.viewportPx[1] / ctx.fovYRad;
     const nudged = ROW.nudge(EMPTY_TILT_MEMORY, start, { look, zoom: Math.log(1.25) }, ctx);
     const dragged = ROW.step(
-      null,
+      ROW.emptyMemory,
       EMPTY_TILT_MEMORY,
       start,
       drag(look[0] * pxPerRad, look[1] * pxPerRad),
@@ -302,5 +343,93 @@ describe('the sky arm', () => {
     expect(ROW.release(start, ctxFor(null))).toBe(false);
     expect(ROW.release(start, ctxFor(EARTH))).toBe(false);
     expect(ROW.release(start, ctxFor(asSceneBodyId('mars')))).toBe(true);
+  });
+});
+
+describe('the sky exit push', () => {
+  const LENS_MAX = degToRad(LENS_MAX_DEG);
+  const F = 1.3;
+  const atMax = (nowMs: number): CameraArmCtx => ({ ...withLens(LENS_MAX), nowMs });
+  const start = framed(AZ, 0.3);
+  /** Notches of F every `gapMs`, from an empty push, until the arm hands back a tween. */
+  const notchesToLift = (gapMs: number, max = 100): number => {
+    let memory: SkyExitPush = ROW.emptyMemory;
+    for (let i = 1; i <= max; i++) {
+      const out = ROW.step(memory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(i * gapMs));
+      expect(out.pose).toBe(start.pose);
+      expect(out.fovYRad).toBeUndefined();
+      if (out.tween !== undefined) {
+        expect(out.memory).toBe(ROW.emptyMemory);
+        return i;
+      }
+      memory = out.memory;
+    }
+    return Infinity;
+  };
+
+  it('wheel-out at the widest lens releases only once SKY_EXIT_PUSH_LN accumulates', () => {
+    expect(notchesToLift(SKY_EXIT_PUSH_DECAY_MS / 4)).toBe(
+      Math.ceil(SKY_EXIT_PUSH_LN / Math.log(F)),
+    );
+    // Below the widest lens the notch widens the lens and pushes nothing.
+    const wider = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(0));
+    const below = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(F), {
+      ...withLens(degToRad(100)),
+      nowMs: 0,
+    });
+    expect(wider.memory.pushLn).toBeCloseTo(Math.log(F), 12);
+    expect(below.fovYRad).toBe(LENS_MAX);
+    expect(below.memory).toBe(ROW.emptyMemory);
+    expect(below.tween).toBeUndefined();
+  });
+
+  it('any wheel-in, drag or rest clears the exit push', () => {
+    const one = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(1000)).memory;
+    expect(one.pushLn).toBeGreaterThan(0);
+    const after = (input: InputStep, nowMs: number) =>
+      ROW.step(one, EMPTY_TILT_MEMORY, start, input, atMax(nowMs)).memory;
+    expect(after(wheel(1 / F), 1100)).toBe(ROW.emptyMemory);
+    expect(after(drag(5, 5), 1100)).toBe(ROW.emptyMemory);
+    // A notch inside the decay adds to the push; one after a longer rest starts it over.
+    expect(after(wheel(F), 1000 + SKY_EXIT_PUSH_DECAY_MS - 1).pushLn).toBeCloseTo(
+      2 * Math.log(F),
+      12,
+    );
+    expect(after(wheel(F), 1000 + SKY_EXIT_PUSH_DECAY_MS).pushLn).toBeCloseTo(Math.log(F), 12);
+    // Spaced past the decay, the push never fills.
+    expect(notchesToLift(SKY_EXIT_PUSH_DECAY_MS, 20)).toBe(
+      SKY_EXIT_PUSH_LN <= Math.log(F) ? 1 : Infinity,
+    );
+  });
+
+  it('the exit tween ends above the spot looking down at the default lens', () => {
+    let memory: SkyExitPush = ROW.emptyMemory;
+    let tween;
+    for (let i = 1; tween === undefined; i++) {
+      const out = ROW.step(memory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(i));
+      memory = out.memory;
+      tween = out.tween;
+    }
+    const ctx = atMax(0);
+    expect(tween.fovYRad).toEqual({ from: LENS_MAX, to: DEFAULT_FOV_Y_RAD });
+    expect(tween.from).toEqual(foldToWorld(start, ctx));
+    const arm = CAMERA_ARMS.body.fromParent(
+      { frame: 'absolute', pose: tween.to },
+      { body: EARTH },
+      ctx,
+    ).pose;
+    const eye = bodyFixedEyeM(arm);
+    const up = radialOf(FRAME.sky);
+    const ground = R_EARTH_M + TERRAIN_M;
+    const along = eye[0] * up[0] + eye[1] * up[1] + eye[2] * up[2];
+    expect(Math.abs(along - ground - SKY_EXIT_ALTITUDE_M) / SKY_EXIT_ALTITUDE_M).toBeLessThan(1e-6);
+    // On the radial: no horizontal offset beyond the same tolerance.
+    const off = Math.hypot(eye[0] - along * up[0], eye[1] - along * up[1], eye[2] - along * up[2]);
+    expect(off / SKY_EXIT_ALTITUDE_M).toBeLessThan(1e-6);
+    const m = arm.basisLocal;
+    for (let i = 0; i < 3; i++) expect(m[6 + i]).toBeCloseTo(-up[i]!, 7);
+    // The map's heading is the sky azimuth: screen-up is the standing basis's horizontal forward.
+    const standing = ROW.toParent(framed(AZ, 0), ctx).pose.basisLocal;
+    for (let i = 0; i < 3; i++) expect(m[3 + i]).toBeCloseTo(standing[6 + i]!, 7);
   });
 });

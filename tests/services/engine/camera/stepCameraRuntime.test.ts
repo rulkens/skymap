@@ -48,6 +48,9 @@ import {
 import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
+import { LENS_MAX_DEG } from '../../../../src/data/camera/lensMaxDeg';
+import { degToRad } from '../../../../src/utils/math/degToRad';
+import { cameraArmKindOf } from '../../../../src/services/engine/camera/arms/cameraArmKindOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -221,6 +224,7 @@ describe('stepCameraRuntime', () => {
           frustum: symmetricFrustum(Math.PI / 3, 1),
           fovYRad: Math.PI / 3,
           tuning: intent.tuning,
+          nowMs: 0,
         },
       });
 
@@ -965,5 +969,33 @@ describe('a fov channel drives the drawn lens', () => {
     h.frame(1);
 
     expect(h.store.getState().camera.fovYRad).toBe(0.7);
+  });
+});
+
+describe('the sky exit lift', () => {
+  it('a push past the widest lens flies out of the sky arm once, to the default lens', () => {
+    const h = makeCameraSimHarness({ focusBody: 'earth' });
+    h.frame(2);
+    const sky = { body: asSceneBodyId('earth'), lonRad: 0.21857, latRad: 0.97158 };
+    h.store.dispatch(
+      commitCameraPose({ frame: { sky }, pose: { azimuthRad: 1, altitudeRad: 0.4 } }),
+    );
+    h.store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
+    h.frame(2);
+    for (let i = 0; i < 40 && h.store.getState().camera.tween === null; i++) h.wheel(300);
+    const lift = h.store.getState().camera.tween;
+    expect(lift).not.toBeNull();
+    // Notches mid-lift do not restart it from the ground.
+    for (let i = 0; i < 10; i++) h.wheel(300);
+    expect(h.store.getState().camera.tween).toBe(lift);
+    // Mid-flight the eye has left the ground (the arm a world pose folds into decides).
+    h.frame(60);
+    expect(cameraArmKindOf(h.state.cameraRuntime.register.pose.frame)).not.toBe('sky');
+    h.frame(140);
+
+    const camera = h.store.getState().camera;
+    expect(camera.tween).toBeNull();
+    expect(cameraArmKindOf(camera.base.frame)).not.toBe('sky');
+    expect(camera.fovYRad).toBeCloseTo(DEFAULT_FOV_Y_RAD, 12);
   });
 });
