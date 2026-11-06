@@ -17,6 +17,9 @@ import { evaluateClip } from '../../../../../src/services/engine/camera/clips/ev
 import { resolveClipStart } from '../../../../../src/state/camera/cameraSlice';
 import { selectionResolverOver } from '../../../../support/selectionResolverOver';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
+import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const RESOLVER = selectionResolverOver({ byId: () => null, byCategory: () => [] });
 const BASIS = ORIENTATION_FRAMES.galactic;
