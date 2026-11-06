@@ -16,7 +16,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 /** Minimal GPUDevice mock — same shape as the filamentRenderer test. */
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {
-    createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+    createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
     createShaderModule: vi.fn(() => ({
       getCompilationInfo: () => Promise.resolve({ messages: [] }),
     })),
@@ -58,6 +58,54 @@ describe('createConstellationRenderer.hasData', () => {
     const renderer = createConstellationRenderer(mockDevice(), 'rgba16float', mockFadeBgl);
     renderer.upload({ version: 1, constellations: [] });
     expect(renderer.hasData()).toBe(false);
+  });
+});
+
+describe('createConstellationRenderer.clear', () => {
+  it('frees the instance buffer once, stops drawing, and draws again after a re-upload', () => {
+    const device = mockDevice();
+    const renderer = createConstellationRenderer(device, 'rgba16float', mockFadeBgl);
+    const created = (device.createBuffer as ReturnType<typeof vi.fn>).mock.results;
+    const instanceBuffers = () =>
+      created
+        .map((r) => r.value as { label: string; destroy: ReturnType<typeof vi.fn> })
+        .filter((b) => b.label === 'constellations-instance-buffer');
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setIndexBuffer: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      drawIndexed: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+    const draw = () =>
+      renderer.draw(
+        pass,
+        mat4.identity() as Float32Array,
+        [1, 1],
+        1,
+        1,
+        1,
+        1,
+        [0, 0, 0],
+        [1, 1, 1],
+      );
+
+    renderer.upload(oneSegmentArtifact());
+    renderer.clear();
+    const [first] = instanceBuffers();
+    expect(first!.destroy).toHaveBeenCalledTimes(1);
+    expect(renderer.hasData()).toBe(false);
+    draw();
+    expect(pass.drawIndexed).not.toHaveBeenCalled();
+
+    renderer.upload(oneSegmentArtifact());
+    draw();
+    expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
+
+    renderer.destroy();
+    const [, second] = instanceBuffers();
+    expect(first!.destroy).toHaveBeenCalledTimes(1);
+    expect(second!.destroy).toHaveBeenCalledTimes(1);
   });
 });
 
