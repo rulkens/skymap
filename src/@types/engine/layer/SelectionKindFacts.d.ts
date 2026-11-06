@@ -1,3 +1,4 @@
+import type { PlacedRow } from '../selection/PlacedRow';
 import type { SelectionRefBase } from '../selection/SelectionRefBase';
 import type { SelectionFocus } from './SelectionFocus';
 
@@ -10,12 +11,22 @@ import type { SelectionFocus } from './SelectionFocus';
  */
 export type SelectionKindFacts<
   Ref extends SelectionRefBase = SelectionRefBase,
-  Row = unknown,
+  Row = any,
   Target = unknown,
 > = {
   readonly type: Ref['type'];
-  /** Null: not focusable, so its rows carry no placement and core never frames or rings them. */
-  readonly focus: SelectionFocus | null;
+  /**
+   * Null: not focusable, so its rows carry no placement and core never frames or rings them.
+   * Only a placed `Row` may set one, as core reads every focusable row as a `PlacedRow`. The
+   * base list's `Row` is `any` (`0 extends 1 & Row` holds only for it), not `unknown`: this
+   * conditional makes TS compare `Row` strictly, and every Layer's narrower row must still fit
+   * the base list.
+   */
+  readonly focus: 0 extends 1 & Row
+    ? SelectionFocus | null
+    : [Row] extends [PlacedRow]
+      ? SelectionFocus | null
+      : null;
   /**
    * Whether a hover onto or off `ref` may change pixels (a caption whitens, a ring brightens),
    * so `watchSelectionWakeSaga` draws a frame. Coarse on purpose: a needless frame is harmless,
