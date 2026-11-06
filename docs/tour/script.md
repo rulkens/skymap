@@ -26,7 +26,7 @@ stage shows on-screen text.
 | 00  | The Long Way Out | [`00-the-long-way-out.md`](stages/00-the-long-way-out.md) | Søndermarken, eye 1.7 m | held, tilt up, clock to night | 0+30 s |
 | 01  | You are here | [`01-you-are-here.md`](stages/01-you-are-here.md) | Earth, ~30,000 km | rise, sky → body → world | 10+7 s |
 | 02  | Earth and Moon | [`02-earth-and-moon.md`](stages/02-earth-and-moon.md) | Earth–Moon, ~800,000 km | log dolly + orbit | 8+7 s |
-| 03  | The Solar System | [`03-the-solar-system.md`](stages/03-the-solar-system.md) | Sun, ~80 au | log dolly + lean | 8+8 s |
+| 03  | The Solar System | [`03-the-solar-system.md`](stages/03-the-solar-system.md) | Sun, ~50 au | turn + log dolly + lean | 10+8 s |
 | 04  | Our stellar neighbourhood | [`04-stellar-neighbourhood.md`](stages/04-stellar-neighbourhood.md) | Sun, ~30 ly | log dolly + orbit | 8+7 s |
 | 05  | The Milky Way | [`05-the-milky-way.md`](stages/05-the-milky-way.md) | Milky Way, ~0.05 Mpc | log dolly + local orbit | 8+7 s |
 | 06  | Nearest neighbour      | [`06-nearest-neighbour.md`](stages/06-nearest-neighbour.md)           | M31, ~0.8 Mpc            | log dolly + lean          | 7+7 s        |

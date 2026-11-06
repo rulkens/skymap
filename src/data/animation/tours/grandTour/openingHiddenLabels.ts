@@ -4,8 +4,8 @@ import type { VisibilityArg } from '../../../../@types/animation/VisibilityArg';
 /**
  * The names `setLabelsFocusedOnly` does not gate, hidden by beat 00 and kept off
  * until a beat names them; Earth's own caption stays. Earth and Moon shows the
- * planets' and moons' names; the Milky Way beat shows the rest again for now,
- * until the Solar System to Milky Way beats claim their own.
+ * planets' and moons' names, the Solar System the Sun's; the Milky Way beat
+ * shows the rest again for now, until the beats before it claim their own.
  */
 export const OPENING_HIDDEN_LABELS = [
   'label:starCatalog',

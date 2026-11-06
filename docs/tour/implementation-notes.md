@@ -14,6 +14,15 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **Turn before you pull back past a body** (beat 03, `solarSystem`): a log
+  dolly backs the eye along the view axis, so a pull-out from a view that faces
+  away from the Sun runs the eye past the Sun as the range crosses 1 au. Turn
+  the view about the old target while the range is still small, then dolly and
+  lean the target. The Sun's caption is the star layer's
+  (`'label:starCatalog:sun'`), not a body caption; a scoped show names it alone
+  while the other star names stay hidden. A perspective view of an orbit plane
+  swells its near side, so to centre the rings aim on the Sun's ecliptic axis,
+  below the Sun; the dwell's yaw (ecliptic pole) still circles the Sun.
 - **Framing two bodies at once** (beat 02, `earthAndMoon`): body captions are
   not focus-gated, so focusing the Moon does not name it; `label:body:planet`
   names every planet and moon in view, so pick the bearing with no other planet

@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { earthAndMoon } from '../../../../../src/data/animation/tours/grandTour/earthAndMoon';
+import { solarSystem } from '../../../../../src/data/animation/tours/grandTour/solarSystem';
 import { youAreHere } from '../../../../../src/data/animation/tours/grandTour/youAreHere';
 import { TOUR_NIGHT_SIM_DAYS } from '../../../../../src/data/animation/tours/grandTour/tourNightSimDays';
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
@@ -31,6 +32,7 @@ const ROLLED: CameraPose = {
 describe('grand tour beat rolls', () => {
   it.each([
     ['Earth and Moon', earthAndMoon],
+    ['the Solar System', solarSystem],
     ['the Milky Way', youAreHere],
   ])('%s lands level after a rolled beat', (_name, clip) => {
     const resolved = resolveClipFoci(clip, RESOLVER, 1, ROLLED, TOUR_NIGHT_SIM_DAYS, BASIS);

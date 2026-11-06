@@ -28,11 +28,11 @@ import { dwellDrift } from '../../../../state/tour/dwellDrift';
 import { bodyPositionMpcAt } from '../../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { cross3 } from '../../../../utils/math/cross3';
 import { degToRad } from '../../../../utils/math/degToRad';
-import { lerpVec3 } from '../../../../utils/math/lerpVec3';
 import { normalize3 } from '../../../../utils/math/normalize3';
 import { EARTH_DATUM_RADIUS_M } from '../../../bodies/earthDatumRadiusM';
 import { ECLIPTIC_FRAME } from '../../../bodies/orbitPlaneFrames';
 import { SCALE_UNITS } from '../../../scaleUnits';
+import { EARTH_AND_MOON_VIEW } from './earthAndMoonView';
 import { FRAME_ROLL_SEC } from './frameRollSec';
 import { TOUR_NIGHT_SIM_DAYS } from './tourNightSimDays';
 import { WHOLE_EARTH_HEIGHT_M } from './wholeEarthHeightM';
@@ -62,10 +62,6 @@ const VIEW_FORWARD = turned(
   [-GAP_DIR[0], -GAP_DIR[1], -GAP_DIR[2]],
   SUNWARD_RAD,
 );
-// Moonward of the middle: the sunward eye stands nearer the Moon, which pushes it
-// out toward the frame's edge.
-const GAP_AIM_MPC = lerpVec3(EARTH_MPC, MOON_MPC, 0.7);
-const GAP_VIEW_DISTANCE_KM = 240_000;
 const WHOLE_EARTH_RANGE_MPC = (EARTH_DATUM_RADIUS_M + WHOLE_EARTH_HEIGHT_M) * SCALE_UNITS.M_TO_MPC;
 
 const PULL_BACK_SEC = 8;
@@ -90,13 +86,17 @@ export const earthAndMoon: ClipData = {
     // Beat 01's last view, restated so a skip or Prev pulls back from the whole Earth.
     all([moveTarget(EARTH_MPC, 0), dollyTo(WHOLE_EARTH_RANGE_MPC, 0)]),
     all([
-      dollyTo(GAP_VIEW_DISTANCE_KM * SCALE_UNITS.KM_TO_MPC, PULL_BACK_SEC),
+      dollyTo(EARTH_AND_MOON_VIEW.distanceMpc, PULL_BACK_SEC),
       aimAlong(VIEW_FORWARD, PULL_BACK_SEC, 'easeInOutSine'),
       // Beat 01's ground-up rise lands rolled; level again, whatever came before.
       tween('roll', { to: 0, over: PULL_BACK_SEC, ease: 'easeInOutSine' }),
       seq([
         wait(TARGET_DELAY_SEC),
-        moveTarget(GAP_AIM_MPC, PULL_BACK_SEC - TARGET_DELAY_SEC, 'easeInOutSine'),
+        moveTarget(
+          EARTH_AND_MOON_VIEW.targetMpc,
+          PULL_BACK_SEC - TARGET_DELAY_SEC,
+          'easeInOutSine',
+        ),
       ]),
       // Planets and moons: the Moon is the first name a beat gives back.
       seq([wait(LABEL_DELAY_SEC), show(['label:body:planet'], REVEAL_SEC)]),

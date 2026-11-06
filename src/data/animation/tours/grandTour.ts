@@ -18,6 +18,7 @@ import { dwellDrift } from '../../../state/tour/dwellDrift';
 import { parkOpening, parkOpeningDwell } from './grandTour/parkOpening';
 import { youAreHereEarth, youAreHereEarthDwell } from './grandTour/youAreHereEarth';
 import { earthAndMoon, earthAndMoonDwell } from './grandTour/earthAndMoon';
+import { solarSystem, solarSystemDwell } from './grandTour/solarSystem';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31, approachM31Dwell } from './grandTour/approachM31';
 import { localGroup, localGroupDwell } from './grandTour/localGroup';
@@ -68,6 +69,17 @@ export const grandTour: Tour = {
         ],
       },
       dwellClip: earthAndMoonDwell,
+    },
+    {
+      enterClip: solarSystem,
+      caption: {
+        title: 'The Solar System',
+        lines: [
+          'Sunlight reaches Earth in eight minutes.',
+          'It takes four hours to reach Neptune, the farthest planet.',
+        ],
+      },
+      dwellClip: solarSystemDwell,
     },
     {
       enterClip: youAreHere,
