@@ -27,8 +27,7 @@ export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass 
         view.camPos,
         // Wrapped on a multiple of the shader's 8 s loop, so f32 never loses the phase.
         (ctx.snapshot.nowMs / 1000) % 200,
-        (globalThis as { __streamLooks?: typeof STELLAR_STREAMS_LOOKS }).__streamLooks ??
-          STELLAR_STREAMS_LOOKS,
+        [STELLAR_STREAMS_LOOKS.streak, STELLAR_STREAMS_LOOKS.haze],
       );
     },
   };

@@ -72,6 +72,7 @@ import { initialState as thumbnailsInitialState } from '../../../src/layers/gala
 import { initialState as starCatalogsInitialState } from '../../../src/layers/starCatalog/state/starCatalogs/initialState';
 import { initialState as filamentsInitialState } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/initialState';
 import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
+import { initialState as stellarStreamsInitialState } from '../../../src/layers/stellarStreams/state/stellarStreams/initialState';
 import { initialState as satellitesInitialState } from '../../../src/layers/satellites/state/satellites/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
@@ -130,6 +131,11 @@ export function makeSettingsFixture(
     cosmicWebFilaments: { ...filamentsInitialState },
     localBubble: { ...localBubbleInitialState },
     satellites: { ...satellitesInitialState },
+    stellarStreams: {
+      ...stellarStreamsInitialState,
+      streak: { ...stellarStreamsInitialState.streak },
+      haze: { ...stellarStreamsInitialState.haze },
+    },
     constellations: { ...constellationsInitialState },
     orbitTrails: { ...orbitTrailsInitialState },
     surfaceTileDebug: { overlays: { ...surfaceTileDebugInitialState.overlays } },

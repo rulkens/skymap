@@ -5,6 +5,8 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
+import { stellarStreamsLayerSettings } from './state/slices';
+import { stellarStreamsVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
 import { stellarStreamsPlanner } from './frame';
@@ -12,8 +14,13 @@ import { stellarStreamsPass } from './streaks/passes/stellarStreamsPass';
 
 export const stellarStreamsLayer = defineLayer({
   name: 'stellarStreams',
+  settings: stellarStreamsLayerSettings,
+  visibility: stellarStreamsVisibility,
   create,
   destroy,
   planners: (runtime) => [stellarStreamsPlanner(runtime)],
   passes: (runtime) => [stellarStreamsPass(runtime)],
+  ui: [
+    { slot: 'labelsAndGuides', content: { toggle: 'stellarStreams', label: 'Stellar streams' } },
+  ],
 });
