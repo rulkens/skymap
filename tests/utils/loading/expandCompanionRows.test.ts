@@ -15,7 +15,7 @@ const parent: AssetWiringRow = {
   key: 'filaments',
   slot: {} as never,
   req: (t) => ({ small: t === 'small' }),
-  demand: { fn: () => true },
+  demand: 'always',
   priority: 20,
 };
 

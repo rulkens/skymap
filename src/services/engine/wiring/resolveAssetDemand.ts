@@ -19,6 +19,7 @@ import type { LabelEntry } from '../../../@types/engine/layer/LabelEntry';
 import type { VisibilityEntry } from '../../../@types/engine/layer/VisibilityEntry';
 
 const OWN_SWITCH: readonly undefined[] = [undefined];
+const NONE: readonly never[] = [];
 // Indexed: every size-gated row resolves its body each demand pass.
 const SCENE_BODY_BY_ID = new Map(SCENE_BODIES.map((body) => [body.id as string, body]));
 
@@ -33,6 +34,23 @@ function assertItemsIn(
   }
 }
 
+function resolveSize(demand: DeclaredDemand): Pick<DemandResolution, 'sizeRadiusM' | 'siteHost'> {
+  const sizeBody = demand.size === undefined ? undefined : SCENE_BODY_BY_ID.get(demand.size.body);
+  if (demand.size !== undefined && sizeBody === undefined) {
+    throw new Error(`size names no scene body '${demand.size.body}'`);
+  }
+  const driver = sizeBody === undefined ? null : positionDriverOrNull(sizeBody.id);
+  const host =
+    driver?.kind === 'surfaceFixed'
+      ? findByIdOrThrow(SCENE_CELESTIAL_BODIES, driver.hostId, 'size host')
+      : undefined;
+
+  return {
+    sizeRadiusM: sizeBody === undefined ? 0 : bodyFootprintRadiusM(sizeBody),
+    siteHost: host && { id: host.id, radiusM: innerBoundRadiusM(host.surface) },
+  };
+}
+
 export function resolveAssetDemand(
   demand: DeclaredDemand,
   gates: AssetWiringRow['gates'],
@@ -43,7 +61,23 @@ export function resolveAssetDemand(
     (gates === undefined || typeof gates === 'string'
       ? gates
       : { address: gates.address, items: [gates.item] });
-  if (shown === undefined) throw new Error('declares neither `shown` nor `gates`');
+  if (shown === undefined) {
+    // A body is drawn whatever the switches say, so a size gate alone needs no switch to read.
+    if (demand.size === undefined || demand.near !== undefined) {
+      throw new Error('declares neither `shown` nor `gates`');
+    }
+    return {
+      entry: undefined,
+      items: NONE,
+      label: undefined,
+      labelItems: NONE,
+      band: undefined,
+      inMpc: 0,
+      outMpc: Infinity,
+      ...resolveSize(demand),
+      selects: undefined,
+    };
+  }
   const address = typeof shown === 'string' ? shown : shown.address;
   const entry = visibilityEntryOf(entries, address);
   const items = typeof shown === 'string' ? (entry.items ?? OWN_SWITCH) : shown.items;
@@ -78,16 +112,6 @@ export function resolveAssetDemand(
     band?.items === undefined ||
     items.every((item) => item !== undefined && band.items!.includes(item));
 
-  const sizeBody = demand.size === undefined ? undefined : SCENE_BODY_BY_ID.get(demand.size.body);
-  if (demand.size !== undefined && sizeBody === undefined) {
-    throw new Error(`size names no scene body '${demand.size.body}'`);
-  }
-  const driver = sizeBody === undefined ? null : positionDriverOrNull(sizeBody.id);
-  const host =
-    driver?.kind === 'surfaceFixed'
-      ? findByIdOrThrow(SCENE_CELESTIAL_BODIES, driver.hostId, 'size host')
-      : undefined;
-
   return {
     entry,
     items,
@@ -96,8 +120,7 @@ export function resolveAssetDemand(
     band: applies ? band : undefined,
     inMpc: wantsIn ? (inEdge ?? 0) : 0,
     outMpc: wantsOut ? (outEdge ?? Infinity) : Infinity,
-    sizeRadiusM: sizeBody === undefined ? 0 : bodyFootprintRadiusM(sizeBody),
-    siteHost: host && { id: host.id, radiusM: innerBoundRadiusM(host.surface) },
+    ...resolveSize(demand),
     selects: 'selects' in entry ? entry.selects : undefined,
   };
 }

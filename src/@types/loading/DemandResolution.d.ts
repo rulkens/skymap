@@ -6,7 +6,8 @@ import type { SceneBodyId } from '../scene/SceneBodyId';
 
 /** A `DeclaredDemand` resolved against the composed entries: the switches, label, band and body it reads. */
 export type DemandResolution = {
-  readonly entry: VisibilityEntry;
+  /** Undefined for a size-only row: it reads no switch and counts as shown. */
+  readonly entry: VisibilityEntry | undefined;
   /** The items whose switches count; `[undefined]` reads the entry's own switch. */
   readonly items: readonly (string | undefined)[];
   /** The label entry whose `of` is the shown address, when `labelsCount` is set. */

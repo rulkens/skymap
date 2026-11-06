@@ -14,7 +14,7 @@ export function assertAssetDemands(
 ): void {
   for (const row of rows) {
     const demand = row.demand;
-    if (typeof demand === 'string' || 'companionOf' in demand || 'fn' in demand) continue;
+    if (typeof demand === 'string' || 'companionOf' in demand) continue;
     try {
       const { selects } = resolveAssetDemand(demand, row.gates, entries);
       const near = demand.near;

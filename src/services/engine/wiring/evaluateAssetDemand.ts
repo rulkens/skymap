@@ -28,6 +28,7 @@ const HOLD: AssetDemandVerdict = { demand: false, release: false };
 const RELEASE: AssetDemandVerdict = { demand: false, release: true };
 
 function isShown(ctx: DemandCtx, r: DemandResolution): boolean {
+  if (r.entry === undefined) return true;
   for (const item of r.items) if (visibilitySwitchOf(ctx.settings, r.entry, item)) return true;
   if (r.label === undefined) return false;
   for (const item of r.labelItems) if (visibilitySwitchOf(ctx.settings, r.label, item)) return true;
@@ -97,7 +98,6 @@ export function evaluateAssetDemand(
   if ('companionOf' in demand) {
     return { demand: ctx.slotState(demand.companionOf) !== 'idle', release: false };
   }
-  if ('fn' in demand) return { demand: demand.fn(ctx), release: demand.release?.(ctx) ?? false };
 
   const r = resolveAssetDemand(demand, row.gates, entries);
   const tierOk = demand.tiers === undefined || demand.tiers.includes(ctx.tier);
