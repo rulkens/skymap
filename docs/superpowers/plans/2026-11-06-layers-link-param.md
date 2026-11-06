@@ -100,17 +100,17 @@ layerSwitchesFrom(settings: EngineSettingsState, baseline: EngineSettingsState):
 
 Tests (`tests/utils/url/`):
 
-- [ ] `parseLayerSwitches reads on, off, scoped and caption tokens in order` —
+- [x] `parseLayerSwitches reads on, off, scoped and caption tokens in order` —
       `'flow,-starCatalog,survey:desiWedge,-label:structure'` → four switches, that order, `unknown: []`.
-- [ ] `parseLayerSwitches drops unknown names and unknown items, keeping the rest` —
+- [x] `parseLayerSwitches drops unknown names and unknown items, keeping the rest` —
       `'flow,nope,survey:nope,,-label:nope'` → one switch (`flow`), `unknown: ['nope', 'survey:nope', '-label:nope']`.
-- [ ] `layerSwitchesFrom is empty for the boot settings` — `(INITIAL_SETTINGS, INITIAL_SETTINGS)` → `[]`.
-- [ ] `layer switches round-trip through the link` — build a state from `INITIAL_SETTINGS` with the settings reducer
+- [x] `layerSwitchesFrom is empty for the boot settings` — `(INITIAL_SETTINGS, INITIAL_SETTINGS)` → `[]`.
+- [x] `layer switches round-trip through the link` — build a state from `INITIAL_SETTINGS` with the settings reducer
       and `setVisibility` writes covering: a whole-entry switch on (`cosmicWebFilaments`), a section switch off
       (`starCatalog`), an item on (`survey:desiWedge`), a caption off (`label:structure`). Encode its diff, parse it,
       apply each switch via `setVisibilityActionsFor` + `settingsReducer` onto `INITIAL_SETTINGS`; the result's
       `layerSwitchesFrom` equals the original's, and is non-empty.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 4: the `layers` row and its apply — `review: yes`
 
