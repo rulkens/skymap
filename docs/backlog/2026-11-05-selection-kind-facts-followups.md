@@ -26,3 +26,5 @@ A new kind edits none of these, but each keeps one Layer's behaviour in core:
 - `src/state/url/hashParamSources.ts:157`, `src/state/camera/watchFlyToLonLatSaga.ts:66` and
   `src/services/engine/frame/passes/orbitTrailsPass.ts:76-77` check `type === 'body'`.
 - `src/state/selection/captureGalaxyFocusIds.ts:45` is J8's (galaxy re-anchor).
+- `src/services/engine/frame/runFrame.ts:204` feeds the structure focus subsystem only a `structure` row; a
+  Layer-contributed fact on the row would let core drop the kind name.
