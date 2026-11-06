@@ -899,6 +899,50 @@ unclear, and no entry here reads them as a licence.
 - **Modified:** Yes. Baked to a triangle mesh with normals.
 - **Checked:** 2026-10-07: <https://dataverse.harvard.edu/api/datasets/:persistentId/?persistentId=doi:10.7910/DVN/INB1RB>
 
+### The Sagittarius stream N-body model (Vasiliev et al. 2021)
+
+<!-- attribution: id=vasiliev2021; keys=vasiliev2021.* -->
+
+- **What:** The present-day snapshot of an N-body model of the disrupting
+  Sagittarius dwarf galaxy, 200,000 star particles (`Sgr_snapshot/stars.txt`
+  of `Sgr_stream_simulations.zip`).
+- **By:** Vasiliev, Belokurov & Erkal 2021, "Tango for three: Sagittarius,
+  LMC, and the Milky Way", MNRAS 501, 2279.
+- **Licence:** Creative Commons Attribution 4.0 International (the Zenodo
+  record).
+- **Use:** Free with credit
+- **Attribution:** Cite the paper and the dataset: Vasiliev, Belokurov &
+  Erkal 2021, Zenodo, doi:10.5281/zenodo.4300977.
+- **Upstream:** <https://zenodo.org/records/4300977>
+- **Enters skymap:** `npm run fetch-vasiliev2021` → `data/raw/vasiliev2021/` →
+  `npm run build-stellar-streams` →
+  `public/data/stellar-streams/v1/stellar-streams.bin`.
+- **Modified:** Yes. 60,000 of the particles picked at random, rotated into
+  the equatorial frame and given a size, brightness and colour of our own.
+- **Checked:** 2026-11-06: <https://zenodo.org/api/records/4300977>
+
+### Stellar stream tracks (galstreams)
+
+<!-- attribution: id=galstreams; keys=galstreams.* -->
+
+- **What:** The published sky tracks, with distances and proper motions, of
+  the Milky Way's stellar streams (`tracks/*.ecsv`, `lib/master_log.txt`).
+- **By:** Cecilia Mateu. Mateu 2023, "galstreams: a library of Milky Way
+  stellar stream footprints and tracks", MNRAS 520, 5225; each track is from
+  the discovery or mapping paper its master-log row names.
+- **Licence:** BSD 3-Clause. "Copyright (c) 2017, Cecilia Mateu".
+- **Use:** Free with credit
+- **Attribution:** Keep the licence notice; cite Mateu 2023 and, for a single
+  stream, the paper of its track.
+- **Upstream:** <https://github.com/cmateu/galstreams> (commit `6a304c0`)
+- **Enters skymap:** `npm run fetch-galstreams` → `data/raw/galstreams/` →
+  `npm run build-stellar-streams` →
+  `public/data/stellar-streams/v1/stellar-streams.bin` and
+  `stellar_streams_meta.json`.
+- **Modified:** Yes. One track per stream resampled into particles scattered
+  across the stream's width.
+- **Checked:** 2026-11-06: <https://github.com/cmateu/galstreams/blob/main/LICENSE>
+
 ### Filaments (DisPerSE)
 
 <!-- attribution: id=disperse; keys=filaments.cache-dir -->

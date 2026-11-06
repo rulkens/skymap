@@ -633,6 +633,14 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'The shape of the Local Bubble, the cavity in the gas around the Sun, from O’Neill and colleagues, 2024.',
   },
+  vasiliev2021: {
+    description:
+      'A computer model of the Sagittarius dwarf galaxy being torn apart by the Milky Way, from Vasiliev and colleagues, 2021.',
+  },
+  galstreams: {
+    description:
+      'The paths across the sky, with distances, of the streams of stars torn from star clusters and small galaxies around the Milky Way.',
+  },
   vizier: {
     description:
       'The catalogue service of CDS in Strasbourg, through which six of our tables were fetched.',

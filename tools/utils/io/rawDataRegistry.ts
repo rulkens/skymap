@@ -331,6 +331,37 @@ export const RAW_DATA = {
       'Provenance for the Local Bubble shell table — upstream DOI, licence, column layout and the frame its angles are in.',
   },
 
+  // ─── Stellar streams: Sagittarius N-body (Vasiliev+ 2021), galstreams ─
+
+  'vasiliev2021.stars': {
+    path: 'data/raw/vasiliev2021/stars.txt',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Vasiliev, Belokurov & Erkal 2021 present-day Sagittarius snapshot (with LMC): 200,000 star particles, one whitespace row each — galactocentric position and velocity, sky position, distance, stripping time.',
+    upstream: 'https://zenodo.org/records/4300977',
+    fetcher: 'tools/fetch/fetchVasiliev2021.ts',
+    readme: 'vasiliev2021.readme',
+  },
+  'vasiliev2021.readme': {
+    path: 'data/raw/vasiliev2021/readme.txt',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "The snapshot's own readme — column list, units and the galactocentric frame (Sun at x = −8 kpc). Extracted alongside stars.txt.",
+    upstream: 'https://zenodo.org/records/4300977',
+    fetcher: 'tools/fetch/fetchVasiliev2021.ts',
+  },
+  'galstreams.dir': {
+    path: 'data/raw/galstreams',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'galstreams (Mateu 2023) at a pinned commit — tracks/track.<kind>.<Name>.<ref>.ecsv (+ .summary.ecsv) per published stream track, and lib/master_log.txt naming each stream\'s preferred ("On") track and width.',
+    upstream: 'https://github.com/cmateu/galstreams',
+    fetcher: 'tools/fetch/fetchGalstreams.ts',
+  },
+
   // ─── Polyphorm (MCPM rhizome sim exports) ─────────────────────────────
 
   'polyphorm.dir': {
