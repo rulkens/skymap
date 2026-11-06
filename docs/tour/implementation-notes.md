@@ -14,6 +14,15 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **A pan that turns with the clock** (beat 00, the sunset): a yaw linear in
+  sim time shares the clock's profile (a linear leg, then `easeOutQuad` over
+  the clock's ease), so the frame and the wheeling sky come to rest together.
+  Yaw tweens take the shorter arc (`lerpAngleShortest`), so a pan longer than
+  half a turn needs a leg break; unwrap the azimuths one step at a time with
+  `wrapRad`. Sun positions come from `skyPoseOfBodyAt` at the tour's noon,
+  sunset and night constants, so moving the date moves only those three
+  (`tourDayTimes.test.ts`). The ground tiles go grey-white from ~4° of solar
+  altitude, so a sunset shot keeps the ground to a thin strip.
 - **Turn before you pull back past a body** (beat 03, `solarSystem`): a log
   dolly backs the eye along the view axis, so a pull-out from a view that faces
   away from the Sun runs the eye past the Sun as the range crosses 1 au. Turn

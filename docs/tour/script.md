@@ -23,7 +23,7 @@ stage shows on-screen text.
 
 | #   | Stage                  | File                                                                  | Focus / dist             | Motion                    | Travel+dwell |
 | --- | ---------------------- | --------------------------------------------------------------------- | ------------------------ | ------------------------- | ------------ |
-| 00  | The Long Way Out | [`00-the-long-way-out.md`](stages/00-the-long-way-out.md) | Søndermarken, eye 1.7 m | held, tilt up, clock to night | 0+30 s |
+| 00  | The Long Way Out | [`00-the-long-way-out.md`](stages/00-the-long-way-out.md) | Søndermarken, eye 1.7 m | pan west with the setting Sun, tilt up, clock to night | 0+27.5 s |
 | 01  | You are here | [`01-you-are-here.md`](stages/01-you-are-here.md) | Earth, ~30,000 km | rise, sky → body → world | 10+7 s |
 | 02  | Earth and Moon | [`02-earth-and-moon.md`](stages/02-earth-and-moon.md) | Earth–Moon, ~800,000 km | log dolly + orbit | 8+7 s |
 | 03  | The Solar System | [`03-the-solar-system.md`](stages/03-the-solar-system.md) | Sun, ~50 au | turn + log dolly + lean | 10+8 s |

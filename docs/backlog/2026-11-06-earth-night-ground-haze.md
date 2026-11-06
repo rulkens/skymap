@@ -8,6 +8,9 @@ park's scan mesh keeps its daylight colours at night at the same time.
 Repro: `#tour=grandTour`, beat 01, the first third of the rise. Contact sheet from the tour
 branch: `data/shots/r1tour-contact.jpg` (frames 5–9, about 1 s apart).
 
+It starts before dark: on 2026-09-05 the tiles turn grey-white from about 4° of solar altitude,
+some 30 min before sunset, in every direction (beat 00's sunset, `data/shots/b00sun/`).
+
 Not diagnosed. Suspects: the aerial-perspective / in-scatter term at low altitude on the night
 side, the ground tiles' night branch below the altitude where the global night texture takes over,
 and the earthScenes mesh shading ignoring the Sun's altitude. Read `docs/RENDERER.md` first. Ruled

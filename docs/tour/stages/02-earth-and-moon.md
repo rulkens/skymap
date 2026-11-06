@@ -37,6 +37,11 @@ ecliptic, looking down on the Moon's orbit, which keeps Neptune and Pluto, named
 by the same caption switch as the Moon, out of frame. The gap rises about 34°
 from Earth, lower left, to the Moon on its ring, upper right.
 
+Stale since the tour moved to 2026-09-05 (beat 00's sunset): the Moon is no
+longer new but 70° from the Sun, a third lit, so the turn toward the Moon's side
+of the gap no longer faces its lit half and the Moon shows a thin sliver. The
+framing needs re-deriving from the Sun's direction.
+
 ## On screen
 
 `Earth and Moon` + narration on dwell start. Body labels for Earth and the

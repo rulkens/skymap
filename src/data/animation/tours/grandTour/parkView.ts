@@ -1,14 +1,13 @@
 /**
- * PARK_VIEW — the bearing beat 00 stands on at Søndermarken and the altitude it
- * looks up to at night, on the `{ sky }` arm (yaw = azimuth, pitch = altitude).
- * Beat 01 restates the night view, so a skip or Prev starts its rise where beat
- * 00 ends.
+ * PARK_VIEW — where beat 00's night view rests at Søndermarken, on the `{ sky }`
+ * arm (yaw = azimuth, pitch = altitude). Beat 01 restates it, so a skip or Prev
+ * starts its rise where beat 00 ends.
  */
 export const PARK_VIEW = {
-  // Due north up the scan's open lawn: the one corridor with sky to the horizon,
-  // front-lit by the noon Sun (south and south-east are backlit canopy).
+  // Near due north: beat 01 hands the view to the body arm due north under the
+  // celestial pole, so beat 00's pan ends turned that way.
   azimuthRad: 0.15,
-  // Short of the zenith, where azimuth stops meaning anything: Cassiopeia to
-  // Cygnus fills the frame at 20:00 UTC.
+  // Short of the zenith, where azimuth stops meaning anything: Cygnus overhead
+  // to Cassiopeia fills the frame at TOUR_NIGHT_SIM_DAYS.
   nightAltitudeRad: 1.4,
 } as const;

@@ -24,7 +24,7 @@ second to the Moon was the last rung, minutes and hours are this one.
 ## Camera
 
 The enter snaps the clock to `TOUR_NIGHT_SIM_DAYS` (`overSec: 0`), so the
-planets sit where they were on 2026-10-10. Log-dolly out from the Earth–Moon
+planets sit where they were on 2026-09-05. Log-dolly out from the Earth–Moon
 framing while the focus leans from Earth to the Sun; arrive with Neptune's
 orbit inside the frame, tilted enough that the orbits read as rings, not lines.
 A slow orbit on the dwell.
