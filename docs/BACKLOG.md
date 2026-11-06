@@ -257,6 +257,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Website docs page for the desktop app** `blocked` — wait for a downloadable release; the install guide is `packages/desktop/README.md`. → [details](backlog/2026-11-04-desktop-website-docs-page.md)
 - [ ] **Intel or universal macOS build** `deferred` — the dmg is arm64 only; an Intel show machine cannot install it. → [details](backlog/2026-11-04-desktop-intel-mac-build.md)
 - [ ] **"Paired" confirmation in first-run setup** `awaiting-decision` — needs a remote-joined signal on `RelayHandle`, a contract that grows only with a yes. → [details](backlog/2026-11-04-desktop-paired-confirmation.md)
+- [ ] **Windows hardware smoke** `manual` — the Windows installer shipped untried; install, sync, render and pair on a real Windows PC. → [details](backlog/2026-11-06-desktop-windows-hardware-smoke.md)
 - [ ] **Signing and notarization** `deferred` — both installers are unsigned and warn on open; out of scope in the spec. → [details](backlog/2026-11-04-desktop-signing-notarization.md)
 - [ ] **The relay ships from `tools/`** `needs-design` — the installer ships `tools/utils/remote/attachRemoteRelay` and `RelayHandle` as runtime code; the relay is no longer a build tool.
 

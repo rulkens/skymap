@@ -535,7 +535,8 @@ export const CONTROL_SHORTCUT = 'CommandOrControl+Alt+K';
 
 - [ ] `npm run dist --workspace packages/desktop` produces a dmg, and a Windows installer per
   Verification B.
-- [ ] Manual on Windows:
+- [x] Manual on Windows — *deferred by owner ruling 2026-11-06: no Windows machine, so the installer
+  ships marked untried and these checks moved to the backlog item "Windows hardware smoke":*
   - install, first sync, boot offline, WebGPU renders (D3D12);
   - a tablet pairs over HTTPS after trusting `/ca.crt`;
   - a projector switched on after boot takes the sky;
@@ -552,7 +553,8 @@ export const CONTROL_SHORTCUT = 'CommandOrControl+Alt+K';
 - `data/offline-inventory.json` published by `sync-r2`;
 - the README, the DEPLOY.md paragraph and the CI step.
 
-**Observable behaviours (manual smoke, mac and Windows):** every smoke step in Tasks 6–10, plus:
+**Observable behaviours (manual smoke, mac; Windows deferred to the backlog, see Task 10):** every
+smoke step in Tasks 6–10, plus:
 
 - [ ] After a new `sync-r2`, an online launch downloads only the changed files, and the next sky load
   prunes the superseded ones.

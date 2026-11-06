@@ -9,7 +9,9 @@ Help view (`HelpView.tsx`): change Connect a tablet and Troubleshooting in both.
 
 ## What you need
 
-- A Mac with Apple silicon, or a Windows 64-bit computer. Intel Macs have no installer yet.
+- A Mac with Apple silicon, or a Windows 64-bit computer. Intel Macs have no installer yet. The
+  Windows installer has not been tried on a Windows computer yet, so treat a first Windows install
+  as a test and report what goes wrong.
 - Internet for the first start only. The download is large; the setup window shows its size and
   the time left, and says so if the disk has too little free space.
 - A graphics driver that supports WebGPU. A blank sky usually means an old driver.

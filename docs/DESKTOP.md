@@ -250,7 +250,7 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   so the server can stream it, with `dist/data/**` filtered out (it would add 2.7 GB).
   `publish: null`: no auto-update channel.
 - `installer/installer.nsh` is the nsis include: branding colours, the firewall rule
-  (`netsh advfirewall`, TCP 47823, private and domain profiles, added on install and removed on
+  (`netsh advfirewall`, TCP 47823 and 47824, private and domain profiles, added on install and removed on
   uninstall), and the uninstaller's unticked "Downloaded sky data" box, which deletes
   `%APPDATA%\Skymap\data` only when ticked and never on an update. The exe and rule names come
   from electron-builder (`${PRODUCT_FILENAME}`, `${PRODUCT_NAME}`); the port is hard-coded there.
@@ -261,7 +261,9 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
   what lets it add the rule.
 - Release: `npm run dist -w packages/desktop` (web build in desktop mode, brand, build,
   electron-builder for both targets, into `packages/desktop/release/`). Both installers are
-  unsigned, about 340 MB each.
+  unsigned, about 340 MB each. The Windows one is cross-built on macOS and has not yet run on a
+  Windows computer (owner ruling 2026-11-06: ship it marked untried); the checks it still needs are
+  in the backlog item "Windows hardware smoke".
 
 ## Dev runs
 
