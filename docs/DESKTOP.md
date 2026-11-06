@@ -43,7 +43,7 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
 
 | Window            | File                                        | What it is                                                                                                                                                                                       |
 | ----------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Sky               | `main/windows/openSkyWindow.ts`, `main/sky/loadSkyPage.ts` | Black, fills one display; its frame shows only once Escape leaves full screen. Loads `https://localhost:47823/?remote` (kiosk) or `/?dome&remote` (dome) from the app's own server. Hosts the relay room.                                  |
+| Sky               | `main/windows/openSkyWindow.ts`, `main/sky/loadSkyPage.ts` | Black and frameless, fills one display; after Escape a window moved by its top edge. Loads `https://localhost:47823/?remote` (kiosk) or `/?dome&remote` (dome) from the app's own server. Hosts the relay room.                                  |
 | Control           | `main/windows/openControlWindow.ts`, `src/control/` | 960 x 760 React page from `file://`, sandboxed, talks to main only through the preload bridge. Close hides it.                                                                                   |
 | Test grid         | `main/sky/showTestGrid.ts`, `assets/test-grid.html` | Not a window: a child view laid over the sky window (dome grid with FRONT at the bottom; on a kiosk a frame, 10% grid, circle and centre cross with the display number and pixel size). `createSkyWindows` holds it; its on/off state is in `ControlState`, so the menu tick and the page agree, and a mode change drops it in main. |
 | About             | `main/windows/openAboutWindow.ts`           | 560 x 500 child of the control window, loading `?view=about` from the same page and preload. One branded window on both platforms.                                                               |
@@ -85,7 +85,9 @@ table; it never rejects and always ends the syncing status), `createDailySchedul
 - **Leaving full screen.** `preload/skyPreload.cts` (no API for the page) sends `sky:escape` for an
   Escape press the page left unused: the app's own handlers (palette, popover, splash) call
   `preventDefault`, so a new Escape use in the app must too, or it also drops full screen. Main then
-  makes the sky a 75% window on its display, which display changes leave alone. F11 (Ctrl+Cmd+F on
+  makes the sky a 75% window on its display, which display changes leave alone. The window has no
+  frame (a close button could only be refused); the same preload lays a 16 px drag strip with a
+  hairline along its top edge, hidden while the window fills its screen. F11 (Ctrl+Cmd+F on
   macOS, `utils/isFullScreenKey.ts`, read off the sky since Windows hangs the menu elsewhere) or
   View › Full screen puts it back; a launch always starts full screen.
 
