@@ -8,7 +8,6 @@
  *   bits  0..25  localIdx    (26 bits, 0..67M per source)
  */
 
-import type { SourceType } from '../@types/data/SourceType';
 import type { PickResult } from '../@types/data/PickResult';
 
 /** Bit shift for the source code in the packed identity. */
@@ -68,5 +67,5 @@ export function unpackPick(rawPickValue: number): PickResult | null {
   // Reserved sentinel band — never a real hit.
   if (sourceCode === SELECTION_SOURCE_SENTINEL_CODE) return null;
   const localIdx = (rawPickValue & SELECTION_LOCAL_IDX_MASK) - PICK_SENTINEL_OFFSET;
-  return { sourceCode: sourceCode as SourceType, localIdx };
+  return { sourceCode, localIdx };
 }

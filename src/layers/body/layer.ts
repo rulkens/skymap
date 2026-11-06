@@ -75,20 +75,20 @@ export const bodyLayer = defineLayer({
     bodyGlintsPass(runtime),
     atmosphereShellPass(runtime),
     aerialPerspectivePass(runtime),
-    bodyMeshesPass,
+    bodyMeshesPass(runtime),
   ],
   computes: (runtime) => [skyViewCompute(runtime), aerialPerspectiveCompute(runtime)],
   assets: bodyAssetRows,
   planners: (runtime) => [surfaceTilePlanner(runtime)],
   sagas: [watchDebugPanelWakeSaga],
   heightAt,
-  guides: () => ({
+  guides: (runtime) => ({
     screenLabels: [
       {
         slab: NEAR0,
         id: 'sceneBodyCaptions',
         label: 'body',
-        produceLabels: produceSceneBodyCaptions,
+        produceLabels: produceSceneBodyCaptions(runtime.pickCodes),
       },
     ],
     orbitTrails: {
@@ -97,7 +97,7 @@ export const bodyLayer = defineLayer({
       selectedOnly: SMALL_BODY_TRAIL_IDS,
     },
   }),
-  selection: () => [bodySelectionRow()],
+  selection: (runtime) => [bodySelectionRow(runtime)],
   search: () => bodySearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'orbitTrails', label: 'Orbit trails' } },

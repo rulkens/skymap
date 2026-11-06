@@ -2,8 +2,8 @@
  * PositionedStar — a `StarBody` paired with the position this frame's body
  * snapshot resolves for it: what `StarPointRenderer.setStars` uploads.
  *
- * `source` + `seedIndex` ride along so a pass packs the star's pick id straight
- * from the record (`packSelection(source, seedIndex + PICK_SENTINEL_OFFSET)`)
+ * `pickCode` + `seedIndex` ride along so a pass packs the star's pick id straight
+ * from the record (`packSelection(pickCode, seedIndex + PICK_SENTINEL_OFFSET)`)
  * instead of searching the seed tables for its id.
  */
 

@@ -55,6 +55,12 @@ vi.mock('../../../../../src/utils/camera/bodyCompose/composeBodyMvp', () => ({
 }));
 import { composeBodyMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodyMvp';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCodes';
+import { STAR_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/starCatalog/sources/starCatalogSourceRows';
+import { fakePickCode } from '../../../../support/fakePickCode';
+
+/** Codes from 40 up: a stamp that packs the catalog value instead fails. */
+const PICK_CODES = catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, fakePickCode());
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
@@ -143,7 +149,7 @@ function makeState(): EngineState {
 
 /** The Layer's runtime, carrying only the `starRenderer` this pass reads. */
 function makeRuntime(starRenderer: unknown): StarCatalogRuntime {
-  return { starRenderer } as unknown as StarCatalogRuntime;
+  return { starRenderer, pickCodes: PICK_CODES } as unknown as StarCatalogRuntime;
 }
 
 // `enabled` never reads `view` — an arbitrary NEAR0 view satisfies the 3-arg
@@ -344,7 +350,7 @@ describe('starSpheresPass.drawPick', () => {
     const decoded = unpackPick(captured[0]!)!;
     const seedIndex = seedIndexOfBody('sirius', SCENE_STARS);
     // The durable identity: Sirius' SCENE_STARS row, decoded straight back.
-    expect(decoded.sourceCode).toBe(Source.FamousStar);
+    expect(decoded.sourceCode).toBe(PICK_CODES.pickCodeOf(Source.FamousStar));
     expect(decoded.localIdx).toBe(seedIndex);
     // ...and that seed index is NOT Sirius' slot in the drawn sphere list (0).
     // Stamping the pack-loop slot would decode to 0, aliasing the first seed.

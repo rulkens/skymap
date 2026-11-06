@@ -16,14 +16,14 @@ export function stubPlannersFor(section: FrameSection): readonly FrameContentPla
         (step): FrameContentPlanner<unknown> => ({
           name: step.name,
           scope: 'once',
-          plan: () => ({ value: undefined, awake: false, settling: false }),
+          plan: () => ({ value: undefined, awake: false, settling: false, loading: false }),
         }),
       )
     : planSteps.map(
         (step): FrameContentPlanner<unknown> => ({
           name: step.name,
           scope: 'perView',
-          plan: () => ({ value: undefined, awake: false, settling: false }),
+          plan: () => ({ value: undefined, awake: false, settling: false, loading: false }),
         }),
       );
 }

@@ -36,5 +36,5 @@ export function structureMemberCount(
   // Nothing loaded/visible to search — "not computable yet", not zero.
   if (visible.length === 0) return null;
 
-  return structureMembership(visible, structure.worldPos, radiusMpc).count;
+  return structureMembership(visible, structure.worldPos, radiusMpc);
 }

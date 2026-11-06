@@ -26,6 +26,8 @@ import { createBodyTextureSlots } from './textures/load/bodyTextureSlots';
 import { createBodyTextureAtlasSlot } from './textures/load/bodyTextureAtlasSlot';
 import { createSurfaceTileStream } from './surfaceTiles/stream/subsystems/surfaceTileStream';
 import { IDLE_SURFACE_TILE_PLAN } from './surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
+import { catalogPickCodes } from '../../utils/picking/catalogPickCodes';
+import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
 import { throttleWithTrailingCall } from '../../utils/throttle/throttleWithTrailingCall';
 
 /** The rate every textual DebugPanel readout refreshes at. */
@@ -89,6 +91,7 @@ export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
       stream: createSurfaceTileStream({ device, requestRender: deps.requestRender }),
       plan: IDLE_SURFACE_TILE_PLAN,
     },
+    pickCodes: catalogPickCodes(BODY_SOURCE_ROWS, deps.pickCode),
     publish: deps.publish,
     // The trailing wake runs the frame that publishes a turned-away readout, so the
     // last state before the loop sleeps still reaches the panel.

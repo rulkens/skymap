@@ -81,6 +81,8 @@ export function createCatalogStore(init: {
   device: GPUDevice;
   fadeBgl: FadeUniformsBgl;
   sourceBgl: SourceUniformsBgl;
+  /** The pick code the SourceUniforms carry — never the catalog `Source` value. */
+  pickCodeOf: (source: GalaxyCatalogSourceType) => number;
   buildRunner?: BuildRunner;
 }): CatalogStore {
   const { device, fadeBgl, sourceBgl } = init;
@@ -156,7 +158,7 @@ export function createCatalogStore(init: {
     const sourceScratch = new ArrayBuffer(16);
     const sourceU32 = new Uint32Array(sourceScratch);
     const sourceF32 = new Float32Array(sourceScratch);
-    sourceU32[0] = source >>> 0;
+    sourceU32[0] = init.pickCodeOf(source) >>> 0;
     sourceF32[1] = entry.sbBoost;
     sourceF32[2] = entry.falloffHalfMpc;
     device.queue.writeBuffer(sourceBuffer, 0, sourceScratch);

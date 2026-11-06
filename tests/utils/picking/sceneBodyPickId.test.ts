@@ -7,14 +7,25 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { sceneBodyPickId } from '../../../src/utils/picking/sceneBodyPickId';
-import { selectionResolverOver } from '../../support/selectionResolverOver';
+import { sceneBodyPickId as pickIdOf } from '../../../src/utils/picking/sceneBodyPickId';
+import { bodyCodeOf } from '../../../src/layers/body/selection/present/bodyCodeOf';
+import { bodySelectionRow } from '../../../src/layers/body/selection/present/bodySelectionRow';
+import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
+import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { fakePickCode } from '../../support/fakePickCode';
+import { bodyPickCodes } from '../../support/layerPickCodes';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { unpackPick } from '../../../src/data/selectionEncoding';
 import { Source } from '../../../src/data/source';
 
-const resolver = selectionResolverOver({ byId: () => null, byCategory: () => [] });
+// Codes from 40 up, so no expectation below can pass on a catalog value.
+const pickCodes = bodyPickCodes(fakePickCode());
+const sceneBodyPickId = (id: string) => pickIdOf(id, bodyCodeOf(pickCodes));
+const resolver = composeSelectionRows(
+  () => [bodySelectionRow({ pickCodes })],
+  () => ALL_KINDS_ENABLED,
+);
 
 describe('sceneBodyPickId', () => {
   // Not subsumed by the round-trip test below: a consistent row swap (e.g. earth
@@ -22,11 +33,11 @@ describe('sceneBodyPickId', () => {
   // GPU stamp — only these sourceCode assertions catch that.
   it('routes each seeded body to the table its own geometry pick indexes', () => {
     const earth = unpackPick(sceneBodyPickId(SCENE_EARTH.id)!)!;
-    expect(earth.sourceCode).toBe(Source.Earth);
+    expect(earth.sourceCode).toBe(pickCodes.pickCodeOf(Source.Earth));
     expect(earth.localIdx).toBe(0);
 
     const planet = unpackPick(sceneBodyPickId('moon')!)!;
-    expect(planet.sourceCode).toBe(Source.Planet);
+    expect(planet.sourceCode).toBe(pickCodes.pickCodeOf(Source.Planet));
     expect(SCENE_PLANETS[planet.localIdx]?.id).toBe('moon');
   });
 

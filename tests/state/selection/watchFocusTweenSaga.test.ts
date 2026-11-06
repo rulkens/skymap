@@ -37,8 +37,10 @@ import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StarRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
+import { starRowRuntime } from '../../support/layerPickCodes';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -100,10 +102,10 @@ describe('watchFocusTweenSaga', () => {
     mw.setContext({
       selection: composeSelectionRows(
         () => [
-          bodySelectionRow(),
-          structureSelectionRow(structures),
-          milkyWaySelectionRow(),
-          starCatalogSelectionRow(NO_SURVEY_STARS),
+          bodySelectionRow({ pickCodes: bodyPickCodes() }),
+          structureSelectionRow(structureRowRuntime(structures)),
+          milkyWaySelectionRow(milkyWayPickCode()),
+          starCatalogSelectionRow(starRowRuntime(NO_SURVEY_STARS)),
         ],
         () => ALL_KINDS_ENABLED,
       ),

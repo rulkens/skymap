@@ -78,6 +78,7 @@ function makeStubInit() {
       focusBgl:
         {} as unknown as import('../../../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
       reversedZ: false,
+      pickCodeOf: (source: number) => source + 40,
     },
     writeBufferCalls,
     renderPipelines,
@@ -100,7 +101,7 @@ function fakeProceduralInstance(
     colourIndex: 0.7,
     crossfadeAlpha: 0.5,
     procFadeOut: 1,
-    sourceCode: 1,
+    source: 1,
     localIdx: 0,
     sbAmp: 1,
     ...overrides,
@@ -134,8 +135,8 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
     } as unknown as GPURenderPassEncoder;
 
     const instances: ProceduralDiskInstance[] = [
-      fakeProceduralInstance({ sourceCode: 1, localIdx: 7 }),
-      fakeProceduralInstance({ sourceCode: 3, localIdx: 1_000_000 }),
+      fakeProceduralInstance({ source: 1, localIdx: 7 }),
+      fakeProceduralInstance({ source: 3, localIdx: 1_000_000 }),
     ];
 
     renderer.draw(
@@ -154,8 +155,9 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
     // Reinterpret the same bytes as u32 to inspect the bitcast-written slot 6.
     const u32 = new Uint32Array(visualPayload.buffer);
 
-    expect(u32[6]).toBe(packSelection(1, 7));
-    expect(u32[FLOATS_PER_INSTANCE + 6]).toBe(packSelection(3, 1_000_000));
+    // The catalog maps through `pickCodeOf` (source + 40 here).
+    expect(u32[6]).toBe(packSelection(41, 7));
+    expect(u32[FLOATS_PER_INSTANCE + 6]).toBe(packSelection(43, 1_000_000));
   });
 });
 
@@ -309,9 +311,9 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
       100,
       FOCUS_BIND_GROUP,
       [
-        fakeProceduralInstance({ sourceCode: 1, localIdx: 42 }),
-        fakeProceduralInstance({ sourceCode: 2, localIdx: 99 }),
-        fakeProceduralInstance({ sourceCode: 3, localIdx: 7 }),
+        fakeProceduralInstance({ source: 1, localIdx: 42 }),
+        fakeProceduralInstance({ source: 2, localIdx: 99 }),
+        fakeProceduralInstance({ source: 3, localIdx: 7 }),
       ],
     );
 
@@ -350,9 +352,9 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
       100,
       FOCUS_BIND_GROUP,
       [
-        fakeProceduralInstance({ sourceCode: 1, localIdx: 10 }),
-        fakeProceduralInstance({ sourceCode: 1, localIdx: 11 }),
-        fakeProceduralInstance({ sourceCode: 1, localIdx: 12 }),
+        fakeProceduralInstance({ source: 1, localIdx: 10 }),
+        fakeProceduralInstance({ source: 1, localIdx: 11 }),
+        fakeProceduralInstance({ source: 1, localIdx: 12 }),
       ],
     );
     const pickPass1 = makeStubPass();

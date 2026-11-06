@@ -16,6 +16,8 @@ import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { compressBrightness } from '../../../../utils/color/compressBrightness';
 import type { BodyState } from '../../../../@types/scene/BodyState';
+import { sceneBodyPickId } from '../../../../utils/picking/sceneBodyPickId';
+import type { BodySourceEntry } from '../../../../@types/data/body/BodySourceEntry';
 import { bodyCaption } from '../../../../utils/labels/bodyCaption';
 import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiusM';
 
@@ -33,7 +35,10 @@ const PLANET_TINT_GAMMA = 0.3;
  * Positions come from the caller's `bodyStates` snapshot, so captions follow the sim clock;
  * a paused clock returns the same map by reference and `labelsNearPass` memoises on that.
  */
-export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): BodyCaption[] {
+export function sceneBodyLabels(
+  bodyStates: ReadonlyMap<string, BodyState>,
+  codeOf: (entry: BodySourceEntry) => number,
+): BodyCaption[] {
   return [
     {
       ...bodyCaption(
@@ -42,6 +47,7 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): Bod
         bodyStates.get(SCENE_EARTH.id)!.positionMpc,
         EARTH_TINT,
         BODY_CAPTION_ROWS.earth.priority,
+        sceneBodyPickId(SCENE_EARTH.id, codeOf) ?? undefined,
       ),
       item: BODY_CAPTION_ROWS.earth.item,
     },
@@ -54,6 +60,7 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): Bod
           bodyStates.get(planet.id)!.positionMpc,
           compressBrightness(planet.albedo, PLANET_TINT_GAMMA),
           row.priority,
+          sceneBodyPickId(planet.id, codeOf) ?? undefined,
         ),
         item: row.item,
       };

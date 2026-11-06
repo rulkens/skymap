@@ -8,6 +8,9 @@ import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import { STRUCTURE_IDS } from '../../../../../src/data/structure/structureIds';
 import { rebaseViewProj } from '../../../../../src/utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
+import { structurePickCodes } from '../../../../support/layerPickCodes';
+
+const CODE_OF = structurePickCodes().pickCodeOf;
 
 // Null-device pattern, mirrors markerLineRenderer.test.ts.
 const newRenderer = (initialCapacity?: number) => {
@@ -24,6 +27,7 @@ const newRenderer = (initialCapacity?: number) => {
     null as unknown as FadeUniformsBgl,
     COSMO,
     STRUCTURE_IDS,
+    CODE_OF,
     initialCapacity,
   );
 };
@@ -135,6 +139,7 @@ describe('StructureMarkerRenderer categories', () => {
       null as unknown as FadeUniformsBgl,
       COSMO,
       ['void'],
+      CODE_OF,
     );
     r.setMarkers([cluster(1), void_(2), group(3), void_(4)], [0, 0, 0]);
     expect(r.markerCount()).toBe(2);
@@ -156,6 +161,7 @@ describe('StructureMarkerRenderer colour target', () => {
       {} as unknown as FadeUniformsBgl,
       COSMO,
       STRUCTURE_IDS,
+      CODE_OF,
     );
 
     const formatByLabel = new Map(
@@ -184,6 +190,7 @@ describe('StructureMarkerRenderer colour target', () => {
       {} as unknown as FadeUniformsBgl,
       NEAR0,
       STRUCTURE_IDS,
+      CODE_OF,
     );
     const pick = captured.find((p) => p.label === 'structure-marker-ring-pick-pipeline');
     expect(pick?.depthStencil?.format).toBe('depth32float');
@@ -215,6 +222,7 @@ describe('StructureMarkerRenderer pick camera', () => {
       {} as unknown as FadeUniformsBgl,
       COSMO,
       STRUCTURE_IDS,
+      CODE_OF,
     );
     renderer.setMarkers([cluster(1)], [0, 0, 0]);
     (device.queue.writeBuffer as ReturnType<typeof vi.fn>).mockClear();
@@ -289,6 +297,7 @@ describe('StructureMarkerRenderer instance eye', () => {
       {} as unknown as FadeUniformsBgl,
       COSMO,
       STRUCTURE_IDS,
+      CODE_OF,
     );
     writes.length = 0;
     renderer.setMarkers([{ ...cluster(1), worldPos: [100, 0, 0] }], [99.5, 0, 0]);
@@ -309,6 +318,7 @@ describe('StructureMarkerRenderer instance eye', () => {
       {} as unknown as FadeUniformsBgl,
       COSMO,
       STRUCTURE_IDS,
+      CODE_OF,
     );
     renderer.setMarkers([cluster(1), { ...cluster(2), pickable: false }], [0, 0, 0]);
     const packed = writes.at(-1)!;
@@ -332,6 +342,7 @@ describe('StructureMarkerRenderer instance eye', () => {
       {} as unknown as FadeUniformsBgl,
       COSMO,
       STRUCTURE_IDS,
+      CODE_OF,
     );
     const eyeA: [number, number, number] = [10, 20, 30];
     renderer.setMarkers([cluster(1)], eyeA);

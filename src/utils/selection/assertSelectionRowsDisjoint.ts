@@ -1,5 +1,4 @@
 import type { SelectionKindRow } from '../../@types/engine/layer/SelectionKindRow';
-import type { SourceType } from '../../@types/data/SourceType';
 
 /**
  * Boot-time shape check for D5's composed selection rows: no two rows may claim
@@ -9,7 +8,7 @@ import type { SourceType } from '../../@types/data/SourceType';
  */
 export function assertSelectionRowsDisjoint(rows: readonly SelectionKindRow[]): void {
   const seenTypes = new Set<string>();
-  const seenSources = new Set<SourceType>();
+  const seenSources = new Set<number>();
   for (const row of rows) {
     if (seenTypes.has(row.type)) {
       throw new Error(`assertSelectionRowsDisjoint: duplicate SelectionRef type "${row.type}"`);

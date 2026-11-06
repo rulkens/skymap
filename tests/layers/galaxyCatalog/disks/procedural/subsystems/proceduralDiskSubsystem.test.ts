@@ -166,7 +166,7 @@ describe('createProceduralDiskSubsystem', () => {
     expect(out.instances.length).toBe(4);
     // Every instance must carry the SDSS source code.
     for (const ins of out.instances) {
-      expect(ins.sourceCode).toBe(Source.SDSS);
+      expect(ins.source).toBe(Source.SDSS);
     }
     // Back-to-front sort reorders instances, so check the SET of localIdx
     // values rather than positional order.

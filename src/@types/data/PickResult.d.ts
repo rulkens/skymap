@@ -1,9 +1,6 @@
-import type { SourceType } from './SourceType';
-
 /**
- * Decoded pick-buffer hit: the source code + per-source local index, the pure
- * identity the bits carry. Classifying it (galaxy-catalog galaxy vs structure
- * ring) is a registry read done downstream by `resolvePick` — the decode
- * itself stays store-free and dispatch-free.
+ * Decoded pick-buffer hit: the pick code + per-source local index, the pure
+ * identity the bits carry. `sourceCode` is a runtime pick code (`LayerCoreDeps.pickCode`),
+ * never a catalog `Source` value; the owning row's `resolvePick` maps it back.
  */
-export type PickResult = { readonly sourceCode: SourceType; readonly localIdx: number };
+export type PickResult = { readonly sourceCode: number; readonly localIdx: number };

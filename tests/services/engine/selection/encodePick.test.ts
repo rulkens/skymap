@@ -7,7 +7,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { Source } from '../../../../src/data/source';
-import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { structurePickId } from '../../../../src/layers/structure/picking/utils/structurePickId';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -19,16 +18,24 @@ import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/
 import { bodySelectionRow } from '../../../../src/layers/body/selection/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../../src/layers/structure/picking/present/structureSelectionRow';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
-import { galaxyRowRuntime } from '../../../support/selectionResolverOver';
+import { galaxyRowRuntime, starRowRuntime } from '../../../support/layerPickCodes';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import {
+  blackHolePickCode,
+  bodyPickCodes,
+  milkyWayPickCode,
+  structurePickCodes,
+  structureRowRuntime,
+  zoneOfAvoidancePickCode,
+} from '../../../support/layerPickCodes';
 
 function roundTrip<Ref extends SelectionRef>(row: SelectionKindRow<Ref>, ref: Ref): Ref | null {
   const word = row.encodePick(ref);
   const pick = unpackPick(word!)!;
-  return row.resolvePick(APP_SOURCE_REGISTRY[pick.sourceCode], pick);
+  return row.resolvePick(pick);
 }
 
 const STRUCTURES: StructureInfo[] = [
@@ -43,22 +50,30 @@ const structureStore = {
 
 describe('SelectionKindRow.encodePick', () => {
   it('milkyWay and zoneOfAvoidance singletons', () => {
-    expect(roundTrip(milkyWaySelectionRow(), { type: 'milkyWay' })).toEqual({ type: 'milkyWay' });
-    expect(roundTrip(zoneOfAvoidanceSelectionRow(), { type: 'zoneOfAvoidance' })).toEqual({
+    expect(roundTrip(milkyWaySelectionRow(milkyWayPickCode()), { type: 'milkyWay' })).toEqual({
+      type: 'milkyWay',
+    });
+    expect(
+      roundTrip(zoneOfAvoidanceSelectionRow(zoneOfAvoidancePickCode()), {
+        type: 'zoneOfAvoidance',
+      }),
+    ).toEqual({
       type: 'zoneOfAvoidance',
     });
   });
 
   it('blackHole', () => {
     const ref = { type: 'blackHole', id: 'sgr-a-star' } as const;
-    expect(roundTrip(blackHoleSelectionRow(), ref)).toEqual(ref);
+    expect(roundTrip(blackHoleSelectionRow(blackHolePickCode()), ref)).toEqual(ref);
   });
 
   it('starCatalog and galaxyCatalog pack their own source and index', () => {
     const star = { type: 'starCatalog', source: Source.FamousStar, index: 3 } as const;
     expect(
       roundTrip(
-        starCatalogSelectionRow({ renderer: null as never, chunkStreams: new Map() }),
+        starCatalogSelectionRow(
+          starRowRuntime({ renderer: null as never, chunkStreams: new Map() }),
+        ),
         star,
       ),
     ).toEqual(star);
@@ -70,17 +85,20 @@ describe('SelectionKindRow.encodePick', () => {
 
   it('body', () => {
     const ref = { type: 'body', id: SCENE_PLANETS[1]!.id } as const;
-    expect(roundTrip(bodySelectionRow(), ref)).toEqual(ref);
+    expect(roundTrip(bodySelectionRow({ pickCodes: bodyPickCodes() }), ref)).toEqual(ref);
     expect(
-      bodySelectionRow().encodePick({ type: 'body', id: asSceneBodyId('no-such-body') }),
+      bodySelectionRow({ pickCodes: bodyPickCodes() }).encodePick({
+        type: 'body',
+        id: asSceneBodyId('no-such-body'),
+      }),
     ).toBeNull();
   });
 
   it('structure: the index is per category, and matches the ring pick word', () => {
-    const row = structureSelectionRow(structureStore);
+    const row = structureSelectionRow(structureRowRuntime(structureStore));
     const ref = { type: 'structure', id: 'c1' } as const;
     expect(roundTrip(row, ref)).toEqual(ref);
-    expect(row.encodePick(ref)).toBe(structurePickId('galaxy-cluster', 1));
+    expect(row.encodePick(ref)).toBe(structurePickId('galaxy-cluster', 1, structurePickCodes()));
     expect(row.encodePick({ type: 'structure', id: 'missing' })).toBeNull();
   });
 });

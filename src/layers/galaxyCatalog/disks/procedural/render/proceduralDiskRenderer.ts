@@ -58,6 +58,7 @@ import vsCode from '../../../../../services/gpu/shaders/galaxyCatalog/procedural
 import fsCode from '../../../../../services/gpu/shaders/galaxyCatalog/proceduralDisks/fragment.wesl?static';
 import pickFsCode from '../../../../../services/gpu/shaders/galaxyCatalog/proceduralDisks/pickFragment.wesl?static';
 import type { ProceduralDiskInstance } from '../@types/ProceduralDiskInstance';
+import type { GalaxyCatalogSourceType } from '../../../@types/GalaxyCatalogSourceType';
 import type { ProceduralDiskRenderer } from '../@types/ProceduralDiskRenderer';
 import type { Renderer } from '../../../../../@types/rendering/Renderer';
 import type { Vec2 } from '../../../../../@types/math/Vec2';
@@ -93,6 +94,8 @@ type Init = {
    * test, resolved through `resolveDepthCompare`.
    */
   reversedZ: boolean;
+  /** The pick word's code for an instance's catalog. */
+  pickCodeOf: (source: GalaxyCatalogSourceType) => number;
 };
 
 export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer {
@@ -272,7 +275,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       packed[o + 5] = ins.positionAngleDeg;
       // Slot 6 is the shader's 'orientation.z' (see proceduralDisks/io.wesl) —
       // the pick pass bitcasts it back to the packed (source, localIdx) id.
-      packedU32[o + 6] = packSelection(ins.sourceCode, ins.localIdx);
+      packedU32[o + 6] = packSelection(init.pickCodeOf(ins.source), ins.localIdx);
       packed[o + 7] = 0;
       packed[o + 8] = ins.colourIndex;
       packed[o + 9] = ins.crossfadeAlpha;

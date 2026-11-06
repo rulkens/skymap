@@ -8,7 +8,12 @@ const STUB_DEPS = {} as LayerCoreDeps<undefined>;
 describe('instantiateLayer', () => {
   it('binds planners and selection to the runtime create returned', () => {
     const runtime = { tag: 'stub-runtime' };
-    const plannerSpy = vi.fn(() => ({ value: undefined, awake: true, settling: false }));
+    const plannerSpy = vi.fn(() => ({
+      value: undefined,
+      awake: true,
+      settling: false,
+      loading: false,
+    }));
     const layer: Layer<'stub', typeof runtime, readonly [], readonly [], undefined> = {
       name: 'stub',
       create: () => runtime,
@@ -37,6 +42,7 @@ describe('instantiateLayer', () => {
       value: undefined,
       awake: true,
       settling: false,
+      loading: false,
     });
     expect(plannerSpy).toHaveBeenCalledWith(snapshot, views, passState);
   });

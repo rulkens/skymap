@@ -37,6 +37,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { missionsPickCode } from '../../../../support/layerPickCodes';
 
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;
@@ -140,7 +141,12 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   } as unknown as EngineState;
 
   const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.hostId === 'earth');
-  missionMeshesPass.draw({} as never, slabViewOf(ctx, hostRow), ctx, state);
+  missionMeshesPass({ pickCode: missionsPickCode() }).draw(
+    {} as never,
+    slabViewOf(ctx, hostRow),
+    ctx,
+    state,
+  );
   near0SelectionRingPass.draw({} as never, slabViewOf(ctx, NEAR0), ctx, state);
 
   const meshCall = meshDraw.mock.calls.find((c) => c[1] === bodyId)!;

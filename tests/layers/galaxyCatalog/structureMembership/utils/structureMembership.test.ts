@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { structureMembership } from '../../../../../src/layers/galaxyCatalog/structureMembership/utils/structureMembership';
 import { Source } from '../../../../../src/data/source';
-import { packSelection } from '../../../../../src/data/selectionEncoding';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -37,12 +36,10 @@ describe('structureMembership — pure cone search', () => {
       [10, 0, 0],
       [20, 0, 0],
     ]);
-    const result = structureMembership(recordsOf([Source.SDSS, catalog]), [0, 0, 0], 10);
-    expect(result.count).toBe(1);
-    expect(result.packedIds).toEqual([packSelection(Source.SDSS, 0)]);
+    expect(structureMembership(recordsOf([Source.SDSS, catalog]), [0, 0, 0], 10)).toBe(1);
   });
 
-  it('merges members across multiple catalogs with correct source codes', () => {
+  it('sums members across multiple catalogs', () => {
     const sdss = makeCatalog([
       [1, 0, 0], // inside
       [2, 0, 0], // inside
@@ -53,17 +50,11 @@ describe('structureMembership — pure cone search', () => {
       [0, 2, 0], // inside
       [0, 100, 0], // outside
     ]);
-    const result = structureMembership(
+    const count = structureMembership(
       recordsOf([Source.SDSS, sdss], [Source.TwoMRS, twomrs]),
       [0, 0, 0],
       10,
     );
-    expect(result.count).toBe(4);
-    expect(result.packedIds).toEqual([
-      packSelection(Source.SDSS, 0),
-      packSelection(Source.SDSS, 1),
-      packSelection(Source.TwoMRS, 0),
-      packSelection(Source.TwoMRS, 1),
-    ]);
+    expect(count).toBe(4);
   });
 });

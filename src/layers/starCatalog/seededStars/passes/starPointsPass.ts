@@ -239,7 +239,10 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCa
       for (const star of points) {
         // A star dimmed out by the focus is not aimable, as for the survey.
         if (!isPickableUnderFocus(star.positionMpc, ctx.snapshot.focus)) continue;
-        const packedId = packSelection(star.source, star.seedIndex + PICK_SENTINEL_OFFSET);
+        const packedId = packSelection(
+          runtime.pickCodes.pickCodeOf(star.source),
+          star.seedIndex + PICK_SENTINEL_OFFSET,
+        );
         const posRelCamMpc = relToCam(star.positionMpc);
         // A satellite inside its anchor's click target is not separately
         // aimable, so this Layer does not stamp it. Zoomed out, all 39 S-star

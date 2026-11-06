@@ -58,6 +58,7 @@ import {
 } from './galaxyPointVertexLayout';
 import { createCatalogStore } from './catalogStore';
 import type { BuildRunner } from '../@types/BuildRunner';
+import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 
 /**
  * Build the render pipeline, allocate the uniform buffer, create the
@@ -91,6 +92,7 @@ export function createGalaxyPointRenderer(init: {
   fadeBgl: FadeUniformsBgl;
   sourceBgl: SourceUniformsBgl;
   focusBgl: FocusUniformsBgl;
+  pickCodeOf: (source: GalaxyCatalogSourceType) => number;
   buildRunner?: BuildRunner;
 }): GalaxyPointRenderer {
   const { device, targetFormat, fadeBgl, sourceBgl, focusBgl } = init;
@@ -186,6 +188,7 @@ export function createGalaxyPointRenderer(init: {
     device,
     fadeBgl,
     sourceBgl,
+    pickCodeOf: init.pickCodeOf,
     buildRunner: init.buildRunner,
   });
 

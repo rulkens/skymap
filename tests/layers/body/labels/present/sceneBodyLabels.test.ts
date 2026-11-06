@@ -5,14 +5,18 @@ import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { compressBrightness } from '../../../../../src/utils/color/compressBrightness';
+import { bodyCodeOf } from '../../../../../src/layers/body/selection/present/bodyCodeOf';
+import { bodyPickCodes } from '../../../../support/layerPickCodes';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+
+const CODE_OF = bodyCodeOf(bodyPickCodes());
 
 // RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc throughout.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get(asSceneBodyId('earth'))!.positionMpc;
 
 describe('sceneBodyLabels', () => {
-  const labels = sceneBodyLabels(J2000_STATES);
+  const labels = sceneBodyLabels(J2000_STATES, CODE_OF);
 
   it('emits one label per scene body (Earth + planets, no mesh body)', () => {
     expect(labels).toHaveLength(1 + SCENE_PLANETS.length);
@@ -25,7 +29,7 @@ describe('sceneBodyLabels', () => {
 
   it('a body caption position tracks the snapshot when simDays changes', () => {
     const laterStates = deriveBodyStates(CONST_J2000 + 120);
-    const laterLabels = sceneBodyLabels(laterStates);
+    const laterLabels = sceneBodyLabels(laterStates, CODE_OF);
 
     const earthNow = labels.find((label) => label.id === 'sceneBody-earth')!;
     const earthLater = laterLabels.find((label) => label.id === 'sceneBody-earth')!;

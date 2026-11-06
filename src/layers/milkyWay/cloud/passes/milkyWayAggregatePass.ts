@@ -24,11 +24,11 @@ export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass<'mi
     // Shared with the upsample consumer and the dust row — see
     // `milkyWayCloudLiveness` on why all three must answer identically.
     enabled(_state, ctx, _view, fade) {
-      return deriveMilkyWayCloudAlpha(ctx, fade) !== null;
+      return deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode) !== null;
     },
 
     draw(pass, view, ctx, state, fade) {
-      const fadeAlpha = deriveMilkyWayCloudAlpha(ctx, fade);
+      const fadeAlpha = deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode);
       if (fadeAlpha === null) return;
 
       // Load-bearing size, not cosmetic — see the module header.
