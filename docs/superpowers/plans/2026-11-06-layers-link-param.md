@@ -159,17 +159,17 @@ Tests:
 
 Read `docs/superpowers/conventions/ui-ux.md` (copy rules) before writing site prose.
 
-- [ ] `appViewProblem` returns `the app reads no layer "<token>"` for the first unknown token of a `layers` value
+- [x] `appViewProblem` returns `the app reads no layer "<token>"` for the first unknown token of a `layers` value
       (one call to `parseLayerSwitches`). Test: `appViewProblem names an unknown layer and passes a known list`.
-- [ ] `DOCS_URL_PARAMS` gains the `layers` row (value, example `layers=cosmicWebFilaments,-starCatalog`, does,
+- [x] `DOCS_URL_PARAMS` gains the `layers` row (value, example `layers=cosmicWebFilaments,-starCatalog`, does,
       unknown, `skipsWelcome: false`) at the position matching the table. `docsReference.test.ts` already fails
       until it exists.
-- [ ] `url-parameters.mdx` gains a `## Layers` section: the token forms (name, `-name`, `name:item`,
+- [x] `url-parameters.mdx` gains a `## Layers` section: the token forms (name, `-name`, `name:item`,
       `label:name`), left-to-right order with the `-survey,survey:famousGalaxy` example, and the names listed from
       `APP_VISIBILITY_REGISTRY` through a new export in `docsUrlParams.ts` (never typed by hand). One `<Example>`.
-- [ ] Facts: `:175` — the app never writes `pose` or `layers` into its address; `:207` — `layers` alone, like
+- [x] Facts: `:175` — the app never writes `pose` or `layers` into its address; `:207` — `layers` alone, like
       `orientation`, shows the welcome screen.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 7: website shots carry their switches on the link
 
