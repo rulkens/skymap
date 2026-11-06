@@ -201,19 +201,19 @@ the call sites from commit `c60f59508` (`git show --stat c60f59508`), `tests/pac
 Check each `hideLabels` caption name against the label entries in `src/layers/*/visibility.ts` and against what
 `tools/utils/capture/labelDeclutterActions.ts` switches today; a mismatch is a deviation to report, not to paper over.
 
-- [ ] `shotHash` appends `layers=<encodeLayerSwitches(...)>` when there are switches (compose with
+- [x] `shotHash` appends `layers=<encodeLayerSwitches(...)>` when there are switches (compose with
       `parseHashParams` / `composeHashParams`; the link may be empty). `siteShotUrl`'s `tourStep` case opens the
       `layers` part alone (the tour itself still starts from the runner).
-- [ ] `siteShotActions` drops every branch the table covers; `hideLabels` keeps only the
+- [x] `siteShotActions` drops every branch the table covers; `hideLabels` keeps only the
       `CAPTURE_HIDDEN_PASSES` pass disables (`tools/utils/capture/hiddenPasses.ts`). `labelDeclutterActions` itself is
       untouched (other capture tools use it).
-- [ ] `shotLink` always returns a string; delete `requireShotLink` and `unlinkableLayers.ts`; every caller from
+- [x] `shotLink` always returns a string; delete `requireShotLink` and `unlinkableLayers.ts`; every caller from
       `c60f59508` drops its `undefined` handling, restoring the link it hid.
-- [ ] `shotLinks.test.ts`: replace the first test with `the runner switches no layer or caption itself: every
+- [x] `shotLinks.test.ts`: replace the first test with `the runner switches no layer or caption itself: every
       switch rides the link` — no `siteShotActions(shot)` action for any `SITE_SHOTS` row is a `setVisibility` or a
       `set…Enabled` / `set…Visible` with an on/off payload (keep the existing `switchesOn`-style matcher, widened to
       off). Keep the gate test.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 8 (controller): verify the pictures and the links
 

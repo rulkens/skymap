@@ -51,6 +51,9 @@ describe('website facts', () => {
       'data/objectCatalogue.ts',
       'utils/heroVideoUrl.ts',
       'utils/pressKitUrl.ts',
+      // The link codec is pure and imports nothing of the app; the type is `LayerSwitch`.
+      'utils/shotHash.ts',
+      'utils/shotLayerSwitches.ts',
     ]);
     expect(importers(/from '[./]+\/(data\/objectCatalogue|utils\/objectCount)(\.ts)?'/)).toEqual([
       'components/docs/ObjectList/ObjectList.tsx',

@@ -14,7 +14,7 @@ import { siteShot } from '../../../data/siteShot.ts';
 import { appAddress } from '../../../utils/appAddress.ts';
 import { asksAcknowledgement } from '../../../utils/asksAcknowledgement.ts';
 import { citationText } from '../../../utils/citationText.ts';
-import { requireShotLink } from '../../../utils/requireShotLink.ts';
+import { shotLink } from '../../../utils/shotLink.ts';
 import CopyButton from '../../shared/links/CopyButton/CopyButton.tsx';
 import DocLink from '../DocLink/DocLink.tsx';
 import RefLine from '../RefLine/RefLine.tsx';
@@ -32,7 +32,7 @@ function CiteCaption({ picture, cite }: CiteCaptionProps) {
   // Two sources can ask for the same paper (the Gaia mission paper); it is listed once.
   const references = [...new Set(entries.flatMap((entry) => entry.references))];
   // The address as the app itself writes it: the camera's exact position is read once and never written back.
-  const view = requireShotLink(picture)
+  const view = shotLink(picture)
     .split('&')
     .filter((part) => !part.startsWith('pose='))
     .join('&');

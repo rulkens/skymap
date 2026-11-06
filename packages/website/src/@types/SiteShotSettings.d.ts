@@ -1,7 +1,8 @@
 /**
- * What a site shot changes in the app after its link has loaded. A deep link
- * carries no settings, so each override applied to a published picture is
- * written here, where a reader of the manifest can see it.
+ * What a site shot changes in the app from its link on. The layer and caption switches (every `hide…`
+ * and the layers listed as on or off by default) ride the link as `layers=` (utils/shotLayerSwitches.ts),
+ * so the published link opens the picture; the rest is the runner's alone, written here where a reader
+ * of the manifest can see it.
  */
 export type SiteShotSettings = {
   /** Labels, the selection ring and structure markers off. */

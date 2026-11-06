@@ -60,10 +60,10 @@ describe.each(SITE_SHOTS)('shot $id', (shot) => {
     );
   });
 
-  it('its settings turn into actions and its address keeps the link, unless the runner starts a tour step itself', () => {
+  it('its settings turn into actions and its address opens the link and its layers, unless the runner starts a tour step itself', () => {
     expect(siteShotActions(shot).length).toBeGreaterThan(0);
     const url = siteShotUrl('http://localhost:1/', shot);
     expect(url.startsWith('http://localhost:1/?cinema')).toBe(shot.settings?.ui !== true);
-    expect(url.endsWith(`#${shot.link}`)).toBe(shot.settings?.tourStep === undefined);
+    expect(url.includes(`#${shot.link}`)).toBe(shot.settings?.tourStep === undefined);
   });
 });

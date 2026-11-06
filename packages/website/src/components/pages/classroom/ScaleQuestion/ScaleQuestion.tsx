@@ -8,7 +8,7 @@
 import type { CSSProperties } from 'react';
 
 import { ACCENTS, says } from '../../../../content/pages/classroom/classroom.data.ts';
-import { requireShotLink } from '../../../../utils/requireShotLink.ts';
+import { shotLink } from '../../../../utils/shotLink.ts';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
@@ -57,7 +57,7 @@ function ScaleQuestion() {
             <p>{says('earth-moon-in-earths')}</p>
           </details>
           <div className={styles.act}>
-            <ViewLink hang view={requireShotLink(SHOT)}>
+            <ViewLink hang view={shotLink(SHOT)}>
               Earth and the Moon
             </ViewLink>
           </div>
