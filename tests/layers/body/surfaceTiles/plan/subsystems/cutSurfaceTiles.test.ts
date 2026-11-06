@@ -14,7 +14,7 @@
 import { describe, it, expect } from 'vitest';
 import { mat4, mat4d } from 'wgpu-matrix';
 
-import { cutSurfaceTiles as cutWithRequestBands } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
+import { cutSurfaceTiles } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { surfaceTileXyForUv } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileXyForUv';
 import { surfaceTileColumns } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
@@ -43,8 +43,8 @@ import { requestBandsOf } from '../../../../../support/requestBandsOf';
 
 /** Every product requests over the fixture's `bands`, as `derivePlannerParams`
  *  builds them while albedo and height share one rule. */
-function cutSurfaceTiles(input: Omit<Parameters<typeof cutWithRequestBands>[0], 'requestBands'>) {
-  return cutWithRequestBands({ ...input, requestBands: requestBandsOf(input.bands) });
+function cutWithSharedBands(input: Omit<Parameters<typeof cutSurfaceTiles>[0], 'requestBands'>) {
+  return cutSurfaceTiles({ ...input, requestBands: requestBandsOf(input.bands) });
 }
 
 const BASE_LEVEL = baseLevelForTier('earth', 'large');
@@ -302,7 +302,7 @@ describe('cutSurfaceTiles', () => {
 
     it('requests a patch whose four-corner radius keeps it in the horizon cap, dropped by the one-corner radius', () => {
       const { altitudeKm, target } = horizonFixture();
-      const result = cutSurfaceTiles(aimedAt(CAM_LAT_DEG, altitudeKm, target, Z));
+      const result = cutWithSharedBands(aimedAt(CAM_LAT_DEG, altitudeKm, target, Z));
       expect(
         result.requests.requests.some((r) => r.tile.z === Z && r.tile.x === X && r.tile.y === Y),
         `z${Z}/${X}/${Y} must be requested once the patch radius accounts for all four corners`,
@@ -316,7 +316,7 @@ describe('cutSurfaceTiles', () => {
         Z,
         SURFACE_TILE_PX,
       );
-      const result = cutSurfaceTiles(aimedAt(CAM_LAT_DEG, altitudeKm, target, Z));
+      const result = cutWithSharedBands(aimedAt(CAM_LAT_DEG, altitudeKm, target, Z));
       expect(
         result.requests.requests.some(
           (r) => r.tile.z === Z && r.tile.x === antiX && r.tile.y === antiY,
@@ -328,7 +328,7 @@ describe('cutSurfaceTiles', () => {
 
   describe('cut / requests divergence (ancestor-fallback residency)', () => {
     it('drops a leaf whose whole ancestor chain is non-resident', () => {
-      const result = cutSurfaceTiles(nadirAt(1000));
+      const result = cutWithSharedBands(nadirAt(1000));
       expect(result.cut).toEqual([]);
       // The two products genuinely diverge here: the walk still reaches
       // leaves and requests them, it just finds nothing to draw.
@@ -349,7 +349,7 @@ describe('cutSurfaceTiles', () => {
           : null,
       );
 
-      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
+      const result = cutWithSharedBands({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       expect(entry!.albedo.slot).toBe(7);
@@ -384,7 +384,7 @@ describe('cutSurfaceTiles', () => {
         return null;
       });
 
-      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
+      const result = cutWithSharedBands({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       // readyAtMs is the RESOLVED (primary) tile's own timestamp, not the fallback's.
@@ -437,7 +437,7 @@ describe('cutSurfaceTiles', () => {
           : null,
       );
 
-      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
+      const result = cutWithSharedBands({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       // Only one resident ancestor anywhere in the chain: nothing shallower to fade from.
@@ -481,7 +481,7 @@ describe('cutSurfaceTiles', () => {
             }
           : null,
       );
-      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
+      const result = cutWithSharedBands({ ...nadirAt(1000), residentSlot });
       expect(result.cut).toEqual([]);
       expect(result.requests.requests.length).toBeGreaterThan(0);
     });
@@ -526,7 +526,7 @@ describe('cutSurfaceTiles', () => {
             ? { slot: 3, ...ancestorRect, readyAtMs: 3_000 }
             : null;
 
-      const result = cutSurfaceTiles({ ...nadirAt(1000), bands, residentSlot });
+      const result = cutWithSharedBands({ ...nadirAt(1000), bands, residentSlot });
 
       // A sibling of the in-band child: same z7 parent, a different quadrant —
       // outside the deep band's bbox, and the global band tops out at z7.
@@ -569,7 +569,7 @@ describe('cutSurfaceTiles', () => {
       // the original assertion), then re-run with exactly that tile resident
       // to prove `cut` reaches it too.
       const { maxLevel, ...input } = tiltedAt(500, 2);
-      const bare = cutSurfaceTiles(input);
+      const bare = cutWithSharedBands(input);
       expect(bare.requests.requests.length).toBeGreaterThan(0);
       const deep = bare.requests.requests.find((r) => r.tile.z === maxLevel);
       expect(deep, `a z${maxLevel} request`).toBeDefined();
@@ -586,7 +586,7 @@ describe('cutSurfaceTiles', () => {
             : null,
         input.bands,
       );
-      const result = cutSurfaceTiles({ ...input, residentSlot });
+      const result = cutWithSharedBands({ ...input, residentSlot });
       expect(result.requests.requests.some((r) => r.tile.z === maxLevel)).toBe(true);
       expect(result.cut.length).toBeGreaterThan(0);
     });
@@ -611,7 +611,7 @@ describe('cutSurfaceTiles', () => {
             ? { ...WHOLE_ATLAS, slot: 9 }
             : null;
 
-      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
+      const result = cutWithSharedBands({ ...nadirAt(1000), residentSlot });
 
       const z = expectedLevel(1000);
       expect(z).toBeGreaterThan(HEIGHT_LEVEL);
@@ -637,7 +637,7 @@ describe('cutSurfaceTiles', () => {
       const residentSlot = (tile: SurfaceTileId) =>
         tile.product === 'height' ? null : WHOLE_ATLAS;
 
-      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
+      const result = cutWithSharedBands({ ...nadirAt(1000), residentSlot });
 
       expect(result.cut).toEqual([]);
       const keys = new Set(
@@ -660,7 +660,7 @@ describe('cutSurfaceTiles', () => {
       // skips the frustum cull, and refines to z13 with nothing on screen —
       // measured 39 height tiles with the cull, so the ceiling here is loose,
       // just far enough below the pre-cull blowup (~1800) to catch a regression.
-      const result = cutSurfaceTiles({
+      const result = cutWithSharedBands({
         ...tiltedAt(300_000, 60),
         bands: GLOBAL_BANDS,
         lodBias: SURFACE_TILE_LOD_BIAS,
@@ -679,7 +679,7 @@ describe('cutSurfaceTiles', () => {
       const resident = new Set<string>();
       const residentSlot = (t: SurfaceTileId) => (resident.has(key(t)) ? WHOLE_ATLAS : null);
       const poseA = { ...nadirAt(1000, 20, 15), lodBias: 1, residentSlot };
-      let settled = cutSurfaceTiles(poseA);
+      let settled = cutWithSharedBands(poseA);
       for (let round = 0; round < 40; round++) {
         let added = 0;
         for (const r of settled.requests.requests)
@@ -688,11 +688,11 @@ describe('cutSurfaceTiles', () => {
             added++;
           }
         if (added === 0) break;
-        settled = cutSurfaceTiles(poseA);
+        settled = cutWithSharedBands(poseA);
       }
       expect(settled.cut.length).toBeGreaterThan(10);
 
-      const panned = cutSurfaceTiles({ ...nadirAt(1000, 20.5, 15), lodBias: 1, residentSlot });
+      const panned = cutWithSharedBands({ ...nadirAt(1000, 20.5, 15), lodBias: 1, residentSlot });
       const newHeights = panned.requests.requests.filter(
         (r) => r.tile.product === 'height' && !resident.has(key(r.tile)),
       );
@@ -700,7 +700,7 @@ describe('cutSurfaceTiles', () => {
 
       // What the pan WOULD draw with everything resident: the leaves the two
       // poses share are on screen in both, and must not have vanished.
-      const ideal = cutSurfaceTiles({
+      const ideal = cutWithSharedBands({
         ...nadirAt(1000, 20.5, 15),
         lodBias: 1,
         residentSlot: () => WHOLE_ATLAS,
@@ -729,16 +729,16 @@ describe('cutSurfaceTiles', () => {
     // 1000 km reaches z8; five halvings reach the bands' z13.
     const LEAF_ALTITUDE_KM = 1000 / 32;
 
-    function cutWithNight(input: Omit<Parameters<typeof cutWithRequestBands>[0], 'requestBands'>) {
-      return cutWithRequestBands({
+    function cutWithNight(input: Omit<Parameters<typeof cutSurfaceTiles>[0], 'requestBands'>) {
+      return cutSurfaceTiles({
         ...input,
         requestBands: { ...requestBandsOf(input.bands), night: NIGHT_BANDS },
       });
     }
     /** Albedo and height resident everywhere the bake has them; night per `night`. */
     function residentWithNight(
-      night: Parameters<typeof cutWithRequestBands>[0]['residentSlot'],
-    ): Parameters<typeof cutWithRequestBands>[0]['residentSlot'] {
+      night: Parameters<typeof cutSurfaceTiles>[0]['residentSlot'],
+    ): Parameters<typeof cutSurfaceTiles>[0]['residentSlot'] {
       return (tile: SurfaceTileId) =>
         tile.product === 'height'
           ? HEIGHT_ONLY(tile)
@@ -814,7 +814,7 @@ describe('cutSurfaceTiles', () => {
   describe('requests (fetch-demand product, no window clip)', () => {
     it('drops the far hemisphere', () => {
       const z = BASE_LEVEL;
-      const result = cutSurfaceTiles({
+      const result = cutWithSharedBands({
         ...nadirAt(20_000),
         bands: [{ uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: z, max: 13 }],
       });
@@ -835,13 +835,13 @@ describe('cutSurfaceTiles', () => {
 
     it('reaches the level a hand-computed texel density calls for', () => {
       expect(expectedLevel(1000)).toBe(8); // guards the arithmetic in the comment above
-      expect(cutSurfaceTiles(nadirAt(1000)).requests.zWin).toBe(8);
+      expect(cutWithSharedBands(nadirAt(1000)).requests.zWin).toBe(8);
     });
 
     it('gains exactly one level per halving of altitude', () => {
-      let previous = cutSurfaceTiles(nadirAt(1000)).requests.zWin;
+      let previous = cutWithSharedBands(nadirAt(1000)).requests.zWin;
       for (const altitudeKm of [500, 250, 125]) {
-        const zWin = cutSurfaceTiles(nadirAt(altitudeKm)).requests.zWin;
+        const zWin = cutWithSharedBands(nadirAt(altitudeKm)).requests.zWin;
         expect(zWin, `${altitudeKm} km`).toBe(previous + 1);
         expect(zWin, `${altitudeKm} km vs hand-computed`).toBe(expectedLevel(altitudeKm));
         previous = zWin;
@@ -849,14 +849,14 @@ describe('cutSurfaceTiles', () => {
     });
 
     it('a lodBias of 1 settles exactly one level shallower, with fewer requests', () => {
-      const unbiased = cutSurfaceTiles(nadirAt(1000));
-      const biased = cutSurfaceTiles({ ...nadirAt(1000), lodBias: 1 });
+      const unbiased = cutWithSharedBands(nadirAt(1000));
+      const biased = cutWithSharedBands({ ...nadirAt(1000), lodBias: 1 });
       expect(biased.requests.zWin).toBe(unbiased.requests.zWin - 1);
       expect(biased.requests.requests.length).toBeLessThan(unbiased.requests.requests.length);
     });
 
     it('a lodBias large enough to push the settled level below baseLevel still floors there', () => {
-      const result = cutSurfaceTiles({ ...nadirAt(1000), lodBias: 1000 });
+      const result = cutWithSharedBands({ ...nadirAt(1000), lodBias: 1000 });
       expect(result.requests.zWin).toBe(BASE_LEVEL);
       expect(result.requests.requests).toEqual([]);
     });
@@ -874,18 +874,18 @@ describe('cutSurfaceTiles', () => {
         ],
       };
 
-      const close = cutSurfaceTiles({ ...nadirAt(1000), ...shipped });
+      const close = cutWithSharedBands({ ...nadirAt(1000), ...shipped });
       expect(close.requests.zWin, 'engages at 1000 km').toBeGreaterThan(BASE_LEVEL);
       expect(close.requests.requests.length).toBeGreaterThan(0);
       expect(close.requests.requests.every((r) => r.tile.z >= MIN_TILE_LEVEL)).toBe(true);
 
-      const far = cutSurfaceTiles({ ...nadirAt(20_000), ...shipped });
+      const far = cutWithSharedBands({ ...nadirAt(20_000), ...shipped });
       expect(far.requests.zWin, 'stands down at 20 000 km').toBe(BASE_LEVEL);
       expect(far.requests.requests).toEqual([]);
     });
 
     it('never exceeds maxTileLevel, however close the camera gets', () => {
-      const result = cutSurfaceTiles({
+      const result = cutWithSharedBands({
         ...nadirAt(125),
         bands: [
           { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: 5 },
@@ -897,7 +897,7 @@ describe('cutSurfaceTiles', () => {
     });
 
     it('requests every ancestor down to the floor alongside each leaf', () => {
-      const result = cutSurfaceTiles(nadirAt(1000));
+      const result = cutWithSharedBands(nadirAt(1000));
       expect(result.requests.requests.length).toBeGreaterThan(0);
       const keys = new Set(
         result.requests.requests.map((r) => `${r.tile.z}/${r.tile.x}/${r.tile.y}`),
@@ -917,7 +917,7 @@ describe('cutSurfaceTiles', () => {
     });
 
     it('returns nothing, not nonsense, from both products when the camera is on the surface', () => {
-      const result = cutSurfaceTiles({ ...nadirAt(1000), camPosLocalM: [1, 0, 0] });
+      const result = cutWithSharedBands({ ...nadirAt(1000), camPosLocalM: [1, 0, 0] });
       expect(result.requests.requests).toEqual([]);
       expect(result.cut).toEqual([]);
     });
@@ -927,7 +927,7 @@ describe('cutSurfaceTiles', () => {
       // 180.5°/5° rather than the seam or equator exactly. Window-membership
       // assertions (`winX0`/`winY0`/`EARTH_TILE_WINDOW_SIDE` wrap) are
       // dropped: `cutSurfaceTiles` has no window to be inside of.
-      const result = cutSurfaceTiles(nadirAt(1000, 180.5, 5));
+      const result = cutWithSharedBands(nadirAt(1000, 180.5, 5));
       const xFrac = ({ z, x }: { z: number; x: number }) =>
         x / surfaceTileColumns(z, SURFACE_TILE_PX);
       expect(
@@ -968,8 +968,8 @@ describe('cutSurfaceTiles', () => {
       // the horizon threshold and the request COUNT (87 correct vs 89 forced)
       // for this exact fixture — hand-verified, not asserted here since that
       // would encode the bug's own number as a magic constant.
-      const radii = cutSurfaceTiles(nadirAt(1000));
-      const metres = cutSurfaceTiles(toMetres(nadirAt(1000)));
+      const radii = cutWithSharedBands(nadirAt(1000));
+      const metres = cutWithSharedBands(toMetres(nadirAt(1000)));
       expect(metres.requests.requests).toEqual(radii.requests.requests);
     });
 
@@ -990,7 +990,9 @@ describe('cutSurfaceTiles', () => {
       const geo = tileGeometry(Z, TX, TY);
 
       function hasTile(altitudeKm: number): boolean {
-        const result = cutSurfaceTiles(toMetres(aimedAt(CAM_LAT_DEG, altitudeKm, geo.centre, Z)));
+        const result = cutWithSharedBands(
+          toMetres(aimedAt(CAM_LAT_DEG, altitudeKm, geo.centre, Z)),
+        );
         return result.requests.requests.some(
           (r) => r.tile.z === Z && r.tile.x === TX && r.tile.y === TY,
         );
@@ -1049,7 +1051,7 @@ describe('cutSurfaceTiles', () => {
 
     function cutWithRange(range: readonly [number, number], altitudeM = 20_000, tiltDeg = 60) {
       const base = tiltedAt(altitudeM, tiltDeg);
-      return cutSurfaceTiles({
+      return cutWithSharedBands({
         ...base,
         camPosLocalM: base.camPosLocalM.map((c) => c * RADIUS_M) as Vec3,
         radiusM: RADIUS_M,
@@ -1122,7 +1124,7 @@ describe('cutSurfaceTiles', () => {
     const GROUND = 2.7 / EARTH_RADIUS_KM;
 
     function deepestRequested(altitudeKm: number, range: readonly [number, number]): number {
-      const result = cutSurfaceTiles({
+      const result = cutWithSharedBands({
         ...nadirAt(altitudeKm),
         bands: DEEP_BANDS,
         residentSlot: (tile: SurfaceTileId) =>
@@ -1174,7 +1176,7 @@ describe('cutSurfaceTiles', () => {
     function everestRequests(range: readonly [number, number]) {
       const base = tiltedAt(2, 85, 86.955, 27.932);
       const { maxLevel: _maxLevel, ...input } = base;
-      const result = cutSurfaceTiles({
+      const result = cutWithSharedBands({
         ...input,
         bands: EVEREST_BANDS,
         lodBias: 1,
@@ -1207,7 +1209,7 @@ describe('cutSurfaceTiles', () => {
       // the datum toward real terrain, not just the horizon cap, went dark.
       const base = tiltedAt(-50, 10, 86.955, 27.932);
       const { maxLevel: _maxLevel, ...input } = base;
-      const result = cutSurfaceTiles({
+      const result = cutWithSharedBands({
         ...input,
         bands: EVEREST_BANDS,
         lodBias: 1,
@@ -1353,7 +1355,7 @@ describe('cutSurfaceTiles', () => {
     it('does not collapse the cut at ~50 m altitude over a deep-band point', () => {
       const { camPosLocalM, viewProjLocal, viewportPx } = buildInputs(50, 10, 0);
 
-      const result = cutSurfaceTiles({
+      const result = cutWithSharedBands({
         camPosLocalM,
         views: [{ viewProjLocal, viewportPx }],
         radiusM: 1,
@@ -1504,7 +1506,7 @@ describe('cutSurfaceTiles', () => {
     /** Does any drawn leaf, at any level, cover the site direction? Mirrors
      *  the ancestor-fallback shape of `cut` itself: the rover's own tile need
      *  not be the deepest one drawn, only SOME ancestor along its column. */
-    function siteIsCovered(cut: ReturnType<typeof cutSurfaceTiles>['cut']): boolean {
+    function siteIsCovered(cut: ReturnType<typeof cutWithSharedBands>['cut']): boolean {
       const uv: [number, number] = [SITE_LON_DEG / 360 + 0.5, SITE_LAT_DEG / 180 + 0.5];
       for (let z = JEZERO_BAND.max; z > MARS_BASE_LEVEL; z--) {
         const [x, y] = surfaceTileXyForUv(uv, z, SURFACE_TILE_PX);
@@ -1516,22 +1518,22 @@ describe('cutSurfaceTiles', () => {
     it('draws a leaf under the rover across a spread of headings', () => {
       for (const headingDeg of [0, 45, 90, 135, 180, 225, 270, 315]) {
         const headingRad = (headingDeg * Math.PI) / 180;
-        const result = cutSurfaceTiles(poseAtHeading(headingRad));
+        const result = cutWithSharedBands(poseAtHeading(headingRad));
         expect(siteIsCovered(result.cut), `heading ${headingDeg}deg`).toBe(true);
       }
     });
   });
 
   describe('over several views', () => {
-    const tileKeys = (result: ReturnType<typeof cutSurfaceTiles>): Set<string> =>
+    const tileKeys = (result: ReturnType<typeof cutWithSharedBands>): Set<string> =>
       new Set(
         result.requests.requests.map(({ tile }) => `${tile.product}/${tile.z}/${tile.x}/${tile.y}`),
       );
 
     it('one frustum given twice gives the one-frustum cut', () => {
       const input = nadirAt(400);
-      const once = cutSurfaceTiles(input);
-      const twice = cutSurfaceTiles({
+      const once = cutWithSharedBands(input);
+      const twice = cutWithSharedBands({
         ...input,
         views: [...input.views, ...input.views],
       });
@@ -1550,9 +1552,9 @@ describe('cutSurfaceTiles', () => {
       const levelVp = new Float64Array(mat4.multiply(proj, level));
       const levelView = { viewProjLocal: levelVp, viewportPx: VIEWPORT };
 
-      const nadirOnly = tileKeys(cutSurfaceTiles(input));
-      const levelOnly = tileKeys(cutSurfaceTiles({ ...input, views: [levelView] }));
-      const both = tileKeys(cutSurfaceTiles({ ...input, views: [...input.views, levelView] }));
+      const nadirOnly = tileKeys(cutWithSharedBands(input));
+      const levelOnly = tileKeys(cutWithSharedBands({ ...input, views: [levelView] }));
+      const both = tileKeys(cutWithSharedBands({ ...input, views: [...input.views, levelView] }));
 
       const onlySecond = [...levelOnly].filter((key) => !nadirOnly.has(key));
       expect(onlySecond.length).toBeGreaterThan(0);
