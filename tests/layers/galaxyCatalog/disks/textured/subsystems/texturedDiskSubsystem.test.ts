@@ -108,6 +108,7 @@ function makeInput(
     records: galaxyRecordsOver(catalogs),
     visibleCatalogs,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
+    viewPlanes: new Float32Array(0),
     famousGalaxiesMeta,
     nowMs,
     sourceOpacity,
@@ -362,12 +363,12 @@ describe('createTexturedDiskSubsystem', () => {
   // array across all 6 capture faces (`texturedDisksPass.ts`), including faces
   // that look away from the live camera's forward direction. That reuse is only
   // sound if this subsystem's admission gates never depend on VIEW DIRECTION —
-  // only on `cam.position` (see `diskPlannerWalk.ts`, which reads `cam.position`
-  // and never `cam.target`/yaw/pitch). This test places a Famous row on the
-  // opposite side of the camera from its look target (`makeCam`'s target is
-  // +x of position) and asserts it still lands in `lastOutput.disks` — it would
-  // fail if either the walk or this subsystem ever grew a direction-dependent
-  // cull, which capture-face reuse silently relies on NOT existing.
+  // only on `cam.position`; the walk's one direction cull is its `viewPlanes`,
+  // which the galaxy planner empties while a capture band is open. This test
+  // places a Famous row on the opposite side of the camera from its look target
+  // (`makeCam`'s target is +x of position) and, with no planes, asserts it still
+  // lands in `lastOutput.disks` — it would fail if this subsystem grew a
+  // direction-dependent cull of its own.
   it('admits a Famous row behind the camera — capture-face reuse needs no direction cull', async () => {
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });

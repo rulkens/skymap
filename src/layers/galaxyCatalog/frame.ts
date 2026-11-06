@@ -26,6 +26,11 @@ import { visibleCatalogsOf } from './records/utils/visibleCatalogsOf';
 import { setsEqual } from '../../utils/set/setsEqual';
 import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
 import { isKind } from '../../utils/selection/isKind';
+import { COSMO } from '../../services/engine/frame/slabs';
+import { FRUSTUM_FLOATS_PER_VIEW } from '../../data/camera/frustumFloatsPerView';
+import { rebaseViewProj } from '../../utils/camera/projection/rebaseViewProj';
+import { narrowMat4 } from '../../utils/math/narrowMat4';
+import { frustumPlanesFromViewProj } from '../../utils/camera/frustum/frustumPlanesFromViewProj';
 import type { StructureSelectionRow } from '../structure/selection/@types/StructureSelectionRow';
 
 export function galaxyCatalogPlanner(
@@ -90,6 +95,16 @@ export function galaxyCatalogPlanner(
       // for a threshold nudge.
       const cam = views[0]!.cam;
       const pxPerRad = Math.max(...views.map((view) => view.drawPxPerRad));
+      // Galaxies draw in COSMO; the planes sit about the walk's origin, cam.position.
+      // A sky capture replays the disks on all six faces, so an open band culls nothing.
+      const cullViews = snapshot.skyCapturesInBand.size > 0 ? [] : views;
+      const viewPlanes = new Float32Array(cullViews.length * FRUSTUM_FLOATS_PER_VIEW);
+      cullViews.forEach((view, v) =>
+        frustumPlanesFromViewProj(
+          narrowMat4(rebaseViewProj(view.slabs[COSMO]!.vp, cam.position)),
+          viewPlanes.subarray(v * FRUSTUM_FLOATS_PER_VIEW, (v + 1) * FRUSTUM_FLOATS_PER_VIEW),
+        ),
+      );
 
       // hiResFamous must run BEFORE the shared disk walk: the textured-disk body
       // folds `hiResFamous.lastOutput.byFamousIdx` into the instances it emits;
@@ -111,6 +126,7 @@ export function galaxyCatalogPlanner(
         records: runtime.records,
         visibleCatalogs,
         pxPerRad,
+        viewPlanes,
         // Both LOD disk bodies fold this into their emitted alpha/brightness so a
         // hidden catalog's disks fade out with the point sprites instead of
         // popping once the fade ends and the visible set drops the catalog. The handed

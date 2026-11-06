@@ -19,5 +19,7 @@ export type DiskWalkInput = {
   readonly records: ReadonlyMap<GalaxyCatalogSourceType, GalaxyRecordSource>;
   readonly visibleCatalogs: ReadonlySet<GalaxyCatalogId>;
   readonly pxPerRad: number;
+  /** Every view's COSMO `frustumPlanesFromViewProj` planes about `cam.position`; empty culls nothing. */
+  readonly viewPlanes: Float32Array;
   readonly sourceOpacity: (source: GalaxyCatalogSourceType) => number;
 };
