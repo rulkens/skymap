@@ -331,6 +331,36 @@ describe('poseFrameConversion', () => {
     );
   });
 
+  it.each([
+    ['above the horizon', 0.3],
+    ['at the nadir', -Math.PI / 2],
+  ])('keeps the view axis for an eye standing below the datum, looking %s', (_label, altRad) => {
+    // The Dead Sea: ground 430 m under the datum, eye 1.7 m over it, so the eye
+    // is INSIDE the datum sphere and its near root lies behind it. A range taken
+    // against the datum went negative there and turned the pose round.
+    const groundM = EARTH_RADIUS_M - 430;
+    const forward: Vec3 = [Math.cos(altRad), 0, Math.sin(altRad)];
+    const { right, up } = imagePlaneBasis(forward, LIMB_ROLL_RAD, [0, 0, 1]);
+    const back = toWorldArm(
+      {
+        bodyId: asSceneBodyId('earth'),
+        anchorLocalM: [0, 0, 0],
+        eyeRelAnchorM: [0, 0, groundM + 1.7],
+        basisLocal: mat3FromColumns(right, up, forward),
+      },
+      bodyState([0, 0, 0], IDENTITY),
+      IDENTITY,
+      IDENTITY,
+      EARTH_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
+      () => groundM,
+    );
+
+    const after = worldPoseOf(back, IDENTITY, IDENTITY);
+    expectVec3Near(after.forward, forward, DIR_FLOOR, 'below-datum axis');
+    expectVec3Near(after.up, up, DIR_FLOOR, 'below-datum screen-up');
+  });
+
   it('composes the world eye exactly as updatePosition does', () => {
     // The module re-composes `updatePosition`'s two steps (frame-local decode,
     // rotate by `poseBasis`) out of the same sub-utils rather than calling it,

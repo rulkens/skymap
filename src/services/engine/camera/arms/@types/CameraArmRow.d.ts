@@ -8,6 +8,7 @@ import type { PoseOf } from '../../../../../@types/camera/arms/PoseOf';
 import type { CameraArmBasisCtx } from '../../../../../@types/camera/arms/CameraArmBasisCtx';
 import type { CameraArmChannels } from './CameraArmChannels';
 import type { CameraArmCtx } from '../../../../../@types/camera/arms/CameraArmCtx';
+import type { ClipData } from '../../../../../@types/animation/ClipData';
 import type { HostBody } from './HostBody';
 import type { TiltMemory } from '../../../../../@types/camera/orientation/TiltMemory';
 
@@ -17,7 +18,7 @@ export type CameraArmRow<K extends CameraArmKind> = {
   /** What the frame tag's value names, for `frameKey`: '' for the world arm, else the body or site id. */
   identity(frame: FrameOf[K]): string;
   host(frame: FrameOf[K], ctx: CameraArmBasisCtx): HostBody | null;
-  /** How a clip's four animation channels read in this arm's frame. */
+  /** How a clip's animation channels read in this arm's frame. */
   readonly channels: CameraArmChannels<K>;
   /** Arm-local gesture memory; the runtime wipes it when `frameKey` changes. */
   readonly emptyMemory: MemOf[K];
@@ -28,6 +29,10 @@ export type CameraArmRow<K extends CameraArmKind> = {
    * that identity as "nothing moved". `tilt` rides beside `memory`
    * rather than inside it: it is keyed by HOST, not by frame (spec §3-P4), so a
    * frame change must not wipe it, and only a tilt-authoring drag writes it.
+   * `fovYRad` is present only when the step changes the lens (radians); the drain
+   * dispatches it, and later steps read it back as `ctx.fovYRad`. `clip` is a
+   * flight the step starts (the sky exit); the drain plays it under the
+   * orientation its absolute start was captured in.
    */
   step(
     memory: MemOf[K],
@@ -35,16 +40,22 @@ export type CameraArmRow<K extends CameraArmKind> = {
     framed: FramedPose<K>,
     input: InputStep,
     ctx: CameraArmCtx,
-  ): { readonly pose: PoseOf[K]; readonly memory: MemOf[K]; readonly tilt: TiltMemory };
+  ): {
+    readonly pose: PoseOf[K];
+    readonly memory: MemOf[K];
+    readonly tilt: TiltMemory;
+    readonly fovYRad?: number;
+    readonly clip?: ClipData;
+  };
   /**
    * One frame's pixel-free motion in this arm's own frame, at the equivalent
    * drag's rate. A delta the arm ignores entirely returns `framed.pose` BY
-   * REFERENCE, the same identity rule as `step`.
+   * REFERENCE, the same identity rule as `step`; `fovYRad` likewise.
    */
   nudge(
     tilt: TiltMemory,
     framed: FramedPose<K>,
     delta: ArmDelta,
     ctx: CameraArmCtx,
-  ): { readonly pose: PoseOf[K]; readonly tilt: TiltMemory };
+  ): { readonly pose: PoseOf[K]; readonly tilt: TiltMemory; readonly fovYRad?: number };
 };

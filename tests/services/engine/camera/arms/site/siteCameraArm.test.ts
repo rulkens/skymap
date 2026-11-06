@@ -58,6 +58,7 @@ function ctxFor(focusBodyId: SceneBodyId | null): CameraArmCtx {
     frustum: symmetricFrustum(Math.PI / 3, 1),
     fovYRad: Math.PI / 3,
     tuning: DEFAULT_CAMERA_TUNING,
+    nowMs: 0,
   };
 }
 

@@ -6,7 +6,7 @@ import type { CameraArmBasisCtx } from '../../../../../@types/camera/arms/Camera
 
 /**
  * One arm's animation-channel pair. `encode` takes WORLD channels rather than
- * a `FramedPose<K>` because a body's four channels keep the AUTHORED target,
+ * a `FramedPose<K>` because a body's channels keep the AUTHORED target,
  * which the framed pose has already folded into its eye — re-deriving it would
  * move `distance` on every absolute→body leg (prep plan, correction D3).
  */

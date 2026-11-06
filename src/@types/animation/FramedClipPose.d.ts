@@ -2,7 +2,7 @@ import type { CameraPose } from '../camera/pose/CameraPose';
 import type { PoseFrame } from '../camera/pose/PoseFrame';
 
 /**
- * The four animation channels plus the frame they were interpolated in.
+ * The animation channels plus the frame they were interpolated in.
  *
  * `'absolute'` ⇒ `channels` is Mpc and orientation-frame angles. A body frame ⇒
  * body-FIXED metres and angles about the body's own axes — a LookAt, which the
