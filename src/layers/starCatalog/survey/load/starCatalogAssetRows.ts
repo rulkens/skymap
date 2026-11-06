@@ -4,6 +4,7 @@
  */
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
+import type { StarCatalogAssetKey } from '../../@types/StarCatalogAssetKey';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import { STAR_CATALOG_SOURCE_ROWS } from '../../sources/starCatalogSourceRows';
 import { starCatalogVisibility } from '../../visibility';
@@ -13,9 +14,11 @@ import { visibilitySwitchOf } from '../../../../utils/visibility/visibilitySwitc
 // The star show entry, by its key: its switch, section rule included, is what demands a catalog.
 const STAR_SHOW_ENTRY = visibilityEntryOf(starCatalogVisibility, 'starCatalog');
 
-export function starCatalogAssetRows(runtime: StarCatalogRuntime): readonly AssetWiringRow[] {
+export function starCatalogAssetRows(
+  runtime: StarCatalogRuntime,
+): readonly AssetWiringRow<unknown, unknown, StarCatalogAssetKey>[] {
   const surveyRows = STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
-    ([source, { id }]): AssetWiringRow => {
+    ([source, { id }]): AssetWiringRow<unknown, unknown, StarCatalogAssetKey> => {
       return {
         key: source,
         slot: runtime.catalogs.get(source)!,

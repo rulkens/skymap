@@ -392,7 +392,7 @@ is not one of the seven above, and never blocks `clipFociReady`.
 `compileClip` **throws** if it ever sees an unresolved arm — resolution must precede
 it (a readiness gate, `clipFociReady`, guarantees every id resolves first). The
 framing (`{ target, distance, radius }`) comes from
-`resolveFocusId → extractSelectionRow → focusFraming`.
+`resolveFocusId → extractSelectionRow → arrivalFraming` over the row's kind's `focus`.
 
 ---
 

@@ -1,9 +1,13 @@
-import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
+import type { FocusableTargetBase } from '../../@types/engine/selection/FocusableTargetBase';
 import type { DetailCardTable } from '../../@types/components/infoCard/DetailCardTable';
 import type { DetailCardEntry } from '../../@types/components/infoCard/DetailCardEntry';
 
-/** The table's row for `target`. TypeScript cannot correlate `table[target.type]`
- * with `target` across the union, so the widening happens here, once. */
-export function detailCardFor(table: DetailCardTable, target: FocusableTarget): DetailCardEntry {
-  return table[target.type] as DetailCardEntry;
+/** The table's card pair for `target`'s kind; `detailCardTable` refused a kind with none at boot. */
+export function detailCardFor(
+  table: DetailCardTable,
+  target: FocusableTargetBase,
+): DetailCardEntry {
+  const entry = table.get(target.type);
+  if (entry === undefined) throw new Error(`detailCardFor: no card for kind "${target.type}"`);
+  return entry;
 }

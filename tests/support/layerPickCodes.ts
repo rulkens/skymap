@@ -54,12 +54,11 @@ export const zoneOfAvoidancePickCode = (pickCode = testPickCode('zoneOfAvoidance
 export function galaxyRowRuntime(
   galaxies: GalaxyRowFixture,
   pickCode = testPickCode('galaxyCatalog'),
-): Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'famousMeta' | 'pickCodes'> {
-  const records = galaxyRecordsOver(galaxies.catalogs, () => galaxies.famousMeta);
+): Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'pickCodes'> {
+  const records = galaxyRecordsOver(galaxies.catalogs);
   return {
     records,
     recordBridge: galaxyRecordBridge(records),
-    famousMeta: galaxies.famousMeta,
     pickCodes: catalogPickCodes(GALAXY_CATALOG_SOURCE_ROWS, pickCode),
   };
 }

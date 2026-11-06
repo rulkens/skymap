@@ -1,6 +1,7 @@
 /** The Layer's authored asset rows: demand + request only; every `slot` comes from the runtime. */
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
+import type { GalaxyCatalogAssetKey } from '../../@types/GalaxyCatalogAssetKey';
 import type { CompanionAssetRow } from '../../../../@types/loading/CompanionAssetRow';
 import type { GalaxyCatalogRegistryEntry } from '../../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
@@ -16,7 +17,7 @@ import { galaxyCatalogRequest } from '../../../../services/engine/wiring/galaxyC
 function pointRow(
   runtime: GalaxyCatalogRuntime,
   entry: GalaxyCatalogRegistryEntry,
-): AssetWiringRow {
+): AssetWiringRow<unknown, unknown, GalaxyCatalogAssetKey> {
   const source = entry.code;
   const id = entry.id;
   // Target 0 means the tier ships no file for this source (SDSS at `small`);
@@ -35,7 +36,10 @@ function pointRow(
 
 export function galaxyCatalogAssetRows(
   runtime: GalaxyCatalogRuntime,
-): readonly (AssetWiringRow | CompanionAssetRow)[] {
+): readonly (
+  | AssetWiringRow<unknown, unknown, GalaxyCatalogAssetKey>
+  | CompanionAssetRow<unknown, unknown, GalaxyCatalogAssetKey>
+)[] {
   return [
     ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(runtime, GALAXY_CATALOG_SOURCE_RECORD[code])),
 

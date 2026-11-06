@@ -65,7 +65,7 @@ Start: `/dev` for the app and `/dev website` for the site.
   Shape: `#focus=body-<id>&t=<ISO 8601 UTC>` (a valid `t` lands the clock paused
   there); other focus kinds use their own form (`galaxy-cluster-virgo-m87`,
   `star-<seed id>`; each Layer's `focusId.encode` in its `*SelectionRow.ts`
-  under `src/layers/*/present/` spells its kind's id). Other
+  under `src/layers/*/selection/` spells its kind's id). Other
   params: `pose` (copy one with the `l` key), `orientation`, `exhibit`, `tour`,
   `clip`, `home`, `layers` (`layers=cosmicWebFilaments,-starCatalog`: `name` on,
   `-name` off, `survey:item` one item, `label:name` a layer's captions); values

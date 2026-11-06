@@ -81,7 +81,7 @@ export const DEFAULT_SPLINE_CONFIG: SplineConfig = {
  * Fly-past offset, in units of the subject's RADIUS. The default (4) flies the
  * eye BESIDE each interior GALAXY subject — a swoop-past that fills the frame
  * roughly a third (framing distance is ~16 radii). Structures are immune: their
- * `focusFraming` radius is 0, so `buildPathTrack`'s offset loop skips them and
+ * `arrivalFraming` radius is 0 (`flyInto`), so `buildPathTrack`'s offset loop skips them and
  * the eye flies straight INTO a cluster / group. 0 flies through every centre.
  */
 export const DEFAULT_PASS_BY_OFFSET = 4;

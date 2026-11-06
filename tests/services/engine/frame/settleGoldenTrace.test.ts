@@ -36,6 +36,9 @@ import GOLDEN from '../../../fixtures/camera/settleGoldenTrace.json';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;

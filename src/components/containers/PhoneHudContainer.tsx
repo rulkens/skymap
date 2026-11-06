@@ -25,7 +25,7 @@ import { selectPaletteOpen, selectUiStackHidden } from '../../state/ui/selectors
 import { reopenSplash, setPaletteOpen } from '../../state/ui/uiSlice';
 import { goHome } from '../../state/selection/goHome';
 import { viewCoverSet } from '../../state/viewCover/viewCoverSlice';
-import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
+import { refKey } from '../../utils/selection/refKey';
 import type { ViewCover } from '../../@types/layout/ViewCover';
 
 export type PhoneHudContainerProps = {
@@ -36,7 +36,7 @@ export type PhoneHudContainerProps = {
 function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   const dispatch = useAppDispatch();
   const selected = useAppSelector(selectSelectedFocusable);
-  const selectionKey = selected ? TARGET_IDENTITY_KEY[selected.type](selected) : null;
+  const selectionKey = selected ? refKey(selected.ref) : null;
 
   const paletteOpen = useAppSelector(selectPaletteOpen);
   const uiStackHidden = useAppSelector(selectUiStackHidden);

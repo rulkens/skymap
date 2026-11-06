@@ -27,7 +27,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
-- [ ] **Selection-kind-facts follow-ups** `ready` — 64-bit pick target, `GlobularCluster` naming clash, five core one-kind branches. → [details](backlog/2026-11-05-selection-kind-facts-followups.md)
+- [ ] **Empty the Layer type-ownership allow-list (move-only PR)** `ready` — 27 `src/@types/` files only one Layer reaches, each cleared by a move, listed in `layerImportBoundary.test.ts`. → [details](backlog/2026-11-06-layer-type-ownership-allow-list.md)
+- [ ] **Selection-kind-facts follow-ups** `ready` — 64-bit pick target, `GlobularCluster` naming clash, six core one-kind branches. → [details](backlog/2026-11-05-selection-kind-facts-followups.md)
 - [ ] **A deep link fails on its asset's error, not a timer** `needs-design` — the arrival waits a flat 30 s (`ARRIVAL_TIMEOUT_MS`) even when the subject's catalog has already failed; give up on the owning asset's `error` instead. Raised by the selection-driven Layers ground check.
 - [ ] **Layer terrain contract review** `needs-design` — whether the camera's ground query should stay a Layer member (`heightAt`, narrowed 2026-10-28) or move behind another seam.
 - [ ] **Label director's `runFrame` swallows exceptions with no page error** `ready` — a producer crash goes unnoticed; producers run unguarded at `label2DDirector.ts:792`, and neither `runFrame` nor the scheduler's `tick` (`renderScheduler.ts:84`, `try/finally`) catches, so trace where the throw is lost.
@@ -85,7 +86,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Direct `slot.load()` sites bypass the asset queue** `needs-design` — the demand loop's drift edge (a tier switch) and the debug Reload button fetch outside the bounded queue, so `ASSET_QUEUE_CONCURRENCY` is not the system-wide bound it reads as. → [details](backlog/2026-07-24-direct-loads-bypass-asset-queue.md)
 - [ ] **`?` query gates have no owner** `ready` — six gates (cinema, perf, gpuTimings, tour, dome, remote) read through six helpers at boot, module load and render; collapse into a `URL_GATES` table seeded into `preloadedState`. → [details](backlog/2026-07-29-url-gates-registry.md)
 - [ ] **Twin selection request sagas** `ready` — `watchRequestFocusSaga`/`watchRequestSelectSaga` are structurally identical; fold into one row-driven saga (keep `takeLatest` per row). → [details](backlog/2026-07-29-twin-request-selection-sagas.md)
-- [ ] **Focusability double-encoded** `needs-design` — `ROW_FOCUSABLE` and `focusFraming`'s throwing arm both encode "no focus target", unchecked against each other; root cause is `SelectionRow` can't express "no position". → [details](backlog/2026-08-17-focusability-double-encoded.md)
 - [ ] **`uiSlice` does boot I/O at module load** `needs-design` — `initialState = buildInitialUiState()` reads `window.location` + localStorage on import; make the fallback lazy. → [details](backlog/2026-07-29-uislice-module-load-boot-reads.md)
 - [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
 - [ ] **Fades pop instead of ramping after the render loop idles** `ready` — `fadeRegistry.fadeTo` stamps the ramp's start from the stale last-_rendered_-frame time, not a live clock. → [details](backlog/2026-08-20-fade-pop-after-idle.md)
@@ -93,7 +93,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Body-arm entry doesn't adopt the arriving pose's tilt** `deferred` — disengage can pop up to 37°. → [details](backlog/2026-09-11-camera-arm-entry-adopts-arriving-tilt.md)
 - [ ] **World-arm wheel burst has no per-frame turn clamp** `awaiting-decision` — a 20-notch burst can roll 115° in one frame. → [details](backlog/2026-09-11-camera-absolute-arm-wheel-burst-unclamped.md)
 - [ ] **Frame-tagged clip keyframes have no per-endpoint authoring validation** `needs-design` — a straddling channel tween silently freezes. → [details](backlog/2026-09-11-clip-per-endpoint-tag-authoring-validation.md)
-- [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
 - [ ] **turnCameraArm reads the site tag by hand** `ready` — `tools/site/utils/turnCameraArm.ts` tests `'site' in arm.frame` outside `arms/`; route it through `isSiteArm`. → [details](backlog/2026-11-03-turn-camera-arm-site-tag.md)
 - [ ] **framedClipArm decodes with the current basis** `deferred` — `cameraDrivers.ts` passes the current basis where the clip pinned another; harmless until a `decode` cell reads a basis. → [details](backlog/2026-11-03-framed-clip-arm-decode-basis.md)
@@ -229,6 +228,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## UI & UX
 
+- [ ] **M31's card tags a measured diameter as fallback** `needs-repro` — "fallback (30 kpc)" beside 40.4 kpc, with an oversized ring. → [details](backlog/2026-11-06-m31-diameter-fallback-tag.md)
 - [ ] **InfoCard live phase + apparent-mag rows** `needs-design` — grow the engine time pub with phase angle + apparent magnitude for the focused body (distance row shipped in #472). → [details](backlog/2026-07-21-infocard-phase-apparent-mag-rows.md)
 - [ ] **"You are here" label continuity** `needs-design` — the label fades out below 2 kpc (its `youAreHere` band, `in: SURVEY_DEEP_ZOOM`, `milkyWay/visibility.ts`); decide whether it hands off toward the Sun/Earth instead of vanishing. → [details](backlog/2026-07-22-you-are-here-label-continuity.md)
 - [ ] **Earth caption stamp out-picks occluders** `ready` — the forced-band 18 px Earth pick point punches through a transiting Moon. → [details](backlog/2026-07-29-earth-caption-stamp-outpicks-occluders.md)

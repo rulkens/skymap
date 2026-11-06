@@ -9,7 +9,7 @@ import type { Epoch } from '../../../../@types/engine/camera/Epoch';
 import type { CameraEpochs } from '../../../../@types/engine/camera/CameraEpochs';
 import type { CameraState } from '../../../../@types/camera/orbitCamera/CameraState';
 import type { EpochRow } from '../../../../@types/engine/camera/EpochRow';
-import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
+import type { SelectionRowBase } from '../../../../@types/engine/selection/SelectionRowBase';
 
 /** Every row unstarted — the engine's boot value; immutable, so one shared object is fine. */
 export const UNSTARTED_EPOCHS: CameraEpochs = {
@@ -46,7 +46,7 @@ export function advanceEpochs(
   prev: CameraEpochs,
   inputs: {
     readonly intent: CameraState;
-    readonly focus: SelectionRow | null;
+    readonly focus: SelectionRowBase | null;
     readonly clip: Epoch<NonNullable<CameraState['clip']>>;
     readonly winnerEpoch: EpochRow | undefined;
     /** The winner DELIVERS the framing (clip/tween); absent reads as no. */

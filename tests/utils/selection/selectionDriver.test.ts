@@ -2,17 +2,19 @@ import { describe, it, expect } from 'vitest';
 import { selectionDriver } from '../../../src/utils/selection/selectionDriver';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
-import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import type { BodySelectionRow } from '../../../src/@types/engine/selection/BodySelectionRow';
 
 describe('selectionDriver', () => {
   it('returns the driver on a driving arm', () => {
     const driver = bodyDriverGeometry('earth');
-    const row: SelectionRow = {
+    const row: BodySelectionRow = {
       type: 'body',
       id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [0, 0, 0],
+      radiusMpc: driver.footprintRadiusM * SCALE_UNITS.M_TO_MPC,
       driver,
     };
     expect(selectionDriver(row)).toBe(driver);

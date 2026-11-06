@@ -35,7 +35,7 @@ import type { StructureFocusSubsystem } from '../../../@types/engine/subsystems/
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { SelectionRef } from '../../../@types/engine/SelectionRef';
+import type { SelectionRefBase } from '../../../@types/engine/selection/SelectionRefBase';
 
 /** Focus fade duration in ms. */
 const FOCUS_FADE_DURATION_MS = 400;
@@ -55,7 +55,7 @@ export const ZERO_FOCUS: FocusUniformsValue = {
 
 /** The latched display target while focus is active or fading out. */
 type ActiveFocus = {
-  readonly ref: Extract<SelectionRef, { type: 'structure' }>;
+  readonly ref: SelectionRefBase;
   readonly center: Vec3;
   readonly apparentRadiusMpc: number;
   readonly physicalRadiusMpc: number;
@@ -71,7 +71,7 @@ export function createStructureFocusSubsystem(
   // The id we are currently fading toward; null = fading out / at rest.
   let focusedId: string | null = null;
   let lastProduced: FocusUniformsValue = ZERO_FOCUS;
-  let lastRef: SelectionRef | null = null;
+  let lastRef: SelectionRefBase | null = null;
 
   function update(structure: StructureInfo | null, nowMs: number): void {
     // null drives a fade-out. Groups share the same fade band mechanic as
@@ -89,7 +89,7 @@ export function createStructureFocusSubsystem(
       };
     }
 
-    const targetId = next?.ref.id ?? null;
+    const targetId = structure?.id ?? null;
     // No transition → no re-fade (covers same focused structure every frame AND
     // an already-in-flight fade-out being re-observed every frame).
     if (targetId === focusedId) return;

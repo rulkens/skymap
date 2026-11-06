@@ -132,17 +132,6 @@ export type GalaxyInfo = {
   galaxyType: GalaxyTypeInfo;
 
   /**
-   * Curated morphological (Hubble) type, pre-formatted for display
-   * (e.g. "Barred spiral (SBb)"), or `undefined` when none is known.
-   *
-   * Only curated famous galaxies carry a morphology; it's an independent fact
-   * from the colour-derived `galaxyType` (morphology says nothing about
-   * red-sequence vs blue-cloud membership), so it lives in its own field rather
-   * than overwriting `galaxyType.description`.  The info card prefers it over
-   * the colour description when present: `morphology ?? galaxyType.description`.
-   */
-  morphology?: string;
-  /**
    * Galaxy catalog-aware IAU designation, e.g. "SDSS J123456.75+012345.5",
    * "GLADE J234500.00-104500.5", "2MASX J...".  Built from RA/Dec via
    * `iauName(source, ra, dec)` so the prefix matches the row's actual
@@ -284,11 +273,11 @@ export type GalaxyInfo = {
   diameterProvenance: string;
 
   /**
-   * Famous-galaxy enrichment block, present only when `source === Source.FamousGalaxy`.
+   * Famous-galaxy identity, present only when `source === Source.FamousGalaxy`.
    *
-   * Populated by `buildGalaxyInfo` from the `famous_galaxies_meta.json` sidecar loaded
-   * at engine startup.  Absent (`undefined`) for SDSS / 2MRS / GLADE rows —
-   * those never have curated metadata.
+   * Copied off the row's compiled-in `FAMOUS_GALAXY_NAMES` entry, so it is there
+   * before any sidecar loads. The prose (description, morphology) is not: the
+   * card containers join it from the Layer's `famousMeta` fact by `id`.
    */
   famous?: {
     /** Stable machine-readable id, e.g. `"m31"`. Matches the WebP filename. */
@@ -304,10 +293,6 @@ export type GalaxyInfo = {
     commonName?: string;
     /** Catalog aliases in seed order, e.g. `["M31", "NGC 224"]`. */
     names: string[];
-    /** One-paragraph descriptive text for the InfoCard. */
-    description: string;
-    /** Morphological / physical type, e.g. `"SBb"`. */
-    type: string;
   };
 
   /** @group Orientation */

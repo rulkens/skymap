@@ -8,7 +8,6 @@
 
 import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
 import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
-import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import { pivotRadiusMpc } from '../camera/framing/pivotRadiusMpc';
 import { frameKey } from '../camera/arms/frameKey';
 import { isBodyArm } from '../camera/arms/body/isBodyArm';
@@ -16,11 +15,13 @@ import { isSiteArm } from '../camera/arms/site/isSiteArm';
 import { bodyFixedEyeM } from '../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import type { SelectionRowBase } from '../../../@types/engine/selection/SelectionRowBase';
+import type { PlacedRow } from '../../../@types/engine/selection/PlacedRow';
 
 export function logCameraState(
   cam: OrbitCamera | null,
   canvas: HTMLCanvasElement,
-  focusRow: SelectionRow | null,
+  focusRow: SelectionRowBase | null,
   simDays: number,
   framed: FramedCameraPose | null = null,
 ): void {
@@ -42,7 +43,7 @@ export function logCameraState(
     // Measured from world positions directly, not `cam.distance` (target-to-
     // camera, which a follow-pan offset can pull away from the body's center)
     // — so a target/body mismatch shows up as a gap between the two numbers.
-    const cameraToBodyCenterMpc = distanceMpc(cam.position, focusRow.positionMpc);
+    const cameraToBodyCenterMpc = distanceMpc(cam.position, (focusRow as PlacedRow).positionMpc);
     derived = {
       cameraToBodyCenterMpc,
       altitudeMeters: ((cameraToBodyCenterMpc - pivotMpc) / SCALE_UNITS.KM_TO_MPC) * 1000,

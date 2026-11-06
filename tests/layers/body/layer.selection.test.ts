@@ -16,7 +16,7 @@ import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
 import { selectionRowsRoute } from '../../../src/store/constants';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { NOOP_SAGA_CONTEXT } from '../../support/createTestStore';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../src/@types/engine/BootstrapDeps';
 
@@ -51,7 +51,7 @@ describe('the body selection kind at boot', () => {
       ...NOOP_SAGA_CONTEXT,
       selection: composeSelectionRows(
         () => state.selectionKindRows,
-        () => ALL_KINDS_ENABLED,
+        () => NO_KINDS_OFF,
       ),
     });
     const rows = () => store.getState()[selectionRowsRoute];

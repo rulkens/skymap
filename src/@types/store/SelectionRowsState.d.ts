@@ -1,13 +1,13 @@
 import type { SelectionSlot } from '../engine/SelectionSlot';
-import type { SelectionRow } from '../engine/SelectionRow';
+import type { SelectionRowBase } from '../engine/selection/SelectionRowBase';
 
 /**
- * SelectionRowsState — the saga-owned derived display cache. One `SelectionRow`
+ * SelectionRowsState — the saga-owned derived display cache. One row
  * (or null when no selection occupies that slot) per `SelectionSlot`. This slice
  * is the READ surface for InfoCard and any other UI that needs the resolved,
  * JSON-serializable representation of a selected thing.
  *
- * Distinct from `SelectionState` (which holds raw `SelectionRef` identity
+ * Distinct from `SelectionState` (which holds raw ref identity
  * Intent) — the saga bridges the two: it watches `SelectionState` for changes,
  * resolves each live ref against the engine's in-memory catalogs, and writes the
  * result here via `setSelectionRow`. The saga is the ONLY writer; selectors are
@@ -23,5 +23,5 @@ import type { SelectionRow } from '../engine/SelectionRow';
  * or the kind has no link form.
  */
 export type SelectionRowsState = {
-  readonly [K in SelectionSlot]: SelectionRow | null;
+  readonly [K in SelectionSlot]: SelectionRowBase | null;
 } & { readonly focusId: string | null };

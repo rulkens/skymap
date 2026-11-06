@@ -18,7 +18,7 @@ import { encodeBlackHoleFocusId } from '../../../../src/layers/blackHoles/marker
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../../src/layers/blackHoles/sources/blackHoleSourceRows';
 import { CRAFT_SEARCH_NAMES } from '../../../../src/layers/missions/craft/present/craftSearch';
 import { BODY_FOCUS_PREFIX } from '../../../../src/services/url/bodyFocusId';
-import { encodeStarFocusId } from '../../../../src/services/url/encodeStarFocusId';
+import { encodeStarFocusId } from '../../../../src/layers/starCatalog/selection/utils/encodeStarFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../../src/services/url/milkyWayFocusId';
 import type { ObjectKind } from '../@types/ObjectKind';
 import type { ObjectRow } from '../@types/ObjectRow';

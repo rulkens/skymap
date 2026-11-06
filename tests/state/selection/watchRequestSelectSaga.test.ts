@@ -46,7 +46,6 @@ describe('watchRequestSelectSaga', () => {
       get catalogs() {
         return cloudPresent ? new Map([[Source.SDSS, makeCloud(1237668393006604288n)]]) : new Map();
       },
-      famousMeta: [],
     } as unknown as GalaxyRowFixture;
     const structures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
     mw.run(watchRequestSelectSaga);

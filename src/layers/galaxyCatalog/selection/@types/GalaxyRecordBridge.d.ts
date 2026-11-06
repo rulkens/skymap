@@ -1,8 +1,6 @@
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 import type { GalaxyRow } from '../../../../@types/engine/GalaxyRow';
-import type { SelectionRef } from '../../../../@types/engine/SelectionRef';
-
-type GalaxyCatalogRef = Extract<SelectionRef, { type: 'galaxyCatalog' }>;
+import type { GalaxyCatalogRef } from './GalaxyCatalogRef';
 
 /**
  * The record sources' lookups made synchronous for the selection row: a plain

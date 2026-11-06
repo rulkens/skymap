@@ -19,7 +19,7 @@ describe('instantiateLayer', () => {
       create: () => runtime,
       destroy: vi.fn(),
       passes: () => [],
-      selection: () => [{ type: 'milkyWay' } as never],
+      selection: { kinds: [], rows: () => [{ type: 'milkyWay' } as never] },
       planners: (r) => {
         expect(r).toBe(runtime);
         return [{ name: 'stub-planner', scope: 'once', plan: plannerSpy }];

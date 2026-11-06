@@ -5,6 +5,7 @@
  */
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
+import type { CosmicWebDensityAssetKey } from '../../@types/CosmicWebDensityAssetKey';
 import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from '../../@types/CosmicWebDensityRuntime';
 
@@ -18,9 +19,9 @@ const PRIORITY: Record<CosmicWebDensityFieldId, number> = {
 
 export function cosmicWebDensityAssetRows(
   runtime: CosmicWebDensityRuntime,
-): readonly AssetWiringRow[] {
+): readonly AssetWiringRow<unknown, unknown, CosmicWebDensityAssetKey>[] {
   return COSMIC_WEB_DENSITY_SOURCE_ROWS.map(
-    ([code, entry]): AssetWiringRow => ({
+    ([code, entry]): AssetWiringRow<unknown, unknown, CosmicWebDensityAssetKey> => ({
       key: code,
       slot: runtime.slots[entry.id],
       // An untiered row carries no `tier`, so a tier flip leaves its request

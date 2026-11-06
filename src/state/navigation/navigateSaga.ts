@@ -35,7 +35,7 @@ import { selectOrientation } from '../settings/selectors';
 import { framingPose } from '../../services/engine/camera/framing/framingPose';
 import { homePose } from '../../services/engine/camera/framing/homePose';
 import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
-import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
+import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
@@ -81,7 +81,7 @@ function* frameFocusSaga(runtime: LiveCameraRuntime): SagaGenerator<NavigateOutc
     if (ready && stillIdle && (yield* select(selectPendingFocusId)) !== null) return UNKNOWN_ID;
   }
   const row = (yield* select(selectFocusRow))!;
-  if (!ROW_FOCUSABLE[row.type]) return OK;
+  if (selectionKindOf(row.type).focus === null) return OK;
   // The committed base, not the runtime's `from`: at boot the runtime still
   // reports its pre-commit placeholder for one frame.
   const base = yield* select(selectCameraBase);
