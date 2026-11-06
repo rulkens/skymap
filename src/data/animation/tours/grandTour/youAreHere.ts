@@ -44,8 +44,8 @@ export const youAreHere: ClipData = {
       aimAlong(GALACTIC_DISC_FORWARD, 0),
       tween('roll', { to: 0, over: 0 }),
     ]),
-    // Placeholder: the beats between Earth and here are to claim these names.
-    show(OPENING_HIDDEN_LABELS, 0),
+    // Placeholder: the beats between Earth and here are to claim these.
+    show([...OPENING_HIDDEN_LABELS, 'missionTrails'], 0),
     focusOnId(MW, 7),
     show(['label:milkyWay'], 1),
   ],

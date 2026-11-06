@@ -14,6 +14,16 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **True sizes for two bodies** (beat 02, fix round 2): discs keep their true
+  size ratio only from an eye as far from one body as from the other, so the
+  aim slides off the gap's middle by the view's lean along the gap
+  (`EARTH_AND_MOON_VIEW`). Square to both the gap and the Sun is the ecliptic
+  pole, where a pole-up view has no heading; a view steeply across the
+  ecliptic (80°) sees both near half lit whatever the Moon's phase, because
+  the Sun lies in the ecliptic. Its heading turned off square to the gap tilts
+  the gap on screen by about that angle, robust to the Moon's ±5° latitude
+  only because the pitch is measured from the ecliptic pole, not from the gap.
+  `earthAndMoonView.test.ts` fails if a date change breaks either.
 - **A pan that turns with the clock** (beat 00, the sunset): a yaw linear in
   sim time shares the clock's profile (a linear leg, then `easeOutQuad` over
   the clock's ease), so the frame and the wheeling sky come to rest together.

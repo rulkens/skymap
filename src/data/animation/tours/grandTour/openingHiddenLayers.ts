@@ -4,6 +4,5 @@ import type { VisibilityArg } from '../../../../@types/animation/VisibilityArg';
 export const OPENING_HIDDEN_LAYERS = [
   'orbitTrails', // planet and moon trails
   'sStarTrails',
-  'missionTrails',
   'satellites', // Earth-orbit satellites and their orbits
 ] as const satisfies readonly VisibilityArg[];

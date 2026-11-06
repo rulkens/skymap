@@ -6,7 +6,7 @@ narration: >
   Thirty Earths would fit in the gap between us and the Moon. Light crosses
   it in just over a second.
 focus: none # cleared: the shot is aimed between the bodies
-distance_mpc: 7.8e-15 # ~240,000 km from a point in the gap, both in frame
+distance_mpc: 1.1e-14 # 340,000 km from a point in the gap, both in frame
 motion: log-dolly + orbit
 travel_s: 8
 dwell_s: 7
@@ -24,23 +24,30 @@ nearest star.
 
 ## Camera
 
-The enter snaps the clock to `TOUR_NIGHT_SIM_DAYS` (`overSec: 0`). Log-dolly
-out from the whole-Earth framing until both bodies sit in frame with the gap
-between them readable; a slow orbit on the dwell for depth. On the tour date
-the Moon is new: it sits roughly sunward of Earth, so a framing from the night
-side sees its unlit face. Pick the orbit so its lit limb shows.
+The enter snaps the clock to `TOUR_NIGHT_SIM_DAYS` (`overSec: 0`) and states
+the ecliptic pole (the Moon is 4° off the ecliptic). Log-dolly out from the
+whole-Earth framing until both bodies sit in frame with the gap between them
+readable; a slow orbit on the dwell for depth.
 
-As built: the beat states the ecliptic pole (the Moon is 4° off the ecliptic,
-so the gap runs flat). The pull-back swings round to a view square to the gap,
-turned 40° sunward (Earth about 95% lit, the Moon about 60%) and 50° up off the
-ecliptic, looking down on the Moon's orbit, which keeps Neptune and Pluto, named
-by the same caption switch as the Moon, out of frame. The gap rises about 34°
-from Earth, lower left, to the Moon on its ring, upper right.
+As built (fix round 2, owner ruling 2026-11-06: true sizes): the view is
+side-on to the gap and both bodies show near half lit, so the Moon's disc is
+its true 3.7 times smaller than Earth's. `EARTH_AND_MOON_VIEW` derives it from
+the tour date's ephemeris, so a date change re-derives it:
 
-Stale since the tour moved to 2026-09-05 (beat 00's sunset): the Moon is no
-longer new but 70° from the Sun, a third lit, so the turn toward the Moon's side
-of the gap no longer faces its lit half and the Moon shows a thin sliver. The
-framing needs re-deriving from the Sun's direction.
+- The eye stands as far from Earth as from the Moon: the aim slides off the
+  gap's middle by the view's lean along the gap.
+- Square to both the gap and the Sun would be the ecliptic pole, where the
+  pole-up view has no heading. The view looks 80° steeply across the ecliptic
+  instead; the Sun lies in the ecliptic, so such a view sees both bodies near
+  half lit whatever the Moon's phase. Of the two mirror views (toward ecliptic
+  north or south) the beat takes the one nearer square to the Sun.
+- The heading turns 34° off square to the gap, which tilts the gap about 34°
+  on screen: Earth lower left, the Moon on its ring upper right.
+- 340,000 km back, which keeps the passed framing's positions. On 2026-09-05
+  at 1600×900: Earth about 26 px and 53% lit at (475, 670), the Moon about
+  7 px and 37% lit at (1165, 203). The lit fractions differ because the gap
+  spans about 50° as seen from the eye.
+- Looking near the ecliptic pole keeps every other planet out of frame.
 
 ## On screen
 
