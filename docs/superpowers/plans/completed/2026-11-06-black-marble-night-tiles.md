@@ -1,6 +1,6 @@
 # Black Marble night tiles — plan
 
-Spec: [`2026-11-06-black-marble-night-tiles-design.md`](../specs/2026-11-06-black-marble-night-tiles-design.md).
+Spec: [`2026-11-06-black-marble-night-tiles-design.md`](../../specs/completed/2026-11-06-black-marble-night-tiles-design.md).
 Branch `worktree-black-marble-night-tiles`, one PR, prep commits first (ruled yCdN).
 
 **Strategy.** Six behaviour-neutral prep commits make "product" a table everywhere it is
