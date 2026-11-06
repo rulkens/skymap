@@ -10,15 +10,15 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
-import BodyDetailCard from '../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard';
-import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
-import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
-import { bodyFootprintRadiusM } from '../../../src/utils/scene/bodyFootprintRadiusM';
-import { MARS_DATUM_RADIUS_M } from '../../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
-import { formatDistance } from '../../../src/utils/format/formatDistance';
-import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import BodyDetailCard from '../../../../../../src/layers/body/card/ui/BodyDetailCard/BodyDetailCard';
+import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
+import type { BodyInfo } from '../../../../../../src/@types/engine/BodyInfo';
+import { SCENE_BODIES } from '../../../../../../src/data/bodies/sceneBodies';
+import { findByIdOrThrow } from '../../../../../../src/utils/object/findByIdOrThrow';
+import { bodyFootprintRadiusM } from '../../../../../../src/utils/scene/bodyFootprintRadiusM';
+import { MARS_DATUM_RADIUS_M } from '../../../../../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
+import { formatDistance } from '../../../../../../src/utils/format/formatDistance';
+import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 
 const JUPITER_RADIUS_M = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'jupiter', 'test'));
 

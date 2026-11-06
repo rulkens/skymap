@@ -15,7 +15,7 @@ import { EARTH_SCENE_BODY_IDS } from './scenes/data/earthSceneBodyIds';
 import { earthSceneSelectionRow } from './scenes/present/earthSceneSelectionRow';
 import { earthScenesSelectionKinds } from './scenes/present/kinds';
 import { earthSceneSearch } from './scenes/present/earthSceneSearch';
-import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
+import BodyDetailCardContainer from '../body/card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 
 export const earthScenesLayer = defineLayer({

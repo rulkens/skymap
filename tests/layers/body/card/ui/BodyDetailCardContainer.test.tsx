@@ -14,13 +14,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import BodyDetailCardContainer from '../../../src/components/containers/BodyDetailCardContainer';
-import { createAppStore } from '../../../src/store/createAppStore';
-import { engineBodyDistanceReported } from '../../../src/state/engine/engineSlice';
-import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import { formatDistance } from '../../../src/utils/format/formatDistance';
-import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
-import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import BodyDetailCardContainer from '../../../../../src/layers/body/card/ui/BodyDetailCardContainer';
+import { createAppStore } from '../../../../../src/store/createAppStore';
+import { engineBodyDistanceReported } from '../../../../../src/state/engine/engineSlice';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { formatDistance } from '../../../../../src/utils/format/formatDistance';
+import type { BodyInfo } from '../../../../../src/@types/engine/BodyInfo';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // Render probe: wrap the real BodyDetailCard so we can count how many times the
 // container actually renders it. The wrapper renders the genuine component (so the
@@ -30,10 +30,10 @@ import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 // rather than by output stability alone. The `mock` prefix lets vitest's hoisted
 // factory reference the counter.
 const mockCardRenderProbe = { count: 0 };
-vi.mock('../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard', async () => {
+vi.mock('../../../../../src/layers/body/card/ui/BodyDetailCard/BodyDetailCard', async () => {
   const actual = await vi.importActual<
-    typeof import('../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard')
-  >('../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard');
+    typeof import('../../../../../src/layers/body/card/ui/BodyDetailCard/BodyDetailCard')
+  >('../../../../../src/layers/body/card/ui/BodyDetailCard/BodyDetailCard');
   return {
     ...actual,
     default: (props: Parameters<typeof actual.default>[0]) => {

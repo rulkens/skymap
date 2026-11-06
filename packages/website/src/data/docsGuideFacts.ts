@@ -729,7 +729,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'card-moon-rows',
     about: 'app',
     text: 'A moon’s card renames two rows: Orbital period, for one trip round its planet, and Distance from the planet by name, in kilometres. A moon’s mass is in kilograms and a planet’s in Earth masses. A row the sheet has nothing for is left out: Pluto has no Axial tilt, and Phobos no Mean temperature.',
-    source: `${REPO_BLOB}/src/components/InfoCard/BodyDetailCard/BodyDetailCard.tsx`,
+    source: `${REPO_BLOB}/src/layers/body/card/ui/BodyDetailCard/BodyDetailCard.tsx`,
     sourceLabel: `the card of a planet or a moon, ${IN_REPO}`,
     checked: CHECKED,
   },

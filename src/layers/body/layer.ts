@@ -39,7 +39,7 @@ import { SMALL_BODY_TRAIL_IDS } from './orbitTrails/data/smallBodyTrailIds';
 import { produceSceneBodyCaptions } from './labels/present/produceSceneBodyCaptions';
 import { bodyLayerExhibits } from './exhibits/exhibits';
 import { NEAR0 } from '../../services/engine/frame/slabs';
-import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
+import BodyDetailCardContainer from './card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 import { surfaceTilePlanner } from './frame';
 import { watchDebugPanelWakeSaga } from './surfaceTiles/debug/sagas/watchDebugPanelWakeSaga';

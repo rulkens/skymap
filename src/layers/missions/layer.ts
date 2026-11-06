@@ -26,7 +26,7 @@ import { craftSearch } from './craft/present/craftSearch';
 import { missionsLayerExhibits } from './exhibits/exhibits';
 import { MISSIONS_BODY_ROWS } from './bodies/missionsBodyRows';
 import { MISSIONS_SOURCE_ROWS } from './sources/missionsSourceRows';
-import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
+import BodyDetailCardContainer from '../body/card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 
 export const missionsLayer = defineLayer({

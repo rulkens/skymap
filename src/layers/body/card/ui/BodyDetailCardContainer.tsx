@@ -14,11 +14,9 @@
 
 import { memo } from 'react';
 import type { ReactNode } from 'react';
-import BodyDetailCard, {
-  type BodyDetailCardProps,
-} from '../InfoCard/BodyDetailCard/BodyDetailCard';
-import { useAppSelector } from '../../store/hooks';
-import { selectFocusedBodyDistanceMpc } from '../../state/engine/selectors';
+import BodyDetailCard, { type BodyDetailCardProps } from './BodyDetailCard/BodyDetailCard';
+import { useAppSelector } from '../../../../store/hooks';
+import { selectFocusedBodyDistanceMpc } from '../../../../state/engine/selectors';
 
 type BodyDetailCardContainerProps = Omit<BodyDetailCardProps, 'distanceMpc'>;
 
