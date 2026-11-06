@@ -18,6 +18,7 @@ import { foldToWorld } from '../arms/foldToWorld';
 import { hostOf } from '../arms/hostOf';
 import { isWorldArm } from '../arms/world/isWorldArm';
 import { rowFor } from '../arms/rowFor';
+import { climbRowFor } from '../arms/climbRowFor';
 import { cameraArmKindOf } from '../arms/cameraArmKindOf';
 import { sameFrame } from '../arms/sameFrame';
 import { zoomedDistance } from './utils/zoomedDistance';
@@ -115,12 +116,19 @@ export function replayInput(
     gestureMemory = stepped.memory;
     tilt = stepped.tilt;
     if (stepped.fovYRad !== undefined) emit(setFovYRad(stepped.fovYRad));
+    const next: FramedPose<K> = { frame: framed.frame, pose: stepped.pose };
     // A flight already under way is not restarted: mid-lift the sky arm still
     // steps the stored pose, so a fresh one would fly back from the ground.
     if (stepped.tween !== undefined && camera.tween === null) {
+      // The fold judges the regime's own pose, which a tween leaving the arm
+      // never moves, so the arm that starts the flight hands the regime up itself.
+      const handed = next as FramedCameraPose;
+      if (!isWorldArm(handed)) {
+        emit(commitCameraPose(climbRowFor(handed.frame).toParent(handed, stepCtx)));
+      }
       emit(startCameraTween({ ...stepped.tween, frame: rootState.settings.orientation }));
     }
-    return { frame: framed.frame, pose: stepped.pose };
+    return next;
   };
 
   /**

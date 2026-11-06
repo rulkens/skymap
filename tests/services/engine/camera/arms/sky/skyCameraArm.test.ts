@@ -348,7 +348,8 @@ describe('the sky arm', () => {
 
 describe('the sky exit push', () => {
   const LENS_MAX = degToRad(LENS_MAX_DEG);
-  const F = 1.3;
+  // A quarter-and-a-bit of the push per notch, so the counts hold whatever it is tuned to.
+  const F = Math.exp(SKY_EXIT_PUSH_LN / 3.5);
   const atMax = (nowMs: number): CameraArmCtx => ({ ...withLens(LENS_MAX), nowMs });
   const start = framed(AZ, 0.3);
   /** Notches of F every `gapMs`, from an empty push, until the arm hands back a tween. */
@@ -374,7 +375,7 @@ describe('the sky exit push', () => {
     // Below the widest lens the notch widens the lens and pushes nothing.
     const wider = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(F), atMax(0));
     const below = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(F), {
-      ...withLens(degToRad(100)),
+      ...withLens(degToRad(119)),
       nowMs: 0,
     });
     expect(wider.memory.pushLn).toBeCloseTo(Math.log(F), 12);
