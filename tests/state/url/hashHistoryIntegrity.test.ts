@@ -13,12 +13,17 @@ import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } fr
 
 import { NOOP_SAGA_CONTEXT } from '../../support/createTestStore';
 import { createAppStore } from '../../../src/store/createAppStore';
-import { selectArrivalPending } from '../../../src/state/arrival/selectors';
+import { selectArrival, selectArrivalPending } from '../../../src/state/arrival/selectors';
+import { selectSettings } from '../../../src/state/settings/selectSettings';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
+import { selectTimeState } from '../../../src/state/time/selectors';
+import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
+import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 
 /** A valid `b`-tagged, 17-field arm for the `#pose=` arrival case below; the numbers are arbitrary. */
 const EARTH_ARM: FramedCameraPose = {
@@ -54,8 +59,9 @@ describe('hash history integrity', () => {
     pushState.mock.calls.map(([, , url]) => new URL(String(url), window.location.href).hash);
 
   /** Registering the context releases the hash bridge, so this call IS the arrival read; it waits for the arrival because until then every publish canonicalizes in place. */
-  const boot = async () => {
+  const boot = async (beforeArrival?: (handle: ReturnType<typeof createAppStore>) => void) => {
     const handle = createAppStore();
+    beforeArrival?.(handle);
     handle.setSagaContext({
       ...NOOP_SAGA_CONTEXT,
       cameraRuntime: () => ({
@@ -130,6 +136,75 @@ describe('hash history integrity', () => {
 
     expect(pushedHashes()).toEqual([]);
     expect(window.location.hash).not.toContain('pose=');
+  });
+
+  it("a cold link's layers land before the reveal and leave the address", async () => {
+    seedHash('focus=body-saturn&layers=cosmicWebFilaments,-starCatalog');
+    const replaceState = vi.spyOn(window.history, 'replaceState');
+    // The settings the reveal shows: the first state whose arrival has settled.
+    let atReveal: ReturnType<typeof selectSettings> | undefined;
+
+    await boot(({ store }) => {
+      store.subscribe(() => {
+        const state = store.getState();
+        if (atReveal === undefined && selectArrival(state).status === 'arrived') {
+          atReveal = selectSettings(state);
+        }
+      });
+    });
+    await flush();
+
+    expect(atReveal?.cosmicWebFilaments.enabled).toBe(true);
+    expect(atReveal?.starCatalogs.enabled).toBe(false);
+    // `layers` writes nothing, so a push would re-apply it and push again on every Back.
+    expect(pushedHashes()).toEqual([]);
+    expect(replaceState).toHaveBeenCalled();
+    expect(window.location.hash).toBe('#focus=body-saturn');
+  });
+
+  it('a hash change without layers leaves the switches alone', async () => {
+    seedHash('focus=body-saturn&layers=cosmicWebFilaments,-starCatalog');
+    const { store } = await boot();
+    await flush();
+
+    navigate('focus=body-mars');
+    await flush();
+
+    const settings = selectSettings(store.getState());
+    expect(settings.cosmicWebFilaments.enabled).toBe(true);
+    expect(settings.starCatalogs.enabled).toBe(false);
+  });
+
+  it("an exhibit link's layers win over the exhibit's own settings", async () => {
+    // solarSystem's settings replace the whole `starCatalogs` cluster, captions included.
+    seedHash('exhibit=solarSystem&layers=-label:starCatalog');
+    const { store } = await boot();
+    await flush();
+
+    // The two label-bearing sets; Gaia and the S-stars draw no names.
+    const { famousStar, sun } = selectSettings(store.getState()).starCatalogs.items;
+    expect([famousStar.labelEnabled, sun.labelEnabled]).toEqual([false, false]);
+  });
+
+  it("a navigation out of a running exhibit lands its t and layers after the exhibit's restore", async () => {
+    seedHash('exhibit=solarSystem');
+    const { store } = await boot();
+    await flush();
+    expect(selectTakeoverSource(store.getState())).not.toBeNull();
+
+    const linked = '2000-01-01T12:00:00.000Z';
+    navigate(`focus=body-mars&t=${linked}&layers=flow`);
+    await flush();
+
+    const state = store.getState();
+    expect(selectTakeoverSource(state)).toBeNull();
+    expect(selectSettings(state).flow.enabled).toBe(true);
+    // A linked exhibit's restore plays the live clock, which would replace the held instant.
+    expect(selectTimeState(state)).toMatchObject({ mode: 'manual', paused: true });
+    expect(deriveSimDays(selectTimeState(state), performance.now())).toBeCloseTo(
+      unixMsToJulianDays(Date.parse(linked)),
+      6,
+    );
   });
 
   it("keeps a takeover navigation's key without pushing", async () => {

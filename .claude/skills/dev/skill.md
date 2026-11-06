@@ -67,9 +67,9 @@ Start: `/dev` for the app and `/dev website` for the site.
   `star-<seed id>`; each Layer's `focusId.encode` in its `*SelectionRow.ts`
   under `src/layers/*/present/` spells its kind's id). Other
   params: `pose` (copy one with the `l` key), `orientation`, `exhibit`, `tour`,
-  `clip`, `home`; values raw, not URL-encoded; full table in
-  `src/state/url/hashParamSources.ts`. No param toggles layers or trails, so name
-  the UI toggle. Plans put these links in the DoD smoke section.
+  `clip`, `home`, `layers` (`layers=cosmicWebFilaments,-starCatalog`: `name` on,
+  `-name` off, `survey:item` one item, `label:name` a layer's captions); values
+  raw, not URL-encoded; full table in `src/state/url/hashParamSources.ts`. Plans put these links in the DoD smoke section.
 - **Phone or another device: HTTPS only.** Start `SKYMAP_HTTPS=1 npm run dev`
   (binds the LAN), never `npm run dev -- --host` over http: on a bare IP WebGPU is
   off (no secure context, blank app) and the remote's pairing QR link fails. It

@@ -5,6 +5,7 @@ import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { HASH_PARAM_SOURCES } from '../../../src/state/url/hashParamSources';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 import { parseHashParams } from '../../../src/utils/url/parseHashParams';
+import { parseLayerSwitches } from '../../../src/utils/url/parseLayerSwitches';
 
 const KEYS = new Set(HASH_PARAM_SOURCES.map((source) => source.key));
 const NAMED = new Set(OBJECT_ROWS.map((row) => row.id));
@@ -25,6 +26,8 @@ export function appViewProblem(hash: string): string | null {
   const params = parseHashParams(hash);
   const unknown = [...params.keys()].find((key) => !KEYS.has(key));
   if (unknown !== undefined) return `the app reads no "${unknown}"`;
+  const unknownLayer = parseLayerSwitches(params.get('layers') ?? '').unknown[0];
+  if (unknownLayer !== undefined) return `the app reads no layer "${unknownLayer}"`;
   const { view } = linkIntentFrom(hash);
   // Each of these keys alone yields its own kind of view, so a value the parser refused shows as a kind that is missing.
   const unread = ['focus', 'pose', 'exhibit', 'tour', 'clip'].find(

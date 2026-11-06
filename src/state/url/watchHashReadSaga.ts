@@ -67,14 +67,14 @@
  * the write half's question to answer, and it is the only half that can.
  */
 
-import { take, call, put, select } from 'typed-redux-saga';
+import { all, take, call, put, select } from 'typed-redux-saga';
 
 import { HASH_PARAM_SOURCES } from './hashParamSources';
 import { hashNavigationStarted } from './hashNavigationStarted';
 import { arrivalPending } from '../arrival/arrivalSlice';
 import { navigateSaga } from '../navigation/navigateSaga';
 import { selectTakeoverSource } from '../takeover/selectors';
-import { exitTakeover } from '../takeover/takeoverActions';
+import { exitTakeover, takeoverEnded } from '../takeover/takeoverActions';
 import { linkIntentFrom } from '../../utils/url/linkIntentFrom';
 import { createHashChangeChannel } from '../../services/url/createHashChangeChannel';
 import { readHashBody } from '../../services/url/readHashBody';
@@ -94,8 +94,9 @@ function* applyNavigation(body: string) {
   const keepsTakeover = takeover !== null && names(takeover.kind, takeover.id);
 
   // An entry that leaves out the running play's key is one from before it,
-  // such as Back to the pre-tour URL.
-  if (takeover !== null && !keepsTakeover) yield* put(exitTakeover());
+  // such as Back to the pre-tour URL. The play's exit restores the scene and
+  // clock it captured, so the link's `t` and `layers` land only after it ends.
+  if (takeover !== null && !keepsTakeover) yield* all([take(takeoverEnded), put(exitTakeover())]);
   // The app's own writes push silently, so an entry naming what runs is
   // Back/Forward across that play's own history (a tour pushes one per
   // focus); navigating would restart it.

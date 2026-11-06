@@ -18,7 +18,9 @@ facts:
 ---
 
 import { BODY_PICK_ROWS } from '../../../../../../src/data/bodies/bodyPickRows';
+import { APP_VISIBILITY_REGISTRY } from '../../../../../../src/compositions/appVisibility';
 import { SURFACE_FIXED_SITES } from '../../../../../../src/data/bodies/surfaceFixedSites';
+import { visibilityAddressOf } from '../../../../../../src/utils/visibility/visibilityAddressOf';
 import {
   DOCS_EXHIBIT_IDS,
   DOCS_FOCUS_IDS,
@@ -183,6 +185,25 @@ The three numbers of the `s` form are the direction the camera stands in and its
 
 A pose with the wrong number of values, a value that is not a number or a name the app does not know is ignored whole.
 
+## Layers
+
+The value of `layers` is a list of names with commas between them, read from left to right.
+
+| Written as | Does |
+| --- | --- |
+| `flow` | Switches the layer on |
+| `-flow` | Switches it off |
+| `survey:desiWedge` | Switches one item of a layer, here the patch of one survey |
+| `label:structure` | Switches a layer’s captions, here the names of structures |
+
+Later names win over earlier ones, so `-survey,survey:famousGalaxy` hides every galaxy catalogue but the famous galaxies’ photographs. A name the app does not know is skipped and the rest apply.
+
+An exhibit switches some layers itself as it opens, and the link’s `layers` apply after them, so the link wins. A tour switches its own layers as its steps play.
+
+The names are: <Codes of={APP_VISIBILITY_REGISTRY.map(visibilityAddressOf)} />.
+
+A name followed by `:` and an item switches that item alone. The items of each layer are: <Codes of={APP_VISIBILITY_REGISTRY.flatMap((entry) => (entry.items ?? []).map((item) => `${visibilityAddressOf(entry)}:${item}`))} />.
+
 ## How parameters combine
 
 <Fact id="ref-params-combine" />
@@ -231,6 +252,10 @@ A pose with the wrong number of values, a value that is not a number or a name t
 
 <Example to="pose=s,perseverance,0.5,0.3,50" address label="Open the rover’s site">
   The Perseverance rover from 50 metres.
+</Example>
+
+<Example to="layers=cosmicWebFilaments,-starCatalog" address label="Open the filaments">
+  The traced filaments of the cosmic web on, the stars off.
 </Example>
 
 <Example to="tour=webShowcase" address label="Start the tour">
