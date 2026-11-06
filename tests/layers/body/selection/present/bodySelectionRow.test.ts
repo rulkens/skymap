@@ -16,6 +16,8 @@ import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { fakePickCode } from '../../../../support/fakePickCode';
 import { bodyPickCodes } from '../../../../support/layerPickCodes';
+import { relErr } from '../../../../support/relErr';
+import type { PlacedRow } from '../../../../../src/@types/engine/selection/PlacedRow';
 
 const pickCodes = bodyPickCodes(fakePickCode());
 const row = bodySelectionRow({ pickCodes });
@@ -47,5 +49,10 @@ describe('bodySelectionRow pick codes', () => {
       expect(row.resolvePick(unpackPick(label.pickId!)!)).toEqual(ref);
       expect(label.pickId).toBe(row.encodePick(ref));
     }
+  });
+
+  it('places Earth at its footprint radius, in Mpc', () => {
+    const earth = row.extractRow(bodyRef(SCENE_EARTH.id), CONST_J2000) as PlacedRow;
+    expect(relErr(earth.radiusMpc, 2.067568250898234e-16)).toBeLessThan(1e-12);
   });
 });

@@ -12,6 +12,7 @@ import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import type { SatellitesRuntime } from '../../../../../src/layers/satellites/@types/SatellitesRuntime';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import { ISS, GOES_18 } from '../../fixtures/celestrakRecords';
+import { relErr } from '../../../../support/relErr';
 
 const { catalog } = buildSatelliteCatalog(
   [{ group: { group: 'active', class: 'active' }, records: [GOES_18, ISS] }],
@@ -78,5 +79,10 @@ describe('satellitesSelectionRow', () => {
       pickCode: PICK_CODE,
     } as unknown as SatellitesRuntime);
     expect(none.extractRow(ISS_REF, AT)).toBeNull();
+  });
+
+  it('places the ISS at its footprint radius, in Mpc', () => {
+    const extracted = row.extractRow(ISS_REF, AT) as Extract<SelectionRow, { type: 'satellite' }>;
+    expect(relErr(extracted.radiusMpc, 1.6203896447221824e-18)).toBeLessThan(1e-12);
   });
 });

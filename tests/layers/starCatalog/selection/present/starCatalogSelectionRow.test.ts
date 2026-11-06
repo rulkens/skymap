@@ -13,6 +13,8 @@ import { starRowRuntime } from '../../../../support/layerPickCodes';
 import { fakePickCode } from '../../../../support/fakePickCode';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../../src/data/bodies/seededStarCatalogsBySource';
 import type { FamousStarMetaEntry } from '../../../../../src/@types/loading/FamousStarMetaEntry';
+import { relErr } from '../../../../support/relErr';
+import type { PlacedRow } from '../../../../../src/@types/engine/selection/PlacedRow';
 
 /**
  * Pool index 7 maps to ordinal 1007 while its chunk is resident; nothing else
@@ -71,5 +73,14 @@ describe('starCatalogSelectionRow', () => {
     const bare = row.extractRow(ref(1), 0)!;
     expect(bare).toMatchObject({ id: omitted!.id });
     expect('famous' in bare).toBe(false);
+  });
+
+  it('places Alpha Centauri at its photosphere radius, in Mpc', () => {
+    const stars = SEEDED_STAR_CATALOGS_BY_SOURCE.get(Source.FamousStar)!.stars;
+    const index = stars.findIndex((star) => star.id === 'alpha-centauri');
+    const row = starCatalogSelectionRow(
+      starRowRuntime({ renderer: null as never, chunkStreams: new Map() }),
+    ).extractRow({ type: 'starCatalog', source: Source.FamousStar, index }, 0) as PlacedRow;
+    expect(relErr(row.radiusMpc, 2.7531547855022603e-14)).toBeLessThan(1e-12);
   });
 });

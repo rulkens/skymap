@@ -15,6 +15,10 @@ import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { ALL_KINDS_ENABLED } from '../../../../support/allKindsEnabled';
 import { bodyPickCodes, missionsPickCode } from '../../../../support/layerPickCodes';
 import { fakePickCode } from '../../../../support/fakePickCode';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { relErr } from '../../../../support/relErr';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import type { PlacedRow } from '../../../../../src/@types/engine/selection/PlacedRow';
 
 // Codes from 40 up: a craft row that still packs the catalog value fails the round trip.
 const missions = missionsPickCode(fakePickCode());
@@ -32,5 +36,13 @@ describe('craftSelectionRow', () => {
       expect(unpackPick(craftPickId(id, missions)!)!.sourceCode).toBeGreaterThanOrEqual(40);
       expect(resolver.resolveFocusId(resolver.focusIdOf(ref)!)).toEqual(ref);
     }
+  });
+
+  it('places Voyager 1 at its footprint radius, in Mpc', () => {
+    const voyager = craftSelectionRow(missions).extractRow(
+      { type: 'craft', id: asSceneBodyId('voyager1') },
+      CONST_J2000,
+    ) as PlacedRow;
+    expect(relErr(voyager.radiusMpc, 4.713666063029354e-22)).toBeLessThan(1e-12);
   });
 });

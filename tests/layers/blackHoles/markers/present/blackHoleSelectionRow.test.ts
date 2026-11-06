@@ -14,6 +14,8 @@ import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { blackHolePickCode } from '../../../../support/layerPickCodes';
 import { fakePickCode } from '../../../../support/fakePickCode';
+import { relErr } from '../../../../support/relErr';
+import type { PlacedRow } from '../../../../../src/@types/engine/selection/PlacedRow';
 
 // Codes from 40 up: a row that still packs the catalog value fails the round trip.
 const ROW = blackHoleSelectionRow(blackHolePickCode(fakePickCode()));
@@ -38,5 +40,10 @@ describe('blackHoleSelectionRow', () => {
     if (row.type !== 'blackHole') throw new Error('expected the blackHole arm');
     expect(row.positionMpc).toEqual(GALACTIC_CENTRE_ANCHOR.positionMpc);
     expect(row.driver.poseId).toBe(GALACTIC_CENTRE_ANCHOR.id);
+  });
+
+  it('places Sgr A* at its footprint radius, in Mpc', () => {
+    const row = ROW.extractRow(SGR_A_STAR_REF, CONST_J2000) as PlacedRow;
+    expect(relErr(row.radiusMpc, 4.1136414639818914e-13)).toBeLessThan(1e-12);
   });
 });
