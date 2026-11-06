@@ -80,7 +80,11 @@ export default defineConfig(({ mode }) => {
     );
   }
   return {
-    define: { DESKTOP_DATA_ORIGIN: JSON.stringify(dataOrigin.replace(/\/$/, '')) },
+    define: {
+      DESKTOP_DATA_ORIGIN: JSON.stringify(dataOrigin.replace(/\/$/, '')),
+      // Versions stay 0.5.0 between installers; the build time tells two apart in About.
+      DESKTOP_BUILT_AT: JSON.stringify(new Date().toISOString()),
+    },
     ssr: { noExternal: true },
     build: {
       ...common,

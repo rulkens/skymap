@@ -15,7 +15,11 @@ function deps(over: Partial<SyncThenLoadDeps> = {}) {
       hasCompleteSet: vi.fn(async () => true),
       state: () => state,
       update,
-      readAbout: vi.fn(async () => ({ version: '1', dataDate: null })),
+      readAbout: vi.fn(async () => ({
+        version: '1',
+        builtAt: '2026-11-06T18:30:00.000Z',
+        dataDate: null,
+      })),
       showControl: vi.fn(),
       loadSky: vi.fn(async () => {}),
       ...over,

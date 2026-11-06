@@ -27,6 +27,9 @@ function AboutView({ about, back }: AboutViewProps): ReactNode {
   const dataDate = about?.dataDate
     ? new Date(about.dataDate).toLocaleDateString('en-GB', { dateStyle: 'long' })
     : 'Not downloaded yet';
+  const builtAt = about
+    ? new Date(about.builtAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+    : '';
   return (
     <main className={styles.root} aria-label="About Skymap">
       {back && (
@@ -56,6 +59,10 @@ function AboutView({ about, back }: AboutViewProps): ReactNode {
         <div>
           <dt>Version</dt>
           <dd>{about?.version ?? ''}</dd>
+        </div>
+        <div>
+          <dt>Built</dt>
+          <dd>{builtAt}</dd>
         </div>
         <div>
           <dt>Data</dt>

@@ -111,6 +111,7 @@ export async function runLifecycle(windowed: boolean): Promise<void> {
   // The data's date is the last complete sync's: its inventory is written last.
   const readAbout = async (): Promise<AboutInfo> => ({
     version: app.getVersion(),
+    builtAt: DESKTOP_BUILT_AT,
     dataDate: await stat(join(dataRoot, INVENTORY_FILE)).then(
       (s) => s.mtime.toISOString(),
       () => null,

@@ -24,7 +24,7 @@ const BASE_STATE: ControlState = {
   networks: [{ name: 'en0', address: '10.0.0.2' }],
   setup: DEFAULT_INSTALL_SETUP,
   firstRun: false,
-  about: { version: '1.2.3', dataDate: null },
+  about: { version: '1.2.3', builtAt: '2026-11-06T18:30:00.000Z', dataDate: null },
   lastAttempt: null,
 };
 
