@@ -23,7 +23,7 @@ export const PRELUDE: FrameSection = {
     { kind: 'plan', name: 'surface-tiles' },
     // Every view's body slabs, so the once `sky-view` bake covers exactly what any view draws.
     { kind: 'plan', name: 'atmosphere-roster' },
-    // `sky-view` re-bakes its LUT every frame (camera altitude + sun direction), unlike
+    // `sky-view` re-bakes its LUT whenever camera altitude or sun direction moves, unlike
     // the once-baked transmittance/multi-scatter LUTs; both computes sit ahead of
     // `foreground:0` so the atmosphere shell samples this frame's table. Each bills
     // `<name>-compute` (`computeTimingSlotName`), keeping `flow` apart from the ribbon
