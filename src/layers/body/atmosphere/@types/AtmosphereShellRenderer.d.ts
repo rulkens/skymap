@@ -22,7 +22,7 @@ export type AtmosphereShellRenderer = Renderer & {
    * was baked from (sun zenith within a small tolerance, the rest exactly): then the
    * dispatch is skipped (the buffer write is not). A texture `reconcile` recreates has no bake yet, so its first dispatch
    * always bakes. THROWS on an unknown `bodyId` (a programming error — callers
-   * only pass `atmosphereDrawList` ids, which come from the same table this
+   * only pass `ATMOSPHERE_BODIES` ids, which come from the same table this
    * renderer bundles).
    *
    * The caller owns the pass, so the whole bake bills ONE GPU-timing slot.

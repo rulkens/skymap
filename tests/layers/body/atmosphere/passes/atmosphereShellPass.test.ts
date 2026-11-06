@@ -7,13 +7,13 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { bodySlabsOf } from '../../../../helpers/frame/bodySlabsOf';
 import { mat4d } from 'wgpu-matrix';
 
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { atmosphereShellPass } from '../../../../../src/layers/body/atmosphere/passes/atmosphereShellPass';
 import { ATMOSPHERE_PARAMS } from '../../../../../src/layers/body/atmosphere/data/atmosphereParams';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { BODY_SLAB_ROWS } from '../../../../../src/layers/body/slabs/present/bodySlabRows';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -44,7 +44,7 @@ import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/
 import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
-// atmosphereDrawList reads live body positions off this snapshot; stub it to the fixtures' refs.
+// The pass reads live body positions off this snapshot; stub it to the fixtures' refs.
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(() => seededBodyStates(0, SEEDED_BODIES)),
 }));
@@ -89,7 +89,7 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-/** A ctx with every body row active; `bodyPose` returns one fixed pose, so only the eye's
+/** A ctx giving every body row a slab; `bodyPose` returns one fixed pose, so only the eye's
  *  distance (inside or outside the band) matters. */
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
@@ -101,8 +101,8 @@ function makeCtx(pose = STUB_POSE): FrameView {
     drawPxPerRad: FIXTURE_PX_PER_RAD,
     snapshot: {
       renderTargets: { farDepthView: () => FAR_DEPTH_VIEW },
-      slabBodyCandidates: BODY_SLAB_ROWS,
     },
+    slabs: bodySlabsOf(),
   } as unknown as FrameView;
 }
 

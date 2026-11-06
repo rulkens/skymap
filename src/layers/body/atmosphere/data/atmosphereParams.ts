@@ -1,7 +1,7 @@
 /**
  * atmosphereParams — authored scattering constants, one row per body with a visible
  * atmosphere; a body absent from the table draws no shell, and adding a row is necessary AND
- * sufficient (renderer and `atmosphereDrawList` are body-agnostic). Earth is the
+ * sufficient (renderer and `ATMOSPHERE_BODIES` are body-agnostic). Earth is the
  * Bruneton/Hillaire reference set; the rest are physically motivated but eye-tuned, hence
  * untested — so Pluto's row tags each value [M]easured / [D]erived / [L]ook. `planetRadiusKm`
  * and `groundAlbedo` derive from the body's seed, keeping the shell concentric with the sphere

@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { atmosphereProbeSkyPass } from '../../../../../src/layers/body/atmosphere/passes/atmosphereProbeSkyPass';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
-import { BODY_SLAB_ROWS } from '../../../../../src/layers/body/slabs/present/bodySlabRows';
+import { bodySlabsOf } from '../../../../helpers/frame/bodySlabsOf';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SceneBodyId } from '../../../../../src/@types/scene/SceneBodyId';
 import type { BodyRuntime } from '../../../../../src/layers/body/@types/BodyRuntime';
@@ -41,14 +41,14 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
 // 720-px viewport, 60° fovY, tangent-exact — the apparent-size gate's scale.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
 
-/** A fresh ctx per call: `atmosphereDrawList` memoises on the ctx object. */
+/** A probe face's ctx: a real view with no planner store, so nothing here may read one. */
 function makeCtx(eyeRelBodyM: Vec3): FrameView {
   const pose: BodyRelativePose = {
     eyeRelBodyM,
     basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyRelativePose['basisM'],
   };
   return {
-    snapshot: { slabBodyCandidates: BODY_SLAB_ROWS },
+    slabs: bodySlabsOf(),
     drawCamPos: [0, 0, 0],
     bodyPose: (() => pose) as FrameView['bodyPose'],
     drawPxPerRad: FIXTURE_PX_PER_RAD,
