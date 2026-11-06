@@ -6,7 +6,7 @@ narration: >
   Thirty Earths would fit in the gap between us and the Moon. Light crosses
   it in just over a second.
 focus: none # cleared: the shot is aimed between the bodies
-distance_mpc: 1.2e-14 # ~380,000 km from a point in the gap, both in frame
+distance_mpc: 7.8e-15 # ~240,000 km from a point in the gap, both in frame
 motion: log-dolly + orbit
 travel_s: 8
 dwell_s: 7
@@ -30,10 +30,12 @@ between them readable; a slow orbit on the dwell for depth. On the tour date
 the Moon is new: it sits roughly sunward of Earth, so a framing from the night
 side sees its unlit face. Pick the orbit so its lit limb shows.
 
-As built: the pull-back swings round to a view square to the gap, turned 40°
-sunward (Earth about 90% lit, the Moon about 60%) and 30° off the galactic
-plane, which keeps Pluto, named by the same caption switch as the Moon, out of
-frame. The gap runs diagonally, about 56° up, under the tour's galactic pole.
+As built: the beat states the ecliptic pole (the Moon is 4° off the ecliptic,
+so the gap runs flat). The pull-back swings round to a view square to the gap,
+turned 40° sunward (Earth about 95% lit, the Moon about 60%) and 50° up off the
+ecliptic, looking down on the Moon's orbit, which keeps Neptune and Pluto, named
+by the same caption switch as the Moon, out of frame. The gap rises about 34°
+from Earth, lower left, to the Moon on its ring, upper right.
 
 ## On screen
 

@@ -16,6 +16,7 @@ import {
   all,
   dollyTo,
   focus,
+  frameTo,
   moveTargetId,
   scene,
   seq,
@@ -101,6 +102,9 @@ export const youAreHereEarth: ClipData = {
   start: 'live',
   timeline: [
     scene(clockTo({ simDays: TOUR_NIGHT_SIM_DAYS, overSec: 0 })),
+    // Beat 00's pole, stated so a Prev from beat 02's ecliptic lands right; the
+    // sky pose stands on the horizon, so the instant roll is unseen.
+    frameTo('galactic', { over: 0 }),
     // Beat 00's last view, restated so a skip or Prev starts the rise in the park.
     all([
       tween('yaw', { to: PARK_VIEW.azimuthRad, over: 0, frame: SKY }),

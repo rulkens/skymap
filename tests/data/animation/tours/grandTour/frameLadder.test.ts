@@ -34,6 +34,9 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../../src/store/rootReducer';
 import { grandTour } from '../../../../../src/data/animation/tours/grandTour';
 import { approachM31 } from '../../../../../src/data/animation/tours/grandTour/approachM31';
+import { earthAndMoon } from '../../../../../src/data/animation/tours/grandTour/earthAndMoon';
+import { youAreHere } from '../../../../../src/data/animation/tours/grandTour/youAreHere';
+import { frameTo } from '../../../../../src/services/engine/animation/effectHelpers';
 import { mergeSnapshot } from '../../../../../src/state/settings/mergeSnapshotAction';
 import { mergeSettingsSnapshot } from '../../../../../src/state/settings/mergeSettingsSnapshot';
 import { computeSceneEntering } from '../../../../../src/state/tour/computeSceneEntering';
@@ -95,6 +98,31 @@ function fireFrameToCues(store: ReturnType<typeof makeStore>, clip: ClipData | u
   }
 }
 
+const POLES: readonly OrientationFrameId[] = [
+  'equatorial',
+  'ecliptic',
+  'galactic',
+  'supergalactic',
+];
+
+/**
+ * docs/tour/implementation-notes.md's frame ladder: galactic over the park and
+ * the rise, ecliptic for the Earth beats from Earth and Moon (the Moon and the
+ * planets orbit near it), galactic again for the Milky Way, supergalactic from
+ * the M31 approach outward, and galactic for the landing (homeAgain's dwell).
+ * Found by clip, not index, so beats can land in between.
+ */
+function ladderPole(i: number): OrientationFrameId {
+  const beats = grandTour.beats;
+  const earthAndMoonAt = beats.findIndex((b) => b.enterClip === earthAndMoon);
+  const milkyWayAt = beats.findIndex((b) => b.enterClip === youAreHere);
+  const m31At = beats.findIndex((b) => b.enterClip === approachM31);
+  if (i === beats.length - 1) return 'galactic';
+  if (i >= m31At) return 'supergalactic';
+  if (i >= milkyWayAt) return 'galactic';
+  return i >= earthAndMoonAt ? 'ecliptic' : 'galactic';
+}
+
 describe('grand tour frame ladder — effective orientation per beat', () => {
   it('runs each beat under the pole set by its own (or an earlier) frameTo cue, never reverted at a beat boundary', () => {
     const store = makeStore();
@@ -118,21 +146,28 @@ describe('grand tour frame ladder — effective orientation per beat', () => {
       orientationPerBeat.push(store.getState().settings.orientation);
     }
 
-    // docs/tour/implementation-notes.md's frame ladder: parkOpening (beat 0)
-    // tilts to galactic and the Earth beats and the Milky Way run under it;
-    // approachM31 tilts to supergalactic for the rest of the outward journey;
-    // homeAgain (the last beat's dwell) tilts back to galactic for the landing.
-    // Found by clip, not index, so Earth beats can land in between.
-    const last = grandTour.beats.length - 1;
+    expect(grandTour.beats.length - 1).toBeGreaterThanOrEqual(9);
+    orientationPerBeat.forEach((pole, i) => expect(pole).toBe(ladderPole(i)));
+  });
+
+  it('runs each beat up to the M31 approach under its pole when entered cold (a skip or Prev)', () => {
     const m31 = grandTour.beats.findIndex((b) => b.enterClip === approachM31);
-    expect(last).toBeGreaterThanOrEqual(9);
-    expect(m31).toBeGreaterThan(0);
-    for (let i = 0; i < m31; i++) {
-      expect(orientationPerBeat[i]).toBe('galactic');
+    for (let i = 0; i <= m31; i++) {
+      for (const before of POLES) {
+        const store = makeStore();
+        const snapshot = captureScene(store.getState() as RootState, 0);
+        // Whatever pole the beat before left live.
+        fireFrameToCues(store, { start: 'live', timeline: [frameTo(before, { over: 0 })] });
+        const baseline = mergeSettingsSnapshot(store.getState().settings, snapshot.settings);
+        store.dispatch(mergeSnapshot(computeSceneEntering(baseline, grandTour.beats, i)));
+        fireFrameToCues(store, grandTour.beats[i]!.enterClip);
+        fireFrameToCues(store, grandTour.beats[i]!.dwellClip);
+        expect([i, before, store.getState().settings.orientation]).toEqual([
+          i,
+          before,
+          ladderPole(i),
+        ]);
+      }
     }
-    for (let i = m31; i < last; i++) {
-      expect(orientationPerBeat[i]).toBe('supergalactic');
-    }
-    expect(orientationPerBeat[last]).toBe('galactic');
   });
 });

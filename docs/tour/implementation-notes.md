@@ -17,10 +17,18 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 - **Framing two bodies at once** (beat 02, `earthAndMoon`): body captions are
   not focus-gated, so focusing the Moon does not name it; `label:body:planet`
   names every planet and moon in view, so pick the bearing with no other planet
-  in frame (Pluto sat behind the first try). A focused moving body pins the
-  orbit target to its centre whenever no clip runs (a tour pause), so a shot
-  aimed off a body clears the focus. The world leg that ends beat 01 carries the
-  body leg's roll (about −36°) into later beats: tween `roll` back to 0.
+  in frame (Pluto and Neptune sat behind the first tries). A focused moving body
+  pins the orbit target to its centre whenever no clip runs (a tour pause), so
+  a shot aimed off a body clears the focus.
+- **Beats state their pole and roll on entry** (fix round 1 of beat 02): the
+  ladder is now galactic (park, rise) → ecliptic (Earth and Moon, and the
+  Solar System and neighbourhood beats to come; the Moon and planets orbit near
+  it, so the gap runs flat) → galactic (Milky Way) → supergalactic (M31 out) →
+  galactic (home). Like the date, each beat up to the M31 approach states its
+  pole with `frameTo` (instant where a cut or the sky arm hides the roll), so a
+  skip or Prev lands right; `frameLadder.test.ts` enters each cold. The rise's
+  world leg keeps the body leg's roll (about −36°), so the beats after it state
+  `roll` too (`beatRolls.test.ts`).
 - **A `{ body }` turn from the ground** (beat 01, `youAreHereEarth`): body
   yaw/pitch are Y-up orbit angles in the host's fixed axes, not local
   azimuth/altitude, so one tween across a big turn leaves the meridian and

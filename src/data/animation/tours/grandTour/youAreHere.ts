@@ -1,7 +1,7 @@
 /**
  * You are here — the Milky Way, approached from far out on its disc bearing.
- * The snap is three zero-duration cues on separate channels (target, distance,
- * yaw/pitch), so one `all` is legal; `aimAlong` takes a fixed WORLD sightline,
+ * The snap is zero-duration cues on separate channels (target, distance,
+ * yaw/pitch, roll), so one `all` is legal; `aimAlong` takes a fixed WORLD sightline,
  * not a `lookAtId` bearing, so every run lands the same view whatever pose the
  * previous beat left. At 100 Mpc the sprite is sub-pixel, so home materialises
  * as the log dolly closes in. The label reveal follows the focus: under the
@@ -17,8 +17,10 @@ import {
   all,
   dollyTo,
   focusOnId,
+  frameTo,
   moveTargetId,
   show,
+  tween,
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { GALACTIC_DISC_FORWARD } from '../../../../services/engine/camera/framing/cameraFraming';
@@ -33,7 +35,15 @@ const FAR_OPEN_MPC = 100;
 export const youAreHere: ClipData = {
   start: 'live',
   timeline: [
-    all([moveTargetId(MW, 0), dollyTo(FAR_OPEN_MPC, 0), aimAlong(GALACTIC_DISC_FORWARD, 0)]),
+    // The pole and the roll are stated on entry, like the snap: the Earth beats
+    // before run under the ecliptic, and a skip from the rise lands rolled.
+    frameTo('galactic', { over: 0 }),
+    all([
+      moveTargetId(MW, 0),
+      dollyTo(FAR_OPEN_MPC, 0),
+      aimAlong(GALACTIC_DISC_FORWARD, 0),
+      tween('roll', { to: 0, over: 0 }),
+    ]),
     // Placeholder: the beats between Earth and here are to claim these names.
     show(OPENING_HIDDEN_LABELS, 0),
     focusOnId(MW, 7),

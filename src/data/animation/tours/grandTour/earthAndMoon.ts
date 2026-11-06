@@ -15,6 +15,7 @@ import {
   all,
   dollyTo,
   focus,
+  frameTo,
   moveTarget,
   scene,
   seq,
@@ -30,8 +31,9 @@ import { degToRad } from '../../../../utils/math/degToRad';
 import { lerpVec3 } from '../../../../utils/math/lerpVec3';
 import { normalize3 } from '../../../../utils/math/normalize3';
 import { EARTH_DATUM_RADIUS_M } from '../../../bodies/earthDatumRadiusM';
-import { GAL_Z_EQ } from '../../../orientation/orientationFrames';
+import { ECLIPTIC_FRAME } from '../../../bodies/orbitPlaneFrames';
 import { SCALE_UNITS } from '../../../scaleUnits';
+import { FRAME_ROLL_SEC } from './frameRollSec';
 import { TOUR_NIGHT_SIM_DAYS } from './tourNightSimDays';
 import { WHOLE_EARTH_HEIGHT_M } from './wholeEarthHeightM';
 
@@ -47,13 +49,13 @@ const GAP_DIR = normalize3([
 const turned = (a: Vec3, b: Vec3, rad: number): Vec3 =>
   normalize3([0, 1, 2].map((i) => a[i]! * Math.cos(rad) + b[i]! * Math.sin(rad)) as Vec3);
 
-// Square to the gap and level with the galactic plane, the Moon lands upper
-// right of Earth with the gap at its least tilt under the tour's galactic pole
-// (the line's own galactic latitude, ~52°). Turned OFF_LEVEL_RAD about the gap,
-// Pluto and Charon leave the frame (their captions share the Moon's switch);
+// Square to the gap and level with the ecliptic, the gap runs flat across the
+// frame (the Moon is 4° off the ecliptic). Turned OFF_LEVEL_RAD about the gap,
+// the eye looks down on the Moon's orbit, the Moon rises to the upper right and
+// the outer planets leave the frame (their captions share the Moon's switch);
 // turned SUNWARD_RAD, the eye sees the Moon gibbous at some foreshortening.
-const SQUARE_DIR = normalize3(cross3(GAL_Z_EQ, GAP_DIR));
-const OFF_LEVEL_RAD = degToRad(30);
+const SQUARE_DIR = normalize3(cross3(ECLIPTIC_FRAME.normal, GAP_DIR));
+const OFF_LEVEL_RAD = degToRad(50);
 const SUNWARD_RAD = degToRad(40);
 const VIEW_FORWARD = turned(
   turned(SQUARE_DIR, cross3(GAP_DIR, SQUARE_DIR), OFF_LEVEL_RAD),
@@ -62,8 +64,8 @@ const VIEW_FORWARD = turned(
 );
 // Moonward of the middle: the sunward eye stands nearer the Moon, which pushes it
 // out toward the frame's edge.
-const GAP_AIM_MPC = lerpVec3(EARTH_MPC, MOON_MPC, 0.56);
-const GAP_VIEW_DISTANCE_KM = 380_000;
+const GAP_AIM_MPC = lerpVec3(EARTH_MPC, MOON_MPC, 0.7);
+const GAP_VIEW_DISTANCE_KM = 240_000;
 const WHOLE_EARTH_RANGE_MPC = (EARTH_DATUM_RADIUS_M + WHOLE_EARTH_HEIGHT_M) * SCALE_UNITS.M_TO_MPC;
 
 const PULL_BACK_SEC = 8;
@@ -79,6 +81,9 @@ export const earthAndMoon: ClipData = {
   start: 'live',
   timeline: [
     scene(clockTo({ simDays: TOUR_NIGHT_SIM_DAYS, overSec: 0 })),
+    // The Moon and the planets orbit near the ecliptic, so its pole is up from
+    // here to the Milky Way beat; stated on entry, as the date is.
+    frameTo('ecliptic', { over: FRAME_ROLL_SEC }),
     // A focused moving body pins the target to its centre whenever no clip runs
     // (a tour pause), and this shot is centred on the gap.
     focus(null),
@@ -87,7 +92,7 @@ export const earthAndMoon: ClipData = {
     all([
       dollyTo(GAP_VIEW_DISTANCE_KM * SCALE_UNITS.KM_TO_MPC, PULL_BACK_SEC),
       aimAlong(VIEW_FORWARD, PULL_BACK_SEC, 'easeInOutSine'),
-      // Beat 01's ground-up rise lands rolled; the pole comes back up here.
+      // Beat 01's ground-up rise lands rolled; level again, whatever came before.
       tween('roll', { to: 0, over: PULL_BACK_SEC, ease: 'easeInOutSine' }),
       seq([
         wait(TARGET_DELAY_SEC),
