@@ -13,7 +13,7 @@ rows declare `near`. Gaia's hand-coded crossfade becomes a declared band.
 
 **Tech Stack:** TypeScript, WebGPU, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-11-06-declarative-asset-demand-design.md` (section "PR B — scale gates").
+**Spec:** `docs/superpowers/specs/completed/2026-11-06-declarative-asset-demand-design.md` (section "PR B — scale gates").
 
 ## Global Constraints
 
@@ -55,12 +55,12 @@ rows declare `near`. Gaia's hand-coded crossfade becomes a declared band.
   behaves as if it had no `near`.
 - The assert requires a `'both'` band to have both `in` and `out`.
 
-- [ ] Test `both edges: loads only between the two load limits`. Use in `[0.4, 1]` and out `[4, 10]` with lead 2,
+- [x] Test `both edges: loads only between the two load limits`. Use in `[0.4, 1]` and out `[4, 10]` with lead 2,
   release 4. Demand at 0.3 and 19; no demand at 0.15 or 21.
-- [ ] Test `both edges: releases past either release limit`: release at 0.09 and at 41; neither at 0.15 or 30.
-- [ ] Test `a band whose items exclude the row's item does not gate it`: far away, it is still demanded.
-- [ ] Assert test `'both' on a one-sided band throws`.
-- [ ] `npm test -- evaluateAssetDemand assertAssetDemands` passes. Commit.
+- [x] Test `both edges: releases past either release limit`: release at 0.09 and at 41; neither at 0.15 or 30.
+- [x] Test `a band whose items exclude the row's item does not gate it`: far away, it is still demanded.
+- [x] Assert test `'both' on a one-sided band throws`.
+- [x] `npm test -- evaluateAssetDemand assertAssetDemands` passes. Commit.
 
 ### Task 2: `drawPxPerRad` reaches demand
 
@@ -77,8 +77,8 @@ rows declare `near`. Gaia's hand-coded crossfade becomes a declared band.
   (`runFrame.ts:194-198`), inline: captures never reach those `views`, so there is no filter to extract.
   `DemandCtx.drawPxPerRad` reads it. Check `frameFilePurity.test.ts`: the max is an expression, not a declared symbol.
 
-- [ ] Wire it through. Write no test for the plumbing.
-- [ ] `npm run typecheck:fast`, `npm test -- buildDemandCtx runFrame frameFilePurity` pass. Commit.
+- [x] Wire it through. Write no test for the plumbing.
+- [x] `npm run typecheck:fast`, `npm test -- buildDemandCtx runFrame frameFilePurity` pass. Commit.
 
 ### Task 3: The `size` gate
 
@@ -112,14 +112,14 @@ export type SizeGate = { readonly body: SceneBodyId; readonly loadPx: number; re
 
 Tests:
 
-- [ ] `size loads at loadPx and releases below releasePx`. Fix `drawPxPerRad` and place a body so px = 17, then 12, then 7.
-- [ ] `size never demands before the first frame`: `drawPxPerRad` 0 → no demand, no throw.
-- [ ] `an absent craft never demands its mesh`: a craft with a future launch, camera at its parked position.
-- [ ] `a site below its host's horizon does not load`, using Søndermarken with the camera on Earth's far side, 500 km up.
-- [ ] `a site straight below the camera loads`: Søndermarken from 2 km up.
-- [ ] `occlusion never releases a loaded site`: in the hold band, with the site behind the horizon → release false.
-- [ ] Assert tests for both throws.
-- [ ] `npm test -- evaluateAssetDemand assertAssetDemands` passes. Commit.
+- [x] `size loads at loadPx and releases below releasePx`. Fix `drawPxPerRad` and place a body so px = 17, then 12, then 7.
+- [x] `size never demands before the first frame`: `drawPxPerRad` 0 → no demand, no throw.
+- [x] `an absent craft never demands its mesh`: a craft with a future launch, camera at its parked position.
+- [x] `a site below its host's horizon does not load`, using Søndermarken with the camera on Earth's far side, 500 km up.
+- [x] `a site straight below the camera loads`: Søndermarken from 2 km up.
+- [x] `occlusion never releases a loaded site`: in the hold band, with the site behind the horizon → release false.
+- [x] Assert tests for both throws.
+- [x] `npm test -- evaluateAssetDemand assertAssetDemands` passes. Commit.
 
 ### Task 4: Body textures and meshes on `size`; the `fn` variant goes
 
@@ -145,9 +145,9 @@ Tests:
 - The `bodyTextureAtlas` row stays `'always'`.
 - Delete the dead `bodyPosOf`, `ceilingOf`-if-unused, and `bodyPos` helpers.
 
-- [ ] Delete the restating row tests. The behavioural proof is Task 5's pose test.
-- [ ] `grep -rn "fn:" src/layers src/services/engine/wiring` finds no demand `fn`.
-- [ ] `npm run typecheck:fast` and `npm test -- bodyAssetRows meshAssetRows oneMpcSeam demandTable` pass. Commit.
+- [x] Delete the restating row tests. The behavioural proof is Task 5's pose test.
+- [x] `grep -rn "fn:" src/layers src/services/engine/wiring` finds no demand `fn`.
+- [x] `npm run typecheck:fast` and `npm test -- bodyAssetRows meshAssetRows oneMpcSeam demandTable` pass. Commit.
 
 ### Task 5: `near` on survey, structure, constellation and Local Bubble rows; survey lifts
 
@@ -179,17 +179,17 @@ Tests:
 
 Behavioural pose tests run the real composed rows (`createLayers` or the demand table) through `evaluateAssetDemand`:
 
-- [ ] `at the Earth boot pose nothing invisible demands`. With the default settings and a 1080p, 60° `drawPxPerRad`
+- [x] `at the Earth boot pose nothing invisible demands`. With the default settings and a 1080p, 60° `drawPxPerRad`
   (≈ 935), none of these demand:
   - every survey points row, density, filaments, flow, structureCatalog and localBubble;
   - the Søndermarken mesh (camera at the default Earth view);
   - the Venus and Moon surface textures (`simDays` for 2026-11-06).
   The Earth surface and the atlas do demand.
-- [ ] `at 1 Mpc the survey layers demand`: survey points, density, filaments and structureCatalog do; localBubble
+- [x] `at 1 Mpc the survey layers demand`: survey points, density, filaments and structureCatalog do; localBubble
   and constellations release; the famous catalog demands at every pose.
-- [ ] `a selected survey galaxy loads its catalog from Earth`: `selectedKinds` has `'galaxyCatalog'` → survey
+- [x] `a selected survey galaxy loads its catalog from Earth`: `selectedKinds` has `'galaxyCatalog'` → survey
   points demand at the Earth pose.
-- [ ] `npm test -- demandTable` (and the new file) pass. Commit.
+- [x] `npm test -- demandTable` (and the new file) pass. Commit.
 
 ### Task 6: Gaia's band as the single truth
 
@@ -209,22 +209,22 @@ Behavioural pose tests run the real composed rows (`createLayers` or the demand 
 use; see how `localBubblePass.ts:28-33` reads its band). A pass's `enabled` is false when that fade is 0. Read
 `docs/RENDERER.md` first.
 
-- [ ] Test `Gaia fades like the old crossfade`: at 5, 8, 16.5, 25 and 30 kpc, the band fade equals the old
+- [x] Test `Gaia fades like the old crossfade`: at 5, 8, 16.5, 25 and 30 kpc, the band fade equals the old
   `starCrossfadeOpacity` values. Compute those from the deleted function's formula and paste them in as literals.
-- [ ] Test `the Gaia row releases beyond 2.5 Mpc and loads within 250 kpc`, through `evaluateAssetDemand` with the
+- [x] Test `the Gaia row releases beyond 2.5 Mpc and loads within 250 kpc`, through `evaluateAssetDemand` with the
   real visibility entry. This is the band check, not a restated declaration.
-- [ ] Keep or adapt any pass test that pins `enabled` going false at 25 kpc.
-- [ ] `npm run typecheck:fast` and `npm test -- starCatalog` pass. Commit.
+- [x] Keep or adapt any pass test that pins `enabled` going false at 25 kpc.
+- [x] `npm run typecheck:fast` and `npm test -- starCatalog` pass. Commit.
 
 ### Task 7: Measure
 
 **Files:** none (results go in the PR body and the ledger)
 
-- [ ] Use `npm run perf -- --url http://localhost:<this worktree's port>` at the perf poses on `d500ceaba` (before)
+- [x] Use `npm run perf -- --url http://localhost:<this worktree's port>` at the perf poses on `d500ceaba` (before)
   and on HEAD (after). Record frame-time deltas and the MEMORY block (GPU ledger) at the Earth boot pose.
-- [ ] Use `npm run perf:cpu` at the same poses, which prices the per-frame `resolveAssetDemand` cost (a PR A
+- [x] Use `npm run perf:cpu` at the same poses, which prices the per-frame `resolveAssetDemand` cost (a PR A
   ruling). If main-thread time per frame rises by more than 0.1 ms, stop and report rather than add a cache.
-- [ ] Shoot the Earth boot view and a 1 Mpc view with `npm run shot`, before and after, as dash checks.
+- [x] Shoot the Earth boot view and a 1 Mpc view with `npm run shot`, before and after, as dash checks.
 
 ## Definition of Done
 
