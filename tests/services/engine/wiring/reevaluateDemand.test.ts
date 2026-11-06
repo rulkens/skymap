@@ -21,6 +21,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
+import type { DemandFn } from '../../../../src/@types/loading/DemandFn';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Tier } from '../../../../src/@types/data/Tier';
@@ -86,6 +87,7 @@ function makeState(
       },
     },
     slotsByKey: points,
+    visibilityEntries: [],
     selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
 }
@@ -93,13 +95,13 @@ function makeState(
 function row(
   slot: AssetSlot<unknown, unknown>,
   key: SourceType,
-  demand: AssetWiringRow['demand'],
-  opts: { release?: AssetWiringRow['release']; req?: AssetWiringRow['req'] } = {},
+  demand: DemandFn,
+  opts: { release?: DemandFn; req?: AssetWiringRow['req'] } = {},
 ): AssetWiringRow {
   const req = opts.req ?? ((tier) => ({ source: key, tier }));
   // `priority` is required on the row type but irrelevant to the edges under
   // test here (fetch order is the queue's concern), so every stub row shares 0.
-  return { key, slot, req, demand, release: opts.release, priority: 0 };
+  return { key, slot, req, demand: { fn: demand, release: opts.release }, priority: 0 };
 }
 
 /** A queue whose calls are assertable — for the edges that must reach it with
@@ -271,7 +273,7 @@ describe('evaluateRows', () => {
     evaluateRows(state, [
       ranked(first, Source.TwoMRS, 0),
       ranked(second, Source.Glade, 1),
-      { ...ranked(waiting, Source.SDSS, 2), demand: () => demanded },
+      { ...ranked(waiting, Source.SDSS, 2), demand: { fn: () => demanded } },
     ]);
     expect(waiting.load).not.toHaveBeenCalled();
 
@@ -407,7 +409,7 @@ describe('evaluateRows — body textures at a stale tier', () => {
     key: 'earth:surface',
     slot,
     req: (tier) => ({ bodyId: 'earth', kind: 'surface', tier: clampTier(tier, 'large') }),
-    demand: () => true,
+    demand: { fn: () => true },
     priority: 0,
   });
 
@@ -415,7 +417,7 @@ describe('evaluateRows — body textures at a stale tier', () => {
     key: 'uranus:surface',
     slot,
     req: (tier) => ({ bodyId: 'uranus', kind: 'surface', tier: clampTier(tier, 'small') }),
-    demand: () => true,
+    demand: { fn: () => true },
     priority: 0,
   });
 
@@ -436,6 +438,7 @@ describe('evaluateRows — body textures at a stale tier', () => {
         },
       },
       slotsByKey: new Map([[key, slot]]),
+      visibilityEntries: [],
       selection: { hover: null, select: null, focus: null },
     } as unknown as EngineState;
   }

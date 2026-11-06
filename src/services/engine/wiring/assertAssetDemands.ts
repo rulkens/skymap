@@ -5,12 +5,11 @@
  */
 
 import { resolveAssetDemand } from './resolveAssetDemand';
-import type { AssetDemand } from '../../../@types/loading/AssetDemand';
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { VisibilityEntry } from '../../../@types/engine/layer/VisibilityEntry';
 
 export function assertAssetDemands(
-  rows: readonly (Pick<AssetWiringRow, 'key' | 'gates'> & { readonly demand: AssetDemand })[],
+  rows: readonly AssetWiringRow[],
   entries: readonly VisibilityEntry[],
 ): void {
   for (const row of rows) {

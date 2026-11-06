@@ -10,6 +10,7 @@
  */
 
 import { buildDemandCtx } from './buildDemandCtx';
+import { evaluateAssetDemand } from './evaluateAssetDemand';
 import { sameRequest } from '../../../utils/loading/sameRequest';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -32,8 +33,9 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       // The queue dedups by string key; no string `AssetKey` is a bare numeral, so
       // stringifying cannot collide it with a numeric `Source` code.
       const queueKey = String(row.key);
+      const verdict = evaluateAssetDemand(row, ctx, state.visibilityEntries);
       // Enqueue edge: only an idle slot with demand; load() stays a re-fetch primitive.
-      if (kind === 'idle' && row.demand(ctx)) {
+      if (kind === 'idle' && verdict.demand) {
         batch.push({
           key: queueKey,
           // NEGATED: `popHighestPriority` pops the LARGEST (thumbnails rank by pixel
@@ -42,7 +44,10 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
           fetcher: async () => {
             // Re-check at fetch time: in the queue gap the drift edge's `.load()` may
             // have claimed the slot, or a tier swap excluded a source with no file.
-            if (slot.state().kind !== 'idle' || !row.demand(buildDemandCtx(state))) return;
+            if (slot.state().kind !== 'idle') return;
+            if (!evaluateAssetDemand(row, buildDemandCtx(state), state.visibilityEntries).demand) {
+              return;
+            }
             // Built HERE so it carries the tier in force when the fetch runs, not when queued.
             await slot.load(row.req(state.tier));
           },
@@ -55,11 +60,11 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
         queue.drop(queueKey);
       }
       // Evict edge: `release` is separate from `demand` to encode hysteresis (load
-      // inside X, evict outside 2X); omitted ⇒ never evict. Idle slots go to the drop edge.
+      // inside X, evict outside 2X). Idle slots go to the drop edge.
       else if (
         (kind === 'ready' || kind === 'error') &&
         slot.committed() !== null &&
-        row.release?.(ctx)
+        verdict.release
       ) {
         slot.release();
       }
@@ -67,7 +72,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       // both reasons evicts. Null `lastRequest()` is never drift, and is tested before
       // `req(tier)`, which allocates on every row of every frame.
       else if (
-        row.demand(ctx) &&
+        verdict.demand &&
         lastRequest !== null &&
         !sameRequest(lastRequest, row.req(state.tier))
       ) {

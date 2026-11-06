@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
+import { cosmicWebFilamentsVisibility } from '../../../../../src/layers/cosmicWebFilaments/visibility';
 
 import { filamentsAssetRows } from '../../../../../src/layers/cosmicWebFilaments/filaments/load/filamentsAssetRows';
 import { sameRequest } from '../../../../../src/utils/loading/sameRequest';
@@ -31,8 +33,20 @@ function makeCtx(settings: unknown): DemandCtx {
 
 describe('filamentsAssetRows', () => {
   it('demand follows settings.cosmicWebFilaments.enabled (bug-fix pin)', () => {
-    expect(ROW.demand(makeCtx({ cosmicWebFilaments: { enabled: true } }))).toBe(true);
-    expect(ROW.demand(makeCtx({ cosmicWebFilaments: { enabled: false } }))).toBe(false);
+    expect(
+      evaluateAssetDemand(
+        ROW,
+        makeCtx({ cosmicWebFilaments: { enabled: true } }),
+        cosmicWebFilamentsVisibility,
+      ).demand,
+    ).toBe(true);
+    expect(
+      evaluateAssetDemand(
+        ROW,
+        makeCtx({ cosmicWebFilaments: { enabled: false } }),
+        cosmicWebFilamentsVisibility,
+      ).demand,
+    ).toBe(false);
   });
 
   it('the request drifts only across the small boundary', () => {

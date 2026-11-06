@@ -5,6 +5,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
+import { starCatalogVisibility } from '../../../../../src/layers/starCatalog/visibility';
 
 import { starCatalogAssetRows } from '../../../../../src/layers/starCatalog/survey/load/starCatalogAssetRows';
 import { expandCompanionRows } from '../../../../../src/utils/loading/expandCompanionRows';
@@ -48,7 +50,9 @@ describe('starCatalogAssetRows demand predicates', () => {
     // Demand is the star show entry's switch: the section (`starCatalogs.enabled`)
     // AND the item bit, so a catalog switched off by either never loads.
     const gaia = rowFor(Source.GaiaStars);
-    const on = (starCatalogs: unknown) => gaia.demand(makeCtx({ settings: { starCatalogs } }));
+    const on = (starCatalogs: unknown) =>
+      evaluateAssetDemand(gaia, makeCtx({ settings: { starCatalogs } }), starCatalogVisibility)
+        .demand;
     // Master on + item on ⇒ demanded.
     expect(on({ enabled: true, items: { gaiaStars: { enabled: true } } })).toBe(true);
     // Master off overrides an enabled item ⇒ not demanded.
@@ -59,7 +63,7 @@ describe('starCatalogAssetRows demand predicates', () => {
 
   it('famousStarsMeta is eagerly demanded, unconditionally', () => {
     const meta = rowFor('famousStarsMeta');
-    expect(meta.demand(makeCtx({}))).toBe(true);
+    expect(evaluateAssetDemand(meta, makeCtx({}), starCatalogVisibility).demand).toBe(true);
   });
 });
 

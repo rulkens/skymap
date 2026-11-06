@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
+import { localBubbleVisibility } from '../../../../../src/layers/localBubble/visibility';
 
 import { localBubbleAssetRows } from '../../../../../src/layers/localBubble/shell/load/localBubbleAssetRows';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
@@ -32,13 +34,17 @@ function makeCtx(enabled: boolean, distanceMpc: number): DemandCtx {
 
 describe('localBubbleAssetRows', () => {
   it('demands only when enabled and within 20 kpc', () => {
-    expect(ROW.demand(makeCtx(true, 0.01))).toBe(true);
-    expect(ROW.demand(makeCtx(false, 0.01))).toBe(false);
-    expect(ROW.demand(makeCtx(true, 0.03))).toBe(false);
+    expect(evaluateAssetDemand(ROW, makeCtx(true, 0.01), localBubbleVisibility).demand).toBe(true);
+    expect(evaluateAssetDemand(ROW, makeCtx(false, 0.01), localBubbleVisibility).demand).toBe(
+      false,
+    );
+    expect(evaluateAssetDemand(ROW, makeCtx(true, 0.03), localBubbleVisibility).demand).toBe(false);
   });
 
   it('releases beyond 40 kpc, holds in between', () => {
-    expect(ROW.release!(makeCtx(true, 0.03))).toBe(false);
-    expect(ROW.release!(makeCtx(true, 0.05))).toBe(true);
+    expect(evaluateAssetDemand(ROW, makeCtx(true, 0.03), localBubbleVisibility).release).toBe(
+      false,
+    );
+    expect(evaluateAssetDemand(ROW, makeCtx(true, 0.05), localBubbleVisibility).release).toBe(true);
   });
 });

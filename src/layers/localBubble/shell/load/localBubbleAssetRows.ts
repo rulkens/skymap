@@ -18,9 +18,11 @@ export function localBubbleAssetRows(
       key: 'localBubble',
       slot: runtime.slot,
       req: () => undefined,
-      demand: (ctx) =>
-        ctx.settings.localBubble.enabled && Math.hypot(...ctx.cameraPosMpc) < DEMAND_DISTANCE_MPC,
-      release: (ctx) => Math.hypot(...ctx.cameraPosMpc) > RELEASE_DISTANCE_MPC,
+      demand: {
+        fn: (ctx) =>
+          ctx.settings.localBubble.enabled && Math.hypot(...ctx.cameraPosMpc) < DEMAND_DISTANCE_MPC,
+        release: (ctx) => Math.hypot(...ctx.cameraPosMpc) > RELEASE_DISTANCE_MPC,
+      },
       priority: 83, // next free rung after filaments (80) / flow (81) / the volume overlays (82)
       gates: 'localBubble',
     },

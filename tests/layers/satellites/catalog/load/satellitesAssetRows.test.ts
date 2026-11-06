@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
 
 import { satellitesAssetRows } from '../../../../../src/layers/satellites/catalog/load/satellitesAssetRows';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
@@ -39,13 +40,13 @@ const FAR_SELECTED: DemandCtx = { ...FAR, selectedKinds: new Set(['satellite']) 
 
 describe('satellitesAssetRows', () => {
   it('neither loads nor holds the catalog far from Earth with nothing asking for it', () => {
-    expect(ROW.demand(FAR)).toBe(false);
-    expect(ROW.release?.(FAR)).toBe(true);
+    expect(evaluateAssetDemand(ROW, FAR, satellitesVisibility).demand).toBe(false);
+    expect(evaluateAssetDemand(ROW, FAR, satellitesVisibility).release).toBe(true);
   });
 
   it('loads and holds the catalog far from Earth while a satellite is selected', () => {
-    expect(ROW.demand(FAR_SELECTED)).toBe(true);
-    expect(ROW.release?.(FAR_SELECTED)).toBe(false);
+    expect(evaluateAssetDemand(ROW, FAR_SELECTED, satellitesVisibility).demand).toBe(true);
+    expect(evaluateAssetDemand(ROW, FAR_SELECTED, satellitesVisibility).release).toBe(false);
   });
 
   // The fade registry throws on an identity it does not hold, and it throws from inside the

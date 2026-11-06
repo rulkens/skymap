@@ -9,7 +9,6 @@ import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { bandDistanceMpc } from '../presentation/bandDistanceMpc';
 import { resolveAssetDemand } from './resolveAssetDemand';
 import { visibilitySwitchOf } from '../../../utils/visibility/visibilitySwitchOf';
-import type { AssetDemand } from '../../../@types/loading/AssetDemand';
 import type { AssetDemandVerdict } from '../../../@types/loading/AssetDemandVerdict';
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { DeclaredDemand } from '../../../@types/loading/DeclaredDemand';
@@ -62,7 +61,7 @@ function isLifted(ctx: DemandCtx, demand: DeclaredDemand, r: DemandResolution): 
 }
 
 export function evaluateAssetDemand(
-  row: Pick<AssetWiringRow, 'gates'> & { readonly demand: AssetDemand },
+  row: Pick<AssetWiringRow, 'demand' | 'gates'>,
   ctx: DemandCtx,
   entries: readonly VisibilityEntry[],
 ): AssetDemandVerdict {

@@ -27,8 +27,10 @@ function pointRow(
     key: source,
     slot: runtime.points.get(source)!,
     req: (tier) => galaxyCatalogRequest(source, tier),
-    demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true && !excluded(ctx.tier),
-    release: (ctx) => excluded(ctx.tier),
+    demand: {
+      fn: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true && !excluded(ctx.tier),
+      release: (ctx) => excluded(ctx.tier),
+    },
     priority: entry.priority,
     gates: { address: 'survey', item: id },
   };
@@ -56,7 +58,7 @@ export function galaxyCatalogAssetRows(
       key: 'pgcAlias',
       slot: runtime.pgcAlias,
       req: () => undefined,
-      demand: (ctx) => ctx.ui.paletteOpen,
+      demand: { fn: (ctx) => ctx.ui.paletteOpen },
       priority: 90, // last: nothing renders from it, and it tolerates a wait
     },
 
@@ -66,7 +68,7 @@ export function galaxyCatalogAssetRows(
       key: 'hiResFamous',
       slot: runtime.hiResFamous,
       req: (tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] }),
-      demand: () => true,
+      demand: { fn: () => true },
       priority: 1,
     },
   ];

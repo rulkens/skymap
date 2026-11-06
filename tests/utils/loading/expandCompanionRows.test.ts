@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../src/services/engine/wiring/evaluateAssetDemand';
 import { expandCompanionRows } from '../../../src/utils/loading/expandCompanionRows';
 import type { AssetWiringRow } from '../../../src/@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../src/@types/loading/CompanionAssetRow';
@@ -17,7 +18,7 @@ const parent: AssetWiringRow = {
   key: 'filaments',
   slot: {} as never,
   req: (t) => ({ small: t === 'small' }),
-  demand: () => true,
+  demand: { fn: () => true },
   priority: 20,
 };
 
@@ -44,8 +45,8 @@ describe('expandCompanionRows', () => {
     expect(expanded!.req('small')).toEqual({ small: true });
     // The parent's function is reused, not re-derived — same behaviour by construction.
     expect(expanded!.req).toBe(parent.req);
-    expect(expanded!.demand(ctxWithSlotState('loading'))).toBe(true);
-    expect(expanded!.demand(ctxWithSlotState('idle'))).toBe(false);
+    expect(evaluateAssetDemand(expanded!, ctxWithSlotState('loading'), []).demand).toBe(true);
+    expect(evaluateAssetDemand(expanded!, ctxWithSlotState('idle'), []).demand).toBe(false);
     expect(expanded!.priority).toBe(21);
   });
 

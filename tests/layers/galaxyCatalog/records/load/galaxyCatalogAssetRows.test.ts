@@ -5,6 +5,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
+import { galaxyCatalogVisibility } from '../../../../../src/layers/galaxyCatalog/visibility';
 
 import { galaxyCatalogAssetRows } from '../../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows';
 import { expandCompanionRows } from '../../../../../src/utils/loading/expandCompanionRows';
@@ -51,37 +53,69 @@ describe('galaxyCatalogAssetRows demand predicates', () => {
   it("galaxy catalog rows demand the galaxy catalog's enabled settings bit", () => {
     const sdss = rowFor(Source.SDSS);
     expect(
-      sdss.demand(
+      evaluateAssetDemand(
+        sdss,
         makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } }),
-      ),
+        galaxyCatalogVisibility,
+      ).demand,
     ).toBe(true);
     // Absent items row (or disabled bit) ⇒ not demanded.
-    expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: {} } } }))).toBe(false);
+    expect(
+      evaluateAssetDemand(
+        sdss,
+        makeCtx({ settings: { galaxyCatalogs: { items: {} } } }),
+        galaxyCatalogVisibility,
+      ).demand,
+    ).toBe(false);
   });
 
   it('a catalog the tier excludes is not demanded even when enabled, and is released', () => {
     const sdss = rowFor(Source.SDSS);
     const settings = { galaxyCatalogs: { items: { sdss: { enabled: true } } } };
-    expect(sdss.demand(makeCtx({ settings, tier: 'small' }))).toBe(false);
-    expect(sdss.release?.(makeCtx({ settings, tier: 'small' }))).toBe(true);
-    expect(sdss.demand(makeCtx({ settings, tier: 'medium' }))).toBe(true);
-    expect(sdss.release?.(makeCtx({ settings, tier: 'medium' }))).toBe(false);
+    expect(
+      evaluateAssetDemand(sdss, makeCtx({ settings, tier: 'small' }), galaxyCatalogVisibility)
+        .demand,
+    ).toBe(false);
+    expect(
+      evaluateAssetDemand(sdss, makeCtx({ settings, tier: 'small' }), galaxyCatalogVisibility)
+        .release,
+    ).toBe(true);
+    expect(
+      evaluateAssetDemand(sdss, makeCtx({ settings, tier: 'medium' }), galaxyCatalogVisibility)
+        .demand,
+    ).toBe(true);
+    expect(
+      evaluateAssetDemand(sdss, makeCtx({ settings, tier: 'medium' }), galaxyCatalogVisibility)
+        .release,
+    ).toBe(false);
   });
 
   it('famousGalaxiesMeta demands when the Famous slot is not idle', () => {
     const famousGalaxiesMeta = rowFor('famousGalaxiesMeta');
     expect(
-      famousGalaxiesMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'loading' } })),
+      evaluateAssetDemand(
+        famousGalaxiesMeta,
+        makeCtx({ slotStates: { [Source.FamousGalaxy]: 'loading' } }),
+        galaxyCatalogVisibility,
+      ).demand,
     ).toBe(true);
     expect(
-      famousGalaxiesMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'idle' } })),
+      evaluateAssetDemand(
+        famousGalaxiesMeta,
+        makeCtx({ slotStates: { [Source.FamousGalaxy]: 'idle' } }),
+        galaxyCatalogVisibility,
+      ).demand,
     ).toBe(false);
   });
 
   it('pgcAlias demands only while the palette is open', () => {
     const pgc = rowFor('pgcAlias');
-    expect(pgc.demand(makeCtx({ paletteOpen: true }))).toBe(true);
-    expect(pgc.demand(makeCtx({ paletteOpen: false }))).toBe(false);
+    expect(
+      evaluateAssetDemand(pgc, makeCtx({ paletteOpen: true }), galaxyCatalogVisibility).demand,
+    ).toBe(true);
+    expect(
+      evaluateAssetDemand(pgc, makeCtx({ paletteOpen: false }), galaxyCatalogVisibility).demand,
+    ).toBe(false);
   });
 });
 

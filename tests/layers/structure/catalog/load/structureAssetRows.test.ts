@@ -5,6 +5,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
+import { structureVisibility } from '../../../../../src/layers/structure/visibility';
 
 import { structureAssetRows } from '../../../../../src/layers/structure/catalog/load/structureAssetRows';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
@@ -43,11 +45,14 @@ describe('structureAssetRows', () => {
         },
       },
     };
-    expect(cluster.demand(makeCtx({ settings: allHidden }))).toBe(false);
+    expect(
+      evaluateAssetDemand(cluster, makeCtx({ settings: allHidden }), structureVisibility).demand,
+    ).toBe(false);
 
     // Any single structure category visible in EITHER its ring or its label ⇒ true.
     expect(
-      cluster.demand(
+      evaluateAssetDemand(
+        cluster,
         makeCtx({
           settings: {
             structures: {
@@ -59,10 +64,12 @@ describe('structureAssetRows', () => {
             },
           },
         }),
-      ),
+        structureVisibility,
+      ).demand,
     ).toBe(true);
     expect(
-      cluster.demand(
+      evaluateAssetDemand(
+        cluster,
         makeCtx({
           settings: {
             structures: {
@@ -74,7 +81,8 @@ describe('structureAssetRows', () => {
             },
           },
         }),
-      ),
+        structureVisibility,
+      ).demand,
     ).toBe(true);
   });
 });

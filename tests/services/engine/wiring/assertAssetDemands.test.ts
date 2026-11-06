@@ -19,7 +19,10 @@ const ENTRIES: readonly VisibilityEntry[] = [
 ];
 
 const check = (demand: AssetDemand, gates?: AssetWiringRow['gates']) => () =>
-  assertAssetDemands([{ key: 'row1', demand, gates }], ENTRIES);
+  assertAssetDemands(
+    [{ key: 'row1', slot: {} as never, req: () => undefined, priority: 0, demand, gates }],
+    ENTRIES,
+  );
 
 describe('assertAssetDemands', () => {
   it('accepts every well-formed declaration', () => {

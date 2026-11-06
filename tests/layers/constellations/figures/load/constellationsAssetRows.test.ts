@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
+import { constellationsVisibility } from '../../../../../src/layers/constellations/visibility';
 
 import { constellationsAssetRows } from '../../../../../src/layers/constellations/figures/load/constellationsAssetRows';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
@@ -29,7 +31,19 @@ function makeCtx(settings: unknown): DemandCtx {
 
 describe('constellationsAssetRows', () => {
   it('demand follows settings.constellations.enabled', () => {
-    expect(ROW.demand(makeCtx({ constellations: { enabled: true } }))).toBe(true);
-    expect(ROW.demand(makeCtx({ constellations: { enabled: false } }))).toBe(false);
+    expect(
+      evaluateAssetDemand(
+        ROW,
+        makeCtx({ constellations: { enabled: true } }),
+        constellationsVisibility,
+      ).demand,
+    ).toBe(true);
+    expect(
+      evaluateAssetDemand(
+        ROW,
+        makeCtx({ constellations: { enabled: false } }),
+        constellationsVisibility,
+      ).demand,
+    ).toBe(false);
   });
 });

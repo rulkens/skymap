@@ -38,16 +38,18 @@ export function satellitesAssetRows(
       slot: runtime.slot,
       req: () => undefined,
       // An open palette loads it too, so a satellite can be searched for from anywhere.
-      demand: (ctx) =>
-        anyClassShown(ctx) &&
-        (ctx.ui.paletteOpen ||
-          ctx.selectedKinds.has('satellite') ||
-          cameraEarthKm(ctx) < SATELLITE_FADES.loadWithinKm),
-      release: (ctx) =>
-        !anyClassShown(ctx) ||
-        (!ctx.ui.paletteOpen &&
-          !ctx.selectedKinds.has('satellite') &&
-          cameraEarthKm(ctx) > SATELLITE_FADES.releaseBeyondKm),
+      demand: {
+        fn: (ctx) =>
+          anyClassShown(ctx) &&
+          (ctx.ui.paletteOpen ||
+            ctx.selectedKinds.has('satellite') ||
+            cameraEarthKm(ctx) < SATELLITE_FADES.loadWithinKm),
+        release: (ctx) =>
+          !anyClassShown(ctx) ||
+          (!ctx.ui.paletteOpen &&
+            !ctx.selectedKinds.has('satellite') &&
+            cameraEarthKm(ctx) > SATELLITE_FADES.releaseBeyondKm),
+      },
       priority: 84, // next free rung after the Local Bubble (83)
       // No `gates`: one file holds every class, and a gate names one item's whole data. The pass
       // draws nothing until a sweep lands, so the dots still wait for the catalog.

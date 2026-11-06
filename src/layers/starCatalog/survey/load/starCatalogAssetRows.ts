@@ -23,7 +23,7 @@ export function starCatalogAssetRows(
         key: source,
         slot: runtime.catalogs.get(source)!,
         req: (tier) => ({ source, tier }),
-        demand: (ctx) => visibilitySwitchOf(ctx.settings, STAR_SHOW_ENTRY, id),
+        demand: { fn: (ctx) => visibilitySwitchOf(ctx.settings, STAR_SHOW_ENTRY, id) },
         priority: 50, // one rank for every star catalog: the Earth boot view's own scale rung
         gates: { address: 'starCatalog', item: id },
       };
@@ -37,7 +37,7 @@ export function starCatalogAssetRows(
       key: 'famousStarsMeta',
       slot: runtime.famousStarsMeta,
       req: () => undefined,
-      demand: () => true,
+      demand: { fn: () => true },
       priority: 22, // right behind famousGalaxiesMeta; both are tiny and wanted early
     },
   ];

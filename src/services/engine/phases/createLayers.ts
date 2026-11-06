@@ -34,6 +34,7 @@ import { assertSelectionKindsComplete } from '../../../utils/selection/assertSel
 import { installSelectionKinds } from '../selection/selectionKindOf';
 import { layerSelectionKinds } from '../../../utils/layer/layerSelectionKinds';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
+import { assertAssetDemands } from '../wiring/assertAssetDemands';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
 import { gateComputeByFade } from '../layer/gateComputeByFade';
@@ -192,6 +193,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     visibilityAddressOf,
     deps.composition.layers.map((layer) => layer.visibility ?? []),
   );
+  // Over the composed entries, so it runs here rather than beside the asset fold above.
+  assertAssetDemands(state.assetRows, state.visibilityEntries);
   state.label3DProducers = instances.flatMap((instance) =>
     instance.worldLabels.map(gateWorldLabelProducer),
   );

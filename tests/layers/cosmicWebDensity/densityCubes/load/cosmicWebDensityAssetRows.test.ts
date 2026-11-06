@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { evaluateAssetDemand } from '../../../../../src/services/engine/wiring/evaluateAssetDemand';
+import { cosmicWebDensityVisibility } from '../../../../../src/layers/cosmicWebDensity/visibility';
 
 import { cosmicWebDensityAssetRows } from '../../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows';
 import { Source } from '../../../../../src/data/source';
@@ -42,8 +44,12 @@ function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean): DemandCtx {
 describe('cosmicWebDensityAssetRows', () => {
   it('polyphorm-2mrs demand follows its own field-enabled flag', () => {
     const polyphorm = ROWS.find((row) => row.key === Source.Polyphorm2MRS)!;
-    expect(polyphorm.demand(makeCtx(true, false))).toBe(true);
-    expect(polyphorm.demand(makeCtx(false, true))).toBe(false);
+    expect(
+      evaluateAssetDemand(polyphorm, makeCtx(true, false), cosmicWebDensityVisibility).demand,
+    ).toBe(true);
+    expect(
+      evaluateAssetDemand(polyphorm, makeCtx(false, true), cosmicWebDensityVisibility).demand,
+    ).toBe(false);
   });
 
   it('a tiered row carries the tier, an untiered row carries none', () => {

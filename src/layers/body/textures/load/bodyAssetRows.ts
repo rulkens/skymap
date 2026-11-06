@@ -55,15 +55,17 @@ function bodyTextureRow(
       kind: entry.kind,
       tier: clampTier(tier, ceilingOf(entry.bodyId, entry.kind)),
     }),
-    demand: (ctx) =>
-      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) <
-      loadRadiusMpc(entry.bodyId),
-    release: (ctx) =>
-      pastTextureReleaseRadius(
-        entry.bodyId,
-        ctx.cameraPosMpc,
-        bodyPosOf(entry.bodyId, ctx.simDays),
-      ),
+    demand: {
+      fn: (ctx) =>
+        distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) <
+        loadRadiusMpc(entry.bodyId),
+      release: (ctx) =>
+        pastTextureReleaseRadius(
+          entry.bodyId,
+          ctx.cameraPosMpc,
+          bodyPosOf(entry.bodyId, ctx.simDays),
+        ),
+    },
     priority: 10, // one rank for the family; they are rarely co-demanded with each other
   };
 }
@@ -76,7 +78,7 @@ export function bodyAssetRows(
       key: 'bodyTextureAtlas',
       slot: runtime.atlasSlot,
       req: () => undefined,
-      demand: () => true,
+      demand: { fn: () => true },
       priority: 0,
     },
     ...ALL_BODY_TEXTURE_KEYS.map((entry) => bodyTextureRow(runtime, entry)),
