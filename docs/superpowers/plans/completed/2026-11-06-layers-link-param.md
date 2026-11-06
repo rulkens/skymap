@@ -217,10 +217,10 @@ Check each `hideLabels` caption name against the label entries in `src/layers/*/
 
 ### Task 8 (controller): verify the pictures and the links
 
-- [ ] Dev server + linked data; reshoot `science-desi` (desiWedge + hides), `features-time-voyager`
+- [x] Dev server + linked data; reshoot `science-desi` (desiWedge + hides), `features-time-voyager`
       (`missionTrails` + `keepBodyLabels`) and `stories-web` (tourStep), and compare each with the committed picture; dash check per
       pair.
-- [ ] Open three restored links in the app (one filaments, one desiWedge, one constellations); dash check each.
+- [x] Open three restored links in the app (one filaments, one desiWedge, one constellations); dash check each.
 
 ## Definition of Done
 
