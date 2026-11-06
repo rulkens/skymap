@@ -85,8 +85,8 @@ function makeRendererSpy() {
   };
 }
 
-// A minimal GalaxyRow at a known world position + diameter. The layer reads
-// x/y/z and diameterKpc straight from the row via selectionHalo.
+// A minimal placed GalaxyRow at a known world position + diameter: the halo reads the
+// `positionMpc` and `radiusMpc` that placement derives from x/y/z and diameterKpc.
 function galaxyRow(overrides: Partial<GalaxyRow> = {}) {
   return makeGalaxyRow({
     source: Source.Glade,

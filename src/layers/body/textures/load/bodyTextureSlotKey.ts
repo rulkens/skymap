@@ -8,7 +8,7 @@ import type { BodyTextureSlotKey } from '../../../../@types/data/BodyTextureSlot
  * `BodyTextureSlotKey` string the `bodyTextures` slot family keys on.
  *
  * The single home for the `:`-joined encoding: the slot `Map` key, the
- * `AssetKey` union member, and the `AssetWiringRow.key` all flow through here, so
+ * `BodyAssetKey` member, and the `AssetWiringRow.key` all flow through here, so
  * the structured `BodyTextureKey` and its flat-string twin can never drift onto
  * different separators.
  */

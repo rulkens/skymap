@@ -1,4 +1,3 @@
-import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
 /**
  * shallowEqualRef — structural equality for a SelectionRefBase-or-null. Every pick
  * builds a fresh ref object, so `===` would always miss; a SelectionRefBase is flat
@@ -6,6 +5,7 @@ import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRe
  * its own util (not react-redux's shallowEqual) because src/state may not import
  * react-redux. Used by the selection slice's dedup-on-write.
  */
+import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
 
 export function shallowEqualRef(a: SelectionRefBase | null, b: SelectionRefBase | null): boolean {
   if (a === b) return true;
