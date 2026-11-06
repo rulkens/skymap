@@ -28,7 +28,7 @@ import { STAR_COLUMN_SCHEMA } from '../../../../../src/data/octree/starOctreeFam
 type Write = { label: string; offset: number; bytes: number; data: ArrayBufferView | ArrayBuffer };
 
 function recordingDevice() {
-  const buffers: { label: string; size: number }[] = [];
+  const buffers: { label: string; size: number; destroy: ReturnType<typeof vi.fn> }[] = [];
   const writes: Write[] = [];
   const pass = {
     setBindGroup: vi.fn(),
@@ -77,7 +77,7 @@ function recordingDevice() {
   };
   const encoder = { beginComputePass: () => pass } as unknown as GPUCommandEncoder;
   const sizeOf = (label: string) => buffers.find((b) => b.label === label)!.size;
-  return { device: device as unknown as GPUDevice, writes, encoder, sizeOf };
+  return { device: device as unknown as GPUDevice, writes, encoder, sizeOf, buffers };
 }
 
 function columns(count: number): StarColumns {
@@ -189,6 +189,20 @@ describe('starCatalogRenderer chunk pool', () => {
     expect(sizeOf(NODES)).toBe((10 + 14) * 24);
     expect(sizeOf(OPACITY)).toBe(24 * 2 * 4);
     expect(sizeOf(RECORDS)).toBe((100 + 100) * 8);
+  });
+
+  it("release frees the catalog's records and cut buffers; a reload uploads afresh", () => {
+    const { device, buffers } = recordingDevice();
+    const renderer = createStarCatalogRenderer(device, 'rgba16float');
+    renderer.upload(Source.GaiaStars, octreeOf(), 2);
+    const first = buffers.filter((b) => b.label.endsWith(`-${Source.GaiaStars}`));
+    expect(first.map((b) => b.label)).toEqual(expect.arrayContaining([NODES, RECORDS, OPACITY]));
+    renderer.release(Source.GaiaStars);
+    for (const b of first) expect(b.destroy, b.label).toHaveBeenCalledOnce();
+    expect([...renderer.loadedCatalogs()]).toEqual([]);
+    renderer.upload(Source.GaiaStars, octreeOf(), 2);
+    expect([...renderer.loadedCatalogs()]).toHaveLength(1);
+    for (const b of first) expect(b.destroy, b.label).toHaveBeenCalledOnce();
   });
 
   it('upload throws naming the slot count that fits when the record cap is exceeded', () => {

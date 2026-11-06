@@ -15,7 +15,7 @@ const EMPTY = { chunks: [], chunkCount: 0, records: { count: 0 } } as unknown as
 
 function hostWith(upload: () => number, previous: OctreeChunkStream<Records>) {
   const host: OctreePoolHost<Records> = {
-    renderer: { upload, uploadChunk: vi.fn(), evictChunk: vi.fn() },
+    renderer: { upload, uploadChunk: vi.fn(), evictChunk: vi.fn(), release: vi.fn() },
     chunkStreams: new Map([[SOURCE, previous]]),
     requestRender: () => {},
   };

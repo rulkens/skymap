@@ -48,6 +48,7 @@ vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
 
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { skyCapturesInBand } from '../../../../src/services/engine/frame/skyCapturesInBand';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { starAggregatesPass } from '../../../../src/layers/starCatalog/survey/passes/starAggregatesPass';
@@ -196,9 +197,10 @@ function makeCtx(
     settling: layers.settling ?? false,
     loading: false,
   });
+  const bodyStates = deriveBodyStates(0);
   return {
     snapshot: {
-      bodyStates: deriveBodyStates(0),
+      bodyStates,
       isReady: true,
       slabBodyCandidates: [],
       simDays: 0,
@@ -208,6 +210,7 @@ function makeCtx(
       // Frame-wide: which targets hold this frame's content — the executor
       // unions into this as it opens each render step.
       renderedTargets: new Set<string>(),
+      skyCapturesInBand: skyCapturesInBand(drawCamPos, bodyStates),
       plans,
     },
     drawCamPos,

@@ -1,7 +1,6 @@
 /**
- * The Layer's asset rows, one per source row, keyed by its `Source` code. Every
- * cube is load-once: no `release`, since freeing one needs an `onRelease` that
- * calls `renderer.unload(id)` or its GPU textures leak on evict.
+ * The Layer's asset rows, one per source row, keyed by its `Source` code. Switching a
+ * cube off releases it, and the slot's `onRelease` frees its GPU textures.
  */
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
@@ -30,7 +29,7 @@ export function cosmicWebDensityAssetRows(
         entry.tiered
           ? { binBaseName: entry.binBaseName, tier }
           : { binBaseName: entry.binBaseName },
-      demand: (ctx) => ctx.settings.cosmicWebDensity.items[entry.id].enabled,
+      demand: {},
       priority: PRIORITY[entry.id],
       gates: { address: 'cosmicWebDensity', item: entry.id },
     }),

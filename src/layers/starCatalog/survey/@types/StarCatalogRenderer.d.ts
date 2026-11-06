@@ -21,6 +21,8 @@ export type StarCatalogRenderer = Renderer & {
    * size is returned for the chunk stream to match.
    */
   upload(source: StarCatalogSourceType, octree: Octree<StarColumns>, slots: number): number;
+  /** Destroy one catalog's GPU buffers, records and cut alike, so a switched-off catalog holds no VRAM. */
+  release(source: StarCatalogSourceType): void;
   /**
    * Land a chunk in a slot: its records and rows, then every root's resident bit, written in
    * the rows of `hostSlot` (its parent's slot; null when the index holds its roots).

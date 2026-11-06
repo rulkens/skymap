@@ -59,7 +59,7 @@ import type { Vec3 } from '../math/Vec3';
 export type CameraAction =
   | {
       readonly kind: 'set';
-      readonly ch: 'distance' | 'yaw' | 'pitch' | 'roll';
+      readonly ch: 'distance' | 'yaw' | 'pitch' | 'roll' | 'fov';
       readonly to: number;
       readonly over: number;
       readonly ease: Ease;

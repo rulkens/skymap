@@ -5,7 +5,7 @@
  * (`reducer(state, actionCreator(payload))`) and asserts the single field the
  * reducer writes. The serialisability test guards the spec §6 requirement that
  * the camera state contains only plain JSON-safe data — no `Set`, no class
- * instances, no wall-clock values (`position`, `fovYRad`).
+ * instances, no wall-clock values (`position`).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -66,10 +66,9 @@ describe('cameraSlice — initial state is serialisable', () => {
     expect(JSON.parse(json)).toEqual(state);
   });
 
-  it('does not contain wall-clock or renderer keys (position / fovYRad)', () => {
+  it('does not contain wall-clock keys (position)', () => {
     const json = JSON.stringify(base());
     expect(json).not.toContain('"position"');
-    expect(json).not.toContain('"fovYRad"');
   });
 });
 

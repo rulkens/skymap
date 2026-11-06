@@ -27,15 +27,16 @@ function setup(override: { value: number | null }) {
     if (slots > POOL_CAP) throw new Error(`only ${POOL_CAP} slots fit`);
     return 0;
   });
+  const release = vi.fn<StarCatalogRenderer['release']>();
   const chunkStreams = new Map<SourceType, OctreeChunkStream<StarColumns>>();
   const host = {
-    renderer: { upload } as unknown as StarCatalogRenderer,
+    renderer: { upload, release } as unknown as StarCatalogRenderer,
     chunkStreams,
     requestRender: () => {},
   };
   const slot = createStarCatalogSlot(Source.GaiaStars, host, () => override.value);
   const runtime = { poolHost: host, catalogs: new Map([[Source.GaiaStars, slot]]) };
-  return { slot, upload, chunkStreams, runtime: runtime as unknown as StarCatalogRuntime };
+  return { slot, upload, release, chunkStreams, runtime: runtime as unknown as StarCatalogRuntime };
 }
 
 const REQ = { source: Source.GaiaStars, tier: 'medium' } as const;
@@ -51,6 +52,15 @@ describe('starCatalogSlot commit', () => {
     override.value = null;
     await slot.load(REQ);
     expect(upload.mock.calls.map((c) => c[2])).toEqual([384, tierSlots()]);
+  });
+});
+
+describe('starCatalogSlot release', () => {
+  it("frees the catalog's GPU buffers, not just its chunk stream", async () => {
+    const { slot, release } = setup({ value: null });
+    await slot.load(REQ);
+    slot.release();
+    expect(release).toHaveBeenCalledExactlyOnceWith(Source.GaiaStars);
   });
 });
 

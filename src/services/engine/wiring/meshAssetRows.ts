@@ -2,8 +2,8 @@
  * meshAssetRows — core's asset rows: one per mesh body, each carrying the slot it
  * mints (the mesh slots stay core's, beside the one mesh renderer every
  * body-bearing Layer draws through). `createLayers` folds these with every Layer's
- * rows into `state.assetRows`. Each `demand(ctx)` is a pure predicate over
- * `DemandCtx`, re-run whole on any state change, so no edge can be missed.
+ * rows into `state.assetRows`. `evaluateAssetDemand` re-reads every row's demand whole
+ * each pass, so no edge can be missed.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -58,11 +58,13 @@ function meshBodyRow(state: Pick<EngineState, 'gpu'>, body: MeshPresentation): A
       tier: clampTier(tier, MESH_ASSETS[body.meshKey]!.tierCeiling),
     }),
     // An absent craft is parked on or in Earth, which must not demand its mesh.
-    demand: (ctx) =>
-      spacecraftPresent(body.id, ctx.simDays) &&
-      distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) < meshBodyLoadRadiusMpc(body.id),
-    release: (ctx) =>
-      distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) > 2 * meshBodyLoadRadiusMpc(body.id),
+    demand: {
+      fn: (ctx) =>
+        spacecraftPresent(body.id, ctx.simDays) &&
+        distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) < meshBodyLoadRadiusMpc(body.id),
+      release: (ctx) =>
+        distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) > 2 * meshBodyLoadRadiusMpc(body.id),
+    },
     priority: 10, // same rank as body textures — rarely co-demanded with the planet family
   };
 }

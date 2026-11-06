@@ -40,7 +40,7 @@ vi.mock('../../../../../src/utils/camera/bodyCompose/bodySlabCamLocal', () => ({
 import { encodeAtmosphereAerialPerspective } from '../../../../../src/layers/body/atmosphere/render/encodeAtmosphereAerialPerspective';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
-// atmosphereDrawList reads body positions off this snapshot; stub it to the fixture's own refs.
+// atmosphereEntry reads body positions off this snapshot; stub it to the fixture's own refs.
 const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];
 // Positioned a hair off the render origin so the apparent-size cull clears
 // comfortably (apparent diameter tracks 1/distance) without real orbital math.
@@ -120,9 +120,9 @@ describe('encodeAtmosphereAerialPerspective', () => {
     expect(uniforms).toHaveLength(44);
   });
 
-  it('the aerial bake skips a hosting row whose body has no inside entry', () => {
-    // The draw list culls on the surface disc, the line on the eye's distance, so the
-    // line can be open with no entry: the bake must find none rather than throw mid-frame.
+  it('the aerial bake skips a hosting row whose body draws no atmosphere', () => {
+    // `drawsAtmosphere` culls on the surface disc, the line on the eye's distance, so the
+    // line can be open while the body draws none: the bake must skip rather than throw.
     beginComputePass.mockClear();
     const renderer = spyRenderer();
     const ctx = makeCtx(true, 1e-30);

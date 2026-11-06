@@ -7,7 +7,8 @@
  * Units throughout: km for radii/heights, 1/km for coefficients — the space the
  * body radii already live in, so the march needs no conversion at the
  * integration boundary. `exposure` is a per-body look dial, not physics the
- * LUTs integrate; see `atmosphereParams.ts`.
+ * LUTs integrate; see `atmosphereParams.ts`. `daylightGain` raises it for an eye
+ * standing in daylight, where `exposure` was tuned for the limb seen from space.
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -21,4 +22,5 @@ export type AtmosphereParams = {
   readonly twilightSoftness: number; // night-limb twilight width in mu (cos-zenith) space; 0 = hard shadow (no fade)
   readonly twilightIntensity: number; // brightness gain on the twilight band; 1 = physical result, > 1 amplifies only the band
   readonly exposure: number; // per-body HDR in-scatter look dial, before the shared tone-map
+  readonly daylightGain: number; // exposure multiplier at full `daylightWeight` (a sunlit ground); 1 = none
 };

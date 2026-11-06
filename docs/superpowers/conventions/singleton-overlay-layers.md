@@ -56,9 +56,10 @@ If the thing you're adding is one of those two, follow their pattern instead.
    `enabled`, no user knobs. GPU resources live on the renderer, never the
    store.
 
-3. **Demand reads `settings.<layer>.enabled`.** The asset-wiring row's
-   `demand(ctx)` predicate reads the existing `ctx.settings` surface
-   (`(ctx) => ctx.settings.<layer>.enabled`). Do **not** add a bespoke
+3. **Demand is the layer's own switch.** The asset-wiring row declares
+   `demand: {}` with `gates: '<layer>'`, so `evaluateAssetDemand` reads
+   `settings.<layer>.enabled` through the visibility entry: it loads while the
+   switch is on and releases when it goes off. Do **not** add a bespoke
    `DemandCtx` surface for the layer — `settings` already expresses it.
 
 4. **The renderer reads `settings.<layer>` each frame; commit flips

@@ -17,7 +17,7 @@ import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/Galax
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
-import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import { galaxyPlannerViewOf } from '../../helpers/frame/galaxyPlannerViewOf';
 import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
 import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
 import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
@@ -45,7 +45,7 @@ function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>):
 
 const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 
-const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
+const VIEWS = [galaxyPlannerViewOf()];
 
 /** `visible` are the catalogs core hands a value above 0: they are the mask. */
 function fadeOf(visible: readonly GalaxyCatalogSourceType[] = SDSS_AND_TWOMRS) {

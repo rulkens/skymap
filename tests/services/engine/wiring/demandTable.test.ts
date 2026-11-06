@@ -35,6 +35,9 @@ import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/rec
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { structureAssetRows } from '../../../../src/layers/structure/catalog/load/structureAssetRows';
 import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
+import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
+import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
+import { structureVisibility } from '../../../../src/layers/structure/visibility';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 
 type StubSlot = AssetSlot<unknown, unknown> & { load: ReturnType<typeof vi.fn> };
@@ -199,6 +202,11 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     ...structureAssetRows(structureRuntime),
   ]);
   state.slotsByKey = new Map(state.assetRows.map((row) => [row.key, row.slot]));
+  state.visibilityEntries = [
+    ...galaxyCatalogVisibility,
+    ...cosmicWebDensityVisibility,
+    ...structureVisibility,
+  ];
   return state;
 }
 

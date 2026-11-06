@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { FOREGROUND_DEPTH_FORMAT } from '../../../../../src/data/renderTargetFormats';
 import { createAtmosphereShellRenderer } from '../../../../../src/layers/body/atmosphere/render/atmosphereShellRenderer';
 import { ATMOSPHERE_PARAMS } from '../../../../../src/layers/body/atmosphere/data/atmosphereParams';
 import { ATMOSPHERE_UNIFORM_FLOATS } from '../../../../../src/layers/body/atmosphere/render/packAtmosphereUniforms';
@@ -133,8 +134,25 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
   it('builds one multiplicative and one additive shell pipeline', () => {
     const { renderPipelines } = build();
     // The three LUT bakes go through createComputePipeline, so every render
-    // pipeline here is a shell pass: the outside pair, then the aerial pair.
-    expect(renderPipelines.map(blendRole)).toEqual(['multiply', 'add', 'multiply', 'add']);
+    // pipeline here is a shell pass: the outside pair, the aerial pair, the probe-sky pair.
+    expect(renderPipelines.map(blendRole)).toEqual([
+      'multiply',
+      'add',
+      'multiply',
+      'add',
+      'multiply',
+      'add',
+    ]);
+  });
+
+  it('gives the probe-sky pair the depth format a probe face attaches', () => {
+    // A probe face's body step attaches the probe depth; a pipeline naming no depth
+    // format is rejected there, and the sky that face should hold is silently missing.
+    const [, , , , multiply, add] = build().renderPipelines as GPURenderPipelineDescriptor[];
+    for (const desc of [multiply!, add!]) {
+      expect(desc.depthStencil?.format).toBe(FOREGROUND_DEPTH_FORMAT);
+      expect(desc.depthStencil?.depthWriteEnabled).toBe(false);
+    }
   });
 
   it('declares no depth state on either shell pass — the step attaches none', () => {
@@ -260,5 +278,69 @@ describe('reconcile — tier-switchable sky-view LUT size', () => {
       'atmosphere-shell-bg-earth',
       'atmosphere-aerial-bg-earth',
     ]);
+  });
+});
+
+/** The LUT is a pure function of its texture and its 16-byte record (the scattering
+ *  params and the two startup LUTs never change), so a matching record re-bakes the
+ *  table the texture already holds. */
+describe('dispatchSkyView — re-bake only a stale LUT', () => {
+  function computePass() {
+    return { setPipeline: vi.fn(), setBindGroup: vi.fn(), dispatchWorkgroups: vi.fn() };
+  }
+  const STILL = new Float32Array([6400, 0.25, 0.1, 1]);
+  const withSunZenith = (cos: number) => new Float32Array([STILL[0]!, cos, STILL[2]!, STILL[3]!]);
+
+  it('skips while the record is identical, and re-bakes once view height moves by one ulp', () => {
+    const { renderer } = build();
+    const pass = computePass();
+    const gpuPass = pass as unknown as GPUComputePassEncoder;
+
+    renderer.dispatchSkyView(gpuPass, 'earth', STILL);
+    renderer.dispatchSkyView(gpuPass, 'earth', new Float32Array(STILL));
+    expect(pass.dispatchWorkgroups).toHaveBeenCalledTimes(1);
+
+    const moved = new Float32Array(STILL);
+    new Uint32Array(moved.buffer)[0]! += 1;
+    renderer.dispatchSkyView(gpuPass, 'earth', moved);
+    expect(pass.dispatchWorkgroups).toHaveBeenCalledTimes(2);
+  });
+
+  it('tolerates sun-zenith drift below 1e-5, measured from the last bake, not the last frame', () => {
+    const { renderer } = build();
+    const pass = computePass();
+    const gpuPass = pass as unknown as GPUComputePassEncoder;
+
+    renderer.dispatchSkyView(gpuPass, 'earth', withSunZenith(0.25));
+    renderer.dispatchSkyView(gpuPass, 'earth', withSunZenith(0.25 + 0.6e-5));
+    expect(pass.dispatchWorkgroups).toHaveBeenCalledTimes(1);
+
+    // Each step is sub-epsilon, but the drift since the bake is not.
+    renderer.dispatchSkyView(gpuPass, 'earth', withSunZenith(0.25 + 1.2e-5));
+    expect(pass.dispatchWorkgroups).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-bakes a recreated LUT even when the record is unchanged', () => {
+    const { renderer } = build();
+    const pass = computePass();
+    const gpuPass = pass as unknown as GPUComputePassEncoder;
+    renderer.dispatchSkyView(gpuPass, 'earth', STILL);
+    renderer.reconcile({ skyViewLutSize: [64, 36] });
+    renderer.dispatchSkyView(gpuPass, 'earth', STILL);
+    expect(pass.dispatchWorkgroups).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps one record per body, so a body baking the same record still gets its own table', () => {
+    const h = mockDevice();
+    const renderer = createAtmosphereShellRenderer(h.device, 'rgba16float', {
+      earth: ATMOSPHERE_PARAMS.earth!,
+      mars: ATMOSPHERE_PARAMS.mars!,
+    });
+    const pass = computePass();
+    const gpuPass = pass as unknown as GPUComputePassEncoder;
+    renderer.dispatchSkyView(gpuPass, 'earth', STILL);
+    renderer.dispatchSkyView(gpuPass, 'mars', STILL);
+    renderer.dispatchSkyView(gpuPass, 'earth', STILL);
+    expect(pass.dispatchWorkgroups).toHaveBeenCalledTimes(2);
   });
 });

@@ -3,14 +3,15 @@
  * one body whose shell encloses the camera: the frame's ONLY write of that body's
  * shell uniform record, from `bodyRowSlabs`' `insideAtmosphere` row, so the same
  * `slab.vp` the apply draw reads. No inside body ⇒ no pass, no timing claim. An
- * open line whose body the draw list culled bakes nothing too.
+ * open line whose body `drawsAtmosphere` culls bakes nothing too.
  */
 
 import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { AtmosphereShellRenderer } from '../@types/AtmosphereShellRenderer';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
-import { atmosphereDrawList } from '../present/atmosphereDrawList';
+import { atmosphereEntry } from '../present/atmosphereEntry';
+import { drawsAtmosphere } from '../present/drawsAtmosphere';
 import { atmosphereShellUniforms } from '../present/atmosphereShellUniforms';
 import { bodyRowSlabs } from '../../../../services/engine/frame/bodyRowSlabs';
 
@@ -29,8 +30,10 @@ export function encodeAtmosphereAerialPerspective(
   const row = ctx.slabs[insideRows[0]!]!;
   if (row.frame.kind !== 'body-m') return;
   const hostId = row.frame.hostId;
-  const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === hostId && e.inside);
-  if (entry === undefined) return;
+  // The apply's own gate (`aerialPerspectivePass`), so a bake never lands without its apply.
+  if (!drawsAtmosphere(hostId, ctx, state)) return;
+  const entry = atmosphereEntry(hostId, ctx, state);
+  if (entry === null || !entry.inside) return;
   const uniforms = atmosphereShellUniforms(entry, row, ctx, state);
 
   const pass = encoder.beginComputePass({

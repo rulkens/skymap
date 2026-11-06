@@ -33,6 +33,7 @@ import { cartesianToRaDec, smoothstep } from '../../../../../utils/math/index';
 import { diskQuadExtentMpc } from '../../../lod/utils/diskQuadExtentMpc';
 import { loadFadeAlpha } from '../utils/loadFadeAlpha';
 import { purgeStrideWindow } from '../../../lod/utils/purgeStrideWindow';
+import { DISK_WALK_DECIMATION } from '../../../lod/data/diskWalkDecimation';
 import { byDistanceToCamera } from '../../../lod/utils/byDistanceToCamera';
 import { galaxyCacheKey } from '../../../lod/utils/galaxyCacheKey';
 import { resolveDiskPlacement } from '../utils/resolveDiskPlacement';
@@ -180,7 +181,8 @@ export function createTexturedDiskSubsystem(
         const [ra, dec] = cartesianToRaDec(x, y, z);
         const key = galaxyCacheKey(ra, dec);
 
-        const slot = atlas.allocate(key, frameCounter);
+        // Held for a whole stride cycle: the walk won't revisit this row sooner.
+        const slot = atlas.allocate(key, frameCounter, frameCounter - DISK_WALK_DECIMATION + 1);
         if (slot === null) return;
 
         if (atlas.isFailed(key)) return;

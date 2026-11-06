@@ -361,6 +361,7 @@ describe('renderFrame visual baseline', () => {
         bodyStates: new Map(),
         renderTargets,
         renderedTargets,
+        skyCapturesInBand: new Set(),
       },
       cam,
       vp: viewProj,

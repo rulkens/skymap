@@ -8,7 +8,8 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
-import { atmosphereDrawList } from '../present/atmosphereDrawList';
+import { atmosphereEntry } from '../present/atmosphereEntry';
+import { drawsAtmosphere } from '../present/drawsAtmosphere';
 
 export function aerialPerspectivePass(runtime: BodyRuntime): ContentPass {
   return {
@@ -17,16 +18,16 @@ export function aerialPerspectivePass(runtime: BodyRuntime): ContentPass {
     enabled(state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
       const bodyId = view.slab.frame.hostId;
-      return atmosphereDrawList(state, ctx).some(
-        (entry) => entry.body.id === bodyId && entry.inside,
+      return (
+        drawsAtmosphere(bodyId, ctx, state) && atmosphereEntry(bodyId, ctx, state)?.inside === true
       );
     },
 
     draw(pass, view, ctx, state) {
       if (view.slab.frame.kind !== 'body-m') return;
       const bodyId = view.slab.frame.hostId;
-      const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
-      if (entry === undefined) return;
+      const entry = atmosphereEntry(bodyId, ctx, state);
+      if (entry === null) return;
       runtime.atmosphereShellRenderer.drawAerialPerspective(
         pass,
         entry.body.id,

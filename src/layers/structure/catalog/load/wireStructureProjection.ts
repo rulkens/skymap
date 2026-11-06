@@ -3,9 +3,10 @@
  * publishes counts + search list with the bulk slot's status. `anchors` (from
  * `buildStaticAnchorStructures`) land synchronously, so both exist from frame 1
  * with `bulk: 'idle'`. `bulk` lands off the catalog slot: loading/committing
- * publish `'loading'`, ready/error write or clear the group and THEN publish
- * counts, and a release publishes `'idle'` (a slot nobody demands must not
- * hold a focus deferral). Both read the store, the set that renders; counts
+ * publish `'loading'`; ready writes the group, error and idle clear it, each
+ * THEN publishing counts. Idle (a release, or a cancel with nothing committed)
+ * must neither keep released records rendering nor hold a focus deferral.
+ * Both read the store, the set that renders; counts
  * cover every structure category, as a missing one renders its toggle countless.
  */
 
@@ -41,11 +42,11 @@ export function wireStructureProjection(
     if (s.kind === 'ready') {
       store.setGroup('bulk', structureCatalogToStructures(s.value));
       publishStore('ready');
-    } else if (s.kind === 'error') {
+    } else if (s.kind === 'error' || s.kind === 'idle') {
       store.clearGroup('bulk');
-      publishStore('error');
+      publishStore(s.kind);
     } else {
-      publish({ bulk: s.kind === 'idle' ? 'idle' : 'loading' });
+      publish({ bulk: 'loading' });
     }
   });
 }

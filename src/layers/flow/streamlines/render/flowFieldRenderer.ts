@@ -297,6 +297,12 @@ export function createFlowFieldRenderer(init: {
       reseed.arm();
     },
 
+    clear(): void {
+      field?.dispose();
+      field = null;
+      computeBindGroup = null;
+    },
+
     reconcile(seed: Pick<FlowSettings, 'mode' | 'count'>): void {
       if (lastMode !== null && (lastMode !== seed.mode || lastCount !== seed.count)) {
         reseed.arm();
