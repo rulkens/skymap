@@ -69,14 +69,12 @@ const PLANET_CENTER = vec3<f32>(0.0, 0.0, 0.0);
 // 'dot(mix(vec3(1), T, ringVis), LUMINANCE)' equal 'mix(1, luminance(T),
 // ringVis)', so an opaque ring band in front leaves the coverage at zero.
 const LUMINANCE: vec3<f32> = vec3<f32>(0.2126, 0.7152, 0.0722);
-// Sky luminance suppression of the background, in 1/luminance, at sea level. A look
-// constant: at noon from 6.5 km the darkest sky (~0.006) hides a star; sun 2 deg down
-// (~0.002) shows ~18%.
+// Sky luminance suppression of the background, in 1/luminance, at full daylight. A
+// look constant: at noon from 6.5 km the darkest sky (~0.006) hides a star.
+// Scaled by 'u.daylight' ('daylightWeight'): a sunlit limb from orbit and a noon
+// zenith from the ground have the same per-pixel luminance; only the viewer's
+// surroundings differ (adapted, or not).
 const SKY_ADAPTATION_GAIN: f32 = 5000.0;
-// The gain falls off with camera altitude (shell-thickness units; Earth: 8 km of
-// 100). A sunlit limb from orbit and a noon zenith from the ground have the same
-// per-pixel luminance; only the viewer's surroundings differ (adapted, or not).
-const SKY_ADAPTATION_SCALE: f32 = 0.08;
 
 struct FsIn {
   // Framebuffer pixel position (y-down, half-pixel centres).
@@ -208,8 +206,7 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   // day because the eye adapts to the sky's radiance. The exposed in-scatter stands
   // in for that level, weighted by the sky around the camera, so a dark sky and a
   // view from space reduce to pure extinction.
-  let altitudeFrac = max(viewHeight - u.bottomRadius, 0.0) / (TOP_RADIUS - u.bottomRadius);
-  let gain = SKY_ADAPTATION_GAIN * exp(-altitudeFrac / SKY_ADAPTATION_SCALE);
+  let gain = SKY_ADAPTATION_GAIN * u.daylight;
   let adaptation = 1.0 + gain * dot(out.emission, LUMINANCE);
   out.coverage = 1.0 - dot(out.transmit, LUMINANCE) / adaptation;
   out.hit = true;

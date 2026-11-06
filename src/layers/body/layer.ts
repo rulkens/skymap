@@ -25,6 +25,7 @@ import { ringsPass } from './rings/passes/ringsPass';
 import { bodyGlintsPass } from './glints/passes/bodyGlintsPass';
 import { atmosphereShellPass } from './atmosphere/passes/atmosphereShellPass';
 import { aerialPerspectivePass } from './atmosphere/passes/aerialPerspectivePass';
+import { atmosphereProbeSkyPass } from './atmosphere/passes/atmosphereProbeSkyPass';
 import { bodyMeshesPass } from './meshes/passes/bodyMeshesPass';
 import { skyViewCompute } from './atmosphere/computes/skyViewCompute';
 import { aerialPerspectiveCompute } from './atmosphere/computes/aerialPerspectiveCompute';
@@ -76,6 +77,7 @@ export const bodyLayer = defineLayer({
     bodyGlintsPass(runtime),
     atmosphereShellPass(runtime),
     aerialPerspectivePass(runtime),
+    atmosphereProbeSkyPass(runtime),
     bodyMeshesPass(runtime),
   ],
   computes: (runtime) => [skyViewCompute(runtime), aerialPerspectiveCompute(runtime)],

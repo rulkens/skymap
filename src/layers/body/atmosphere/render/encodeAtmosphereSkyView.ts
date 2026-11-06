@@ -16,6 +16,7 @@ import type { AtmosphereShellRenderer } from '../@types/AtmosphereShellRenderer'
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
 import { atmosphereDrawList } from '../present/atmosphereDrawList';
+import { sunZenithCos } from '../utils/sunZenithCos';
 
 export function encodeAtmosphereSkyView(
   renderer: AtmosphereShellRenderer,
@@ -35,11 +36,6 @@ export function encodeAtmosphereSkyView(
   for (const { body, params, camLocal, sunLocal } of entries) {
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
     const viewHeightKm = radius * params.atmosphereTopKm;
-    const sunZenithCos =
-      radius > 0
-        ? (camLocal[0] * sunLocal[0] + camLocal[1] * sunLocal[1] + camLocal[2] * sunLocal[2]) /
-          radius
-        : 0;
 
     const twilight = params.twilightSoftness;
     const twilightIntensity = params.twilightIntensity;
@@ -48,7 +44,12 @@ export function encodeAtmosphereSkyView(
     renderer.dispatchSkyView(
       pass,
       body.id,
-      new Float32Array([viewHeightKm, sunZenithCos, twilight, twilightIntensity]),
+      new Float32Array([
+        viewHeightKm,
+        sunZenithCos(camLocal, sunLocal),
+        twilight,
+        twilightIntensity,
+      ]),
     );
   }
   pass.end();

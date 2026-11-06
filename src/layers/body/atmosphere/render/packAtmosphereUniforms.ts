@@ -24,6 +24,7 @@ export function packAtmosphereUniforms(
   ringInnerRatio: number,
   ringOuterRatio: number,
   froxelSliceKm: number,
+  daylight: number, // daylightWeight, 0..1
 ): Float32Array {
   const out = new Float32Array(ATMOSPHERE_UNIFORM_FLOATS);
   out.set(packLitBodyUniforms(mvp, sunDirLocal), 0); // f32 0..19
@@ -31,7 +32,7 @@ export function packAtmosphereUniforms(
   out[20] = camPosLocal[0]; // byte 80 — vec3, 16-byte aligned
   out[21] = camPosLocal[1]; // byte 84
   out[22] = camPosLocal[2]; // byte 88
-  // out[23] (byte 92) stays zero — camPosLocal's vec3 tail pad.
+  out[23] = daylight; // byte 92 — camPosLocal's vec3 tail slot
   out[24] = exposure; // byte 96
   out[25] = ringInnerRatio; // byte 100
   out[26] = ringOuterRatio; // byte 104

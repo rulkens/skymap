@@ -617,6 +617,15 @@ export function createAtmosphereShellRenderer(
     aerial.draw(pass, bodyId, depthView);
   }
 
+  function drawProbeSky(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    farDepthView: GPUTextureView,
+  ): void {
+    aerial.drawSky(pass, bodyId, uniforms, farDepthView);
+  }
+
   function destroy(): void {
     for (const bundle of bundles.values()) {
       bundle.transmittanceTex.destroy();
@@ -642,6 +651,7 @@ export function createAtmosphereShellRenderer(
     draw,
     bakeAerialPerspective,
     drawAerialPerspective,
+    drawProbeSky,
     destroy,
     reconcile,
   };
