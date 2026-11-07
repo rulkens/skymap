@@ -93,9 +93,9 @@ allow overlaps.
 Refactor-ground checkpoint, 2026-11-07; signed off. Prep rides this PR as its first commits (Q6),
 each behaviour-free:
 
-1. **One segment interpolator.** `segmentValueAt(seg, from, t)` and `segmentEndValue(seg, from)` in
-   `src/services/engine/animation/`; the three inline ease sites in `evaluateClip.ts` (393, 416, 468)
-   and `channelValueAt.ts`'s own fold (28–42) call it. Missing joint: the rule "what a segment does"
+1. **One segment interpolator.** `segmentValueAt(seg, from, t)` in `src/services/engine/animation/`
+   (its value at `endSec` is the segment's planned end); `evaluateClip.ts`'s one generic base walk
+   and `channelValueAt.ts`'s own fold call it. Missing joint: the rule "what a segment does"
    lived in four places, and a blend would have been a second branch at each.
 2. **`BaseSegment.ease` → `curve: { kind: 'ease'; ease }`**, one arm. Writers `compileClip.ts` 190,
    207, 226; tests `validateSingleWriter.test.ts`, `compileClip.test.ts`. Missing joint: the curve

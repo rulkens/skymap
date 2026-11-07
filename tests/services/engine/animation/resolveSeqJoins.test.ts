@@ -8,6 +8,7 @@ import {
   all,
   flyPath,
   atPoint,
+  wait,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
@@ -84,6 +85,15 @@ describe('resolveSeqJoins', () => {
       ],
       /crosses a frame change/,
     ],
+    [
+      'a matched join between a log and a linear dolly',
+      [
+        seq([dollyTo(300, 4, 'linear'), tween('distance', { to: 900, over: 4, space: 'lin' })], {
+          overlap: 0,
+        }),
+      ],
+      /'log' into 'lin'/,
+    ],
   ])('throws on %s', (_name, timeline, reason) => {
     expect(() => compile(timeline)).toThrow(/seq at 0s, join 1/);
     expect(() => compile(timeline)).toThrow(reason);
@@ -94,5 +104,25 @@ describe('resolveSeqJoins', () => {
     const segs = Object.values(clip.baseTracks).flat();
     expect(segs).toHaveLength(2);
     expect(segs.every((s) => s.blendIn === undefined)).toBe(true);
+  });
+
+  it('throws on a frame change between the outgoing move and the writer before it', () => {
+    const bodyYaw = tween('yaw', { to: 0.5, over: 0.5, frame: { body: asSceneBodyId('earth') } });
+    const timeline = [
+      all([dollyTo(200, 2), seq([wait(1), bodyYaw])]),
+      seq([dollyTo(300, 2), dollyTo(900, 2)], { overlap: 0 }),
+    ];
+    expect(() => compile(timeline)).toThrow(/seq at 2s, join 1: .*crosses a frame change at 1s/);
+  });
+
+  it("a 'live' start compiles", () => {
+    const clip = compileClip({
+      start: 'live',
+      timeline: [seq([dollyTo(300, 4), dollyTo(900, 4)], { overlap: 0 })],
+    });
+    expect(Number.isFinite(clip.durationSec)).toBe(true);
+    for (const { curve } of clip.baseTracks.distance) {
+      expect(curve.kind === 'hermite' && [curve.m0, curve.m1].every(Number.isFinite)).toBe(true);
+    }
   });
 });

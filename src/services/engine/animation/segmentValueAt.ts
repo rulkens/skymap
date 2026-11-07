@@ -11,11 +11,14 @@ import type { SegmentCurve } from '../../../@types/animation/compiledClip/Segmen
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { EASE } from './ease';
 import { lerpChannel } from './lerpChannel';
+import { hermiteUnit } from '../../../utils/math/hermiteUnit';
 
 function curveProgress(curve: SegmentCurve, u: number): number {
   switch (curve.kind) {
     case 'ease':
       return EASE[curve.ease](u);
+    case 'hermite':
+      return hermiteUnit(curve.m0, curve.m1, u);
   }
 }
 

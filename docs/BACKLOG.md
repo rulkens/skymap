@@ -99,6 +99,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
 - [ ] **turnCameraArm reads the site tag by hand** `ready` — `tools/site/utils/turnCameraArm.ts` tests `'site' in arm.frame` outside `arms/`; route it through `isSiteArm`. → [details](backlog/2026-11-03-turn-camera-arm-site-tag.md)
 - [ ] **framedClipArm decodes with the current basis** `deferred` — `cameraDrivers.ts` passes the current basis where the clip pinned another; harmless until a `decode` cell reads a basis. → [details](backlog/2026-11-03-framed-clip-arm-decode-basis.md)
+- [ ] **No focused tests for `validateCompositeExclusivity` / `channelValueAt`** `deferred` — both are covered only through whole-clip tests; the non-clash side is unpinned. → [details](backlog/2026-11-07-composite-exclusivity-channel-value-tests.md)
 - [ ] **Earth point in the URL hash** `needs-design` — `#site=lon,lat[,alt]` snapping over a coordinate via the existing `flyToLonLat` saga; the typable subset of the pose codec. → [details](backlog/2026-09-15-earth-point-url-hash.md)
 - [ ] **Sub-pixel craft and scene glints can't be picked** `ready` — `glintsPassOver` (missions, earthScenes, blackHoles) has no `drawPick`, so an unresolved craft drawn as a glint takes no click.
 

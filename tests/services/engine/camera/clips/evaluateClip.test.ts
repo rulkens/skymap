@@ -729,3 +729,58 @@ describe('blending seq: crossfade', () => {
     }
   });
 });
+
+describe('blending seq: matched join', () => {
+  const FROM_150: CameraPose = { ...START, distance: 150 };
+  const clipOf = (timeline: ClipData['timeline']): ClipData => ({ start: FROM_150, timeline });
+  const lnD = (clip: ClipData, t: number) => Math.log(evaluateClip(clip, t).distance);
+  // One-sided d ln D/dt: `h` > 0 looks forward, `h` < 0 back.
+  const speed = (clip: ClipData, t: number, h: number) => (lnD(clip, t + h) - lnD(clip, t)) / h;
+  const central = (clip: ClipData, t: number) => (lnD(clip, t + 1e-4) - lnD(clip, t - 1e-4)) / 2e-4;
+  const dollies = (to: [number, number], opts?: { overlap: number }) =>
+    clipOf([seq([dollyTo(to[0], 4), dollyTo(to[1], 4)], opts)]);
+
+  it('the join speed is the harmonic mean of the two average speeds', () => {
+    const clip = dollies([300, 900], { overlap: 0 });
+    expect(Math.abs(speed(clip, 4, -1e-3) - 0.2125)).toBeLessThan(1e-3);
+    expect(Math.abs(speed(clip, 4, 1e-3) - 0.2125)).toBeLessThan(1e-3);
+  });
+
+  it('a reversal stops at the join', () => {
+    expect(Math.abs(central(dollies([300, 150], { overlap: 0 }), 4))).toBeLessThan(1e-3);
+  });
+
+  it('the join is never faster than twice the slower average', () => {
+    const slower = Math.LN2 / 4;
+    for (const ratio of [1, 4, 20]) {
+      const join = speed(dollies([300, 300 * 2 ** ratio], { overlap: 0 }), 4, -1e-4);
+      expect(join).toBeGreaterThanOrEqual(slower - 1e-3);
+      expect(join).toBeLessThanOrEqual(2 * slower + 1e-3);
+    }
+  });
+
+  it("an outer end keeps its ease's end speed", () => {
+    const outer = (ease: 'easeInOutCubic' | 'linear') =>
+      speed(clipOf([seq([dollyTo(300, 4, ease), dollyTo(900, 4)], { overlap: 0 })]), 0, 1e-4);
+    expect(Math.abs(outer('easeInOutCubic'))).toBeLessThan(1e-3);
+    expect(Math.abs(outer('linear') - Math.LN2 / 4)).toBeLessThan(1e-3);
+  });
+
+  it('a plain seq still rests at the join', () => {
+    expect(Math.abs(central(dollies([300, 900]), 4))).toBeLessThan(1e-3);
+  });
+
+  it('a target join matches speed and stops at a reversal', () => {
+    const targetSpeed = (clip: ClipData, h: number) => {
+      const [a, b] = [evaluateClip(clip, 4).target, evaluateClip(clip, 4 + h).target];
+      return Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / Math.abs(h);
+    };
+    const moves = (to: Vec3) =>
+      clipOf([seq([moveTarget([3, 0, 0], 4), moveTarget(to, 4)], { overlap: 0 })]);
+    // The harmonic mean of 0.75 and 1.5 units/s.
+    expect(Math.abs(targetSpeed(moves([9, 0, 0]), -1e-4) - 1)).toBeLessThan(1e-3);
+    expect(Math.abs(targetSpeed(moves([9, 0, 0]), 1e-4) - 1)).toBeLessThan(1e-3);
+    expect(targetSpeed(moves([0, 0, 0]), -1e-4)).toBeLessThan(1e-3);
+    expect(targetSpeed(moves([0, 0, 0]), 1e-4)).toBeLessThan(1e-3);
+  });
+});

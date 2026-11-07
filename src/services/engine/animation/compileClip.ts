@@ -470,6 +470,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     acc.baseSegs.map((seg) => continuedFromComposite(seg, acc)),
     acc.compositeTracks,
     acc.seqs,
+    start,
   );
   const baseTracks = baseTracksOf(baseSegs);
 
