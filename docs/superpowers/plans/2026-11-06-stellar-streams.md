@@ -756,3 +756,29 @@ Task 13 re-runs (perf, eye check) after Task 20.
 - Per-stream highlight of the selected stream; real-orbit animation or time scrub; streams without real
   distances; packed records; R2 sync (the owner's step from main); `matteHiddenPasses` and the other backlogged
   adjacent findings.
+
+### Task 21: Wikipedia blurbs and links on the stream card (owner request 2026-11-07)
+
+**Why:** famous stars, galaxies and structures carry a Wikipedia "Learn more" link and a lead-paragraph blurb; the
+owner wants the same for streams that have an article.
+
+**Rulings:** a committed curated table `tools/streams/data/streamWikipedia.constants.ts`, rows `{ name, title }`
+keyed by galstreams `Name` (Sagittarius by its id), holding only English Wikipedia articles **about the stream
+itself** (e.g. the Sagittarius, GD-1, Palomar 5 tidal-tail, Orphan, Monoceros-ring articles — each verified to
+exist as a `standard` page via the REST summary endpoint, never from memory; no progenitor-cluster articles, no
+disambiguation pages). Same build guard as the metallicity/mass tables (`assertTableNamesBuilt`). The build fetches
+each summary through the existing `tools/parsers/wikipediaSummary.ts` (`wikipediaSummaryUrl`,
+`parseWikipediaSummary`) with an on-disk cache routed through `tools/utils/io/rawDataRegistry.ts` /
+`loadJsonCache` (the famous pipeline's pattern, 1 s polite delay, cache hit = no network), so rebuilds stay
+deterministic and offline. Meta gains `wikipediaTitle: string | null`; when an extract exists it replaces the entry's
+`description` (else the current description stays). The card adds the shared `WikipediaRow` and shows the
+description through the shared `DescriptionBlock`, laid out as in `StructureDetailCard`. ATTRIBUTIONS row for the
+Wikipedia text (CC BY-SA 4.0), matching how famous-galaxy extracts are credited.
+
+**Files:** the table, the stream meta builders + types (tools and src), test fixture, the card, ATTRIBUTIONS,
+tools/streams/README.
+
+**Tests:** card link + blurb present/absent; build guard on an unknown table key; the build uses the cached extract
+and falls back to the old description when the article has none.
+
+- [ ] Commit (rebuilt data is gitignored).
