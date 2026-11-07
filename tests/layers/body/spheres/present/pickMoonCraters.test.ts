@@ -15,7 +15,7 @@ import { moonCraterTable } from '../../../../../src/layers/body/spheres/present/
 import { pickMoonCraters } from '../../../../../src/layers/body/spheres/present/pickMoonCraters';
 import { visibleDiscAreaPx } from '../../../../../src/layers/body/spheres/present/visibleDiscAreaPx';
 import {
-  ANTIQUE_MOON_MAX_CRATERS,
+  ANTIQUE_MOON_CLOSE_CRATERS,
   ANTIQUE_MOON_RING_AREA_UNITS,
 } from '../../../../../src/layers/body/spheres/data/antiqueMoonPrint';
 
@@ -116,11 +116,11 @@ describe('pickMoonCraters', () => {
     expect(pickMoonCraters(table, view(1.3, 20))).toEqual([1, 0]);
   });
 
-  it('stops at the cap in a close-up', () => {
+  it('stops at the close-up cap when the disc fills the frame', () => {
     const picked = pickMoonCraters(
       moonCraterTable(crowd(400, 0.15, 1, 0.002), R_KM),
       view(1.3, 20),
     );
-    expect(picked).toHaveLength(ANTIQUE_MOON_MAX_CRATERS);
+    expect(picked).toHaveLength(ANTIQUE_MOON_CLOSE_CRATERS.count);
   });
 });

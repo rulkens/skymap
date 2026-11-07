@@ -4,9 +4,12 @@
 /** The body the pass prints. */
 export const ANTIQUE_MOON_HOST = 'moon';
 
-/** The rings one frame prints, most: a close-up's budget would ask ~180, bubble wrap,
- * so it is cut here; the full disc asks ~60, the census of a period plate. */
+/** The rings one frame prints, most: the full disc asks ~60, the census of a period plate. */
 export const ANTIQUE_MOON_MAX_CRATERS = 60;
+
+/** A close-up's ring cap as the visible disc fills the frame over `fill` (share of its
+ * area): its area budget would ask ~180, bubble wrap. */
+export const ANTIQUE_MOON_CLOSE_CRATERS = { count: 40, fill: [0.3, 0.8] } as const;
 
 /** One ring per this much visible disc, print units² (a 1600×900 frame's px): the
  * reviewers' density for a chart, not a census. */

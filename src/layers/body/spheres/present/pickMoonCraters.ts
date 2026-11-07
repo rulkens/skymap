@@ -5,7 +5,8 @@
  * Every named crater whose name shows comes first, then the largest as seen (foreshortened;
  * one wider than the frame ranked down) whose centre is outside every larger kept ring (but
  * for a small one on a named crater's floor), to one ring per
- * `ANTIQUE_MOON_RING_AREA_UNITS` of visible disc, at most `ANTIQUE_MOON_MAX_CRATERS`.
+ * `ANTIQUE_MOON_RING_AREA_UNITS` of visible disc, at most `ANTIQUE_MOON_MAX_CRATERS`, fewer
+ * as the disc fills the frame (`ANTIQUE_MOON_CLOSE_CRATERS`).
  * Indices into the table.
  */
 
@@ -13,6 +14,7 @@ import type { MoonCraterTable } from '../@types/MoonCraterTable';
 import type { MoonCraterView } from '../@types/MoonCraterView';
 import type { MoonNamedCrater } from '../@types/MoonNamedCrater';
 import {
+  ANTIQUE_MOON_CLOSE_CRATERS,
   ANTIQUE_MOON_FLOOR_CRATER,
   ANTIQUE_MOON_MAX_CRATERS,
   ANTIQUE_MOON_NAMED_RIM_UNITS,
@@ -21,6 +23,7 @@ import {
   ANTIQUE_MOON_RING_AREA_UNITS,
 } from '../data/antiqueMoonPrint';
 import { visibleDiscAreaPx } from './visibleDiscAreaPx';
+import { smoothstep } from '../../../../utils/math/smoothstep';
 
 export function pickMoonCraters(
   table: MoonCraterTable,
@@ -55,9 +58,15 @@ export function pickMoonCraters(
     return seen ? dPx * Math.sqrt(Math.max(sinEl, 0.02)) : dPx;
   };
 
+  const discPx = visibleDiscAreaPx(view);
+  const close = ANTIQUE_MOON_CLOSE_CRATERS;
+  const cap =
+    ANTIQUE_MOON_MAX_CRATERS -
+    (ANTIQUE_MOON_MAX_CRATERS - close.count) *
+      smoothstep(close.fill[0], close.fill[1], discPx / (view.widthPx * view.heightPx));
   const budget = Math.min(
-    ANTIQUE_MOON_MAX_CRATERS,
-    Math.round(visibleDiscAreaPx(view) / view.unitPx ** 2 / ANTIQUE_MOON_RING_AREA_UNITS),
+    Math.round(cap),
+    Math.round(discPx / view.unitPx ** 2 / ANTIQUE_MOON_RING_AREA_UNITS),
   );
   const chosen = new Set<number>();
   for (const { index, revealPx } of named) {

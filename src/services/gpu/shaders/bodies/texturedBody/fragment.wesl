@@ -202,8 +202,10 @@ const SLOPE_GAIN: f32 = 2.4;
 const RIM_MIN_UNITS: f32 = 8.0;
 const RIM_FULL_UNITS: f32 = 14.0;
 const NAMED_MIN_UNITS: f32 = 7.0;
-// Linear albedo over which a crater's floor is no sea (the plate's MARE_SHORE).
+// Linear albedo over which a crater's floor is no sea (the plate's MARE_SHORE), and under
+// which a ringed floor is its own small sea (Plato, Grimaldi: Riccioli's dark ovals).
 const BRIGHT_FLOOR: f32 = 0.25;
+const DARK_FLOOR: f32 = 0.12;
 // Arcs round a ruined wall: its rim breaks into about this many.
 const RIM_ARCS: f32 = 9.0;
 
@@ -404,8 +406,10 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let wide = mareTap(uv, grad.ddx, grad.ddy, MARE_WIDE_PX, MARE_WIDE_TEXELS, MARE_WIDE_CAP_KM);
   // The blanket keeps the albedo's own swell over its ground, so the sea's lines still vary.
   let thrownOn = min(albedo, blanket.x + 0.6 * (albedo - wide));
+  // A dark floor passes the plate's wide support, which keeps a walled plain's floor paper.
+  let support = select(wide, min(wide, fine), rims.y > 0.5 && fine * fine < DARK_FLOOR);
   return encodeMoonRow(mix(albedo, thrownOn, blanket.y), lit, rims.x * day,
-    rims.y > 0.5 && fine * fine > BRIGHT_FLOOR, mix(wide, min(wide, blanket.x), blanket.y));
+    rims.y > 0.5 && fine * fine > BRIGHT_FLOOR, mix(support, min(support, blanket.x), blanket.y));
 }
 
 // The Moon's ground in the shared relief row (`relief.wesl`'s contract), from the normal
