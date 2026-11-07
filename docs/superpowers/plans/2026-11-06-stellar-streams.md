@@ -684,7 +684,46 @@ website test forces them.
 
 - [x] Commit (rebuilt data is gitignored).
 
-Task 13 re-runs (perf, eye check) after Task 19.
+### Task 20: Stream picking along centrelines; a stream focus recedes everything else (owner rulings 2026-11-07)
+
+**Why:** the pick buffer shows the streams' per-particle streak stamps degenerating into screen-crossing slivers,
+shards and wedges for particles near or behind the camera; the owner wants simple, static pick shapes that
+follow each stream's general shape — "definitely not a quad for every particle". And while a stream is focused,
+background galaxies are still clickable; the owner ruled **option 2**: no spatial region for a stream —
+everything except the focused stream dims and is unclickable (no sphere, no stream-shaped tube).
+
+**Rulings:**
+1. *Centrelines.* The build simplifies each galstreams track to a centreline of ~16–32 points (e.g.
+   Douglas–Peucker or even arc-length resampling, deterministic) and writes it into the meta
+   (`centrelineMpc: [x,y,z][]`). Sagittarius has no track: derive two centrelines (leading, trailing arm) from
+   the full snapshot by binning particles along the orbital plane (fit the plane, e.g. PCA of positions;
+   split arms by the sign of the angle from the remnant or by strip direction), averaging each bin; the remnant
+   joins both. Name the method in a header line.
+2. *Pick.* The streak-stamp pick (`vsPick`/`fsPick` over the particle instances) is replaced by a static ribbon
+   pass: one quad per centreline segment, screen-space width = max(stream width in px, a pick minimum),
+   segments with an endpoint behind the camera clipped or skipped (never extruded through w ≤ 0). Static: no
+   flow, no time. One small vertex buffer built from the meta at load. Gated like today (streak look live,
+   fade > 0). During a stream focus only the focused stream's ribbons are drawn.
+3. *Focus, option 2.* A focused stream publishes a spatial focus whose bright region is empty, so every
+   galaxy, star and disk that today dims outside a structure's sphere dims everywhere and is unpickable through
+   the existing shader and `isPickableUnderFocus` paths — no shader change for those consumers. Express it as
+   data on the row (e.g. `focusSphere` with zero radii, or a named "recede all" region), not a type branch in
+   core. The focused stream's own caption stays pickable (exempt by `subjectId === focusPickId`); other stream
+   captions are not. The Task 18 sphere fade applies (structure↔stream switches fade, never pop).
+
+**Files:** `tools/streams/` (centreline util(s), meta entry builders, types), runtime meta type, the streams
+pick renderer path (new ribbon pick; delete the particle pick from `streams.wesl` and the renderer — no dead
+code), the stream selection row (`focusSphere`), the label producer's pick gate.
+
+**Tests:** centreline simplification keeps endpoints and stays within a tolerance of the track; Sgr centrelines
+are two, ordered, and pass near the remnant; ribbon builder skips/clips behind-camera segments (CPU side if
+the clip lives there); a stream focus makes `isPickableUnderFocus` false for a galaxy far away and true for
+nothing but the focused stream's caption; switching structure→stream fades.
+
+- [ ] No Layer contract change.
+- [ ] Commit (rebuilt data is gitignored).
+
+Task 13 re-runs (perf, eye check) after Task 20.
 
 ---
 
