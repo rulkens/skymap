@@ -224,8 +224,6 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, un
   let lowSun = 1.0 - smoothstep(0.25, 0.75, ndl);
   let stv = sun - ndl * n;
   let st = stv * inverseSqrt(max(dot(stv, stv), 1e-12));
-  // How far the Sun stands off the zenith: only a tilted Sun lights one wall.
-  let tilt = smoothstep(0.2, 0.5, length(stv));
   for (var i = 0u; i < moon.count; i++) {
     let cr = moon.craters[i];
     let cosPsi = dot(n, cr.c);
@@ -247,11 +245,7 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, un
       // low Sun the lit side is one fine cut.
       var width = select(1.0, 1.6, cr.weight > 0.75) + 1.4 * smoothstep(0.0, 0.8, shadeSide) * lowSun * w;
       width = 1.0 + (width - 1.0) * (1.0 - lowSun * (1.0 - smoothstep(-0.3, 0.5, shadeSide)));
-      // A small crater under a tilted Sun is its shadow crescent: the lit rim is paper,
-      // as the period plates left it; a big one keeps its ring for the wall arcs.
-      let crescent = tilt * (1.0 - smoothstep(FRAME_MIN_UNITS, 1.5 * FRAME_MIN_UNITS, dUnits));
-      let litGap = crescent * (1.0 - smoothstep(-0.55, -0.2, shadeSide));
-      ink = inkLine(d, width, pxUnits) * smoothstep(0.05, 0.25, w) * (1.0 - litGap);
+      ink = inkLine(d, width, pxUnits) * smoothstep(0.05, 0.25, w);
     }
     let q = psi / cr.rho;
     if (q < 1.0 && q > WALL_Q && dUnits >= FRAME_MIN_UNITS && cr.weight > 0.3 && ndl > 0.0) {
