@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
 import type { PendingStep } from '../../../src/@types/input/PendingStep';
-import type { InputStep } from '../../../src/@types/camera/input/InputStep';
+import type { RawInputStep } from '../../../src/@types/camera/input/RawInputStep';
 
 const drag = (over: Partial<PendingStep & { kind: 'motion' }>): PendingStep => ({
   kind: 'motion',
@@ -14,10 +14,12 @@ const drag = (over: Partial<PendingStep & { kind: 'motion' }>): PendingStep => (
   ratio: 1,
   at: { x: 0.5, y: 0.5 },
   held: true,
+  firstEventMs: 0,
+  eventMs: 0,
   ...over,
 });
 
-const dragOf = (step: InputStep | undefined) => {
+const dragOf = (step: RawInputStep | undefined) => {
   if (step?.kind !== 'drag') throw new Error(`expected a drag, got ${step?.kind}`);
   return step;
 };
@@ -49,16 +51,34 @@ describe('pendingToInputSteps', () => {
 
   it('a pinch gives a zoom step with cursorPx null', () => {
     const steps = pendingToInputSteps([drag({ intent: 'zoom', ratio: 0.8, at: null })], [100, 50]);
-    expect(steps).toEqual([{ kind: 'zoom', factor: 0.8, duringGesture: true, cursorPx: null }]);
+    expect(steps).toMatchObject([
+      { kind: 'zoom', factor: 0.8, duringGesture: true, cursorPx: null },
+    ]);
   });
 
-  it('a held: false wheel gives duringGesture false and its cursor in view pixels', () => {
+  it('a held: false wheel gives duringGesture false, its cursor in view pixels and its event span', () => {
     const steps = pendingToInputSteps(
-      [drag({ intent: 'zoom', ratio: 1.1, held: false, at: { x: 0.25, y: 0.5 } })],
+      [
+        drag({
+          intent: 'zoom',
+          ratio: 1.1,
+          held: false,
+          at: { x: 0.25, y: 0.5 },
+          firstEventMs: 10,
+          eventMs: 40,
+        }),
+      ],
       [100, 50],
     );
     expect(steps).toEqual([
-      { kind: 'zoom', factor: 1.1, duringGesture: false, cursorPx: [25, 25] },
+      {
+        kind: 'zoom',
+        factor: 1.1,
+        duringGesture: false,
+        cursorPx: [25, 25],
+        firstEventMs: 10,
+        lastEventMs: 40,
+      },
     ]);
   });
 

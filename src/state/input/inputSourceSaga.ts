@@ -102,11 +102,27 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
             break;
           case 'drag':
             if (held === null) break;
-            motion.push({ intent: held, dx: g.dx, dy: g.dy, ratio: 1, at: g.at, held: true });
+            motion.push({
+              intent: held,
+              dx: g.dx,
+              dy: g.dy,
+              ratio: 1,
+              at: g.at,
+              held: true,
+              eventMs: event.t,
+            });
             buffer();
             break;
           case 'pinch':
-            motion.push({ intent: 'zoom', dx: 0, dy: 0, ratio: g.ratio, at: null, held: true });
+            motion.push({
+              intent: 'zoom',
+              dx: 0,
+              dy: 0,
+              ratio: g.ratio,
+              at: null,
+              held: true,
+              eventMs: event.t,
+            });
             buffer();
             break;
           case 'wheel':
@@ -117,6 +133,7 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
               ratio: g.ratio,
               at: g.at,
               held: held !== null,
+              eventMs: event.t,
             });
             buffer();
             break;

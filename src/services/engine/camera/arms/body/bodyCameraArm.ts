@@ -34,6 +34,8 @@ import { toBodyArm, toWorldArm } from './poseFrameConversion';
 import { hostOf } from '../hostOf';
 import { hostOrThrow } from '../hostOrThrow';
 import { bodyGroundRadiusAtM } from '../../../../../utils/scene/bodyGroundRadiusAtM';
+import { eyeAtFloor } from './utils/eyeAtFloor';
+import { skySpotAt } from '../../../../../utils/geo/skySpotAt';
 
 function surfaceStepCtxOf(host: HostBody, ctx: CameraArmCtx): SurfaceStepCtx {
   return {
@@ -103,7 +105,19 @@ export const bodyCameraArm: ClimbRow<'body'> = {
     }
     const surfaceCtx = surfaceStepCtxOf(hostOrThrow(framed.frame, ctx), ctx);
     const stepped = surfaceStep(memory, tilt, framed.pose, input, surfaceCtx);
-    return { pose: stepped.pose, memory: stepped.gesture, tilt: stepped.tilt };
+    const result = { pose: stepped.pose, memory: stepped.gesture, tilt: stepped.tilt };
+    // A fresh zoom-in that STARTS on the floor pushes it, sliding or not (spec §4.2): at the
+    // floor the view is oblique, so a notch is rarely eaten whole.
+    const anchorM = stepped.zoomAnchorM;
+    const pushes =
+      input.kind === 'zoom' &&
+      input.fresh &&
+      input.factor < 1 &&
+      anchorM !== null &&
+      eyeAtFloor(framed.pose, surfaceCtx.groundRadiusAtM, surfaceCtx.standoffRadii);
+    if (!pushes) return result;
+    const spot = skySpotAt(framed.frame.body, anchorM);
+    return { ...result, pushed: { edge: 'in', spot, pointLocalM: anchorM } };
   },
 
   nudge(tilt, framed, delta, ctx) {

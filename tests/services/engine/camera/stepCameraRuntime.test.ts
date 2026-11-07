@@ -36,6 +36,7 @@ import { selectTimeState } from '../../../../src/state/time/selectors';
 import { selectPendingInput } from '../../../../src/state/input/selectors';
 import { inputConsumed } from '../../../../src/state/input/inputSlice';
 import { pendingToInputSteps } from '../../../../src/utils/input/pendingToInputSteps';
+import { watchZoomLimitSaga } from '../../../../src/state/camera/watchZoomLimitSaga';
 import { pivotFraming } from '../../../../src/services/engine/camera/framing/pivotRadiusMpc';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
@@ -61,7 +62,7 @@ import { refoldTo } from '../../../../src/services/engine/camera/arms/refoldTo';
 import { skySpotRadial } from '../../../../src/utils/geo/skySpotRadial';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { SKY_EXIT_ALTITUDE_M } from '../../../../src/services/engine/camera/arms/sky/data/skyExitAltitudeM';
-import { SKY_EXIT_PAUSE_MS } from '../../../../src/services/engine/camera/arms/sky/data/skyExitPauseMs';
+import { FRESH_WHEEL_PAUSE_MS } from '../../../../src/data/input/freshWheelPauseMs';
 import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
 import type { SkyPose } from '../../../../src/@types/camera/pose/SkyPose';
@@ -82,7 +83,7 @@ import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
-import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
+import type { RawInputStep } from '../../../../src/@types/camera/input/RawInputStep';
 import type { NavVelocity } from '../../../../src/@types/camera/input/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import {
@@ -235,7 +236,6 @@ describe('stepCameraRuntime', () => {
           frustum: symmetricFrustum(Math.PI / 3, 1),
           fovYRad: Math.PI / 3,
           tuning: intent.tuning,
-          nowMs: 0,
         },
       });
 
@@ -480,12 +480,12 @@ describe('the wheel under a mission', () => {
 
 describe('stepCameraRuntime — the openspace scheme', () => {
   const GUARD = 2000;
-  const press: readonly InputStep[] = [
+  const press: readonly RawInputStep[] = [
     { kind: 'gestureStart' },
     { kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] },
   ];
-  const hold: readonly InputStep[] = [{ kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] }];
-  const release: readonly InputStep[] = [{ kind: 'gestureEnd' }];
+  const hold: readonly RawInputStep[] = [{ kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] }];
+  const release: readonly RawInputStep[] = [{ kind: 'gestureEnd' }];
 
   // The hand-fed frames' wall clock, picking up where the harness's own frames stopped.
   const clocks = new WeakMap<CameraSimHarness, number>();
@@ -494,7 +494,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
   /** One frame with hand-fed steps, installed and dispatched as `runFrame` does. */
   function stepWith(
     h: CameraSimHarness,
-    steps: readonly InputStep[],
+    steps: readonly RawInputStep[],
     schemes?: StepInputs['schemes'],
   ) {
     // `wireInput` dispatches the release outside the loop, as it does the press.
@@ -582,7 +582,16 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     const stale = h.store.getState().camera.base;
     if (!isWorldArm(live) || !isWorldArm(stale)) throw new Error('expected the world arm');
     expect(Math.abs(live.pose.yaw - stale.pose.yaw)).toBeGreaterThan(1e-3);
-    stepWith(h, [{ kind: 'zoom', factor: 1.2, duringGesture: false, cursorPx: null }]);
+    stepWith(h, [
+      {
+        kind: 'zoom',
+        factor: 1.2,
+        duringGesture: false,
+        cursorPx: null,
+        firstEventMs: 0,
+        lastEventMs: 0,
+      },
+    ]);
     const after = h.state.cameraRuntime.register.pose;
     if (!isWorldArm(after)) throw new Error('expected the world arm');
     // The coast keeps turning by a frame's worth; a snap back lands on the base's yaw.
@@ -691,7 +700,16 @@ describe('stepCameraRuntime — the openspace scheme', () => {
         lastNowMs: nextNow(h) - dtS * 1000,
       },
     };
-    const out = stepWith(h, [{ kind: 'zoom', factor: 1.25, duringGesture: false, cursorPx: null }]);
+    const out = stepWith(h, [
+      {
+        kind: 'zoom',
+        factor: 1.25,
+        duringGesture: false,
+        cursorPx: null,
+        firstEventMs: 0,
+        lastEventMs: 0,
+      },
+    ]);
     const lenses = out.actions.filter((a) => setFovYRad.match(a)).map((a) => a.payload as number);
     expect(lenses).toHaveLength(2);
     expect(lenses[1]).toBeCloseTo(lens * 1.25 * 1.1, 9);
@@ -731,7 +749,14 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     h.store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'navOrbit' }));
     stepWith(h, [
       { kind: 'gestureStart' },
-      { kind: 'zoom', factor: 1.5, duringGesture: true, cursorPx: null },
+      {
+        kind: 'zoom',
+        factor: 1.5,
+        duringGesture: true,
+        cursorPx: null,
+        firstEventMs: 0,
+        lastEventMs: 0,
+      },
     ]);
     const pinched = worldOf(h.state.cameraRuntime.register.pose).distance;
 
@@ -975,7 +1000,11 @@ describe('the sky exit lift', () => {
 
   /** Every displayed pose from the lift's start to its hand-off, and the clip it ran. */
   const lift = () => {
-    const h = makeCameraSimHarness({ focusBody: 'earth', realClipPlayer: true });
+    const h = makeCameraSimHarness({
+      focusBody: 'earth',
+      realClipPlayer: true,
+      sagas: [watchZoomLimitSaga],
+    });
     h.frame(2);
     h.store.dispatch(
       commitCameraPose({ frame: { sky: SKY }, pose: { azimuthRad: AZIMUTH, altitudeRad: 0.4 } }),
@@ -1020,7 +1049,11 @@ describe('the sky exit lift', () => {
   });
 
   it('carries the wheel quiet across frames: a streaming scroll stops at the widest lens', () => {
-    const h = makeCameraSimHarness({ focusBody: 'earth', realClipPlayer: true });
+    const h = makeCameraSimHarness({
+      focusBody: 'earth',
+      realClipPlayer: true,
+      sagas: [watchZoomLimitSaga],
+    });
     h.frame(2);
     h.store.dispatch(
       commitCameraPose({ frame: { sky: SKY }, pose: { azimuthRad: AZIMUTH, altitudeRad: 0.4 } }),
@@ -1034,7 +1067,7 @@ describe('the sky exit lift', () => {
     }
     expect(h.store.getState().camera.fovYRad).toBe(degToRad(LENS_MAX_DEG));
     expect(h.store.getState().camera.clip).toBeNull();
-    h.frame(Math.ceil(SKY_EXIT_PAUSE_MS / 16));
+    h.frame(Math.ceil(FRESH_WHEEL_PAUSE_MS / 16));
     h.wheel(300);
     expect(h.store.getState().camera.clip).not.toBeNull();
   });
