@@ -8,6 +8,7 @@ import {
   MIN_LABEL_CLEARANCE_PX,
 } from '../../../../../src/services/engine/presentation/leaderLineStyle';
 import { ATLAS_FONT_SIZE } from '../../../../../src/data/fonts';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
@@ -115,6 +116,23 @@ describe('produceMilkyWayLabel', () => {
     expect(pickOf(ctx)).toBeDefined();
     expect(pickOf(at([0, 0, 0]))).toBeDefined();
     expect(pickOf(at([5, 0, 0]))).toBeUndefined();
+  });
+
+  it('gates its pick at the galactic centre, as the disc does, not at the Sun', () => {
+    const ctx = makeCtx(0.5);
+    const kpcSphere = (center: Vec3) =>
+      ({
+        ...ctx,
+        snapshot: {
+          ...ctx.snapshot,
+          focus: { center, apparentRadiusMpc: 0.001, physicalRadiusMpc: 0.0005, blend: 1 },
+        },
+      }) as FrameView;
+    const pickOf = (c: FrameView) =>
+      produceMilkyWayLabelFor(PICK_CODE)(makeState(), c, 1).labels[0]!.pickId;
+
+    expect(pickOf(kpcSphere([0, 0, 0]))).toBeUndefined();
+    expect(pickOf(kpcSphere([...MILKY_WAY_CENTER_WORLD] as Vec3))).toBeDefined();
   });
 
   it('emits one label carrying a leader when enabled', () => {
