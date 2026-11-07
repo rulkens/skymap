@@ -182,7 +182,7 @@ fn moonInk(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, m
 // slope, a light share where it is lit and up to RELIEF_SHARE.y in shade, by the terrain's
 // own light (`shade`), not the plain render's luma: the albedo carries baked shadows from
 // another Sun. A rim, steep on both flanks, keeps its crest line (`fallCrest`).
-const RELIEF_SHARE = vec2<f32>(0.08, 0.5);
+const RELIEF_SHARE = vec2<f32>(0.12, 0.55);
 
 fn moonRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec4<f32>, unit: f32,
               shade: f32) -> f32 {
