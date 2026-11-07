@@ -1,6 +1,7 @@
 /**
  * produceAntiqueMoonPlaces — the antique look's Moon names (`ANTIQUE_MOON_PLACES`):
- * maria and Terrae fitted across what they name (`placeAntiqueAreaName`), craters on
+ * maria and Terrae fitted across what they name (`placeAntiqueAreaName`), each stepping
+ * off the higher-ranked ones' names (`verticalClearance`), craters on
  * their floors or beside their rims (`placeAntiqueCraterName`), all faded in with the
  * disc (`ANTIQUE_MOON_PLACE_REVEAL.discPx`). The producer owns each name's px and side,
  * which `antiqueLabel` keeps; the director declutters seas first, then by `rank`. With
@@ -29,18 +30,27 @@ import { smoothstep } from '../../../../utils/math/smoothstep';
 import { antiqueBodyView } from './antiqueBodyView';
 import { placeAntiqueAreaName } from '../utils/placeAntiqueAreaName';
 import { placeAntiqueCraterName } from '../utils/placeAntiqueCraterName';
+import { antiqueNameBoxPx } from '../utils/antiqueNameBoxPx';
+import { verticalClearance } from '../utils/verticalClearance';
+import { rectRoomInCircle } from '../../../../utils/math/rectRoomInCircle';
+import type { ScreenRectPx } from '../../../../@types/rendering/ScreenRectPx';
 
 const NONE = { labels: [], awake: false } as const;
 // Above every rank, so rank 1 carries the highest priority within the row; a sea or Terra
 // a whole ceiling over every crater, as Riccioli's plate prints every sea first.
 const RANK_CEILING = 1000;
+// The director's antique pad (`ANTIQUE_LABEL_DECLUTTER`, 8) and a margin for the set
+// glyphs over `antiqueNameBoxPx`'s estimate.
+const SEA_PAD_PX = 16;
+// placeAntiqueAreaName's limb clearance.
+const SEA_LIMB_CLEAR_PX = 4;
 
 export function produceAntiqueMoonPlaces(
   pickCodes: BodyRuntime['pickCodes'],
 ): LayerScreenLabel<'body'>['produceLabels'] {
   const codeOf = bodyCodeOf(pickCodes);
   const { priority, item } = BODY_CAPTION_ROWS.moonPlace;
-  const { discPx } = ANTIQUE_MOON_PLACE_REVEAL;
+  const { discPx, lineEm } = ANTIQUE_MOON_PLACE_REVEAL;
   const moonId = 'moon';
   const radiusM = findByIdOrThrow(SCENE_CELESTIAL_BODIES, moonId, 'produceAntiqueMoonPlaces')
     .surface.datumRadiusM;
@@ -68,6 +78,11 @@ export function produceAntiqueMoonPlaces(
     const view = antiqueBodyView(moon, radiusM, toSun, ctx);
     const subjectId = sceneBodyPickId(moonId, codeOf) ?? undefined;
     const labels: Label2D[] = [];
+    // The sea names placed so far, in rank order: a later one steps off them (`verticalClearance`).
+    const seas: ScreenRectPx[] = [];
+    const inDisc = (r: ScreenRectPx): boolean =>
+      view.discCentrePx === null ||
+      rectRoomInCircle(r, view.discCentrePx, view.discRadiusPx) >= SEA_LIMB_CLEAR_PX;
     ANTIQUE_MOON_PLACES.forEach((place, i) => {
       const lettering = letterings[i]!;
       const at =
@@ -75,10 +90,24 @@ export function produceAntiqueMoonPlaces(
           ? placeAntiqueCraterName(place, view, lettering)
           : placeAntiqueAreaName(place, view, lettering);
       if (!at) return;
+      let yPx = at.yPx;
+      if (place.kind !== 'crater' && at.alpha > 0) {
+        const { cut, trackingEm = 0 } = lettering;
+        const box = antiqueNameBoxPx(place.name, cut, trackingEm, at.px, lineEm);
+        const rect = {
+          x0: at.xPx - box.width / 2,
+          y0: yPx - box.height / 2,
+          x1: at.xPx + box.width / 2,
+          y1: yPx + box.height / 2,
+        };
+        const dy = verticalClearance(rect, at.slackPx ?? 0, seas, SEA_PAD_PX, inDisc) ?? 0;
+        yPx += dy;
+        seas.push({ ...rect, y0: rect.y0 + dy, y1: rect.y1 + dy });
+      }
       labels.push({
         id: place.id,
         text: place.name,
-        worldPos: view.anchorMpc(at.xPx, at.yPx, place.latDeg, place.lonDeg),
+        worldPos: view.anchorMpc(at.xPx, yPx, place.latDeg, place.lonDeg),
         font: 'cormorant',
         pixelSize: 0,
         worldEmMpc: radiusMpc,

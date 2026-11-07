@@ -48,13 +48,16 @@ describe('placeAntiqueAreaName', () => {
     expect(placeAntiqueAreaName(crisiumAt(0), view, LETTERING)!.alpha).toBe(0);
   });
 
-  it("fades a name out before it overhangs the limb, where the extent's corners droop below it", () => {
-    // Seen from 25° south, Mare Frigoris's long box fits its extent but not the disc.
+  it('keeps a sea foreshortened at the limb named, moved inward off it', () => {
+    // Seen from 25° south, Mare Frigoris is a sliver under the north limb, but its
+    // extent square-on holds its name: Riccioli letters every sea.
     const frigoris = ANTIQUE_MOON_PLACES.find((p) => p.id === 'moonPlace-mareFrigoris')!;
     if (frigoris.kind === 'crater') throw new Error('Mare Frigoris is a mare');
     const view = orthographicMoonView(315, [1, 0, 0], -25);
-    const at = placeAntiqueAreaName(frigoris, view, ANTIQUE_PLACE_LETTERING[frigoris.id]!);
-    expect(at!.alpha).toBe(0);
+    const anchor = view.project(frigoris.latDeg, frigoris.lonDeg)!;
+    const at = placeAntiqueAreaName(frigoris, view, ANTIQUE_PLACE_LETTERING[frigoris.id]!)!;
+    expect(at.alpha).toBeCloseTo(1);
+    expect(at.yPx).toBeGreaterThan(anchor[1]);
   });
 
   it("moves a wide sea's name inward off the limb rather than dropping it", () => {

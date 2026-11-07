@@ -1,8 +1,8 @@
 /**
  * ANTIQUE_MOON_PLACE_REVEAL — when a Moon name shows. Every name fades in with the disc
  * (`discPx`, as Earth's `globePx`). A mare or Terra shows while its box fits its extent
- * as seen, the far side of the limb clipped off (`fitPx` of room), and both ends of the
- * box are lit (`sunCos.area`). A crater shows once its diameter reaches
+ * as seen or square-on (`fitPx` of room), its anchor faces the eye (`facing`) and both
+ * ends of the box are lit (`sunCos.area`). A crater shows once its diameter reaches
  * `craterPx[0] * craterPx[1] ** rank` px (fully in at `revealGrow` times that), its
  * foreshortening is below `facing`, and its centre and the far end of its name are lit
  * (`sunCos.crater`): the Moon has no twilight, so the night keeps none.
