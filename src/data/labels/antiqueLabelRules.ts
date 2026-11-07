@@ -13,7 +13,22 @@ import type { LabelName } from '../../@types/animation/LabelName';
 export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabelRule>>> = {
   body: {
     unlisted: 'hide',
-    lettering: 'capitals',
+    lettering: 'roman',
+    // The planets take the title capitals, Cassini's numbered moons the italic.
+    letteringOf: {
+      'sceneBody-earth': 'capitals',
+      'sceneBody-moon': 'capitals',
+      'sceneBody-mercury': 'capitals',
+      'sceneBody-venus': 'capitals',
+      'sceneBody-mars': 'capitals',
+      'sceneBody-jupiter': 'capitals',
+      'sceneBody-saturn': 'capitals',
+      'sceneBody-tethys': 'italic',
+      'sceneBody-dione': 'italic',
+      'sceneBody-rhea': 'italic',
+      'sceneBody-titan': 'italic',
+      'sceneBody-iapetus': 'italic',
+    },
     names: {
       'sceneBody-earth': 'Terra',
       'sceneBody-moon': 'Luna',
@@ -28,11 +43,11 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
       'sceneBody-callisto': 'Callisto',
       // The five Saturn moons known by 1684, numbered outward as Cassini did;
       // the names they carry today date from 1847.
-      'sceneBody-tethys': 'Saturni Satelles I',
-      'sceneBody-dione': 'Saturni Satelles II',
-      'sceneBody-rhea': 'Saturni Satelles III',
-      'sceneBody-titan': 'Saturni Satelles IV',
-      'sceneBody-iapetus': 'Saturni Satelles V',
+      'sceneBody-tethys': 'Saturni satelles I',
+      'sceneBody-dione': 'Saturni satelles II',
+      'sceneBody-rhea': 'Saturni satelles III',
+      'sceneBody-titan': 'Saturni satelles IV',
+      'sceneBody-iapetus': 'Saturni satelles V',
     },
   },
   starCatalog: {
@@ -40,6 +55,11 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
     lettering: 'italic',
     names: {
       'sceneBody-sun': 'Sol',
+      // As Bayer and the Amsterdam globe makers spelled them.
+      'sceneBody-polaris': 'Stella Polaris',
+      'sceneBody-alkaid': 'Benetnasch',
+      'sceneBody-schedar': 'Schedir',
+      'sceneBody-fomalhaut': 'Fomahant',
       // Named after 1690: discoverers, navigators' coinages, 2016+ IAU adoptions
       // from outside the Arabic and Latin tradition. Bayer designations too: an
       // atlas of the period lettered the star, it did not write the name out.
@@ -51,6 +71,8 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
       'sceneBody-gamma-cassiopeiae': null,
       'sceneBody-delta-cephei': null,
       'sceneBody-nunki': null,
+      'sceneBody-alnair': null,
+      'sceneBody-kaus-australis': null,
       'sceneBody-sargas': null,
       'sceneBody-ankaa': null,
       'sceneBody-proxima-centauri': null,
@@ -102,7 +124,7 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
   milkyWay: { unlisted: 'keep', lettering: 'capitals', names: { milkyWay: 'Via Lactea' } },
   famousGalaxy: {
     unlisted: 'hide',
-    lettering: 'capitals',
+    lettering: 'roman',
     names: {
       'famous-lmc': 'Nubecula Major',
       'famous-smc': 'Nubecula Minor',
@@ -112,7 +134,7 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
   },
   structure: {
     unlisted: 'hide',
-    lettering: 'capitals',
+    lettering: 'roman',
     names: {
       'open-cluster-pleiades': 'Pleiades',
       'open-cluster-hyades': 'Hyades',

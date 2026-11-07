@@ -48,7 +48,34 @@ describe('antiqueLabel', () => {
     expect(place.trackingEm).toBeGreaterThan(0);
     const star = antiqueLabel(label('vega', 'Vega'), STARS, false, ALL_FONTS)!;
     expect(star.font).not.toBe(place.font);
-    expect(star.trackingEm).toBeUndefined();
+    expect(star.trackingEm ?? 0).toBe(0);
+  });
+
+  it("sets a producer's mixed tiers from letteringOf", () => {
+    const bodies: AntiqueLabelRule = {
+      unlisted: 'keep',
+      lettering: 'roman',
+      letteringOf: { saturn: 'capitals' },
+      names: {},
+    };
+    const moon = antiqueLabel(label('rhea', 'Rhea'), bodies, false, ALL_FONTS)!;
+    const planet = antiqueLabel(label('saturn', 'Saturn'), bodies, false, ALL_FONTS)!;
+    expect(moon.text).toBe('Rhea');
+    expect(planet.text).toBe('SATVRN');
+    expect(moon.maxPixelSize!).toBeLessThan(planet.minPixelSize!);
+  });
+
+  it('sets a long subject title in italic rather than capitals', () => {
+    const subject = antiqueLabel(label('famous-m31', 'x'), PLACES, true, ALL_FONTS)!;
+    const long = antiqueLabel(
+      { ...label('m31', 'Nebula in Cingulo Andromedae') },
+      PLACES,
+      true,
+      ALL_FONTS,
+    )!;
+    expect(long.text).toBe('Nebula in Cingulo Andromedae');
+    expect(long.font).not.toBe(subject.font);
+    expect(long.minPixelSize).toBe(subject.minPixelSize);
   });
 
   it('keeps the focused subject, renamed when the table names it', () => {
@@ -64,7 +91,7 @@ describe('antiqueLabel', () => {
     const kept = (text: string) => antiqueLabel(label('x', text), PLACES, true, ALL_FONTS)?.text;
     expect(kept('Virgo (M87)')).toBe('VIRGO');
     expect(kept('Laniakea\nSupercluster')).toBe('LANIAKEA');
-    expect(kept('Galactic Centre')).toBe('CENTRVM GALAXIAE');
+    expect(kept('Galactic Centre')).toBe('Centrum Galaxiae');
   });
 
   it('sets a kept catalog number in roman, which carries the digits', () => {

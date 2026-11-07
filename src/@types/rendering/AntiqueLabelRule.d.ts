@@ -5,11 +5,15 @@
  * name (stars, constellations) or hides it (galaxies, structures, moons).
  */
 
+import type { AntiqueLettering } from './AntiqueLettering';
+
 export type AntiqueLabelRule = {
   /** What a label whose id `names` does not list does: keep its own text, or hide. */
   readonly unlisted: 'keep' | 'hide';
-  /** How the engraver cuts it: italic as named (stars), or letter-spaced roman capitals. */
-  readonly lettering: 'italic' | 'capitals';
+  /** The cut the producer's labels take. */
+  readonly lettering: AntiqueLettering;
+  /** Label id → a different cut, where a producer mixes tiers (planets among moons). */
+  readonly letteringOf?: Readonly<Record<string, AntiqueLettering>>;
   /** Label id → its period name, or null to hide it. */
   readonly names: Readonly<Record<string, string | null>>;
 };
