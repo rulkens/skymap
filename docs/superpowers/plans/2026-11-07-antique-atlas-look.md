@@ -159,6 +159,15 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [ ] Latin names for the web (Laniakea, Perseus-Pisces, Virgo, Coma Berenices, Attractor Magnus, Murus Hydrae); VACVVM LOCALE and VACVVM SCVLPTORIS only past `ANTIQUE_REGIME_MPC[1]`; a cluster glyph from the structures row.
 - [ ] The Zone of Avoidance ruled as a named hatched band, so it no longer reads as a void.
 
+### Task 20: The ruling follows the frame (owner rulings 2026-11-07: ecliptic default as Hevelius; Earth numbered from the Pico de Teide)
+**Files:** `src/services/gpu/shaders/antiqueLook/{graticule,fragment,io}.wesl`, `src/data/rendering/antiqueRulings.ts`,
+`src/services/gpu/passes/antiqueLook/antiquePlateRulings.ts`, `src/utils/gpu/antiqueLook/{rulingLonLat,antiqueGraticuleSteps,antiqueGlobeCastable,antiqueGlobeCoverage,placeAntiqueNumerals,formatAntiqueDegrees,setAntiqueDigits,packAntiqueUniforms}.ts`,
+`src/@types/rendering/{AntiqueRulingFrame,AntiqueRulingStep,AntiquePlateRulings}.d.ts`
+- [x] One `AntiqueRulingFrame` value (axes, prime-meridian offset, optional globe centre, net ink, steps) drives the shader's rulings and ladder and the border numerals; no per-frame code paths.
+- [x] The sky's frame follows the orientation setting: ecliptic by default, equatorial, galactic.
+- [x] A globe under the view (Earth, the one listed in `ANTIQUE_GLOBE_RULINGS`) rules its own body-fixed lat/lon net, faded in by its share of the plate and the ground scale; the border reads the globe where the band lies over it. Earth's longitude counts from the Pico de Teide.
+- [x] Numerals in degrees and minutes (° and ’ added to the IM Fell glyph sheet).
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
@@ -168,7 +177,7 @@ label rules; `styles/antique.css`.
 
 **Observable behaviours (smoke):**
 - `?antique#focus=body-earth`: cream laid paper with plate mark; numbered chequered neatline;
-  RA/Dec rulings running edge to edge; star glyphs by brightness with paper halos; Earth with cut
+  ecliptic rulings running edge to edge; star glyphs by brightness with paper halos; Earth with cut
   coasts, washed land and sea, hatching only in shade, night side cross-hatched; "Terra" as the
   largest name; the cartouche top-left; the chrome as paper slips in IM Fell.
 - Toggling the Display switch on and off swaps looks live, with no reload and no black frame.
