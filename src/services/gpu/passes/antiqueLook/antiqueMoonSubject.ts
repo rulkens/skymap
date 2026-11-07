@@ -6,12 +6,10 @@
  */
 
 import { ANTIQUE_GLOBE_TITLES } from '../../../../data/rendering/antiqueGlobeTitles';
-import { antiqueGlobePlateWeight } from '../../../../utils/gpu/antiqueLook/antiqueGlobePlateWeight';
-import { smoothstep } from '../../../../utils/math/smoothstep';
+import { antiqueGlobeSubject } from '../../../../utils/gpu/antiqueLook/antiqueGlobeSubject';
 import type { antiqueTitleGlobe } from './antiqueTitleGlobe';
 
 export function antiqueMoonSubject(globe: ReturnType<typeof antiqueTitleGlobe>): number {
   if (globe?.id !== 'moon') return 0;
-  const centred = globe.centreLonLat ? 1 : smoothstep(0.3, 0.5, globe.coverage);
-  return antiqueGlobePlateWeight(globe.radiusUnits, ANTIQUE_GLOBE_TITLES.moon?.span) * centred;
+  return antiqueGlobeSubject(globe, globe.centreLonLat !== null, ANTIQUE_GLOBE_TITLES.moon!);
 }

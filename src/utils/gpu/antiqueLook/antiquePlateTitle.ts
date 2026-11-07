@@ -12,7 +12,7 @@ import type { AntiqueTitleKey } from '../../../@types/rendering/AntiqueTitleKey'
 import { ANTIQUE_GLOBE_TITLES } from '../../../data/rendering/antiqueGlobeTitles';
 import { ANTIQUE_EARTH_TITLE_REGIONS } from '../../../data/rendering/antiqueTitleRegions';
 import { smoothstep } from '../../math/smoothstep';
-import { antiqueGlobePlateWeight } from './antiqueGlobePlateWeight';
+import { antiqueGlobeSubject } from './antiqueGlobeSubject';
 
 export function antiquePlateTitle(input: {
   /** 0 inside the Galaxy (a star chart) to 1 out among the galaxies. */
@@ -35,13 +35,7 @@ export function antiquePlateTitle(input: {
   const { globe, centreLonLat } = input;
   const row = globe ? ANTIQUE_GLOBE_TITLES[globe.id] : undefined;
   if (globe && row) {
-    // A globe beside the plate's centre is its subject only while it fills most
-    // of it: standing on the ground and looking up, the plate is the sky's.
-    const centred = centreLonLat ? 1 : smoothstep(0.3, 0.5, globe.coverage);
-    levels.push({
-      key: row.key,
-      v: antiqueGlobePlateWeight(globe.radiusUnits, row.span) * centred,
-    });
+    levels.push({ key: row.key, v: antiqueGlobeSubject(globe, centreLonLat !== null, row) });
     if (globe.id === 'earth' && centreLonLat) {
       const lon = ((((centreLonLat[0] + 180) % 360) + 360) % 360) - 180;
       const lat = centreLonLat[1];

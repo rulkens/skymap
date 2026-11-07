@@ -56,6 +56,16 @@ describe('antiquePlateTitle', () => {
     ).toBe('coelum');
   });
 
+  it("keeps the Moon's plate from its own ground, where the Earth's sky keeps the chart", () => {
+    // Earthrise: the Moon's ground across the plate's lower third, the centre ray in the sky.
+    expect(
+      antiquePlateTitle({ cosmos: 0, globe: globe('moon', 50, 0.3), centreLonLat: null }),
+    ).toEqual({ key: 'luna', weight: 1 });
+    expect(
+      antiquePlateTitle({ cosmos: 0, globe: globe('earth', 50, 0.3), centreLonLat: null })?.key,
+    ).toBe('coelum');
+  });
+
   it("names the Earth's region under the plate's centre as the globe magnifies", () => {
     expect(
       antiquePlateTitle({ cosmos: 0, globe: globe('earth', 0.8, 0.5, 20), centreLonLat: AMSTERDAM })
