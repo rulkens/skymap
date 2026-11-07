@@ -326,7 +326,7 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
 // a slope past RELIEF_SLOPE.x (both flanks of a rim, so the plate draws its crest), a hint
 // of stipple weight on flats (ground, so a crest between flanks still prints), 0 by night
 // and where a print unit spans more ground than RELIEF_M.y (the full disc).
-const RELIEF_SLOPE = vec2<f32>(0.12, 0.5);
+const RELIEF_SLOPE = vec2<f32>(0.08, 0.4);
 const RELIEF_STROKE: f32 = 0.3;
 const RELIEF_M = vec2<f32>(1200.0, 3000.0);
 const RELIEF_FLAT: f32 = 0.01;
