@@ -111,7 +111,12 @@ export function createEngine(
             bakedContentVersion: null,
             lastBakeAtMs: null,
           }
-        : { subject: null, refreshedAtMs: new Map<string, number>(), due: false },
+        : {
+            subject: null,
+            refreshedAtMs: new Map<string, number>(),
+            due: false,
+            refreshOwedInMs: null,
+          },
     ]),
   ) as CubemapCaptureRuntimes;
 

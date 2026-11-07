@@ -22,6 +22,7 @@ import { lightTimeLayerSettings } from '../layers/lightTime/state/slices';
 import { missionsLayerSettings } from '../layers/missions/state/slices';
 import { satellitesLayerSettings } from '../layers/satellites/state/slices';
 import { cosmicHorizonLayerSettings } from '../layers/cosmicHorizon/state/slices';
+import { probeSpheresLayerSettings } from '../layers/probeSpheres/state/slices';
 
 export const APP_SETTINGS_SLICE_REGISTRY = [
   ...blackHolesLayerSettings,
@@ -41,4 +42,5 @@ export const APP_SETTINGS_SLICE_REGISTRY = [
   ...missionsLayerSettings,
   ...satellitesLayerSettings,
   ...cosmicHorizonLayerSettings,
+  ...probeSpheresLayerSettings,
 ] as const;

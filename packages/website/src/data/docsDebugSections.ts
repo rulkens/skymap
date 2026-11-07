@@ -110,6 +110,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/body/earth/ui/EarthTuningSectionContainer.tsx',
   },
   {
+    heading: 'Probe spheres',
+    shows:
+      'The colour, metalness and roughness of the three mirror spheres that show what a model’s reflection is lit by: one in orbit, one in Søndermarken, one in Jezero crater. The spheres are drawn only with layers=probeSpheres in the link.',
+    file: 'src/layers/probeSpheres/spheres/ui/ProbeSpheresTuningSectionContainer.tsx',
+  },
+  {
     heading: 'Debug Overlays',
     shows:
       'Two pictures laid over the scene: the buffer a click is looked up in, and the stand-in shapes of the orbit trails.',

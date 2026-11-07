@@ -72,6 +72,7 @@ import { initialState as starCatalogsInitialState } from '../../../src/layers/st
 import { initialState as filamentsInitialState } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/initialState';
 import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
 import { initialState as stellarStreamsInitialState } from '../../../src/layers/stellarStreams/state/stellarStreams/initialState';
+import { initialState as probeSpheresInitialState } from '../../../src/layers/probeSpheres/state/probeSpheres/initialState';
 import { initialState as satellitesInitialState } from '../../../src/layers/satellites/state/satellites/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
@@ -126,6 +127,7 @@ export function makeSettingsFixture(
     blackHoleLensingTuning: { ...blackHoleLensingTuningInitialState },
     cosmicWebFilaments: { ...filamentsInitialState },
     localBubble: { ...localBubbleInitialState },
+    probeSpheres: { ...probeSpheresInitialState },
     satellites: { ...satellitesInitialState },
     stellarStreams: {
       ...stellarStreamsInitialState,
@@ -163,6 +165,7 @@ export function makeSettingsFixture(
       disabledPasses: {},
       matteWhite: false,
       meshAmbient: 0,
+      meshSelfBounce: 0,
       renderStrategy: 'auto',
       clipPathInspect: {
         clipId: null,

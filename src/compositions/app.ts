@@ -20,6 +20,7 @@ import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
 import { lightTimeLayer } from '../layers/lightTime/layer';
 import { localBubbleLayer } from '../layers/localBubble/layer';
 import { milkyWayLayer } from '../layers/milkyWay/layer';
+import { probeSpheresLayer } from '../layers/probeSpheres/layer';
 import { missionsLayer } from '../layers/missions/layer';
 import { satellitesLayer } from '../layers/satellites/layer';
 import { starCatalogLayer } from '../layers/starCatalog/layer';
@@ -47,6 +48,7 @@ export const APP_COMPOSITION = {
     structureLayer,
     bodyLayer,
     earthScenesLayer,
+    probeSpheresLayer,
   ] as const,
   home: EARTH_HOME,
 } satisfies EngineComposition<
@@ -69,5 +71,6 @@ export const APP_COMPOSITION = {
     typeof structureLayer,
     typeof bodyLayer,
     typeof earthScenesLayer,
+    typeof probeSpheresLayer,
   ]
 >;

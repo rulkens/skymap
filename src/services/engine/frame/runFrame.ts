@@ -268,11 +268,15 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.controlSchemes[next.scheme].drivers,
   );
 
+  const probeOwedInMs = state.cubemapCaptures.probe.refreshOwedInMs;
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();
   } else if (selectIsLiveTicking(rootState)) {
     // At rest with a live sim clock: a coarse heartbeat (see LIVE_IDLE_TICK_MS)
     // the scheduler ignores while a frame is already queued.
     state.subsystems.scheduler.requestIdleFrame(LIVE_IDLE_TICK_MS);
+  } else if (probeOwedInMs !== null) {
+    // At rest with a probe older than this frame: one wake when it falls due.
+    state.subsystems.scheduler.requestIdleFrame(probeOwedInMs);
   }
 }

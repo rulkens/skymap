@@ -15,6 +15,8 @@ export const SITE_GROUND_HEIGHTS: Readonly<Record<string, number>> = {
   spirit: 4267.150660739002,
   opportunity: 4713.81073991086,
   soendermarken: 18.53,
+  'probe-sphere-soendermarken': 31.781248311063543,
+  'probe-sphere-jezero': 4262.193130717158,
 };
 
 /** Site id -> the ground's up in the site's radial (east, north, up) frame,
@@ -25,4 +27,6 @@ export const SITE_GROUND_UPS_ENU: Readonly<Record<string, Readonly<Vec3>>> = {
   spirit: [0.04647436555169493, 0.0454836873522199, 0.9978834438607611],
   opportunity: [0, 0.00909252388406329, 0.9999586621502999],
   soendermarken: [0.00005304356556104682, -2.617993873899241e-7, 0.9999999985931558],
+  'probe-sphere-soendermarken': [-0.0019999654826169766, 0, 0.9999980000670343],
+  'probe-sphere-jezero': [0.1747976362388456, -0.08616462637890177, 0.9808269182308856],
 };
