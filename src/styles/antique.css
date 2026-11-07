@@ -286,6 +286,17 @@
   --exhibit-ramp-rule: 0 0 0 0.8px var(--antique-ink);
   --exhibit-ramp-blend: multiply;
   --exhibit-ramp-opacity: 0.8;
+  /* The Voyager timeline: ink for the marks, rubric for the play button, thumb and chosen tab. */
+  --timeline-mark: var(--antique-ink);
+  --timeline-select: var(--antique-rubric);
+  --timeline-tick-idle: rgba(43, 33, 24, 0.3);
+  --timeline-tick-ring: rgba(43, 33, 24, 0.6);
+  --timeline-play-ground: var(--antique-rubric);
+  --timeline-play-fg: var(--antique-slip);
+  --timeline-thumb: var(--antique-rubric);
+  --timeline-thumb-glow: transparent;
+  --timeline-when-wrap: nowrap;
+  --timeline-when-gap: var(--space-4);
   --exhibit-toggle-order: -1;
   --exhibit-toggle-justify: flex-start;
   --exhibit-hide-rule: 2px solid transparent;
