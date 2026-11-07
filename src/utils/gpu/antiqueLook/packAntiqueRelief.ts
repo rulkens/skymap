@@ -48,5 +48,6 @@ export function packAntiqueRelief(
   f32[52] = input.body.cellM;
   f32[53] = input.body.slopeInk;
   f32[54] = input.body.wideNormal ? 1 : 0;
+  f32[55] = input.reveal;
   return out;
 }

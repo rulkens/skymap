@@ -20,7 +20,7 @@ import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { BODY_CAPTION_ROWS } from '../data/bodyCaptionRows';
 import { ANTIQUE_REFERENCE_HEIGHT_CSS } from '../../../../data/rendering/antiqueLook';
-import { antiqueMapDetail } from '../../earth/antiqueMap/utils/antiqueMapDetail';
+import { antiqueMapDetail } from '../../../../utils/gpu/antiqueLook/antiqueMapDetail';
 import { bodyCodeOf } from '../../selection/present/bodyCodeOf';
 import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';

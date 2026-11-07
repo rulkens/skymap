@@ -9,7 +9,7 @@
 // | 0 invVp: NDC → eye-relative body-fixed m | 64 vp | 128 eyeFromAnchor, m; 140 orbit |
 // | 144 anchorCells (i32); 156 exaggeration | 160 sun; 172 radPerPx | 176 eyeRelBody; 188 unit |
 // | 192 res; 200 sin, 204 cos of the plate light's elevation | 208 cellM; 212 slopeInk;   |
-// | 216 wideNormal (`AntiqueReliefBody`, per body; `packAntiqueRelief.ts`)              |
+// | 216 wideNormal (`AntiqueReliefBody`, per body); 220 reveal (`packAntiqueRelief.ts`) |
 
 import package::antiqueLook::io::VSOut;
 
@@ -30,7 +30,7 @@ struct ReliefUniforms {
   cellM: f32,
   slopeInk: f32,
   wideNormal: f32,
-  _pad: f32,
+  reveal: f32,
 }
 
 // foreground:0's depth (reversed-Z: 0 is the far clear, so sky).
@@ -192,5 +192,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let w = clamp(jf - f32(j0), 0.0, 1.0);
   let q = r.eyeFromAnchor + p;
   let noise = (groundNoise(q, j0) * (1.0 - w) + groundNoise(q, j0 + 1) * w) / sqrt((1.0 - w) * (1.0 - w) + w * w);
-  return vec4<f32>(fall, noise, select(-fade, stroke, stroke > 0.0));
+  // Hachures fade in as a body's far relief signs fade out (`revealDetail`).
+  return vec4<f32>(fall, noise, select(-fade, stroke * r.reveal, stroke > 0.0));
 }

@@ -32,6 +32,7 @@ function input(eyeRelBodyM: [number, number, number]): AntiqueReliefInput {
     datumRadiusM: MARS_M,
     body: MARS,
     print: 2,
+    reveal: 0.25,
     sun: [0, 0.6, 0.8],
     size: { width: 1600, height: 900 },
     unitPx: 1,
@@ -63,6 +64,7 @@ describe('packAntiqueRelief', () => {
     expect(f32[at('cellM')]).toBe(MARS.cellM);
     expect(f32[at('slopeInk')]).toBe(MARS.slopeInk);
     expect(f32[at('wideNormal')]).toBe(0);
+    expect(f32[at('reveal')]).toBe(0.25);
     const earth = { ...input(eye), body: ANTIQUE_RELIEF_BODIES['earth']! };
     expect(new Float32Array(packAntiqueRelief(earth))[at('wideNormal')]).toBe(1);
   });

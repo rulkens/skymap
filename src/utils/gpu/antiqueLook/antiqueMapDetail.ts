@@ -6,7 +6,7 @@
  * so a name and its sign arrive together.
  */
 
-import { ANTIQUE_MAP_DETAIL_BASE } from '../data/antiqueMapReveal';
+import { ANTIQUE_MAP_DETAIL_BASE } from '../../../data/rendering/antiqueMapReveal';
 
 export function antiqueMapDetail(unitsPerRad: number, altitudeKm: number): number {
   return Math.log2(unitsPerRad / Math.max(altitudeKm, 0.001) / ANTIQUE_MAP_DETAIL_BASE);

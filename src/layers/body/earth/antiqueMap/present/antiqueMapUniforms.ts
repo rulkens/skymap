@@ -15,7 +15,7 @@ import { bodySlabCamLocal } from '../../../../../utils/camera/bodyCompose/bodySl
 import { innerBoundRadiusM } from '../../../../../utils/occlusion/innerBoundRadiusM';
 import { narrowMat4 } from '../../../../../utils/math/narrowMat4';
 import { prepareBodySurfaceFrame } from '../../../slabs/present/prepareBodySurfaceFrame';
-import { antiqueMapDetail } from '../utils/antiqueMapDetail';
+import { antiqueMapDetail } from '../../../../../utils/gpu/antiqueLook/antiqueMapDetail';
 import { ANTIQUE_MAP_UNIFORM_FLOATS } from '../data/antiqueEarthMapFormat';
 
 export function antiqueMapUniforms(

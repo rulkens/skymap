@@ -20,6 +20,9 @@ import {
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { sunDirLocal } from '../../../../utils/camera/bodyCompose/sunDirLocal';
+import { antiqueMapDetail } from '../../../../utils/gpu/antiqueLook/antiqueMapDetail';
+import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
+import { smoothstep } from '../../../../utils/math/smoothstep';
 import { sceneBodyStates } from '../../../engine/frame/sceneBodyStates';
 
 export function antiqueReliefInput(
@@ -38,13 +41,20 @@ export function antiqueReliefInput(
   const bodyState = sceneBodyStates(state, ctx).get(hostId);
   if (body === undefined || pose === null || bodyState === undefined) return null;
   const datumRadiusM = body.surface.datumRadiusM;
-  if (Math.hypot(...pose.eyeRelBodyM) - datumRadiusM > ANTIQUE_RELIEF_MAX_ALT_M) return null;
+  const eyeR = Math.hypot(...pose.eyeRelBodyM);
+  if (eyeR - datumRadiusM > ANTIQUE_RELIEF_MAX_ALT_M) return null;
+  // The map's own reveal level, from the same inner-bound altitude its signs use.
+  const band = reliefBody.revealDetail;
+  const detail = antiqueMapDetail(ctx.drawPxPerRad / unitPx, (eyeR - innerBoundRadiusM(body.surface)) / 1000);
+  const reveal = band === null ? 1 : smoothstep(band[0], band[1], detail);
+  if (reveal <= 0) return null;
   return {
     vp: row.vp,
     eyeRelBodyM: pose.eyeRelBodyM,
     datumRadiusM,
     body: reliefBody,
     print: ANTIQUE_BODY_PRINT_CODES[ANTIQUE_BODY_PRINTS[hostId] ?? 'plain'],
+    reveal,
     sun: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),
     size: ctx.canvasSize,
     unitPx,

@@ -20,6 +20,8 @@ export type AntiqueReliefInput = {
   /** Its print convention's code (`ANTIQUE_BODY_PRINT_CODES`): the plate dispatches the
    * engraved ground on it, since inside the relief shell the globe has no plate record. */
   readonly print: number;
+  /** 0..1, how far the hachures have faded in (`AntiqueReliefBody.revealDetail`). */
+  readonly reveal: number;
   /** Unit vector toward the Sun. */
   readonly sun: Readonly<Vec3>;
   readonly size: Size;

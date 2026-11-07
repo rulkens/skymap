@@ -73,6 +73,8 @@ fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
 // left plains, and the sea is the coast's and the water lines'.
 const EARTH_SHADE_INK: f32 = 0.75;
 const EARTH_DETAIL_INK: f32 = 0.45;
+// No face inks more than this share, so overlapping strokes never clot to solid black.
+const EARTH_INK_CAP: f32 = 0.42;
 
 fn earthRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec4<f32>, unit: f32,
                plain: f32, around: f32) -> f32 {
@@ -80,14 +82,14 @@ fn earthRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec
     return 0.0;
   }
   let detail = clamp((around - plain) / max(around, 1e-3) * 2.0, 0.0, 1.0);
-  let share = EARTH_SHADE_INK * relief.a + EARTH_DETAIL_INK * detail * min(relief.a * 4.0, 1.0);
+  let share = min(EARTH_SHADE_INK * relief.a + EARTH_DETAIL_INK * detail * min(relief.a * 4.0, 1.0), EARTH_INK_CAP);
   if (share <= 0.0) {
     return 0.0;
   }
   var ink = quantileCut(fallLines(field, samp, px, unit, false), share);
-  let deep = smoothstep(0.45, 0.7, share);
+  let deep = smoothstep(0.55, 0.8, relief.a);
   if (deep > 0.0) {
-    ink = max(ink, quantileCut(fallLines(field, samp, px, unit, true), 0.4 * deep));
+    ink = max(ink, quantileCut(fallLines(field, samp, px, unit, true), 0.3 * deep));
   }
   return ink;
 }

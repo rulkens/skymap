@@ -14,4 +14,7 @@ export type AntiqueReliefBody = {
   /** Difference the depth normal across one height cell on screen, so a coarse mesh's
    * facets average out instead of printing one tone each. */
   readonly wideNormal: boolean;
+  /** The antique map's reveal level (`antiqueMapDetail`) over which the hachures fade in,
+   * as the map's molehill signs fade out; null: always in. */
+  readonly revealDetail: readonly [number, number] | null;
 };
