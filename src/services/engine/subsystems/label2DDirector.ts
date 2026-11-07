@@ -822,10 +822,11 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     labels: readonly Label2D[],
     ctx: FrameView,
     isTitle: (label: Label2D) => boolean,
+    chromeHidden: boolean,
   ): readonly Label2D[] {
     const projection = config.project(ctx);
     const projected = projectLabels(labels, projection);
-    const { inner, keepOut } = antiquePlateKeepOut(projection.viewportPx);
+    const { inner, keepOut } = antiquePlateKeepOut(projection.viewportPx, chromeHidden);
     return labels.filter((label, i) => {
       const { screenPx, clipW } = projected[i]!;
       const bbox = screenPx ? measureText!(label) : null;
@@ -909,7 +910,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // `config.lift` is null): runs over survivors only, after the envelope
     // has resolved the final alpha for each.
     const lifted = applyLift(highlighted, ctx, antique);
-    const labels = antique ? clearOfPlate(lifted, ctx, isTitle) : lifted;
+    const labels = antique ? clearOfPlate(lifted, ctx, isTitle, state.ui.uiHidden) : lifted;
 
     // Flush contract: one MarkerLine per surviving leader-carrying label,
     // derived from the FINAL (post-declutter, post-envelope, post-lift) set.
