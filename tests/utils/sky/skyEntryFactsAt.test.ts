@@ -12,6 +12,8 @@ import { hostOrThrow } from '../../../src/services/engine/camera/arms/hostOrThro
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { ARRIVAL_APPROACH_ALT_M } from '../../../src/data/sky/arrivalApproachAltM';
+import { SKY_ENTRY_MAX_ALT_M } from '../../../src/data/sky/skyEntryMaxAltM';
 import type { BodyFixedPose } from '../../../src/@types/camera/pose/BodyFixedPose';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 
@@ -61,9 +63,17 @@ describe('skyEntryFactsAt', () => {
     expect(facts(poseAt('jupiter', 5_000, DOWN)).spot).toBeNull();
   });
 
-  it('names the ground above the entry ceiling too: the ceiling is the selector’s', () => {
-    const above = facts(poseAt('earth', 25_000, DOWN));
-    expect(above.spot).toEqual({ body: 'earth', lonRad: 0, latRad: 0 });
-    expect(above.altitudeM).toBeCloseTo(25_000, 3);
+  it('names the ground above the entry ceiling where a far entry’s approach ends', () => {
+    const reliefTopM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!.surface.reliefM[1];
+    const approachEnd = facts(poseAt('mars', reliefTopM + ARRIVAL_APPROACH_ALT_M, DOWN));
+    expect(approachEnd.altitudeM).toBeGreaterThanOrEqual(SKY_ENTRY_MAX_ALT_M);
+    expect(approachEnd.spot).toEqual({ body: 'mars', lonRad: 0, latRad: 0 });
+  });
+
+  it('casts nothing above the ceiling and past the approach, but keeps the altitude', () => {
+    const reliefTopM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!.surface.reliefM[1];
+    const past = facts(poseAt('mars', reliefTopM + ARRIVAL_APPROACH_ALT_M + 2_000, DOWN));
+    expect(past).toEqual({ spot: null, pointLocalM: null, altitudeM: past.altitudeM });
+    expect(past.altitudeM).toBeCloseTo(reliefTopM + ARRIVAL_APPROACH_ALT_M + 2_000, 3);
   });
 });
