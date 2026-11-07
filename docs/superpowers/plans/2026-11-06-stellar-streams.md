@@ -560,8 +560,8 @@ budget is debris, so the tails gain density. Total stays 60k.
   = min(budget, rows); same seed → same picks; with fewer unbound rows than the remainder, bound fills the
   rest (budget is never underspent)
 
-- [ ] `sagittariusMeta` keeps reading the full snapshot (anchor + lengthKpc unchanged) — assert in the test.
-- [ ] Rebuild, check the 128,419 total holds, commit code and data separately.
+- [x] `sagittariusMeta` keeps reading the full snapshot (anchor + lengthKpc unchanged) — assert in the test.
+- [x] Rebuild, check the 128,419 total holds, commit code and data separately.
 
 ### Task 16: Caption only long-enough streams; short card source line (owner ruling Q-labels a)
 

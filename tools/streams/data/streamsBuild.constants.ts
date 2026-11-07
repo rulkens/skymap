@@ -5,6 +5,11 @@
 
 /** Sagittarius particles drawn from the snapshot's 200,000 star particles. */
 export const SGR_PARTICLE_BUDGET = 60_000;
+/**
+ * At most this share of the budget is still-bound remnant (`tStripGyr` 0): a uniform pick made it
+ * 56%, ~33k particles in a few kpc that blew the core out to white. The rest goes to the debris.
+ */
+export const SGR_BOUND_SHARE = 0.1;
 /** The run's span (its trajectory starts at −3 Gyr), so the oldest debris (−2.6) never clamps. */
 export const SGR_OLDEST_STRIP_GYR = 3;
 export const SGR_LUMINOSITY = 1;

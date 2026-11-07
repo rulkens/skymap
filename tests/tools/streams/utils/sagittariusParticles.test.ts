@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { VasilievStar } from '../../../../tools/streams/@types/VasilievStar';
 import {
+  SGR_BOUND_SHARE,
   SGR_OLDEST_STRIP_GYR,
   SGR_PARTICLE_BUDGET,
 } from '../../../../tools/streams/data/streamsBuild.constants';
 import { sagittariusParticles } from '../../../../tools/streams/utils/sagittariusParticles';
+import { sagittariusMeta } from '../../../../tools/streams/utils/sagittariusMeta';
+import { raDecDistToEqCart } from '../../../../src/utils/math/raDecDistToEqCart';
 import { galToEq } from '../../../../tools/utils/math/galToEq';
 
 function star(i: number, tStripGyr = 0): VasilievStar {
@@ -24,6 +27,19 @@ function star(i: number, tStripGyr = 0): VasilievStar {
 }
 
 const mean = (a: Float32Array) => a.reduce((s, v) => s + v, 0) / a.length;
+const BOUND_CAP = Math.floor(SGR_BOUND_SHARE * SGR_PARTICLE_BUDGET);
+// Bound rows sit at 20 kpc, stripped ones at 60, so a particle's distance names its class.
+const sgrRows = (bound: number, stripped: number): VasilievStar[] => [
+  ...Array.from({ length: bound }, (_, i) => ({ ...star(i), distanceKpc: 20 })),
+  ...Array.from({ length: stripped }, (_, i) => ({ ...star(i, -1), distanceKpc: 60 })),
+];
+function boundCount(positionsMpc: Float32Array): number {
+  let count = 0;
+  for (let i = 0; i < positionsMpc.length; i += 3) {
+    if (Math.hypot(positionsMpc[i]!, positionsMpc[i + 1]!, positionsMpc[i + 2]!) < 0.04) count++;
+  }
+  return count;
+}
 
 describe('sagittariusParticles', () => {
   it('subsamples to the budget, deterministically for one seed', () => {
@@ -34,6 +50,43 @@ describe('sagittariusParticles', () => {
     expect(Array.from(sagittariusParticles(rows, 2n).positionsMpc)).not.toEqual(
       Array.from(a.positionsMpc),
     );
+  });
+
+  it('caps the bound remnant and spends the rest of the budget on debris', () => {
+    const { positionsMpc } = sagittariusParticles(sgrRows(40_000, 70_000), 1n);
+    expect(positionsMpc.length / 3).toBe(SGR_PARTICLE_BUDGET);
+    expect(boundCount(positionsMpc)).toBe(BOUND_CAP);
+  });
+
+  it('takes every bound row when there are fewer than the cap', () => {
+    const { positionsMpc } = sagittariusParticles(sgrRows(100, 70_000), 1n);
+    expect(positionsMpc.length / 3).toBe(SGR_PARTICLE_BUDGET);
+    expect(boundCount(positionsMpc)).toBe(100);
+  });
+
+  it('bound rows fill what the debris cannot, so the budget is never underspent', () => {
+    const { positionsMpc } = sagittariusParticles(sgrRows(40_000, 30_000), 1n);
+    expect(positionsMpc.length / 3).toBe(SGR_PARTICLE_BUDGET);
+    expect(boundCount(positionsMpc)).toBe(SGR_PARTICLE_BUDGET - 30_000);
+  });
+
+  it("the meta's anchor and extent read the full snapshot, not the capped pick", () => {
+    const rows = sgrRows(40_000, 70_000).map((s, i) => ({ ...s, ra: i % 2 ? 10 : 200 }));
+    const meta = sagittariusMeta(rows, sagittariusParticles(rows, 1n));
+    const bound = rows.filter((s) => s.tStripGyr === 0);
+    const anchor = [0, 1, 2].map(
+      (c) =>
+        bound.reduce(
+          (sum, s) =>
+            sum +
+            raDecDistToEqCart({ raHours: s.ra / 15, decDeg: s.dec, distMpc: s.distanceKpc / 1e3 })[
+              c
+            ]!,
+          0,
+        ) / bound.length,
+    );
+    meta.anchorMpc.forEach((v, c) => expect(v).toBeCloseTo(anchor[c]!, 9));
+    expect(sagittariusMeta(rows, sagittariusParticles(rows, 2n)).lengthKpc).toBe(meta.lengthKpc);
   });
 
   it('the tangent is the rotated galactocentric velocity', () => {

@@ -1,17 +1,21 @@
 /**
- * Sagittarius from the Vasiliev+ 2021 N-body snapshot: a seeded uniform subsample, placed from the
- * catalogue's own sky position and distance, moving along its galactocentric velocity. Colour
- * follows stripping time (bound and fresh debris amber, old debris blue); brightness does not,
- * so the old arms are not dimmed into invisibility.
+ * Sagittarius from the Vasiliev+ 2021 N-body snapshot: a seeded subsample, placed from the
+ * catalogue's own sky position and distance, moving along its galactocentric velocity. Bound and
+ * stripped stars are picked separately, the bound capped at `SGR_BOUND_SHARE` of the budget (a
+ * uniform pick drowned the core in remnant); either class fills what the other cannot, so the
+ * budget is never underspent. Colour follows stripping time (bound and fresh debris amber, old
+ * debris blue); brightness does not, so the old arms are not dimmed into invisibility.
  */
 import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { galToEq } from '../../utils/math/galToEq';
 import { splitmix64Rng } from '../../utils/random/splitmix64Rng';
+import { seededPick } from '../../utils/random/seededPick';
 import { clamp } from '../../utils/textures/clamp';
 import type { StreamParticles } from '../@types/StreamParticles';
 import type { VasilievStar } from '../@types/VasilievStar';
 import {
+  SGR_BOUND_SHARE,
   SGR_LUMINOSITY,
   SGR_OLDEST_STRIP_GYR,
   SGR_PARTICLE_BUDGET,
@@ -19,17 +23,20 @@ import {
 } from '../data/streamsBuild.constants';
 
 const KPC_TO_MPC = 1e-3;
+const BOUND_CAP = Math.floor(SGR_BOUND_SHARE * SGR_PARTICLE_BUDGET);
 
 export function sagittariusParticles(rows: readonly VasilievStar[], seed: bigint): StreamParticles {
   const rng = splitmix64Rng(seed);
-  // Partial Fisher–Yates, then back into file order so the pick is the only thing the seed decides.
-  const order = Int32Array.from(rows, (_, i) => i);
+  const bound: number[] = [];
+  const stripped: number[] = [];
+  rows.forEach((s, i) => (s.tStripGyr === 0 ? bound : stripped).push(i));
   const n = Math.min(SGR_PARTICLE_BUDGET, rows.length);
-  for (let i = 0; i < n; i++) {
-    const j = i + Math.floor(rng() * (rows.length - i));
-    [order[i], order[j]] = [order[j]!, order[i]!];
-  }
-  const picks = order.subarray(0, n).sort();
+  const nStripped = Math.min(stripped.length, n - Math.min(bound.length, BOUND_CAP));
+  // Back into file order, so the pick is the only thing the seed decides.
+  const picks = Int32Array.from([
+    ...seededPick(bound, n - nStripped, rng),
+    ...seededPick(stripped, nStripped, rng),
+  ]).sort();
 
   const positionsMpc = new Float32Array(n * 3);
   const tangents = new Float32Array(n * 3);
