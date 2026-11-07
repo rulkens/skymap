@@ -37,6 +37,30 @@ describe('antiqueLabel', () => {
     );
   });
 
+  it('drops the bracketed catalog number from a kept modern name', () => {
+    expect(antiqueLabel(label('galaxy-cluster-virgo-m87', 'Virgo (M87)'), HIDE, true)?.text).toBe(
+      'Virgo',
+    );
+  });
+
+  it('sets the subject larger than any capped class label', () => {
+    const big: Label2D = { ...label('sceneBody-sun', 'Sun'), minPixelSize: 40, maxPixelSize: 150 };
+    const shown = antiqueLabel(big, KEEP, false)!;
+    const subject = antiqueLabel(label('famous-m31', 'Andromeda Galaxy'), HIDE, true)!;
+    expect(subject.minPixelSize).toBeGreaterThan(shown.maxPixelSize!);
+  });
+
+  it('puts a self-lifted name back on its subject', () => {
+    const lifted: Label2D = {
+      ...label('famous-m31', 'Andromeda Galaxy'),
+      worldPos: [0, 9, 0],
+      leader: { fromWorld: [1, 2, 3], toWorld: [0, 8, 0], pixelWidth: 1, color: [1, 1, 1, 1] },
+    };
+    const placed = antiqueLabel(lifted, HIDE, false)!;
+    expect(placed.worldPos).toEqual([1, 2, 3]);
+    expect(placed.leader).toBeUndefined();
+  });
+
   it('does not read inherited keys as table entries', () => {
     expect(antiqueLabel(label('constructor', 'Constructor'), HIDE, false)).toBeNull();
   });

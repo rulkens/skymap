@@ -96,8 +96,13 @@ export function liftedLabelPlacement(input: {
    * visible gap above the body's rim instead of piercing it.
    */
   lineBottomLiftPx?: number;
+  /**
+   * When set, the ink bottom sits exactly this many px above the dot, replacing
+   * step 1's proportional lift and step 2's clearance floor (the antique look).
+   */
+  inkGapPx?: number;
 }): { labelWorldPos: Vec3; line: { fromWorld: Vec3; toWorld: Vec3 } | null } | null {
-  const liftPx0 = proposedLiftPx(input.subjectSizePx);
+  const liftPx0 = input.inkGapPx === undefined ? proposedLiftPx(input.subjectSizePx) : 0;
   const proposed = labelLeaderLine({
     anchorWorldPos: input.anchorWorldPos,
     vp: input.vp,
@@ -128,7 +133,7 @@ export function liftedLabelPlacement(input: {
   // MIN_LABEL_CLEARANCE_PX of the dot. Re-running `labelLeaderLine` replays
   // the same forward projection of the same dot — it cannot flip to null —
   // and only moves the lifted world point; the guard keeps the type honest.
-  const deficitPx = MIN_LABEL_CLEARANCE_PX + inkDropPx - liftPx0;
+  const deficitPx = (input.inkGapPx ?? MIN_LABEL_CLEARANCE_PX) + inkDropPx - liftPx0;
   const liftPx = deficitPx > 0 ? liftPx0 + deficitPx : liftPx0;
   const leader =
     deficitPx > 0

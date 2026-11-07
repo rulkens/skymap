@@ -134,6 +134,7 @@ import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { antiqueLookOn } from '../../../utils/render/antiqueLookOn';
 import { antiqueLabel } from '../../../utils/labels/antiqueLabel';
 import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
+import { ANTIQUE_LABEL_STYLE } from '../../../data/labels/antiqueLabelStyle';
 import { emphasisOf } from '../presentation/emphasisOf';
 import {
   HOVERED_LABEL_WHITEN,
@@ -675,7 +676,11 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * constellation captions (which anchor in empty space and have no subject
    * to float above) simply never carry one.
    */
-  function applyLift(labels: readonly Label2D[], ctx: FrameView): readonly Label2D[] {
+  function applyLift(
+    labels: readonly Label2D[],
+    ctx: FrameView,
+    antique: boolean,
+  ): readonly Label2D[] {
     const policy = config.lift;
     if (!policy) return labels;
     const slab = ctx.slabs[policy.slab];
@@ -729,6 +734,10 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         minPixelSize: label.minPixelSize ?? LABEL_MIN_PX_DEFAULT,
         maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
         lineBottomLiftPx: lift.lineBottomLiftPx ?? 0,
+        // An engraved name sits just off its glyph's rim, not a diameter and a half above.
+        inkGapPx: antique
+          ? lift.subjectSizePx * ANTIQUE_LABEL_STYLE.rimFraction + ANTIQUE_LABEL_STYLE.gapPx
+          : undefined,
       });
 
       if (placement === null) {
@@ -852,7 +861,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // Lift stage (NEAR0 only — a no-op array pass-through when
     // `config.lift` is null): runs over survivors only, after the envelope
     // has resolved the final alpha for each.
-    const labels = applyLift(highlighted, ctx);
+    const labels = applyLift(highlighted, ctx, antique);
 
     // Flush contract: one MarkerLine per surviving leader-carrying label,
     // derived from the FINAL (post-declutter, post-envelope, post-lift) set.

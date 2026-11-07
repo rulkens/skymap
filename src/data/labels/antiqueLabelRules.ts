@@ -25,12 +25,13 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
       'sceneBody-europa': 'Europa',
       'sceneBody-ganymede': 'Ganymedes',
       'sceneBody-callisto': 'Callisto',
-      // Saturn's moons found by 1684: Titan (1655), Iapetus, Rhea, Tethys, Dione.
-      'sceneBody-titan': 'Titan',
-      'sceneBody-iapetus': 'Iapetus',
-      'sceneBody-rhea': 'Rhea',
-      'sceneBody-tethys': 'Tethys',
-      'sceneBody-dione': 'Dione',
+      // The five Saturn moons known by 1684, numbered outward as Cassini did;
+      // the names they carry today date from 1847.
+      'sceneBody-tethys': 'Saturni Satelles I',
+      'sceneBody-dione': 'Saturni Satelles II',
+      'sceneBody-rhea': 'Saturni Satelles III',
+      'sceneBody-titan': 'Saturni Satelles IV',
+      'sceneBody-iapetus': 'Saturni Satelles V',
     },
   },
   starCatalog: {
@@ -38,8 +39,18 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
     names: {
       'sceneBody-sun': 'Sol',
       // Named after 1690: discoverers, navigators' coinages, 2016+ IAU adoptions
-      // from outside the Arabic and Latin tradition, and Bayer letters in
-      // constellations drawn later.
+      // from outside the Arabic and Latin tradition. Bayer designations too: an
+      // atlas of the period lettered the star, it did not write the name out.
+      'sceneBody-alpha-centauri': null,
+      'sceneBody-epsilon-eridani': null,
+      'sceneBody-tau-ceti': null,
+      'sceneBody-epsilon-centauri': null,
+      'sceneBody-eta-centauri': null,
+      'sceneBody-gamma-cassiopeiae': null,
+      'sceneBody-delta-cephei': null,
+      'sceneBody-nunki': null,
+      'sceneBody-sargas': null,
+      'sceneBody-ankaa': null,
       'sceneBody-proxima-centauri': null,
       'sceneBody-barnards-star': null,
       'sceneBody-kapteyns-star': null,
@@ -101,9 +112,6 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
       'open-cluster-pleiades': 'Pleiades',
       'open-cluster-hyades': 'Hyades',
       'open-cluster-praesepe': 'Praesepe',
-      'open-cluster-h-persei': 'h Persei',
-      'open-cluster-chi-persei': 'Chi Persei',
-      'globular-cluster-omega-centauri': 'Omega Centauri',
       'nebula-orion': 'Nebula in Ense Orionis',
     },
   },
