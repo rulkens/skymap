@@ -1,7 +1,7 @@
 # Blending seq Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under
-> `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
+> `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** `seq(steps, { overlap })` starts each step before the previous one ends, and the compiler
 works out how every camera channel crosses each join: a crossfade where a channel's two writers
@@ -16,7 +16,7 @@ segments. Evaluation stays a pure function of (compiled clip, t).
 
 **Tech Stack:** TypeScript, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-11-07-blending-seq-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-11-07-blending-seq-design.md`
 
 ## Global Constraints
 
@@ -102,15 +102,15 @@ seq (none exist on main, so: zero, full stop).
   zero-duration `localT = 1` case. Its value at `seg.endSec` is the segment's planned end (the
   crossfade's and the matched join's `from` rule) — no separate end-value function.
 
-- [ ] Replace `evaluateBaseScalar` and `evaluateBaseVec3` with ONE generic walk
+- [x] Replace `evaluateBaseScalar` and `evaluateBaseVec3` with ONE generic walk
       `evaluateBaseTrack<V>(segments, startVal: V, t, window): V` that calls `segmentValueAt` for
       the active segment and for the fold of ended ones (`runningVal = segmentValueAt(seg, from, t)`
       when `t ≥ endSec`, which keeps today's loop-spin fold at `t`). The Vec3 caller still returns
       a fresh array. `fovYRadAt` and `evaluateBaseAt` call the generic walk.
-- [ ] `channelValueAt`'s base-segment arm becomes `segmentValueAt(w, w.from ?? value, atSec)`.
-- [ ] No new test (pure extraction; the parity probe and the evaluator suite pin it).
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/services/engine/camera tests/services/engine/animation tests/data/animation`.
-- [ ] Commit: "Clip evaluator: one segment interpolator for every base walk".
+- [x] `channelValueAt`'s base-segment arm becomes `segmentValueAt(w, w.from ?? value, atSec)`.
+- [x] No new test (pure extraction; the parity probe and the evaluator suite pin it).
+- [x] `npm run typecheck:fast`; `npx vitest run tests/services/engine/camera tests/services/engine/animation tests/data/animation`.
+- [x] Commit: "Clip evaluator: one segment interpolator for every base walk".
 
 ### Task 2: `ease` → `curve` union (prep 2)
 
@@ -127,21 +127,21 @@ seq (none exist on main, so: zero, full stop).
   Task 7 adds `'hermite'`). `BaseSegment.ease` is removed; `BaseSegment.curve: SegmentCurve`.
 - `segmentValueAt` reads progress through a local `curveProgress(curve, u)` switch.
 
-- [ ] Reshape type, the three writers (`curve: { kind: 'ease', ease: effect.ease }`), the reader and
+- [x] Reshape type, the three writers (`curve: { kind: 'ease', ease: effect.ease }`), the reader and
       the two test files. `VelRamp`/`OscTrack` keep `ease`.
-- [ ] No new test (a type reshape; the compiler finds every site).
-- [ ] typecheck + the animation and clip tests; parity probe → zero diff.
-- [ ] Commit: "Compiled clip: a segment's curve is a variant".
+- [x] No new test (a type reshape; the compiler finds every site).
+- [x] typecheck + the animation and clip tests; parity probe → zero diff.
+- [x] Commit: "Compiled clip: a segment's curve is a variant".
 
 ### Task 3: `resolveClipFoci` keeps structural fields (prep 3)
 
 **Files:** Modify `src/services/engine/animation/resolveClipFoci.ts:148-166`
 
-- [ ] `seq`, `all`, `fork` rebuild with `{ ...effect, children: … }` / `{ ...effect, child: … }`, as
+- [x] `seq`, `all`, `fork` rebuild with `{ ...effect, children: … }` / `{ ...effect, child: … }`, as
       `applyPathTuning.ts:64` already does.
-- [ ] No test here (no field to lose yet; Task 4 adds the `overlap` round-trip test).
-- [ ] typecheck + `npx vitest run tests/services/engine/animation/resolveClipFoci.test.ts`; parity → zero.
-- [ ] Commit: "resolveClipFoci: structural nodes keep their fields".
+- [x] No test here (no field to lose yet; Task 4 adds the `overlap` round-trip test).
+- [x] typecheck + `npx vitest run tests/services/engine/animation/resolveClipFoci.test.ts`; parity → zero.
+- [x] Commit: "resolveClipFoci: structural nodes keep their fields".
 
 ### Task 4: Authoring and step placement (rules 1–2)
 
@@ -177,7 +177,7 @@ zero-length children go where the next step with a duration starts; the seq's du
 - rule 1: entries finite and ≥ 0; an array's length equals the number of duration joins;
 - rule 2: `overlap[k] ≤ dur(step k)` and `≤ dur(step k+1)`; `overlap[k−1] + overlap[k] ≤ dur(step k)`.
 
-- [ ] Tests (compileClip.test.ts, `describe('seq overlap')`), each from a concrete `start` pose:
+- [x] Tests (compileClip.test.ts, `describe('seq overlap')`), each from a concrete `start` pose:
   - `shifts each step start and shrinks the duration` — `seq([dollyTo(300, 4), spin('yaw', { by: 1, over: 4 })], { overlap: 1 })`
     → yaw segment `startSec === 3`, `durationSec === 7`.
   - `counts only steps with a duration` — `seq([dollyTo(300, 4), show(['label:body:planet']), spin('yaw', { by: 1, over: 4 }), hold(2)], { overlap: [1, 0.5] })`
@@ -189,10 +189,10 @@ zero-length children go where the next step with a duration starts; the seq's du
     `overlap: 5` against a 4 s step; `/seq at 0s, join 2/` for `overlap: [3, 3]` around a 4 s middle step.
   - `resolveClipFoci keeps overlap` (resolveClipFoci.test.ts): a resolved clip's seq still carries
     `overlap: [1, 2]`.
-- [ ] Run them → fail. Implement. Run → pass.
-- [ ] clip-primitives.md seq row: the new signature and one sentence pointing at "Blending a seq"
+- [x] Run them → fail. Implement. Run → pass.
+- [x] clip-primitives.md seq row: the new signature and one sentence pointing at "Blending a seq"
       (Task 7 writes that section).
-- [ ] Commit: "seq overlap: steps start before the previous one ends".
+- [x] Commit: "seq overlap: steps start before the previous one ends".
 
 ### Task 5: Cue order guard (rule 6)
 
@@ -207,11 +207,11 @@ zero-length children go where the next step with a duration starts; the seq's du
   key (`computeSceneEntering` doesn't fold them). Message names the seq, the join and both cue kinds,
   and says the tour rebuilds scenes in written order.
 
-- [ ] Tests: `throws when an overlap fires a later show before an earlier hide of the same layer`
+- [x] Tests: `throws when an overlap fires a later show before an earlier hide of the same layer`
       (step 1 ends with `hide([x])` at its end, step 2 opens with `show([x])`, overlap 1 → throws
       `/seq at 0s, join 1/`); `passes when the keys differ`; `passes at equal times` (stable order);
       `ignores fade cues`.
-- [ ] Fail → implement → pass. Commit: "seq overlap: cue order must match written order".
+- [x] Fail → implement → pass. Commit: "seq overlap: cue order must match written order".
 
 ### Task 6: Crossfade (rules 3, 4, composite, loop) — `review: yes`
 
@@ -264,7 +264,7 @@ Evaluator: in the generic walk, while `seg` is active and the next segment has `
 `lerpChannel(channel, CHANNEL_SPACE[channel], segmentValueAt(seg, from, t), segmentValueAt(next, inFrom, t), smootherstep((t − blendIn.startSec) / (blendIn.endSec − blendIn.startSec)))`.
 Once `seg` ends, the walk continues as today (the next segment starts from the planned end).
 
-- [ ] Tests (evaluateClip.test.ts, `describe('blending seq: crossfade')`, start distance 100,
+- [x] Tests (evaluateClip.test.ts, `describe('blending seq: crossfade')`, start distance 100,
       `seq([dollyTo(400, 4, 'linear'), dollyTo(200, 4, 'linear')], { overlap: 2 })`):
   - `value and velocity are continuous at both window ends` — at t = 2 and t = 4, one-sided
     differences (h = 1e-4) on ln(distance) agree within 1e-3, and the value matches the lone plan's.
@@ -276,15 +276,15 @@ Once `seg` ends, the walk continues as today (the next segment starts from the p
     overlap 1: consecutive samples (dt = 0.01) differ by < 0.05.
   - `nested overlapping seqs classify their own joins` — inner overlap seq as step 1 of an outer one,
     both blending distance: compiles, each `in` has one `blendIn`, and the evaluation is continuous.
-- [ ] Tests (resolveSeqJoins.test.ts, through `compileClip`): throws `/seq at 0s, join 1/` for —
+- [x] Tests (resolveSeqJoins.test.ts, through `compileClip`): throws `/seq at 0s, join 1/` for —
       a `flyPath` overlapping a `dollyTo` (composite); a zero-length `dollyTo(x, 0)` step between two
       dolly steps; a looping `spin` followed by a yaw tween; a crossfade whose incoming dolly ends
       before the outgoing one (`all` inside the step); a body-framed `set` crossfading into an
       absolute one. `channels on different steps run together` — dolly then yaw spin with overlap 1
       gets no `blendIn` anywhere.
-- [ ] Tests (validateSingleWriter.test.ts): `an overlap with a matching blendIn passes`;
+- [x] Tests (validateSingleWriter.test.ts): `an overlap with a matching blendIn passes`;
       `a blendIn that does not match the overlap throws`; `three live writers throw`.
-- [ ] Fail → implement → pass; parity probe → zero. Commit: "Blending seq: crossfade where a
+- [x] Fail → implement → pass; parity probe → zero. Commit: "Blending seq: crossfade where a
       channel's writers overlap".
 
 ### Task 7: Velocity-matched join + docs — `review: yes`
@@ -317,7 +317,7 @@ matched at both ends takes both join slopes. Throw for different `space` (D5) an
 opening inside `(prev.startSec, in.startSec]`, `prev` being the channel's writer before `out`
 (absent ⇒ −∞), read through `buildFrameLegs`/`legIndexAt` (D3, rule 4; `fov` exempt).
 
-- [ ] Tests (evaluateClip.test.ts, `describe('blending seq: matched join')`, start distance 150):
+- [x] Tests (evaluateClip.test.ts, `describe('blending seq: matched join')`, start distance 150):
   - `the join speed is the harmonic mean of the two average speeds` —
     `seq([dollyTo(300, 4), dollyTo(900, 4)], { overlap: 0 })`: d ln D/dt at t = 4 ± 1e-3 is
     0.2125 ± 1e-3 on both sides.
@@ -327,18 +327,18 @@ opening inside `(prev.startSec, in.startSec]`, `prev` being the channel's writer
     `linear` outer start: speed = sOut ± 1e-3.
   - `a plain seq still rests at the join` — same steps, no option: speed at t = 4 < 1e-3.
   - `a target join matches speed and stops at a reversal` — `moveTarget` there and back: speed 0.
-- [ ] Tests (resolveSeqJoins.test.ts): throws `/join 1/` for `dollyTo(…, 'linear')` in `'log'`
+- [x] Tests (resolveSeqJoins.test.ts): throws `/join 1/` for `dollyTo(…, 'linear')` in `'log'`
       against a `tween('distance', { space: 'lin', … })`; for a body-framed tween starting between
       the channel's previous writer and the outgoing segment. `a 'live' start compiles` — a
       `start: 'live'` clip with a matched join on its first distance writer: no throw, finite
       `durationSec`.
-- [ ] Test (hermiteUnit.test.ts): end values and end slopes for (0, 0), (1, 1), (2, 0.5).
-- [ ] Docs: clip-primitives.md — the single-writer paragraph names the blend pair as its one
+- [x] Test (hermiteUnit.test.ts): end values and end slopes for (0, 0), (1, 1), (2, 0.5).
+- [x] Docs: clip-primitives.md — the single-writer paragraph names the blend pair as its one
       exception; "Blending a seq": authoring, the three-row table, the crossfade and the matched join
       in a few lines each, the rules, the known limits (turn rates on a narrow lens; no blending
       across clip boundaries; target corners keep their direction change). BACKLOG line + detail
       file for the missing `validateCompositeExclusivity` / `channelValueAt` tests.
-- [ ] Fail → implement → pass; parity probe → zero. Commit: "Blending seq: velocity-matched joins
+- [x] Fail → implement → pass; parity probe → zero. Commit: "Blending seq: velocity-matched joins
       where writers abut".
 
 ---
