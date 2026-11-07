@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest';
 import type { Label2D } from '../../../src/@types/rendering/Label2D';
 import type { AntiqueLabelRule } from '../../../src/@types/rendering/AntiqueLabelRule';
 import { antiqueLabel } from '../../../src/utils/labels/antiqueLabel';
+import { bodyCaption } from '../../../src/utils/labels/bodyCaption';
+import { ANTIQUE_LABEL_RULES } from '../../../src/data/labels/antiqueLabelRules';
+import { ANTIQUE_LABEL_STYLE } from '../../../src/data/labels/antiqueLabelStyle';
+import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 
 const label = (id: string, text: string): Label2D => ({
   id,
@@ -14,7 +18,12 @@ const label = (id: string, text: string): Label2D => ({
 const STARS: AntiqueLabelRule = {
   unlisted: 'keep',
   lettering: 'italic',
-  names: { 'sceneBody-sun': 'Sol', tiaki: null },
+  names: { 'sceneBody-sun': 'Sol' },
+};
+const CONSTELLATIONS: AntiqueLabelRule = {
+  unlisted: 'keep',
+  lettering: 'capitals',
+  names: { Carina: 'Argo Navis', Antlia: null },
 };
 const PLACES: AntiqueLabelRule = {
   unlisted: 'hide',
@@ -27,7 +36,23 @@ const ALL_FONTS = () => true;
 describe('antiqueLabel', () => {
   it('renames a listed label and hides a null one', () => {
     expect(antiqueLabel(label('sceneBody-sun', 'Sun'), STARS, false, ALL_FONTS)?.text).toBe('Sol');
-    expect(antiqueLabel(label('tiaki', 'Tiaki'), STARS, false, ALL_FONTS)).toBeNull();
+    expect(antiqueLabel(label('Carina', 'Carina'), CONSTELLATIONS, false, ALL_FONTS)?.text).toBe(
+      'ARGO NAVIS',
+    );
+    expect(antiqueLabel(label('Antlia', 'Antlia'), CONSTELLATIONS, false, ALL_FONTS)).toBeNull();
+  });
+
+  it('shows every named star: the period name where the table has one, else the modern name in the star italic', () => {
+    const rule = ANTIQUE_LABEL_RULES.starCatalog;
+    for (const star of SCENE_STARS) {
+      // A catalog number is no name; it hides (below) unless it is the subject.
+      if (/\d/.test(star.label)) continue;
+      const caption = bodyCaption(star, 1, [0, 0, 0], [1, 1, 1], 0, undefined);
+      const shown = antiqueLabel(caption, rule, false, ALL_FONTS);
+      expect(shown, star.label).not.toBeNull();
+      expect(shown!.text).toBe(rule?.names[caption.id] ?? star.label);
+      expect(shown!.font).toBe(ANTIQUE_LABEL_STYLE.italicFont);
+    }
   });
 
   it("follows the rule's unlisted policy", () => {

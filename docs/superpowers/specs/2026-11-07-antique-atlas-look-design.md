@@ -90,7 +90,10 @@ paper tile 2.2 MB, ornament atlas ~1.1 MB) are fetched from `public/antique/` th
 - Labels (`label2DDirector`, rules in `data/labels/antiqueLabelRules.ts`): period names where
   one existed (Nubecula Minor, Saturnus, Nebula in Cingulo Andromedae, Argo Navis…), modern and
   post-1690 names hidden (digits, spacecraft, voids, moons found after 1690, Lacaille's
-  constellations), the selected subject always kept.
+  constellations), the selected subject always kept. A star with no period name keeps its
+  modern one in the star italic (owner ruling, 2026-11-07).
+- The camera's roll (`StepInputs.northUp`, `northUpArm`): held at zero in the world arm, so
+  the orientation frame's pole is up (owner ruling, 2026-11-07, the crude form: no projection).
 
 ### Ornaments (compositing)
 
@@ -139,8 +142,7 @@ shader tuning:
   body shaders. Saturn's ring needs its own id to be hatched lighter than the ball.
 - **App chrome on the plate.** The cards, toggles and photo thumbnail still read as modern UI
   over the sheet.
-- **Owner rulings.** North-up roll while the look is on, Latin glosses for modern names, and
-  dotted versus solid glow outlines.
+- **Owner rulings.** Latin glosses for modern names, and dotted versus solid glow outlines.
 
 ## Out of scope
 

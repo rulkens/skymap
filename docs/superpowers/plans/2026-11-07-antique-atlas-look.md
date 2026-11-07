@@ -83,8 +83,8 @@ export const ANTIQUE_PRINT_CELL_UNITS = 4;   // one print-point texel per 4 prin
 - [ ] Phase 2: the galaxy Layer writes the same target, so galaxy views keep their dots.
 
 ### Task 11: North-up and names (rulings 2026-11-07)
-- [ ] Camera roll held at zero (celestial north up) while the look is on.
-- [ ] Modern names shown where no period name exists; period names kept where they do.
+- [x] Camera roll held at zero (celestial north up) while the look is on.
+- [x] Modern names shown where no period name exists; period names kept where they do.
 
 ### Task 12: Constellation lines engraved
 - [ ] With the look on, the constellation pass draws into its own target; the plate inks it as a fine rule behind bodies, stars knocked out of it.
