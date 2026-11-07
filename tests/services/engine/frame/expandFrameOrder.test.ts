@@ -20,6 +20,7 @@ import type { FrameInputs } from '../../../../src/services/engine/frame/expandFr
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import { ANTIQUE_HIDDEN_PASSES } from '../../../../src/data/rendering/antiqueLook';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
@@ -469,6 +470,21 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     });
     expect(on.some((step) => step.kind === 'render' && step.target === 'overlay')).toBe(true);
     expect(on.at(-1)).toEqual({ kind: 'stylize', source: 'print', overlay: 'overlay' });
+  });
+
+  it('the antique look drops its hidden passes from every render step, and only it', () => {
+    const drawn = (steps: readonly FrameStep[]) => new Set(steps.flatMap((step) => namesOf(step)));
+    const hidden = ANTIQUE_HIDDEN_PASSES.filter((name) =>
+      COMPOSED_PASSES.some((pass) => pass.name === name),
+    );
+    expect(hidden.length).toBeGreaterThan(0);
+    // A body slab in the chain, so the body roster (cloud shells) expands too.
+    const on = drawn(program({ antique: true, foregroundChain: [NEAR0, 2] }));
+    const off = drawn(program({ foregroundChain: [NEAR0, 2] }));
+    for (const name of hidden) {
+      expect(on.has(name), name).toBe(false);
+      expect(off.has(name), name).toBe(true);
+    }
   });
 
   it('with the look off nothing is rerouted and no stylize step runs', () => {
