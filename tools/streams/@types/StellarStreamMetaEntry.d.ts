@@ -9,6 +9,8 @@ export type StellarStreamMetaEntry = {
   source: 'vasiliev2021' | 'galstreams';
   reference: string;
   lengthKpc: number;
+  /** The radius focus frames: half a track's length; for Sagittarius its denser debris's reach. */
+  frameRadiusKpc: number;
   distanceKpc: readonly [number, number];
   /** null for the N-body stream and for tracks whose master-log width is unset. */
   widthDeg: number | null;

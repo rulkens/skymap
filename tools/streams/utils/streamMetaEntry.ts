@@ -28,6 +28,7 @@ export function streamMetaEntry(
     source: 'galstreams',
     reference: track.ref,
     lengthKpc,
+    frameRadiusKpc: lengthKpc / 2,
     distanceKpc: [Math.min(...track.distanceKpc), Math.max(...track.distanceKpc)],
     widthDeg: track.widthDeg,
     particleCount: particles.luminosity.length,

@@ -8,6 +8,8 @@ export type StellarStreamMeta = {
   readonly reference: string;
   /** Track length; for Sagittarius, the debris extent. */
   readonly lengthKpc: number;
+  /** The radius focus frames; tighter than half the extent for Sagittarius. */
+  readonly frameRadiusKpc: number;
   readonly distanceKpc: readonly [number, number];
   /** null for the N-body stream and for tracks with no catalogued width. */
   readonly widthDeg: number | null;

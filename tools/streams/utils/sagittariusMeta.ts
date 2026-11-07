@@ -8,6 +8,8 @@ import type { VasilievStar } from '../@types/VasilievStar';
 const MPC_TO_KPC = 1e3;
 /** The extent ignores the farthest 1% of the snapshot, so one stray particle cannot set it. */
 const EXTENT_PERCENTILE = 99;
+/** Focus frames the remnant and both inner arms; the sparse outer trailing arm would push the camera ~2.5× farther. */
+const FRAME_PERCENTILE = 90;
 
 /** The meta row of Sagittarius; its label and focus sit at the bound remnant's mean position. */
 export function sagittariusMeta(
@@ -38,6 +40,7 @@ export function sagittariusMeta(
     reference: 'Vasiliev, Belokurov & Erkal 2021',
     // An extent (diameter around the remnant) here; for galstreams streams an arc length.
     lengthKpc: 2 * percentile(fromAnchorKpc, EXTENT_PERCENTILE),
+    frameRadiusKpc: percentile(fromAnchorKpc, FRAME_PERCENTILE),
     distanceKpc: [near, far],
     widthDeg: null,
     particleCount: p.luminosity.length,
