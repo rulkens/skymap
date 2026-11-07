@@ -12,7 +12,7 @@ export const stellarStreamsSelectionKinds: readonly SelectionKindFacts<
   {
     type: 'stellarStream',
     focus: STELLAR_STREAM_FOCUS,
-    // Every stream carries a caption.
+    // Any stream may be captioned: a hovered short stream gains one, so hover must wake the loop.
     mayHaveLabel: () => true,
     toFocusable: (row) => ({ ...row, ref: { type: 'stellarStream', slug: row.id } }),
     displayName: (target) => target.names[0]!,

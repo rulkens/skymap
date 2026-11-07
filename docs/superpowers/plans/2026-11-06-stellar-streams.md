@@ -561,7 +561,7 @@ budget is debris, so the tails gain density. Total stays 60k.
   rest (budget is never underspent)
 
 - [x] `sagittariusMeta` keeps reading the full snapshot (anchor + lengthKpc unchanged) — assert in the test.
-- [x] Rebuild, check the 128,419 total holds, commit code and data separately.
+- [x] Rebuild (128,419 holds, byte-identical rerun); data untracked (`public/data` is gitignored), the owner's R2 sync.
 
 ### Task 16: Caption only long-enough streams; short card source line (owner ruling Q-labels a)
 

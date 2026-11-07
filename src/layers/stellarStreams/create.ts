@@ -1,7 +1,7 @@
 /**
- * create — the renderer and the haze's upsample blit, then the two slots. Each slot's fetcher checks the pair against the
- * other's committed value, so whichever lands second runs the check; core fades the streaks in
- * on the bin's commit through the asset row's `gates`.
+ * create — the renderer and the haze's upsample blit, then the two slots. Each slot's fetcher
+ * checks the pair against the other's committed value, so whichever lands second runs the check;
+ * core fades the streaks in on the bin's commit through the asset row's `gates`.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';

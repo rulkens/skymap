@@ -44,6 +44,15 @@ describe('stellarStreams planner', () => {
     expect(plan(1, true, STILL).awake).toBe(false);
   });
 
+  it('does not wake for a drifting look at intensity 0', () => {
+    const dark: StellarStreamsSettings = {
+      ...initialState,
+      streak: { ...initialState.streak, intensity: 0 },
+      haze: { ...initialState.haze, intensity: 0, flow: 4 },
+    };
+    expect(plan(1, true, dark).awake).toBe(false);
+  });
+
   it('does not wake before the bin loads', () => {
     expect(plan(1, false).awake).toBe(false);
   });

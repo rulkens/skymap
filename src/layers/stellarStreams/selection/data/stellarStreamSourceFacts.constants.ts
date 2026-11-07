@@ -23,8 +23,8 @@ export const STELLAR_STREAM_SOURCE_FACTS: Record<
   galstreams: {
     kind: 'Stellar stream',
     sizeLabel: 'Length',
-    // The full credit wrapped; galstreams is credited in the meta description and ATTRIBUTIONS.md.
-    sourceLine: (reference) => `${reference} track`,
+    // Short so it does not wrap; the card shows no description, so galstreams stays named here.
+    sourceLine: (reference) => `galstreams · ${reference}`,
     licence: 'BSD-3-Clause',
   },
 };
