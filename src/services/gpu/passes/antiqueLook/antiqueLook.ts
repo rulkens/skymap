@@ -27,6 +27,8 @@ import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntique
 import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
 import { placeAntiqueNumerals } from '../../../../utils/gpu/antiqueLook/placeAntiqueNumerals';
 import { antiqueGraticuleSteps } from '../../../../utils/gpu/antiqueLook/antiqueGraticuleSteps';
+import { terminatorHatchAngle } from '../../../../utils/gpu/antiqueLook/terminatorHatchAngle';
+import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
 import { viewBasis } from '../../../../utils/camera/projection/viewBasis';
 import { viewCornerRays } from '../../../../utils/camera/projection/viewCornerRays';
 import { timestampSpread } from '../../../../utils/gpu/timestampSpread';
@@ -37,6 +39,9 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { GpuTimingService } from '../../../../@types/gpu/timing/GpuTimingService';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
+
+/** The terminator is read off the Sun's pose relative to the eye. */
+const SUN = asSceneBodyId('sun');
 
 /** A fixed seed keeps the sheet identical across reloads: a print does not change. */
 const PAPER_SEED = 17.0;
@@ -112,6 +117,7 @@ export function createAntiqueLook(init: {
         rays: viewCornerRays(basis, ctx.frustum),
         seed: PAPER_SEED,
         rulings,
+        hatchAngle: terminatorHatchAngle(ctx.bodyPose(SUN)),
       },
       uniformBytes,
     );

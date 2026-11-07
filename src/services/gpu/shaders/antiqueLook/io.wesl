@@ -9,6 +9,7 @@
 // | 80     | seed    | per-session paper seed                                   |
 // | 84     | raStep  | RA ruling interval, degrees (one for the whole plate)    |
 // | 88     | decStep | Dec ruling interval, degrees                             |
+// | 92     | hatch   | body hatch angle, radians: parallel to the terminator    |
 
 struct AntiqueUniforms {
   res: vec2<f32>,
@@ -21,7 +22,7 @@ struct AntiqueUniforms {
   seed: f32,
   raStep: f32,
   decStep: f32,
-  _pad0: f32,
+  hatchAngle: f32,
 }
 
 struct VSOut {

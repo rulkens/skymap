@@ -6,7 +6,7 @@
 // suppressed quarter-res peaks), and the low band of light — glows, nebulae,
 // structure discs — as Dutch outline colour: a crisp boundary line with a band
 // of wash fading inward and plain paper inside, never solid ink. Bodies are
-// engraved the classic way: hatching that follows the form, swelling into
+// engraved the classic way: hatching parallel to the terminator, swelling into
 // shadow, crossed at 45° on the night side; seas left pale with a coast halo.
 
 import package::antiqueLook::io::AntiqueUniforms;
@@ -190,20 +190,6 @@ fn coastNear(uv: vec2<f32>) -> f32 {
   return near;
 }
 
-// The direction a burin would follow on a body here: along the lines of equal
-// light (parallel to the terminator), from the gradient of the body's own light
-// at quarter res; where it is flat, a quiet default slant.
-fn formAngle(uv: vec2<f32>) -> f32 {
-  // Judged ~40 px apart: the terminator's scale, not the land's, or the burin wanders.
-  let t = 10.0 / vec2<f32>(textureDimensions(washTex));
-  let gx = luma(textureSampleLevel(washTex, linear, uv + vec2<f32>(t.x, 0.0), 0.0).rgb)
-    - luma(textureSampleLevel(washTex, linear, uv - vec2<f32>(t.x, 0.0), 0.0).rgb);
-  let gy = luma(textureSampleLevel(washTex, linear, uv + vec2<f32>(0.0, t.y), 0.0).rgb)
-    - luma(textureSampleLevel(washTex, linear, uv - vec2<f32>(0.0, t.y), 0.0).rgb);
-  let along = normalize(vec2<f32>(-gy, gx) + vec2<f32>(0.94, 0.34) * 0.02);
-  return atan2(along.y, along.x);
-}
-
 // The six classes of the Bayer/Flamsteed ladder, by the light a star spreads.
 // Radii in units: dots for the faintest two, then 5, 6, 6 and 8 rays; the
 // brightest class adds a glory of short ticks. y: the knock-out halo (1.3×).
@@ -313,16 +299,16 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let skyInk = max(star.x, max(dots, contour * 0.8) * clear) * sky;
   let rulings = graticule(viewRay(uv), u.unit, u.raStep, u.decStep) * sky * clear;
 
-  // Bodies: hatching along the form, its width carrying a smoothed tone (so a
-  // line swells into shadow instead of breaking into dashes); land by darkness,
-  // seas pale by day with the coast halo; the night crossed throughout.
+  // Bodies: hatching parallel to the terminator, its width carrying a smoothed
+  // tone (so a line swells into shadow instead of breaking into dashes); land by
+  // darkness, seas pale by day with the coast halo; the night crossed throughout.
   let lowBody = textureSampleLevel(washTex, linear, uv, 0.0).rgb;
   let l = mix(luma(lowBody), luma(src), 0.35);
   let ocean = smoothstep(0.06, 0.22, (src.b - max(src.r, src.g * 0.92)) / max(src.b, 0.04));
   let night = 1.0 - smoothstep(0.04, 0.16, max(lowBody.r, max(lowBody.g, lowBody.b)));
   let landTone = max(pow(1.0 - clamp(l * 1.8, 0.0, 1.0), 1.6), night);
   let tone = mix(landTone, night, ocean);
-  let hatchInk = crossHatch(p, tone, HATCH, formAngle(uv));
+  let hatchInk = crossHatch(p, tone, HATCH, u.hatchAngle);
   let halo = coastHalo(p, coastNear(uv), 2.4) * ocean * (1.0 - night);
   let o = i32(round(u.unit));
   let gx = bodyCover(ip + vec2<i32>(o, 0)) - bodyCover(ip - vec2<i32>(o, 0));
@@ -335,7 +321,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   var captions = 0.0;
   var captionHalo = 0.0;
   if ((u.flags & FLAG_CAPTIONS) != 0u) {
-    captions = smoothstep(0.03, 0.2, texel(overlayTex, ip).a);
+    // Ink from the letters' light fill only; their dark contrast outline (drawn
+    // for a black sky) feeds the paper halo instead of thickening the type.
+    let ov = texel(overlayTex, ip);
+    captions = smoothstep(0.03, 0.2, ov.a) * smoothstep(0.3, 0.6, luma(ov.rgb / max(ov.a, 1e-3)));
     let reach = 2.5 * u.unit;
     for (var k = 0; k < 8; k++) {
       let a = f32(k) * 0.7853982;

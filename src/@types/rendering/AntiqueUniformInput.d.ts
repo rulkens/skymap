@@ -21,4 +21,6 @@ export type AntiqueUniformInput = {
   readonly seed: number;
   /** One RA / Dec ruling interval for the whole plate, degrees (`antiqueGraticuleSteps`). */
   readonly rulings: { readonly raDeg: number; readonly decDeg: number };
+  /** Body hatch direction, screen radians (`terminatorHatchAngle`). */
+  readonly hatchAngle: number;
 };

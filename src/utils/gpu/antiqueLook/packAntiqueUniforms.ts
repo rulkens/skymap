@@ -28,5 +28,6 @@ export function packAntiqueUniforms(
   f32[20] = input.seed;
   f32[21] = input.rulings.raDeg;
   f32[22] = input.rulings.decDeg;
+  f32[23] = input.hatchAngle;
   return out;
 }
