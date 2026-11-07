@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { type Font, parse } from 'opentype.js';
 import sharp from 'sharp';
 
+import { smoothstep } from '../../src/utils/math/smoothstep';
 import type { GreyRaster } from '../@types/image/GreyRaster';
 import { closeMaskDisc } from '../utils/image/closeMaskDisc';
 import { dilateMaskDisc } from '../utils/image/dilateMaskDisc';
@@ -59,20 +60,47 @@ const FILL_BLUR_SIGMA_PX = 1.5;
 const CARTOUCHE_OVAL = { cx: 0.49, cy: 0.473, rx: 0.231, ry: 0.201 } as const;
 const ROMAN = 'IMFellEnglish-Regular.ttf';
 const ITALIC = 'IMFellEnglish-Italic.ttf';
+/**
+ * `capOfRy` is the cap height as a fraction of the oval's half-height. The oval
+ * is too narrow for caps that size at the face's own width, so a line may be
+ * condensed down to `minSqueeze` before it shrinks, as engravers cut it.
+ */
 const TITLE_LINES = [
-  { text: 'NOVA ET ACCVRATISSIMA', file: ROMAN, dy: -0.46, sizeOfRy: 0.2 },
-  { text: 'TOTIVS VNIVERSI TABVLA', file: ROMAN, dy: 0, sizeOfRy: 0.3 },
-  { text: 'Amstelodami, ex officina Skymap. MDCLX', file: ITALIC, dy: 0.46, sizeOfRy: 0.17 },
+  { text: 'NOVA ET ACCVRATISSIMA', file: ROMAN, dy: -0.5, capOfRy: 0.19, minSqueeze: 0.72 },
+  { text: 'TOTIVS VNIVERSI TABVLA', file: ROMAN, dy: 0.02, capOfRy: 0.26, minSqueeze: 0.72 },
+  {
+    text: 'Amstelodami, ex officina Skymapiana, Anno MDCXC',
+    file: ITALIC,
+    dy: 0.5,
+    capOfRy: 0.15,
+    minSqueeze: 0.8,
+  },
 ] as const;
-/** Fraction of the oval's chord a title line may span. */
-const TITLE_CHORD_FILL = 0.84;
+/** Fraction of the oval's chord a title line may span: keeps it inside the rule. */
+const TITLE_CHORD_FILL = 0.92;
+/** Ink-density band pushed to paper/ink, so scanned greys read as engraved lines. */
+const INK_PUSH = [0.3, 0.65] as const;
 
-async function loadInk(id: string): Promise<GreyRaster> {
-  const { data, info } = await sharp(`${ROOT}data/antique/sprites/${id}.png`)
+/**
+ * The sprite's ink density, scaled and padded; `push` maps it to two levels at
+ * the source's own resolution first: there a grey is a scan midtone, while after
+ * the downscale it is mostly a fine hatch line's coverage, which a push would erase.
+ */
+async function loadInk(id: string, push: boolean): Promise<GreyRaster> {
+  const src = await sharp(`${ROOT}data/antique/sprites/${id}.png`)
     .ensureAlpha()
-    .resize({ width: MAX_SIDE_PX, height: MAX_SIDE_PX, fit: 'inside', withoutEnlargement: true })
-    .extend({ top: PAD_PX, bottom: PAD_PX, left: PAD_PX, right: PAD_PX, background: '#0000' })
     .extractChannel(3)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const ink = push
+    ? src.data.map((v) => Math.round(smoothstep(INK_PUSH[0], INK_PUSH[1], v / 255) * 255))
+    : src.data;
+  const { data, info } = await sharp(ink, {
+    raw: { width: src.info.width, height: src.info.height, channels: 1 },
+  })
+    .resize({ width: MAX_SIDE_PX, height: MAX_SIDE_PX, fit: 'inside', withoutEnlargement: true })
+    .extend({ top: PAD_PX, bottom: PAD_PX, left: PAD_PX, right: PAD_PX, background: '#000' })
+    .extractChannel(0) // extend's colour background promotes the plane to sRGB
     .raw()
     .toBuffer({ resolveWithObject: true });
   return { data: new Uint8Array(data), width: info.width, height: info.height };
@@ -100,9 +128,15 @@ async function engraveTitle(ink: Uint8Array, w: number, h: number): Promise<void
       new Uint8Array(readFileSync(`${ROOT}data/antique/fonts/${line.file}`)).buffer,
     );
     const chord = 2 * rx * Math.sqrt(1 - line.dy * line.dy) * TITLE_CHORD_FILL;
+    const cap = face.getPath('H', 0, 0, 1).getBoundingBox();
     const { x1, x2 } = face.getPath(line.text, 0, 0, 1).getBoundingBox();
-    const sizePx = Math.min(line.sizeOfRy * 2 * ry, chord / (x2 - x1));
-    const glyphs = await rasterizeLine(face, line.text, sizePx);
+    let sizePx = (line.capOfRy * ry) / (cap.y2 - cap.y1);
+    let squeeze = Math.min(1, chord / ((x2 - x1) * sizePx));
+    if (squeeze < line.minSqueeze) {
+      squeeze = line.minSqueeze;
+      sizePx = chord / ((x2 - x1) * squeeze);
+    }
+    const glyphs = await rasterizeLine(face, line.text, sizePx, squeeze);
     const x0 = Math.round(PAD_PX + CARTOUCHE_OVAL.cx * iw - glyphs.width / 2);
     const y0 = Math.round(PAD_PX + CARTOUCHE_OVAL.cy * ih + line.dy * ry - glyphs.height / 2);
     for (let y = 0; y < glyphs.height; y++)
@@ -114,30 +148,38 @@ async function engraveTitle(ink: Uint8Array, w: number, h: number): Promise<void
 }
 
 /**
- * One line of text as coverage, `sizePx` the em size, cropped to its ink box.
- * Drawn from the font's outlines rather than sharp's `text` input: on macOS
- * that goes through CoreText, which ignores `fontfile` and falls back to sans.
+ * One line of text as two-level ink (engraved, no grey), `sizePx` the em size,
+ * condensed by `squeeze`, cropped to its ink box. Drawn from the font's outlines
+ * rather than sharp's `text` input: on macOS that goes through CoreText, which
+ * ignores `fontfile` and falls back to sans.
  */
-async function rasterizeLine(face: Font, text: string, sizePx: number): Promise<GreyRaster> {
+async function rasterizeLine(
+  face: Font,
+  text: string,
+  sizePx: number,
+  squeeze: number,
+): Promise<GreyRaster> {
   const path = face.getPath(text, 0, 0, sizePx);
   const { x1, y1, x2, y2 } = path.getBoundingBox();
-  const width = Math.ceil(x2 - x1);
+  const width = Math.ceil((x2 - x1) * squeeze);
   const height = Math.ceil(y2 - y1);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${x1} ${y1} ${width} ${height}"><path d="${path.toPathData(3)}"/></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><path transform="scale(${squeeze} 1) translate(${-x1} ${-y1})" d="${path.toPathData(3)}"/></svg>`;
   const { data } = await sharp(Buffer.from(svg))
     .ensureAlpha()
     .extractChannel(3)
     .raw()
     .toBuffer({ resolveWithObject: true });
-  return { data: new Uint8Array(data), width, height };
+  return { data: Uint8Array.from(data, (v) => (v >= 110 ? 255 : 0)), width, height };
 }
 
 async function buildSprite(id: string): Promise<OrnamentSprite> {
-  const { data: ink, width: w, height: h } = await loadInk(id);
+  const { data: ink, width: w, height: h } = await loadInk(id, true);
   if (id === 'cartouche') await engraveTitle(ink, w, h);
+  // The silhouette reads the unpushed ink: faint wave and hatch lines still hold it together.
+  const { data: density } = await loadInk(id, false);
   const solid = fillMaskHoles(
     closeMaskDisc(
-      ink.map((v) => (v > INK_THRESHOLD ? 1 : 0)),
+      density.map((v) => (v > INK_THRESHOLD ? 1 : 0)),
       w,
       h,
       CLOSE_RADIUS_PX,
