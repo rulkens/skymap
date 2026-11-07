@@ -20,15 +20,18 @@ const GROUND_INK_CAP: f32 = 0.5;
 // Darkness under the reference over which the shade's ink comes in; the hatch tone it
 // reaches (`crossHatch`: lines from 0.06, wider from 0.5, crossed past 0.8) and spacing.
 const GROUND_SHADE: vec2<f32> = vec2<f32>(0.1, 0.5);
-const GROUND_TONE: f32 = 0.95;
-const GROUND_HATCH: f32 = 3.0;
+const GROUND_TONE: f32 = 0.8;
+const GROUND_HATCH: f32 = 3.6;
 // The plains' two rings, in screen heights: past a big crater's wall at mid range.
 const GROUND_SURROUND: vec2<f32> = vec2<f32>(0.07, 0.2);
+// The plain render's luma below which ground is shade wherever it lies (lit Martian
+// ground prints ~0.25 in the print): a valley dark all round still inks, as the plain shows.
+const GROUND_LIT_LUMA: f32 = 0.2;
 // The lit crest's curvature (luma over the plains' per unit²) over which its line comes in,
 // the span it is measured across (units), and how much brighter than the plains it stands.
-const GROUND_CREST: vec2<f32> = vec2<f32>(0.002, 0.005);
+const GROUND_CREST: vec2<f32> = vec2<f32>(0.004, 0.008);
 const GROUND_CREST_SPAN: f32 = 6.0;
-const GROUND_CREST_LIT: vec2<f32> = vec2<f32>(1.05, 1.25);
+const GROUND_CREST_LIT: vec2<f32> = vec2<f32>(1.15, 1.4);
 
 fn washLuma(wash: texture_2d_array<f32>, samp: sampler, uv: vec2<f32>, layer: i32) -> f32 {
   return luma(textureSampleLevel(wash, samp, uv, layer, 0.0).rgb);
@@ -48,12 +51,12 @@ fn groundRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: ve
     let r = select(GROUND_SURROUND.x, GROUND_SURROUND.y, (k & 1) == 1);
     mean += washLuma(wash, samp, uv + vec2<f32>(cos(a) * res.y / res.x, sin(a)) * r, layer) / 8.0;
   }
-  let reference = max(max(around, mean), 1e-3);
+  let reference = max(max(around, mean), GROUND_LIT_LUMA);
   let dark = clamp(1.0 - plain / reference, 0.0, 1.0);
   let shade = smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, dark);
   // The hatching's tone from the smooth wash, so its lines arrive and leave by rank, each
   // tapering out, instead of flickering with the plain render's pixel grain.
-  let washShade = smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, clamp(1.0 - around / max(mean, 1e-3), 0.0, 1.0));
+  let washShade = smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, clamp(1.0 - around / max(mean, GROUND_LIT_LUMA), 0.0, 1.0));
   let weight = min(abs(relief.a) * 1.5, 1.0);
   // A crest is too flat to be a landform itself: its line is sought on every pixel.
   var ink = fallCrest(field, samp, px, unit);
