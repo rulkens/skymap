@@ -176,6 +176,7 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] The sky's frame follows the orientation setting: ecliptic by default, equatorial, galactic.
 - [x] A globe under the view (Earth, the one listed in `ANTIQUE_GLOBE_RULINGS`) rules its own body-fixed lat/lon net, faded in by its share of the plate and the ground scale; the border reads the globe where the band lies over it. Earth's longitude counts from the Pico de Teide.
 - [x] Numerals in degrees and minutes (° and ’ added to the IM Fell glyph sheet).
+- [x] A side number runs inward from the inner rule, shrunk to fit the plate's numeral strip (`ANTIQUE_SIDE_NUMERAL_REACH_UNITS` = the shader's `NUMERAL_SIDE_REACH`), so "52°40’" is never clipped.
 
 ### Task 21: Earth up close, c.1690 (owner: "earth when zoomed in should have more detail, i.e. borders, cities, probably within that time period")
 **Files:** `tools/antique/earth/**` (bake: `npm run build-antique-earth` → `public/antique/earth-1690.bin`), `tools/fetch/{fetchNaturalEarth,fetchOhm1690}.ts`, `data/raw/{naturalearth,ohm}/`, `src/data/labels/antiqueEarthRealms.ts`
