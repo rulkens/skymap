@@ -318,10 +318,10 @@ the sun's lowest point that night); "Skip to when it rises" from Task 9; both vi
 Navigation sky rows: Drag "look around", Wheel "field of view", "Wheel out at 120°" "lift off", Esc
 "close card, then leave".
 
-- [ ] Interaction tests: button gate show/hide; hover shows the ring; Leave dispatches `exitTakeover({ restore: true })`;
+- [x] Interaction tests: button gate show/hide; hover shows the ring; Leave dispatches `exitTakeover({ restore: true })`;
       `Skip to tonight from live mode lands manual, paused, at the target` (Review focus 5).
-- [ ] Shots at both widths for: entry rest, entry hover, phone entry, HUD night, HUD day (skip visible).
-- [ ] Commit.
+- [x] Shots at both widths for: entry rest, entry hover, phone entry, HUD night, HUD day (skip visible).
+- [x] Commit.
 
 **Feature PR:** push, open "Sky mode: look up from here, compass HUD, search turns your head", stacked on the
 prep PR, watch CI. Perf gate (controller ruling): `npm run perf:cpu` at the Søndermarken sky pose and a 15 km

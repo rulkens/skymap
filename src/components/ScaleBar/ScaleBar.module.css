@@ -22,7 +22,7 @@
  * follows. The inline-width scaleLine reads in real px within the box; see the
  * SCALE_TARGET_PX coupling comment in src/data/layout/scaleTargetPx.ts for why ≤120 px fits here.
  */
-.scaleBar {
+.root {
   position: fixed;
   bottom: calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3));
   right: var(--corner-offset);
@@ -76,4 +76,20 @@
   border-right: 1px solid var(--color-accent-bright);
   border-bottom: 1px solid var(--color-accent-bright);
   box-sizing: border-box;
+}
+
+/* Standing: the lens over the spot. */
+.field,
+.spot {
+  display: block;
+  white-space: nowrap;
+}
+
+.field {
+  margin-bottom: var(--space-1);
+  color: var(--color-fg);
+}
+
+.spot {
+  color: var(--color-fg-muted);
 }

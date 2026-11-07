@@ -34,6 +34,9 @@ import { selectSelectedRef } from '../selection/selectors';
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
 import { exitTakeover } from '../takeover/takeoverActions';
+import { selectSkyView } from '../engine/selectors';
+import { selectSkyEntry } from '../sky/selectSkyEntry';
+import { enterSkyHere } from '../sky/enterSkyHere';
 import { selectPaletteOpen } from '../ui/selectors';
 import { setPaletteOpen, toggleDebugPanelOpen, toggleUiHidden } from '../ui/uiSlice';
 import { selectTimeState } from '../time/selectors';
@@ -56,13 +59,16 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   // An open card closes first, focus kept (R11). Otherwise `exitTakeover` ends whatever runs — a tour, an
   // exhibit, a registry clip, sky mode, or the debug path replay — as the person's own leave,
   // so sky mode restores (or lifts off when standing with no takeover); nothing running, a no-op.
+  // Standing never clears focus: the sky arm releases the moment focus leaves its body.
   {
     keys: 'escape',
-    run: (s) =>
-      selectSelectedRef(s) !== null
-        ? updateSelectionSelect(null)
-        : [clearSelection(), exitTakeover({ restore: true })],
+    run: (s) => {
+      if (selectSelectedRef(s) !== null) return updateSelectionSelect(null);
+      if (selectSkyView(s) !== null) return exitTakeover({ restore: true });
+      return [clearSelection(), exitTakeover({ restore: true })];
+    },
   },
+  { keys: 's', run: (s) => (selectSkyEntry(s) === null ? null : enterSkyHere()) },
   { keys: 'f', run: () => focusSelected() },
   { keys: 'h,e', run: () => goHome() },
   { keys: 'tab', run: () => toggleUiHidden(), preventDefault: true },

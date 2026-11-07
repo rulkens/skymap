@@ -1,0 +1,139 @@
+/*
+ * SkyHud.module.css — a column at the bottom centre over the bare sky, so text carries a dark
+ * halo instead of a panel. Only the buttons take the pointer: a drag that starts on the title or
+ * the ribbon still turns the view. The desktop width leaves the left stack its column.
+ */
+
+.root {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3));
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  width: clamp(240px, calc(100vw - 2 * (var(--panel-width) + 2 * var(--corner-offset))), 560px);
+  margin: 0;
+  color: var(--color-fg-muted);
+  text-shadow:
+    0 0 var(--space-3) var(--shadow-card-outer),
+    0 1px var(--space-1) var(--shadow-card-outer);
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
+  user-select: none;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: fadeIn var(--duration-base) var(--ease-standard);
+}
+
+.phone {
+  bottom: calc(var(--bottom-stack-height) + var(--sheet-lift) + var(--scale-clearance));
+  z-index: var(--z-bottom-stack);
+  width: min(560px, calc(100vw - 2 * var(--corner-offset)));
+}
+
+.title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-5);
+  max-width: 100%;
+  margin: 0;
+  font-weight: normal;
+}
+
+.tag {
+  color: var(--color-accent);
+  font: var(--font-size-sm) / 1 var(--font-family-mono);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+}
+
+.place {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-fg);
+  font-family: var(--font-family-display);
+  font-size: 1.375rem;
+  line-height: var(--line-height-tight);
+}
+
+.heading,
+.note {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  color: var(--color-fg-tertiary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: calc(var(--space-12) + var(--space-3));
+  padding: 0 var(--space-5);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  background: var(--surface-card-strong);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  color: var(--color-accent-control);
+  font: inherit;
+  letter-spacing: var(--letter-spacing-tight);
+  text-shadow: none;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background-color var(--duration-color) ease,
+    border-color var(--duration-color) ease;
+}
+
+.phone .button {
+  height: var(--touch-target);
+  padding: 0 var(--space-8);
+}
+
+@media (hover: hover) {
+  .button:hover {
+    border-color: var(--border-hover);
+    background: var(--surface-control-hover);
+    color: var(--color-fg);
+  }
+}
+
+.button:active {
+  background: var(--surface-control-active);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.key {
+  composes: key from '../common/keyHint.module.css';
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    animation: none;
+  }
+}
