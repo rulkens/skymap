@@ -3,14 +3,16 @@
  * packOrnaments — packs the antique look's engraved ornaments into one sheet,
  * `public/antique/ornaments.png`, and generates its layout module. Channels:
  * R = ink density, G = fill (the solid silhouette the plate is cleared to paper
- * under), B = wash (colour strength; 0 here, every sprite is uncoloured).
+ * under), B = wash (where the colourist painted: the alpha of `<id>.colour.png`
+ * when a sprite has one, else 0).
  *
  * Usage:  npm run pack-ornaments
- * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha; provenance in
- *         data/antique/PROVENANCE.md) and the IM Fell TTFs in data/antique/fonts/.
+ * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha), optional
+ *         <id>.colour.png (RGB hue, alpha saturation), provenance in
+ *         data/antique/PROVENANCE.md; the IM Fell TTFs in data/antique/fonts/.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { type Font, parse } from 'opentype.js';
@@ -27,15 +29,13 @@ import type { OrnamentSprite } from './@types/OrnamentSprite';
 
 const SPRITE_IDS = [
   'cartouche',
-  'compassRose',
   'cetus',
+  'ship',
+  'whale',
   'dragon',
   'seaSerpent',
   'seaMonster',
-  'hornedWhale',
   'seaHorse',
-  'spoutFish',
-  'ship',
 ] as const;
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -49,15 +49,19 @@ const GUTTER_PX = 4;
 const PAD_PX = 10;
 const INK_THRESHOLD = Math.round(0.08 * 255);
 const CLOSE_RADIUS_PX = 6;
+/** Wider closes where the engraving leaves a body's outline open (the whale's belly line). */
+const CLOSE_RADIUS_OVERRIDE_PX: Partial<Record<(typeof SPRITE_IDS)[number], number>> = {
+  whale: 24,
+};
 const FILL_GROW_PX = 3;
 const FILL_BLUR_SIGMA_PX = 1.5;
 
 /**
- * The cartouche's empty oval, measured by eye on the 1024 px source and stored
- * normalised to the unpadded sprite. Hard-coded rather than detected: the oval's
- * inner rule is broken at the top left, so a flood would leak out of it.
+ * The cartouche's empty interior, measured on the 591×634 source just inside its
+ * inner rule and stored normalised to the unpadded sprite. Hard-coded rather than
+ * detected: the interior opens upward between the crest scrolls, so a flood leaks.
  */
-const CARTOUCHE_OVAL = { cx: 0.49, cy: 0.473, rx: 0.231, ry: 0.201 } as const;
+const CARTOUCHE_OVAL = { cx: 0.504, cy: 0.502, rx: 0.318, ry: 0.31 } as const;
 const ROMAN = 'IMFellEnglish-Regular.ttf';
 const ITALIC = 'IMFellEnglish-Italic.ttf';
 /**
@@ -86,8 +90,8 @@ const INK_PUSH = [0.3, 0.65] as const;
  * the source's own resolution first: there a grey is a scan midtone, while after
  * the downscale it is mostly a fine hatch line's coverage, which a push would erase.
  */
-async function loadInk(id: string, push: boolean): Promise<GreyRaster> {
-  const src = await sharp(`${ROOT}data/antique/sprites/${id}.png`)
+async function loadInk(file: string, push: boolean): Promise<GreyRaster> {
+  const src = await sharp(spritePath(file))
     .ensureAlpha()
     .extractChannel(3)
     .raw()
@@ -104,6 +108,10 @@ async function loadInk(id: string, push: boolean): Promise<GreyRaster> {
     .raw()
     .toBuffer({ resolveWithObject: true });
   return { data: new Uint8Array(data), width: info.width, height: info.height };
+}
+
+function spritePath(file: string): string {
+  return `${ROOT}data/antique/sprites/${file}.png`;
 }
 
 function insideOval(x: number, y: number, w: number, h: number, scale: number): boolean {
@@ -172,7 +180,7 @@ async function rasterizeLine(
   return { data: Uint8Array.from(data, (v) => (v >= 110 ? 255 : 0)), width, height };
 }
 
-async function buildSprite(id: string): Promise<OrnamentSprite> {
+async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSprite> {
   const { data: ink, width: w, height: h } = await loadInk(id, true);
   if (id === 'cartouche') await engraveTitle(ink, w, h);
   // The silhouette reads the unpushed ink: faint wave and hatch lines still hold it together.
@@ -182,7 +190,7 @@ async function buildSprite(id: string): Promise<OrnamentSprite> {
       density.map((v) => (v > INK_THRESHOLD ? 1 : 0)),
       w,
       h,
-      CLOSE_RADIUS_PX,
+      CLOSE_RADIUS_OVERRIDE_PX[id] ?? CLOSE_RADIUS_PX,
     ),
     w,
     h,
@@ -193,7 +201,10 @@ async function buildSprite(id: string): Promise<OrnamentSprite> {
   const grown = dilateMaskDisc(solid, w, h, FILL_GROW_PX);
   const soft = gaussianBlurFloat32(Float32Array.from(grown), w, h, FILL_BLUR_SIGMA_PX);
   const fill = Uint8Array.from(soft, (v) => Math.round(Math.min(1, v) * 255));
-  return { ink, fill, w, h };
+  const wash = existsSync(spritePath(`${id}.colour`))
+    ? (await loadInk(`${id}.colour`, false)).data
+    : new Uint8Array(w * h);
+  return { ink, fill, wash, w, h };
 }
 
 /** The narrowest-square packing under the size cap. */
@@ -222,6 +233,7 @@ async function main(): Promise<void> {
         const o = ((y + j) * width + x + i) * 3;
         atlas[o] = s.ink[j * s.w + i]!;
         atlas[o + 1] = s.fill[j * s.w + i]!;
+        atlas[o + 2] = s.wash[j * s.w + i]!;
       }
   });
   await sharp(atlas, { raw: { width, height, channels: 3 } })

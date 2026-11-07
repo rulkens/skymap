@@ -1,7 +1,8 @@
-/** One processed ornament before packing: ink and fill planes, padded, w×h px. */
+/** One processed ornament before packing: ink, fill and wash planes, padded, w×h px. */
 export type OrnamentSprite = {
   readonly ink: Uint8Array;
   readonly fill: Uint8Array;
+  readonly wash: Uint8Array;
   readonly w: number;
   readonly h: number;
 };
