@@ -50,6 +50,7 @@ import package::antiqueLook::bodies::moon::moonInk;
 import package::antiqueLook::bodies::moon::moonToneAlong;
 import package::antiqueLook::bodies::moon::moonShade;
 import package::antiqueLook::bodies::moon::moonAt;
+import package::antiqueLook::bodies::moon::moonRelief;
 import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::frameLonLat;
 import package::antiqueLook::graticule::globeNormal;
@@ -696,6 +697,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       let around = luma(textureSampleLevel(quarterTex, linear, uv, WASH_LAYER, 0.0).rgb);
       if ((u.flags >> RELIEF_PRINT_SHIFT) == PRINT_EARTH) {
         bodyInk = max(bodyInk, earthRelief(reliefTex, px, relief, u.unit, luma(src), around));
+      } else if ((u.flags >> RELIEF_PRINT_SHIFT) == PRINT_MOON) {
+        bodyInk = max(bodyInk, select(0.0, moonRelief(reliefTex, linear, px, relief, u.unit, moon.shade), moonRow));
       } else {
         bodyInk = max(bodyInk, groundRelief(reliefTex, linear, px, relief, u.unit, u.hatchAngle,
           luma(src), quarterTex, WASH_LAYER));

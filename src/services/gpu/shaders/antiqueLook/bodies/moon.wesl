@@ -8,6 +8,9 @@
 
 import package::lib::util::hash21Hq;
 import package::antiqueLook::bodies::moonRow::decodeMoonRow;
+import package::antiqueLook::engraving::fallCrest;
+import package::antiqueLook::engraving::fallLines;
+import package::antiqueLook::engraving::quantileCut;
 
 // Lommel–Seeliger brightness 2·L/(L + ndv) on the terrain's light L: ~1 across the
 // whole full disc (no limb darkening), falling only at the terminator. Paper from 0.16
@@ -144,4 +147,20 @@ fn moonInk(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, m
   let clear = step(1.5, b);
   let rims = (b - 2.0 * clear) * (1.0 - smoothstep(0.88, 0.98, moon.shade));
   return max(moonMare(field, layer, px, unit, moon) * (1.0 - clear), rims);
+}
+
+// The ground's hachures, from the shared relief row (`fsMoonRelief`): down each steep
+// slope, a light share where it is lit and up to RELIEF_SHARE.y in shade, by the terrain's
+// own light (`shade`), not the plain render's luma: the albedo carries baked shadows from
+// another Sun. A rim, steep on both flanks, keeps its crest line (`fallCrest`).
+const RELIEF_SHARE = vec2<f32>(0.12, 0.5);
+
+fn moonRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec4<f32>, unit: f32,
+              shade: f32) -> f32 {
+  var ink = fallCrest(field, samp, px, unit);
+  if (relief.a > 0.0) {
+    let share = min(relief.a * 1.5, 1.0) * mix(RELIEF_SHARE.x, RELIEF_SHARE.y, smoothstep(0.1, 0.5, shade));
+    ink = max(ink, quantileCut(fallLines(field, samp, px, unit, false), share));
+  }
+  return ink;
 }
