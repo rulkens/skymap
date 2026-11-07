@@ -37,9 +37,6 @@ export const PRELUDE: FrameSection = {
     // can sample a cubemap written this frame. Most frames the face list is empty and
     // this line emits nothing (the lens's zero-dispatch guarantee).
     //
-    // `solarSystem` is the star field a reflection probe is captured over; parallax
-    // across the solar system is sub-texel on its 256² faces.
-    //
     // TWO rosters because the content spans both slabs: galaxy billboards and
     // textured disks project through COSMO, survey stars through NEAR0. A render step
     // is the unit of pass encoding, so a NEAR0-only step leaves the COSMO half
@@ -48,8 +45,19 @@ export const PRELUDE: FrameSection = {
     // alone: a capture step hands it a SYNTHETIC per-face ctx, never the real camera.
     {
       kind: 'capture',
-      captures: APP_SKY_CAPTURE_KEYS,
+      captures: APP_SKY_CAPTURE_KEYS.filter((key) => key !== 'solarSystem'),
       cosmoPasses: ['point-sprites', 'textured-disks'],
+      near0Passes: ['star-aggregates', 'star-catalog'],
+      bodyPasses: [],
+    },
+    // `solarSystem` is the star field a reflection probe is captured over; parallax
+    // across the solar system is sub-texel on its 256² faces. Stars only: galaxies are
+    // invisible in a 128² probe, and drawing ~2.5M billboards six times cost up to
+    // 34 ms a bake.
+    {
+      kind: 'capture',
+      captures: ['solarSystem'],
+      cosmoPasses: [],
       near0Passes: ['star-aggregates', 'star-catalog'],
       bodyPasses: [],
     },

@@ -5,7 +5,7 @@
  * cycle, own slice → `appSettingsSlices` → `combinedSettingsReducer` → that Layer → its
  * slice again); and keeps a `src/@types/` file only one Layer imports in that Layer's own
  * `@types/` (type-ownership sweep: core types never hand-write a Layer's). `oneMpcSeam.test.ts`
- * is the import walk this copies; `frameFilePurity.test.ts` the exact-count ALLOWED idiom.
+ * is the import walk this copies; `serviceFilePurity.test.ts` the exact-count ALLOWED idiom.
  */
 import { describe, it, expect } from 'vitest';
 import { Project } from 'ts-morph';

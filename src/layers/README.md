@@ -90,7 +90,7 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
   `Props` is the one exception.
 - **`passes/` files export only their one named symbol** — helpers go to the
   module's `utils/`, constants to its `data/` (`src/utils/`, `src/data/` when shared). Ratchet:
-  `tests/services/engine/frame/frameFilePurity.test.ts`.
+  `tests/conventions/serviceFilePurity.test.ts`.
 - **Pass names are globally unique.** `createLayers` throws at boot if two Layers
   answer to the same one, which is what catches a half-finished migration where
   core still holds a row the Layer now also declares.

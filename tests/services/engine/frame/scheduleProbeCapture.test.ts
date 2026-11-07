@@ -63,6 +63,7 @@ function makeState(resident: readonly string[]): EngineState {
       meshBodyRenderer: { hasMesh: (id: string) => resident.includes(id) },
     },
     cubemapCaptures: makeCubemapCaptureRuntimes(),
+    settings: { debug: { disabledPasses: {} } },
   } as unknown as EngineState;
 }
 
@@ -110,6 +111,15 @@ describe('scheduleProbeCapture', () => {
     expect(scheduleProbeCapture({ state, ctx: ctxAt('voyager1') })).not.toBeNull();
     expect(state.cubemapCaptures.probe.subject).toBe('voyager1');
     expect(deriveViewMock).toHaveBeenCalledTimes(12);
+  });
+
+  it('captures nothing while probe·capture is unticked in the DebugPanel', () => {
+    const state = makeState(['curiosity']);
+    state.settings.debug.disabledPasses = { 'probe·capture': true };
+
+    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity') })).toBeNull();
+    expect(state.cubemapCaptures.probe.subject).toBeNull();
+    expect(state.cubemapCaptures.probe.refreshedAtMs.has('curiosity')).toBe(false);
   });
 
   it('votes to keep ticking while a second body resolved in the same tick is still due', () => {

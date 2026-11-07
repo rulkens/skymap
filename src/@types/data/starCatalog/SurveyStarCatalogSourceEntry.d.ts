@@ -6,9 +6,8 @@ import type { OctreeBudgets } from '../../octree/OctreeBudgets';
  * A star catalog streamed from disk (the survey-wide Gaia bin).
  *
  * Its presentation defaults live in-row (like `CosmicWebDensitySourceEntry`) rather than
- * in a separate settings table, so the draw budget and the crossfade band that
- * hands off to the procedural Milky-Way cloud sit next to the `binBaseName`
- * they govern. Leaf stars ARE pickable — `drawPick` stamps a resolved star's
+ * in a separate settings table, so the draw budget sits next to the `binBaseName`
+ * it governs. Leaf stars ARE pickable — `drawPick` stamps a resolved star's
  * identity into the NEAR0 pick pass — and the `code` tags the source in that
  * pick encoding, but a star's identity is its record index and is never
  * persisted to the `.bin`.
@@ -23,6 +22,4 @@ export type SurveyStarCatalogSourceEntry = SourceEntryBase & {
   readonly binBaseName: string;
   /** Per-tier limits: the cut's draw budget and the octree pool's slots. */
   readonly budgets: OctreeBudgets;
-  /** Camera-distance crossfade band to the procedural MW cloud, parsecs. */
-  readonly crossfadePc: { readonly inner: number; readonly outer: number };
 };

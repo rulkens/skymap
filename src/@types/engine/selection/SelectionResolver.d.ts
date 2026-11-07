@@ -10,5 +10,7 @@ export type SelectionResolver = {
   resolvePick(pick: PickResult | null): SelectionRefBase | null;
   extractRow(ref: SelectionRefBase | null, simDays: number): SelectionRowBase | null;
   resolveFocusId(focusId: string): SelectionRefBase | null;
+  /** The kind whose row claims `focusId`, known before its data loads (the reveal reads it). */
+  claimedKind(focusId: string): SelectionRefBase['type'] | null;
   focusIdOf(ref: SelectionRefBase): string | null;
 };

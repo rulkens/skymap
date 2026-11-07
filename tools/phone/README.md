@@ -84,6 +84,8 @@ the front: a background tab draws nothing.
   `public/data` answers every data fetch with `index.html`: run `/link-data`.
 - **WebGPU needs a secure context.** A LAN IP is one only over HTTPS. The cert is
   `.certs/<lan-ip>+1.pem`, minted with mkcert when missing; the phone need not trust the CA.
+- **One command at a time.** Each command forwards `tcp:9333` for its own run and removes it at
+  the end, so a second command running alongside loses its DevTools connection when the first ends.
 - **Never `adb reverse` the data.** Catalog downloads over it once took the phone's adbd offline.
 - **`Runtime.evaluate` can hang on the phone,** so the tool reads screenshots, network events and
   traces and the DOM domain only (selectors, input), and every DevTools call has a timeout.

@@ -14,7 +14,7 @@ cheapest way to have something concrete to show an institution. Phase 1 below
 is sized as "demoable to one real contact", not "product".
 
 **Offline install build: split out 2026-09-19** into
-[`specs/2026-09-19-desktop-offline-app-design.md`](../superpowers/specs/2026-09-19-desktop-offline-app-design.md)
+[`specs/completed/2026-09-19-desktop-offline-app-design.md`](../superpowers/specs/completed/2026-09-19-desktop-offline-app-design.md)
 (Electron app, R2 sync, crash reload, navigation lock, self-hosted font). What
 remains here is the attract loop, idle reset and thumbnail pack.
 

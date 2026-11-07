@@ -7,6 +7,6 @@ import type { SceneBodyId } from './SceneBodyId';
 export type MeshPresentation = {
   readonly id: SceneBodyId;
   readonly meshKey: string;
-  /** Baked bounding sphere, metres — the pick proxy and load-radius scale. */
+  /** Baked bounding sphere, metres — the pick proxy. */
   readonly boundingRadiusM: number;
 };

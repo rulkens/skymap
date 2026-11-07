@@ -1,6 +1,6 @@
 # SDD ledger — plan: docs/superpowers/plans/2026-11-06-declarative-asset-demand.md
 
-Spec: docs/superpowers/specs/2026-11-06-declarative-asset-demand-design.md
+Spec: docs/superpowers/specs/completed/2026-11-06-declarative-asset-demand-design.md
 Branch: worktree-optimize-gpu-loaded-data · base 451e9a1e0
 Prep PR: #1072 (prep/gated-slots-release-gpu) — Tasks 4–7 wait for its merge + `git merge main`.
 

@@ -24,6 +24,7 @@ import sharp from 'sharp';
 
 import { PRESS_PICTURES } from '../../packages/website/src/data/pressPictures';
 import { siteShot } from '../../packages/website/src/data/siteShot';
+import { skymapIcon } from '../../packages/website/src/utils/skymapIcon';
 import { PRESS_KIT } from './pressKitPlan';
 import { SITE_SHOTS_DIR } from './SITE_SHOTS_DIR';
 import { pressCredits } from './utils/pressCredits';
@@ -37,7 +38,6 @@ const OUT_DIR = 'public/data/site';
 const SIZE_FILE = 'packages/website/src/data/pressKit.json';
 const MASTERS = 'data/shots/site';
 const FONT = 'tools/site/fonts/CormorantGaramond-SemiBold.ttf';
-const ICON = 'public/favicon.svg';
 const GROUNDS = { light: '#000000', dark: '#ffffff' } as const;
 
 const { values } = parseArgs({
@@ -93,12 +93,13 @@ try {
     );
   }
 
-  const icon = readFileSync(ICON);
+  // The app icon as macOS draws it, on Apple's 1024 grid with its shadow.
+  const icon = Buffer.from(skymapIcon('mac', 'large'));
   put('icon/skymap-icon.svg', icon);
   for (const size of PRESS_KIT.iconSizes) {
     put(
       `icon/skymap-icon-${size}.png`,
-      await sharp(icon, { density: (72 * size) / 32 })
+      await sharp(icon, { density: (72 * size) / 1024 })
         .resize(size, size)
         .png()
         .toBuffer(),

@@ -14,6 +14,8 @@ import { IDENTITY_MAT3 } from '../../../../../utils/math/identityMat3';
 import { bodyFixedEyeM } from '../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { datumOnlyTerrainHeight } from '../../../../../utils/camera/terrain/datumOnlyTerrainHeight';
 import { orbitAnglesLookingAlong } from '../../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { rollFromScreenUp } from '../../../../../utils/camera/orbitPose/rollFromScreenUp';
+import { BODY_LOCAL_FRAME } from '../../../../../data/camera/bodyLocalFrame';
 import { bodyRelativePose } from '../../bodyFrame/bodyRelativePose';
 import { toBodyArm } from './poseFrameConversion';
 import { hostOrThrow } from '../hostOrThrow';
@@ -40,12 +42,14 @@ export function toBodyFixedChannels(
     camBasisWorld: IDENTITY_MAT3,
     bodyState,
   }).eyeRelBodyM;
-  const forward: Vec3 = [eyeArm.basisLocal[6], eyeArm.basisLocal[7], eyeArm.basisLocal[8]];
+  const m = eyeArm.basisLocal;
+  const forward: Vec3 = [m[6], m[7], m[8]];
   const { yaw, pitch } = orbitAnglesLookingAlong(forward);
   return {
     target,
     yaw,
     pitch,
     distance: Math.hypot(eyeM[0] - target[0], eyeM[1] - target[1], eyeM[2] - target[2]),
+    roll: rollFromScreenUp(forward, [m[3], m[4], m[5]], BODY_LOCAL_FRAME.pole),
   };
 }

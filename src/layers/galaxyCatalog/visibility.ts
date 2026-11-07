@@ -19,6 +19,7 @@ export const galaxyCatalogVisibility = [
     key: 'survey',
     cluster: 'galaxyCatalogs',
     items: GALAXY_CATALOG_IDS,
+    selects: ['galaxyCatalog'],
     bands: { deepZoom: { ...SURVEY_DEEP_ZOOM, items: SURVEY_IDS } },
   },
   {

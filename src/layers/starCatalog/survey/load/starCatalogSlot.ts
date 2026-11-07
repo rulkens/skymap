@@ -3,7 +3,7 @@
  * across every `starCatalog` registry row (parameterized by `source`).
  * Commit installs the decoded `Octree`'s chunk pool (`installStarPool`);
  * release drops the stream and frees the catalog's GPU buffers. Its row `gates` the star entry's item, so core fades the
- * catalog in on the commit; the registry `crossfadePc` band rides on top of that value.
+ * catalog in on the commit; the entry's `survey` band rides on top of that value.
  */
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
 import { starCatalogFetcher } from './starCatalogFetcher';

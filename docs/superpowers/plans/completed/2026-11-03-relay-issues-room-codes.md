@@ -14,7 +14,7 @@ returns `last ?? random`, so the web app behaves as today. `newRoom`, `pairingOr
 
 **Tech Stack:** Node `http` + `ws`, redux-saga (`typed-redux-saga`), Vitest (node environment).
 
-**Spec:** `docs/superpowers/specs/2026-09-19-desktop-offline-app-design.md` §3.1, §3.4, §7. Rulings are in
+**Spec:** `docs/superpowers/specs/completed/2026-09-19-desktop-offline-app-design.md` §3.1, §3.4, §7. Rulings are in
 `docs/grill-sessions/desktop-dome-remote-2026-11-03.md` (Q4, Q10, Q11).
 
 ## Global Constraints

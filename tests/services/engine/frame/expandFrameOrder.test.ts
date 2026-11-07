@@ -206,7 +206,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       [NEAR0, 'sgrAStar', 0],
       [COSMO, 'sgrAStar', 2],
       [NEAR0, 'sgrAStar', 2],
-      [COSMO, 'solarSystem', 1],
+      // Stars-only roster: an empty COSMO list emits no COSMO step.
       [NEAR0, 'solarSystem', 1],
     ]);
     // The captures ride the PRELUDE computes, ahead of every other render

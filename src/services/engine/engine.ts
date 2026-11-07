@@ -34,6 +34,8 @@ import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerr
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
+import { captureTimingSlotName } from './frame/timing/captureTimingSlotName';
+import type { CubemapCaptureKey } from '../../@types/rendering/CubemapCaptureKey';
 import { liveWorldPose } from './helpers/liveWorldPose';
 import { liveClipStartPose } from './helpers/liveClipStartPose';
 import { waitUntilSettled } from './helpers/waitUntilSettled';
@@ -107,6 +109,7 @@ export function createEngine(
             lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
             bakedSettings: null,
             bakedContentVersion: null,
+            lastBakeAtMs: null,
           }
         : { subject: null, refreshedAtMs: new Map<string, number>(), due: false },
     ]),
@@ -228,6 +231,7 @@ export function createEngine(
     booted: false,
     fadesAnimating: false,
     layersLoading: false,
+    drawPxPerRad: 0,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
@@ -416,11 +420,14 @@ export function createEngine(
         idle:
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
-      // Prelude compute steps first: GPU work no render toggle could reach.
+      // Prelude compute steps and captures first: GPU work no render toggle could reach.
       passOverrides: {
         allNames: [
           ...FRAME_ORDER.filter((step) => step.kind === 'compute').map((step) =>
             computeTimingSlotName(step.name, 'canvas'),
+          ),
+          ...(Object.keys(APP_CUBEMAP_CAPTURE_REGISTRY) as CubemapCaptureKey[]).map(
+            captureTimingSlotName,
           ),
           ...FRAME_ORDER_PASS_NAMES,
         ],
@@ -449,7 +456,9 @@ export function createEngine(
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: register.winner,
-          gesture: gesture.value?.gesture ?? null,
+          // Only the body arm's memory is a surface gesture.
+          gesture:
+            gesture.value !== null && 'gesture' in gesture.value ? gesture.value.gesture : null,
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),

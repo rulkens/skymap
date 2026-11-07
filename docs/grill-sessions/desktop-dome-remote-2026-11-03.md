@@ -1,7 +1,7 @@
 # Grill Session: Dome and remote in the desktop app — 2026-11-03
 
 Source: the owner asked for "an electron stand-alone app for kiosks and domes". The parked
-[desktop offline app spec](../superpowers/specs/2026-09-19-desktop-offline-app-design.md) covered
+[desktop offline app spec](../superpowers/specs/completed/2026-09-19-desktop-offline-app-design.md) covered
 kiosks only. This session folds the dome in: the app runs on the projector server, and the operator
 drives it from a phone or tablet.
 

@@ -75,6 +75,7 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
         resolvePick: () => null,
         extractRow: () => null,
         resolveFocusId: () => null,
+        claimedKind: () => null,
         focusIdOf: () => null,
       },
     };

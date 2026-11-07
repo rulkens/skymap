@@ -527,8 +527,9 @@ function frameLegsOf(compiled: CompiledClip): readonly FrameLeg[] {
 
   // `'tween'` only: reading a relative `spin`'s absent tag as `'absolute'` sent
   // an earth-framed pose back through the Mpc seam mid-orbit.
-  const segments = Object.values(compiled.baseTracks)
-    .flat()
+  // The lens is frame-free (`fovYRadAt`): its untagged tween must not open an absolute leg.
+  const segments = Object.entries(compiled.baseTracks)
+    .flatMap(([ch, track]) => (ch === 'fov' ? [] : track))
     .filter((seg) => seg.segKind === 'tween')
     // At a shared instant a zero-length snap sorts first, so the leg that runs
     // on from it owns the instant; track order would hide one leg forever.

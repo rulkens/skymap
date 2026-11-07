@@ -251,6 +251,7 @@ function makeState(
   // fixture provides no slot for).
   const state = {
     tier: 'medium',
+    ui: { paletteOpen: false } as never,
     settings: {
       galaxyCatalogs: {
         enabled: true,
@@ -344,7 +345,7 @@ function makeState(
       ...cosmicWebDensityVisibility,
       ...structureVisibility,
     ],
-    selection: { hover: null, select: null, focus: null },
+    selection: { hover: null, select: null, focus: null, pending: { select: null, focus: null } },
   } as unknown as EngineState;
   state.assetRows = expandCompanionRows([
     ...meshAssetRows(state),
@@ -373,6 +374,7 @@ function makeDeps(): BootstrapDeps {
       resolvePick: () => null,
       extractRow: () => null,
       resolveFocusId: () => null,
+      claimedKind: () => null,
       focusIdOf: () => null,
     },
     phaseLocals: {

@@ -24,7 +24,11 @@ import { zoomedDistance } from './utils/zoomedDistance';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
-import cameraReducer, { commitCameraPose } from '../../../../state/camera/cameraSlice';
+import cameraReducer, {
+  clipStarted,
+  commitCameraPose,
+  setFovYRad,
+} from '../../../../state/camera/cameraSlice';
 
 import type { ClimbableKind } from '../@types/ClimbableKind';
 import type { DriverId } from '../../../../@types/engine/camera/DriverId';
@@ -51,7 +55,6 @@ export function replayInput(
   args: {
     readonly ctx: CameraArmCtx;
     readonly rootState: RootState;
-    readonly nowMs: number;
     readonly winnerLastFrame: DriverId;
     /** That row's `ridesWheelTarget`. */
     readonly lastWinnerRidesWheel: boolean;
@@ -69,8 +72,8 @@ export function replayInput(
   /** The navigator's input, in order; a `gestureEnd` is also handled here. */
   readonly navSteps: readonly NavStep[];
 } {
-  const { ctx, rootState, nowMs, winnerLastFrame, lastWinnerRidesWheel } = args;
-  const { bodies, poseBasis, upBasis, pivot, tuning } = ctx;
+  const { ctx, rootState, winnerLastFrame, lastWinnerRidesWheel } = args;
+  const { bodies, poseBasis, upBasis, pivot, tuning, nowMs } = ctx;
   // Only camera actions are emitted mid-drain, so every other slice is the
   // snapshot's; the focus row is read once.
   const focus = selectFocusRow(rootState);
@@ -105,9 +108,16 @@ export function replayInput(
     memory: MemOf[K],
     input: InputStep,
   ): FramedPose<K> => {
-    const stepped = rowFor<K>(framed.frame).step(memory, tilt, framed, input, ctx);
+    // The lens is read from the fold, so a second notch in the drain compounds on the first.
+    const stepCtx = { ...ctx, fovYRad: camera.fovYRad };
+    const stepped = rowFor<K>(framed.frame).step(memory, tilt, framed, input, stepCtx);
     gestureMemory = stepped.memory;
     tilt = stepped.tilt;
+    if (stepped.fovYRad !== undefined) emit(setFovYRad(stepped.fovYRad));
+    // While it plays, the clip swallows every pose-moving step (`stepRegister`).
+    if (stepped.clip !== undefined) {
+      emit(clipStarted({ data: stepped.clip, frame: rootState.settings.orientation }));
+    }
     return { frame: framed.frame, pose: stepped.pose };
   };
 

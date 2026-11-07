@@ -1,9 +1,6 @@
 /**
- * buildDemandCtx — unit tests for the demand-context builder.
- *
- * Targets the two non-trivial surfaces: `slotState` (slot accessor + idle fallback) and `request` (the
- * transient request-flag set). `settings` is a direct passthrough. A minimal `state` carries only
- * `settings`, `ui` and `slotsByKey`.
+ * buildDemandCtx — the demand-context builder's derived surfaces: `slotState`, the camera eye,
+ * the sim instant and `selectedKinds`. `settings` is a passthrough; the `state` is minimal.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -18,6 +15,11 @@ import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { SelectionState } from '../../../../src/@types/store/SelectionState';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
+import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
+import { galaxyRowRuntime } from '../../../support/layerPickCodes';
+
+// No catalog loaded: a `pgc-` id is claimed by prefix but resolves to nothing yet.
+const UNLOADED_GALAXY_ROW = galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs: new Map() }));
 
 function makeState(
   opts: {
@@ -65,7 +67,14 @@ function makeState(
       },
     },
     slotsByKey,
-    selection: { hover: null, select: null, focus: null, ...opts.selection },
+    selection: {
+      hover: null,
+      select: null,
+      focus: null,
+      pending: { select: null, focus: null },
+      ...opts.selection,
+    },
+    selectionKindRows: [UNLOADED_GALAXY_ROW],
   } as unknown as EngineState;
 }
 
@@ -107,5 +116,16 @@ describe('buildDemandCtx', () => {
       }),
     );
     expect([...ctx.selectedKinds].sort()).toEqual(['body', 'satellite']);
+  });
+
+  it('selectedKinds holds the kind claiming a pending id before its catalog loads', () => {
+    const ctx = buildDemandCtx(
+      makeState({ selection: { pending: { select: null, focus: 'pgc-2557' } } }),
+    );
+    expect([...ctx.selectedKinds]).toEqual(['galaxyCatalog']);
+    const select = buildDemandCtx(
+      makeState({ selection: { pending: { select: 'pgc-2557', focus: null } } }),
+    );
+    expect([...select.selectedKinds]).toEqual(['galaxyCatalog']);
   });
 });
