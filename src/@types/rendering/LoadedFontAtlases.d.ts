@@ -23,7 +23,8 @@ import type { FontMetrics } from './FontMetrics';
 import type { FontId } from '../data/FontId';
 
 export type LoadedFontAtlases = {
-  readonly metricsByFont: Readonly<Record<FontId, FontMetrics>>;
-  /** Order matches `FONT_IDS`; index = GPU texture-array layer. */
-  readonly bitmaps: readonly ImageBitmap[];
+  /** Only the fonts loaded so far: an `onDemand` font joins when first asked for. */
+  readonly metricsByFont: Readonly<Partial<Record<FontId, FontMetrics>>>;
+  /** Order matches `FONT_IDS`; index = GPU texture-array layer, a hole until loaded. */
+  readonly bitmaps: readonly (ImageBitmap | undefined)[];
 };

@@ -39,7 +39,7 @@ function pack(labels: Label2D[], maxGlyphs = 64) {
   const glyphU32 = new Uint32Array(glyphBuf);
   const glyphCount = packLabels({
     labels,
-    metricsByFont: { cormorant: METRICS, imFell: METRICS, imFellItalic: METRICS },
+    metricsByFont: { cormorant: METRICS },
     layerIndexOf: { cormorant: 0 } as never,
     labelF32,
     glyphF32,

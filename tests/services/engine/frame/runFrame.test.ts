@@ -119,6 +119,7 @@ const EARTH_RADIUS_KM = 6371;
 function makeState(): EngineState {
   return {
     settings: {
+      antique: { enabled: false },
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2,

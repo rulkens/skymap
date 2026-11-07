@@ -157,7 +157,7 @@ export function createLabelRenderer(
   // First-font metrics serve as the canonical atlas-dimensions source
   // (every layer is the same size — buildFontAtlas asserts this).
   const firstFontId = FONT_IDS[0]!;
-  const firstMetrics: FontMetrics = metricsByFont[firstFontId];
+  const firstMetrics: FontMetrics = metricsByFont[firstFontId]!;
 
   // ── CPU scratch buffers — (re)built by `allocate` below. The Float32Array and Uint32Array share a single
   // ArrayBuffer so f32 fields and the u32 labelIndex write into the same

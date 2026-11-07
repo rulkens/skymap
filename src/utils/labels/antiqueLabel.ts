@@ -10,6 +10,7 @@
 
 import type { Label2D } from '../../@types/rendering/Label2D';
 import type { AntiqueLabelRule } from '../../@types/rendering/AntiqueLabelRule';
+import type { FontId } from '../../@types/data/FontId';
 import { ANTIQUE_LABEL_STYLE } from '../../data/labels/antiqueLabelStyle';
 import { ANTIQUE_MODERN_NAME_EDITS } from '../../data/labels/antiqueModernNameEdits';
 import { LABEL_MIN_PX_DEFAULT, LABEL_MAX_PX_DEFAULT } from '../../data/labels/labelSizingDefaults';
@@ -20,6 +21,7 @@ export function antiqueLabel(
   label: Label2D,
   rule: AntiqueLabelRule | undefined,
   subjectKept: boolean,
+  hasFont: (font: FontId) => boolean,
 ): Label2D | null {
   const name = rule && Object.hasOwn(rule.names, label.id) ? rule.names[label.id] : undefined;
   const hidden =
@@ -38,16 +40,15 @@ export function antiqueLabel(
       ? ANTIQUE_MODERN_NAME_EDITS.reduce((t, [from, to]) => t.replace(from, to), label.text)
       : label.text);
 
-  // The italic cut carries letters only; a kept catalog number goes roman.
+  // The italic cut carries letters only; a kept catalog number goes roman. Until
+  // the look's fonts land (`loadLookFonts`), the label keeps its own.
   const style = ANTIQUE_LABEL_STYLE;
   const italic = rule?.lettering === 'italic' && !DIGIT.test(text);
+  const fell = italic ? style.italicFont : style.romanFont;
+  const font = hasFont(fell) ? fell : label.font;
   const lettering: Partial<Label2D> = italic
-    ? { text, font: style.italicFont }
-    : {
-        text: text.toUpperCase().replace(/U/g, 'V'),
-        font: style.romanFont,
-        trackingEm: style.trackingEm,
-      };
+    ? { text, font }
+    : { text: text.toUpperCase().replace(/U/g, 'V'), font, trackingEm: style.trackingEm };
   if (subjectKept) {
     const px = style.subjectPx;
     return { ...placed, ...lettering, alignX: 'center', minPixelSize: px, maxPixelSize: px };

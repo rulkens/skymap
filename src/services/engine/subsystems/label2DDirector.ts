@@ -115,6 +115,7 @@ import type { Label2DProjected } from '../../../@types/rendering/Label2DProjecte
 import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { LabelName } from '../../../@types/animation/LabelName';
+import type { FontId } from '../../../@types/data/FontId';
 import { projectLabels } from '../../../utils/labels/projectLabels';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import {
@@ -796,12 +797,13 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     labels: readonly Label2D[],
     labelName: LabelName | undefined,
     keptPicks: readonly (number | null)[],
+    hasFont: (font: FontId) => boolean,
   ): Label2D[] {
     const rule = labelName === undefined ? undefined : ANTIQUE_LABEL_RULES[labelName];
     const out: Label2D[] = [];
     for (const l of labels) {
       const kept = l.subjectId !== undefined && keptPicks.includes(l.subjectId);
-      const shown = antiqueLabel(l, rule, kept);
+      const shown = antiqueLabel(l, rule, kept, hasFont);
       if (shown !== null) out.push(shown);
     }
     return out;
@@ -856,10 +858,11 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
           encodeSelectionPick(state.selectionKindRows, state.selection.select),
         ]
       : [];
+    const hasFont = (font: FontId) => state.gpu.fontAtlases?.metricsByFont[font] !== undefined;
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
       if (out.awake) anyAwake = true;
-      const produced = antique ? toAntique(out.labels, p.label, keptPicks) : out.labels;
+      const produced = antique ? toAntique(out.labels, p.label, keptPicks, hasFont) : out.labels;
       if (p.label === undefined || atRest) {
         for (const l of produced) mergedLabels.push(l);
         continue;

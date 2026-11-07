@@ -133,16 +133,18 @@ export const FONTS = {
   },
   // The antique look's lettering: an engraver cut no bold, so roman capitals
   // for places and bodies, italic for stars.
-  // Name glyphs only, digits kept for a focused catalog name and Ö for BOÖTES:
-  // every font loads at boot whether the look is on or not, so its atlas stays lean.
+  // Name glyphs only, digits kept for a focused catalog name and Ö for BOÖTES.
+  // Fetched when the look first switches on: a session without it pays nothing.
   imFell: {
     ttf: 'IMFellEnglish-Regular.ttf',
     charset: NAME_LETTERS + '0123456789Ö',
+    onDemand: true,
   },
   // Letters only: the italic's wide swashes overflow one page with all of ASCII.
   imFellItalic: {
     ttf: 'IMFellEnglish-Italic.ttf',
     charset: NAME_LETTERS,
+    onDemand: true,
   },
 } as const satisfies Readonly<Record<string, FontConfig>>;
 
@@ -152,3 +154,6 @@ export const FONTS = {
  * Order matches declaration order of `FONTS` keys.
  */
 export const FONT_IDS: readonly FontId[] = Object.keys(FONTS) as readonly FontId[];
+
+/** The fonts `initGpu` loads; the rest wait for whoever needs them. */
+export const BOOT_FONT_IDS: readonly FontId[] = FONT_IDS.filter((id) => !('onDemand' in FONTS[id]));

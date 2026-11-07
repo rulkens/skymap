@@ -31,13 +31,11 @@ export function textLayoutOf(
   const key = `${label.font}|${alignX}|${alignY}|${trackingEm}|${label.text}`;
   let laidOut = memo.get(key);
   if (laidOut === undefined) {
-    const quads = layoutLabel(
-      label.text,
-      metricsByFont[label.font],
-      alignX,
-      alignY,
-      trackingEm * ATLAS_FONT_SIZE,
-    );
+    // A font not loaded yet lays out to no ink: drawn and measured as nothing.
+    const metrics = metricsByFont[label.font];
+    const quads = metrics
+      ? layoutLabel(label.text, metrics, alignX, alignY, trackingEm * ATLAS_FONT_SIZE)
+      : [];
     laidOut = { quads, bbox: measureLabel(quads) };
     memo.set(key, laidOut);
   }

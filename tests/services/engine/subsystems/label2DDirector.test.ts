@@ -29,6 +29,7 @@ function makeState(): EngineState {
     selectionKindRows: [],
     settings: { antique: { enabled: false } },
     viewRig: 'mono',
+    gpu: { fontAtlases: null },
   } as unknown as EngineState;
 }
 
