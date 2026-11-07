@@ -113,6 +113,7 @@ import type { Label2DDirectorConfig } from '../../../@types/engine/subsystems/La
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
 import type { Label2DProjected } from '../../../@types/rendering/Label2DProjected';
 import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
+import type { ScreenBodyDisc } from '../../../@types/rendering/ScreenBodyDisc';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { LabelName } from '../../../@types/animation/LabelName';
 import type { FontId } from '../../../@types/data/FontId';
@@ -136,7 +137,9 @@ import { antiqueLookOn } from '../../../utils/render/antiqueLookOn';
 import { ANTIQUE_REGIME_MPC } from '../../../data/rendering/antiqueLook';
 import { antiqueLabel } from '../../../utils/labels/antiqueLabel';
 import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
-import { ANTIQUE_LABEL_STYLE } from '../../../data/labels/antiqueLabelStyle';
+import { antiqueInkGapPx } from '../../../utils/labels/antiqueInkGapPx';
+import { rectMeetsCircle } from '../../../utils/math/rectMeetsCircle';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ANTIQUE_AREA_LETTERING } from '../../../data/labels/antiqueAreaLettering';
 import { ANTIQUE_PLACE_LETTERING } from '../../../data/labels/antiquePlaceLettering';
 import { ANTIQUE_LABEL_DECLUTTER } from '../../../data/labels/antiqueLabelDeclutter';
@@ -218,7 +221,9 @@ function sortByDeclutterPriorityDesc(labels: readonly Label2D[]): number[] {
  * unconditionally and never block, as are labels whose text lays out to no
  * ink.  A culled label's leader is culled with it BY CONSTRUCTION — the
  * leader lives on the label object, so there is no separate line-side filter
- * to run.  Returns a fresh array in original input order (deterministic,
+ * to run.  Under the antique look (`antique`) a lifted name is judged just off
+ * its glyph's rim, where `applyLift` engraves it, and a name never prints across
+ * the disc of a body nearer than its own subject (a star over a planet's limb).  Returns a fresh array in original input order (deterministic,
  * sort-independent).
  */
 function declutterByBboxOverlap(
@@ -227,6 +232,7 @@ function declutterByBboxOverlap(
   projected: readonly Label2DProjected[],
   projection: Label2DProjection,
   padPx: number,
+  antique: boolean,
 ): Label2D[] {
   const { pxPerRad } = projection;
   // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
@@ -242,18 +248,29 @@ function declutterByBboxOverlap(
     // The lift stage runs later, over survivors, so a lifted label is judged
     // here at its proposed lift: a planet's floated name must not cull a
     // rover standing at the planet's own anchor.
+    if (antique && label.lift !== undefined) {
+      const r = labelScreenRect({ label, bbox, screenPx: p.screenPx, clipW: p.clipW, pxPerRad });
+      const dy = p.screenPx[1] - antiqueInkGapPx(label.lift.subjectSizePx) - r.y1;
+      return { x0: r.x0, y0: r.y0 + dy, x1: r.x1, y1: r.y1 + dy };
+    }
     const screenPx: Vec2 =
       label.lift === undefined
         ? p.screenPx
         : [p.screenPx[0], p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx)];
     return labelScreenRect({ label, bbox, screenPx, clipW: p.clipW, pxPerRad });
   });
+  const discs = antique ? bodyDiscs(labels, projected) : [];
 
   const order = sortByDeclutterPriorityDesc(labels);
   const accepted: number[] = [];
   for (const i of order) {
     const rect = rects[i];
     if (projected[i]!.onScreen && rect) {
+      const nearKm = labels[i]!.occludeNearKm ?? -Infinity;
+      const behindDisc = discs.some(
+        (d) => d.index !== i && nearKm > d.centreKm && rectMeetsCircle(rect, d.centre, d.radius),
+      );
+      if (behindDisc) continue;
       let collides = false;
       for (const a of accepted) {
         const aRect = rects[a]!;
@@ -275,6 +292,26 @@ function declutterByBboxOverlap(
 
   const acceptedIndices = new Set(accepted);
   return labels.filter((_, i) => acceptedIndices.has(i));
+}
+
+/**
+ * The on-screen discs of the lifted subjects (a body's caption carries its apparent
+ * size): a name whose subject stands farther than a disc's centre is behind the body.
+ */
+function bodyDiscs(
+  labels: readonly Label2D[],
+  projected: readonly Label2DProjected[],
+): ScreenBodyDisc[] {
+  const discs: ScreenBodyDisc[] = [];
+  labels.forEach((label, index) => {
+    const centre = projected[index]!.screenPx;
+    const { lift, occludeNearKm, worldEmMpc } = label;
+    if (!centre || !lift || occludeNearKm === undefined || worldEmMpc === undefined) return;
+    if (lift.subjectSizePx < 1) return;
+    const centreKm = occludeNearKm + worldEmMpc * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM;
+    discs.push({ index, centre, radius: lift.subjectSizePx / 2, centreKm });
+  });
+  return discs;
 }
 
 /**
@@ -485,6 +522,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
           projected,
           projection,
           policy.padPx,
+          antique,
         );
         break;
       case 'screenSeparation':
@@ -750,9 +788,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
         lineBottomLiftPx: lift.lineBottomLiftPx ?? 0,
         // An engraved name sits just off its glyph's rim, not a diameter and a half above.
-        inkGapPx: antique
-          ? lift.subjectSizePx * ANTIQUE_LABEL_STYLE.rimFraction + ANTIQUE_LABEL_STYLE.gapPx
-          : undefined,
+        inkGapPx: antique ? antiqueInkGapPx(lift.subjectSizePx) : undefined,
       });
 
       if (placement === null) {

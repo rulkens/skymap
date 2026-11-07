@@ -20,6 +20,7 @@ import { ANTIQUE_MODERN_NAME_EDITS } from '../../data/labels/antiqueModernNameEd
 import { ANTIQUE_AREA_LETTERING } from '../../data/labels/antiqueAreaLettering';
 import { ANTIQUE_PLACE_LETTERING } from '../../data/labels/antiquePlaceLettering';
 import { isKeyOf } from '../object/isKeyOf';
+import { CAPTION_PRIORITY_SCALE } from '../../data/labels/captionPriorityScale';
 
 const DIGIT = /\d/;
 
@@ -83,8 +84,16 @@ export function antiqueLabel(
     subjectKept || (area && (place?.centred ?? true))
       ? 'center'
       : (place && label.alignX) || 'left';
+  // The subject is named first; a rule's band re-ranks its producer, keeping the tie-break.
+  const own = label.declutterPriority;
+  const declutterPriority = subjectKept
+    ? Number.MAX_VALUE
+    : rule?.priority === undefined
+      ? own
+      : rule.priority * CAPTION_PRIORITY_SCALE + ((own ?? 0) % CAPTION_PRIORITY_SCALE);
   return {
     ...placed,
+    declutterPriority,
     text:
       cut === 'capitals' || cut === 'spacedItalic' ? text.toUpperCase().replace(/U/g, 'V') : text,
     font: hasFont(fell) ? fell : label.font,

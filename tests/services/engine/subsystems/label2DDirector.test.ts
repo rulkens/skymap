@@ -1122,6 +1122,74 @@ describe('label2DDirector', () => {
       expect(flushedIds).toContain('curiosity');
     });
 
+    describe('under the antique look', () => {
+      const antique = () =>
+        ({ ...makeState(), settings: { antique: { enabled: true } } }) as EngineState;
+      // ~140 x 24 px at the look's 20 px capitals, rising from its anchor.
+      const wide = () => ({ minX: 0, minY: -100, maxX: 600, maxY: 0 });
+      const KM = SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM;
+      const planet: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'mars',
+        text: 'Mars',
+        declutterPriority: 20 * CAPTION_PRIORITY_SCALE,
+        fadeAlpha: 1,
+        worldEmMpc: 1e-10,
+        occludeNearKm: 1e-8 * KM,
+        // A 400 px disc centred on screen.
+        lift: { subjectSizePx: 400, lineBottomLiftPx: 204 },
+      };
+
+      it("judges a lifted name where the look draws it, just off its glyph's rim", () => {
+        // Praesepe printed over MARS: the cull judged the planet's name a diameter
+        // and a half up the screen, where the plain look floats it.
+        const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+        const labelStub = makeLabelStub();
+        dir.attachRenderers(labelStub as never, makeLineStub() as never, wide);
+        // Screen (520, 230): its name rises across the band MARS sits in, above the rim.
+        const cluster: Label2D = {
+          ...SAMPLE_LABEL,
+          id: 'praesepe',
+          worldPos: [0.04, 0.54, 0],
+          declutterPriority: 44,
+          fadeAlpha: 1,
+          lift: { subjectSizePx: 0, lineBottomLiftPx: 4 },
+        };
+        dir.registerProducer(makeProducer('p', [planet, cluster]));
+        dir.runFrame(antique(), makeNear0Ctx(0));
+        expect(dir.labels().map((l) => l.id)).toEqual(['mars']);
+      });
+
+      it("keeps a farther subject's name off a nearer body's disc, never its own places", () => {
+        // Denebola on Jupiter's limb: a star behind the planet named across its disc.
+        const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+        const labelStub = makeLabelStub();
+        dir.attachRenderers(labelStub as never, makeLineStub() as never, wide);
+        const onDisc = { fadeAlpha: 1, declutterPriority: 10 * CAPTION_PRIORITY_SCALE };
+        // Screen (450, 650) and (650, 450): both rects lie inside the disc, clear of MARS.
+        const star: Label2D = {
+          ...SAMPLE_LABEL,
+          ...onDisc,
+          id: 'denebola',
+          worldPos: [-0.1, -0.3, 0],
+          occludeNearKm: 1e5 * KM,
+        };
+        const place: Label2D = {
+          ...SAMPLE_LABEL,
+          ...onDisc,
+          id: 'olympus',
+          worldPos: [0.3, 0.1, 0],
+          occludeNearKm: 1.00000000001e-8 * KM,
+        };
+        dir.registerProducer(makeProducer('p', [planet, star, place]));
+        dir.runFrame(antique(), makeNear0Ctx(0));
+        expect(dir.labels().map((l) => l.id)).toEqual(['mars', 'olympus']);
+
+        dir.runFrame(makeState(), makeNear0Ctx(16));
+        expect(dir.labels().map((l) => l.id)).toContain('denebola');
+      });
+    });
+
     it('smoothstepRamp keeps flushing a remembered emission until the ramp hits 0 (mirrors the exponential absence test above)', () => {
       // An ad hoc config pairing the NEW screenSeparation declutter arm with
       // the UNCHANGED smoothstepRamp envelope — not one of the two real

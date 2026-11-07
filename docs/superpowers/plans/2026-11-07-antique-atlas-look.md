@@ -247,6 +247,15 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] Hand-off with the map's molehills over `antiqueMapDetail` 7..8 (agreed with the Earth map stream).
 - [ ] Panel plateaued at 5.5/5.5/5.5 (r9): patch ends cut, not tapered; no rim line; the Alps and Andes need finer heights than ETOPO z7.
 
+### Task 31: Names ranked as a plate ranks them (review 7 #4)
+**Files:** `services/engine/subsystems/label2DDirector.ts`, `utils/labels/{antiqueLabel,antiqueInkGapPx}.ts`,
+`utils/math/rectMeetsCircle.ts`, `data/labels/antiqueLabelRules.ts`, `@types/rendering/AntiqueLabelRule.d.ts`, lookbench `sgra`
+- [x] The subject's title outranks every name; a lifted name is judged just off its glyph's rim, where the look engraves it (Praesepe printed over MARS: the cull judged it at the plain look's lift).
+- [x] A name never prints across the disc of a body nearer than its subject (a star on Jupiter's limb).
+- [x] Constellation names over star names (`AntiqueLabelRule.priority`); names coined after 1690 (Avior, Peacock, Tiaki, Larawag) as Bayer's letter, the modern name as gloss.
+- [x] The sgra view frames Sgr A* (its pose looked back at the Sun, the hole behind the camera).
+- Open: Greek letters (τ Ceti) need Greek in the IM Fell atlas (rebake + R2 sync); a constellation name anchored off the plate or under the title is dropped, not moved along its figure; English galaxy titles (Whirlpool Galaxy) await a ruling on a Latin form or a catalogue title with the modern gloss.
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings

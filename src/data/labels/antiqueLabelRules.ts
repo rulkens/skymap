@@ -61,11 +61,19 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
       'sceneBody-alkaid': 'Benetnasch',
       'sceneBody-schedar': 'Schedir',
       'sceneBody-fomalhaut': 'Fomahant',
+      // Names coined after the plate (1930s almanac, IAU 2016-18) yield to Bayer's
+      // letter, spelled out until the italic carries Greek; the modern name glosses it.
+      'sceneBody-avior': 'Epsilon Argus\n(Avior)',
+      'sceneBody-peacock': 'Alpha Pavonis\n(Peacock)',
+      'sceneBody-tiaki': 'Beta Gruis\n(Tiaki)',
+      'sceneBody-larawag': 'Epsilon Scorpii\n(Larawag)',
     },
   },
   constellations: {
     unlisted: 'keep',
     lettering: 'capitals',
+    // A figure's name is the plate's frame: over its stars' names (10), under the planets'.
+    priority: 12,
     names: {
       Carina: 'Argo Navis',
       Puppis: null,

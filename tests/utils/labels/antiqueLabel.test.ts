@@ -9,6 +9,7 @@ import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { ANTIQUE_EARTH_TOWNS } from '../../../src/data/labels/antiqueEarthTowns';
 import { ANTIQUE_PLACE_LETTERING } from '../../../src/data/labels/antiquePlaceLettering';
 import { ANTIQUE_EARTH_PLACES } from '../../../src/data/labels/antiqueEarthPlaces';
+import { CAPTION_PRIORITY_SCALE } from '../../../src/data/labels/captionPriorityScale';
 
 const label = (id: string, text: string): Label2D => ({
   id,
@@ -120,6 +121,23 @@ describe('antiqueLabel', () => {
     expect(kept('Virgo (M87)')).toBe('VIRGO');
     expect(kept('Laniakea\nSupercluster')).toBe('LANIAKEA');
     expect(kept('Galactic Centre')).toBe('Centrum Galaxiae');
+  });
+
+  it("ranks the subject's title over every other name", () => {
+    const title = antiqueLabel(label('x', 'Ross 154'), STARS, true, ALL_FONTS)!;
+    expect(title.declutterPriority).toBe(Number.MAX_VALUE);
+  });
+
+  it("names a constellation over its stars, each keeping its producer's tie-break", () => {
+    const S = CAPTION_PRIORITY_SCALE;
+    const cetus = { ...label('Cetus', 'Cetus'), declutterPriority: 5 * S };
+    const mira = { ...label('sceneBody-mira', 'Mira'), declutterPriority: 10 * S + 2 };
+    const sirius = { ...label('sceneBody-sirius', 'Sirius'), declutterPriority: 10 * S + 1 };
+    const rules = ANTIQUE_LABEL_RULES;
+    const rank = (l: Label2D, rule: AntiqueLabelRule | undefined) =>
+      antiqueLabel(l, rule, false, ALL_FONTS)!.declutterPriority!;
+    expect(rank(cetus, rules.constellations)).toBeGreaterThan(rank(mira, rules.starCatalog));
+    expect(rank(mira, rules.starCatalog)).toBeGreaterThan(rank(sirius, rules.starCatalog));
   });
 
   it('sets a kept catalog number in roman, which carries the digits', () => {
