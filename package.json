@@ -144,6 +144,7 @@
     "r2-cors": "npx wrangler r2 bucket cors set skymap-data --file tools/deploy/r2Cors.json",
     "record-clip": "tsx tools/record/record.ts --clip",
     "record-tour": "tsx tools/record/record.ts",
+    "mock": "tsx tools/mock/mock.ts",
     "shot": "tsx tools/shot/shot.ts",
     "loadtime": "tsx tools/loadtime/measureLoad.ts",
     "refactor": "tsx tools/refactor/refactor.ts",
