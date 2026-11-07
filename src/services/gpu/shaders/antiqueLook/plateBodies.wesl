@@ -9,6 +9,7 @@ struct PlateBody {
   sun: vec4<f32>, // xyz centre→Sun, unit; w its print convention, a PRINT_* code
   ring: vec4<f32>, // xyz the north pole (a ring's plane normal); w ring texture's outer edge (radii), 0 = no ring
   ringEdges: vec4<f32>, // C inner, B inner, Cassini mid, A outer (radii)
+  spot: vec4<f32>, // xyz its one marked feature's centre, unit (Jupiter's Red Spot); w 1 = has one
 }
 
 struct PlateBodies {
@@ -25,6 +26,7 @@ const PRINT_PLAIN: u32 = 0u;
 const PRINT_EARTH: u32 = 1u;
 const PRINT_MARS: u32 = 2u;
 const PRINT_MOON: u32 = 3u;
+const PRINT_JUPITER: u32 = 4u;
 
 fn printOf(b: PlateBody) -> u32 {
   return u32(b.sun.w + 0.5);

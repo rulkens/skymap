@@ -19,4 +19,6 @@ export type AntiquePlateBody = {
   /** North pole, unit: a ring's plane normal, and the latitude a print hatches along. */
   readonly pole: Readonly<Vec3>;
   readonly ring: AntiquePlateRing | null;
+  /** Its one marked feature's centre, unit, world axes (Jupiter's Great Red Spot). */
+  readonly spot: Readonly<Vec3> | null;
 };

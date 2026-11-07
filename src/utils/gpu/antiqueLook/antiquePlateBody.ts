@@ -1,7 +1,7 @@
 /**
  * antiquePlateBody — one globe as the plate casts it: eye-relative in its own
  * radii (from f64 Mpc, so no cancellation reaches the GPU), world axes, with
- * its Sun, its pole (a ring's plane normal), its ring and its apparent
+ * its Sun, its pole (a ring's plane normal), its ring, its spot and its apparent
  * radius in print units. Null where `antiqueGlobeCastable` says a sphere cast
  * would draw a false horizon, so a surface view keeps the plain path.
  */
@@ -12,6 +12,8 @@ import type { AntiquePlateBody } from '../../../@types/rendering/AntiquePlateBod
 import type { AntiqueBodyPrint } from '../../../@types/rendering/AntiqueBodyPrint';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { antiqueGlobeCastable } from './antiqueGlobeCastable';
+import { eqRaDecToUnitCart } from '../../math/eqRaDecToUnitCart';
+import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
 
 export function antiquePlateBody(input: {
   readonly positionMpc: Readonly<Vec3>;
@@ -24,6 +26,8 @@ export function antiquePlateBody(input: {
   readonly print: AntiqueBodyPrint;
   /** Ring edges in km: C inner, B inner, Cassini mid, A outer, and the texture's outer edge. */
   readonly ringKm: readonly [number, number, number, number, number] | null;
+  /** A surface spot, body-fixed [east longitude, latitude] in degrees. */
+  readonly spotLonLatDeg: readonly [number, number] | null;
   readonly eyeMpc: Readonly<Vec3>;
   readonly sunMpc: Readonly<Vec3>;
   /** Print units per radian at the view centre (focal length in units). */
@@ -63,5 +67,9 @@ export function antiquePlateBody(input: {
             ],
             outer: ringKm[4] * kmToRadii,
           },
+    // Body-fixed longitude and latitude map to a direction as RA and Dec do.
+    spot: input.spotLonLatDeg
+      ? rotateVec3ByTightMat3(m, eqRaDecToUnitCart(...input.spotLonLatDeg))
+      : null,
   };
 }

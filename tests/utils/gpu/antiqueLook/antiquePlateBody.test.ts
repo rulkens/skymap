@@ -1,7 +1,8 @@
 /**
  * antiquePlateBody — the pole (a ring's normal) is the orientation's pole COLUMN (a row
  * tilts Saturn's ring the wrong way), the Sun points from the body toward the
- * Sun, the apparent radius is the silhouette cone's (not the bare 1/d), ring
+ * Sun, a surface spot is rotated from body-fixed east longitude and latitude into world
+ * axes (a sign slip moves Jupiter's Red Spot off the plain render's), the apparent radius is the silhouette cone's (not the bare 1/d), ring
  * radii are in the drawn radius, and an eye inside the relief shell (plus the
  * margin) gets no record: a sphere cast there drew a false horizon on Mars.
  */
@@ -38,7 +39,11 @@ const LEVEL: Vec3[] = [
   [1, -0.05, -0.05],
 ];
 
-const at = (eye: Vec3, cornerRays: readonly Vec3[] = LEVEL) =>
+const at = (
+  eye: Vec3,
+  cornerRays: readonly Vec3[] = LEVEL,
+  spotLonLatDeg: readonly [number, number] | null = null,
+) =>
   antiquePlateBody({
     positionMpc: [0, 0, 0],
     orientation: TILT,
@@ -50,6 +55,7 @@ const at = (eye: Vec3, cornerRays: readonly Vec3[] = LEVEL) =>
     sunMpc: [-1e-5, 0, 0],
     unitsPerRad: 800,
     cornerRays,
+    spotLonLatDeg,
   });
 
 describe('antiquePlateBody', () => {
@@ -61,6 +67,15 @@ describe('antiquePlateBody', () => {
     expect(body.pole).toEqual([0, -S, C]);
     expect(body.ring!.lines[0]).toBeCloseTo(74_500 / 58_232, 9);
     expect(body.ring!.outer).toBeCloseTo(140_220 / 58_232, 9);
+  });
+
+  it('turns a spot at 90° east on the equator to the orientation’s y column', () => {
+    const eye: Vec3 = [0, 0, -2 * R_MPC];
+    expect(at(eye)!.spot).toBeNull();
+    const spot = at(eye, LEVEL, [90, 0])!.spot!;
+    [0, C, S].forEach((v, i) => expect(spot[i]).toBeCloseTo(v, 9));
+    const south = at(eye, LEVEL, [0, -30])!.spot!;
+    [C, 0.5 * S, -0.5 * C].forEach((v, i) => expect(south[i]).toBeCloseTo(v, 9));
   });
 
   it('records nothing for an eye inside or just above the relief', () => {

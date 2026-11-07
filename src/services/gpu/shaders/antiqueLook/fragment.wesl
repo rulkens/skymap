@@ -35,11 +35,15 @@ import package::antiqueLook::plateBodies::PRINT_PLAIN;
 import package::antiqueLook::plateBodies::PRINT_EARTH;
 import package::antiqueLook::plateBodies::PRINT_MARS;
 import package::antiqueLook::plateBodies::PRINT_MOON;
+import package::antiqueLook::plateBodies::PRINT_JUPITER;
+import package::antiqueLook::plateBodies::ballNormal;
 import package::antiqueLook::bodies::earth::EarthPrintIn;
 import package::antiqueLook::bodies::earth::earthPrint;
 import package::antiqueLook::bodies::earth::earthRelief;
 import package::antiqueLook::bodies::mars::marsPrint;
 import package::antiqueLook::bodies::mars::marsRelief;
+import package::antiqueLook::bodies::jupiter::jupiterPrint;
+import package::antiqueLook::bodies::jupiter::redSpotRadius;
 import package::antiqueLook::bodies::moon::MoonTone;
 import package::antiqueLook::bodies::moon::moonMare;
 import package::antiqueLook::bodies::moon::moonRims;
@@ -556,7 +560,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     var form = vec3<f32>(dot(p, n), along, 1.0);
     var lines = 0.0;
     var print = PRINT_PLAIN;
-    var marsForm = form;
+    var latForm = form;
+    var lat = 0.0;
+    var spotQ = 1e3;
+    var spotQPerUnit = 1.0;
     var moon = MoonTone(0.0, 0.0, 0.0);
     let relief = texel(reliefTex, ip);
     let ground = (u.flags & FLAG_RELIEF) != 0u && relief.a != 0.0 && rowOn(HIDE_RELIEF) > 0.0;
@@ -601,10 +608,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
             texel(reliefTex, ip + vec2<i32>(0, 1)).a, texel(reliefTex, ip - vec2<i32>(1, 0)).a,
             texel(reliefTex, ip - vec2<i32>(0, 1)).a, u.unit);
         }
-        if (print == PRINT_MARS) {
-          let lat = ballLatitude(viewRay(uv), b);
+        if (print == PRINT_MARS || print == PRINT_JUPITER) {
+          lat = ballLatitude(viewRay(uv), b);
           let dLat = vec2<f32>(ballLatitude(rayX, b), ballLatitude(rayY, b)) - lat;
-          marsForm = vec3<f32>(radius * lat, along, length(dLat) * radius * u.unit);
+          latForm = vec3<f32>(radius * lat, along, length(dLat) * radius * u.unit);
+        }
+        if (print == PRINT_JUPITER && b.spot.w > 0.0) {
+          let c = b.centre.xyz;
+          spotQ = redSpotRadius(ballNormal(viewRay(uv), c), b.ring.xyz, b.spot.xyz);
+          let qx = redSpotRadius(ballNormal(rayX, c), b.ring.xyz, b.spot.xyz);
+          let qy = redSpotRadius(ballNormal(rayY, c), b.ring.xyz, b.spot.xyz);
+          spotQPerUnit = length(vec2<f32>(qx, qy) - spotQ) * u.unit;
         }
       }
       lines = max(lines, inkLine(hit.edgeUnits, 1.1, pxUnits));
@@ -620,10 +634,14 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       col = earth.col;
       bodyInk = max(bodyInk, earth.ink);
     } else if (print == PRINT_MARS) {
-      let mars = marsPrint(col, cover, landShare, marsForm, p, pxUnits);
+      let mars = marsPrint(col, cover, landShare, latForm, p, pxUnits);
       col = mars.col;
       // A marking is a globe's feature: on the engraved ground the relief speaks.
       bodyInk = max(bodyInk, select(mars.ink, 0.0, ground));
+    } else if (print == PRINT_JUPITER) {
+      let jupiter = jupiterPrint(col, cover, latForm, lat, spotQ, spotQPerUnit, p, pxUnits);
+      col = jupiter.col;
+      bodyInk = max(bodyInk, jupiter.ink);
     } else if (print == PRINT_MOON && relief.g > 0.0) {
       bodyInk = max(bodyInk, max(moonMare(relief.r, moon.litSlope, p, pxUnits), moonRims(relief.b, moon.shade)));
     }

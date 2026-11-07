@@ -12,7 +12,7 @@ import {
 } from '../../../data/rendering/antiquePlateBodies';
 
 const HEADER_FLOATS = 4;
-const RECORD_FLOATS = 16;
+const RECORD_FLOATS = 20;
 
 export function packAntiquePlateBodies(
   bodies: readonly AntiquePlateBody[],
@@ -24,7 +24,7 @@ export function packAntiquePlateBodies(
   f32.fill(0);
   new Uint32Array(out)[0] = count;
   for (let i = 0; i < count; i++) {
-    const { centre, radiusUnits, sun, print, pole, ring } = bodies[i]!;
+    const { centre, radiusUnits, sun, print, pole, ring, spot } = bodies[i]!;
     const at = HEADER_FLOATS + i * RECORD_FLOATS;
     f32.set(centre, at);
     f32[at + 3] = radiusUnits;
@@ -35,6 +35,10 @@ export function packAntiquePlateBodies(
       // Outer edge 0 is the shader's "no ring".
       f32[at + 11] = ring.outer;
       f32.set(ring.lines, at + 12);
+    }
+    if (spot !== null) {
+      f32.set(spot, at + 16);
+      f32[at + 19] = 1;
     }
   }
   return out;

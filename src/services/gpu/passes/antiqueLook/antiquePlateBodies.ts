@@ -15,6 +15,7 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { ViewCornerRays } from '../../../../@types/camera/projection/ViewCornerRays';
 import {
   ANTIQUE_BODY_PRINTS,
+  ANTIQUE_BODY_SPOTS,
   ANTIQUE_RING_LINES_KM,
 } from '../../../../data/rendering/antiquePlateBodies';
 import { ANTIQUE_ALBEDO_MASK } from '../../../../data/rendering/antiqueAlbedoMask';
@@ -58,6 +59,7 @@ export function antiquePlateBodies(
       sunMpc: RENDER_ORIGIN_MPC,
       unitsPerRad: ctx.drawPxPerRad / unitPx,
       cornerRays: [rays.tl, rays.tr, rays.bl, rays.br],
+      spotLonLatDeg: ANTIQUE_BODY_SPOTS[id] ?? null,
     });
     if (record !== null) records.push(record);
   };
