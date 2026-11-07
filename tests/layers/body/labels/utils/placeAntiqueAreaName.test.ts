@@ -41,10 +41,10 @@ describe('placeAntiqueAreaName', () => {
   });
 
   it("fades a name out before it overhangs the limb, where the extent's corners droop below it", () => {
-    // Seen from 20° south, Mare Frigoris's long box fits its extent but not the disc.
+    // Seen from 25° south, Mare Frigoris's long box fits its extent but not the disc.
     const frigoris = ANTIQUE_MOON_PLACES.find((p) => p.id === 'moonPlace-mareFrigoris')!;
     if (frigoris.kind === 'crater') throw new Error('Mare Frigoris is a mare');
-    const view = orthographicMoonView(315, [1, 0, 0], -20);
+    const view = orthographicMoonView(315, [1, 0, 0], -25);
     const at = placeAntiqueAreaName(frigoris, view, ANTIQUE_PLACE_LETTERING[frigoris.id]!);
     expect(at!.alpha).toBe(0);
   });

@@ -19,7 +19,7 @@ import { antiqueNameBoxPx } from './antiqueNameBoxPx';
 import { visibleSurfacePx } from './visibleSurfacePx';
 import { sunCosAlong } from './sunCosAlong';
 
-const LIMB_CLEAR_PX = 10;
+const LIMB_CLEAR_PX = 4;
 
 export function placeAntiqueAreaName(
   place: Extract<AntiqueMoonPlace, { kind: 'mare' | 'terra' }>,
@@ -44,8 +44,8 @@ export function placeAntiqueAreaName(
     Math.abs(n[1] - s[1]) - box.height,
   );
   // An extent's corners can droop below the limb's curve, so a name must also clear the
-  // limb. As an engraver would, it first moves inward, but never by more than half its
-  // room in the extent: Procellarum can, a thin strip like Frigoris fades instead.
+  // limb. As an engraver would, it first moves inward, but never by more than its room
+  // in the extent: Procellarum can, a thin strip like Frigoris fades instead.
   const disc = view.discCentrePx;
   const discRoomAt = (at: Vec2): number =>
     disc === null
@@ -64,7 +64,7 @@ export function placeAntiqueAreaName(
   if (disc !== null && discRoomAt(at) < fitPx[1]) {
     const toCentre = [disc[0] - centre[0], disc[1] - centre[1]] as const;
     const len = Math.hypot(toCentre[0], toCentre[1]) || 1;
-    const shift = Math.min(Math.max(extentRoomPx, 0) / 2, len);
+    const shift = Math.min(Math.max(extentRoomPx, 0), len);
     // Radial steps shrink a corner's distance by less than their length; a few settle it.
     for (let moved = 0, k = 0; k < 4 && discRoomAt(at) < fitPx[1] && moved < shift; k++) {
       const step = Math.min(fitPx[1] - discRoomAt(at), shift - moved);
