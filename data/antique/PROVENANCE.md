@@ -17,8 +17,8 @@ applies.
 | cetus | _Firmamentum Sobiescianum sive Uranographia_, plate Cetus | Johannes Hevelius (1611–1687) | 1690 | [link](<https://commons.wikimedia.org/wiki/File:Cetus_(Uranographia_Hevelius).jpg>) | Public domain (author died >70 y; e-rara scan) | 4716×3537 (orig.) | [688, 98, 4278, 2827] |
 | seaMonster | _Islandia_ (Theatrum Orbis Terrarum) | Abraham Ortelius (1527–1598) | c. 1590 (BnF dates it 1587) | [link](<https://commons.wikimedia.org/wiki/File:Islandia_-_(Ortelius_Abraham)_-_btv1b10678483d.jpg>) | Public domain (PD France / PD-US expired), BnF Gallica scan | 6424×4640 (orig.) | [1753, 3711, 2844, 4249] |
 | seaHorse | same (Hroshvalur) | same | same | same | same | same | [1197, 3078, 2044, 3685] |
-| dragon | _Mundus Subterraneus_, winged dragon | Athanasius Kircher (1602–1680); Commons tags the attribution "Kircher?" | 1665 | [link](<https://commons.wikimedia.org/wiki/File:Kircher,_Athanasius_%E2%80%94_Mundus_Subterraneus_%E2%80%94_Winged_dragon_(on_the_ground)_%E2%80%94_1665.jpg>) | PD-Art (PD-old-100) | 1282×614 (orig.) | [8, 5, 1237, 614] |
-| seaSerpent | _Serpentum et Draconum Historiae_, "Draconis alati figura ex Pareo" | Ulisse Aldrovandi (1522–1605), ed. Bartolomeo Ambrosini (d. 1657) | 1640 | [link](https://commons.wikimedia.org/wiki/File:Ulyssis_Aldrovandi_BHL41765473.jpg) | PD-scan (PD-old-70-expired), Biodiversity Heritage Library | 4624×2933 (orig.) | [325, 506, 4389, 2908] |
+| dragon | _Firmamentum Sobiescianum sive Uranographia_ (bound with _Prodromus astronomiae_), Fig. B, Draco | Johannes Hevelius (1611–1687) | 1690 | [link](<https://commons.wikimedia.org/wiki/File:Draco_Hevelius_-_Prodromus_astronomiae_1690_(5590223).jpg>) | PD-old-100-expired, Polona (National Library of Poland) scan | 4400×3474 (orig.) | [1359, 438, 3582, 3346] |
+| seaSerpent | same atlas, Fig. TT, Hydra (uncoloured copy) | same | 1690 | [link](<https://commons.wikimedia.org/wiki/File:Hydra_-_Prodromus_astronomiae_1690_(436340).jpg>) | PD-old-100-expired, Polona scan | 4435×3495 (orig.) | [44, 441, 4442, 1739] |
 
 The cartouche's title is engraved at pack time in IM FELL English (`data/raw/fonts/`, © Igino Marini, SIL Open
 Font License 1.1, `data/raw/fonts/OFL-IMFell.txt`).
@@ -35,6 +35,10 @@ long side.
   whose surrounding ring matched best (a small exemplar inpaint), and the leftover chart arcs and a
   stray letter are erased. The figure keeps the source orientation, Hevelius' globe view; the
   renderer mirrors it.
+- **dragon, seaSerpent:** the same pipeline as cetus, with 35 and 36 star symbols inpainted from
+  nearby body hatching (inked donors only, so no blank paper discs). The chart lines are removed per
+  half of the plate, because the two sheets of each plate are offset at the gutter. Neither figure
+  is mirrored.
 - **ship:** Goos labels no ship type; it is a typical Dutch three-masted merchantman of the 1660s,
   seen from the stern. The colour layer carries the washes: brown hull, green sea.
 
@@ -45,4 +49,8 @@ long side.
 - ship: a faint grey sea wash remains around the waterline.
 - cetus: there are faint patches where the stars were inpainted, and a dashed remnant of the colure
   line remains on the neck.
-- dragon: the source is only 1282 px wide, so the line detail is softer than the rest.
+- dragon, seaSerpent: both keep the plate's gutter seam (a vertical break in the hatching through
+  Draco's head and coils), a few Bayer letters and soft inpaint patches.
+- dragon: the tail near α has a short ragged stretch where a degree-scale circle crossed it.
+- seaSerpent: two short gaps in the body, where Hevelius drew Crater's foot and Corvus's claws over
+  the serpent and both were removed.
