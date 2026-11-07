@@ -46,7 +46,9 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 /** A fixed seed keeps the sheet identical across reloads: a print does not change. */
 const PAPER_SEED = 17.0;
 
-type Binding = 'texture' | 'uniform' | 'sampler';
+const TEXTURE = { texture: { sampleType: 'float' } } as const;
+const UNIFORM = { buffer: { type: 'uniform' } } as const;
+const SAMPLER = { sampler: { type: 'filtering' } } as const;
 
 export function createAntiqueLook(init: {
   device: GPUDevice;
@@ -58,18 +60,17 @@ export function createAntiqueLook(init: {
     entryPoint: 'vs',
   };
 
-  function layoutOf(label: string, bindings: readonly Binding[]): GPUBindGroupLayout {
+  function layoutOf(
+    label: string,
+    bindings: readonly Omit<GPUBindGroupLayoutEntry, 'binding' | 'visibility'>[],
+  ): GPUBindGroupLayout {
     return device.createBindGroupLayout({
       label: `antique-look-${label}-bgl`,
-      entries: bindings.map(
-        (kind, binding): GPUBindGroupLayoutEntry => ({
-          binding,
-          visibility: GPUShaderStage.FRAGMENT,
-          ...(kind === 'texture' ? { texture: { sampleType: 'float' } } : {}),
-          ...(kind === 'uniform' ? { buffer: { type: 'uniform' } } : {}),
-          ...(kind === 'sampler' ? { sampler: { type: 'filtering' } } : {}),
-        }),
-      ),
+      entries: bindings.map((entry, binding) => ({
+        ...entry,
+        binding,
+        visibility: GPUShaderStage.FRAGMENT,
+      })),
     });
   }
 
@@ -95,24 +96,24 @@ export function createAntiqueLook(init: {
     });
   }
 
-  const paperLayout = layoutOf('paper', ['uniform', 'texture', 'texture', 'sampler']);
-  const reduceLayout = layoutOf('reduce', ['texture', 'texture']);
-  const peaksLayout = layoutOf('peaks', ['texture', 'uniform']);
-  const glowLayout = layoutOf('glow', ['texture']);
+  const paperLayout = layoutOf('paper', [UNIFORM, TEXTURE, TEXTURE, SAMPLER]);
+  const reduceLayout = layoutOf('reduce', [TEXTURE, TEXTURE]);
+  const peaksLayout = layoutOf('peaks', [TEXTURE, UNIFORM]);
+  const glowLayout = layoutOf('glow', [TEXTURE]);
   const plateLayout = layoutOf('plate', [
-    'texture', // print
-    'texture', // overlay
-    'texture', // foreground:0
-    'uniform',
-    'texture', // paper
-    'texture', // wash
-    'texture', // stars
-    'sampler',
-    'texture', // glow
-    'uniform', // ornaments
-    'texture', // ornament atlas
-    'uniform', // border digits
-    'texture', // glyph sheet
+    TEXTURE, // print
+    TEXTURE, // overlay
+    TEXTURE, // foreground:0
+    UNIFORM,
+    TEXTURE, // paper
+    TEXTURE, // wash
+    TEXTURE, // stars
+    SAMPLER,
+    TEXTURE, // glow
+    UNIFORM, // ornaments
+    TEXTURE, // ornament atlas
+    UNIFORM, // border digits
+    TEXTURE, // glyph sheet
   ]);
   const paperPipeline = pipelineOf('paper', paperCode, paperLayout, ['rgba8unorm']);
   const reducePipeline = pipelineOf('reduce', reduceCode, reduceLayout, [

@@ -18,6 +18,7 @@ import { bodyRowSteps } from './bodyRowSteps';
 import { resolvePassNames } from './resolvePassNames';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
 import { depthKeyOf } from '../../../utils/render/depthKeyOf';
+import { lookTarget } from '../../../utils/render/lookTarget';
 
 export type FrameInputs = {
   readonly tone: ToneMap;
@@ -53,15 +54,6 @@ function merge(
   tone: ToneMap | null,
 ): FrameStep {
   return { kind: 'composite', step: { source, dest, blend, tone } };
-}
-
-/**
- * Under a look the swap chain belongs to `stylize` alone: the scene goes to
- * `print`, the captions to their own transparent `overlay` row so the look can
- * ink them as lettering rather than treat them as scene light.
- */
-function lookTarget(target: string, as: 'print' | 'overlay', frame: FrameInputs): string {
-  return frame.antique && target === 'swap' ? as : target;
 }
 
 /**
@@ -103,7 +95,7 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
   render: (spec, passes, frame) =>
     (typeof spec.slab === 'number' ? [spec.slab] : frame.bodyRowSlabs[spec.slab]).map((slab) => ({
       kind: 'render',
-      target: lookTarget(spec.target, 'overlay', frame),
+      target: lookTarget(spec.target, 'overlay', frame.antique),
       slab,
       passes: resolvePassNames(spec.passes, passes),
       ...(spec.depth === undefined ? {} : { depth: spec.depth }),
@@ -126,7 +118,7 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
   composite: (spec) => [merge(spec.source, spec.dest, 'over', null)],
   bloom: (_spec, _passes, frame) => (frame.bloomEnabled ? [{ kind: 'bloom' }] : []),
   tonemap: (spec, _passes, frame) => [
-    merge(spec.source, lookTarget(spec.dest, 'print', frame), 'replace', frame.tone),
+    merge(spec.source, lookTarget(spec.dest, 'print', frame.antique), 'replace', frame.tone),
   ],
   copy: (spec) => [{ kind: 'copy', source: spec.source }],
   stylize: (spec, _passes, frame) =>

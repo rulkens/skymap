@@ -24,14 +24,12 @@ const STEPS = [1, 2, 5, 10, 15, 20, 30, 45, 90] as const;
 const MIN_GAP_UNITS = 90;
 const DEG = 180 / Math.PI;
 
-type Sheet = Pick<AntiqueGlyphSheet, 'width' | 'height' | 'glyphs'>;
-
 export function placeAntiqueNumerals(input: {
   readonly basis: ViewBasis;
   readonly frustum: ViewFrustum;
   readonly size: Size;
   readonly unitPx: number;
-  readonly sheet: Sheet;
+  readonly sheet: Pick<AntiqueGlyphSheet, 'width' | 'height' | 'glyphs'>;
 }): readonly AntiqueGlyphInstance[] {
   const { size, unitPx } = input;
   const band = ANTIQUE_LADDER_UNITS * unitPx;
@@ -97,7 +95,7 @@ function setDigits(
   text: string,
   centre: readonly [number, number],
   unitPx: number,
-  sheet: Sheet,
+  sheet: Pick<AntiqueGlyphSheet, 'width' | 'height' | 'glyphs'>,
   out: AntiqueGlyphInstance[],
 ): void {
   const height = ANTIQUE_NUMERAL_UNITS * unitPx;
