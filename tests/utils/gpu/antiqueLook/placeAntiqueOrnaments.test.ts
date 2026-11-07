@@ -8,6 +8,10 @@ import { describe, it, expect } from 'vitest';
 import { placeAntiqueOrnaments } from '../../../../src/utils/gpu/antiqueLook/placeAntiqueOrnaments';
 import type { AntiqueOrnament } from '../../../../src/@types/rendering/AntiqueOrnament';
 import type { ViewBasis } from '../../../../src/@types/camera/projection/ViewBasis';
+import { GAL_TO_EQ_MATRIX } from '../../../../src/data/superGalacticTransform';
+import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
+import { cross3 } from '../../../../src/utils/math/cross3';
+import { normalize3 } from '../../../../src/utils/math/normalize3';
 
 const ATLAS = { width: 100, height: 100, sprites: { beast: { x: 0, y: 0, w: 100, h: 50 } } };
 const FRUSTUM = { tanLeft: -1.0264, tanRight: 1.0264, tanDown: -0.5774, tanUp: 0.5774 };
@@ -16,6 +20,14 @@ const SIZE = { width: 1600, height: 900 };
 const NORTH_UP: ViewBasis = { forward: [1, 0, 0], right: [0, -1, 0], up: [0, 0, 1] };
 // The same view rolled so north points to screen left.
 const NORTH_LEFT: ViewBasis = { forward: [1, 0, 0], right: [0, 0, -1], up: [0, -1, 0] };
+
+// The galactic centre (l = 0, b = 0) in the equatorial world frame, and a view looking at it.
+const GALACTIC_CENTRE = rotateVec3ByTightMat3(GAL_TO_EQ_MATRIX, [1, 0, 0], [0, 0, 0]);
+const GALACTIC_CENTRE_AHEAD: ViewBasis = (() => {
+  const f = GALACTIC_CENTRE;
+  const right = normalize3(cross3(f, [0, 0, 1]));
+  return { forward: f, right, up: cross3(right, f) };
+})();
 
 function skyRow(over: Partial<AntiqueOrnament> & { lonDeg?: number }): AntiqueOrnament {
   return {
@@ -34,6 +46,7 @@ function skyRow(over: Partial<AntiqueOrnament> & { lonDeg?: number }): AntiqueOr
 }
 
 function place(rows: readonly AntiqueOrnament[], basis = NORTH_UP, camDistMpc = 0) {
+  const camPosMpc = [camDistMpc, 0, 0] as [number, number, number];
   return placeAntiqueOrnaments({
     ornaments: rows,
     atlas: ATLAS,
@@ -41,7 +54,7 @@ function place(rows: readonly AntiqueOrnament[], basis = NORTH_UP, camDistMpc = 
     frustum: FRUSTUM,
     size: SIZE,
     unitPx: 1,
-    camDistMpc,
+    camPosMpc,
   });
 }
 
@@ -87,6 +100,30 @@ describe('placeAntiqueOrnaments', () => {
     // Centred just past the right edge: well under the ~0.6 on-screen share it needs.
     const [edge] = place([skyRow({ lonDeg: -50 })]);
     expect(edge === undefined || edge.opacity < 0.5).toBe(true);
+  });
+
+  it('sizes a place in space by its distance from the eye, not from the Sun', () => {
+    const atPlace = (camX: number) =>
+      placeAntiqueOrnaments({
+        ornaments: [
+          skyRow({
+            regime: 'always',
+            facesNorth: false,
+            anchor: { kind: 'space', lonDeg: 0, latDeg: 0, distMpc: 20, sizeMpc: 4 },
+          }),
+        ],
+        atlas: ATLAS,
+        basis: GALACTIC_CENTRE_AHEAD,
+        frustum: FRUSTUM,
+        size: SIZE,
+        unitPx: 1,
+        camPosMpc: GALACTIC_CENTRE.map((c) => c * camX) as [number, number, number],
+      })[0]!;
+    // Halfway to it, it should look about twice as wide and stay dead ahead.
+    const far = atPlace(0);
+    const near = atPlace(10);
+    expect(near.halfPx[0] / far.halfPx[0]).toBeCloseTo(2, 1);
+    expect(near.centrePx[0]).toBeCloseTo(far.centrePx[0], 3);
   });
 
   it('fades a sky row out while it is too small to read', () => {

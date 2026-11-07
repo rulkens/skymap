@@ -135,7 +135,7 @@ export function createAntiqueLook(init: {
             frustum: ctx.frustum,
             size,
             unitPx,
-            camDistMpc: Math.hypot(...ctx.drawCamPos),
+            camPosMpc: ctx.drawCamPos,
           });
     device.queue.writeBuffer(g.ornaments, 0, packAntiqueOrnaments(placed, ornamentBytes));
     const digits =

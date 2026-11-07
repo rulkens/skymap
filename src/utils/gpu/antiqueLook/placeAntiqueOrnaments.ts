@@ -35,10 +35,12 @@ export function placeAntiqueOrnaments(input: {
   readonly frustum: ViewFrustum;
   readonly size: Size;
   readonly unitPx: number;
-  readonly camDistMpc: number;
+  /** The eye in the world frame, Mpc from the Sun. */
+  readonly camPosMpc: Readonly<Vec3>;
 }): readonly AntiqueOrnamentInstance[] {
   const { atlas, basis, frustum, size, unitPx } = input;
-  const cosmos = smoothstep(ANTIQUE_REGIME_MPC[0], ANTIQUE_REGIME_MPC[1], input.camDistMpc);
+  const camDistMpc = Math.hypot(input.camPosMpc[0], input.camPosMpc[1], input.camPosMpc[2]);
+  const cosmos = smoothstep(ANTIQUE_REGIME_MPC[0], ANTIQUE_REGIME_MPC[1], camDistMpc);
   const pxPerTan = size.height / (frustum.tanUp - frustum.tanDown);
   const placed: AntiqueOrnamentInstance[] = [];
 
@@ -60,14 +62,30 @@ export function placeAntiqueOrnaments(input: {
     let widthPx: number;
     let opacity = row.opacity * regime;
     let dir: Vec3;
-    if (anchor.kind === 'sky') {
+    if (anchor.kind === 'sky' || anchor.kind === 'space') {
+      const galactic = anchor.kind === 'space' || anchor.frame === 'galactic';
       const raw = raDecDistToCartesian(anchor.lonDeg, anchor.latDeg, 1);
-      dir =
-        anchor.frame === 'galactic' ? rotateVec3ByTightMat3(GAL_TO_EQ_MATRIX, raw, [0, 0, 0]) : raw;
+      const unit = galactic ? rotateVec3ByTightMat3(GAL_TO_EQ_MATRIX, raw, [0, 0, 0]) : raw;
+      // A place is seen from the camera: its direction and distance from the eye.
+      const cam = input.camPosMpc;
+      const toward: Vec3 =
+        anchor.kind === 'space'
+          ? [
+              unit[0] * anchor.distMpc - cam[0],
+              unit[1] * anchor.distMpc - cam[1],
+              unit[2] * anchor.distMpc - cam[2],
+            ]
+          : unit;
+      const range = Math.hypot(toward[0], toward[1], toward[2]);
+      dir = [toward[0] / range, toward[1] / range, toward[2] / range];
       const at = projectDirToPx(dir, basis, frustum, size);
       if (at === null) continue;
       centre = [at.x, at.y];
-      widthPx = (Math.tan(anchor.sizeDeg * DEG * 0.5) * 2 * pxPerTan) / at.z;
+      const angle =
+        anchor.kind === 'space'
+          ? 2 * Math.atan(anchor.sizeMpc / (2 * range))
+          : anchor.sizeDeg * DEG;
+      widthPx = (Math.tan(angle * 0.5) * 2 * pxPerTan) / at.z;
       const share = widthPx / size.height;
       opacity *=
         smoothstep(SKY_FADE_IN[0], SKY_FADE_IN[1], share) *
@@ -86,7 +104,8 @@ export function placeAntiqueOrnaments(input: {
     const half: [number, number] = [widthPx * 0.5, widthPx * 0.5 * aspect];
     // A sky figure mostly off the plate reads as a cropped stray claw: fade it
     // out unless at least about half of it is on screen.
-    if (anchor.kind === 'sky') opacity *= smoothstep(0.35, 0.6, onScreenShare(centre, half, size));
+    if (anchor.kind !== 'sheet')
+      opacity *= smoothstep(0.35, 0.6, onScreenShare(centre, half, size));
     if (opacity <= 0.003 || offScreen(centre, half, size)) continue;
     // A negative half-width flips the sprite in the shader (local x runs backwards).
     if (row.mirrored) half[0] = -half[0];

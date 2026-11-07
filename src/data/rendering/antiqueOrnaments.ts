@@ -33,6 +33,18 @@ const beast = (
   mirrored,
 });
 
+const voyager = (
+  id: string,
+  sprite: string,
+  lonDeg: number,
+  distMpc: number,
+  sizeMpc: number,
+  pigment: number,
+): AntiqueOrnament => ({
+  ...beast(id, sprite, 'cosmos', 'galactic', lonDeg, 0, 0, pigment),
+  anchor: { kind: 'space', lonDeg, latDeg: 0, distMpc, sizeMpc },
+});
+
 export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
   {
     id: 'cartouche',
@@ -52,10 +64,11 @@ export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
   beast('cetus', 'cetus', 'stars', 'equatorial', 25, -8, 36, 5, true),
   beast('draco', 'dragon', 'stars', 'equatorial', 255, 64, 34, 1),
   beast('hydra', 'seaSerpent', 'stars', 'equatorial', 150, -18, 44, 0),
-  // Out among the galaxies the Zone of Avoidance is an uncharted ocean, and the
-  // sea-chart fauna and a ship may sail it.
-  beast('zoa-monster', 'seaMonster', 'cosmos', 'galactic', 60, 0, 30, 0),
-  beast('zoa-whale', 'hornedWhale', 'cosmos', 'galactic', 150, 0, 28, 5),
-  beast('zoa-seahorse', 'seaHorse', 'cosmos', 'galactic', 240, 0, 26, 1),
-  beast('zoa-ship', 'ship', 'cosmos', 'galactic', 320, 0, 22, 6),
+  // Out among the galaxies the Zone of Avoidance is a wedge of space round the
+  // galactic plane that the surveys cannot see into: an uncharted ocean, where
+  // the sea-chart fauna and a ship may sail, each at a place in it.
+  voyager('zoa-monster', 'seaMonster', 60, 30, 18, 0),
+  voyager('zoa-whale', 'hornedWhale', 150, 45, 22, 5),
+  voyager('zoa-seahorse', 'seaHorse', 240, 35, 16, 1),
+  voyager('zoa-ship', 'ship', 320, 25, 12, 6),
 ];
